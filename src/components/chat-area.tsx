@@ -18,14 +18,10 @@ import { ChatInfoModal } from './modals/chat-info-modal';
 import { useFirestore, useUser, useCollection, useDoc, useMemoFirebase } from '@/firebase';
 import { collection, query, orderBy, doc, arrayUnion } from 'firebase/firestore';
 import { addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { suggestMessageDraft } from '@/ai/flows/ai-message-drafting-flow';
 import { cn } from '@/lib/utils';
 import { formatLastSeen } from '@/lib/utils';
 import type { Message } from '@/lib/types';
-
-const EMOJIS = ['❤️', '👍', '😂', '🔥', '😮', '😢', '👏', '✅', '🚀', '🎉', '🙏', '💯'];
 
 interface ChatAreaProps {
   toggleSidebar: () => void;
@@ -71,7 +67,6 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
     return chat.participantIds?.includes(user.uid) || false;
   }, [chat, user]);
 
-  // Разрешаем чтение сообщений, если чат публичный ИЛИ если пользователь - участник
   const canReadMessages = useMemo(() => {
     if (!chat) return false;
     if (chat.type === 'group' || chat.type === 'channel') return true;
@@ -128,24 +123,6 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
       setStatusString(chat?.type === 'group' ? 'Группа' : 'Канал');
     }
   }, [isOtherProfileLoading, otherUserProfile?.lastSeen, chat?.type, chat?.typing, otherId]);
-
-  useEffect(() => {
-    if (userProfile?.settings?.theme) {
-      const theme = userProfile.settings.theme;
-      const root = document.documentElement;
-      const themes: Record<string, { primary: string, accent: string }> = {
-        ocean: { primary: '210 100% 50%', accent: '180 100% 40%' },
-        forest: { primary: '140 100% 30%', accent: '160 100% 45%' },
-        sunset: { primary: '20 100% 50%', accent: '45 100% 50%' },
-        midnight: { primary: '240 10% 10%', accent: '240 10% 40%' },
-        default: { primary: '230 43% 42%', accent: '199 73% 58%' }
-      };
-      
-      const selection = themes[theme] || themes.default;
-      root.style.setProperty('--primary', selection.primary);
-      root.style.setProperty('--accent', selection.accent);
-    }
-  }, [userProfile?.settings?.theme]);
 
   useEffect(() => {
     if (messages && user && currentChatId && chat && isParticipant && db) {
@@ -295,9 +272,9 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
                   <Loader2 className="w-8 h-8 animate-spin text-primary" />
                 </div>
               )}
-              {(!isParticipant && chat?.type !== 'private') && (
+              {(chat && !isParticipant && chat.type !== 'private') && (
                 <div className="flex flex-col items-center gap-3 py-10 bg-card/40 backdrop-blur-md rounded-2xl border border-primary/20 mt-10">
-                   <p className="text-sm font-semibold">Вы просматриваете этот {chat.type === 'group' ? 'чат' : 'канал'}</p>
+                   <p className="text-sm font-semibold">Вы просматриваете этот {chat?.type === 'group' ? 'чат' : 'канал'}</p>
                    <Button onClick={() => updateDocumentNonBlocking(chatRef!, { participantIds: arrayUnion(user?.uid) })}>Вступить, чтобы писать</Button>
                 </div>
               )}
@@ -335,7 +312,7 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
           </div>
         ) : (
           <div className="flex justify-center max-w-4xl mx-auto">
-             <Button variant="outline" className="w-full h-11 rounded-xl" onClick={() => updateDocumentNonBlocking(chatRef!, { participantIds: arrayUnion(user?.uid) })}>Вступить в обсуждение</Button>
+             {chat && <Button variant="outline" className="w-full h-11 rounded-xl" onClick={() => updateDocumentNonBlocking(chatRef!, { participantIds: arrayUnion(user?.uid) })}>Вступить в обсуждение</Button>}
           </div>
         )}
       </footer>

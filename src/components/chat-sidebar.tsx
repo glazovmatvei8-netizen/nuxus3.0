@@ -186,7 +186,7 @@ function ChatListItem({ chat, isActive, otherId, chatDisplayName, manualAvatarUr
           className="h-11 w-11 md:h-12 md:w-12 border-2 border-transparent group-hover:border-primary/20 transition-all" 
           fallbackName={chatDisplayName}
         />
-        {status === 'в сети' && !isTyping && (
+        {(status === 'в сети' || isTyping) && (
           <span className="absolute bottom-0 right-0 w-3 h-3 bg-accent rounded-full border-2 border-background shadow-sm" />
         )}
       </div>

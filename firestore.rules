@@ -23,10 +23,10 @@ service cloud.firestore {
       return chat.type == 'group' || chat.type == 'channel';
     }
 
-    // Проверка участия в чате
+    // Проверка участия в чате (используем hasAny для массивов)
     function isParticipant(chatId) {
       let chat = get(/databases/$(database)/documents/chats/$(chatId)).data;
-      return isSignedIn() && (request.auth.uid in chat.participantIds);
+      return isSignedIn() && (chat.participantIds.hasAny([request.auth.uid]));
     }
 
     match /users/{userId} {
@@ -41,7 +41,7 @@ service cloud.firestore {
       allow create: if isSignedIn();
       // Обновление (вступление, печатание) доступно всем вошедшим
       allow update: if isSignedIn(); 
-      allow delete: if isSignedIn() && (resource.data.ownerId == request.auth.uid || (request.auth.uid in resource.data.adminIds));
+      allow delete: if isSignedIn() && (resource.data.ownerId == request.auth.uid || (resource.data.adminIds.hasAny([request.auth.uid])));
     }
 
     match /chats/{chatId}/messages/{messageId} {
@@ -55,7 +55,7 @@ service cloud.firestore {
       allow update: if isSignedIn() && isParticipant(chatId); 
       
       // Удаление: автор или админ
-      allow delete: if isSignedIn() && (resource.data.senderId == request.auth.uid || request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.adminIds);
+      allow delete: if isSignedIn() && (resource.data.senderId == request.auth.uid || get(/databases/$(database)/documents/chats/$(chatId)).data.adminIds.hasAny([request.auth.uid]));
     }
 
     match /chats/{chatId}/messages/{messageId}/reactions/{reactionId} {
