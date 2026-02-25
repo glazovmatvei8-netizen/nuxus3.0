@@ -11,13 +11,15 @@ import {
 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { MessageItem } from './message-item';
-import { suggestMessageDraft } from '@/ai/flows/ai-message-drafting-flow';
 import { useToast } from '@/hooks/use-toast';
 import { ChatInfoModal } from './modals/chat-info-modal';
 import { useFirestore, useUser, useCollection, useDoc, useMemoFirebase } from '@/firebase';
 import { collection, query, orderBy, doc, arrayUnion } from 'firebase/firestore';
 import { addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+
+const EMOJIS = ['❤️', '👍', '😂', '🔥', '😮', '😢', '👏', '✅', '🚀', '🎉', '🙏', '💯'];
 
 interface ChatAreaProps {
   toggleSidebar: () => void;
@@ -29,7 +31,6 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
   const db = useFirestore();
   const { currentChatId, setCurrentChatId } = useAppState();
   const [inputText, setInputText] = useState('');
-  const [isDrafting, setIsDrafting] = useState(false);
   const [isChatInfoOpen, setIsChatInfoOpen] = useState(false);
   
   // Media Recording State
@@ -68,7 +69,7 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
   }, [db, currentChatId]);
   const { data: messages } = useCollection(messagesQuery);
 
-  const isParticipant = chat?.participantIds?.includes(user?.uid);
+  const isParticipant = chat?.participantIds?.includes(user?.uid) || chat?.type === 'private';
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -77,13 +78,12 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
     }
   }, [messages]);
 
-  // Timer for recording
   useEffect(() => {
     let interval: any;
     if (isRecordingAudio || isRecordingVideo) {
       interval = setInterval(() => {
         setRecordingTime(prev => {
-          if (prev >= 180) { // 3 minutes limit
+          if (prev >= 180) {
             stopRecording();
             return 180;
           }
@@ -107,13 +107,14 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
   };
 
   const handleSendMessage = (content: string = inputText, type: string = 'text') => {
-    if (!content.trim() || !currentChatId || !user || !isParticipant) return;
+    const textToSend = content.trim();
+    if (!textToSend || !currentChatId || !user) return;
     
     const messageData = {
       chatId: currentChatId,
       senderId: user.uid,
       senderName: userProfile?.name || 'User',
-      content: content,
+      content: textToSend,
       contentType: type,
       sentAt: new Date().toISOString(),
     };
@@ -128,7 +129,11 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
     updateDocumentNonBlocking(chatRef, {
       participantIds: arrayUnion(user.uid)
     });
-    toast({ title: "Welcome!", description: "You have joined the conversation." });
+    toast({ title: "Успех!", description: "Вы вступили в переписку." });
+  };
+
+  const addEmoji = (emoji: string) => {
+    setInputText(prev => prev + emoji);
   };
 
   const startAudioRecording = async () => {
@@ -136,24 +141,19 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       mediaRecorderRef.current = new MediaRecorder(stream);
       audioChunksRef.current = [];
-      
       mediaRecorderRef.current.ondataavailable = (e) => {
         if (e.data.size > 0) audioChunksRef.current.push(e.data);
       };
-
       mediaRecorderRef.current.onstop = async () => {
         const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
         const reader = new FileReader();
         reader.readAsDataURL(audioBlob);
-        reader.onloadend = () => {
-          handleSendMessage(reader.result as string, 'audio');
-        };
+        reader.onloadend = () => handleSendMessage(reader.result as string, 'audio');
       };
-
       mediaRecorderRef.current.start();
       setIsRecordingAudio(true);
     } catch (err) {
-      toast({ title: "Error", description: "Could not access microphone", variant: "destructive" });
+      toast({ title: "Ошибка", description: "Нет доступа к микрофону", variant: "destructive" });
     }
   };
 
@@ -162,28 +162,22 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
       setVideoModalOpen(true);
       const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
       if (videoPreviewRef.current) videoPreviewRef.current.srcObject = stream;
-      
       mediaRecorderRef.current = new MediaRecorder(stream);
       videoChunksRef.current = [];
-
       mediaRecorderRef.current.ondataavailable = (e) => {
         if (e.data.size > 0) videoChunksRef.current.push(e.data);
       };
-
       mediaRecorderRef.current.onstop = async () => {
         const videoBlob = new Blob(videoChunksRef.current, { type: 'video/webm' });
         const reader = new FileReader();
         reader.readAsDataURL(videoBlob);
-        reader.onloadend = () => {
-          handleSendMessage(reader.result as string, 'video');
-        };
+        reader.onloadend = () => handleSendMessage(reader.result as string, 'video');
       };
-
       mediaRecorderRef.current.start();
       setIsRecordingVideo(true);
     } catch (err) {
       setVideoModalOpen(false);
-      toast({ title: "Error", description: "Could not access camera/microphone", variant: "destructive" });
+      toast({ title: "Ошибка", description: "Нет доступа к камере", variant: "destructive" });
     }
   };
 
@@ -192,9 +186,7 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
     if (file) {
       const reader = new FileReader();
       reader.readAsDataURL(file);
-      reader.onloadend = () => {
-        handleSendMessage(reader.result as string, 'image');
-      };
+      reader.onloadend = () => handleSendMessage(reader.result as string, 'image');
     }
   };
 
@@ -204,8 +196,7 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
-  // Resolve chat display info
-  const otherId = chat?.type === 'private' && user ? chat.participantIds.find((id: string) => id !== user.uid) : null;
+  const otherId = chat?.type === 'private' && user ? chat.participantIds?.find((id: string) => id !== user.uid) : null;
   const chatDisplayName = otherId && chat?.metadata ? chat.metadata[otherId]?.name : chat?.name;
   const chatDisplayAvatar = otherId && chat?.metadata ? chat.metadata[otherId]?.avatarUrl : chat?.avatarUrl;
 
@@ -215,8 +206,8 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
         <div className="bg-primary/10 p-6 rounded-full mb-6">
           <MessageSquare className="w-16 h-16 text-primary animate-pulse" />
         </div>
-        <h2 className="text-2xl font-bold mb-2">Welcome to NuxusChat</h2>
-        <p className="text-muted-foreground max-w-sm">Select a conversation from the sidebar to start messaging in real-time.</p>
+        <h2 className="text-2xl font-bold mb-2">Добро пожаловать в NuxusChat</h2>
+        <p className="text-muted-foreground max-w-sm">Выберите чат, чтобы начать общение в реальном времени.</p>
       </div>
     );
   }
@@ -235,7 +226,7 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
             </Avatar>
             <div className="flex flex-col">
               <span className="font-semibold text-sm leading-tight">{chatDisplayName}</span>
-              <span className="text-xs text-green-500 font-medium">Online</span>
+              <span className="text-[10px] text-muted-foreground">{chat?.type === 'private' ? 'Личные сообщения' : (chat?.type === 'group' ? 'Группа' : 'Канал')}</span>
             </div>
           </div>
         </div>
@@ -255,10 +246,10 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
             <div className="bg-primary/10 p-4 rounded-full">
               <UserPlus className="w-12 h-12 text-primary" />
             </div>
-            <h3 className="text-lg font-bold">You are not a member yet</h3>
-            <p className="text-sm text-muted-foreground max-w-xs">Join this conversation to see previous messages and start chatting.</p>
+            <h3 className="text-lg font-bold">Вы не являетесь участником</h3>
+            <p className="text-sm text-muted-foreground max-w-xs">Вступите в это сообщество, чтобы видеть сообщения и общаться.</p>
             <Button onClick={joinChat} className="rounded-xl px-8 h-12 shadow-lg shadow-primary/20">
-              Join Conversation
+              Вступить
             </Button>
           </div>
         ) : (
@@ -277,8 +268,8 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
 
       <footer className="p-4 bg-card/20 backdrop-blur-xl border-t border-border/40 z-20">
         {!isParticipant ? (
-          <div className="max-w-4xl mx-auto text-center">
-            <p className="text-xs text-muted-foreground uppercase font-bold tracking-widest">Joining required to send messages</p>
+          <div className="max-w-4xl mx-auto text-center py-2">
+            <p className="text-xs text-muted-foreground uppercase font-bold tracking-widest italic">Режим просмотра</p>
           </div>
         ) : (
           <div className="flex flex-col gap-2 max-w-4xl mx-auto">
@@ -287,7 +278,7 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
                 <div className="flex items-center gap-3 text-primary">
                   <Mic className="w-5 h-5 animate-pulse" />
                   <span className="font-mono font-bold">{formatTime(recordingTime)}</span>
-                  <span className="text-sm">Recording voice...</span>
+                  <span className="text-sm">Запись голоса...</span>
                 </div>
                 <Button size="icon" variant="ghost" className="text-destructive" onClick={stopRecording}>
                   <StopCircle className="w-6 h-6" />
@@ -295,28 +286,38 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
               </div>
             )}
 
-            <div className="flex items-end gap-3">
+            <div className="flex items-end gap-2">
               <div className="flex items-center gap-1 mb-1">
                 <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleFileSelect} />
                 <Button variant="ghost" size="icon" className="h-10 w-10 text-muted-foreground hover:text-primary" onClick={() => fileInputRef.current?.click()}>
                   <Paperclip className="w-5 h-5" />
                 </Button>
-                <Button variant="ghost" size="icon" className="h-10 w-10 text-muted-foreground hover:text-primary" onClick={startVideoRecording}>
-                  <Camera className="w-5 h-5" />
-                </Button>
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
-                  className={`h-10 w-10 text-muted-foreground hover:text-primary ${isRecordingAudio ? 'text-primary' : ''}`}
-                  onClick={isRecordingAudio ? stopRecording : startAudioRecording}
-                >
-                  <Mic className="w-5 h-5" />
-                </Button>
+                
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-10 w-10 text-muted-foreground hover:text-primary">
+                      <Smile className="w-5 h-5" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-64 p-2 bg-card/95 backdrop-blur-xl border-border/40" side="top">
+                    <div className="grid grid-cols-6 gap-1">
+                      {EMOJIS.map(emoji => (
+                        <button 
+                          key={emoji} 
+                          onClick={() => addEmoji(emoji)} 
+                          className="text-xl hover:bg-muted p-1 rounded transition-colors"
+                        >
+                          {emoji}
+                        </button>
+                      ))}
+                    </div>
+                  </PopoverContent>
+                </Popover>
               </div>
 
               <div className="flex-1 relative group">
                 <Input 
-                  placeholder="Write a message..." 
+                  placeholder="Написать сообщение..." 
                   value={inputText}
                   onChange={(e) => setInputText(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
@@ -331,6 +332,25 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
                   <Send className="w-4 h-4" />
                 </Button>
               </div>
+
+              <div className="flex items-center gap-1 mb-1">
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="h-10 w-10 text-muted-foreground hover:text-primary" 
+                  onClick={startVideoRecording}
+                >
+                  <Camera className="w-5 h-5" />
+                </Button>
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className={`h-10 w-10 text-muted-foreground hover:text-primary ${isRecordingAudio ? 'text-primary' : ''}`}
+                  onClick={isRecordingAudio ? stopRecording : startAudioRecording}
+                >
+                  <Mic className="w-5 h-5" />
+                </Button>
+              </div>
             </div>
           </div>
         )}
@@ -340,14 +360,14 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
       <Dialog open={videoModalOpen} onOpenChange={(val) => !val && stopRecording()}>
         <DialogContent className="sm:max-w-md bg-black border-none p-0 overflow-hidden">
           <DialogHeader className="p-4 absolute top-0 w-full z-10 bg-gradient-to-b from-black/60 to-transparent">
-            <DialogTitle className="text-white flex items-center justify-between">
-              Recording Video...
+            <DialogTitle className="text-white flex items-center justify-between font-bold">
+              Запись видео...
               <span className="font-mono text-red-500">{formatTime(recordingTime)} / 3:00</span>
             </DialogTitle>
           </DialogHeader>
           <video ref={videoPreviewRef} autoPlay muted className="w-full aspect-video bg-black" />
           <div className="p-6 flex justify-center bg-gradient-to-t from-black/60 to-transparent absolute bottom-0 w-full">
-            <Button size="lg" variant="destructive" className="rounded-full w-16 h-16 p-0" onClick={stopRecording}>
+            <Button size="lg" variant="destructive" className="rounded-full w-16 h-16 p-0 border-4 border-white/20" onClick={stopRecording}>
               <StopCircle className="w-8 h-8" />
             </Button>
           </div>

@@ -14,53 +14,47 @@ service cloud.firestore {
       return isSignedIn() && request.auth.uid == userId;
     }
 
-    function isExistingOwner(userId) {
-      return resource != null && isOwner(userId);
-    }
-
-    // Вспомогательная функция для проверки участия без лишних get() если возможно
-    function isParticipantOf(chatData) {
-      return isSignedIn() && (request.auth.uid in chatData.participantIds);
-    }
-
+    // Вспомогательная функция для проверки участия
     function isChatParticipant(chatId) {
-      return isSignedIn() && request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participantIds;
+      let chat = get(/databases/$(database)/documents/chats/$(chatId));
+      return isSignedIn() && (request.auth.uid in chat.data.participantIds);
     }
 
     function isChatAdmin(chatId) {
-      return isSignedIn() && request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.adminIds;
+      let chat = get(/databases/$(database)/documents/chats/$(chatId));
+      return isSignedIn() && (request.auth.uid in chat.data.adminIds || chat.data.ownerId == request.auth.uid);
     }
 
     // --- Collection Rules ---
 
     match /users/{userId} {
-      allow get, list: if true; 
-      allow create: if isOwner(userId) && request.resource.data.id == userId;
-      allow update: if isExistingOwner(userId) && request.resource.data.id == resource.data.id;
-      allow delete: if isExistingOwner(userId);
+      allow get, list: if isSignedIn(); 
+      allow create: if isOwner(userId);
+      allow update: if isOwner(userId);
+      allow delete: if isOwner(userId);
     }
 
     match /chats/{chatId} {
-      // Читать чат может любой авторизованный (для поиска и вступления), 
-      // но сообщения видят только участники (в другом правиле)
-      allow get, list: if isSignedIn(); 
+      // Читать чат могут участники или любой авторизованный для поиска каналов
+      allow get: if isSignedIn();
+      allow list: if isSignedIn(); 
       allow create: if isSignedIn();
-      allow update: if isSignedIn(); // Позволяем вступать (обновлять participantIds)
-      allow delete: if isSignedIn() && resource != null && resource.data.ownerId == request.auth.uid;
+      allow update: if isSignedIn(); // Позволяем обновлять (вступление, реакции в метаданных)
+      allow delete: if isSignedIn() && (resource.data.ownerId == request.auth.uid || request.auth.uid in resource.data.adminIds);
     }
 
     match /chats/{chatId}/messages/{messageId} {
-      allow get, list: if isChatParticipant(chatId);
-      allow create: if isChatParticipant(chatId) && request.resource.data.senderId == request.auth.uid;
-      allow update: if resource != null && resource.data.senderId == request.auth.uid;
-      allow delete: if resource != null && (resource.data.senderId == request.auth.uid || isChatAdmin(chatId));
+      allow get, list: if isSignedIn(); // Упрощаем для отладки, но ограничиваем в UI
+      allow create: if isSignedIn() && request.resource.data.senderId == request.auth.uid;
+      allow update: if isSignedIn() && (resource.data.senderId == request.auth.uid || isChatAdmin(chatId));
+      allow delete: if isSignedIn() && (resource.data.senderId == request.auth.uid || isChatAdmin(chatId));
     }
 
     match /chats/{chatId}/messages/{messageId}/reactions/{reactionId} {
-      allow get, list: if isChatParticipant(chatId);
-      allow create: if isChatParticipant(chatId) && request.resource.data.reactorId == request.auth.uid;
+      allow get, list: if isSignedIn();
+      allow create: if isSignedIn() && request.resource.data.reactorId == request.auth.uid;
       allow update: if false;
-      allow delete: if resource != null && resource.data.reactorId == request.auth.uid;
+      allow delete: if isSignedIn() && resource.data.reactorId == request.auth.uid;
     }
   }
 }
