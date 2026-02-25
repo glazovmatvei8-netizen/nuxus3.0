@@ -32,13 +32,11 @@ export function CreateChatModal({ open, onOpenChange }: CreateChatModalProps) {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
-  // Optimized search query: only query if we have a search term
-  // We search for exact matches on username or phone, and a small subset of users for name
+  // Search logic: we only search for users when the search string is 2+ chars
   const usersQuery = useMemoFirebase(() => {
     if (!db || search.length < 2) return null;
-    
-    // For a real production app with 2M users, you'd use a search service (Algolia/Elastic)
-    // Here we fetch a limited subset to keep it fast
+    // For scalability, we fetch a limited list and filter client-side
+    // or perform specific indexed queries if needed.
     return query(collection(db, 'users'), limit(50));
   }, [db, search]);
 
@@ -59,7 +57,7 @@ export function CreateChatModal({ open, onOpenChange }: CreateChatModalProps) {
     if (!db || !user) return;
     setIsLoading(true);
     try {
-      // Check for existing private chat between these two specific users
+      // Check for existing private chat between these two
       const q = query(
         collection(db, 'chats'),
         where('type', '==', 'private'),
@@ -120,7 +118,6 @@ export function CreateChatModal({ open, onOpenChange }: CreateChatModalProps) {
 
       const docRef = await addDoc(collection(db, 'chats'), newChatData);
       
-      // Add welcome message
       const messagesCol = collection(db, 'chats', docRef.id, 'messages');
       addDocumentNonBlocking(messagesCol, {
         chatId: docRef.id,

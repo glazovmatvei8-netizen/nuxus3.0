@@ -31,18 +31,11 @@ export default function AuthScreen() {
 
   const normalizePhone = (phone: string) => {
     let digits = phone.replace(/\D/g, '');
+    // Handle Russian local format 8 -> 7
     if (digits.length === 11 && digits.startsWith('8')) {
       digits = '7' + digits.substring(1);
     }
-    if (!digits.startsWith('+') && digits.length > 0) {
-      // We'll use the digits for the email, but for display we want a standard format
-    }
     return digits;
-  };
-
-  const validatePhone = (phone: string) => {
-    const digits = phone.replace(/\D/g, '');
-    return digits.length >= 10;
   };
 
   const handleAuth = async (e: React.FormEvent) => {
@@ -55,12 +48,8 @@ export default function AuthScreen() {
       return;
     }
 
-    if (!validatePhone(formData.phone)) {
-      toast({ title: "Ошибка", description: "Введите корректный номер телефона", variant: "destructive" });
-      return;
-    }
-
     setIsLoading(true);
+    // We use phone@nuxus.chat as a dummy email for Firebase Auth
     const loginEmail = `${phoneDigits}@nuxus.chat`;
 
     try {
@@ -74,7 +63,7 @@ export default function AuthScreen() {
         let username = formData.username.trim().toLowerCase();
         if (!username.startsWith('@')) username = '@' + username;
 
-        // Check if username is taken
+        // Check if username is already taken in Firestore
         const usernameQuery = query(collection(db, 'users'), where('username', '==', username));
         const usernameSnapshot = await getDocs(usernameQuery);
         
@@ -90,7 +79,7 @@ export default function AuthScreen() {
           id: result.user.uid,
           name: formData.name.trim(),
           username: username,
-          phone: formData.phone.trim(),
+          phone: `+${phoneDigits}`,
           createdAt: new Date().toISOString(),
           avatarUrl: `https://picsum.photos/seed/${result.user.uid}/200`,
           inactivityDeletion: 'never'
