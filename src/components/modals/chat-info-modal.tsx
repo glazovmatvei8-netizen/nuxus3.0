@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState } from 'react';
@@ -5,9 +6,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Sparkles, Users, Shield } from 'lucide-react';
-import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, where } from 'firebase/firestore';
+import { Sparkles, Users, Shield, Loader2 } from 'lucide-react';
+import { useFirestore, useCollection, useMemoFirebase, useUser } from '@/firebase';
+import { collection, query, where, orderBy, limit, getDocs } from 'firebase/firestore';
 import { chatConversationSummary } from '@/ai/flows/chat-conversation-summary-flow';
 import { useToast } from '@/hooks/use-toast';
 
@@ -19,6 +20,7 @@ interface ChatInfoModalProps {
 
 export function ChatInfoModal({ open, onOpenChange, chat }: ChatInfoModalProps) {
   const db = useFirestore();
+  const { user } = useUser();
   const [summary, setSummary] = useState<string | null>(null);
   const [isSummarizing, setIsSummarizing] = useState(false);
   const { toast } = useToast();
@@ -34,12 +36,27 @@ export function ChatInfoModal({ open, onOpenChange, chat }: ChatInfoModalProps) 
   const { data: members } = useCollection(membersQuery);
 
   const handleSummarize = async () => {
+    if (!db || !chat.id) return;
     setIsSummarizing(true);
     try {
-      // In a real app, you'd fetch the last messages here
-      // For now, we use a placeholder or previous messages if passed
-      toast({ title: "Summarizing...", description: "Analyzing conversation context." });
-      setSummary("This is an AI-generated summary of your recent conversation about the project.");
+      const msgsQuery = query(
+        collection(db, 'chats', chat.id, 'messages'),
+        orderBy('sentAt', 'desc'),
+        limit(20)
+      );
+      const snap = await getDocs(msgsQuery);
+      const msgs = snap.docs.map(d => ({
+        senderName: d.data().senderName || 'Unknown',
+        text: d.data().contentType === 'text' ? d.data().content : `[${d.data().contentType}]`
+      })).reverse();
+
+      if (msgs.length === 0) {
+        setSummary("Сообщений для суммаризации нет.");
+        return;
+      }
+
+      const { summary: aiSummary } = await chatConversationSummary({ chatMessages: msgs });
+      setSummary(aiSummary);
     } catch (e) {
       toast({ title: "Summary Error", description: "Failed to summarize chat", variant: "destructive" });
     } finally {
@@ -72,7 +89,7 @@ export function ChatInfoModal({ open, onOpenChange, chat }: ChatInfoModalProps) 
                 onClick={handleSummarize}
                 disabled={isSummarizing}
               >
-                {summary ? 'Refresh' : 'Generate'}
+                {isSummarizing ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : (summary ? 'Refresh' : 'Generate')}
               </Button>
             </div>
             <div className="bg-muted/20 border border-border/40 rounded-xl p-4 min-h-[60px] flex items-center justify-center text-center">

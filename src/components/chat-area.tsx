@@ -9,7 +9,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { 
   Send, Paperclip, Smile, MoreVertical, ChevronLeft, 
   Sparkles, MessageSquare, Info, Mic, Camera, X, StopCircle, UserPlus,
-  CornerUpLeft, Pencil, Trash2
+  CornerUpLeft, Pencil, Trash2, Loader2
 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { MessageItem } from './message-item';
@@ -20,6 +20,7 @@ import { collection, query, orderBy, doc, arrayUnion } from 'firebase/firestore'
 import { addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { suggestMessageDraft } from '@/ai/flows/ai-message-drafting-flow';
 import type { Message } from '@/lib/types';
 
 const EMOJIS = ['❤️', '👍', '😂', '🔥', '😮', '😢', '👏', '✅', '🚀', '🎉', '🙏', '💯'];
@@ -35,6 +36,7 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
   const { currentChatId, setCurrentChatId } = useAppState();
   const [inputText, setInputText] = useState('');
   const [isChatInfoOpen, setIsChatInfoOpen] = useState(false);
+  const [isSuggesting, setIsSuggesting] = useState(false);
   
   // Telegram-like states
   const [replyTo, setReplyTo] = useState<Message | null>(null);
@@ -150,27 +152,24 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
     if (type === 'text') setInputText('');
   };
 
-  const handleReply = (message: Message) => {
-    setReplyTo(message);
-    setEditMessage(null);
-  };
-
-  const handleEdit = (message: Message) => {
-    setEditMessage(message);
-    setInputText(message.content);
-    setReplyTo(null);
-  };
-
-  const joinChat = () => {
-    if (!chatRef || !user) return;
-    updateDocumentNonBlocking(chatRef, {
-      participantIds: arrayUnion(user.uid)
-    });
-    toast({ title: "Успех!", description: "Вы вступили в переписку." });
-  };
-
-  const addEmoji = (emoji: string) => {
-    setInputText(prev => prev + emoji);
+  const handleAISuggest = async () => {
+    if (!messages || messages.length === 0) return;
+    setIsSuggesting(true);
+    try {
+      const history = messages.slice(-5).map(m => ({
+        sender: m.senderName,
+        message: m.contentType === 'text' ? m.content : `[${m.contentType}]`
+      }));
+      const { draftMessage } = await suggestMessageDraft({
+        conversationHistory: history,
+        currentUserInput: inputText
+      });
+      setInputText(draftMessage);
+    } catch (e) {
+      toast({ title: "AI Error", description: "Could not get suggestion.", variant: "destructive" });
+    } finally {
+      setIsSuggesting(false);
+    }
   };
 
   const startAudioRecording = async () => {
@@ -216,21 +215,6 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
       setVideoModalOpen(false);
       toast({ title: "Ошибка", description: "Нет доступа к камере", variant: "destructive" });
     }
-  };
-
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.readAsDataURL(file);
-      reader.onloadend = () => handleSendMessage(reader.result as string, 'image');
-    }
-  };
-
-  const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
   const otherId = chat?.type === 'private' && user ? chat.participantIds?.find((id: string) => id !== user.uid) : null;
@@ -285,7 +269,7 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
             </div>
             <h3 className="text-lg font-bold">Вы не являетесь участником</h3>
             <p className="text-sm text-muted-foreground max-w-xs">Вступите, чтобы общаться.</p>
-            <Button onClick={joinChat} className="rounded-xl px-8 h-12 shadow-lg shadow-primary/20">Вступить</Button>
+            <Button onClick={() => updateDocumentNonBlocking(chatRef!, { participantIds: arrayUnion(user?.uid) })} className="rounded-xl px-8 h-12 shadow-lg shadow-primary/20">Вступить</Button>
           </div>
         ) : (
           <div className="flex flex-col gap-2 max-w-4xl mx-auto min-h-full pb-4">
@@ -295,8 +279,8 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
                 message={msg} 
                 isMe={msg.senderId === user?.uid}
                 chatId={currentChatId}
-                onReply={() => handleReply(msg)}
-                onEdit={() => handleEdit(msg)}
+                onReply={() => setReplyTo(msg)}
+                onEdit={() => { setEditMessage(msg); setInputText(msg.content); }}
               />
             ))}
           </div>
@@ -314,7 +298,7 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
               <div className="flex items-center justify-between bg-primary/10 p-3 rounded-2xl animate-in slide-in-from-bottom-2 mb-2">
                 <div className="flex items-center gap-3 text-primary">
                   <Mic className="w-5 h-5 animate-pulse" />
-                  <span className="font-mono font-bold">{formatTime(recordingTime)}</span>
+                  <span className="font-mono font-bold">0:{recordingTime.toString().padStart(2, '0')}</span>
                   <span className="text-sm hidden sm:inline">Запись голоса...</span>
                 </div>
                 <Button size="icon" variant="ghost" className="text-destructive" onClick={stopRecording}>
@@ -338,42 +322,29 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
               </div>
             )}
 
-            {editMessage && (
-              <div className="flex items-center justify-between bg-muted/40 p-2 rounded-xl border-l-4 border-accent animate-in slide-in-from-bottom-2 mb-2">
-                <div className="flex items-center gap-3 overflow-hidden">
-                  <Pencil className="w-4 h-4 text-accent shrink-0" />
-                  <div className="flex flex-col min-w-0">
-                    <span className="text-xs font-bold text-accent truncate">Редактирование</span>
-                    <span className="text-[10px] text-muted-foreground truncate">{editMessage.content}</span>
-                  </div>
-                </div>
-                <Button size="icon" variant="ghost" className="h-6 w-6 rounded-full" onClick={() => { setEditMessage(null); setInputText(''); }}>
-                  <X className="w-4 h-4" />
-                </Button>
-              </div>
-            )}
-
             <div className="flex items-end gap-1 md:gap-2">
               <div className="flex items-center gap-0.5 md:gap-1 mb-1">
-                <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleFileSelect} />
+                <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) {
+                    const reader = new FileReader();
+                    reader.onloadend = () => handleSendMessage(reader.result as string, 'image');
+                    reader.readAsDataURL(file);
+                  }
+                }} />
                 <Button variant="ghost" size="icon" className="h-9 w-9 md:h-10 md:w-10 text-muted-foreground hover:text-primary" onClick={() => fileInputRef.current?.click()}>
                   <Paperclip className="w-5 h-5" />
                 </Button>
                 
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-9 w-9 md:h-10 md:w-10 text-muted-foreground hover:text-primary hidden sm:inline-flex">
-                      <Smile className="w-5 h-5" />
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-64 p-2 bg-card/95 backdrop-blur-xl border-border/40" side="top">
-                    <div className="grid grid-cols-6 gap-1">
-                      {EMOJIS.map(emoji => (
-                        <button key={emoji} onClick={() => addEmoji(emoji)} className="text-xl hover:bg-muted p-1 rounded transition-colors">{emoji}</button>
-                      ))}
-                    </div>
-                  </PopoverContent>
-                </Popover>
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className={cn("h-9 w-9 md:h-10 md:w-10 text-muted-foreground hover:text-primary transition-all", isSuggesting && "animate-spin")}
+                  onClick={handleAISuggest}
+                  disabled={isSuggesting}
+                >
+                  {isSuggesting ? <Loader2 className="w-5 h-5" /> : <Sparkles className="w-5 h-5 text-accent" />}
+                </Button>
               </div>
 
               <div className="flex-1 relative group">
@@ -395,20 +366,10 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
               </div>
 
               <div className="flex items-center gap-0.5 md:gap-1 mb-1">
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
-                  className="h-9 w-9 md:h-10 md:w-10 text-muted-foreground hover:text-primary hidden sm:inline-flex" 
-                  onClick={startVideoRecording}
-                >
+                <Button variant="ghost" size="icon" className="h-9 w-9 md:h-10 md:w-10 text-muted-foreground hover:text-primary hidden sm:inline-flex" onClick={startVideoRecording}>
                   <Camera className="w-5 h-5" />
                 </Button>
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
-                  className={`h-9 w-9 md:h-10 md:w-10 text-muted-foreground hover:text-primary ${isRecordingAudio ? 'text-primary' : ''}`}
-                  onClick={isRecordingAudio ? stopRecording : startAudioRecording}
-                >
+                <Button variant="ghost" size="icon" className={cn("h-9 w-9 md:h-10 md:w-10 text-muted-foreground hover:text-primary", isRecordingAudio && "text-primary")} onClick={isRecordingAudio ? stopRecording : startAudioRecording}>
                   <Mic className="w-5 h-5" />
                 </Button>
               </div>
@@ -422,7 +383,7 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
           <DialogHeader className="p-4 absolute top-0 w-full z-10 bg-gradient-to-b from-black/60 to-transparent">
             <DialogTitle className="text-white flex items-center justify-between font-bold">
               Запись видео...
-              <span className="font-mono text-red-500">{formatTime(recordingTime)} / 3:00</span>
+              <span className="font-mono text-red-500">0:{recordingTime.toString().padStart(2, '0')} / 3:00</span>
             </DialogTitle>
           </DialogHeader>
           <video ref={videoPreviewRef} autoPlay muted className="w-full aspect-video bg-black" />

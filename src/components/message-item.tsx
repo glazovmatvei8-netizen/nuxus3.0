@@ -122,7 +122,7 @@ export function MessageItem({ message, isMe, chatId, onReply, onEdit }: MessageI
         );
       case 'service':
         return (
-          <div className="flex justify-center my-4">
+          <div className="flex justify-center my-4 w-full">
             <span className="bg-muted/30 px-4 py-1.5 rounded-full text-[10px] uppercase font-bold tracking-wider text-muted-foreground border border-border/20">
               {message.content}
             </span>
@@ -227,7 +227,8 @@ export function MessageItem({ message, isMe, chatId, onReply, onEdit }: MessageI
 
       {isReactionPickerOpen && (
         <Popover open={isReactionPickerOpen} onOpenChange={setIsReactionPickerOpen}>
-           <PopoverContent className="w-auto p-1 rounded-full border-border/40 backdrop-blur-xl bg-card/60" side="top">
+          <PopoverTrigger asChild><div className="hidden" /></PopoverTrigger>
+          <PopoverContent className="w-auto p-1 rounded-full border-border/40 backdrop-blur-xl bg-card/60" side="top">
             <div className="flex gap-1">
               {REACTIONS.map(emoji => (
                 <button key={emoji} onClick={() => handleAddReaction(emoji)} className="hover:scale-125 transition-transform p-1 text-lg">{emoji}</button>
