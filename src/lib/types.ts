@@ -3,7 +3,7 @@ export type MessageType = 'text' | 'image' | 'service' | 'audio' | 'video';
 
 export interface Reaction {
   emoji: string;
-  users: string[]; // array of phone/ids
+  users: string[]; 
 }
 
 export interface Message {
@@ -14,7 +14,6 @@ export interface Message {
   content: string;
   sentAt: string;
   contentType: MessageType;
-  duration?: number;
   replyToId?: string;
   replyToContent?: string;
   editedAt?: string;
@@ -43,7 +42,7 @@ export interface Chat {
 }
 
 export interface UserSettings {
-  theme: 'default' | 'ocean' | 'forest' | 'sunset' | 'midnight';
+  theme: 'default' | 'ocean' | 'midnight';
   chatBackground: string;
   messageSize: 'small' | 'medium' | 'large';
 }
@@ -53,10 +52,8 @@ export interface User {
   phone: string;
   name: string;
   username: string;
-  bio?: string;
   avatarUrl: string | null;
   lastSeen?: string;
   createdAt: string;
-  inactivityDeletion?: string;
   settings?: UserSettings;
 }

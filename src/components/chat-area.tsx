@@ -67,12 +67,6 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
     return chat.participantIds?.includes(user.uid) || false;
   }, [chat, user]);
 
-  const canReadMessages = useMemo(() => {
-    if (!chat) return false;
-    if (chat.type === 'group' || chat.type === 'channel') return true;
-    return isParticipant;
-  }, [chat, isParticipant]);
-
   const otherId = chat?.type === 'private' && user ? chat.participantIds?.find((id: string = '') => id !== user.uid) : null;
   const otherUserRef = useMemoFirebase(() => {
     if (!db || !otherId) return null;
@@ -81,12 +75,12 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
   const { data: otherUserProfile, isLoading: isOtherProfileLoading } = useDoc(otherUserRef);
 
   const messagesQuery = useMemoFirebase(() => {
-    if (!db || !currentChatId || !chat || !canReadMessages) return null;
+    if (!db || !currentChatId || !isParticipant) return null;
     return query(
       collection(db, 'chats', currentChatId, 'messages'),
       orderBy('sentAt', 'asc')
     );
-  }, [db, currentChatId, chat, canReadMessages]);
+  }, [db, currentChatId, isParticipant]);
   
   const { data: messages, isLoading: isMessagesLoading } = useCollection<Message>(messagesQuery);
 
@@ -256,7 +250,7 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
           <div className="absolute inset-0 z-[-1] brightness-100" style={bgStyle} />
         )}
         <ScrollArea ref={scrollRef} className="h-full px-4 py-4">
-          {(!canReadMessages && !isChatLoading && chat) ? (
+          {!isParticipant && !isChatLoading && chat ? (
             <div className="flex flex-col items-center justify-center h-full gap-4">
               <UserPlus className="w-12 h-12 text-primary" />
               <p className="text-muted-foreground">Вы не в чате</p>
@@ -270,12 +264,6 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
               {isMessagesLoading && (
                 <div className="flex justify-center p-8">
                   <Loader2 className="w-8 h-8 animate-spin text-primary" />
-                </div>
-              )}
-              {(chat && !isParticipant && chat.type !== 'private') && (
-                <div className="flex flex-col items-center gap-3 py-10 bg-card/40 backdrop-blur-md rounded-2xl border border-primary/20 mt-10">
-                   <p className="text-sm font-semibold">Вы просматриваете этот {chat?.type === 'group' ? 'чат' : 'канал'}</p>
-                   <Button onClick={() => updateDocumentNonBlocking(chatRef!, { participantIds: arrayUnion(user?.uid) })}>Вступить, чтобы писать</Button>
                 </div>
               )}
             </div>
