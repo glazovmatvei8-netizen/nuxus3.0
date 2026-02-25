@@ -6,11 +6,13 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Sparkles, Users, Shield, Loader2 } from 'lucide-react';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { Sparkles, Users, Shield, Loader2, Image as ImageIcon, Video, FileText } from 'lucide-react';
 import { useFirestore, useCollection, useMemoFirebase, useUser } from '@/firebase';
 import { collection, query, where, orderBy, limit, getDocs } from 'firebase/firestore';
 import { chatConversationSummary } from '@/ai/flows/chat-conversation-summary-flow';
 import { useToast } from '@/hooks/use-toast';
+import type { Message } from '@/lib/types';
 
 interface ChatInfoModalProps {
   open: boolean;
@@ -34,6 +36,16 @@ export function ChatInfoModal({ open, onOpenChange, chat }: ChatInfoModalProps) 
   }, [db, chat.participantIds]);
 
   const { data: members } = useCollection(membersQuery);
+
+  const mediaQuery = useMemoFirebase(() => {
+    if (!db || !chat.id) return null;
+    return query(
+      collection(db, 'chats', chat.id, 'messages'),
+      where('contentType', 'in', ['image', 'video']),
+      orderBy('sentAt', 'desc')
+    );
+  }, [db, chat.id]);
+  const { data: mediaMessages } = useCollection<Message>(mediaQuery);
 
   const handleSummarize = async () => {
     if (!db || !chat.id) return;
@@ -66,8 +78,8 @@ export function ChatInfoModal({ open, onOpenChange, chat }: ChatInfoModalProps) 
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md bg-card/95 backdrop-blur-xl border-border/40 p-0 overflow-hidden">
-        <DialogHeader className="p-6 bg-primary/5 border-b border-border/40 text-center flex flex-col items-center">
+      <DialogContent className="max-w-md bg-card/95 backdrop-blur-xl border-border/40 p-0 overflow-hidden max-h-[90vh] flex flex-col">
+        <DialogHeader className="p-6 bg-primary/5 border-b border-border/40 text-center flex flex-col items-center shrink-0">
           <Avatar className="h-24 w-24 border-4 border-background shadow-xl ring-2 ring-primary/20 mb-4">
             <AvatarImage src={chatAvatar || ''} />
             <AvatarFallback className="bg-primary/20 text-primary text-2xl font-bold uppercase">{chatName.slice(0, 2)}</AvatarFallback>
@@ -76,36 +88,48 @@ export function ChatInfoModal({ open, onOpenChange, chat }: ChatInfoModalProps) 
           <DialogDescription className="text-muted-foreground">{chat.username}</DialogDescription>
         </DialogHeader>
 
-        <div className="p-6 space-y-6">
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-2">
-                <Sparkles className="w-3 h-3 text-accent" /> AI Summary
-              </h3>
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                className={`h-7 px-2 text-[10px] font-bold ${isSummarizing ? 'animate-pulse' : ''}`}
-                onClick={handleSummarize}
-                disabled={isSummarizing}
-              >
-                {isSummarizing ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : (summary ? 'Refresh' : 'Generate')}
-              </Button>
-            </div>
-            <div className="bg-muted/20 border border-border/40 rounded-xl p-4 min-h-[60px] flex items-center justify-center text-center">
-              {summary ? (
-                <p className="text-sm leading-relaxed text-foreground/90 italic">"{summary}"</p>
-              ) : (
-                <p className="text-xs text-muted-foreground italic">No summary generated yet. Click generate to analyze recent conversation.</p>
-              )}
-            </div>
-          </div>
+        <Tabs defaultValue="info" className="flex-1 flex flex-col overflow-hidden">
+          <TabsList className="grid w-full grid-cols-3 bg-muted/20 border-b border-border/40 rounded-none h-12">
+            <TabsTrigger value="info" className="text-xs font-bold uppercase tracking-tight">Инфо</TabsTrigger>
+            <TabsTrigger value="members" className="text-xs font-bold uppercase tracking-tight">Участники</TabsTrigger>
+            <TabsTrigger value="media" className="text-xs font-bold uppercase tracking-tight">Медиа</TabsTrigger>
+          </TabsList>
 
-          <div className="space-y-4">
-            <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-2">
-              <Users className="w-3 h-3" /> Members ({chat.participantIds?.length || 0})
-            </h3>
-            <ScrollArea className="h-[180px]">
+          <ScrollArea className="flex-1">
+            <TabsContent value="info" className="p-6 space-y-6 m-0">
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-2">
+                    <Sparkles className="w-3 h-3 text-accent" /> AI Summary
+                  </h3>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className={`h-7 px-2 text-[10px] font-bold ${isSummarizing ? 'animate-pulse' : ''}`}
+                    onClick={handleSummarize}
+                    disabled={isSummarizing}
+                  >
+                    {isSummarizing ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : (summary ? 'Refresh' : 'Generate')}
+                  </Button>
+                </div>
+                <div className="bg-muted/20 border border-border/40 rounded-xl p-4 min-h-[60px] flex items-center justify-center text-center">
+                  {summary ? (
+                    <p className="text-sm leading-relaxed text-foreground/90 italic">"{summary}"</p>
+                  ) : (
+                    <p className="text-xs text-muted-foreground italic">No summary generated yet. Click generate to analyze recent conversation.</p>
+                  )}
+                </div>
+              </div>
+              
+              <div className="space-y-2">
+                <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Описание</h3>
+                <p className="text-sm text-foreground/80 leading-relaxed bg-muted/10 p-4 rounded-xl border border-border/40">
+                  {chat.description || 'Описание отсутствует.'}
+                </p>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="members" className="p-4 m-0">
               <div className="space-y-2">
                 {members?.map(user => {
                   const isAdmin = chat.adminIds?.includes(user.id);
@@ -130,14 +154,37 @@ export function ChatInfoModal({ open, onOpenChange, chat }: ChatInfoModalProps) 
                   );
                 })}
               </div>
-            </ScrollArea>
-          </div>
+            </TabsContent>
 
-          <div className="pt-2">
-            <Button variant="outline" className="w-full rounded-xl border-border/40" onClick={() => onOpenChange(false)}>
-              Close Details
-            </Button>
-          </div>
+            <TabsContent value="media" className="p-4 m-0">
+              {mediaMessages && mediaMessages.length > 0 ? (
+                <div className="grid grid-cols-3 gap-1">
+                  {mediaMessages.map(msg => (
+                    <div key={msg.id} className="aspect-square relative group cursor-pointer overflow-hidden rounded-md border border-border/20">
+                      {msg.contentType === 'image' ? (
+                        <img src={msg.content} className="w-full h-full object-cover transition-transform group-hover:scale-110" />
+                      ) : (
+                        <div className="w-full h-full bg-black flex items-center justify-center">
+                          <Video className="w-6 h-6 text-white" />
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="py-12 text-center text-muted-foreground space-y-2">
+                  <ImageIcon className="w-8 h-8 mx-auto opacity-20" />
+                  <p className="text-xs italic">Медиафайлы еще не отправлялись</p>
+                </div>
+              )}
+            </TabsContent>
+          </ScrollArea>
+        </Tabs>
+        
+        <div className="p-4 bg-muted/10 border-t border-border/40 shrink-0">
+          <Button variant="outline" className="w-full rounded-xl" onClick={() => onOpenChange(false)}>
+            Закрыть
+          </Button>
         </div>
       </DialogContent>
     </Dialog>

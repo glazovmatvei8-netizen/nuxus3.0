@@ -9,7 +9,7 @@ import { UserAvatar } from '@/components/user-avatar';
 import { 
   Send, Paperclip, Smile, MoreVertical, ChevronLeft, 
   Sparkles, MessageSquare, Info, Mic, Camera, X, StopCircle, UserPlus,
-  CornerUpLeft, Pencil, Trash2, Loader2
+  CornerUpLeft, Pencil, Trash2, Loader2, Pin, PinOff
 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { MessageItem } from './message-item';
@@ -69,6 +69,12 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
     return doc(db, 'chats', currentChatId);
   }, [db, currentChatId]);
   const { data: chat } = useDoc(chatRef);
+
+  const pinnedMsgRef = useMemoFirebase(() => {
+    if (!db || !currentChatId || !chat?.pinnedMessageId) return null;
+    return doc(db, 'chats', currentChatId, 'messages', chat.pinnedMessageId);
+  }, [db, currentChatId, chat?.pinnedMessageId]);
+  const { data: pinnedMessage } = useDoc<Message>(pinnedMsgRef);
 
   const otherId = chat?.type === 'private' && user ? chat.participantIds?.find((id: string = '') => id !== user.uid) : null;
   const otherUserRef = useMemoFirebase(() => {
@@ -246,6 +252,11 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
     }
   };
 
+  const handleUnpin = () => {
+    if (!chatRef) return;
+    updateDocumentNonBlocking(chatRef, { pinnedMessageId: null });
+  };
+
   const chatDisplayName = otherId && chat?.metadata ? chat.metadata[otherId]?.name : chat?.name;
   const statusString = isOtherProfileLoading ? 'загрузка...' : formatLastSeen(otherUserProfile?.lastSeen);
 
@@ -300,8 +311,25 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
         </div>
       </header>
 
+      {pinnedMessage && (
+        <div className="h-12 bg-card/40 backdrop-blur-md border-b border-border/40 px-4 flex items-center justify-between z-10 animate-in slide-in-from-top-2">
+          <div className="flex items-center gap-3 overflow-hidden cursor-pointer flex-1" onClick={() => {
+            const el = document.getElementById(`msg-${pinnedMessage.id}`);
+            el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }}>
+            <Pin className="w-4 h-4 text-primary shrink-0 rotate-45" />
+            <div className="flex flex-col min-w-0">
+              <span className="text-[10px] font-bold text-primary uppercase">Закрепленное сообщение</span>
+              <span className="text-xs truncate text-muted-foreground">{pinnedMessage.content}</span>
+            </div>
+          </div>
+          <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground" onClick={handleUnpin}>
+            <X className="w-4 h-4" />
+          </Button>
+        </div>
+      )}
+
       <div className="flex-1 relative z-10 overflow-hidden">
-        {/* Background Overlay - Opacity-100 for full brightness */}
         {customBackground && customBackground !== 'default' && (
           <div className="absolute inset-0 z-[-1] opacity-100" style={backgroundStyle} />
         )}

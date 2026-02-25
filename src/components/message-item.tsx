@@ -18,10 +18,10 @@ import {
   DropdownMenuSeparator
 } from "@/components/ui/dropdown-menu";
 import { format } from 'date-fns';
-import { SmilePlus, Play, Pause, CornerUpLeft, Pencil, Trash2, Check, CheckCheck } from 'lucide-react';
+import { SmilePlus, Play, Pause, CornerUpLeft, Pencil, Trash2, Check, CheckCheck, Pin } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { collection, doc } from 'firebase/firestore';
-import { addDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { addDocumentNonBlocking, deleteDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import type { Message } from '@/lib/types';
 
 interface MessageItemProps {
@@ -79,6 +79,11 @@ export function MessageItem({ message, isMe, chatId, onReply, onEdit, size = 'me
   const handleDelete = () => {
     if (!db || !chatId || !message.id) return;
     deleteDocumentNonBlocking(doc(db, 'chats', chatId, 'messages', message.id));
+  };
+
+  const handlePin = () => {
+    if (!db || !chatId) return;
+    updateDocumentNonBlocking(doc(db, 'chats', chatId), { pinnedMessageId: message.id });
   };
 
   const groupedReactions = (reactionsData || []).reduce((acc: Record<string, string[]>, curr) => {
@@ -144,7 +149,7 @@ export function MessageItem({ message, isMe, chatId, onReply, onEdit, size = 'me
   };
 
   return (
-    <div className={cn(
+    <div id={`msg-${message.id}`} className={cn(
       "flex gap-3 max-w-[85%] animate-in slide-in-from-bottom-2 px-1 py-0.5",
       isMe ? "ml-auto flex-row-reverse" : "mr-auto"
     )}>
@@ -199,6 +204,9 @@ export function MessageItem({ message, isMe, chatId, onReply, onEdit, size = 'me
                 <Pencil className="w-4 h-4" /> Изменить
               </DropdownMenuItem>
             )}
+            <DropdownMenuItem onClick={handlePin} className="gap-2">
+              <Pin className="w-4 h-4" /> Закрепить
+            </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={() => setIsReactionPickerOpen(true)} className="gap-2">
               <SmilePlus className="w-4 h-4" /> Реакция

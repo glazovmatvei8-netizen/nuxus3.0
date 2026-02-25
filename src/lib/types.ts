@@ -34,6 +34,7 @@ export interface Chat {
   adminIds: string[];
   createdAt: string;
   ownerId: string;
+  pinnedMessageId?: string | null;
   metadata?: Record<string, {
     name: string;
     username: string;
@@ -52,6 +53,7 @@ export interface User {
   phone: string;
   name: string;
   username: string;
+  bio?: string;
   avatarUrl: string | null;
   lastSeen?: string;
   createdAt: string;

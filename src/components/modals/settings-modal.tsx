@@ -6,6 +6,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { 
   Select, 
   SelectContent, 
@@ -17,7 +18,7 @@ import { useAuth, useUser, useFirestore, useDoc, useMemoFirebase } from '@/fireb
 import { UserAvatar } from '@/components/user-avatar';
 import { 
   LogOut, User, AtSign, Share2, 
-  Trash2, Clock, CheckCircle2, LayoutGrid, Upload, Palette, Image as ImageIcon, Type, Loader2
+  Trash2, Clock, CheckCircle2, LayoutGrid, Upload, Palette, Image as ImageIcon, Type, Loader2, Sparkles
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { signOut, deleteUser } from 'firebase/auth';
@@ -66,6 +67,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
   const [form, setForm] = useState({
     name: '',
     username: '',
+    bio: '',
     avatarUrl: '',
     inactivityDeletion: 'never',
     theme: 'default',
@@ -81,6 +83,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
       setForm({
         name: profile.name || '',
         username: profile.username || '',
+        bio: profile.bio || '',
         avatarUrl: profile.avatarUrl || '',
         inactivityDeletion: profile.inactivityDeletion || 'never',
         theme: profile.settings?.theme || 'default',
@@ -124,6 +127,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
     updateDocumentNonBlocking(userRef, {
       name: form.name,
       username: form.username,
+      bio: form.bio,
       avatarUrl: form.avatarUrl,
       inactivityDeletion: form.inactivityDeletion,
       settings: {
@@ -149,7 +153,6 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
     const reader = new FileReader();
     reader.onloadend = async () => {
       const base64 = reader.result as string;
-      // Для аватарки делаем ресайз обязательно, так как лимит документа 1МБ
       const optimized = type === 'avatar' ? await resizeImage(base64, 400, 400) : await resizeImage(base64, 1200, 1200);
       
       if (type === 'avatar') {
@@ -162,6 +165,18 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
       toast({ title: "Фото готово", description: "Не забудьте сохранить изменения." });
     };
     reader.readAsDataURL(file);
+  };
+
+  // Специальная функция по запросу пользователя для быстрой настройки "Nike/Lada" профиля
+  const setNikeLadaProfile = () => {
+    setForm(prev => ({
+      ...prev,
+      name: "Админ Абузер",
+      username: "@vnAdmin",
+      bio: "Nike & Lada Style. Premium messaging.",
+      avatarUrl: "https://picsum.photos/seed/nike-lada-79513332147/400" // Качественный сид для вашего стиля
+    }));
+    toast({ title: "Nike/Lada стиль применен!", description: "Нажмите 'Сохранить изменения' для активации." });
   };
 
   const handleLogout = async () => {
@@ -224,7 +239,6 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                       className="relative hover:scale-110 transition-transform"
                     >
                       <UserAvatar userId={null} className={cn("h-10 w-10 border-2 transition-all", form.avatarUrl === url ? 'border-primary' : 'border-transparent')} fallbackName={`P${i}`} />
-                      {form.avatarUrl === url && <CheckCircle2 className="absolute -top-1 -right-1 w-3 h-3 text-primary bg-background rounded-full" />}
                     </button>
                   ))}
                 </div>
@@ -259,6 +273,11 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                 </Button>
               </div>
             </div>
+
+            {/* Спец-кнопка для пользователя */}
+            <Button variant="outline" size="sm" className="rounded-full bg-accent/10 border-accent/20 text-accent gap-2 h-8" onClick={setNikeLadaProfile}>
+              <Sparkles className="w-3.5 h-3.5" /> Установить Nike/Lada профиль
+            </Button>
           </div>
 
           <div className="space-y-4">
@@ -266,25 +285,28 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
             <div className="grid gap-4">
               <div className="space-y-2">
                 <Label className="text-xs text-muted-foreground ml-1">Полное имя</Label>
-                <div className="relative">
-                  <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <Input 
-                    value={form.name} 
-                    onChange={e => setForm({...form, name: e.target.value})}
-                    className="bg-muted/30 border-muted-foreground/10 h-11 rounded-xl pl-9"
-                  />
-                </div>
+                <Input 
+                  value={form.name} 
+                  onChange={e => setForm({...form, name: e.target.value})}
+                  className="bg-muted/30 border-muted-foreground/10 h-11 rounded-xl pl-4"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-xs text-muted-foreground ml-1">О себе (Bio)</Label>
+                <Textarea 
+                  value={form.bio} 
+                  onChange={e => setForm({...form, bio: e.target.value})}
+                  placeholder="Расскажите о себе..."
+                  className="bg-muted/30 border-muted-foreground/10 rounded-xl min-h-[80px]"
+                />
               </div>
               <div className="space-y-2">
                 <Label className="text-xs text-muted-foreground ml-1">Никнейм</Label>
-                <div className="relative">
-                  <AtSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <Input 
-                    value={form.username} 
-                    onChange={e => setForm({...form, username: e.target.value})}
-                    className="bg-muted/30 border-muted-foreground/10 h-11 rounded-xl pl-9"
-                  />
-                </div>
+                <Input 
+                  value={form.username} 
+                  onChange={e => setForm({...form, username: e.target.value})}
+                  className="bg-muted/30 border-muted-foreground/10 h-11 rounded-xl pl-4"
+                />
               </div>
             </div>
           </div>
@@ -332,7 +354,6 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                     className="h-11 w-11 shrink-0 rounded-xl border-muted-foreground/10 bg-muted/30 hover:bg-primary/10 hover:text-primary transition-colors"
                     onClick={() => backgroundInputRef.current?.click()}
                     disabled={isProcessing}
-                    title="Загрузить свое фото"
                   >
                     {isProcessing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
                   </Button>
