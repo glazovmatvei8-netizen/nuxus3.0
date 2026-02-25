@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -12,7 +12,7 @@ import {
 import { format } from 'date-fns';
 import { SmilePlus } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { collection, doc, deleteDoc } from 'firebase/firestore';
+import { collection, doc } from 'firebase/firestore';
 import { addDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 interface MessageItemProps {
@@ -27,6 +27,18 @@ export function MessageItem({ message, isMe, chatId }: MessageItemProps) {
   const { user } = useUser();
   const db = useFirestore();
   const [isReactionPickerOpen, setIsReactionPickerOpen] = useState(false);
+  const [formattedTime, setFormattedTime] = useState<string>('');
+
+  // Handle time formatting on client to avoid hydration mismatch
+  useEffect(() => {
+    if (message.sentAt) {
+      try {
+        setFormattedTime(format(new Date(message.sentAt), 'HH:mm'));
+      } catch (e) {
+        setFormattedTime('');
+      }
+    }
+  }, [message.sentAt]);
 
   const reactionsQuery = useMemoFirebase(() => {
     if (!db || !chatId || !message.id) return null;
@@ -119,7 +131,7 @@ export function MessageItem({ message, isMe, chatId }: MessageItemProps) {
               "text-[9px] mt-1 text-right",
               isMe ? "text-white/60" : "text-muted-foreground/60"
             )}>
-              {message.sentAt ? format(new Date(message.sentAt), 'HH:mm') : ''}
+              {formattedTime}
             </div>
           </div>
 
