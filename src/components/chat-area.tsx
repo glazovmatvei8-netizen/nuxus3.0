@@ -15,7 +15,7 @@ import { suggestMessageDraft } from '@/ai/flows/ai-message-drafting-flow';
 import { useToast } from '@/hooks/use-toast';
 import { ChatInfoModal } from './modals/chat-info-modal';
 import { useFirestore, useUser, useCollection, useDoc, useMemoFirebase } from '@/firebase';
-import { collection, query, orderBy, doc, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, query, orderBy, doc } from 'firebase/firestore';
 import { addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 interface ChatAreaProps {
@@ -32,6 +32,13 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
   const [isChatInfoOpen, setIsChatInfoOpen] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
+
+  // Fetch current user profile to use real name in messages
+  const userProfileRef = useMemoFirebase(() => {
+    if (!db || !user) return null;
+    return doc(db, 'users', user.uid);
+  }, [db, user]);
+  const { data: userProfile } = useDoc(userProfileRef);
 
   const chatRef = useMemoFirebase(() => {
     if (!db || !currentChatId) return null;
@@ -63,7 +70,7 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
     const messageData = {
       chatId: currentChatId,
       senderId: user.uid,
-      senderName: user.email?.split('@')[0] || 'User',
+      senderName: userProfile?.name || 'User', // Use real name from profile
       content: inputText,
       contentType: 'text',
       sentAt: new Date().toISOString(),

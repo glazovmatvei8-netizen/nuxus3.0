@@ -11,9 +11,8 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { CreateChatModal } from './modals/create-chat-modal';
 import { SettingsModal } from './modals/settings-modal';
 import type { ChatType } from '@/lib/types';
-import { formatDistanceToNow } from 'date-fns';
-import { useFirestore, useUser, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, where, orderBy } from 'firebase/firestore';
+import { useFirestore, useUser, useCollection, useDoc, useMemoFirebase } from '@/firebase';
+import { collection, query, where, doc } from 'firebase/firestore';
 
 export default function ChatSidebar() {
   const { user } = useUser();
@@ -23,6 +22,14 @@ export default function ChatSidebar() {
   const [activeTab, setActiveTab] = useState<ChatType | 'all'>('all');
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+
+  // Fetch current user's profile for display
+  const userProfileRef = useMemoFirebase(() => {
+    if (!db || !user) return null;
+    return doc(db, 'users', user.uid);
+  }, [db, user]);
+
+  const { data: profile } = useDoc(userProfileRef);
 
   // Memoized query for chats where the current user is a participant
   const chatsQuery = useMemoFirebase(() => {
@@ -51,12 +58,18 @@ export default function ChatSidebar() {
             onClick={() => setIsSettingsOpen(true)}
           >
             <Avatar className="h-10 w-10 border-2 border-primary/20 ring-primary/10 ring-offset-2 ring-offset-background group-hover:scale-105 transition-transform">
-              <AvatarImage src="" />
-              <AvatarFallback className="bg-primary text-white uppercase">{user?.email?.slice(0, 2)}</AvatarFallback>
+              <AvatarImage src={profile?.avatarUrl || ''} />
+              <AvatarFallback className="bg-primary text-white uppercase font-bold">
+                {profile?.name?.slice(0, 2) || '??'}
+              </AvatarFallback>
             </Avatar>
-            <div className="flex flex-col">
-              <span className="font-semibold text-sm leading-tight group-hover:text-primary transition-colors">{user?.email}</span>
-              <span className="text-xs text-muted-foreground">Online</span>
+            <div className="flex flex-col min-w-0">
+              <span className="font-semibold text-sm leading-tight group-hover:text-primary transition-colors truncate">
+                {profile?.name || 'Loading...'}
+              </span>
+              <span className="text-xs text-muted-foreground truncate">
+                {profile?.username || '...'}
+              </span>
             </div>
           </div>
           <Button variant="ghost" size="icon" className="rounded-full hover:bg-muted/50" onClick={() => setIsSettingsOpen(true)}>
