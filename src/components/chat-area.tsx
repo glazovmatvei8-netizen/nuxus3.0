@@ -195,6 +195,11 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
+  // Resolve chat display info
+  const otherId = chat?.type === 'private' && user ? chat.participantIds.find((id: string) => id !== user.uid) : null;
+  const chatDisplayName = otherId && chat?.metadata ? chat.metadata[otherId]?.name : chat?.name;
+  const chatDisplayAvatar = otherId && chat?.metadata ? chat.metadata[otherId]?.avatarUrl : chat?.avatarUrl;
+
   if (!currentChatId) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center text-center p-8 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-primary/5 to-background">
@@ -216,11 +221,11 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
           </Button>
           <div className="flex items-center gap-3 cursor-pointer" onClick={() => setIsChatInfoOpen(true)}>
             <Avatar className="h-10 w-10 ring-2 ring-primary/20">
-              <AvatarImage src={chat?.avatarUrl || ''} />
-              <AvatarFallback className="bg-primary/20 text-primary font-bold">{chat?.name?.slice(0, 2)}</AvatarFallback>
+              <AvatarImage src={chatDisplayAvatar || ''} />
+              <AvatarFallback className="bg-primary/20 text-primary font-bold">{chatDisplayName?.slice(0, 2)}</AvatarFallback>
             </Avatar>
             <div className="flex flex-col">
-              <span className="font-semibold text-sm leading-tight">{chat?.name}</span>
+              <span className="font-semibold text-sm leading-tight">{chatDisplayName}</span>
               <span className="text-xs text-green-500 font-medium">Online</span>
             </div>
           </div>

@@ -6,13 +6,13 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useAppState } from '@/lib/store';
-import { useFirestore, useUser, useCollection, useMemoFirebase } from '@/firebase';
+import { useFirestore, useUser, useCollection, useMemoFirebase, useDoc } from '@/firebase';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Search, Users, Radio, MessageSquarePlus, ArrowRight, Loader2, Contact } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
 import type { ChatType } from '@/lib/types';
-import { collection, query, addDoc, getDocs, where, limit } from 'firebase/firestore';
+import { collection, query, addDoc, getDocs, where, limit, doc } from 'firebase/firestore';
 import { addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 interface CreateChatModalProps {
@@ -32,11 +32,15 @@ export function CreateChatModal({ open, onOpenChange }: CreateChatModalProps) {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
-  // Search logic: we only search for users when the search string is 2+ chars
+  const userProfileRef = useMemoFirebase(() => {
+    if (!db || !user) return null;
+    return doc(db, 'users', user.uid);
+  }, [db, user]);
+  const { data: currentUserProfile } = useDoc(userProfileRef);
+
+  // Search logic
   const usersQuery = useMemoFirebase(() => {
     if (!db || search.length < 2) return null;
-    // For scalability, we fetch a limited list and filter client-side
-    // or perform specific indexed queries if needed.
     return query(collection(db, 'users'), limit(50));
   }, [db, search]);
 
@@ -44,20 +48,16 @@ export function CreateChatModal({ open, onOpenChange }: CreateChatModalProps) {
 
   const filteredUsers = (allUsers || []).filter(u => {
     if (u.id === user?.uid) return false;
-    
     const searchLower = search.toLowerCase();
-    const nameMatch = u.name?.toLowerCase().includes(searchLower);
-    const usernameMatch = u.username?.toLowerCase().includes(searchLower);
-    const phoneMatch = u.phone?.replace(/\D/g, '').includes(search.replace(/\D/g, ''));
-    
-    return nameMatch || usernameMatch || phoneMatch;
+    return u.name?.toLowerCase().includes(searchLower) || 
+           u.username?.toLowerCase().includes(searchLower) || 
+           u.phone?.includes(search);
   });
 
   const startPrivateChat = async (otherUser: any) => {
-    if (!db || !user) return;
+    if (!db || !user || !currentUserProfile) return;
     setIsLoading(true);
     try {
-      // Check for existing private chat between these two
       const q = query(
         collection(db, 'chats'),
         where('type', '==', 'private'),
@@ -77,13 +77,26 @@ export function CreateChatModal({ open, onOpenChange }: CreateChatModalProps) {
 
       const newChatData = {
         type: 'private' as const,
+        participantIds: [user.uid, otherUser.id],
+        adminIds: [user.uid, otherUser.id], // Оба админы в личке
+        ownerId: user.uid,
+        createdAt: new Date().toISOString(),
+        // Сохраняем данные обоих для корректного отображения имен
+        metadata: {
+          [user.uid]: {
+            name: currentUserProfile.name,
+            username: currentUserProfile.username,
+            avatarUrl: currentUserProfile.avatarUrl || null
+          },
+          [otherUser.id]: {
+            name: otherUser.name,
+            username: otherUser.username,
+            avatarUrl: otherUser.avatarUrl || null
+          }
+        },
+        // Дефолтные значения для совместимости
         name: otherUser.name,
         username: otherUser.username,
-        avatarUrl: otherUser.avatarUrl || null,
-        participantIds: [user.uid, otherUser.id],
-        adminIds: [user.uid],
-        createdAt: new Date().toISOString(),
-        ownerId: user.uid,
       };
 
       const docRef = await addDoc(collection(db, 'chats'), newChatData);

@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState } from 'react';
@@ -23,15 +24,12 @@ export default function ChatSidebar() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
-  // Fetch current user's profile for display
   const userProfileRef = useMemoFirebase(() => {
     if (!db || !user) return null;
     return doc(db, 'users', user.uid);
   }, [db, user]);
-
   const { data: profile } = useDoc(userProfileRef);
 
-  // Memoized query for chats where the current user is a participant
   const chatsQuery = useMemoFirebase(() => {
     if (!db || !user) return null;
     return query(
@@ -39,13 +37,15 @@ export default function ChatSidebar() {
       where('participantIds', 'array-contains', user.uid)
     );
   }, [db, user]);
-
   const { data: chats, isLoading } = useCollection(chatsQuery);
 
   const filteredChats = (chats || []).filter(chat => {
+    const chatName = chat.type === 'private' && chat.metadata && user
+      ? chat.metadata[chat.participantIds.find((id: string) => id !== user.uid)]?.name || chat.name
+      : chat.name;
+    
     const matchesTab = activeTab === 'all' || chat.type === activeTab;
-    const matchesSearch = chat.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                        chat.username?.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesSearch = chatName?.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesTab && matchesSearch;
   });
 
@@ -107,7 +107,11 @@ export default function ChatSidebar() {
         ) : (
           <div className="space-y-1">
             {filteredChats.map(chat => {
-              const chatName = chat.name || 'Unknown Chat';
+              const otherId = chat.type === 'private' && user ? chat.participantIds.find((id: string) => id !== user.uid) : null;
+              const chatDisplayName = otherId && chat.metadata ? chat.metadata[otherId]?.name : chat.name;
+              const chatDisplayUsername = otherId && chat.metadata ? chat.metadata[otherId]?.username : chat.username;
+              const chatDisplayAvatar = otherId && chat.metadata ? chat.metadata[otherId]?.avatarUrl : chat.avatarUrl;
+              
               const isActive = currentChatId === chat.id;
 
               return (
@@ -120,19 +124,19 @@ export default function ChatSidebar() {
                 >
                   <div className="relative">
                     <Avatar className="h-12 w-12 border-2 border-transparent group-hover:border-primary/20 transition-all">
-                      <AvatarImage src={chat.avatarUrl || ''} />
+                      <AvatarImage src={chatDisplayAvatar || ''} />
                       <AvatarFallback className={`${isActive ? 'bg-white/20' : 'bg-primary/10 text-primary'} uppercase font-bold`}>
-                        {chatName.slice(0, 2)}
+                        {chatDisplayName?.slice(0, 2) || '??'}
                       </AvatarFallback>
                     </Avatar>
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between gap-2">
-                      <span className="font-semibold truncate text-sm">{chatName}</span>
+                      <span className="font-semibold truncate text-sm">{chatDisplayName}</span>
                     </div>
                     <div className="flex items-center justify-between">
                       <p className={`text-xs truncate ${isActive ? 'text-white/80' : 'text-muted-foreground'}`}>
-                        {chat.description || chat.username}
+                        {chat.description || chatDisplayUsername}
                       </p>
                     </div>
                   </div>
