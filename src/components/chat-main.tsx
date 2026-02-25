@@ -11,7 +11,7 @@ export default function ChatMain() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
   return (
-    <div className="flex h-[100svh] w-full bg-background max-w-[1600px] mx-auto overflow-hidden shadow-2xl relative">
+    <div className="fixed inset-0 flex w-full bg-background max-w-[1600px] mx-auto overflow-hidden shadow-2xl">
       <div className={cn(
         "absolute inset-0 md:relative md:flex transition-all duration-300 z-30 bg-background",
         "w-full md:w-[350px] lg:w-[400px] h-full flex-shrink-0 border-r border-border/40",

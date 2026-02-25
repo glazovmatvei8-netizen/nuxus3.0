@@ -38,6 +38,8 @@
   }
   body {
     @apply bg-background text-foreground font-body antialiased;
+    overscroll-behavior-y: none;
+    -webkit-tap-highlight-color: transparent;
   }
 }
 
@@ -47,4 +49,11 @@
 .scrollbar-hide {
   -ms-overflow-style: none;
   scrollbar-width: none;
+}
+
+/* Фикс для мобильных браузеров, чтобы контент не прыгал под клавиатуру */
+@supports (-webkit-touch-callout: none) {
+  .h-viewport {
+    height: -webkit-fill-available;
+  }
 }
