@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useRef } from 'react';
@@ -18,7 +17,7 @@ import { useAuth, useUser, useFirestore, useDoc, useMemoFirebase } from '@/fireb
 import { UserAvatar } from '@/components/user-avatar';
 import { 
   LogOut, User, AtSign, Share2, 
-  Trash2, Clock, CheckCircle2, LayoutGrid, Upload, Palette, Image as ImageIcon, Type, Loader2, Sparkles
+  Trash2, LayoutGrid, Upload, Palette, Image as ImageIcon, Type, Loader2
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { signOut, deleteUser } from 'firebase/auth';
@@ -167,19 +166,6 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
     reader.readAsDataURL(file);
   };
 
-  // Специальная функция по запросу пользователя для быстрой настройки "Nike/Lada" профиля
-  const setNikeLadaProfile = () => {
-    const nikeAvatar = "https://picsum.photos/seed/nike-lada-79513332147/400";
-    setForm(prev => ({
-      ...prev,
-      name: "Админ Абузер",
-      username: "@vnAdmin",
-      bio: "Nike & Lada Style. Premium messaging.",
-      avatarUrl: nikeAvatar
-    }));
-    toast({ title: "Nike/Lada стиль применен!", description: "Нажмите 'Сохранить изменения' для активации." });
-  };
-
   const handleLogout = async () => {
     await signOut(auth);
     onOpenChange(false);
@@ -275,11 +261,6 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                 </Button>
               </div>
             </div>
-
-            {/* Спец-кнопка для пользователя */}
-            <Button variant="outline" size="sm" className="rounded-full bg-accent/10 border-accent/20 text-accent gap-2 h-8 font-bold" onClick={setNikeLadaProfile}>
-              <Sparkles className="w-3.5 h-3.5" /> Nike/Lada Style ✨
-            </Button>
           </div>
 
           <div className="space-y-4">
