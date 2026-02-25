@@ -5,7 +5,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useAppState } from '@/lib/store';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { UserAvatar } from '@/components/user-avatar';
 import { 
   Send, Paperclip, Smile, MoreVertical, ChevronLeft, 
   Sparkles, MessageSquare, Info, Mic, Camera, X, StopCircle, UserPlus,
@@ -21,6 +21,7 @@ import { addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/no
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { suggestMessageDraft } from '@/ai/flows/ai-message-drafting-flow';
+import { cn } from '@/lib/utils';
 import type { Message } from '@/lib/types';
 
 const EMOJIS = ['❤️', '👍', '😂', '🔥', '😮', '😢', '👏', '✅', '🚀', '🎉', '🙏', '💯'];
@@ -37,6 +38,7 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
   const [inputText, setInputText] = useState('');
   const [isChatInfoOpen, setIsChatInfoOpen] = useState(false);
   const [isSuggesting, setIsSuggesting] = useState(false);
+  const [isEmojiOpen, setIsEmojiOpen] = useState(false);
   
   // Telegram-like states
   const [replyTo, setReplyTo] = useState<Message | null>(null);
@@ -219,7 +221,6 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
 
   const otherId = chat?.type === 'private' && user ? chat.participantIds?.find((id: string) => id !== user.uid) : null;
   const chatDisplayName = otherId && chat?.metadata ? chat.metadata[otherId]?.name : chat?.name;
-  const chatDisplayAvatar = otherId && chat?.metadata ? chat.metadata[otherId]?.avatarUrl : chat?.avatarUrl;
 
   if (!currentChatId) {
     return (
@@ -241,10 +242,11 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
             <ChevronLeft className="w-5 h-5" />
           </Button>
           <div className="flex items-center gap-3 cursor-pointer min-w-0" onClick={() => setIsChatInfoOpen(true)}>
-            <Avatar className="h-9 w-9 md:h-10 md:w-10 ring-2 ring-primary/20 shrink-0">
-              <AvatarImage src={chatDisplayAvatar || ''} />
-              <AvatarFallback className="bg-primary/20 text-primary font-bold">{chatDisplayName?.slice(0, 2)}</AvatarFallback>
-            </Avatar>
+            <UserAvatar 
+              userId={chat?.type === 'private' ? otherId : null} 
+              fallbackName={chatDisplayName}
+              className="h-9 w-9 md:h-10 md:w-10 ring-2 ring-primary/20"
+            />
             <div className="flex flex-col min-w-0">
               <span className="font-semibold text-sm leading-tight truncate">{chatDisplayName}</span>
               <span className="text-[10px] text-muted-foreground truncate">{chat?.type === 'private' ? 'Личные сообщения' : (chat?.type === 'group' ? 'Группа' : 'Канал')}</span>
@@ -336,6 +338,27 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
                   <Paperclip className="w-5 h-5" />
                 </Button>
                 
+                <Popover open={isEmojiOpen} onOpenChange={setIsEmojiOpen}>
+                  <PopoverTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-9 w-9 md:h-10 md:w-10 text-muted-foreground hover:text-primary">
+                      <Smile className="w-5 h-5" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-2 bg-card/95 backdrop-blur-xl border-border/40 rounded-2xl" side="top">
+                    <div className="grid grid-cols-6 gap-1">
+                      {EMOJIS.map(emoji => (
+                        <button 
+                          key={emoji} 
+                          onClick={() => { setInputText(prev => prev + emoji); setIsEmojiOpen(false); }}
+                          className="text-xl hover:scale-125 transition-transform p-1"
+                        >
+                          {emoji}
+                        </button>
+                      ))}
+                    </div>
+                  </PopoverContent>
+                </Popover>
+
                 <Button 
                   variant="ghost" 
                   size="icon" 

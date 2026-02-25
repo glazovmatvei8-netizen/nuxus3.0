@@ -1,10 +1,11 @@
+
 "use client"
 
 import React, { useState } from 'react';
 import { useAppState } from '@/lib/store';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { UserAvatar } from '@/components/user-avatar';
 import { Search, Settings, Plus, Loader2 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -56,12 +57,11 @@ export default function ChatSidebar() {
             className="flex items-center gap-3 cursor-pointer group min-w-0"
             onClick={() => setIsSettingsOpen(true)}
           >
-            <Avatar className="h-10 w-10 border-2 border-primary/20 ring-primary/10 ring-offset-2 ring-offset-background group-hover:scale-105 transition-transform shrink-0">
-              <AvatarImage src={profile?.avatarUrl || ''} />
-              <AvatarFallback className="bg-primary text-white uppercase font-bold">
-                {profile?.name?.slice(0, 2) || '??'}
-              </AvatarFallback>
-            </Avatar>
+            <UserAvatar 
+              userId={user?.uid} 
+              className="h-10 w-10 border-2 border-primary/20 ring-primary/10 ring-offset-2 ring-offset-background group-hover:scale-105 transition-transform shrink-0"
+              fallbackName={profile?.name}
+            />
             <div className="flex flex-col min-w-0">
               <span className="font-semibold text-sm leading-tight group-hover:text-primary transition-colors truncate">
                 {profile?.name || 'Loading...'}
@@ -109,7 +109,6 @@ export default function ChatSidebar() {
               const otherId = chat.type === 'private' && user ? chat.participantIds.find((id: string) => id !== user.uid) : null;
               const chatDisplayName = otherId && chat.metadata ? chat.metadata[otherId]?.name : chat.name;
               const chatDisplayUsername = otherId && chat.metadata ? chat.metadata[otherId]?.username : chat.username;
-              const chatDisplayAvatar = otherId && chat.metadata ? chat.metadata[otherId]?.avatarUrl : chat.avatarUrl;
               
               const isActive = currentChatId === chat.id;
 
@@ -122,12 +121,19 @@ export default function ChatSidebar() {
                   }`}
                 >
                   <div className="relative shrink-0">
-                    <Avatar className="h-11 w-11 md:h-12 md:w-12 border-2 border-transparent group-hover:border-primary/20 transition-all">
-                      <AvatarImage src={chatDisplayAvatar || ''} />
-                      <AvatarFallback className={`${isActive ? 'bg-white/20' : 'bg-primary/10 text-primary'} uppercase font-bold`}>
-                        {chatDisplayName?.slice(0, 2) || '??'}
-                      </AvatarFallback>
-                    </Avatar>
+                    {chat.type === 'private' ? (
+                      <UserAvatar 
+                        userId={otherId} 
+                        className="h-11 w-11 md:h-12 md:w-12 border-2 border-transparent group-hover:border-primary/20 transition-all" 
+                        fallbackName={chatDisplayName}
+                      />
+                    ) : (
+                      <UserAvatar 
+                        userId={null} 
+                        fallbackName={chatDisplayName}
+                        className="h-11 w-11 md:h-12 md:w-12 border-2 border-transparent group-hover:border-primary/20 transition-all"
+                      />
+                    )}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between gap-2">

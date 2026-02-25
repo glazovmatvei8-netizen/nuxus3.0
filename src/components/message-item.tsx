@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { UserAvatar } from '@/components/user-avatar';
 import { Button } from '@/components/ui/button';
 import { 
   Popover, 
@@ -141,9 +141,7 @@ export function MessageItem({ message, isMe, chatId, onReply, onEdit }: MessageI
       isMe ? "ml-auto flex-row-reverse" : "mr-auto"
     )}>
       {!isMe && (
-        <Avatar className="h-8 w-8 mt-auto shrink-0 ring-2 ring-primary/10">
-          <AvatarFallback className="text-[10px] bg-primary/20 text-primary">{message.senderName?.slice(0, 2)}</AvatarFallback>
-        </Avatar>
+        <UserAvatar userId={message.senderId} className="h-8 w-8 mt-auto shrink-0 ring-2 ring-primary/10" fallbackName={message.senderName} />
       )}
       
       <div className={cn("flex flex-col gap-0.5", isMe ? "items-end" : "items-start")}>

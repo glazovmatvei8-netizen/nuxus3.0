@@ -1,8 +1,8 @@
 
 "use client"
 
-import React, { useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import React, { useState, useRef } from 'react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -14,10 +14,10 @@ import {
   SelectValue 
 } from "@/components/ui/select";
 import { useAuth, useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { UserAvatar } from '@/components/user-avatar';
 import { 
   LogOut, User, AtSign, Copy, Share2, 
-  Trash2, Clock, CheckCircle2, LayoutGrid
+  Trash2, Clock, CheckCircle2, LayoutGrid, Upload, Image as ImageIcon
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { signOut, deleteUser } from 'firebase/auth';
@@ -43,6 +43,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
   const db = useFirestore();
   const { user } = useUser();
   const { toast } = useToast();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const userRef = useMemoFirebase(() => {
     if (!db || !user) return null;
@@ -83,6 +84,23 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
     toast({ title: "Сохранено", description: "Ваш профиль обновлен." });
   };
 
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 800000) { // Примерно 800KB лимит для Base64 в Firestore
+        toast({ title: "Файл слишком велик", description: "Выберите изображение поменьше", variant: "destructive" });
+        return;
+      }
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setForm(prev => ({ ...prev, avatarUrl: reader.result as string }));
+        setIsAvatarPickerOpen(false);
+        toast({ title: "Фото загружено", description: "Не забудьте сохранить изменения" });
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const handleLogout = async () => {
     await signOut(auth);
     onOpenChange(false);
@@ -121,31 +139,50 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
         <div className="p-6 space-y-6">
           <div className="flex flex-col items-center gap-4">
             <div className="relative group cursor-pointer" onClick={() => setIsAvatarPickerOpen(!isAvatarPickerOpen)}>
-              <Avatar className="h-24 w-24 border-4 border-background shadow-xl ring-2 ring-primary/20 hover:scale-105 transition-transform">
-                <AvatarImage src={form.avatarUrl} />
-                <AvatarFallback className="bg-primary/20 text-primary text-2xl font-bold">
-                  {profile?.name?.slice(0, 2) || '??'}
-                </AvatarFallback>
-              </Avatar>
-              <div className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                <LayoutGrid className="w-6 h-6 text-white" />
+              <div className="relative">
+                <UserAvatar 
+                  userId={user?.uid} 
+                  className="h-24 w-24 border-4 border-background shadow-xl ring-2 ring-primary/20 hover:scale-105 transition-transform" 
+                  fallbackName={form.name}
+                />
+                <div className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                  <LayoutGrid className="w-6 h-6 text-white" />
+                </div>
               </div>
             </div>
 
             {isAvatarPickerOpen && (
-              <div className="grid grid-cols-6 gap-2 p-2 bg-muted/30 rounded-2xl animate-in fade-in zoom-in-95">
-                {PRESET_AVATARS.map((url, i) => (
-                  <button 
-                    key={i} 
-                    onClick={() => { setForm({...form, avatarUrl: url}); setIsAvatarPickerOpen(false); }}
-                    className="relative"
+              <div className="w-full space-y-4 animate-in fade-in zoom-in-95 duration-200">
+                <div className="grid grid-cols-6 gap-2 p-3 bg-muted/30 rounded-2xl">
+                  {PRESET_AVATARS.map((url, i) => (
+                    <button 
+                      key={i} 
+                      onClick={() => { setForm({...form, avatarUrl: url}); setIsAvatarPickerOpen(false); }}
+                      className="relative hover:scale-110 transition-transform"
+                    >
+                      <UserAvatar userId={null} className={`h-10 w-10 border-2 transition-all ${form.avatarUrl === url ? 'border-primary' : 'border-transparent'}`} fallbackName={`P${i}`} />
+                      {form.avatarUrl === url && <CheckCircle2 className="absolute -top-1 -right-1 w-3 h-3 text-primary bg-background rounded-full" />}
+                    </button>
+                  ))}
+                </div>
+                
+                <div className="flex gap-2">
+                  <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleFileUpload} />
+                  <Button 
+                    variant="outline" 
+                    className="flex-1 rounded-xl h-10 border-primary/20 hover:bg-primary/10 gap-2"
+                    onClick={() => fileInputRef.current?.click()}
                   >
-                    <Avatar className={`h-10 w-10 border-2 transition-all ${form.avatarUrl === url ? 'border-primary' : 'border-transparent'}`}>
-                      <AvatarImage src={url} />
-                    </Avatar>
-                    {form.avatarUrl === url && <CheckCircle2 className="absolute -top-1 -right-1 w-3 h-3 text-primary bg-background rounded-full" />}
-                  </button>
-                ))}
+                    <Upload className="w-4 h-4" /> Загрузить фото
+                  </Button>
+                  <Button 
+                    variant="ghost" 
+                    className="rounded-xl h-10 px-3"
+                    onClick={() => setIsAvatarPickerOpen(false)}
+                  >
+                    Отмена
+                  </Button>
+                </div>
               </div>
             )}
 
