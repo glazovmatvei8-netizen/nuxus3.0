@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useRef, useEffect } from 'react';
@@ -7,7 +8,8 @@ import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { 
   Send, Paperclip, Smile, MoreVertical, ChevronLeft, 
-  Sparkles, MessageSquare, Info, Mic, Camera, X, StopCircle, UserPlus
+  Sparkles, MessageSquare, Info, Mic, Camera, X, StopCircle, UserPlus,
+  CornerUpLeft, Pencil, Trash2
 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { MessageItem } from './message-item';
@@ -18,6 +20,7 @@ import { collection, query, orderBy, doc, arrayUnion } from 'firebase/firestore'
 import { addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import type { Message } from '@/lib/types';
 
 const EMOJIS = ['❤️', '👍', '😂', '🔥', '😮', '😢', '👏', '✅', '🚀', '🎉', '🙏', '💯'];
 
@@ -32,6 +35,10 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
   const { currentChatId, setCurrentChatId } = useAppState();
   const [inputText, setInputText] = useState('');
   const [isChatInfoOpen, setIsChatInfoOpen] = useState(false);
+  
+  // Telegram-like states
+  const [replyTo, setReplyTo] = useState<Message | null>(null);
+  const [editMessage, setEditMessage] = useState<Message | null>(null);
   
   // Media Recording State
   const [isRecordingAudio, setIsRecordingAudio] = useState(false);
@@ -67,7 +74,7 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
       orderBy('sentAt', 'asc')
     );
   }, [db, currentChatId]);
-  const { data: messages } = useCollection(messagesQuery);
+  const { data: messages } = useCollection<Message>(messagesQuery);
 
   const isParticipant = chat?.participantIds?.includes(user?.uid) || chat?.type === 'private';
 
@@ -111,18 +118,47 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
     if (!textToSend && type === 'text') return;
     if (!currentChatId || !user) return;
     
-    const messageData = {
+    if (editMessage && type === 'text') {
+      const messageRef = doc(db, 'chats', currentChatId, 'messages', editMessage.id);
+      updateDocumentNonBlocking(messageRef, {
+        content: textToSend,
+        editedAt: new Date().toISOString()
+      });
+      setEditMessage(null);
+      setInputText('');
+      return;
+    }
+
+    const messageData: Partial<Message> = {
       chatId: currentChatId,
       senderId: user.uid,
       senderName: userProfile?.name || 'User',
       content: textToSend,
-      contentType: type,
+      contentType: type as any,
       sentAt: new Date().toISOString(),
+      isRead: false
     };
+
+    if (replyTo) {
+      messageData.replyToId = replyTo.id;
+      messageData.replyToContent = replyTo.contentType === 'text' ? replyTo.content : `[${replyTo.contentType}]`;
+      setReplyTo(null);
+    }
 
     const messagesCol = collection(db, 'chats', currentChatId, 'messages');
     addDocumentNonBlocking(messagesCol, messageData);
     if (type === 'text') setInputText('');
+  };
+
+  const handleReply = (message: Message) => {
+    setReplyTo(message);
+    setEditMessage(null);
+  };
+
+  const handleEdit = (message: Message) => {
+    setEditMessage(message);
+    setInputText(message.content);
+    setReplyTo(null);
   };
 
   const joinChat = () => {
@@ -207,8 +243,8 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
         <div className="bg-primary/10 p-6 rounded-full mb-6">
           <MessageSquare className="w-16 h-16 text-primary animate-pulse" />
         </div>
-        <h2 className="text-2xl font-bold mb-2">Добро пожаловать в NuxusChat</h2>
-        <p className="text-muted-foreground max-w-sm">Выберите чат, чтобы начать общение в реальном времени.</p>
+        <h2 className="text-2xl font-bold mb-2">NuxusChat Premium</h2>
+        <p className="text-muted-foreground max-w-sm">Выберите чат, чтобы начать качественное общение.</p>
       </div>
     );
   }
@@ -241,26 +277,26 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
         </div>
       </header>
 
-      <ScrollArea ref={scrollRef} className="flex-1 px-4 py-4 relative z-10 bg-gradient-to-b from-card/10 via-background to-background overflow-y-auto">
+      <ScrollArea ref={scrollRef} className="flex-1 px-4 py-4 relative z-10 overflow-y-auto">
         {!isParticipant ? (
           <div className="min-h-full flex flex-col items-center justify-center text-center p-8 space-y-4">
             <div className="bg-primary/10 p-4 rounded-full">
               <UserPlus className="w-12 h-12 text-primary" />
             </div>
             <h3 className="text-lg font-bold">Вы не являетесь участником</h3>
-            <p className="text-sm text-muted-foreground max-w-xs">Вступите в это сообщество, чтобы видеть сообщения и общаться.</p>
-            <Button onClick={joinChat} className="rounded-xl px-8 h-12 shadow-lg shadow-primary/20">
-              Вступить
-            </Button>
+            <p className="text-sm text-muted-foreground max-w-xs">Вступите, чтобы общаться.</p>
+            <Button onClick={joinChat} className="rounded-xl px-8 h-12 shadow-lg shadow-primary/20">Вступить</Button>
           </div>
         ) : (
-          <div className="flex flex-col gap-4 max-w-4xl mx-auto min-h-full pb-4">
+          <div className="flex flex-col gap-2 max-w-4xl mx-auto min-h-full pb-4">
             {messages?.map((msg) => (
               <MessageItem 
                 key={msg.id} 
                 message={msg} 
                 isMe={msg.senderId === user?.uid}
                 chatId={currentChatId}
+                onReply={() => handleReply(msg)}
+                onEdit={() => handleEdit(msg)}
               />
             ))}
           </div>
@@ -287,6 +323,36 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
               </div>
             )}
 
+            {replyTo && (
+              <div className="flex items-center justify-between bg-muted/40 p-2 rounded-xl border-l-4 border-primary animate-in slide-in-from-bottom-2 mb-2">
+                <div className="flex items-center gap-3 overflow-hidden">
+                  <CornerUpLeft className="w-4 h-4 text-primary shrink-0" />
+                  <div className="flex flex-col min-w-0">
+                    <span className="text-xs font-bold text-primary truncate">{replyTo.senderName}</span>
+                    <span className="text-[10px] text-muted-foreground truncate">{replyTo.content}</span>
+                  </div>
+                </div>
+                <Button size="icon" variant="ghost" className="h-6 w-6 rounded-full" onClick={() => setReplyTo(null)}>
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
+            )}
+
+            {editMessage && (
+              <div className="flex items-center justify-between bg-muted/40 p-2 rounded-xl border-l-4 border-accent animate-in slide-in-from-bottom-2 mb-2">
+                <div className="flex items-center gap-3 overflow-hidden">
+                  <Pencil className="w-4 h-4 text-accent shrink-0" />
+                  <div className="flex flex-col min-w-0">
+                    <span className="text-xs font-bold text-accent truncate">Редактирование</span>
+                    <span className="text-[10px] text-muted-foreground truncate">{editMessage.content}</span>
+                  </div>
+                </div>
+                <Button size="icon" variant="ghost" className="h-6 w-6 rounded-full" onClick={() => { setEditMessage(null); setInputText(''); }}>
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
+            )}
+
             <div className="flex items-end gap-1 md:gap-2">
               <div className="flex items-center gap-0.5 md:gap-1 mb-1">
                 <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleFileSelect} />
@@ -303,13 +369,7 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
                   <PopoverContent className="w-64 p-2 bg-card/95 backdrop-blur-xl border-border/40" side="top">
                     <div className="grid grid-cols-6 gap-1">
                       {EMOJIS.map(emoji => (
-                        <button 
-                          key={emoji} 
-                          onClick={() => addEmoji(emoji)} 
-                          className="text-xl hover:bg-muted p-1 rounded transition-colors"
-                        >
-                          {emoji}
-                        </button>
+                        <button key={emoji} onClick={() => addEmoji(emoji)} className="text-xl hover:bg-muted p-1 rounded transition-colors">{emoji}</button>
                       ))}
                     </div>
                   </PopoverContent>
@@ -318,7 +378,7 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
 
               <div className="flex-1 relative group">
                 <Input 
-                  placeholder="Написать сообщение..." 
+                  placeholder={editMessage ? "Изменить сообщение..." : "Написать сообщение..."}
                   value={inputText}
                   onChange={(e) => setInputText(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
@@ -357,7 +417,6 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
         )}
       </footer>
 
-      {/* Video Recording Modal */}
       <Dialog open={videoModalOpen} onOpenChange={(val) => !val && stopRecording()}>
         <DialogContent className="sm:max-w-md bg-black border-none p-0 overflow-hidden">
           <DialogHeader className="p-4 absolute top-0 w-full z-10 bg-gradient-to-b from-black/60 to-transparent">

@@ -10,21 +10,31 @@ import {
   PopoverContent, 
   PopoverTrigger 
 } from '@/components/ui/popover';
+import { 
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator
+} from "@/components/ui/dropdown-menu";
 import { format } from 'date-fns';
-import { SmilePlus, Play, Pause, Download } from 'lucide-react';
+import { SmilePlus, Play, Pause, CornerUpLeft, Pencil, Trash2, Check, CheckCheck } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { collection, doc } from 'firebase/firestore';
 import { addDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import type { Message } from '@/lib/types';
 
 interface MessageItemProps {
-  message: any;
+  message: Message;
   isMe: boolean;
   chatId: string;
+  onReply?: () => void;
+  onEdit?: () => void;
 }
 
 const REACTIONS = ['❤️', '👍', '😂', '😮', '😢', '🔥', '👏'];
 
-export function MessageItem({ message, isMe, chatId }: MessageItemProps) {
+export function MessageItem({ message, isMe, chatId, onReply, onEdit }: MessageItemProps) {
   const { user } = useUser();
   const db = useFirestore();
   const [isReactionPickerOpen, setIsReactionPickerOpen] = useState(false);
@@ -65,6 +75,11 @@ export function MessageItem({ message, isMe, chatId }: MessageItemProps) {
     setIsReactionPickerOpen(false);
   };
 
+  const handleDelete = () => {
+    if (!db || !chatId || !message.id) return;
+    deleteDocumentNonBlocking(doc(db, 'chats', chatId, 'messages', message.id));
+  };
+
   const groupedReactions = (reactionsData || []).reduce((acc: Record<string, string[]>, curr) => {
     if (!acc[curr.emoji]) acc[curr.emoji] = [];
     acc[curr.emoji].push(curr.reactorId);
@@ -84,7 +99,7 @@ export function MessageItem({ message, isMe, chatId }: MessageItemProps) {
       case 'image':
         return (
           <div className="mt-1 rounded-lg overflow-hidden border border-border/20 max-w-sm">
-            <img src={message.content} alt="Sent image" className="w-full h-auto object-cover max-h-[300px]" />
+            <img src={message.content} alt="Sent" className="w-full h-auto object-cover max-h-[300px]" />
           </div>
         );
       case 'audio':
@@ -94,10 +109,9 @@ export function MessageItem({ message, isMe, chatId }: MessageItemProps) {
               {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4 ml-0.5" />}
             </Button>
             <div className="flex-1 h-1 bg-primary/20 rounded-full relative overflow-hidden">
-              <div className="absolute top-0 left-0 h-full bg-primary" style={{ width: '40%' }}></div>
+              <div className="absolute top-0 left-0 h-full bg-primary" style={{ width: isPlaying ? '100%' : '0%', transition: 'width 3s linear' }}></div>
             </div>
             <audio ref={audioRef} src={message.content} onEnded={() => setIsPlaying(false)} className="hidden" />
-            <span className="text-[10px] opacity-60">Voice</span>
           </div>
         );
       case 'video':
@@ -115,7 +129,7 @@ export function MessageItem({ message, isMe, chatId }: MessageItemProps) {
           </div>
         );
       default:
-        return <div className="whitespace-pre-wrap leading-relaxed">{message.content}</div>;
+        return <div className="whitespace-pre-wrap leading-relaxed break-words">{message.content}</div>;
     }
   };
 
@@ -123,7 +137,7 @@ export function MessageItem({ message, isMe, chatId }: MessageItemProps) {
 
   return (
     <div className={cn(
-      "flex gap-3 max-w-[85%] animate-in slide-in-from-bottom-2",
+      "flex gap-3 max-w-[85%] animate-in slide-in-from-bottom-2 px-1 py-0.5",
       isMe ? "ml-auto flex-row-reverse" : "mr-auto"
     )}>
       {!isMe && (
@@ -132,70 +146,74 @@ export function MessageItem({ message, isMe, chatId }: MessageItemProps) {
         </Avatar>
       )}
       
-      <div className={cn("flex flex-col gap-1", isMe ? "items-end" : "items-start")}>
-        {!isMe && <span className="text-[10px] font-semibold text-muted-foreground ml-2">{message.senderName}</span>}
+      <div className={cn("flex flex-col gap-0.5", isMe ? "items-end" : "items-start")}>
+        {!isMe && <span className="text-[10px] font-bold text-muted-foreground ml-2 opacity-70">{message.senderName}</span>}
         
-        <div className="relative group flex items-end gap-2">
-          {isMe && (
-            <Popover open={isReactionPickerOpen} onOpenChange={setIsReactionPickerOpen}>
-              <PopoverTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-6 w-6 opacity-0 group-hover:opacity-100 rounded-full hover:bg-muted/50 mb-1">
-                  <SmilePlus className="w-3.5 h-3.5 text-muted-foreground" />
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-1 rounded-full border-border/40 backdrop-blur-xl bg-card/60" side="left">
-                <div className="flex gap-1">
-                  {REACTIONS.map(emoji => (
-                    <button key={emoji} onClick={() => handleAddReaction(emoji)} className="hover:scale-125 transition-transform p-1 text-lg">{emoji}</button>
-                  ))}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <div className="relative group cursor-pointer active:scale-[0.98] transition-transform">
+              {message.replyToId && (
+                <div className={cn(
+                  "px-3 py-1.5 rounded-t-xl text-[10px] bg-black/5 border-l-2 border-primary max-w-full truncate opacity-70 mb-[-4px]",
+                  isMe ? "bg-white/10" : "bg-black/5"
+                )}>
+                  <span className="font-bold block text-primary">Ответ на сообщение</span>
+                  <span className="truncate block italic">{message.replyToContent}</span>
                 </div>
-              </PopoverContent>
-            </Popover>
-          )}
+              )}
 
-          <div className={cn(
-            "px-4 py-2.5 rounded-2xl text-sm shadow-md transition-all",
-            isMe 
-              ? "bg-primary text-white rounded-br-none shadow-primary/20" 
-              : "bg-card text-foreground rounded-bl-none shadow-black/10 border border-border/40"
-          )}>
-            {renderContent()}
-            <div className={cn(
-              "text-[9px] mt-1 text-right",
-              isMe ? "text-white/60" : "text-muted-foreground/60"
-            )}>
-              {formattedTime}
+              <div className={cn(
+                "px-4 py-2 rounded-2xl text-sm shadow-sm relative group-hover:shadow-md transition-shadow",
+                isMe 
+                  ? "bg-primary text-white rounded-br-none" 
+                  : "bg-card text-foreground rounded-bl-none border border-border/40",
+                message.replyToId ? "rounded-tr-none rounded-tl-none" : ""
+              )}>
+                {renderContent()}
+                <div className={cn(
+                  "flex items-center justify-end gap-1 mt-1 text-[9px] select-none",
+                  isMe ? "text-white/60" : "text-muted-foreground/60"
+                )}>
+                  {message.editedAt && <span>изменено</span>}
+                  <span>{formattedTime}</span>
+                  {isMe && (
+                    message.isRead ? <CheckCheck className="w-3 h-3 text-accent" /> : <Check className="w-3 h-3" />
+                  )}
+                </div>
+              </div>
             </div>
-          </div>
-
-          {!isMe && (
-            <Popover open={isReactionPickerOpen} onOpenChange={setIsReactionPickerOpen}>
-              <PopoverTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-6 w-6 opacity-0 group-hover:opacity-100 rounded-full hover:bg-muted/50 mb-1">
-                  <SmilePlus className="w-3.5 h-3.5 text-muted-foreground" />
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-1 rounded-full border-border/40 backdrop-blur-xl bg-card/60" side="right">
-                <div className="flex gap-1">
-                  {REACTIONS.map(emoji => (
-                    <button key={emoji} onClick={() => handleAddReaction(emoji)} className="hover:scale-125 transition-transform p-1 text-lg">{emoji}</button>
-                  ))}
-                </div>
-              </PopoverContent>
-            </Popover>
-          )}
-        </div>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent className="w-48 bg-card/95 backdrop-blur-xl border-border/40">
+            <DropdownMenuItem onClick={onReply} className="gap-2">
+              <CornerUpLeft className="w-4 h-4" /> Ответить
+            </DropdownMenuItem>
+            {isMe && message.contentType === 'text' && (
+              <DropdownMenuItem onClick={onEdit} className="gap-2">
+                <Pencil className="w-4 h-4" /> Изменить
+              </DropdownMenuItem>
+            )}
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={() => setIsReactionPickerOpen(true)} className="gap-2">
+              <SmilePlus className="w-4 h-4" /> Реакция
+            </DropdownMenuItem>
+            {isMe && (
+              <DropdownMenuItem onClick={handleDelete} className="gap-2 text-destructive focus:text-destructive">
+                <Trash2 className="w-4 h-4" /> Удалить
+              </DropdownMenuItem>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
 
         {Object.entries(groupedReactions).length > 0 && (
-          <div className={cn("flex flex-wrap gap-1 mt-1", isMe ? "justify-end" : "justify-start")}>
+          <div className={cn("flex flex-wrap gap-1 mt-0.5", isMe ? "justify-end" : "justify-start")}>
             {Object.entries(groupedReactions).map(([emoji, reactorIds]) => (
               <button
                 key={emoji}
                 onClick={() => handleAddReaction(emoji)}
                 className={cn(
-                  "flex items-center gap-1.5 px-2 py-1 rounded-full text-[10px] border transition-all",
+                  "flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] border transition-all",
                   reactorIds.includes(user?.uid || '')
-                    ? "bg-primary/20 border-primary/40 text-primary font-bold scale-105"
+                    ? "bg-primary/20 border-primary/40 text-primary font-bold"
                     : "bg-muted/20 border-border/40 text-muted-foreground hover:bg-muted/40"
                 )}
               >
@@ -206,6 +224,18 @@ export function MessageItem({ message, isMe, chatId }: MessageItemProps) {
           </div>
         )}
       </div>
+
+      {isReactionPickerOpen && (
+        <Popover open={isReactionPickerOpen} onOpenChange={setIsReactionPickerOpen}>
+           <PopoverContent className="w-auto p-1 rounded-full border-border/40 backdrop-blur-xl bg-card/60" side="top">
+            <div className="flex gap-1">
+              {REACTIONS.map(emoji => (
+                <button key={emoji} onClick={() => handleAddReaction(emoji)} className="hover:scale-125 transition-transform p-1 text-lg">{emoji}</button>
+              ))}
+            </div>
+          </PopoverContent>
+        </Popover>
+      )}
     </div>
   );
 }

@@ -1,3 +1,4 @@
+
 {
   "entities": {
     "UserProfile": {
@@ -61,7 +62,7 @@
         },
         "username": {
           "type": "string",
-          "description": "A unique public identifier for group or channel chats, starting with '@'. Used for join links and search. (Relationship: Chat 1:1 with Username when type is group/channel)"
+          "description": "A unique public identifier for group or channel chats, starting with '@'. Used for join links and search."
         },
         "description": {
           "type": "string",
@@ -79,18 +80,18 @@
         },
         "ownerId": {
           "type": "string",
-          "description": "Reference to the UserProfile ID who initially created and owns this group or channel. (Relationship: UserProfile 1:N Chat)"
+          "description": "Reference to the UserProfile ID who initially created and owns this group or channel."
         },
         "participantIds": {
           "type": "array",
-          "description": "References to UserProfile IDs who are active participants in this chat. (Relationship: UserProfile N:N Chat)",
+          "description": "References to UserProfile IDs who are active participants in this chat.",
           "items": {
             "type": "string"
           }
         },
         "adminIds": {
           "type": "array",
-          "description": "References to UserProfile IDs who have administrative privileges within this group or channel chat. (Relationship: UserProfile N:N Chat for Admins)",
+          "description": "References to UserProfile IDs who have administrative privileges within this group or channel chat.",
           "items": {
             "type": "string"
           }
@@ -108,7 +109,7 @@
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Message",
       "type": "object",
-      "description": "Represents a single communication message sent within any chat, supporting various content types.",
+      "description": "Represents a single communication message sent within any chat, supporting various content types and Telegram-like features.",
       "properties": {
         "id": {
           "type": "string",
@@ -116,24 +117,45 @@
         },
         "chatId": {
           "type": "string",
-          "description": "Reference to the Chat in which this message was sent. (Relationship: Chat 1:N Message)"
+          "description": "Reference to the Chat in which this message was sent."
         },
         "senderId": {
           "type": "string",
-          "description": "Reference to the UserProfile ID who sent this message. 'system' for automated messages. (Relationship: UserProfile 1:N Message)"
+          "description": "Reference to the UserProfile ID who sent this message."
+        },
+        "senderName": {
+          "type": "string",
+          "description": "Cached sender name for display performance."
         },
         "content": {
           "type": "string",
-          "description": "The textual content of the message, or a URL if the contentType is 'image'."
+          "description": "The textual content or media URL."
         },
         "contentType": {
           "type": "string",
-          "description": "The specific type of content the message carries, such as 'text', 'image', or 'service'."
+          "description": "The specific type of content: 'text', 'image', 'audio', 'video', 'service'."
         },
         "sentAt": {
           "type": "string",
           "description": "Timestamp indicating when the message was sent.",
           "format": "date-time"
+        },
+        "replyToId": {
+          "type": "string",
+          "description": "Reference to another Message ID if this is a reply."
+        },
+        "replyToContent": {
+          "type": "string",
+          "description": "Snippet of the replied message content for display."
+        },
+        "editedAt": {
+          "type": "string",
+          "description": "Timestamp indicating when the message was last edited.",
+          "format": "date-time"
+        },
+        "isRead": {
+          "type": "boolean",
+          "description": "Whether the message has been seen by participants."
         }
       },
       "required": [
@@ -143,42 +165,6 @@
         "content",
         "contentType",
         "sentAt"
-      ]
-    },
-    "Reaction": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Reaction",
-      "type": "object",
-      "description": "Represents a user's emoji reaction to a specific message, allowing for interactive feedback.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the Reaction entity."
-        },
-        "messageId": {
-          "type": "string",
-          "description": "Reference to the Message that this reaction is associated with. (Relationship: Message 1:N Reaction)"
-        },
-        "reactorId": {
-          "type": "string",
-          "description": "Reference to the UserProfile ID of the user who added this reaction. (Relationship: UserProfile 1:N Reaction)"
-        },
-        "emoji": {
-          "type": "string",
-          "description": "The emoji character representing the reaction (e.g., '❤️', '👍')."
-        },
-        "reactedAt": {
-          "type": "string",
-          "description": "Timestamp indicating when the reaction was added.",
-          "format": "date-time"
-        }
-      },
-      "required": [
-        "id",
-        "messageId",
-        "reactorId",
-        "emoji",
-        "reactedAt"
       ]
     }
   },
@@ -197,7 +183,7 @@
           "schema": {
             "$ref": "#/backend/entities/UserProfile"
           },
-          "description": "Stores individual user profile information. `userId` matches the authenticated user's UID. Only the owner can write to their profile. Basic public fields (name, username, avatarUrl) are readable by all authenticated users for search and display. Includes denormalized 'id' matching the userId parameter for self-referencing."
+          "description": "Stores individual user profile information."
         }
       },
       {
@@ -207,7 +193,7 @@
           "schema": {
             "$ref": "#/backend/entities/Chat"
           },
-          "description": "Stores metadata for all conversation types (private, group, channel). Authorization is based on 'participantIds' and 'adminIds' arrays stored directly on the document. `ownerId` specifies the creator of groups/channels. `chatId` matches the document ID for direct lookup."
+          "description": "Stores metadata for all conversation types."
         }
       },
       {
@@ -217,44 +203,9 @@
           "schema": {
             "$ref": "#/backend/entities/Message"
           },
-          "description": "Stores individual messages for a specific chat. Access is determined by the `participantIds` and `adminIds` of the parent Chat document (via rules `get()`). The `chatId` field is denormalized for direct queryability and rule evaluation, and `senderId` ensures message attribution.",
-          "params": [
-            {
-              "name": "chatId",
-              "description": "The unique identifier of the parent chat."
-            },
-            {
-              "name": "messageId",
-              "description": "The unique identifier of the message within the chat."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/chats/{chatId}/messages/{messageId}/reactions/{reactionId}",
-        "definition": {
-          "entityName": "Reaction",
-          "schema": {
-            "$ref": "#/backend/entities/Reaction"
-          },
-          "description": "Stores emoji reactions for individual messages. Access is determined by the `participantIds` and `adminIds` of the grandparent Chat document (via rules `get()`). The `messageId` field is denormalized, and `reactorId` ensures reaction attribution.",
-          "params": [
-            {
-              "name": "chatId",
-              "description": "The unique identifier of the grandparent chat."
-            },
-            {
-              "name": "messageId",
-              "description": "The unique identifier of the parent message."
-            },
-            {
-              "name": "reactionId",
-              "description": "The unique identifier of the reaction within the message."
-            }
-          ]
+          "description": "Stores individual messages for a specific chat."
         }
       }
-    ],
-    "reasoning": "The Firestore data structure for NuxusChat prioritizes security, scalability, and debuggability following the core design principles. The structure leverages distinct top-level collections for `users` and `chats`, with subcollections for `messages` and `reactions` under `chats` to reflect the hierarchical nature of conversations.\n\n**Authorization Independence:**\n\n1.  **UserProfile (`/users/{userId}`):** User profiles are stored in a top-level collection where `userId` directly corresponds to `request.auth.uid`. This ensures strong, path-based ownership for write operations, meaning a user can only modify their own profile, thereby achieving authorization independence for private data without relying on `get()` calls to other documents.\n2.  **Chat (`/chats/{chatId}`):** Each `Chat` document contains the definitive `participantIds` and `adminIds` arrays. This makes authorization for read and write operations on the `Chat` document itself self-contained. The `ownerId` is also directly on the document for group/channel administration.\n3.  **Message and Reaction Subcollections (`/chats/{chatId}/messages/{messageId}` and `/chats/{chatId}/messages/{messageId}/reactions/{reactionId}`):** For these subcollections, a crucial design decision was made regarding the \"Authorization Independence\" mandate. Instead of fully denormalizing `participantIds` and `adminIds` into *every* `Message` and `Reaction` document, authorization will rely on a `get()` call to the *parent `Chat` document* in Firestore security rules. This is a deliberate choice to ensure **real-time data consistency and security for chat membership**. If `participantIds` were denormalized, a user leaving a chat would require updating potentially thousands of `Message` and `Reaction` documents to revoke access, which is inefficient, complex, and prone to inconsistency (a user could temporarily retain access to old messages). By checking the live `Chat` document for membership, access is always based on the current state, making the system more secure, consistent, and debuggable in practice, even if it involves a `get()` operation in the rule. The `chatId` is explicitly stored in `Message` documents, and `messageId` in `Reaction` documents, to facilitate direct queries and rule evaluation within the subcollection context.\n\n**QAPs (Rules are not Filters):**\n\n1.  **UserProfile (`/users/{userId}`):** The `users` collection supports QAP-compliant queries. While direct listing of all users will be restricted, authenticated users will be allowed to perform specific `where` queries on `username` and `phone` fields to find other users for starting private chats or inviting to groups. This ensures that user search functionality works securely without exposing a full list of all users.\n2.  **Chat (`/chats/{chatId}`):** To display a user's list of conversations, clients must query the `/chats` collection with a `where('participantIds', 'array-contains', request.auth.uid)` clause. This is a QAP-compliant query that efficiently filters chats based on current user participation, ensuring users only retrieve chats they are authorized to see. Public groups and channels can be discovered and joined via their unique `username` field, which also supports QAP-compliant lookups (e.g., `where('username', '==', '@groupname')`).\n3.  **Message and Reaction Subcollections:** Access to `/chats/{chatId}/messages` and `/chats/{chatId}/messages/{messageId}/reactions` is implicitly governed by the parent `Chat` document's authorization rules. This means any read or list operation on these subcollections will first confirm the user's participation in the parent chat via the security rules, thus naturally enforcing QAP."
+    ]
   }
 }

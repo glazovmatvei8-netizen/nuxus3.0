@@ -1,3 +1,4 @@
+
 export type MessageType = 'text' | 'image' | 'service' | 'audio' | 'video';
 
 export interface Reaction {
@@ -7,13 +8,17 @@ export interface Reaction {
 
 export interface Message {
   id: string;
-  senderPhone: string;
+  chatId: string;
+  senderId: string;
   senderName: string;
   content: string;
   sentAt: string;
   contentType: MessageType;
-  duration?: number; // duration for audio/video in seconds
-  reactions?: Record<string, string[]>;
+  duration?: number;
+  replyToId?: string;
+  replyToContent?: string;
+  editedAt?: string;
+  isRead?: boolean;
 }
 
 export type ChatType = 'private' | 'group' | 'channel';
@@ -29,6 +34,11 @@ export interface Chat {
   adminIds: string[];
   createdAt: string;
   ownerId: string;
+  metadata?: Record<string, {
+    name: string;
+    username: string;
+    avatarUrl: string | null;
+  }>;
 }
 
 export interface User {
