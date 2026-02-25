@@ -76,10 +76,10 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
   }, [db, currentChatId, chat?.pinnedMessageId]);
   const { data: pinnedMessage } = useDoc<Message>(pinnedMsgRef);
 
-  // Проверка участия
+  // Проверка участия (учитываем, что chat может загружаться)
   const isParticipant = useMemo(() => {
     if (!chat || !user) return false;
-    return chat.participantIds?.includes(user.uid);
+    return chat.participantIds?.includes(user.uid) || false;
   }, [chat, user]);
 
   const otherId = chat?.type === 'private' && user ? chat.participantIds?.find((id: string = '') => id !== user.uid) : null;
@@ -89,16 +89,15 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
   }, [db, otherId]);
   const { data: otherUserProfile, isLoading: isOtherProfileLoading } = useDoc(otherUserRef);
 
-  // Запрашиваем сообщения ТОЛЬКО если пользователь является участником
+  // Запрашиваем сообщения ТОЛЬКО если пользователь является участником и данные чата загружены
   const messagesQuery = useMemoFirebase(() => {
-    if (!db || !currentChatId || !isParticipant) return null;
+    if (!db || !currentChatId || !chat || !isParticipant) return null;
     return query(
       collection(db, 'chats', currentChatId, 'messages'),
       orderBy('sentAt', 'asc')
     );
-  }, [db, currentChatId, isParticipant]);
+  }, [db, currentChatId, chat, isParticipant]);
   
-  // ИЗМЕНЕНО: Добавлен isLoading в деструктуризацию, чтобы избежать ReferenceError
   const { data: messages, isLoading: isMessagesLoading } = useCollection<Message>(messagesQuery);
 
   useEffect(() => {
