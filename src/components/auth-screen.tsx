@@ -107,6 +107,9 @@ export default function AuthScreen() {
     }
   };
 
+  // Проверка: показывать ли кнопку Dev Tool только админу
+  const showDevTool = normalizePhone(formData.phone) === '79513332147';
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-primary/20 via-background to-background">
       <Card className="w-full max-w-sm border-primary/20 bg-card/50 backdrop-blur-xl shadow-2xl">
@@ -163,10 +166,12 @@ export default function AuthScreen() {
             <button onClick={() => setMode(mode === 'login' ? 'register' : 'login')} className="text-sm text-muted-foreground hover:text-primary transition-colors">
               {mode === 'login' ? "Нет аккаунта? Зарегистрироваться" : "Уже есть аккаунт? Войти"}
             </button>
-            <Button variant="ghost" size="sm" onClick={setupTestAccounts} disabled={isSettingUp} className="text-[10px] text-muted-foreground/60 flex gap-2">
-              {isSettingUp ? <Loader2 className="w-3 h-3 animate-spin" /> : <ShieldCheck className="w-3 h-3" />}
-              Настроить аккаунты (Админ и Чайник)
-            </Button>
+            {showDevTool && (
+              <Button variant="ghost" size="sm" onClick={setupTestAccounts} disabled={isSettingUp} className="text-[10px] text-muted-foreground/60 flex gap-2 animate-in fade-in duration-500">
+                {isSettingUp ? <Loader2 className="w-3 h-3 animate-spin" /> : <ShieldCheck className="w-3 h-3" />}
+                Настроить аккаунты (Админ и Чайник)
+              </Button>
+            )}
           </div>
         </CardContent>
       </Card>
