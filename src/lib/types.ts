@@ -47,6 +47,7 @@ export interface User {
   name: string;
   username: string;
   avatarUrl: string | null;
+  lastSeen?: string;
   createdAt: string;
   inactivityDeletion?: string;
 }

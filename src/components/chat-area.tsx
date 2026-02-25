@@ -22,6 +22,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { suggestMessageDraft } from '@/ai/flows/ai-message-drafting-flow';
 import { cn } from '@/lib/utils';
+import { formatLastSeen } from '@/lib/utils';
 import type { Message } from '@/lib/types';
 
 const EMOJIS = ['❤️', '👍', '😂', '🔥', '😮', '😢', '👏', '✅', '🚀', '🎉', '🙏', '💯'];
@@ -69,6 +70,14 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
   }, [db, currentChatId]);
   const { data: chat } = useDoc(chatRef);
 
+  // Status logic for the other user
+  const otherId = chat?.type === 'private' && user ? chat.participantIds?.find((id: string) => id !== user.uid) : null;
+  const otherUserRef = useMemoFirebase(() => {
+    if (!db || !otherId) return null;
+    return doc(db, 'users', otherId);
+  }, [db, otherId]);
+  const { data: otherUserProfile } = useDoc(otherUserRef);
+
   const messagesQuery = useMemoFirebase(() => {
     if (!db || !currentChatId) return null;
     return query(
@@ -80,14 +89,14 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
 
   const isParticipant = chat?.participantIds?.includes(user?.uid) || chat?.type === 'private';
 
-  // Mark as read logic - only if chat data is available and user is a participant
+  // Mark as read logic
   useEffect(() => {
     if (messages && user && currentChatId && chat && isParticipant) {
-      messages.forEach(msg => {
-        if (!msg.isRead && msg.senderId !== user.uid) {
-          const msgRef = doc(db, 'chats', currentChatId, 'messages', msg.id);
-          updateDocumentNonBlocking(msgRef, { isRead: true });
-        }
+      // Only update first 5 unread to prevent error/flood
+      const unread = messages.filter(msg => !msg.isRead && msg.senderId !== user.uid).slice(0, 10);
+      unread.forEach(msg => {
+        const msgRef = doc(db, 'chats', currentChatId, 'messages', msg.id);
+        updateDocumentNonBlocking(msgRef, { isRead: true });
       });
     }
   }, [messages, user, currentChatId, isParticipant, db, chat]);
@@ -229,7 +238,6 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
     }
   };
 
-  const otherId = chat?.type === 'private' && user ? chat.participantIds?.find((id: string) => id !== user.uid) : null;
   const chatDisplayName = otherId && chat?.metadata ? chat.metadata[otherId]?.name : chat?.name;
 
   if (!currentChatId) {
@@ -259,7 +267,12 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
             />
             <div className="flex flex-col min-w-0">
               <span className="font-semibold text-sm leading-tight truncate">{chatDisplayName}</span>
-              <span className="text-[10px] text-muted-foreground truncate">{chat?.type === 'private' ? 'Личные сообщения' : (chat?.type === 'group' ? 'Группа' : 'Канал')}</span>
+              <span className={cn(
+                "text-[10px] truncate",
+                otherUserProfile?.lastSeen && formatLastSeen(otherUserProfile.lastSeen) === 'в сети' ? 'text-accent font-bold' : 'text-muted-foreground'
+              )}>
+                {chat?.type === 'private' ? formatLastSeen(otherUserProfile?.lastSeen) : (chat?.type === 'group' ? 'Группа' : 'Канал')}
+              </span>
             </div>
           </div>
         </div>

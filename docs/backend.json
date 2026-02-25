@@ -28,6 +28,11 @@
           "description": "URL to the user's profile picture.",
           "format": "uri"
         },
+        "lastSeen": {
+          "type": "string",
+          "description": "ISO timestamp of the last time the user was active.",
+          "format": "date-time"
+        },
         "createdAt": {
           "type": "string",
           "description": "Timestamp indicating when the user profile was created.",
