@@ -38,10 +38,16 @@ export function CreateChatModal({ open, onOpenChange }: CreateChatModalProps) {
 
   const { data: allUsers } = useCollection(usersQuery);
 
-  const filteredUsers = (allUsers || []).filter(u => 
-    u.id !== user?.uid &&
-    (u.name?.toLowerCase().includes(search.toLowerCase()) || u.username?.toLowerCase().includes(search.toLowerCase()))
-  );
+  const filteredUsers = (allUsers || []).filter(u => {
+    if (u.id === user?.uid) return false;
+    
+    const searchLower = search.toLowerCase();
+    const nameMatch = u.name?.toLowerCase().includes(searchLower);
+    const usernameMatch = u.username?.toLowerCase().includes(searchLower);
+    const phoneMatch = u.phone?.includes(search); // Поиск по номеру телефона
+    
+    return nameMatch || usernameMatch || phoneMatch;
+  });
 
   const startPrivateChat = async (otherUser: any) => {
     if (!db || !user) return;
@@ -54,7 +60,10 @@ export function CreateChatModal({ open, onOpenChange }: CreateChatModalProps) {
         where('participantIds', 'array-contains', user.uid)
       );
       const snapshot = await getDocs(q);
-      const existing = snapshot.docs.find(d => d.data().participantIds.includes(otherUser.id));
+      const existing = snapshot.docs.find(d => {
+        const pIds = d.data().participantIds;
+        return pIds.includes(otherUser.id) && pIds.length === 2;
+      });
 
       if (existing) {
         setCurrentChatId(existing.id);
@@ -77,7 +86,7 @@ export function CreateChatModal({ open, onOpenChange }: CreateChatModalProps) {
       setCurrentChatId(docRef.id);
       onOpenChange(false);
     } catch (error: any) {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
+      toast({ title: "Ошибка", description: error.message, variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
@@ -85,7 +94,7 @@ export function CreateChatModal({ open, onOpenChange }: CreateChatModalProps) {
 
   const createGroupOrChannel = async () => {
     if (!name || !username || !db || !user) {
-      toast({ title: "Error", description: "All fields are required", variant: "destructive" });
+      toast({ title: "Ошибка", description: "Заполните все поля", variant: "destructive" });
       return;
     }
 
@@ -111,16 +120,16 @@ export function CreateChatModal({ open, onOpenChange }: CreateChatModalProps) {
         chatId: docRef.id,
         senderId: 'system',
         senderName: 'Nuxus',
-        content: `${type === 'group' ? 'Group' : 'Channel'} created successfully!`,
+        content: `${type === 'group' ? 'Группа' : 'Канал'} создана!`,
         contentType: 'service',
         sentAt: new Date().toISOString(),
       });
 
       setCurrentChatId(docRef.id);
       onOpenChange(false);
-      toast({ title: "Success", description: `${type} created!` });
+      toast({ title: "Успех", description: `${type === 'group' ? 'Группа' : 'Канал'} создана!` });
     } catch (error: any) {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
+      toast({ title: "Ошибка", description: error.message, variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
@@ -132,10 +141,10 @@ export function CreateChatModal({ open, onOpenChange }: CreateChatModalProps) {
         <DialogHeader className="p-6 pb-2">
           <DialogTitle className="text-xl font-bold flex items-center gap-2">
             {step === 'select' ? <MessageSquarePlus className="w-5 h-5 text-primary" /> : <ArrowRight className="w-5 h-5 text-primary" />}
-            {step === 'select' ? 'Start New conversation' : `Create ${type}`}
+            {step === 'select' ? 'Новый чат' : `Создание ${type === 'group' ? 'группы' : 'канала'}`}
           </DialogTitle>
           <DialogDescription>
-            {step === 'select' ? 'Choose who you want to talk to or create a group' : 'Finalize your group details'}
+            {step === 'select' ? 'Найдите друга по имени, нику или телефону' : 'Укажите детали вашего сообщества'}
           </DialogDescription>
         </DialogHeader>
 
@@ -149,7 +158,7 @@ export function CreateChatModal({ open, onOpenChange }: CreateChatModalProps) {
                   onClick={() => { setType('group'); setStep('details'); }}
                 >
                   <Users className="w-5 h-5 text-primary" />
-                  <span className="text-[10px] font-bold">NEW GROUP</span>
+                  <span className="text-[10px] font-bold">ГРУППА</span>
                 </Button>
                 <Button 
                   variant="outline" 
@@ -157,14 +166,14 @@ export function CreateChatModal({ open, onOpenChange }: CreateChatModalProps) {
                   onClick={() => { setType('channel'); setStep('details'); }}
                 >
                   <Radio className="w-5 h-5 text-accent" />
-                  <span className="text-[10px] font-bold">NEW FEED</span>
+                  <span className="text-[10px] font-bold">КАНАЛ</span>
                 </Button>
               </div>
 
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input 
-                  placeholder="Search users..." 
+                  placeholder="Имя, @ник или +7..." 
                   className="pl-9 h-11 bg-muted/30 border-muted-foreground/10 rounded-xl"
                   value={search}
                   onChange={e => setSearch(e.target.value)}
@@ -174,54 +183,63 @@ export function CreateChatModal({ open, onOpenChange }: CreateChatModalProps) {
 
             <ScrollArea className="h-[300px] border-t border-border/40">
               <div className="p-2 space-y-1">
-                {filteredUsers.map(u => (
-                  <div
-                    key={u.id}
-                    onClick={() => startPrivateChat(u)}
-                    className="flex items-center gap-3 p-3 rounded-xl hover:bg-primary/10 cursor-pointer group transition-all"
-                  >
-                    <Avatar className="h-10 w-10 border-2 border-transparent group-hover:border-primary/20">
-                      <AvatarImage src={u.avatarUrl || ''} />
-                      <AvatarFallback className="bg-primary/20 text-primary font-bold uppercase">{u.name?.slice(0, 2)}</AvatarFallback>
-                    </Avatar>
-                    <div className="flex flex-col">
-                      <span className="font-semibold text-sm group-hover:text-primary transition-colors">{u.name}</span>
-                      <span className="text-[10px] text-muted-foreground">{u.username}</span>
+                {filteredUsers.length > 0 ? (
+                  filteredUsers.map(u => (
+                    <div
+                      key={u.id}
+                      onClick={() => startPrivateChat(u)}
+                      className="flex items-center gap-3 p-3 rounded-xl hover:bg-primary/10 cursor-pointer group transition-all"
+                    >
+                      <Avatar className="h-10 w-10 border-2 border-transparent group-hover:border-primary/20">
+                        <AvatarImage src={u.avatarUrl || ''} />
+                        <AvatarFallback className="bg-primary/20 text-primary font-bold uppercase">{u.name?.slice(0, 2)}</AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between">
+                          <span className="font-semibold text-sm group-hover:text-primary transition-colors truncate">{u.name}</span>
+                          <span className="text-[10px] text-muted-foreground shrink-0">{u.phone}</span>
+                        </div>
+                        <span className="text-[10px] text-muted-foreground block truncate">{u.username}</span>
+                      </div>
                     </div>
+                  ))
+                ) : (
+                  <div className="p-8 text-center text-muted-foreground text-sm italic">
+                    {search ? 'Пользователи не найдены' : 'Начните вводить данные для поиска'}
                   </div>
-                ))}
+                )}
               </div>
             </ScrollArea>
           </div>
         ) : (
           <div className="p-6 space-y-6">
             <div className="flex justify-center mb-4">
-              <div className="w-24 h-24 rounded-full bg-primary/10 border-2 border-dashed border-primary/40 flex flex-center items-center justify-center cursor-pointer hover:bg-primary/20 transition-all">
+              <div className="w-24 h-24 rounded-full bg-primary/10 border-2 border-dashed border-primary/40 flex items-center justify-center cursor-pointer hover:bg-primary/20 transition-all">
                 {type === 'group' ? <Users className="w-8 h-8 text-primary" /> : <Radio className="w-8 h-8 text-accent" />}
               </div>
             </div>
             <div className="space-y-4">
               <Input 
-                placeholder={`${type === 'group' ? 'Group' : 'Channel'} Name`} 
+                placeholder={type === 'group' ? 'Название группы' : 'Название канала'} 
                 value={name}
                 onChange={e => setName(e.target.value)}
                 className="h-12 bg-muted/30 border-muted-foreground/10 rounded-xl text-lg font-semibold"
               />
               <Input 
-                placeholder={`@${type}username`} 
+                placeholder={`@${type === 'group' ? 'group' : 'channel'}_id`} 
                 value={username}
                 onChange={e => setUsername(e.target.value)}
                 className="h-12 bg-muted/30 border-muted-foreground/10 rounded-xl"
               />
             </div>
             <div className="flex gap-3 pt-4">
-              <Button variant="ghost" className="flex-1 rounded-xl" onClick={() => setStep('select')}>Back</Button>
+              <Button variant="ghost" className="flex-1 rounded-xl" onClick={() => setStep('select')}>Назад</Button>
               <Button 
-                className="flex-1 rounded-xl h-11 shadow-lg shadow-primary/20" 
+                className="flex-1 rounded-xl h-11 shadow-lg shadow-primary/20 font-bold" 
                 onClick={createGroupOrChannel}
                 disabled={isLoading}
               >
-                {isLoading ? <Loader2 className="animate-spin" /> : `Create ${type}`}
+                {isLoading ? <Loader2 className="animate-spin" /> : `Создать ${type === 'group' ? 'группу' : 'канал'}`}
               </Button>
             </div>
           </div>
