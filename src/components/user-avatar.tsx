@@ -16,6 +16,7 @@ interface UserAvatarProps {
 
 /**
  * Умный компонент аватарки, который всегда отображает актуальное фото пользователя из Firestore.
+ * Оптимизирован для мобильных устройств и обработки ошибок загрузки.
  */
 export function UserAvatar({ userId, className, fallbackName, fallbackClassName }: UserAvatarProps) {
   const db = useFirestore();
@@ -25,14 +26,21 @@ export function UserAvatar({ userId, className, fallbackName, fallbackClassName 
     return doc(db, 'users', userId);
   }, [db, userId]);
 
-  const { data: profile } = useDoc(userRef);
+  const { data: profile, isLoading } = useDoc(userRef);
 
   const displayAvatar = profile?.avatarUrl;
   const displayName = profile?.name || fallbackName || '??';
 
   return (
-    <Avatar className={cn("shrink-0", className)}>
-      <AvatarImage src={displayAvatar || ''} alt={displayName} className="object-cover" />
+    <Avatar className={cn("shrink-0 relative", className)}>
+      {/* Отображаем картинку только если она есть и данные загружены */}
+      {!isLoading && displayAvatar ? (
+        <AvatarImage 
+          src={displayAvatar} 
+          alt={displayName} 
+          className="object-cover"
+        />
+      ) : null}
       <AvatarFallback className={cn("bg-primary/20 text-primary font-bold uppercase", fallbackClassName)}>
         {displayName.slice(0, 2)}
       </AvatarFallback>

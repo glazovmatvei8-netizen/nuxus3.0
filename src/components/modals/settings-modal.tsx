@@ -109,15 +109,26 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
   const handleAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      if (file.size > 800000) {
-        toast({ title: "Файл слишком велик", description: "Выберите изображение до 800КБ", variant: "destructive" });
+      // Проверка на HEIC/HEIF - современные телефоны часто сохраняют в них
+      if (!['image/jpeg', 'image/png'].includes(file.type)) {
+        toast({ 
+          title: "Неверный формат", 
+          description: "Пожалуйста, используйте JPEG или PNG. Форматы HEIC (с iPhone) не поддерживаются.", 
+          variant: "destructive" 
+        });
         return;
       }
+
+      if (file.size > 900000) {
+        toast({ title: "Файл слишком велик", description: "Выберите изображение до 900КБ для лучшей работы.", variant: "destructive" });
+        return;
+      }
+
       const reader = new FileReader();
       reader.onloadend = () => {
         setForm(prev => ({ ...prev, avatarUrl: reader.result as string }));
         setIsAvatarPickerOpen(false);
-        toast({ title: "Фото загружено", description: "Не забудьте сохранить изменения" });
+        toast({ title: "Фото загружено", description: "Не забудьте сохранить изменения внизу страницы." });
       };
       reader.readAsDataURL(file);
     }
@@ -126,8 +137,8 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
   const handleBackgroundUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      if (file.size > 800000) {
-        toast({ title: "Файл слишком велик", description: "Выберите изображение до 800КБ", variant: "destructive" });
+      if (file.size > 900000) {
+        toast({ title: "Файл слишком велик", description: "Выберите изображение до 900КБ", variant: "destructive" });
         return;
       }
       const reader = new FileReader();
@@ -206,7 +217,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                 </div>
                 
                 <div className="flex gap-2">
-                  <input type="file" ref={avatarInputRef} className="hidden" accept="image/*" onChange={handleAvatarUpload} />
+                  <input type="file" ref={avatarInputRef} className="hidden" accept="image/jpeg,image/png" onChange={handleAvatarUpload} />
                   <Button 
                     variant="outline" 
                     className="flex-1 rounded-xl h-10 border-primary/20 hover:bg-primary/10 gap-2"
@@ -222,6 +233,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                     Отмена
                   </Button>
                 </div>
+                <p className="text-[10px] text-center text-muted-foreground italic">Рекомендуется JPEG или PNG до 900 КБ</p>
               </div>
             )}
 
@@ -302,7 +314,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                       ))}
                     </SelectContent>
                   </Select>
-                  <input type="file" ref={backgroundInputRef} className="hidden" accept="image/*" onChange={handleBackgroundUpload} />
+                  <input type="file" ref={backgroundInputRef} className="hidden" accept="image/jpeg,image/png" onChange={handleBackgroundUpload} />
                   <Button 
                     variant="outline" 
                     size="icon" 
