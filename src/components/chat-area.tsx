@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useRef, useEffect } from 'react';
@@ -8,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { 
   Send, Paperclip, Smile, MoreVertical, ChevronLeft, 
-  Sparkles, MessageSquare, Info, Mic, Camera, X, StopCircle
+  Sparkles, MessageSquare, Info, Mic, Camera, X, StopCircle, UserPlus
 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { MessageItem } from './message-item';
@@ -16,8 +15,8 @@ import { suggestMessageDraft } from '@/ai/flows/ai-message-drafting-flow';
 import { useToast } from '@/hooks/use-toast';
 import { ChatInfoModal } from './modals/chat-info-modal';
 import { useFirestore, useUser, useCollection, useDoc, useMemoFirebase } from '@/firebase';
-import { collection, query, orderBy, doc } from 'firebase/firestore';
-import { addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { collection, query, orderBy, doc, arrayUnion } from 'firebase/firestore';
+import { addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 interface ChatAreaProps {
@@ -69,6 +68,8 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
   }, [db, currentChatId]);
   const { data: messages } = useCollection(messagesQuery);
 
+  const isParticipant = chat?.participantIds?.includes(user?.uid);
+
   useEffect(() => {
     if (scrollRef.current) {
       const scrollContainer = scrollRef.current.querySelector('[data-radix-scroll-area-viewport]');
@@ -106,7 +107,7 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
   };
 
   const handleSendMessage = (content: string = inputText, type: string = 'text') => {
-    if (!content.trim() || !currentChatId || !user) return;
+    if (!content.trim() || !currentChatId || !user || !isParticipant) return;
     
     const messageData = {
       chatId: currentChatId,
@@ -120,6 +121,14 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
     const messagesCol = collection(db, 'chats', currentChatId, 'messages');
     addDocumentNonBlocking(messagesCol, messageData);
     if (type === 'text') setInputText('');
+  };
+
+  const joinChat = () => {
+    if (!chatRef || !user) return;
+    updateDocumentNonBlocking(chatRef, {
+      participantIds: arrayUnion(user.uid)
+    });
+    toast({ title: "Welcome!", description: "You have joined the conversation." });
   };
 
   const startAudioRecording = async () => {
@@ -241,71 +250,90 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
       </header>
 
       <ScrollArea ref={scrollRef} className="flex-1 px-4 py-4 relative z-10 bg-gradient-to-b from-card/10 via-background to-background">
-        <div className="flex flex-col gap-4 max-w-4xl mx-auto min-h-full">
-          {messages?.map((msg) => (
-            <MessageItem 
-              key={msg.id} 
-              message={msg} 
-              isMe={msg.senderId === user?.uid}
-              chatId={currentChatId}
-            />
-          ))}
-        </div>
+        {!isParticipant ? (
+          <div className="h-full flex flex-col items-center justify-center text-center p-8 space-y-4">
+            <div className="bg-primary/10 p-4 rounded-full">
+              <UserPlus className="w-12 h-12 text-primary" />
+            </div>
+            <h3 className="text-lg font-bold">You are not a member yet</h3>
+            <p className="text-sm text-muted-foreground max-w-xs">Join this conversation to see previous messages and start chatting.</p>
+            <Button onClick={joinChat} className="rounded-xl px-8 h-12 shadow-lg shadow-primary/20">
+              Join Conversation
+            </Button>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-4 max-w-4xl mx-auto min-h-full">
+            {messages?.map((msg) => (
+              <MessageItem 
+                key={msg.id} 
+                message={msg} 
+                isMe={msg.senderId === user?.uid}
+                chatId={currentChatId}
+              />
+            ))}
+          </div>
+        )}
       </ScrollArea>
 
       <footer className="p-4 bg-card/20 backdrop-blur-xl border-t border-border/40 z-20">
-        <div className="flex flex-col gap-2 max-w-4xl mx-auto">
-          {isRecordingAudio && (
-            <div className="flex items-center justify-between bg-primary/10 p-3 rounded-2xl animate-in slide-in-from-bottom-2">
-              <div className="flex items-center gap-3 text-primary">
-                <Mic className="w-5 h-5 animate-pulse" />
-                <span className="font-mono font-bold">{formatTime(recordingTime)}</span>
-                <span className="text-sm">Recording voice...</span>
+        {!isParticipant ? (
+          <div className="max-w-4xl mx-auto text-center">
+            <p className="text-xs text-muted-foreground uppercase font-bold tracking-widest">Joining required to send messages</p>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-2 max-w-4xl mx-auto">
+            {isRecordingAudio && (
+              <div className="flex items-center justify-between bg-primary/10 p-3 rounded-2xl animate-in slide-in-from-bottom-2">
+                <div className="flex items-center gap-3 text-primary">
+                  <Mic className="w-5 h-5 animate-pulse" />
+                  <span className="font-mono font-bold">{formatTime(recordingTime)}</span>
+                  <span className="text-sm">Recording voice...</span>
+                </div>
+                <Button size="icon" variant="ghost" className="text-destructive" onClick={stopRecording}>
+                  <StopCircle className="w-6 h-6" />
+                </Button>
               </div>
-              <Button size="icon" variant="ghost" className="text-destructive" onClick={stopRecording}>
-                <StopCircle className="w-6 h-6" />
-              </Button>
-            </div>
-          )}
+            )}
 
-          <div className="flex items-end gap-3">
-            <div className="flex items-center gap-1 mb-1">
-              <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleFileSelect} />
-              <Button variant="ghost" size="icon" className="h-10 w-10 text-muted-foreground hover:text-primary" onClick={() => fileInputRef.current?.click()}>
-                <Paperclip className="w-5 h-5" />
-              </Button>
-              <Button variant="ghost" size="icon" className="h-10 w-10 text-muted-foreground hover:text-primary" onClick={startVideoRecording}>
-                <Camera className="w-5 h-5" />
-              </Button>
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                className={`h-10 w-10 text-muted-foreground hover:text-primary ${isRecordingAudio ? 'text-primary' : ''}`}
-                onClick={isRecordingAudio ? stopRecording : startAudioRecording}
-              >
-                <Mic className="w-5 h-5" />
-              </Button>
-            </div>
+            <div className="flex items-end gap-3">
+              <div className="flex items-center gap-1 mb-1">
+                <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleFileSelect} />
+                <Button variant="ghost" size="icon" className="h-10 w-10 text-muted-foreground hover:text-primary" onClick={() => fileInputRef.current?.click()}>
+                  <Paperclip className="w-5 h-5" />
+                </Button>
+                <Button variant="ghost" size="icon" className="h-10 w-10 text-muted-foreground hover:text-primary" onClick={startVideoRecording}>
+                  <Camera className="w-5 h-5" />
+                </Button>
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className={`h-10 w-10 text-muted-foreground hover:text-primary ${isRecordingAudio ? 'text-primary' : ''}`}
+                  onClick={isRecordingAudio ? stopRecording : startAudioRecording}
+                >
+                  <Mic className="w-5 h-5" />
+                </Button>
+              </div>
 
-            <div className="flex-1 relative group">
-              <Input 
-                placeholder="Write a message..." 
-                value={inputText}
-                onChange={(e) => setInputText(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
-                className="bg-muted/40 border-muted-foreground/10 rounded-2xl h-11 pr-12 focus:ring-1 focus:ring-primary/40 group-hover:bg-muted/60 transition-colors"
-                disabled={isRecordingAudio}
-              />
-              <Button 
-                size="icon" 
-                className={`absolute right-1 top-1 w-9 h-9 rounded-xl shadow-lg shadow-primary/20 transition-all ${inputText.trim() ? 'scale-100 opacity-100' : 'scale-0 opacity-0'}`}
-                onClick={() => handleSendMessage()}
-              >
-                <Send className="w-4 h-4" />
-              </Button>
+              <div className="flex-1 relative group">
+                <Input 
+                  placeholder="Write a message..." 
+                  value={inputText}
+                  onChange={(e) => setInputText(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
+                  className="bg-muted/40 border-muted-foreground/10 rounded-2xl h-11 pr-12 focus:ring-1 focus:ring-primary/40 group-hover:bg-muted/60 transition-colors"
+                  disabled={isRecordingAudio}
+                />
+                <Button 
+                  size="icon" 
+                  className={`absolute right-1 top-1 w-9 h-9 rounded-xl shadow-lg shadow-primary/20 transition-all ${inputText.trim() ? 'scale-100 opacity-100' : 'scale-0 opacity-0'}`}
+                  onClick={() => handleSendMessage()}
+                >
+                  <Send className="w-4 h-4" />
+                </Button>
+              </div>
             </div>
           </div>
-        </div>
+        )}
       </footer>
 
       {/* Video Recording Modal */}
