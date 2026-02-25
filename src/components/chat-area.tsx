@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useRef, useEffect } from 'react';
@@ -70,13 +69,12 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
   }, [db, currentChatId]);
   const { data: chat } = useDoc(chatRef);
 
-  // Status logic for the other user
   const otherId = chat?.type === 'private' && user ? chat.participantIds?.find((id: string) => id !== user.uid) : null;
   const otherUserRef = useMemoFirebase(() => {
     if (!db || !otherId) return null;
     return doc(db, 'users', otherId);
   }, [db, otherId]);
-  const { data: otherUserProfile } = useDoc(otherUserRef);
+  const { data: otherUserProfile, isLoading: isOtherProfileLoading } = useDoc(otherUserRef);
 
   const messagesQuery = useMemoFirebase(() => {
     if (!db || !currentChatId) return null;
@@ -89,10 +87,8 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
 
   const isParticipant = chat?.participantIds?.includes(user?.uid) || chat?.type === 'private';
 
-  // Mark as read logic
   useEffect(() => {
     if (messages && user && currentChatId && chat && isParticipant) {
-      // Only update first 5 unread to prevent error/flood
       const unread = messages.filter(msg => !msg.isRead && msg.senderId !== user.uid).slice(0, 10);
       unread.forEach(msg => {
         const msgRef = doc(db, 'chats', currentChatId, 'messages', msg.id);
@@ -107,24 +103,6 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
       if (scrollContainer) scrollContainer.scrollTop = scrollContainer.scrollHeight;
     }
   }, [messages]);
-
-  useEffect(() => {
-    let interval: any;
-    if (isRecordingAudio || isRecordingVideo) {
-      interval = setInterval(() => {
-        setRecordingTime(prev => {
-          if (prev >= 180) {
-            stopRecording();
-            return 180;
-          }
-          return prev + 1;
-        });
-      }, 1000);
-    } else {
-      setRecordingTime(0);
-    }
-    return () => clearInterval(interval);
-  }, [isRecordingAudio, isRecordingVideo]);
 
   const stopRecording = () => {
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
@@ -239,6 +217,7 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
   };
 
   const chatDisplayName = otherId && chat?.metadata ? chat.metadata[otherId]?.name : chat?.name;
+  const statusString = isOtherProfileLoading ? 'загрузка...' : formatLastSeen(otherUserProfile?.lastSeen);
 
   if (!currentChatId) {
     return (
@@ -269,9 +248,9 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
               <span className="font-semibold text-sm leading-tight truncate">{chatDisplayName}</span>
               <span className={cn(
                 "text-[10px] truncate",
-                otherUserProfile?.lastSeen && formatLastSeen(otherUserProfile.lastSeen) === 'в сети' ? 'text-accent font-bold' : 'text-muted-foreground'
+                statusString === 'в сети' ? 'text-accent font-bold' : 'text-muted-foreground'
               )}>
-                {chat?.type === 'private' ? formatLastSeen(otherUserProfile?.lastSeen) : (chat?.type === 'group' ? 'Группа' : 'Канал')}
+                {chat?.type === 'private' ? statusString : (chat?.type === 'group' ? 'Группа' : 'Канал')}
               </span>
             </div>
           </div>

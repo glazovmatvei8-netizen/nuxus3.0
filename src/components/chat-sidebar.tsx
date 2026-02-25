@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState } from 'react';
@@ -14,6 +13,7 @@ import { SettingsModal } from './modals/settings-modal';
 import type { ChatType } from '@/lib/types';
 import { useFirestore, useUser, useCollection, useDoc, useMemoFirebase } from '@/firebase';
 import { collection, query, where, doc } from 'firebase/firestore';
+import { formatLastSeen, cn } from '@/lib/utils';
 
 export default function ChatSidebar() {
   const { user } = useUser();
@@ -108,44 +108,18 @@ export default function ChatSidebar() {
             {filteredChats.map(chat => {
               const otherId = chat.type === 'private' && user ? chat.participantIds.find((id: string) => id !== user.uid) : null;
               const chatDisplayName = otherId && chat.metadata ? chat.metadata[otherId]?.name : chat.name;
-              const chatDisplayUsername = otherId && chat.metadata ? chat.metadata[otherId]?.username : chat.username;
               
               const isActive = currentChatId === chat.id;
 
               return (
-                <div
+                <ChatListItem 
                   key={chat.id}
+                  chat={chat}
+                  isActive={isActive}
+                  otherId={otherId}
+                  chatDisplayName={chatDisplayName}
                   onClick={() => setCurrentChatId(chat.id)}
-                  className={`flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all duration-200 group ${
-                    isActive ? 'bg-primary shadow-lg shadow-primary/20 text-white' : 'hover:bg-muted/40 text-foreground'
-                  }`}
-                >
-                  <div className="relative shrink-0">
-                    {chat.type === 'private' ? (
-                      <UserAvatar 
-                        userId={otherId} 
-                        className="h-11 w-11 md:h-12 md:w-12 border-2 border-transparent group-hover:border-primary/20 transition-all" 
-                        fallbackName={chatDisplayName}
-                      />
-                    ) : (
-                      <UserAvatar 
-                        userId={null} 
-                        fallbackName={chatDisplayName}
-                        className="h-11 w-11 md:h-12 md:w-12 border-2 border-transparent group-hover:border-primary/20 transition-all"
-                      />
-                    )}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="font-semibold truncate text-sm">{chatDisplayName}</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <p className={`text-xs truncate ${isActive ? 'text-white/80' : 'text-muted-foreground'}`}>
-                        {chat.description || chatDisplayUsername}
-                      </p>
-                    </div>
-                  </div>
-                </div>
+                />
               );
             })}
           </div>
@@ -164,6 +138,51 @@ export default function ChatSidebar() {
 
       <CreateChatModal open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen} />
       <SettingsModal open={isSettingsOpen} onOpenChange={setIsSettingsOpen} />
+    </div>
+  );
+}
+
+function ChatListItem({ chat, isActive, otherId, chatDisplayName, onClick }: any) {
+  const db = useFirestore();
+  const userProfileRef = useMemoFirebase(() => {
+    if (!db || !otherId) return null;
+    return doc(db, 'users', otherId);
+  }, [db, otherId]);
+  
+  const { data: otherProfile } = useDoc(userProfileRef);
+  const status = otherId ? formatLastSeen(otherProfile?.lastSeen) : (chat.type === 'group' ? 'Группа' : 'Канал');
+
+  return (
+    <div
+      onClick={onClick}
+      className={cn(
+        "flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all duration-200 group",
+        isActive ? 'bg-primary shadow-lg shadow-primary/20 text-white' : 'hover:bg-muted/40 text-foreground'
+      )}
+    >
+      <div className="relative shrink-0">
+        <UserAvatar 
+          userId={otherId} 
+          className="h-11 w-11 md:h-12 md:w-12 border-2 border-transparent group-hover:border-primary/20 transition-all" 
+          fallbackName={chatDisplayName}
+        />
+        {status === 'в сети' && (
+          <span className="absolute bottom-0 right-0 w-3 h-3 bg-accent rounded-full border-2 border-background" />
+        )}
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center justify-between gap-2">
+          <span className="font-semibold truncate text-sm">{chatDisplayName}</span>
+        </div>
+        <div className="flex items-center justify-between">
+          <p className={cn(
+            "text-[10px] truncate",
+            isActive ? 'text-white/80' : (status === 'в сети' ? 'text-accent font-bold' : 'text-muted-foreground')
+          )}>
+            {status}
+          </p>
+        </div>
+      </div>
     </div>
   );
 }

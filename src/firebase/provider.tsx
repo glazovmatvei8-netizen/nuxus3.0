@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { DependencyList, createContext, useContext, ReactNode, useMemo, useState, useEffect } from 'react';
@@ -89,8 +88,11 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
       });
     };
 
-    updateStatus(); // Initial
-    const interval = setInterval(updateStatus, 30000); // Every 30s
+    // Обновляем сразу при монтировании
+    updateStatus();
+    
+    // И затем каждые 30 секунд
+    const interval = setInterval(updateStatus, 30000); 
     return () => clearInterval(interval);
   }, [userAuthState.user, firestore]);
 

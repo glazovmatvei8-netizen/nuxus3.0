@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState } from 'react';
@@ -65,6 +64,7 @@ export default function AuthScreen() {
           phone: `+${phoneDigits}`,
           avatarUrl: `https://picsum.photos/seed/${res.user.uid}/200`,
           createdAt: new Date().toISOString(),
+          lastSeen: new Date().toISOString(),
           inactivityDeletion: 'never'
         });
       } else {
@@ -95,6 +95,7 @@ export default function AuthScreen() {
             phone: `+${acc.phone}`,
             avatarUrl: `https://picsum.photos/seed/${acc.phone}/200`,
             createdAt: new Date().toISOString(),
+            lastSeen: new Date().toISOString(),
             inactivityDeletion: 'never'
           });
         } catch (e) {} // Account might already exist
@@ -107,7 +108,6 @@ export default function AuthScreen() {
     }
   };
 
-  // Проверка: показывать ли кнопку Dev Tool только админу
   const showDevTool = normalizePhone(formData.phone) === '79513332147';
 
   return (
