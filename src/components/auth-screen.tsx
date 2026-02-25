@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState } from 'react';
@@ -6,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { MessageSquareText, Loader2, Smartphone, Lock, UserCircle, AtSign } from 'lucide-react';
+import { MessageSquareText, Loader2, Smartphone, Lock, UserCircle, AtSign, ShieldCheck } from 'lucide-react';
 import { useAuth, useFirestore } from '@/firebase';
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';
 import { doc, setDoc, query, collection, where, getDocs, limit } from 'firebase/firestore';
@@ -20,6 +21,7 @@ export default function AuthScreen() {
   
   const [mode, setMode] = useState<AuthMode>('login');
   const [isLoading, setIsLoading] = useState(false);
+  const [isSettingUp, setIsSettingUp] = useState(false);
   
   const [formData, setFormData] = useState({
     name: '',
@@ -38,82 +40,70 @@ export default function AuthScreen() {
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
-    
     const phoneDigits = normalizePhone(formData.phone);
-    
     if (!phoneDigits) {
       toast({ title: "Ошибка", description: "Введите корректный номер телефона", variant: "destructive" });
       return;
     }
-
-    if (formData.password.length < 6) {
-      toast({ title: "Ошибка", description: "Пароль должен быть не менее 6 символов", variant: "destructive" });
-      return;
-    }
-
     setIsLoading(true);
     const loginEmail = `${phoneDigits}@nuxus.chat`;
-
     try {
       if (mode === 'register') {
-        if (!formData.name || !formData.username) {
-          toast({ title: "Ошибка", description: "Пожалуйста, заполните имя и ник", variant: "destructive" });
+        const username = formData.username.startsWith('@') ? formData.username.toLowerCase() : '@' + formData.username.toLowerCase();
+        const q = query(collection(db, 'users'), where('username', '==', username), limit(1));
+        const snap = await getDocs(q);
+        if (!snap.empty) {
+          toast({ title: "Ник занят", description: "Выберите другой @username", variant: "destructive" });
           setIsLoading(false);
           return;
         }
-
-        let username = formData.username.trim().toLowerCase();
-        if (!username.startsWith('@')) username = '@' + username;
-
-        // Проверка ника на уникальность
-        const usernameQuery = query(
-          collection(db, 'users'), 
-          where('username', '==', username),
-          limit(1)
-        );
-        const usernameSnapshot = await getDocs(usernameQuery);
-        
-        if (!usernameSnapshot.empty) {
-          toast({ title: "Ник занят", description: "Этот ник уже используется другим пользователем.", variant: "destructive" });
-          setIsLoading(false);
-          return;
-        }
-
-        const result = await createUserWithEmailAndPassword(auth, loginEmail, formData.password);
-        
-        const userProfile = {
-          id: result.user.uid,
-          name: formData.name.trim(),
+        const res = await createUserWithEmailAndPassword(auth, loginEmail, formData.password);
+        await setDoc(doc(db, 'users', res.user.uid), {
+          id: res.user.uid,
+          name: formData.name,
           username: username,
           phone: `+${phoneDigits}`,
+          avatarUrl: `https://picsum.photos/seed/${res.user.uid}/200`,
           createdAt: new Date().toISOString(),
-          avatarUrl: `https://picsum.photos/seed/${result.user.uid}/200`,
           inactivityDeletion: 'never'
-        };
-
-        await setDoc(doc(db, 'users', result.user.uid), userProfile);
-        toast({ title: "Успех", description: "Аккаунт успешно создан!" });
+        });
       } else {
         await signInWithEmailAndPassword(auth, loginEmail, formData.password);
-        toast({ title: "С возвращением!", description: "Вы успешно вошли." });
       }
-    } catch (error: any) {
-      console.error("Auth Error:", error);
-      let message = "Произошла ошибка.";
-      
-      if (error.code === 'auth/email-already-in-use') {
-        message = "Этот номер телефона уже зарегистрирован.";
-      } else if (error.code === 'auth/invalid-credential' || error.code === 'auth/wrong-password' || error.code === 'auth/user-not-found') {
-        message = "Неверный номер или пароль.";
-      } else if (error.code === 'auth/network-request-failed') {
-        message = "Ошибка сети. Проверьте подключение к интернету.";
-      } else {
-        message = error.message || "Попробуйте еще раз позже.";
-      }
-      
-      toast({ title: "Ошибка", description: message, variant: "destructive" });
+    } catch (err: any) {
+      toast({ title: "Ошибка", description: "Проверьте данные или интернет", variant: "destructive" });
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const setupTestAccounts = async () => {
+    setIsSettingUp(true);
+    const accounts = [
+      { phone: '79513332147', pass: 'gaz20092', name: 'Админ Абузер', user: '@vnAdmin' },
+      { phone: '79064222830', pass: '1234567', name: 'Чайник', user: '@Chai' }
+    ];
+    try {
+      for (const acc of accounts) {
+        const email = `${acc.phone}@nuxus.chat`;
+        try {
+          const res = await createUserWithEmailAndPassword(auth, email, acc.pass);
+          await setDoc(doc(db, 'users', res.user.uid), {
+            id: res.user.uid,
+            name: acc.name,
+            username: acc.user,
+            phone: `+${acc.phone}`,
+            avatarUrl: `https://picsum.photos/seed/${acc.phone}/200`,
+            createdAt: new Date().toISOString(),
+            inactivityDeletion: 'never'
+          });
+        } catch (e) {} // Account might already exist
+      }
+      toast({ title: "Готово!", description: "Аккаунты созданы. Теперь можно войти." });
+    } catch (err) {
+      toast({ title: "Ошибка настройки", variant: "destructive" });
+    } finally {
+      setIsSettingUp(false);
     }
   };
 
@@ -136,84 +126,47 @@ export default function AuthScreen() {
             {mode === 'register' && (
               <>
                 <div className="space-y-1.5">
-                  <Label htmlFor="name" className="text-xs uppercase tracking-wider text-muted-foreground ml-1">Полное имя</Label>
+                  <Label className="text-xs uppercase text-muted-foreground ml-1">Имя</Label>
                   <div className="relative">
                     <UserCircle className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <Input 
-                      id="name"
-                      placeholder="Имя Фамилия" 
-                      value={formData.name} 
-                      onChange={e => setFormData({...formData, name: e.target.value})}
-                      className="bg-muted/30 pl-9 h-11 rounded-xl"
-                      required
-                    />
+                    <Input placeholder="Имя Фамилия" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="bg-muted/30 pl-9 rounded-xl" required />
                   </div>
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="username" className="text-xs uppercase tracking-wider text-muted-foreground ml-1">Никнейм</Label>
+                  <Label className="text-xs uppercase text-muted-foreground ml-1">Никнейм</Label>
                   <div className="relative">
                     <AtSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <Input 
-                      id="username"
-                      placeholder="@username" 
-                      value={formData.username} 
-                      onChange={e => setFormData({...formData, username: e.target.value.replace(/\s/g, '').toLowerCase()})}
-                      className="bg-muted/30 pl-9 h-11 rounded-xl"
-                      required
-                    />
+                    <Input placeholder="@username" value={formData.username} onChange={e => setFormData({...formData, username: e.target.value})} className="bg-muted/30 pl-9 rounded-xl" required />
                   </div>
                 </div>
               </>
             )}
-
             <div className="space-y-1.5">
-              <Label htmlFor="phone" className="text-xs uppercase tracking-wider text-muted-foreground ml-1">Телефон</Label>
+              <Label className="text-xs uppercase text-muted-foreground ml-1">Телефон</Label>
               <div className="relative">
                 <Smartphone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <Input 
-                  id="phone"
-                  placeholder="+79001234567" 
-                  type="tel"
-                  value={formData.phone} 
-                  onChange={e => setFormData({...formData, phone: e.target.value})}
-                  className="bg-muted/30 pl-9 h-11 rounded-xl"
-                  required
-                />
+                <Input placeholder="+79001234567" type="tel" value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} className="bg-muted/30 pl-9 rounded-xl" required />
               </div>
             </div>
-
             <div className="space-y-1.5">
-              <Label htmlFor="password" className="text-xs uppercase tracking-wider text-muted-foreground ml-1">Пароль</Label>
+              <Label className="text-xs uppercase text-muted-foreground ml-1">Пароль</Label>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <Input 
-                  id="password"
-                  placeholder="Минимум 6 символов" 
-                  type="password"
-                  value={formData.password} 
-                  onChange={e => setFormData({...formData, password: e.target.value})}
-                  className="bg-muted/30 pl-9 h-11 rounded-xl"
-                  required
-                />
+                <Input placeholder="Минимум 6 символов" type="password" value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} className="bg-muted/30 pl-9 rounded-xl" required />
               </div>
             </div>
-
-            <Button 
-              type="submit"
-              disabled={isLoading}
-              className="w-full h-12 text-md font-bold shadow-lg shadow-primary/20 transition-all active:scale-95 mt-4 rounded-xl"
-            >
-              {isLoading ? <Loader2 className="animate-spin" /> : (mode === 'login' ? "Войти" : "Создать аккаунт")}
+            <Button type="submit" disabled={isLoading} className="w-full h-12 text-md font-bold shadow-lg shadow-primary/20 rounded-xl">
+              {isLoading ? <Loader2 className="animate-spin" /> : (mode === 'login' ? "Войти" : "Зарегистрироваться")}
             </Button>
           </form>
-
-          <div className="mt-6 text-center">
-            <button 
-              onClick={() => setMode(mode === 'login' ? 'register' : 'login')}
-              className="text-sm text-muted-foreground hover:text-primary transition-colors py-1"
-            >
+          <div className="mt-4 flex flex-col gap-2">
+            <button onClick={() => setMode(mode === 'login' ? 'register' : 'login')} className="text-sm text-muted-foreground hover:text-primary transition-colors">
               {mode === 'login' ? "Нет аккаунта? Зарегистрироваться" : "Уже есть аккаунт? Войти"}
             </button>
+            <Button variant="ghost" size="sm" onClick={setupTestAccounts} disabled={isSettingUp} className="text-[10px] text-muted-foreground/60 flex gap-2">
+              {isSettingUp ? <Loader2 className="w-3 h-3 animate-spin" /> : <ShieldCheck className="w-3 h-3" />}
+              Настроить аккаунты (Админ и Чайник)
+            </Button>
           </div>
         </CardContent>
       </Card>
