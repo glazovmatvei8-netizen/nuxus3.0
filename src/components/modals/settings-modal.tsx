@@ -16,13 +16,14 @@ import { useAuth, useUser, useFirestore, useDoc, useMemoFirebase } from '@/fireb
 import { UserAvatar } from '@/components/user-avatar';
 import { 
   LogOut, User, Share2, 
-  Trash2, LayoutGrid, Upload, Palette, ImageIcon, Type, Loader2, Sparkles, X
+  Trash2, LayoutGrid, Upload, Palette, ImageIcon, Type, Loader2, Sparkles, X, Wand2
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { signOut } from 'firebase/auth';
 import { doc } from 'firebase/firestore';
 import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { generateBrandVisual } from '@/ai/flows/generate-brand-visual-flow';
+import { generateAiAvatar } from '@/ai/flows/generate-ai-avatar-flow';
 
 interface SettingsModalProps {
   open: boolean;
@@ -53,7 +54,6 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
   const { user } = useUser();
   const { toast } = useToast();
   const avatarInputRef = useRef<HTMLInputElement>(null);
-  const backgroundInputRef = useRef<HTMLInputElement>(null);
 
   const userRef = useMemoFirebase(() => {
     if (!db || !user) return null;
@@ -76,6 +76,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
   const [showBrandVisual, setShowBrandVisual] = useState(false);
   const [brandImageUrl, setBrandImageUrl] = useState<string | null>(null);
   const [isGeneratingVisual, setIsGeneratingVisual] = useState(false);
+  const [isGeneratingAvatar, setIsGeneratingAvatar] = useState(false);
 
   React.useEffect(() => {
     if (profile) {
@@ -124,6 +125,19 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
     }
   };
 
+  const handleGenerateAiAvatar = async () => {
+    setIsGeneratingAvatar(true);
+    try {
+      const result = await generateAiAvatar();
+      setForm(prev => ({ ...prev, avatarUrl: result.imageUrl }));
+      toast({ title: "AI-аватар готов!", description: "Нажмите 'Сохранить', чтобы применить его." });
+    } catch (e) {
+      toast({ title: "Ошибка генерации аватара", variant: "destructive" });
+    } finally {
+      setIsGeneratingAvatar(false);
+    }
+  };
+
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
@@ -149,8 +163,19 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                 </div>
               </div>
 
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="flex items-center gap-2 rounded-full border-primary/40 text-primary hover:bg-primary/10 h-8"
+                onClick={handleGenerateAiAvatar}
+                disabled={isGeneratingAvatar}
+              >
+                {isGeneratingAvatar ? <Loader2 className="w-3 h-3 animate-spin" /> : <Wand2 className="w-3 h-3" />}
+                Сгенерировать AI-аватар
+              </Button>
+
               {isAvatarPickerOpen && (
-                <div className="w-full space-y-4">
+                <div className="w-full space-y-4 animate-in slide-in-from-top-2">
                   <div className="grid grid-cols-6 gap-2 p-3 bg-muted/30 rounded-2xl">
                     {PRESET_AVATARS.map((url, i) => (
                       <button key={i} onClick={() => { setForm({...form, avatarUrl: url}); setIsAvatarPickerOpen(false); }}>
@@ -161,7 +186,17 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                   <Button variant="outline" className="w-full" onClick={() => avatarInputRef.current?.click()}>
                     Загрузить фото
                   </Button>
-                  <input type="file" ref={avatarInputRef} className="hidden" accept="image/*" />
+                  <input type="file" ref={avatarInputRef} className="hidden" accept="image/*" onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (f) {
+                      const r = new FileReader();
+                      r.onloadend = () => {
+                        setForm(prev => ({ ...prev, avatarUrl: r.result as string }));
+                        setIsAvatarPickerOpen(false);
+                      };
+                      r.readAsDataURL(f);
+                    }
+                  }} />
                 </div>
               )}
             </div>
@@ -205,7 +240,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
 
           <div className="p-6 border-t border-border/40 shrink-0 space-y-2">
             <Button className="w-full h-11" onClick={handleSave} disabled={isProcessing}>
-               Сохранить
+               Сохранить изменения
             </Button>
             <Button variant="ghost" className="w-full h-11 text-muted-foreground" onClick={handleLogout}>
                Выйти
