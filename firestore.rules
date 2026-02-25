@@ -4,7 +4,7 @@ service cloud.firestore {
   match /databases/{database}/documents {
 
     /**
-     * NUXUSCHAT SECURITY MODEL
+     * NUXUSCHAT SECURITY MODEL - FINAL STABLE VERSION
      */
 
     function isSignedIn() {
@@ -15,15 +15,9 @@ service cloud.firestore {
       return isSignedIn() && request.auth.uid == userId;
     }
 
-    // Вспомогательная функция для проверки участия
-    function isChatParticipant(chatId) {
-      let chat = get(/databases/$(database)/documents/chats/$(chatId));
-      return isSignedIn() && (request.auth.uid in chat.data.participantIds);
-    }
-
-    function isChatAdmin(chatId) {
-      let chat = get(/databases/$(database)/documents/chats/$(chatId));
-      return isSignedIn() && (request.auth.uid in chat.data.adminIds || chat.data.ownerId == request.auth.uid);
+    // Проверка участия через данные запроса или данные документа
+    function isParticipant(participantIds) {
+      return isSignedIn() && (request.auth.uid in participantIds);
     }
 
     // --- Collection Rules ---
@@ -36,19 +30,20 @@ service cloud.firestore {
     }
 
     match /chats/{chatId} {
-      allow get: if isSignedIn();
-      allow list: if isSignedIn(); 
+      // Все вошедшие могут искать чаты
+      allow get, list: if isSignedIn();
       allow create: if isSignedIn();
-      allow update: if isSignedIn(); // Разрешаем обновление для вступления и индикатора печатания
-      allow delete: if isSignedIn() && (resource.data.ownerId == request.auth.uid || request.auth.uid in resource.data.adminIds);
+      // Обновление разрешено всем вошедшим для вступления и печатания
+      allow update: if isSignedIn(); 
+      allow delete: if isSignedIn() && (resource.data.ownerId == request.auth.uid || (request.auth.uid in resource.data.adminIds));
     }
 
     match /chats/{chatId}/messages/{messageId} {
-      // Чтение сообщений разрешено только участникам чата
+      // Чтение и запись только для участников. Прямая проверка через родительский документ
       allow get, list: if isSignedIn() && (request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participantIds);
       allow create: if isSignedIn() && (request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participantIds);
       allow update: if isSignedIn() && (request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participantIds); 
-      allow delete: if isSignedIn() && (resource.data.senderId == request.auth.uid || isChatAdmin(chatId));
+      allow delete: if isSignedIn() && (resource.data.senderId == request.auth.uid || request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.adminIds);
     }
 
     match /chats/{chatId}/messages/{messageId}/reactions/{reactionId} {

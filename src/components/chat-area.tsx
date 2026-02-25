@@ -70,9 +70,9 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
     if (!db || !currentChatId) return null;
     return doc(db, 'chats', currentChatId);
   }, [db, currentChatId]);
-  const { data: chat } = useDoc(chatRef);
+  const { data: chat, isLoading: isChatLoading } = useDoc(chatRef);
 
-  // Проверка участия
+  // СТРОГАЯ ПРОВЕРКА УЧАСТИЯ: запрос сообщений пойдет только если сервер подтвердил участие
   const isParticipant = useMemo(() => {
     if (!chat || !user) return false;
     return chat.participantIds?.includes(user.uid) || false;
@@ -86,6 +86,7 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
   const { data: otherUserProfile, isLoading: isOtherProfileLoading } = useDoc(otherUserRef);
 
   const messagesQuery = useMemoFirebase(() => {
+    // Если мы не участники, даже не пытаемся запрашивать коллекцию, чтобы не было Permission Denied
     if (!db || !currentChatId || !chat || !isParticipant) return null;
     return query(
       collection(db, 'chats', currentChatId, 'messages'),
@@ -97,7 +98,7 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
 
   // Логика индикатора печатания
   useEffect(() => {
-    if (!currentChatId || !user) return;
+    if (!currentChatId || !user || !isParticipant) return;
     
     if (inputText.length > 0) {
       updateDocumentNonBlocking(doc(db, 'chats', currentChatId), {
@@ -115,7 +116,7 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
         [`typing.${user.uid}`]: false
       });
     }
-  }, [inputText, currentChatId, user, db]);
+  }, [inputText, currentChatId, user, db, isParticipant]);
 
   useEffect(() => {
     const isTyping = chat?.typing && otherId && chat.typing[otherId];
@@ -186,7 +187,7 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
   const handleSendMessage = (content: string = inputText, type: string = 'text') => {
     const textToSend = content.trim();
     if (!textToSend && type === 'text') return;
-    if (!currentChatId || !user) return;
+    if (!currentChatId || !user || !isParticipant) return;
     
     if (editMessage && type === 'text') {
       const messageRef = doc(db, 'chats', currentChatId, 'messages', editMessage.id);
@@ -343,7 +344,7 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
           <div className="absolute inset-0 z-[-1] opacity-100" style={backgroundStyle} />
         )}
         <ScrollArea ref={scrollRef} className="h-full px-4 py-4 overflow-y-auto">
-          {(!isParticipant && chat) ? (
+          {(!isParticipant && !isChatLoading && chat) ? (
             <div className="min-h-full flex flex-col items-center justify-center text-center p-8 space-y-4">
               <div className="bg-primary/10 p-4 rounded-full">
                 <UserPlus className="w-12 h-12 text-primary" />
