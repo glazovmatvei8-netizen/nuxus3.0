@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState } from 'react';
@@ -7,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useAuth, useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Camera, LogOut, User, ShieldCheck, AtSign } from 'lucide-react';
+import { Camera, LogOut, User, ShieldCheck, AtSign, Copy, Share2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { signOut } from 'firebase/auth';
 import { doc } from 'firebase/firestore';
@@ -64,13 +65,25 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
     toast({ title: "Logged Out", description: "You have been successfully logged out." });
   };
 
+  const copyInvite = () => {
+    if (!profile?.username) return;
+    const inviteText = `Привет! Давай общаться в NuxusChat. Мой ник: ${profile.username}\nЗаходи: ${window.location.origin}`;
+    navigator.clipboard.writeText(inviteText);
+    toast({ 
+      title: "Скопировано!", 
+      description: "Текст приглашения с вашим ником скопирован в буфер обмена." 
+    });
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md bg-card/95 backdrop-blur-xl border-border/40 p-0 overflow-hidden">
         <DialogHeader className="p-6 bg-primary/5 border-b border-border/40">
-          <DialogTitle className="flex items-center gap-2 text-xl font-bold">
-            <User className="w-5 h-5 text-primary" />
-            Profile Settings
+          <DialogTitle className="flex items-center justify-between w-full">
+            <div className="flex items-center gap-2 text-xl font-bold">
+              <User className="w-5 h-5 text-primary" />
+              Настройки профиля
+            </div>
           </DialogTitle>
         </DialogHeader>
         
@@ -87,42 +100,67 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                 <Camera className="w-4 h-4" />
               </Button>
             </div>
-            <div className="text-center">
+            <div className="text-center w-full">
               <h3 className="text-lg font-bold">{profile?.name || 'Anonymous'}</h3>
-              <p className="text-sm text-muted-foreground">{profile?.username || '@username'}</p>
+              <div className="flex items-center justify-center gap-2 mt-1">
+                <p className="text-sm text-muted-foreground">{profile?.username || '@username'}</p>
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="h-6 w-6 text-muted-foreground hover:text-primary"
+                  onClick={copyInvite}
+                  title="Копировать приглашение"
+                >
+                  <Share2 className="w-3.5 h-3.5" />
+                </Button>
+              </div>
             </div>
           </div>
 
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label className="text-xs font-bold text-muted-foreground flex items-center gap-2">
-                <User className="w-3 h-3" /> FULL NAME
+              <Label className="text-xs font-bold text-muted-foreground flex items-center gap-2 uppercase tracking-wider">
+                <User className="w-3 h-3" /> Полное имя
               </Label>
               <Input 
                 value={form.name} 
                 onChange={e => setForm({...form, name: e.target.value})}
                 className="bg-muted/30 border-muted-foreground/10 h-11 rounded-xl"
+                placeholder="Ваше имя"
               />
             </div>
             <div className="space-y-2">
-              <Label className="text-xs font-bold text-muted-foreground flex items-center gap-2">
-                <AtSign className="w-3 h-3" /> USERNAME
+              <Label className="text-xs font-bold text-muted-foreground flex items-center gap-2 uppercase tracking-wider">
+                <AtSign className="w-3 h-3" /> Имя пользователя
               </Label>
               <Input 
                 value={form.username} 
                 onChange={e => setForm({...form, username: e.target.value})}
                 className="bg-muted/30 border-muted-foreground/10 h-11 rounded-xl"
+                placeholder="@username"
               />
             </div>
           </div>
 
           <div className="pt-4 space-y-3">
             <Button className="w-full h-11 rounded-xl shadow-lg shadow-primary/20" onClick={handleSave}>
-              Save Changes
+              Сохранить изменения
             </Button>
-            <Button variant="ghost" className="w-full h-11 rounded-xl text-destructive hover:bg-destructive/10 hover:text-destructive" onClick={handleLogout}>
+            <Button 
+              variant="outline" 
+              className="w-full h-11 rounded-xl border-primary/20 flex items-center gap-2"
+              onClick={copyInvite}
+            >
+              <Copy className="w-4 h-4" />
+              Пригласить друга
+            </Button>
+            <Button 
+              variant="ghost" 
+              className="w-full h-11 rounded-xl text-destructive hover:bg-destructive/10 hover:text-destructive" 
+              onClick={handleLogout}
+            >
               <LogOut className="w-4 h-4 mr-2" />
-              Log Out
+              Выйти из аккаунта
             </Button>
           </div>
         </div>
