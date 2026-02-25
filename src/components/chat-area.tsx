@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useRef, useEffect } from 'react';
@@ -69,7 +70,7 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
   }, [db, currentChatId]);
   const { data: chat } = useDoc(chatRef);
 
-  const otherId = chat?.type === 'private' && user ? chat.participantIds?.find((id: string) => id !== user.uid) : null;
+  const otherId = chat?.type === 'private' && user ? chat.participantIds?.find((id: string = '') => id !== user.uid) : null;
   const otherUserRef = useMemoFirebase(() => {
     if (!db || !otherId) return null;
     return doc(db, 'users', otherId);
@@ -85,9 +86,8 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
   }, [db, currentChatId]);
   const { data: messages } = useCollection<Message>(messagesQuery);
 
-  const isParticipant = chat?.participantIds?.includes(user?.uid) || chat?.type === 'private';
+  const isParticipant = chat?.participantIds?.includes(user?.uid || '') || chat?.type === 'private';
 
-  // Apply User Theme
   useEffect(() => {
     if (userProfile?.settings?.theme) {
       const theme = userProfile.settings.theme;
@@ -207,7 +207,7 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
       mediaRecorderRef.current = new MediaRecorder(stream);
       audioChunksRef.current = [];
       mediaRecorderRef.current.ondataavailable = (e) => {
-        if (e.data.size > 0) audioChunksRef.current.push(e.data);
+        if (e.data.size > 0) audioChunksRef.push(e.data);
       };
       mediaRecorderRef.current.onstop = async () => {
         const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
@@ -230,7 +230,7 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
       mediaRecorderRef.current = new MediaRecorder(stream);
       videoChunksRef.current = [];
       mediaRecorderRef.current.ondataavailable = (e) => {
-        if (e.data.size > 0) videoChunksRef.current.push(e.data);
+        if (e.data.size > 0) videoChunksRef.push(e.data);
       };
       mediaRecorderRef.current.onstop = async () => {
         const videoBlob = new Blob(videoChunksRef.current, { type: 'video/webm' });

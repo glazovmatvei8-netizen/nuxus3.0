@@ -1,10 +1,10 @@
 
 "use client"
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useDoc, useMemoFirebase, useFirestore } from '@/firebase';
 import { doc } from 'firebase/firestore';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
 
 interface UserAvatarProps {
@@ -20,6 +20,7 @@ interface UserAvatarProps {
  */
 export function UserAvatar({ userId, className, fallbackName, fallbackClassName }: UserAvatarProps) {
   const db = useFirestore();
+  const [imgError, setImgError] = useState(false);
   
   const userRef = useMemoFirebase(() => {
     if (!db || !userId) return null;
@@ -33,17 +34,19 @@ export function UserAvatar({ userId, className, fallbackName, fallbackClassName 
 
   return (
     <Avatar className={cn("shrink-0 relative", className)}>
-      {/* Отображаем картинку только если она есть и данные загружены */}
-      {!isLoading && displayAvatar ? (
-        <AvatarImage 
+      {/* Используем обычный img для лучшей поддержки тяжелых Base64 на мобильных устройствах */}
+      {!isLoading && displayAvatar && !imgError ? (
+        <img 
           src={displayAvatar} 
           alt={displayName} 
-          className="object-cover"
+          className="aspect-square h-full w-full object-cover"
+          onError={() => setImgError(true)}
         />
-      ) : null}
-      <AvatarFallback className={cn("bg-primary/20 text-primary font-bold uppercase", fallbackClassName)}>
-        {displayName.slice(0, 2)}
-      </AvatarFallback>
+      ) : (
+        <AvatarFallback className={cn("bg-primary/20 text-primary font-bold uppercase h-full w-full flex items-center justify-center", fallbackClassName)}>
+          {displayName.slice(0, 2)}
+        </AvatarFallback>
+      )}
     </Avatar>
   );
 }
