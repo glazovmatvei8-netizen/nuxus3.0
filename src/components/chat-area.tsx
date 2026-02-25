@@ -80,9 +80,9 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
 
   const isParticipant = chat?.participantIds?.includes(user?.uid) || chat?.type === 'private';
 
-  // Mark as read logic
+  // Mark as read logic - only if chat data is available and user is a participant
   useEffect(() => {
-    if (messages && user && currentChatId && isParticipant) {
+    if (messages && user && currentChatId && chat && isParticipant) {
       messages.forEach(msg => {
         if (!msg.isRead && msg.senderId !== user.uid) {
           const msgRef = doc(db, 'chats', currentChatId, 'messages', msg.id);
@@ -90,7 +90,7 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
         }
       });
     }
-  }, [messages, user, currentChatId, isParticipant, db]);
+  }, [messages, user, currentChatId, isParticipant, db, chat]);
 
   useEffect(() => {
     if (scrollRef.current) {

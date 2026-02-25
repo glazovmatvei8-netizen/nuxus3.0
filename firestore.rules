@@ -35,24 +35,24 @@ service cloud.firestore {
     }
 
     match /chats/{chatId} {
-      // Читать чат могут участники или любой авторизованный для поиска каналов
       allow get: if isSignedIn();
       allow list: if isSignedIn(); 
       allow create: if isSignedIn();
-      allow update: if isSignedIn(); // Позволяем обновлять (вступление, реакции в метаданных)
+      allow update: if isSignedIn(); 
       allow delete: if isSignedIn() && (resource.data.ownerId == request.auth.uid || request.auth.uid in resource.data.adminIds);
     }
 
     match /chats/{chatId}/messages/{messageId} {
-      allow get, list: if isSignedIn(); // Упрощаем для отладки, но ограничиваем в UI
-      allow create: if isSignedIn() && request.resource.data.senderId == request.auth.uid;
-      allow update: if isSignedIn() && (resource.data.senderId == request.auth.uid || isChatAdmin(chatId));
+      allow get, list: if isSignedIn();
+      allow create: if isSignedIn();
+      // Позволяем обновление всем участникам (для isRead и реакций)
+      allow update: if isSignedIn(); 
       allow delete: if isSignedIn() && (resource.data.senderId == request.auth.uid || isChatAdmin(chatId));
     }
 
     match /chats/{chatId}/messages/{messageId}/reactions/{reactionId} {
       allow get, list: if isSignedIn();
-      allow create: if isSignedIn() && request.resource.data.reactorId == request.auth.uid;
+      allow create: if isSignedIn();
       allow update: if false;
       allow delete: if isSignedIn() && resource.data.reactorId == request.auth.uid;
     }
