@@ -76,7 +76,7 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
   }, [db, currentChatId, chat?.pinnedMessageId]);
   const { data: pinnedMessage } = useDoc<Message>(pinnedMsgRef);
 
-  // Проверка участия: критично для предотвращения ошибок прав доступа
+  // Проверка участия
   const isParticipant = useMemo(() => {
     if (!chat || !user) return false;
     return chat.participantIds?.includes(user.uid);
@@ -97,7 +97,9 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
       orderBy('sentAt', 'asc')
     );
   }, [db, currentChatId, isParticipant]);
-  const { data: messages } = useCollection<Message>(messagesQuery);
+  
+  // ИЗМЕНЕНО: Добавлен isLoading в деструктуризацию, чтобы избежать ReferenceError
+  const { data: messages, isLoading: isMessagesLoading } = useCollection<Message>(messagesQuery);
 
   useEffect(() => {
     if (isOtherProfileLoading) {
@@ -139,7 +141,7 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
     }
   }, [userProfile?.settings?.theme]);
 
-  // Пометка сообщений как прочитанных (только если мы участник и сообщения загружены)
+  // Пометка сообщений как прочитанных
   useEffect(() => {
     if (messages && user && currentChatId && chat && isParticipant) {
       const unread = messages.filter(msg => !msg.isRead && msg.senderId !== user.uid).slice(0, 10);
@@ -230,7 +232,7 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
       mediaRecorderRef.current = new MediaRecorder(stream);
       audioChunksRef.current = [];
       mediaRecorderRef.current.ondataavailable = (e) => {
-        if (e.data.size > 0) audioChunksRef.push(e.data);
+        if (e.data.size > 0) audioChunksRef.current.push(e.data);
       };
       mediaRecorderRef.current.onstop = async () => {
         const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
@@ -253,7 +255,7 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
       mediaRecorderRef.current = new MediaRecorder(stream);
       videoChunksRef.current = [];
       mediaRecorderRef.current.ondataavailable = (e) => {
-        if (e.data.size > 0) videoChunksRef.push(e.data);
+        if (e.data.size > 0) videoChunksRef.current.push(e.data);
       };
       mediaRecorderRef.current.onstop = async () => {
         const videoBlob = new Blob(videoChunksRef.current, { type: 'video/webm' });
@@ -372,7 +374,7 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
                   size={userProfile?.settings?.messageSize}
                 />
               ))}
-              {isLoading && (
+              {isMessagesLoading && (
                 <div className="flex justify-center p-8">
                   <Loader2 className="w-8 h-8 animate-spin text-primary" />
                 </div>
