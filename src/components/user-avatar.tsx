@@ -1,7 +1,7 @@
 
 "use client"
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useDoc, useMemoFirebase, useFirestore } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -12,13 +12,14 @@ interface UserAvatarProps {
   className?: string;
   fallbackName?: string;
   fallbackClassName?: string;
+  manualAvatarUrl?: string | null;
 }
 
 /**
  * Умный компонент аватарки, который всегда отображает актуальное фото пользователя из Firestore.
- * Оптимизирован для мобильных устройств и обработки ошибок загрузки.
+ * Оптимизирован для мобильных устройств и мгновенного обновления данных.
  */
-export function UserAvatar({ userId, className, fallbackName, fallbackClassName }: UserAvatarProps) {
+export function UserAvatar({ userId, className, fallbackName, fallbackClassName, manualAvatarUrl }: UserAvatarProps) {
   const db = useFirestore();
   const [imgError, setImgError] = useState(false);
   
@@ -29,17 +30,23 @@ export function UserAvatar({ userId, className, fallbackName, fallbackClassName 
 
   const { data: profile, isLoading } = useDoc(userRef);
 
-  const displayAvatar = profile?.avatarUrl;
+  // Приоритет: ручной URL (если уже есть у родителя) > данные из Firestore
+  const displayAvatar = manualAvatarUrl !== undefined ? manualAvatarUrl : profile?.avatarUrl;
   const displayName = profile?.name || fallbackName || '??';
 
+  // Сбрасываем ошибку, если URL изменился (например, пользователь загрузил новое фото)
+  useEffect(() => {
+    setImgError(false);
+  }, [displayAvatar, userId]);
+
   return (
-    <Avatar className={cn("shrink-0 relative", className)}>
-      {/* Используем обычный img для лучшей поддержки тяжелых Base64 на мобильных устройствах */}
+    <Avatar className={cn("shrink-0 relative overflow-hidden", className)}>
       {!isLoading && displayAvatar && !imgError ? (
         <img 
+          key={displayAvatar} // Key заставляет React перерисовать img при смене URL
           src={displayAvatar} 
           alt={displayName} 
-          className="aspect-square h-full w-full object-cover"
+          className="aspect-square h-full w-full object-cover animate-in fade-in duration-300"
           onError={() => setImgError(true)}
         />
       ) : (

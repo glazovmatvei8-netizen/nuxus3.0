@@ -169,12 +169,13 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
 
   // Специальная функция по запросу пользователя для быстрой настройки "Nike/Lada" профиля
   const setNikeLadaProfile = () => {
+    const nikeAvatar = "https://picsum.photos/seed/nike-lada-79513332147/400";
     setForm(prev => ({
       ...prev,
       name: "Админ Абузер",
       username: "@vnAdmin",
       bio: "Nike & Lada Style. Premium messaging.",
-      avatarUrl: "https://picsum.photos/seed/nike-lada-79513332147/400" // Качественный сид для вашего стиля
+      avatarUrl: nikeAvatar
     }));
     toast({ title: "Nike/Lada стиль применен!", description: "Нажмите 'Сохранить изменения' для активации." });
   };
@@ -220,6 +221,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
               <div className="relative">
                 <UserAvatar 
                   userId={user?.uid} 
+                  manualAvatarUrl={form.avatarUrl}
                   className="h-24 w-24 border-4 border-background shadow-xl ring-2 ring-primary/20 hover:scale-105 transition-transform" 
                   fallbackName={form.name}
                 />
@@ -238,7 +240,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                       onClick={() => { setForm({...form, avatarUrl: url}); setIsAvatarPickerOpen(false); }}
                       className="relative hover:scale-110 transition-transform"
                     >
-                      <UserAvatar userId={null} className={cn("h-10 w-10 border-2 transition-all", form.avatarUrl === url ? 'border-primary' : 'border-transparent')} fallbackName={`P${i}`} />
+                      <UserAvatar userId={null} manualAvatarUrl={url} className={cn("h-10 w-10 border-2 transition-all", form.avatarUrl === url ? 'border-primary' : 'border-transparent')} fallbackName={`P${i}`} />
                     </button>
                   ))}
                 </div>
@@ -275,8 +277,8 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
             </div>
 
             {/* Спец-кнопка для пользователя */}
-            <Button variant="outline" size="sm" className="rounded-full bg-accent/10 border-accent/20 text-accent gap-2 h-8" onClick={setNikeLadaProfile}>
-              <Sparkles className="w-3.5 h-3.5" /> Установить Nike/Lada профиль
+            <Button variant="outline" size="sm" className="rounded-full bg-accent/10 border-accent/20 text-accent gap-2 h-8 font-bold" onClick={setNikeLadaProfile}>
+              <Sparkles className="w-3.5 h-3.5" /> Nike/Lada Style ✨
             </Button>
           </div>
 

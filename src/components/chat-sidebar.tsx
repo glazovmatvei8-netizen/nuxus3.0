@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useEffect } from 'react';
@@ -59,12 +60,13 @@ export default function ChatSidebar() {
           >
             <UserAvatar 
               userId={user?.uid} 
+              manualAvatarUrl={profile?.avatarUrl} // Передаем URL напрямую для мгновенного обновления
               className="h-10 w-10 border-2 border-primary/20 ring-primary/10 ring-offset-2 ring-offset-background group-hover:scale-105 transition-transform shrink-0"
               fallbackName={profile?.name}
             />
             <div className="flex flex-col min-w-0">
               <span className="font-semibold text-sm leading-tight group-hover:text-primary transition-colors truncate">
-                {profile?.name || 'Loading...'}
+                {profile?.name || 'Загрузка...'}
               </span>
               <span className="text-xs text-muted-foreground truncate">
                 {profile?.username || '...'}
@@ -79,7 +81,7 @@ export default function ChatSidebar() {
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input 
-            placeholder="Поиск сообщений..." 
+            placeholder="Поиск чатов..." 
             className="pl-9 bg-muted/30 border-muted-foreground/10 rounded-xl h-10 focus:ring-1 focus:ring-primary/40 w-full"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
@@ -108,6 +110,7 @@ export default function ChatSidebar() {
             {filteredChats.map(chat => {
               const otherId = chat.type === 'private' && user ? chat.participantIds.find((id: string) => id !== user.uid) : null;
               const chatDisplayName = otherId && chat.metadata ? chat.metadata[otherId]?.name : chat.name;
+              const chatAvatarUrl = otherId && chat.metadata ? chat.metadata[otherId]?.avatarUrl : chat.avatarUrl;
               
               const isActive = currentChatId === chat.id;
 
@@ -118,6 +121,7 @@ export default function ChatSidebar() {
                   isActive={isActive}
                   otherId={otherId}
                   chatDisplayName={chatDisplayName}
+                  manualAvatarUrl={chatAvatarUrl}
                   onClick={() => setCurrentChatId(chat.id)}
                 />
               );
@@ -142,7 +146,7 @@ export default function ChatSidebar() {
   );
 }
 
-function ChatListItem({ chat, isActive, otherId, chatDisplayName, onClick }: any) {
+function ChatListItem({ chat, isActive, otherId, chatDisplayName, manualAvatarUrl, onClick }: any) {
   const db = useFirestore();
   const [status, setStatus] = useState<string>('');
   
@@ -172,11 +176,12 @@ function ChatListItem({ chat, isActive, otherId, chatDisplayName, onClick }: any
       <div className="relative shrink-0">
         <UserAvatar 
           userId={otherId} 
+          manualAvatarUrl={manualAvatarUrl || otherProfile?.avatarUrl}
           className="h-11 w-11 md:h-12 md:w-12 border-2 border-transparent group-hover:border-primary/20 transition-all" 
           fallbackName={chatDisplayName}
         />
         {status === 'в сети' && (
-          <span className="absolute bottom-0 right-0 w-3 h-3 bg-accent rounded-full border-2 border-background" />
+          <span className="absolute bottom-0 right-0 w-3 h-3 bg-accent rounded-full border-2 border-background shadow-sm" />
         )}
       </div>
       <div className="flex-1 min-w-0">
