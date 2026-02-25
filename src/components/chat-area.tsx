@@ -40,11 +40,9 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
   const [isSuggesting, setIsSuggesting] = useState(false);
   const [isEmojiOpen, setIsEmojiOpen] = useState(false);
   
-  // Telegram-like states
   const [replyTo, setReplyTo] = useState<Message | null>(null);
   const [editMessage, setEditMessage] = useState<Message | null>(null);
   
-  // Media Recording State
   const [isRecordingAudio, setIsRecordingAudio] = useState(false);
   const [isRecordingVideo, setIsRecordingVideo] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
@@ -81,6 +79,18 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
   const { data: messages } = useCollection<Message>(messagesQuery);
 
   const isParticipant = chat?.participantIds?.includes(user?.uid) || chat?.type === 'private';
+
+  // Mark as read logic
+  useEffect(() => {
+    if (messages && user && currentChatId && isParticipant) {
+      messages.forEach(msg => {
+        if (!msg.isRead && msg.senderId !== user.uid) {
+          const msgRef = doc(db, 'chats', currentChatId, 'messages', msg.id);
+          updateDocumentNonBlocking(msgRef, { isRead: true });
+        }
+      });
+    }
+  }, [messages, user, currentChatId, isParticipant, db]);
 
   useEffect(() => {
     if (scrollRef.current) {
