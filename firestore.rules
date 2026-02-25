@@ -43,16 +43,17 @@ service cloud.firestore {
     }
 
     match /chats/{chatId}/messages/{messageId} {
-      allow get, list: if isSignedIn();
-      allow create: if isSignedIn();
-      // Позволяем обновление всем участникам (для isRead и реакций)
-      allow update: if isSignedIn(); 
+      // Чтение сообщений разрешено только участникам чата
+      allow get, list: if isChatParticipant(chatId);
+      allow create: if isChatParticipant(chatId);
+      // Обновление (для статуса прочтения и реакций) разрешено участникам
+      allow update: if isChatParticipant(chatId); 
       allow delete: if isSignedIn() && (resource.data.senderId == request.auth.uid || isChatAdmin(chatId));
     }
 
     match /chats/{chatId}/messages/{messageId}/reactions/{reactionId} {
-      allow get, list: if isSignedIn();
-      allow create: if isSignedIn();
+      allow get, list: if isChatParticipant(chatId);
+      allow create: if isChatParticipant(chatId);
       allow update: if false;
       allow delete: if isSignedIn() && resource.data.reactorId == request.auth.uid;
     }

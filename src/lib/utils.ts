@@ -18,10 +18,11 @@ export function formatLastSeen(lastSeenIso: string | undefined): string {
     const now = new Date();
     
     // Используем разницу в секундах для максимальной точности
-    const diffSeconds = Math.abs(differenceInSeconds(now, lastSeen));
+    // Добавляем 1 секунду запаса на случай разсинхрона серверов
+    const diffSeconds = Math.max(0, differenceInSeconds(now, lastSeen));
 
-    if (diffSeconds < 60) return 'в сети';
-    if (diffSeconds < 300) return 'был(а) только что';
+    if (diffSeconds < 30) return 'в сети';
+    if (diffSeconds < 60) return 'был(а) только что';
     
     return `был(а) ${formatDistanceToNow(lastSeen, { addSuffix: true, locale: ru })}`;
   } catch (e) {

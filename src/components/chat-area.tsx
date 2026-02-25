@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useAppState } from '@/lib/store';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -76,6 +76,12 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
   }, [db, currentChatId, chat?.pinnedMessageId]);
   const { data: pinnedMessage } = useDoc<Message>(pinnedMsgRef);
 
+  // Проверка участия: критично для предотвращения ошибок прав доступа
+  const isParticipant = useMemo(() => {
+    if (!chat || !user) return false;
+    return chat.participantIds?.includes(user.uid);
+  }, [chat, user]);
+
   const otherId = chat?.type === 'private' && user ? chat.participantIds?.find((id: string = '') => id !== user.uid) : null;
   const otherUserRef = useMemoFirebase(() => {
     if (!db || !otherId) return null;
@@ -83,16 +89,15 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
   }, [db, otherId]);
   const { data: otherUserProfile, isLoading: isOtherProfileLoading } = useDoc(otherUserRef);
 
+  // Запрашиваем сообщения ТОЛЬКО если пользователь является участником
   const messagesQuery = useMemoFirebase(() => {
-    if (!db || !currentChatId) return null;
+    if (!db || !currentChatId || !isParticipant) return null;
     return query(
       collection(db, 'chats', currentChatId, 'messages'),
       orderBy('sentAt', 'asc')
     );
-  }, [db, currentChatId]);
+  }, [db, currentChatId, isParticipant]);
   const { data: messages } = useCollection<Message>(messagesQuery);
-
-  const isParticipant = chat?.participantIds?.includes(user?.uid || '') || chat?.type === 'private';
 
   useEffect(() => {
     if (isOtherProfileLoading) {
@@ -104,6 +109,7 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
     }
   }, [isOtherProfileLoading, otherUserProfile?.lastSeen, chat?.type]);
 
+  // Управление темами
   useEffect(() => {
     if (userProfile?.settings?.theme) {
       const theme = userProfile.settings.theme;
@@ -133,6 +139,7 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
     }
   }, [userProfile?.settings?.theme]);
 
+  // Пометка сообщений как прочитанных (только если мы участник и сообщения загружены)
   useEffect(() => {
     if (messages && user && currentChatId && chat && isParticipant) {
       const unread = messages.filter(msg => !msg.isRead && msg.senderId !== user.uid).slice(0, 10);
@@ -343,13 +350,13 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
           <div className="absolute inset-0 z-[-1] opacity-100" style={backgroundStyle} />
         )}
         <ScrollArea ref={scrollRef} className="h-full px-4 py-4 overflow-y-auto">
-          {!isParticipant ? (
+          {(!isParticipant && chat) ? (
             <div className="min-h-full flex flex-col items-center justify-center text-center p-8 space-y-4">
               <div className="bg-primary/10 p-4 rounded-full">
                 <UserPlus className="w-12 h-12 text-primary" />
               </div>
               <h3 className="text-lg font-bold">Вы не являетесь участником</h3>
-              <p className="text-sm text-muted-foreground max-w-xs">Вступите, чтобы общаться.</p>
+              <p className="text-sm text-muted-foreground max-w-xs">Вступите, чтобы общаться и видеть сообщения.</p>
               <Button onClick={() => updateDocumentNonBlocking(chatRef!, { participantIds: arrayUnion(user?.uid) })} className="rounded-xl px-8 h-12 shadow-lg shadow-primary/20">Вступить</Button>
             </div>
           ) : (
@@ -365,6 +372,11 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
                   size={userProfile?.settings?.messageSize}
                 />
               ))}
+              {isLoading && (
+                <div className="flex justify-center p-8">
+                  <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                </div>
+              )}
             </div>
           )}
         </ScrollArea>
