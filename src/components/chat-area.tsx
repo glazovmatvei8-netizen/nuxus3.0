@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useRef, useEffect } from 'react';
@@ -86,6 +87,36 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
   const { data: messages } = useCollection<Message>(messagesQuery);
 
   const isParticipant = chat?.participantIds?.includes(user?.uid) || chat?.type === 'private';
+
+  // Apply User Theme
+  useEffect(() => {
+    if (userProfile?.settings?.theme) {
+      const theme = userProfile.settings.theme;
+      const root = document.documentElement;
+      
+      switch (theme) {
+        case 'ocean':
+          root.style.setProperty('--primary', '210 100% 50%');
+          root.style.setProperty('--accent', '180 100% 40%');
+          break;
+        case 'forest':
+          root.style.setProperty('--primary', '140 100% 30%');
+          root.style.setProperty('--accent', '160 100% 45%');
+          break;
+        case 'sunset':
+          root.style.setProperty('--primary', '20 100% 50%');
+          root.style.setProperty('--accent', '45 100% 50%');
+          break;
+        case 'midnight':
+          root.style.setProperty('--primary', '240 10% 10%');
+          root.style.setProperty('--accent', '240 10% 40%');
+          break;
+        default:
+          root.style.setProperty('--primary', '230 43% 42%');
+          root.style.setProperty('--accent', '199 73% 58%');
+      }
+    }
+  }, [userProfile?.settings?.theme]);
 
   useEffect(() => {
     if (messages && user && currentChatId && chat && isParticipant) {
@@ -231,6 +262,11 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
     );
   }
 
+  const customBackground = userProfile?.settings?.chatBackground;
+  const backgroundStyle = customBackground && customBackground !== 'default' 
+    ? { backgroundImage: `url(${customBackground})`, backgroundSize: 'cover', backgroundPosition: 'center' } 
+    : {};
+
   return (
     <div className="flex-1 flex flex-col h-full bg-background relative overflow-hidden">
       <header className="h-16 flex items-center justify-between px-4 border-b border-border/40 bg-card/20 backdrop-blur-xl z-20 shrink-0">
@@ -265,31 +301,38 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
         </div>
       </header>
 
-      <ScrollArea ref={scrollRef} className="flex-1 px-4 py-4 relative z-10 overflow-y-auto">
-        {!isParticipant ? (
-          <div className="min-h-full flex flex-col items-center justify-center text-center p-8 space-y-4">
-            <div className="bg-primary/10 p-4 rounded-full">
-              <UserPlus className="w-12 h-12 text-primary" />
-            </div>
-            <h3 className="text-lg font-bold">Вы не являетесь участником</h3>
-            <p className="text-sm text-muted-foreground max-w-xs">Вступите, чтобы общаться.</p>
-            <Button onClick={() => updateDocumentNonBlocking(chatRef!, { participantIds: arrayUnion(user?.uid) })} className="rounded-xl px-8 h-12 shadow-lg shadow-primary/20">Вступить</Button>
-          </div>
-        ) : (
-          <div className="flex flex-col gap-2 max-w-4xl mx-auto min-h-full pb-4">
-            {messages?.map((msg) => (
-              <MessageItem 
-                key={msg.id} 
-                message={msg} 
-                isMe={msg.senderId === user?.uid}
-                chatId={currentChatId}
-                onReply={() => setReplyTo(msg)}
-                onEdit={() => { setEditMessage(msg); setInputText(msg.content); }}
-              />
-            ))}
-          </div>
+      <div className="flex-1 relative z-10 overflow-hidden">
+        {/* Background Overlay */}
+        {customBackground && customBackground !== 'default' && (
+          <div className="absolute inset-0 z-[-1] opacity-15" style={backgroundStyle} />
         )}
-      </ScrollArea>
+        <ScrollArea ref={scrollRef} className="h-full px-4 py-4 overflow-y-auto">
+          {!isParticipant ? (
+            <div className="min-h-full flex flex-col items-center justify-center text-center p-8 space-y-4">
+              <div className="bg-primary/10 p-4 rounded-full">
+                <UserPlus className="w-12 h-12 text-primary" />
+              </div>
+              <h3 className="text-lg font-bold">Вы не являетесь участником</h3>
+              <p className="text-sm text-muted-foreground max-w-xs">Вступите, чтобы общаться.</p>
+              <Button onClick={() => updateDocumentNonBlocking(chatRef!, { participantIds: arrayUnion(user?.uid) })} className="rounded-xl px-8 h-12 shadow-lg shadow-primary/20">Вступить</Button>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-2 max-w-4xl mx-auto min-h-full pb-4">
+              {messages?.map((msg) => (
+                <MessageItem 
+                  key={msg.id} 
+                  message={msg} 
+                  isMe={msg.senderId === user?.uid}
+                  chatId={currentChatId}
+                  onReply={() => setReplyTo(msg)}
+                  onEdit={() => { setEditMessage(msg); setInputText(msg.content); }}
+                  size={userProfile?.settings?.messageSize}
+                />
+              ))}
+            </div>
+          )}
+        </ScrollArea>
+      </div>
 
       <footer className="p-3 md:p-4 bg-card/20 backdrop-blur-xl border-t border-border/40 z-20 shrink-0">
         {!isParticipant ? (

@@ -17,12 +17,13 @@ import { useAuth, useUser, useFirestore, useDoc, useMemoFirebase } from '@/fireb
 import { UserAvatar } from '@/components/user-avatar';
 import { 
   LogOut, User, AtSign, Copy, Share2, 
-  Trash2, Clock, CheckCircle2, LayoutGrid, Upload, Image as ImageIcon
+  Trash2, Clock, CheckCircle2, LayoutGrid, Upload, Palette, Image as ImageIcon, Type
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { signOut, deleteUser } from 'firebase/auth';
 import { doc, deleteDoc } from 'firebase/firestore';
 import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { cn } from '@/lib/utils';
 
 interface SettingsModalProps {
   open: boolean;
@@ -36,6 +37,15 @@ const PRESET_AVATARS = [
   'https://picsum.photos/seed/4/200',
   'https://picsum.photos/seed/5/200',
   'https://picsum.photos/seed/6/200',
+];
+
+const BACKGROUNDS = [
+  { name: 'Стандарт', value: 'default' },
+  { name: 'Ночной город', value: 'https://images.unsplash.com/photo-1514565131-fce0801e5785?auto=format&fit=crop&q=80&w=800' },
+  { name: 'Минимализм', value: 'https://images.unsplash.com/photo-1557683316-973673baf926?auto=format&fit=crop&q=80&w=800' },
+  { name: 'Абстракция', value: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&q=80&w=800' },
+  { name: 'Горы', value: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&q=80&w=800' },
+  { name: 'Текстура', value: 'https://images.unsplash.com/photo-1550684848-fac1c5b4e853?auto=format&fit=crop&q=80&w=800' },
 ];
 
 export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
@@ -56,7 +66,10 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
     name: '',
     username: '',
     avatarUrl: '',
-    inactivityDeletion: 'never'
+    inactivityDeletion: 'never',
+    theme: 'default',
+    chatBackground: 'default',
+    messageSize: 'medium'
   });
 
   const [isAvatarPickerOpen, setIsAvatarPickerOpen] = useState(false);
@@ -67,7 +80,10 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
         name: profile.name || '',
         username: profile.username || '',
         avatarUrl: profile.avatarUrl || '',
-        inactivityDeletion: profile.inactivityDeletion || 'never'
+        inactivityDeletion: profile.inactivityDeletion || 'never',
+        theme: profile.settings?.theme || 'default',
+        chatBackground: profile.settings?.chatBackground || 'default',
+        messageSize: profile.settings?.messageSize || 'medium'
       });
     }
   }, [profile]);
@@ -78,16 +94,21 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
       name: form.name,
       username: form.username,
       avatarUrl: form.avatarUrl,
-      inactivityDeletion: form.inactivityDeletion
+      inactivityDeletion: form.inactivityDeletion,
+      settings: {
+        theme: form.theme,
+        chatBackground: form.chatBackground,
+        messageSize: form.messageSize
+      }
     });
     onOpenChange(false);
-    toast({ title: "Сохранено", description: "Ваш профиль обновлен." });
+    toast({ title: "Сохранено", description: "Ваш профиль и настройки обновлены." });
   };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      if (file.size > 800000) { // Примерно 800KB лимит для Base64 в Firestore
+      if (file.size > 800000) {
         toast({ title: "Файл слишком велик", description: "Выберите изображение поменьше", variant: "destructive" });
         return;
       }
@@ -128,15 +149,16 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md bg-card/95 backdrop-blur-xl border-border/40 p-0 overflow-hidden max-h-[90vh] overflow-y-auto">
-        <DialogHeader className="p-6 bg-primary/5 border-b border-border/40">
+      <DialogContent className="max-w-md bg-card/95 backdrop-blur-xl border-border/40 p-0 overflow-hidden max-h-[90vh] flex flex-col">
+        <DialogHeader className="p-6 bg-primary/5 border-b border-border/40 shrink-0">
           <DialogTitle className="flex items-center gap-2 text-xl font-bold">
             <User className="w-5 h-5 text-primary" />
             Настройки профиля
           </DialogTitle>
         </DialogHeader>
         
-        <div className="p-6 space-y-6">
+        <div className="flex-1 overflow-y-auto p-6 space-y-8 scrollbar-hide">
+          {/* Avatar Section */}
           <div className="flex flex-col items-center gap-4">
             <div className="relative group cursor-pointer" onClick={() => setIsAvatarPickerOpen(!isAvatarPickerOpen)}>
               <div className="relative">
@@ -160,7 +182,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                       onClick={() => { setForm({...form, avatarUrl: url}); setIsAvatarPickerOpen(false); }}
                       className="relative hover:scale-110 transition-transform"
                     >
-                      <UserAvatar userId={null} className={`h-10 w-10 border-2 transition-all ${form.avatarUrl === url ? 'border-primary' : 'border-transparent'}`} fallbackName={`P${i}`} />
+                      <UserAvatar userId={null} className={cn("h-10 w-10 border-2 transition-all", form.avatarUrl === url ? 'border-primary' : 'border-transparent')} fallbackName={`P${i}`} />
                       {form.avatarUrl === url && <CheckCircle2 className="absolute -top-1 -right-1 w-3 h-3 text-primary bg-background rounded-full" />}
                     </button>
                   ))}
@@ -197,70 +219,140 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
             </div>
           </div>
 
+          {/* Profile Details */}
           <div className="space-y-4">
-            <div className="space-y-2">
-              <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider ml-1">Полное имя</Label>
-              <Input 
-                value={form.name} 
-                onChange={e => setForm({...form, name: e.target.value})}
-                className="bg-muted/30 border-muted-foreground/10 h-11 rounded-xl"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider ml-1">Ник</Label>
-              <Input 
-                value={form.username} 
-                onChange={e => setForm({...form, username: e.target.value})}
-                className="bg-muted/30 border-muted-foreground/10 h-11 rounded-xl"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label className="text-[10px] font-bold text-muted-foreground flex items-center gap-2 uppercase tracking-wider ml-1">
-                <Clock className="w-3 h-3" /> Удалить аккаунт при бездействии
-              </Label>
-              <Select 
-                value={form.inactivityDeletion} 
-                onValueChange={(val) => setForm({...form, inactivityDeletion: val})}
-              >
-                <SelectTrigger className="bg-muted/30 border-muted-foreground/10 h-11 rounded-xl">
-                  <SelectValue placeholder="Выберите срок" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="never">Никогда</SelectItem>
-                  <SelectItem value="1_month">1 месяц</SelectItem>
-                  <SelectItem value="2_months">2 месяца</SelectItem>
-                  <SelectItem value="6_months">6 месяцев</SelectItem>
-                  <SelectItem value="1_year">1 год</SelectItem>
-                </SelectContent>
-              </Select>
+            <h4 className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest px-1">Основные данные</h4>
+            <div className="grid gap-4">
+              <div className="space-y-2">
+                <Label className="text-xs text-muted-foreground ml-1">Полное имя</Label>
+                <div className="relative">
+                  <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input 
+                    value={form.name} 
+                    onChange={e => setForm({...form, name: e.target.value})}
+                    className="bg-muted/30 border-muted-foreground/10 h-11 rounded-xl pl-9"
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-xs text-muted-foreground ml-1">Никнейм</Label>
+                <div className="relative">
+                  <AtSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input 
+                    value={form.username} 
+                    onChange={e => setForm({...form, username: e.target.value})}
+                    className="bg-muted/30 border-muted-foreground/10 h-11 rounded-xl pl-9"
+                  />
+                </div>
+              </div>
             </div>
           </div>
 
-          <div className="pt-4 space-y-2">
-            <Button className="w-full h-11 rounded-xl shadow-lg shadow-primary/20 font-bold" onClick={handleSave}>
-              Сохранить изменения
-            </Button>
-            <Button variant="outline" className="w-full h-11 rounded-xl border-primary/10" onClick={copyInvite}>
-              <Copy className="w-4 h-4 mr-2" /> Пригласить друга
-            </Button>
-            
-            <div className="flex gap-2">
-              <Button 
-                variant="ghost" 
-                className="flex-1 h-11 rounded-xl text-muted-foreground hover:bg-muted/30" 
-                onClick={handleLogout}
-              >
-                <LogOut className="w-4 h-4 mr-2" /> Выйти
-              </Button>
-              <Button 
-                variant="ghost" 
-                className="flex-1 h-11 rounded-xl text-destructive hover:bg-destructive/10" 
-                onClick={handleDeleteAccount}
-              >
-                <Trash2 className="w-4 h-4 mr-2" /> Удалить
-              </Button>
+          {/* Appearance Section */}
+          <div className="space-y-4">
+            <h4 className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest px-1">Оформление</h4>
+            <div className="grid gap-4">
+              <div className="space-y-2">
+                <Label className="text-xs text-muted-foreground ml-1 flex items-center gap-2">
+                  <Palette className="w-3.5 h-3.5" /> Цветовая тема
+                </Label>
+                <Select value={form.theme} onValueChange={(val) => setForm({...form, theme: val})}>
+                  <SelectTrigger className="bg-muted/30 border-muted-foreground/10 h-11 rounded-xl">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="default">Классика (Nuxus Blue)</SelectItem>
+                    <SelectItem value="ocean">Океан (Breezy Blue)</SelectItem>
+                    <SelectItem value="forest">Лес (Natural Green)</SelectItem>
+                    <SelectItem value="sunset">Закат (Warm Orange)</SelectItem>
+                    <SelectItem value="midnight">Полночь (Deep Black)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-xs text-muted-foreground ml-1 flex items-center gap-2">
+                  <ImageIcon className="w-3.5 h-3.5" /> Фон чата
+                </Label>
+                <Select value={form.chatBackground} onValueChange={(val) => setForm({...form, chatBackground: val})}>
+                  <SelectTrigger className="bg-muted/30 border-muted-foreground/10 h-11 rounded-xl">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {BACKGROUNDS.map(bg => (
+                      <SelectItem key={bg.value} value={bg.value}>{bg.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-xs text-muted-foreground ml-1 flex items-center gap-2">
+                  <Type className="w-3.5 h-3.5" /> Размер сообщений
+                </Label>
+                <Select value={form.messageSize} onValueChange={(val) => setForm({...form, messageSize: val})}>
+                  <SelectTrigger className="bg-muted/30 border-muted-foreground/10 h-11 rounded-xl">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="small">Крошечный</SelectItem>
+                    <SelectItem value="medium">Средний (Стандарт)</SelectItem>
+                    <SelectItem value="large">Большой</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
+          </div>
+
+          {/* Account Management */}
+          <div className="space-y-4">
+            <h4 className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest px-1">Управление аккаунтом</h4>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label className="text-xs text-muted-foreground flex items-center gap-2 ml-1">
+                  <Clock className="w-3.5 h-3.5" /> Удалить аккаунт при бездействии
+                </Label>
+                <Select 
+                  value={form.inactivityDeletion} 
+                  onValueChange={(val) => setForm({...form, inactivityDeletion: val})}
+                >
+                  <SelectTrigger className="bg-muted/30 border-muted-foreground/10 h-11 rounded-xl">
+                    <SelectValue placeholder="Выберите срок" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="never">Никогда</SelectItem>
+                    <SelectItem value="1_month">1 месяц</SelectItem>
+                    <SelectItem value="2_months">2 месяца</SelectItem>
+                    <SelectItem value="6_months">6 месяцев</SelectItem>
+                    <SelectItem value="1_year">1 год</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Footer actions */}
+        <div className="p-6 pt-2 border-t border-border/40 shrink-0 space-y-2 bg-card/80 backdrop-blur-md">
+          <Button className="w-full h-11 rounded-xl shadow-lg shadow-primary/20 font-bold" onClick={handleSave}>
+            Сохранить изменения
+          </Button>
+          
+          <div className="flex gap-2">
+            <Button 
+              variant="ghost" 
+              className="flex-1 h-11 rounded-xl text-muted-foreground hover:bg-muted/30" 
+              onClick={handleLogout}
+            >
+              <LogOut className="w-4 h-4 mr-2" /> Выйти
+            </Button>
+            <Button 
+              variant="ghost" 
+              className="flex-1 h-11 rounded-xl text-destructive hover:bg-destructive/10" 
+              onClick={handleDeleteAccount}
+            >
+              <Trash2 className="w-4 h-4 mr-2" /> Удалить
+            </Button>
           </div>
         </div>
       </DialogContent>

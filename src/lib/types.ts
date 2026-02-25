@@ -41,6 +41,12 @@ export interface Chat {
   }>;
 }
 
+export interface UserSettings {
+  theme: 'default' | 'ocean' | 'forest' | 'sunset' | 'midnight';
+  chatBackground: string;
+  messageSize: 'small' | 'medium' | 'large';
+}
+
 export interface User {
   id: string;
   phone: string;
@@ -50,4 +56,5 @@ export interface User {
   lastSeen?: string;
   createdAt: string;
   inactivityDeletion?: string;
+  settings?: UserSettings;
 }

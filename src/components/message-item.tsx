@@ -30,11 +30,12 @@ interface MessageItemProps {
   chatId: string;
   onReply?: () => void;
   onEdit?: () => void;
+  size?: 'small' | 'medium' | 'large';
 }
 
 const REACTIONS = ['❤️', '👍', '😂', '😮', '😢', '🔥', '👏'];
 
-export function MessageItem({ message, isMe, chatId, onReply, onEdit }: MessageItemProps) {
+export function MessageItem({ message, isMe, chatId, onReply, onEdit, size = 'medium' }: MessageItemProps) {
   const { user } = useUser();
   const db = useFirestore();
   const [isReactionPickerOpen, setIsReactionPickerOpen] = useState(false);
@@ -122,7 +123,7 @@ export function MessageItem({ message, isMe, chatId, onReply, onEdit }: MessageI
         );
       case 'service':
         return (
-          <div className="flex justify-center my-4 w-full">
+          <div className="flex justify-center my-4 w-full text-center">
             <span className="bg-muted/30 px-4 py-1.5 rounded-full text-[10px] uppercase font-bold tracking-wider text-muted-foreground border border-border/20">
               {message.content}
             </span>
@@ -135,13 +136,20 @@ export function MessageItem({ message, isMe, chatId, onReply, onEdit }: MessageI
 
   if (message.contentType === 'service') return renderContent() as any;
 
+  // Size specific classes
+  const sizeClasses = {
+    small: "px-3 py-1.5 text-xs",
+    medium: "px-4 py-2 text-sm",
+    large: "px-5 py-3 text-base"
+  };
+
   return (
     <div className={cn(
       "flex gap-3 max-w-[85%] animate-in slide-in-from-bottom-2 px-1 py-0.5",
       isMe ? "ml-auto flex-row-reverse" : "mr-auto"
     )}>
       {!isMe && (
-        <UserAvatar userId={message.senderId} className="h-8 w-8 mt-auto shrink-0 ring-2 ring-primary/10" fallbackName={message.senderName} />
+        <UserAvatar userId={message.senderId} className={cn("mt-auto shrink-0 ring-2 ring-primary/10", size === 'large' ? 'h-10 w-10' : 'h-8 w-8')} fallbackName={message.senderName} />
       )}
       
       <div className={cn("flex flex-col gap-0.5", isMe ? "items-end" : "items-start")}>
@@ -161,7 +169,8 @@ export function MessageItem({ message, isMe, chatId, onReply, onEdit }: MessageI
               )}
 
               <div className={cn(
-                "px-4 py-2 rounded-2xl text-sm shadow-sm relative group-hover:shadow-md transition-shadow",
+                "rounded-2xl shadow-sm relative group-hover:shadow-md transition-shadow",
+                sizeClasses[size],
                 isMe 
                   ? "bg-primary text-white rounded-br-none" 
                   : "bg-card text-foreground rounded-bl-none border border-border/40",
