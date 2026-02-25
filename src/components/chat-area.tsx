@@ -108,7 +108,8 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
 
   const handleSendMessage = (content: string = inputText, type: string = 'text') => {
     const textToSend = content.trim();
-    if (!textToSend || !currentChatId || !user) return;
+    if (!textToSend && type === 'text') return;
+    if (!currentChatId || !user) return;
     
     const messageData = {
       chatId: currentChatId,
@@ -213,25 +214,25 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
   }
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-background relative">
-      <header className="h-16 flex items-center justify-between px-4 border-b border-border/40 bg-card/20 backdrop-blur-xl z-20">
-        <div className="flex items-center gap-3">
-          <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setCurrentChatId(null)}>
+    <div className="flex-1 flex flex-col h-full bg-background relative overflow-hidden">
+      <header className="h-16 flex items-center justify-between px-4 border-b border-border/40 bg-card/20 backdrop-blur-xl z-20 shrink-0">
+        <div className="flex items-center gap-2 md:gap-3 min-w-0">
+          <Button variant="ghost" size="icon" className="md:hidden shrink-0" onClick={() => setCurrentChatId(null)}>
             <ChevronLeft className="w-5 h-5" />
           </Button>
-          <div className="flex items-center gap-3 cursor-pointer" onClick={() => setIsChatInfoOpen(true)}>
-            <Avatar className="h-10 w-10 ring-2 ring-primary/20">
+          <div className="flex items-center gap-3 cursor-pointer min-w-0" onClick={() => setIsChatInfoOpen(true)}>
+            <Avatar className="h-9 w-9 md:h-10 md:w-10 ring-2 ring-primary/20 shrink-0">
               <AvatarImage src={chatDisplayAvatar || ''} />
               <AvatarFallback className="bg-primary/20 text-primary font-bold">{chatDisplayName?.slice(0, 2)}</AvatarFallback>
             </Avatar>
-            <div className="flex flex-col">
-              <span className="font-semibold text-sm leading-tight">{chatDisplayName}</span>
-              <span className="text-[10px] text-muted-foreground">{chat?.type === 'private' ? 'Личные сообщения' : (chat?.type === 'group' ? 'Группа' : 'Канал')}</span>
+            <div className="flex flex-col min-w-0">
+              <span className="font-semibold text-sm leading-tight truncate">{chatDisplayName}</span>
+              <span className="text-[10px] text-muted-foreground truncate">{chat?.type === 'private' ? 'Личные сообщения' : (chat?.type === 'group' ? 'Группа' : 'Канал')}</span>
             </div>
           </div>
         </div>
-        <div className="flex items-center gap-1">
-          <Button variant="ghost" size="icon" className="rounded-full text-muted-foreground" onClick={() => setIsChatInfoOpen(true)}>
+        <div className="flex items-center gap-1 shrink-0">
+          <Button variant="ghost" size="icon" className="rounded-full text-muted-foreground hidden sm:inline-flex" onClick={() => setIsChatInfoOpen(true)}>
             <Info className="w-5 h-5" />
           </Button>
           <Button variant="ghost" size="icon" className="rounded-full text-muted-foreground">
@@ -240,9 +241,9 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
         </div>
       </header>
 
-      <ScrollArea ref={scrollRef} className="flex-1 px-4 py-4 relative z-10 bg-gradient-to-b from-card/10 via-background to-background">
+      <ScrollArea ref={scrollRef} className="flex-1 px-4 py-4 relative z-10 bg-gradient-to-b from-card/10 via-background to-background overflow-y-auto">
         {!isParticipant ? (
-          <div className="h-full flex flex-col items-center justify-center text-center p-8 space-y-4">
+          <div className="min-h-full flex flex-col items-center justify-center text-center p-8 space-y-4">
             <div className="bg-primary/10 p-4 rounded-full">
               <UserPlus className="w-12 h-12 text-primary" />
             </div>
@@ -253,7 +254,7 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
             </Button>
           </div>
         ) : (
-          <div className="flex flex-col gap-4 max-w-4xl mx-auto min-h-full">
+          <div className="flex flex-col gap-4 max-w-4xl mx-auto min-h-full pb-4">
             {messages?.map((msg) => (
               <MessageItem 
                 key={msg.id} 
@@ -266,7 +267,7 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
         )}
       </ScrollArea>
 
-      <footer className="p-4 bg-card/20 backdrop-blur-xl border-t border-border/40 z-20">
+      <footer className="p-3 md:p-4 bg-card/20 backdrop-blur-xl border-t border-border/40 z-20 shrink-0">
         {!isParticipant ? (
           <div className="max-w-4xl mx-auto text-center py-2">
             <p className="text-xs text-muted-foreground uppercase font-bold tracking-widest italic">Режим просмотра</p>
@@ -274,11 +275,11 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
         ) : (
           <div className="flex flex-col gap-2 max-w-4xl mx-auto">
             {isRecordingAudio && (
-              <div className="flex items-center justify-between bg-primary/10 p-3 rounded-2xl animate-in slide-in-from-bottom-2">
+              <div className="flex items-center justify-between bg-primary/10 p-3 rounded-2xl animate-in slide-in-from-bottom-2 mb-2">
                 <div className="flex items-center gap-3 text-primary">
                   <Mic className="w-5 h-5 animate-pulse" />
                   <span className="font-mono font-bold">{formatTime(recordingTime)}</span>
-                  <span className="text-sm">Запись голоса...</span>
+                  <span className="text-sm hidden sm:inline">Запись голоса...</span>
                 </div>
                 <Button size="icon" variant="ghost" className="text-destructive" onClick={stopRecording}>
                   <StopCircle className="w-6 h-6" />
@@ -286,16 +287,16 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
               </div>
             )}
 
-            <div className="flex items-end gap-2">
-              <div className="flex items-center gap-1 mb-1">
+            <div className="flex items-end gap-1 md:gap-2">
+              <div className="flex items-center gap-0.5 md:gap-1 mb-1">
                 <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleFileSelect} />
-                <Button variant="ghost" size="icon" className="h-10 w-10 text-muted-foreground hover:text-primary" onClick={() => fileInputRef.current?.click()}>
+                <Button variant="ghost" size="icon" className="h-9 w-9 md:h-10 md:w-10 text-muted-foreground hover:text-primary" onClick={() => fileInputRef.current?.click()}>
                   <Paperclip className="w-5 h-5" />
                 </Button>
                 
                 <Popover>
                   <PopoverTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-10 w-10 text-muted-foreground hover:text-primary">
+                    <Button variant="ghost" size="icon" className="h-9 w-9 md:h-10 md:w-10 text-muted-foreground hover:text-primary hidden sm:inline-flex">
                       <Smile className="w-5 h-5" />
                     </Button>
                   </PopoverTrigger>
@@ -321,23 +322,23 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
                   value={inputText}
                   onChange={(e) => setInputText(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
-                  className="bg-muted/40 border-muted-foreground/10 rounded-2xl h-11 pr-12 focus:ring-1 focus:ring-primary/40 group-hover:bg-muted/60 transition-colors"
+                  className="bg-muted/40 border-muted-foreground/10 rounded-2xl h-10 md:h-11 pr-10 md:pr-12 focus:ring-1 focus:ring-primary/40 group-hover:bg-muted/60 transition-colors"
                   disabled={isRecordingAudio}
                 />
                 <Button 
                   size="icon" 
-                  className={`absolute right-1 top-1 w-9 h-9 rounded-xl shadow-lg shadow-primary/20 transition-all ${inputText.trim() ? 'scale-100 opacity-100' : 'scale-0 opacity-0'}`}
+                  className={`absolute right-1 top-1 w-8 h-8 md:w-9 md:h-9 rounded-xl shadow-lg shadow-primary/20 transition-all ${inputText.trim() ? 'scale-100 opacity-100' : 'scale-0 opacity-0'}`}
                   onClick={() => handleSendMessage()}
                 >
                   <Send className="w-4 h-4" />
                 </Button>
               </div>
 
-              <div className="flex items-center gap-1 mb-1">
+              <div className="flex items-center gap-0.5 md:gap-1 mb-1">
                 <Button 
                   variant="ghost" 
                   size="icon" 
-                  className="h-10 w-10 text-muted-foreground hover:text-primary" 
+                  className="h-9 w-9 md:h-10 md:w-10 text-muted-foreground hover:text-primary hidden sm:inline-flex" 
                   onClick={startVideoRecording}
                 >
                   <Camera className="w-5 h-5" />
@@ -345,7 +346,7 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
                 <Button 
                   variant="ghost" 
                   size="icon" 
-                  className={`h-10 w-10 text-muted-foreground hover:text-primary ${isRecordingAudio ? 'text-primary' : ''}`}
+                  className={`h-9 w-9 md:h-10 md:w-10 text-muted-foreground hover:text-primary ${isRecordingAudio ? 'text-primary' : ''}`}
                   onClick={isRecordingAudio ? stopRecording : startAudioRecording}
                 >
                   <Mic className="w-5 h-5" />
