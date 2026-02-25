@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useEffect } from 'react';
@@ -17,7 +18,7 @@ import {
   DropdownMenuSeparator
 } from "@/components/ui/dropdown-menu";
 import { format } from 'date-fns';
-import { SmilePlus, Play, Pause, CornerUpLeft, Pencil, Trash2, Check, CheckCheck, Pin } from 'lucide-react';
+import { SmilePlus, Play, Pause, CornerUpLeft, Pencil, Trash2, Check, CheckCheck } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { collection, doc } from 'firebase/firestore';
 import { addDocumentNonBlocking, deleteDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
@@ -78,11 +79,6 @@ export function MessageItem({ message, isMe, chatId, onReply, onEdit, size = 'me
   const handleDelete = () => {
     if (!db || !chatId || !message.id) return;
     deleteDocumentNonBlocking(doc(db, 'chats', chatId, 'messages', message.id));
-  };
-
-  const handlePin = () => {
-    if (!db || !chatId) return;
-    updateDocumentNonBlocking(doc(db, 'chats', chatId), { pinnedMessageId: message.id });
   };
 
   const groupedReactions = (reactionsData || []).reduce((acc: Record<string, string[]>, curr) => {
@@ -202,9 +198,6 @@ export function MessageItem({ message, isMe, chatId, onReply, onEdit, size = 'me
                 <Pencil className="w-4 h-4" /> Изменить
               </DropdownMenuItem>
             )}
-            <DropdownMenuItem onClick={handlePin} className="gap-2">
-              <Pin className="w-4 h-4" /> Закрепить
-            </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={() => setIsReactionPickerOpen(true)} className="gap-2">
               <SmilePlus className="w-4 h-4" /> Реакция

@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useRef, useEffect, useMemo } from 'react';
@@ -8,7 +9,7 @@ import { UserAvatar } from '@/components/user-avatar';
 import { 
   Send, Paperclip, Smile, MoreVertical, ChevronLeft, 
   Sparkles, MessageSquare, Info, Mic, Camera, X, StopCircle, UserPlus,
-  CornerUpLeft, Pencil, Trash2, Loader2, Pin
+  CornerUpLeft, Pencil, Trash2, Loader2
 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { MessageItem } from './message-item';
@@ -55,6 +56,7 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
   const videoPreviewRef = useRef<HTMLVideoElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
   const { toast } = useToast();
 
@@ -70,13 +72,7 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
   }, [db, currentChatId]);
   const { data: chat } = useDoc(chatRef);
 
-  const pinnedMsgRef = useMemoFirebase(() => {
-    if (!db || !currentChatId || !chat?.pinnedMessageId) return null;
-    return doc(db, 'chats', currentChatId, 'messages', chat.pinnedMessageId);
-  }, [db, currentChatId, chat?.pinnedMessageId]);
-  const { data: pinnedMessage } = useDoc<Message>(pinnedMsgRef);
-
-  // Проверка участия (учитываем, что chat может загружаться)
+  // Проверка участия
   const isParticipant = useMemo(() => {
     if (!chat || !user) return false;
     return chat.participantIds?.includes(user.uid) || false;
@@ -89,7 +85,6 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
   }, [db, otherId]);
   const { data: otherUserProfile, isLoading: isOtherProfileLoading } = useDoc(otherUserRef);
 
-  // Запрашиваем сообщения ТОЛЬКО если пользователь является участником и данные чата загружены
   const messagesQuery = useMemoFirebase(() => {
     if (!db || !currentChatId || !chat || !isParticipant) return null;
     return query(
@@ -100,43 +95,63 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
   
   const { data: messages, isLoading: isMessagesLoading } = useCollection<Message>(messagesQuery);
 
+  // Логика индикатора печатания
   useEffect(() => {
-    if (isOtherProfileLoading) {
+    if (!currentChatId || !user) return;
+    
+    if (inputText.length > 0) {
+      updateDocumentNonBlocking(doc(db, 'chats', currentChatId), {
+        [`typing.${user.uid}`]: true
+      });
+      
+      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+      typingTimeoutRef.current = setTimeout(() => {
+        updateDocumentNonBlocking(doc(db, 'chats', currentChatId), {
+          [`typing.${user.uid}`]: false
+        });
+      }, 3000);
+    } else {
+      updateDocumentNonBlocking(doc(db, 'chats', currentChatId), {
+        [`typing.${user.uid}`]: false
+      });
+    }
+  }, [inputText, currentChatId, user, db]);
+
+  useEffect(() => {
+    const isTyping = chat?.typing && otherId && chat.typing[otherId];
+    if (isTyping) {
+      setStatusString('печатает...');
+    } else if (isOtherProfileLoading) {
       setStatusString('загрузка...');
     } else if (chat?.type === 'private') {
       setStatusString(formatLastSeen(otherUserProfile?.lastSeen));
     } else {
       setStatusString(chat?.type === 'group' ? 'Группа' : 'Канал');
     }
-  }, [isOtherProfileLoading, otherUserProfile?.lastSeen, chat?.type]);
+  }, [isOtherProfileLoading, otherUserProfile?.lastSeen, chat?.type, chat?.typing, otherId]);
 
   // Управление темами
   useEffect(() => {
     if (userProfile?.settings?.theme) {
       const theme = userProfile.settings.theme;
       const root = document.documentElement;
+      const colors: Record<string, string> = {
+        ocean: '210 100% 50%',
+        forest: '140 100% 30%',
+        sunset: '20 100% 50%',
+        midnight: '240 10% 10%',
+        default: '230 43% 42%'
+      };
+      const accents: Record<string, string> = {
+        ocean: '180 100% 40%',
+        forest: '160 100% 45%',
+        sunset: '45 100% 50%',
+        midnight: '240 10% 40%',
+        default: '199 73% 58%'
+      };
       
-      switch (theme) {
-        case 'ocean':
-          root.style.setProperty('--primary', '210 100% 50%');
-          root.style.setProperty('--accent', '180 100% 40%');
-          break;
-        case 'forest':
-          root.style.setProperty('--primary', '140 100% 30%');
-          root.style.setProperty('--accent', '160 100% 45%');
-          break;
-        case 'sunset':
-          root.style.setProperty('--primary', '20 100% 50%');
-          root.style.setProperty('--accent', '45 100% 50%');
-          break;
-        case 'midnight':
-          root.style.setProperty('--primary', '240 10% 10%');
-          root.style.setProperty('--accent', '240 10% 40%');
-          break;
-        default:
-          root.style.setProperty('--primary', '230 43% 42%');
-          root.style.setProperty('--accent', '199 73% 58%');
-      }
+      root.style.setProperty('--primary', colors[theme] || colors.default);
+      root.style.setProperty('--accent', accents[theme] || accents.default);
     }
   }, [userProfile?.settings?.theme]);
 
@@ -270,11 +285,6 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
     }
   };
 
-  const handleUnpin = () => {
-    if (!chatRef) return;
-    updateDocumentNonBlocking(chatRef, { pinnedMessageId: null });
-  };
-
   const chatDisplayName = otherId && chat?.metadata ? chat.metadata[otherId]?.name : chat?.name;
 
   if (!currentChatId) {
@@ -310,8 +320,8 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
             <div className="flex flex-col min-w-0">
               <span className="font-semibold text-sm leading-tight truncate">{chatDisplayName}</span>
               <span className={cn(
-                "text-[10px] truncate",
-                statusString === 'в сети' ? 'text-accent font-bold' : 'text-muted-foreground'
+                "text-[10px] truncate transition-colors duration-200",
+                statusString === 'печатает...' || statusString === 'в сети' ? 'text-accent font-bold' : 'text-muted-foreground'
               )}>
                 {statusString}
               </span>
@@ -327,24 +337,6 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
           </Button>
         </div>
       </header>
-
-      {pinnedMessage && (
-        <div className="h-12 bg-card/40 backdrop-blur-md border-b border-border/40 px-4 flex items-center justify-between z-10 animate-in slide-in-from-top-2">
-          <div className="flex items-center gap-3 overflow-hidden cursor-pointer flex-1" onClick={() => {
-            const el = document.getElementById(`msg-${pinnedMessage.id}`);
-            el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          }}>
-            <Pin className="w-4 h-4 text-primary shrink-0 rotate-45" />
-            <div className="flex flex-col min-w-0">
-              <span className="text-[10px] font-bold text-primary uppercase">Закрепленное сообщение</span>
-              <span className="text-xs truncate text-muted-foreground">{pinnedMessage.content}</span>
-            </div>
-          </div>
-          <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground" onClick={handleUnpin}>
-            <X className="w-4 h-4" />
-          </Button>
-        </div>
-      )}
 
       <div className="flex-1 relative z-10 overflow-hidden">
         {customBackground && customBackground !== 'default' && (
