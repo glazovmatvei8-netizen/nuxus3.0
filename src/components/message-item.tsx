@@ -1,8 +1,7 @@
 "use client"
 
 import React, { useState } from 'react';
-import type { Message } from '@/lib/types';
-import { useAppState } from '@/lib/store';
+import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { 
@@ -13,9 +12,11 @@ import {
 import { format } from 'date-fns';
 import { SmilePlus } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { collection, doc, deleteDoc } from 'firebase/firestore';
+import { addDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 interface MessageItemProps {
-  message: Message;
+  message: any;
   isMe: boolean;
   chatId: string;
 }
@@ -23,20 +24,47 @@ interface MessageItemProps {
 const REACTIONS = ['❤️', '👍', '😂', '😮', '😢', '🔥', '👏'];
 
 export function MessageItem({ message, isMe, chatId }: MessageItemProps) {
-  const { addReaction, currentUser } = useAppState();
+  const { user } = useUser();
+  const db = useFirestore();
   const [isReactionPickerOpen, setIsReactionPickerOpen] = useState(false);
 
+  const reactionsQuery = useMemoFirebase(() => {
+    if (!db || !chatId || !message.id) return null;
+    return collection(db, 'chats', chatId, 'messages', message.id, 'reactions');
+  }, [db, chatId, message.id]);
+
+  const { data: reactionsData } = useCollection(reactionsQuery);
+
   const handleAddReaction = (emoji: string) => {
-    if (!currentUser) return;
-    addReaction(chatId, message.id, emoji, currentUser.phone);
+    if (!user || !db) return;
+    
+    const existing = reactionsData?.find(r => r.emoji === emoji && r.reactorId === user.uid);
+    if (existing) {
+      const reactionRef = doc(db, 'chats', chatId, 'messages', message.id, 'reactions', existing.id);
+      deleteDocumentNonBlocking(reactionRef);
+    } else {
+      const reactionsCol = collection(db, 'chats', chatId, 'messages', message.id, 'reactions');
+      addDocumentNonBlocking(reactionsCol, {
+        messageId: message.id,
+        reactorId: user.uid,
+        emoji,
+        reactedAt: new Date().toISOString(),
+      });
+    }
     setIsReactionPickerOpen(false);
   };
 
-  if (message.type === 'service') {
+  const groupedReactions = (reactionsData || []).reduce((acc: Record<string, string[]>, curr) => {
+    if (!acc[curr.emoji]) acc[curr.emoji] = [];
+    acc[curr.emoji].push(curr.reactorId);
+    return acc;
+  }, {});
+
+  if (message.contentType === 'service') {
     return (
       <div className="flex justify-center my-4">
         <span className="bg-muted/30 px-4 py-1.5 rounded-full text-[10px] uppercase font-bold tracking-wider text-muted-foreground backdrop-blur-sm border border-border/20">
-          {message.text}
+          {message.content}
         </span>
       </div>
     );
@@ -49,7 +77,7 @@ export function MessageItem({ message, isMe, chatId }: MessageItemProps) {
     )}>
       {!isMe && (
         <Avatar className="h-8 w-8 mt-auto shrink-0 ring-2 ring-primary/10">
-          <AvatarFallback className="text-[10px] bg-primary/20 text-primary">{message.senderName.slice(0, 2)}</AvatarFallback>
+          <AvatarFallback className="text-[10px] bg-primary/20 text-primary">{message.senderName?.slice(0, 2)}</AvatarFallback>
         </Avatar>
       )}
       
@@ -86,12 +114,12 @@ export function MessageItem({ message, isMe, chatId }: MessageItemProps) {
               ? "bg-primary text-white rounded-br-none shadow-primary/20" 
               : "bg-card text-foreground rounded-bl-none shadow-black/10 border border-border/40"
           )}>
-            <div className="whitespace-pre-wrap leading-relaxed">{message.text}</div>
+            <div className="whitespace-pre-wrap leading-relaxed">{message.content}</div>
             <div className={cn(
               "text-[9px] mt-1 text-right",
               isMe ? "text-white/60" : "text-muted-foreground/60"
             )}>
-              {format(message.time, 'HH:mm')}
+              {message.sentAt ? format(new Date(message.sentAt), 'HH:mm') : ''}
             </div>
           </div>
 
@@ -119,21 +147,21 @@ export function MessageItem({ message, isMe, chatId }: MessageItemProps) {
           )}
         </div>
 
-        {message.reactions && Object.entries(message.reactions).length > 0 && (
+        {Object.entries(groupedReactions).length > 0 && (
           <div className={cn("flex flex-wrap gap-1 mt-1", isMe ? "justify-end" : "justify-start")}>
-            {Object.entries(message.reactions).map(([emoji, users]) => (
+            {Object.entries(groupedReactions).map(([emoji, reactorIds]) => (
               <button
                 key={emoji}
                 onClick={() => handleAddReaction(emoji)}
                 className={cn(
                   "flex items-center gap-1.5 px-2 py-1 rounded-full text-[10px] border transition-all",
-                  users.includes(currentUser?.phone || '')
+                  reactorIds.includes(user?.uid || '')
                     ? "bg-primary/20 border-primary/40 text-primary font-bold scale-105"
                     : "bg-muted/20 border-border/40 text-muted-foreground hover:bg-muted/40"
                 )}
               >
                 <span>{emoji}</span>
-                <span className="font-mono">{users.length}</span>
+                <span className="font-mono">{reactorIds.length}</span>
               </button>
             ))}
           </div>

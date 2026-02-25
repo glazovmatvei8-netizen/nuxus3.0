@@ -5,33 +5,41 @@ import { useAppState } from '@/lib/store';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Search, Settings, Plus, Users, Radio, MessageSquare, Filter } from 'lucide-react';
+import { Search, Settings, Plus, Loader2 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { CreateChatModal } from './modals/create-chat-modal';
 import { SettingsModal } from './modals/settings-modal';
 import type { ChatType } from '@/lib/types';
 import { formatDistanceToNow } from 'date-fns';
+import { useFirestore, useUser, useCollection, useMemoFirebase } from '@/firebase';
+import { collection, query, where, orderBy } from 'firebase/firestore';
 
 export default function ChatSidebar() {
-  const { currentUser, chats, users, currentChatId, setCurrentChatId } = useAppState();
+  const { user } = useUser();
+  const db = useFirestore();
+  const { currentChatId, setCurrentChatId } = useAppState();
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState<ChatType | 'all'>('all');
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
-  const filteredChats = chats.filter(chat => {
+  // Memoized query for chats where the current user is a participant
+  const chatsQuery = useMemoFirebase(() => {
+    if (!db || !user) return null;
+    return query(
+      collection(db, 'chats'),
+      where('participantIds', 'array-contains', user.uid)
+    );
+  }, [db, user]);
+
+  const { data: chats, isLoading } = useCollection(chatsQuery);
+
+  const filteredChats = (chats || []).filter(chat => {
     const matchesTab = activeTab === 'all' || chat.type === activeTab;
-    const chatName = chat.type === 'private' 
-      ? users[chat.participants.find(p => p !== currentUser?.phone) || '']?.name || 'User'
-      : chat.name;
-    const matchesSearch = chatName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                        chat.username.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesSearch = chat.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                        chat.username?.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesTab && matchesSearch;
-  }).sort((a, b) => {
-    const aTime = a.messages.length ? a.messages[a.messages.length - 1].time : a.createdAt;
-    const bTime = b.messages.length ? b.messages[b.messages.length - 1].time : b.createdAt;
-    return bTime - aTime;
   });
 
   return (
@@ -43,12 +51,12 @@ export default function ChatSidebar() {
             onClick={() => setIsSettingsOpen(true)}
           >
             <Avatar className="h-10 w-10 border-2 border-primary/20 ring-primary/10 ring-offset-2 ring-offset-background group-hover:scale-105 transition-transform">
-              <AvatarImage src={currentUser?.avatar || ''} />
-              <AvatarFallback className="bg-primary text-white uppercase">{currentUser?.name?.slice(0, 2)}</AvatarFallback>
+              <AvatarImage src="" />
+              <AvatarFallback className="bg-primary text-white uppercase">{user?.email?.slice(0, 2)}</AvatarFallback>
             </Avatar>
             <div className="flex flex-col">
-              <span className="font-semibold text-sm leading-tight group-hover:text-primary transition-colors">{currentUser?.name}</span>
-              <span className="text-xs text-muted-foreground">{currentUser?.username}</span>
+              <span className="font-semibold text-sm leading-tight group-hover:text-primary transition-colors">{user?.email}</span>
+              <span className="text-xs text-muted-foreground">Online</span>
             </div>
           </div>
           <Button variant="ghost" size="icon" className="rounded-full hover:bg-muted/50" onClick={() => setIsSettingsOpen(true)}>
@@ -79,51 +87,47 @@ export default function ChatSidebar() {
       </div>
 
       <ScrollArea className="flex-1 px-2 py-2">
-        <div className="space-y-1">
-          {filteredChats.map(chat => {
-            const isPrivate = chat.type === 'private';
-            const otherUser = isPrivate ? users[chat.participants.find(p => p !== currentUser?.phone) || ''] : null;
-            const chatName = isPrivate ? otherUser?.name || 'Unknown' : chat.name;
-            const chatAvatar = isPrivate ? otherUser?.avatar : chat.avatar;
-            const lastMsg = chat.messages[chat.messages.length - 1];
-            const isActive = currentChatId === chat.id;
+        {isLoading ? (
+          <div className="flex justify-center p-4">
+            <Loader2 className="w-6 h-6 animate-spin text-primary" />
+          </div>
+        ) : (
+          <div className="space-y-1">
+            {filteredChats.map(chat => {
+              const chatName = chat.name || 'Unknown Chat';
+              const isActive = currentChatId === chat.id;
 
-            return (
-              <div
-                key={chat.id}
-                onClick={() => setCurrentChatId(chat.id)}
-                className={`flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all duration-200 group ${
-                  isActive ? 'bg-primary shadow-lg shadow-primary/20 text-white' : 'hover:bg-muted/40 text-foreground'
-                }`}
-              >
-                <div className="relative">
-                  <Avatar className="h-12 w-12 border-2 border-transparent group-hover:border-primary/20 transition-all">
-                    <AvatarImage src={chatAvatar || ''} />
-                    <AvatarFallback className={`${isActive ? 'bg-white/20' : 'bg-primary/10 text-primary'} uppercase font-bold`}>
-                      {chatName.slice(0, 2)}
-                    </AvatarFallback>
-                  </Avatar>
-                  {isPrivate && (
-                    <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-background rounded-full" />
-                  )}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="font-semibold truncate text-sm">{chatName}</span>
-                    <span className={`text-[10px] whitespace-nowrap ${isActive ? 'text-white/70' : 'text-muted-foreground'}`}>
-                      {lastMsg ? formatDistanceToNow(lastMsg.time, { addSuffix: false }).replace('about ', '') : ''}
-                    </span>
+              return (
+                <div
+                  key={chat.id}
+                  onClick={() => setCurrentChatId(chat.id)}
+                  className={`flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all duration-200 group ${
+                    isActive ? 'bg-primary shadow-lg shadow-primary/20 text-white' : 'hover:bg-muted/40 text-foreground'
+                  }`}
+                >
+                  <div className="relative">
+                    <Avatar className="h-12 w-12 border-2 border-transparent group-hover:border-primary/20 transition-all">
+                      <AvatarImage src={chat.avatarUrl || ''} />
+                      <AvatarFallback className={`${isActive ? 'bg-white/20' : 'bg-primary/10 text-primary'} uppercase font-bold`}>
+                        {chatName.slice(0, 2)}
+                      </AvatarFallback>
+                    </Avatar>
                   </div>
-                  <div className="flex items-center justify-between">
-                    <p className={`text-xs truncate ${isActive ? 'text-white/80' : 'text-muted-foreground'}`}>
-                      {lastMsg ? (lastMsg.type === 'image' ? '🖼️ Photo' : lastMsg.text) : 'No messages yet'}
-                    </p>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-semibold truncate text-sm">{chatName}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <p className={`text-xs truncate ${isActive ? 'text-white/80' : 'text-muted-foreground'}`}>
+                        {chat.description || chat.username}
+                      </p>
+                    </div>
                   </div>
                 </div>
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
+        )}
       </ScrollArea>
 
       <div className="p-4 bg-muted/20 backdrop-blur-md border-t border-border/40">

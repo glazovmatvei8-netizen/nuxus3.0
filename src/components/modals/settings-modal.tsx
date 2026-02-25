@@ -5,10 +5,13 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { useAppState } from '@/lib/store';
+import { useAuth, useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Camera, LogOut, User, Phone, ShieldCheck, AtSign } from 'lucide-react';
+import { Camera, LogOut, User, ShieldCheck, AtSign } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { signOut } from 'firebase/auth';
+import { doc } from 'firebase/firestore';
+import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 interface SettingsModalProps {
   open: boolean;
@@ -16,31 +19,47 @@ interface SettingsModalProps {
 }
 
 export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
-  const { currentUser, setCurrentUser, users, setUsers } = useAppState();
-  const [form, setForm] = useState({
-    name: currentUser?.name || '',
-    username: currentUser?.username || '',
-    phone: currentUser?.phone || ''
-  });
+  const auth = useAuth();
+  const db = useFirestore();
+  const { user } = useUser();
   const { toast } = useToast();
 
-  const handleSave = () => {
-    if (!currentUser) return;
-    const updatedUser = { ...currentUser, ...form };
-    
-    // Update global users list too
-    const newUsers = { ...users };
-    delete newUsers[currentUser.phone];
-    newUsers[form.phone] = updatedUser;
+  const userRef = useMemoFirebase(() => {
+    if (!db || !user) return null;
+    return doc(db, 'users', user.uid);
+  }, [db, user]);
 
-    setUsers(newUsers);
-    setCurrentUser(updatedUser);
+  const { data: profile } = useDoc(userRef);
+
+  const [form, setForm] = useState({
+    name: '',
+    username: ''
+  });
+
+  // Update form when profile is loaded
+  React.useEffect(() => {
+    if (profile) {
+      setForm({
+        name: profile.name || '',
+        username: profile.username || ''
+      });
+    }
+  }, [profile]);
+
+  const handleSave = () => {
+    if (!userRef) return;
+    
+    updateDocumentNonBlocking(userRef, {
+      name: form.name,
+      username: form.username
+    });
+    
     onOpenChange(false);
     toast({ title: "Settings Saved", description: "Your profile has been updated." });
   };
 
-  const handleLogout = () => {
-    setCurrentUser(null);
+  const handleLogout = async () => {
+    await signOut(auth);
     onOpenChange(false);
     toast({ title: "Logged Out", description: "You have been successfully logged out." });
   };
@@ -59,9 +78,9 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
           <div className="flex flex-col items-center gap-4">
             <div className="relative group">
               <Avatar className="h-24 w-24 border-4 border-background shadow-xl ring-2 ring-primary/20">
-                <AvatarImage src={currentUser?.avatar || ''} />
+                <AvatarImage src={profile?.avatarUrl || ''} />
                 <AvatarFallback className="bg-primary/20 text-primary text-2xl font-bold uppercase">
-                  {currentUser?.name?.slice(0, 2)}
+                  {profile?.name?.slice(0, 2) || '??'}
                 </AvatarFallback>
               </Avatar>
               <Button size="icon" className="absolute bottom-0 right-0 rounded-full h-8 w-8 shadow-lg">
@@ -69,8 +88,8 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
               </Button>
             </div>
             <div className="text-center">
-              <h3 className="text-lg font-bold">{currentUser?.name}</h3>
-              <p className="text-sm text-muted-foreground">{currentUser?.username}</p>
+              <h3 className="text-lg font-bold">{profile?.name || 'Anonymous'}</h3>
+              <p className="text-sm text-muted-foreground">{profile?.username || '@username'}</p>
             </div>
           </div>
 
@@ -92,16 +111,6 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
               <Input 
                 value={form.username} 
                 onChange={e => setForm({...form, username: e.target.value})}
-                className="bg-muted/30 border-muted-foreground/10 h-11 rounded-xl"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label className="text-xs font-bold text-muted-foreground flex items-center gap-2">
-                <Phone className="w-3 h-3" /> PHONE NUMBER
-              </Label>
-              <Input 
-                value={form.phone} 
-                onChange={e => setForm({...form, phone: e.target.value})}
                 className="bg-muted/30 border-muted-foreground/10 h-11 rounded-xl"
               />
             </div>

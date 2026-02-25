@@ -1,60 +1,75 @@
 "use client"
 
 import React, { useState } from 'react';
-import { useAppState } from '@/lib/store';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { MessageSquareText } from 'lucide-react';
+import { MessageSquareText, Loader2 } from 'lucide-react';
+import { useAuth, useFirestore } from '@/firebase';
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
+import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 export default function AuthScreen() {
-  const { setCurrentUser, users, setUsers } = useAppState();
+  const auth = useAuth();
+  const db = useFirestore();
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState('login');
+  const [isLoading, setIsLoading] = useState(false);
 
   const [form, setForm] = useState({
-    phone: '+7',
-    password: 'password123',
+    email: '',
+    password: '',
     name: '',
     username: ''
   });
 
-  const handleAuth = (type: 'login' | 'register') => {
-    if (type === 'register') {
-      if (!form.phone || !form.name || !form.username || !form.password) {
-        toast({ title: "Error", description: "All fields are required", variant: "destructive" });
-        return;
-      }
-      const username = form.username.startsWith('@') ? form.username : '@' + form.username;
-      
-      const userExists = Object.values(users).some(u => u.phone === form.phone || u.username === username);
-      if (userExists) {
-        toast({ title: "Error", description: "User already exists", variant: "destructive" });
-        return;
-      }
+  const handleAuth = async (type: 'login' | 'register') => {
+    if (!form.email || !form.password) {
+      toast({ title: "Error", description: "Email and password are required", variant: "destructive" });
+      return;
+    }
 
-      const newUser = {
-        phone: form.phone,
-        name: form.name,
-        username,
-        password: form.password,
-        avatar: null,
-        createdAt: Date.now()
-      };
+    setIsLoading(true);
+    try {
+      if (type === 'register') {
+        if (!form.name || !form.username) {
+          toast({ title: "Error", description: "Name and username are required", variant: "destructive" });
+          setIsLoading(false);
+          return;
+        }
 
-      setUsers({ ...users, [form.phone]: newUser });
-      setCurrentUser(newUser);
-      toast({ title: "Welcome!", description: `Account created for ${form.name}` });
-    } else {
-      const user = users[form.phone];
-      if (user && user.password === form.password) {
-        setCurrentUser(user);
-        toast({ title: "Welcome back!", description: `Signed in as ${user.name}` });
+        const userCredential = await createUserWithEmailAndPassword(auth, form.email, form.password);
+        const user = userCredential.user;
+        const username = form.username.startsWith('@') ? form.username : '@' + form.username;
+
+        const userProfile = {
+          id: user.uid,
+          name: form.name,
+          username: username,
+          email: form.email,
+          createdAt: new Date().toISOString(),
+        };
+
+        // Create user profile in Firestore
+        const userRef = doc(db, 'users', user.uid);
+        setDocumentNonBlocking(userRef, userProfile, { merge: true });
+
+        toast({ title: "Welcome!", description: `Account created for ${form.name}` });
       } else {
-        toast({ title: "Auth Failed", description: "Invalid credentials", variant: "destructive" });
+        await signInWithEmailAndPassword(auth, form.email, form.password);
+        toast({ title: "Welcome back!", description: `Signed in successfully` });
       }
+    } catch (error: any) {
+      toast({ 
+        title: "Auth Error", 
+        description: error.message || "Something went wrong", 
+        variant: "destructive" 
+      });
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -79,9 +94,10 @@ export default function AuthScreen() {
             <TabsContent value="login" className="space-y-4">
               <div className="space-y-2">
                 <Input 
-                  placeholder="Phone number" 
-                  value={form.phone} 
-                  onChange={e => setForm({...form, phone: e.target.value})}
+                  type="email"
+                  placeholder="Email" 
+                  value={form.email} 
+                  onChange={e => setForm({...form, email: e.target.value})}
                   className="bg-muted/30 border-muted-foreground/20 h-12"
                 />
               </div>
@@ -94,8 +110,12 @@ export default function AuthScreen() {
                   className="bg-muted/30 border-muted-foreground/20 h-12"
                 />
               </div>
-              <Button onClick={() => handleAuth('login')} className="w-full h-12 text-lg font-semibold shadow-lg shadow-primary/20 transition-all hover:scale-[1.02]">
-                Sign In
+              <Button 
+                onClick={() => handleAuth('login')} 
+                disabled={isLoading}
+                className="w-full h-12 text-lg font-semibold shadow-lg shadow-primary/20 transition-all hover:scale-[1.02]"
+              >
+                {isLoading ? <Loader2 className="animate-spin mr-2" /> : "Sign In"}
               </Button>
             </TabsContent>
             <TabsContent value="register" className="space-y-4">
@@ -112,9 +132,10 @@ export default function AuthScreen() {
                 className="bg-muted/30 border-muted-foreground/20 h-11"
               />
               <Input 
-                placeholder="Phone number" 
-                value={form.phone} 
-                onChange={e => setForm({...form, phone: e.target.value})}
+                type="email"
+                placeholder="Email" 
+                value={form.email} 
+                onChange={e => setForm({...form, email: e.target.value})}
                 className="bg-muted/30 border-muted-foreground/20 h-11"
               />
               <Input 
@@ -124,8 +145,12 @@ export default function AuthScreen() {
                 onChange={e => setForm({...form, password: e.target.value})}
                 className="bg-muted/30 border-muted-foreground/20 h-11"
               />
-              <Button onClick={() => handleAuth('register')} className="w-full h-11 text-lg font-semibold shadow-lg shadow-primary/20 transition-all hover:scale-[1.02]">
-                Create Account
+              <Button 
+                onClick={() => handleAuth('register')} 
+                disabled={isLoading}
+                className="w-full h-11 text-lg font-semibold shadow-lg shadow-primary/20 transition-all hover:scale-[1.02]"
+              >
+                {isLoading ? <Loader2 className="animate-spin mr-2" /> : "Create Account"}
               </Button>
             </TabsContent>
           </Tabs>

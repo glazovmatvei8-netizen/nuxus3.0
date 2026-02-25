@@ -5,11 +5,14 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useAppState } from '@/lib/store';
+import { useFirestore, useUser, useCollection, useMemoFirebase } from '@/firebase';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Search, UserPlus, Users, Radio, MessageSquarePlus, ArrowRight } from 'lucide-react';
+import { Search, Users, Radio, MessageSquarePlus, ArrowRight, Loader2 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
 import type { ChatType } from '@/lib/types';
+import { collection, query, addDoc, doc, getDocs, where } from 'firebase/firestore';
+import { addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 interface CreateChatModalProps {
   open: boolean;
@@ -17,74 +20,110 @@ interface CreateChatModalProps {
 }
 
 export function CreateChatModal({ open, onOpenChange }: CreateChatModalProps) {
-  const { users, currentUser, chats, setChats, setCurrentChatId } = useAppState();
+  const { user } = useUser();
+  const db = useFirestore();
+  const { setCurrentChatId } = useAppState();
   const [search, setSearch] = useState('');
   const [step, setStep] = useState<'select' | 'details'>('select');
   const [type, setType] = useState<ChatType>('private');
   const [name, setName] = useState('');
   const [username, setUsername] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
-  const filteredUsers = Object.values(users).filter(u => 
-    u.phone !== currentUser?.phone &&
-    (u.name.toLowerCase().includes(search.toLowerCase()) || u.username.toLowerCase().includes(search.toLowerCase()))
+  const usersQuery = useMemoFirebase(() => {
+    if (!db) return null;
+    return query(collection(db, 'users'));
+  }, [db]);
+
+  const { data: allUsers } = useCollection(usersQuery);
+
+  const filteredUsers = (allUsers || []).filter(u => 
+    u.id !== user?.uid &&
+    (u.name?.toLowerCase().includes(search.toLowerCase()) || u.username?.toLowerCase().includes(search.toLowerCase()))
   );
 
-  const startPrivateChat = (otherUser: any) => {
-    const existing = chats.find(c => c.type === 'private' && c.participants.includes(otherUser.phone));
-    if (existing) {
-      setCurrentChatId(existing.id);
+  const startPrivateChat = async (otherUser: any) => {
+    if (!db || !user) return;
+    setIsLoading(true);
+    try {
+      // Check for existing private chat
+      const q = query(
+        collection(db, 'chats'),
+        where('type', '==', 'private'),
+        where('participantIds', 'array-contains', user.uid)
+      );
+      const snapshot = await getDocs(q);
+      const existing = snapshot.docs.find(d => d.data().participantIds.includes(otherUser.id));
+
+      if (existing) {
+        setCurrentChatId(existing.id);
+        onOpenChange(false);
+        return;
+      }
+
+      const newChatData = {
+        type: 'private' as const,
+        name: otherUser.name,
+        username: otherUser.username,
+        avatarUrl: otherUser.avatarUrl || null,
+        participantIds: [user.uid, otherUser.id],
+        adminIds: [user.uid],
+        createdAt: new Date().toISOString(),
+        ownerId: user.uid,
+      };
+
+      const docRef = await addDoc(collection(db, 'chats'), newChatData);
+      setCurrentChatId(docRef.id);
       onOpenChange(false);
-      return;
+    } catch (error: any) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    } finally {
+      setIsLoading(false);
     }
-
-    const newChat = {
-      id: Date.now().toString(),
-      type: 'private' as const,
-      name: otherUser.name,
-      username: otherUser.username,
-      avatar: otherUser.avatar,
-      participants: [currentUser!.phone, otherUser.phone],
-      admins: [currentUser!.phone],
-      messages: [],
-      createdAt: Date.now()
-    };
-
-    setChats([...chats, newChat]);
-    setCurrentChatId(newChat.id);
-    onOpenChange(false);
   };
 
-  const createGroupOrChannel = () => {
-    if (!name || !username) {
+  const createGroupOrChannel = async () => {
+    if (!name || !username || !db || !user) {
       toast({ title: "Error", description: "All fields are required", variant: "destructive" });
       return;
     }
 
-    const formattedUsername = username.startsWith('@') ? username : '@' + username;
-    const newChat = {
-      id: Date.now().toString(),
-      type: type,
-      name: name,
-      username: formattedUsername,
-      avatar: null,
-      participants: [currentUser!.phone],
-      admins: [currentUser!.phone],
-      messages: [{
-        id: 'service-1',
-        senderPhone: 'system',
-        senderName: 'Nuxus',
-        text: `${type === 'group' ? 'Group' : 'Channel'} created successfully!`,
-        time: Date.now(),
-        type: 'service' as const
-      }],
-      createdAt: Date.now()
-    };
+    setIsLoading(true);
+    try {
+      const formattedUsername = username.startsWith('@') ? username : '@' + username;
+      const newChatData = {
+        type: type,
+        name: name,
+        username: formattedUsername,
+        avatarUrl: null,
+        participantIds: [user.uid],
+        adminIds: [user.uid],
+        ownerId: user.uid,
+        createdAt: new Date().toISOString(),
+      };
 
-    setChats([...chats, newChat]);
-    setCurrentChatId(newChat.id);
-    onOpenChange(false);
-    toast({ title: "Success", description: `${type} created!` });
+      const docRef = await addDoc(collection(db, 'chats'), newChatData);
+      
+      // Add welcome message
+      const messagesCol = collection(db, 'chats', docRef.id, 'messages');
+      addDocumentNonBlocking(messagesCol, {
+        chatId: docRef.id,
+        senderId: 'system',
+        senderName: 'Nuxus',
+        content: `${type === 'group' ? 'Group' : 'Channel'} created successfully!`,
+        contentType: 'service',
+        sentAt: new Date().toISOString(),
+      });
+
+      setCurrentChatId(docRef.id);
+      onOpenChange(false);
+      toast({ title: "Success", description: `${type} created!` });
+    } catch (error: any) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -135,19 +174,19 @@ export function CreateChatModal({ open, onOpenChange }: CreateChatModalProps) {
 
             <ScrollArea className="h-[300px] border-t border-border/40">
               <div className="p-2 space-y-1">
-                {filteredUsers.map(user => (
+                {filteredUsers.map(u => (
                   <div
-                    key={user.phone}
-                    onClick={() => startPrivateChat(user)}
+                    key={u.id}
+                    onClick={() => startPrivateChat(u)}
                     className="flex items-center gap-3 p-3 rounded-xl hover:bg-primary/10 cursor-pointer group transition-all"
                   >
                     <Avatar className="h-10 w-10 border-2 border-transparent group-hover:border-primary/20">
-                      <AvatarImage src={user.avatar || ''} />
-                      <AvatarFallback className="bg-primary/20 text-primary font-bold uppercase">{user.name.slice(0, 2)}</AvatarFallback>
+                      <AvatarImage src={u.avatarUrl || ''} />
+                      <AvatarFallback className="bg-primary/20 text-primary font-bold uppercase">{u.name?.slice(0, 2)}</AvatarFallback>
                     </Avatar>
                     <div className="flex flex-col">
-                      <span className="font-semibold text-sm group-hover:text-primary transition-colors">{user.name}</span>
-                      <span className="text-[10px] text-muted-foreground">{user.username}</span>
+                      <span className="font-semibold text-sm group-hover:text-primary transition-colors">{u.name}</span>
+                      <span className="text-[10px] text-muted-foreground">{u.username}</span>
                     </div>
                   </div>
                 ))}
@@ -177,7 +216,13 @@ export function CreateChatModal({ open, onOpenChange }: CreateChatModalProps) {
             </div>
             <div className="flex gap-3 pt-4">
               <Button variant="ghost" className="flex-1 rounded-xl" onClick={() => setStep('select')}>Back</Button>
-              <Button className="flex-1 rounded-xl h-11 shadow-lg shadow-primary/20" onClick={createGroupOrChannel}>Create {type}</Button>
+              <Button 
+                className="flex-1 rounded-xl h-11 shadow-lg shadow-primary/20" 
+                onClick={createGroupOrChannel}
+                disabled={isLoading}
+              >
+                {isLoading ? <Loader2 className="animate-spin" /> : `Create ${type}`}
+              </Button>
             </div>
           </div>
         )}

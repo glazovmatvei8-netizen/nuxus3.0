@@ -7,14 +7,16 @@ import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { 
   Send, Paperclip, Smile, MoreVertical, ChevronLeft, 
-  Menu, Sparkles, Image as ImageIcon, Info, Wand2,
-  Share2, MessageSquare
+  Sparkles, MessageSquare, Info
 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { MessageItem } from './message-item';
 import { suggestMessageDraft } from '@/ai/flows/ai-message-drafting-flow';
 import { useToast } from '@/hooks/use-toast';
 import { ChatInfoModal } from './modals/chat-info-modal';
+import { useFirestore, useUser, useCollection, useDoc, useMemoFirebase } from '@/firebase';
+import { collection, query, orderBy, doc, addDoc, serverTimestamp } from 'firebase/firestore';
+import { addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 interface ChatAreaProps {
   toggleSidebar: () => void;
@@ -22,50 +24,63 @@ interface ChatAreaProps {
 }
 
 export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps) {
-  const { currentChatId, setCurrentChatId, chats, currentUser, users, addMessage } = useAppState();
+  const { user } = useUser();
+  const db = useFirestore();
+  const { currentChatId, setCurrentChatId } = useAppState();
   const [inputText, setInputText] = useState('');
   const [isDrafting, setIsDrafting] = useState(false);
   const [isChatInfoOpen, setIsChatInfoOpen] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
-  const chat = chats.find(c => c.id === currentChatId);
-  const isPrivate = chat?.type === 'private';
-  const otherUser = isPrivate ? users[chat?.participants.find(p => p !== currentUser?.phone) || ''] : null;
-  const chatName = isPrivate ? otherUser?.name || 'Unknown' : chat?.name || 'Select a chat';
-  const chatAvatar = isPrivate ? otherUser?.avatar : chat?.avatar;
+  const chatRef = useMemoFirebase(() => {
+    if (!db || !currentChatId) return null;
+    return doc(db, 'chats', currentChatId);
+  }, [db, currentChatId]);
+
+  const { data: chat } = useDoc(chatRef);
+
+  const messagesQuery = useMemoFirebase(() => {
+    if (!db || !currentChatId) return null;
+    return query(
+      collection(db, 'chats', currentChatId, 'messages'),
+      orderBy('sentAt', 'asc')
+    );
+  }, [db, currentChatId]);
+
+  const { data: messages } = useCollection(messagesQuery);
 
   useEffect(() => {
     if (scrollRef.current) {
       const scrollContainer = scrollRef.current.querySelector('[data-radix-scroll-area-viewport]');
       if (scrollContainer) scrollContainer.scrollTop = scrollContainer.scrollHeight;
     }
-  }, [chat?.messages]);
+  }, [messages]);
 
   const handleSendMessage = () => {
-    if (!inputText.trim() || !currentChatId || !currentUser) return;
+    if (!inputText.trim() || !currentChatId || !user) return;
     
-    const newMessage = {
-      id: Date.now().toString(),
-      senderPhone: currentUser.phone,
-      senderName: currentUser.name,
-      text: inputText,
-      time: Date.now(),
-      type: 'text' as const,
-      reactions: {}
+    const messageData = {
+      chatId: currentChatId,
+      senderId: user.uid,
+      senderName: user.email?.split('@')[0] || 'User',
+      content: inputText,
+      contentType: 'text',
+      sentAt: new Date().toISOString(),
     };
 
-    addMessage(currentChatId, newMessage);
+    const messagesCol = collection(db, 'chats', currentChatId, 'messages');
+    addDocumentNonBlocking(messagesCol, messageData);
     setInputText('');
   };
 
   const handleAIDraft = async () => {
-    if (!chat || !currentUser) return;
+    if (!messages || !user) return;
     setIsDrafting(true);
     try {
-      const history = chat.messages.slice(-5).map(m => ({
+      const history = (messages || []).slice(-5).map(m => ({
         sender: m.senderName,
-        message: m.text
+        message: m.content
       }));
       const response = await suggestMessageDraft({
         conversationHistory: history,
@@ -103,12 +118,12 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
           </Button>
           <div className="flex items-center gap-3 cursor-pointer" onClick={() => setIsChatInfoOpen(true)}>
             <Avatar className="h-10 w-10 ring-2 ring-primary/20">
-              <AvatarImage src={chatAvatar || ''} />
-              <AvatarFallback className="bg-primary/20 text-primary font-bold">{chatName.slice(0, 2)}</AvatarFallback>
+              <AvatarImage src={chat?.avatarUrl || ''} />
+              <AvatarFallback className="bg-primary/20 text-primary font-bold">{chat?.name?.slice(0, 2)}</AvatarFallback>
             </Avatar>
             <div className="flex flex-col">
-              <span className="font-semibold text-sm leading-tight">{chatName}</span>
-              <span className="text-xs text-green-500 font-medium">{isPrivate ? 'Online' : `${chat?.participants.length} members`}</span>
+              <span className="font-semibold text-sm leading-tight">{chat?.name}</span>
+              <span className="text-xs text-green-500 font-medium">Online</span>
             </div>
           </div>
         </div>
@@ -124,11 +139,11 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
 
       <ScrollArea ref={scrollRef} className="flex-1 px-4 py-4 relative z-10 bg-gradient-to-b from-card/10 via-background to-background">
         <div className="flex flex-col gap-4 max-w-4xl mx-auto min-h-full">
-          {chat?.messages.map((msg, index) => (
+          {messages?.map((msg) => (
             <MessageItem 
               key={msg.id} 
               message={msg} 
-              isMe={msg.senderPhone === currentUser?.phone}
+              isMe={msg.senderId === user?.uid}
               chatId={currentChatId}
             />
           ))}
@@ -174,7 +189,7 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
         </div>
       </footer>
 
-      <ChatInfoModal open={isChatInfoOpen} onOpenChange={setIsChatInfoOpen} chat={chat!} />
+      {chat && <ChatInfoModal open={isChatInfoOpen} onOpenChange={setIsChatInfoOpen} chat={chat as any} />}
     </div>
   );
 }
