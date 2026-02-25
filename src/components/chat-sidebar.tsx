@@ -41,8 +41,12 @@ export default function ChatSidebar() {
   const { data: chats, isLoading } = useCollection(chatsQuery);
 
   const filteredChats = (chats || []).filter(chat => {
-    const chatName = chat.type === 'private' && chat.metadata && user
-      ? chat.metadata[chat.participantIds.find((id: string) => id !== user.uid)]?.name || chat.name
+    const otherId = chat.type === 'private' && user && chat.participantIds
+      ? chat.participantIds.find((id: string) => id !== user.uid)
+      : null;
+      
+    const chatName = otherId && chat.metadata && chat.metadata[otherId]
+      ? chat.metadata[otherId].name || chat.name
       : chat.name;
     
     const matchesTab = activeTab === 'all' || chat.type === activeTab;
@@ -60,7 +64,7 @@ export default function ChatSidebar() {
           >
             <UserAvatar 
               userId={user?.uid} 
-              manualAvatarUrl={profile?.avatarUrl} // Передаем URL напрямую для мгновенного обновления
+              manualAvatarUrl={profile?.avatarUrl}
               className="h-10 w-10 border-2 border-primary/20 ring-primary/10 ring-offset-2 ring-offset-background group-hover:scale-105 transition-transform shrink-0"
               fallbackName={profile?.name}
             />
@@ -108,9 +112,9 @@ export default function ChatSidebar() {
         ) : (
           <div className="space-y-1">
             {filteredChats.map(chat => {
-              const otherId = chat.type === 'private' && user ? chat.participantIds.find((id: string) => id !== user.uid) : null;
-              const chatDisplayName = otherId && chat.metadata ? chat.metadata[otherId]?.name : chat.name;
-              const chatAvatarUrl = otherId && chat.metadata ? chat.metadata[otherId]?.avatarUrl : chat.avatarUrl;
+              const otherId = chat.type === 'private' && user ? chat.participantIds?.find((id: string) => id !== user.uid) : null;
+              const chatDisplayName = otherId && chat.metadata && chat.metadata[otherId] ? chat.metadata[otherId].name : chat.name;
+              const chatAvatarUrl = otherId && chat.metadata && chat.metadata[otherId] ? chat.metadata[otherId].avatarUrl : chat.avatarUrl;
               
               const isActive = currentChatId === chat.id;
 
@@ -165,6 +169,8 @@ function ChatListItem({ chat, isActive, otherId, chatDisplayName, manualAvatarUr
     }
   }, [otherId, otherProfile?.lastSeen, chat.type]);
 
+  const isTyping = chat?.typing && otherId && chat.typing[otherId];
+
   return (
     <div
       onClick={onClick}
@@ -180,7 +186,7 @@ function ChatListItem({ chat, isActive, otherId, chatDisplayName, manualAvatarUr
           className="h-11 w-11 md:h-12 md:w-12 border-2 border-transparent group-hover:border-primary/20 transition-all" 
           fallbackName={chatDisplayName}
         />
-        {status === 'в сети' && (
+        {status === 'в сети' && !isTyping && (
           <span className="absolute bottom-0 right-0 w-3 h-3 bg-accent rounded-full border-2 border-background shadow-sm" />
         )}
       </div>
@@ -190,10 +196,10 @@ function ChatListItem({ chat, isActive, otherId, chatDisplayName, manualAvatarUr
         </div>
         <div className="flex items-center justify-between">
           <p className={cn(
-            "text-[10px] truncate",
-            isActive ? 'text-white/80' : (status === 'в сети' ? 'text-accent font-bold' : 'text-muted-foreground')
+            "text-[10px] truncate transition-colors",
+            isActive ? 'text-white/80' : (isTyping || status === 'в сети' ? 'text-accent font-bold' : 'text-muted-foreground')
           )}>
-            {status}
+            {isTyping ? 'печатает...' : status}
           </p>
         </div>
       </div>
