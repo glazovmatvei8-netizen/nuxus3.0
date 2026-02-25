@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState } from 'react';
@@ -6,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { MessageSquareText, Loader2, Smartphone, Lock, UserCircle, AtSign } from 'lucide-react';
+import { MessageSquareText, Loader2, Smartphone, Lock, UserCircle, AtSign, ShieldAlert } from 'lucide-react';
 import { useAuth, useFirestore } from '@/firebase';
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';
 import { doc, setDoc, query, collection, where, getDocs } from 'firebase/firestore';
@@ -29,7 +30,6 @@ export default function AuthScreen() {
   });
 
   const validatePhone = (phone: string) => {
-    // Удаляем всё кроме цифр и проверяем длину
     const digits = phone.replace(/\D/g, '');
     return digits.length >= 10;
   };
@@ -45,13 +45,11 @@ export default function AuthScreen() {
     }
 
     if (!validatePhone(formData.phone)) {
-      toast({ title: "Ошибка", description: "Введите корректный номер телефона (минимум 10 цифр)", variant: "destructive" });
+      toast({ title: "Ошибка", description: "Введите корректный номер телефона", variant: "destructive" });
       return;
     }
 
     setIsLoading(true);
-    
-    // Используем телефон как email для Firebase Auth (внутренний идентификатор)
     const loginEmail = `${phoneId}@nuxus.chat`;
 
     try {
@@ -65,53 +63,73 @@ export default function AuthScreen() {
         let username = formData.username.trim().toLowerCase();
         if (!username.startsWith('@')) username = '@' + username;
 
-        // 1. Проверка уникальности Username в Firestore
         const usernameQuery = query(collection(db, 'users'), where('username', '==', username));
         const usernameSnapshot = await getDocs(usernameQuery);
         
         if (!usernameSnapshot.empty) {
-          toast({ 
-            title: "Ник занят", 
-            description: "Это имя пользователя уже используется. Выберите другое.", 
-            variant: "destructive" 
-          });
+          toast({ title: "Ник занят", description: "Этот ник уже используется.", variant: "destructive" });
           setIsLoading(false);
           return;
         }
 
-        // 2. Создание пользователя в Firebase Auth
         const result = await createUserWithEmailAndPassword(auth, loginEmail, formData.password);
         
-        // 3. Сохранение профиля в Firestore
         const userProfile = {
           id: result.user.uid,
           name: formData.name.trim(),
           username: username,
           phone: formData.phone.trim(),
           createdAt: new Date().toISOString(),
-          avatarUrl: null
+          avatarUrl: `https://picsum.photos/seed/${result.user.uid}/200`,
+          inactivityDeletion: 'never'
         };
 
         await setDoc(doc(db, 'users', result.user.uid), userProfile);
         toast({ title: "Успех", description: "Аккаунт успешно создан!" });
       } else {
-        // Вход по логину (телефону) и паролю
         await signInWithEmailAndPassword(auth, loginEmail, formData.password);
         toast({ title: "С возвращением!", description: "Вы успешно вошли." });
       }
     } catch (error: any) {
       console.error("Auth Error:", error);
       let message = "Произошла ошибка при входе.";
-      
-      if (error.code === 'auth/email-already-in-use') {
-        message = "Этот номер телефона уже зарегистрирован.";
-      } else if (error.code === 'auth/wrong-password' || error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential') {
-        message = "Неверный номер телефона или пароль.";
-      } else if (error.code === 'auth/weak-password') {
-        message = "Пароль слишком простой (нужно от 6 символов).";
-      }
-
+      if (error.code === 'auth/email-already-in-use') message = "Этот номер уже зарегистрирован.";
+      else if (error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') message = "Неверный номер или пароль.";
       toast({ title: "Ошибка", description: message, variant: "destructive" });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const seedAdmin = async () => {
+    setIsLoading(true);
+    const adminPhone = '+79513332147';
+    const adminPass = 'gaz20092';
+    const adminEmail = '79513332147@nuxus.chat';
+
+    try {
+      const result = await createUserWithEmailAndPassword(auth, adminEmail, adminPass);
+      const userProfile = {
+        id: result.user.uid,
+        name: 'Админ Абузер',
+        username: '@vnAdmin',
+        phone: adminPhone,
+        createdAt: new Date().toISOString(),
+        avatarUrl: `https://picsum.photos/seed/admin/200`,
+        inactivityDeletion: 'never'
+      };
+      await setDoc(doc(db, 'users', result.user.uid), userProfile);
+      toast({ title: "Админ создан", description: "Теперь вы можете войти." });
+      setMode('login');
+      setFormData({ ...formData, phone: adminPhone, password: adminPass });
+    } catch (e: any) {
+      if (e.code === 'auth/email-already-in-use') {
+        toast({ title: "Инфо", description: "Админ уже существует в базе." });
+        setMode('login');
+        setFormData({ ...formData, phone: adminPhone, password: adminPass });
+      } else {
+        toast({ title: "Ошибка", description: e.message, variant: "destructive" });
+      }
     } finally {
       setIsLoading(false);
     }
@@ -141,7 +159,7 @@ export default function AuthScreen() {
                     <UserCircle className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                     <Input 
                       id="name"
-                      placeholder="Иван Иванов" 
+                      placeholder="Админ Абузер" 
                       value={formData.name} 
                       onChange={e => setFormData({...formData, name: e.target.value})}
                       className="bg-muted/30 pl-9 h-11 rounded-xl"
@@ -150,12 +168,12 @@ export default function AuthScreen() {
                   </div>
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="username" className="text-xs uppercase tracking-wider text-muted-foreground ml-1">Имя пользователя</Label>
+                  <Label htmlFor="username" className="text-xs uppercase tracking-wider text-muted-foreground ml-1">Ник</Label>
                   <div className="relative">
                     <AtSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                     <Input 
                       id="username"
-                      placeholder="username" 
+                      placeholder="@vnAdmin" 
                       value={formData.username} 
                       onChange={e => setFormData({...formData, username: e.target.value.replace(/\s/g, '').toLowerCase()})}
                       className="bg-muted/30 pl-9 h-11 rounded-xl"
@@ -167,12 +185,12 @@ export default function AuthScreen() {
             )}
 
             <div className="space-y-1.5">
-              <Label htmlFor="phone" className="text-xs uppercase tracking-wider text-muted-foreground ml-1">Номер телефона</Label>
+              <Label htmlFor="phone" className="text-xs uppercase tracking-wider text-muted-foreground ml-1">Телефон</Label>
               <div className="relative">
                 <Smartphone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input 
                   id="phone"
-                  placeholder="+7 (999) 000-00-00" 
+                  placeholder="+79513332147" 
                   type="tel"
                   value={formData.phone} 
                   onChange={e => setFormData({...formData, phone: e.target.value})}
@@ -207,13 +225,21 @@ export default function AuthScreen() {
             </Button>
           </form>
 
-          <div className="mt-6 text-center">
+          <div className="mt-6 flex flex-col gap-2 text-center">
             <button 
               onClick={() => setMode(mode === 'login' ? 'register' : 'login')}
-              className="text-sm text-muted-foreground hover:text-primary transition-colors py-2"
+              className="text-sm text-muted-foreground hover:text-primary transition-colors py-1"
             >
-              {mode === 'login' ? "Ещё нет аккаунта? Создать" : "Уже есть аккаунт? Войти"}
+              {mode === 'login' ? "Нет аккаунта? Создать" : "Уже есть аккаунт? Войти"}
             </button>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="text-[10px] text-muted-foreground/50 hover:text-orange-500"
+              onClick={seedAdmin}
+            >
+              <ShieldAlert className="w-3 h-3 mr-1" /> Создать админ-аккаунт
+            </Button>
           </div>
         </CardContent>
       </Card>
