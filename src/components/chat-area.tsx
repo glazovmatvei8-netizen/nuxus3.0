@@ -39,21 +39,15 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
   const [inputText, setInputText] = useState('');
   const [isChatInfoOpen, setIsChatInfoOpen] = useState(false);
   const [isSuggesting, setIsSuggesting] = useState(false);
-  const [isEmojiOpen, setIsEmojiOpen] = useState(false);
   
   const [replyTo, setReplyTo] = useState<Message | null>(null);
   const [editMessage, setEditMessage] = useState<Message | null>(null);
   
   const [isRecordingAudio, setIsRecordingAudio] = useState(false);
-  const [isRecordingVideo, setIsRecordingVideo] = useState(false);
-  const [recordingTime, setRecordingTime] = useState(0);
-  const [videoModalOpen, setVideoModalOpen] = useState(false);
   const [statusString, setStatusString] = useState<string>('');
   
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
-  const videoChunksRef = useRef<Blob[]>([]);
-  const videoPreviewRef = useRef<HTMLVideoElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -77,6 +71,13 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
     return chat.participantIds?.includes(user.uid) || false;
   }, [chat, user]);
 
+  // Разрешаем чтение сообщений, если чат публичный ИЛИ если пользователь - участник
+  const canReadMessages = useMemo(() => {
+    if (!chat) return false;
+    if (chat.type === 'group' || chat.type === 'channel') return true;
+    return isParticipant;
+  }, [chat, isParticipant]);
+
   const otherId = chat?.type === 'private' && user ? chat.participantIds?.find((id: string = '') => id !== user.uid) : null;
   const otherUserRef = useMemoFirebase(() => {
     if (!db || !otherId) return null;
@@ -85,12 +86,12 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
   const { data: otherUserProfile, isLoading: isOtherProfileLoading } = useDoc(otherUserRef);
 
   const messagesQuery = useMemoFirebase(() => {
-    if (!db || !currentChatId || !chat || !isParticipant) return null;
+    if (!db || !currentChatId || !chat || !canReadMessages) return null;
     return query(
       collection(db, 'chats', currentChatId, 'messages'),
       orderBy('sentAt', 'asc')
     );
-  }, [db, currentChatId, chat, isParticipant]);
+  }, [db, currentChatId, chat, canReadMessages]);
   
   const { data: messages, isLoading: isMessagesLoading } = useCollection<Message>(messagesQuery);
 
@@ -217,8 +218,6 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
       mediaRecorderRef.current.stream.getTracks().forEach(t => t.stop());
     }
     setIsRecordingAudio(false);
-    setIsRecordingVideo(false);
-    setVideoModalOpen(false);
   };
 
   const startAudioRecording = async () => {
@@ -280,7 +279,7 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
           <div className="absolute inset-0 z-[-1] brightness-100" style={bgStyle} />
         )}
         <ScrollArea ref={scrollRef} className="h-full px-4 py-4">
-          {(!isParticipant && !isChatLoading && chat) ? (
+          {(!canReadMessages && !isChatLoading && chat) ? (
             <div className="flex flex-col items-center justify-center h-full gap-4">
               <UserPlus className="w-12 h-12 text-primary" />
               <p className="text-muted-foreground">Вы не в чате</p>
@@ -291,14 +290,24 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
               {messages?.map(msg => (
                 <MessageItem key={msg.id} message={msg} isMe={msg.senderId === user?.uid} chatId={currentChatId} onReply={() => setReplyTo(msg)} onEdit={() => { setEditMessage(msg); setInputText(msg.content); }} size={userProfile?.settings?.messageSize} />
               ))}
-              {isMessagesLoading && <div className="flex justify-center p-8"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>}
+              {isMessagesLoading && (
+                <div className="flex justify-center p-8">
+                  <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                </div>
+              )}
+              {(!isParticipant && chat?.type !== 'private') && (
+                <div className="flex flex-col items-center gap-3 py-10 bg-card/40 backdrop-blur-md rounded-2xl border border-primary/20 mt-10">
+                   <p className="text-sm font-semibold">Вы просматриваете этот {chat.type === 'group' ? 'чат' : 'канал'}</p>
+                   <Button onClick={() => updateDocumentNonBlocking(chatRef!, { participantIds: arrayUnion(user?.uid) })}>Вступить, чтобы писать</Button>
+                </div>
+              )}
             </div>
           )}
         </ScrollArea>
       </div>
 
       <footer className="p-3 bg-card/20 backdrop-blur-xl border-t border-border/40 z-20">
-        {isParticipant && (
+        {isParticipant ? (
           <div className="flex flex-col gap-2 max-w-4xl mx-auto">
             {replyTo && (
               <div className="flex items-center justify-between bg-muted/40 p-2 rounded-xl border-l-4 border-primary mb-2">
@@ -323,6 +332,10 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
               </div>
               <Button variant="ghost" size="icon" onClick={isRecordingAudio ? stopRecording : startAudioRecording} className={cn("mb-1", isRecordingAudio && "text-primary")}><Mic className="w-5 h-5" /></Button>
             </div>
+          </div>
+        ) : (
+          <div className="flex justify-center max-w-4xl mx-auto">
+             <Button variant="outline" className="w-full h-11 rounded-xl" onClick={() => updateDocumentNonBlocking(chatRef!, { participantIds: arrayUnion(user?.uid) })}>Вступить в обсуждение</Button>
           </div>
         )}
       </footer>

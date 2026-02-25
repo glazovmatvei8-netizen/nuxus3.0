@@ -4,7 +4,9 @@ service cloud.firestore {
   match /databases/{database}/documents {
 
     /**
-     * NUXUSCHAT SECURITY MODEL - FINAL STABLE VERSION
+     * NUXUSCHAT SECURITY MODEL - TELEGRAM STYLE
+     * Публичные группы/каналы доступны для чтения всем.
+     * Личные чаты и отправка сообщений - только участникам.
      */
 
     function isSignedIn() {
@@ -15,12 +17,17 @@ service cloud.firestore {
       return isSignedIn() && request.auth.uid == userId;
     }
 
-    // Проверка участия через данные запроса или данные документа
-    function isParticipant(participantIds) {
-      return isSignedIn() && (request.auth.uid in participantIds);
+    // Проверка является ли чат публичным (группа или канал)
+    function isPublicChat(chatId) {
+      let chat = get(/databases/$(database)/documents/chats/$(chatId)).data;
+      return chat.type == 'group' || chat.type == 'channel';
     }
 
-    // --- Collection Rules ---
+    // Проверка участия в чате
+    function isParticipant(chatId) {
+      let chat = get(/databases/$(database)/documents/chats/$(chatId)).data;
+      return isSignedIn() && (request.auth.uid in chat.participantIds);
+    }
 
     match /users/{userId} {
       allow get, list: if isSignedIn(); 
@@ -30,25 +37,30 @@ service cloud.firestore {
     }
 
     match /chats/{chatId} {
-      // Все вошедшие могут искать чаты
       allow get, list: if isSignedIn();
       allow create: if isSignedIn();
-      // Обновление разрешено всем вошедшим для вступления и печатания
+      // Обновление (вступление, печатание) доступно всем вошедшим
       allow update: if isSignedIn(); 
       allow delete: if isSignedIn() && (resource.data.ownerId == request.auth.uid || (request.auth.uid in resource.data.adminIds));
     }
 
     match /chats/{chatId}/messages/{messageId} {
-      // Чтение и запись только для участников. Прямая проверка через родительский документ
-      allow get, list: if isSignedIn() && (request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participantIds);
-      allow create: if isSignedIn() && (request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participantIds);
-      allow update: if isSignedIn() && (request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participantIds); 
+      // Чтение: участники ИЛИ если это публичный чат (группа/канал)
+      allow get, list: if isSignedIn() && (isParticipant(chatId) || isPublicChat(chatId));
+      
+      // Создание: только участники
+      allow create: if isSignedIn() && isParticipant(chatId);
+      
+      // Обновление: только участники
+      allow update: if isSignedIn() && isParticipant(chatId); 
+      
+      // Удаление: автор или админ
       allow delete: if isSignedIn() && (resource.data.senderId == request.auth.uid || request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.adminIds);
     }
 
     match /chats/{chatId}/messages/{messageId}/reactions/{reactionId} {
-      allow get, list: if isSignedIn() && (request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participantIds);
-      allow create: if isSignedIn() && (request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participantIds);
+      allow get, list: if isSignedIn() && (isParticipant(chatId) || isPublicChat(chatId));
+      allow create: if isSignedIn() && isParticipant(chatId);
       allow update: if false;
       allow delete: if isSignedIn() && resource.data.reactorId == request.auth.uid;
     }

@@ -31,6 +31,11 @@ export function ChatInfoModal({ open, onOpenChange, chat }: ChatInfoModalProps) 
     return user && chat.participantIds?.includes(user.uid);
   }, [user, chat.participantIds]);
 
+  const canReadMedia = useMemo(() => {
+    if (chat.type === 'group' || chat.type === 'channel') return true;
+    return isParticipant;
+  }, [chat.type, isParticipant]);
+
   const chatName = chat.name || 'Chat';
   const chatAvatar = chat.avatarUrl;
 
@@ -42,13 +47,13 @@ export function ChatInfoModal({ open, onOpenChange, chat }: ChatInfoModalProps) 
   const { data: members } = useCollection(membersQuery);
 
   const mediaQuery = useMemoFirebase(() => {
-    if (!db || !chat.id || !isParticipant) return null;
+    if (!db || !chat.id || !canReadMedia) return null;
     return query(
       collection(db, 'chats', chat.id, 'messages'),
       where('contentType', 'in', ['image', 'video']),
       orderBy('sentAt', 'desc')
     );
-  }, [db, chat.id, isParticipant]);
+  }, [db, chat.id, canReadMedia]);
   const { data: mediaMessages } = useCollection<Message>(mediaQuery);
 
   const handleSummarize = async () => {
@@ -163,7 +168,7 @@ export function ChatInfoModal({ open, onOpenChange, chat }: ChatInfoModalProps) 
             </TabsContent>
 
             <TabsContent value="media" className="p-4 m-0">
-              {!isParticipant ? (
+              {!canReadMedia ? (
                 <div className="py-12 text-center text-muted-foreground space-y-2">
                    <p className="text-xs italic">Медиа доступно только участникам чата</p>
                 </div>
