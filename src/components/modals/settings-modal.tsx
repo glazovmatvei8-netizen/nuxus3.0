@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useRef } from 'react';
@@ -109,18 +108,17 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
   const handleAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      // Проверка на HEIC/HEIF - современные телефоны часто сохраняют в них
       if (!['image/jpeg', 'image/png'].includes(file.type)) {
         toast({ 
           title: "Неверный формат", 
-          description: "Пожалуйста, используйте JPEG или PNG. Форматы HEIC (с iPhone) не поддерживаются.", 
+          description: "Пожалуйста, используйте JPEG или PNG.", 
           variant: "destructive" 
         });
         return;
       }
 
-      if (file.size > 900000) {
-        toast({ title: "Файл слишком велик", description: "Выберите изображение до 900КБ для лучшей работы.", variant: "destructive" });
+      if (file.size > 3000000) {
+        toast({ title: "Файл слишком велик", description: "Выберите изображение до 3 МБ.", variant: "destructive" });
         return;
       }
 
@@ -128,7 +126,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
       reader.onloadend = () => {
         setForm(prev => ({ ...prev, avatarUrl: reader.result as string }));
         setIsAvatarPickerOpen(false);
-        toast({ title: "Фото загружено", description: "Не забудьте сохранить изменения внизу страницы." });
+        toast({ title: "Фото загружено", description: "Не забудьте сохранить изменения." });
       };
       reader.readAsDataURL(file);
     }
@@ -137,14 +135,14 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
   const handleBackgroundUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      if (file.size > 900000) {
-        toast({ title: "Файл слишком велик", description: "Выберите изображение до 900КБ", variant: "destructive" });
+      if (file.size > 3000000) {
+        toast({ title: "Файл слишком велик", description: "Выберите изображение до 3 МБ.", variant: "destructive" });
         return;
       }
       const reader = new FileReader();
       reader.onloadend = () => {
         setForm(prev => ({ ...prev, chatBackground: reader.result as string }));
-        toast({ title: "Фон загружен", description: "Не забудьте сохранить изменения" });
+        toast({ title: "Фон загружен", description: "Не забудьте сохранить изменения." });
       };
       reader.readAsDataURL(file);
     }
@@ -233,7 +231,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                     Отмена
                   </Button>
                 </div>
-                <p className="text-[10px] text-center text-muted-foreground italic">Рекомендуется JPEG или PNG до 900 КБ</p>
+                <p className="text-[10px] text-center text-muted-foreground italic">Рекомендуется JPEG или PNG до 3 МБ</p>
               </div>
             )}
 

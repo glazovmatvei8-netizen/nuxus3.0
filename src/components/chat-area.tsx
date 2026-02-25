@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useRef, useEffect } from 'react';
@@ -302,9 +301,9 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
       </header>
 
       <div className="flex-1 relative z-10 overflow-hidden">
-        {/* Background Overlay */}
+        {/* Background Overlay - Opacity-100 for full brightness */}
         {customBackground && customBackground !== 'default' && (
-          <div className="absolute inset-0 z-[-1] opacity-15" style={backgroundStyle} />
+          <div className="absolute inset-0 z-[-1] opacity-100" style={backgroundStyle} />
         )}
         <ScrollArea ref={scrollRef} className="h-full px-4 py-4 overflow-y-auto">
           {!isParticipant ? (
