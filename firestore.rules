@@ -1,3 +1,4 @@
+
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -16,7 +17,8 @@ service cloud.firestore {
 
     // Вспомогательная функция для проверки участия
     function isChatParticipant(chatId) {
-      return isSignedIn() && (request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participantIds);
+      let chat = get(/databases/$(database)/documents/chats/$(chatId));
+      return isSignedIn() && (request.auth.uid in chat.data.participantIds);
     }
 
     function isChatAdmin(chatId) {
@@ -37,7 +39,7 @@ service cloud.firestore {
       allow get: if isSignedIn();
       allow list: if isSignedIn(); 
       allow create: if isSignedIn();
-      allow update: if isSignedIn(); 
+      allow update: if isSignedIn(); // Разрешаем обновление для вступления и индикатора печатания
       allow delete: if isSignedIn() && (resource.data.ownerId == request.auth.uid || request.auth.uid in resource.data.adminIds);
     }
 
@@ -45,7 +47,6 @@ service cloud.firestore {
       // Чтение сообщений разрешено только участникам чата
       allow get, list: if isSignedIn() && (request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participantIds);
       allow create: if isSignedIn() && (request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participantIds);
-      // Обновление (для статуса прочтения и реакций) разрешено участникам
       allow update: if isSignedIn() && (request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participantIds); 
       allow delete: if isSignedIn() && (resource.data.senderId == request.auth.uid || isChatAdmin(chatId));
     }

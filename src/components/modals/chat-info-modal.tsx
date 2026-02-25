@@ -1,7 +1,7 @@
 
 "use client"
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -27,6 +27,10 @@ export function ChatInfoModal({ open, onOpenChange, chat }: ChatInfoModalProps) 
   const [isSummarizing, setIsSummarizing] = useState(false);
   const { toast } = useToast();
 
+  const isParticipant = useMemo(() => {
+    return user && chat.participantIds?.includes(user.uid);
+  }, [user, chat.participantIds]);
+
   const chatName = chat.name || 'Chat';
   const chatAvatar = chat.avatarUrl;
 
@@ -38,17 +42,17 @@ export function ChatInfoModal({ open, onOpenChange, chat }: ChatInfoModalProps) 
   const { data: members } = useCollection(membersQuery);
 
   const mediaQuery = useMemoFirebase(() => {
-    if (!db || !chat.id) return null;
+    if (!db || !chat.id || !isParticipant) return null;
     return query(
       collection(db, 'chats', chat.id, 'messages'),
       where('contentType', 'in', ['image', 'video']),
       orderBy('sentAt', 'desc')
     );
-  }, [db, chat.id]);
+  }, [db, chat.id, isParticipant]);
   const { data: mediaMessages } = useCollection<Message>(mediaQuery);
 
   const handleSummarize = async () => {
-    if (!db || !chat.id) return;
+    if (!db || !chat.id || !isParticipant) return;
     setIsSummarizing(true);
     try {
       const msgsQuery = query(
@@ -107,13 +111,15 @@ export function ChatInfoModal({ open, onOpenChange, chat }: ChatInfoModalProps) 
                     size="sm" 
                     className={`h-7 px-2 text-[10px] font-bold ${isSummarizing ? 'animate-pulse' : ''}`}
                     onClick={handleSummarize}
-                    disabled={isSummarizing}
+                    disabled={isSummarizing || !isParticipant}
                   >
                     {isSummarizing ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : (summary ? 'Refresh' : 'Generate')}
                   </Button>
                 </div>
                 <div className="bg-muted/20 border border-border/40 rounded-xl p-4 min-h-[60px] flex items-center justify-center text-center">
-                  {summary ? (
+                  {!isParticipant ? (
+                    <p className="text-xs text-muted-foreground italic">Суммаризация доступна только участникам чата.</p>
+                  ) : summary ? (
                     <p className="text-sm leading-relaxed text-foreground/90 italic">"{summary}"</p>
                   ) : (
                     <p className="text-xs text-muted-foreground italic">No summary generated yet. Click generate to analyze recent conversation.</p>
@@ -157,7 +163,11 @@ export function ChatInfoModal({ open, onOpenChange, chat }: ChatInfoModalProps) 
             </TabsContent>
 
             <TabsContent value="media" className="p-4 m-0">
-              {mediaMessages && mediaMessages.length > 0 ? (
+              {!isParticipant ? (
+                <div className="py-12 text-center text-muted-foreground space-y-2">
+                   <p className="text-xs italic">Медиа доступно только участникам чата</p>
+                </div>
+              ) : mediaMessages && mediaMessages.length > 0 ? (
                 <div className="grid grid-cols-3 gap-1">
                   {mediaMessages.map(msg => (
                     <div key={msg.id} className="aspect-square relative group cursor-pointer overflow-hidden rounded-md border border-border/20">

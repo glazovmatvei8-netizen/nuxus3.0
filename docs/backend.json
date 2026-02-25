@@ -63,11 +63,11 @@
         },
         "name": {
           "type": "string",
-          "description": "The display name of the chat (e.g., group name, channel name, or inferred from the other participant's name for private chats)."
+          "description": "The display name of the chat."
         },
         "username": {
           "type": "string",
-          "description": "A unique public identifier for group or channel chats, starting with '@'. Used for join links and search."
+          "description": "A unique public identifier for group or channel chats."
         },
         "description": {
           "type": "string",
@@ -75,7 +75,7 @@
         },
         "avatarUrl": {
           "type": "string",
-          "description": "URL to the chat's avatar image, applicable for group and channel chats.",
+          "description": "URL to the chat's avatar image.",
           "format": "uri"
         },
         "createdAt": {
@@ -85,21 +85,25 @@
         },
         "ownerId": {
           "type": "string",
-          "description": "Reference to the UserProfile ID who initially created and owns this group or channel."
+          "description": "UserProfile ID who owns this chat."
         },
         "participantIds": {
           "type": "array",
-          "description": "References to UserProfile IDs who are active participants in this chat.",
+          "description": "References to UserProfile IDs who are participants.",
           "items": {
             "type": "string"
           }
         },
         "adminIds": {
           "type": "array",
-          "description": "References to UserProfile IDs who have administrative privileges within this group or channel chat.",
+          "description": "References to UserProfile IDs who are admins.",
           "items": {
             "type": "string"
           }
+        },
+        "typing": {
+          "type": "object",
+          "description": "Map of user IDs to typing status."
         }
       },
       "required": [
@@ -114,53 +118,53 @@
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Message",
       "type": "object",
-      "description": "Represents a single communication message sent within any chat, supporting various content types and Telegram-like features.",
+      "description": "Represents a single message.",
       "properties": {
         "id": {
           "type": "string",
-          "description": "Unique identifier for the Message entity."
+          "description": "Unique identifier."
         },
         "chatId": {
           "type": "string",
-          "description": "Reference to the Chat in which this message was sent."
+          "description": "Chat reference."
         },
         "senderId": {
           "type": "string",
-          "description": "Reference to the UserProfile ID who sent this message."
+          "description": "Sender reference."
         },
         "senderName": {
           "type": "string",
-          "description": "Cached sender name for display performance."
+          "description": "Cached sender name."
         },
         "content": {
           "type": "string",
-          "description": "The textual content or media URL."
+          "description": "Textual content or media URL."
         },
         "contentType": {
           "type": "string",
-          "description": "The specific type of content: 'text', 'image', 'audio', 'video', 'service'."
+          "description": "Content type: 'text', 'image', 'audio', 'video', 'service'."
         },
         "sentAt": {
           "type": "string",
-          "description": "Timestamp indicating when the message was sent.",
+          "description": "Sent timestamp.",
           "format": "date-time"
         },
         "replyToId": {
           "type": "string",
-          "description": "Reference to another Message ID if this is a reply."
+          "description": "Reference to another Message ID."
         },
         "replyToContent": {
           "type": "string",
-          "description": "Snippet of the replied message content for display."
+          "description": "Snippet of replied message."
         },
         "editedAt": {
           "type": "string",
-          "description": "Timestamp indicating when the message was last edited.",
+          "description": "Last edited timestamp.",
           "format": "date-time"
         },
         "isRead": {
           "type": "boolean",
-          "description": "Whether the message has been seen by participants."
+          "description": "Read status."
         }
       },
       "required": [
