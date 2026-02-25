@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useRef, useEffect } from 'react';
@@ -9,7 +8,7 @@ import { UserAvatar } from '@/components/user-avatar';
 import { 
   Send, Paperclip, Smile, MoreVertical, ChevronLeft, 
   Sparkles, MessageSquare, Info, Mic, Camera, X, StopCircle, UserPlus,
-  CornerUpLeft, Pencil, Trash2, Loader2, Pin, PinOff
+  CornerUpLeft, Pencil, Trash2, Loader2, Pin
 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { MessageItem } from './message-item';
@@ -48,6 +47,7 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
   const [isRecordingVideo, setIsRecordingVideo] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
   const [videoModalOpen, setVideoModalOpen] = useState(false);
+  const [statusString, setStatusString] = useState<string>('');
   
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
@@ -93,6 +93,16 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
   const { data: messages } = useCollection<Message>(messagesQuery);
 
   const isParticipant = chat?.participantIds?.includes(user?.uid || '') || chat?.type === 'private';
+
+  useEffect(() => {
+    if (isOtherProfileLoading) {
+      setStatusString('загрузка...');
+    } else if (chat?.type === 'private') {
+      setStatusString(formatLastSeen(otherUserProfile?.lastSeen));
+    } else {
+      setStatusString(chat?.type === 'group' ? 'Группа' : 'Канал');
+    }
+  }, [isOtherProfileLoading, otherUserProfile?.lastSeen, chat?.type]);
 
   useEffect(() => {
     if (userProfile?.settings?.theme) {
@@ -258,7 +268,6 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
   };
 
   const chatDisplayName = otherId && chat?.metadata ? chat.metadata[otherId]?.name : chat?.name;
-  const statusString = isOtherProfileLoading ? 'загрузка...' : formatLastSeen(otherUserProfile?.lastSeen);
 
   if (!currentChatId) {
     return (
@@ -296,7 +305,7 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
                 "text-[10px] truncate",
                 statusString === 'в сети' ? 'text-accent font-bold' : 'text-muted-foreground'
               )}>
-                {chat?.type === 'private' ? statusString : (chat?.type === 'group' ? 'Группа' : 'Канал')}
+                {statusString}
               </span>
             </div>
           </div>

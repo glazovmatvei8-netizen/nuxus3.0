@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useEffect } from 'react';
@@ -141,7 +140,6 @@ export function MessageItem({ message, isMe, chatId, onReply, onEdit, size = 'me
 
   if (message.contentType === 'service') return renderContent() as any;
 
-  // Size specific classes
   const sizeClasses = {
     small: "px-3 py-1.5 text-xs",
     medium: "px-4 py-2 text-sm",

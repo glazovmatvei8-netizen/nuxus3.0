@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAppState } from '@/lib/store';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -144,13 +144,22 @@ export default function ChatSidebar() {
 
 function ChatListItem({ chat, isActive, otherId, chatDisplayName, onClick }: any) {
   const db = useFirestore();
+  const [status, setStatus] = useState<string>('');
+  
   const userProfileRef = useMemoFirebase(() => {
     if (!db || !otherId) return null;
     return doc(db, 'users', otherId);
   }, [db, otherId]);
   
   const { data: otherProfile } = useDoc(userProfileRef);
-  const status = otherId ? formatLastSeen(otherProfile?.lastSeen) : (chat.type === 'group' ? 'Группа' : 'Канал');
+
+  useEffect(() => {
+    if (otherId) {
+      setStatus(formatLastSeen(otherProfile?.lastSeen));
+    } else {
+      setStatus(chat.type === 'group' ? 'Группа' : 'Канал');
+    }
+  }, [otherId, otherProfile?.lastSeen, chat.type]);
 
   return (
     <div
