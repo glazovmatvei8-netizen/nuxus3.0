@@ -4,31 +4,7 @@ service cloud.firestore {
 
     /**
      * NUXUSCHAT SECURITY MODEL
-     *
-     * Core Philosophy:
-     * This ruleset implements a robust, real-time access control model for a multi-user chat application. 
-     * It prioritizes data consistency and user privacy by leveraging both path-based ownership 
-     * and document-based membership lists (participantIds).
-     *
-     * Data Structure:
-     * - /users/{userId}: Private user profiles, identified by the Auth UID.
-     * - /chats/{chatId}: Shared conversation metadata for private, group, and channel chats.
-     * - /chats/{chatId}/messages/{messageId}: Hierarchical message storage under parent chats.
-     * - /chats/{chatId}/messages/{messageId}/reactions/{reactionId}: Emoji reactions nested under messages.
-     *
-     * Key Security Decisions:
-     * 1. User Privacy: Profiles are searchable by all authenticated users (to allow starting chats), 
-     *    but only modifiable by the account owner.
-     * 2. Membership-Based Access: Read/Write access to chats and their subcollections is strictly 
-     *    controlled by the 'participantIds' array on the parent Chat document.
-     * 3. Authorization Integrity: For messages and reactions, rules use get() to fetch the 
-     *    parent chat's membership list, ensuring that revoked access is effective immediately 
-     *    without needing to update thousands of sub-documents.
-     * 4. Relational Integrity: On creation, documents must include fields that link them 
-     *    to the authenticated user (e.g., senderId, reactorId) or the correct path (userId).
      */
-
-    // --- Helper Functions ---
 
     function isSignedIn() {
       return request.auth != null;
@@ -38,61 +14,36 @@ service cloud.firestore {
       return isSignedIn() && request.auth.uid == userId;
     }
 
-    // Combines ownership check with existence check for updates/deletes
     function isExistingOwner(userId) {
       return resource != null && isOwner(userId);
     }
 
-    // Checks if the user is a participant of a specific chat via get()
-    // Used for subcollection access (messages/reactions)
     function isChatParticipant(chatId) {
       return isSignedIn() && request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participantIds;
     }
 
-    // Checks if the user is an admin of a specific chat via get()
     function isChatAdmin(chatId) {
       return isSignedIn() && request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.adminIds;
     }
 
     // --- Collection Rules ---
 
-    /**
-     * @description Rules for UserProfile. Owners manage their data; others can read for search.
-     * @path /users/{userId}
-     * @allow Authenticated user reading any profile (get) or searching (list).
-     * @allow Authenticated user creating their own profile where document ID matches UID.
-     * @deny User trying to update or delete another user's profile.
-     * @principle Ownership and Self-Creation (P3.1, P3.4).
-     */
     match /users/{userId} {
-      allow get, list: if isSignedIn();
+      // Разрешаем чтение и поиск даже неавторизованным, чтобы работала проверка ника при регистрации
+      allow get, list: if true; 
       allow create: if isOwner(userId) && request.resource.data.id == userId;
       allow update: if isExistingOwner(userId) && request.resource.data.id == resource.data.id;
       allow delete: if isExistingOwner(userId);
     }
 
-    /**
-     * @description Rules for Chat documents. Access is governed by participantIds and adminIds.
-     * @path /chats/{chatId}
-     * @allow Participant reading a chat; Creator/Admin updating settings or members.
-     * @deny Non-participant attempting to read a private chat or group.
-     * @principle Shared Access (Closed Collaborators) (P3.3).
-     */
     match /chats/{chatId} {
       allow get: if isSignedIn() && (request.auth.uid in resource.data.participantIds);
-      allow list: if isSignedIn(); // Queries must use where('participantIds', 'array-contains', uid)
+      allow list: if isSignedIn();
       allow create: if isSignedIn() && request.resource.data.ownerId == request.auth.uid;
       allow update: if isSignedIn() && (request.auth.uid in resource.data.adminIds);
       allow delete: if isSignedIn() && resource != null && resource.data.ownerId == request.auth.uid;
     }
 
-    /**
-     * @description Rules for Messages. Inherits access from the parent Chat document.
-     * @path /chats/{chatId}/messages/{messageId}
-     * @allow Participant reading history; Participant sending a message as themselves.
-     * @deny User sending a message with a different senderId or in a chat they aren't in.
-     * @principle Relational Integrity and Inherited Authorization (P5, P3.3).
-     */
     match /chats/{chatId}/messages/{messageId} {
       allow get, list: if isChatParticipant(chatId);
       allow create: if isChatParticipant(chatId) && request.resource.data.senderId == request.auth.uid;
@@ -100,17 +51,10 @@ service cloud.firestore {
       allow delete: if resource != null && (resource.data.senderId == request.auth.uid || isChatAdmin(chatId));
     }
 
-    /**
-     * @description Rules for Reactions. Inherits access from the grandparent Chat document.
-     * @path /chats/{chatId}/messages/{messageId}/reactions/{reactionId}
-     * @allow Participant adding a reaction to a message in their chat.
-     * @deny User reacting as someone else or in a chat they don't belong to.
-     * @principle Auditable Logic and Existence Checks (P4, P7).
-     */
     match /chats/{chatId}/messages/{messageId}/reactions/{reactionId} {
       allow get, list: if isChatParticipant(chatId);
       allow create: if isChatParticipant(chatId) && request.resource.data.reactorId == request.auth.uid;
-      allow update: if false; // Reactions are typically immutable; delete and recreate instead.
+      allow update: if false;
       allow delete: if resource != null && resource.data.reactorId == request.auth.uid;
     }
   }

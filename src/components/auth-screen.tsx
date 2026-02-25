@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState } from 'react';
@@ -10,7 +9,7 @@ import { useToast } from '@/hooks/use-toast';
 import { MessageSquareText, Loader2, Smartphone, Lock, UserCircle, AtSign } from 'lucide-react';
 import { useAuth, useFirestore } from '@/firebase';
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';
-import { doc, setDoc, query, collection, where, getDocs } from 'firebase/firestore';
+import { doc, setDoc, query, collection, where, getDocs, limit } from 'firebase/firestore';
 
 type AuthMode = 'login' | 'register';
 
@@ -31,7 +30,6 @@ export default function AuthScreen() {
 
   const normalizePhone = (phone: string) => {
     let digits = phone.replace(/\D/g, '');
-    // Handle Russian local format 8 -> 7
     if (digits.length === 11 && digits.startsWith('8')) {
       digits = '7' + digits.substring(1);
     }
@@ -43,19 +41,23 @@ export default function AuthScreen() {
     
     const phoneDigits = normalizePhone(formData.phone);
     
-    if (!phoneDigits || !formData.password) {
-      toast({ title: "Ошибка", description: "Заполните телефон и пароль", variant: "destructive" });
+    if (!phoneDigits) {
+      toast({ title: "Ошибка", description: "Введите корректный номер телефона", variant: "destructive" });
+      return;
+    }
+
+    if (formData.password.length < 6) {
+      toast({ title: "Ошибка", description: "Пароль должен быть не менее 6 символов", variant: "destructive" });
       return;
     }
 
     setIsLoading(true);
-    // We use phone@nuxus.chat as a dummy email for Firebase Auth
     const loginEmail = `${phoneDigits}@nuxus.chat`;
 
     try {
       if (mode === 'register') {
         if (!formData.name || !formData.username) {
-          toast({ title: "Ошибка", description: "Заполните имя и ник", variant: "destructive" });
+          toast({ title: "Ошибка", description: "Пожалуйста, заполните имя и ник", variant: "destructive" });
           setIsLoading(false);
           return;
         }
@@ -63,8 +65,12 @@ export default function AuthScreen() {
         let username = formData.username.trim().toLowerCase();
         if (!username.startsWith('@')) username = '@' + username;
 
-        // Check if username is already taken in Firestore
-        const usernameQuery = query(collection(db, 'users'), where('username', '==', username));
+        // Проверка ника на уникальность
+        const usernameQuery = query(
+          collection(db, 'users'), 
+          where('username', '==', username),
+          limit(1)
+        );
         const usernameSnapshot = await getDocs(usernameQuery);
         
         if (!usernameSnapshot.empty) {
@@ -93,9 +99,18 @@ export default function AuthScreen() {
       }
     } catch (error: any) {
       console.error("Auth Error:", error);
-      let message = "Произошла ошибка при входе.";
-      if (error.code === 'auth/email-already-in-use') message = "Этот номер уже зарегистрирован.";
-      else if (error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential' || error.code === 'auth/user-not-found') message = "Неверный номер или пароль.";
+      let message = "Произошла ошибка.";
+      
+      if (error.code === 'auth/email-already-in-use') {
+        message = "Этот номер телефона уже зарегистрирован.";
+      } else if (error.code === 'auth/invalid-credential' || error.code === 'auth/wrong-password' || error.code === 'auth/user-not-found') {
+        message = "Неверный номер или пароль.";
+      } else if (error.code === 'auth/network-request-failed') {
+        message = "Ошибка сети. Проверьте подключение к интернету.";
+      } else {
+        message = error.message || "Попробуйте еще раз позже.";
+      }
+      
       toast({ title: "Ошибка", description: message, variant: "destructive" });
     } finally {
       setIsLoading(false);
@@ -126,7 +141,7 @@ export default function AuthScreen() {
                     <UserCircle className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                     <Input 
                       id="name"
-                      placeholder="Иван Иванов" 
+                      placeholder="Имя Фамилия" 
                       value={formData.name} 
                       onChange={e => setFormData({...formData, name: e.target.value})}
                       className="bg-muted/30 pl-9 h-11 rounded-xl"
@@ -135,7 +150,7 @@ export default function AuthScreen() {
                   </div>
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="username" className="text-xs uppercase tracking-wider text-muted-foreground ml-1">Ник</Label>
+                  <Label htmlFor="username" className="text-xs uppercase tracking-wider text-muted-foreground ml-1">Никнейм</Label>
                   <div className="relative">
                     <AtSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                     <Input 
@@ -173,7 +188,7 @@ export default function AuthScreen() {
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input 
                   id="password"
-                  placeholder="••••••••" 
+                  placeholder="Минимум 6 символов" 
                   type="password"
                   value={formData.password} 
                   onChange={e => setFormData({...formData, password: e.target.value})}
@@ -197,7 +212,7 @@ export default function AuthScreen() {
               onClick={() => setMode(mode === 'login' ? 'register' : 'login')}
               className="text-sm text-muted-foreground hover:text-primary transition-colors py-1"
             >
-              {mode === 'login' ? "Нет аккаунта? Создать" : "Уже есть аккаунт? Войти"}
+              {mode === 'login' ? "Нет аккаунта? Зарегистрироваться" : "Уже есть аккаунт? Войти"}
             </button>
           </div>
         </CardContent>
