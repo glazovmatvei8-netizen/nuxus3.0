@@ -16,7 +16,7 @@ import {
 import { useAuth, useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
-  LogOut, User, AtSign, Copy, Share2, 
+  LogOut, User, AtSign, Share2, 
   Trash2, Clock, CheckCircle2, LayoutGrid, Upload, Palette, Image as ImageIcon, Type
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
@@ -53,7 +53,8 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
   const db = useFirestore();
   const { user } = useUser();
   const { toast } = useToast();
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
+  const backgroundInputRef = useRef<HTMLInputElement>(null);
 
   const userRef = useMemoFirebase(() => {
     if (!db || !user) return null;
@@ -105,11 +106,11 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
     toast({ title: "Сохранено", description: "Ваш профиль и настройки обновлены." });
   };
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       if (file.size > 800000) {
-        toast({ title: "Файл слишком велик", description: "Выберите изображение поменьше", variant: "destructive" });
+        toast({ title: "Файл слишком велик", description: "Выберите изображение до 800КБ", variant: "destructive" });
         return;
       }
       const reader = new FileReader();
@@ -117,6 +118,22 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
         setForm(prev => ({ ...prev, avatarUrl: reader.result as string }));
         setIsAvatarPickerOpen(false);
         toast({ title: "Фото загружено", description: "Не забудьте сохранить изменения" });
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleBackgroundUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 800000) {
+        toast({ title: "Файл слишком велик", description: "Выберите изображение до 800КБ", variant: "destructive" });
+        return;
+      }
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setForm(prev => ({ ...prev, chatBackground: reader.result as string }));
+        toast({ title: "Фон загружен", description: "Не забудьте сохранить изменения" });
       };
       reader.readAsDataURL(file);
     }
@@ -189,11 +206,11 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                 </div>
                 
                 <div className="flex gap-2">
-                  <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleFileUpload} />
+                  <input type="file" ref={avatarInputRef} className="hidden" accept="image/*" onChange={handleAvatarUpload} />
                   <Button 
                     variant="outline" 
                     className="flex-1 rounded-xl h-10 border-primary/20 hover:bg-primary/10 gap-2"
-                    onClick={() => fileInputRef.current?.click()}
+                    onClick={() => avatarInputRef.current?.click()}
                   >
                     <Upload className="w-4 h-4" /> Загрузить фото
                   </Button>
@@ -274,16 +291,28 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                 <Label className="text-xs text-muted-foreground ml-1 flex items-center gap-2">
                   <ImageIcon className="w-3.5 h-3.5" /> Фон чата
                 </Label>
-                <Select value={form.chatBackground} onValueChange={(val) => setForm({...form, chatBackground: val})}>
-                  <SelectTrigger className="bg-muted/30 border-muted-foreground/10 h-11 rounded-xl">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {BACKGROUNDS.map(bg => (
-                      <SelectItem key={bg.value} value={bg.value}>{bg.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <div className="flex gap-2">
+                  <Select value={form.chatBackground} onValueChange={(val) => setForm({...form, chatBackground: val})}>
+                    <SelectTrigger className="flex-1 bg-muted/30 border-muted-foreground/10 h-11 rounded-xl">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {BACKGROUNDS.map(bg => (
+                        <SelectItem key={bg.value} value={bg.value}>{bg.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <input type="file" ref={backgroundInputRef} className="hidden" accept="image/*" onChange={handleBackgroundUpload} />
+                  <Button 
+                    variant="outline" 
+                    size="icon" 
+                    className="h-11 w-11 shrink-0 rounded-xl border-muted-foreground/10 bg-muted/30 hover:bg-primary/10 hover:text-primary transition-colors"
+                    onClick={() => backgroundInputRef.current?.click()}
+                    title="Загрузить свое фото"
+                  >
+                    <Upload className="w-4 h-4" />
+                  </Button>
+                </div>
               </div>
 
               <div className="space-y-2">
