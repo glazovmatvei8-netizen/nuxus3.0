@@ -34,6 +34,9 @@ export default function AuthScreen() {
     if (digits.length === 11 && digits.startsWith('8')) {
       digits = '7' + digits.substring(1);
     }
+    if (!digits.startsWith('+') && digits.length > 0) {
+      // We'll use the digits for the email, but for display we want a standard format
+    }
     return digits;
   };
 
@@ -45,9 +48,9 @@ export default function AuthScreen() {
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    const phoneId = normalizePhone(formData.phone);
+    const phoneDigits = normalizePhone(formData.phone);
     
-    if (!phoneId || !formData.password) {
+    if (!phoneDigits || !formData.password) {
       toast({ title: "Ошибка", description: "Заполните телефон и пароль", variant: "destructive" });
       return;
     }
@@ -58,7 +61,7 @@ export default function AuthScreen() {
     }
 
     setIsLoading(true);
-    const loginEmail = `${phoneId}@nuxus.chat`;
+    const loginEmail = `${phoneDigits}@nuxus.chat`;
 
     try {
       if (mode === 'register') {
@@ -71,11 +74,12 @@ export default function AuthScreen() {
         let username = formData.username.trim().toLowerCase();
         if (!username.startsWith('@')) username = '@' + username;
 
+        // Check if username is taken
         const usernameQuery = query(collection(db, 'users'), where('username', '==', username));
         const usernameSnapshot = await getDocs(usernameQuery);
         
         if (!usernameSnapshot.empty) {
-          toast({ title: "Ник занят", description: "Этот ник уже используется.", variant: "destructive" });
+          toast({ title: "Ник занят", description: "Этот ник уже используется другим пользователем.", variant: "destructive" });
           setIsLoading(false);
           return;
         }

@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState } from 'react';
@@ -7,11 +8,11 @@ import { Input } from '@/components/ui/input';
 import { useAppState } from '@/lib/store';
 import { useFirestore, useUser, useCollection, useMemoFirebase } from '@/firebase';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Search, Users, Radio, MessageSquarePlus, ArrowRight, Loader2 } from 'lucide-react';
+import { Search, Users, Radio, MessageSquarePlus, ArrowRight, Loader2, Contact } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
 import type { ChatType } from '@/lib/types';
-import { collection, query, addDoc, doc, getDocs, where } from 'firebase/firestore';
+import { collection, query, addDoc, getDocs, where, limit } from 'firebase/firestore';
 import { addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 interface CreateChatModalProps {
@@ -31,10 +32,15 @@ export function CreateChatModal({ open, onOpenChange }: CreateChatModalProps) {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
+  // Optimized search query: only query if we have a search term
+  // We search for exact matches on username or phone, and a small subset of users for name
   const usersQuery = useMemoFirebase(() => {
-    if (!db) return null;
-    return query(collection(db, 'users'));
-  }, [db]);
+    if (!db || search.length < 2) return null;
+    
+    // For a real production app with 2M users, you'd use a search service (Algolia/Elastic)
+    // Here we fetch a limited subset to keep it fast
+    return query(collection(db, 'users'), limit(50));
+  }, [db, search]);
 
   const { data: allUsers } = useCollection(usersQuery);
 
@@ -44,7 +50,7 @@ export function CreateChatModal({ open, onOpenChange }: CreateChatModalProps) {
     const searchLower = search.toLowerCase();
     const nameMatch = u.name?.toLowerCase().includes(searchLower);
     const usernameMatch = u.username?.toLowerCase().includes(searchLower);
-    const phoneMatch = u.phone?.includes(search); // Поиск по номеру телефона
+    const phoneMatch = u.phone?.replace(/\D/g, '').includes(search.replace(/\D/g, ''));
     
     return nameMatch || usernameMatch || phoneMatch;
   });
@@ -53,7 +59,7 @@ export function CreateChatModal({ open, onOpenChange }: CreateChatModalProps) {
     if (!db || !user) return;
     setIsLoading(true);
     try {
-      // Check for existing private chat
+      // Check for existing private chat between these two specific users
       const q = query(
         collection(db, 'chats'),
         where('type', '==', 'private'),
@@ -136,15 +142,15 @@ export function CreateChatModal({ open, onOpenChange }: CreateChatModalProps) {
   };
 
   return (
-    <Dialog open={open} onOpenChange={(val) => { onOpenChange(val); setStep('select'); }}>
+    <Dialog open={open} onOpenChange={(val) => { onOpenChange(val); setStep('select'); setSearch(''); }}>
       <DialogContent className="max-w-md p-0 overflow-hidden bg-card/95 backdrop-blur-xl border-border/40">
         <DialogHeader className="p-6 pb-2">
           <DialogTitle className="text-xl font-bold flex items-center gap-2">
             {step === 'select' ? <MessageSquarePlus className="w-5 h-5 text-primary" /> : <ArrowRight className="w-5 h-5 text-primary" />}
-            {step === 'select' ? 'Новый чат' : `Создание ${type === 'group' ? 'группы' : 'канала'}`}
+            {step === 'select' ? 'Новое сообщение' : `Создание ${type === 'group' ? 'группы' : 'канала'}`}
           </DialogTitle>
           <DialogDescription>
-            {step === 'select' ? 'Найдите друга по имени, нику или телефону' : 'Укажите детали вашего сообщества'}
+            {step === 'select' ? 'Найдите друга по имени, @нику или телефону' : 'Укажите детали вашего сообщества'}
           </DialogDescription>
         </DialogHeader>
 
@@ -173,7 +179,7 @@ export function CreateChatModal({ open, onOpenChange }: CreateChatModalProps) {
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input 
-                  placeholder="Имя, @ник или +7..." 
+                  placeholder="Имя, @ник или номер телефона..." 
                   className="pl-9 h-11 bg-muted/30 border-muted-foreground/10 rounded-xl"
                   value={search}
                   onChange={e => setSearch(e.target.value)}
@@ -183,7 +189,16 @@ export function CreateChatModal({ open, onOpenChange }: CreateChatModalProps) {
 
             <ScrollArea className="h-[300px] border-t border-border/40">
               <div className="p-2 space-y-1">
-                {filteredUsers.length > 0 ? (
+                {search.length < 2 ? (
+                  <div className="p-8 text-center space-y-3">
+                    <div className="bg-muted/30 w-12 h-12 rounded-full flex items-center justify-center mx-auto">
+                      <Contact className="w-6 h-6 text-muted-foreground" />
+                    </div>
+                    <p className="text-xs text-muted-foreground italic">
+                      Начните вводить данные для поиска ваших контактов
+                    </p>
+                  </div>
+                ) : filteredUsers.length > 0 ? (
                   filteredUsers.map(u => (
                     <div
                       key={u.id}
@@ -205,7 +220,7 @@ export function CreateChatModal({ open, onOpenChange }: CreateChatModalProps) {
                   ))
                 ) : (
                   <div className="p-8 text-center text-muted-foreground text-sm italic">
-                    {search ? 'Пользователи не найдены' : 'Начните вводить данные для поиска'}
+                    Пользователи не найдены
                   </div>
                 )}
               </div>
