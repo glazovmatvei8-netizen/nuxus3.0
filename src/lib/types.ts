@@ -1,4 +1,4 @@
-export type MessageType = 'text' | 'image' | 'service';
+export type MessageType = 'text' | 'image' | 'service' | 'audio' | 'video';
 
 export interface Reaction {
   emoji: string;
@@ -9,9 +9,10 @@ export interface Message {
   id: string;
   senderPhone: string;
   senderName: string;
-  text: string;
-  time: number;
-  type: MessageType;
+  content: string;
+  sentAt: string;
+  contentType: MessageType;
+  duration?: number; // duration for audio/video in seconds
   reactions?: Record<string, string[]>;
 }
 
@@ -23,18 +24,19 @@ export interface Chat {
   name: string;
   username: string;
   description?: string;
-  avatar: string | null;
-  participants: string[];
-  admins: string[];
-  messages: Message[];
-  createdAt: number;
+  avatarUrl: string | null;
+  participantIds: string[];
+  adminIds: string[];
+  createdAt: string;
+  ownerId: string;
 }
 
 export interface User {
+  id: string;
   phone: string;
   name: string;
   username: string;
-  avatar: string | null;
-  createdAt: number;
-  password?: string;
+  avatarUrl: string | null;
+  createdAt: string;
+  inactivityDeletion?: string;
 }
