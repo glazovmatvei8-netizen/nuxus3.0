@@ -29,6 +29,15 @@ export default function AuthScreen() {
     password: ''
   });
 
+  const normalizePhone = (phone: string) => {
+    let digits = phone.replace(/\D/g, '');
+    // Если номер начинается с 8 и имеет длину 11, заменяем на 7
+    if (digits.length === 11 && digits.startsWith('8')) {
+      digits = '7' + digits.substring(1);
+    }
+    return digits;
+  };
+
   const validatePhone = (phone: string) => {
     const digits = phone.replace(/\D/g, '');
     return digits.length >= 10;
@@ -37,7 +46,7 @@ export default function AuthScreen() {
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    const phoneId = formData.phone.replace(/\D/g, '');
+    const phoneId = normalizePhone(formData.phone);
     
     if (!phoneId || !formData.password) {
       toast({ title: "Ошибка", description: "Заполните телефон и пароль", variant: "destructive" });
@@ -94,7 +103,7 @@ export default function AuthScreen() {
       console.error("Auth Error:", error);
       let message = "Произошла ошибка при входе.";
       if (error.code === 'auth/email-already-in-use') message = "Этот номер уже зарегистрирован.";
-      else if (error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') message = "Неверный номер или пароль.";
+      else if (error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential' || error.code === 'auth/user-not-found') message = "Неверный номер или пароль.";
       toast({ title: "Ошибка", description: message, variant: "destructive" });
     } finally {
       setIsLoading(false);
@@ -105,9 +114,11 @@ export default function AuthScreen() {
     setIsLoading(true);
     const adminPhone = '+79513332147';
     const adminPass = 'gaz20092';
-    const adminEmail = '79513332147@nuxus.chat';
+    const phoneId = normalizePhone(adminPhone);
+    const adminEmail = `${phoneId}@nuxus.chat`;
 
     try {
+      // Пытаемся создать
       const result = await createUserWithEmailAndPassword(auth, adminEmail, adminPass);
       const userProfile = {
         id: result.user.uid,
@@ -119,14 +130,16 @@ export default function AuthScreen() {
         inactivityDeletion: 'never'
       };
       await setDoc(doc(db, 'users', result.user.uid), userProfile);
-      toast({ title: "Админ создан", description: "Теперь вы можете войти." });
-      setMode('login');
-      setFormData({ ...formData, phone: adminPhone, password: adminPass });
+      toast({ title: "Админ создан", description: "Вход выполнен автоматически." });
     } catch (e: any) {
       if (e.code === 'auth/email-already-in-use') {
-        toast({ title: "Инфо", description: "Админ уже существует в базе." });
-        setMode('login');
-        setFormData({ ...formData, phone: adminPhone, password: adminPass });
+        // Если уже есть, просто входим
+        try {
+          await signInWithEmailAndPassword(auth, adminEmail, adminPass);
+          toast({ title: "Вход", description: "Вы вошли как @vnAdmin" });
+        } catch (signInErr) {
+          toast({ title: "Ошибка", description: "Неверный пароль для существующего админа.", variant: "destructive" });
+        }
       } else {
         toast({ title: "Ошибка", description: e.message, variant: "destructive" });
       }
@@ -235,10 +248,11 @@ export default function AuthScreen() {
             <Button 
               variant="ghost" 
               size="sm" 
+              disabled={isLoading}
               className="text-[10px] text-muted-foreground/50 hover:text-orange-500"
               onClick={seedAdmin}
             >
-              <ShieldAlert className="w-3 h-3 mr-1" /> Создать админ-аккаунт
+              <ShieldAlert className="w-3 h-3 mr-1" /> Создать/Войти как Админ
             </Button>
           </div>
         </CardContent>
