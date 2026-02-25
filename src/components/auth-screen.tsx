@@ -11,6 +11,14 @@ import { useAuth, useFirestore } from '@/firebase';
 import { RecaptchaVerifier, signInWithPhoneNumber, ConfirmationResult } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 
+// Extend Window interface for Recaptcha
+declare global {
+  interface Window {
+    recaptchaVerifier: RecaptchaVerifier;
+    grecaptcha: any;
+  }
+}
+
 type AuthStep = 'phone' | 'code' | 'profile';
 
 export default function AuthScreen() {
@@ -32,37 +40,76 @@ export default function AuthScreen() {
   // Initialize Recaptcha
   useEffect(() => {
     if (typeof window !== 'undefined' && !window.recaptchaVerifier) {
-      window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
-        size: 'invisible',
-        callback: () => {
-          // reCAPTCHA solved, allow signInWithPhoneNumber.
-        }
-      });
+      try {
+        window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
+          size: 'invisible',
+          callback: () => {
+            // reCAPTCHA solved
+          },
+          'expired-callback': () => {
+            // Response expired. Ask user to solve reCAPTCHA again.
+            if (window.recaptchaVerifier) {
+              window.recaptchaVerifier.render().then(widgetId => {
+                window.grecaptcha.reset(widgetId);
+              });
+            }
+          }
+        });
+      } catch (error) {
+        console.error("Recaptcha init error:", error);
+      }
     }
+    
+    return () => {
+      if (window.recaptchaVerifier) {
+        // Optional cleanup if necessary
+      }
+    };
   }, [auth]);
 
   const handleSendCode = async () => {
-    if (!phoneNumber || phoneNumber.length < 10) {
-      toast({ title: "Ошибка", description: "Введите корректный номер телефона", variant: "destructive" });
+    // Basic phone validation (must start with + and have digits)
+    let formattedPhone = phoneNumber.trim();
+    if (!formattedPhone.startsWith('+')) {
+      formattedPhone = '+' + formattedPhone;
+    }
+
+    if (formattedPhone.length < 10) {
+      toast({ 
+        title: "Ошибка", 
+        description: "Введите корректный номер в международном формате (например, +79990001122)", 
+        variant: "destructive" 
+      });
       return;
     }
 
     setIsLoading(true);
     try {
       const appVerifier = window.recaptchaVerifier;
-      const confirmation = await signInWithPhoneNumber(auth, phoneNumber, appVerifier);
+      const confirmation = await signInWithPhoneNumber(auth, formattedPhone, appVerifier);
       setConfirmationResult(confirmation);
       setStep('code');
       toast({ title: "Код отправлен", description: "Проверьте ваши SMS сообщения" });
     } catch (error: any) {
-      console.error(error);
+      console.error("SMS Error:", error);
+      
+      let errorMessage = "Не удалось отправить код. Убедитесь, что номер верный.";
+      if (error.code === 'auth/invalid-phone-number') {
+        errorMessage = "Неверный формат номера телефона. Используйте +7...";
+      } else if (error.code === 'auth/too-many-requests') {
+        errorMessage = "Слишком много попыток. Попробуйте позже.";
+      } else if (error.code === 'auth/operation-not-allowed') {
+        errorMessage = "Вход по номеру телефона не включен в консоли Firebase.";
+      }
+
       toast({ 
         title: "Ошибка SMS", 
-        description: error.message || "Не удалось отправить код", 
+        description: errorMessage, 
         variant: "destructive" 
       });
-      // Reset recaptcha on error
-      if (window.recaptchaVerifier) {
+
+      // Reset recaptcha on error to allow retry
+      if (window.recaptchaVerifier && window.grecaptcha) {
         window.recaptchaVerifier.render().then(widgetId => {
           window.grecaptcha.reset(widgetId);
         });
@@ -83,7 +130,7 @@ export default function AuthScreen() {
       const result = await confirmationResult.confirm(verificationCode);
       const user = result.user;
       
-      // Check if user profile exists
+      // Check if user profile exists in Firestore
       const userDoc = await getDoc(doc(db, 'users', user.uid));
       
       if (userDoc.exists()) {
@@ -92,9 +139,10 @@ export default function AuthScreen() {
         setStep('profile');
       }
     } catch (error: any) {
+      console.error("Verification Error:", error);
       toast({ 
         title: "Ошибка кода", 
-        description: "Неверный код подтверждения", 
+        description: "Неверный или просроченный код подтверждения", 
         variant: "destructive" 
       });
     } finally {
@@ -113,19 +161,22 @@ export default function AuthScreen() {
       const user = auth.currentUser;
       if (!user) throw new Error("Пользователь не найден");
 
-      const username = profileForm.username.startsWith('@') ? profileForm.username : '@' + profileForm.username;
+      let username = profileForm.username.trim();
+      if (!username.startsWith('@')) {
+        username = '@' + username;
+      }
 
       const userProfile = {
         id: user.uid,
-        name: profileForm.name,
+        name: profileForm.name.trim(),
         username: username,
         phone: user.phoneNumber || phoneNumber,
         createdAt: new Date().toISOString(),
+        avatarUrl: null
       };
 
       await setDoc(doc(db, 'users', user.uid), userProfile);
-      toast({ title: "Готово!", description: "Ваш профиль создан" });
-      // The auth state listener in layout/page will automatically handle the redirect
+      toast({ title: "Готово!", description: "Ваш профиль успешно создан" });
     } catch (error: any) {
       toast({ 
         title: "Ошибка профиля", 
@@ -150,9 +201,9 @@ export default function AuthScreen() {
           </div>
           <CardTitle className="text-3xl font-bold tracking-tight text-white">NuxusChat</CardTitle>
           <CardDescription>
-            {step === 'phone' && "Введите номер телефона для входа"}
-            {step === 'code' && "Введите код из SMS"}
-            {step === 'profile' && "Расскажите о себе"}
+            {step === 'phone' && "Введите номер в формате +7..."}
+            {step === 'code' && "Код из SMS отправлен на ваш номер"}
+            {step === 'profile' && "Представьтесь, чтобы начать общение"}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -166,6 +217,7 @@ export default function AuthScreen() {
                   value={phoneNumber} 
                   onChange={e => setPhoneNumber(e.target.value)}
                   className="bg-muted/30 border-muted-foreground/20 h-12 pl-10"
+                  type="tel"
                 />
               </div>
               <Button 
@@ -173,8 +225,11 @@ export default function AuthScreen() {
                 disabled={isLoading}
                 className="w-full h-12 text-lg font-semibold shadow-lg shadow-primary/20 transition-all hover:scale-[1.02]"
               >
-                {isLoading ? <Loader2 className="animate-spin mr-2" /> : "Отправить код"}
+                {isLoading ? <Loader2 className="animate-spin mr-2" /> : "Получить код"}
               </Button>
+              <p className="text-[10px] text-center text-muted-foreground px-4">
+                Нажимая «Получить код», вы подтверждаете согласие на получение сервисных SMS.
+              </p>
             </div>
           )}
 
@@ -183,7 +238,7 @@ export default function AuthScreen() {
               <div className="relative">
                 <CheckCircle2 className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                 <Input 
-                  placeholder="Код из SMS (6 цифр)" 
+                  placeholder="000000" 
                   value={verificationCode} 
                   maxLength={6}
                   onChange={e => setVerificationCode(e.target.value.replace(/\D/g, ''))}
@@ -232,7 +287,7 @@ export default function AuthScreen() {
                 disabled={isLoading}
                 className="w-full h-11 text-lg font-semibold shadow-lg shadow-primary/20 transition-all hover:scale-[1.02]"
               >
-                {isLoading ? <Loader2 className="animate-spin mr-2" /> : "Завершить"}
+                {isLoading ? <Loader2 className="animate-spin mr-2" /> : "Завершить регистрацию"}
               </Button>
             </div>
           )}
