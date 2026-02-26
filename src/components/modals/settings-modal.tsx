@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState, useRef } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -15,8 +15,7 @@ import {
 import { useAuth, useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
-  LogOut, User, Share2, 
-  Trash2, LayoutGrid, Upload, Palette, ImageIcon, Type, Loader2, Sparkles, X, Wand2
+  LogOut, User, LayoutGrid, Palette, Loader2, Sparkles, X, Wand2, AtSign, Smartphone, Settings2
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { signOut } from 'firebase/auth';
@@ -24,20 +23,13 @@ import { doc } from 'firebase/firestore';
 import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { generateBrandVisual } from '@/ai/flows/generate-brand-visual-flow';
 import { generateAiAvatar } from '@/ai/flows/generate-ai-avatar-flow';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Separator } from '@/components/ui/separator';
 
 interface SettingsModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
-
-const PRESET_AVATARS = [
-  'https://picsum.photos/seed/1/200',
-  'https://picsum.photos/seed/2/200',
-  'https://picsum.photos/seed/3/200',
-  'https://picsum.photos/seed/4/200',
-  'https://picsum.photos/seed/5/200',
-  'https://picsum.photos/seed/6/200',
-];
 
 const BACKGROUNDS = [
   { name: 'Стандарт', value: 'default' },
@@ -45,7 +37,6 @@ const BACKGROUNDS = [
   { name: 'Минимализм', value: 'https://images.unsplash.com/photo-1557683316-973673baf926?auto=format&fit=crop&q=80&w=800' },
   { name: 'Абстракция', value: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&q=80&w=800' },
   { name: 'Горы', value: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&q=80&w=800' },
-  { name: 'Текстура', value: 'https://images.unsplash.com/photo-1550684848-fac1c5b4e853?auto=format&fit=crop&q=80&w=800' },
 ];
 
 export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
@@ -66,13 +57,9 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
     name: '',
     username: '',
     avatarUrl: '',
-    theme: 'default',
     chatBackground: 'default',
-    messageSize: 'medium'
   });
 
-  const [isAvatarPickerOpen, setIsAvatarPickerOpen] = useState(false);
-  const [isProcessing, setIsProcessing] = useState(false);
   const [showBrandVisual, setShowBrandVisual] = useState(false);
   const [brandImageUrl, setBrandImageUrl] = useState<string | null>(null);
   const [isGeneratingVisual, setIsGeneratingVisual] = useState(false);
@@ -84,9 +71,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
         name: profile.name || '',
         username: profile.username || '',
         avatarUrl: profile.avatarUrl || '',
-        theme: profile.settings?.theme || 'default',
         chatBackground: profile.settings?.chatBackground || 'default',
-        messageSize: profile.settings?.messageSize || 'medium'
       });
     }
   }, [profile]);
@@ -98,13 +83,12 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
       username: form.username,
       avatarUrl: form.avatarUrl,
       settings: {
-        theme: form.theme,
+        ...profile?.settings,
         chatBackground: form.chatBackground,
-        messageSize: form.messageSize
       }
     });
     onOpenChange(false);
-    toast({ title: "Сохранено" });
+    toast({ title: "Настройки сохранены" });
   };
 
   const handleLogout = async () => {
@@ -130,7 +114,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
     try {
       const result = await generateAiAvatar();
       setForm(prev => ({ ...prev, avatarUrl: result.imageUrl }));
-      toast({ title: "AI-аватар готов!", description: "Нажмите 'Сохранить', чтобы применить его." });
+      toast({ title: "AI-аватар создан" });
     } catch (e) {
       toast({ title: "Ошибка генерации аватара", variant: "destructive" });
     } finally {
@@ -141,109 +125,129 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-md bg-card/95 backdrop-blur-xl border-border/40 p-0 overflow-hidden max-h-[90vh] flex flex-col">
-          <DialogHeader className="p-6 bg-primary/5 border-b border-border/40 shrink-0">
-            <DialogTitle className="flex items-center gap-2 text-xl font-bold">
-              <User className="w-5 h-5 text-primary" />
+        <DialogContent className="max-w-md bg-card/95 backdrop-blur-2xl border-border/40 p-0 overflow-hidden max-h-[85vh] flex flex-col rounded-t-[2rem] sm:rounded-2xl">
+          <DialogHeader className="p-4 border-b border-border/20 bg-muted/30 shrink-0">
+            <DialogTitle className="flex items-center gap-2 text-lg font-bold">
+              <Settings2 className="w-5 h-5 text-primary" />
               Настройки
             </DialogTitle>
           </DialogHeader>
           
-          <div className="flex-1 overflow-y-auto p-6 space-y-8 scrollbar-hide">
-            <div className="flex flex-col items-center gap-4">
-              <div className="relative group cursor-pointer" onClick={() => setIsAvatarPickerOpen(!isAvatarPickerOpen)}>
-                <UserAvatar 
-                  userId={user?.uid} 
-                  manualAvatarUrl={form.avatarUrl}
-                  className="h-24 w-24 border-4 border-background shadow-xl ring-2 ring-primary/20" 
-                  fallbackName={form.name}
-                />
-                <div className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                  <LayoutGrid className="w-6 h-6 text-white" />
-                </div>
-              </div>
-
-              <Button 
-                variant="outline" 
-                size="sm" 
-                className="flex items-center gap-2 rounded-full border-primary/40 text-primary hover:bg-primary/10 h-8"
-                onClick={handleGenerateAiAvatar}
-                disabled={isGeneratingAvatar}
-              >
-                {isGeneratingAvatar ? <Loader2 className="w-3 h-3 animate-spin" /> : <Wand2 className="w-3 h-3" />}
-                Сгенерировать AI-аватар
-              </Button>
-
-              {isAvatarPickerOpen && (
-                <div className="w-full space-y-4 animate-in slide-in-from-top-2">
-                  <div className="grid grid-cols-6 gap-2 p-3 bg-muted/30 rounded-2xl">
-                    {PRESET_AVATARS.map((url, i) => (
-                      <button key={i} onClick={() => { setForm({...form, avatarUrl: url}); setIsAvatarPickerOpen(false); }}>
-                        <UserAvatar userId={null} manualAvatarUrl={url} className="h-10 w-10" fallbackName={`P${i}`} />
-                      </button>
-                    ))}
+          <ScrollArea className="flex-1 px-4 py-2">
+            <div className="space-y-4 py-2">
+              {/* Profile Header */}
+              <div className="flex flex-col items-center gap-3 py-2">
+                <div className="relative group cursor-pointer" onClick={() => avatarInputRef.current?.click()}>
+                  <UserAvatar 
+                    userId={user?.uid} 
+                    manualAvatarUrl={form.avatarUrl}
+                    className="h-20 w-20 border-2 border-primary/20 shadow-lg ring-offset-background" 
+                    fallbackName={form.name}
+                  />
+                  <div className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                    <LayoutGrid className="w-5 h-5 text-white" />
                   </div>
-                  <Button variant="outline" className="w-full" onClick={() => avatarInputRef.current?.click()}>
-                    Загрузить фото
-                  </Button>
                   <input type="file" ref={avatarInputRef} className="hidden" accept="image/*" onChange={(e) => {
                     const f = e.target.files?.[0];
                     if (f) {
                       const r = new FileReader();
-                      r.onloadend = () => {
-                        setForm(prev => ({ ...prev, avatarUrl: r.result as string }));
-                        setIsAvatarPickerOpen(false);
-                      };
+                      r.onloadend = () => setForm(prev => ({ ...prev, avatarUrl: r.result as string }));
                       r.readAsDataURL(f);
                     }
                   }} />
                 </div>
-              )}
-            </div>
+                <div className="text-center">
+                  <h3 className="font-bold text-base leading-tight">{form.name || 'Без имени'}</h3>
+                  <p className="text-xs text-muted-foreground">{form.username || '@username'}</p>
+                </div>
+              </div>
 
-            <div className="space-y-4">
-              <div className="grid gap-4">
-                <div className="space-y-2">
-                  <Label>Имя</Label>
-                  <Input value={form.name} onChange={e => setForm({...form, name: e.target.value})} />
+              {/* Section: Account */}
+              <div className="bg-muted/30 rounded-2xl p-3 space-y-3">
+                <div className="flex items-center gap-2 mb-1 px-1">
+                  <User className="w-3.5 h-3.5 text-primary" />
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Аккаунт</span>
                 </div>
-                <div className="space-y-2">
-                  <Label>@username</Label>
-                  <Input value={form.username} onChange={e => setForm({...form, username: e.target.value})} />
+                <div className="space-y-2.5">
+                  <div className="space-y-1">
+                    <Label className="text-[10px] ml-1 text-muted-foreground">Имя</Label>
+                    <Input 
+                      className="bg-background/50 h-9 rounded-xl border-none focus-visible:ring-1 focus-visible:ring-primary/40" 
+                      value={form.name} 
+                      onChange={e => setForm({...form, name: e.target.value})} 
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-[10px] ml-1 text-muted-foreground">Никнейм</Label>
+                    <div className="relative">
+                      <AtSign className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+                      <Input 
+                        className="bg-background/50 h-9 rounded-xl border-none pl-9 focus-visible:ring-1 focus-visible:ring-primary/40" 
+                        value={form.username} 
+                        onChange={e => setForm({...form, username: e.target.value})} 
+                      />
+                    </div>
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  <Label>Фон чата</Label>
+              </div>
+
+              {/* Section: Appearance */}
+              <div className="bg-muted/30 rounded-2xl p-3 space-y-3">
+                <div className="flex items-center gap-2 mb-1 px-1">
+                  <Palette className="w-3.5 h-3.5 text-accent" />
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Оформление</span>
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-[10px] ml-1 text-muted-foreground">Фон чатов</Label>
                   <Select value={form.chatBackground} onValueChange={(val) => setForm({...form, chatBackground: val})}>
-                    <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
-                    <SelectContent>
+                    <SelectTrigger className="bg-background/50 h-9 rounded-xl border-none focus:ring-1 focus:ring-primary/40">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="rounded-xl border-border/40">
                       {BACKGROUNDS.map(bg => (
-                        <SelectItem key={bg.value} value={bg.value}>{bg.name}</SelectItem>
+                        <SelectItem key={bg.value} value={bg.value} className="text-xs">{bg.name}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
-                
-                <div className="pt-4 border-t border-border/40">
+              </div>
+
+              {/* Section: AI Features */}
+              <div className="bg-primary/5 rounded-2xl p-3 space-y-2 border border-primary/10">
+                <div className="flex items-center gap-2 mb-1 px-1">
+                  <Sparkles className="w-3.5 h-3.5 text-primary" />
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-primary/70">AI Возможности</span>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
                   <Button 
-                    variant="outline" 
-                    className="w-full flex items-center gap-2 border-accent/40 text-accent hover:bg-accent/10"
+                    variant="ghost" 
+                    className="h-10 text-[10px] bg-background/50 rounded-xl flex flex-col items-center justify-center gap-0.5 hover:bg-primary/10"
+                    onClick={handleGenerateAiAvatar}
+                    disabled={isGeneratingAvatar}
+                  >
+                    {isGeneratingAvatar ? <Loader2 className="w-3 h-3 animate-spin" /> : <Wand2 className="w-3 h-3" />}
+                    <span>AI Аватар</span>
+                  </Button>
+                  <Button 
+                    variant="ghost" 
+                    className="h-10 text-[10px] bg-background/50 rounded-xl flex flex-col items-center justify-center gap-0.5 hover:bg-accent/10"
                     onClick={handleGenerateVisual}
                     disabled={isGeneratingVisual}
                   >
-                    {isGeneratingVisual ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
-                    Концепт мессенджера (AI)
+                    {isGeneratingVisual ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
+                    <span>Концепт</span>
                   </Button>
                 </div>
               </div>
             </div>
-          </div>
+          </ScrollArea>
 
-          <div className="p-6 border-t border-border/40 shrink-0 space-y-2">
-            <Button className="w-full h-11" onClick={handleSave} disabled={isProcessing}>
-               Сохранить изменения
+          <div className="p-4 border-t border-border/20 bg-muted/20 shrink-0 grid grid-cols-5 gap-2">
+            <Button className="col-span-4 h-10 rounded-xl font-bold shadow-lg shadow-primary/20" onClick={handleSave}>
+               Сохранить
             </Button>
-            <Button variant="ghost" className="w-full h-11 text-muted-foreground" onClick={handleLogout}>
-               Выйти
+            <Button variant="ghost" size="icon" className="h-10 w-10 rounded-xl text-destructive hover:bg-destructive/10" onClick={handleLogout}>
+               <LogOut className="w-5 h-5" />
             </Button>
           </div>
         </DialogContent>
@@ -251,7 +255,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
 
       <Dialog open={showBrandVisual} onOpenChange={setShowBrandVisual}>
         <DialogContent className="max-w-3xl bg-black/90 border-none p-0 overflow-hidden">
-          <div className="relative aspect-video flex items-center justify-center group">
+          <div className="relative aspect-video flex items-center justify-center">
             <Button 
               variant="ghost" 
               size="icon" 
@@ -263,14 +267,10 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
             {brandImageUrl && (
               <img 
                 src={brandImageUrl} 
-                alt="NuxusChat Brand Visual" 
-                className="w-full h-full object-contain animate-in fade-in zoom-in-95 duration-700"
+                alt="NuxusChat Visual" 
+                className="w-full h-full object-contain animate-in fade-in zoom-in-95"
               />
             )}
-            <div className="absolute bottom-0 inset-x-0 p-6 bg-gradient-to-t from-black/80 to-transparent">
-              <h3 className="text-xl font-bold text-white mb-1">NuxusChat Vision</h3>
-              <p className="text-sm text-white/60">Conceptual 3D render generated by AI</p>
-            </div>
           </div>
         </DialogContent>
       </Dialog>
