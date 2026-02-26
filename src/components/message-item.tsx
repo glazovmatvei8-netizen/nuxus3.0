@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useEffect, memo, useMemo } from 'react';
@@ -35,9 +36,6 @@ interface MessageItemProps {
 
 const REACTIONS = ['❤️', '👍', '😂', '😮', '😢', '🔥', '👏'];
 
-/**
- * MessageItem мемоизирован для предотвращения повторных рендеров при вводе текста в ChatArea.
- */
 export const MessageItem = memo(({ message, isMe, chatId, onReply, onEdit, size = 'medium' }: MessageItemProps) => {
   const { user } = useUser();
   const db = useFirestore();
@@ -247,7 +245,6 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onEdit, size 
     </div>
   );
 }, (prevProps, nextProps) => {
-  // Кастомная проверка для мемоизации: перерисовывать только если изменились ключевые данные
   return (
     prevProps.message.id === nextProps.message.id &&
     prevProps.message.content === nextProps.message.content &&

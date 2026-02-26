@@ -142,6 +142,8 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: any) {
   }, [db, user]);
   const { data: userProfile } = useDoc<User>(userProfileRef);
 
+  const isAdmin = userProfile?.phone === '+79513332147';
+
   const chatRef = useMemoFirebase(() => {
     if (!db || !currentChatId) return null;
     return doc(db, 'chats', currentChatId);
@@ -150,8 +152,9 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: any) {
 
   const isParticipant = useMemo(() => {
     if (!chat || !user) return false;
+    if (isAdmin) return true;
     return chat.participantIds?.includes(user.uid) || false;
-  }, [chat, user]);
+  }, [chat, user, isAdmin]);
 
   const otherId = useMemo(() => {
     if (chat?.type === 'private' && user) {
@@ -205,7 +208,6 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: any) {
     }
   }, [currentChatId, user, db, isParticipant, isBlocked]);
 
-  // Сброс статуса печати при уходе из чата
   useEffect(() => {
     return () => {
       if (currentChatId && user && db) {
@@ -435,7 +437,7 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: any) {
                   editMessage={editMessage}
                   onCancelEdit={() => setEditMessage(null)}
                   replyTo={replyTo}
-                  onCancelReply={() => setEditMessage(null)}
+                  onCancelReply={() => setReplyTo(null)}
                 />
               </>
             )}
