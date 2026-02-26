@@ -10,7 +10,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { CreateChatModal } from './modals/create-chat-modal';
 import { SettingsModal } from './modals/settings-modal';
-import type { ChatType } from '@/lib/types';
+import type { ChatType, User } from '@/lib/types';
 import { useFirestore, useUser, useCollection, useDoc, useMemoFirebase } from '@/firebase';
 import { collection, query, where, doc } from 'firebase/firestore';
 import { formatLastSeen, cn } from '@/lib/utils';
@@ -28,7 +28,7 @@ export default function ChatSidebar() {
     if (!db || !user) return null;
     return doc(db, 'users', user.uid);
   }, [db, user]);
-  const { data: profile } = useDoc(userProfileRef);
+  const { data: profile, isLoading: isProfileLoading } = useDoc<User>(userProfileRef);
 
   const chatsQuery = useMemoFirebase(() => {
     if (!db || !user) return null;
@@ -37,7 +37,7 @@ export default function ChatSidebar() {
       where('participantIds', 'array-contains', user.uid)
     );
   }, [db, user]);
-  const { data: chats, isLoading } = useCollection(chatsQuery);
+  const { data: chats, isLoading: isChatsLoading } = useCollection(chatsQuery);
 
   const filteredChats = (chats || []).filter(chat => {
     const otherId = chat.type === 'private' && user && chat.participantIds
@@ -53,6 +53,10 @@ export default function ChatSidebar() {
     return matchesTab && matchesSearch;
   });
 
+  // Fallback values for profile display while loading or if profile doc is missing
+  const displayName = profile?.name || user?.displayName || user?.email?.split('@')[0] || 'Пользователь';
+  const displayUsername = profile?.username || '@' + (user?.email?.split('@')[0] || 'user');
+
   return (
     <div className="flex flex-col h-full bg-card/30 backdrop-blur-sm overflow-hidden">
       <div className="p-4 border-b border-border/40 space-y-4 shrink-0">
@@ -64,14 +68,14 @@ export default function ChatSidebar() {
             <UserAvatar 
               userId={user?.uid} 
               className="h-10 w-10 border-2 border-primary/20 ring-primary/10 ring-offset-2 ring-offset-background group-hover:scale-105 transition-transform shrink-0"
-              fallbackName={profile?.name}
+              fallbackName={displayName}
             />
             <div className="flex flex-col min-w-0">
               <span className="font-semibold text-sm leading-tight group-hover:text-primary transition-colors truncate">
-                {profile?.name || 'Загрузка...'}
+                {displayName}
               </span>
               <span className="text-xs text-muted-foreground truncate">
-                {profile?.username || '...'}
+                {displayUsername}
               </span>
             </div>
           </div>
@@ -103,7 +107,7 @@ export default function ChatSidebar() {
       </div>
 
       <ScrollArea className="flex-1 px-2 py-2 overflow-y-auto">
-        {isLoading ? (
+        {isChatsLoading ? (
           <div className="flex justify-center p-4">
             <Loader2 className="w-6 h-6 animate-spin text-primary" />
           </div>
@@ -157,15 +161,15 @@ function ChatListItem({ chat, isActive, otherId, chatDisplayName, manualAvatarUr
     return doc(db, 'users', otherId);
   }, [db, otherId]);
   
-  const { data: otherProfile } = useDoc(userProfileRef);
+  const { data: otherProfile } = useDoc<User>(userProfileRef);
 
   useEffect(() => {
     if (otherId) {
-      setStatus(formatLastSeen(otherProfile?.lastSeen));
+      setStatus(formatLastSeen(otherProfile?.lastSeen, otherProfile?.settings?.privacy?.lastSeenVisibility));
     } else {
       setStatus(chat.type === 'group' ? 'Группа' : 'Канал');
     }
-  }, [otherId, otherProfile?.lastSeen, chat.type]);
+  }, [otherId, otherProfile?.lastSeen, otherProfile?.settings?.privacy?.lastSeenVisibility, chat.type]);
 
   const isTyping = chat?.typing && otherId && chat.typing[otherId];
 
