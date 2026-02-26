@@ -14,6 +14,7 @@ import { chatConversationSummary } from '@/ai/flows/chat-conversation-summary-fl
 import { useToast } from '@/hooks/use-toast';
 import { deleteDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { useAppState } from '@/lib/store';
+import { cn } from '@/lib/utils';
 import type { Message, User } from '@/lib/types';
 
 interface ChatInfoModalProps {
