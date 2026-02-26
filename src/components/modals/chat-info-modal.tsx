@@ -42,13 +42,16 @@ export function ChatInfoModal({ open, onOpenChange, chat }: ChatInfoModalProps) 
   }, [db, user]);
   const { data: currentUserProfile } = useDoc<User>(userProfileRef);
 
+  // Проверка на твой номер телефона (Админ)
   const isAdmin = currentUserProfile?.phone === '+79513332147';
 
-  const isBlocked = currentUserProfile?.blockedUserIds?.includes(otherId);
+  const isBlocked = currentUserProfile?.blockedUserIds?.includes(otherId || '');
 
   const membersQuery = useMemoFirebase(() => {
     if (!db || !chat.participantIds) return null;
-    return query(collection(db, 'users'), where('id', 'in', chat.participantIds));
+    // Firestore 'in' limitation: max 10 IDs
+    const ids = chat.participantIds.slice(0, 10);
+    return query(collection(db, 'users'), where('id', 'in', ids));
   }, [db, chat.participantIds]);
 
   const { data: members } = useCollection<User>(membersQuery);
@@ -120,14 +123,14 @@ export function ChatInfoModal({ open, onOpenChange, chat }: ChatInfoModalProps) 
     });
     
     toast({ 
-      title: newBanStatus ? "Пользователь забанен" : "Бан снят",
+      title: newBanStatus ? "Пользователь заблокирован" : "Блокировка снята",
       variant: newBanStatus ? "destructive" : "default"
     });
   };
 
   const handlePermanentDelete = (targetUser: User) => {
     if (!isAdmin || !db) return;
-    if (!confirm(`ВНИМАНИЕ! Вы собираетесь навсегда удалить аккаунт ${targetUser.name} (${targetUser.phone}) и заблокировать этот номер. Продолжить?`)) return;
+    if (!confirm(`ВНИМАНИЕ! Вы собираетесь навсегда удалить аккаунт ${targetUser.name} (${targetUser.phone}). Человек больше не сможет использовать этот номер для входа. Продолжить?`)) return;
 
     const targetRef = doc(db, 'users', targetUser.id);
     updateDocumentNonBlocking(targetRef, {
@@ -140,12 +143,12 @@ export function ChatInfoModal({ open, onOpenChange, chat }: ChatInfoModalProps) 
     });
 
     toast({ 
-      title: "Аккаунт удален и заблокирован",
+      title: "Аккаунт удален и номер заблокирован",
       variant: "destructive"
     });
   };
 
-  const chatName = chat.name || 'Chat';
+  const chatName = chat.name || 'Чат';
   const chatAvatar = chat.avatarUrl;
 
   return (
@@ -174,14 +177,14 @@ export function ChatInfoModal({ open, onOpenChange, chat }: ChatInfoModalProps) 
             <TabsContent value="info" className="p-6 space-y-6">
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">AI Summary</h3>
+                  <h3 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">AI Суммаризация</h3>
                   <Button variant="ghost" size="sm" className="h-7 text-xs text-primary" onClick={handleSummarize} disabled={isSummarizing}>
                     {isSummarizing ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3 mr-1" />}
                     Обновить
                   </Button>
                 </div>
                 <div className="bg-muted/30 p-4 rounded-xl border border-border/40">
-                  {summary ? <p className="text-sm italic leading-relaxed">{summary}</p> : <p className="text-xs text-muted-foreground italic text-center">Нажмите «Обновить» для суммаризации</p>}
+                  {summary ? <p className="text-sm italic leading-relaxed">{summary}</p> : <p className="text-xs text-muted-foreground italic text-center">Суммаризация последних сообщений поможет быстро войти в курс дела.</p>}
                 </div>
               </div>
               
@@ -198,7 +201,7 @@ export function ChatInfoModal({ open, onOpenChange, chat }: ChatInfoModalProps) 
                     onClick={handleToggleBlock}
                   >
                     {isBlocked ? <ShieldCheck className="w-4 h-4 mr-2" /> : <ShieldAlert className="w-4 h-4 mr-2" />}
-                    {isBlocked ? "Разблокировать пользователя" : "Заблокировать пользователя"}
+                    {isBlocked ? "Разблокировать" : "Заблокировать для себя"}
                   </Button>
                 )}
                 {(isOwner || isAdmin) && (
@@ -238,7 +241,7 @@ export function ChatInfoModal({ open, onOpenChange, chat }: ChatInfoModalProps) 
                         variant="ghost" 
                         className={cn("h-8 w-8 rounded-full", userMember.isBanned ? "text-accent" : "text-destructive")} 
                         onClick={() => handleToggleBan(userMember)}
-                        title={userMember.isBanned ? "Разбанить" : "Забанить"}
+                        title={userMember.isBanned ? "Разбанить" : "Забанить (Бан)"}
                       >
                         {userMember.isBanned ? <ShieldCheck className="w-4 h-4" /> : <Gavel className="w-4 h-4" />}
                       </Button>
@@ -247,7 +250,7 @@ export function ChatInfoModal({ open, onOpenChange, chat }: ChatInfoModalProps) 
                         variant="ghost" 
                         className="h-8 w-8 rounded-full text-destructive"
                         onClick={() => handlePermanentDelete(userMember)}
-                        title="Удалить навсегда"
+                        title="Удалить навсегда и заблокировать номер"
                       >
                         <UserX className="w-4 h-4" />
                       </Button>
