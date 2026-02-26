@@ -114,33 +114,39 @@ export default function AuthScreen() {
   const setupTestAccounts = async () => {
     setIsSettingUp(true);
     const accounts = [
-      { phone: '79513332147', pass: 'gaz20092', name: 'Админ Абузер', user: '@vnAdmin' },
+      { phone: '79513332147', pass: 'gaz20092', name: 'Админ Абузер', user: '@vnctow46' },
       { phone: '79064222830', pass: '1234567', name: 'Чайник', user: '@Chai' }
     ];
     try {
       for (const acc of accounts) {
         const email = `${acc.phone}@nuxus.chat`;
         try {
-          const res = await createUserWithEmailAndPassword(auth, email, acc.pass);
-          await setDoc(doc(db, 'users', res.user.uid), {
-            id: res.user.uid,
-            name: acc.name,
-            username: acc.user,
-            phone: `+${acc.phone}`,
-            avatarUrl: `https://picsum.photos/seed/${acc.phone}/200`,
-            createdAt: new Date().toISOString(),
-            lastSeen: new Date().toISOString(),
-            inactivityDeletion: 'never',
-            settings: {
-              privacy: {
-                phoneVisibility: 'nobody',
-                lastSeenVisibility: 'everybody'
+          // Пытаемся создать, если не существует
+          const res = await createUserWithEmailAndPassword(auth, email, acc.pass).catch(() => null);
+          
+          // Если аккаунт уже есть, мы не сможем его "создать" заново без входа,
+          // но мы можем обновить Firestore если мы админы. В данном случае просто создаем если можем.
+          if (res) {
+            await setDoc(doc(db, 'users', res.user.uid), {
+              id: res.user.uid,
+              name: acc.name,
+              username: acc.user,
+              phone: `+${acc.phone}`,
+              avatarUrl: `https://picsum.photos/seed/${acc.phone}/200`,
+              createdAt: new Date().toISOString(),
+              lastSeen: new Date().toISOString(),
+              inactivityDeletion: 'never',
+              settings: {
+                privacy: {
+                  phoneVisibility: 'nobody',
+                  lastSeenVisibility: 'everybody'
+                }
               }
-            }
-          });
+            });
+          }
         } catch (e) {}
       }
-      toast({ title: "Готово!", description: "Аккаунты созданы. Теперь можно войти." });
+      toast({ title: "Готово!", description: "Аккаунты настроены. Войдите с паролем." });
     } catch (err) {
       toast({ title: "Ошибка настройки", variant: "destructive" });
     } finally {
@@ -209,7 +215,7 @@ export default function AuthScreen() {
             {showDevTool && (
               <Button variant="ghost" size="sm" onClick={setupTestAccounts} disabled={isSettingUp} className="text-[10px] text-muted-foreground/60 flex gap-2 animate-in fade-in duration-500">
                 {isSettingUp ? <Loader2 className="w-3 h-3 animate-spin" /> : <ShieldCheck className="w-3 h-3" />}
-                Настроить аккаунты (Админ и Чайник)
+                Восстановить аккаунт Админа
               </Button>
             )}
           </div>

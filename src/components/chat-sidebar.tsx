@@ -54,10 +54,9 @@ export default function ChatSidebar() {
     return matchesTab && matchesSearch;
   });
 
-  // Извлекаем номер телефона из технического email (формат: 79001234567@nuxus.chat)
-  const userPhone = user?.email?.split('@')[0];
-  const displayName = isProfileLoading ? 'Загрузка...' : (profile?.name || user?.displayName || 'Новый пользователь');
-  const displayUsername = isProfileLoading ? '...' : (profile?.username || (userPhone ? `+${userPhone}` : 'Настройте профиль'));
+  // Логика отображения имени: Профиль -> Firebase Auth -> Номер телефона
+  const displayName = isProfileLoading ? '...' : (profile?.name || user?.displayName || 'Пользователь');
+  const displayUsername = isProfileLoading ? '...' : (profile?.username || (user?.email ? `@${user.email.split('@')[0]}` : 'Настройте профиль'));
 
   return (
     <div className="flex flex-col h-full bg-card/30 backdrop-blur-sm overflow-hidden">
@@ -71,6 +70,7 @@ export default function ChatSidebar() {
               userId={user?.uid} 
               className="h-10 w-10 border-2 border-primary/20 ring-primary/10 ring-offset-2 ring-offset-background group-hover:scale-105 transition-transform shrink-0"
               fallbackName={displayName}
+              manualAvatarUrl={profile?.avatarUrl}
             />
             <div className="flex flex-col min-w-0">
               <span className="font-semibold text-sm leading-tight group-hover:text-primary transition-colors truncate">
@@ -186,7 +186,7 @@ function ChatListItem({ chat, isActive, otherId, chatDisplayName, manualAvatarUr
       <div className="relative shrink-0">
         <UserAvatar 
           userId={otherId} 
-          manualAvatarUrl={manualAvatarUrl}
+          manualAvatarUrl={manualAvatarUrl || otherProfile?.avatarUrl}
           className="h-11 w-11 md:h-12 md:w-12 border-2 border-transparent group-hover:border-primary/20 transition-all" 
           fallbackName={chatDisplayName}
         />
