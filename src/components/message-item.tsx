@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useEffect } from 'react';
@@ -23,6 +22,7 @@ import { cn } from '@/lib/utils';
 import { collection, doc } from 'firebase/firestore';
 import { addDocumentNonBlocking, deleteDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import type { Message } from '@/lib/types';
+import Image from 'next/image';
 
 interface MessageItemProps {
   message: Message;
@@ -99,14 +99,20 @@ export function MessageItem({ message, isMe, chatId, onReply, onEdit, size = 'me
     switch (message.contentType) {
       case 'image':
         return (
-          <div className="mt-1 rounded-lg overflow-hidden border border-border/20 max-w-sm">
-            <img src={message.content} alt="Sent" className="w-full h-auto object-cover max-h-[300px]" />
+          <div className="mt-1 rounded-lg overflow-hidden border border-border/20 max-w-sm relative aspect-video min-w-[200px]">
+            <Image 
+              src={message.content} 
+              alt="Sent Image" 
+              fill
+              className="object-cover" 
+              sizes="(max-width: 768px) 100vw, 400px"
+            />
           </div>
         );
       case 'audio':
         return (
           <div className="flex items-center gap-3 p-2 bg-black/10 rounded-xl min-w-[200px]">
-            <Button size="icon" variant="ghost" className="h-8 w-8 rounded-full bg-primary/20" onClick={toggleAudio}>
+            <Button size="icon" variant="ghost" className="h-8 w-8 rounded-full bg-primary/20" onClick={toggleAudio} aria-label={isPlaying ? "Pause audio" : "Play audio"}>
               {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4 ml-0.5" />}
             </Button>
             <div className="flex-1 h-1 bg-primary/20 rounded-full relative overflow-hidden">

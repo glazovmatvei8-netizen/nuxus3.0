@@ -5,6 +5,7 @@ import { useDoc, useMemoFirebase, useFirestore } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
+import Image from 'next/image';
 
 interface UserAvatarProps {
   userId: string | null | undefined;
@@ -15,8 +16,7 @@ interface UserAvatarProps {
 }
 
 /**
- * Умный компонент аватарки, который всегда отображает актуальное фото пользователя из Firestore.
- * Если userId передан, он имеет приоритет над старыми данными из метаданных чата.
+ * Умный компонент аватарки, оптимизированный для Lighthouse с использованием next/image.
  */
 export function UserAvatar({ userId, className, fallbackName, fallbackClassName, manualAvatarUrl }: UserAvatarProps) {
   const db = useFirestore();
@@ -29,7 +29,6 @@ export function UserAvatar({ userId, className, fallbackName, fallbackClassName,
 
   const { data: profile, isLoading } = useDoc(userRef);
 
-  // Приоритет: 1. Живые данные из профиля (Firestore) 2. Ручной URL (метаданные) 3. Заглушка
   const displayAvatar = profile?.avatarUrl || manualAvatarUrl;
   const displayName = profile?.name || fallbackName || '??';
 
@@ -40,12 +39,15 @@ export function UserAvatar({ userId, className, fallbackName, fallbackClassName,
   return (
     <Avatar className={cn("shrink-0 relative overflow-hidden", className)}>
       {!isLoading && displayAvatar && !imgError ? (
-        <img 
+        <Image 
           key={displayAvatar}
           src={displayAvatar} 
           alt={displayName} 
-          className="aspect-square h-full w-full object-cover animate-in fade-in duration-300"
+          fill
+          sizes="(max-width: 768px) 100vw, 48px"
+          className="object-cover animate-in fade-in duration-300"
           onError={() => setImgError(true)}
+          priority={userId === 'currentUser'}
         />
       ) : (
         <AvatarFallback className={cn("bg-primary/20 text-primary font-bold uppercase h-full w-full flex items-center justify-center", fallbackClassName)}>

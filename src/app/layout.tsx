@@ -3,22 +3,48 @@ import './globals.css';
 import { AppProvider } from '@/lib/store';
 import { Toaster } from '@/components/ui/toaster';
 import { FirebaseClientProvider } from '@/firebase/client-provider';
+import { Inter } from 'next/font/google';
+
+const inter = Inter({
+  subsets: ['latin', 'cyrillic'],
+  display: 'swap',
+  variable: '--font-inter',
+});
 
 export const metadata: Metadata = {
-  title: 'NuxusChat',
-  description: 'Premium messaging experience',
+  title: 'NuxusChat — Премиальный мессенджер',
+  description: 'Современный и безопасный мессенджер для общения в реальном времени с поддержкой AI и видеосообщений.',
+  keywords: ['чат', 'мессенджер', 'безопасность', 'AI', 'видеосообщения', 'NuxusChat'],
+  authors: [{ name: 'Nuxus Team' }],
   appleWebApp: {
     capable: true,
-    statusBarStyle: 'default',
+    statusBarStyle: 'black-translucent',
     title: 'NuxusChat',
   },
-  formatDetection: {
-    telephone: false,
+  openGraph: {
+    type: 'website',
+    locale: 'ru_RU',
+    url: 'https://nuxus.chat',
+    title: 'NuxusChat — Премиальный мессенджер',
+    description: 'Общайтесь красиво и безопасно.',
+    siteName: 'NuxusChat',
+    images: [{
+      url: 'https://picsum.photos/seed/nuxus/1200/630',
+      width: 1200,
+      height: 630,
+      alt: 'NuxusChat Preview',
+    }],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'NuxusChat',
+    description: 'Премиальный опыт общения.',
+    images: ['https://picsum.photos/seed/nuxus/1200/630'],
   },
 };
 
 export const viewport: Viewport = {
-  themeColor: '#3b4261',
+  themeColor: '#1a1b26',
   width: 'device-width',
   initialScale: 1,
   maximumScale: 1,
@@ -32,14 +58,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="ru" className="dark" suppressHydrationWarning>
-      <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
-        <meta name="mobile-web-app-capable" content="yes" />
-      </head>
-      <body className="font-body antialiased bg-background text-foreground overflow-hidden h-[100dvh] touch-none">
+    <html lang="ru" className={`dark ${inter.variable}`} suppressHydrationWarning>
+      <body className="font-sans antialiased bg-background text-foreground overflow-hidden h-[100dvh] touch-none">
         <FirebaseClientProvider>
           <AppProvider>
             {children}
