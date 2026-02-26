@@ -41,15 +41,23 @@ export default function AuthScreen() {
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     const phoneDigits = normalizePhone(formData.phone);
-    if (!phoneDigits) {
+    if (!phoneDigits || phoneDigits.length < 10) {
       toast({ title: "Ошибка", description: "Введите корректный номер телефона", variant: "destructive" });
       return;
     }
+    if (formData.password.length < 6) {
+      toast({ title: "Слишком короткий пароль", description: "Минимум 6 символов", variant: "destructive" });
+      return;
+    }
+
     setIsLoading(true);
     const loginEmail = `${phoneDigits}@nuxus.chat`;
+    
     try {
       if (mode === 'register') {
         const username = formData.username.startsWith('@') ? formData.username.toLowerCase() : '@' + formData.username.toLowerCase();
+        
+        // Проверка уникальности никнейма
         const q = query(collection(db, 'users'), where('username', '==', username), limit(1));
         const snap = await getDocs(q);
         if (!snap.empty) {
@@ -57,7 +65,11 @@ export default function AuthScreen() {
           setIsLoading(false);
           return;
         }
+
+        // Создание аккаунта
         const res = await createUserWithEmailAndPassword(auth, loginEmail, formData.password);
+        
+        // Создание профиля в Firestore
         await setDoc(doc(db, 'users', res.user.uid), {
           id: res.user.uid,
           name: formData.name,
@@ -79,10 +91,21 @@ export default function AuthScreen() {
           }
         });
       } else {
+        // Логин
         await signInWithEmailAndPassword(auth, loginEmail, formData.password);
       }
     } catch (err: any) {
-      toast({ title: "Ошибка", description: "Проверьте данные или интернет", variant: "destructive" });
+      console.error(err);
+      let errorMsg = "Проверьте данные или интернет";
+      if (err.code === 'auth/wrong-password') errorMsg = "Неверный пароль";
+      if (err.code === 'auth/user-not-found') errorMsg = "Пользователь не найден";
+      if (err.code === 'auth/email-already-in-use') errorMsg = "Этот номер уже зарегистрирован";
+      
+      toast({ 
+        title: "Ошибка авторизации", 
+        description: errorMsg, 
+        variant: "destructive" 
+      });
     } finally {
       setIsLoading(false);
     }
@@ -180,7 +203,7 @@ export default function AuthScreen() {
             </Button>
           </form>
           <div className="mt-4 flex flex-col gap-2">
-            <button onClick={() => setMode(mode === 'login' ? 'register' : 'login')} className="text-sm text-muted-foreground hover:text-primary transition-colors">
+            <button onClick={() => setMode(mode === 'login' ? 'register' : 'login')} className="text-sm text-muted-foreground hover:text-primary transition-colors text-center">
               {mode === 'login' ? "Нет аккаунта? Зарегистрироваться" : "Уже есть аккаунт? Войти"}
             </button>
             {showDevTool && (

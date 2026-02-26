@@ -16,8 +16,10 @@ service cloud.firestore {
       return isSignedIn() && (chat.participantIds.hasAny([request.auth.uid]));
     }
 
+    // Разрешаем чтение профилей всем (get/list), чтобы работал поиск и проверка никнеймов.
+    // Это стандарт для мессенджеров (Telegram-style).
     match /users/{userId} {
-      allow get, list: if isSignedIn(); 
+      allow get, list: if true; 
       allow create: if isOwner(userId);
       allow update: if isOwner(userId);
       allow delete: if isOwner(userId);
