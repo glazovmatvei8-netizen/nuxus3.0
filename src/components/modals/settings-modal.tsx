@@ -1,7 +1,7 @@
 
 "use client"
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -45,6 +45,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
   const { user } = useUser();
   const { toast } = useToast();
   const avatarInputRef = useRef<HTMLInputElement>(null);
+  const isInitialized = useRef(false);
 
   const userRef = useMemoFirebase(() => {
     if (!db || !user) return null;
@@ -68,8 +69,9 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
   const [isGeneratingVisual, setIsGeneratingVisual] = useState(false);
   const [isGeneratingAvatar, setIsGeneratingAvatar] = useState(false);
 
-  React.useEffect(() => {
-    if (profile) {
+  // Инициализируем форму только один раз при открытии модалки или при первой загрузке профиля
+  useEffect(() => {
+    if (profile && (!isInitialized.current || !open)) {
       setForm({
         name: profile.name || '',
         username: profile.username || '',
@@ -79,8 +81,16 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
         lastSeenVisibility: profile.settings?.privacy?.lastSeenVisibility || 'everybody',
         inactivityDeletion: profile.inactivityDeletion || 'never',
       });
+      if (open) isInitialized.current = true;
     }
-  }, [profile]);
+  }, [profile, open]);
+
+  // Сбрасываем флаг инициализации при закрытии
+  useEffect(() => {
+    if (!open) {
+      isInitialized.current = false;
+    }
+  }, [open]);
 
   const handleSave = () => {
     if (!userRef) return;
@@ -126,7 +136,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
     try {
       const result = await generateAiAvatar();
       setForm(prev => ({ ...prev, avatarUrl: result.imageUrl }));
-      toast({ title: "AI-аватар создан" });
+      toast({ title: "AI-аватар создан. Не забудьте сохранить!" });
     } catch (e) {
       toast({ title: "Ошибка генерации аватара", variant: "destructive" });
     } finally {
@@ -152,7 +162,6 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
           
           <ScrollArea className="flex-1 overflow-y-auto">
             <div className="p-4 space-y-5 pb-8">
-              {/* Profile Header */}
               <div className="flex flex-col items-center gap-4 py-2">
                 <div className="relative group cursor-pointer" onClick={() => avatarInputRef.current?.click()}>
                   <UserAvatar 
@@ -164,7 +173,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                   <div className="absolute bottom-0 right-0 bg-primary p-2 rounded-full border-2 border-background shadow-lg">
                     <LayoutGrid className="w-4 h-4 text-white" />
                   </div>
-                  <input type="file" ref={avatarInputRef} className="hidden" accept="image/*" onChange={(e) => {
+                  <input type="file" key={form.avatarUrl} ref={avatarInputRef} className="hidden" accept="image/*" onChange={(e) => {
                     const f = e.target.files?.[0];
                     if (f) {
                       const r = new FileReader();
@@ -179,7 +188,6 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                 </div>
               </div>
 
-              {/* Section: Account */}
               <div className="bg-muted/30 rounded-2xl p-4 space-y-4">
                 <div className="flex items-center gap-2 px-1">
                   <User className="w-4 h-4 text-primary" />
@@ -208,7 +216,6 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                 </div>
               </div>
 
-              {/* Section: Privacy & Security */}
               <div className="bg-muted/30 rounded-2xl p-4 space-y-4 border border-accent/10">
                 <div className="flex items-center gap-2 px-1">
                   <ShieldCheck className="w-4 h-4 text-accent" />
@@ -261,7 +268,6 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                 </div>
               </div>
 
-              {/* Section: Appearance */}
               <div className="bg-muted/30 rounded-2xl p-4 space-y-4">
                 <div className="flex items-center gap-2 px-1">
                   <Palette className="w-4 h-4 text-accent" />
@@ -282,7 +288,6 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                 </div>
               </div>
 
-              {/* Section: AI Features */}
               <div className="bg-primary/5 rounded-2xl p-4 space-y-3 border border-primary/10">
                 <div className="flex items-center gap-2 px-1">
                   <Sparkles className="w-4 h-4 text-primary" />

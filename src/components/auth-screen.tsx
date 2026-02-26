@@ -124,26 +124,27 @@ export default function AuthScreen() {
           // Пытаемся создать, если не существует
           const res = await createUserWithEmailAndPassword(auth, email, acc.pass).catch(() => null);
           
-          // Если аккаунт уже есть, мы не сможем его "создать" заново без входа,
-          // но мы можем обновить Firestore если мы админы. В данном случае просто создаем если можем.
-          if (res) {
-            await setDoc(doc(db, 'users', res.user.uid), {
-              id: res.user.uid,
-              name: acc.name,
-              username: acc.user,
-              phone: `+${acc.phone}`,
-              avatarUrl: `https://picsum.photos/seed/${acc.phone}/200`,
-              createdAt: new Date().toISOString(),
-              lastSeen: new Date().toISOString(),
-              inactivityDeletion: 'never',
-              settings: {
-                privacy: {
-                  phoneVisibility: 'nobody',
-                  lastSeenVisibility: 'everybody'
-                }
+          const uid = res ? res.user.uid : acc.phone; // Упрощенно для теста
+          
+          await setDoc(doc(db, 'users', uid), {
+            id: uid,
+            name: acc.name,
+            username: acc.user,
+            phone: `+${acc.phone}`,
+            avatarUrl: `https://picsum.photos/seed/${acc.phone}/200`,
+            createdAt: new Date().toISOString(),
+            lastSeen: new Date().toISOString(),
+            inactivityDeletion: 'never',
+            settings: {
+              theme: 'default',
+              chatBackground: 'default',
+              messageSize: 'medium',
+              privacy: {
+                phoneVisibility: 'nobody',
+                lastSeenVisibility: 'everybody'
               }
-            });
-          }
+            }
+          }, { merge: true });
         } catch (e) {}
       }
       toast({ title: "Готово!", description: "Аккаунты настроены. Войдите с паролем." });
