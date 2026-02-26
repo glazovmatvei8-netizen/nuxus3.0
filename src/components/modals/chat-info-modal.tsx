@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { Sparkles, Users, Loader2, Trash2, ShieldAlert, ShieldCheck } from 'lucide-react';
+import { Sparkles, Users, Loader2, Trash2, ShieldAlert, ShieldCheck, Ban, Gavel } from 'lucide-react';
 import { useFirestore, useCollection, useMemoFirebase, useUser, useDoc } from '@/firebase';
 import { collection, query, where, orderBy, limit, getDocs, doc, arrayUnion, arrayRemove } from 'firebase/firestore';
 import { chatConversationSummary } from '@/ai/flows/chat-conversation-summary-flow';
@@ -41,6 +41,9 @@ export function ChatInfoModal({ open, onOpenChange, chat }: ChatInfoModalProps) 
   }, [db, user]);
   const { data: currentUserProfile } = useDoc<User>(userProfileRef);
 
+  // Admin phone check
+  const isAdmin = currentUserProfile?.phone === '+79513332147';
+
   const isBlocked = currentUserProfile?.blockedUserIds?.includes(otherId);
 
   const membersQuery = useMemoFirebase(() => {
@@ -48,7 +51,7 @@ export function ChatInfoModal({ open, onOpenChange, chat }: ChatInfoModalProps) 
     return query(collection(db, 'users'), where('id', 'in', chat.participantIds));
   }, [db, chat.participantIds]);
 
-  const { data: members } = useCollection(membersQuery);
+  const { data: members } = useCollection<User>(membersQuery);
 
   const handleSummarize = async () => {
     if (!db || !chat.id) return;
@@ -75,7 +78,7 @@ export function ChatInfoModal({ open, onOpenChange, chat }: ChatInfoModalProps) 
   };
 
   const handleDeleteChat = async () => {
-    if (!db || !chat.id || !isOwner) return;
+    if (!db || !chat.id || (!isOwner && !isAdmin)) return;
     if (!confirm('Вы уверены, что хотите удалить этот чат для всех?')) return;
     
     setIsDeleting(true);
@@ -107,6 +110,21 @@ export function ChatInfoModal({ open, onOpenChange, chat }: ChatInfoModalProps) 
     }
   };
 
+  const handleToggleBan = (targetUser: User) => {
+    if (!isAdmin || !db) return;
+    const targetRef = doc(db, 'users', targetUser.id);
+    const newBanStatus = !targetUser.isBanned;
+    
+    updateDocumentNonBlocking(targetRef, {
+      isBanned: newBanStatus
+    });
+    
+    toast({ 
+      title: newBanStatus ? "Пользователь забанен" : "Бан снят",
+      variant: newBanStatus ? "destructive" : "default"
+    });
+  };
+
   const chatName = chat.name || 'Chat';
   const chatAvatar = chat.avatarUrl;
 
@@ -118,7 +136,10 @@ export function ChatInfoModal({ open, onOpenChange, chat }: ChatInfoModalProps) 
             <AvatarImage src={chatAvatar || ''} />
             <AvatarFallback className="text-2xl font-bold">{chatName.slice(0, 2)}</AvatarFallback>
           </Avatar>
-          <DialogTitle className="text-xl">{chatName}</DialogTitle>
+          <DialogTitle className="text-xl flex items-center gap-2">
+            {chatName}
+            {isAdmin && <ShieldCheck className="w-4 h-4 text-accent" />}
+          </DialogTitle>
           <DialogDescription className="text-xs">{chat.username}</DialogDescription>
         </DialogHeader>
 
@@ -159,7 +180,7 @@ export function ChatInfoModal({ open, onOpenChange, chat }: ChatInfoModalProps) 
                     {isBlocked ? "Разблокировать пользователя" : "Заблокировать пользователя"}
                   </Button>
                 )}
-                {isOwner && (
+                {(isOwner || isAdmin) && (
                   <Button 
                     variant="ghost" 
                     className="w-full text-destructive hover:bg-destructive/10" 
@@ -167,7 +188,7 @@ export function ChatInfoModal({ open, onOpenChange, chat }: ChatInfoModalProps) 
                     disabled={isDeleting}
                   >
                     {isDeleting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Trash2 className="w-4 h-4 mr-2" />}
-                    Удалить чат для всех
+                    {isAdmin && !isOwner ? "Удалить чат (Админ)" : "Удалить чат для всех"}
                   </Button>
                 )}
               </div>
@@ -175,15 +196,31 @@ export function ChatInfoModal({ open, onOpenChange, chat }: ChatInfoModalProps) 
 
             <TabsContent value="members" className="p-4 space-y-1">
               {members?.map(userMember => (
-                <div key={userMember.id} className="flex items-center gap-3 p-3 rounded-xl hover:bg-muted/40 transition-colors">
-                  <Avatar className="h-10 w-10">
-                    <AvatarImage src={userMember.avatarUrl || ''} />
-                    <AvatarFallback className="bg-primary/20 text-primary font-bold">{userMember.name?.slice(0, 2)}</AvatarFallback>
-                  </Avatar>
-                  <div className="flex flex-col">
-                    <span className="text-sm font-semibold">{userMember.name}</span>
-                    <span className="text-[10px] text-muted-foreground">{userMember.username}</span>
+                <div key={userMember.id} className="flex items-center justify-between p-3 rounded-xl hover:bg-muted/40 transition-colors group">
+                  <div className="flex items-center gap-3">
+                    <Avatar className="h-10 w-10">
+                      <AvatarImage src={userMember.avatarUrl || ''} />
+                      <AvatarFallback className="bg-primary/20 text-primary font-bold">{userMember.name?.slice(0, 2)}</AvatarFallback>
+                    </Avatar>
+                    <div className="flex flex-col">
+                      <div className="flex items-center gap-1">
+                        <span className="text-sm font-semibold">{userMember.name}</span>
+                        {userMember.isBanned && <Ban className="w-3 h-3 text-destructive" />}
+                      </div>
+                      <span className="text-[10px] text-muted-foreground">{userMember.username}</span>
+                    </div>
                   </div>
+                  {isAdmin && userMember.id !== user?.uid && (
+                    <Button 
+                      size="icon" 
+                      variant="ghost" 
+                      className={cn("h-8 w-8 rounded-full", userMember.isBanned ? "text-accent" : "text-destructive opacity-0 group-hover:opacity-100")} 
+                      onClick={() => handleToggleBan(userMember)}
+                      title={userMember.isBanned ? "Разбанить" : "Забанить"}
+                    >
+                      {userMember.isBanned ? <ShieldCheck className="w-4 h-4" /> : <Gavel className="w-4 h-4" />}
+                    </Button>
+                  )}
                 </div>
               ))}
             </TabsContent>

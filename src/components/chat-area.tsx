@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useRef, useEffect, useMemo } from 'react';
@@ -7,7 +8,8 @@ import { Input } from '@/components/ui/input';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
   Send, Paperclip, Sparkles, MessageSquare, Info, Mic, Camera, X, UserPlus,
-  CornerUpLeft, Loader2, ShieldAlert, Trash, Check, MoreVertical, ChevronLeft, ChevronDown
+  CornerUpLeft, Loader2, ShieldAlert, Trash, Check, MoreVertical, ChevronLeft, ChevronDown,
+  Images, Plus
 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { MessageItem } from './message-item';
@@ -20,6 +22,7 @@ import { suggestMessageDraft } from '@/ai/flows/ai-message-drafting-flow';
 import { cn } from '@/lib/utils';
 import { formatLastSeen } from '@/lib/utils';
 import type { Message, User } from '@/lib/types';
+import Image from 'next/image';
 
 interface ChatAreaProps {
   toggleSidebar: () => void;
@@ -41,6 +44,9 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
   const [isRecordingAudio, setIsRecordingAudio] = useState(false);
   const [isRecordingVideo, setIsRecordingVideo] = useState(false);
   const [statusString, setStatusString] = useState<string>('');
+
+  // Multi-photo state
+  const [pendingPhotos, setPendingPhotos] = useState<string[]>([]);
   
   const [activeStream, setActiveStream] = useState<MediaStream | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -92,7 +98,6 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
   
   const { data: messages, isLoading: isMessagesLoading } = useCollection<Message>(messagesQuery);
 
-  // Sync video stream to preview element
   useEffect(() => {
     if (isRecordingVideo && activeStream && videoPreviewRef.current) {
       videoPreviewRef.current.srcObject = activeStream;
@@ -169,7 +174,7 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
   };
 
   const handleSendMessage = (content: string = inputText, type: string = 'text') => {
-    if (isBlocked) {
+    if (isBlocked || userProfile?.isBanned) {
       toast({ title: "Ошибка", description: "Вы не можете отправлять сообщения", variant: "destructive" });
       return;
     }
@@ -206,6 +211,31 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
     setTimeout(scrollToBottom, 100);
   };
 
+  const handleSendPhotos = () => {
+    if (pendingPhotos.length === 0) return;
+    pendingPhotos.forEach(photo => {
+      handleSendMessage(photo, 'image');
+    });
+    setPendingPhotos([]);
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []).slice(0, 10);
+    if (files.length === 0) return;
+    
+    const readers = files.map(file => {
+      return new Promise<string>((resolve) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.readAsDataURL(file);
+      });
+    });
+
+    Promise.all(readers).then(results => {
+      setPendingPhotos(results);
+    });
+  };
+
   const handleAISuggest = async () => {
     if (!messages || messages.length === 0) return;
     setIsSuggesting(true);
@@ -229,7 +259,7 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
   };
 
   const startVideoRecording = async () => {
-    if (isBlocked) return;
+    if (isBlocked || userProfile?.isBanned) return;
     isCancelledRef.current = false;
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ 
@@ -288,7 +318,7 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
   };
 
   const startAudioRecording = async () => {
-    if (isBlocked) return;
+    if (isBlocked || userProfile?.isBanned) return;
     isCancelledRef.current = false;
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -418,13 +448,43 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
       <footer className="p-3 bg-card/20 backdrop-blur-xl border-t border-border/40 z-20 shrink-0">
         {isParticipant ? (
           <div className="flex flex-col gap-2 max-w-4xl mx-auto">
-            {isBlocked ? (
+            {isBlocked || userProfile?.isBanned ? (
               <div className="flex items-center justify-center h-12 bg-muted/20 rounded-xl border border-border/40 text-muted-foreground text-xs font-semibold gap-2">
                 <ShieldAlert className="w-4 h-4" />
-                {isBlockedByMe ? "Вы заблокировали пользователя" : "Вы заблокированы этим пользователем"}
+                {userProfile?.isBanned ? "Ваш аккаунт заблокирован" : (isBlockedByMe ? "Вы заблокировали пользователя" : "Вы заблокированы этим пользователем")}
               </div>
             ) : (
               <>
+                {pendingPhotos.length > 0 && (
+                  <div className="bg-card/90 backdrop-blur-md p-4 rounded-2xl mb-2 border border-primary/20 animate-in slide-in-from-bottom-5">
+                    <div className="flex items-center justify-between mb-3">
+                      <span className="text-xs font-bold text-primary flex items-center gap-2">
+                        <Images className="w-4 h-4" />
+                        Выбрано фото ({pendingPhotos.length}/10)
+                      </span>
+                      <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground" onClick={() => setPendingPhotos([])}><X className="w-4 h-4" /></Button>
+                    </div>
+                    <ScrollArea className="w-full whitespace-nowrap pb-2">
+                      <div className="flex gap-2">
+                        {pendingPhotos.map((photo, i) => (
+                          <div key={i} className="relative w-16 h-16 rounded-lg overflow-hidden shrink-0 border border-border/20">
+                            <Image src={photo} alt={`Preview ${i}`} fill className="object-cover" />
+                            <button 
+                              onClick={() => setPendingPhotos(pendingPhotos.filter((_, idx) => idx !== i))}
+                              className="absolute top-0.5 right-0.5 bg-black/60 rounded-full p-0.5 hover:bg-black"
+                            >
+                              <X className="w-3 h-3 text-white" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </ScrollArea>
+                    <div className="mt-3 flex gap-2">
+                      <Button className="flex-1 h-9 rounded-xl font-bold" onClick={handleSendPhotos}>Отправить все</Button>
+                      <Button variant="outline" className="h-9 rounded-xl" onClick={() => fileInputRef.current?.click()}><Plus className="w-4 h-4 mr-1" /> Добавить</Button>
+                    </div>
+                  </div>
+                )}
                 {isRecordingVideo && (
                   <div className="absolute bottom-20 left-1/2 -translate-x-1/2 w-48 h-48 rounded-full overflow-hidden border-4 border-primary shadow-2xl z-50 bg-black">
                     <video 
@@ -474,9 +534,7 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
                 )}
                 <div className="flex items-end gap-2">
                   <div className="flex items-center gap-1 mb-1">
-                    <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={e => {
-                      const f = e.target.files?.[0]; if (f) { const r = new FileReader(); r.onloadend = () => handleSendMessage(r.result as string, 'image'); r.readAsDataURL(f); }
-                    }} />
+                    <input type="file" ref={fileInputRef} className="hidden" accept="image/*" multiple onChange={handleFileSelect} />
                     <Button variant="ghost" size="icon" onClick={() => fileInputRef.current?.click()} aria-label="Прикрепить файл"><Paperclip className="w-5 h-5" /></Button>
                     <Button variant="ghost" size="icon" onClick={handleAISuggest} disabled={isSuggesting} aria-label="AI черновик"><Sparkles className={cn("w-5 h-5 text-accent", isSuggesting && "animate-spin")} /></Button>
                   </div>

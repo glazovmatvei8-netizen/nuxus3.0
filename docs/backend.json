@@ -44,6 +44,10 @@
           "items": {
             "type": "string"
           }
+        },
+        "isBanned": {
+          "type": "boolean",
+          "description": "Indicates if the user is globally banned from the application."
         }
       },
       "required": [

@@ -1,14 +1,29 @@
+
 "use client"
 
-import { useUser } from '@/firebase';
+import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import AuthScreen from '@/components/auth-screen';
 import ChatMain from '@/components/chat-main';
-import { Loader2 } from 'lucide-react';
+import { Loader2, ShieldAlert } from 'lucide-react';
+import { doc } from 'firebase/firestore';
+import type { User as UserType } from '@/lib/types';
+import { Button } from '@/components/ui/button';
+import { signOut } from 'firebase/auth';
+import { useAuth } from '@/firebase';
 
 export default function Home() {
   const { user, isUserLoading } = useUser();
+  const db = useFirestore();
+  const auth = useAuth();
 
-  if (isUserLoading) {
+  const userProfileRef = useMemoFirebase(() => {
+    if (!db || !user) return null;
+    return doc(db, 'users', user.uid);
+  }, [db, user]);
+
+  const { data: profile, isLoading: isProfileLoading } = useDoc<UserType>(userProfileRef);
+
+  if (isUserLoading || (user && isProfileLoading)) {
     return (
       <div className="h-screen w-full flex items-center justify-center bg-background">
         <Loader2 className="w-10 h-10 text-primary animate-spin" />
@@ -18,6 +33,24 @@ export default function Home() {
 
   if (!user) {
     return <AuthScreen />;
+  }
+
+  if (profile?.isBanned) {
+    return (
+      <div className="h-screen w-full flex flex-col items-center justify-center bg-background p-6 text-center">
+        <div className="bg-destructive/10 p-6 rounded-full mb-6">
+          <ShieldAlert className="w-16 h-16 text-destructive" />
+        </div>
+        <h1 className="text-3xl font-bold mb-4 text-white">Вы заблокированы</h1>
+        <p className="text-muted-foreground max-w-md mb-8">
+          Ваш аккаунт был заблокирован администратором за нарушение правил сообщества. 
+          Доступ к мессенджеру ограничен.
+        </p>
+        <Button variant="outline" onClick={() => signOut(auth)}>
+          Выйти из аккаунта
+        </Button>
+      </div>
+    );
   }
 
   return <ChatMain />;
