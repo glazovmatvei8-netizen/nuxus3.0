@@ -8,7 +8,10 @@ service cloud.firestore {
     }
 
     function isNotBanned() {
-      return !get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isBanned;
+      let userPath = /databases/$(database)/documents/users/$(request.auth.uid);
+      // Если профиля еще нет, разрешаем доступ (он создастся при первом heartbeat)
+      // Если профиль есть, проверяем флаг isBanned
+      return !exists(userPath) || get(userPath).data.get('isBanned', false) == false;
     }
 
     function isOwner(userId) {
@@ -16,18 +19,19 @@ service cloud.firestore {
     }
 
     function isAdmin() {
-      return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.phone == '+79513332147';
+      let userPath = /databases/$(database)/documents/users/$(request.auth.uid);
+      // Админ определяется по номеру телефона в его профиле
+      return isSignedIn() && exists(userPath) && get(userPath).data.get('phone', '') == '+79513332147';
     }
 
     function isParticipant(chatId) {
-      let chat = get(/databases/$(database)/documents/chats/$(chatId)).data;
-      return isSignedIn() && (chat.participantIds.hasAny([request.auth.uid]));
+      let chatPath = /databases/$(database)/documents/chats/$(chatId);
+      return isSignedIn() && exists(chatPath) && (request.auth.uid in get(chatPath).data.get('participantIds', []));
     }
 
     match /users/{userId} {
       allow get, list: if isSignedIn(); 
       allow create: if isOwner(userId);
-      // Разрешаем обновление своего профиля ИЛИ если обновляет админ (для бана)
       allow update: if isOwner(userId) || isAdmin();
       allow delete: if isOwner(userId) || isAdmin();
     }
@@ -36,21 +40,21 @@ service cloud.firestore {
       allow get, list: if isSignedIn() && isNotBanned();
       allow create: if isSignedIn() && isNotBanned();
       allow update: if isSignedIn() && isNotBanned(); 
-      allow delete: if (isSignedIn() && resource.data.ownerId == request.auth.uid) || isAdmin();
-    }
+      allow delete: if (isSignedIn() && exists(/databases/$(database)/documents/chats/$(chatId)) && get(/databases/$(database)/documents/chats/$(chatId)).data.get('ownerId', '') == request.auth.uid) || isAdmin();
 
-    match /chats/{chatId}/messages/{messageId} {
-      allow get, list: if isParticipant(chatId) && isNotBanned();
-      allow create: if isParticipant(chatId) && isNotBanned();
-      allow update: if isParticipant(chatId) && isNotBanned(); 
-      allow delete: if (isSignedIn() && resource.data.senderId == request.auth.uid) || isAdmin();
-    }
+      match /messages/{messageId} {
+        allow get, list: if isParticipant(chatId) && isNotBanned();
+        allow create: if isParticipant(chatId) && isNotBanned();
+        allow update: if isParticipant(chatId) && isNotBanned(); 
+        allow delete: if (isSignedIn() && resource.data.senderId == request.auth.uid) || isAdmin();
 
-    match /chats/{chatId}/messages/{messageId}/reactions/{reactionId} {
-      allow get, list: if isParticipant(chatId) && isNotBanned();
-      allow create: if isParticipant(chatId) && isNotBanned();
-      allow update: if false;
-      allow delete: if (isSignedIn() && resource.data.reactorId == request.auth.uid) || isAdmin();
+        match /reactions/{reactionId} {
+          allow get, list: if isParticipant(chatId) && isNotBanned();
+          allow create: if isParticipant(chatId) && isNotBanned();
+          allow update: if false;
+          allow delete: if (isSignedIn() && resource.data.reactorId == request.auth.uid) || isAdmin();
+        }
+      }
     }
   }
 }

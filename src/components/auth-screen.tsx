@@ -121,30 +121,40 @@ export default function AuthScreen() {
       for (const acc of accounts) {
         const email = `${acc.phone}@nuxus.chat`;
         try {
-          // Пытаемся создать, если не существует
-          const res = await createUserWithEmailAndPassword(auth, email, acc.pass).catch(() => null);
-          
-          const uid = res ? res.user.uid : acc.phone; // Упрощенно для теста
-          
-          await setDoc(doc(db, 'users', uid), {
-            id: uid,
-            name: acc.name,
-            username: acc.user,
-            phone: `+${acc.phone}`,
-            avatarUrl: `https://picsum.photos/seed/${acc.phone}/200`,
-            createdAt: new Date().toISOString(),
-            lastSeen: new Date().toISOString(),
-            inactivityDeletion: 'never',
-            settings: {
-              theme: 'default',
-              chatBackground: 'default',
-              messageSize: 'medium',
-              privacy: {
-                phoneVisibility: 'nobody',
-                lastSeenVisibility: 'everybody'
-              }
+          // Пытаемся залогиниться, чтобы получить UID, если пользователь уже есть
+          let uid = '';
+          try {
+            const loginRes = await signInWithEmailAndPassword(auth, email, acc.pass);
+            uid = loginRes.user.uid;
+          } catch (e) {
+            // Если не залогинились, пытаемся создать
+            const createRes = await createUserWithEmailAndPassword(auth, email, acc.pass).catch(() => null);
+            if (createRes) {
+              uid = createRes.user.uid;
             }
-          }, { merge: true });
+          }
+          
+          if (uid) {
+            await setDoc(doc(db, 'users', uid), {
+              id: uid,
+              name: acc.name,
+              username: acc.user,
+              phone: `+${acc.phone}`,
+              avatarUrl: `https://picsum.photos/seed/${acc.phone}/200`,
+              createdAt: new Date().toISOString(),
+              lastSeen: new Date().toISOString(),
+              inactivityDeletion: 'never',
+              settings: {
+                theme: 'default',
+                chatBackground: 'default',
+                messageSize: 'medium',
+                privacy: {
+                  phoneVisibility: 'nobody',
+                  lastSeenVisibility: 'everybody'
+                }
+              }
+            }, { merge: true });
+          }
         } catch (e) {}
       }
       toast({ title: "Готово!", description: "Аккаунты настроены. Войдите с паролем." });
