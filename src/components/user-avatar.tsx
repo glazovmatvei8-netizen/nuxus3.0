@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useEffect } from 'react';
@@ -17,7 +16,7 @@ interface UserAvatarProps {
 
 /**
  * Умный компонент аватарки, который всегда отображает актуальное фото пользователя из Firestore.
- * Оптимизирован для мобильных устройств и мгновенного обновления данных.
+ * Если userId передан, он имеет приоритет над старыми данными из метаданных чата.
  */
 export function UserAvatar({ userId, className, fallbackName, fallbackClassName, manualAvatarUrl }: UserAvatarProps) {
   const db = useFirestore();
@@ -30,11 +29,10 @@ export function UserAvatar({ userId, className, fallbackName, fallbackClassName,
 
   const { data: profile, isLoading } = useDoc(userRef);
 
-  // Приоритет: ручной URL (если уже есть у родителя) > данные из Firestore
-  const displayAvatar = manualAvatarUrl !== undefined ? manualAvatarUrl : profile?.avatarUrl;
+  // Приоритет: 1. Живые данные из профиля (Firestore) 2. Ручной URL (метаданные) 3. Заглушка
+  const displayAvatar = profile?.avatarUrl || manualAvatarUrl;
   const displayName = profile?.name || fallbackName || '??';
 
-  // Сбрасываем ошибку, если URL изменился (например, пользователь загрузил новое фото)
   useEffect(() => {
     setImgError(false);
   }, [displayAvatar, userId]);
@@ -43,7 +41,7 @@ export function UserAvatar({ userId, className, fallbackName, fallbackClassName,
     <Avatar className={cn("shrink-0 relative overflow-hidden", className)}>
       {!isLoading && displayAvatar && !imgError ? (
         <img 
-          key={displayAvatar} // Key заставляет React перерисовать img при смене URL
+          key={displayAvatar}
           src={displayAvatar} 
           alt={displayName} 
           className="aspect-square h-full w-full object-cover animate-in fade-in duration-300"

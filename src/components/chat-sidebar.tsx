@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useEffect } from 'react';
@@ -64,7 +63,6 @@ export default function ChatSidebar() {
           >
             <UserAvatar 
               userId={user?.uid} 
-              manualAvatarUrl={profile?.avatarUrl}
               className="h-10 w-10 border-2 border-primary/20 ring-primary/10 ring-offset-2 ring-offset-background group-hover:scale-105 transition-transform shrink-0"
               fallbackName={profile?.name}
             />
@@ -182,7 +180,7 @@ function ChatListItem({ chat, isActive, otherId, chatDisplayName, manualAvatarUr
       <div className="relative shrink-0">
         <UserAvatar 
           userId={otherId} 
-          manualAvatarUrl={manualAvatarUrl || otherProfile?.avatarUrl}
+          manualAvatarUrl={manualAvatarUrl}
           className="h-11 w-11 md:h-12 md:w-12 border-2 border-transparent group-hover:border-primary/20 transition-all" 
           fallbackName={chatDisplayName}
         />
