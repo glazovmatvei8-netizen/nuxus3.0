@@ -56,6 +56,7 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const lastTypingSignalRef = useRef<number>(0);
   
   const { toast } = useToast();
 
@@ -77,11 +78,11 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
   }, [chat, user]);
 
   const otherId = chat?.type === 'private' && user ? chat.participantIds?.find((id: string = '') => id !== user.uid) : null;
-  const otherUserRef = useMemoFirebase(() => {
+  const otherUserProfileRef = useMemoFirebase(() => {
     if (!db || !otherId) return null;
     return doc(db, 'users', otherId);
   }, [db, otherId]);
-  const { data: otherUserProfile, isLoading: isOtherProfileLoading } = useDoc<User>(otherUserRef);
+  const { data: otherUserProfile, isLoading: isOtherProfileLoading } = useDoc<User>(otherUserProfileRef);
 
   const isBlockedByMe = userProfile?.blockedUserIds?.includes(otherId || '');
   const isBlockedByThem = otherUserProfile?.blockedUserIds?.includes(user?.uid || '');
@@ -103,24 +104,38 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
     }
   }, [isRecordingVideo, activeStream]);
 
+  // Optimized Typing Status handling
   useEffect(() => {
     if (!currentChatId || !user || !isParticipant || !db || isBlocked) return;
     
+    const now = Date.now();
+    const chatDocRef = doc(db, 'chats', currentChatId);
+
     if (inputText.length > 0) {
-      updateDocumentNonBlocking(doc(db, 'chats', currentChatId), {
-        [`typing.${user.uid}`]: true
-      });
+      // Only send signal if we haven't sent one in the last 2 seconds
+      if (now - lastTypingSignalRef.current > 2000) {
+        updateDocumentNonBlocking(chatDocRef, {
+          [`typing.${user.uid}`]: true
+        });
+        lastTypingSignalRef.current = now;
+      }
       
       if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
       typingTimeoutRef.current = setTimeout(() => {
-        updateDocumentNonBlocking(doc(db, 'chats', currentChatId), {
+        updateDocumentNonBlocking(chatDocRef, {
           [`typing.${user.uid}`]: false
         });
-      }, 3000);
+        lastTypingSignalRef.current = 0;
+      }, 4000);
     } else {
-      updateDocumentNonBlocking(doc(db, 'chats', currentChatId), {
-        [`typing.${user.uid}`]: false
-      });
+      // If text is cleared, signal "not typing" immediately
+      if (lastTypingSignalRef.current !== 0) {
+        updateDocumentNonBlocking(chatDocRef, {
+          [`typing.${user.uid}`]: false
+        });
+        lastTypingSignalRef.current = 0;
+      }
+      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
     }
   }, [inputText, currentChatId, user, db, isParticipant, isBlocked]);
 
