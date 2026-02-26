@@ -15,7 +15,7 @@ import {
 import { useAuth, useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
-  LogOut, User, LayoutGrid, Palette, Loader2, Sparkles, X, Wand2, AtSign, Smartphone, Settings2
+  LogOut, User, LayoutGrid, Palette, Loader2, Sparkles, X, Wand2, AtSign, Settings2, Check
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { signOut } from 'firebase/auth';
@@ -24,7 +24,6 @@ import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { generateBrandVisual } from '@/ai/flows/generate-brand-visual-flow';
 import { generateAiAvatar } from '@/ai/flows/generate-ai-avatar-flow';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Separator } from '@/components/ui/separator';
 
 interface SettingsModalProps {
   open: boolean;
@@ -125,27 +124,32 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-md bg-card/95 backdrop-blur-2xl border-border/40 p-0 overflow-hidden max-h-[85vh] flex flex-col rounded-t-[2rem] sm:rounded-2xl">
+        <DialogContent className="max-w-md bg-card/95 backdrop-blur-2xl border-border/40 p-0 overflow-hidden max-h-[90vh] flex flex-col rounded-t-3xl sm:rounded-2xl">
           <DialogHeader className="p-4 border-b border-border/20 bg-muted/30 shrink-0">
-            <DialogTitle className="flex items-center gap-2 text-lg font-bold">
-              <Settings2 className="w-5 h-5 text-primary" />
-              Настройки
+            <DialogTitle className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-lg font-bold">
+                <Settings2 className="w-5 h-5 text-primary" />
+                <span>Настройки</span>
+              </div>
+              <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full" onClick={() => onOpenChange(false)}>
+                <X className="w-5 h-5" />
+              </Button>
             </DialogTitle>
           </DialogHeader>
           
-          <ScrollArea className="flex-1 px-4 py-2">
-            <div className="space-y-4 py-2">
+          <ScrollArea className="flex-1 overflow-y-auto">
+            <div className="p-4 space-y-5 pb-8">
               {/* Profile Header */}
-              <div className="flex flex-col items-center gap-3 py-2">
+              <div className="flex flex-col items-center gap-4 py-2">
                 <div className="relative group cursor-pointer" onClick={() => avatarInputRef.current?.click()}>
                   <UserAvatar 
                     userId={user?.uid} 
                     manualAvatarUrl={form.avatarUrl}
-                    className="h-20 w-20 border-2 border-primary/20 shadow-lg ring-offset-background" 
+                    className="h-24 w-24 border-4 border-primary/20 shadow-xl" 
                     fallbackName={form.name}
                   />
-                  <div className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                    <LayoutGrid className="w-5 h-5 text-white" />
+                  <div className="absolute bottom-0 right-0 bg-primary p-2 rounded-full border-2 border-background shadow-lg">
+                    <LayoutGrid className="w-4 h-4 text-white" />
                   </div>
                   <input type="file" ref={avatarInputRef} className="hidden" accept="image/*" onChange={(e) => {
                     const f = e.target.files?.[0];
@@ -157,32 +161,32 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                   }} />
                 </div>
                 <div className="text-center">
-                  <h3 className="font-bold text-base leading-tight">{form.name || 'Без имени'}</h3>
-                  <p className="text-xs text-muted-foreground">{form.username || '@username'}</p>
+                  <h3 className="font-bold text-xl leading-tight">{form.name || 'Без имени'}</h3>
+                  <p className="text-sm text-muted-foreground">{form.username || '@username'}</p>
                 </div>
               </div>
 
               {/* Section: Account */}
-              <div className="bg-muted/30 rounded-2xl p-3 space-y-3">
-                <div className="flex items-center gap-2 mb-1 px-1">
-                  <User className="w-3.5 h-3.5 text-primary" />
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Аккаунт</span>
+              <div className="bg-muted/30 rounded-2xl p-4 space-y-4">
+                <div className="flex items-center gap-2 px-1">
+                  <User className="w-4 h-4 text-primary" />
+                  <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Аккаунт</span>
                 </div>
-                <div className="space-y-2.5">
-                  <div className="space-y-1">
-                    <Label className="text-[10px] ml-1 text-muted-foreground">Имя</Label>
+                <div className="space-y-3">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs ml-1 font-semibold text-muted-foreground">Имя</Label>
                     <Input 
-                      className="bg-background/50 h-9 rounded-xl border-none focus-visible:ring-1 focus-visible:ring-primary/40" 
+                      className="bg-background/50 h-11 rounded-xl border-border/20 focus-visible:ring-1 focus-visible:ring-primary/40" 
                       value={form.name} 
                       onChange={e => setForm({...form, name: e.target.value})} 
                     />
                   </div>
-                  <div className="space-y-1">
-                    <Label className="text-[10px] ml-1 text-muted-foreground">Никнейм</Label>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs ml-1 font-semibold text-muted-foreground">Никнейм</Label>
                     <div className="relative">
-                      <AtSign className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+                      <AtSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                       <Input 
-                        className="bg-background/50 h-9 rounded-xl border-none pl-9 focus-visible:ring-1 focus-visible:ring-primary/40" 
+                        className="bg-background/50 h-11 rounded-xl border-border/20 pl-9 focus-visible:ring-1 focus-visible:ring-primary/40" 
                         value={form.username} 
                         onChange={e => setForm({...form, username: e.target.value})} 
                       />
@@ -192,20 +196,20 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
               </div>
 
               {/* Section: Appearance */}
-              <div className="bg-muted/30 rounded-2xl p-3 space-y-3">
-                <div className="flex items-center gap-2 mb-1 px-1">
-                  <Palette className="w-3.5 h-3.5 text-accent" />
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Оформление</span>
+              <div className="bg-muted/30 rounded-2xl p-4 space-y-4">
+                <div className="flex items-center gap-2 px-1">
+                  <Palette className="w-4 h-4 text-accent" />
+                  <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Оформление</span>
                 </div>
-                <div className="space-y-1">
-                  <Label className="text-[10px] ml-1 text-muted-foreground">Фон чатов</Label>
+                <div className="space-y-1.5">
+                  <Label className="text-xs ml-1 font-semibold text-muted-foreground">Фон чатов</Label>
                   <Select value={form.chatBackground} onValueChange={(val) => setForm({...form, chatBackground: val})}>
-                    <SelectTrigger className="bg-background/50 h-9 rounded-xl border-none focus:ring-1 focus:ring-primary/40">
+                    <SelectTrigger className="bg-background/50 h-11 rounded-xl border-border/20 focus:ring-1 focus:ring-primary/40">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent className="rounded-xl border-border/40">
                       {BACKGROUNDS.map(bg => (
-                        <SelectItem key={bg.value} value={bg.value} className="text-xs">{bg.name}</SelectItem>
+                        <SelectItem key={bg.value} value={bg.value} className="text-sm">{bg.name}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -213,41 +217,52 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
               </div>
 
               {/* Section: AI Features */}
-              <div className="bg-primary/5 rounded-2xl p-3 space-y-2 border border-primary/10">
-                <div className="flex items-center gap-2 mb-1 px-1">
-                  <Sparkles className="w-3.5 h-3.5 text-primary" />
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-primary/70">AI Возможности</span>
+              <div className="bg-primary/5 rounded-2xl p-4 space-y-3 border border-primary/10">
+                <div className="flex items-center gap-2 px-1">
+                  <Sparkles className="w-4 h-4 text-primary" />
+                  <span className="text-xs font-bold uppercase tracking-widest text-primary/70">AI Лаборатория</span>
                 </div>
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-1 gap-2">
                   <Button 
                     variant="ghost" 
-                    className="h-10 text-[10px] bg-background/50 rounded-xl flex flex-col items-center justify-center gap-0.5 hover:bg-primary/10"
+                    className="w-full h-12 bg-background/50 rounded-xl flex items-center justify-between px-4 hover:bg-primary/10 group"
                     onClick={handleGenerateAiAvatar}
                     disabled={isGeneratingAvatar}
                   >
-                    {isGeneratingAvatar ? <Loader2 className="w-3 h-3 animate-spin" /> : <Wand2 className="w-3 h-3" />}
-                    <span>AI Аватар</span>
+                    <div className="flex items-center gap-3">
+                      <div className="bg-primary/20 p-2 rounded-lg">
+                        {isGeneratingAvatar ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wand2 className="w-4 h-4" />}
+                      </div>
+                      <span className="text-sm font-medium">Сгенерировать AI-аватар</span>
+                    </div>
+                    <Sparkles className="w-4 h-4 text-primary opacity-50 group-hover:opacity-100" />
                   </Button>
                   <Button 
                     variant="ghost" 
-                    className="h-10 text-[10px] bg-background/50 rounded-xl flex flex-col items-center justify-center gap-0.5 hover:bg-accent/10"
+                    className="w-full h-12 bg-background/50 rounded-xl flex items-center justify-between px-4 hover:bg-accent/10 group"
                     onClick={handleGenerateVisual}
                     disabled={isGeneratingVisual}
                   >
-                    {isGeneratingVisual ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
-                    <span>Концепт</span>
+                    <div className="flex items-center gap-3">
+                      <div className="bg-accent/20 p-2 rounded-lg">
+                        {isGeneratingVisual ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+                      </div>
+                      <span className="text-sm font-medium">Посмотреть концепт</span>
+                    </div>
+                    <LayoutGrid className="w-4 h-4 text-accent opacity-50 group-hover:opacity-100" />
                   </Button>
                 </div>
               </div>
             </div>
           </ScrollArea>
 
-          <div className="p-4 border-t border-border/20 bg-muted/20 shrink-0 grid grid-cols-5 gap-2">
-            <Button className="col-span-4 h-10 rounded-xl font-bold shadow-lg shadow-primary/20" onClick={handleSave}>
-               Сохранить
+          <div className="p-4 border-t border-border/20 bg-muted/20 shrink-0 flex gap-2">
+            <Button className="flex-1 h-12 rounded-xl font-bold shadow-lg shadow-primary/20 flex items-center gap-2" onClick={handleSave}>
+               <Check className="w-5 h-5" />
+               Сохранить изменения
             </Button>
-            <Button variant="ghost" size="icon" className="h-10 w-10 rounded-xl text-destructive hover:bg-destructive/10" onClick={handleLogout}>
-               <LogOut className="w-5 h-5" />
+            <Button variant="ghost" size="icon" className="h-12 w-12 rounded-xl text-destructive hover:bg-destructive/10" onClick={handleLogout}>
+               <LogOut className="w-6 h-6" />
             </Button>
           </div>
         </DialogContent>
