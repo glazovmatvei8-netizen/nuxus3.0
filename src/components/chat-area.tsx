@@ -9,7 +9,7 @@ import { UserAvatar } from '@/components/user-avatar';
 import { 
   Send, Paperclip, Smile, MoreVertical, ChevronLeft, 
   Sparkles, MessageSquare, Info, Mic, Camera, X, StopCircle, UserPlus,
-  CornerUpLeft, Pencil, Trash2, Loader2, ShieldAlert
+  CornerUpLeft, Pencil, Trash2, Loader2, ShieldAlert, Video
 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { MessageItem } from './message-item';
@@ -40,9 +40,11 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
   const [editMessage, setEditMessage] = useState<Message | null>(null);
   
   const [isRecordingAudio, setIsRecordingAudio] = useState(false);
+  const [isRecordingVideo, setIsRecordingVideo] = useState(false);
   const [statusString, setStatusString] = useState<string>('');
   
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const videoPreviewRef = useRef<HTMLVideoElement>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -74,7 +76,6 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
   }, [db, otherId]);
   const { data: otherUserProfile, isLoading: isOtherProfileLoading } = useDoc<User>(otherUserRef);
 
-  // Check if I blocked them or they blocked me
   const isBlockedByMe = userProfile?.blockedUserIds?.includes(otherId || '');
   const isBlockedByThem = otherUserProfile?.blockedUserIds?.includes(user?.uid || '');
   const isBlocked = isBlockedByMe || isBlockedByThem;
@@ -129,7 +130,7 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
 
   useEffect(() => {
     if (messages && user && currentChatId && chat && isParticipant && db) {
-      const unread = messages.filter(msg => !msg.isRead && msg.senderId !== user.uid).slice(0, 5);
+      const unread = messages.filter(msg => !msg.isRead && msg.senderId !== user.uid);
       unread.forEach(msg => {
         const msgRef = doc(db, 'chats', currentChatId, 'messages', msg.id);
         updateDocumentNonBlocking(msgRef, { isRead: true });
@@ -146,7 +147,7 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
 
   const handleSendMessage = (content: string = inputText, type: string = 'text') => {
     if (isBlocked) {
-      toast({ title: "Ошибка", description: "Вы не можете отправлять сообщения заблокированному пользователю", variant: "destructive" });
+      toast({ title: "Ошибка", description: "Вы не можете отправлять сообщения", variant: "destructive" });
       return;
     }
     const text = content.trim();
@@ -196,19 +197,39 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
     } finally { setIsSuggesting(false); }
   };
 
-  const stopRecording = () => {
+  const startVideoRecording = async () => {
+    if (isBlocked) return;
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: { width: 400, height: 400, facingMode: 'user' } });
+      if (videoPreviewRef.current) {
+        videoPreviewRef.current.srcObject = stream;
+      }
+      mediaRecorderRef.current = new MediaRecorder(stream, { mimeType: 'video/webm' });
+      audioChunksRef.current = [];
+      mediaRecorderRef.current.ondataavailable = e => e.data.size > 0 && audioChunksRef.current.push(e.data);
+      mediaRecorderRef.current.onstop = () => {
+        const blob = new Blob(audioChunksRef.current, { type: 'video/webm' });
+        const reader = new FileReader();
+        reader.onloadend = () => handleSendMessage(reader.result as string, 'video');
+        reader.readAsDataURL(blob);
+        stream.getTracks().forEach(t => t.stop());
+      };
+      mediaRecorderRef.current.start();
+      setIsRecordingVideo(true);
+    } catch (e) {
+      toast({ title: "Нет доступа к камере", variant: "destructive" });
+    }
+  };
+
+  const stopVideoRecording = () => {
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
       mediaRecorderRef.current.stop();
-      mediaRecorderRef.current.stream.getTracks().forEach(t => t.stop());
     }
-    setIsRecordingAudio(false);
+    setIsRecordingVideo(false);
   };
 
   const startAudioRecording = async () => {
-    if (isBlocked) {
-      toast({ title: "Ошибка", description: "Функция недоступна", variant: "destructive" });
-      return;
-    }
+    if (isBlocked) return;
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       mediaRecorderRef.current = new MediaRecorder(stream);
@@ -219,10 +240,18 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
         const reader = new FileReader();
         reader.onloadend = () => handleSendMessage(reader.result as string, 'audio');
         reader.readAsDataURL(blob);
+        stream.getTracks().forEach(t => t.stop());
       };
       mediaRecorderRef.current.start();
       setIsRecordingAudio(true);
     } catch (e) { toast({ title: "Нет доступа к микрофону", variant: "destructive" }); }
+  };
+
+  const stopAudioRecording = () => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      mediaRecorderRef.current.stop();
+    }
+    setIsRecordingAudio(false);
   };
 
   const chatDisplayName = otherId && chat?.metadata && chat.metadata[otherId] ? chat.metadata[otherId].name : chat?.name;
@@ -242,8 +271,8 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
     : {};
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-background relative overflow-hidden">
-      <header className="h-16 flex items-center justify-between px-4 border-b border-border/40 bg-card/20 backdrop-blur-xl z-20">
+    <div className="flex-1 flex flex-col h-[100dvh] bg-background relative overflow-hidden">
+      <header className="h-16 flex items-center justify-between px-4 border-b border-border/40 bg-card/20 backdrop-blur-xl z-20 shrink-0">
         <div className="flex items-center gap-2 min-w-0">
           <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setCurrentChatId(null)}>
             <ChevronLeft className="w-5 h-5" />
@@ -288,7 +317,7 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
         </ScrollArea>
       </div>
 
-      <footer className="p-3 bg-card/20 backdrop-blur-xl border-t border-border/40 z-20">
+      <footer className="p-3 bg-card/20 backdrop-blur-xl border-t border-border/40 z-20 shrink-0">
         {isParticipant ? (
           <div className="flex flex-col gap-2 max-w-4xl mx-auto">
             {isBlocked ? (
@@ -298,6 +327,12 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
               </div>
             ) : (
               <>
+                {isRecordingVideo && (
+                  <div className="absolute bottom-20 left-1/2 -translate-x-1/2 w-48 h-48 rounded-full overflow-hidden border-4 border-primary shadow-2xl z-50 bg-black">
+                    <video ref={videoPreviewRef} autoPlay muted playsInline className="w-full h-full object-cover" />
+                    <Button variant="destructive" size="icon" className="absolute bottom-2 left-1/2 -translate-x-1/2 rounded-full h-8 w-8" onClick={stopVideoRecording}><StopCircle className="w-5 h-5" /></Button>
+                  </div>
+                )}
                 {replyTo && (
                   <div className="flex items-center justify-between bg-muted/40 p-2 rounded-xl border-l-4 border-primary mb-2">
                     <div className="flex items-center gap-3 truncate">
@@ -316,10 +351,13 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
                     <Button variant="ghost" size="icon" onClick={handleAISuggest} disabled={isSuggesting}><Sparkles className={cn("w-5 h-5 text-accent", isSuggesting && "animate-spin")} /></Button>
                   </div>
                   <div className="flex-1 relative">
-                    <Input placeholder={editMessage ? "Изменить..." : "Сообщение..."} value={inputText} onChange={e => setInputText(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSendMessage()} className="bg-muted/40 rounded-2xl h-11 pr-12" />
-                    <Button size="icon" className={cn("absolute right-1 top-1 w-9 h-9 rounded-xl transition-all", inputText.trim() ? 'scale-100' : 'scale-0')} onClick={() => handleSendMessage()}><Send className="w-4 h-4" /></Button>
+                    <Input placeholder={editMessage ? "Изменить..." : "Сообщение..."} value={inputText} onChange={e => setInputText(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSendMessage()} className="bg-muted/40 rounded-2xl h-11 pr-12 focus:ring-1 focus:ring-primary" />
+                    <Button size="icon" className={cn("absolute right-1 top-1 w-9 h-9 rounded-xl transition-all", (inputText.trim() || isRecordingVideo || isRecordingAudio) ? 'scale-100' : 'scale-0')} onClick={() => handleSendMessage()}><Send className="w-4 h-4" /></Button>
                   </div>
-                  <Button variant="ghost" size="icon" onClick={isRecordingAudio ? stopRecording : startAudioRecording} className={cn("mb-1", isRecordingAudio && "text-primary")}><Mic className="w-5 h-5" /></Button>
+                  <div className="flex gap-1 mb-1">
+                    <Button variant="ghost" size="icon" onClick={isRecordingVideo ? stopVideoRecording : startVideoRecording} className={cn(isRecordingVideo && "text-primary animate-pulse")}><Camera className="w-5 h-5" /></Button>
+                    <Button variant="ghost" size="icon" onClick={isRecordingAudio ? stopAudioRecording : startAudioRecording} className={cn(isRecordingAudio && "text-primary animate-pulse")}><Mic className="w-5 h-5" /></Button>
+                  </div>
                 </div>
               </>
             )}

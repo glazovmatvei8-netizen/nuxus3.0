@@ -117,8 +117,10 @@ export function MessageItem({ message, isMe, chatId, onReply, onEdit, size = 'me
         );
       case 'video':
         return (
-          <div className="mt-1 rounded-xl overflow-hidden border border-border/20 max-w-sm bg-black aspect-video flex items-center justify-center">
-            <video src={message.content} controls className="max-w-full max-h-[300px]" />
+          <div className="mt-1 flex justify-center">
+            <div className="relative w-48 h-48 rounded-full overflow-hidden border-4 border-primary/40 bg-black shadow-lg">
+              <video src={message.content} controls className="w-full h-full object-cover" />
+            </div>
           </div>
         );
       case 'service':
@@ -169,7 +171,7 @@ export function MessageItem({ message, isMe, chatId, onReply, onEdit, size = 'me
 
               <div className={cn(
                 "rounded-2xl shadow-sm relative group-hover:shadow-md transition-shadow",
-                sizeClasses[size],
+                message.contentType !== 'video' ? sizeClasses[size] : "p-1",
                 isMe 
                   ? "bg-primary text-white rounded-br-none" 
                   : "bg-card text-foreground rounded-bl-none border border-border/40",
