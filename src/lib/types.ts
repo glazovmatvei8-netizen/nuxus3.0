@@ -66,5 +66,4 @@ export interface User {
   settings?: UserSettings;
   blockedUserIds?: string[];
   isBanned?: boolean;
-  frozenUntil?: string; // ISO timestamp
 }

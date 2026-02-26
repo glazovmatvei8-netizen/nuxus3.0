@@ -1,18 +1,13 @@
 
 "use client"
 
-import React, { useState, useMemo } from 'react';
+import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { 
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { Sparkles, Users, Loader2, Trash2, ShieldAlert, ShieldCheck, Ban, Gavel, UserX, Snowflake, Clock } from 'lucide-react';
+import { Sparkles, Loader2, Trash2, ShieldAlert, ShieldCheck, Ban, Gavel, UserX } from 'lucide-react';
 import { useFirestore, useCollection, useMemoFirebase, useUser, useDoc } from '@/firebase';
 import { collection, query, where, orderBy, limit, getDocs, doc, arrayUnion, arrayRemove } from 'firebase/firestore';
 import { chatConversationSummary } from '@/ai/flows/chat-conversation-summary-flow';
@@ -21,22 +16,12 @@ import { deleteDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase
 import { useAppState } from '@/lib/store';
 import { cn } from '@/lib/utils';
 import type { Message, User } from '@/lib/types';
-import { addHours, addDays } from 'date-fns';
 
 interface ChatInfoModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   chat: any;
 }
-
-const FREEZE_OPTIONS = [
-  { label: '1 час', value: 1, unit: 'hour' },
-  { label: '12 часов', value: 12, unit: 'hour' },
-  { label: '1 день', value: 1, unit: 'day' },
-  { label: '3 дня', value: 3, unit: 'day' },
-  { label: '7 дней', value: 7, unit: 'day' },
-  { label: '30 дней', value: 30, unit: 'day' },
-];
 
 export function ChatInfoModal({ open, onOpenChange, chat }: ChatInfoModalProps) {
   const db = useFirestore();
@@ -137,22 +122,6 @@ export function ChatInfoModal({ open, onOpenChange, chat }: ChatInfoModalProps) 
     toast({ 
       title: newBanStatus ? "Пользователь забанен" : "Бан снят",
       variant: newBanStatus ? "destructive" : "default"
-    });
-  };
-
-  const handleFreeze = (targetUser: User, value: number, unit: string) => {
-    if (!isAdmin || !db) return;
-    const targetRef = doc(db, 'users', targetUser.id);
-    const now = new Date();
-    const frozenUntil = unit === 'hour' ? addHours(now, value) : addDays(now, value);
-    
-    updateDocumentNonBlocking(targetRef, {
-      frozenUntil: frozenUntil.toISOString()
-    });
-    
-    toast({ 
-      title: `Пользователь заморожен на ${value} ${unit === 'hour' ? 'ч.' : 'д.'}`,
-      variant: "destructive"
     });
   };
 
@@ -263,30 +232,6 @@ export function ChatInfoModal({ open, onOpenChange, chat }: ChatInfoModalProps) 
                   </div>
                   {isAdmin && userMember.id !== user?.uid && (
                     <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <Button size="icon" variant="ghost" className="h-8 w-8 rounded-full text-accent" title="Заморозить">
-                            <Snowflake className="w-4 h-4" />
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-48 p-2 bg-card/95 backdrop-blur-xl border-border/40" side="left">
-                          <div className="flex flex-col gap-1">
-                            <p className="text-[10px] font-bold text-muted-foreground mb-1 px-2">СРОК ЗАМОРОЗКИ</p>
-                            {FREEZE_OPTIONS.map(opt => (
-                              <Button 
-                                key={opt.label} 
-                                variant="ghost" 
-                                size="sm" 
-                                className="justify-start h-8 text-xs"
-                                onClick={() => handleFreeze(userMember, opt.value, opt.unit)}
-                              >
-                                <Clock className="w-3 h-3 mr-2" /> {opt.label}
-                              </Button>
-                            ))}
-                          </div>
-                        </PopoverContent>
-                      </Popover>
-
                       <Button 
                         size="icon" 
                         variant="ghost" 

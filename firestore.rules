@@ -23,9 +23,8 @@ service cloud.firestore {
       
       let userData = get(userPath).data;
       let banned = userData.get('isBanned', false) == true;
-      let frozen = userData.keys().has('frozenUntil') && timestamp(userData.frozenUntil) > request.time;
       
-      return !banned && !frozen;
+      return !banned;
     }
 
     function isOwner(userId) {
