@@ -64,4 +64,5 @@ export interface User {
   createdAt: string;
   inactivityDeletion: '1-month' | '3-months' | '6-months' | '1-year' | 'never';
   settings?: UserSettings;
+  blockedUserIds?: string[];
 }

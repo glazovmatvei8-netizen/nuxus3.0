@@ -9,7 +9,7 @@ import { UserAvatar } from '@/components/user-avatar';
 import { 
   Send, Paperclip, Smile, MoreVertical, ChevronLeft, 
   Sparkles, MessageSquare, Info, Mic, Camera, X, StopCircle, UserPlus,
-  CornerUpLeft, Pencil, Trash2, Loader2
+  CornerUpLeft, Pencil, Trash2, Loader2, ShieldAlert
 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { MessageItem } from './message-item';
@@ -21,7 +21,7 @@ import { addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/no
 import { suggestMessageDraft } from '@/ai/flows/ai-message-drafting-flow';
 import { cn } from '@/lib/utils';
 import { formatLastSeen } from '@/lib/utils';
-import type { Message } from '@/lib/types';
+import type { Message, User } from '@/lib/types';
 
 interface ChatAreaProps {
   toggleSidebar: () => void;
@@ -54,7 +54,7 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
     if (!db || !user) return null;
     return doc(db, 'users', user.uid);
   }, [db, user]);
-  const { data: userProfile } = useDoc(userProfileRef);
+  const { data: userProfile } = useDoc<User>(userProfileRef);
 
   const chatRef = useMemoFirebase(() => {
     if (!db || !currentChatId) return null;
@@ -72,7 +72,12 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
     if (!db || !otherId) return null;
     return doc(db, 'users', otherId);
   }, [db, otherId]);
-  const { data: otherUserProfile, isLoading: isOtherProfileLoading } = useDoc(otherUserRef);
+  const { data: otherUserProfile, isLoading: isOtherProfileLoading } = useDoc<User>(otherUserRef);
+
+  // Check if I blocked them or they blocked me
+  const isBlockedByMe = userProfile?.blockedUserIds?.includes(otherId || '');
+  const isBlockedByThem = otherUserProfile?.blockedUserIds?.includes(user?.uid || '');
+  const isBlocked = isBlockedByMe || isBlockedByThem;
 
   const messagesQuery = useMemoFirebase(() => {
     if (!db || !currentChatId || !isParticipant) return null;
@@ -85,7 +90,7 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
   const { data: messages, isLoading: isMessagesLoading } = useCollection<Message>(messagesQuery);
 
   useEffect(() => {
-    if (!currentChatId || !user || !isParticipant || !db) return;
+    if (!currentChatId || !user || !isParticipant || !db || isBlocked) return;
     
     if (inputText.length > 0) {
       updateDocumentNonBlocking(doc(db, 'chats', currentChatId), {
@@ -103,11 +108,15 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
         [`typing.${user.uid}`]: false
       });
     }
-  }, [inputText, currentChatId, user, db, isParticipant]);
+  }, [inputText, currentChatId, user, db, isParticipant, isBlocked]);
 
   useEffect(() => {
     const isTyping = chat?.typing && otherId && chat.typing[otherId];
-    if (isTyping) {
+    if (isBlockedByMe) {
+      setStatusString('Пользователь заблокирован');
+    } else if (isBlockedByThem) {
+      setStatusString('Вы заблокированы');
+    } else if (isTyping) {
       setStatusString('печатает...');
     } else if (isOtherProfileLoading) {
       setStatusString('загрузка...');
@@ -116,7 +125,7 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
     } else {
       setStatusString(chat?.type === 'group' ? 'Группа' : 'Канал');
     }
-  }, [isOtherProfileLoading, otherUserProfile?.lastSeen, otherUserProfile?.settings?.privacy?.lastSeenVisibility, chat?.type, chat?.typing, otherId]);
+  }, [isOtherProfileLoading, otherUserProfile?.lastSeen, otherUserProfile?.settings?.privacy?.lastSeenVisibility, chat?.type, chat?.typing, otherId, isBlockedByMe, isBlockedByThem]);
 
   useEffect(() => {
     if (messages && user && currentChatId && chat && isParticipant && db) {
@@ -136,6 +145,10 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
   }, [messages]);
 
   const handleSendMessage = (content: string = inputText, type: string = 'text') => {
+    if (isBlocked) {
+      toast({ title: "Ошибка", description: "Вы не можете отправлять сообщения заблокированному пользователю", variant: "destructive" });
+      return;
+    }
     const text = content.trim();
     if (!text && type === 'text') return;
     if (!currentChatId || !user || !isParticipant || !db) return;
@@ -192,6 +205,10 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
   };
 
   const startAudioRecording = async () => {
+    if (isBlocked) {
+      toast({ title: "Ошибка", description: "Функция недоступна", variant: "destructive" });
+      return;
+    }
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       mediaRecorderRef.current = new MediaRecorder(stream);
@@ -235,7 +252,7 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
             <UserAvatar userId={chat?.type === 'private' ? otherId : null} fallbackName={chatDisplayName} className="h-9 w-9 ring-2 ring-primary/20" />
             <div className="flex flex-col min-w-0">
               <span className="font-semibold text-sm truncate">{chatDisplayName}</span>
-              <span className={cn("text-[10px] truncate", statusString === 'печатает...' ? 'text-accent font-bold' : 'text-muted-foreground')}>{statusString}</span>
+              <span className={cn("text-[10px] truncate", (statusString === 'печатает...' || isBlocked) ? 'text-accent font-bold' : 'text-muted-foreground')}>{statusString}</span>
             </div>
           </div>
         </div>
@@ -274,29 +291,38 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
       <footer className="p-3 bg-card/20 backdrop-blur-xl border-t border-border/40 z-20">
         {isParticipant ? (
           <div className="flex flex-col gap-2 max-w-4xl mx-auto">
-            {replyTo && (
-              <div className="flex items-center justify-between bg-muted/40 p-2 rounded-xl border-l-4 border-primary mb-2">
-                <div className="flex items-center gap-3 truncate">
-                  <CornerUpLeft className="w-4 h-4 text-primary" />
-                  <span className="text-xs truncate italic">{replyTo.content}</span>
+            {isBlocked ? (
+              <div className="flex items-center justify-center h-12 bg-muted/20 rounded-xl border border-border/40 text-muted-foreground text-xs font-semibold gap-2">
+                <ShieldAlert className="w-4 h-4" />
+                {isBlockedByMe ? "Вы заблокировали пользователя" : "Вы заблокированы этим пользователем"}
+              </div>
+            ) : (
+              <>
+                {replyTo && (
+                  <div className="flex items-center justify-between bg-muted/40 p-2 rounded-xl border-l-4 border-primary mb-2">
+                    <div className="flex items-center gap-3 truncate">
+                      <CornerUpLeft className="w-4 h-4 text-primary" />
+                      <span className="text-xs truncate italic">{replyTo.content}</span>
+                    </div>
+                    <Button size="icon" variant="ghost" onClick={() => setReplyTo(null)} className="h-6 w-6"><X className="w-4 h-4" /></Button>
+                  </div>
+                )}
+                <div className="flex items-end gap-2">
+                  <div className="flex items-center gap-1 mb-1">
+                    <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={e => {
+                      const f = e.target.files?.[0]; if (f) { const r = new FileReader(); r.onloadend = () => handleSendMessage(r.result as string, 'image'); r.readAsDataURL(f); }
+                    }} />
+                    <Button variant="ghost" size="icon" onClick={() => fileInputRef.current?.click()}><Paperclip className="w-5 h-5" /></Button>
+                    <Button variant="ghost" size="icon" onClick={handleAISuggest} disabled={isSuggesting}><Sparkles className={cn("w-5 h-5 text-accent", isSuggesting && "animate-spin")} /></Button>
+                  </div>
+                  <div className="flex-1 relative">
+                    <Input placeholder={editMessage ? "Изменить..." : "Сообщение..."} value={inputText} onChange={e => setInputText(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSendMessage()} className="bg-muted/40 rounded-2xl h-11 pr-12" />
+                    <Button size="icon" className={cn("absolute right-1 top-1 w-9 h-9 rounded-xl transition-all", inputText.trim() ? 'scale-100' : 'scale-0')} onClick={() => handleSendMessage()}><Send className="w-4 h-4" /></Button>
+                  </div>
+                  <Button variant="ghost" size="icon" onClick={isRecordingAudio ? stopRecording : startAudioRecording} className={cn("mb-1", isRecordingAudio && "text-primary")}><Mic className="w-5 h-5" /></Button>
                 </div>
-                <Button size="icon" variant="ghost" onClick={() => setReplyTo(null)} className="h-6 w-6"><X className="w-4 h-4" /></Button>
-              </div>
+              </>
             )}
-            <div className="flex items-end gap-2">
-              <div className="flex items-center gap-1 mb-1">
-                <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={e => {
-                  const f = e.target.files?.[0]; if (f) { const r = new FileReader(); r.onloadend = () => handleSendMessage(r.result as string, 'image'); r.readAsDataURL(f); }
-                }} />
-                <Button variant="ghost" size="icon" onClick={() => fileInputRef.current?.click()}><Paperclip className="w-5 h-5" /></Button>
-                <Button variant="ghost" size="icon" onClick={handleAISuggest} disabled={isSuggesting}><Sparkles className={cn("w-5 h-5 text-accent", isSuggesting && "animate-spin")} /></Button>
-              </div>
-              <div className="flex-1 relative">
-                <Input placeholder={editMessage ? "Изменить..." : "Сообщение..."} value={inputText} onChange={e => setInputText(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSendMessage()} className="bg-muted/40 rounded-2xl h-11 pr-12" />
-                <Button size="icon" className={cn("absolute right-1 top-1 w-9 h-9 rounded-xl transition-all", inputText.trim() ? 'scale-100' : 'scale-0')} onClick={() => handleSendMessage()}><Send className="w-4 h-4" /></Button>
-              </div>
-              <Button variant="ghost" size="icon" onClick={isRecordingAudio ? stopRecording : startAudioRecording} className={cn("mb-1", isRecordingAudio && "text-primary")}><Mic className="w-5 h-5" /></Button>
-            </div>
           </div>
         ) : (
           <div className="flex justify-center max-w-4xl mx-auto">

@@ -3,11 +3,6 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    /**
-     * NUXUSCHAT SECURITY MODEL
-     * Базовая стабильная версия правил.
-     */
-
     function isSignedIn() {
       return request.auth != null;
     }
@@ -16,7 +11,6 @@ service cloud.firestore {
       return isSignedIn() && request.auth.uid == userId;
     }
 
-    // Простая проверка участия в чате
     function isParticipant(chatId) {
       let chat = get(/databases/$(database)/documents/chats/$(chatId)).data;
       return isSignedIn() && (chat.participantIds.hasAny([request.auth.uid]));
@@ -37,7 +31,6 @@ service cloud.firestore {
     }
 
     match /chats/{chatId}/messages/{messageId} {
-      // Чтение: только участники (для стабильности)
       allow get, list: if isParticipant(chatId);
       allow create: if isParticipant(chatId);
       allow update: if isParticipant(chatId); 

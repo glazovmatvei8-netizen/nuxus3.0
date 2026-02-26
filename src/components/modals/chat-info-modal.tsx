@@ -7,12 +7,14 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { Sparkles, Users, Loader2 } from 'lucide-react';
-import { useFirestore, useCollection, useMemoFirebase, useUser } from '@/firebase';
-import { collection, query, where, orderBy, limit, getDocs } from 'firebase/firestore';
+import { Sparkles, Users, Loader2, Trash2, ShieldAlert, ShieldCheck } from 'lucide-react';
+import { useFirestore, useCollection, useMemoFirebase, useUser, useDoc } from '@/firebase';
+import { collection, query, where, orderBy, limit, getDocs, doc, arrayUnion, arrayRemove } from 'firebase/firestore';
 import { chatConversationSummary } from '@/ai/flows/chat-conversation-summary-flow';
 import { useToast } from '@/hooks/use-toast';
-import type { Message } from '@/lib/types';
+import { deleteDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { useAppState } from '@/lib/store';
+import type { Message, User } from '@/lib/types';
 
 interface ChatInfoModalProps {
   open: boolean;
@@ -23,16 +25,23 @@ interface ChatInfoModalProps {
 export function ChatInfoModal({ open, onOpenChange, chat }: ChatInfoModalProps) {
   const db = useFirestore();
   const { user } = useUser();
+  const { setCurrentChatId } = useAppState();
   const [summary, setSummary] = useState<string | null>(null);
   const [isSummarizing, setIsSummarizing] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const { toast } = useToast();
 
-  const isParticipant = useMemo(() => {
-    return user && chat.participantIds?.includes(user.uid);
-  }, [user, chat.participantIds]);
+  const isOwner = user && chat.ownerId === user.uid;
+  const isPrivate = chat.type === 'private';
+  const otherId = isPrivate && user ? chat.participantIds?.find((id: string) => id !== user.uid) : null;
 
-  const chatName = chat.name || 'Chat';
-  const chatAvatar = chat.avatarUrl;
+  const userProfileRef = useMemoFirebase(() => {
+    if (!db || !user) return null;
+    return doc(db, 'users', user.uid);
+  }, [db, user]);
+  const { data: currentUserProfile } = useDoc<User>(userProfileRef);
+
+  const isBlocked = currentUserProfile?.blockedUserIds?.includes(otherId);
 
   const membersQuery = useMemoFirebase(() => {
     if (!db || !chat.participantIds) return null;
@@ -42,7 +51,7 @@ export function ChatInfoModal({ open, onOpenChange, chat }: ChatInfoModalProps) 
   const { data: members } = useCollection(membersQuery);
 
   const handleSummarize = async () => {
-    if (!db || !chat.id || !isParticipant) return;
+    if (!db || !chat.id) return;
     setIsSummarizing(true);
     try {
       const msgsQuery = query(
@@ -65,59 +74,124 @@ export function ChatInfoModal({ open, onOpenChange, chat }: ChatInfoModalProps) 
     }
   };
 
+  const handleDeleteChat = async () => {
+    if (!db || !chat.id || !isOwner) return;
+    if (!confirm('Вы уверены, что хотите удалить этот чат для всех?')) return;
+    
+    setIsDeleting(true);
+    try {
+      deleteDocumentNonBlocking(doc(db, 'chats', chat.id));
+      setCurrentChatId(null);
+      onOpenChange(false);
+      toast({ title: "Чат удален" });
+    } catch (e) {
+      toast({ title: "Ошибка при удалении", variant: "destructive" });
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const handleToggleBlock = () => {
+    if (!userProfileRef || !otherId) return;
+    
+    if (isBlocked) {
+      updateDocumentNonBlocking(userProfileRef, {
+        blockedUserIds: arrayRemove(otherId)
+      });
+      toast({ title: "Пользователь разблокирован" });
+    } else {
+      updateDocumentNonBlocking(userProfileRef, {
+        blockedUserIds: arrayUnion(otherId)
+      });
+      toast({ title: "Пользователь заблокирован" });
+    }
+  };
+
+  const chatName = chat.name || 'Chat';
+  const chatAvatar = chat.avatarUrl;
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md bg-card/95 backdrop-blur-xl border-border/40 p-0 overflow-hidden max-h-[90vh] flex flex-col">
         <DialogHeader className="p-6 bg-primary/5 border-b border-border/40 text-center flex flex-col items-center">
-          <Avatar className="h-24 w-24 mb-4">
+          <Avatar className="h-24 w-24 mb-4 ring-4 ring-primary/10">
             <AvatarImage src={chatAvatar || ''} />
-            <AvatarFallback>{chatName.slice(0, 2)}</AvatarFallback>
+            <AvatarFallback className="text-2xl font-bold">{chatName.slice(0, 2)}</AvatarFallback>
           </Avatar>
-          <DialogTitle>{chatName}</DialogTitle>
-          <DialogDescription>{chat.username}</DialogDescription>
+          <DialogTitle className="text-xl">{chatName}</DialogTitle>
+          <DialogDescription className="text-xs">{chat.username}</DialogDescription>
         </DialogHeader>
 
         <Tabs defaultValue="info" className="flex-1 overflow-hidden">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="info">Инфо</TabsTrigger>
-            <TabsTrigger value="members">Участники</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-2 h-12 bg-muted/30 p-1">
+            <TabsTrigger value="info" className="rounded-lg">Инфо</TabsTrigger>
+            <TabsTrigger value="members" className="rounded-lg">Участники</TabsTrigger>
           </TabsList>
 
           <ScrollArea className="h-[300px]">
             <TabsContent value="info" className="p-6 space-y-6">
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-xs font-bold uppercase text-muted-foreground">AI Summary</h3>
-                  <Button variant="ghost" size="sm" onClick={handleSummarize} disabled={isSummarizing}>
-                    {isSummarizing ? <Loader2 className="animate-spin" /> : 'Обновить'}
+                  <h3 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">AI Summary</h3>
+                  <Button variant="ghost" size="sm" className="h-7 text-xs text-primary" onClick={handleSummarize} disabled={isSummarizing}>
+                    {isSummarizing ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3 mr-1" />}
+                    Обновить
                   </Button>
                 </div>
-                <div className="bg-muted/20 p-4 rounded-xl border border-border/40">
-                  {summary ? <p className="text-sm italic">{summary}</p> : <p className="text-xs text-muted-foreground">Нет данных</p>}
+                <div className="bg-muted/30 p-4 rounded-xl border border-border/40">
+                  {summary ? <p className="text-sm italic leading-relaxed">{summary}</p> : <p className="text-xs text-muted-foreground italic text-center">Нажмите «Обновить» для суммаризации</p>}
                 </div>
               </div>
+              
               <div className="space-y-2">
-                <h3 className="text-xs font-bold uppercase text-muted-foreground">Описание</h3>
-                <p className="text-sm">{chat.description || 'Нет описания'}</p>
+                <h3 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Описание</h3>
+                <p className="text-sm bg-muted/10 p-3 rounded-lg border border-border/20">{chat.description || 'Нет описания'}</p>
+              </div>
+
+              <div className="pt-4 space-y-3">
+                {isPrivate && otherId && (
+                  <Button 
+                    variant={isBlocked ? "outline" : "ghost"} 
+                    className={isBlocked ? "w-full text-accent" : "w-full text-destructive hover:bg-destructive/10"}
+                    onClick={handleToggleBlock}
+                  >
+                    {isBlocked ? <ShieldCheck className="w-4 h-4 mr-2" /> : <ShieldAlert className="w-4 h-4 mr-2" />}
+                    {isBlocked ? "Разблокировать пользователя" : "Заблокировать пользователя"}
+                  </Button>
+                )}
+                {isOwner && (
+                  <Button 
+                    variant="ghost" 
+                    className="w-full text-destructive hover:bg-destructive/10" 
+                    onClick={handleDeleteChat}
+                    disabled={isDeleting}
+                  >
+                    {isDeleting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Trash2 className="w-4 h-4 mr-2" />}
+                    Удалить чат для всех
+                  </Button>
+                )}
               </div>
             </TabsContent>
 
-            <TabsContent value="members" className="p-4">
-              {members?.map(user => (
-                <div key={user.id} className="flex items-center gap-3 p-2 rounded-xl hover:bg-muted/30">
-                  <Avatar className="h-9 w-9">
-                    <AvatarImage src={user.avatarUrl || ''} />
-                    <AvatarFallback>{user.name?.slice(0, 2)}</AvatarFallback>
+            <TabsContent value="members" className="p-4 space-y-1">
+              {members?.map(userMember => (
+                <div key={userMember.id} className="flex items-center gap-3 p-3 rounded-xl hover:bg-muted/40 transition-colors">
+                  <Avatar className="h-10 w-10">
+                    <AvatarImage src={userMember.avatarUrl || ''} />
+                    <AvatarFallback className="bg-primary/20 text-primary font-bold">{userMember.name?.slice(0, 2)}</AvatarFallback>
                   </Avatar>
-                  <span className="text-sm font-semibold">{user.name}</span>
+                  <div className="flex flex-col">
+                    <span className="text-sm font-semibold">{userMember.name}</span>
+                    <span className="text-[10px] text-muted-foreground">{userMember.username}</span>
+                  </div>
                 </div>
               ))}
             </TabsContent>
           </ScrollArea>
         </Tabs>
         
-        <div className="p-4 border-t border-border/40">
-          <Button variant="outline" className="w-full" onClick={() => onOpenChange(false)}>
+        <div className="p-4 border-t border-border/40 bg-muted/10">
+          <Button variant="outline" className="w-full h-11 rounded-xl" onClick={() => onOpenChange(false)}>
             Закрыть
           </Button>
         </div>

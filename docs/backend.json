@@ -37,6 +37,13 @@
           "type": "string",
           "description": "Timestamp indicating when the user profile was created.",
           "format": "date-time"
+        },
+        "blockedUserIds": {
+          "type": "array",
+          "description": "List of user IDs that this user has blocked.",
+          "items": {
+            "type": "string"
+          }
         }
       },
       "required": [
