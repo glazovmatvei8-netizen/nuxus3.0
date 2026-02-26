@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
   Send, Paperclip, Sparkles, MessageSquare, Info, Mic, Camera, X, UserPlus,
-  CornerUpLeft, Loader2, ShieldAlert, Trash, Check, MoreVertical, ChevronLeft
+  CornerUpLeft, Loader2, ShieldAlert, Trash, Check, MoreVertical, ChevronLeft, ChevronDown
 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { MessageItem } from './message-item';
@@ -33,6 +33,7 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
   const [inputText, setInputText] = useState('');
   const [isChatInfoOpen, setIsChatInfoOpen] = useState(false);
   const [isSuggesting, setIsSuggesting] = useState(false);
+  const [showScrollDown, setShowScrollDown] = useState(false);
   
   const [replyTo, setReplyTo] = useState<Message | null>(null);
   const [editMessage, setEditMessage] = useState<Message | null>(null);
@@ -147,11 +148,25 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
   }, [messages, user, currentChatId, isParticipant, db, chat]);
 
   useEffect(() => {
-    if (scrollRef.current) {
-      const viewport = scrollRef.current.querySelector('[data-radix-scroll-area-viewport]');
-      if (viewport) viewport.scrollTop = viewport.scrollHeight;
+    if (scrollRef.current && !showScrollDown) {
+      scrollToBottom();
     }
   }, [messages]);
+
+  const scrollToBottom = () => {
+    if (scrollRef.current) {
+      const viewport = scrollRef.current.querySelector('[data-radix-scroll-area-viewport]');
+      if (viewport) {
+        viewport.scrollTo({ top: viewport.scrollHeight, behavior: 'smooth' });
+      }
+    }
+  };
+
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const target = e.currentTarget;
+    const isUp = target.scrollHeight - target.scrollTop - target.clientHeight > 300;
+    setShowScrollDown(isUp);
+  };
 
   const handleSendMessage = (content: string = inputText, type: string = 'text') => {
     if (isBlocked) {
@@ -188,6 +203,7 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
 
     addDocumentNonBlocking(collection(db, 'chats', currentChatId, 'messages'), data);
     if (type === 'text') setInputText('');
+    setTimeout(scrollToBottom, 100);
   };
 
   const handleAISuggest = async () => {
@@ -362,7 +378,11 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
         {customBackground && customBackground !== 'default' && (
           <div className="absolute inset-0 z-[-1] brightness-100" style={bgStyle} />
         )}
-        <ScrollArea ref={scrollRef} className="h-full px-4 py-4">
+        <ScrollArea 
+          ref={scrollRef} 
+          className="h-full px-4 py-4"
+          onScroll={handleScroll as any}
+        >
           {!isParticipant && !isChatLoading && chat ? (
             <div className="flex flex-col items-center justify-center h-full gap-4">
               <UserPlus className="w-12 h-12 text-primary" />
@@ -382,6 +402,17 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
             </div>
           )}
         </ScrollArea>
+        
+        {showScrollDown && (
+          <Button 
+            size="icon" 
+            variant="secondary" 
+            className="absolute bottom-4 right-4 rounded-full shadow-lg z-30 animate-in fade-in zoom-in"
+            onClick={scrollToBottom}
+          >
+            <ChevronDown className="w-5 h-5" />
+          </Button>
+        )}
       </div>
 
       <footer className="p-3 bg-card/20 backdrop-blur-xl border-t border-border/40 z-20 shrink-0">
@@ -403,6 +434,9 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
                       playsInline 
                       className="w-full h-full object-cover" 
                     />
+                    <div className="absolute top-4 left-0 right-0 flex justify-center">
+                       <div className="bg-red-500 w-2 h-2 rounded-full animate-pulse shadow-[0_0_10px_red]" />
+                    </div>
                     <div className="absolute bottom-2 left-0 right-0 flex justify-center gap-4 px-4">
                        <Button variant="destructive" size="icon" className="rounded-full h-10 w-10 shadow-lg" onClick={cancelVideoRecording} aria-label="Отменить видео">
                           <Trash className="w-5 h-5" />
