@@ -9,9 +9,17 @@ service cloud.firestore {
 
     function isNotBanned() {
       let userPath = /databases/$(database)/documents/users/$(request.auth.uid);
-      let userData = get(userPath).data;
-      // Доступ разрешен если: профиля нет ИЛИ (флаг бана ложный И срок заморозки прошел)
-      return isSignedIn() && (!exists(userPath) || (userData.get('isBanned', false) == false && (!userData.keys().has('frozenUntil') || duration(request.time - timestamp(userData.frozenUntil)).seconds() > 0)));
+      // Доступ разрешен если:
+      // 1. Пользователь авторизован
+      // 2. И ЛИБО профиля еще нет (первый вход), ЛИБО он не забанен и не заморожен
+      return isSignedIn() && (
+        !exists(userPath) || (
+          get(userPath).data.get('isBanned', false) == false && (
+            !get(userPath).data.keys().has('frozenUntil') || 
+            timestamp(get(userPath).data.frozenUntil) < request.time
+          )
+        )
+      );
     }
 
     function isOwner(userId) {
@@ -37,9 +45,16 @@ service cloud.firestore {
     }
 
     match /chats/{chatId} {
-      allow get, list: if isSignedIn() && isNotBanned();
+      // Разрешаем листинг коллекции чатов для всех незабаненных (фильтрация идет на клиенте по participantIds)
+      allow list: if isSignedIn() && isNotBanned();
+      
+      // Доступ к конкретному чату только участникам или админу
+      allow get: if isSignedIn() && (isParticipant(chatId) || isAdmin());
+      
       allow create: if isSignedIn() && isNotBanned();
+      
       allow update: if (isSignedIn() && isNotBanned() && (isParticipant(chatId) || isAdmin())); 
+      
       allow delete: if (isSignedIn() && exists(/databases/$(database)/documents/chats/$(chatId)) && get(/databases/$(database)/documents/chats/$(chatId)).data.get('ownerId', '') == request.auth.uid) || isAdmin();
 
       match /messages/{messageId} {
