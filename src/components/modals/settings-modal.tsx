@@ -16,7 +16,7 @@ import {
 import { useAuth, useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
-  LogOut, User, LayoutGrid, Palette, Loader2, Sparkles, X, Wand2, AtSign, Settings2, Check, ShieldCheck, Lock, Trash2
+  LogOut, User, LayoutGrid, Palette, Loader2, Sparkles, X, Wand2, AtSign, Settings2, Check, ShieldCheck, Lock, Trash2, UserX
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { signOut } from 'firebase/auth';
@@ -68,8 +68,8 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
   const [brandImageUrl, setBrandImageUrl] = useState<string | null>(null);
   const [isGeneratingVisual, setIsGeneratingVisual] = useState(false);
   const [isGeneratingAvatar, setIsGeneratingAvatar] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
-  // Инициализируем форму только один раз при открытии модалки или при первой загрузке профиля
   useEffect(() => {
     if (profile && (!isInitialized.current || !open)) {
       setForm({
@@ -85,7 +85,6 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
     }
   }, [profile, open]);
 
-  // Сбрасываем флаг инициализации при закрытии
   useEffect(() => {
     if (!open) {
       isInitialized.current = false;
@@ -116,6 +115,28 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
   const handleLogout = async () => {
     await signOut(auth);
     onOpenChange(false);
+  };
+
+  const handleDeleteAccount = async () => {
+    if (!userRef || !confirm('Внимание! Это действие необратимо. Ваш аккаунт будет полностью удален, а номер телефона заблокирован. Продолжить?')) return;
+    
+    setIsDeleting(true);
+    try {
+      updateDocumentNonBlocking(userRef, {
+        isBanned: true,
+        name: "Удаленный аккаунт",
+        username: "@deleted",
+        phone: profile?.phone || 'deleted',
+        avatarUrl: null,
+        deletedAt: new Date().toISOString()
+      });
+      toast({ title: "Аккаунт удален" });
+      setTimeout(() => signOut(auth), 500);
+    } catch (e) {
+      toast({ title: "Ошибка при удалении", variant: "destructive" });
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   const handleGenerateVisual = async () => {
@@ -317,6 +338,18 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                     </div>
                   </Button>
                 </div>
+              </div>
+
+              <div className="pt-4 px-2">
+                <Button 
+                  variant="ghost" 
+                  className="w-full h-12 rounded-xl text-destructive hover:bg-destructive/10 justify-start gap-3"
+                  onClick={handleDeleteAccount}
+                  disabled={isDeleting}
+                >
+                  {isDeleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserX className="w-4 h-4" />}
+                  <span className="font-bold">Удалить мой аккаунт</span>
+                </Button>
               </div>
             </div>
           </ScrollArea>

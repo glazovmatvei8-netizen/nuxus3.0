@@ -29,10 +29,6 @@ interface ChatAreaProps {
   isSidebarOpen: boolean;
 }
 
-/**
- * Отдельный компонент для ввода сообщения, чтобы предотвратить 
- * ререндеринг всего списка сообщений при каждом нажатии клавиши.
- */
 const ChatInput = ({ 
   onSend, 
   onTyping, 
@@ -60,6 +56,7 @@ const ChatInput = ({
     if (!text.trim()) return;
     onSend(text, 'text');
     setText('');
+    onTyping(false); // Сбрасываем статус печати при отправке
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -188,12 +185,6 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
   
   const { data: messages, isLoading: isMessagesLoading } = useCollection<Message>(messagesQuery);
 
-  useEffect(() => {
-    if (isRecordingVideo && activeStream && videoPreviewRef.current) {
-      videoPreviewRef.current.srcObject = activeStream;
-    }
-  }, [isRecordingVideo, activeStream]);
-
   const handleTyping = useCallback((isTyping: boolean) => {
     if (!currentChatId || !user || !isParticipant || !db || isBlocked) return;
     
@@ -209,15 +200,23 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
       typingTimeoutRef.current = setTimeout(() => {
         updateDocumentNonBlocking(chatDocRef, { [`typing.${user.uid}`]: false });
         lastTypingSignalRef.current = 0;
-      }, 4000);
+      }, 5000);
     } else {
-      if (lastTypingSignalRef.current !== 0) {
-        updateDocumentNonBlocking(chatDocRef, { [`typing.${user.uid}`]: false });
-        lastTypingSignalRef.current = 0;
-      }
       if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+      updateDocumentNonBlocking(chatDocRef, { [`typing.${user.uid}`]: false });
+      lastTypingSignalRef.current = 0;
     }
   }, [currentChatId, user, db, isParticipant, isBlocked]);
+
+  // Сброс статуса печати при уходе из чата
+  useEffect(() => {
+    return () => {
+      if (currentChatId && user && db) {
+        const chatDocRef = doc(db, 'chats', currentChatId);
+        updateDocumentNonBlocking(chatDocRef, { [`typing.${user.uid}`]: false });
+      }
+    };
+  }, [currentChatId, user, db]);
 
   useEffect(() => {
     const isTyping = chat?.typing && otherId && chat.typing[otherId];
@@ -358,11 +357,11 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
             <UserAvatar userId={chat?.type === 'private' ? otherId : null} fallbackName={chatDisplayName} className="h-9 w-9 ring-2 ring-primary/20" />
             <div className="flex flex-col min-w-0">
               <span className="font-semibold text-sm truncate">{chatDisplayName}</span>
-              <span className={cn("text-[10px] truncate", (statusString === 'печатает...' || isBlocked) ? 'text-accent font-bold' : 'text-muted-foreground')}>
+              <div className={cn("text-[10px] truncate leading-none mt-0.5", (statusString === 'печатает...' || isBlocked) ? 'text-accent font-bold' : 'text-muted-foreground')}>
                 {statusString === 'печатает...' ? (
                   <span className="flex items-center gap-0.5">печатает<span className="animate-typing-dot">.</span><span className="animate-typing-dot [animation-delay:0.2s]">.</span><span className="animate-typing-dot [animation-delay:0.4s]">.</span></span>
                 ) : statusString}
-              </span>
+              </div>
             </div>
           </div>
         </div>

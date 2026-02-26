@@ -9,8 +9,9 @@ service cloud.firestore {
 
     function isNotBanned() {
       let userPath = /databases/$(database)/documents/users/$(request.auth.uid);
-      // Если профиля еще нет в базе или флаг бана отсутствует/ложный — доступ разрешен
-      return isSignedIn() && (!exists(userPath) || get(userPath).data.get('isBanned', false) == false);
+      let userData = get(userPath).data;
+      // Доступ разрешен если: профиля нет ИЛИ (флаг бана ложный И срок заморозки прошел)
+      return isSignedIn() && (!exists(userPath) || (userData.get('isBanned', false) == false && (!userData.keys().has('frozenUntil') || duration(request.time - timestamp(userData.frozenUntil)).seconds() > 0)));
     }
 
     function isOwner(userId) {
@@ -42,14 +43,12 @@ service cloud.firestore {
       allow delete: if (isSignedIn() && exists(/databases/$(database)/documents/chats/$(chatId)) && get(/databases/$(database)/documents/chats/$(chatId)).data.get('ownerId', '') == request.auth.uid) || isAdmin();
 
       match /messages/{messageId} {
-        // Разрешаем чтение сообщений участникам ИЛИ админу
         allow get, list: if (isParticipant(chatId) || isAdmin()) && isNotBanned();
         allow create: if isParticipant(chatId) && isNotBanned();
         allow update: if (isParticipant(chatId) || isAdmin()) && isNotBanned(); 
         allow delete: if (isSignedIn() && resource.data.senderId == request.auth.uid) || isAdmin();
 
         match /reactions/{reactionId} {
-          // Разрешаем чтение реакций участникам ИЛИ админу
           allow get, list: if (isParticipant(chatId) || isAdmin()) && isNotBanned();
           allow create: if isParticipant(chatId) && isNotBanned();
           allow update: if false;
