@@ -24,12 +24,7 @@ import { formatLastSeen } from '@/lib/utils';
 import type { Message, User } from '@/lib/types';
 import Image from 'next/image';
 
-interface ChatAreaProps {
-  toggleSidebar: () => void;
-  isSidebarOpen: boolean;
-}
-
-const ChatInput = ({ 
+const ChatInput = React.memo(({ 
   onSend, 
   onTyping, 
   isSuggesting, 
@@ -56,7 +51,7 @@ const ChatInput = ({
     if (!text.trim()) return;
     onSend(text, 'text');
     setText('');
-    onTyping(false); // Сбрасываем статус печати при отправке
+    onTyping(false);
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -110,7 +105,9 @@ const ChatInput = ({
       </div>
     </div>
   );
-};
+});
+
+ChatInput.displayName = 'ChatInput';
 
 export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps) {
   const { user } = useUser();
@@ -208,13 +205,13 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
     }
   }, [currentChatId, user, db, isParticipant, isBlocked]);
 
-  // Сброс статуса печати при уходе из чата
   useEffect(() => {
     return () => {
       if (currentChatId && user && db) {
         const chatDocRef = doc(db, 'chats', currentChatId);
         updateDocumentNonBlocking(chatDocRef, { [`typing.${user.uid}`]: false });
       }
+      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
     };
   }, [currentChatId, user, db]);
 
@@ -284,7 +281,7 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
     setTimeout(scrollToBottom, 50);
   }, [isBlocked, userProfile, currentChatId, user, isParticipant, db, editMessage, replyTo, scrollToBottom]);
 
-  const handleAISuggest = async (currentInput: string) => {
+  const handleAISuggest = useCallback(async (currentInput: string) => {
     if (!messages || messages.length === 0) return null;
     setIsSuggesting(true);
     try {
@@ -298,7 +295,7 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
       toast({ title: "Ошибка AI", variant: "destructive" });
       return null;
     } finally { setIsSuggesting(false); }
-  };
+  }, [messages, toast]);
 
   const startVideoRecording = async () => {
     if (isBlocked || userProfile?.isBanned) return;
@@ -431,13 +428,13 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
                   onSuggest={handleAISuggest}
                   onFileSelect={handleFileSelect}
                   onStartVideo={startVideoRecording}
-                  onStartAudio={() => {}} // Placeholder
+                  onStartAudio={() => {}} 
                   isBlocked={isBlocked}
                   isBanned={userProfile?.isBanned}
                   editMessage={editMessage}
                   onCancelEdit={() => setEditMessage(null)}
                   replyTo={replyTo}
-                  onCancelReply={() => setReplyTo(null)}
+                  onCancelReply={() => setEditMessage(null)}
                 />
               </>
             )}

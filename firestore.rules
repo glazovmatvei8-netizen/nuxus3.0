@@ -7,29 +7,29 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    // Оптимизированная проверка админа по email в токене (без get())
+    function isAdmin() {
+      return isSignedIn() && request.auth.token.email == '79513332147@nuxus.chat';
+    }
+
     function isNotBanned() {
+      if (!isSignedIn()) return false;
+      // Админ никогда не забанен
+      if (isAdmin()) return true;
+      
       let userPath = /databases/$(database)/documents/users/$(request.auth.uid);
-      // Доступ разрешен если:
-      // 1. Пользователь авторизован
-      // 2. И ЛИБО профиля еще нет (первый вход), ЛИБО он не забанен и не заморожен
-      return isSignedIn() && (
-        !exists(userPath) || (
-          get(userPath).data.get('isBanned', false) == false && (
-            !get(userPath).data.keys().has('frozenUntil') || 
-            timestamp(get(userPath).data.frozenUntil) < request.time
-          )
-        )
-      );
+      // Если профиля еще нет, разрешаем доступ для его создания
+      if (!exists(userPath)) return true;
+      
+      let userData = get(userPath).data;
+      let banned = userData.get('isBanned', false) == true;
+      let frozen = userData.keys().has('frozenUntil') && timestamp(userData.frozenUntil) > request.time;
+      
+      return !banned && !frozen;
     }
 
     function isOwner(userId) {
       return isSignedIn() && request.auth.uid == userId;
-    }
-
-    function isAdmin() {
-      let userPath = /databases/$(database)/documents/users/$(request.auth.uid);
-      // Админ определяется по номеру телефона в его профиле
-      return isSignedIn() && exists(userPath) && get(userPath).data.get('phone', '') == '+79513332147';
     }
 
     function isParticipant(chatId) {
@@ -45,7 +45,7 @@ service cloud.firestore {
     }
 
     match /chats/{chatId} {
-      // Разрешаем листинг коллекции чатов для всех незабаненных (фильтрация идет на клиенте по participantIds)
+      // Разрешаем листинг если пользователь не забанен
       allow list: if isSignedIn() && isNotBanned();
       
       // Доступ к конкретному чату только участникам или админу
