@@ -35,7 +35,7 @@ export default function Home() {
     return <AuthScreen />;
   }
 
-  // Проверка на глобальный бан
+  // Проверка на бан
   if (profile?.isBanned) {
     return (
       <div className="h-screen w-full flex flex-col items-center justify-center bg-background p-6 text-center">
@@ -44,7 +44,7 @@ export default function Home() {
         </div>
         <h1 className="text-3xl font-bold mb-4 text-white">Аккаунт заблокирован</h1>
         <p className="text-muted-foreground max-w-md mb-8">
-          Ваш аккаунт был навсегда удален или заблокирован администратором за нарушение правил.
+          Ваш доступ к мессенджеру был ограничен за нарушение правил.
         </p>
         <Button variant="outline" onClick={() => signOut(auth)}>
           Выйти
