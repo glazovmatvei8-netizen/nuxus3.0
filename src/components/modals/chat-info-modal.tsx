@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { Sparkles, Users, Loader2, Trash2, ShieldAlert, ShieldCheck, Ban, Gavel } from 'lucide-react';
+import { Sparkles, Users, Loader2, Trash2, ShieldAlert, ShieldCheck, Ban, Gavel, UserX } from 'lucide-react';
 import { useFirestore, useCollection, useMemoFirebase, useUser, useDoc } from '@/firebase';
 import { collection, query, where, orderBy, limit, getDocs, doc, arrayUnion, arrayRemove } from 'firebase/firestore';
 import { chatConversationSummary } from '@/ai/flows/chat-conversation-summary-flow';
@@ -42,7 +42,6 @@ export function ChatInfoModal({ open, onOpenChange, chat }: ChatInfoModalProps) 
   }, [db, user]);
   const { data: currentUserProfile } = useDoc<User>(userProfileRef);
 
-  // Admin phone check
   const isAdmin = currentUserProfile?.phone === '+79513332147';
 
   const isBlocked = currentUserProfile?.blockedUserIds?.includes(otherId);
@@ -123,6 +122,26 @@ export function ChatInfoModal({ open, onOpenChange, chat }: ChatInfoModalProps) 
     toast({ 
       title: newBanStatus ? "Пользователь забанен" : "Бан снят",
       variant: newBanStatus ? "destructive" : "default"
+    });
+  };
+
+  const handlePermanentDelete = (targetUser: User) => {
+    if (!isAdmin || !db) return;
+    if (!confirm(`ВНИМАНИЕ! Вы собираетесь навсегда удалить аккаунт ${targetUser.name} (${targetUser.phone}) и заблокировать этот номер. Продолжить?`)) return;
+
+    const targetRef = doc(db, 'users', targetUser.id);
+    updateDocumentNonBlocking(targetRef, {
+      isBanned: true,
+      name: "Удаленный аккаунт",
+      username: "@deleted",
+      avatarUrl: null,
+      lastSeen: null,
+      deletedAt: new Date().toISOString()
+    });
+
+    toast({ 
+      title: "Аккаунт удален и заблокирован",
+      variant: "destructive"
     });
   };
 
@@ -212,15 +231,26 @@ export function ChatInfoModal({ open, onOpenChange, chat }: ChatInfoModalProps) 
                     </div>
                   </div>
                   {isAdmin && userMember.id !== user?.uid && (
-                    <Button 
-                      size="icon" 
-                      variant="ghost" 
-                      className={cn("h-8 w-8 rounded-full", userMember.isBanned ? "text-accent" : "text-destructive opacity-0 group-hover:opacity-100")} 
-                      onClick={() => handleToggleBan(userMember)}
-                      title={userMember.isBanned ? "Разбанить" : "Забанить"}
-                    >
-                      {userMember.isBanned ? <ShieldCheck className="w-4 h-4" /> : <Gavel className="w-4 h-4" />}
-                    </Button>
+                    <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <Button 
+                        size="icon" 
+                        variant="ghost" 
+                        className={cn("h-8 w-8 rounded-full", userMember.isBanned ? "text-accent" : "text-destructive")} 
+                        onClick={() => handleToggleBan(userMember)}
+                        title={userMember.isBanned ? "Разбанить" : "Забанить"}
+                      >
+                        {userMember.isBanned ? <ShieldCheck className="w-4 h-4" /> : <Gavel className="w-4 h-4" />}
+                      </Button>
+                      <Button 
+                        size="icon" 
+                        variant="ghost" 
+                        className="h-8 w-8 rounded-full text-destructive"
+                        onClick={() => handlePermanentDelete(userMember)}
+                        title="Удалить навсегда"
+                      >
+                        <UserX className="w-4 h-4" />
+                      </Button>
+                    </div>
                   )}
                 </div>
               ))}
