@@ -7,9 +7,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
-  Send, Paperclip, Smile, MoreVertical, ChevronLeft, 
-  Sparkles, MessageSquare, Info, Mic, Camera, X, StopCircle, UserPlus,
-  CornerUpLeft, Pencil, Trash2, Loader2, ShieldAlert, Video, Trash, Check
+  Send, Paperclip, Sparkles, MessageSquare, Info, Mic, Camera, X, UserPlus,
+  CornerUpLeft, Loader2, ShieldAlert, Trash, Check, MoreVertical, ChevronLeft
 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { MessageItem } from './message-item';
@@ -43,6 +42,7 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
   const [isRecordingVideo, setIsRecordingVideo] = useState(false);
   const [statusString, setStatusString] = useState<string>('');
   
+  const [activeStream, setActiveStream] = useState<MediaStream | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const videoPreviewRef = useRef<HTMLVideoElement>(null);
   const audioChunksRef = useRef<Blob[]>([]);
@@ -91,6 +91,13 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
   }, [db, currentChatId, isParticipant]);
   
   const { data: messages, isLoading: isMessagesLoading } = useCollection<Message>(messagesQuery);
+
+  // Sync video stream to preview element
+  useEffect(() => {
+    if (isRecordingVideo && activeStream && videoPreviewRef.current) {
+      videoPreviewRef.current.srcObject = activeStream;
+    }
+  }, [isRecordingVideo, activeStream]);
 
   useEffect(() => {
     if (!currentChatId || !user || !isParticipant || !db || isBlocked) return;
@@ -199,29 +206,52 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
     } finally { setIsSuggesting(false); }
   };
 
+  const stopAllTracks = (stream: MediaStream | null) => {
+    if (stream) {
+      stream.getTracks().forEach(track => track.stop());
+    }
+    setActiveStream(null);
+  };
+
   const startVideoRecording = async () => {
     if (isBlocked) return;
     isCancelledRef.current = false;
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: { width: 400, height: 400, facingMode: 'user' } });
-      if (videoPreviewRef.current) {
-        videoPreviewRef.current.srcObject = stream;
-      }
-      mediaRecorderRef.current = new MediaRecorder(stream, { mimeType: 'video/webm' });
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        audio: true, 
+        video: { 
+          width: 400, 
+          height: 400, 
+          facingMode: 'user' 
+        } 
+      });
+      
+      setActiveStream(stream);
+      setIsRecordingVideo(true);
+
+      const mediaRecorder = new MediaRecorder(stream, { mimeType: 'video/webm' });
+      mediaRecorderRef.current = mediaRecorder;
       audioChunksRef.current = [];
-      mediaRecorderRef.current.ondataavailable = e => e.data.size > 0 && audioChunksRef.current.push(e.data);
-      mediaRecorderRef.current.onstop = () => {
-        if (!isCancelledRef.current) {
+      
+      mediaRecorder.ondataavailable = e => {
+        if (e.data.size > 0) audioChunksRef.current.push(e.data);
+      };
+      
+      mediaRecorder.onstop = () => {
+        if (!isCancelledRef.current && audioChunksRef.current.length > 0) {
           const blob = new Blob(audioChunksRef.current, { type: 'video/webm' });
           const reader = new FileReader();
-          reader.onloadend = () => handleSendMessage(reader.result as string, 'video');
+          reader.onloadend = () => {
+            handleSendMessage(reader.result as string, 'video');
+          };
           reader.readAsDataURL(blob);
         }
-        stream.getTracks().forEach(t => t.stop());
+        stopAllTracks(stream);
       };
-      mediaRecorderRef.current.start();
-      setIsRecordingVideo(true);
+
+      mediaRecorder.start();
     } catch (e) {
+      console.error(e);
       toast({ title: "Нет доступа к камере", variant: "destructive" });
     }
   };
@@ -247,21 +277,33 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
     isCancelledRef.current = false;
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      mediaRecorderRef.current = new MediaRecorder(stream);
+      setActiveStream(stream);
+      setIsRecordingAudio(true);
+
+      const mediaRecorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = mediaRecorder;
       audioChunksRef.current = [];
-      mediaRecorderRef.current.ondataavailable = e => e.data.size > 0 && audioChunksRef.current.push(e.data);
-      mediaRecorderRef.current.onstop = () => {
-        if (!isCancelledRef.current) {
+      
+      mediaRecorder.ondataavailable = e => {
+        if (e.data.size > 0) audioChunksRef.current.push(e.data);
+      };
+      
+      mediaRecorder.onstop = () => {
+        if (!isCancelledRef.current && audioChunksRef.current.length > 0) {
           const blob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
           const reader = new FileReader();
-          reader.onloadend = () => handleSendMessage(reader.result as string, 'audio');
+          reader.onloadend = () => {
+            handleSendMessage(reader.result as string, 'audio');
+          };
           reader.readAsDataURL(blob);
         }
-        stream.getTracks().forEach(t => t.stop());
+        stopAllTracks(stream);
       };
-      mediaRecorderRef.current.start();
-      setIsRecordingAudio(true);
-    } catch (e) { toast({ title: "Нет доступа к микрофону", variant: "destructive" }); }
+      
+      mediaRecorder.start();
+    } catch (e) { 
+      toast({ title: "Нет доступа к микрофону", variant: "destructive" }); 
+    }
   };
 
   const finishAudioRecording = () => {
@@ -355,7 +397,13 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
               <>
                 {isRecordingVideo && (
                   <div className="absolute bottom-20 left-1/2 -translate-x-1/2 w-48 h-48 rounded-full overflow-hidden border-4 border-primary shadow-2xl z-50 bg-black">
-                    <video ref={videoPreviewRef} autoPlay muted playsInline className="w-full h-full object-cover" />
+                    <video 
+                      ref={videoPreviewRef} 
+                      autoPlay 
+                      muted 
+                      playsInline 
+                      className="w-full h-full object-cover" 
+                    />
                     <div className="absolute bottom-2 left-0 right-0 flex justify-center gap-4 px-4">
                        <Button variant="destructive" size="icon" className="rounded-full h-10 w-10 shadow-lg" onClick={cancelVideoRecording}>
                           <Trash className="w-5 h-5" />
@@ -401,7 +449,7 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
                   </div>
                   <div className="flex-1 relative">
                     <Input placeholder={editMessage ? "Изменить..." : "Сообщение..."} value={inputText} onChange={e => setInputText(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSendMessage()} className="bg-muted/40 rounded-2xl h-11 pr-12 focus:ring-1 focus:ring-primary" />
-                    <Button size="icon" className={cn("absolute right-1 top-1 w-9 h-9 rounded-xl transition-all", (inputText.trim() || isRecordingVideo || isRecordingAudio) ? 'scale-100' : 'scale-0')} onClick={() => handleSendMessage()}><Send className="w-4 h-4" /></Button>
+                    <Button size="icon" className={cn("absolute right-1 top-1 w-9 h-9 rounded-xl transition-all", (inputText.trim()) ? 'scale-100' : 'scale-0')} onClick={() => handleSendMessage()}><Send className="w-4 h-4" /></Button>
                   </div>
                   <div className="flex gap-1 mb-1">
                     <Button variant="ghost" size="icon" onClick={isRecordingVideo ? finishVideoRecording : startVideoRecording} className={cn(isRecordingVideo && "text-primary animate-pulse")}><Camera className="w-5 h-5" /></Button>
