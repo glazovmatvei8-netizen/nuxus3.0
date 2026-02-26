@@ -42,14 +42,11 @@ export function ChatInfoModal({ open, onOpenChange, chat }: ChatInfoModalProps) 
   }, [db, user]);
   const { data: currentUserProfile } = useDoc<User>(userProfileRef);
 
-  // Проверка на твой номер телефона (Админ)
   const isAdmin = currentUserProfile?.phone === '+79513332147';
-
   const isBlocked = currentUserProfile?.blockedUserIds?.includes(otherId || '');
 
   const membersQuery = useMemoFirebase(() => {
     if (!db || !chat.participantIds) return null;
-    // Firestore 'in' limitation: max 10 IDs
     const ids = chat.participantIds.slice(0, 10);
     return query(collection(db, 'users'), where('id', 'in', ids));
   }, [db, chat.participantIds]);
@@ -99,16 +96,11 @@ export function ChatInfoModal({ open, onOpenChange, chat }: ChatInfoModalProps) 
 
   const handleToggleBlock = () => {
     if (!userProfileRef || !otherId) return;
-    
     if (isBlocked) {
-      updateDocumentNonBlocking(userProfileRef, {
-        blockedUserIds: arrayRemove(otherId)
-      });
+      updateDocumentNonBlocking(userProfileRef, { blockedUserIds: arrayRemove(otherId) });
       toast({ title: "Пользователь разблокирован" });
     } else {
-      updateDocumentNonBlocking(userProfileRef, {
-        blockedUserIds: arrayUnion(otherId)
-      });
+      updateDocumentNonBlocking(userProfileRef, { blockedUserIds: arrayUnion(otherId) });
       toast({ title: "Пользователь заблокирован" });
     }
   };
@@ -117,20 +109,13 @@ export function ChatInfoModal({ open, onOpenChange, chat }: ChatInfoModalProps) 
     if (!isAdmin || !db) return;
     const targetRef = doc(db, 'users', targetUser.id);
     const newBanStatus = !targetUser.isBanned;
-    
-    updateDocumentNonBlocking(targetRef, {
-      isBanned: newBanStatus
-    });
-    
-    toast({ 
-      title: newBanStatus ? "Пользователь заблокирован" : "Блокировка снята",
-      variant: newBanStatus ? "destructive" : "default"
-    });
+    updateDocumentNonBlocking(targetRef, { isBanned: newBanStatus });
+    toast({ title: newBanStatus ? "Пользователь заблокирован" : "Блокировка снята", variant: newBanStatus ? "destructive" : "default" });
   };
 
   const handlePermanentDelete = (targetUser: User) => {
     if (!isAdmin || !db) return;
-    if (!confirm(`ВНИМАНИЕ! Вы собираетесь навсегда удалить аккаунт ${targetUser.name} (${targetUser.phone}). Человек больше не сможет использовать этот номер для входа. Продолжить?`)) return;
+    if (!confirm(`ВНИМАНИЕ! Вы собираетесь навсегда удалить аккаунт ${targetUser.name}. Человек больше не сможет зайти. Продолжить?`)) return;
 
     const targetRef = doc(db, 'users', targetUser.id);
     updateDocumentNonBlocking(targetRef, {
@@ -141,11 +126,7 @@ export function ChatInfoModal({ open, onOpenChange, chat }: ChatInfoModalProps) 
       lastSeen: null,
       deletedAt: new Date().toISOString()
     });
-
-    toast({ 
-      title: "Аккаунт удален и номер заблокирован",
-      variant: "destructive"
-    });
+    toast({ title: "Аккаунт удален и номер заблокирован", variant: "destructive" });
   };
 
   const chatName = chat.name || 'Чат';
@@ -241,7 +222,7 @@ export function ChatInfoModal({ open, onOpenChange, chat }: ChatInfoModalProps) 
                         variant="ghost" 
                         className={cn("h-8 w-8 rounded-full", userMember.isBanned ? "text-accent" : "text-destructive")} 
                         onClick={() => handleToggleBan(userMember)}
-                        title={userMember.isBanned ? "Разбанить" : "Забанить (Бан)"}
+                        title={userMember.isBanned ? "Разбанить" : "Забанить"}
                       >
                         {userMember.isBanned ? <ShieldCheck className="w-4 h-4" /> : <Gavel className="w-4 h-4" />}
                       </Button>
@@ -250,7 +231,7 @@ export function ChatInfoModal({ open, onOpenChange, chat }: ChatInfoModalProps) 
                         variant="ghost" 
                         className="h-8 w-8 rounded-full text-destructive"
                         onClick={() => handlePermanentDelete(userMember)}
-                        title="Удалить навсегда и заблокировать номер"
+                        title="Удалить навсегда"
                       >
                         <UserX className="w-4 h-4" />
                       </Button>

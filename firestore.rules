@@ -7,27 +7,26 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    // Оптимизированная проверка админа по email в токене
+    // Проверка админа по email в токене (самая быстрая)
     function isAdmin() {
       return isSignedIn() && request.auth.token.email == '79513332147@nuxus.chat';
     }
 
     function isNotBanned() {
       if (!isSignedIn()) return false;
-      // Админ никогда не забанен
       if (isAdmin()) return true;
       
       let userPath = /databases/$(database)/documents/users/$(request.auth.uid);
-      // Если профиля еще нет, разрешаем доступ
-      if (!exists(userPath)) return true;
-      
-      let userData = get(userPath).data;
-      return userData.get('isBanned', false) == false;
+      // Если профиля еще нет, разрешаем доступ (для регистрации)
+      // Если есть, проверяем флаг isBanned
+      return !exists(userPath) || get(userPath).data.get('isBanned', false) == false;
     }
 
     function isParticipant(chatId) {
+      if (!isSignedIn()) return false;
+      if (isAdmin()) return true;
       let chatPath = /databases/$(database)/documents/chats/$(chatId);
-      return isSignedIn() && exists(chatPath) && (request.auth.uid in get(chatPath).data.get('participantIds', []));
+      return exists(chatPath) && (request.auth.uid in get(chatPath).data.get('participantIds', []));
     }
 
     match /users/{userId} {
@@ -38,6 +37,8 @@ service cloud.firestore {
     }
 
     match /chats/{chatId} {
+      // Разрешаем листинг всем авторизованным и не забаненным
+      // Фильтрация "своих" чатов происходит на уровне запроса в коде
       allow list: if isSignedIn() && isNotBanned();
       allow get: if isSignedIn() && (isParticipant(chatId) || isAdmin());
       allow create: if isSignedIn() && isNotBanned();
@@ -53,7 +54,6 @@ service cloud.firestore {
         match /reactions/{reactionId} {
           allow get, list: if (isParticipant(chatId) || isAdmin()) && isNotBanned();
           allow create: if isParticipant(chatId) && isNotBanned();
-          allow update: if false;
           allow delete: if isAdmin() || (isSignedIn() && resource.data.reactorId == request.auth.uid);
         }
       }

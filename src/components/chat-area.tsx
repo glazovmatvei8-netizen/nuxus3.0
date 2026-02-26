@@ -7,9 +7,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
-  Send, Paperclip, Sparkles, MessageSquare, Info, Mic, Camera, X, UserPlus,
+  Send, Paperclip, Sparkles, MessageSquare, Info, Mic, Camera, X, 
   CornerUpLeft, Loader2, ShieldAlert, Trash, Check, MoreVertical, ChevronLeft, ChevronDown,
-  Images, Plus
+  Images
 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { MessageItem } from './message-item';
@@ -109,7 +109,7 @@ const ChatInput = React.memo(({
 
 ChatInput.displayName = 'ChatInput';
 
-export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps) {
+export default function ChatArea({ toggleSidebar, isSidebarOpen }: any) {
   const { user } = useUser();
   const db = useFirestore();
   const { currentChatId, setCurrentChatId } = useAppState();
@@ -120,10 +120,8 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
   const [replyTo, setReplyTo] = useState<Message | null>(null);
   const [editMessage, setEditMessage] = useState<Message | null>(null);
   
-  const [isRecordingAudio, setIsRecordingAudio] = useState(false);
   const [isRecordingVideo, setIsRecordingVideo] = useState(false);
   const [statusString, setStatusString] = useState<string>('');
-
   const [pendingPhotos, setPendingPhotos] = useState<string[]>([]);
   
   const [activeStream, setActiveStream] = useState<MediaStream | null>(null);
@@ -195,7 +193,9 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
       }
       if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
       typingTimeoutRef.current = setTimeout(() => {
-        updateDocumentNonBlocking(chatDocRef, { [`typing.${user.uid}`]: false });
+        if (db && currentChatId && user) {
+          updateDocumentNonBlocking(doc(db, 'chats', currentChatId), { [`typing.${user.uid}`]: false });
+        }
         lastTypingSignalRef.current = 0;
       }, 5000);
     } else {
@@ -205,6 +205,7 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
     }
   }, [currentChatId, user, db, isParticipant, isBlocked]);
 
+  // Сброс статуса печати при уходе из чата
   useEffect(() => {
     return () => {
       if (currentChatId && user && db) {
