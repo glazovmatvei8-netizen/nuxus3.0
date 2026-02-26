@@ -1,6 +1,7 @@
+
 "use client"
 
-import React, { useState, useRef, useEffect, useMemo } from 'react';
+import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { useAppState } from '@/lib/store';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -28,11 +29,96 @@ interface ChatAreaProps {
   isSidebarOpen: boolean;
 }
 
+/**
+ * Отдельный компонент для ввода сообщения, чтобы предотвратить 
+ * ререндеринг всего списка сообщений при каждом нажатии клавиши.
+ */
+const ChatInput = ({ 
+  onSend, 
+  onTyping, 
+  isSuggesting, 
+  onSuggest, 
+  onFileSelect, 
+  onStartVideo, 
+  onStartAudio, 
+  isBlocked, 
+  isBanned,
+  editMessage,
+  onCancelEdit,
+  replyTo,
+  onCancelReply
+}: any) => {
+  const [text, setText] = useState('');
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (editMessage) setText(editMessage.content);
+    else setText('');
+  }, [editMessage]);
+
+  const handleSend = () => {
+    if (!text.trim()) return;
+    onSend(text, 'text');
+    setText('');
+  };
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    setText(val);
+    onTyping(val.length > 0);
+  };
+
+  const handleSuggest = async () => {
+    const draft = await onSuggest(text);
+    if (draft) setText(draft);
+  };
+
+  return (
+    <div className="flex flex-col gap-2 max-w-4xl mx-auto w-full">
+      {replyTo && (
+        <div className="flex items-center justify-between bg-muted/40 p-2 rounded-xl border-l-4 border-primary mb-1 animate-in slide-in-from-bottom-1">
+          <div className="flex items-center gap-3 truncate">
+            <CornerUpLeft className="w-4 h-4 text-primary" />
+            <span className="text-xs truncate italic">{replyTo.content}</span>
+          </div>
+          <Button size="icon" variant="ghost" onClick={onCancelReply} className="h-6 w-6"><X className="w-4 h-4" /></Button>
+        </div>
+      )}
+      <div className="flex items-end gap-2">
+        <div className="flex items-center gap-1 mb-1">
+          <input type="file" ref={fileInputRef} className="hidden" accept="image/*" multiple onChange={onFileSelect} />
+          <Button variant="ghost" size="icon" onClick={() => fileInputRef.current?.click()}><Paperclip className="w-5 h-5" /></Button>
+          <Button variant="ghost" size="icon" onClick={handleSuggest} disabled={isSuggesting}><Sparkles className={cn("w-5 h-5 text-accent", isSuggesting && "animate-spin")} /></Button>
+        </div>
+        <div className="flex-1 relative">
+          <Input 
+            placeholder={editMessage ? "Изменить..." : "Сообщение..."} 
+            value={text} 
+            onChange={handleChange}
+            onKeyDown={e => e.key === 'Enter' && handleSend()} 
+            className="bg-muted/40 rounded-2xl h-11 pr-12 focus:ring-1 focus:ring-primary border-none" 
+          />
+          <Button 
+            size="icon" 
+            className={cn("absolute right-1 top-1 w-9 h-9 rounded-xl transition-all duration-200", text.trim() ? 'scale-100 opacity-100' : 'scale-0 opacity-0')} 
+            onClick={handleSend}
+          >
+            <Send className="w-4 h-4" />
+          </Button>
+        </div>
+        <div className="flex gap-1 mb-1">
+          <Button variant="ghost" size="icon" onClick={onStartVideo}><Camera className="w-5 h-5" /></Button>
+          <Button variant="ghost" size="icon" onClick={onStartAudio}><Mic className="w-5 h-5" /></Button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps) {
   const { user } = useUser();
   const db = useFirestore();
   const { currentChatId, setCurrentChatId } = useAppState();
-  const [inputText, setInputText] = useState('');
   const [isChatInfoOpen, setIsChatInfoOpen] = useState(false);
   const [isSuggesting, setIsSuggesting] = useState(false);
   const [showScrollDown, setShowScrollDown] = useState(false);
@@ -44,7 +130,6 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
   const [isRecordingVideo, setIsRecordingVideo] = useState(false);
   const [statusString, setStatusString] = useState<string>('');
 
-  // Multi-photo state
   const [pendingPhotos, setPendingPhotos] = useState<string[]>([]);
   
   const [activeStream, setActiveStream] = useState<MediaStream | null>(null);
@@ -54,9 +139,8 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
   const isCancelledRef = useRef(false);
   
   const scrollRef = useRef<HTMLDivElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const lastTypingSignalRef = useRef<number>(0);
+  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
   const { toast } = useToast();
 
@@ -77,7 +161,13 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
     return chat.participantIds?.includes(user.uid) || false;
   }, [chat, user]);
 
-  const otherId = chat?.type === 'private' && user ? chat.participantIds?.find((id: string = '') => id !== user.uid) : null;
+  const otherId = useMemo(() => {
+    if (chat?.type === 'private' && user) {
+      return chat.participantIds?.find((id: string) => id !== user.uid);
+    }
+    return null;
+  }, [chat, user]);
+
   const otherUserProfileRef = useMemoFirebase(() => {
     if (!db || !otherId) return null;
     return doc(db, 'users', otherId);
@@ -104,103 +194,74 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
     }
   }, [isRecordingVideo, activeStream]);
 
-  // Optimized Typing Status handling
-  useEffect(() => {
+  const handleTyping = useCallback((isTyping: boolean) => {
     if (!currentChatId || !user || !isParticipant || !db || isBlocked) return;
     
     const now = Date.now();
     const chatDocRef = doc(db, 'chats', currentChatId);
 
-    if (inputText.length > 0) {
-      // Only send signal if we haven't sent one in the last 2 seconds
-      if (now - lastTypingSignalRef.current > 2000) {
-        updateDocumentNonBlocking(chatDocRef, {
-          [`typing.${user.uid}`]: true
-        });
+    if (isTyping) {
+      if (now - lastTypingSignalRef.current > 3000) {
+        updateDocumentNonBlocking(chatDocRef, { [`typing.${user.uid}`]: true });
         lastTypingSignalRef.current = now;
       }
-      
       if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
       typingTimeoutRef.current = setTimeout(() => {
-        updateDocumentNonBlocking(chatDocRef, {
-          [`typing.${user.uid}`]: false
-        });
+        updateDocumentNonBlocking(chatDocRef, { [`typing.${user.uid}`]: false });
         lastTypingSignalRef.current = 0;
       }, 4000);
     } else {
-      // If text is cleared, signal "not typing" immediately
       if (lastTypingSignalRef.current !== 0) {
-        updateDocumentNonBlocking(chatDocRef, {
-          [`typing.${user.uid}`]: false
-        });
+        updateDocumentNonBlocking(chatDocRef, { [`typing.${user.uid}`]: false });
         lastTypingSignalRef.current = 0;
       }
       if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
     }
-  }, [inputText, currentChatId, user, db, isParticipant, isBlocked]);
+  }, [currentChatId, user, db, isParticipant, isBlocked]);
 
   useEffect(() => {
     const isTyping = chat?.typing && otherId && chat.typing[otherId];
-    if (isBlockedByMe) {
-      setStatusString('Пользователь заблокирован');
-    } else if (isBlockedByThem) {
-      setStatusString('Вы заблокированы');
-    } else if (isTyping) {
-      setStatusString('печатает...');
-    } else if (isOtherProfileLoading) {
-      setStatusString('загрузка...');
-    } else if (chat?.type === 'private') {
-      setStatusString(formatLastSeen(otherUserProfile?.lastSeen, otherUserProfile?.settings?.privacy?.lastSeenVisibility));
-    } else {
-      setStatusString(chat?.type === 'group' ? 'Группа' : 'Канал');
-    }
+    if (isBlockedByMe) setStatusString('Пользователь заблокирован');
+    else if (isBlockedByThem) setStatusString('Вы заблокированы');
+    else if (isTyping) setStatusString('печатает...');
+    else if (isOtherProfileLoading) setStatusString('загрузка...');
+    else if (chat?.type === 'private') setStatusString(formatLastSeen(otherUserProfile?.lastSeen, otherUserProfile?.settings?.privacy?.lastSeenVisibility));
+    else setStatusString(chat?.type === 'group' ? 'Группа' : 'Канал');
   }, [isOtherProfileLoading, otherUserProfile?.lastSeen, otherUserProfile?.settings?.privacy?.lastSeenVisibility, chat?.type, chat?.typing, otherId, isBlockedByMe, isBlockedByThem]);
 
   useEffect(() => {
     if (messages && user && currentChatId && chat && isParticipant && db) {
       const unread = messages.filter(msg => !msg.isRead && msg.senderId !== user.uid);
       unread.forEach(msg => {
-        const msgRef = doc(db, 'chats', currentChatId, 'messages', msg.id);
-        updateDocumentNonBlocking(msgRef, { isRead: true });
+        updateDocumentNonBlocking(doc(db, 'chats', currentChatId, 'messages', msg.id), { isRead: true });
       });
     }
   }, [messages, user, currentChatId, isParticipant, db, chat]);
 
   useEffect(() => {
-    if (scrollRef.current && !showScrollDown) {
-      scrollToBottom();
-    }
+    if (scrollRef.current && !showScrollDown) scrollToBottom();
   }, [messages]);
 
-  const scrollToBottom = () => {
+  const scrollToBottom = useCallback(() => {
     if (scrollRef.current) {
       const viewport = scrollRef.current.querySelector('[data-radix-scroll-area-viewport]');
       if (viewport) {
-        viewport.scrollTo({ top: viewport.scrollHeight, behavior: 'smooth' });
+        viewport.scrollTo({ top: viewport.scrollHeight, behavior: 'auto' });
       }
     }
-  };
+  }, []);
 
-  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
-    const target = e.currentTarget;
-    const isUp = target.scrollHeight - target.scrollTop - target.clientHeight > 300;
-    setShowScrollDown(isUp);
-  };
-
-  const handleSendMessage = (content: string = inputText, type: string = 'text') => {
-    if (isBlocked || userProfile?.isBanned) {
-      toast({ title: "Ошибка", description: "Вы не можете отправлять сообщения", variant: "destructive" });
-      return;
-    }
-    const text = content.trim();
-    if (!text && type === 'text') return;
+  const handleSendMessage = useCallback((content: string, type: string = 'text') => {
+    if (isBlocked || userProfile?.isBanned) return;
+    if (!content.trim() && type === 'text') return;
     if (!currentChatId || !user || !isParticipant || !db) return;
     
     if (editMessage && type === 'text') {
-      const ref = doc(db, 'chats', currentChatId, 'messages', editMessage.id);
-      updateDocumentNonBlocking(ref, { content: text, editedAt: new Date().toISOString() });
+      updateDocumentNonBlocking(doc(db, 'chats', currentChatId, 'messages', editMessage.id), { 
+        content: content.trim(), 
+        editedAt: new Date().toISOString() 
+      });
       setEditMessage(null);
-      setInputText('');
       return;
     }
 
@@ -208,7 +269,7 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
       chatId: currentChatId,
       senderId: user.uid,
       senderName: userProfile?.name || 'User',
-      content: text,
+      content: content.trim(),
       contentType: type as any,
       sentAt: new Date().toISOString(),
       isRead: false
@@ -221,164 +282,57 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
     }
 
     addDocumentNonBlocking(collection(db, 'chats', currentChatId, 'messages'), data);
-    if (type === 'text') setInputText('');
-    setTimeout(scrollToBottom, 100);
-  };
+    setTimeout(scrollToBottom, 50);
+  }, [isBlocked, userProfile, currentChatId, user, isParticipant, db, editMessage, replyTo, scrollToBottom]);
 
-  const handleSendPhotos = () => {
-    if (pendingPhotos.length === 0) return;
-    pendingPhotos.forEach(photo => {
-      handleSendMessage(photo, 'image');
-    });
-    setPendingPhotos([]);
-  };
-
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []).slice(0, 10);
-    if (files.length === 0) return;
-    
-    const readers = files.map(file => {
-      return new Promise<string>((resolve) => {
-        const reader = new FileReader();
-        reader.onloadend = () => resolve(reader.result as string);
-        reader.readAsDataURL(file);
-      });
-    });
-
-    Promise.all(readers).then(results => {
-      setPendingPhotos(results);
-    });
-  };
-
-  const handleAISuggest = async () => {
-    if (!messages || messages.length === 0) return;
+  const handleAISuggest = async (currentInput: string) => {
+    if (!messages || messages.length === 0) return null;
     setIsSuggesting(true);
     try {
       const history = messages.slice(-5).map(m => ({
         sender: m.senderName,
         message: m.contentType === 'text' ? m.content : `[${m.contentType}]`
       }));
-      const { draftMessage } = await suggestMessageDraft({ conversationHistory: history, currentUserInput: inputText });
-      setInputText(draftMessage);
+      const { draftMessage } = await suggestMessageDraft({ conversationHistory: history, currentUserInput: currentInput });
+      return draftMessage;
     } catch (e) {
       toast({ title: "Ошибка AI", variant: "destructive" });
+      return null;
     } finally { setIsSuggesting(false); }
-  };
-
-  const stopAllTracks = (stream: MediaStream | null) => {
-    if (stream) {
-      stream.getTracks().forEach(track => track.stop());
-    }
-    setActiveStream(null);
   };
 
   const startVideoRecording = async () => {
     if (isBlocked || userProfile?.isBanned) return;
     isCancelledRef.current = false;
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ 
-        audio: true, 
-        video: { 
-          width: 400, 
-          height: 400, 
-          facingMode: 'user' 
-        } 
-      });
-      
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: { width: 400, height: 400, facingMode: 'user' } });
       setActiveStream(stream);
       setIsRecordingVideo(true);
-
       const mediaRecorder = new MediaRecorder(stream, { mimeType: 'video/webm' });
       mediaRecorderRef.current = mediaRecorder;
       audioChunksRef.current = [];
-      
-      mediaRecorder.ondataavailable = e => {
-        if (e.data.size > 0) audioChunksRef.current.push(e.data);
-      };
-      
+      mediaRecorder.ondataavailable = e => { if (e.data.size > 0) audioChunksRef.current.push(e.data); };
       mediaRecorder.onstop = () => {
         if (!isCancelledRef.current && audioChunksRef.current.length > 0) {
           const blob = new Blob(audioChunksRef.current, { type: 'video/webm' });
           const reader = new FileReader();
-          reader.onloadend = () => {
-            handleSendMessage(reader.result as string, 'video');
-          };
+          reader.onloadend = () => handleSendMessage(reader.result as string, 'video');
           reader.readAsDataURL(blob);
         }
-        stopAllTracks(stream);
+        stream.getTracks().forEach(t => t.stop());
+        setActiveStream(null);
       };
-
       mediaRecorder.start();
-    } catch (e) {
-      console.error(e);
-      toast({ title: "Нет доступа к камере", variant: "destructive" });
-    }
+    } catch (e) { toast({ title: "Ошибка камеры", variant: "destructive" }); }
   };
 
-  const finishVideoRecording = () => {
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
-      mediaRecorderRef.current.stop();
-    }
-    setIsRecordingVideo(false);
-  };
-
-  const cancelVideoRecording = () => {
-    isCancelledRef.current = true;
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
-      mediaRecorderRef.current.stop();
-    }
-    setIsRecordingVideo(false);
-    toast({ title: "Запись отменена" });
-  };
-
-  const startAudioRecording = async () => {
-    if (isBlocked || userProfile?.isBanned) return;
-    isCancelledRef.current = false;
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      setActiveStream(stream);
-      setIsRecordingAudio(true);
-
-      const mediaRecorder = new MediaRecorder(stream);
-      mediaRecorderRef.current = mediaRecorder;
-      audioChunksRef.current = [];
-      
-      mediaRecorder.ondataavailable = e => {
-        if (e.data.size > 0) audioChunksRef.current.push(e.data);
-      };
-      
-      mediaRecorder.onstop = () => {
-        if (!isCancelledRef.current && audioChunksRef.current.length > 0) {
-          const blob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
-          const reader = new FileReader();
-          reader.onloadend = () => {
-            handleSendMessage(reader.result as string, 'audio');
-          };
-          reader.readAsDataURL(blob);
-        }
-        stopAllTracks(stream);
-      };
-      
-      mediaRecorder.start();
-    } catch (e) { 
-      toast({ title: "Нет доступа к микрофону", variant: "destructive" }); 
-    }
-  };
-
-  const finishAudioRecording = () => {
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
-      mediaRecorderRef.current.stop();
-    }
-    setIsRecordingAudio(false);
-  };
-
-  const cancelAudioRecording = () => {
-    isCancelledRef.current = true;
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
-      mediaRecorderRef.current.stop();
-    }
-    setIsRecordingAudio(false);
-    toast({ title: "Запись отменена" });
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []).slice(0, 10);
+    files.forEach(file => {
+      const reader = new FileReader();
+      reader.onloadend = () => setPendingPhotos(prev => [...prev, reader.result as string]);
+      reader.readAsDataURL(file);
+    });
   };
 
   const chatDisplayName = otherId && chat?.metadata && chat.metadata[otherId] ? chat.metadata[otherId].name : chat?.name;
@@ -393,79 +347,42 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
   }
 
   const customBackground = userProfile?.settings?.chatBackground;
-  const bgStyle = customBackground && customBackground !== 'default' 
-    ? { backgroundImage: `url(${customBackground})`, backgroundSize: 'cover', backgroundPosition: 'center' } 
-    : {};
+  const bgStyle = customBackground && customBackground !== 'default' ? { backgroundImage: `url(${customBackground})`, backgroundSize: 'cover', backgroundPosition: 'center' } : {};
 
   return (
     <div className="flex-1 flex flex-col h-[100dvh] bg-background relative overflow-hidden">
       <header className="h-16 flex items-center justify-between px-4 border-b border-border/40 bg-card/20 backdrop-blur-xl z-20 shrink-0">
         <div className="flex items-center gap-2 min-w-0">
-          <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setCurrentChatId(null)} aria-label="Вернуться назад">
-            <ChevronLeft className="w-5 h-5" />
-          </Button>
+          <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setCurrentChatId(null)}><ChevronLeft className="w-5 h-5" /></Button>
           <div className="flex items-center gap-3 cursor-pointer min-w-0" onClick={() => setIsChatInfoOpen(true)}>
             <UserAvatar userId={chat?.type === 'private' ? otherId : null} fallbackName={chatDisplayName} className="h-9 w-9 ring-2 ring-primary/20" />
             <div className="flex flex-col min-w-0">
               <span className="font-semibold text-sm truncate">{chatDisplayName}</span>
               <span className={cn("text-[10px] truncate", (statusString === 'печатает...' || isBlocked) ? 'text-accent font-bold' : 'text-muted-foreground')}>
                 {statusString === 'печатает...' ? (
-                  <span className="flex items-center gap-0.5">
-                    печатает
-                    <span className="animate-typing-dot">.</span>
-                    <span className="animate-typing-dot [animation-delay:0.2s]">.</span>
-                    <span className="animate-typing-dot [animation-delay:0.4s]">.</span>
-                  </span>
+                  <span className="flex items-center gap-0.5">печатает<span className="animate-typing-dot">.</span><span className="animate-typing-dot [animation-delay:0.2s]">.</span><span className="animate-typing-dot [animation-delay:0.4s]">.</span></span>
                 ) : statusString}
               </span>
             </div>
           </div>
         </div>
         <div className="flex items-center gap-1">
-          <Button variant="ghost" size="icon" className="rounded-full text-muted-foreground" onClick={() => setIsChatInfoOpen(true)} aria-label="Информация о чате"><Info className="w-5 h-5" /></Button>
-          <Button variant="ghost" size="icon" className="rounded-full text-muted-foreground" aria-label="Дополнительно"><MoreVertical className="w-5 h-5" /></Button>
+          <Button variant="ghost" size="icon" onClick={() => setIsChatInfoOpen(true)}><Info className="w-5 h-5" /></Button>
+          <Button variant="ghost" size="icon"><MoreVertical className="w-5 h-5" /></Button>
         </div>
       </header>
 
       <div className="flex-1 relative z-10 overflow-hidden">
-        {customBackground && customBackground !== 'default' && (
-          <div className="absolute inset-0 z-[-1] brightness-100" style={bgStyle} />
-        )}
-        <ScrollArea 
-          ref={scrollRef} 
-          className="h-full px-4 py-4"
-          onScroll={handleScroll as any}
-        >
-          {!isParticipant && !isChatLoading && chat ? (
-            <div className="flex flex-col items-center justify-center h-full gap-4">
-              <UserPlus className="w-12 h-12 text-primary" />
-              <p className="text-muted-foreground">Вы не в чате</p>
-              <Button onClick={() => updateDocumentNonBlocking(chatRef!, { participantIds: arrayUnion(user?.uid) })}>Вступить</Button>
-            </div>
-          ) : (
-            <div className="flex flex-col gap-2 max-w-4xl mx-auto pb-4">
-              {messages?.map(msg => (
-                <MessageItem key={msg.id} message={msg} isMe={msg.senderId === user?.uid} chatId={currentChatId} onReply={() => setReplyTo(msg)} onEdit={() => { setEditMessage(msg); setInputText(msg.content); }} size={userProfile?.settings?.messageSize} />
-              ))}
-              {isMessagesLoading && (
-                <div className="flex justify-center p-8">
-                  <Loader2 className="w-8 h-8 animate-spin text-primary" />
-                </div>
-              )}
-            </div>
-          )}
+        {customBackground && customBackground !== 'default' && <div className="absolute inset-0 z-[-1]" style={bgStyle} />}
+        <ScrollArea ref={scrollRef} className="h-full px-4 py-4" onScroll={(e: any) => setShowScrollDown(e.currentTarget.scrollHeight - e.currentTarget.scrollTop - e.currentTarget.clientHeight > 300)}>
+          <div className="flex flex-col gap-2 max-w-4xl mx-auto pb-4">
+            {messages?.map(msg => (
+              <MessageItem key={msg.id} message={msg} isMe={msg.senderId === user?.uid} chatId={currentChatId} onReply={() => setReplyTo(msg)} onEdit={() => setEditMessage(msg)} size={userProfile?.settings?.messageSize} />
+            ))}
+            {isMessagesLoading && <div className="flex justify-center p-8"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>}
+          </div>
         </ScrollArea>
-        
-        {showScrollDown && (
-          <Button 
-            size="icon" 
-            variant="secondary" 
-            className="absolute bottom-4 right-4 rounded-full shadow-lg z-30 animate-in fade-in zoom-in"
-            onClick={scrollToBottom}
-          >
-            <ChevronDown className="w-5 h-5" />
-          </Button>
-        )}
+        {showScrollDown && <Button size="icon" variant="secondary" className="absolute bottom-4 right-4 rounded-full shadow-lg z-30" onClick={scrollToBottom}><ChevronDown className="w-5 h-5" /></Button>}
       </div>
 
       <footer className="p-3 bg-card/20 backdrop-blur-xl border-t border-border/40 z-20 shrink-0">
@@ -474,108 +391,61 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
             {isBlocked || userProfile?.isBanned ? (
               <div className="flex items-center justify-center h-12 bg-muted/20 rounded-xl border border-border/40 text-muted-foreground text-xs font-semibold gap-2">
                 <ShieldAlert className="w-4 h-4" />
-                {userProfile?.isBanned ? "Ваш аккаунт заблокирован" : (isBlockedByMe ? "Вы заблокировали пользователя" : "Вы заблокированы этим пользователем")}
+                {userProfile?.isBanned ? "Аккаунт заблокирован" : "Общение ограничено"}
               </div>
             ) : (
               <>
                 {pendingPhotos.length > 0 && (
                   <div className="bg-card/90 backdrop-blur-md p-4 rounded-2xl mb-2 border border-primary/20 animate-in slide-in-from-bottom-5">
                     <div className="flex items-center justify-between mb-3">
-                      <span className="text-xs font-bold text-primary flex items-center gap-2">
-                        <Images className="w-4 h-4" />
-                        Выбрано фото ({pendingPhotos.length}/10)
-                      </span>
-                      <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground" onClick={() => setPendingPhotos([])}><X className="w-4 h-4" /></Button>
+                      <span className="text-xs font-bold text-primary flex items-center gap-2"><Images className="w-4 h-4" />Выбрано фото ({pendingPhotos.length}/10)</span>
+                      <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setPendingPhotos([])}><X className="w-4 h-4" /></Button>
                     </div>
                     <ScrollArea className="w-full whitespace-nowrap pb-2">
                       <div className="flex gap-2">
                         {pendingPhotos.map((photo, i) => (
-                          <div key={i} className="relative w-16 h-16 rounded-lg overflow-hidden shrink-0 border border-border/20">
-                            <Image src={photo} alt={`Preview ${i}`} fill className="object-cover" />
-                            <button 
-                              onClick={() => setPendingPhotos(pendingPhotos.filter((_, idx) => idx !== i))}
-                              className="absolute top-0.5 right-0.5 bg-black/60 rounded-full p-0.5 hover:bg-black"
-                            >
-                              <X className="w-3 h-3 text-white" />
-                            </button>
+                          <div key={i} className="relative w-16 h-16 rounded-lg overflow-hidden border">
+                            <Image src={photo} alt="P" fill className="object-cover" />
+                            <button onClick={() => setPendingPhotos(pendingPhotos.filter((_, idx) => idx !== i))} className="absolute top-0 right-0 bg-black/60 p-0.5"><X className="w-3 h-3 text-white" /></button>
                           </div>
                         ))}
                       </div>
                     </ScrollArea>
                     <div className="mt-3 flex gap-2">
-                      <Button className="flex-1 h-9 rounded-xl font-bold" onClick={handleSendPhotos}>Отправить все</Button>
-                      <Button variant="outline" className="h-9 rounded-xl" onClick={() => fileInputRef.current?.click()}><Plus className="w-4 h-4 mr-1" /> Добавить</Button>
+                      <Button className="flex-1 h-9 font-bold" onClick={() => { pendingPhotos.forEach(p => handleSendMessage(p, 'image')); setPendingPhotos([]); }}>Отправить все</Button>
                     </div>
                   </div>
                 )}
                 {isRecordingVideo && (
-                  <div className="absolute bottom-20 left-1/2 -translate-x-1/2 w-48 h-48 rounded-full overflow-hidden border-4 border-primary shadow-2xl z-50 bg-black">
-                    <video 
-                      ref={videoPreviewRef} 
-                      autoPlay 
-                      muted 
-                      playsInline 
-                      className="w-full h-full object-cover" 
-                    />
-                    <div className="absolute top-4 left-0 right-0 flex justify-center">
-                       <div className="bg-red-500 w-2 h-2 rounded-full animate-pulse shadow-[0_0_10px_red]" />
-                    </div>
+                  <div className="absolute bottom-20 left-1/2 -translate-x-1/2 w-48 h-48 rounded-full overflow-hidden border-4 border-primary z-50 bg-black">
+                    <video ref={videoPreviewRef} autoPlay muted playsInline className="w-full h-full object-cover" />
                     <div className="absolute bottom-2 left-0 right-0 flex justify-center gap-4 px-4">
-                       <Button variant="destructive" size="icon" className="rounded-full h-10 w-10 shadow-lg" onClick={cancelVideoRecording} aria-label="Отменить видео">
-                          <Trash className="w-5 h-5" />
-                       </Button>
-                       <Button variant="default" size="icon" className="bg-primary hover:bg-primary/90 rounded-full h-10 w-10 shadow-lg" onClick={finishVideoRecording} aria-label="Отправить видео">
-                          <Check className="w-5 h-5" />
-                       </Button>
+                       <Button variant="destructive" size="icon" className="rounded-full" onClick={() => { isCancelledRef.current = true; setIsRecordingVideo(false); mediaRecorderRef.current?.stop(); }}><Trash className="w-5 h-5" /></Button>
+                       <Button variant="default" size="icon" className="bg-primary rounded-full" onClick={() => { setIsRecordingVideo(false); mediaRecorderRef.current?.stop(); }}><Check className="w-5 h-5" /></Button>
                     </div>
                   </div>
                 )}
-                {isRecordingAudio && (
-                  <div className="absolute bottom-20 left-1/2 -translate-x-1/2 flex items-center gap-4 bg-card/90 backdrop-blur-xl border border-primary/20 px-6 py-3 rounded-full shadow-2xl z-50 animate-in slide-in-from-bottom-5">
-                    <div className="flex items-center gap-2 text-primary">
-                       <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
-                       <span className="text-sm font-bold">Идет запись...</span>
-                    </div>
-                    <div className="flex gap-2">
-                       <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-destructive h-8 w-8" onClick={cancelAudioRecording} aria-label="Отменить аудио">
-                          <Trash className="w-4 h-4" />
-                       </Button>
-                       <Button variant="ghost" size="icon" className="text-primary hover:text-primary h-8 w-8" onClick={finishAudioRecording} aria-label="Отправить аудио">
-                          <Check className="w-4 h-4" />
-                       </Button>
-                    </div>
-                  </div>
-                )}
-                {replyTo && (
-                  <div className="flex items-center justify-between bg-muted/40 p-2 rounded-xl border-l-4 border-primary mb-2">
-                    <div className="flex items-center gap-3 truncate">
-                      <CornerUpLeft className="w-4 h-4 text-primary" />
-                      <span className="text-xs truncate italic">{replyTo.content}</span>
-                    </div>
-                    <Button size="icon" variant="ghost" onClick={() => setReplyTo(null)} className="h-6 w-6" aria-label="Отменить ответ"><X className="w-4 h-4" /></Button>
-                  </div>
-                )}
-                <div className="flex items-end gap-2">
-                  <div className="flex items-center gap-1 mb-1">
-                    <input type="file" ref={fileInputRef} className="hidden" accept="image/*" multiple onChange={handleFileSelect} />
-                    <Button variant="ghost" size="icon" onClick={() => fileInputRef.current?.click()} aria-label="Прикрепить файл"><Paperclip className="w-5 h-5" /></Button>
-                    <Button variant="ghost" size="icon" onClick={handleAISuggest} disabled={isSuggesting} aria-label="AI черновик"><Sparkles className={cn("w-5 h-5 text-accent", isSuggesting && "animate-spin")} /></Button>
-                  </div>
-                  <div className="flex-1 relative">
-                    <Input placeholder={editMessage ? "Изменить..." : "Сообщение..."} value={inputText} onChange={e => setInputText(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSendMessage()} className="bg-muted/40 rounded-2xl h-11 pr-12 focus:ring-1 focus:ring-primary" aria-label="Поле ввода сообщения" />
-                    <Button size="icon" className={cn("absolute right-1 top-1 w-9 h-9 rounded-xl transition-all", (inputText.trim()) ? 'scale-100' : 'scale-0')} onClick={() => handleSendMessage()} aria-label="Отправить"><Send className="w-4 h-4" /></Button>
-                  </div>
-                  <div className="flex gap-1 mb-1">
-                    <Button variant="ghost" size="icon" onClick={isRecordingVideo ? finishVideoRecording : startVideoRecording} className={cn(isRecordingVideo && "text-primary animate-pulse")} aria-label="Записать видео"><Camera className="w-5 h-5" /></Button>
-                    <Button variant="ghost" size="icon" onClick={isRecordingAudio ? finishAudioRecording : startAudioRecording} className={cn(isRecordingAudio && "text-primary animate-pulse")} aria-label="Записать аудио"><Mic className="w-5 h-5" /></Button>
-                  </div>
-                </div>
+                <ChatInput 
+                  onSend={handleSendMessage}
+                  onTyping={handleTyping}
+                  isSuggesting={isSuggesting}
+                  onSuggest={handleAISuggest}
+                  onFileSelect={handleFileSelect}
+                  onStartVideo={startVideoRecording}
+                  onStartAudio={() => {}} // Placeholder
+                  isBlocked={isBlocked}
+                  isBanned={userProfile?.isBanned}
+                  editMessage={editMessage}
+                  onCancelEdit={() => setEditMessage(null)}
+                  replyTo={replyTo}
+                  onCancelReply={() => setReplyTo(null)}
+                />
               </>
             )}
           </div>
         ) : (
           <div className="flex justify-center max-w-4xl mx-auto">
-             {chat && <Button variant="outline" className="w-full h-11 rounded-xl" onClick={() => updateDocumentNonBlocking(chatRef!, { participantIds: arrayUnion(user?.uid) })}>Вступить в обсуждение</Button>}
+             {chat && <Button variant="outline" className="w-full h-11 rounded-xl" onClick={() => updateDocumentNonBlocking(chatRef!, { participantIds: arrayUnion(user?.uid) })}>Вступить</Button>}
           </div>
         )}
       </footer>

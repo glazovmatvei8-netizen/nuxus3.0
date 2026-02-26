@@ -1,6 +1,7 @@
+
 "use client"
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, memo } from 'react';
 import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { UserAvatar } from '@/components/user-avatar';
 import { Button } from '@/components/ui/button';
@@ -35,21 +36,22 @@ interface MessageItemProps {
 
 const REACTIONS = ['❤️', '👍', '😂', '😮', '😢', '🔥', '👏'];
 
-export function MessageItem({ message, isMe, chatId, onReply, onEdit, size = 'medium' }: MessageItemProps) {
+/**
+ * MessageItem мемоизирован для предотвращения повторных рендеров при вводе текста в ChatArea.
+ */
+export const MessageItem = memo(({ message, isMe, chatId, onReply, onEdit, size = 'medium' }: MessageItemProps) => {
   const { user } = useUser();
   const db = useFirestore();
   const [isReactionPickerOpen, setIsReactionPickerOpen] = useState(false);
-  const [formattedTime, setFormattedTime] = useState<string>('');
   const [isPlaying, setIsPlaying] = useState(false);
   const audioRef = React.useRef<HTMLAudioElement>(null);
 
-  useEffect(() => {
-    if (message.sentAt) {
-      try {
-        setFormattedTime(format(new Date(message.sentAt), 'HH:mm'));
-      } catch (e) {
-        setFormattedTime('');
-      }
+  const formattedTime = useMemo(() => {
+    if (!message.sentAt) return '';
+    try {
+      return format(new Date(message.sentAt), 'HH:mm');
+    } catch (e) {
+      return '';
     }
   }, [message.sentAt]);
 
@@ -81,11 +83,13 @@ export function MessageItem({ message, isMe, chatId, onReply, onEdit, size = 'me
     deleteDocumentNonBlocking(doc(db, 'chats', chatId, 'messages', message.id));
   };
 
-  const groupedReactions = (reactionsData || []).reduce((acc: Record<string, string[]>, curr) => {
-    if (!acc[curr.emoji]) acc[curr.emoji] = [];
-    acc[curr.emoji].push(curr.reactorId);
-    return acc;
-  }, {});
+  const groupedReactions = useMemo(() => {
+    return (reactionsData || []).reduce((acc: Record<string, string[]>, curr) => {
+      if (!acc[curr.emoji]) acc[curr.emoji] = [];
+      acc[curr.emoji].push(curr.reactorId);
+      return acc;
+    }, {});
+  }, [reactionsData]);
 
   const toggleAudio = () => {
     if (audioRef.current) {
@@ -112,7 +116,7 @@ export function MessageItem({ message, isMe, chatId, onReply, onEdit, size = 'me
       case 'audio':
         return (
           <div className="flex items-center gap-3 p-2 bg-black/10 rounded-xl min-w-[200px]">
-            <Button size="icon" variant="ghost" className="h-8 w-8 rounded-full bg-primary/20" onClick={toggleAudio} aria-label={isPlaying ? "Pause audio" : "Play audio"}>
+            <Button size="icon" variant="ghost" className="h-8 w-8 rounded-full bg-primary/20" onClick={toggleAudio}>
               {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4 ml-0.5" />}
             </Button>
             <div className="flex-1 h-1 bg-primary/20 rounded-full relative overflow-hidden">
@@ -152,7 +156,7 @@ export function MessageItem({ message, isMe, chatId, onReply, onEdit, size = 'me
 
   return (
     <div id={`msg-${message.id}`} className={cn(
-      "flex gap-3 max-w-[85%] animate-in slide-in-from-bottom-2 px-1 py-0.5",
+      "flex gap-3 max-w-[85%] animate-in fade-in duration-150 px-1 py-0.5",
       isMe ? "ml-auto flex-row-reverse" : "mr-auto"
     )}>
       {!isMe && (
@@ -167,10 +171,10 @@ export function MessageItem({ message, isMe, chatId, onReply, onEdit, size = 'me
             <div className="relative group cursor-pointer active:scale-[0.98] transition-transform">
               {message.replyToId && (
                 <div className={cn(
-                  "px-3 py-1.5 rounded-t-xl text-[10px] bg-black/5 border-l-2 border-primary max-w-full truncate opacity-70 mb-[-4px]",
+                  "px-3 py-1.5 rounded-t-xl text-[10px] border-l-2 border-primary max-w-full truncate opacity-70 mb-[-4px]",
                   isMe ? "bg-white/10" : "bg-black/5"
                 )}>
-                  <span className="font-bold block text-primary">Ответ на сообщение</span>
+                  <span className="font-bold block text-primary">Ответ</span>
                   <span className="truncate block italic">{message.replyToContent}</span>
                 </div>
               )}
@@ -198,23 +202,13 @@ export function MessageItem({ message, isMe, chatId, onReply, onEdit, size = 'me
             </div>
           </DropdownMenuTrigger>
           <DropdownMenuContent className="w-48 bg-card/95 backdrop-blur-xl border-border/40">
-            <DropdownMenuItem onClick={onReply} className="gap-2">
-              <CornerUpLeft className="w-4 h-4" /> Ответить
-            </DropdownMenuItem>
+            <DropdownMenuItem onClick={onReply} className="gap-2"><CornerUpLeft className="w-4 h-4" /> Ответить</DropdownMenuItem>
             {isMe && message.contentType === 'text' && (
-              <DropdownMenuItem onClick={onEdit} className="gap-2">
-                <Pencil className="w-4 h-4" /> Изменить
-              </DropdownMenuItem>
+              <DropdownMenuItem onClick={onEdit} className="gap-2"><Pencil className="w-4 h-4" /> Изменить</DropdownMenuItem>
             )}
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => setIsReactionPickerOpen(true)} className="gap-2">
-              <SmilePlus className="w-4 h-4" /> Реакция
-            </DropdownMenuItem>
-            {isMe && (
-              <DropdownMenuItem onClick={handleDelete} className="gap-2 text-destructive focus:text-destructive">
-                <Trash2 className="w-4 h-4" /> Удалить
-              </DropdownMenuItem>
-            )}
+            <DropdownMenuItem onClick={() => setIsReactionPickerOpen(true)} className="gap-2"><SmilePlus className="w-4 h-4" /> Реакция</DropdownMenuItem>
+            {isMe && <DropdownMenuItem onClick={handleDelete} className="gap-2 text-destructive focus:text-destructive"><Trash2 className="w-4 h-4" /> Удалить</DropdownMenuItem>}
           </DropdownMenuContent>
         </DropdownMenu>
 
@@ -223,16 +217,16 @@ export function MessageItem({ message, isMe, chatId, onReply, onEdit, size = 'me
             {Object.entries(groupedReactions).map(([emoji, reactorIds]) => (
               <button
                 key={emoji}
-                onClick={() => handleAddReaction(emoji)}
+                onClick={() => handleAddReaction(emoji as string)}
                 className={cn(
                   "flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] border transition-all",
-                  reactorIds.includes(user?.uid || '')
+                  (reactorIds as string[]).includes(user?.uid || '')
                     ? "bg-primary/20 border-primary/40 text-primary font-bold"
                     : "bg-muted/20 border-border/40 text-muted-foreground hover:bg-muted/40"
                 )}
               >
                 <span>{emoji}</span>
-                <span className="font-mono">{reactorIds.length}</span>
+                <span className="font-mono">{(reactorIds as string[]).length}</span>
               </button>
             ))}
           </div>
@@ -253,4 +247,16 @@ export function MessageItem({ message, isMe, chatId, onReply, onEdit, size = 'me
       )}
     </div>
   );
-}
+}, (prevProps, nextProps) => {
+  // Кастомная проверка для мемоизации: перерисовывать только если изменились ключевые данные
+  return (
+    prevProps.message.id === nextProps.message.id &&
+    prevProps.message.content === nextProps.message.content &&
+    prevProps.message.editedAt === nextProps.message.editedAt &&
+    prevProps.message.isRead === nextProps.message.isRead &&
+    prevProps.size === nextProps.size &&
+    prevProps.isMe === nextProps.isMe
+  );
+});
+
+MessageItem.displayName = 'MessageItem';
