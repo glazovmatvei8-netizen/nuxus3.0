@@ -54,8 +54,9 @@ export default function ChatSidebar() {
   });
 
   // Fallback values for profile display while loading or if profile doc is missing
-  const displayName = profile?.name || user?.displayName || user?.email?.split('@')[0] || 'Пользователь';
-  const displayUsername = profile?.username || '@' + (user?.email?.split('@')[0] || 'user');
+  // Avoiding showing phone number from email by checking isProfileLoading
+  const displayName = isProfileLoading ? 'Загрузка...' : (profile?.name || user?.displayName || 'Пользователь');
+  const displayUsername = isProfileLoading ? '...' : (profile?.username || '@' + (user?.uid.slice(0, 5) || 'user'));
 
   return (
     <div className="flex flex-col h-full bg-card/30 backdrop-blur-sm overflow-hidden">
