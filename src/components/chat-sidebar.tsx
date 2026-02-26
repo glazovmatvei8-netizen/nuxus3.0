@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useEffect } from 'react';
@@ -199,12 +198,19 @@ function ChatListItem({ chat, isActive, otherId, chatDisplayName, manualAvatarUr
           <span className="font-semibold truncate text-sm">{chatDisplayName}</span>
         </div>
         <div className="flex items-center justify-between">
-          <p className={cn(
+          <div className={cn(
             "text-[10px] truncate transition-colors",
             isActive ? 'text-white/80' : (isTyping || status === 'в сети' ? 'text-accent font-bold' : 'text-muted-foreground')
           )}>
-            {isTyping ? 'печатает...' : status}
-          </p>
+            {isTyping ? (
+              <span className="flex items-center gap-0.5">
+                печатает
+                <span className="animate-typing-dot">.</span>
+                <span className="animate-typing-dot [animation-delay:0.2s]">.</span>
+                <span className="animate-typing-dot [animation-delay:0.4s]">.</span>
+              </span>
+            ) : status}
+          </div>
         </div>
       </div>
     </div>

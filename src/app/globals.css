@@ -57,3 +57,13 @@
     height: -webkit-fill-available;
   }
 }
+
+@keyframes typing-dot {
+  0%, 20% { opacity: 0; transform: translateY(0); }
+  50% { opacity: 1; transform: translateY(-1.5px); }
+  100% { opacity: 0; transform: translateY(0); }
+}
+
+.animate-typing-dot {
+  animation: typing-dot 1.4s infinite both;
+}

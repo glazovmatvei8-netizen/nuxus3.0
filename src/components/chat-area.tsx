@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useRef, useEffect, useMemo } from 'react';
@@ -394,7 +393,16 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
             <UserAvatar userId={chat?.type === 'private' ? otherId : null} fallbackName={chatDisplayName} className="h-9 w-9 ring-2 ring-primary/20" />
             <div className="flex flex-col min-w-0">
               <span className="font-semibold text-sm truncate">{chatDisplayName}</span>
-              <span className={cn("text-[10px] truncate", (statusString === 'печатает...' || isBlocked) ? 'text-accent font-bold' : 'text-muted-foreground')}>{statusString}</span>
+              <span className={cn("text-[10px] truncate", (statusString === 'печатает...' || isBlocked) ? 'text-accent font-bold' : 'text-muted-foreground')}>
+                {statusString === 'печатает...' ? (
+                  <span className="flex items-center gap-0.5">
+                    печатает
+                    <span className="animate-typing-dot">.</span>
+                    <span className="animate-typing-dot [animation-delay:0.2s]">.</span>
+                    <span className="animate-typing-dot [animation-delay:0.4s]">.</span>
+                  </span>
+                ) : statusString}
+              </span>
             </div>
           </div>
         </div>
