@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useRef, useEffect, useMemo } from 'react';
@@ -342,7 +341,7 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
     <div className="flex-1 flex flex-col h-[100dvh] bg-background relative overflow-hidden">
       <header className="h-16 flex items-center justify-between px-4 border-b border-border/40 bg-card/20 backdrop-blur-xl z-20 shrink-0">
         <div className="flex items-center gap-2 min-w-0">
-          <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setCurrentChatId(null)}>
+          <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setCurrentChatId(null)} aria-label="Вернуться назад">
             <ChevronLeft className="w-5 h-5" />
           </Button>
           <div className="flex items-center gap-3 cursor-pointer min-w-0" onClick={() => setIsChatInfoOpen(true)}>
@@ -354,8 +353,8 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
           </div>
         </div>
         <div className="flex items-center gap-1">
-          <Button variant="ghost" size="icon" className="rounded-full text-muted-foreground" onClick={() => setIsChatInfoOpen(true)}><Info className="w-5 h-5" /></Button>
-          <Button variant="ghost" size="icon" className="rounded-full text-muted-foreground"><MoreVertical className="w-5 h-5" /></Button>
+          <Button variant="ghost" size="icon" className="rounded-full text-muted-foreground" onClick={() => setIsChatInfoOpen(true)} aria-label="Информация о чате"><Info className="w-5 h-5" /></Button>
+          <Button variant="ghost" size="icon" className="rounded-full text-muted-foreground" aria-label="Дополнительно"><MoreVertical className="w-5 h-5" /></Button>
         </div>
       </header>
 
@@ -405,10 +404,10 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
                       className="w-full h-full object-cover" 
                     />
                     <div className="absolute bottom-2 left-0 right-0 flex justify-center gap-4 px-4">
-                       <Button variant="destructive" size="icon" className="rounded-full h-10 w-10 shadow-lg" onClick={cancelVideoRecording}>
+                       <Button variant="destructive" size="icon" className="rounded-full h-10 w-10 shadow-lg" onClick={cancelVideoRecording} aria-label="Отменить видео">
                           <Trash className="w-5 h-5" />
                        </Button>
-                       <Button variant="default" size="icon" className="bg-primary hover:bg-primary/90 rounded-full h-10 w-10 shadow-lg" onClick={finishVideoRecording}>
+                       <Button variant="default" size="icon" className="bg-primary hover:bg-primary/90 rounded-full h-10 w-10 shadow-lg" onClick={finishVideoRecording} aria-label="Отправить видео">
                           <Check className="w-5 h-5" />
                        </Button>
                     </div>
@@ -421,10 +420,10 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
                        <span className="text-sm font-bold">Идет запись...</span>
                     </div>
                     <div className="flex gap-2">
-                       <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-destructive h-8 w-8" onClick={cancelAudioRecording}>
+                       <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-destructive h-8 w-8" onClick={cancelAudioRecording} aria-label="Отменить аудио">
                           <Trash className="w-4 h-4" />
                        </Button>
-                       <Button variant="ghost" size="icon" className="text-primary hover:text-primary h-8 w-8" onClick={finishAudioRecording}>
+                       <Button variant="ghost" size="icon" className="text-primary hover:text-primary h-8 w-8" onClick={finishAudioRecording} aria-label="Отправить аудио">
                           <Check className="w-4 h-4" />
                        </Button>
                     </div>
@@ -436,7 +435,7 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
                       <CornerUpLeft className="w-4 h-4 text-primary" />
                       <span className="text-xs truncate italic">{replyTo.content}</span>
                     </div>
-                    <Button size="icon" variant="ghost" onClick={() => setReplyTo(null)} className="h-6 w-6"><X className="w-4 h-4" /></Button>
+                    <Button size="icon" variant="ghost" onClick={() => setReplyTo(null)} className="h-6 w-6" aria-label="Отменить ответ"><X className="w-4 h-4" /></Button>
                   </div>
                 )}
                 <div className="flex items-end gap-2">
@@ -444,16 +443,16 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
                     <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={e => {
                       const f = e.target.files?.[0]; if (f) { const r = new FileReader(); r.onloadend = () => handleSendMessage(r.result as string, 'image'); r.readAsDataURL(f); }
                     }} />
-                    <Button variant="ghost" size="icon" onClick={() => fileInputRef.current?.click()}><Paperclip className="w-5 h-5" /></Button>
-                    <Button variant="ghost" size="icon" onClick={handleAISuggest} disabled={isSuggesting}><Sparkles className={cn("w-5 h-5 text-accent", isSuggesting && "animate-spin")} /></Button>
+                    <Button variant="ghost" size="icon" onClick={() => fileInputRef.current?.click()} aria-label="Прикрепить файл"><Paperclip className="w-5 h-5" /></Button>
+                    <Button variant="ghost" size="icon" onClick={handleAISuggest} disabled={isSuggesting} aria-label="AI черновик"><Sparkles className={cn("w-5 h-5 text-accent", isSuggesting && "animate-spin")} /></Button>
                   </div>
                   <div className="flex-1 relative">
-                    <Input placeholder={editMessage ? "Изменить..." : "Сообщение..."} value={inputText} onChange={e => setInputText(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSendMessage()} className="bg-muted/40 rounded-2xl h-11 pr-12 focus:ring-1 focus:ring-primary" />
-                    <Button size="icon" className={cn("absolute right-1 top-1 w-9 h-9 rounded-xl transition-all", (inputText.trim()) ? 'scale-100' : 'scale-0')} onClick={() => handleSendMessage()}><Send className="w-4 h-4" /></Button>
+                    <Input placeholder={editMessage ? "Изменить..." : "Сообщение..."} value={inputText} onChange={e => setInputText(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSendMessage()} className="bg-muted/40 rounded-2xl h-11 pr-12 focus:ring-1 focus:ring-primary" aria-label="Поле ввода сообщения" />
+                    <Button size="icon" className={cn("absolute right-1 top-1 w-9 h-9 rounded-xl transition-all", (inputText.trim()) ? 'scale-100' : 'scale-0')} onClick={() => handleSendMessage()} aria-label="Отправить"><Send className="w-4 h-4" /></Button>
                   </div>
                   <div className="flex gap-1 mb-1">
-                    <Button variant="ghost" size="icon" onClick={isRecordingVideo ? finishVideoRecording : startVideoRecording} className={cn(isRecordingVideo && "text-primary animate-pulse")}><Camera className="w-5 h-5" /></Button>
-                    <Button variant="ghost" size="icon" onClick={isRecordingAudio ? finishAudioRecording : startAudioRecording} className={cn(isRecordingAudio && "text-primary animate-pulse")}><Mic className="w-5 h-5" /></Button>
+                    <Button variant="ghost" size="icon" onClick={isRecordingVideo ? finishVideoRecording : startVideoRecording} className={cn(isRecordingVideo && "text-primary animate-pulse")} aria-label="Записать видео"><Camera className="w-5 h-5" /></Button>
+                    <Button variant="ghost" size="icon" onClick={isRecordingAudio ? finishAudioRecording : startAudioRecording} className={cn(isRecordingAudio && "text-primary animate-pulse")} aria-label="Записать аудио"><Mic className="w-5 h-5" /></Button>
                   </div>
                 </div>
               </>
