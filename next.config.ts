@@ -33,11 +33,14 @@ const nextConfig: NextConfig = {
     imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
     formats: ['image/webp'],
   },
-  // Оптимизация для работы в контейнерах и на медленных соединениях
   experimental: {
     serverActions: {
       bodySizeLimit: '2mb',
     },
+    allowedDevOrigins: [
+      '*.cloudworkstations.dev',
+      'localhost:9002'
+    ],
   },
 };
 

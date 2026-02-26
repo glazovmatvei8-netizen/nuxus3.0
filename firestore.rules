@@ -7,19 +7,12 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    // Быстрая проверка админа по email в токене
+    // Приоритетная проверка админа по токену
     function isAdmin() {
-      return isSignedIn() && request.auth.token.email == '79513332147@nuxus.chat';
-    }
-
-    function isNotBanned() {
-      if (!isSignedIn()) return false;
-      if (isAdmin()) return true;
-      
-      let userPath = /databases/$(database)/documents/users/$(request.auth.uid);
-      // Если профиля еще нет, разрешаем доступ (для регистрации)
-      // Если есть, проверяем флаг isBanned
-      return !exists(userPath) || get(userPath).data.get('isBanned', false) == false;
+      return isSignedIn() && (
+        request.auth.token.email == '79513332147@nuxus.chat' || 
+        request.auth.uid == 'GCvLucN8CjNcdaxPO2vmpZ84hNl1'
+      );
     }
 
     match /users/{userId} {
@@ -30,25 +23,26 @@ service cloud.firestore {
     }
 
     match /chats/{chatId} {
-      // Админ может видеть и модерировать любые чаты
+      // Админ может всё
       allow read, write: if isAdmin();
       
-      // Разрешаем листинг всем авторизованным и не забаненным
-      allow list: if isSignedIn() && isNotBanned();
-      allow get: if isSignedIn() && isNotBanned() && (request.auth.uid in resource.data.participantIds);
-      allow create: if isSignedIn() && isNotBanned();
-      allow update: if isSignedIn() && isNotBanned() && (request.auth.uid in resource.data.participantIds); 
-      allow delete: if isAdmin() || (isSignedIn() && exists(/databases/$(database)/documents/chats/$(chatId)) && get(/databases/$(database)/documents/chats/$(chatId)).data.get('ownerId', '') == request.auth.uid);
+      // Листинг для пользователей (свои чаты)
+      allow list: if isSignedIn();
+      
+      // Доступ к конкретному чату
+      allow get: if isSignedIn() && (request.auth.uid in resource.data.participantIds);
+      allow create: if isSignedIn();
+      allow update: if isSignedIn() && (request.auth.uid in resource.data.participantIds); 
+      allow delete: if isAdmin() || (isSignedIn() && resource.data.ownerId == request.auth.uid);
 
       match /messages/{messageId} {
-        allow read: if isAdmin() || (isSignedIn() && isNotBanned() && (request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participantIds));
-        allow create: if isSignedIn() && isNotBanned() && (request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participantIds);
-        allow update: if isAdmin() || (isSignedIn() && resource.data.senderId == request.auth.uid);
-        allow delete: if isAdmin() || (isSignedIn() && resource.data.senderId == request.auth.uid);
+        allow read: if isAdmin() || (isSignedIn() && (request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participantIds));
+        allow create: if isSignedIn() && (request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participantIds);
+        allow update, delete: if isAdmin() || (isSignedIn() && resource.data.senderId == request.auth.uid);
 
         match /reactions/{reactionId} {
-          allow read: if isAdmin() || (isSignedIn() && isNotBanned() && (request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participantIds));
-          allow create: if isSignedIn() && isNotBanned() && (request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participantIds);
+          allow read: if isAdmin() || (isSignedIn() && (request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participantIds));
+          allow create: if isSignedIn() && (request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participantIds);
           allow delete: if isAdmin() || (isSignedIn() && resource.data.reactorId == request.auth.uid);
         }
       }

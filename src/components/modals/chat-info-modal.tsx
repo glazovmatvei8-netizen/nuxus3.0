@@ -42,7 +42,7 @@ export function ChatInfoModal({ open, onOpenChange, chat }: ChatInfoModalProps) 
   }, [db, user]);
   const { data: currentUserProfile } = useDoc<User>(userProfileRef);
 
-  const isAdmin = currentUserProfile?.phone === '+79513332147';
+  const isAdmin = currentUserProfile?.phone === '+79513332147' || user?.email === '79513332147@nuxus.chat';
   const isBlocked = currentUserProfile?.blockedUserIds?.includes(otherId || '');
 
   const membersQuery = useMemoFirebase(() => {
@@ -220,7 +220,7 @@ export function ChatInfoModal({ open, onOpenChange, chat }: ChatInfoModalProps) 
                       <Button 
                         size="icon" 
                         variant="ghost" 
-                        className={cn("h-8 w-8 rounded-full", userMember.isBanned ? "text-accent" : "text-destructive")} 
+                        className={cn("h-8 w-8 rounded-full", userMember.isBanned ? "text-accent" : "text-destructive opacity-0 group-hover:opacity-100")} 
                         onClick={() => handleToggleBan(userMember)}
                         title={userMember.isBanned ? "Разбанить" : "Забанить"}
                       >
@@ -229,7 +229,7 @@ export function ChatInfoModal({ open, onOpenChange, chat }: ChatInfoModalProps) 
                       <Button 
                         size="icon" 
                         variant="ghost" 
-                        className="h-8 w-8 rounded-full text-destructive"
+                        className="h-8 w-8 rounded-full text-destructive opacity-0 group-hover:opacity-100"
                         onClick={() => handlePermanentDelete(userMember)}
                         title="Удалить навсегда"
                       >
