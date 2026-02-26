@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useEffect } from 'react';
@@ -53,10 +54,10 @@ export default function ChatSidebar() {
     return matchesTab && matchesSearch;
   });
 
-  // Fallback values for profile display while loading or if profile doc is missing
-  // Avoiding showing phone number from email by checking isProfileLoading
-  const displayName = isProfileLoading ? 'Загрузка...' : (profile?.name || user?.displayName || 'Пользователь');
-  const displayUsername = isProfileLoading ? '...' : (profile?.username || '@' + (user?.uid.slice(0, 5) || 'user'));
+  // Извлекаем номер телефона из технического email (формат: 79001234567@nuxus.chat)
+  const userPhone = user?.email?.split('@')[0];
+  const displayName = isProfileLoading ? 'Загрузка...' : (profile?.name || user?.displayName || 'Новый пользователь');
+  const displayUsername = isProfileLoading ? '...' : (profile?.username || (userPhone ? `+${userPhone}` : 'Настройте профиль'));
 
   return (
     <div className="flex flex-col h-full bg-card/30 backdrop-blur-sm overflow-hidden">
