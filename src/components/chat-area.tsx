@@ -9,7 +9,7 @@ import { UserAvatar } from '@/components/user-avatar';
 import { 
   Send, Paperclip, Smile, MoreVertical, ChevronLeft, 
   Sparkles, MessageSquare, Info, Mic, Camera, X, StopCircle, UserPlus,
-  CornerUpLeft, Pencil, Trash2, Loader2, ShieldAlert, Video
+  CornerUpLeft, Pencil, Trash2, Loader2, ShieldAlert, Video, Trash, Check
 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { MessageItem } from './message-item';
@@ -46,6 +46,8 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const videoPreviewRef = useRef<HTMLVideoElement>(null);
   const audioChunksRef = useRef<Blob[]>([]);
+  const isCancelledRef = useRef(false);
+  
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -199,6 +201,7 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
 
   const startVideoRecording = async () => {
     if (isBlocked) return;
+    isCancelledRef.current = false;
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: { width: 400, height: 400, facingMode: 'user' } });
       if (videoPreviewRef.current) {
@@ -208,10 +211,12 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
       audioChunksRef.current = [];
       mediaRecorderRef.current.ondataavailable = e => e.data.size > 0 && audioChunksRef.current.push(e.data);
       mediaRecorderRef.current.onstop = () => {
-        const blob = new Blob(audioChunksRef.current, { type: 'video/webm' });
-        const reader = new FileReader();
-        reader.onloadend = () => handleSendMessage(reader.result as string, 'video');
-        reader.readAsDataURL(blob);
+        if (!isCancelledRef.current) {
+          const blob = new Blob(audioChunksRef.current, { type: 'video/webm' });
+          const reader = new FileReader();
+          reader.onloadend = () => handleSendMessage(reader.result as string, 'video');
+          reader.readAsDataURL(blob);
+        }
         stream.getTracks().forEach(t => t.stop());
       };
       mediaRecorderRef.current.start();
@@ -221,25 +226,37 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
     }
   };
 
-  const stopVideoRecording = () => {
+  const finishVideoRecording = () => {
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
       mediaRecorderRef.current.stop();
     }
     setIsRecordingVideo(false);
   };
 
+  const cancelVideoRecording = () => {
+    isCancelledRef.current = true;
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      mediaRecorderRef.current.stop();
+    }
+    setIsRecordingVideo(false);
+    toast({ title: "Запись отменена" });
+  };
+
   const startAudioRecording = async () => {
     if (isBlocked) return;
+    isCancelledRef.current = false;
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       mediaRecorderRef.current = new MediaRecorder(stream);
       audioChunksRef.current = [];
       mediaRecorderRef.current.ondataavailable = e => e.data.size > 0 && audioChunksRef.current.push(e.data);
       mediaRecorderRef.current.onstop = () => {
-        const blob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
-        const reader = new FileReader();
-        reader.onloadend = () => handleSendMessage(reader.result as string, 'audio');
-        reader.readAsDataURL(blob);
+        if (!isCancelledRef.current) {
+          const blob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+          const reader = new FileReader();
+          reader.onloadend = () => handleSendMessage(reader.result as string, 'audio');
+          reader.readAsDataURL(blob);
+        }
         stream.getTracks().forEach(t => t.stop());
       };
       mediaRecorderRef.current.start();
@@ -247,11 +264,20 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
     } catch (e) { toast({ title: "Нет доступа к микрофону", variant: "destructive" }); }
   };
 
-  const stopAudioRecording = () => {
+  const finishAudioRecording = () => {
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
       mediaRecorderRef.current.stop();
     }
     setIsRecordingAudio(false);
+  };
+
+  const cancelAudioRecording = () => {
+    isCancelledRef.current = true;
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      mediaRecorderRef.current.stop();
+    }
+    setIsRecordingAudio(false);
+    toast({ title: "Запись отменена" });
   };
 
   const chatDisplayName = otherId && chat?.metadata && chat.metadata[otherId] ? chat.metadata[otherId].name : chat?.name;
@@ -330,7 +356,30 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
                 {isRecordingVideo && (
                   <div className="absolute bottom-20 left-1/2 -translate-x-1/2 w-48 h-48 rounded-full overflow-hidden border-4 border-primary shadow-2xl z-50 bg-black">
                     <video ref={videoPreviewRef} autoPlay muted playsInline className="w-full h-full object-cover" />
-                    <Button variant="destructive" size="icon" className="absolute bottom-2 left-1/2 -translate-x-1/2 rounded-full h-8 w-8" onClick={stopVideoRecording}><StopCircle className="w-5 h-5" /></Button>
+                    <div className="absolute bottom-2 left-0 right-0 flex justify-center gap-4 px-4">
+                       <Button variant="destructive" size="icon" className="rounded-full h-10 w-10 shadow-lg" onClick={cancelVideoRecording}>
+                          <Trash className="w-5 h-5" />
+                       </Button>
+                       <Button variant="default" size="icon" className="bg-primary hover:bg-primary/90 rounded-full h-10 w-10 shadow-lg" onClick={finishVideoRecording}>
+                          <Check className="w-5 h-5" />
+                       </Button>
+                    </div>
+                  </div>
+                )}
+                {isRecordingAudio && (
+                  <div className="absolute bottom-20 left-1/2 -translate-x-1/2 flex items-center gap-4 bg-card/90 backdrop-blur-xl border border-primary/20 px-6 py-3 rounded-full shadow-2xl z-50 animate-in slide-in-from-bottom-5">
+                    <div className="flex items-center gap-2 text-primary">
+                       <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
+                       <span className="text-sm font-bold">Идет запись...</span>
+                    </div>
+                    <div className="flex gap-2">
+                       <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-destructive h-8 w-8" onClick={cancelAudioRecording}>
+                          <Trash className="w-4 h-4" />
+                       </Button>
+                       <Button variant="ghost" size="icon" className="text-primary hover:text-primary h-8 w-8" onClick={finishAudioRecording}>
+                          <Check className="w-4 h-4" />
+                       </Button>
+                    </div>
                   </div>
                 )}
                 {replyTo && (
@@ -355,8 +404,8 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
                     <Button size="icon" className={cn("absolute right-1 top-1 w-9 h-9 rounded-xl transition-all", (inputText.trim() || isRecordingVideo || isRecordingAudio) ? 'scale-100' : 'scale-0')} onClick={() => handleSendMessage()}><Send className="w-4 h-4" /></Button>
                   </div>
                   <div className="flex gap-1 mb-1">
-                    <Button variant="ghost" size="icon" onClick={isRecordingVideo ? stopVideoRecording : startVideoRecording} className={cn(isRecordingVideo && "text-primary animate-pulse")}><Camera className="w-5 h-5" /></Button>
-                    <Button variant="ghost" size="icon" onClick={isRecordingAudio ? stopAudioRecording : startAudioRecording} className={cn(isRecordingAudio && "text-primary animate-pulse")}><Mic className="w-5 h-5" /></Button>
+                    <Button variant="ghost" size="icon" onClick={isRecordingVideo ? finishVideoRecording : startVideoRecording} className={cn(isRecordingVideo && "text-primary animate-pulse")}><Camera className="w-5 h-5" /></Button>
+                    <Button variant="ghost" size="icon" onClick={isRecordingAudio ? finishAudioRecording : startAudioRecording} className={cn(isRecordingAudio && "text-primary animate-pulse")}><Mic className="w-5 h-5" /></Button>
                   </div>
                 </div>
               </>
