@@ -1,3 +1,4 @@
+
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
 import { formatDistanceToNow, parseISO, differenceInSeconds } from 'date-fns';
@@ -9,16 +10,15 @@ export function cn(...inputs: ClassValue[]) {
 
 /**
  * Форматирует статус последней активности пользователя в стиле Telegram.
+ * Учитывает настройки конфиденциальности.
  */
-export function formatLastSeen(lastSeenIso: string | undefined): string {
+export function formatLastSeen(lastSeenIso: string | undefined, visibility: 'everybody' | 'nobody' = 'everybody'): string {
+  if (visibility === 'nobody') return 'был(а) недавно';
   if (!lastSeenIso) return 'был(а) недавно';
   
   try {
     const lastSeen = parseISO(lastSeenIso);
     const now = new Date();
-    
-    // Используем разницу в секундах для максимальной точности
-    // Добавляем 1 секунду запаса на случай разсинхрона серверов
     const diffSeconds = Math.max(0, differenceInSeconds(now, lastSeen));
 
     if (diffSeconds < 30) return 'в сети';

@@ -112,11 +112,11 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: ChatAreaProps
     } else if (isOtherProfileLoading) {
       setStatusString('загрузка...');
     } else if (chat?.type === 'private') {
-      setStatusString(formatLastSeen(otherUserProfile?.lastSeen));
+      setStatusString(formatLastSeen(otherUserProfile?.lastSeen, otherUserProfile?.settings?.privacy?.lastSeenVisibility));
     } else {
       setStatusString(chat?.type === 'group' ? 'Группа' : 'Канал');
     }
-  }, [isOtherProfileLoading, otherUserProfile?.lastSeen, chat?.type, chat?.typing, otherId]);
+  }, [isOtherProfileLoading, otherUserProfile?.lastSeen, otherUserProfile?.settings?.privacy?.lastSeenVisibility, chat?.type, chat?.typing, otherId]);
 
   useEffect(() => {
     if (messages && user && currentChatId && chat && isParticipant && db) {

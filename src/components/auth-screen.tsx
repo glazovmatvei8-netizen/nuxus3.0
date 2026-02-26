@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState } from 'react';
@@ -65,7 +66,17 @@ export default function AuthScreen() {
           avatarUrl: `https://picsum.photos/seed/${res.user.uid}/200`,
           createdAt: new Date().toISOString(),
           lastSeen: new Date().toISOString(),
-          inactivityDeletion: 'never'
+          inactivityDeletion: 'never',
+          settings: {
+            theme: 'default',
+            chatBackground: 'default',
+            messageSize: 'medium',
+            privacy: {
+              phoneVisibility: 'nobody',
+              lastSeenVisibility: 'everybody',
+              allowGroupsFrom: 'everybody'
+            }
+          }
         });
       } else {
         await signInWithEmailAndPassword(auth, loginEmail, formData.password);
@@ -96,9 +107,15 @@ export default function AuthScreen() {
             avatarUrl: `https://picsum.photos/seed/${acc.phone}/200`,
             createdAt: new Date().toISOString(),
             lastSeen: new Date().toISOString(),
-            inactivityDeletion: 'never'
+            inactivityDeletion: 'never',
+            settings: {
+              privacy: {
+                phoneVisibility: 'nobody',
+                lastSeenVisibility: 'everybody'
+              }
+            }
           });
-        } catch (e) {} // Account might already exist
+        } catch (e) {}
       }
       toast({ title: "Готово!", description: "Аккаунты созданы. Теперь можно войти." });
     } catch (err) {

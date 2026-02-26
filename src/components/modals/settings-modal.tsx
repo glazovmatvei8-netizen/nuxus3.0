@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useRef } from 'react';
@@ -15,7 +16,7 @@ import {
 import { useAuth, useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
-  LogOut, User, LayoutGrid, Palette, Loader2, Sparkles, X, Wand2, AtSign, Settings2, Check
+  LogOut, User, LayoutGrid, Palette, Loader2, Sparkles, X, Wand2, AtSign, Settings2, Check, ShieldCheck, Lock, Trash2
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { signOut } from 'firebase/auth';
@@ -57,6 +58,9 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
     username: '',
     avatarUrl: '',
     chatBackground: 'default',
+    phoneVisibility: 'nobody',
+    lastSeenVisibility: 'everybody',
+    inactivityDeletion: 'never',
   });
 
   const [showBrandVisual, setShowBrandVisual] = useState(false);
@@ -71,6 +75,9 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
         username: profile.username || '',
         avatarUrl: profile.avatarUrl || '',
         chatBackground: profile.settings?.chatBackground || 'default',
+        phoneVisibility: profile.settings?.privacy?.phoneVisibility || 'nobody',
+        lastSeenVisibility: profile.settings?.privacy?.lastSeenVisibility || 'everybody',
+        inactivityDeletion: profile.inactivityDeletion || 'never',
       });
     }
   }, [profile]);
@@ -81,9 +88,15 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
       name: form.name,
       username: form.username,
       avatarUrl: form.avatarUrl,
+      inactivityDeletion: form.inactivityDeletion,
       settings: {
         ...profile?.settings,
         chatBackground: form.chatBackground,
+        privacy: {
+          ...profile?.settings?.privacy,
+          phoneVisibility: form.phoneVisibility,
+          lastSeenVisibility: form.lastSeenVisibility,
+        }
       }
     });
     onOpenChange(false);
@@ -176,7 +189,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                   <div className="space-y-1.5">
                     <Label className="text-xs ml-1 font-semibold text-muted-foreground">Имя</Label>
                     <Input 
-                      className="bg-background/50 h-11 rounded-xl border-border/20 focus-visible:ring-1 focus-visible:ring-primary/40" 
+                      className="bg-background/50 h-11 rounded-xl border-border/20" 
                       value={form.name} 
                       onChange={e => setForm({...form, name: e.target.value})} 
                     />
@@ -186,11 +199,64 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                     <div className="relative">
                       <AtSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                       <Input 
-                        className="bg-background/50 h-11 rounded-xl border-border/20 pl-9 focus-visible:ring-1 focus-visible:ring-primary/40" 
+                        className="bg-background/50 h-11 rounded-xl border-border/20 pl-9" 
                         value={form.username} 
                         onChange={e => setForm({...form, username: e.target.value})} 
                       />
                     </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Section: Privacy & Security */}
+              <div className="bg-muted/30 rounded-2xl p-4 space-y-4 border border-accent/10">
+                <div className="flex items-center gap-2 px-1">
+                  <ShieldCheck className="w-4 h-4 text-accent" />
+                  <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Конфиденциальность</span>
+                </div>
+                
+                <div className="space-y-4">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs ml-1 font-semibold text-muted-foreground">Номер телефона</Label>
+                    <Select value={form.phoneVisibility} onValueChange={(val) => setForm({...form, phoneVisibility: val as any})}>
+                      <SelectTrigger className="bg-background/50 h-11 rounded-xl">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="everybody">Все</SelectItem>
+                        <SelectItem value="contacts">Мои контакты</SelectItem>
+                        <SelectItem value="nobody">Никто</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label className="text-xs ml-1 font-semibold text-muted-foreground">Последняя активность</Label>
+                    <Select value={form.lastSeenVisibility} onValueChange={(val) => setForm({...form, lastSeenVisibility: val as any})}>
+                      <SelectTrigger className="bg-background/50 h-11 rounded-xl">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="everybody">Все</SelectItem>
+                        <SelectItem value="nobody">Никто</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label className="text-xs ml-1 font-semibold text-muted-foreground">Удалить аккаунт при неактивности</Label>
+                    <Select value={form.inactivityDeletion} onValueChange={(val) => setForm({...form, inactivityDeletion: val as any})}>
+                      <SelectTrigger className="bg-background/50 h-11 rounded-xl">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="1-month">Через 1 месяц</SelectItem>
+                        <SelectItem value="3-months">Через 3 месяца</SelectItem>
+                        <SelectItem value="6-months">Через 6 месяцев</SelectItem>
+                        <SelectItem value="1-year">Через 1 год</SelectItem>
+                        <SelectItem value="never">Никогда</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
               </div>
@@ -204,12 +270,12 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                 <div className="space-y-1.5">
                   <Label className="text-xs ml-1 font-semibold text-muted-foreground">Фон чатов</Label>
                   <Select value={form.chatBackground} onValueChange={(val) => setForm({...form, chatBackground: val})}>
-                    <SelectTrigger className="bg-background/50 h-11 rounded-xl border-border/20 focus:ring-1 focus:ring-primary/40">
+                    <SelectTrigger className="bg-background/50 h-11 rounded-xl">
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent className="rounded-xl border-border/40">
+                    <SelectContent>
                       {BACKGROUNDS.map(bg => (
-                        <SelectItem key={bg.value} value={bg.value} className="text-sm">{bg.name}</SelectItem>
+                        <SelectItem key={bg.value} value={bg.value}>{bg.name}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -225,31 +291,25 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                 <div className="grid grid-cols-1 gap-2">
                   <Button 
                     variant="ghost" 
-                    className="w-full h-12 bg-background/50 rounded-xl flex items-center justify-between px-4 hover:bg-primary/10 group"
+                    className="w-full h-12 bg-background/50 rounded-xl flex items-center justify-between px-4"
                     onClick={handleGenerateAiAvatar}
                     disabled={isGeneratingAvatar}
                   >
                     <div className="flex items-center gap-3">
-                      <div className="bg-primary/20 p-2 rounded-lg">
-                        {isGeneratingAvatar ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wand2 className="w-4 h-4" />}
-                      </div>
-                      <span className="text-sm font-medium">Сгенерировать AI-аватар</span>
+                      {isGeneratingAvatar ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wand2 className="w-4 h-4 text-primary" />}
+                      <span className="text-sm font-medium">Создать AI-аватар</span>
                     </div>
-                    <Sparkles className="w-4 h-4 text-primary opacity-50 group-hover:opacity-100" />
                   </Button>
                   <Button 
                     variant="ghost" 
-                    className="w-full h-12 bg-background/50 rounded-xl flex items-center justify-between px-4 hover:bg-accent/10 group"
+                    className="w-full h-12 bg-background/50 rounded-xl flex items-center justify-between px-4"
                     onClick={handleGenerateVisual}
                     disabled={isGeneratingVisual}
                   >
                     <div className="flex items-center gap-3">
-                      <div className="bg-accent/20 p-2 rounded-lg">
-                        {isGeneratingVisual ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
-                      </div>
-                      <span className="text-sm font-medium">Посмотреть концепт</span>
+                      {isGeneratingVisual ? <Loader2 className="w-4 h-4 animate-spin" /> : <LayoutGrid className="w-4 h-4 text-accent" />}
+                      <span className="text-sm font-medium">Концепт мессенджера</span>
                     </div>
-                    <LayoutGrid className="w-4 h-4 text-accent opacity-50 group-hover:opacity-100" />
                   </Button>
                 </div>
               </div>
@@ -257,11 +317,10 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
           </ScrollArea>
 
           <div className="p-4 border-t border-border/20 bg-muted/20 shrink-0 flex gap-2">
-            <Button className="flex-1 h-12 rounded-xl font-bold shadow-lg shadow-primary/20 flex items-center gap-2" onClick={handleSave}>
-               <Check className="w-5 h-5" />
-               Сохранить изменения
+            <Button className="flex-1 h-12 rounded-xl font-bold shadow-lg" onClick={handleSave}>
+               <Check className="w-5 h-5 mr-2" /> Сохранить
             </Button>
-            <Button variant="ghost" size="icon" className="h-12 w-12 rounded-xl text-destructive hover:bg-destructive/10" onClick={handleLogout}>
+            <Button variant="ghost" size="icon" className="h-12 w-12 rounded-xl text-destructive" onClick={handleLogout}>
                <LogOut className="w-6 h-6" />
             </Button>
           </div>
@@ -274,18 +333,12 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
             <Button 
               variant="ghost" 
               size="icon" 
-              className="absolute top-4 right-4 z-10 text-white hover:bg-white/20"
+              className="absolute top-4 right-4 z-10 text-white"
               onClick={() => setShowBrandVisual(false)}
             >
               <X className="w-6 h-6" />
             </Button>
-            {brandImageUrl && (
-              <img 
-                src={brandImageUrl} 
-                alt="NuxusChat Visual" 
-                className="w-full h-full object-contain animate-in fade-in zoom-in-95"
-              />
-            )}
+            {brandImageUrl && <img src={brandImageUrl} alt="NuxusChat Visual" className="w-full h-full object-contain" />}
           </div>
         </DialogContent>
       </Dialog>
