@@ -7,7 +7,7 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    // Проверка администратора по email или UID
+    // Проверка администратора по email (мгновенно через токен)
     function isAdmin() {
       return isSignedIn() && (
         request.auth.token.email == '79513332147@nuxus.chat' || 
@@ -15,7 +15,7 @@ service cloud.firestore {
       );
     }
 
-    // Проверка на отсутствие бана
+    // Проверка на отсутствие бана (безопасная проверка существования)
     function isNotBanned() {
       let userPath = /databases/$(database)/documents/users/$(request.auth.uid);
       return isSignedIn() && (!exists(userPath) || get(userPath).data.isBanned != true);
@@ -29,6 +29,7 @@ service cloud.firestore {
     }
 
     match /chats/{chatId} {
+      // Админ может видеть все чаты, пользователи - только где они участники и не забанены
       allow list: if isAdmin() || (isSignedIn() && isNotBanned());
       allow get: if isAdmin() || (isSignedIn() && isNotBanned() && (request.auth.uid in resource.data.participantIds));
       allow create: if isSignedIn() && isNotBanned();

@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { MessageSquareText, Loader2, Smartphone, Lock, UserCircle, AtSign, ShieldCheck, UserX } from 'lucide-react';
+import { MessageSquareText, Loader2, Smartphone, Lock, UserCircle, AtSign } from 'lucide-react';
 import { useAuth, useFirestore } from '@/firebase';
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';
 import { doc, setDoc, query, collection, where, getDocs, limit } from 'firebase/firestore';
@@ -21,7 +21,6 @@ export default function AuthScreen() {
   
   const [mode, setMode] = useState<AuthMode>('login');
   const [isLoading, setIsLoading] = useState(false);
-  const [isSettingUp, setIsSettingUp] = useState(false);
   
   const [formData, setFormData] = useState({
     name: '',
@@ -57,10 +56,18 @@ export default function AuthScreen() {
     
     try {
       if (mode === 'register') {
+        // Проверка на заблокированный номер (черный список в базе)
+        const banCheck = await getDocs(query(collection(db, 'users'), where('phone', '==', fullPhone), where('isBanned', '==', true), limit(1)));
+        if (!banCheck.empty) {
+          toast({ title: "Ошибка", description: "Этот номер телефона заблокирован", variant: "destructive" });
+          setIsLoading(false);
+          return;
+        }
+
         const username = formData.username.startsWith('@') ? formData.username.toLowerCase() : '@' + formData.username.toLowerCase();
-        
         const q = query(collection(db, 'users'), where('username', '==', username), limit(1));
         const snap = await getDocs(q);
+        
         if (!snap.empty) {
           toast({ title: "Ник занят", description: "Выберите другой @username", variant: "destructive" });
           setIsLoading(false);
@@ -109,61 +116,6 @@ export default function AuthScreen() {
       setIsLoading(false);
     }
   };
-
-  const setupTestAccounts = async () => {
-    setIsSettingUp(true);
-    const accounts = [
-      { phone: '79513332147', pass: 'gaz20092', name: 'Админ Абузер', user: '@vnctow46', seed: 'admin_premium' },
-      { phone: '79064222830', pass: '1234567', name: 'Чайник', user: '@Chai', seed: 'user_tech' }
-    ];
-    try {
-      for (const acc of accounts) {
-        const email = `${acc.phone}@nuxus.chat`;
-        try {
-          let uid = '';
-          try {
-            const loginRes = await signInWithEmailAndPassword(auth, email, acc.pass);
-            uid = loginRes.user.uid;
-          } catch (e) {
-            const createRes = await createUserWithEmailAndPassword(auth, email, acc.pass).catch(() => null);
-            if (createRes) {
-              uid = createRes.user.uid;
-            }
-          }
-          
-          if (uid) {
-            await setDoc(doc(db, 'users', uid), {
-              id: uid,
-              name: acc.name,
-              username: acc.user,
-              phone: `+${acc.phone}`,
-              avatarUrl: `https://picsum.photos/seed/${acc.seed}/200`,
-              createdAt: new Date().toISOString(),
-              lastSeen: new Date().toISOString(),
-              inactivityDeletion: 'never',
-              isBanned: false,
-              settings: {
-                theme: 'default',
-                chatBackground: 'default',
-                messageSize: 'medium',
-                privacy: {
-                  phoneVisibility: 'nobody',
-                  lastSeenVisibility: 'everybody'
-                }
-              }
-            }, { merge: true });
-          }
-        } catch (e) {}
-      }
-      toast({ title: "Готово!", description: "Аккаунты настроены. Перезайдите для обновления аватарки." });
-    } catch (err) {
-      toast({ title: "Ошибка настройки", variant: "destructive" });
-    } finally {
-      setIsSettingUp(false);
-    }
-  };
-
-  const showDevTool = normalizePhone(formData.phone) === '79513332147';
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-primary/20 via-background to-background">
@@ -221,14 +173,6 @@ export default function AuthScreen() {
             <button onClick={() => setMode(mode === 'login' ? 'register' : 'login')} className="text-sm text-muted-foreground hover:text-primary transition-colors text-center">
               {mode === 'login' ? "Нет аккаунта? Зарегистрироваться" : "Уже есть аккаунт? Войти"}
             </button>
-            {showDevTool && (
-              <div className="flex flex-col gap-1 mt-4 animate-in fade-in slide-in-from-bottom-2 duration-500">
-                <Button variant="ghost" size="sm" onClick={setupTestAccounts} disabled={isSettingUp} className="text-[10px] text-muted-foreground/60 flex gap-2">
-                  {isSettingUp ? <Loader2 className="w-3 h-3 animate-spin" /> : <ShieldCheck className="w-3 h-3" />}
-                  Перенастроить тестовые аккаунты
-                </Button>
-              </div>
-            )}
           </div>
         </CardContent>
       </Card>
