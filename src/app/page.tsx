@@ -35,6 +35,15 @@ export default function Home() {
     return <AuthScreen />;
   }
 
+  // Если профиль загружается, показываем лоадер, но не кидаем на AuthScreen
+  if (isProfileLoading) {
+    return (
+      <div className="h-screen w-full flex items-center justify-center bg-background">
+        <Loader2 className="w-8 h-8 text-primary animate-spin" />
+      </div>
+    );
+  }
+
   // Проверка на бан
   if (profile?.isBanned) {
     return (

@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { MessageSquareText, Loader2, Smartphone, UserCircle, AtSign, Lock, ArrowRight, HelpCircle } from 'lucide-react';
+import { MessageSquareText, Loader2, Smartphone, UserCircle, AtSign, Lock, ArrowRight, HelpCircle, ShieldAlert } from 'lucide-react';
 import { useAuth, useFirestore } from '@/firebase';
 import { 
   signInWithEmailAndPassword,
@@ -26,6 +26,7 @@ export default function AuthScreen() {
   
   const [mode, setMode] = useState<AuthMode>('login');
   const [isLoading, setIsLoading] = useState(false);
+  const [lastError, setLastError] = useState<string | null>(null);
   
   const [formData, setFormData] = useState({
     name: '',
@@ -49,6 +50,7 @@ export default function AuthScreen() {
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
+    setLastError(null);
     const fullPhone = normalizePhone(formData.phone);
     
     if (fullPhone.length < 11) {
@@ -115,18 +117,19 @@ export default function AuthScreen() {
       }
     } catch (err: any) {
       console.error("Auth Error:", err.code, err.message);
+      setLastError(err.code);
       
-      let errorMessage = "Проверьте данные или включите Email/Password в Firebase Console";
+      let errorMessage = "Проверьте данные или настройки Firebase";
       if (err.code === 'auth/operation-not-allowed') {
-        errorMessage = "Метод входа отключен. Включите Email/Password в консоли Firebase.";
+        errorMessage = "Метод входа 'Email/Password' отключен в Firebase Console.";
       } else if (err.code === 'auth/email-already-in-use') {
         errorMessage = "Этот номер уже зарегистрирован. Попробуйте войти.";
       } else if (err.code === 'auth/wrong-password') {
         errorMessage = "Неверный пароль.";
       } else if (err.code === 'auth/user-not-found') {
         errorMessage = "Аккаунт не найден.";
-      } else if (err.code === 'auth/admin-restricted-operation') {
-        errorMessage = "Операция ограничена. Проверьте настройки доменов в Firebase.";
+      } else if (err.code === 'auth/admin-restricted-operation' || err.code === 'auth/unauthorized-domain') {
+        errorMessage = "Домен не авторизован. Добавьте текущий URL в Authorized Domains в Firebase.";
       }
 
       toast({ 
@@ -161,14 +164,14 @@ export default function AuthScreen() {
                   <Label className="text-xs uppercase text-muted-foreground ml-1">Ваше имя</Label>
                   <div className="relative">
                     <UserCircle className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <Input placeholder="Имя" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="bg-muted/30 pl-9 rounded-xl" required />
+                    <Input placeholder="Имя" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="bg-muted/30 pl-9 rounded-xl border-none focus:ring-1 focus:ring-primary" required />
                   </div>
                 </div>
                 <div className="space-y-1.5">
                   <Label className="text-xs uppercase text-muted-foreground ml-1">Желаемый никнейм</Label>
                   <div className="relative">
                     <AtSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <Input placeholder="@username" value={formData.username} onChange={e => setFormData({...formData, username: e.target.value})} className="bg-muted/30 pl-9 rounded-xl" required />
+                    <Input placeholder="@username" value={formData.username} onChange={e => setFormData({...formData, username: e.target.value})} className="bg-muted/30 pl-9 rounded-xl border-none focus:ring-1 focus:ring-primary" required />
                   </div>
                 </div>
               </>
@@ -177,14 +180,14 @@ export default function AuthScreen() {
               <Label className="text-xs uppercase text-muted-foreground ml-1">Номер телефона</Label>
               <div className="relative">
                 <Smartphone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <Input placeholder="+7 900 000 00 00" type="tel" value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} className="bg-muted/30 pl-9 rounded-xl" required />
+                <Input placeholder="+7 900 000 00 00" type="tel" value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} className="bg-muted/30 pl-9 rounded-xl border-none focus:ring-1 focus:ring-primary" required />
               </div>
             </div>
             <div className="space-y-1.5">
               <Label className="text-xs uppercase text-muted-foreground ml-1">Пароль</Label>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <Input type="password" placeholder="Мин. 6 символов" value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} className="bg-muted/30 pl-9 rounded-xl" required />
+                <Input type="password" placeholder="Мин. 6 символов" value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} className="bg-muted/30 pl-9 rounded-xl border-none focus:ring-1 focus:ring-primary" required />
               </div>
             </div>
             <Button type="submit" disabled={isLoading} className="w-full h-12 text-md font-bold shadow-lg shadow-primary/20 rounded-xl transition-all active:scale-95">
@@ -198,10 +201,20 @@ export default function AuthScreen() {
             </button>
           </div>
           
+          {lastError && (
+            <div className="mt-4 p-3 bg-destructive/10 rounded-xl border border-destructive/20 flex items-start gap-2 animate-in fade-in slide-in-from-top-2">
+              <ShieldAlert className="w-4 h-4 text-destructive shrink-0 mt-0.5" />
+              <div className="text-[10px] text-destructive leading-tight">
+                <strong>Техническая ошибка:</strong> {lastError}<br/>
+                Если это 'auth/admin-restricted-operation', добавьте домен в Authorized Domains в консоли Firebase.
+              </div>
+            </div>
+          )}
+
           <div className="mt-6 flex items-start gap-2 p-3 bg-primary/5 rounded-xl border border-primary/10">
             <HelpCircle className="w-4 h-4 text-primary shrink-0 mt-0.5" />
             <p className="text-[11px] text-muted-foreground leading-tight">
-              Если возникает ошибка, убедитесь, что в Firebase Console включен метод "Электронная почта/пароль".
+              Используйте любой номер телефона. Мы используем метод "Электронная почта/пароль" для входа без SMS.
             </p>
           </div>
         </CardContent>
