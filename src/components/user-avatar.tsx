@@ -5,9 +5,10 @@ import React, { useState, useEffect } from 'react';
 import { useDoc, useMemoFirebase, useFirestore } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { cn, formatDisplayName } from '@/lib/utils';
+import { cn, formatDisplayName, isUserPremium } from '@/lib/utils';
 import Image from 'next/image';
 import { Star } from 'lucide-react';
+import type { User } from '@/lib/types';
 
 interface UserAvatarProps {
   userId: string | null | undefined;
@@ -29,11 +30,11 @@ export function UserAvatar({ userId, className, fallbackName, fallbackClassName,
     return doc(db, 'users', userId);
   }, [db, userId]);
 
-  const { data: profile, isLoading } = useDoc(userRef);
+  const { data: profile, isLoading } = useDoc<User>(userRef);
 
   const displayAvatar = profile?.avatarUrl || manualAvatarUrl;
   const displayName = formatDisplayName(profile?.name || fallbackName || '??');
-  const isPremium = profile?.isPremium && profile.premiumUntil && new Date(profile.premiumUntil) > new Date();
+  const premium = isUserPremium(profile);
 
   useEffect(() => {
     setImgError(false);
@@ -59,7 +60,7 @@ export function UserAvatar({ userId, className, fallbackName, fallbackClassName,
           </AvatarFallback>
         )}
       </Avatar>
-      {isPremium && (
+      {premium && (
         <div className="absolute -bottom-0.5 -right-0.5 bg-background rounded-full p-0.5 z-10">
           <div className="bg-gradient-to-tr from-purple-500 to-accent p-0.5 rounded-full shadow-sm">
             <Star className="w-2.5 h-2.5 text-white fill-white" />

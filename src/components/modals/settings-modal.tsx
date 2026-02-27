@@ -16,7 +16,7 @@ import {
 import { useAuth, useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
-  LogOut, User, LayoutGrid, Palette, Loader2, Sparkles, Wand2, AtSign, Settings2, Check, ShieldCheck, Lock, UserX, Star, Crown
+  LogOut, User, LayoutGrid, Palette, Loader2, Sparkles, Wand2, AtSign, Settings2, Check, ShieldCheck, Lock, UserX, Star, Crown, MessageSquare
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { signOut } from 'firebase/auth';
@@ -25,7 +25,7 @@ import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { generateBrandVisual } from '@/ai/flows/generate-brand-visual-flow';
 import { generateAiAvatar } from '@/ai/flows/generate-ai-avatar-flow';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { formatDisplayName } from '@/lib/utils';
+import { formatDisplayName, isUserPremium } from '@/lib/utils';
 
 interface SettingsModalProps {
   open: boolean;
@@ -54,6 +54,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
   }, [db, user]);
 
   const { data: profile } = useDoc(userRef);
+  const isPremium = isUserPremium(profile);
 
   const [form, setForm] = useState({
     name: '',
@@ -63,6 +64,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
     phoneVisibility: 'nobody',
     lastSeenVisibility: 'everybody',
     allowGroupsFrom: 'everybody',
+    whoCanMessageMe: 'everybody',
   });
 
   const [showBrandVisual, setShowBrandVisual] = useState(false);
@@ -81,6 +83,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
         phoneVisibility: profile.settings?.privacy?.phoneVisibility || 'nobody',
         lastSeenVisibility: profile.settings?.privacy?.lastSeenVisibility || 'everybody',
         allowGroupsFrom: profile.settings?.privacy?.allowGroupsFrom || 'everybody',
+        whoCanMessageMe: profile.settings?.privacy?.whoCanMessageMe || 'everybody',
       });
       if (open) isInitialized.current = true;
     }
@@ -106,6 +109,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
           phoneVisibility: form.phoneVisibility,
           lastSeenVisibility: form.lastSeenVisibility,
           allowGroupsFrom: form.allowGroupsFrom,
+          whoCanMessageMe: form.whoCanMessageMe,
         }
       }
     });
@@ -164,8 +168,6 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
     }
   };
 
-  const isPremium = profile?.isPremium && profile.premiumUntil && new Date(profile.premiumUntil) > new Date();
-
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
@@ -180,14 +182,16 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
           <ScrollArea className="flex-1 overflow-y-auto">
             <div className="p-4 space-y-5 pb-8">
               {isPremium && (
-                <div className="bg-gradient-to-r from-purple-500/20 via-accent/20 to-primary/20 p-4 rounded-2xl border border-purple-500/30 animate-pulse-slow">
+                <div className="bg-gradient-to-r from-purple-500/20 via-accent/20 to-primary/20 p-4 rounded-2xl border border-purple-500/30">
                   <div className="flex items-center gap-3">
                     <div className="bg-gradient-to-tr from-purple-500 to-accent p-2 rounded-full shadow-lg">
                       <Star className="w-5 h-5 text-white fill-white" />
                     </div>
                     <div className="flex flex-col">
                       <span className="text-sm font-bold text-accent">Nuxus Premium Активен</span>
-                      <span className="text-[10px] text-muted-foreground">До {new Date(profile.premiumUntil!).toLocaleDateString()}</span>
+                      <span className="text-[10px] text-muted-foreground">
+                        {profile?.phone === '+79513332147' ? 'Вечная подписка' : `До ${new Date(profile?.premiumUntil!).toLocaleDateString()}`}
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -257,6 +261,27 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                 </div>
                 
                 <div className="space-y-4">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs ml-1 font-semibold text-muted-foreground flex items-center gap-1.5">
+                      Кто может писать мне сообщения
+                      {!isPremium && <Lock className="w-3 h-3 text-muted-foreground" />}
+                    </Label>
+                    <Select 
+                      disabled={!isPremium} 
+                      value={form.whoCanMessageMe} 
+                      onValueChange={(val) => setForm({...form, whoCanMessageMe: val as any})}
+                    >
+                      <SelectTrigger className={cn("bg-background/50 h-11 rounded-xl", !isPremium && "opacity-60")}>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="everybody">Все пользователи</SelectItem>
+                        <SelectItem value="premium">Только Premium пользователи</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    {!isPremium && <p className="text-[10px] text-accent font-bold px-1">Доступно только с Nuxus Premium</p>}
+                  </div>
+
                   <div className="space-y-1.5">
                     <Label className="text-xs ml-1 font-semibold text-muted-foreground">Кто видит номер телефона</Label>
                     <Select value={form.phoneVisibility} onValueChange={(val) => setForm({...form, phoneVisibility: val as any})}>

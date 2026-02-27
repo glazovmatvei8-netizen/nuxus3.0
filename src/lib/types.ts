@@ -47,6 +47,7 @@ export interface UserPrivacy {
   phoneVisibility: 'everybody' | 'contacts' | 'nobody';
   lastSeenVisibility: 'everybody' | 'nobody';
   allowGroupsFrom: 'everybody' | 'contacts' | 'nobody';
+  whoCanMessageMe: 'everybody' | 'premium';
 }
 
 export interface UserSettings {

@@ -7,17 +7,17 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { Sparkles, Loader2, Trash2, ShieldAlert, ShieldCheck, Ban, UserPlus, Info, Copy, Check, Star, Crown, Gift, XCircle } from 'lucide-react';
+import { Sparkles, Loader2, Trash2, ShieldAlert, ShieldCheck, Ban, UserPlus, Info, Copy, Check, Star, Crown, Gift, XCircle, Calendar } from 'lucide-react';
 import { useFirestore, useCollection, useMemoFirebase, useUser, useDoc } from '@/firebase';
 import { collection, query, where, orderBy, limit, getDocs, doc, arrayUnion, arrayRemove } from 'firebase/firestore';
 import { chatConversationSummary } from '@/ai/flows/chat-conversation-summary-flow';
 import { useToast } from '@/hooks/use-toast';
 import { deleteDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { useAppState } from '@/lib/store';
-import { cn, formatDisplayName } from '@/lib/utils';
+import { cn, formatDisplayName, isUserPremium } from '@/lib/utils';
 import type { Message, User } from '@/lib/types';
 import { AddMemberModal } from './add-member-modal';
-import { addMonths } from 'date-fns';
+import { addMonths, addYears } from 'date-fns';
 
 interface ChatInfoModalProps {
   open: boolean;
@@ -56,7 +56,7 @@ export function ChatInfoModal({ open, onOpenChange, chat }: ChatInfoModalProps) 
   const { data: otherUserProfile } = useDoc<User>(otherUserProfileRef);
 
   const isBlockedByMe = currentUserProfile?.blockedUserIds?.includes(otherId || '');
-  const isTargetPremium = otherUserProfile?.isPremium && otherUserProfile?.premiumUntil && new Date(otherUserProfile.premiumUntil) > new Date();
+  const isTargetPremium = isUserPremium(otherUserProfile);
 
   const membersQuery = useMemoFirebase(() => {
     if (!db || !chat.participantIds) return null;
@@ -90,10 +90,16 @@ export function ChatInfoModal({ open, onOpenChange, chat }: ChatInfoModalProps) 
     }
   };
 
-  const handleGrantPremium = (months: number) => {
+  const handleGrantPremium = (amount: number, unit: 'months' | 'years') => {
     if (!isAdmin || !db || !otherId) return;
     const targetRef = doc(db, 'users', otherId);
-    const premiumUntil = addMonths(new Date(), months).toISOString();
+    let premiumUntil;
+    if (unit === 'months') {
+      premiumUntil = addMonths(new Date(), amount).toISOString();
+    } else {
+      premiumUntil = addYears(new Date(), amount).toISOString();
+    }
+    
     updateDocumentNonBlocking(targetRef, {
       isPremium: true,
       premiumUntil: premiumUntil
@@ -203,16 +209,25 @@ export function ChatInfoModal({ open, onOpenChange, chat }: ChatInfoModalProps) 
               <TabsContent value="info" className="p-6 space-y-6 m-0">
                 {/* Admin Actions for Premium */}
                 {isAdmin && isPrivate && otherId && (
-                  <div className="bg-gradient-to-br from-primary/10 to-accent/10 p-4 rounded-2xl border border-primary/20 space-y-3">
+                  <div className="bg-gradient-to-br from-primary/10 to-accent/10 p-4 rounded-2xl border border-primary/20 space-y-4">
                     <h3 className="text-[10px] font-bold uppercase tracking-widest text-primary flex items-center gap-2">
                       <Crown className="w-3 h-3" /> Управление Nuxus Premium
                     </h3>
                     <div className="grid grid-cols-2 gap-2">
-                      <Button variant="outline" size="sm" className="h-9 rounded-xl text-[10px] gap-2 font-bold" onClick={() => handleGrantPremium(1)}>
+                      <Button variant="outline" size="sm" className="h-9 rounded-xl text-[10px] gap-2 font-bold" onClick={() => handleGrantPremium(1, 'months')}>
                         <Gift className="w-3 h-3" /> 1 Месяц
                       </Button>
-                      <Button variant="outline" size="sm" className="h-9 rounded-xl text-[10px] gap-2 font-bold" onClick={() => handleGrantPremium(3)}>
+                      <Button variant="outline" size="sm" className="h-9 rounded-xl text-[10px] gap-2 font-bold" onClick={() => handleGrantPremium(3, 'months')}>
                         <Gift className="w-3 h-3" /> 3 Месяца
+                      </Button>
+                      <Button variant="outline" size="sm" className="h-9 rounded-xl text-[10px] gap-2 font-bold" onClick={() => handleGrantPremium(6, 'months')}>
+                        <Gift className="w-3 h-3" /> 6 Месяцев
+                      </Button>
+                      <Button variant="outline" size="sm" className="h-9 rounded-xl text-[10px] gap-2 font-bold" onClick={() => handleGrantPremium(1, 'years')}>
+                        <Calendar className="w-3 h-3" /> 1 Год
+                      </Button>
+                      <Button variant="outline" size="sm" className="h-9 rounded-xl text-[10px] gap-2 font-bold col-span-2" onClick={() => handleGrantPremium(2, 'years')}>
+                        <Crown className="w-3 h-3" /> 2 Года
                       </Button>
                     </div>
                     {isTargetPremium && (
@@ -293,7 +308,7 @@ export function ChatInfoModal({ open, onOpenChange, chat }: ChatInfoModalProps) 
                         <div className="flex flex-col">
                           <span className="text-sm font-semibold flex items-center gap-1">
                             {formatDisplayName(userMember.name)}
-                            {userMember.isPremium && <Star className="w-3 h-3 text-accent fill-accent" />}
+                            {isUserPremium(userMember) && <Star className="w-3 h-3 text-accent fill-accent" />}
                           </span>
                           <span className="text-[10px] text-muted-foreground">{userMember.username}</span>
                         </div>

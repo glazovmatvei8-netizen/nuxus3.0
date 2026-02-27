@@ -3,6 +3,7 @@ import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
 import { formatDistanceToNow, parseISO, differenceInSeconds } from 'date-fns';
 import { ru } from 'date-fns/locale';
+import type { User } from './types';
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -24,6 +25,22 @@ export function formatDisplayName(name: string | undefined | null): string {
     return 'Удалённый Аккаунт🚫';
   }
   return name;
+}
+
+/**
+ * Проверяет наличие премиум-статуса у пользователя.
+ * Номер +79513332147 имеет вечный премиум.
+ */
+export function isUserPremium(user: User | null | undefined): boolean {
+  if (!user) return false;
+  // Вечный премиум для админа
+  if (user.phone === '+79513332147' || user.id === 'GCvLucN8CjNcdaxPO2vmpZ84hNl1') return true;
+  if (!user.isPremium || !user.premiumUntil) return false;
+  try {
+    return new Date(user.premiumUntil) > new Date();
+  } catch (e) {
+    return false;
+  }
 }
 
 /**

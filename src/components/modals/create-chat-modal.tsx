@@ -8,12 +8,13 @@ import { Input } from '@/components/ui/input';
 import { useAppState } from '@/lib/store';
 import { useFirestore, useUser, useCollection, useMemoFirebase, useDoc } from '@/firebase';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Search, Users, Radio, MessageSquarePlus, ArrowRight, Loader2, Contact } from 'lucide-react';
+import { Search, Users, Radio, MessageSquarePlus, ArrowRight, Loader2, Contact, Lock } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
-import type { ChatType } from '@/lib/types';
+import type { ChatType, User } from '@/lib/types';
 import { collection, query, addDoc, getDocs, where, limit, doc } from 'firebase/firestore';
 import { addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { isUserPremium } from '@/lib/utils';
 
 interface CreateChatModalProps {
   open: boolean;
@@ -36,7 +37,7 @@ export function CreateChatModal({ open, onOpenChange }: CreateChatModalProps) {
     if (!db || !user) return null;
     return doc(db, 'users', user.uid);
   }, [db, user]);
-  const { data: currentUserProfile } = useDoc(userProfileRef);
+  const { data: currentUserProfile } = useDoc<User>(userProfileRef);
 
   // Search logic
   const usersQuery = useMemoFirebase(() => {
@@ -44,7 +45,7 @@ export function CreateChatModal({ open, onOpenChange }: CreateChatModalProps) {
     return query(collection(db, 'users'), limit(50));
   }, [db, search]);
 
-  const { data: allUsers } = useCollection(usersQuery);
+  const { data: allUsers } = useCollection<User>(usersQuery);
 
   const filteredUsers = (allUsers || []).filter(u => {
     if (u.id === user?.uid) return false;
@@ -54,8 +55,20 @@ export function CreateChatModal({ open, onOpenChange }: CreateChatModalProps) {
            u.phone?.includes(search);
   });
 
-  const startPrivateChat = async (otherUser: any) => {
+  const startPrivateChat = async (otherUser: User) => {
     if (!db || !user || !currentUserProfile) return;
+
+    // Проверка приватности: может ли писать не-премиум пользователь?
+    const otherCanBeMessagedBy = otherUser.settings?.privacy?.whoCanMessageMe || 'everybody';
+    if (otherCanBeMessagedBy === 'premium' && !isUserPremium(currentUserProfile)) {
+      toast({ 
+        title: "Доступ ограничен", 
+        description: "Этот пользователь разрешил писать себе только Premium участникам. Получите подписку в Настройках!", 
+        variant: "destructive" 
+      });
+      return;
+    }
+
     setIsLoading(true);
     try {
       const q = query(
@@ -78,23 +91,23 @@ export function CreateChatModal({ open, onOpenChange }: CreateChatModalProps) {
       const newChatData = {
         type: 'private' as const,
         participantIds: [user.uid, otherUser.id],
-        adminIds: [user.uid, otherUser.id], // Оба админы в личке
+        adminIds: [user.uid, otherUser.id], 
         ownerId: user.uid,
         createdAt: new Date().toISOString(),
-        // Сохраняем данные обоих для корректного отображения имен
         metadata: {
           [user.uid]: {
             name: currentUserProfile.name,
             username: currentUserProfile.username,
-            avatarUrl: currentUserProfile.avatarUrl || null
+            avatarUrl: currentUserProfile.avatarUrl || null,
+            isPremium: isUserPremium(currentUserProfile)
           },
           [otherUser.id]: {
             name: otherUser.name,
             username: otherUser.username,
-            avatarUrl: otherUser.avatarUrl || null
+            avatarUrl: otherUser.avatarUrl || null,
+            isPremium: isUserPremium(otherUser)
           }
         },
-        // Дефолтные значения для совместимости
         name: otherUser.name,
         username: otherUser.username,
       };
@@ -221,10 +234,20 @@ export function CreateChatModal({ open, onOpenChange }: CreateChatModalProps) {
                       </Avatar>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between">
-                          <span className="font-semibold text-sm group-hover:text-primary transition-colors truncate">{u.name}</span>
+                          <span className="font-semibold text-sm group-hover:text-primary transition-colors truncate flex items-center gap-1">
+                            {u.name}
+                            {isUserPremium(u) && <Star className="w-3 h-3 text-accent fill-accent" />}
+                          </span>
                           <span className="text-[10px] text-muted-foreground shrink-0">{u.phone}</span>
                         </div>
-                        <span className="text-[10px] text-muted-foreground block truncate">{u.username}</span>
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] text-muted-foreground block truncate">{u.username}</span>
+                          {u.settings?.privacy?.whoCanMessageMe === 'premium' && (
+                            <div className="flex items-center gap-1 text-[9px] text-accent font-bold">
+                              <Lock className="w-2.5 h-2.5" /> Только Premium
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
                   ))
