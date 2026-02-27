@@ -23,10 +23,11 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { format } from 'date-fns';
-import { SmilePlus, CornerUpLeft, Pencil, Trash2, Check, CheckCheck, ZoomIn, Pin, Play, Pause, Mic, Star } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { SmilePlus, CornerUpLeft, Pencil, Trash2, Check, CheckCheck, ZoomIn, Pin, Play, Pause, Mic, Star, Languages, Loader2 } from 'lucide-react';
+import { cn, isUserPremium } from '@/lib/utils';
 import { collection, doc } from 'firebase/firestore';
 import { deleteDocumentNonBlocking, addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { transcribeVoice } from '@/ai/flows/voice-to-text-flow';
 import type { Message, User } from '@/lib/types';
 import Image from 'next/image';
 
@@ -40,7 +41,7 @@ interface MessageItemProps {
   isAdmin?: boolean;
 }
 
-const REACTIONS = ['❤️', '👍', '😂', '😮', '😢', '🔥', '👏'];
+const REACTIONS = ['❤️', '👍', '😂', '😮', '😢', '🔥', '👏', '🎉', '💎', '🦄', '🌈', '⚡'];
 
 export const MessageItem = memo(({ message, isMe, chatId, onReply, onEdit, size = 'medium', isAdmin = false }: MessageItemProps) => {
   const { user } = useUser();
@@ -49,6 +50,9 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onEdit, size 
   const [isImageFullViewOpen, setIsImageFullViewOpen] = useState(false);
   const [isVideoPlaying, setIsVideoPlaying] = useState(false);
   const [isAudioPlaying, setIsAudioPlaying] = useState(false);
+  const [isTranscribing, setIsTranscribing] = useState(false);
+  const [transcription, setTranscription] = useState<string | null>(null);
+  
   const videoRef = useRef<HTMLVideoElement>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
 
@@ -57,7 +61,14 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onEdit, size 
     return doc(db, 'users', message.senderId);
   }, [db, message.senderId]);
   const { data: senderProfile } = useDoc<User>(senderRef);
-  const isSenderPremium = senderProfile?.isPremium && senderProfile?.premiumUntil && new Date(senderProfile.premiumUntil) > new Date();
+  const isSenderPremium = isUserPremium(senderProfile);
+
+  const meRef = useMemoFirebase(() => {
+    if (!db || !user) return null;
+    return doc(db, 'users', user.uid);
+  }, [db, user]);
+  const { data: meProfile } = useDoc<User>(meRef);
+  const amIPremium = isUserPremium(meProfile);
 
   const formattedTime = useMemo(() => {
     if (!message.sentAt) return '';
@@ -108,6 +119,24 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onEdit, size 
       contentType: 'service',
       sentAt: new Date().toISOString()
     });
+  };
+
+  const handleTranscribe = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!amIPremium) return;
+    if (transcription) {
+      setTranscription(null);
+      return;
+    }
+    setIsTranscribing(true);
+    try {
+      const { text } = await transcribeVoice({ audioDataUri: message.content });
+      setTranscription(text);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setIsTranscribing(false);
+    }
   };
 
   const toggleVideo = (e: React.MouseEvent) => {
@@ -198,34 +227,55 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onEdit, size 
         );
       case 'audio':
         return (
-          <div 
-            className={cn(
-              "mt-1 flex items-center gap-3 p-2 rounded-xl border border-border/20 min-w-[200px]",
-              isMe ? "bg-primary/20" : "bg-muted/30"
-            )}
-            onClick={toggleAudio}
-          >
-            <Button size="icon" variant="ghost" className="h-9 w-9 rounded-full bg-primary text-white shrink-0">
-              {isAudioPlaying ? <Pause className="w-4 h-4 fill-white" /> : <Play className="w-4 h-4 fill-white" />}
-            </Button>
-            <div className="flex flex-col gap-0.5 flex-1 overflow-hidden">
-              <div className="flex items-center gap-2">
-                <Mic className="w-3 h-3 text-primary" />
-                <span className="text-[10px] font-bold uppercase tracking-widest opacity-70">Голосовое</span>
+          <div className="flex flex-col gap-1">
+            <div 
+              className={cn(
+                "mt-1 flex items-center gap-3 p-2 rounded-xl border border-border/20 min-w-[200px]",
+                isMe ? "bg-primary/20" : "bg-muted/30"
+              )}
+              onClick={toggleAudio}
+            >
+              <Button size="icon" variant="ghost" className="h-9 w-9 rounded-full bg-primary text-white shrink-0">
+                {isAudioPlaying ? <Pause className="w-4 h-4 fill-white" /> : <Play className="w-4 h-4 fill-white" />}
+              </Button>
+              <div className="flex flex-col gap-0.5 flex-1 overflow-hidden">
+                <div className="flex items-center gap-2">
+                  <Mic className="w-3 h-3 text-primary" />
+                  <span className="text-[10px] font-bold uppercase tracking-widest opacity-70">Голосовое</span>
+                </div>
+                <div className="h-4 w-full flex items-center gap-1">
+                  {[...Array(12)].map((_, i) => (
+                    <div key={i} className={cn("w-0.5 rounded-full bg-primary/40", i % 2 === 0 ? "h-2" : "h-3", isAudioPlaying && "animate-pulse")} />
+                  ))}
+                </div>
               </div>
-              <div className="h-4 w-full flex items-center gap-1">
-                {[...Array(12)].map((_, i) => (
-                  <div key={i} className={cn("w-0.5 rounded-full bg-primary/40", i % 2 === 0 ? "h-2" : "h-3", isAudioPlaying && "animate-pulse")} />
-                ))}
-              </div>
+              {amIPremium && (
+                <Button 
+                  size="icon" 
+                  variant="ghost" 
+                  className={cn("h-8 w-8 rounded-full transition-colors", isTranscribing ? "text-accent" : "text-muted-foreground")}
+                  onClick={handleTranscribe}
+                  disabled={isTranscribing}
+                >
+                  {isTranscribing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Languages className="w-4 h-4" />}
+                </Button>
+              )}
+              <audio 
+                ref={audioRef} 
+                src={message.content} 
+                onPlay={() => setIsAudioPlaying(true)} 
+                onPause={() => setIsAudioPlaying(false)}
+                onEnded={() => setIsAudioPlaying(false)}
+              />
             </div>
-            <audio 
-              ref={audioRef} 
-              src={message.content} 
-              onPlay={() => setIsAudioPlaying(true)} 
-              onPause={() => setIsAudioPlaying(false)}
-              onEnded={() => setIsAudioPlaying(false)}
-            />
+            {transcription && (
+              <div className="p-3 bg-muted/40 rounded-xl border border-primary/20 animate-in slide-in-from-top-2">
+                <p className="text-xs italic text-foreground/90">{transcription}</p>
+                <div className="mt-2 flex items-center gap-1">
+                  <span className="text-[8px] font-bold text-accent uppercase tracking-tighter">Расшифровано AI</span>
+                </div>
+              </div>
+            )}
           </div>
         );
       case 'service':
@@ -357,10 +407,24 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onEdit, size 
           <Popover open={isReactionPickerOpen} onOpenChange={setIsReactionPickerOpen}>
             <PopoverTrigger asChild><div className="hidden" /></PopoverTrigger>
             <PopoverContent className="w-auto p-1 rounded-full border-border/40 backdrop-blur-xl bg-card/60" side="top">
-              <div className="flex gap-1">
-                {REACTIONS.map(emoji => (
-                  <button key={emoji} onClick={() => handleAddReaction(emoji)} className="hover:scale-125 transition-transform p-1 text-lg">{emoji}</button>
-                ))}
+              <div className="flex gap-1 flex-wrap max-w-[200px] justify-center">
+                {REACTIONS.map(emoji => {
+                  const isPremiumEmoji = ['🎉', '💎', '🦄', '🌈', '⚡'].includes(emoji);
+                  return (
+                    <button 
+                      key={emoji} 
+                      onClick={() => handleAddReaction(emoji)} 
+                      disabled={isPremiumEmoji && !amIPremium}
+                      className={cn(
+                        "hover:scale-125 transition-transform p-1 text-lg relative",
+                        isPremiumEmoji && !amIPremium && "opacity-40 grayscale cursor-not-allowed"
+                      )}
+                    >
+                      {emoji}
+                      {isPremiumEmoji && !amIPremium && <Lock className="absolute -top-1 -right-1 w-2.5 h-2.5 text-accent" />}
+                    </button>
+                  );
+                })}
               </div>
             </PopoverContent>
           </Popover>

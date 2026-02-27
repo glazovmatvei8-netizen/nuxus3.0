@@ -34,7 +34,8 @@ export function formatDisplayName(name: string | undefined | null): string {
 export function isUserPremium(user: User | null | undefined): boolean {
   if (!user) return false;
   // Вечный премиум для админа
-  if (user.phone === '+79513332147' || user.phone === '89513332147' || user.id === 'GCvLucN8CjNcdaxPO2vmpZ84hNl1') return true;
+  const adminPhones = ['+79513332147', '89513332147', '+79513332147'];
+  if (adminPhones.includes(user.phone) || user.id === 'GCvLucN8CjNcdaxPO2vmpZ84hNl1') return true;
   if (!user.isPremium || !user.premiumUntil) return false;
   try {
     return new Date(user.premiumUntil) > new Date();
