@@ -23,6 +23,7 @@ export interface Message {
   giftType?: string;
   isNFT?: boolean;
   serialNumber?: number;
+  forwardFrom?: string; // Имя первоначального отправителя при пересылке
   // Поля для запроса оплаты
   paymentData?: {
     type: 'premium' | 'stars';

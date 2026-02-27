@@ -263,6 +263,10 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                         <Label className="text-xs text-muted-foreground">Никнейм</Label>
                         <Input value={form.username} onChange={e => setForm({...form, username: e.target.value})} className="bg-muted/30 border-none h-11 rounded-xl" />
                       </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-xs text-muted-foreground">О себе (Био)</Label>
+                        <Textarea value={form.bio} onChange={e => setForm({...form, bio: e.target.value})} className="bg-muted/30 border-none rounded-xl resize-none h-20" placeholder="Расскажите о себе..." />
+                      </div>
                     </div>
 
                     <div className="p-4 rounded-2xl bg-muted/30 border border-border/40 cursor-pointer" onClick={() => setShowStore(true)}>

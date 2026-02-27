@@ -17,13 +17,13 @@ import { collection, query, where, doc, getDocs, addDoc, limit, arrayUnion, arra
 import { formatLastSeen, formatDisplayName, cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { updateDocumentNonBlocking, addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 export default function ChatSidebar() {
   const { user } = useUser();
   const db = useFirestore();
   const { toast } = useToast();
-  const { currentChatId, setCurrentChatId } = useAppState();
+  const { currentChatId, setCurrentChatId, forwardingMessage, setForwardingMessage } = useAppState();
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState<ChatType | 'all'>('all');
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -57,6 +57,33 @@ export default function ChatSidebar() {
       pinnedChatIds: isPinned ? arrayRemove(chatId) : arrayUnion(chatId)
     });
     toast({ title: isPinned ? "Чат откреплен" : "Чат закреплен" });
+  };
+
+  const handleChatClick = async (chat: Chat) => {
+    if (forwardingMessage) {
+      if (!db || !user || !profile) return;
+      
+      const newMsgData: any = {
+        chatId: chat.id,
+        senderId: user.uid,
+        senderName: profile.name,
+        content: forwardingMessage.content,
+        contentType: forwardingMessage.contentType,
+        sentAt: new Date().toISOString(),
+        isRead: false,
+        forwardFrom: forwardingMessage.senderName
+      };
+
+      addDocumentNonBlocking(collection(db, 'chats', chat.id, 'messages'), newMsgData);
+      updateDocumentNonBlocking(doc(db, 'chats', chat.id), { lastMessageAt: new Date().toISOString() });
+      
+      setForwardingMessage(null);
+      setCurrentChatId(chat.id);
+      toast({ title: "Сообщение переслано" });
+      return;
+    }
+    
+    setCurrentChatId(chat.id);
   };
 
   // Эффект для глобального поиска по @username
@@ -101,7 +128,7 @@ export default function ChatSidebar() {
     
     const savedChat = chats?.find(c => c.type === 'saved');
     if (savedChat) {
-      setCurrentChatId(savedChat.id);
+      handleChatClick(savedChat);
       return;
     }
 
@@ -115,7 +142,7 @@ export default function ChatSidebar() {
       );
       const snap = await getDocs(q);
       if (!snap.empty) {
-        setCurrentChatId(snap.docs[0].id);
+        handleChatClick({ id: snap.docs[0].id, ...snap.docs[0].data() } as any);
       } else {
         const newSaved = await addDoc(collection(db, 'chats'), {
           type: 'saved',
@@ -128,7 +155,9 @@ export default function ChatSidebar() {
           lastMessageAt: new Date().toISOString(),
           avatarUrl: null
         });
-        setCurrentChatId(newSaved.id);
+        const newSavedDoc = doc(db, 'chats', newSaved.id);
+        const newSavedSnap = await getDocs(query(collection(db, 'chats'), where('id', '==', newSaved.id), limit(1))); // dummy but for types
+        handleChatClick({ id: newSaved.id } as any);
       }
     } catch (e) {
       toast({ title: "Ошибка", description: "Не удалось открыть Избранное", variant: "destructive" });
@@ -236,7 +265,7 @@ export default function ChatSidebar() {
                 <ChatListItem 
                   chat={globalSearchResult}
                   isActive={currentChatId === globalSearchResult.id}
-                  onClick={() => setCurrentChatId(globalSearchResult.id)}
+                  onClick={() => handleChatClick(globalSearchResult)}
                   isGlobalResult
                 />
               </div>
@@ -272,7 +301,7 @@ export default function ChatSidebar() {
                   otherId={otherId}
                   cachedDisplayName={chatDisplayName}
                   manualAvatarUrl={chatAvatarUrl}
-                  onClick={() => setCurrentChatId(chat.id)}
+                  onClick={() => handleChatClick(chat)}
                   isPinned={pinnedIds.includes(chat.id)}
                   onTogglePin={(e: any) => handleTogglePin(chat.id, e)}
                 />

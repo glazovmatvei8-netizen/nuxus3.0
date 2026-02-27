@@ -2,7 +2,7 @@
 "use client"
 
 import React, { useState, useMemo, memo } from 'react';
-import { useUser, useFirestore } from '@/firebase';
+import { useUser, useFirestore, useAppState } from '@/firebase';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
   DropdownMenu,
@@ -19,7 +19,8 @@ import {
   Coffee, Pizza, Beer, Wine, Camera, Laptop, Watch, Smartphone, Car, 
   Plane, Sun, Moon, Cloud, Snowflake, Trees, Flower2, Dog, Cat, Bird, 
   Fish, Bitcoin, Coins, Gamepad2, Music, Smile, ThumbsUp, Bell, Mail, 
-  Key, Lock, Shield, Sword, Anchor, Compass, Map, Flag, Briefcase, GraduationCap
+  Key, Lock, Shield, Sword, Anchor, Compass, Map, Flag, Briefcase, GraduationCap,
+  Pin, Forward
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { collection, doc, increment, query, where, getDocs, limit } from 'firebase/firestore';
@@ -48,6 +49,7 @@ const GIFT_ICONS: Record<string, any> = {
 export const MessageItem = memo(({ message, isMe, chatId, onReply, amIPremium = false, isAdmin = false, senderAvatarUrl = null }: any) => {
   const { user } = useUser();
   const db = useFirestore();
+  const { setForwardingMessage } = useAppState();
   const { toast } = useToast();
   const [isTranscribing, setIsTranscribing] = useState(false);
   const [transcription, setTranscription] = useState<string | null>(null);
@@ -62,6 +64,17 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, amIPremium = 
       const { text } = await transcribeVoice({ audioDataUri: message.content });
       setTranscription(text);
     } catch (e) {} finally { setIsTranscribing(false); }
+  };
+
+  const handlePin = () => {
+    if (!db || !chatId) return;
+    updateDocumentNonBlocking(doc(db, 'chats', chatId), { pinnedMessageId: message.id });
+    toast({ title: "Сообщение закреплено" });
+  };
+
+  const handleForward = () => {
+    setForwardingMessage(message);
+    toast({ title: "Выберите чат для пересылки" });
   };
 
   const handlePaymentAction = async (action: 'confirm' | 'reject', e: React.MouseEvent) => {
@@ -84,8 +97,6 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, amIPremium = 
             : addYears(currentExpiry, message.paymentData.amount || 1).toISOString();
           
           updateDocumentNonBlocking(targetUserRef, { isPremium: true, premiumUntil: newExpiry });
-        } else if (message.paymentData.type === 'stars') {
-          updateDocumentNonBlocking(targetUserRef, { stars: increment(message.paymentData.stars || 0) });
         }
 
         updateDocumentNonBlocking(msgRef, {
@@ -193,7 +204,17 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, amIPremium = 
       );
     }
     
-    return <div className="whitespace-pre-wrap text-sm break-words text-left">{message.content}</div>;
+    return (
+      <div className="flex flex-col text-left">
+        {message.forwardFrom && (
+          <div className="flex items-center gap-1.5 mb-1 opacity-60 border-l-2 border-white/20 pl-2">
+            <Forward className="w-2.5 h-2.5" />
+            <span className="text-[9px] font-bold uppercase tracking-wider">Переслано от {message.forwardFrom}</span>
+          </div>
+        )}
+        <div className="whitespace-pre-wrap text-sm break-words">{message.content}</div>
+      </div>
+    );
   };
 
   if (message.contentType === 'service') {
@@ -201,7 +222,7 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, amIPremium = 
   }
 
   return (
-    <div id={`msg-${message.id}`} className={cn("flex gap-2 max-w-[85%] relative", isMe ? "ml-auto flex-row-reverse" : "mr-auto")}>
+    <div id={`msg-${message.id}`} className={cn("flex gap-2 max-w-[85%] relative transition-colors duration-1000 p-1 rounded-xl", isMe ? "ml-auto flex-row-reverse" : "mr-auto")}>
       {!isMe && <UserAvatar userId={null} manualAvatarUrl={senderAvatarUrl} className="h-8 w-8 mt-auto shrink-0" fallbackName={message.senderName} />}
       <div className={cn("flex flex-col min-w-0", isMe ? "items-end" : "items-start")}>
         <DropdownMenu>
@@ -219,6 +240,8 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, amIPremium = 
           </DropdownMenuTrigger>
           <DropdownMenuContent align={isMe ? 'end' : 'start'} className="w-48 bg-card/95 backdrop-blur-xl border-white/10">
             <DropdownMenuItem onClick={() => onReply(message)} className="gap-2"><CornerUpLeft className="w-4 h-4" /> Ответить</DropdownMenuItem>
+            <DropdownMenuItem onClick={handleForward} className="gap-2"><Forward className="w-4 h-4" /> Переслать</DropdownMenuItem>
+            {isAdmin && <DropdownMenuItem onClick={handlePin} className="gap-2"><Pin className="w-4 h-4" /> Закрепить</DropdownMenuItem>}
             <DropdownMenuSeparator className="bg-white/5" />
             {(isMe || isAdmin) && (
               <DropdownMenuItem onClick={() => deleteDocumentNonBlocking(doc(db, 'chats', chatId, 'messages', message.id))} className="text-destructive gap-2">

@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
-  Send, Info, ChevronLeft, Loader2, MessageSquare
+  Send, Info, ChevronLeft, Loader2, MessageSquare, Pin, X, Forward, Camera
 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { MessageItem } from './message-item';
@@ -50,7 +50,7 @@ MessageList.displayName = 'MessageList';
 export default function ChatArea() {
   const { user } = useUser();
   const db = useFirestore();
-  const { currentChatId, setCurrentChatId } = useAppState();
+  const { currentChatId, setCurrentChatId, forwardingMessage, setForwardingMessage } = useAppState();
   
   const [isChatInfoOpen, setIsChatInfoOpen] = useState(false);
   const [isSending, setIsSending] = useState(false);
@@ -85,6 +85,12 @@ export default function ChatArea() {
     return null;
   }, [otherId, chat]);
 
+  const pinnedMessageRef = useMemoFirebase(() => {
+    if (!db || !currentChatId || !chat?.pinnedMessageId) return null;
+    return doc(db, 'chats', currentChatId, 'messages', chat.pinnedMessageId);
+  }, [db, currentChatId, chat?.pinnedMessageId]);
+  const { data: pinnedMessage } = useDoc<Message>(pinnedMessageRef);
+
   const messagesQuery = useMemoFirebase(() => {
     if (!db || !currentChatId) return null;
     return query(collection(db, 'chats', currentChatId, 'messages'), orderBy('sentAt', 'asc'));
@@ -98,6 +104,15 @@ export default function ChatArea() {
       if (viewport) viewport.scrollTo({ top: viewport.scrollHeight, behavior });
     }
   }, []);
+
+  const scrollToMessage = (messageId: string) => {
+    const el = document.getElementById(`msg-${messageId}`);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      el.classList.add('bg-primary/20');
+      setTimeout(() => el.classList.remove('bg-primary/20'), 2000);
+    }
+  };
 
   useEffect(() => {
     if (messages?.length) {
@@ -143,6 +158,11 @@ export default function ChatArea() {
     setTimeout(() => scrollToBottom('smooth'), 100);
   }, [messageInput, currentChatId, user, db, userProfile, replyTo, scrollToBottom]);
 
+  const unpinMessage = () => {
+    if (!db || !currentChatId) return;
+    updateDocumentNonBlocking(doc(db, 'chats', currentChatId), { pinnedMessageId: null });
+  };
+
   const chatDisplayName = useMemo(() => {
     if (otherProfile?.name) return otherProfile.name;
     if (otherMetadata?.name) return otherMetadata.name;
@@ -181,11 +201,28 @@ export default function ChatArea() {
               </div>
             </div>
           </div>
-          <Button variant="ghost" size="icon" onClick={() => setIsChatInfoOpen(true)} className="rounded-full">
-            <Info className="w-5 h-5" />
-          </Button>
+          <div className="flex items-center gap-1">
+            <Button variant="ghost" size="icon" onClick={() => setIsChatInfoOpen(true)} className="rounded-full">
+              <Info className="w-5 h-5" />
+            </Button>
+          </div>
         </div>
       </header>
+
+      {pinnedMessage && (
+        <div className="h-12 bg-card/40 backdrop-blur-md border-b border-border/20 px-4 flex items-center justify-between z-10 shrink-0 animate-in slide-in-from-top duration-300">
+          <div className="flex items-center gap-3 cursor-pointer min-w-0 flex-1" onClick={() => scrollToMessage(pinnedMessage.id)}>
+            <Pin className="w-3 h-3 text-primary shrink-0" />
+            <div className="flex flex-col min-w-0">
+              <span className="text-[10px] font-bold text-primary uppercase tracking-wider">Закрепленное сообщение</span>
+              <span className="text-xs truncate opacity-70">{pinnedMessage.content}</span>
+            </div>
+          </div>
+          <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full" onClick={unpinMessage}>
+            <X className="w-4 h-4" />
+          </Button>
+        </div>
+      )}
 
       <ScrollArea ref={scrollRef} className="flex-1 w-full relative z-10">
         {messages && (
@@ -208,6 +245,20 @@ export default function ChatArea() {
       </ScrollArea>
 
       <footer className="p-3 bg-card/20 backdrop-blur-xl border-t border-border/40 z-20 shrink-0">
+        {forwardingMessage && (
+          <div className="max-w-4xl mx-auto mb-2 p-3 bg-primary/10 rounded-xl border border-primary/20 flex items-center justify-between animate-in slide-in-from-bottom-2">
+            <div className="flex items-center gap-3 min-w-0">
+              <Forward className="w-4 h-4 text-primary" />
+              <div className="flex flex-col min-w-0">
+                <span className="text-[10px] font-bold text-primary uppercase">Пересылка сообщения</span>
+                <span className="text-xs truncate opacity-70">От: {forwardingMessage.senderName}</span>
+              </div>
+            </div>
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setForwardingMessage(null)}>
+              <X className="w-4 h-4" />
+            </Button>
+          </div>
+        )}
         {replyTo && (
           <div className="max-w-4xl mx-auto mb-2 p-2 bg-primary/5 rounded-xl border-l-4 border-primary flex items-center justify-between animate-in slide-in-from-bottom-2">
             <div className="flex flex-col min-w-0">
@@ -215,11 +266,14 @@ export default function ChatArea() {
               <span className="text-xs truncate opacity-70">{replyTo.content}</span>
             </div>
             <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setReplyTo(null)}>
-              <Info className="w-4 h-4 rotate-45" />
+              <X className="w-4 h-4" />
             </Button>
           </div>
         )}
         <div className="flex gap-2 max-w-4xl mx-auto items-end">
+          <Button variant="ghost" size="icon" className="h-11 w-11 rounded-xl shrink-0 text-muted-foreground hover:text-primary">
+            <Camera className="w-5 h-5" />
+          </Button>
           <Input 
             placeholder="Сообщение..." 
             className="bg-muted/40 rounded-xl h-11 border-none focus-visible:ring-1 focus-visible:ring-primary/30" 
