@@ -6,7 +6,7 @@ import { useAppState } from '@/lib/store';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { UserAvatar } from '@/components/user-avatar';
-import { Search, Settings, Plus, Loader2, Bookmark, Pin } from 'lucide-react';
+import { Search, Settings, Plus, Loader2, Bookmark, Pin, Globe } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { CreateChatModal } from './modals/create-chat-modal';
@@ -28,6 +28,8 @@ export default function ChatSidebar() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isCreatingSaved, setIsCreatingSaved] = useState(false);
+  const [globalSearchResult, setGlobalSearchResult] = useState<Chat | null>(null);
+  const [isSearchingGlobal, setIsSearchingGlobal] = useState(false);
 
   const userProfileRef = useMemoFirebase(() => {
     if (!db || !user) return null;
@@ -45,6 +47,44 @@ export default function ChatSidebar() {
   const { data: chats, isLoading: isChatsLoading } = useCollection<Chat>(chatsQuery);
 
   const pinnedIds = profile?.pinnedChatIds || [];
+
+  // Эффект для глобального поиска по @username
+  useEffect(() => {
+    const searchGlobal = async () => {
+      if (!db || !searchQuery.startsWith('@') || searchQuery.length < 3) {
+        setGlobalSearchResult(null);
+        return;
+      }
+
+      setIsSearchingGlobal(true);
+      try {
+        const q = query(
+          collection(db, 'chats'),
+          where('username', '==', searchQuery.toLowerCase()),
+          limit(1)
+        );
+        const snap = await getDocs(q);
+        if (!snap.empty) {
+          const chatData = { id: snap.docs[0].id, ...snap.docs[0].data() } as Chat;
+          // Показываем в глобальном поиске только если пользователь еще не в чате
+          if (!chatData.participantIds.includes(user?.uid || '')) {
+            setGlobalSearchResult(chatData);
+          } else {
+            setGlobalSearchResult(null);
+          }
+        } else {
+          setGlobalSearchResult(null);
+        }
+      } catch (e) {
+        console.error("Global search error:", e);
+      } finally {
+        setIsSearchingGlobal(false);
+      }
+    };
+
+    const timer = setTimeout(searchGlobal, 500);
+    return () => clearTimeout(timer);
+  }, [searchQuery, db, user?.uid]);
 
   const handleOpenSavedMessages = async () => {
     if (!db || !user || !profile) return;
@@ -161,7 +201,22 @@ export default function ChatSidebar() {
           </div>
         ) : (
           <div className="space-y-1">
-            {activeTab === 'all' && (
+            {/* Секция глобального поиска */}
+            {globalSearchResult && (
+              <div className="mb-4">
+                <div className="px-3 py-1 text-[10px] font-bold text-primary flex items-center gap-1 uppercase tracking-widest">
+                  <Globe className="w-3 h-3" /> Глобальный поиск
+                </div>
+                <ChatListItem 
+                  chat={globalSearchResult}
+                  isActive={currentChatId === globalSearchResult.id}
+                  onClick={() => setCurrentChatId(globalSearchResult.id)}
+                  isGlobalResult
+                />
+              </div>
+            )}
+
+            {activeTab === 'all' && searchQuery.length === 0 && (
               <div
                 onClick={handleOpenSavedMessages}
                 className={cn(
@@ -196,6 +251,17 @@ export default function ChatSidebar() {
                 />
               );
             })}
+
+            {!isSearchingGlobal && searchQuery.length > 0 && allFilteredChats.length === 0 && !globalSearchResult && (
+              <div className="p-8 text-center text-muted-foreground text-xs italic">
+                Ничего не найдено
+              </div>
+            )}
+            {isSearchingGlobal && (
+              <div className="flex justify-center p-4">
+                <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+              </div>
+            )}
           </div>
         )}
       </ScrollArea>
@@ -216,7 +282,7 @@ export default function ChatSidebar() {
   );
 }
 
-function ChatListItem({ chat, isActive, otherId, cachedDisplayName, manualAvatarUrl, onClick, isPinned }: any) {
+function ChatListItem({ chat, isActive, otherId, cachedDisplayName, manualAvatarUrl, onClick, isPinned, isGlobalResult }: any) {
   const db = useFirestore();
   const { user } = useUser();
   const [status, setStatus] = useState<string>('');
@@ -229,29 +295,33 @@ function ChatListItem({ chat, isActive, otherId, cachedDisplayName, manualAvatar
   const { data: otherProfile } = useDoc<User>(userProfileRef);
 
   const unreadQuery = useMemoFirebase(() => {
-    if (!db || !chat.id || !user) return null;
+    if (!db || !chat.id || !user || isGlobalResult) return null;
     return query(
       collection(db, 'chats', chat.id, 'messages'),
       where('isRead', '==', false)
     );
-  }, [db, chat.id, user]);
+  }, [db, chat.id, user, isGlobalResult]);
 
   const { data: unreadData } = useCollection<Message>(unreadQuery);
   const unreadCount = (unreadData || []).filter(m => m.senderId !== user?.uid).length;
 
   useEffect(() => {
+    if (isGlobalResult) {
+      setStatus(chat.type === 'group' ? 'Публичная группа' : 'Публичный канал');
+      return;
+    }
     const isOtherDeleted = otherProfile?.isBanned || otherProfile?.name?.includes('Удалённый Аккаунт');
     if (otherId) {
       setStatus(formatLastSeen(otherProfile?.lastSeen, otherProfile?.settings?.privacy?.lastSeenVisibility, isOtherDeleted));
     } else {
-      setStatus(chat.type === 'group' ? 'Группа' : 'Канал');
+      setStatus(chat.type === 'group' ? 'Группа' : (chat.type === 'channel' ? 'Канал' : 'Избранное'));
     }
-  }, [otherId, otherProfile, chat.type]);
+  }, [otherId, otherProfile, chat.type, isGlobalResult]);
 
   const isOtherDeleted = otherProfile?.isBanned || otherProfile?.name?.includes('Удалённый Аккаунт');
   const isTyping = chat?.typing && otherId && chat.typing[otherId] && !isOtherDeleted;
   
-  const finalDisplayName = formatDisplayName(otherProfile?.name || cachedDisplayName || 'Пользователь');
+  const finalDisplayName = formatDisplayName(otherProfile?.name || cachedDisplayName || chat.name || 'Пользователь');
 
   return (
     <div
@@ -264,11 +334,11 @@ function ChatListItem({ chat, isActive, otherId, cachedDisplayName, manualAvatar
       <div className="relative shrink-0">
         <UserAvatar 
           userId={otherId} 
-          manualAvatarUrl={manualAvatarUrl || otherProfile?.avatarUrl}
+          manualAvatarUrl={manualAvatarUrl || otherProfile?.avatarUrl || chat.avatarUrl}
           className="h-11 w-11 md:h-12 md:w-12" 
           fallbackName={finalDisplayName}
         />
-        {(status === 'в сети' || isTyping) && !isOtherDeleted && (
+        {(status === 'в сети' || isTyping) && !isOtherDeleted && !isGlobalResult && (
           <span className="absolute bottom-0 right-0 w-3 h-3 bg-accent rounded-full border-2 border-background" />
         )}
       </div>
@@ -295,6 +365,7 @@ function ChatListItem({ chat, isActive, otherId, cachedDisplayName, manualAvatar
               <span className="flex items-center gap-0.5">печатает<span className="animate-typing-dot">.</span><span className="animate-typing-dot [animation-delay:0.2s]">.</span><span className="animate-typing-dot [animation-delay:0.4s]">.</span></span>
             ) : status}
           </div>
+          {isGlobalResult && <div className="text-[9px] opacity-60">{chat.username}</div>}
         </div>
       </div>
     </div>

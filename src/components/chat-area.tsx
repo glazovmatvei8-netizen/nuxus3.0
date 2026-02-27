@@ -9,14 +9,14 @@ import { UserAvatar } from '@/components/user-avatar';
 import { 
   Send, Paperclip, Sparkles, MessageSquare, Info, X, 
   CornerUpLeft, Loader2, ShieldAlert, ChevronLeft, ChevronDown,
-  Search, MoreVertical, Mic
+  Search, MoreVertical, Mic, UserPlus
 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { MessageItem } from './message-item';
 import { useToast } from '@/hooks/use-toast';
 import { ChatInfoModal } from './modals/chat-info-modal';
 import { useFirestore, useUser, useCollection, useDoc, useMemoFirebase } from '@/firebase';
-import { collection, query, orderBy, doc } from 'firebase/firestore';
+import { collection, query, orderBy, doc, arrayUnion } from 'firebase/firestore';
 import { addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { suggestMessageDraft } from '@/ai/flows/ai-message-drafting-flow';
 import { cn, formatDisplayName, formatLastSeen } from '@/lib/utils';
@@ -113,6 +113,7 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: any) {
   const [isChatInfoOpen, setIsChatInfoOpen] = useState(false);
   const [isSuggesting, setIsSuggesting] = useState(false);
   const [showScrollDown, setShowScrollDown] = useState(false);
+  const [isJoining, setIsJoining] = useState(false);
   
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -139,6 +140,8 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: any) {
     return doc(db, 'chats', currentChatId);
   }, [db, currentChatId]);
   const { data: chat } = useDoc(chatRef);
+
+  const isParticipant = chat?.participantIds?.includes(user?.uid || '');
 
   const otherId = useMemo(() => {
     if (chat?.type === 'private' && user) {
@@ -185,10 +188,8 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: any) {
     }
   }, []);
 
-  // Авто-скролл при открытии чата и при новых сообщениях
   useEffect(() => {
     if (messages && messages.length > 0) {
-      // Используем instant для первой загрузки и auto/smooth для новых
       const isInitial = !dataLoadedRef.current;
       scrollToBottom(isInitial ? 'instant' as any : 'auto');
       dataLoadedRef.current = true;
@@ -201,9 +202,8 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: any) {
   }, [currentChatId]);
 
   const handleTyping = useCallback((isTyping: boolean) => {
-    if (!currentChatId || !user || !db || isBlocked) return;
+    if (!currentChatId || !user || !db || isBlocked || !isParticipant) return;
     
-    // Блокировка анимации для удаленных
     const isOtherDeleted = otherUserProfile?.isBanned || otherUserProfile?.name?.includes('Удалённый Аккаунт');
     if (isOtherDeleted) return;
 
@@ -211,7 +211,6 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: any) {
     const chatDocRef = doc(db, 'chats', currentChatId);
 
     if (isTyping) {
-      // Throttling: отправляем сигнал не чаще чем раз в 3.5 секунды
       if (now - lastTypingSignalRef.current > 3500) {
         updateDocumentNonBlocking(chatDocRef, { [`typing.${user.uid}`]: true });
         lastTypingSignalRef.current = now;
@@ -228,7 +227,7 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: any) {
       updateDocumentNonBlocking(chatDocRef, { [`typing.${user.uid}`]: false });
       lastTypingSignalRef.current = 0;
     }
-  }, [currentChatId, user, db, isBlocked, otherUserProfile]);
+  }, [currentChatId, user, db, isBlocked, otherUserProfile, isParticipant]);
 
   useEffect(() => {
     const isOtherDeleted = otherUserProfile?.isBanned || otherUserProfile?.name?.includes('Удалённый Аккаунт');
@@ -239,20 +238,20 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: any) {
     else if (isTyping) setStatusString('печатает...');
     else if (isOtherProfileLoading) setStatusString('загрузка...');
     else if (chat?.type === 'private') setStatusString(formatLastSeen(otherUserProfile?.lastSeen, otherUserProfile?.settings?.privacy?.lastSeenVisibility, isOtherDeleted));
-    else setStatusString(chat?.type === 'group' ? 'Группа' : 'Канал');
+    else setStatusString(chat?.type === 'group' ? 'Группа' : (chat?.type === 'channel' ? 'Канал' : 'Избранное'));
   }, [isOtherProfileLoading, otherUserProfile, chat?.type, chat?.typing, otherId, isBlockedByMe, isBlockedByThem]);
 
   useEffect(() => {
-    if (messages && user && currentChatId && chat && db) {
+    if (messages && user && currentChatId && chat && db && isParticipant) {
       const unread = messages.filter(msg => !msg.isRead && msg.senderId !== user.uid);
       unread.forEach(msg => {
         updateDocumentNonBlocking(doc(db, 'chats', currentChatId, 'messages', msg.id), { isRead: true });
       });
     }
-  }, [messages, user, currentChatId, db, chat]);
+  }, [messages, user, currentChatId, db, chat, isParticipant]);
 
   const handleSendMessage = useCallback((content: string, type: string = 'text') => {
-    if (isBlocked || userProfile?.isBanned) return;
+    if (isBlocked || userProfile?.isBanned || !isParticipant) return;
     if (!content.trim() && type === 'text') return;
     if (!currentChatId || !user || !db) return;
     
@@ -284,7 +283,22 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: any) {
     addDocumentNonBlocking(collection(db, 'chats', currentChatId, 'messages'), data);
     updateDocumentNonBlocking(doc(db, 'chats', currentChatId), { [`typing.${user.uid}`]: false });
     setTimeout(() => scrollToBottom('smooth'), 50);
-  }, [isBlocked, userProfile, currentChatId, user, db, editMessage, replyTo, scrollToBottom]);
+  }, [isBlocked, userProfile, currentChatId, user, db, editMessage, replyTo, scrollToBottom, isParticipant]);
+
+  const handleJoinChat = async () => {
+    if (!db || !currentChatId || !user || isJoining) return;
+    setIsJoining(true);
+    try {
+      await updateDocumentNonBlocking(doc(db, 'chats', currentChatId), {
+        participantIds: arrayUnion(user.uid)
+      });
+      toast({ title: "Успех", description: "Вы вступили в чат!" });
+    } catch (e: any) {
+      toast({ title: "Ошибка", description: e.message, variant: "destructive" });
+    } finally {
+      setIsJoining(false);
+    }
+  };
 
   const handleAISuggest = useCallback(async (currentInput: string) => {
     if (!messages || messages.length === 0) return null;
@@ -411,10 +425,26 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: any) {
 
       <footer className="p-3 bg-card/20 backdrop-blur-xl border-t border-border/40 z-20 shrink-0">
         <div className="flex flex-col gap-2 max-w-4xl mx-auto">
-          {isBlocked || userProfile?.isBanned ? (
-            <div className="flex items-center justify-center h-12 bg-muted/20 rounded-xl border border-border/40 text-muted-foreground text-xs font-semibold gap-2">
-              <ShieldAlert className="w-4 h-4" />
-              {userProfile?.isBanned ? "Аккаунт заблокирован" : "Общение ограничено"}
+          {isBlocked || userProfile?.isBanned || !isParticipant ? (
+            <div className="flex items-center justify-center h-14 bg-muted/20 rounded-xl border border-border/40 px-4">
+              {userProfile?.isBanned ? (
+                <div className="text-muted-foreground text-xs font-semibold flex items-center gap-2">
+                  <ShieldAlert className="w-4 h-4" /> Аккаунт заблокирован
+                </div>
+              ) : !isParticipant ? (
+                <Button 
+                  className="w-full h-10 rounded-xl font-bold flex items-center gap-2"
+                  onClick={handleJoinChat}
+                  disabled={isJoining}
+                >
+                  {isJoining ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserPlus className="w-4 h-4" />}
+                  {chat?.type === 'channel' ? 'Подписаться' : 'Вступить в группу'}
+                </Button>
+              ) : (
+                <div className="text-muted-foreground text-xs font-semibold flex items-center gap-2">
+                  <ShieldAlert className="w-4 h-4" /> Общение ограничено
+                </div>
+              )}
             </div>
           ) : (
             <>

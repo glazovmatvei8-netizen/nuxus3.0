@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { Sparkles, Loader2, Trash2, ShieldAlert, ShieldCheck, Ban, UserPlus, Info } from 'lucide-react';
+import { Sparkles, Loader2, Trash2, ShieldAlert, ShieldCheck, Ban, UserPlus, Info, Copy, Check } from 'lucide-react';
 import { useFirestore, useCollection, useMemoFirebase, useUser, useDoc } from '@/firebase';
 import { collection, query, where, orderBy, limit, getDocs, doc, arrayUnion, arrayRemove } from 'firebase/firestore';
 import { chatConversationSummary } from '@/ai/flows/chat-conversation-summary-flow';
@@ -32,6 +32,7 @@ export function ChatInfoModal({ open, onOpenChange, chat }: ChatInfoModalProps) 
   const [isSummarizing, setIsSummarizing] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isAddMemberOpen, setIsAddMemberOpen] = useState(false);
+  const [isCopied, setIsCopied] = useState(false);
   const { toast } = useToast();
 
   const isOwner = user && chat.ownerId === user.uid;
@@ -103,6 +104,14 @@ export function ChatInfoModal({ open, onOpenChange, chat }: ChatInfoModalProps) 
     }
   };
 
+  const handleCopyLink = () => {
+    if (!chat.username) return;
+    navigator.clipboard.writeText(chat.username);
+    setIsCopied(true);
+    toast({ title: "Ссылка скопирована", description: `Никнейм ${chat.username} в буфере обмена` });
+    setTimeout(() => setIsCopied(false), 2000);
+  };
+
   const handleToggleBlock = () => {
     if (!userProfileRef || !otherId) return;
     if (isBlockedByMe) {
@@ -139,6 +148,17 @@ export function ChatInfoModal({ open, onOpenChange, chat }: ChatInfoModalProps) 
               {(isAdmin || isOwner) && <ShieldCheck className="w-4 h-4 text-accent" />}
             </DialogTitle>
             <DialogDescription className="text-xs">{chat.username || otherUserProfile?.username}</DialogDescription>
+            {chat.username && chat.type !== 'private' && chat.username !== '@saved' && (
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="mt-3 h-8 rounded-full text-[10px] font-bold gap-2 px-4"
+                onClick={handleCopyLink}
+              >
+                {isCopied ? <Check className="w-3 h-3 text-accent" /> : <Copy className="w-3 h-3" />}
+                {isCopied ? 'Скопировано' : 'Копировать ссылку'}
+              </Button>
+            )}
           </DialogHeader>
 
           <Tabs defaultValue="info" className="flex-1 overflow-hidden flex flex-col">
