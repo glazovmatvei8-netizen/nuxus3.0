@@ -51,14 +51,6 @@ const PREMIUM_PLANS = [
   { id: '2y', name: '2 Года', price: 2200, unit: 'years', amount: 2 },
 ];
 
-const STAR_PACKS = [
-  { id: '50s', stars: 50, price: 50 },
-  { id: '100s', stars: 100, price: 100 },
-  { id: '500s', stars: 500, price: 500 },
-  { id: '1000s', stars: 1000, price: 1000 },
-  { id: '5000s', stars: 5000, price: 5000 },
-];
-
 const CARD_NUMBER = "2204 1202 0495 4230";
 const ADMIN_PHONE = '+79513332147';
 const ADMIN_UID = 'GCvLucN8CjNcdaxPO2vmpZ84hNl1';
@@ -165,7 +157,6 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
         adminId = adminSnap.docs[0].id;
       }
 
-      // Ищем именно выделенный системный чат Nuxus, а не личный диалог
       const chatQuery = query(
         collection(db, 'chats'),
         where('participantIds', 'array-contains', user.uid),
@@ -175,7 +166,6 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
       
       let adminChatId;
       if (chatSnap.empty) {
-        // Создаем новый чат "Nuxus" (Системный)
         const newChatData = {
           type: 'private',
           name: 'Nuxus',
@@ -195,12 +185,12 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
         adminChatId = chatSnap.docs[0].id;
       }
 
-      const itemName = pendingPayment.type === 'premium' ? `Подписка Premium: ${pendingPayment.item.name}` : `Пакет звезд: ${pendingPayment.item.stars} ⭐`;
+      const itemName = `Подписка Premium: ${pendingPayment.item.name}`;
       
       const messagesCol = collection(db, 'chats', adminChatId, 'messages');
       await addDoc(messagesCol, {
         chatId: adminChatId,
-        senderId: 'nuxus_bot', // Отправляем от имени бота, а не от пользователя
+        senderId: 'nuxus_bot',
         senderName: 'Nuxus',
         content: `Пользователь оплатил: ${itemName}`,
         contentType: 'payment_request',
@@ -214,7 +204,6 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
           targetUserUsername: profile.username,
           amount: pendingPayment.item.amount || null,
           unit: pendingPayment.item.unit || null,
-          stars: pendingPayment.item.stars || null,
           price: pendingPayment.item.price,
           status: 'pending'
         }
@@ -278,25 +267,6 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
               {showStore ? (
                 <div className="p-6 space-y-8 pb-12">
                   <div className="space-y-4">
-                    <h3 className="text-lg font-bold flex items-center gap-2 text-accent">
-                      <Coins className="w-5 h-5" /> Купить Звезды (1₽ = 1⭐)
-                    </h3>
-                    <div className="grid grid-cols-2 gap-3">
-                      {STAR_PACKS.map(pack => (
-                        <Button 
-                          key={pack.id} 
-                          variant="outline" 
-                          className="h-16 rounded-2xl flex flex-col items-center justify-center border-accent/20 hover:bg-accent/10 transition-all"
-                          onClick={() => setPendingPayment({ type: 'stars', item: pack })}
-                        >
-                          <span className="text-sm font-black text-accent">{pack.stars} ⭐</span>
-                          <span className="text-[10px] text-muted-foreground">{pack.price} ₽</span>
-                        </Button>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="space-y-4">
                     <h3 className="text-lg font-bold flex items-center gap-2 text-primary">
                       <Crown className="w-5 h-5" /> Подписки Nuxus Premium
                     </h3>
@@ -346,10 +316,6 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                         {isPremium && <Star className="w-5 h-5 text-accent fill-accent" />}
                       </h3>
                       <p className="text-sm text-muted-foreground">{form.username || '@username'}</p>
-                      <div className="mt-2 flex items-center justify-center gap-1 bg-accent/20 px-3 py-1 rounded-full">
-                        <Coins className="w-3 h-3 text-accent" />
-                        <span className="text-xs font-black text-accent">{profile?.stars || 0} звезд</span>
-                      </div>
                     </div>
                   </div>
 

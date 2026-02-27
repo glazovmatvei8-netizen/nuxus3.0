@@ -76,9 +76,9 @@ export default function ChatArea() {
     return null;
   }, [chat, user]);
 
-  const otherAvatarUrl = useMemo(() => {
+  const otherMetadata = useMemo(() => {
     if (otherId && chat?.metadata && chat.metadata[otherId]) {
-      return chat.metadata[otherId].avatarUrl;
+      return chat.metadata[otherId];
     }
     return null;
   }, [otherId, chat]);
@@ -143,9 +143,15 @@ export default function ChatArea() {
 
   const chatDisplayName = useMemo(() => {
     if (!chat) return '...';
-    if (otherId && chat.metadata?.[otherId]) return chat.metadata[otherId].name;
+    if (otherMetadata) return otherMetadata.name;
     return chat.name;
-  }, [chat, otherId]);
+  }, [chat, otherMetadata]);
+
+  const chatDisplayUsername = useMemo(() => {
+    if (otherMetadata?.username) return otherMetadata.username;
+    if (chat?.username) return chat.username;
+    return '';
+  }, [otherMetadata, chat]);
 
   if (!currentChatId) return (
     <div className="flex-1 flex flex-col items-center justify-center text-center p-8 bg-background">
@@ -165,12 +171,10 @@ export default function ChatArea() {
               <ChevronLeft className="w-5 h-5" />
             </Button>
             <div className="flex items-center gap-3 cursor-pointer min-w-0" onClick={() => setIsChatInfoOpen(true)}>
-              <UserAvatar userId={otherId} manualAvatarUrl={otherAvatarUrl} className="h-9 w-9" fallbackName={chatDisplayName} />
+              <UserAvatar userId={otherId} manualAvatarUrl={otherMetadata?.avatarUrl} className="h-9 w-9" fallbackName={chatDisplayName} />
               <div className="flex flex-col min-w-0">
                 <span className="font-semibold text-sm truncate">{formatDisplayName(chatDisplayName)}</span>
-                {chat?.type === 'private' && (
-                  <span className="text-[10px] text-muted-foreground truncate">{otherId ? '@' + otherId.slice(0, 8) : ''}</span>
-                )}
+                <span className="text-[10px] text-muted-foreground truncate">{chatDisplayUsername}</span>
               </div>
             </div>
           </div>
@@ -189,7 +193,7 @@ export default function ChatArea() {
             onReply={setReplyTo}
             amIPremium={amIPremium}
             isAdmin={chat?.ownerId === user?.uid || chat?.adminIds?.includes(user?.uid || '')}
-            otherAvatarUrl={otherAvatarUrl}
+            otherAvatarUrl={otherMetadata?.avatarUrl}
           />
         )}
         {isMessagesLoading && (

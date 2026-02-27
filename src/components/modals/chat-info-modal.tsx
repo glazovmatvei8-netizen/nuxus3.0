@@ -27,12 +27,6 @@ import type { Message, User, ReceivedGift } from '@/lib/types';
 import { AddMemberModal } from './add-member-modal';
 import { addMonths, addYears } from 'date-fns';
 
-interface ChatInfoModalProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  chat: any;
-}
-
 export const AVAILABLE_GIFTS = [
   // Classic
   { id: 'gift_star', name: 'Звезда', icon: Star, color: 'text-yellow-400', value: 100 },
@@ -100,7 +94,6 @@ export function ChatInfoModal({ open, onOpenChange, chat }: ChatInfoModalProps) 
   const [isSummarizing, setIsSummarizing] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isAddMemberOpen, setIsAddMemberOpen] = useState(false);
-  const [isCopied, setIsCopied] = useState(false);
   const [showGiftSelection, setShowGiftSelection] = useState(false);
   const [giftMessage, setGiftMessage] = useState('');
   const { toast } = useToast();
@@ -123,7 +116,6 @@ export function ChatInfoModal({ open, onOpenChange, chat }: ChatInfoModalProps) 
   }, [db, otherId]);
   const { data: otherUserProfile } = useDoc<User>(otherUserProfileRef);
 
-  const isBlockedByMe = currentUserProfile?.blockedUserIds?.includes(otherId || '');
   const isTargetPremium = isUserPremium(otherUserProfile);
 
   const membersQuery = useMemoFirebase(() => {
@@ -158,24 +150,26 @@ export function ChatInfoModal({ open, onOpenChange, chat }: ChatInfoModalProps) 
     }
   };
 
-  const handleSendGift = (gift: typeof AVAILABLE_GIFTS[0]) => {
+  const handleSendGift = async (gift: typeof AVAILABLE_GIFTS[0]) => {
     if (!isAdmin || !db || !chat.id || !otherId) return;
     
     const serialNumber = gift.isNFT ? Math.floor(Math.random() * 500) + 1 : undefined;
 
-    addDocumentNonBlocking(collection(db, 'chats', chat.id, 'messages'), {
+    const messageData = {
       chatId: chat.id,
       senderId: user?.uid || 'admin',
       senderName: currentUserProfile?.name || 'Admin',
       content: gift.id,
-      contentType: 'gift',
+      contentType: 'gift' as const,
       giftMessage: giftMessage.trim() || undefined,
       giftValue: gift.value,
-      isNFT: gift.isNFT,
+      isNFT: gift.isNFT || false,
       serialNumber,
       sentAt: new Date().toISOString(),
       isRead: false
-    });
+    };
+
+    addDocumentNonBlocking(collection(db, 'chats', chat.id, 'messages'), messageData);
 
     addDocumentNonBlocking(collection(db, 'users', otherId, 'receivedGifts'), {
       giftType: gift.id,
@@ -183,7 +177,7 @@ export function ChatInfoModal({ open, onOpenChange, chat }: ChatInfoModalProps) 
       senderName: currentUserProfile?.name || 'Admin',
       message: giftMessage.trim() || undefined,
       value: gift.value,
-      isNFT: gift.isNFT,
+      isNFT: gift.isNFT || false,
       serialNumber,
       receivedAt: new Date().toISOString(),
       isSold: false
@@ -194,20 +188,14 @@ export function ChatInfoModal({ open, onOpenChange, chat }: ChatInfoModalProps) 
     toast({ title: "Подарок отправлен!" });
   };
 
-  const handleSellNFT = (gift: ReceivedGift) => {
-    if (!db || !user || !gift.isNFT || gift.isSold) return;
-    const sellValue = Math.floor((gift.value || 0) * 0.8);
-    
-    updateDocumentNonBlocking(doc(db, 'users', user.uid, 'receivedGifts', gift.id), { isSold: true });
-    updateDocumentNonBlocking(doc(db, 'users', user.uid), { stars: increment(sellValue) });
-    
-    toast({ title: "NFT продан!", description: `Вы получили ${sellValue} ⭐ на ваш баланс.` });
-  };
-
   const handleGrantPremium = (amount: number, unit: 'months' | 'years') => {
     if (!isAdmin || !db || !otherId) return;
-    const premiumUntil = unit === 'months' ? addMonths(new Date(), amount).toISOString() : addYears(new Date(), amount).toISOString();
-    updateDocumentNonBlocking(doc(db, 'users', otherId), { isPremium: true, premiumUntil });
+    const currentExpiry = otherUserProfile?.premiumUntil ? new Date(otherUserProfile.premiumUntil) : new Date();
+    const newExpiry = unit === 'months' 
+      ? addMonths(currentExpiry, amount).toISOString() 
+      : addYears(currentExpiry, amount).toISOString();
+      
+    updateDocumentNonBlocking(doc(db, 'users', otherId), { isPremium: true, premiumUntil: newExpiry });
     toast({ title: "Premium выдан!" });
   };
 
@@ -260,7 +248,6 @@ export function ChatInfoModal({ open, onOpenChange, chat }: ChatInfoModalProps) 
                               <button key={g.id} onClick={() => handleSendGift(g)} className="flex flex-col items-center gap-1 p-2 rounded-xl hover:bg-primary/10 transition-colors group relative">
                                 <g.icon className={cn("w-6 h-6", g.color)} />
                                 <span className="text-[8px] font-bold uppercase truncate w-full text-center">{g.name}</span>
-                                <span className="text-[7px] text-accent font-black">{g.value}⭐</span>
                                 {g.isNFT && <div className="absolute top-0 right-0 bg-accent text-[6px] text-white px-1 rounded-bl-lg font-bold">NFT</div>}
                               </button>
                             ))}
@@ -276,14 +263,7 @@ export function ChatInfoModal({ open, onOpenChange, chat }: ChatInfoModalProps) 
                             <div key={g.id} className="relative group p-2 rounded-xl bg-muted/30 border border-white/5 flex flex-col items-center gap-1">
                               <Icon className={cn("w-6 h-6", giftInfo?.color)} />
                               <span className="text-[7px] font-bold text-center truncate w-full">{giftInfo?.name}</span>
-                              {g.isNFT && (
-                                <>
-                                  <div className="text-[6px] text-accent font-black">#{g.serialNumber}</div>
-                                  {user?.uid === otherId && (
-                                    <button onClick={() => handleSellNFT(g)} className="absolute inset-0 bg-accent/90 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl flex items-center justify-center text-[8px] font-bold text-white">ПРОДАТЬ</button>
-                                  )}
-                                </>
-                              )}
+                              {g.isNFT && <div className="text-[6px] text-accent font-black">#{g.serialNumber}</div>}
                             </div>
                           );
                         })}
@@ -294,9 +274,12 @@ export function ChatInfoModal({ open, onOpenChange, chat }: ChatInfoModalProps) 
                   {isAdmin && isPrivate && otherId && (
                     <div className="p-4 bg-primary/5 rounded-2xl border border-primary/20 space-y-3">
                       <h3 className="text-[10px] font-bold uppercase tracking-widest text-primary flex items-center gap-2"><Crown className="w-3 h-3" /> Управление Premium</h3>
-                      <div className="grid grid-cols-2 gap-2">
-                        <Button variant="outline" size="sm" className="h-8 text-[10px]" onClick={() => handleGrantPremium(1, 'months')}>1 Месяц</Button>
+                      <div className="grid grid-cols-3 gap-2">
+                        <Button variant="outline" size="sm" className="h-8 text-[10px]" onClick={() => handleGrantPremium(1, 'months')}>1 Мес.</Button>
+                        <Button variant="outline" size="sm" className="h-8 text-[10px]" onClick={() => handleGrantPremium(3, 'months')}>3 Мес.</Button>
+                        <Button variant="outline" size="sm" className="h-8 text-[10px]" onClick={() => handleGrantPremium(6, 'months')}>6 Мес.</Button>
                         <Button variant="outline" size="sm" className="h-8 text-[10px]" onClick={() => handleGrantPremium(1, 'years')}>1 Год</Button>
+                        <Button variant="outline" size="sm" className="h-8 text-[10px]" onClick={() => handleGrantPremium(2, 'years')}>2 Года</Button>
                       </div>
                     </div>
                   )}
