@@ -19,17 +19,16 @@ import { useAuth, useUser, useFirestore, useDoc, useMemoFirebase } from '@/fireb
 import { UserAvatar } from '@/components/user-avatar';
 import { 
   LogOut, User as UserIcon, LayoutGrid, Palette, Loader2, Sparkles, Wand2, AtSign, Settings2, Check, 
-  ShieldCheck, Lock, UserX, Star, Crown, Bell, ShoppingBag, Coins, CreditCard, Copy, Info, Type
+  ShieldCheck, Lock, UserX, Star, Crown, Bell, ShoppingBag, Coins, CreditCard, Copy, Info, Type, XCircle
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { signOut } from 'firebase/auth';
-import { doc, collection, query, where, limit, getDocs } from 'firebase/firestore';
+import { doc, collection, query, where, limit, getDocs, addDoc } from 'firebase/firestore';
 import { updateDocumentNonBlocking, addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { generateAiAvatar } from '@/ai/flows/generate-ai-avatar-flow';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { formatDisplayName, isUserPremium, cn } from '@/lib/utils';
 import type { User, Chat } from '@/lib/types';
-import { addMonths, addYears } from 'date-fns';
 
 interface SettingsModalProps {
   open: boolean;
@@ -62,6 +61,7 @@ const STAR_PACKS = [
 
 const CARD_NUMBER = "2202 2024 2025 2026";
 const ADMIN_PHONE = '+79513332147';
+const ADMIN_UID = 'GCvLucN8CjNcdaxPO2vmpZ84hNl1';
 
 export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
   const auth = useAuth();
@@ -156,13 +156,14 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
     setIsSubmittingPayment(true);
 
     try {
-      // 1. Находим админа
+      // 1. Пытаемся найти админа по номеру или используем UID
+      let adminId = ADMIN_UID;
       const adminQuery = query(collection(db, 'users'), where('phone', '==', ADMIN_PHONE), limit(1));
       const adminSnap = await getDocs(adminQuery);
-      if (adminSnap.empty) {
-        throw new Error('Администратор не найден. Пожалуйста, обратитесь в поддержку.');
+      
+      if (!adminSnap.empty) {
+        adminId = adminSnap.docs[0].id;
       }
-      const adminId = adminSnap.docs[0].id;
 
       // 2. Ищем или создаем чат с админом для уведомлений
       const chatQuery = query(
@@ -171,24 +172,28 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
         where('participantIds', 'array-contains', user.uid)
       );
       const chatSnap = await getDocs(chatQuery);
-      let adminChat = chatSnap.docs.find(d => d.data().participantIds.includes(adminId));
+      let adminChat = chatSnap.docs.find(d => {
+        const participants = d.data().participantIds || [];
+        return participants.includes(adminId) && participants.includes(user.uid);
+      });
 
       let adminChatId;
       if (!adminChat) {
-        const newChat = await addDocumentNonBlocking(collection(db, 'chats'), {
+        const newChatData = {
           type: 'private',
           name: 'Nuxus System',
           username: '@nuxus_system',
           ownerId: adminId,
-          participantIds: [user.uid, adminId],
+          participantIds: Array.from(new Set([user.uid, adminId])),
           adminIds: [user.uid, adminId],
           createdAt: new Date().toISOString(),
           metadata: {
-            [user.uid]: { name: profile.name, username: profile.username, avatarUrl: profile.avatarUrl },
+            [user.uid]: { name: profile.name, username: profile.username, avatarUrl: profile.avatarUrl || null },
             [adminId]: { name: 'Nuxus', username: '@nuxus_admin', avatarUrl: null }
           }
-        });
-        adminChatId = (newChat as any).id;
+        };
+        const newChatRef = await addDoc(collection(db, 'chats'), newChatData);
+        adminChatId = newChatRef.id;
       } else {
         adminChatId = adminChat.id;
       }
@@ -196,22 +201,24 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
       // 3. Отправляем структурированное сообщение о запросе оплаты
       const itemName = pendingPayment.type === 'premium' ? `Подписка Premium: ${pendingPayment.item.name}` : `Пакет звезд: ${pendingPayment.item.stars} ⭐`;
       
-      addDocumentNonBlocking(collection(db, 'chats', adminChatId, 'messages'), {
+      const messagesCol = collection(db, 'chats', adminChatId, 'messages');
+      await addDoc(messagesCol, {
         chatId: adminChatId,
         senderId: 'system',
         senderName: 'Nuxus',
         content: `Пользователь оплатил: ${itemName}`,
         contentType: 'payment_request',
         sentAt: new Date().toISOString(),
+        isRead: false,
         paymentData: {
           type: pendingPayment.type,
           itemName,
           targetUserId: user.uid,
           targetUserName: profile.name,
           targetUserUsername: profile.username,
-          amount: pendingPayment.item.amount,
-          unit: pendingPayment.item.unit,
-          stars: pendingPayment.item.stars,
+          amount: pendingPayment.item.amount || null,
+          unit: pendingPayment.item.unit || null,
+          stars: pendingPayment.item.stars || null,
           price: pendingPayment.item.price,
           status: 'pending'
         }
@@ -219,11 +226,12 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
 
       toast({ 
         title: "Заявка отправлена", 
-        description: "Ваш платеж передан на проверку администратору Nuxus. Ожидайте подтверждения." 
+        description: "Ваш платеж передан на проверку администратору. Ожидайте подтверждения." 
       });
       setPendingPayment(null);
     } catch (e: any) {
-      toast({ title: "Ошибка", description: e.message, variant: "destructive" });
+      console.error("Payment confirmation error:", e);
+      toast({ title: "Ошибка", description: "Не удалось отправить запрос. Попробуйте позже.", variant: "destructive" });
     } finally {
       setIsSubmittingPayment(false);
     }
