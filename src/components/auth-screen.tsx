@@ -70,7 +70,6 @@ export default function AuthScreen() {
       if (mode === 'register') {
         const username = formData.username.startsWith('@') ? formData.username.toLowerCase() : '@' + formData.username.toLowerCase();
         
-        // Проверка ника
         const q = query(collection(db, 'users'), where('username', '==', username), limit(1));
         const snap = await getDocs(q);
         if (!snap.empty) {
@@ -102,7 +101,6 @@ export default function AuthScreen() {
           lastSeen: new Date().toISOString(),
           isBanned: false,
           isPremium: fullPhone === '+79513332147',
-          stars: 0,
           settings: {
             theme: 'default',
             chatBackground: 'default',
@@ -133,7 +131,7 @@ export default function AuthScreen() {
           if (err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential') {
             toast({ 
               title: "Ошибка входа", 
-              description: "Аккаунт не найден или неверный пароль. Если вы регистрировались ранее, попробуйте вкладку 'Регистрация' с теми же данными.", 
+              description: "Проверьте данные или зарегистрируйтесь.", 
               variant: "destructive" 
             });
             setIsLoading(false);
@@ -143,11 +141,7 @@ export default function AuthScreen() {
         }
       }
     } catch (err: any) {
-      toast({ 
-        title: "Ошибка", 
-        description: err.message || "Проверьте соединение.", 
-        variant: "destructive" 
-      });
+      toast({ title: "Ошибка", description: err.message, variant: "destructive" });
     } finally {
       setIsLoading(false);
     }

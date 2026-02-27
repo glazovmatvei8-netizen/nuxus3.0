@@ -1,5 +1,5 @@
 
-export type MessageType = 'text' | 'image' | 'audio' | 'video' | 'service' | 'gift' | 'payment_request' | 'stars_transfer';
+export type MessageType = 'text' | 'image' | 'audio' | 'video' | 'service' | 'gift' | 'payment_request';
 
 export interface Message {
   id: string;
@@ -20,16 +20,14 @@ export interface Message {
   serialNumber?: number;
   forwardFrom?: string;
   translation?: string;
-  starsAmount?: number;
   paymentData?: {
-    type: 'premium' | 'stars';
+    type: 'premium';
     itemName: string;
     targetUserId: string;
     targetUserName: string;
     targetUserUsername: string;
     amount?: number;
     unit?: 'months' | 'years';
-    stars?: number;
     price: number;
     status: 'pending' | 'confirmed' | 'rejected';
   };
@@ -116,6 +114,5 @@ export interface User {
   isBanned?: boolean;
   isPremium?: boolean;
   premiumUntil?: string | null;
-  stars?: number;
   isArchived?: string[]; // array of chatIds
 }
