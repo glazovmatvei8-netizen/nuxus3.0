@@ -70,12 +70,15 @@ export default function AuthScreen() {
       if (mode === 'register') {
         const username = formData.username.startsWith('@') ? formData.username.toLowerCase() : '@' + formData.username.toLowerCase();
         
-        const q = query(collection(db, 'users'), where('username', '==', username), limit(1));
-        const snap = await getDocs(q);
-        if (!snap.empty) {
-          toast({ title: "Ник занят", description: "Этот @username уже используется", variant: "destructive" });
-          setIsLoading(false);
-          return;
+        // Проверка ника
+        if (formData.username) {
+          const q = query(collection(db, 'users'), where('username', '==', username), limit(1));
+          const snap = await getDocs(q);
+          if (!snap.empty) {
+            toast({ title: "Ник занят", description: "Этот @username уже используется", variant: "destructive" });
+            setIsLoading(false);
+            return;
+          }
         }
 
         let user;
@@ -91,10 +94,11 @@ export default function AuthScreen() {
           }
         }
 
+        // Создаем или обновляем профиль
         await setDoc(doc(db, 'users', user.uid), {
           id: user.uid,
-          name: formData.name,
-          username: username,
+          name: formData.name || 'Пользователь',
+          username: username || `@user_${user.uid.slice(0, 5)}`,
           phone: fullPhone,
           avatarUrl: `https://picsum.photos/seed/${user.uid}/200`,
           createdAt: new Date().toISOString(),
@@ -112,8 +116,9 @@ export default function AuthScreen() {
               whoCanMessageMe: 'everybody'
             }
           }
-        });
-        toast({ title: "Успех", description: "Аккаунт создан! Добро пожаловать." });
+        }, { merge: true });
+        
+        toast({ title: "Успех", description: "Добро пожаловать в Nuxus!" });
       } else {
         try {
           const result = await signInWithEmailAndPassword(auth, virtualEmail, formData.password);
@@ -127,10 +132,10 @@ export default function AuthScreen() {
             return;
           }
         } catch (err: any) {
-          if (err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') {
+          if (err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential') {
             toast({ 
               title: "Ошибка входа", 
-              description: "Проверьте номер или пароль. Если вы не регистрировались ранее, переключитесь на вкладку Регистрация.", 
+              description: "Аккаунт не найден или неверный пароль. Если вы регистрировались ранее, попробуйте вкладку 'Регистрация' с теми же данными.", 
               variant: "destructive" 
             });
             setIsLoading(false);
@@ -187,14 +192,14 @@ export default function AuthScreen() {
                     <Label className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground/80 ml-1">Имя</Label>
                     <div className="relative group">
                       <UserCircle className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
-                      <Input placeholder="Ваше имя" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="bg-white/5 border-white/10 pl-10 h-14 rounded-2xl focus:border-primary/50 transition-all" required />
+                      <Input placeholder="Ваше имя" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="bg-white/5 border-white/10 pl-10 h-14 rounded-2xl focus:border-primary/50 transition-all" required={mode === 'register'} />
                     </div>
                   </div>
                   <div className="space-y-1.5">
                     <Label className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground/80 ml-1">Никнейм</Label>
                     <div className="relative group">
                       <AtSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
-                      <Input placeholder="username" value={formData.username} onChange={e => setFormData({...formData, username: e.target.value})} className="bg-white/5 border-white/10 pl-10 h-14 rounded-2xl focus:border-primary/50 transition-all" required />
+                      <Input placeholder="username" value={formData.username} onChange={e => setFormData({...formData, username: e.target.value})} className="bg-white/5 border-white/10 pl-10 h-14 rounded-2xl focus:border-primary/50 transition-all" required={mode === 'register'} />
                     </div>
                   </div>
                 </>

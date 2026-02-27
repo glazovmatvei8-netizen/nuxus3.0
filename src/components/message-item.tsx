@@ -21,7 +21,7 @@ import {
   Plane, Sun, Moon, Cloud, Snowflake, Trees, Flower2, Dog, Cat, Bird, 
   Fish, Bitcoin, Coins, Gamepad2, Music, Smile, ThumbsUp, Bell, Mail, 
   Key, Lock, Shield, Sword, Anchor, Compass, Map, Flag, Briefcase, GraduationCap,
-  Pin, Forward, Gift, PlayCircle, Edit2, Copy, EyeOff
+  Pin, Forward, Gift, PlayCircle, Edit2, Copy
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { collection, doc, query, where, getDocs, limit } from 'firebase/firestore';
@@ -75,7 +75,7 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, amIPremium = 
 
   const handleForward = () => {
     setForwardingMessage(message);
-    toast({ title: "Выберите контакт для пересылки" });
+    toast({ title: "Выберите чат для пересылки" });
   };
 
   const handleCopy = () => {
@@ -94,38 +94,24 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, amIPremium = 
 
   const handlePaymentAction = async (action: 'confirm' | 'reject', e: React.MouseEvent) => {
     e.stopPropagation();
-    e.preventDefault();
     if (!isAdmin || !db || !message.paymentData || isActionLoading) return;
     setIsActionLoading(true);
-
     try {
       const msgRef = doc(db, 'chats', chatId, 'messages', message.id);
       const targetUserRef = doc(db, 'users', message.paymentData.targetUserId);
 
       if (action === 'confirm') {
-        if (message.paymentData.type === 'premium') {
-          const targetUserSnap = await getDocs(query(collection(db, 'users'), where('id', '==', message.paymentData.targetUserId), limit(1)));
-          const targetData = targetUserSnap.docs[0]?.data();
-          const currentExpiry = targetData?.premiumUntil ? new Date(targetData.premiumUntil) : new Date();
-          const newExpiry = message.paymentData.unit === 'months' 
-            ? addMonths(currentExpiry, message.paymentData.amount || 1).toISOString()
-            : addYears(currentExpiry, message.paymentData.amount || 1).toISOString();
-          
-          updateDocumentNonBlocking(targetUserRef, { isPremium: true, premiumUntil: newExpiry });
-        }
-
-        updateDocumentNonBlocking(msgRef, {
-          contentType: 'service',
-          content: `✅ Оплата подтверждена: ${message.paymentData.itemName}`,
-          paymentData: { ...message.paymentData, status: 'confirmed' }
-        });
+        const targetData = (await getDocs(query(collection(db, 'users'), where('id', '==', message.paymentData.targetUserId), limit(1)))).docs[0]?.data();
+        const currentExpiry = targetData?.premiumUntil ? new Date(targetData.premiumUntil) : new Date();
+        const newExpiry = message.paymentData.unit === 'months' 
+          ? addMonths(currentExpiry, message.paymentData.amount || 1).toISOString()
+          : addYears(currentExpiry, message.paymentData.amount || 1).toISOString();
+        
+        updateDocumentNonBlocking(targetUserRef, { isPremium: true, premiumUntil: newExpiry });
+        updateDocumentNonBlocking(msgRef, { contentType: 'service', content: `✅ Оплата принята: ${message.paymentData.itemName}` });
         toast({ title: "Оплата подтверждена" });
       } else {
-        updateDocumentNonBlocking(msgRef, {
-          contentType: 'service',
-          content: `❌ Оплата отклонена: ${message.paymentData.itemName}`,
-          paymentData: { ...message.paymentData, status: 'rejected' }
-        });
+        updateDocumentNonBlocking(msgRef, { contentType: 'service', content: `❌ Оплата отклонена: ${message.paymentData.itemName}` });
         toast({ title: "Оплата отклонена" });
       }
     } catch (e: any) {
@@ -149,36 +135,20 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, amIPremium = 
       return (
         <div className="flex flex-col gap-3 p-1 min-w-[240px]">
           <div className="flex items-center gap-2 border-b border-white/10 pb-2">
-            <div className="bg-primary/20 p-2 rounded-xl">
-              {data.type === 'premium' ? <Crown className="w-5 h-5 text-primary" /> : <Star className="w-5 h-5 text-accent" />}
-            </div>
+            <Crown className="w-5 h-5 text-primary" />
             <div className="flex flex-col text-left">
               <span className="text-[9px] font-bold uppercase tracking-widest text-primary">Запрос оплаты</span>
               <span className="text-sm font-bold text-white">{data.itemName}</span>
             </div>
           </div>
-          <div className="space-y-1.5 text-[10px]">
-            <div className="flex items-center justify-between text-muted-foreground">
-              <span className="flex items-center gap-1"><UserIcon className="w-3 h-3" /> Юзер:</span>
-              <span className="text-white">{data.targetUserUsername}</span>
-            </div>
-            <div className="flex items-center justify-between text-muted-foreground">
-              <span className="flex items-center gap-1"><Calendar className="w-3 h-3" /> Дата:</span>
-              <span className="text-white">{formattedTime}</span>
-            </div>
-            <div className="flex items-center justify-between pt-1 border-t border-white/5">
-              <span className="font-bold">К оплате:</span>
-              <span className="text-accent font-black">{data.price} ₽</span>
-            </div>
+          <div className="space-y-1.5 text-[10px] text-left">
+            <div className="flex justify-between"><span>Юзер:</span><span className="text-white">{data.targetUserUsername}</span></div>
+            <div className="flex justify-between pt-1 border-t border-white/5"><span>К оплате:</span><span className="text-accent font-black">{data.price} ₽</span></div>
           </div>
-          {isAdmin && data.status === 'pending' && (
+          {isAdmin && (
             <div className="flex gap-2 pt-1">
-              <Button size="sm" className="flex-1 h-7 text-[9px]" onClick={(e) => handlePaymentAction('confirm', e)} disabled={isActionLoading}>
-                {isActionLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3 mr-1" />} Принять
-              </Button>
-              <Button size="sm" variant="outline" className="flex-1 h-7 text-[9px]" onClick={(e) => handlePaymentAction('reject', e)} disabled={isActionLoading}>
-                Отказать
-              </Button>
+              <Button size="sm" className="flex-1 h-7 text-[9px]" onClick={(e) => handlePaymentAction('confirm', e)} disabled={isActionLoading}>Принять</Button>
+              <Button size="sm" variant="outline" className="flex-1 h-7 text-[9px]" onClick={(e) => handlePaymentAction('reject', e)} disabled={isActionLoading}>Отказать</Button>
             </div>
           )}
         </div>
@@ -188,34 +158,19 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, amIPremium = 
     if (message.contentType === 'gift') {
       const Icon = GIFT_ICONS[message.content] || Gift;
       return (
-        <div className="flex flex-col items-center justify-center my-2">
-          <div className={cn("bg-card/40 p-5 rounded-3xl border border-white/5 shadow-xl flex flex-col items-center gap-3 min-w-[200px]", message.isNFT && "ring-1 ring-accent/30")}>
-            <div className="text-[9px] font-black text-primary uppercase tracking-widest opacity-60">ПОДАРОК</div>
-            <Icon className={cn("w-14 h-14 drop-shadow-lg", message.isNFT ? "text-accent" : "text-primary")} />
-            <div className="text-center">
-              <div className="text-sm font-black text-white">{message.giftValue} ₽</div>
-              {message.giftMessage && <p className="text-[10px] italic text-muted-foreground mt-1">"{message.giftMessage}"</p>}
-            </div>
-          </div>
+        <div className="flex flex-col items-center justify-center my-2 p-4 bg-card/40 rounded-3xl border border-white/5">
+          <Icon className={cn("w-14 h-14 mb-2 text-primary")} />
+          <div className="text-sm font-black text-white">{message.giftValue} ₽</div>
+          {message.giftMessage && <p className="text-[10px] italic text-muted-foreground mt-1">"{message.giftMessage}"</p>}
         </div>
       );
     }
     
-    if (message.contentType === 'image') {
-      return (
-        <div className="relative w-full max-w-[280px] aspect-square rounded-xl overflow-hidden mt-1">
-          <Image src={message.content} alt="" fill className="object-cover" />
-        </div>
-      );
-    }
-
     if (message.contentType === 'video') {
       return (
-        <div className="relative w-48 h-48 rounded-full overflow-hidden border-2 border-primary/30 mt-1 bg-black">
+        <div className="relative w-48 h-48 rounded-full overflow-hidden border-2 border-primary/30 bg-black mt-1">
           <video src={message.content} className="w-full h-full object-cover" autoPlay loop muted playsInline />
-          <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-0 hover:opacity-100 transition-opacity bg-black/20">
-            <PlayCircle className="w-10 h-10 text-white" />
-          </div>
+          <PlayCircle className="absolute inset-0 m-auto w-10 h-10 text-white/50 pointer-events-none" />
         </div>
       );
     }
@@ -246,11 +201,8 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, amIPremium = 
           </div>
         )}
         {message.replyToId && (
-          <div 
-            onClick={(e) => { e.stopPropagation(); jumpToOriginal(); }}
-            className="mb-1 p-1.5 bg-black/10 rounded-lg border-l-2 border-primary cursor-pointer hover:bg-black/20 transition-all max-w-full"
-          >
-            <div className="text-[8px] font-bold text-primary uppercase truncate">{message.replyToContent?.startsWith('[') ? 'Медиа' : 'Ответ'}</div>
+          <div onClick={(e) => { e.stopPropagation(); jumpToOriginal(); }} className="mb-1 p-1.5 bg-black/10 rounded-lg border-l-2 border-primary cursor-pointer hover:bg-black/20 transition-all">
+            <div className="text-[8px] font-bold text-primary uppercase">Ответ</div>
             <div className="text-[10px] truncate opacity-60 italic">{message.replyToContent}</div>
           </div>
         )}
