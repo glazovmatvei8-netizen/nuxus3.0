@@ -215,8 +215,8 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, amIPremium = 
 
   if (message.contentType === 'service') {
     return (
-      <div className="w-full flex justify-center my-4 px-2">
-        <div className="max-w-[90%] bg-white/5 backdrop-blur-md px-4 py-1.5 rounded-full border border-white/10 shadow-sm">
+      <div className="w-full flex justify-center my-4 px-4">
+        <div className="max-w-[90%] bg-white/5 backdrop-blur-md px-6 py-2 rounded-full border border-white/10 shadow-sm">
           <p className="text-[9px] text-muted-foreground uppercase font-black tracking-[0.2em] text-center whitespace-normal leading-relaxed break-words">
             {message.content}
           </p>
@@ -226,15 +226,15 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, amIPremium = 
   }
 
   return (
-    <div id={`msg-${message.id}`} className={cn("w-full flex mb-1 px-2", isMe ? "justify-end" : "justify-start")}>
-      <div className={cn("flex gap-2 max-w-[85%] relative", isMe ? "flex-row-reverse ml-auto" : "flex-row")}>
-        {!isMe && <UserAvatar userId={null} manualAvatarUrl={senderAvatarUrl} className="h-8 w-8 mt-auto shrink-0" fallbackName={message.senderName} />}
+    <div id={`msg-${message.id}`} className={cn("w-full flex mb-2 px-2", isMe ? "justify-end" : "justify-start")}>
+      <div className={cn("flex gap-3 max-w-[85%] relative", isMe ? "flex-row-reverse" : "flex-row")}>
+        {!isMe && <UserAvatar userId={null} manualAvatarUrl={senderAvatarUrl} className="h-9 w-9 mt-auto shrink-0" fallbackName={message.senderName} />}
         <div className={cn("flex flex-col min-w-0 max-w-full relative", isMe ? "items-end" : "items-start")}>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <div className={cn(
-                "p-3 rounded-2xl cursor-pointer shadow-sm border transition-all hover:opacity-95 relative inline-block",
-                isMe ? "message-bubble-me border-none self-end text-white" : "bg-card border-white/5 text-foreground",
+                "p-3 rounded-2xl cursor-pointer shadow-md border transition-all hover:opacity-95 relative inline-block break-words",
+                isMe ? "message-bubble-me border-none self-end text-white ml-auto" : "bg-card border-white/5 text-foreground",
                 message.contentType === 'video' && "p-1 rounded-full bg-transparent border-none shadow-none"
               )}>
                 {renderContent()}
