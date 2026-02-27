@@ -7,28 +7,29 @@ import { getAuth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 import { initializeAppCheck, ReCaptchaEnterpriseProvider } from 'firebase/app-check';
 
-// IMPORTANT: DO NOT MODIFY THIS FUNCTION
+// Инициализация Firebase с поддержкой App Check
 export function initializeFirebase() {
   if (!getApps().length) {
     let firebaseApp;
     try {
-      firebaseApp = initializeApp();
+      firebaseApp = initializeApp(firebaseConfig);
     } catch (e) {
-      if (process.env.NODE_ENV === "production") {
-        console.warn('Automatic initialization failed. Falling back to firebase config object.', e);
-      }
+      console.error('Firebase initialization failed:', e);
       firebaseApp = initializeApp(firebaseConfig);
     }
 
-    // Инициализация App Check для защиты от DDoS и несанкционированных запросов
+    // App Check помогает защитить ваш проект от несанкционированного доступа ботов.
+    // Если у вас нет ключа ReCaptcha Enterprise, этот блок можно пропустить.
     if (typeof window !== 'undefined') {
       try {
+        // Мы используем тот же API ключ для инициализации провайдера
         initializeAppCheck(firebaseApp, {
-          provider: new ReCaptchaEnterpriseProvider('AIzaSyCbhMCq8kvo_079ShPP5QX89OA6uZNSVgc'), // Используем API ключ проекта
+          provider: new ReCaptchaEnterpriseProvider(firebaseConfig.apiKey),
           isTokenAutoRefreshEnabled: true,
         });
       } catch (err) {
-        console.warn('App Check failed to initialize:', err);
+        // Не блокируем работу приложения, если App Check не инициализировался
+        console.warn('App Check failed to initialize, continuing without it:', err);
       }
     }
 

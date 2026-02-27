@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { MessageSquareText, Loader2, Smartphone, UserCircle, AtSign, ShieldCheck, Lock, ArrowRight } from 'lucide-react';
+import { MessageSquareText, Loader2, Smartphone, UserCircle, AtSign, ShieldCheck, Lock, ArrowRight, AlertCircle } from 'lucide-react';
 import { useAuth, useFirestore } from '@/firebase';
 import { 
   signInWithEmailAndPassword,
@@ -39,7 +39,6 @@ export default function AuthScreen() {
     return '+' + digits;
   };
 
-  // Создаем виртуальный email для Firebase Auth на основе номера телефона
   const getVirtualEmail = (phone: string) => {
     return `${normalizePhone(phone).replace('+', '')}@nuxus.chat`;
   };
@@ -49,7 +48,7 @@ export default function AuthScreen() {
     const fullPhone = normalizePhone(formData.phone);
     
     if (fullPhone.length < 11) {
-      toast({ title: "Ошибка", description: "Введите корректный номер", variant: "destructive" });
+      toast({ title: "Ошибка", description: "Введите корректный номер (например, +79...) ", variant: "destructive" });
       return;
     }
 
@@ -97,7 +96,7 @@ export default function AuthScreen() {
             }
           }
         });
-        toast({ title: "Успех", description: "Аккаунт создан!" });
+        toast({ title: "Успех", description: "Аккаунт создан! Добро пожаловать." });
       } else {
         const result = await signInWithEmailAndPassword(auth, virtualEmail, formData.password);
         const user = result.user;
@@ -110,12 +109,25 @@ export default function AuthScreen() {
       }
     } catch (err: any) {
       console.error("Auth Error:", err);
-      let msg = "Ошибка авторизации";
-      if (err.code === 'auth/user-not-found') msg = "Аккаунт не найден";
-      else if (err.code === 'auth/wrong-password') msg = "Неверный пароль";
-      else if (err.code === 'auth/email-already-in-use') msg = "Этот номер уже зарегистрирован";
+      let title = "Ошибка авторизации";
+      let msg = "Проверьте данные или интернет";
+
+      if (err.code === 'auth/operation-not-allowed') {
+        title = "Метод входа отключен";
+        msg = "Включите 'Email/Password' в Firebase Console -> Authentication -> Sign-in method";
+      } else if (err.code === 'auth/user-not-found') {
+        msg = "Аккаунт с таким номером не найден";
+      } else if (err.code === 'auth/wrong-password') {
+        msg = "Неверный пароль";
+      } else if (err.code === 'auth/email-already-in-use') {
+        msg = "Этот номер уже зарегистрирован. Попробуйте войти.";
+      } else if (err.code === 'auth/network-request-failed') {
+        msg = "Проблема с сетью. Проверьте подключение к интернету.";
+      } else if (err.code === 'auth/too-many-requests') {
+        msg = "Слишком много попыток. Попробуйте позже.";
+      }
       
-      toast({ title: "Ошибка", description: msg, variant: "destructive" });
+      toast({ title, description: msg, variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
@@ -178,6 +190,13 @@ export default function AuthScreen() {
             <button onClick={() => setMode(mode === 'login' ? 'register' : 'login')} className="text-sm text-muted-foreground hover:text-primary transition-colors">
               {mode === 'login' ? "Нет аккаунта? Регистрация" : "Уже есть аккаунт? Войти"}
             </button>
+          </div>
+          
+          <div className="mt-6 flex items-start gap-2 p-3 bg-primary/5 rounded-xl border border-primary/10">
+            <AlertCircle className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+            <p className="text-[10px] text-muted-foreground leading-tight">
+              Если возникает ошибка "Проверьте данные", убедитесь, что в Firebase Console включен провайдер <b>Email/Password</b>.
+            </p>
           </div>
         </CardContent>
       </Card>
