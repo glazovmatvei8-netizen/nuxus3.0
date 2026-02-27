@@ -155,9 +155,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
           <ScrollArea className="flex-1">
             <TabsContent value="profile" className="p-6 space-y-6 m-0">
               <div className="flex flex-col items-center gap-4 py-4">
-                <div className="relative group">
-                  <UserAvatar userId={user?.uid} manualAvatarUrl={form.avatarUrl} className="h-32 w-32 border-4 border-background" fallbackName={form.name} />
-                </div>
+                <UserAvatar userId={user?.uid} manualAvatarUrl={form.avatarUrl} className="h-32 w-32 border-4 border-background" fallbackName={form.name} />
                 <div className="flex gap-2 w-full">
                   <Input placeholder="🚀" value={form.statusEmoji} onChange={e => setForm({...form, statusEmoji: e.target.value})} className="w-12 text-center bg-muted/30 border-none h-11 rounded-xl" />
                   <Input placeholder="Ваш статус..." value={form.statusText} onChange={e => setForm({...form, statusText: e.target.value})} className="flex-1 bg-muted/30 border-none h-11 rounded-xl" />

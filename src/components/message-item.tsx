@@ -214,43 +214,53 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, amIPremium = 
   };
 
   if (message.contentType === 'service') {
-    return <div className="w-full flex justify-center my-2 text-center p-2 text-[10px] text-muted-foreground uppercase tracking-widest">{message.content}</div>;
+    return (
+      <div className="w-full flex justify-center my-4 px-10">
+        <div className="max-w-md bg-white/5 backdrop-blur-md px-4 py-1.5 rounded-full border border-white/10 shadow-sm">
+          <p className="text-[9px] text-muted-foreground uppercase font-black tracking-[0.2em] text-center whitespace-normal leading-relaxed">
+            {message.content}
+          </p>
+        </div>
+      </div>
+    );
   }
 
   return (
-    <div id={`msg-${message.id}`} className={cn("flex gap-2 max-w-[85%] relative w-full px-2 mb-1", isMe ? "justify-end ml-auto" : "justify-start mr-auto")}>
-      {!isMe && <UserAvatar userId={null} manualAvatarUrl={senderAvatarUrl} className="h-8 w-8 mt-auto shrink-0" fallbackName={message.senderName} />}
-      <div className={cn("flex flex-col min-w-0 max-w-full relative", isMe ? "items-end" : "items-start")}>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <div className={cn(
-              "p-3 rounded-2xl cursor-pointer shadow-sm border transition-all hover:opacity-90 relative inline-block",
-              isMe ? "message-bubble-me border-none self-end text-white" : "bg-card border-white/5 text-foreground",
-              message.contentType === 'video' && "p-1 rounded-full bg-transparent border-none shadow-none"
-            )}>
-              {renderContent()}
-              <div className={cn("flex items-center justify-end gap-1 mt-1 opacity-60", message.contentType === 'video' && "absolute bottom-2 right-6 bg-black/40 px-1.5 py-0.5 rounded-full")}>
-                <span className="text-[9px]">{formattedTime}</span>
-                {isMe && (message.isRead ? <CheckCheck className="w-3 h-3 text-accent" /> : <Check className="w-3 h-3" />)}
+    <div id={`msg-${message.id}`} className={cn("w-full flex mb-1 px-2", isMe ? "justify-end" : "justify-start")}>
+      <div className={cn("flex gap-2 max-w-[85%] relative", isMe ? "flex-row-reverse" : "flex-row")}>
+        {!isMe && <UserAvatar userId={null} manualAvatarUrl={senderAvatarUrl} className="h-8 w-8 mt-auto shrink-0" fallbackName={message.senderName} />}
+        <div className={cn("flex flex-col min-w-0 max-w-full relative", isMe ? "items-end" : "items-start")}>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <div className={cn(
+                "p-3 rounded-2xl cursor-pointer shadow-sm border transition-all hover:opacity-95 relative inline-block",
+                isMe ? "message-bubble-me border-none self-end text-white" : "bg-card border-white/5 text-foreground",
+                message.contentType === 'video' && "p-1 rounded-full bg-transparent border-none shadow-none"
+              )}>
+                {renderContent()}
+                <div className={cn("flex items-center justify-end gap-1 mt-1 opacity-60", message.contentType === 'video' && "absolute bottom-2 right-6 bg-black/40 px-1.5 py-0.5 rounded-full")}>
+                  <span className="text-[9px]">{formattedTime}</span>
+                  {isMe && (message.isRead ? <CheckCheck className="w-3 h-3 text-accent" /> : <Check className="w-3 h-3" />)}
+                </div>
               </div>
-            </div>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align={isMe ? 'end' : 'start'} className="w-48 bg-card border-white/10">
-            <DropdownMenuItem onClick={() => onReply(message)} className="gap-2"><CornerUpLeft className="w-4 h-4" /> Ответить</DropdownMenuItem>
-            {isMe && message.contentType === 'text' && (
-              <DropdownMenuItem onClick={() => onEdit(message)} className="gap-2"><Edit2 className="w-4 h-4" /> Изменить</DropdownMenuItem>
-            )}
-            <DropdownMenuItem onClick={handleCopy} className="gap-2"><Copy className="w-4 h-4" /> Копировать</DropdownMenuItem>
-            <DropdownMenuItem onClick={handleForward} className="gap-2"><Forward className="w-4 h-4" /> Переслать</DropdownMenuItem>
-            {isAdmin && <DropdownMenuItem onClick={handlePin} className="gap-2"><Pin className="w-4 h-4" /> Закрепить</DropdownMenuItem>}
-            <DropdownMenuSeparator className="bg-white/5" />
-            {(isMe || isAdmin) && (
-              <DropdownMenuItem onClick={() => deleteDocumentNonBlocking(doc(db, 'chats', chatId, 'messages', message.id))} className="text-destructive gap-2">
-                <Trash2 className="w-4 h-4" /> Удалить
-              </DropdownMenuItem>
-            )}
-          </DropdownMenuContent>
-        </DropdownMenu>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align={isMe ? 'end' : 'start'} className="w-48 bg-card border-white/10">
+              <DropdownMenuItem onClick={() => onReply(message)} className="gap-2"><CornerUpLeft className="w-4 h-4" /> Ответить</DropdownMenuItem>
+              {isMe && message.contentType === 'text' && (
+                <DropdownMenuItem onClick={() => onEdit(message)} className="gap-2"><Edit2 className="w-4 h-4" /> Изменить</DropdownMenuItem>
+              )}
+              <DropdownMenuItem onClick={handleCopy} className="gap-2"><Copy className="w-4 h-4" /> Копировать</DropdownMenuItem>
+              <DropdownMenuItem onClick={handleForward} className="gap-2"><Forward className="w-4 h-4" /> Переслать</DropdownMenuItem>
+              {isAdmin && <DropdownMenuItem onClick={handlePin} className="gap-2"><Pin className="w-4 h-4" /> Закрепить</DropdownMenuItem>}
+              <DropdownMenuSeparator className="bg-white/5" />
+              {(isMe || isAdmin) && (
+                <DropdownMenuItem onClick={() => deleteDocumentNonBlocking(doc(db, 'chats', chatId, 'messages', message.id))} className="text-destructive gap-2">
+                  <Trash2 className="w-4 h-4" /> Удалить
+                </DropdownMenuItem>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </div>
     </div>
   );

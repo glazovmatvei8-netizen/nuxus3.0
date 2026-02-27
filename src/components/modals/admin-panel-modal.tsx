@@ -36,7 +36,6 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
     if (!alertText.trim() || !db) return;
     setIsSendingAlert(true);
     try {
-      // Имитация рассылки
       toast({ title: "Рассылка отправлена (имитация)", description: "Функция будет доступна в следующем ядре." });
       setAlertText('');
     } catch (e) {
