@@ -28,7 +28,6 @@ import { deleteDocumentNonBlocking, updateDocumentNonBlocking, addDocumentNonBlo
 import { useAppState } from '@/lib/store';
 import { cn, formatDisplayName, isUserPremium } from '@/lib/utils';
 import type { Message, User, ReceivedGift } from '@/lib/types';
-import { AddMemberModal } from './add-member-modal';
 import { addMonths, addYears } from 'date-fns';
 
 export const AVAILABLE_GIFTS = [
@@ -90,7 +89,6 @@ export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onO
   const { setCurrentChatId } = useAppState();
   const [summary, setSummary] = useState<string | null>(null);
   const [isSummarizing, setIsSummarizing] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
   const [showGiftSelection, setShowGiftSelection] = useState(false);
   const [giftMessage, setGiftMessage] = useState('');
   const { toast } = useToast();
@@ -117,7 +115,6 @@ export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onO
     
     const serialNumber = gift.isNFT ? Math.floor(Math.random() * 500) + 1 : undefined;
 
-    // КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: Избегаем undefined в объекте для Firestore
     const messageData: any = {
       chatId: chat.id,
       senderId: user?.uid || 'admin',
@@ -130,12 +127,8 @@ export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onO
       isRead: false
     };
 
-    if (giftMessage.trim()) {
-      messageData.giftMessage = giftMessage.trim();
-    }
-    if (serialNumber) {
-      messageData.serialNumber = serialNumber;
-    }
+    if (giftMessage.trim()) messageData.giftMessage = giftMessage.trim();
+    if (serialNumber) messageData.serialNumber = serialNumber;
 
     const giftDocData: any = {
       giftType: gift.id,
@@ -147,12 +140,8 @@ export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onO
       isSold: false
     };
 
-    if (giftMessage.trim()) {
-      giftDocData.message = giftMessage.trim();
-    }
-    if (serialNumber) {
-      giftDocData.serialNumber = serialNumber;
-    }
+    if (giftMessage.trim()) giftDocData.message = giftMessage.trim();
+    if (serialNumber) giftDocData.serialNumber = serialNumber;
 
     addDocumentNonBlocking(collection(db, 'chats', chat.id, 'messages'), messageData);
     addDocumentNonBlocking(collection(db, 'users', otherId, 'receivedGifts'), giftDocData);

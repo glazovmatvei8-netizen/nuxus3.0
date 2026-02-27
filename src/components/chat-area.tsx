@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useRef, useEffect, useMemo, useCallback, memo } from 'react';
@@ -18,6 +19,9 @@ import { addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/no
 import { formatDisplayName, isUserPremium } from '@/lib/utils';
 import type { Message, User as UserType, Chat } from '@/lib/types';
 
+/**
+ * Оптимизированный список сообщений для предотвращения лишних рендеров всего чата.
+ */
 const MessageList = memo(({ 
   messages, 
   userId, 
@@ -27,8 +31,9 @@ const MessageList = memo(({
   isAdmin, 
   otherAvatarUrl 
 }: any) => {
+  if (!messages) return null;
   return (
-    <div className="flex flex-col gap-3 max-w-4xl mx-auto px-6 py-8 min-h-full">
+    <div className="flex flex-col gap-3 max-w-4xl mx-auto px-4 md:px-6 py-8 min-h-full">
       {messages.map((msg: Message) => (
         <MessageItem 
           key={msg.id} 
@@ -186,18 +191,23 @@ export default function ChatArea() {
   );
 
   return (
-    <div className="flex-1 flex flex-col h-[100dvh] bg-background relative overflow-hidden">
-      <header className="h-20 flex flex-col justify-center border-b border-white/5 bg-card/40 backdrop-blur-3xl z-30 shrink-0">
-        <div className="flex items-center justify-between px-6 h-full">
-          <div className="flex items-center gap-4 min-w-0 flex-1">
-            <Button variant="ghost" size="icon" className="md:hidden rounded-2xl" onClick={() => setCurrentChatId(null)}>
+    <div className="flex-1 flex flex-col h-[100dvh] bg-background relative overflow-hidden z-20">
+      <header className="h-20 flex flex-col justify-center border-b border-white/5 bg-card/80 backdrop-blur-3xl z-40 shrink-0">
+        <div className="flex items-center justify-between px-4 md:px-6 h-full">
+          <div className="flex items-center gap-3 md:gap-4 min-w-0 flex-1">
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="md:hidden rounded-2xl bg-white/5" 
+              onClick={() => setCurrentChatId(null)}
+            >
               <ChevronLeft className="w-6 h-6" />
             </Button>
-            <div className="flex items-center gap-4 cursor-pointer min-w-0 group" onClick={() => setIsChatInfoOpen(true)}>
-              <UserAvatar userId={otherId} manualAvatarUrl={otherMetadata?.avatarUrl} className="h-11 w-11 rounded-2xl ring-2 ring-primary/20 ring-offset-2 ring-offset-background group-hover:scale-105 transition-all" fallbackName={chatDisplayName} />
+            <div className="flex items-center gap-3 md:gap-4 cursor-pointer min-w-0 group" onClick={() => setIsChatInfoOpen(true)}>
+              <UserAvatar userId={otherId} manualAvatarUrl={otherMetadata?.avatarUrl} className="h-10 w-10 md:h-11 md:w-11 rounded-2xl ring-2 ring-primary/20 ring-offset-2 ring-offset-background group-hover:scale-105 transition-all" fallbackName={chatDisplayName} />
               <div className="flex flex-col min-w-0">
-                <span className="font-black text-sm uppercase tracking-tighter truncate group-hover:text-primary transition-colors">{formatDisplayName(chatDisplayName)}</span>
-                <span className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest truncate">{chatDisplayUsername}</span>
+                <span className="font-black text-xs md:text-sm uppercase tracking-tighter truncate group-hover:text-primary transition-colors">{formatDisplayName(chatDisplayName)}</span>
+                <span className="text-[9px] md:text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest truncate">{chatDisplayUsername}</span>
               </div>
             </div>
           </div>
@@ -210,7 +220,7 @@ export default function ChatArea() {
       </header>
 
       {pinnedMessage && (
-        <div className="h-14 bg-primary/10 backdrop-blur-2xl border-b border-primary/20 px-6 flex items-center justify-between z-20 shrink-0 animate-in slide-in-from-top duration-500">
+        <div className="h-14 bg-primary/10 backdrop-blur-2xl border-b border-primary/20 px-4 md:px-6 flex items-center justify-between z-30 shrink-0 animate-in slide-in-from-top duration-500">
           <div className="flex items-center gap-4 cursor-pointer min-w-0 flex-1" onClick={() => scrollToMessage(pinnedMessage.id)}>
             <div className="bg-primary/20 p-2 rounded-xl">
               <Pin className="w-3.5 h-3.5 text-primary" />
@@ -246,10 +256,10 @@ export default function ChatArea() {
         )}
       </ScrollArea>
 
-      <footer className="p-4 bg-card/60 backdrop-blur-3xl border-t border-white/5 z-30 shrink-0">
+      <footer className="p-3 md:p-4 bg-card/80 backdrop-blur-3xl border-t border-white/5 z-40 shrink-0">
         <div className="max-w-4xl mx-auto space-y-3">
           {forwardingMessage && (
-            <div className="mb-2 p-4 bg-primary/10 rounded-2xl border border-primary/20 flex items-center justify-between animate-in slide-in-from-bottom-4">
+            <div className="mb-2 p-3 md:p-4 bg-primary/10 rounded-2xl border border-primary/20 flex items-center justify-between animate-in slide-in-from-bottom-4">
               <div className="flex items-center gap-4 min-w-0">
                 <div className="bg-primary/20 p-2 rounded-xl">
                   <Forward className="w-4 h-4 text-primary" />
@@ -265,7 +275,7 @@ export default function ChatArea() {
             </div>
           )}
           {replyTo && (
-            <div className="mb-2 p-3 bg-white/5 rounded-2xl border-l-4 border-primary flex items-center justify-between animate-in slide-in-from-bottom-4">
+            <div className="mb-2 p-2 md:p-3 bg-white/5 rounded-2xl border-l-4 border-primary flex items-center justify-between animate-in slide-in-from-bottom-4">
               <div className="flex flex-col min-w-0 pl-2">
                 <span className="text-[9px] font-black text-primary uppercase tracking-widest">Ответ: {replyTo.senderName}</span>
                 <span className="text-xs truncate text-white/60 italic">{replyTo.content}</span>
@@ -275,22 +285,22 @@ export default function ChatArea() {
               </Button>
             </div>
           )}
-          <div className="flex gap-3 items-end">
-            <Button variant="ghost" size="icon" className="h-14 w-14 rounded-2xl shrink-0 bg-white/5 hover:bg-white/10 text-muted-foreground hover:text-primary transition-all">
-              <Camera className="w-6 h-6" />
+          <div className="flex gap-2 md:gap-3 items-end">
+            <Button variant="ghost" size="icon" className="h-12 w-12 md:h-14 md:w-14 rounded-2xl shrink-0 bg-white/5 hover:bg-white/10 text-muted-foreground hover:text-primary transition-all">
+              <Camera className="w-5 h-5 md:w-6 md:h-6" />
             </Button>
             <div className="flex-1 relative">
               <Input 
-                placeholder="Напишите что-нибудь..." 
-                className="bg-white/5 rounded-2xl h-14 border-white/5 focus-visible:ring-1 focus-visible:ring-primary/40 transition-all text-sm px-6 placeholder:uppercase placeholder:text-[10px] placeholder:font-black placeholder:tracking-widest" 
+                placeholder="Напишите..." 
+                className="bg-white/5 rounded-2xl h-12 md:h-14 border-white/5 focus-visible:ring-1 focus-visible:ring-primary/40 transition-all text-sm px-4 md:px-6 placeholder:uppercase placeholder:text-[10px] placeholder:font-black placeholder:tracking-widest" 
                 value={messageInput}
                 onChange={e => setMessageInput(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && !e.shiftKey && handleSendMessage()}
                 disabled={isSending}
               />
             </div>
-            <Button size="icon" className="h-14 w-14 rounded-2xl shrink-0 shadow-2xl shadow-primary/40 bg-gradient-to-br from-primary to-primary/80 transition-transform active:scale-90" onClick={handleSendMessage} disabled={isSending || !messageInput.trim()}>
-              {isSending ? <Loader2 className="w-6 h-6 animate-spin" /> : <Send className="w-6 h-6" />}
+            <Button size="icon" className="h-12 w-12 md:h-14 md:w-14 rounded-2xl shrink-0 shadow-2xl shadow-primary/40 bg-gradient-to-br from-primary to-primary/80 transition-transform active:scale-90" onClick={handleSendMessage} disabled={isSending || !messageInput.trim()}>
+              {isSending ? <Loader2 className="w-5 h-5 md:w-6 md:h-6 animate-spin" /> : <Send className="w-5 h-5 md:w-6 md:h-6" />}
             </Button>
           </div>
         </div>
