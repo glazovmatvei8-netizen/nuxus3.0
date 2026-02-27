@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useMemo } from 'react';
@@ -8,7 +9,7 @@ import { UserAvatar } from '@/components/user-avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { 
-  Sparkles, Loader2, Trash2, Gift, XCircle, Crown, Star, Info, MessageSquare, ShieldAlert
+  Sparkles, Loader2, Trash2, Gift, XCircle, Crown, Star, Info, MessageSquare, ShieldAlert, LogOut, UserPlus
 } from 'lucide-react';
 import { 
   Star as StarIcon, Heart, Zap, Flame, Trophy, Rocket, Diamond, 
@@ -20,7 +21,7 @@ import {
   Flag, Briefcase, GraduationCap 
 } from 'lucide-react';
 import { useFirestore, useCollection, useMemoFirebase, useUser, useDoc } from '@/firebase';
-import { collection, query, where, orderBy, limit, getDocs, doc } from 'firebase/firestore';
+import { collection, query, where, orderBy, limit, getDocs, doc, updateDoc, arrayRemove } from 'firebase/firestore';
 import { chatConversationSummary } from '@/ai/flows/chat-conversation-summary-flow';
 import { useToast } from '@/hooks/use-toast';
 import { deleteDocumentNonBlocking, updateDocumentNonBlocking, addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
@@ -28,6 +29,7 @@ import { useAppState } from '@/lib/store';
 import { cn, formatDisplayName, isUserPremium } from '@/lib/utils';
 import type { Message, User, ReceivedGift } from '@/lib/types';
 import { addMonths, addYears } from 'date-fns';
+import { AddMemberModal } from './add-member-modal';
 
 export const AVAILABLE_GIFTS = [
   { id: 'gift_star', name: 'Звезда', icon: StarIcon, color: 'text-yellow-400', value: 100 },
@@ -42,44 +44,6 @@ export const AVAILABLE_GIFTS = [
   { id: 'gift_popper', name: 'Хлопушка', icon: PartyPopper, color: 'text-green-400', value: 120 },
   { id: 'gift_ghost', name: 'Привидение', icon: Ghost, color: 'text-gray-400', value: 400 },
   { id: 'gift_gem', name: 'Изумруд', icon: Gem, color: 'text-emerald-400', value: 2500, isNFT: true },
-  { id: 'gift_coffee', name: 'Кофе', icon: Coffee, color: 'text-amber-800', value: 50 },
-  { id: 'gift_pizza', name: 'Пицца', icon: Pizza, color: 'text-orange-400', value: 80 },
-  { id: 'gift_beer', name: 'Пиво', icon: Beer, color: 'text-yellow-600', value: 70 },
-  { id: 'gift_wine', name: 'Вино', icon: Wine, color: 'text-red-700', value: 150 },
-  { id: 'gift_camera', name: 'Камера', icon: Camera, color: 'text-blue-500', value: 600 },
-  { id: 'gift_laptop', name: 'Ноутбук', icon: Laptop, color: 'text-slate-500', value: 2000 },
-  { id: 'gift_watch', name: 'Часы', icon: Watch, color: 'text-indigo-400', value: 1200 },
-  { id: 'gift_phone', name: 'Смартфон', icon: Smartphone, color: 'text-sky-400', value: 1800 },
-  { id: 'gift_car', name: 'Машина', icon: Car, color: 'text-red-600', value: 15000, isNFT: true },
-  { id: 'gift_plane', name: 'Самолет', icon: Plane, color: 'text-blue-300', value: 50000, isNFT: true },
-  { id: 'gift_sun', name: 'Солнце', icon: Sun, color: 'text-yellow-500', value: 100 },
-  { id: 'gift_moon', name: 'Луна', icon: Moon, color: 'text-slate-300', value: 100 },
-  { id: 'gift_cloud', name: 'Облако', icon: Cloud, color: 'text-sky-200', value: 50 },
-  { id: 'gift_snow', name: 'Снежинка', icon: Snowflake, color: 'text-blue-100', value: 80 },
-  { id: 'gift_tree', name: 'Дерево', icon: Trees, color: 'text-green-600', value: 120 },
-  { id: 'gift_flower', name: 'Цветок', icon: Flower2, color: 'text-pink-300', value: 90 },
-  { id: 'gift_dog', name: 'Собака', icon: Dog, color: 'text-orange-300', value: 300 },
-  { id: 'gift_cat', name: 'Кот', icon: Cat, color: 'text-slate-400', value: 300 },
-  { id: 'gift_bird', name: 'Птица', icon: Bird, color: 'text-blue-400', value: 200 },
-  { id: 'gift_fish', name: 'Рыба', icon: Fish, color: 'text-cyan-400', value: 250 },
-  { id: 'gift_bitcoin', name: 'Биткоин', icon: Bitcoin, color: 'text-orange-500', value: 8000, isNFT: true },
-  { id: 'gift_coins', name: 'Монеты', icon: Coins, color: 'text-yellow-600', value: 500 },
-  { id: 'gift_game', name: 'Консоль', icon: Gamepad2, color: 'text-purple-500', value: 1100 },
-  { id: 'gift_music', name: 'Музыка', icon: Music, color: 'text-pink-500', value: 300 },
-  { id: 'gift_smile', name: 'Улыбка', icon: Smile, color: 'text-yellow-400', value: 20 },
-  { id: 'gift_like', name: 'Лайк', icon: ThumbsUp, color: 'text-blue-500', value: 20 },
-  { id: 'gift_bell', name: 'Колокольчик', icon: Bell, color: 'text-yellow-600', value: 100 },
-  { id: 'gift_mail', name: 'Письмо', icon: Mail, color: 'text-slate-400', value: 40 },
-  { id: 'gift_key', name: 'Ключ', icon: Key, color: 'text-amber-500', value: 1000, isNFT: true },
-  { id: 'gift_lock', name: 'Замок', icon: Lock, color: 'text-slate-600', value: 500 },
-  { id: 'gift_shield', name: 'Щит', icon: Shield, color: 'text-blue-700', value: 700 },
-  { id: 'gift_sword', name: 'Меч', icon: Sword, color: 'text-slate-400', value: 800 },
-  { id: 'gift_anchor', name: 'Якорь', icon: Anchor, color: 'text-blue-900', value: 400 },
-  { id: 'gift_compass', name: 'Компас', icon: Compass, color: 'text-red-500', value: 300 },
-  { id: 'gift_map', name: 'Карта', icon: Map, color: 'text-green-500', value: 450 },
-  { id: 'gift_flag', name: 'Флаг', icon: Flag, color: 'text-blue-600', value: 200 },
-  { id: 'gift_briefcase', name: 'Портфель', icon: Briefcase, color: 'text-amber-900', value: 600 },
-  { id: 'gift_grad', name: 'Диплом', icon: GraduationCap, color: 'text-indigo-600', value: 700 },
 ];
 
 export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onOpenChange: (o: boolean) => void, chat: any }) {
@@ -90,6 +54,7 @@ export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onO
   const [isSummarizing, setIsSummarizing] = useState(false);
   const [showGiftSelection, setShowGiftSelection] = useState(false);
   const [giftMessage, setGiftMessage] = useState('');
+  const [isAddMemberOpen, setIsAddMemberOpen] = useState(false);
   const { toast } = useToast();
 
   const isOwner = user && chat.ownerId === user.uid;
@@ -150,15 +115,19 @@ export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onO
     toast({ title: "Подарок отправлен!" });
   };
 
-  const handleGrantPremium = (amount: number, unit: 'months' | 'years') => {
-    if (!isAdmin || !db || !otherId) return;
-    const currentExpiry = otherUserProfile?.premiumUntil ? new Date(otherUserProfile.premiumUntil) : new Date();
-    const newExpiry = unit === 'months' 
-      ? addMonths(currentExpiry, amount).toISOString() 
-      : addYears(currentExpiry, amount).toISOString();
-      
-    updateDocumentNonBlocking(doc(db, 'users', otherId), { isPremium: true, premiumUntil: newExpiry });
-    toast({ title: "Premium выдан!" });
+  const handleLeaveChat = async () => {
+    if (!db || !user || !chat.id) return;
+    try {
+      const chatRef = doc(db, 'chats', chat.id);
+      await updateDoc(chatRef, {
+        participantIds: arrayRemove(user.uid)
+      });
+      setCurrentChatId(null);
+      onOpenChange(false);
+      toast({ title: "Вы покинули чат" });
+    } catch (e) {
+      toast({ title: "Ошибка", variant: "destructive" });
+    }
   };
 
   const handleSummarize = async () => {
@@ -184,6 +153,7 @@ export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onO
   const chatUsername = otherUserProfile?.username || chat.username;
 
   return (
+    <>
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md bg-card border-border p-0 overflow-hidden h-[90vh] flex flex-col">
         <DialogHeader className="p-6 bg-muted/30 border-b border-border text-center flex flex-col items-center shrink-0">
@@ -218,7 +188,6 @@ export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onO
                             <button key={g.id} onClick={() => handleSendGift(g)} className="flex flex-col items-center gap-1 p-2 rounded-xl hover:bg-muted transition-colors group relative">
                               <g.icon className={cn("w-6 h-6", g.color)} />
                               <span className="text-[8px] font-bold uppercase truncate w-full text-center">{g.name}</span>
-                              {g.isNFT && <div className="absolute top-0 right-0 bg-accent text-[6px] text-white px-1 rounded-bl-lg font-bold">NFT</div>}
                             </button>
                           ))}
                         </div>
@@ -233,7 +202,6 @@ export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onO
                           <div key={g.id} className="relative group p-2 rounded-xl bg-muted/30 border border-white/5 flex flex-col items-center gap-1">
                             <Icon className={cn("w-6 h-6", giftInfo?.color)} />
                             <span className="text-[7px] font-bold text-center truncate w-full">{giftInfo?.name}</span>
-                            {g.isNFT && <div className="text-[6px] text-accent font-black">#{g.serialNumber}</div>}
                           </div>
                         );
                       })}
@@ -241,29 +209,21 @@ export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onO
                   </div>
                 )}
 
-                {isAdmin && isPrivate && otherId && (
-                  <div className="p-4 bg-muted/30 rounded-2xl border border-border space-y-3">
-                    <h3 className="text-[10px] font-bold uppercase tracking-widest text-primary flex items-center gap-2"><Crown className="w-3 h-3" /> Управление Premium</h3>
-                    <div className="grid grid-cols-3 gap-2">
-                      <Button variant="outline" size="sm" className="h-8 text-[10px]" onClick={() => handleGrantPremium(1, 'months')}>1 Мес.</Button>
-                      <Button variant="outline" size="sm" className="h-8 text-[10px]" onClick={() => handleGrantPremium(3, 'months')}>3 Мес.</Button>
-                      <Button variant="outline" size="sm" className="h-8 text-[10px]" onClick={() => handleGrantPremium(6, 'months')}>6 Мес.</Button>
-                      <Button variant="outline" size="sm" className="h-8 text-[10px]" onClick={() => handleGrantPremium(1, 'years')}>1 Год</Button>
-                      <Button variant="outline" size="sm" className="h-8 text-[10px]" onClick={() => handleGrantPremium(2, 'years')}>2 Года</Button>
-                    </div>
-                  </div>
-                )}
-
                 <div className="space-y-2">
                   <h3 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-2"><Sparkles className="w-3 h-3" /> AI Суммаризация</h3>
                   <div className="bg-muted/30 p-4 rounded-xl border border-border">
-                    {summary ? <p className="text-sm italic">{summary}</p> : <Button variant="ghost" size="sm" className="w-full text-xs" onClick={handleSummarize} disabled={isSummarizing}>Суммаризировать</Button>}
+                    {summary ? <p className="text-sm italic">{summary}</p> : <Button variant="ghost" size="sm" className="w-full text-xs" onClick={handleSummarize} disabled={isSummarizing}>Суммаризировать последние сообщения</Button>}
                   </div>
                 </div>
 
-                <div className="pt-4 pb-12">
+                <div className="pt-4 pb-12 space-y-2">
+                  {!isPrivate && (
+                    <Button variant="outline" className="w-full h-11 rounded-xl gap-2 font-bold" onClick={handleLeaveChat}>
+                      <LogOut className="w-4 h-4" /> Покинуть группу
+                    </Button>
+                  )}
                   <Button variant="ghost" className="w-full text-destructive hover:bg-destructive/10" onClick={() => {
-                    if (confirm('Удалить этот чат?')) {
+                    if (confirm('Вы уверены, что хотите удалить этот чат навсегда?')) {
                       deleteDocumentNonBlocking(doc(db, 'chats', chat.id));
                       setCurrentChatId(null);
                       onOpenChange(false);
@@ -275,10 +235,18 @@ export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onO
           </TabsContent>
 
           <TabsContent value="members" className="flex-1 min-h-0 m-0 overflow-hidden">
-            <ScrollArea className="h-full p-4">
-              <div className="space-y-2">
+            <div className="p-4 border-b border-border flex justify-between items-center">
+              <span className="text-[10px] font-bold uppercase text-muted-foreground">Участники: {chat.participantIds?.length}</span>
+              {!isPrivate && (
+                <Button variant="ghost" size="sm" className="h-7 text-xs text-primary gap-1" onClick={() => setIsAddMemberOpen(true)}>
+                  <UserPlus className="w-3 h-3" /> Добавить
+                </Button>
+              )}
+            </div>
+            <ScrollArea className="flex-1">
+              <div className="p-4 space-y-2">
                 {chat.participantIds?.map((pid: string) => (
-                  <MemberRow key={pid} userId={pid} />
+                  <MemberRow key={pid} userId={pid} ownerId={chat.ownerId} />
                 ))}
               </div>
             </ScrollArea>
@@ -286,23 +254,35 @@ export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onO
         </Tabs>
       </DialogContent>
     </Dialog>
+    <AddMemberModal 
+      open={isAddMemberOpen} 
+      onOpenChange={setIsAddMemberOpen} 
+      chatId={chat.id} 
+      currentParticipantIds={chat.participantIds || []} 
+    />
+    </>
   );
 }
 
-function MemberRow({ userId }: { userId: string }) {
+function MemberRow({ userId, ownerId }: { userId: string, ownerId: string }) {
   const db = useFirestore();
   const userRef = useMemoFirebase(() => (!db ? null : doc(db, 'users', userId)), [db, userId]);
   const { data: m } = useDoc<User>(userRef);
   if (!m) return null;
   return (
-    <div className="flex items-center justify-between p-3 rounded-xl hover:bg-muted/40">
+    <div className="flex items-center justify-between p-3 rounded-xl hover:bg-muted/40 transition-colors">
       <div className="flex items-center gap-3">
         <UserAvatar userId={m.id} className="h-10 w-10" fallbackName={m.name} />
-        <div className="flex flex-col">
-          <span className="text-sm font-semibold flex items-center gap-1">{formatDisplayName(m.name)} {isUserPremium(m) && <Star className="w-3 h-3 text-accent fill-accent" />}</span>
-          <span className="text-[10px] text-muted-foreground">{m.username}</span>
+        <div className="flex flex-col text-left">
+          <span className="text-sm font-semibold flex items-center gap-1">
+            {formatDisplayName(m.name)} 
+            {isUserPremium(m) && <Star className="w-3 h-3 text-accent fill-accent" />}
+            {userId === ownerId && <Crown className="w-3 h-3 text-primary" />}
+          </span>
+          <span className="text-[10px] text-muted-foreground truncate max-w-[150px]">{m.username}</span>
         </div>
       </div>
+      {userId === ownerId && <span className="text-[8px] font-black uppercase text-primary border border-primary/20 px-1.5 py-0.5 rounded-lg">Владелец</span>}
     </div>
   );
 }

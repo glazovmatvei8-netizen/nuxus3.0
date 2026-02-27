@@ -24,6 +24,7 @@ export interface Message {
   isNFT?: boolean;
   serialNumber?: number;
   forwardFrom?: string;
+  reactions?: Record<string, string[]>; // emoji -> [userIds]
   paymentData?: {
     type: 'premium' | 'stars';
     itemName: string;

@@ -21,7 +21,7 @@ import {
   Plane, Sun, Moon, Cloud, Snowflake, Trees, Flower2, Dog, Cat, Bird, 
   Fish, Bitcoin, Coins, Gamepad2, Music, Smile, ThumbsUp, Bell, Mail, 
   Key, Lock, Shield, Sword, Anchor, Compass, Map, Flag, Briefcase, GraduationCap,
-  Pin, Forward, Gift, PlayCircle
+  Pin, Forward, Gift, PlayCircle, Edit2, Copy
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { collection, doc, query, where, getDocs, limit } from 'firebase/firestore';
@@ -47,7 +47,7 @@ const GIFT_ICONS: Record<string, any> = {
   gift_briefcase: Briefcase, gift_grad: GraduationCap
 };
 
-export const MessageItem = memo(({ message, isMe, chatId, onReply, amIPremium = false, isAdmin = false, senderAvatarUrl = null }: any) => {
+export const MessageItem = memo(({ message, isMe, chatId, onReply, amIPremium = false, isAdmin = false, senderAvatarUrl = null, onEdit }: any) => {
   const { user } = useUser();
   const db = useFirestore();
   const { setForwardingMessage } = useAppState();
@@ -76,6 +76,37 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, amIPremium = 
   const handleForward = () => {
     setForwardingMessage(message);
     toast({ title: "Выберите контакт для пересылки" });
+  };
+
+  const handleCopy = () => {
+    if (message.contentType === 'text') {
+      navigator.clipboard.writeText(message.content);
+      toast({ title: "Текст скопирован" });
+    }
+  };
+
+  const jumpToOriginal = () => {
+    if (message.replyToId) {
+      const el = document.getElementById(`msg-${message.replyToId}`);
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  };
+
+  const handleReaction = (emoji: string) => {
+    if (!db || !user || !chatId) return;
+    const msgRef = doc(db, 'chats', chatId, 'messages', message.id);
+    const reactions = { ...(message.reactions || {}) };
+    
+    if (!reactions[emoji]) reactions[emoji] = [];
+    
+    if (reactions[emoji].includes(user.uid)) {
+      reactions[emoji] = reactions[emoji].filter(id => id !== user.uid);
+      if (reactions[emoji].length === 0) delete reactions[emoji];
+    } else {
+      reactions[emoji].push(user.uid);
+    }
+    
+    updateDocumentNonBlocking(msgRef, { reactions });
   };
 
   const handlePaymentAction = async (action: 'confirm' | 'reject', e: React.MouseEvent) => {
@@ -230,7 +261,19 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, amIPremium = 
             <span className="text-[8px] font-bold uppercase">Переслано от {message.forwardFrom}</span>
           </div>
         )}
-        <div className="whitespace-pre-wrap text-sm break-words">{message.content}</div>
+        {message.replyToId && (
+          <div 
+            onClick={(e) => { e.stopPropagation(); jumpToOriginal(); }}
+            className="mb-1 p-1.5 bg-black/10 rounded-lg border-l-2 border-primary cursor-pointer hover:bg-black/20 transition-all max-w-full"
+          >
+            <div className="text-[8px] font-bold text-primary uppercase truncate">{message.replyToContent?.startsWith('[') ? 'Медиа' : 'Ответ'}</div>
+            <div className="text-[10px] truncate opacity-60 italic">{message.replyToContent}</div>
+          </div>
+        )}
+        <div className="whitespace-pre-wrap text-sm break-words">
+          {message.content}
+          {message.editedAt && <span className="text-[8px] ml-1 opacity-40 uppercase">(ред.)</span>}
+        </div>
       </div>
     );
   };
@@ -239,6 +282,8 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, amIPremium = 
     return <div className="w-full flex justify-center my-2 text-center p-2 text-[10px] text-muted-foreground uppercase tracking-widest">{message.content}</div>;
   }
 
+  const reactionsList = Object.entries(message.reactions || {});
+
   return (
     <div id={`msg-${message.id}`} className={cn("flex gap-2 max-w-[85%] relative transition-colors duration-1000", isMe ? "ml-auto flex-row-reverse" : "mr-auto")}>
       {!isMe && <UserAvatar userId={null} manualAvatarUrl={senderAvatarUrl} className="h-8 w-8 mt-auto shrink-0" fallbackName={message.senderName} />}
@@ -246,7 +291,7 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, amIPremium = 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <div className={cn(
-              "p-3 rounded-2xl cursor-pointer shadow-sm border transition-all hover:bg-muted/10",
+              "p-3 rounded-2xl cursor-pointer shadow-sm border transition-all hover:bg-muted/10 relative",
               isMe ? "message-bubble-me border-none" : "bg-card border-white/5 text-foreground",
               message.contentType === 'video' && "p-1 rounded-full bg-transparent border-none shadow-none"
             )}>
@@ -255,10 +300,42 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, amIPremium = 
                 <span className="text-[9px]">{formattedTime}</span>
                 {isMe && (message.isRead ? <CheckCheck className="w-3 h-3 text-accent" /> : <Check className="w-3 h-3" />)}
               </div>
+              
+              {reactionsList.length > 0 && (
+                <div className={cn("absolute -bottom-2 flex gap-1", isMe ? "right-2" : "left-2")}>
+                  {reactionsList.map(([emoji, users]) => (
+                    <button 
+                      key={emoji}
+                      onClick={(e) => { e.stopPropagation(); handleReaction(emoji); }}
+                      className={cn(
+                        "bg-card border border-white/5 rounded-full px-1.5 py-0.5 text-[10px] flex items-center gap-1 shadow-md hover:scale-110 transition-transform",
+                        users.includes(user?.uid || '') && "bg-primary/20 border-primary/40"
+                      )}
+                    >
+                      {emoji} <span className="font-bold opacity-60">{users.length}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           </DropdownMenuTrigger>
           <DropdownMenuContent align={isMe ? 'end' : 'start'} className="w-48 bg-card border-white/10">
+            <div className="flex gap-1 p-2 border-b border-white/5 justify-between">
+              {['👍', '❤️', '🔥', '😂', '😮', '😢'].map(emoji => (
+                <button 
+                  key={emoji} 
+                  onClick={() => handleReaction(emoji)}
+                  className="hover:scale-125 transition-transform p-1 rounded-lg hover:bg-white/5"
+                >
+                  {emoji}
+                </button>
+              ))}
+            </div>
             <DropdownMenuItem onClick={() => onReply(message)} className="gap-2"><CornerUpLeft className="w-4 h-4" /> Ответить</DropdownMenuItem>
+            {isMe && message.contentType === 'text' && (
+              <DropdownMenuItem onClick={() => onEdit(message)} className="gap-2"><Edit2 className="w-4 h-4" /> Изменить</DropdownMenuItem>
+            )}
+            <DropdownMenuItem onClick={handleCopy} className="gap-2"><Copy className="w-4 h-4" /> Копировать</DropdownMenuItem>
             <DropdownMenuItem onClick={handleForward} className="gap-2"><Forward className="w-4 h-4" /> Переслать</DropdownMenuItem>
             {isAdmin && <DropdownMenuItem onClick={handlePin} className="gap-2"><Pin className="w-4 h-4" /> Закрепить</DropdownMenuItem>}
             <DropdownMenuSeparator className="bg-white/5" />
@@ -276,6 +353,8 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, amIPremium = 
   return prev.message.id === next.message.id && 
          prev.message.content === next.message.content && 
          prev.message.isRead === next.message.isRead &&
+         prev.message.editedAt === next.message.editedAt &&
+         JSON.stringify(prev.message.reactions) === JSON.stringify(next.message.reactions) &&
          prev.amIPremium === next.amIPremium &&
          prev.isAdmin === next.isAdmin &&
          prev.senderAvatarUrl === next.senderAvatarUrl &&

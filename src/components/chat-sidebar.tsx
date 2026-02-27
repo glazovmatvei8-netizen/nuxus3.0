@@ -13,7 +13,7 @@ import { CreateChatModal } from './modals/create-chat-modal';
 import { SettingsModal } from './modals/settings-modal';
 import type { ChatType, User, Message, Chat } from '@/lib/types';
 import { useFirestore, useUser, useCollection, useDoc, useMemoFirebase } from '@/firebase';
-import { collection, query, where, doc, getDocs, addDoc, limit, arrayUnion, arrayRemove } from 'firebase/firestore';
+import { collection, query, where, doc, getDocs, addDoc, limit, arrayUnion, arrayRemove, updateDoc } from 'firebase/firestore';
 import { formatLastSeen, formatDisplayName, cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
@@ -84,6 +84,22 @@ export default function ChatSidebar() {
     }
     
     setCurrentChatId(chat.id);
+  };
+
+  const handleJoinPublicChat = async (chat: Chat) => {
+    if (!db || !user) return;
+    try {
+      const chatRef = doc(db, 'chats', chat.id);
+      await updateDoc(chatRef, {
+        participantIds: arrayUnion(user.uid)
+      });
+      setCurrentChatId(chat.id);
+      setSearchQuery('');
+      setGlobalSearchResult(null);
+      toast({ title: "Вы вступили в сообщество" });
+    } catch (e) {
+      toast({ title: "Ошибка", description: "Не удалось вступить", variant: "destructive" });
+    }
   };
 
   useEffect(() => {
@@ -233,7 +249,7 @@ export default function ChatSidebar() {
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input 
-            placeholder="Поиск..." 
+            placeholder="Поиск по нику @username..." 
             className="pl-9 bg-muted border-none rounded-xl h-10 text-sm"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
@@ -259,6 +275,11 @@ export default function ChatSidebar() {
           </div>
         ) : (
           <div className="space-y-1 pb-24">
+            {isSearchingGlobal && (
+              <div className="flex justify-center p-4">
+                <Loader2 className="w-4 h-4 animate-spin text-primary" />
+              </div>
+            )}
             {globalSearchResult && (
               <div className="mb-4">
                 <div className="px-3 py-1 text-[10px] font-black text-primary flex items-center gap-1 uppercase tracking-widest mb-1">
@@ -269,6 +290,7 @@ export default function ChatSidebar() {
                   isActive={currentChatId === globalSearchResult.id}
                   onClick={() => handleChatClick(globalSearchResult)}
                   isGlobalResult
+                  onJoin={() => handleJoinPublicChat(globalSearchResult)}
                 />
               </div>
             )}
@@ -319,7 +341,7 @@ export default function ChatSidebar() {
           onClick={() => setIsCreateModalOpen(true)}
         >
           <Plus className="w-5 h-5 mr-2" />
-          Новая связь
+          Новое сообщество
         </Button>
       </div>
 
@@ -329,7 +351,7 @@ export default function ChatSidebar() {
   );
 }
 
-function ChatListItem({ chat, isActive, otherId, cachedDisplayName, manualAvatarUrl, onClick, isPinned, isGlobalResult, onTogglePin }: any) {
+function ChatListItem({ chat, isActive, otherId, cachedDisplayName, manualAvatarUrl, onClick, isPinned, isGlobalResult, onTogglePin, onJoin }: any) {
   const db = useFirestore();
   const { user } = useUser();
   const [status, setStatus] = useState<string>('');
@@ -390,7 +412,7 @@ function ChatListItem({ chat, isActive, otherId, cachedDisplayName, manualAvatar
           <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-accent rounded-full border-2 border-card" />
         )}
       </div>
-      <div className="flex-1 min-w-0">
+      <div className="flex-1 min-w-0 text-left">
         <div className="flex items-center justify-between gap-2">
           <span className="font-bold text-sm truncate flex items-center gap-1">
             {finalDisplayName}
@@ -414,7 +436,9 @@ function ChatListItem({ chat, isActive, otherId, cachedDisplayName, manualAvatar
               <span className="flex items-center gap-0.5">печатает<span className="animate-typing-dot">.</span><span className="animate-typing-dot [animation-delay:0.2s]">.</span><span className="animate-typing-dot [animation-delay:0.4s]">.</span></span>
             ) : status}
           </div>
-          {isPinned && !isActive && (
+          {isGlobalResult ? (
+            <Button size="sm" variant="outline" className="h-6 text-[8px] uppercase px-2 rounded-lg" onClick={(e) => { e.stopPropagation(); onJoin(); }}>Вступить</Button>
+          ) : isPinned && !isActive && (
              <Button 
                 variant="ghost" 
                 size="icon" 

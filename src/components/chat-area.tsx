@@ -7,14 +7,14 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
-  Send, Info, ChevronLeft, Loader2, Bookmark, Pin, X, Forward, Camera, Video, Circle, Wand2, Phone
+  Send, Info, ChevronLeft, Loader2, Bookmark, Pin, X, Forward, Camera, Video, Circle, Wand2, Phone, Search as SearchIcon
 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { MessageItem } from './message-item';
 import { useToast } from '@/hooks/use-toast';
 import { ChatInfoModal } from './modals/chat-info-modal';
 import { useFirestore, useUser, useCollection, useDoc, useMemoFirebase } from '@/firebase';
-import { collection, query, orderBy, doc, limit, addDoc } from 'firebase/firestore';
+import { collection, query, orderBy, doc, limit, addDoc, updateDoc } from 'firebase/firestore';
 import { addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { formatDisplayName, isUserPremium } from '@/lib/utils';
 import type { Message, User as UserType, Chat } from '@/lib/types';
@@ -28,7 +28,8 @@ const MessageList = memo(({
   onReply, 
   amIPremium, 
   isAdmin, 
-  otherAvatarUrl 
+  otherAvatarUrl,
+  onEdit
 }: any) => {
   if (!messages) return null;
   return (
@@ -43,6 +44,7 @@ const MessageList = memo(({
           amIPremium={amIPremium}
           isAdmin={isAdmin}
           senderAvatarUrl={msg.senderId === userId ? null : otherAvatarUrl}
+          onEdit={onEdit}
         />
       ))}
     </div>
@@ -59,7 +61,9 @@ export default function ChatArea() {
   const [isSending, setIsSending] = useState(false);
   const [isDrafting, setIsDrafting] = useState(false);
   const [replyTo, setReplyTo] = useState<Message | null>(null);
+  const [editingMsg, setEditingMsg] = useState<Message | null>(null);
   const [messageInput, setMessageInput] = useState('');
+  const [localDrafts, setLocalDrafts] = useState<Record<string, string>>({});
   
   // Video Message state
   const [isRecordingVideo, setIsRecordingVideo] = useState(false);
@@ -109,6 +113,36 @@ export default function ChatArea() {
     }
   }, []);
 
+  // Handle typing indicator
+  useEffect(() => {
+    if (!db || !currentChatId || !user) return;
+    const typingRef = doc(db, 'chats', currentChatId);
+    
+    if (messageInput.length > 0) {
+      updateDoc(typingRef, { [`typing.${user.uid}`]: true });
+    } else {
+      updateDoc(typingRef, { [`typing.${user.uid}`]: false });
+    }
+    
+    return () => {
+      updateDoc(typingRef, { [`typing.${user.uid}`]: false });
+    };
+  }, [messageInput, currentChatId, user, db]);
+
+  // Handle local drafts when switching chats
+  useEffect(() => {
+    if (currentChatId) {
+      setMessageInput(localDrafts[currentChatId] || '');
+    }
+  }, [currentChatId, localDrafts]);
+
+  const onInputChange = (val: string) => {
+    setMessageInput(val);
+    if (currentChatId) {
+      setLocalDrafts(prev => ({ ...prev, [currentChatId]: val }));
+    }
+  };
+
   useEffect(() => {
     if (messages?.length) {
       if (!dataLoadedRef.current) {
@@ -127,6 +161,18 @@ export default function ChatArea() {
     if (!trimmedContent || !currentChatId || !user || !db) return;
     
     setIsSending(true);
+
+    if (editingMsg) {
+      updateDocumentNonBlocking(doc(db, 'chats', currentChatId, 'messages', editingMsg.id), {
+        content: trimmedContent,
+        editedAt: new Date().toISOString()
+      });
+      setEditingMsg(null);
+      setMessageInput('');
+      setIsSending(false);
+      return;
+    }
+
     const msgData: any = { 
       chatId: currentChatId, 
       senderId: user.uid, 
@@ -148,10 +194,13 @@ export default function ChatArea() {
       lastMessageAt: new Date().toISOString()
     });
     
-    if (type === 'text') setMessageInput('');
+    if (type === 'text') {
+      setMessageInput('');
+      if (currentChatId) setLocalDrafts(prev => ({ ...prev, [currentChatId]: '' }));
+    }
     setIsSending(false);
     setTimeout(() => scrollToBottom('smooth'), 100);
-  }, [messageInput, currentChatId, user, db, userProfile, replyTo, scrollToBottom]);
+  }, [messageInput, currentChatId, user, db, userProfile, replyTo, editingMsg, scrollToBottom]);
 
   const handleAiDraft = async () => {
     if (!messages || !amIPremium) return;
@@ -233,6 +282,12 @@ export default function ChatArea() {
     setIsRecordingVideo(false);
   };
 
+  const handleEditMessage = (msg: Message) => {
+    setEditingMsg(msg);
+    setMessageInput(msg.content);
+    setReplyTo(null);
+  };
+
   const chatDisplayName = useMemo(() => {
     if (otherProfile?.name) return otherProfile.name;
     if (otherMetadata?.name) return otherMetadata.name;
@@ -278,6 +333,9 @@ export default function ChatArea() {
         </div>
         
         <div className="flex items-center gap-1">
+          <Button variant="ghost" size="icon" className="rounded-lg opacity-40 hover:opacity-100" onClick={() => toast({ title: "Поиск", description: "Функция скоро появится" })}>
+            <SearchIcon className="w-5 h-5" />
+          </Button>
           {chat?.type === 'private' && (
             <>
               <Button variant="ghost" size="icon" onClick={() => startCall('audio')} className="rounded-lg text-primary">
@@ -301,6 +359,7 @@ export default function ChatArea() {
             userId={user?.uid}
             chatId={currentChatId}
             onReply={setReplyTo}
+            onEdit={handleEditMessage}
             amIPremium={amIPremium}
             isAdmin={chat?.ownerId === user?.uid || chat?.adminIds?.includes(user?.uid || '')}
             otherAvatarUrl={otherProfile?.avatarUrl || otherMetadata?.avatarUrl}
@@ -341,6 +400,17 @@ export default function ChatArea() {
               </Button>
             </div>
           )}
+          {editingMsg && (
+            <div className="p-2 bg-accent/5 rounded-xl border-l-4 border-accent flex items-center justify-between">
+              <div className="flex flex-col min-w-0 pl-2">
+                <span className="text-[9px] font-bold text-accent uppercase tracking-widest">Редактирование</span>
+                <span className="text-xs truncate text-muted-foreground italic">{editingMsg.content}</span>
+              </div>
+              <Button variant="ghost" size="icon" className="h-7 w-7 rounded-lg" onClick={() => { setEditingMsg(null); setMessageInput(''); }}>
+                <X className="w-4 h-4" />
+              </Button>
+            </div>
+          )}
 
           {isRecordingVideo && (
             <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
@@ -377,11 +447,11 @@ export default function ChatArea() {
                 placeholder="Напишите сообщение..." 
                 className="bg-muted border-none rounded-xl h-11 text-sm px-4 pr-10" 
                 value={messageInput}
-                onChange={e => setMessageInput(e.target.value)}
+                onChange={e => onInputChange(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && !e.shiftKey && handleSendMessage()}
                 disabled={isSending}
               />
-              {amIPremium && (
+              {amIPremium && !editingMsg && (
                 <button 
                   onClick={handleAiDraft}
                   disabled={isDrafting}
@@ -398,7 +468,7 @@ export default function ChatArea() {
               </Button>
             ) : (
               <Button size="icon" className="h-11 w-11 rounded-xl shrink-0 bg-primary hover:bg-primary/90" onClick={() => handleSendMessage()} disabled={isSending}>
-                {isSending ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
+                {isSending ? <Loader2 className="w-5 h-5 animate-spin" /> : (editingMsg ? <Check className="w-5 h-5" /> : <Send className="w-5 h-5" />)}
               </Button>
             )}
           </div>
