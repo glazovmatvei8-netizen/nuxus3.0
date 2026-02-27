@@ -18,8 +18,11 @@ export interface Message {
   replyToContent?: string;
   editedAt?: string;
   isRead?: boolean;
-  giftMessage?: string; // Личное сообщение к подарку
-  giftValue?: number;   // Ценность подарка в звездах
+  giftMessage?: string;
+  giftValue?: number;
+  giftType?: string;
+  isNFT?: boolean;
+  serialNumber?: number;
 }
 
 export interface ReceivedGift {
@@ -28,8 +31,11 @@ export interface ReceivedGift {
   senderName: string;
   senderId: string;
   receivedAt: string;
-  message?: string;     // Сохраненное сообщение
-  value?: number;       // Сохраненная ценность
+  message?: string;
+  value?: number;
+  isNFT?: boolean;
+  serialNumber?: number;
+  isSold?: boolean;
 }
 
 export type ChatType = 'private' | 'group' | 'channel' | 'saved';
@@ -88,5 +94,5 @@ export interface User {
   isBanned?: boolean;
   isPremium?: boolean;
   premiumUntil?: string | null;
-  stars?: number; // Баланс звезд пользователя
+  stars?: number;
 }

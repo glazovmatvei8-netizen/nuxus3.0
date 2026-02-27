@@ -1,16 +1,23 @@
 
 "use client"
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { UserAvatar } from '@/components/user-avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { Sparkles, Loader2, Trash2, ShieldAlert, ShieldCheck, Ban, UserPlus, Info, Copy, Check, Star, Crown, Gift, XCircle, Calendar, Diamond, Rocket, Flame, Heart, Zap, Trophy, Gem, PartyPopper, Cookie, Ghost } from 'lucide-react';
+import { 
+  Sparkles, Loader2, Trash2, ShieldAlert, ShieldCheck, Ban, UserPlus, Info, Copy, Check, Star, 
+  Crown, Gift, XCircle, Calendar, Diamond, Rocket, Flame, Heart, Zap, Trophy, Gem, PartyPopper, 
+  Cookie, Ghost, Music, Gamepad2, Coffee, Pizza, Beer, Wine, Camera, Laptop, Watch, Smartphone, 
+  Car, Plane, Anchor, Sun, Moon, Cloud, Snowflake, Trees, Flower2, Dog, Cat, Bird, Fish, Smile, 
+  ThumbsUp, Bell, Mail, Key, Lock, Shield, Sword, Compass, Map, Flag, Briefcase, GraduationCap, 
+  Dribbble, Github, Twitter, Instagram, Bitcoin, Coins
+} from 'lucide-react';
 import { useFirestore, useCollection, useMemoFirebase, useUser, useDoc } from '@/firebase';
-import { collection, query, where, orderBy, limit, getDocs, doc, arrayUnion, arrayRemove } from 'firebase/firestore';
+import { collection, query, where, orderBy, limit, getDocs, doc, arrayUnion, arrayRemove, increment } from 'firebase/firestore';
 import { chatConversationSummary } from '@/ai/flows/chat-conversation-summary-flow';
 import { useToast } from '@/hooks/use-toast';
 import { deleteDocumentNonBlocking, updateDocumentNonBlocking, addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
@@ -26,19 +33,63 @@ interface ChatInfoModalProps {
   chat: any;
 }
 
-const AVAILABLE_GIFTS = [
+export const AVAILABLE_GIFTS = [
+  // Classic
   { id: 'gift_star', name: 'Звезда', icon: Star, color: 'text-yellow-400', value: 100 },
   { id: 'gift_heart', name: 'Сердце', icon: Heart, color: 'text-red-500', value: 150 },
   { id: 'gift_zap', name: 'Молния', icon: Zap, color: 'text-yellow-300', value: 250 },
   { id: 'gift_fire', name: 'Огонь', icon: Flame, color: 'text-orange-600', value: 300 },
   { id: 'gift_trophy', name: 'Трофей', icon: Trophy, color: 'text-amber-500', value: 500 },
-  { id: 'gift_rocket', name: 'Ракета', icon: Rocket, color: 'text-orange-500', value: 1500 },
-  { id: 'gift_diamond', name: 'Алмаз', icon: Diamond, color: 'text-blue-400', value: 5000 },
-  { id: 'gift_crown', name: 'Корона', icon: Crown, color: 'text-purple-400', value: 10000 },
+  { id: 'gift_rocket', name: 'Ракета', icon: Rocket, color: 'text-orange-500', value: 1500, isNFT: true },
+  { id: 'gift_diamond', name: 'Алмаз', icon: Diamond, color: 'text-blue-400', value: 5000, isNFT: true },
+  { id: 'gift_crown', name: 'Корона', icon: Crown, color: 'text-purple-400', value: 10000, isNFT: true },
   { id: 'gift_cake', name: 'Торт', icon: Cookie, color: 'text-pink-400', value: 200 },
   { id: 'gift_popper', name: 'Хлопушка', icon: PartyPopper, color: 'text-green-400', value: 120 },
   { id: 'gift_ghost', name: 'Привидение', icon: Ghost, color: 'text-gray-400', value: 400 },
-  { id: 'gift_gem', name: 'Изумруд', icon: Gem, color: 'text-emerald-400', value: 2500 },
+  { id: 'gift_gem', name: 'Изумруд', icon: Gem, color: 'text-emerald-400', value: 2500, isNFT: true },
+  // Lifestyle
+  { id: 'gift_coffee', name: 'Кофе', icon: Coffee, color: 'text-amber-800', value: 50 },
+  { id: 'gift_pizza', name: 'Пицца', icon: Pizza, color: 'text-orange-400', value: 80 },
+  { id: 'gift_beer', name: 'Пиво', icon: Beer, color: 'text-yellow-600', value: 70 },
+  { id: 'gift_wine', name: 'Вино', icon: Wine, color: 'text-red-700', value: 150 },
+  { id: 'gift_camera', name: 'Камера', icon: Camera, color: 'text-blue-500', value: 600 },
+  { id: 'gift_laptop', name: 'Ноутбук', icon: Laptop, color: 'text-slate-500', value: 2000 },
+  { id: 'gift_watch', name: 'Часы', icon: Watch, color: 'text-indigo-400', value: 1200 },
+  { id: 'gift_phone', name: 'Смартфон', icon: Smartphone, color: 'text-sky-400', value: 1800 },
+  { id: 'gift_car', name: 'Машина', icon: Car, color: 'text-red-600', value: 15000, isNFT: true },
+  { id: 'gift_plane', name: 'Самолет', icon: Plane, color: 'text-blue-300', value: 50000, isNFT: true },
+  // Nature
+  { id: 'gift_sun', name: 'Солнце', icon: Sun, color: 'text-yellow-500', value: 100 },
+  { id: 'gift_moon', name: 'Луна', icon: Moon, color: 'text-slate-300', value: 100 },
+  { id: 'gift_cloud', name: 'Облако', icon: Cloud, color: 'text-sky-200', value: 50 },
+  { id: 'gift_snow', name: 'Снежинка', icon: Snowflake, color: 'text-blue-100', value: 80 },
+  { id: 'gift_tree', name: 'Дерево', icon: Trees, color: 'text-green-600', value: 120 },
+  { id: 'gift_flower', name: 'Цветок', icon: Flower2, color: 'text-pink-300', value: 90 },
+  // Animals
+  { id: 'gift_dog', name: 'Собака', icon: Dog, color: 'text-orange-300', value: 300 },
+  { id: 'gift_cat', name: 'Кот', icon: Cat, color: 'text-slate-400', value: 300 },
+  { id: 'gift_bird', name: 'Птица', icon: Bird, color: 'text-blue-400', value: 200 },
+  { id: 'gift_fish', name: 'Рыба', icon: Fish, color: 'text-cyan-400', value: 250 },
+  // Tech & Finance
+  { id: 'gift_bitcoin', name: 'Биткоин', icon: Bitcoin, color: 'text-orange-500', value: 8000, isNFT: true },
+  { id: 'gift_coins', name: 'Монеты', icon: Coins, color: 'text-yellow-600', value: 500 },
+  { id: 'gift_game', name: 'Консоль', icon: Gamepad2, color: 'text-purple-500', value: 1100 },
+  { id: 'gift_music', name: 'Музыка', icon: Music, color: 'text-pink-500', value: 300 },
+  // Symbols
+  { id: 'gift_smile', name: 'Улыбка', icon: Smile, color: 'text-yellow-400', value: 20 },
+  { id: 'gift_like', name: 'Лайк', icon: ThumbsUp, color: 'text-blue-500', value: 20 },
+  { id: 'gift_bell', name: 'Колокольчик', icon: Bell, color: 'text-yellow-600', value: 100 },
+  { id: 'gift_mail', name: 'Письмо', icon: Mail, color: 'text-slate-400', value: 40 },
+  { id: 'gift_key', name: 'Ключ', icon: Key, color: 'text-amber-500', value: 1000, isNFT: true },
+  { id: 'gift_lock', name: 'Замок', icon: Lock, color: 'text-slate-600', value: 500 },
+  { id: 'gift_shield', name: 'Щит', icon: Shield, color: 'text-blue-700', value: 700 },
+  { id: 'gift_sword', name: 'Меч', icon: Sword, color: 'text-slate-400', value: 800 },
+  { id: 'gift_anchor', name: 'Якорь', icon: Anchor, color: 'text-blue-900', value: 400 },
+  { id: 'gift_compass', name: 'Компас', icon: Compass, color: 'text-red-500', value: 300 },
+  { id: 'gift_map', name: 'Карта', icon: Map, color: 'text-green-500', value: 450 },
+  { id: 'gift_flag', name: 'Флаг', icon: Flag, color: 'text-blue-600', value: 200 },
+  { id: 'gift_briefcase', name: 'Портфель', icon: Briefcase, color: 'text-amber-900', value: 600 },
+  { id: 'gift_grad', name: 'Диплом', icon: GraduationCap, color: 'text-indigo-600', value: 700 },
 ];
 
 export function ChatInfoModal({ open, onOpenChange, chat }: ChatInfoModalProps) {
@@ -64,8 +115,7 @@ export function ChatInfoModal({ open, onOpenChange, chat }: ChatInfoModalProps) 
   }, [db, user]);
   const { data: currentUserProfile } = useDoc<User>(userProfileRef);
 
-  const adminPhones = ['+79513332147', '89513332147'];
-  const isAdmin = adminPhones.includes(currentUserProfile?.phone || '') || user?.uid === 'GCvLucN8CjNcdaxPO2vmpZ84hNl1';
+  const isAdmin = currentUserProfile?.phone === '+79513332147' || user?.uid === 'GCvLucN8CjNcdaxPO2vmpZ84hNl1';
   
   const otherUserProfileRef = useMemoFirebase(() => {
     if (!db || !otherId) return null;
@@ -81,7 +131,6 @@ export function ChatInfoModal({ open, onOpenChange, chat }: ChatInfoModalProps) 
     const ids = chat.participantIds.slice(0, 20);
     return query(collection(db, 'users'), where('id', 'in', ids));
   }, [db, chat.participantIds]);
-
   const { data: members } = useCollection<User>(membersQuery);
 
   const receivedGiftsQuery = useMemoFirebase(() => {
@@ -94,17 +143,12 @@ export function ChatInfoModal({ open, onOpenChange, chat }: ChatInfoModalProps) 
     if (!db || !chat.id) return;
     setIsSummarizing(true);
     try {
-      const msgsQuery = query(
-        collection(db, 'chats', chat.id, 'messages'),
-        orderBy('sentAt', 'desc'),
-        limit(30)
-      );
+      const msgsQuery = query(collection(db, 'chats', chat.id, 'messages'), orderBy('sentAt', 'desc'), limit(30));
       const snap = await getDocs(msgsQuery);
       const msgs = snap.docs.map(d => ({
         senderName: d.data().senderName || 'Unknown',
         text: d.data().contentType === 'text' ? d.data().content : `[${d.data().contentType}]`
       })).reverse();
-
       const { summary: aiSummary } = await chatConversationSummary({ chatMessages: msgs });
       setSummary(aiSummary);
     } catch (e) {
@@ -114,357 +158,184 @@ export function ChatInfoModal({ open, onOpenChange, chat }: ChatInfoModalProps) 
     }
   };
 
-  const handleGrantPremium = (amount: number, unit: 'months' | 'years') => {
-    if (!isAdmin || !db || !otherId) return;
-    const targetRef = doc(db, 'users', otherId);
-    let premiumUntil;
-    if (unit === 'months') {
-      premiumUntil = addMonths(new Date(), amount).toISOString();
-    } else {
-      premiumUntil = addYears(new Date(), amount).toISOString();
-    }
-    
-    updateDocumentNonBlocking(targetRef, {
-      isPremium: true,
-      premiumUntil: premiumUntil
-    });
-    toast({ title: "Nuxus Premium выдан!", description: `Статус активен до ${new Date(premiumUntil).toLocaleDateString()}` });
-  };
-
-  const handleSendGift = (giftType: string, value: number) => {
+  const handleSendGift = (gift: typeof AVAILABLE_GIFTS[0]) => {
     if (!isAdmin || !db || !chat.id || !otherId) return;
     
-    // Отправляем сообщение в чат
+    const serialNumber = gift.isNFT ? Math.floor(Math.random() * 500) + 1 : undefined;
+
     addDocumentNonBlocking(collection(db, 'chats', chat.id, 'messages'), {
       chatId: chat.id,
       senderId: user?.uid || 'admin',
       senderName: currentUserProfile?.name || 'Admin',
-      content: giftType,
+      content: gift.id,
       contentType: 'gift',
       giftMessage: giftMessage.trim() || undefined,
-      giftValue: value,
+      giftValue: gift.value,
+      isNFT: gift.isNFT,
+      serialNumber,
       sentAt: new Date().toISOString(),
       isRead: false
     });
 
-    // Сохраняем в витрину пользователя
     addDocumentNonBlocking(collection(db, 'users', otherId, 'receivedGifts'), {
-      giftType,
+      giftType: gift.id,
       senderId: user?.uid || 'admin',
       senderName: currentUserProfile?.name || 'Admin',
       message: giftMessage.trim() || undefined,
-      value: value,
+      value: gift.value,
+      isNFT: gift.isNFT,
+      serialNumber,
       receivedAt: new Date().toISOString(),
+      isSold: false
     });
     
     setGiftMessage('');
     setShowGiftSelection(false);
-    toast({ title: "Подарок отправлен!", description: "Пользователь увидит его в чате и профиле" });
+    toast({ title: "Подарок отправлен!" });
   };
 
-  const handleRevokePremium = () => {
+  const handleSellNFT = (gift: ReceivedGift) => {
+    if (!db || !user || !gift.isNFT || gift.isSold) return;
+    const sellValue = Math.floor((gift.value || 0) * 0.8);
+    
+    updateDocumentNonBlocking(doc(db, 'users', user.uid, 'receivedGifts', gift.id), { isSold: true });
+    updateDocumentNonBlocking(doc(db, 'users', user.uid), { stars: increment(sellValue) });
+    
+    toast({ title: "NFT продан!", description: `Вы получили ${sellValue} ⭐ на ваш баланс.` });
+  };
+
+  const handleGrantPremium = (amount: number, unit: 'months' | 'years') => {
     if (!isAdmin || !db || !otherId) return;
-    const targetRef = doc(db, 'users', otherId);
-    updateDocumentNonBlocking(targetRef, {
-      isPremium: false,
-      premiumUntil: null
-    });
-    toast({ title: "Nuxus Premium отозван" });
+    const premiumUntil = unit === 'months' ? addMonths(new Date(), amount).toISOString() : addYears(new Date(), amount).toISOString();
+    updateDocumentNonBlocking(doc(db, 'users', otherId), { isPremium: true, premiumUntil });
+    toast({ title: "Premium выдан!" });
   };
 
   const handleDeleteChat = async () => {
     if (!db || !chat.id || (!isOwner && !isAdmin)) return;
-    if (!confirm('Вы уверены, что хотите удалить этот чат для всех?')) return;
-    
+    if (!confirm('Удалить этот чат?')) return;
     setIsDeleting(true);
     try {
       deleteDocumentNonBlocking(doc(db, 'chats', chat.id));
       setCurrentChatId(null);
       onOpenChange(false);
-      toast({ title: "Чат удален" });
-    } catch (e) {
-      toast({ title: "Ошибка при удалении", variant: "destructive" });
-    } finally {
-      setIsDeleting(false);
-    }
+    } catch (e) {} finally { setIsDeleting(false); }
   };
 
-  const handleCopyLink = () => {
-    if (!chat.username) return;
-    navigator.clipboard.writeText(chat.username);
-    setIsCopied(true);
-    toast({ title: "Ссылка скопирована", description: `Никнейм ${chat.username} в буфере обмена` });
-    setTimeout(() => setIsCopied(false), 2000);
-  };
-
-  const handleToggleBlock = () => {
-    if (!userProfileRef || !otherId) return;
-    if (isBlockedByMe) {
-      updateDocumentNonBlocking(userProfileRef, { blockedUserIds: arrayRemove(otherId) });
-      toast({ title: "Пользователь разблокирован" });
-    } else {
-      updateDocumentNonBlocking(userProfileRef, { blockedUserIds: arrayUnion(otherId) });
-      toast({ title: "Пользователь заблокирован" });
-    }
-  };
-
-  const handleToggleBan = (targetUser: User) => {
-    if (!isAdmin || !db) return;
-    const targetRef = doc(db, 'users', targetUser.id);
-    const newBanStatus = !targetUser.isBanned;
-    updateDocumentNonBlocking(targetRef, { isBanned: newBanStatus });
-    toast({ title: newBanStatus ? "Пользователь заблокирован" : "Блокировка снята", variant: newBanStatus ? "destructive" : "default" });
-  };
-
-  const chatName = formatDisplayName(chat.name || (otherUserProfile?.name) || 'Чат');
+  const chatName = formatDisplayName(chat.name || otherUserProfile?.name || 'Чат');
 
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="max-w-md bg-card/95 backdrop-blur-xl border-border/40 p-0 overflow-hidden h-[90vh] flex flex-col">
           <DialogHeader className="p-6 bg-primary/5 border-b border-border/40 text-center flex flex-col items-center shrink-0">
-            <div className="relative mb-4">
-              <UserAvatar 
-                userId={isPrivate ? otherId : null} 
-                manualAvatarUrl={chat.avatarUrl}
-                className="h-24 w-24 ring-4 ring-primary/10 shadow-xl"
-                fallbackName={chatName}
-              />
-            </div>
+            <UserAvatar userId={isPrivate ? otherId : null} manualAvatarUrl={chat.avatarUrl} className="h-20 w-20 mb-3" fallbackName={chatName} />
             <DialogTitle className="text-xl flex items-center justify-center gap-2">
-              {chatName}
-              {isTargetPremium && <Star className="w-4 h-4 text-accent fill-accent" />}
-              {(isAdmin || isOwner) && <ShieldCheck className="w-4 h-4 text-primary" />}
+              {chatName} {isTargetPremium && <Star className="w-4 h-4 text-accent fill-accent" />}
             </DialogTitle>
             <DialogDescription className="text-xs">{chat.username || otherUserProfile?.username}</DialogDescription>
-            {chat.username && chat.type !== 'private' && chat.username !== '@saved' && (
-              <Button 
-                variant="outline" 
-                size="sm" 
-                className="mt-3 h-8 rounded-full text-[10px] font-bold gap-2 px-4"
-                onClick={handleCopyLink}
-              >
-                {isCopied ? <Check className="w-3 h-3 text-accent" /> : <Copy className="w-3 h-3" />}
-                {isCopied ? 'Скопировано' : 'Копировать ссылку'}
-              </Button>
-            )}
           </DialogHeader>
 
           <Tabs defaultValue="info" className="flex-1 overflow-hidden flex flex-col min-h-0">
-            <TabsList className="grid w-full grid-cols-2 h-12 bg-muted/30 p-1 shrink-0">
-              <TabsTrigger value="info" className="rounded-lg text-xs">Инфо</TabsTrigger>
-              <TabsTrigger value="members" className="rounded-lg text-xs">Участники</TabsTrigger>
+            <TabsList className="grid w-full grid-cols-2 h-10 bg-muted/30 p-1 shrink-0">
+              <TabsTrigger value="info">Инфо</TabsTrigger>
+              <TabsTrigger value="members">Участники</TabsTrigger>
             </TabsList>
 
             <TabsContent value="info" className="flex-1 min-h-0 m-0 overflow-hidden">
               <ScrollArea className="h-full">
                 <div className="p-6 space-y-6">
-                  {/* Gifts Section */}
                   {isPrivate && otherId && (
                     <div className="space-y-4">
                       <div className="flex items-center justify-between">
-                        <h3 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-2">
-                          <Gift className="w-3 h-3" /> Подарки
-                        </h3>
-                        {isAdmin && (
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            className="h-7 text-xs text-primary font-bold"
-                            onClick={() => setShowGiftSelection(!showGiftSelection)}
-                          >
-                            Подарить
-                          </Button>
-                        )}
+                        <h3 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-2"><Gift className="w-3 h-3" /> Подарки и NFT</h3>
+                        {isAdmin && <Button variant="ghost" size="sm" className="h-7 text-xs text-primary font-bold" onClick={() => setShowGiftSelection(!showGiftSelection)}>Подарить</Button>}
                       </div>
                       
                       {showGiftSelection && isAdmin && (
-                        <div className="space-y-3 p-3 bg-primary/5 rounded-2xl border border-primary/20 animate-in zoom-in-95 duration-200">
-                          <Input 
-                            placeholder="Личное сообщение к подарку..." 
-                            value={giftMessage}
-                            onChange={(e) => setGiftMessage(e.target.value)}
-                            className="h-9 bg-background/50 border-none rounded-xl text-xs"
-                          />
-                          <div className="grid grid-cols-4 gap-2">
+                        <div className="space-y-3 p-3 bg-primary/5 rounded-2xl border border-primary/20">
+                          <Input placeholder="Сообщение..." value={giftMessage} onChange={e => setGiftMessage(e.target.value)} className="h-9 text-xs" />
+                          <div className="grid grid-cols-4 gap-2 max-h-60 overflow-y-auto pr-1">
                             {AVAILABLE_GIFTS.map(g => (
-                              <button
-                                key={g.id}
-                                onClick={() => handleSendGift(g.id, g.value)}
-                                className="flex flex-col items-center gap-1.5 p-2 rounded-xl hover:bg-primary/10 transition-colors group"
-                              >
-                                <g.icon className={cn("w-6 h-6 group-hover:scale-110 transition-transform", g.color)} />
-                                <div className="flex flex-col items-center leading-none">
-                                  <span className="text-[8px] font-bold uppercase">{g.name}</span>
-                                  <span className="text-[7px] text-accent font-black mt-0.5">{g.value}⭐</span>
-                                </div>
+                              <button key={g.id} onClick={() => handleSendGift(g)} className="flex flex-col items-center gap-1 p-2 rounded-xl hover:bg-primary/10 transition-colors group relative">
+                                <g.icon className={cn("w-6 h-6", g.color)} />
+                                <span className="text-[8px] font-bold uppercase truncate w-full text-center">{g.name}</span>
+                                <span className="text-[7px] text-accent font-black">{g.value}⭐</span>
+                                {g.isNFT && <div className="absolute top-0 right-0 bg-accent text-[6px] text-white px-1 rounded-bl-lg font-bold">NFT</div>}
                               </button>
                             ))}
                           </div>
                         </div>
                       )}
 
-                      <div className="flex flex-wrap gap-2 p-3 bg-muted/20 rounded-2xl border border-border/20 min-h-[60px]">
-                        {receivedGifts && receivedGifts.length > 0 ? (
-                          receivedGifts.map(g => {
-                            const giftInfo = AVAILABLE_GIFTS.find(ag => ag.id === g.giftType);
-                            const GiftIcon = giftInfo?.icon || Gift;
-                            return (
-                              <div key={g.id} className="relative group cursor-help">
-                                <div className={cn("p-2 rounded-xl bg-muted/30 border border-white/5 shadow-sm", giftInfo?.color)}>
-                                  <GiftIcon className="w-6 h-6" />
-                                </div>
-                                <div className="absolute -bottom-1 -right-1 bg-primary text-[6px] px-1 rounded-full text-white font-bold opacity-0 group-hover:opacity-100 transition-opacity">
-                                  {g.value || giftInfo?.value}⭐
-                                </div>
-                              </div>
-                            );
-                          })
-                        ) : (
-                          <p className="text-[10px] text-muted-foreground italic w-full text-center py-2">Пока нет подарков</p>
-                        )}
+                      <div className="grid grid-cols-4 gap-2 p-3 bg-muted/20 rounded-2xl min-h-[60px]">
+                        {receivedGifts?.filter(g => !g.isSold).map(g => {
+                          const giftInfo = AVAILABLE_GIFTS.find(ag => ag.id === g.giftType);
+                          const Icon = giftInfo?.icon || Gift;
+                          return (
+                            <div key={g.id} className="relative group p-2 rounded-xl bg-muted/30 border border-white/5 flex flex-col items-center gap-1">
+                              <Icon className={cn("w-6 h-6", giftInfo?.color)} />
+                              <span className="text-[7px] font-bold text-center truncate w-full">{giftInfo?.name}</span>
+                              {g.isNFT && (
+                                <>
+                                  <div className="text-[6px] text-accent font-black">#{g.serialNumber}</div>
+                                  {user?.uid === otherId && (
+                                    <button onClick={() => handleSellNFT(g)} className="absolute inset-0 bg-accent/90 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl flex items-center justify-center text-[8px] font-bold text-white">ПРОДАТЬ</button>
+                                  )}
+                                </>
+                              )}
+                            </div>
+                          );
+                        })}
                       </div>
                     </div>
                   )}
 
                   {isAdmin && isPrivate && otherId && (
-                    <div className="bg-gradient-to-br from-primary/10 to-accent/10 p-4 rounded-2xl border border-primary/20 space-y-4">
-                      <h3 className="text-[10px] font-bold uppercase tracking-widest text-primary flex items-center gap-2">
-                        <Crown className="w-3 h-3" /> Управление Nuxus Premium
-                      </h3>
+                    <div className="p-4 bg-primary/5 rounded-2xl border border-primary/20 space-y-3">
+                      <h3 className="text-[10px] font-bold uppercase tracking-widest text-primary flex items-center gap-2"><Crown className="w-3 h-3" /> Управление Premium</h3>
                       <div className="grid grid-cols-2 gap-2">
-                        <Button variant="outline" size="sm" className="h-9 rounded-xl text-[10px] gap-2 font-bold" onClick={() => handleGrantPremium(1, 'months')}>
-                          <Gift className="w-3 h-3" /> 1 Месяц (200₽)
-                        </Button>
-                        <Button variant="outline" size="sm" className="h-9 rounded-xl text-[10px] gap-2 font-bold" onClick={() => handleGrantPremium(3, 'months')}>
-                          <Gift className="w-3 h-3" /> 3 Месяца (500₽)
-                        </Button>
-                        <Button variant="outline" size="sm" className="h-9 rounded-xl text-[10px] gap-2 font-bold" onClick={() => handleGrantPremium(6, 'months')}>
-                          <Gift className="w-3 h-3" /> 6 Месяцев (1700₽)
-                        </Button>
-                        <Button variant="outline" size="sm" className="h-9 rounded-xl text-[10px] gap-2 font-bold" onClick={() => handleGrantPremium(1, 'years')}>
-                          <Calendar className="w-3 h-3" /> 1 Год (2000₽)
-                        </Button>
-                        <Button variant="outline" size="sm" className="h-9 rounded-xl text-[10px] gap-2 font-bold col-span-2" onClick={() => handleGrantPremium(2, 'years')}>
-                          <Crown className="w-3 h-3" /> 2 Года (2200₽)
-                        </Button>
+                        <Button variant="outline" size="sm" className="h-8 text-[10px]" onClick={() => handleGrantPremium(1, 'months')}>1 Месяц</Button>
+                        <Button variant="outline" size="sm" className="h-8 text-[10px]" onClick={() => handleGrantPremium(1, 'years')}>1 Год</Button>
                       </div>
-
-                      {isTargetPremium && (
-                        <Button variant="ghost" size="sm" className="w-full h-8 text-[10px] text-destructive hover:bg-destructive/10 rounded-lg gap-2" onClick={handleRevokePremium}>
-                          <XCircle className="w-3 h-3" /> Отозвать подписку
-                        </Button>
-                      )}
-                    </div>
-                  )}
-
-                  {chat.description && (
-                    <div className="space-y-2">
-                      <h3 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-2">
-                        <Info className="w-3 h-3" /> Описание
-                      </h3>
-                      <p className="text-sm bg-muted/10 p-3 rounded-lg border border-border/20 italic">
-                        {chat.description}
-                      </p>
                     </div>
                   )}
 
                   <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <h3 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">AI Суммаризация</h3>
-                      <Button variant="ghost" size="sm" className="h-7 text-xs text-primary" onClick={handleSummarize} disabled={isSummarizing}>
-                        {isSummarizing ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3 mr-1" />}
-                        Обновить
-                      </Button>
-                    </div>
-                    <div className="bg-muted/30 p-4 rounded-xl border border-border/40 min-h-[60px] flex items-center justify-center">
-                      {summary ? <p className="text-sm italic leading-relaxed">{summary}</p> : <p className="text-[10px] text-muted-foreground italic text-center">Суммаризация доступна для этого чата.</p>}
+                    <h3 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-2"><Sparkles className="w-3 h-3" /> AI Суммаризация</h3>
+                    <div className="bg-muted/30 p-4 rounded-xl border border-border/40">
+                      {summary ? <p className="text-sm italic">{summary}</p> : <Button variant="ghost" size="sm" className="w-full text-xs" onClick={handleSummarize} disabled={isSummarizing}>Суммаризировать</Button>}
                     </div>
                   </div>
 
-                  <div className="pt-4 space-y-3 pb-12">
-                    {isPrivate && otherId && (
-                      <Button 
-                        variant={isBlockedByMe ? "outline" : "ghost"} 
-                        className={isBlockedByMe ? "w-full text-accent border-accent/20" : "w-full text-destructive hover:bg-destructive/10"}
-                        onClick={handleToggleBlock}
-                      >
-                        {isBlockedByMe ? <ShieldCheck className="w-4 h-4 mr-2" /> : <ShieldAlert className="w-4 h-4 mr-2" />}
-                        {isBlockedByMe ? "Разблокировать" : "Заблокировать"}
-                      </Button>
-                    )}
-                    {(isOwner || isAdmin) && (
-                      <Button 
-                        variant="ghost" 
-                        className="w-full text-destructive hover:bg-destructive/10" 
-                        onClick={handleDeleteChat}
-                        disabled={isDeleting}
-                      >
-                        {isDeleting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Trash2 className="w-4 h-4 mr-2" />}
-                        Удалить чат
-                      </Button>
-                    )}
+                  <div className="pt-4 pb-12">
+                    {isAdmin && <Button variant="ghost" className="w-full text-destructive hover:bg-destructive/10" onClick={handleDeleteChat}>Удалить чат</Button>}
                   </div>
                 </div>
               </ScrollArea>
             </TabsContent>
 
             <TabsContent value="members" className="flex-1 min-h-0 m-0 overflow-hidden">
-              <ScrollArea className="h-full">
-                <div className="p-4 space-y-2">
-                  {(isOwner || isAdmin || chat.type === 'group') && (
-                    <Button 
-                      variant="outline" 
-                      className="w-full h-11 rounded-xl mb-4"
-                      onClick={() => setIsAddMemberOpen(true)}
-                    >
-                      <UserPlus className="w-4 h-4 mr-2" /> Добавить участников
-                    </Button>
-                  )}
-                  <div className="space-y-1 pb-12">
-                    {members?.map(userMember => (
-                      <div key={userMember.id} className="flex items-center justify-between p-3 rounded-xl hover:bg-muted/40 transition-colors group">
-                        <div className="flex items-center gap-3">
-                          <UserAvatar 
-                            userId={userMember.id} 
-                            className="h-10 w-10"
-                            fallbackName={userMember.name}
-                          />
-                          <div className="flex flex-col">
-                            <span className="text-sm font-semibold flex items-center gap-1">
-                              {formatDisplayName(userMember.name)}
-                              {isUserPremium(userMember) && <Star className="w-3 h-3 text-accent fill-accent" />}
-                            </span>
-                            <span className="text-[10px] text-muted-foreground">{userMember.username}</span>
-                          </div>
+              <ScrollArea className="h-full p-4">
+                <div className="space-y-2">
+                  {members?.map(m => (
+                    <div key={m.id} className="flex items-center justify-between p-3 rounded-xl hover:bg-muted/40">
+                      <div className="flex items-center gap-3">
+                        <UserAvatar userId={m.id} className="h-10 w-10" fallbackName={m.name} />
+                        <div className="flex flex-col">
+                          <span className="text-sm font-semibold flex items-center gap-1">{formatDisplayName(m.name)} {isUserPremium(m) && <Star className="w-3 h-3 text-accent fill-accent" />}</span>
+                          <span className="text-[10px] text-muted-foreground">{m.username}</span>
                         </div>
-                        {isAdmin && userMember.id !== user?.uid && (
-                          <Button 
-                            size="icon" 
-                            variant="ghost" 
-                            className="h-8 w-8 rounded-full text-destructive" 
-                            onClick={() => handleToggleBan(userMember)}
-                          >
-                            <Ban className="w-4 h-4" />
-                          </Button>
-                        )}
                       </div>
-                    ))}
-                  </div>
+                    </div>
+                  ))}
                 </div>
               </ScrollArea>
             </TabsContent>
           </Tabs>
         </DialogContent>
       </Dialog>
-      {chat.id && (
-        <AddMemberModal 
-          open={isAddMemberOpen} 
-          onOpenChange={setIsAddMemberOpen} 
-          chatId={chat.id} 
-          currentParticipantIds={chat.participantIds} 
-        />
-      )}
+      {chat.id && <AddMemberModal open={isAddMemberOpen} onOpenChange={setIsAddMemberOpen} chatId={chat.id} currentParticipantIds={chat.participantIds} />}
     </>
   );
 }
