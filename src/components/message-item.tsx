@@ -56,7 +56,7 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, amIPremium = 
   const [transcription, setTranscription] = useState<string | null>(null);
   const [isActionLoading, setIsActionLoading] = useState(false);
 
-  const formattedTime = useMemo(() => message.sentAt ? format(new Date(message.sentAt), 'HH:mm') : '', [message.sentAt]);
+  const formattedTime = message.sentAt ? format(new Date(message.sentAt), 'HH:mm') : '';
 
   const handleTranscribe = async () => {
     if (!amIPremium || transcription) { setTranscription(null); return; }
@@ -135,14 +135,10 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, amIPremium = 
     }
   };
 
-  // Simple Markdown Parser for messages
   const parseMarkdown = (text: string) => {
     if (!text) return text;
-    // Bold
     let formatted = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-    // Italic
     formatted = formatted.replace(/\*(.*?)\*/g, '<em>$1</em>');
-    // Inline Code
     formatted = formatted.replace(/`(.*?)`/g, '<code class="bg-black/20 px-1 rounded">$1</code>');
     return <span dangerouslySetInnerHTML={{ __html: formatted }} />;
   };
@@ -216,14 +212,7 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, amIPremium = 
     if (message.contentType === 'video') {
       return (
         <div className="relative w-48 h-48 rounded-full overflow-hidden border-2 border-primary/30 mt-1 bg-black">
-          <video 
-            src={message.content} 
-            className="w-full h-full object-cover" 
-            autoPlay 
-            loop 
-            muted 
-            playsInline
-          />
+          <video src={message.content} className="w-full h-full object-cover" autoPlay loop muted playsInline />
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-0 hover:opacity-100 transition-opacity bg-black/20">
             <PlayCircle className="w-10 h-10 text-white" />
           </div>
@@ -314,15 +303,5 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, amIPremium = 
       </div>
     </div>
   );
-}, (prev, next) => {
-  return prev.message.id === next.message.id && 
-         prev.message.content === next.message.content && 
-         prev.message.isRead === next.message.isRead &&
-         prev.message.editedAt === next.message.editedAt &&
-         prev.amIPremium === next.amIPremium &&
-         prev.isAdmin === next.isAdmin &&
-         prev.senderAvatarUrl === next.senderAvatarUrl &&
-         prev.chatId === next.chatId;
 });
-
 MessageItem.displayName = 'MessageItem';
