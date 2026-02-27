@@ -347,4 +347,3 @@ export function ChatInfoModal({ open, onOpenChange, chat }: ChatInfoModalProps) 
     </>
   );
 }
-

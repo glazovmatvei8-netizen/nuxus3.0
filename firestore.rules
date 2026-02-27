@@ -30,7 +30,8 @@ service cloud.firestore {
 
     // Пользователи
     match /users/{userId} {
-      allow read: if isSignedIn();
+      // Разрешаем чтение всем для проверки никнеймов и поиска
+      allow read: if true; 
       // Пользователь может менять свой профиль, админ может менять любой (для Premium/Ban)
       allow write: if isAdmin() || (isSignedIn() && request.auth.uid == userId);
     }
@@ -53,12 +54,10 @@ service cloud.firestore {
         
         allow create: if isChatMember(chatId) && 
           request.resource.data.content is string && 
-          request.resource.data.content.size() < 10000; // Увеличил размер для видео/аудио данных
+          request.resource.data.content.size() < 2000000; // Увеличил лимит для медиа данных (Base64)
           
         allow update: if isChatMember(chatId) && 
-          request.auth.uid == resource.data.senderId &&
-          request.resource.data.content is string && 
-          request.resource.data.content.size() < 10000;
+          request.auth.uid == resource.data.senderId;
           
         allow delete: if isAdmin() || (isSignedIn() && request.auth.uid == resource.data.senderId);
 

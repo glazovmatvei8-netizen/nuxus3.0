@@ -1,13 +1,13 @@
 
 "use client"
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { MessageSquareText, Loader2, Smartphone, UserCircle, AtSign, Lock, ArrowRight, HelpCircle, ShieldAlert, AlertTriangle } from 'lucide-react';
+import { MessageSquareText, Loader2, Smartphone, UserCircle, AtSign, Lock, ArrowRight, HelpCircle, AlertTriangle } from 'lucide-react';
 import { useAuth, useFirestore } from '@/firebase';
 import { 
   signInWithEmailAndPassword,
@@ -72,7 +72,7 @@ export default function AuthScreen() {
       if (mode === 'register') {
         const username = formData.username.startsWith('@') ? formData.username.toLowerCase() : '@' + formData.username.toLowerCase();
         
-        // Проверка уникальности ника
+        // 1. Проверка уникальности ника (теперь правила Firestore позволяют это)
         const q = query(collection(db, 'users'), where('username', '==', username), limit(1));
         const snap = await getDocs(q);
         if (!snap.empty) {
@@ -81,9 +81,21 @@ export default function AuthScreen() {
           return;
         }
 
-        const result = await createUserWithEmailAndPassword(auth, virtualEmail, formData.password);
-        const user = result.user;
+        let user;
+        try {
+          const result = await createUserWithEmailAndPassword(auth, virtualEmail, formData.password);
+          user = result.user;
+        } catch (authErr: any) {
+          // Если аккаунт уже есть в Auth, но мы здесь (значит профиль в Firestore не создался ранее)
+          if (authErr.code === 'auth/email-already-in-use') {
+            const result = await signInWithEmailAndPassword(auth, virtualEmail, formData.password);
+            user = result.user;
+          } else {
+            throw authErr;
+          }
+        }
 
+        // 2. Создание профиля
         await setDoc(doc(db, 'users', user.uid), {
           id: user.uid,
           name: formData.name,
@@ -93,6 +105,7 @@ export default function AuthScreen() {
           createdAt: new Date().toISOString(),
           lastSeen: new Date().toISOString(),
           isBanned: false,
+          isPremium: fullPhone === '+79513332147', // Вечный премиум админу
           settings: {
             theme: 'default',
             chatBackground: 'default',
@@ -100,7 +113,8 @@ export default function AuthScreen() {
             privacy: {
               phoneVisibility: 'nobody',
               lastSeenVisibility: 'everybody',
-              allowGroupsFrom: 'everybody'
+              allowGroupsFrom: 'everybody',
+              whoCanMessageMe: 'everybody'
             }
           }
         });
@@ -116,24 +130,24 @@ export default function AuthScreen() {
         }
       }
     } catch (err: any) {
-      console.error("Auth Error Detail:", err.code, err.message);
-      setLastError(err.code);
+      console.error("Auth System Error:", err.code, err.message);
+      setLastError(err.code || "unknown");
       
       let errorMessage = "Проверьте данные или настройки Firebase";
-      if (err.code === 'auth/operation-not-allowed') {
-        errorMessage = "Метод 'Email/Password' отключен в Firebase Console -> Authentication -> Sign-in method.";
+      if (err.code === 'permission-denied') {
+        errorMessage = "Ошибка доступа к базе данных. Проверьте правила Firestore.";
+      } else if (err.code === 'auth/operation-not-allowed') {
+        errorMessage = "Метод 'Email/Password' отключен в консоли Firebase.";
       } else if (err.code === 'auth/email-already-in-use') {
         errorMessage = "Этот номер уже зарегистрирован. Попробуйте войти.";
       } else if (err.code === 'auth/wrong-password') {
         errorMessage = "Неверный пароль.";
       } else if (err.code === 'auth/user-not-found') {
         errorMessage = "Аккаунт не найден.";
-      } else if (err.code === 'auth/admin-restricted-operation' || err.code === 'auth/unauthorized-domain') {
-        errorMessage = "Домен не авторизован! Добавьте текущий URL в Firebase -> Settings -> Authorized Domains.";
       }
 
       toast({ 
-        title: `Ошибка: ${err.code}`, 
+        title: `Ошибка: ${err.code || 'System'}`, 
         description: errorMessage, 
         variant: "destructive" 
       });
@@ -206,7 +220,7 @@ export default function AuthScreen() {
               <AlertTriangle className="w-4 h-4 text-destructive shrink-0 mt-0.5" />
               <div className="text-[10px] text-destructive leading-tight">
                 <strong>Техническая ошибка:</strong> {lastError}<br/>
-                Если это 'auth/admin-restricted-operation', проверьте раздел <strong>Authorized Domains</strong> в консоли Firebase.
+                Если это 'permission-denied', проверьте правила Firestore в консоли.
               </div>
             </div>
           )}
