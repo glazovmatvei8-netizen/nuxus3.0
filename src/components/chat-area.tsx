@@ -216,6 +216,19 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: any) {
   
   const { data: messages, isLoading: isMessagesLoading } = useCollection<Message>(messagesQuery);
 
+  // LOGIC: Mark messages as read automatically
+  useEffect(() => {
+    if (!db || !currentChatId || !user || !messages) return;
+
+    messages.forEach((msg) => {
+      // If message is unread and NOT sent by me, mark it as read
+      if (!msg.isRead && msg.senderId !== user.uid) {
+        const msgRef = doc(db, 'chats', currentChatId, 'messages', msg.id);
+        updateDocumentNonBlocking(msgRef, { isRead: true });
+      }
+    });
+  }, [messages, currentChatId, user, db]);
+
   const filteredMessages = useMemo(() => {
     if (!messages) return [];
     if (!isSearchOpen || !searchQuery.trim()) return messages;
