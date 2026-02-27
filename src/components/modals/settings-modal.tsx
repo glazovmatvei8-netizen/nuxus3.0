@@ -59,7 +59,7 @@ const STAR_PACKS = [
   { id: '5000s', stars: 5000, price: 5000 },
 ];
 
-const CARD_NUMBER = "2202 2024 2025 2026";
+const CARD_NUMBER = "2204 1202 0495 4230";
 const ADMIN_PHONE = '+79513332147';
 const ADMIN_UID = 'GCvLucN8CjNcdaxPO2vmpZ84hNl1';
 
@@ -135,6 +135,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
         chatBackground: form.chatBackground,
         messageSize: form.messageSize,
         notifications: {
+          ...profile?.settings?.notifications,
           showPreview: form.showPreview,
           sounds: form.sounds,
         },
@@ -156,7 +157,6 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
     setIsSubmittingPayment(true);
 
     try {
-      // 1. Пытаемся найти админа по номеру или используем UID
       let adminId = ADMIN_UID;
       const adminQuery = query(collection(db, 'users'), where('phone', '==', ADMIN_PHONE), limit(1));
       const adminSnap = await getDocs(adminQuery);
@@ -165,7 +165,6 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
         adminId = adminSnap.docs[0].id;
       }
 
-      // 2. Ищем или создаем чат с админом для уведомлений
       const chatQuery = query(
         collection(db, 'chats'),
         where('type', '==', 'private'),
@@ -198,7 +197,6 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
         adminChatId = adminChat.id;
       }
 
-      // 3. Отправляем структурированное сообщение о запросе оплаты
       const itemName = pendingPayment.type === 'premium' ? `Подписка Premium: ${pendingPayment.item.name}` : `Пакет звезд: ${pendingPayment.item.stars} ⭐`;
       
       const messagesCol = collection(db, 'chats', adminChatId, 'messages');
@@ -239,7 +237,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
 
   const handleCopyCard = () => {
     navigator.clipboard.writeText(CARD_NUMBER.replace(/\s/g, ''));
-    toast({ title: "Номер карты скопирован" });
+    toast({ title: "Номер реквизитов скопирован" });
   };
 
   const handleLogout = async () => {
@@ -552,7 +550,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
               Оплата заказа
             </DialogTitle>
             <DialogDescription className="text-muted-foreground text-sm">
-              Для совершения покупки переведите указанную сумму на карту
+              Для совершения покупки переведите указанную сумму на реквизиты
             </DialogDescription>
           </DialogHeader>
 
@@ -567,13 +565,16 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
 
               <div className="bg-background/50 p-4 rounded-2xl border border-white/5 space-y-3">
                 <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Номер карты</span>
+                  <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Реквизиты (ЮMoney)</span>
                   <Button variant="ghost" size="icon" className="h-6 w-6 rounded-lg" onClick={handleCopyCard}>
                     <Copy className="w-3.5 h-3.5" />
                   </Button>
                 </div>
-                <div className="text-lg font-mono font-bold text-white tracking-wider">
-                  {CARD_NUMBER}
+                <div className="flex flex-col gap-1">
+                  <div className="text-lg font-mono font-bold text-white tracking-wider">
+                    {CARD_NUMBER}
+                  </div>
+                  <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-tight">Сервис: ЮMoney</span>
                 </div>
               </div>
             </div>
