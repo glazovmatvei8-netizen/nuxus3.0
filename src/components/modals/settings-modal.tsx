@@ -12,7 +12,7 @@ import { useAuth, useUser, useFirestore, useDoc, useMemoFirebase } from '@/fireb
 import { UserAvatar } from '@/components/user-avatar';
 import { 
   LogOut, Palette, Loader2, CreditCard, Copy, Info, Type,
-  ShieldCheck, Eye, Users, Crown, Settings2, Check, Wand2, HardDrive, Archive, Smile
+  ShieldCheck, Eye, Users, Crown, Settings2, Check, HardDrive, Archive, Smile, Image as ImageIcon
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { signOut } from 'firebase/auth';
@@ -20,7 +20,6 @@ import { doc, collection, query, where, limit, getDocs, addDoc } from 'firebase/
 import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { isUserPremium } from '@/lib/utils';
-import { generateAiAvatar } from '@/ai/flows/generate-ai-avatar-flow';
 import type { User } from '@/lib/types';
 
 const PREMIUM_PLANS = [
@@ -62,7 +61,6 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
 
   const [activeTab, setActiveTab] = useState('profile');
   const [isSubmittingPayment, setIsSubmittingPayment] = useState(false);
-  const [isGeneratingAvatar, setIsGeneratingAvatar] = useState(false);
   const [pendingPayment, setPendingPayment] = useState<any>(null);
 
   useEffect(() => {
@@ -109,23 +107,6 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
     });
     onOpenChange(false);
     toast({ title: "Настройки сохранены" });
-  };
-
-  const handleGenerateAiAvatar = async () => {
-    if (!isPremium) {
-      toast({ title: "Только для Premium", description: "Нейросети доступны владельцам Premium!" });
-      return;
-    }
-    setIsGeneratingAvatar(true);
-    try {
-      const { imageUrl } = await generateAiAvatar();
-      setForm({ ...form, avatarUrl: imageUrl });
-      toast({ title: "Успех", description: "Аватар сгенерирован!" });
-    } catch (e) {
-      toast({ title: "Ошибка", variant: "destructive" });
-    } finally {
-      setIsGeneratingAvatar(false);
-    }
   };
 
   const handleConfirmPayment = async () => {
@@ -176,9 +157,6 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
               <div className="flex flex-col items-center gap-4 py-4">
                 <div className="relative group">
                   <UserAvatar userId={user?.uid} manualAvatarUrl={form.avatarUrl} className="h-32 w-32 border-4 border-background" fallbackName={form.name} />
-                  <button onClick={handleGenerateAiAvatar} disabled={isGeneratingAvatar} className="absolute bottom-0 right-0 bg-primary p-2 rounded-2xl border-4 border-background shadow-lg">
-                    {isGeneratingAvatar ? <Loader2 className="w-5 h-5 animate-spin text-white" /> : <Wand2 className="w-5 h-5 text-white" />}
-                  </button>
                 </div>
                 <div className="flex gap-2 w-full">
                   <Input placeholder="🚀" value={form.statusEmoji} onChange={e => setForm({...form, statusEmoji: e.target.value})} className="w-12 text-center bg-muted/30 border-none h-11 rounded-xl" />
@@ -186,6 +164,18 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                 </div>
               </div>
               <div className="space-y-4">
+                <div className="space-y-1.5">
+                  <Label className="text-xs uppercase font-bold">Ссылка на аватарку</Label>
+                  <div className="relative">
+                    <ImageIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <Input 
+                      placeholder="https://images.unsplash.com/..." 
+                      value={form.avatarUrl} 
+                      onChange={e => setForm({...form, avatarUrl: e.target.value})} 
+                      className="bg-muted/30 border-none h-11 rounded-xl pl-10" 
+                    />
+                  </div>
+                </div>
                 <div className="space-y-1.5"><Label className="text-xs uppercase font-bold">Имя</Label><Input value={form.name} onChange={e => setForm({...form, name: e.target.value})} className="bg-muted/30 border-none h-11 rounded-xl" /></div>
                 <div className="space-y-1.5"><Label className="text-xs uppercase font-bold">Никнейм</Label><Input value={form.username} onChange={e => setForm({...form, username: e.target.value})} className="bg-muted/30 border-none h-11 rounded-xl" /></div>
                 <div className="space-y-1.5"><Label className="text-xs uppercase font-bold">О себе</Label><Textarea value={form.bio} onChange={e => setForm({...form, bio: e.target.value})} className="bg-muted/30 border-none rounded-xl" /></div>
@@ -207,6 +197,21 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                    <select value={form.lastSeenVisibility} onChange={e => setForm({...form, lastSeenVisibility: e.target.value as any})} className="w-full h-11 bg-muted/30 rounded-xl px-3 border-none outline-none text-sm">
                     <option value="everybody">Все</option>
                     <option value="nobody">Никто</option>
+                  </select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-[10px] flex items-center gap-2 uppercase font-bold"><Users className="w-3 h-3" /> Кто может приглашать в группы</Label>
+                   <select value={form.allowGroupsFrom} onChange={e => setForm({...form, allowGroupsFrom: e.target.value as any})} className="w-full h-11 bg-muted/30 rounded-xl px-3 border-none outline-none text-sm">
+                    <option value="everybody">Все</option>
+                    <option value="contacts">Контакты</option>
+                    <option value="nobody">Никто</option>
+                  </select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-[10px] flex items-center gap-2 uppercase font-bold"><Crown className="w-3 h-3" /> Кто может писать первым</Label>
+                   <select value={form.whoCanMessageMe} onChange={e => setForm({...form, whoCanMessageMe: e.target.value as any})} className="w-full h-11 bg-muted/30 rounded-xl px-3 border-none outline-none text-sm">
+                    <option value="everybody">Все</option>
+                    <option value="premium">Только Premium</option>
                   </select>
                 </div>
               </div>
