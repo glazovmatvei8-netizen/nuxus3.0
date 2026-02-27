@@ -1,7 +1,7 @@
 
 "use client"
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useAppState } from '@/lib/store';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -69,7 +69,6 @@ export default function ChatSidebar() {
   const handleOpenSavedMessages = async () => {
     if (!db || !user || !profile) return;
     
-    // Проверяем, есть ли уже чат "Избранное"
     const savedChat = chats?.find(c => c.type === 'saved');
     if (savedChat) {
       setCurrentChatId(savedChat.id);
@@ -108,7 +107,7 @@ export default function ChatSidebar() {
   };
 
   const allFilteredChats = (chats || []).filter(chat => {
-    if (chat.type === 'saved') return false; // Избранное рисуем отдельно сверху
+    if (chat.type === 'saved') return false; 
     const otherId = chat.type === 'private' && user && chat.participantIds
       ? chat.participantIds.find((id: string) => id !== user.uid)
       : null;
@@ -185,7 +184,6 @@ export default function ChatSidebar() {
           </div>
         ) : (
           <div className="space-y-1">
-            {/* Избранное всегда сверху */}
             {activeTab === 'all' && (
               <div
                 onClick={handleOpenSavedMessages}
@@ -204,7 +202,6 @@ export default function ChatSidebar() {
               </div>
             )}
 
-            {/* Закрепленные чаты */}
             {pinnedChats.map(chat => {
               const otherId = chat.type === 'private' && user ? chat.participantIds?.find((id: string) => id !== user.uid) : null;
               const chatDisplayName = otherId && chat.metadata && chat.metadata[otherId] ? chat.metadata[otherId].name : chat.name;
@@ -226,7 +223,6 @@ export default function ChatSidebar() {
 
             {pinnedChats.length > 0 && unpinnedChats.length > 0 && <div className="h-px bg-border/20 my-2 mx-4" />}
 
-            {/* Обычные чаты */}
             {unpinnedChats.map(chat => {
               const otherId = chat.type === 'private' && user ? chat.participantIds?.find((id: string) => id !== user.uid) : null;
               const chatDisplayName = otherId && chat.metadata && chat.metadata[otherId] ? chat.metadata[otherId].name : chat.name;
