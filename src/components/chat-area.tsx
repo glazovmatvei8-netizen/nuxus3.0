@@ -188,6 +188,7 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: any) {
     }
   }, []);
 
+  // Авто-скролл при загрузке новых сообщений или открытии чата
   useEffect(() => {
     if (messages && messages.length > 0) {
       const isInitial = !dataLoadedRef.current;
@@ -211,6 +212,7 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: any) {
     const chatDocRef = doc(db, 'chats', currentChatId);
 
     if (isTyping) {
+      // Throttling: отправляем сигнал не чаще раза в 3.5 сек
       if (now - lastTypingSignalRef.current > 3500) {
         updateDocumentNonBlocking(chatDocRef, { [`typing.${user.uid}`]: true });
         lastTypingSignalRef.current = now;
