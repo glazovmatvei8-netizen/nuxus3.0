@@ -1,13 +1,13 @@
 
 "use client"
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { MessageSquareText, Loader2, Smartphone, UserCircle, AtSign, ShieldCheck, Lock, ArrowRight, AlertCircle, HelpCircle } from 'lucide-react';
+import { MessageSquareText, Loader2, Smartphone, UserCircle, AtSign, Lock, ArrowRight, HelpCircle } from 'lucide-react';
 import { useAuth, useFirestore } from '@/firebase';
 import { 
   signInWithEmailAndPassword,
@@ -38,6 +38,7 @@ export default function AuthScreen() {
     let digits = phone.replace(/\D/g, '');
     if (digits.startsWith('8')) digits = '7' + digits.slice(1);
     if (!digits.startsWith('7') && digits.length === 10) digits = '7' + digits;
+    if (!digits.startsWith('7')) digits = '7' + digits;
     return '+' + digits;
   };
 
@@ -51,12 +52,12 @@ export default function AuthScreen() {
     const fullPhone = normalizePhone(formData.phone);
     
     if (fullPhone.length < 11) {
-      toast({ title: "Ошибка", description: "Введите корректный номер (например, +79...) ", variant: "destructive" });
+      toast({ title: "Ошибка", description: "Введите корректный номер (+7...)", variant: "destructive" });
       return;
     }
 
     if (formData.password.length < 6) {
-      toast({ title: "Ошибка", description: "Пароль должен быть не менее 6 символов", variant: "destructive" });
+      toast({ title: "Ошибка", description: "Пароль слишком короткий (мин. 6 симв.)", variant: "destructive" });
       return;
     }
 
@@ -64,13 +65,12 @@ export default function AuthScreen() {
     const virtualEmail = getVirtualEmail(formData.phone);
 
     try {
-      // Устанавливаем локальное сохранение сессии
       await setPersistence(auth, browserLocalPersistence);
 
       if (mode === 'register') {
         const username = formData.username.startsWith('@') ? formData.username.toLowerCase() : '@' + formData.username.toLowerCase();
         
-        // Проверка ника
+        // Проверка уникальности ника
         const q = query(collection(db, 'users'), where('username', '==', username), limit(1));
         const snap = await getDocs(q);
         if (!snap.empty) {
@@ -115,35 +115,23 @@ export default function AuthScreen() {
       }
     } catch (err: any) {
       console.error("Auth Error:", err.code, err.message);
-      let title = "Ошибка авторизации";
-      let msg = "Проверьте данные или соединение";
-
-      switch (err.code) {
-        case 'auth/operation-not-allowed':
-          title = "Метод отключен";
-          msg = "Включите 'Email/Password' в Firebase Console -> Authentication -> Sign-in method";
-          break;
-        case 'auth/user-not-found':
-          msg = "Аккаунт с таким номером не найден";
-          break;
-        case 'auth/wrong-password':
-          msg = "Неверный пароль";
-          break;
-        case 'auth/invalid-credential':
-          msg = "Неверный номер или пароль";
-          break;
-        case 'auth/email-already-in-use':
-          msg = "Этот номер уже зарегистрирован. Попробуйте войти.";
-          break;
-        case 'auth/too-many-requests':
-          msg = "Слишком много попыток. Попробуйте через 5 минут.";
-          break;
-        case 'auth/network-request-failed':
-          msg = "Ошибка сети. Проверьте интернет-соединение.";
-          break;
-      }
       
-      toast({ title, description: msg, variant: "destructive" });
+      let errorMessage = "Проверьте данные или включите Email/Password в Firebase Console";
+      if (err.code === 'auth/operation-not-allowed') {
+        errorMessage = "Метод входа отключен. Включите Email/Password в консоли Firebase.";
+      } else if (err.code === 'auth/email-already-in-use') {
+        errorMessage = "Этот номер уже зарегистрирован. Попробуйте войти.";
+      } else if (err.code === 'auth/wrong-password') {
+        errorMessage = "Неверный пароль.";
+      } else if (err.code === 'auth/user-not-found') {
+        errorMessage = "Аккаунт не найден.";
+      }
+
+      toast({ 
+        title: `Ошибка: ${err.code}`, 
+        description: errorMessage, 
+        variant: "destructive" 
+      });
     } finally {
       setIsLoading(false);
     }
@@ -160,7 +148,7 @@ export default function AuthScreen() {
           </div>
           <CardTitle className="text-2xl font-bold tracking-tight text-white">NuxusChat</CardTitle>
           <CardDescription>
-            {mode === 'login' ? 'Вход в аккаунт' : 'Создать новый аккаунт'}
+            {mode === 'login' ? 'Вход по номеру и паролю' : 'Создать новый аккаунт'}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -168,14 +156,14 @@ export default function AuthScreen() {
             {mode === 'register' && (
               <>
                 <div className="space-y-1.5">
-                  <Label className="text-xs uppercase text-muted-foreground ml-1">Имя</Label>
+                  <Label className="text-xs uppercase text-muted-foreground ml-1">Ваше имя</Label>
                   <div className="relative">
                     <UserCircle className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <Input placeholder="Ваше имя" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="bg-muted/30 pl-9 rounded-xl" required />
+                    <Input placeholder="Имя" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="bg-muted/30 pl-9 rounded-xl" required />
                   </div>
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-xs uppercase text-muted-foreground ml-1">Никнейм</Label>
+                  <Label className="text-xs uppercase text-muted-foreground ml-1">Желаемый никнейм</Label>
                   <div className="relative">
                     <AtSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                     <Input placeholder="@username" value={formData.username} onChange={e => setFormData({...formData, username: e.target.value})} className="bg-muted/30 pl-9 rounded-xl" required />
@@ -198,7 +186,7 @@ export default function AuthScreen() {
               </div>
             </div>
             <Button type="submit" disabled={isLoading} className="w-full h-12 text-md font-bold shadow-lg shadow-primary/20 rounded-xl transition-all active:scale-95">
-              {isLoading ? <Loader2 className="animate-spin" /> : <span className="flex items-center gap-2">{mode === 'login' ? 'Войти' : 'Зарегистрироваться'} <ArrowRight className="w-4 h-4" /></span>}
+              {isLoading ? <Loader2 className="animate-spin" /> : <span className="flex items-center gap-2">{mode === 'login' ? 'Войти' : 'Начать общение'} <ArrowRight className="w-4 h-4" /></span>}
             </Button>
           </form>
           
@@ -211,7 +199,7 @@ export default function AuthScreen() {
           <div className="mt-6 flex items-start gap-2 p-3 bg-primary/5 rounded-xl border border-primary/10">
             <HelpCircle className="w-4 h-4 text-primary shrink-0 mt-0.5" />
             <p className="text-[11px] text-muted-foreground leading-tight">
-              Мы используем вход по номеру и паролю вместо SMS для обеспечения стабильности и бесплатного доступа.
+              Если возникает ошибка, убедитесь, что в Firebase Console включен метод "Электронная почта/пароль".
             </p>
           </div>
         </CardContent>

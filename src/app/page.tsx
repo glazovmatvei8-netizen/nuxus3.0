@@ -23,7 +23,7 @@ export default function Home() {
 
   const { data: profile, isLoading: isProfileLoading } = useDoc<UserType>(userProfileRef);
 
-  if (isUserLoading || (user && isProfileLoading)) {
+  if (isUserLoading) {
     return (
       <div className="h-screen w-full flex items-center justify-center bg-background">
         <Loader2 className="w-10 h-10 text-primary animate-spin" />
