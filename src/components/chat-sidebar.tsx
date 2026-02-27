@@ -6,7 +6,7 @@ import { useAppState } from '@/lib/store';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { UserAvatar } from '@/components/user-avatar';
-import { Search, Settings, Plus, Loader2, Bookmark, Pin, PinOff } from 'lucide-react';
+import { Search, Settings, Plus, Loader2, Bookmark, Pin } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { CreateChatModal } from './modals/create-chat-modal';
@@ -46,25 +46,6 @@ export default function ChatSidebar() {
   const { data: chats, isLoading: isChatsLoading } = useCollection<Chat>(chatsQuery);
 
   const pinnedIds = profile?.pinnedChatIds || [];
-
-  const handleTogglePin = (e: React.MouseEvent, chatId: string) => {
-    e.stopPropagation();
-    if (!userProfileRef || !profile) return;
-    
-    let newPinned = [...pinnedIds];
-    if (newPinned.includes(chatId)) {
-      newPinned = newPinned.filter(id => id !== chatId);
-      toast({ title: "Чат откреплен" });
-    } else {
-      if (newPinned.length >= 5) {
-        toast({ title: "Лимит достигнут", description: "Максимум 5 закрепленных чатов", variant: "destructive" });
-        return;
-      }
-      newPinned = [chatId, ...newPinned];
-      toast({ title: "Чат закреплен" });
-    }
-    updateDocumentNonBlocking(userProfileRef, { pinnedChatIds: newPinned });
-  };
 
   const handleOpenSavedMessages = async () => {
     if (!db || !user || !profile) return;
@@ -121,9 +102,6 @@ export default function ChatSidebar() {
     return matchesTab && matchesSearch;
   });
 
-  const pinnedChats = allFilteredChats.filter(c => pinnedIds.includes(c.id));
-  const unpinnedChats = allFilteredChats.filter(c => !pinnedIds.includes(c.id));
-
   const displayName = isProfileLoading ? '...' : formatDisplayName(profile?.name || user?.displayName);
   const displayUsername = isProfileLoading ? '...' : (profile?.username || (user?.email ? `@${user.email.split('@')[0]}` : 'Настройте профиль'));
 
@@ -169,10 +147,10 @@ export default function ChatSidebar() {
       <div className="px-2 py-2 border-b border-border/40 shrink-0">
         <Tabs value={activeTab} onValueChange={(val) => setActiveTab(val as any)} className="w-full">
           <TabsList className="grid w-full grid-cols-4 h-9 bg-transparent p-0 gap-1">
-            <TabsTrigger value="all" className="rounded-lg text-[10px] md:text-xs data-[state=active]:bg-primary/10 data-[state=active]:text-primary">Все</TabsTrigger>
-            <TabsTrigger value="private" className="rounded-lg text-[10px] md:text-xs data-[state=active]:bg-primary/10 data-[state=active]:text-primary">Чаты</TabsTrigger>
-            <TabsTrigger value="group" className="rounded-lg text-[10px] md:text-xs data-[state=active]:bg-primary/10 data-[state=active]:text-primary">Группы</TabsTrigger>
-            <TabsTrigger value="channel" className="rounded-lg text-[10px] md:text-xs data-[state=active]:bg-primary/10 data-[state=active]:text-primary">Каналы</TabsTrigger>
+            <TabsTrigger value="all" className="rounded-lg text-[10px] md:text-xs">Все</TabsTrigger>
+            <TabsTrigger value="private" className="rounded-lg text-[10px] md:text-xs">Чаты</TabsTrigger>
+            <TabsTrigger value="group" className="rounded-lg text-[10px] md:text-xs">Группы</TabsTrigger>
+            <TabsTrigger value="channel" className="rounded-lg text-[10px] md:text-xs">Каналы</TabsTrigger>
           </TabsList>
         </Tabs>
       </div>
@@ -189,7 +167,7 @@ export default function ChatSidebar() {
                 onClick={handleOpenSavedMessages}
                 className={cn(
                   "flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all duration-200 group relative",
-                  chats?.find(c => c.type === 'saved')?.id === currentChatId ? 'bg-primary shadow-lg shadow-primary/20 text-white' : 'hover:bg-muted/40 text-foreground'
+                  chats?.find(c => c.type === 'saved')?.id === currentChatId ? 'bg-primary text-white' : 'hover:bg-muted/40 text-foreground'
                 )}
               >
                 <div className="h-11 w-11 md:h-12 md:w-12 rounded-full bg-accent/20 flex items-center justify-center shrink-0">
@@ -202,7 +180,7 @@ export default function ChatSidebar() {
               </div>
             )}
 
-            {pinnedChats.map(chat => {
+            {allFilteredChats.map(chat => {
               const otherId = chat.type === 'private' && user ? chat.participantIds?.find((id: string) => id !== user.uid) : null;
               const chatDisplayName = otherId && chat.metadata && chat.metadata[otherId] ? chat.metadata[otherId].name : chat.name;
               const chatAvatarUrl = otherId && chat.metadata && chat.metadata[otherId] ? chat.metadata[otherId].avatarUrl : chat.avatarUrl;
@@ -215,29 +193,7 @@ export default function ChatSidebar() {
                   cachedDisplayName={chatDisplayName}
                   manualAvatarUrl={chatAvatarUrl}
                   onClick={() => setCurrentChatId(chat.id)}
-                  isPinned={true}
-                  onTogglePin={handleTogglePin}
-                />
-              );
-            })}
-
-            {pinnedChats.length > 0 && unpinnedChats.length > 0 && <div className="h-px bg-border/20 my-2 mx-4" />}
-
-            {unpinnedChats.map(chat => {
-              const otherId = chat.type === 'private' && user ? chat.participantIds?.find((id: string) => id !== user.uid) : null;
-              const chatDisplayName = otherId && chat.metadata && chat.metadata[otherId] ? chat.metadata[otherId].name : chat.name;
-              const chatAvatarUrl = otherId && chat.metadata && chat.metadata[otherId] ? chat.metadata[otherId].avatarUrl : chat.avatarUrl;
-              return (
-                <ChatListItem 
-                  key={chat.id}
-                  chat={chat}
-                  isActive={currentChatId === chat.id}
-                  otherId={otherId}
-                  cachedDisplayName={chatDisplayName}
-                  manualAvatarUrl={chatAvatarUrl}
-                  onClick={() => setCurrentChatId(chat.id)}
-                  isPinned={false}
-                  onTogglePin={handleTogglePin}
+                  isPinned={pinnedIds.includes(chat.id)}
                 />
               );
             })}
@@ -261,7 +217,7 @@ export default function ChatSidebar() {
   );
 }
 
-function ChatListItem({ chat, isActive, otherId, cachedDisplayName, manualAvatarUrl, onClick, isPinned, onTogglePin }: any) {
+function ChatListItem({ chat, isActive, otherId, cachedDisplayName, manualAvatarUrl, onClick, isPinned }: any) {
   const db = useFirestore();
   const { user } = useUser();
   const [status, setStatus] = useState<string>('');
@@ -294,9 +250,7 @@ function ChatListItem({ chat, isActive, otherId, cachedDisplayName, manualAvatar
   }, [otherId, otherProfile, chat.type]);
 
   const isOtherDeleted = otherProfile?.isBanned || otherProfile?.name?.includes('Удалённый Аккаунт');
-  const isTyping = chat?.typing && otherId && chat.typing[otherId];
-  // Блокируем отображение анимации печати для удаленных аккаунтов
-  const showTyping = isTyping && !isOtherDeleted;
+  const isTyping = chat?.typing && otherId && chat.typing[otherId] && !isOtherDeleted;
   
   const finalDisplayName = formatDisplayName(otherProfile?.name || cachedDisplayName || 'Пользователь');
 
@@ -305,18 +259,18 @@ function ChatListItem({ chat, isActive, otherId, cachedDisplayName, manualAvatar
       onClick={onClick}
       className={cn(
         "flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all duration-200 group relative",
-        isActive ? 'bg-primary shadow-lg shadow-primary/20 text-white' : 'hover:bg-muted/40 text-foreground'
+        isActive ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'hover:bg-muted/40 text-foreground'
       )}
     >
       <div className="relative shrink-0">
         <UserAvatar 
           userId={otherId} 
           manualAvatarUrl={manualAvatarUrl || otherProfile?.avatarUrl}
-          className="h-11 w-11 md:h-12 md:w-12 border-2 border-transparent group-hover:border-primary/20 transition-all" 
+          className="h-11 w-11 md:h-12 md:w-12" 
           fallbackName={finalDisplayName}
         />
-        {(status === 'в сети' || showTyping) && !isOtherDeleted && (
-          <span className="absolute bottom-0 right-0 w-3 h-3 bg-accent rounded-full border-2 border-background shadow-sm" />
+        {(status === 'в сети' || isTyping) && !isOtherDeleted && (
+          <span className="absolute bottom-0 right-0 w-3 h-3 bg-accent rounded-full border-2 border-background" />
         )}
       </div>
       <div className="flex-1 min-w-0">
@@ -326,16 +280,8 @@ function ChatListItem({ chat, isActive, otherId, cachedDisplayName, manualAvatar
             {isPinned && <Pin className="w-3 h-3 rotate-45" />}
           </span>
           <div className="flex items-center gap-1">
-            <Button 
-              size="icon" 
-              variant="ghost" 
-              className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
-              onClick={(e) => onTogglePin(e, chat.id)}
-            >
-              {isPinned ? <PinOff className="w-3 h-3" /> : <Pin className="w-3 h-3" />}
-            </Button>
             {unreadCount > 0 && !isActive && (
-              <Badge variant="default" className="bg-accent text-white rounded-full h-5 min-w-5 flex items-center justify-center text-[10px] font-bold px-1 animate-in zoom-in-50 duration-200">
+              <Badge variant="default" className="bg-accent text-white rounded-full h-5 min-w-5 flex items-center justify-center text-[10px] font-bold px-1">
                 {unreadCount}
               </Badge>
             )}
@@ -344,15 +290,10 @@ function ChatListItem({ chat, isActive, otherId, cachedDisplayName, manualAvatar
         <div className="flex items-center justify-between">
           <div className={cn(
             "text-[10px] truncate transition-colors",
-            isActive ? 'text-white/80' : (showTyping || status === 'в сети' ? 'text-accent font-bold' : 'text-muted-foreground')
+            isActive ? 'text-white/80' : (isTyping || status === 'в сети' ? 'text-accent font-bold' : 'text-muted-foreground')
           )}>
-            {showTyping ? (
-              <span className="flex items-center gap-0.5">
-                печатает
-                <span className="animate-typing-dot">.</span>
-                <span className="animate-typing-dot [animation-delay:0.2s]">.</span>
-                <span className="animate-typing-dot [animation-delay:0.4s]">.</span>
-              </span>
+            {isTyping ? (
+              <span className="flex items-center gap-0.5">печатает<span className="animate-typing-dot">.</span><span className="animate-typing-dot [animation-delay:0.2s]">.</span><span className="animate-typing-dot [animation-delay:0.4s]">.</span></span>
             ) : status}
           </div>
         </div>

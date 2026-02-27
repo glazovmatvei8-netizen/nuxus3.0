@@ -1,11 +1,10 @@
 
 "use client"
 
-import React, { useState, useEffect, memo, useMemo } from 'react';
+import React, { useState, useMemo, memo } from 'react';
 import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { UserAvatar } from '@/components/user-avatar';
 import { Button } from '@/components/ui/button';
-import { useAppState } from '@/lib/store';
 import { 
   Popover, 
   PopoverContent, 
@@ -25,7 +24,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { format } from 'date-fns';
-import { SmilePlus, Play, Pause, CornerUpLeft, Pencil, Trash2, Check, CheckCheck, X, ZoomIn, Pin, Forward } from 'lucide-react';
+import { SmilePlus, CornerUpLeft, Pencil, Trash2, Check, CheckCheck, ZoomIn } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { collection, doc } from 'firebase/firestore';
 import { addDocumentNonBlocking, deleteDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
@@ -44,13 +43,10 @@ interface MessageItemProps {
 const REACTIONS = ['❤️', '👍', '😂', '😮', '😢', '🔥', '👏'];
 
 export const MessageItem = memo(({ message, isMe, chatId, onReply, onEdit, size = 'medium' }: MessageItemProps) => {
-  const { user } = useUser();
+  const { user } = user || useUser();
   const db = useFirestore();
-  const { setForwardingMessage } = useAppState();
   const [isReactionPickerOpen, setIsReactionPickerOpen] = useState(false);
-  const [isPlaying, setIsPlaying] = useState(false);
   const [isImageFullViewOpen, setIsImageFullViewOpen] = useState(false);
-  const audioRef = React.useRef<HTMLAudioElement>(null);
 
   const formattedTime = useMemo(() => {
     if (!message.sentAt) return '';
@@ -89,15 +85,6 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onEdit, size 
     deleteDocumentNonBlocking(doc(db, 'chats', chatId, 'messages', message.id));
   };
 
-  const handlePin = () => {
-    if (!db || !chatId || !message.id) return;
-    updateDocumentNonBlocking(doc(db, 'chats', chatId), { pinnedMessageId: message.id });
-  };
-
-  const handleForward = () => {
-    setForwardingMessage(message);
-  };
-
   const groupedReactions = useMemo(() => {
     return (reactionsData || []).reduce((acc: Record<string, string[]>, curr) => {
       if (!acc[curr.emoji]) acc[curr.emoji] = [];
@@ -106,20 +93,12 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onEdit, size 
     }, {});
   }, [reactionsData]);
 
-  const toggleAudio = () => {
-    if (audioRef.current) {
-      if (isPlaying) audioRef.current.pause();
-      else audioRef.current.play();
-      setIsPlaying(!isPlaying);
-    }
-  };
-
   const renderContent = () => {
     switch (message.contentType) {
       case 'image':
         return (
           <div 
-            className="mt-1 rounded-lg overflow-hidden border border-border/20 max-w-sm relative aspect-video min-w-[200px] cursor-zoom-in group/img active:scale-[0.98] transition-transform"
+            className="mt-1 rounded-lg overflow-hidden border border-border/20 max-w-sm relative aspect-video min-w-[200px] cursor-zoom-in group/img"
             onPointerDown={(e) => e.stopPropagation()}
             onClick={(e) => { 
               e.preventDefault();
@@ -136,39 +115,6 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onEdit, size 
             />
             <div className="absolute inset-0 bg-black/20 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center">
               <ZoomIn className="w-8 h-8 text-white/80" />
-            </div>
-          </div>
-        );
-      case 'audio':
-        return (
-          <div 
-            className="flex items-center gap-3 p-2 bg-black/10 rounded-xl min-w-[240px]"
-            onPointerDown={(e) => e.stopPropagation()}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <Button size="icon" variant="ghost" className="h-9 w-9 rounded-full bg-primary/20 hover:bg-primary/30 shrink-0" onClick={toggleAudio}>
-              {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4 ml-0.5" />}
-            </Button>
-            <div className="flex-1 flex flex-col gap-1">
-              <div className="flex items-center gap-1">
-                {[...Array(20)].map((_, i) => (
-                  <div key={i} className={cn("w-0.5 bg-primary/40 rounded-full", i % 3 === 0 ? "h-4" : i % 2 === 0 ? "h-2" : "h-3", isPlaying && "animate-pulse")} />
-                ))}
-              </div>
-              <span className="text-[9px] text-muted-foreground uppercase font-bold">Голосовое сообщение</span>
-            </div>
-            <audio ref={audioRef} src={message.content} onEnded={() => setIsPlaying(false)} className="hidden" />
-          </div>
-        );
-      case 'video':
-        return (
-          <div 
-            className="mt-1 flex justify-center"
-            onPointerDown={(e) => e.stopPropagation()}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="relative w-48 h-48 rounded-full overflow-hidden border-4 border-primary/40 bg-black shadow-lg">
-              <video src={message.content} controls className="w-full h-full object-cover" />
             </div>
           </div>
         );
@@ -221,7 +167,7 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onEdit, size 
 
                 <div className={cn(
                   "rounded-2xl shadow-sm relative group-hover:shadow-md transition-shadow",
-                  message.contentType !== 'video' && message.contentType !== 'image' && message.contentType !== 'audio' ? sizeClasses[size] : (message.contentType === 'image' || message.contentType === 'audio' ? "p-0.5" : "p-1"),
+                  message.contentType !== 'image' ? sizeClasses[size] : "p-0.5",
                   isMe 
                     ? "bg-primary text-white rounded-br-none" 
                     : "bg-card text-foreground rounded-bl-none border border-border/40",
@@ -246,8 +192,6 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onEdit, size 
               {isMe && message.contentType === 'text' && (
                 <DropdownMenuItem onClick={onEdit} className="gap-2"><Pencil className="w-4 h-4" /> Изменить</DropdownMenuItem>
               )}
-              <DropdownMenuItem onClick={handlePin} className="gap-2"><Pin className="w-4 h-4" /> Закрепить</DropdownMenuItem>
-              <DropdownMenuItem onClick={handleForward} className="gap-2"><Forward className="w-4 h-4" /> Переслать</DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => setIsReactionPickerOpen(true)} className="gap-2"><SmilePlus className="w-4 h-4" /> Реакция</DropdownMenuItem>
               {isMe && <DropdownMenuItem onClick={handleDelete} className="gap-2 text-destructive focus:text-destructive"><Trash2 className="w-4 h-4" /> Удалить</DropdownMenuItem>}
@@ -303,15 +247,6 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onEdit, size 
         </DialogContent>
       </Dialog>
     </>
-  );
-}, (prevProps, nextProps) => {
-  return (
-    prevProps.message.id === nextProps.message.id &&
-    prevProps.message.content === nextProps.message.content &&
-    prevProps.message.editedAt === nextProps.message.editedAt &&
-    prevProps.message.isRead === nextProps.message.isRead &&
-    prevProps.size === nextProps.size &&
-    prevProps.isMe === nextProps.isMe
   );
 });
 
