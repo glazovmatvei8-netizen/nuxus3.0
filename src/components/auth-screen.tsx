@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { MessageSquareText, Loader2, Smartphone, UserCircle, AtSign, Lock, ArrowRight, HelpCircle, AlertTriangle } from 'lucide-react';
+import { MessageSquareText, Loader2, Smartphone, UserCircle, AtSign, Lock, ArrowRight } from 'lucide-react';
 import { useAuth, useFirestore } from '@/firebase';
 import { 
   signInWithEmailAndPassword,
@@ -25,7 +25,6 @@ export default function AuthScreen() {
   
   const [mode, setMode] = useState<AuthMode>('login');
   const [isLoading, setIsLoading] = useState(false);
-  const [lastError, setLastError] = useState<string | null>(null);
   
   const [formData, setFormData] = useState({
     name: '',
@@ -49,7 +48,6 @@ export default function AuthScreen() {
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLastError(null);
     const fullPhone = normalizePhone(formData.phone);
     
     if (fullPhone.length < 11) {
@@ -126,7 +124,6 @@ export default function AuthScreen() {
         }
       }
     } catch (err: any) {
-      setLastError(err.code || "unknown");
       toast({ 
         title: `Ошибка: ${err.code || 'System'}`, 
         description: "Проверьте данные или соединение.", 
@@ -138,15 +135,12 @@ export default function AuthScreen() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4 overflow-hidden relative">
-      <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-primary/20 blur-[120px] rounded-full animate-pulse" />
-      <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-accent/20 blur-[120px] rounded-full animate-pulse" />
-      
-      <Card className="w-full max-sm:max-w-none max-w-sm border-white/5 bg-card/40 backdrop-blur-3xl shadow-2xl relative z-10 overflow-hidden">
-        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary via-accent to-primary animate-shimmer" />
+    <div className="min-h-screen flex items-center justify-center bg-background p-4 relative overflow-hidden">
+      <div className="absolute top-0 left-0 w-full h-full bg-primary/5 -z-10" />
+      <Card className="w-full max-w-sm border-white/5 bg-card/60 backdrop-blur-xl shadow-2xl relative z-10">
         <CardHeader className="text-center pb-2">
           <div className="flex justify-center mb-6">
-            <div className="bg-gradient-to-br from-primary to-primary/80 p-4 rounded-3xl shadow-2xl shadow-primary/40 animate-float">
+            <div className="bg-primary p-4 rounded-3xl shadow-xl shadow-primary/20 animate-float">
               <MessageSquareText className="w-10 h-10 text-white" />
             </div>
           </div>
@@ -163,14 +157,14 @@ export default function AuthScreen() {
                   <Label className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground ml-1">Ваше имя</Label>
                   <div className="relative">
                     <UserCircle className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-primary" />
-                    <Input placeholder="Имя" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="bg-white/5 border-white/10 pl-10 rounded-2xl focus:ring-1 focus:ring-primary/50" required />
+                    <Input placeholder="Имя" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="bg-white/5 border-white/10 pl-10 rounded-2xl" required />
                   </div>
                 </div>
                 <div className="space-y-1.5">
                   <Label className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground ml-1">Желаемый никнейм</Label>
                   <div className="relative">
                     <AtSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-primary" />
-                    <Input placeholder="@username" value={formData.username} onChange={e => setFormData({...formData, username: e.target.value})} className="bg-white/5 border-white/10 pl-10 rounded-2xl focus:ring-1 focus:ring-primary/50" required />
+                    <Input placeholder="@username" value={formData.username} onChange={e => setFormData({...formData, username: e.target.value})} className="bg-white/5 border-white/10 pl-10 rounded-2xl" required />
                   </div>
                 </div>
               </>
@@ -179,18 +173,18 @@ export default function AuthScreen() {
               <Label className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground ml-1">Номер телефона</Label>
               <div className="relative">
                 <Smartphone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-primary" />
-                <Input placeholder="+7 900 000 00 00" type="tel" value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} className="bg-white/5 border-white/10 pl-10 rounded-2xl focus:ring-1 focus:ring-primary/50" required />
+                <Input placeholder="+7 900 000 00 00" type="tel" value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} className="bg-white/5 border-white/10 pl-10 rounded-2xl" required />
               </div>
             </div>
             <div className="space-y-1.5">
               <Label className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground ml-1">Пароль</Label>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-primary" />
-                <Input type="password" placeholder="••••••••" value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} className="bg-white/5 border-white/10 pl-10 rounded-2xl focus:ring-1 focus:ring-primary/50" required />
+                <Input type="password" placeholder="••••••••" value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} className="bg-white/5 border-white/10 pl-10 rounded-2xl" required />
               </div>
             </div>
-            <Button type="submit" disabled={isLoading} className="w-full h-14 text-md font-black uppercase tracking-tighter bg-gradient-to-r from-primary to-primary/80 shadow-2xl shadow-primary/20 rounded-2xl transition-all active:scale-95 group">
-              {isLoading ? <Loader2 className="animate-spin" /> : <span className="flex items-center gap-2">{mode === 'login' ? 'Войти' : 'Начать'} <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" /></span>}
+            <Button type="submit" disabled={isLoading} className="w-full h-12 text-sm font-bold uppercase tracking-widest bg-primary hover:bg-primary/90 rounded-2xl transition-all">
+              {isLoading ? <Loader2 className="animate-spin" /> : <span className="flex items-center gap-2">{mode === 'login' ? 'Войти' : 'Начать'} <ArrowRight className="w-5 h-5" /></span>}
             </Button>
           </form>
           

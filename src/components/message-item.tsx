@@ -124,36 +124,36 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, amIPremium = 
     if (message.contentType === 'payment_request' && message.paymentData) {
       const data = message.paymentData;
       return (
-        <div className="flex flex-col gap-4 p-2 min-w-[260px]">
-          <div className="flex items-center gap-3 border-b border-white/10 pb-3">
+        <div className="flex flex-col gap-3 p-1 min-w-[240px]">
+          <div className="flex items-center gap-2 border-b border-white/10 pb-2">
             <div className="bg-primary/20 p-2 rounded-xl">
               {data.type === 'premium' ? <Crown className="w-5 h-5 text-primary" /> : <Star className="w-5 h-5 text-accent" />}
             </div>
             <div className="flex flex-col text-left">
-              <span className="text-[10px] font-bold uppercase tracking-widest text-primary">Запрос оплаты</span>
-              <span className="text-sm font-black text-white">{data.itemName}</span>
+              <span className="text-[9px] font-bold uppercase tracking-widest text-primary">Запрос оплаты</span>
+              <span className="text-sm font-bold text-white">{data.itemName}</span>
             </div>
           </div>
-          <div className="space-y-2 text-[10px]">
+          <div className="space-y-1.5 text-[10px]">
             <div className="flex items-center justify-between text-muted-foreground">
-              <span className="flex items-center gap-1"><UserIcon className="w-3 h-3" /> Пользователь:</span>
-              <span className="text-white font-medium">{data.targetUserUsername}</span>
+              <span className="flex items-center gap-1"><UserIcon className="w-3 h-3" /> Юзер:</span>
+              <span className="text-white">{data.targetUserUsername}</span>
             </div>
             <div className="flex items-center justify-between text-muted-foreground">
               <span className="flex items-center gap-1"><Calendar className="w-3 h-3" /> Дата:</span>
-              <span className="text-white font-medium">{formattedTime}</span>
+              <span className="text-white">{formattedTime}</span>
             </div>
-            <div className="flex items-center justify-between pt-2 border-t border-white/5">
+            <div className="flex items-center justify-between pt-1 border-t border-white/5">
               <span className="font-bold">К оплате:</span>
-              <span className="text-accent font-black text-sm">{data.price} ₽</span>
+              <span className="text-accent font-black">{data.price} ₽</span>
             </div>
           </div>
           {isAdmin && data.status === 'pending' && (
-            <div className="flex gap-2 pt-2">
-              <Button size="sm" className="flex-1 rounded-xl h-8 text-[10px]" onClick={(e) => handlePaymentAction('confirm', e)} disabled={isActionLoading}>
+            <div className="flex gap-2 pt-1">
+              <Button size="sm" className="flex-1 h-7 text-[9px]" onClick={(e) => handlePaymentAction('confirm', e)} disabled={isActionLoading}>
                 {isActionLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3 mr-1" />} Принять
               </Button>
-              <Button size="sm" variant="outline" className="flex-1 rounded-xl h-8 text-[10px]" onClick={(e) => handlePaymentAction('reject', e)} disabled={isActionLoading}>
+              <Button size="sm" variant="outline" className="flex-1 h-7 text-[9px]" onClick={(e) => handlePaymentAction('reject', e)} disabled={isActionLoading}>
                 Отказать
               </Button>
             </div>
@@ -165,14 +165,13 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, amIPremium = 
     if (message.contentType === 'gift') {
       const Icon = GIFT_ICONS[message.content] || Gift;
       return (
-        <div className="flex flex-col items-center justify-center my-4 w-full">
-          <div className={cn("bg-card p-6 rounded-[32px] border border-white/10 shadow-xl flex flex-col items-center gap-3 max-w-[280px] relative overflow-hidden", message.isNFT && "ring-2 ring-accent/40")}>
-            {message.isNFT && <div className="absolute top-0 right-0 bg-accent text-[8px] px-3 py-1 rounded-bl-xl font-black text-white tracking-widest">NFT</div>}
-            <div className="text-[10px] font-black text-primary uppercase tracking-widest opacity-60">ПОДАРОК</div>
-            <Icon className={cn("w-16 h-16 drop-shadow-2xl", message.isNFT ? "text-accent" : "text-primary")} />
+        <div className="flex flex-col items-center justify-center my-2">
+          <div className={cn("bg-card/40 p-5 rounded-3xl border border-white/5 shadow-xl flex flex-col items-center gap-3 min-w-[200px]", message.isNFT && "ring-1 ring-accent/30")}>
+            <div className="text-[9px] font-black text-primary uppercase tracking-widest opacity-60">ПОДАРОК</div>
+            <Icon className={cn("w-14 h-14 drop-shadow-lg", message.isNFT ? "text-accent" : "text-primary")} />
             <div className="text-center">
-              <div className="text-lg font-black text-white">{message.giftValue} ⭐</div>
-              {message.giftMessage && <p className="text-xs italic text-muted-foreground mt-2">"{message.giftMessage}"</p>}
+              <div className="text-sm font-black text-white">{message.giftValue} ₽</div>
+              {message.giftMessage && <p className="text-[10px] italic text-muted-foreground mt-1">"{message.giftMessage}"</p>}
             </div>
           </div>
         </div>
@@ -181,7 +180,7 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, amIPremium = 
     
     if (message.contentType === 'image') {
       return (
-        <div className="relative w-full max-w-[300px] aspect-square rounded-xl overflow-hidden mt-1">
+        <div className="relative w-full max-w-[280px] aspect-square rounded-xl overflow-hidden mt-1">
           <Image src={message.content} alt="" fill className="object-cover" />
         </div>
       );
@@ -207,9 +206,9 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, amIPremium = 
     return (
       <div className="flex flex-col text-left">
         {message.forwardFrom && (
-          <div className="flex items-center gap-1.5 mb-1 opacity-60 border-l-2 border-white/20 pl-2">
+          <div className="flex items-center gap-1.5 mb-1 opacity-50 border-l-2 border-white/10 pl-2">
             <Forward className="w-2.5 h-2.5" />
-            <span className="text-[9px] font-bold uppercase tracking-wider">Переслано от {message.forwardFrom}</span>
+            <span className="text-[8px] font-bold uppercase">Переслано от {message.forwardFrom}</span>
           </div>
         )}
         <div className="whitespace-pre-wrap text-sm break-words">{message.content}</div>
@@ -222,14 +221,14 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, amIPremium = 
   }
 
   return (
-    <div id={`msg-${message.id}`} className={cn("flex gap-2 max-w-[85%] relative transition-colors duration-1000 p-1 rounded-xl", isMe ? "ml-auto flex-row-reverse" : "mr-auto")}>
+    <div id={`msg-${message.id}`} className={cn("flex gap-2 max-w-[85%] relative transition-colors duration-1000", isMe ? "ml-auto flex-row-reverse" : "mr-auto")}>
       {!isMe && <UserAvatar userId={null} manualAvatarUrl={senderAvatarUrl} className="h-8 w-8 mt-auto shrink-0" fallbackName={message.senderName} />}
       <div className={cn("flex flex-col min-w-0", isMe ? "items-end" : "items-start")}>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <div className={cn(
-              "p-3 rounded-2xl cursor-pointer shadow-sm border transition-all hover:brightness-105 active:scale-[0.98]",
-              isMe ? "bg-primary text-white border-primary shadow-primary/20" : "bg-card border-white/5 text-foreground"
+              "p-3 rounded-2xl cursor-pointer shadow-sm border transition-all hover:bg-muted/10",
+              isMe ? "bg-primary text-white border-primary" : "bg-card border-white/5 text-foreground"
             )}>
               {renderContent()}
               <div className="flex items-center justify-end gap-1 mt-1 opacity-60">

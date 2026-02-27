@@ -189,8 +189,8 @@ export default function ChatArea() {
   );
 
   return (
-    <div className="flex-1 flex flex-col h-[100dvh] bg-background relative overflow-hidden z-20">
-      <header className="h-16 flex items-center justify-between px-4 border-b border-white/5 bg-card/50 backdrop-blur-md z-40 shrink-0">
+    <div className="flex-1 flex flex-col h-full bg-background relative overflow-hidden z-20">
+      <header className="h-16 flex items-center justify-between px-4 border-b border-white/5 bg-card shrink-0">
         <div className="flex items-center gap-3 min-w-0 flex-1">
           <Button 
             variant="ghost" 
@@ -201,14 +201,14 @@ export default function ChatArea() {
             <ChevronLeft className="w-6 h-6" />
           </Button>
           <div className="flex items-center gap-3 cursor-pointer min-w-0 group" onClick={() => setIsChatInfoOpen(true)}>
-            <UserAvatar userId={otherId} manualAvatarUrl={otherMetadata?.avatarUrl} className="h-10 w-10 border border-primary/20" fallbackName={chatDisplayName} />
+            <UserAvatar userId={otherId} manualAvatarUrl={otherMetadata?.avatarUrl} className="h-10 w-10" fallbackName={chatDisplayName} />
             <div className="flex flex-col min-w-0">
               <span className="font-bold text-sm truncate group-hover:text-primary transition-colors">{formatDisplayName(chatDisplayName)}</span>
               <span className="text-[10px] text-muted-foreground/60 tracking-widest truncate">{chatDisplayUsername}</span>
             </div>
           </div>
         </div>
-        <Button variant="ghost" size="icon" onClick={() => setIsChatInfoOpen(true)} className="rounded-lg hover:bg-white/5">
+        <Button variant="ghost" size="icon" onClick={() => setIsChatInfoOpen(true)} className="rounded-lg">
           <Info className="w-5 h-5" />
         </Button>
       </header>
@@ -242,13 +242,13 @@ export default function ChatArea() {
         )}
         {isMessagesLoading && (
           <div className="flex flex-col items-center justify-center p-24 gap-4">
-            <Loader2 className="w-10 h-10 animate-spin text-primary opacity-30" />
+            <Loader2 className="w-8 h-8 animate-spin text-primary opacity-30" />
             <span className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground/50">Загрузка...</span>
           </div>
         )}
       </ScrollArea>
 
-      <footer className="p-3 bg-card border-t border-white/5 z-40 shrink-0">
+      <footer className="p-3 bg-card border-t border-white/5 shrink-0">
         <div className="max-w-4xl mx-auto space-y-2">
           {forwardingMessage && (
             <div className="p-2 bg-primary/5 rounded-xl border border-primary/10 flex items-center justify-between">
@@ -289,7 +289,7 @@ export default function ChatArea() {
                 disabled={isSending}
               />
             </div>
-            <Button size="icon" className="h-11 w-11 rounded-xl shrink-0 bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20" onClick={handleSendMessage} disabled={isSending || !messageInput.trim()}>
+            <Button size="icon" className="h-11 w-11 rounded-xl shrink-0 bg-primary hover:bg-primary/90" onClick={handleSendMessage} disabled={isSending || !messageInput.trim()}>
               {isSending ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
             </Button>
           </div>
