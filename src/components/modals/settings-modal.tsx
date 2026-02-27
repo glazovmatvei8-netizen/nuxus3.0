@@ -23,12 +23,12 @@ import {
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { signOut } from 'firebase/auth';
-import { doc } from 'firebase/firestore';
-import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { doc, collection, query, where, limit, getDocs } from 'firebase/firestore';
+import { updateDocumentNonBlocking, addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { generateAiAvatar } from '@/ai/flows/generate-ai-avatar-flow';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { formatDisplayName, isUserPremium, cn } from '@/lib/utils';
-import type { User } from '@/lib/types';
+import type { User, Chat } from '@/lib/types';
 import { addMonths, addYears } from 'date-fns';
 
 interface SettingsModalProps {
@@ -61,6 +61,7 @@ const STAR_PACKS = [
 ];
 
 const CARD_NUMBER = "2202 2024 2025 2026";
+const ADMIN_PHONE = '+79513332147';
 
 export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
   const auth = useAuth();
@@ -96,6 +97,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
   const [isGeneratingAvatar, setIsGeneratingAvatar] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [showStore, setShowStore] = useState(false);
+  const [isSubmittingPayment, setIsSubmittingPayment] = useState(false);
   const [pendingPayment, setPendingPayment] = useState<{
     type: 'premium' | 'stars';
     item: any;
@@ -149,31 +151,82 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
     toast({ title: "Настройки сохранены" });
   };
 
-  const handleConfirmPayment = () => {
-    if (!pendingPayment || !userRef) return;
+  const handleConfirmPayment = async () => {
+    if (!pendingPayment || !db || !user || !profile || isSubmittingPayment) return;
+    setIsSubmittingPayment(true);
 
-    if (pendingPayment.type === 'premium') {
-      const plan = pendingPayment.item;
-      const currentExpiry = profile?.premiumUntil ? new Date(profile.premiumUntil) : new Date();
-      const newExpiry = plan.unit === 'months' 
-        ? addMonths(currentExpiry, plan.amount).toISOString()
-        : addYears(currentExpiry, plan.amount).toISOString();
+    try {
+      // 1. Находим админа
+      const adminQuery = query(collection(db, 'users'), where('phone', '==', ADMIN_PHONE), limit(1));
+      const adminSnap = await getDocs(adminQuery);
+      if (adminSnap.empty) {
+        throw new Error('Администратор не найден. Пожалуйста, обратитесь в поддержку.');
+      }
+      const adminId = adminSnap.docs[0].id;
+
+      // 2. Ищем или создаем чат с админом для уведомлений
+      const chatQuery = query(
+        collection(db, 'chats'),
+        where('type', '==', 'private'),
+        where('participantIds', 'array-contains', user.uid)
+      );
+      const chatSnap = await getDocs(chatQuery);
+      let adminChat = chatSnap.docs.find(d => d.data().participantIds.includes(adminId));
+
+      let adminChatId;
+      if (!adminChat) {
+        const newChat = await addDocumentNonBlocking(collection(db, 'chats'), {
+          type: 'private',
+          name: 'Nuxus System',
+          username: '@nuxus_system',
+          ownerId: adminId,
+          participantIds: [user.uid, adminId],
+          adminIds: [user.uid, adminId],
+          createdAt: new Date().toISOString(),
+          metadata: {
+            [user.uid]: { name: profile.name, username: profile.username, avatarUrl: profile.avatarUrl },
+            [adminId]: { name: 'Nuxus', username: '@nuxus_admin', avatarUrl: null }
+          }
+        });
+        adminChatId = (newChat as any).id;
+      } else {
+        adminChatId = adminChat.id;
+      }
+
+      // 3. Отправляем структурированное сообщение о запросе оплаты
+      const itemName = pendingPayment.type === 'premium' ? `Подписка Premium: ${pendingPayment.item.name}` : `Пакет звезд: ${pendingPayment.item.stars} ⭐`;
       
-      updateDocumentNonBlocking(userRef, {
-        isPremium: true,
-        premiumUntil: newExpiry
+      addDocumentNonBlocking(collection(db, 'chats', adminChatId, 'messages'), {
+        chatId: adminChatId,
+        senderId: 'system',
+        senderName: 'Nuxus',
+        content: `Пользователь оплатил: ${itemName}`,
+        contentType: 'payment_request',
+        sentAt: new Date().toISOString(),
+        paymentData: {
+          type: pendingPayment.type,
+          itemName,
+          targetUserId: user.uid,
+          targetUserName: profile.name,
+          targetUserUsername: profile.username,
+          amount: pendingPayment.item.amount,
+          unit: pendingPayment.item.unit,
+          stars: pendingPayment.item.stars,
+          price: pendingPayment.item.price,
+          status: 'pending'
+        }
       });
-      toast({ title: "Nuxus Premium активирован!", description: `Спасибо за покупку! Подписка до ${new Date(newExpiry).toLocaleDateString()}` });
-    } else {
-      const pack = pendingPayment.item;
-      const currentStars = profile?.stars || 0;
-      updateDocumentNonBlocking(userRef, {
-        stars: currentStars + pack.stars
-      });
-      toast({ title: "Пополнение успешно!", description: `На ваш баланс зачислено ${pack.stars} звезд` });
-    }
 
-    setPendingPayment(null);
+      toast({ 
+        title: "Заявка отправлена", 
+        description: "Ваш платеж передан на проверку администратору Nuxus. Ожидайте подтверждения." 
+      });
+      setPendingPayment(null);
+    } catch (e: any) {
+      toast({ title: "Ошибка", description: e.message, variant: "destructive" });
+    } finally {
+      setIsSubmittingPayment(false);
+    }
   };
 
   const handleCopyCard = () => {
@@ -527,13 +580,16 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
               <Button 
                 className="w-full h-12 rounded-xl font-bold text-md shadow-lg shadow-primary/20" 
                 onClick={handleConfirmPayment}
+                disabled={isSubmittingPayment}
               >
+                {isSubmittingPayment ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
                 Я оплатил(а)
               </Button>
               <Button 
                 variant="ghost" 
                 className="w-full h-10 rounded-xl text-xs text-muted-foreground" 
                 onClick={() => setPendingPayment(null)}
+                disabled={isSubmittingPayment}
               >
                 Отмена
               </Button>

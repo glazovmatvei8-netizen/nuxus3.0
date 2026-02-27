@@ -22,20 +22,23 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
-import { format } from 'date-fns';
+import { format, addMonths, addYears } from 'date-fns';
 import { 
   SmilePlus, CornerUpLeft, Pencil, Trash2, Check, CheckCheck, ZoomIn, Pin, Play, Pause, Mic, Star, 
   Languages, Loader2, Lock, Gift, Crown, Diamond, Rocket, Flame, Heart, Zap, Trophy, PartyPopper, 
   Cookie, Ghost, Gem, Music, Gamepad2, Coffee, Pizza, Beer, Wine, Camera, Laptop, Watch, Smartphone, 
   Car, Plane, Anchor, Sun, Moon, Cloud, Snowflake, Trees, Flower2, Dog, Cat, Bird, Fish, Smile, 
-  ThumbsUp, Bell, Mail, Key, Shield, Sword, Compass, Map, Flag, Briefcase, GraduationCap, Bitcoin, Coins
+  ThumbsUp, Bell, Mail, Key, Shield, Sword, Compass, Map, Flag, Briefcase, GraduationCap, Bitcoin, Coins,
+  Calendar, User as UserIcon, ShieldCheck, XCircle
 } from 'lucide-react';
 import { cn, isUserPremium } from '@/lib/utils';
-import { collection, doc } from 'firebase/firestore';
+import { collection, doc, increment } from 'firebase/firestore';
 import { deleteDocumentNonBlocking, addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { transcribeVoice } from '@/ai/flows/voice-to-text-flow';
 import type { Message, User } from '@/lib/types';
 import Image from 'next/image';
+import { Button } from './ui/button';
+import { useToast } from '@/hooks/use-toast';
 
 const GIFT_ICONS: Record<string, any> = {
   gift_star: Star, gift_heart: Heart, gift_zap: Zap, gift_fire: Flame, gift_trophy: Trophy, 
@@ -57,22 +60,17 @@ const REACTIONS = ['❤️', '👍', '😂', '😮', '😢', '🔥', '👏', '�
 export const MessageItem = memo(({ message, isMe, chatId, onReply, onEdit, size = 'medium', isAdmin = false }: any) => {
   const { user } = useUser();
   const db = useFirestore();
+  const { toast } = useToast();
   const [isReactionPickerOpen, setIsReactionPickerOpen] = useState(false);
-  const [isImageFullViewOpen, setIsImageFullViewOpen] = useState(false);
-  const [isVideoPlaying, setIsVideoPlaying] = useState(false);
-  const [isAudioPlaying, setIsAudioPlaying] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
   const [transcription, setTranscription] = useState<string | null>(null);
-  
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const audioRef = useRef<HTMLAudioElement>(null);
+  const [isActionLoading, setIsActionLoading] = useState(false);
 
   const senderRef = useMemoFirebase(() => {
     if (!db || !message.senderId || message.senderId === 'system') return null;
     return doc(db, 'users', message.senderId);
   }, [db, message.senderId]);
   const { data: senderProfile } = useDoc<User>(senderRef);
-  const isSenderPremium = isUserPremium(senderProfile);
 
   const meRef = useMemoFirebase(() => {
     if (!db || !user) return null;
@@ -108,6 +106,54 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onEdit, size 
     } catch (e) {} finally { setIsTranscribing(false); }
   };
 
+  const handlePaymentAction = async (action: 'confirm' | 'reject') => {
+    if (!isAdmin || !db || !message.paymentData || isActionLoading) return;
+    setIsActionLoading(true);
+
+    try {
+      const msgRef = doc(db, 'chats', chatId, 'messages', message.id);
+      const targetUserRef = doc(db, 'users', message.paymentData.targetUserId);
+
+      if (action === 'confirm') {
+        if (message.paymentData.type === 'premium') {
+          // Получаем текущего пользователя для расчета даты
+          const targetUserSnap = await useDoc(targetUserRef);
+          const currentExpiry = targetUserSnap.data?.premiumUntil ? new Date(targetUserSnap.data.premiumUntil) : new Date();
+          const newExpiry = message.paymentData.unit === 'months' 
+            ? addMonths(currentExpiry, message.paymentData.amount || 1).toISOString()
+            : addYears(currentExpiry, message.paymentData.amount || 1).toISOString();
+          
+          updateDocumentNonBlocking(targetUserRef, {
+            isPremium: true,
+            premiumUntil: newExpiry
+          });
+        } else if (message.paymentData.type === 'stars') {
+          updateDocumentNonBlocking(targetUserRef, {
+            stars: increment(message.paymentData.stars || 0)
+          });
+        }
+
+        updateDocumentNonBlocking(msgRef, {
+          contentType: 'service',
+          content: `✅ Оплата подтверждена: ${message.paymentData.itemName}`,
+          paymentData: { ...message.paymentData, status: 'confirmed' }
+        });
+        toast({ title: "Оплата подтверждена" });
+      } else {
+        updateDocumentNonBlocking(msgRef, {
+          contentType: 'service',
+          content: `❌ Оплата отклонена: ${message.paymentData.itemName}`,
+          paymentData: { ...message.paymentData, status: 'rejected' }
+        });
+        toast({ title: "Оплата отклонена" });
+      }
+    } catch (e: any) {
+      toast({ title: "Ошибка", description: e.message, variant: "destructive" });
+    } finally {
+      setIsActionLoading(false);
+    }
+  };
+
   const groupedReactions = useMemo(() => {
     return (reactionsData || []).reduce((acc: any, curr) => {
       if (!acc[curr.emoji]) acc[curr.emoji] = [];
@@ -117,6 +163,62 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onEdit, size 
   }, [reactionsData]);
 
   const renderContent = () => {
+    if (message.contentType === 'payment_request' && message.paymentData) {
+      const data = message.paymentData;
+      return (
+        <div className="flex flex-col gap-4 p-2 min-w-[260px]">
+          <div className="flex items-center gap-3 border-b border-white/10 pb-3">
+            <div className="bg-primary/20 p-2 rounded-xl">
+              {data.type === 'premium' ? <Crown className="w-5 h-5 text-primary" /> : <Star className="w-5 h-5 text-accent" />}
+            </div>
+            <div className="flex flex-col">
+              <span className="text-xs font-bold uppercase tracking-widest text-primary">Запрос оплаты</span>
+              <span className="text-sm font-black text-white">{data.itemName}</span>
+            </div>
+          </div>
+
+          <div className="space-y-2 text-xs">
+            <div className="flex items-center justify-between text-muted-foreground">
+              <span className="flex items-center gap-1"><UserIcon className="w-3 h-3" /> Пользователь:</span>
+              <span className="text-white font-medium">{data.targetUserUsername}</span>
+            </div>
+            <div className="flex items-center justify-between text-muted-foreground">
+              <span className="flex items-center gap-1"><Calendar className="w-3 h-3" /> Дата:</span>
+              <span className="text-white font-medium">{format(new Date(message.sentAt), 'dd.MM.yyyy HH:mm')}</span>
+            </div>
+            <div className="flex items-center justify-between pt-2 border-t border-white/5">
+              <span className="font-bold">К оплате:</span>
+              <span className="text-accent font-black text-sm">{data.price} ₽</span>
+            </div>
+          </div>
+
+          {isAdmin && data.status === 'pending' && (
+            <div className="flex gap-2 pt-2">
+              <Button 
+                size="sm" 
+                className="flex-1 bg-primary hover:bg-primary/90 rounded-xl h-9 text-xs font-bold"
+                onClick={() => handlePaymentAction('confirm')}
+                disabled={isActionLoading}
+              >
+                {isActionLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4 mr-1" />}
+                Подтвердить
+              </Button>
+              <Button 
+                size="sm" 
+                variant="outline" 
+                className="flex-1 border-destructive/20 text-destructive hover:bg-destructive/10 rounded-xl h-9 text-xs font-bold"
+                onClick={() => handlePaymentAction('reject')}
+                disabled={isActionLoading}
+              >
+                {isActionLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <XCircle className="w-4 h-4 mr-1" />}
+                Отказать
+              </Button>
+            </div>
+          )}
+        </div>
+      );
+    }
+
     if (message.contentType === 'gift') {
       const Icon = GIFT_ICONS[message.content] || Gift;
       return (
@@ -197,7 +299,8 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onEdit, size 
           <DropdownMenuTrigger asChild>
             <div className={cn(
               "p-3 rounded-2xl cursor-pointer shadow-sm border transition-all hover:brightness-110 relative",
-              isMe ? "bg-primary text-white border-primary" : "bg-card border-border text-foreground"
+              isMe ? "bg-primary text-white border-primary" : "bg-card border-border text-foreground",
+              message.contentType === 'payment_request' && "border-primary/40 bg-primary/5"
             )}>
               {renderContent()}
               <div className="flex items-center justify-end gap-1 mt-1 opacity-60">

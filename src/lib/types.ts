@@ -1,5 +1,5 @@
 
-export type MessageType = 'text' | 'image' | 'audio' | 'video' | 'service' | 'gift';
+export type MessageType = 'text' | 'image' | 'audio' | 'video' | 'service' | 'gift' | 'payment_request';
 
 export interface Reaction {
   emoji: string;
@@ -23,6 +23,19 @@ export interface Message {
   giftType?: string;
   isNFT?: boolean;
   serialNumber?: number;
+  // Поля для запроса оплаты
+  paymentData?: {
+    type: 'premium' | 'stars';
+    itemName: string;
+    targetUserId: string;
+    targetUserName: string;
+    targetUserUsername: string;
+    amount?: number;
+    unit?: 'months' | 'years';
+    stars?: number;
+    price: number;
+    status: 'pending' | 'confirmed' | 'rejected';
+  };
 }
 
 export interface ReceivedGift {
