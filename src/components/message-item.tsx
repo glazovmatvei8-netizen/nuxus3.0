@@ -2,7 +2,8 @@
 "use client"
 
 import React, { useState, useMemo, memo } from 'react';
-import { useUser, useFirestore, useAppState } from '@/firebase';
+import { useUser, useFirestore } from '@/firebase';
+import { useAppState } from '@/lib/store';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
   DropdownMenu,
@@ -20,10 +21,10 @@ import {
   Plane, Sun, Moon, Cloud, Snowflake, Trees, Flower2, Dog, Cat, Bird, 
   Fish, Bitcoin, Coins, Gamepad2, Music, Smile, ThumbsUp, Bell, Mail, 
   Key, Lock, Shield, Sword, Anchor, Compass, Map, Flag, Briefcase, GraduationCap,
-  Pin, Forward
+  Pin, Forward, Gift
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { collection, doc, increment, query, where, getDocs, limit } from 'firebase/firestore';
+import { collection, doc, query, where, getDocs, limit } from 'firebase/firestore';
 import { deleteDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { transcribeVoice } from '@/ai/flows/voice-to-text-flow';
 import type { Message } from '@/lib/types';
