@@ -165,36 +165,34 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
         adminId = adminSnap.docs[0].id;
       }
 
+      // Ищем именно выделенный системный чат Nuxus, а не личный диалог
       const chatQuery = query(
         collection(db, 'chats'),
-        where('type', '==', 'private'),
-        where('participantIds', 'array-contains', user.uid)
+        where('participantIds', 'array-contains', user.uid),
+        where('username', '==', '@nuxus_bot')
       );
       const chatSnap = await getDocs(chatQuery);
-      let adminChat = chatSnap.docs.find(d => {
-        const participants = d.data().participantIds || [];
-        return participants.includes(adminId) && participants.includes(user.uid);
-      });
-
+      
       let adminChatId;
-      if (!adminChat) {
+      if (chatSnap.empty) {
+        // Создаем новый чат "Nuxus" (Системный)
         const newChatData = {
           type: 'private',
-          name: 'Nuxus System',
-          username: '@nuxus_system',
+          name: 'Nuxus',
+          username: '@nuxus_bot',
           ownerId: adminId,
           participantIds: Array.from(new Set([user.uid, adminId])),
           adminIds: [user.uid, adminId],
           createdAt: new Date().toISOString(),
           metadata: {
             [user.uid]: { name: profile.name, username: profile.username, avatarUrl: profile.avatarUrl || null },
-            [adminId]: { name: 'Nuxus', username: '@nuxus_admin', avatarUrl: null }
+            [adminId]: { name: 'Nuxus', username: '@nuxus_bot', avatarUrl: null }
           }
         };
         const newChatRef = await addDoc(collection(db, 'chats'), newChatData);
         adminChatId = newChatRef.id;
       } else {
-        adminChatId = adminChat.id;
+        adminChatId = chatSnap.docs[0].id;
       }
 
       const itemName = pendingPayment.type === 'premium' ? `Подписка Premium: ${pendingPayment.item.name}` : `Пакет звезд: ${pendingPayment.item.stars} ⭐`;
@@ -202,7 +200,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
       const messagesCol = collection(db, 'chats', adminChatId, 'messages');
       await addDoc(messagesCol, {
         chatId: adminChatId,
-        senderId: 'system',
+        senderId: 'nuxus_bot', // Отправляем от имени бота, а не от пользователя
         senderName: 'Nuxus',
         content: `Пользователь оплатил: ${itemName}`,
         contentType: 'payment_request',
@@ -224,7 +222,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
 
       toast({ 
         title: "Заявка отправлена", 
-        description: "Ваш платеж передан на проверку администратору. Ожидайте подтверждения." 
+        description: "Ваш платеж передан на проверку в систему Nuxus. Ожидайте подтверждения." 
       });
       setPendingPayment(null);
     } catch (e: any) {
