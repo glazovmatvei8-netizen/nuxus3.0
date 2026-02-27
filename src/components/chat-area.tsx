@@ -197,7 +197,7 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: any) {
     if (messages && messages.length > 0) {
       const isInitial = !dataLoadedRef.current;
       if (isInitial) {
-        setTimeout(() => scrollToBottom('instant' as any), 10);
+        setTimeout(() => scrollToBottom('instant' as any), 50);
         dataLoadedRef.current = true;
       } else {
         scrollToBottom('smooth');
@@ -295,7 +295,7 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: any) {
     setTimeout(() => {
       scrollToBottom('smooth');
       setIsSending(false);
-    }, 50);
+    }, 100);
   }, [isBlocked, userProfile, currentChatId, user, db, editMessage, replyTo, scrollToBottom, isParticipant, toast]);
 
   const handleJoinChat = async () => {
