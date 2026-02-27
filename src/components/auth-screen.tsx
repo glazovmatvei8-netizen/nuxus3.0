@@ -1,7 +1,7 @@
 
 "use client"
 
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -125,6 +125,8 @@ export default function AuthScreen() {
         errorMessage = "Неверный пароль.";
       } else if (err.code === 'auth/user-not-found') {
         errorMessage = "Аккаунт не найден.";
+      } else if (err.code === 'auth/admin-restricted-operation') {
+        errorMessage = "Операция ограничена. Проверьте настройки доменов в Firebase.";
       }
 
       toast({ 
