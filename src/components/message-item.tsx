@@ -1,8 +1,8 @@
 
 "use client"
 
-import React, { useState, useMemo, memo, useCallback } from 'react';
-import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
+import React, { useState, useMemo, memo } from 'react';
+import { useUser, useFirestore } from '@/firebase';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
   DropdownMenu,
@@ -13,8 +13,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { format, addMonths, addYears } from 'date-fns';
 import { 
-  SmilePlus, CornerUpLeft, Pencil, Trash2, Check, CheckCheck, Mic, Star, 
-  Languages, Loader2, Crown, Gift, User as UserIcon, Calendar, Diamond, 
+  CornerUpLeft, Trash2, Check, CheckCheck, Mic, Star, 
+  Languages, Loader2, Crown, User as UserIcon, Calendar, Diamond, 
   Rocket, Flame, Heart, Zap, Trophy, Gem, PartyPopper, Cookie, Ghost, 
   Coffee, Pizza, Beer, Wine, Camera, Laptop, Watch, Smartphone, Car, 
   Plane, Sun, Moon, Cloud, Snowflake, Trees, Flower2, Dog, Cat, Bird, 
@@ -23,7 +23,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { collection, doc, increment, query, where, getDocs, limit } from 'firebase/firestore';
-import { deleteDocumentNonBlocking, addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { deleteDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { transcribeVoice } from '@/ai/flows/voice-to-text-flow';
 import type { Message } from '@/lib/types';
 import Image from 'next/image';
@@ -45,7 +45,7 @@ const GIFT_ICONS: Record<string, any> = {
   gift_briefcase: Briefcase, gift_grad: GraduationCap
 };
 
-export const MessageItem = memo(({ message, isMe, chatId, onReply, onEdit, onOpenReactions, amIPremium = false, isAdmin = false, senderAvatarUrl = null }: any) => {
+export const MessageItem = memo(({ message, isMe, chatId, onReply, amIPremium = false, isAdmin = false, senderAvatarUrl = null }: any) => {
   const { user } = useUser();
   const db = useFirestore();
   const { toast } = useToast();
@@ -54,25 +54,6 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onEdit, onOpe
   const [isActionLoading, setIsActionLoading] = useState(false);
 
   const formattedTime = useMemo(() => message.sentAt ? format(new Date(message.sentAt), 'HH:mm') : '', [message.sentAt]);
-
-  const reactionsQuery = useMemoFirebase(() => {
-    if (!db || !chatId || !message.id) return null;
-    return collection(db, 'chats', chatId, 'messages', message.id, 'reactions');
-  }, [db, chatId, message.id]);
-  
-  const { data: reactionsData } = useCollection(reactionsQuery);
-
-  const handleToggleReaction = useCallback((emoji: string) => {
-    if (!user || !db) return;
-    const existing = reactionsData?.find(r => r.emoji === emoji && r.reactorId === user.uid);
-    if (existing) {
-      deleteDocumentNonBlocking(doc(db, 'chats', chatId, 'messages', message.id, 'reactions', existing.id));
-    } else {
-      addDocumentNonBlocking(collection(db, 'chats', chatId, 'messages', message.id, 'reactions'), {
-        messageId: message.id, reactorId: user.uid, emoji, reactedAt: new Date().toISOString(),
-      });
-    }
-  }, [reactionsData, user, db, chatId, message.id]);
 
   const handleTranscribe = async () => {
     if (!amIPremium || transcription) { setTranscription(null); return; }
@@ -127,14 +108,6 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onEdit, onOpe
       setIsActionLoading(false);
     }
   };
-
-  const groupedReactions = useMemo(() => {
-    return (reactionsData || []).reduce((acc: any, curr) => {
-      if (!acc[curr.emoji]) acc[curr.emoji] = [];
-      acc[curr.emoji].push(curr.reactorId);
-      return acc;
-    }, {});
-  }, [reactionsData]);
 
   const renderContent = () => {
     if (message.contentType === 'payment_request' && message.paymentData) {
@@ -246,7 +219,6 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onEdit, onOpe
           </DropdownMenuTrigger>
           <DropdownMenuContent align={isMe ? 'end' : 'start'} className="w-48 bg-card/95 backdrop-blur-xl border-white/10">
             <DropdownMenuItem onClick={() => onReply(message)} className="gap-2"><CornerUpLeft className="w-4 h-4" /> Ответить</DropdownMenuItem>
-            <DropdownMenuItem onClick={() => onOpenReactions(message)} className="gap-2"><SmilePlus className="w-4 h-4" /> Реакция</DropdownMenuItem>
             <DropdownMenuSeparator className="bg-white/5" />
             {(isMe || isAdmin) && (
               <DropdownMenuItem onClick={() => deleteDocumentNonBlocking(doc(db, 'chats', chatId, 'messages', message.id))} className="text-destructive gap-2">
@@ -255,28 +227,10 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onEdit, onOpe
             )}
           </DropdownMenuContent>
         </DropdownMenu>
-
-        {Object.keys(groupedReactions).length > 0 && (
-          <div className="flex flex-wrap gap-1 mt-1">
-            {Object.entries(groupedReactions).map(([emoji, uids]: any) => (
-              <button 
-                key={emoji} 
-                onClick={() => handleToggleReaction(emoji)} 
-                className={cn(
-                  "bg-muted/40 px-2 py-0.5 rounded-full text-[10px] border border-white/5 transition-all active:scale-90", 
-                  uids.includes(user?.uid) && "ring-1 ring-primary/40 bg-primary/10"
-                )}
-              >
-                {emoji} {uids.length}
-              </button>
-            ))}
-          </div>
-        )}
       </div>
     </div>
   );
 }, (prev, next) => {
-  // Очень важная проверка для предотвращения лишних перерисовок
   return prev.message.id === next.message.id && 
          prev.message.content === next.message.content && 
          prev.message.isRead === next.message.isRead &&

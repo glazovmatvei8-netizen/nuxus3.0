@@ -7,20 +7,17 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
-  Send, Info, ChevronLeft, Loader2, MessageSquare, AtSign, AtSignIcon
+  Send, Info, ChevronLeft, Loader2, MessageSquare
 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { MessageItem } from './message-item';
 import { useToast } from '@/hooks/use-toast';
 import { ChatInfoModal } from './modals/chat-info-modal';
 import { useFirestore, useUser, useCollection, useDoc, useMemoFirebase } from '@/firebase';
-import { collection, query, orderBy, doc, limit } from 'firebase/firestore';
+import { collection, query, orderBy, doc } from 'firebase/firestore';
 import { addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
-import { cn, formatDisplayName, isUserPremium } from '@/lib/utils';
+import { formatDisplayName, isUserPremium } from '@/lib/utils';
 import type { Message, User as UserType, Chat } from '@/lib/types';
-import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-
-const REACTIONS = ['❤️', '👍', '😂', '😮', '😢', '🔥', '👏', '🎉', '💎', '⚡'];
 
 // Изолированный список сообщений для предотвращения перерисовок всего ChatArea
 const MessageList = memo(({ 
@@ -28,8 +25,6 @@ const MessageList = memo(({
   userId, 
   chatId, 
   onReply, 
-  onEdit, 
-  onOpenReactions, 
   amIPremium, 
   isAdmin, 
   otherAvatarUrl 
@@ -43,8 +38,6 @@ const MessageList = memo(({
           isMe={msg.senderId === userId} 
           chatId={chatId} 
           onReply={onReply} 
-          onEdit={onEdit} 
-          onOpenReactions={onOpenReactions}
           amIPremium={amIPremium}
           isAdmin={isAdmin}
           senderAvatarUrl={msg.senderId === userId ? null : otherAvatarUrl}
@@ -55,31 +48,6 @@ const MessageList = memo(({
 });
 MessageList.displayName = 'MessageList';
 
-// Изолированный компонент выбора реакций
-const ReactionPicker = memo(({ target, onClose, onSelect }: any) => {
-  if (!target) return null;
-  return (
-    <Dialog open={!!target} onOpenChange={val => !val && onClose()}>
-      <DialogContent className="max-w-[280px] p-2 bg-card/95 backdrop-blur-xl rounded-3xl border-white/10 shadow-2xl">
-        <DialogTitle className="sr-only">Реакции</DialogTitle>
-        <DialogDescription className="sr-only">Выберите эмодзи для сообщения</DialogDescription>
-        <div className="grid grid-cols-5 gap-1">
-          {REACTIONS.map(emoji => (
-            <button 
-              key={emoji} 
-              className="p-3 text-2xl hover:bg-primary/20 rounded-xl transition-all hover:scale-125 active:scale-90" 
-              onClick={() => onSelect(emoji)}
-            >
-              {emoji}
-            </button>
-          ))}
-        </div>
-      </DialogContent>
-    </Dialog>
-  );
-});
-ReactionPicker.displayName = 'ReactionPicker';
-
 export default function ChatArea() {
   const { user } = useUser();
   const db = useFirestore();
@@ -88,7 +56,6 @@ export default function ChatArea() {
   const [isChatInfoOpen, setIsChatInfoOpen] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [replyTo, setReplyTo] = useState<Message | null>(null);
-  const [reactionTarget, setReactionTarget] = useState<Message | null>(null);
   const [messageInput, setMessageInput] = useState('');
   
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -174,20 +141,6 @@ export default function ChatArea() {
     setTimeout(() => scrollToBottom('smooth'), 100);
   }, [messageInput, currentChatId, user, db, userProfile, replyTo, scrollToBottom]);
 
-  const handleAddReaction = useCallback((emoji: string) => {
-    if (!user || !db || !reactionTarget || !currentChatId) return;
-    
-    const reactionRef = collection(db, 'chats', currentChatId, 'messages', reactionTarget.id, 'reactions');
-    addDocumentNonBlocking(reactionRef, { 
-      messageId: reactionTarget.id, 
-      reactorId: user.uid, 
-      emoji, 
-      reactedAt: new Date().toISOString() 
-    });
-    
-    setReactionTarget(null);
-  }, [user, db, reactionTarget, currentChatId]);
-
   const chatDisplayName = useMemo(() => {
     if (!chat) return '...';
     if (otherId && chat.metadata?.[otherId]) return chat.metadata[otherId].name;
@@ -234,7 +187,6 @@ export default function ChatArea() {
             userId={user?.uid}
             chatId={currentChatId}
             onReply={setReplyTo}
-            onOpenReactions={setReactionTarget}
             amIPremium={amIPremium}
             isAdmin={chat?.ownerId === user?.uid || chat?.adminIds?.includes(user?.uid || '')}
             otherAvatarUrl={otherAvatarUrl}
@@ -274,12 +226,6 @@ export default function ChatArea() {
           </Button>
         </div>
       </footer>
-
-      <ReactionPicker 
-        target={reactionTarget} 
-        onClose={() => setReactionTarget(null)} 
-        onSelect={handleAddReaction} 
-      />
 
       {chat && <ChatInfoModal open={isChatInfoOpen} onOpenChange={setIsChatInfoOpen} chat={chat as any} />}
     </div>
