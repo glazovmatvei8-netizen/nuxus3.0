@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useRef, useEffect, useMemo, useCallback, memo } from 'react';
@@ -20,7 +19,7 @@ import { formatDisplayName, isUserPremium } from '@/lib/utils';
 import type { Message, User as UserType, Chat } from '@/lib/types';
 
 /**
- * Оптимизированный список сообщений для предотвращения лишних рендеров всего чата.
+ * Optimized message list to prevent re-renders of the entire chat area.
  */
 const MessageList = memo(({ 
   messages, 
@@ -182,56 +181,49 @@ export default function ChatArea() {
 
   if (!currentChatId) return (
     <div className="flex-1 flex flex-col items-center justify-center text-center p-8 bg-background relative overflow-hidden">
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-primary/5 via-transparent to-transparent opacity-50" />
-      <div className="bg-primary/5 p-10 rounded-full mb-6 relative z-10 animate-float">
-        <MessageSquare className="w-20 h-20 text-primary/30" />
+      <div className="bg-muted p-10 rounded-full mb-6 animate-float">
+        <MessageSquare className="w-16 h-16 text-muted-foreground/30" />
       </div>
-      <h2 className="text-2xl font-black uppercase tracking-widest text-white/40 relative z-10">Выберите диалог</h2>
+      <h2 className="text-xl font-bold text-muted-foreground uppercase tracking-widest">Выберите диалог</h2>
     </div>
   );
 
   return (
     <div className="flex-1 flex flex-col h-[100dvh] bg-background relative overflow-hidden z-20">
-      <header className="h-20 flex flex-col justify-center border-b border-white/5 bg-card/80 backdrop-blur-3xl z-40 shrink-0">
-        <div className="flex items-center justify-between px-4 md:px-6 h-full">
-          <div className="flex items-center gap-3 md:gap-4 min-w-0 flex-1">
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              className="md:hidden rounded-2xl bg-white/5" 
-              onClick={() => setCurrentChatId(null)}
-            >
-              <ChevronLeft className="w-6 h-6" />
-            </Button>
-            <div className="flex items-center gap-3 md:gap-4 cursor-pointer min-w-0 group" onClick={() => setIsChatInfoOpen(true)}>
-              <UserAvatar userId={otherId} manualAvatarUrl={otherMetadata?.avatarUrl} className="h-10 w-10 md:h-11 md:w-11 rounded-2xl ring-2 ring-primary/20 ring-offset-2 ring-offset-background group-hover:scale-105 transition-all" fallbackName={chatDisplayName} />
-              <div className="flex flex-col min-w-0">
-                <span className="font-black text-xs md:text-sm uppercase tracking-tighter truncate group-hover:text-primary transition-colors">{formatDisplayName(chatDisplayName)}</span>
-                <span className="text-[9px] md:text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest truncate">{chatDisplayUsername}</span>
-              </div>
+      <header className="h-16 flex items-center justify-between px-4 border-b border-white/5 bg-card/50 backdrop-blur-md z-40 shrink-0">
+        <div className="flex items-center gap-3 min-w-0 flex-1">
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="md:hidden rounded-lg hover:bg-white/5" 
+            onClick={() => setCurrentChatId(null)}
+          >
+            <ChevronLeft className="w-6 h-6" />
+          </Button>
+          <div className="flex items-center gap-3 cursor-pointer min-w-0 group" onClick={() => setIsChatInfoOpen(true)}>
+            <UserAvatar userId={otherId} manualAvatarUrl={otherMetadata?.avatarUrl} className="h-10 w-10 border border-primary/20" fallbackName={chatDisplayName} />
+            <div className="flex flex-col min-w-0">
+              <span className="font-bold text-sm truncate group-hover:text-primary transition-colors">{formatDisplayName(chatDisplayName)}</span>
+              <span className="text-[10px] text-muted-foreground/60 tracking-widest truncate">{chatDisplayUsername}</span>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <Button variant="ghost" size="icon" onClick={() => setIsChatInfoOpen(true)} className="rounded-2xl hover:bg-white/5 hover:text-primary transition-all">
-              <Info className="w-6 h-6" />
-            </Button>
-          </div>
         </div>
+        <Button variant="ghost" size="icon" onClick={() => setIsChatInfoOpen(true)} className="rounded-lg hover:bg-white/5">
+          <Info className="w-5 h-5" />
+        </Button>
       </header>
 
       {pinnedMessage && (
-        <div className="h-14 bg-primary/10 backdrop-blur-2xl border-b border-primary/20 px-4 md:px-6 flex items-center justify-between z-30 shrink-0 animate-in slide-in-from-top duration-500">
-          <div className="flex items-center gap-4 cursor-pointer min-w-0 flex-1" onClick={() => scrollToMessage(pinnedMessage.id)}>
-            <div className="bg-primary/20 p-2 rounded-xl">
-              <Pin className="w-3.5 h-3.5 text-primary" />
-            </div>
+        <div className="h-12 bg-primary/5 border-b border-primary/10 px-4 flex items-center justify-between z-30 shrink-0">
+          <div className="flex items-center gap-3 cursor-pointer min-w-0 flex-1" onClick={() => scrollToMessage(pinnedMessage.id)}>
+            <Pin className="w-3.5 h-3.5 text-primary rotate-45" />
             <div className="flex flex-col min-w-0">
-              <span className="text-[9px] font-black text-primary uppercase tracking-[0.2em]">Закреплено</span>
-              <span className="text-xs truncate text-white/80 font-medium">{pinnedMessage.content}</span>
+              <span className="text-[9px] font-bold text-primary uppercase tracking-widest">Закреплено</span>
+              <span className="text-xs truncate text-muted-foreground">{pinnedMessage.content}</span>
             </div>
           </div>
-          <Button variant="ghost" size="icon" className="h-10 w-10 rounded-2xl hover:bg-white/5" onClick={unpinMessage}>
-            <X className="w-5 h-5" />
+          <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg" onClick={unpinMessage}>
+            <X className="w-4 h-4" />
           </Button>
         </div>
       )}
@@ -251,56 +243,54 @@ export default function ChatArea() {
         {isMessagesLoading && (
           <div className="flex flex-col items-center justify-center p-24 gap-4">
             <Loader2 className="w-10 h-10 animate-spin text-primary opacity-30" />
-            <span className="text-[10px] uppercase font-black tracking-widest text-muted-foreground/50">Синхронизация...</span>
+            <span className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground/50">Загрузка...</span>
           </div>
         )}
       </ScrollArea>
 
-      <footer className="p-3 md:p-4 bg-card/80 backdrop-blur-3xl border-t border-white/5 z-40 shrink-0">
-        <div className="max-w-4xl mx-auto space-y-3">
+      <footer className="p-3 bg-card border-t border-white/5 z-40 shrink-0">
+        <div className="max-w-4xl mx-auto space-y-2">
           {forwardingMessage && (
-            <div className="mb-2 p-3 md:p-4 bg-primary/10 rounded-2xl border border-primary/20 flex items-center justify-between animate-in slide-in-from-bottom-4">
-              <div className="flex items-center gap-4 min-w-0">
-                <div className="bg-primary/20 p-2 rounded-xl">
-                  <Forward className="w-4 h-4 text-primary" />
-                </div>
+            <div className="p-2 bg-primary/5 rounded-xl border border-primary/10 flex items-center justify-between">
+              <div className="flex items-center gap-3 min-w-0">
+                <Forward className="w-4 h-4 text-primary" />
                 <div className="flex flex-col min-w-0">
-                  <span className="text-[9px] font-black text-primary uppercase tracking-widest">Пересылка</span>
-                  <span className="text-xs truncate text-white/70 font-medium">От: {forwardingMessage.senderName}</span>
+                  <span className="text-[9px] font-bold text-primary uppercase">Пересылка</span>
+                  <span className="text-xs truncate text-muted-foreground">От: {forwardingMessage.senderName}</span>
                 </div>
               </div>
-              <Button variant="ghost" size="icon" className="h-10 w-10 rounded-2xl" onClick={() => setForwardingMessage(null)}>
-                <X className="w-5 h-5" />
-              </Button>
-            </div>
-          )}
-          {replyTo && (
-            <div className="mb-2 p-2 md:p-3 bg-white/5 rounded-2xl border-l-4 border-primary flex items-center justify-between animate-in slide-in-from-bottom-4">
-              <div className="flex flex-col min-w-0 pl-2">
-                <span className="text-[9px] font-black text-primary uppercase tracking-widest">Ответ: {replyTo.senderName}</span>
-                <span className="text-xs truncate text-white/60 italic">{replyTo.content}</span>
-              </div>
-              <Button variant="ghost" size="icon" className="h-8 w-8 rounded-xl" onClick={() => setReplyTo(null)}>
+              <Button variant="ghost" size="icon" className="h-7 w-7 rounded-lg" onClick={() => setForwardingMessage(null)}>
                 <X className="w-4 h-4" />
               </Button>
             </div>
           )}
-          <div className="flex gap-2 md:gap-3 items-end">
-            <Button variant="ghost" size="icon" className="h-12 w-12 md:h-14 md:w-14 rounded-2xl shrink-0 bg-white/5 hover:bg-white/10 text-muted-foreground hover:text-primary transition-all">
-              <Camera className="w-5 h-5 md:w-6 md:h-6" />
+          {replyTo && (
+            <div className="p-2 bg-muted/50 rounded-xl border-l-4 border-primary flex items-center justify-between">
+              <div className="flex flex-col min-w-0 pl-2">
+                <span className="text-[9px] font-bold text-primary uppercase tracking-widest">Ответ: {replyTo.senderName}</span>
+                <span className="text-xs truncate text-muted-foreground italic">{replyTo.content}</span>
+              </div>
+              <Button variant="ghost" size="icon" className="h-7 w-7 rounded-lg" onClick={() => setReplyTo(null)}>
+                <X className="w-4 h-4" />
+              </Button>
+            </div>
+          )}
+          <div className="flex gap-2 items-end">
+            <Button variant="ghost" size="icon" className="h-11 w-11 rounded-xl shrink-0 bg-muted hover:bg-muted/80">
+              <Camera className="w-5 h-5 text-muted-foreground" />
             </Button>
-            <div className="flex-1 relative">
+            <div className="flex-1">
               <Input 
-                placeholder="Напишите..." 
-                className="bg-white/5 rounded-2xl h-12 md:h-14 border-white/5 focus-visible:ring-1 focus-visible:ring-primary/40 transition-all text-sm px-4 md:px-6 placeholder:uppercase placeholder:text-[10px] placeholder:font-black placeholder:tracking-widest" 
+                placeholder="Напишите сообщение..." 
+                className="bg-muted border-none rounded-xl h-11 text-sm px-4" 
                 value={messageInput}
                 onChange={e => setMessageInput(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && !e.shiftKey && handleSendMessage()}
                 disabled={isSending}
               />
             </div>
-            <Button size="icon" className="h-12 w-12 md:h-14 md:w-14 rounded-2xl shrink-0 shadow-2xl shadow-primary/40 bg-gradient-to-br from-primary to-primary/80 transition-transform active:scale-90" onClick={handleSendMessage} disabled={isSending || !messageInput.trim()}>
-              {isSending ? <Loader2 className="w-5 h-5 md:w-6 md:h-6 animate-spin" /> : <Send className="w-5 h-5 md:w-6 md:h-6" />}
+            <Button size="icon" className="h-11 w-11 rounded-xl shrink-0 bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20" onClick={handleSendMessage} disabled={isSending || !messageInput.trim()}>
+              {isSending ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
             </Button>
           </div>
         </div>

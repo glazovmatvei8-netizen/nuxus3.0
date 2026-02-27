@@ -166,7 +166,7 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, amIPremium = 
       const Icon = GIFT_ICONS[message.content] || Gift;
       return (
         <div className="flex flex-col items-center justify-center my-4 w-full">
-          <div className={cn("bg-card/40 backdrop-blur-2xl p-6 rounded-[32px] border border-white/10 shadow-xl flex flex-col items-center gap-3 max-w-[280px] relative overflow-hidden", message.isNFT && "ring-2 ring-accent/40")}>
+          <div className={cn("bg-card p-6 rounded-[32px] border border-white/10 shadow-xl flex flex-col items-center gap-3 max-w-[280px] relative overflow-hidden", message.isNFT && "ring-2 ring-accent/40")}>
             {message.isNFT && <div className="absolute top-0 right-0 bg-accent text-[8px] px-3 py-1 rounded-bl-xl font-black text-white tracking-widest">NFT</div>}
             <div className="text-[10px] font-black text-primary uppercase tracking-widest opacity-60">ПОДАРОК</div>
             <Icon className={cn("w-16 h-16 drop-shadow-2xl", message.isNFT ? "text-accent" : "text-primary")} />
@@ -229,7 +229,7 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, amIPremium = 
           <DropdownMenuTrigger asChild>
             <div className={cn(
               "p-3 rounded-2xl cursor-pointer shadow-sm border transition-all hover:brightness-105 active:scale-[0.98]",
-              isMe ? "bg-gradient-to-br from-primary to-primary/80 text-white border-primary shadow-primary/20" : "bg-card/50 backdrop-blur-md border-white/5 text-foreground"
+              isMe ? "bg-primary text-white border-primary shadow-primary/20" : "bg-card border-white/5 text-foreground"
             )}>
               {renderContent()}
               <div className="flex items-center justify-end gap-1 mt-1 opacity-60">
@@ -238,7 +238,7 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, amIPremium = 
               </div>
             </div>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align={isMe ? 'end' : 'start'} className="w-48 bg-card/95 backdrop-blur-xl border-white/10">
+          <DropdownMenuContent align={isMe ? 'end' : 'start'} className="w-48 bg-card border-white/10">
             <DropdownMenuItem onClick={() => onReply(message)} className="gap-2"><CornerUpLeft className="w-4 h-4" /> Ответить</DropdownMenuItem>
             <DropdownMenuItem onClick={handleForward} className="gap-2"><Forward className="w-4 h-4" /> Переслать</DropdownMenuItem>
             {isAdmin && <DropdownMenuItem onClick={handlePin} className="gap-2"><Pin className="w-4 h-4" /> Закрепить</DropdownMenuItem>}

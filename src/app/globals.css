@@ -23,7 +23,7 @@
     --border: 240 5% 15%;
     --input: 240 5% 15%;
     --ring: 263 70% 50%;
-    --radius: 1rem;
+    --radius: 0.75rem;
   }
 }
 
@@ -35,14 +35,7 @@
     @apply bg-background text-foreground font-sans antialiased;
     overscroll-behavior-y: none;
     -webkit-tap-highlight-color: transparent;
-    background-image: 
-      radial-gradient(at 0% 0%, hsla(263, 70%, 50%, 0.05) 0px, transparent 50%),
-      radial-gradient(at 100% 100%, hsla(190, 90%, 50%, 0.05) 0px, transparent 50%);
   }
-}
-
-.glass-panel {
-  @apply bg-card/40 backdrop-blur-2xl border-white/5;
 }
 
 .scrollbar-hide::-webkit-scrollbar {

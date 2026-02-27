@@ -196,8 +196,8 @@ export default function ChatSidebar() {
   const isPremium = profile?.isPremium && profile.premiumUntil && new Date(profile.premiumUntil) > new Date();
 
   return (
-    <div className="flex flex-col h-full bg-card/20 backdrop-blur-2xl overflow-hidden">
-      <div className="p-6 space-y-6 shrink-0 border-b border-white/5 bg-gradient-to-b from-white/5 to-transparent">
+    <div className="flex flex-col h-full bg-card overflow-hidden">
+      <div className="p-6 space-y-6 shrink-0 border-b border-white/5">
         <div className="flex items-center justify-between">
           <div 
             className="flex items-center gap-4 cursor-pointer group min-w-0"
@@ -205,12 +205,12 @@ export default function ChatSidebar() {
           >
             <UserAvatar 
               userId={user?.uid} 
-              className="h-12 w-12 border-2 border-primary/40 ring-2 ring-primary/10 ring-offset-4 ring-offset-background group-hover:scale-110 transition-all duration-500 shrink-0"
+              className="h-12 w-12 border-2 border-primary group-hover:scale-105 transition-all"
               fallbackName={displayName}
               manualAvatarUrl={profile?.avatarUrl}
             />
             <div className="flex flex-col min-w-0">
-              <span className="font-black text-sm uppercase tracking-tighter group-hover:text-primary transition-colors truncate flex items-center gap-1">
+              <span className="font-bold text-sm truncate flex items-center gap-1">
                 {displayName}
                 {isPremium && <Star className="w-3 h-3 text-accent fill-accent" />}
               </span>
@@ -219,16 +219,16 @@ export default function ChatSidebar() {
               </span>
             </div>
           </div>
-          <Button variant="ghost" size="icon" className="rounded-2xl hover:bg-white/5 hover:text-primary shrink-0 transition-all" onClick={() => setIsSettingsOpen(true)}>
+          <Button variant="ghost" size="icon" className="rounded-xl hover:bg-white/5" onClick={() => setIsSettingsOpen(true)}>
             <Settings className="w-5 h-5" />
           </Button>
         </div>
 
-        <div className="relative group">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground transition-colors group-focus-within:text-primary" />
+        <div className="relative">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input 
             placeholder="Поиск..." 
-            className="pl-11 bg-white/5 border-white/5 rounded-2xl h-12 focus:ring-1 focus:ring-primary/40 transition-all w-full placeholder:uppercase placeholder:text-[10px] placeholder:font-black placeholder:tracking-widest"
+            className="pl-11 bg-muted border-none rounded-xl h-11"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
@@ -237,11 +237,11 @@ export default function ChatSidebar() {
 
       <div className="px-3 py-3 shrink-0">
         <Tabs value={activeTab} onValueChange={(val) => setActiveTab(val as any)} className="w-full">
-          <TabsList className="grid w-full grid-cols-4 h-11 bg-white/5 rounded-2xl p-1 gap-1 border border-white/5">
-            <TabsTrigger value="all" className="rounded-xl text-[10px] font-black uppercase tracking-tighter data-[state=active]:bg-primary">Все</TabsTrigger>
-            <TabsTrigger value="private" className="rounded-xl text-[10px] font-black uppercase tracking-tighter data-[state=active]:bg-primary">Чаты</TabsTrigger>
-            <TabsTrigger value="group" className="rounded-xl text-[10px] font-black uppercase tracking-tighter data-[state=active]:bg-primary">Группы</TabsTrigger>
-            <TabsTrigger value="channel" className="rounded-xl text-[10px] font-black uppercase tracking-tighter data-[state=active]:bg-primary">Инфо</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-4 h-10 bg-muted rounded-xl p-1 gap-1">
+            <TabsTrigger value="all" className="rounded-lg text-[10px] font-bold uppercase tracking-widest">Все</TabsTrigger>
+            <TabsTrigger value="private" className="rounded-lg text-[10px] font-bold uppercase tracking-widest">Чаты</TabsTrigger>
+            <TabsTrigger value="group" className="rounded-lg text-[10px] font-bold uppercase tracking-widest">Группы</TabsTrigger>
+            <TabsTrigger value="channel" className="rounded-lg text-[10px] font-bold uppercase tracking-widest">Инфо</TabsTrigger>
           </TabsList>
         </Tabs>
       </div>
@@ -252,7 +252,7 @@ export default function ChatSidebar() {
             <Loader2 className="w-8 h-8 animate-spin text-primary opacity-50" />
           </div>
         ) : (
-          <div className="space-y-2 pb-24">
+          <div className="space-y-1 pb-24">
             {globalSearchResult && (
               <div className="mb-4">
                 <div className="px-3 py-1 text-[10px] font-black text-primary flex items-center gap-1 uppercase tracking-widest mb-1">
@@ -271,15 +271,15 @@ export default function ChatSidebar() {
               <div
                 onClick={handleOpenSavedMessages}
                 className={cn(
-                  "flex items-center gap-4 p-4 rounded-3xl cursor-pointer transition-all duration-300 group relative border border-transparent",
-                  chats?.find(c => c.type === 'saved')?.id === currentChatId ? 'bg-primary text-white shadow-xl shadow-primary/20' : 'hover:bg-white/5 text-foreground'
+                  "flex items-center gap-4 p-3 rounded-2xl cursor-pointer transition-all",
+                  chats?.find(c => c.type === 'saved')?.id === currentChatId ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'hover:bg-muted text-foreground'
                 )}
               >
-                <div className="h-12 w-12 rounded-2xl bg-accent/20 flex items-center justify-center shrink-0 shadow-inner">
-                  {isCreatingSaved ? <Loader2 className="w-5 h-5 animate-spin" /> : <Bookmark className="w-6 h-6 text-accent" />}
+                <div className="h-11 w-11 rounded-xl bg-accent/20 flex items-center justify-center shrink-0">
+                  {isCreatingSaved ? <Loader2 className="w-5 h-5 animate-spin" /> : <Bookmark className="w-5 h-5 text-accent" />}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <span className="font-black text-sm uppercase tracking-tighter">Избранное</span>
+                  <span className="font-bold text-sm">Избранное</span>
                   <div className="text-[10px] uppercase font-bold text-muted-foreground/60">Личные заметки</div>
                 </div>
               </div>
@@ -307,12 +307,12 @@ export default function ChatSidebar() {
         )}
       </ScrollArea>
 
-      <div className="absolute bottom-6 left-0 w-full px-6 pointer-events-none">
+      <div className="p-4 border-t border-white/5 bg-card">
         <Button 
-          className="w-full rounded-2xl h-14 shadow-2xl shadow-primary/40 bg-gradient-to-r from-primary to-primary/80 font-black uppercase tracking-widest pointer-events-auto transition-transform hover:scale-[1.02] active:scale-95 group"
+          className="w-full rounded-xl h-12 shadow-xl shadow-primary/20 bg-primary hover:bg-primary/90 font-bold uppercase tracking-widest"
           onClick={() => setIsCreateModalOpen(true)}
         >
-          <Plus className="w-5 h-5 mr-2 group-hover:rotate-90 transition-transform" />
+          <Plus className="w-5 h-5 mr-2" />
           Новый чат
         </Button>
       </div>
@@ -369,44 +369,31 @@ function ChatListItem({ chat, isActive, otherId, cachedDisplayName, manualAvatar
     <div
       onClick={onClick}
       className={cn(
-        "flex items-center gap-4 p-4 rounded-3xl cursor-pointer transition-all duration-300 group relative border border-transparent",
-        isActive ? 'bg-primary text-white shadow-xl shadow-primary/30 z-10' : 'hover:bg-white/5 text-foreground'
+        "flex items-center gap-4 p-3 rounded-2xl cursor-pointer transition-all",
+        isActive ? 'bg-primary text-white shadow-lg shadow-primary/20 z-10' : 'hover:bg-muted text-foreground'
       )}
     >
       <div className="relative shrink-0">
         <UserAvatar 
           userId={otherId} 
           manualAvatarUrl={manualAvatarUrl || otherProfile?.avatarUrl || chat.avatarUrl}
-          className="h-12 w-12 rounded-2xl" 
+          className="h-11 w-11 rounded-xl" 
           fallbackName={finalDisplayName}
         />
         {(status === 'в сети' || isTyping) && !isOtherDeleted && !isGlobalResult && (
-          <span className="absolute -bottom-1 -right-1 w-3.5 h-3.5 bg-accent rounded-full border-[3px] border-background animate-pulse" />
+          <span className="absolute bottom-0 right-0 w-3 h-3 bg-accent rounded-full border-2 border-card" />
         )}
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex items-center justify-between gap-2">
-          <span className="font-black text-sm uppercase tracking-tighter truncate flex items-center gap-1">
+          <span className="font-bold text-sm truncate flex items-center gap-1">
             {finalDisplayName}
             {isOtherPremium && <Star className="w-3 h-3 text-accent fill-accent shrink-0" />}
-            {isPinned && <Pin className="w-3 h-3 rotate-45 shrink-0" />}
+            {isPinned && <Pin className="w-3 h-3 rotate-45 shrink-0 opacity-60" />}
           </span>
           <div className="flex items-center gap-1">
-            {onTogglePin && (
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                className={cn(
-                  "h-7 w-7 rounded-xl md:opacity-0 group-hover:opacity-100 transition-all",
-                  isPinned ? "text-accent" : "text-muted-foreground"
-                )}
-                onClick={onTogglePin}
-              >
-                <Pin className={cn("w-3.5 h-3.5", isPinned && "fill-accent")} />
-              </Button>
-            )}
             {unreadCount > 0 && !isActive && (
-              <Badge variant="default" className="bg-accent text-accent-foreground rounded-lg h-5 min-w-5 flex items-center justify-center text-[10px] font-black px-1 border-none">
+              <Badge variant="default" className="bg-accent text-accent-foreground rounded-full h-5 min-w-5 flex items-center justify-center text-[10px] font-bold px-1 border-none">
                 {unreadCount}
               </Badge>
             )}
@@ -414,14 +401,23 @@ function ChatListItem({ chat, isActive, otherId, cachedDisplayName, manualAvatar
         </div>
         <div className="flex items-center justify-between">
           <div className={cn(
-            "text-[10px] uppercase font-bold tracking-widest truncate transition-colors",
+            "text-[10px] uppercase font-bold tracking-widest truncate",
             isActive ? 'text-white/80' : (isTyping || status === 'в сети' ? 'text-accent' : 'text-muted-foreground/60')
           )}>
             {isTyping ? (
               <span className="flex items-center gap-0.5">печатает<span className="animate-typing-dot">.</span><span className="animate-typing-dot [animation-delay:0.2s]">.</span><span className="animate-typing-dot [animation-delay:0.4s]">.</span></span>
             ) : status}
           </div>
-          {isGlobalResult && <div className="text-[9px] font-black opacity-40 uppercase tracking-tighter">{chat.username}</div>}
+          {isPinned && !isActive && (
+             <Button 
+                variant="ghost" 
+                size="icon" 
+                className="h-6 w-6 rounded-lg text-muted-foreground"
+                onClick={(e) => onTogglePin(e)}
+              >
+                <Pin className="w-3 h-3" />
+              </Button>
+          )}
         </div>
       </div>
     </div>

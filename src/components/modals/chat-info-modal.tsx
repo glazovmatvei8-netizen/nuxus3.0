@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useMemo } from 'react';
@@ -21,7 +20,7 @@ import {
   Flag, Briefcase, GraduationCap 
 } from 'lucide-react';
 import { useFirestore, useCollection, useMemoFirebase, useUser, useDoc } from '@/firebase';
-import { collection, query, where, orderBy, limit, getDocs, doc, increment } from 'firebase/firestore';
+import { collection, query, where, orderBy, limit, getDocs, doc } from 'firebase/firestore';
 import { chatConversationSummary } from '@/ai/flows/chat-conversation-summary-flow';
 import { useToast } from '@/hooks/use-toast';
 import { deleteDocumentNonBlocking, updateDocumentNonBlocking, addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
@@ -186,8 +185,8 @@ export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onO
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md bg-card/95 backdrop-blur-xl border-border/40 p-0 overflow-hidden h-[90vh] flex flex-col">
-        <DialogHeader className="p-6 bg-primary/5 border-b border-border/40 text-center flex flex-col items-center shrink-0">
+      <DialogContent className="max-w-md bg-card border-border p-0 overflow-hidden h-[90vh] flex flex-col">
+        <DialogHeader className="p-6 bg-muted/30 border-b border-border text-center flex flex-col items-center shrink-0">
           <UserAvatar userId={isPrivate ? otherId : null} manualAvatarUrl={chat.avatarUrl} className="h-20 w-20 mb-3" fallbackName={chatName} />
           <DialogTitle className="text-xl flex items-center justify-center gap-2">
             {chatName} {isUserPremium(otherUserProfile) && <Star className="w-4 h-4 text-accent fill-accent" />}
@@ -196,7 +195,7 @@ export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onO
         </DialogHeader>
 
         <Tabs defaultValue="info" className="flex-1 overflow-hidden flex flex-col min-h-0">
-          <TabsList className="grid w-full grid-cols-2 h-10 bg-muted/30 p-1 shrink-0">
+          <TabsList className="grid w-full grid-cols-2 h-10 bg-muted p-1 shrink-0">
             <TabsTrigger value="info">Инфо</TabsTrigger>
             <TabsTrigger value="members">Участники</TabsTrigger>
           </TabsList>
@@ -212,11 +211,11 @@ export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onO
                     </div>
                     
                     {showGiftSelection && isAdmin && (
-                      <div className="space-y-3 p-3 bg-primary/5 rounded-2xl border border-primary/20">
+                      <div className="space-y-3 p-3 bg-muted/50 rounded-2xl border border-border">
                         <Input placeholder="Сообщение..." value={giftMessage} onChange={e => setGiftMessage(e.target.value)} className="h-9 text-xs" />
                         <div className="grid grid-cols-4 gap-2 max-h-60 overflow-y-auto pr-1">
                           {AVAILABLE_GIFTS.map(g => (
-                            <button key={g.id} onClick={() => handleSendGift(g)} className="flex flex-col items-center gap-1 p-2 rounded-xl hover:bg-primary/10 transition-colors group relative">
+                            <button key={g.id} onClick={() => handleSendGift(g)} className="flex flex-col items-center gap-1 p-2 rounded-xl hover:bg-muted transition-colors group relative">
                               <g.icon className={cn("w-6 h-6", g.color)} />
                               <span className="text-[8px] font-bold uppercase truncate w-full text-center">{g.name}</span>
                               {g.isNFT && <div className="absolute top-0 right-0 bg-accent text-[6px] text-white px-1 rounded-bl-lg font-bold">NFT</div>}
@@ -243,7 +242,7 @@ export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onO
                 )}
 
                 {isAdmin && isPrivate && otherId && (
-                  <div className="p-4 bg-primary/5 rounded-2xl border border-primary/20 space-y-3">
+                  <div className="p-4 bg-muted/30 rounded-2xl border border-border space-y-3">
                     <h3 className="text-[10px] font-bold uppercase tracking-widest text-primary flex items-center gap-2"><Crown className="w-3 h-3" /> Управление Premium</h3>
                     <div className="grid grid-cols-3 gap-2">
                       <Button variant="outline" size="sm" className="h-8 text-[10px]" onClick={() => handleGrantPremium(1, 'months')}>1 Мес.</Button>
@@ -257,19 +256,19 @@ export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onO
 
                 <div className="space-y-2">
                   <h3 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-2"><Sparkles className="w-3 h-3" /> AI Суммаризация</h3>
-                  <div className="bg-muted/30 p-4 rounded-xl border border-border/40">
+                  <div className="bg-muted/30 p-4 rounded-xl border border-border">
                     {summary ? <p className="text-sm italic">{summary}</p> : <Button variant="ghost" size="sm" className="w-full text-xs" onClick={handleSummarize} disabled={isSummarizing}>Суммаризировать</Button>}
                   </div>
                 </div>
 
                 <div className="pt-4 pb-12">
-                  {isAdmin && <Button variant="ghost" className="w-full text-destructive hover:bg-destructive/10" onClick={() => {
+                  <Button variant="ghost" className="w-full text-destructive hover:bg-destructive/10" onClick={() => {
                     if (confirm('Удалить этот чат?')) {
                       deleteDocumentNonBlocking(doc(db, 'chats', chat.id));
                       setCurrentChatId(null);
                       onOpenChange(false);
                     }
-                  }}>Удалить чат</Button>}
+                  }}>Удалить чат</Button>
                 </div>
               </div>
             </ScrollArea>
