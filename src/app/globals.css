@@ -1,29 +1,30 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
   :root {
-    --background: 240 10% 4%;
+    --background: 240 10% 3.9%;
     --foreground: 0 0% 98%;
-    --card: 240 10% 7%;
+    --card: 240 10% 6%;
     --card-foreground: 0 0% 98%;
-    --popover: 240 10% 8%;
+    --popover: 240 10% 5%;
     --popover-foreground: 0 0% 98%;
-    --primary: 263 70% 50%;
+    --primary: 263 70% 55%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 240 5% 15%;
+    --secondary: 240 5% 12%;
     --secondary-foreground: 0 0% 98%;
-    --muted: 240 5% 12%;
-    --muted-foreground: 240 5% 65%;
+    --muted: 240 5% 10%;
+    --muted-foreground: 240 5% 60%;
     --accent: 190 90% 50%;
     --accent-foreground: 240 10% 4%;
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 98%;
     --border: 240 5% 15%;
     --input: 240 5% 15%;
-    --ring: 263 70% 50%;
-    --radius: 0.75rem;
+    --ring: 263 70% 55%;
+    --radius: 1rem;
   }
 }
 
@@ -48,7 +49,7 @@
 
 @keyframes float {
   0% { transform: translateY(0px); }
-  50% { transform: translateY(-10px); }
+  50% { transform: translateY(-8px); }
   100% { transform: translateY(0px); }
 }
 
@@ -64,4 +65,14 @@
 
 .animate-typing-dot {
   animation: typing-dot 1.4s infinite both;
+}
+
+/* Glass effect refinements */
+.glass {
+  @apply bg-card/60 backdrop-blur-xl border border-white/5;
+}
+
+.message-bubble-me {
+  background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(263 70% 45%) 100%);
+  @apply shadow-lg shadow-primary/10;
 }

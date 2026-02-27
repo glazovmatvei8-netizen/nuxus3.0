@@ -115,19 +115,35 @@ export default function AuthScreen() {
         });
         toast({ title: "Успех", description: "Аккаунт создан! Добро пожаловать." });
       } else {
-        const result = await signInWithEmailAndPassword(auth, virtualEmail, formData.password);
-        const user = result.user;
+        try {
+          const result = await signInWithEmailAndPassword(auth, virtualEmail, formData.password);
+          const user = result.user;
 
-        const userDoc = await getDoc(doc(db, 'users', user.uid));
-        if (userDoc.exists() && userDoc.data()?.isBanned) {
-          toast({ title: "Доступ запрещен", description: "Ваш аккаунт заблокирован", variant: "destructive" });
-          await auth.signOut();
+          const userDoc = await getDoc(doc(db, 'users', user.uid));
+          if (userDoc.exists() && userDoc.data()?.isBanned) {
+            toast({ title: "Доступ запрещен", description: "Ваш аккаунт заблокирован", variant: "destructive" });
+            await auth.signOut();
+            setIsLoading(false);
+            return;
+          }
+        } catch (err: any) {
+          if (err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') {
+            toast({ 
+              title: "Ошибка входа", 
+              description: "Проверьте номер или пароль. Если у вас нет аккаунта, переключитесь на Регистрацию.", 
+              variant: "destructive" 
+            });
+            setIsLoading(false);
+            return;
+          }
+          throw err;
         }
       }
     } catch (err: any) {
+      console.error(err);
       toast({ 
-        title: `Ошибка: ${err.code || 'System'}`, 
-        description: "Проверьте данные или соединение.", 
+        title: "Системная ошибка", 
+        description: "Проверьте соединение с интернетом или настройки сети.", 
         variant: "destructive" 
       });
     } finally {
@@ -153,13 +169,13 @@ export default function AuthScreen() {
           </div>
         </div>
 
-        <Card className="border-white/5 bg-card/40 backdrop-blur-2xl shadow-2xl rounded-[2rem] overflow-hidden">
+        <Card className="border-white/5 bg-card/40 backdrop-blur-2xl shadow-2xl rounded-[2.5rem] overflow-hidden border">
           <CardHeader className="text-center pb-2 pt-8">
             <CardTitle className="text-5xl font-black tracking-tighter text-white uppercase italic leading-none">
               Nuxus
             </CardTitle>
             <CardDescription className="text-muted-foreground/60 mt-3 font-medium tracking-widest uppercase text-[9px]">
-              {mode === 'login' ? 'Authenticating User' : 'Creating Identity'}
+              {mode === 'login' ? 'Energy Core Authorization' : 'Creating New Neural Identity'}
             </CardDescription>
           </CardHeader>
           
@@ -168,17 +184,17 @@ export default function AuthScreen() {
               {mode === 'register' && (
                 <>
                   <div className="space-y-1.5">
-                    <Label className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground/80 ml-1">Ваше имя</Label>
+                    <Label className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground/80 ml-1">Имя</Label>
                     <div className="relative group">
                       <UserCircle className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
-                      <Input placeholder="Имя" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="bg-white/5 border-white/10 pl-10 h-12 rounded-2xl focus:border-primary/50 transition-all" required />
+                      <Input placeholder="Ваше имя" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="bg-white/5 border-white/10 pl-10 h-12 rounded-2xl focus:border-primary/50 transition-all" required />
                     </div>
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground/80 ml-1">Желаемый никнейм</Label>
+                    <Label className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground/80 ml-1">Никнейм</Label>
                     <div className="relative group">
                       <AtSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
-                      <Input placeholder="@username" value={formData.username} onChange={e => setFormData({...formData, username: e.target.value})} className="bg-white/5 border-white/10 pl-10 h-12 rounded-2xl focus:border-primary/50 transition-all" required />
+                      <Input placeholder="username" value={formData.username} onChange={e => setFormData({...formData, username: e.target.value})} className="bg-white/5 border-white/10 pl-10 h-12 rounded-2xl focus:border-primary/50 transition-all" required />
                     </div>
                   </div>
                 </>
@@ -188,7 +204,7 @@ export default function AuthScreen() {
                 <Label className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground/80 ml-1">Номер телефона</Label>
                 <div className="relative group">
                   <Smartphone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
-                  <Input placeholder="+7 900 000 00 00" type="tel" value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} className="bg-white/5 border-white/10 pl-10 h-12 rounded-2xl focus:border-primary/50 transition-all" required />
+                  <Input placeholder="8 900 000 00 00" type="tel" value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} className="bg-white/5 border-white/10 pl-10 h-12 rounded-2xl focus:border-primary/50 transition-all" required />
                 </div>
               </div>
 
@@ -216,7 +232,7 @@ export default function AuthScreen() {
                 onClick={() => setMode(mode === 'login' ? 'register' : 'login')} 
                 className="text-[10px] text-muted-foreground hover:text-primary transition-colors font-black uppercase tracking-widest"
               >
-                {mode === 'login' ? "Нет аккаунта? Создать" : "Уже зарегистрированы? Войти"}
+                {mode === 'login' ? "Нет аккаунта? Регистрация" : "Уже есть аккаунт? Вход"}
               </button>
             </div>
           </CardContent>

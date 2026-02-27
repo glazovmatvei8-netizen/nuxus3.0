@@ -247,7 +247,7 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, amIPremium = 
           <DropdownMenuTrigger asChild>
             <div className={cn(
               "p-3 rounded-2xl cursor-pointer shadow-sm border transition-all hover:bg-muted/10",
-              isMe ? "bg-primary text-white border-primary" : "bg-card border-white/5 text-foreground",
+              isMe ? "message-bubble-me border-none" : "bg-card border-white/5 text-foreground",
               message.contentType === 'video' && "p-1 rounded-full bg-transparent border-none shadow-none"
             )}>
               {renderContent()}

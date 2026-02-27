@@ -14,7 +14,7 @@ const inter = Inter({
 
 export const metadata: Metadata = {
   title: 'Nuxus — Премиальная связь',
-  description: 'Современный и безопасный мессенджер для общения в реальном времени с поддержкой AI и видеосообщений.',
+  description: 'Современный и безопасный мессенджер нового поколения.',
   keywords: ['чат', 'мессенджер', 'безопасность', 'AI', 'видеосообщения', 'Nuxus'],
   authors: [{ name: 'Nuxus Team' }],
   appleWebApp: {
@@ -26,7 +26,7 @@ export const metadata: Metadata = {
     type: 'website',
     locale: 'ru_RU',
     url: 'https://nuxus.app',
-    title: 'Nuxus — Премиальный опыт общения',
+    title: 'Nuxus — Технологичное ядро общения',
     description: 'Общайтесь красиво и безопасно.',
     siteName: 'Nuxus',
     images: [{
@@ -45,7 +45,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: '#1a1b26',
+  themeColor: '#0a0a0c',
   width: 'device-width',
   initialScale: 1,
   maximumScale: 1,
