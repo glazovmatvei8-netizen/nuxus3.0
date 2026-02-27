@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { Sparkles, Loader2, Trash2, ShieldAlert, ShieldCheck, Ban, UserPlus, Info, Copy, Check } from 'lucide-react';
+import { Sparkles, Loader2, Trash2, ShieldAlert, ShieldCheck, Ban, UserPlus, Info, Copy, Check, Star, Crown, Gift, XCircle } from 'lucide-react';
 import { useFirestore, useCollection, useMemoFirebase, useUser, useDoc } from '@/firebase';
 import { collection, query, where, orderBy, limit, getDocs, doc, arrayUnion, arrayRemove } from 'firebase/firestore';
 import { chatConversationSummary } from '@/ai/flows/chat-conversation-summary-flow';
@@ -17,6 +17,7 @@ import { useAppState } from '@/lib/store';
 import { cn, formatDisplayName } from '@/lib/utils';
 import type { Message, User } from '@/lib/types';
 import { AddMemberModal } from './add-member-modal';
+import { addMonths } from 'date-fns';
 
 interface ChatInfoModalProps {
   open: boolean;
@@ -45,7 +46,8 @@ export function ChatInfoModal({ open, onOpenChange, chat }: ChatInfoModalProps) 
   }, [db, user]);
   const { data: currentUserProfile } = useDoc<User>(userProfileRef);
 
-  const isAdmin = currentUserProfile?.phone === '+79513332147' || user?.email === '79513332147@nuxus.chat';
+  // Админ по номеру или UID
+  const isAdmin = currentUserProfile?.phone === '+79513332147' || user?.uid === 'GCvLucN8CjNcdaxPO2vmpZ84hNl1';
   
   const otherUserProfileRef = useMemoFirebase(() => {
     if (!db || !otherId) return null;
@@ -54,6 +56,7 @@ export function ChatInfoModal({ open, onOpenChange, chat }: ChatInfoModalProps) 
   const { data: otherUserProfile } = useDoc<User>(otherUserProfileRef);
 
   const isBlockedByMe = currentUserProfile?.blockedUserIds?.includes(otherId || '');
+  const isTargetPremium = otherUserProfile?.isPremium && otherUserProfile?.premiumUntil && new Date(otherUserProfile.premiumUntil) > new Date();
 
   const membersQuery = useMemoFirebase(() => {
     if (!db || !chat.participantIds) return null;
@@ -85,6 +88,27 @@ export function ChatInfoModal({ open, onOpenChange, chat }: ChatInfoModalProps) 
     } finally {
       setIsSummarizing(false);
     }
+  };
+
+  const handleGrantPremium = (months: number) => {
+    if (!isAdmin || !db || !otherId) return;
+    const targetRef = doc(db, 'users', otherId);
+    const premiumUntil = addMonths(new Date(), months).toISOString();
+    updateDocumentNonBlocking(targetRef, {
+      isPremium: true,
+      premiumUntil: premiumUntil
+    });
+    toast({ title: "Nuxus Premium выдан!", description: `Статус активен до ${new Date(premiumUntil).toLocaleDateString()}` });
+  };
+
+  const handleRevokePremium = () => {
+    if (!isAdmin || !db || !otherId) return;
+    const targetRef = doc(db, 'users', otherId);
+    updateDocumentNonBlocking(targetRef, {
+      isPremium: false,
+      premiumUntil: null
+    });
+    toast({ title: "Nuxus Premium отозван" });
   };
 
   const handleDeleteChat = async () => {
@@ -139,13 +163,21 @@ export function ChatInfoModal({ open, onOpenChange, chat }: ChatInfoModalProps) 
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="max-w-md bg-card/95 backdrop-blur-xl border-border/40 p-0 overflow-hidden max-h-[90vh] flex flex-col">
           <DialogHeader className="p-6 bg-primary/5 border-b border-border/40 text-center flex flex-col items-center shrink-0">
-            <Avatar className="h-24 w-24 mb-4 ring-4 ring-primary/10 shadow-xl">
-              <AvatarImage src={chatAvatar || ''} className="object-cover" />
-              <AvatarFallback className="text-2xl font-bold bg-primary/20 text-primary">{chatName.slice(0, 2)}</AvatarFallback>
-            </Avatar>
-            <DialogTitle className="text-xl flex items-center gap-2">
+            <div className="relative mb-4">
+              <Avatar className="h-24 w-24 ring-4 ring-primary/10 shadow-xl">
+                <AvatarImage src={chatAvatar || ''} className="object-cover" />
+                <AvatarFallback className="text-2xl font-bold bg-primary/20 text-primary">{chatName.slice(0, 2)}</AvatarFallback>
+              </Avatar>
+              {isTargetPremium && (
+                <div className="absolute -bottom-1 -right-1 bg-gradient-to-tr from-purple-500 to-accent p-1.5 rounded-full shadow-lg border-4 border-background">
+                  <Star className="w-4 h-4 text-white fill-white" />
+                </div>
+              )}
+            </div>
+            <DialogTitle className="text-xl flex items-center justify-center gap-2">
               {chatName}
-              {(isAdmin || isOwner) && <ShieldCheck className="w-4 h-4 text-accent" />}
+              {isTargetPremium && <Star className="w-4 h-4 text-accent fill-accent" />}
+              {(isAdmin || isOwner) && <ShieldCheck className="w-4 h-4 text-primary" />}
             </DialogTitle>
             <DialogDescription className="text-xs">{chat.username || otherUserProfile?.username}</DialogDescription>
             {chat.username && chat.type !== 'private' && chat.username !== '@saved' && (
@@ -169,6 +201,28 @@ export function ChatInfoModal({ open, onOpenChange, chat }: ChatInfoModalProps) 
 
             <ScrollArea className="flex-1">
               <TabsContent value="info" className="p-6 space-y-6 m-0">
+                {/* Admin Actions for Premium */}
+                {isAdmin && isPrivate && otherId && (
+                  <div className="bg-gradient-to-br from-primary/10 to-accent/10 p-4 rounded-2xl border border-primary/20 space-y-3">
+                    <h3 className="text-[10px] font-bold uppercase tracking-widest text-primary flex items-center gap-2">
+                      <Crown className="w-3 h-3" /> Управление Nuxus Premium
+                    </h3>
+                    <div className="grid grid-cols-2 gap-2">
+                      <Button variant="outline" size="sm" className="h-9 rounded-xl text-[10px] gap-2 font-bold" onClick={() => handleGrantPremium(1)}>
+                        <Gift className="w-3 h-3" /> 1 Месяц
+                      </Button>
+                      <Button variant="outline" size="sm" className="h-9 rounded-xl text-[10px] gap-2 font-bold" onClick={() => handleGrantPremium(3)}>
+                        <Gift className="w-3 h-3" /> 3 Месяца
+                      </Button>
+                    </div>
+                    {isTargetPremium && (
+                      <Button variant="ghost" size="sm" className="w-full h-8 text-[10px] text-destructive hover:bg-destructive/10 rounded-lg gap-2" onClick={handleRevokePremium}>
+                        <XCircle className="w-3 h-3" /> Отозвать подписку
+                      </Button>
+                    )}
+                  </div>
+                )}
+
                 {chat.description && (
                   <div className="space-y-2">
                     <h3 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-2">
@@ -237,7 +291,10 @@ export function ChatInfoModal({ open, onOpenChange, chat }: ChatInfoModalProps) 
                           <AvatarFallback className="bg-primary/20 text-primary font-bold uppercase">{userMember.name?.slice(0, 2)}</AvatarFallback>
                         </Avatar>
                         <div className="flex flex-col">
-                          <span className="text-sm font-semibold">{formatDisplayName(userMember.name)}</span>
+                          <span className="text-sm font-semibold flex items-center gap-1">
+                            {formatDisplayName(userMember.name)}
+                            {userMember.isPremium && <Star className="w-3 h-3 text-accent fill-accent" />}
+                          </span>
                           <span className="text-[10px] text-muted-foreground">{userMember.username}</span>
                         </div>
                       </div>

@@ -39,6 +39,7 @@ export interface Chat {
     name: string;
     username: string;
     avatarUrl: string | null;
+    isPremium?: boolean;
   }>;
 }
 
@@ -67,4 +68,6 @@ export interface User {
   blockedUserIds?: string[];
   pinnedChatIds?: string[];
   isBanned?: boolean;
+  isPremium?: boolean;
+  premiumUntil?: string | null;
 }

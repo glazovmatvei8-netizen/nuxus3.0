@@ -6,7 +6,7 @@ import { useAppState } from '@/lib/store';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { UserAvatar } from '@/components/user-avatar';
-import { Search, Settings, Plus, Loader2, Bookmark, Pin, Globe } from 'lucide-react';
+import { Search, Settings, Plus, Loader2, Bookmark, Pin, Globe, Star } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { CreateChatModal } from './modals/create-chat-modal';
@@ -66,7 +66,6 @@ export default function ChatSidebar() {
         const snap = await getDocs(q);
         if (!snap.empty) {
           const chatData = { id: snap.docs[0].id, ...snap.docs[0].data() } as Chat;
-          // Показываем в глобальном поиске только если пользователь еще не в чате
           if (!chatData.participantIds.includes(user?.uid || '')) {
             setGlobalSearchResult(chatData);
           } else {
@@ -143,6 +142,7 @@ export default function ChatSidebar() {
 
   const displayName = isProfileLoading ? '...' : formatDisplayName(profile?.name || user?.displayName);
   const displayUsername = isProfileLoading ? '...' : (profile?.username || (user?.email ? `@${user.email.split('@')[0]}` : 'Настройте профиль'));
+  const isPremium = profile?.isPremium && profile.premiumUntil && new Date(profile.premiumUntil) > new Date();
 
   return (
     <div className="flex flex-col h-full bg-card/30 backdrop-blur-sm overflow-hidden">
@@ -159,8 +159,9 @@ export default function ChatSidebar() {
               manualAvatarUrl={profile?.avatarUrl}
             />
             <div className="flex flex-col min-w-0">
-              <span className="font-semibold text-sm leading-tight group-hover:text-primary transition-colors truncate">
+              <span className="font-semibold text-sm leading-tight group-hover:text-primary transition-colors truncate flex items-center gap-1">
                 {displayName}
+                {isPremium && <Star className="w-3 h-3 text-accent fill-accent" />}
               </span>
               <span className="text-xs text-muted-foreground truncate">
                 {displayUsername}
@@ -201,7 +202,6 @@ export default function ChatSidebar() {
           </div>
         ) : (
           <div className="space-y-1">
-            {/* Секция глобального поиска */}
             {globalSearchResult && (
               <div className="mb-4">
                 <div className="px-3 py-1 text-[10px] font-bold text-primary flex items-center gap-1 uppercase tracking-widest">
@@ -320,6 +320,7 @@ function ChatListItem({ chat, isActive, otherId, cachedDisplayName, manualAvatar
 
   const isOtherDeleted = otherProfile?.isBanned || otherProfile?.name?.includes('Удалённый Аккаунт');
   const isTyping = chat?.typing && otherId && chat.typing[otherId] && !isOtherDeleted;
+  const isOtherPremium = otherProfile?.isPremium && otherProfile?.premiumUntil && new Date(otherProfile.premiumUntil) > new Date();
   
   const finalDisplayName = formatDisplayName(otherProfile?.name || cachedDisplayName || chat.name || 'Пользователь');
 
@@ -346,7 +347,8 @@ function ChatListItem({ chat, isActive, otherId, cachedDisplayName, manualAvatar
         <div className="flex items-center justify-between gap-2">
           <span className="font-semibold truncate text-sm flex items-center gap-1">
             {finalDisplayName}
-            {isPinned && <Pin className="w-3 h-3 rotate-45" />}
+            {isOtherPremium && <Star className="w-3 h-3 text-accent fill-accent shrink-0" />}
+            {isPinned && <Pin className="w-3 h-3 rotate-45 shrink-0" />}
           </span>
           <div className="flex items-center gap-1">
             {unreadCount > 0 && !isActive && (

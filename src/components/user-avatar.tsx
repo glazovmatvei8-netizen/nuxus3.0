@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useEffect } from 'react';
@@ -6,6 +7,7 @@ import { doc } from 'firebase/firestore';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { cn, formatDisplayName } from '@/lib/utils';
 import Image from 'next/image';
+import { Star } from 'lucide-react';
 
 interface UserAvatarProps {
   userId: string | null | undefined;
@@ -16,7 +18,7 @@ interface UserAvatarProps {
 }
 
 /**
- * Умный компонент аватарки, оптимизированный для Lighthouse с использованием next/image.
+ * Умный компонент аватарки с поддержкой Premium-значка.
  */
 export function UserAvatar({ userId, className, fallbackName, fallbackClassName, manualAvatarUrl }: UserAvatarProps) {
   const db = useFirestore();
@@ -31,29 +33,39 @@ export function UserAvatar({ userId, className, fallbackName, fallbackClassName,
 
   const displayAvatar = profile?.avatarUrl || manualAvatarUrl;
   const displayName = formatDisplayName(profile?.name || fallbackName || '??');
+  const isPremium = profile?.isPremium && profile.premiumUntil && new Date(profile.premiumUntil) > new Date();
 
   useEffect(() => {
     setImgError(false);
   }, [displayAvatar, userId]);
 
   return (
-    <Avatar className={cn("shrink-0 relative overflow-hidden", className)}>
-      {!isLoading && displayAvatar && !imgError ? (
-        <Image 
-          key={displayAvatar}
-          src={displayAvatar} 
-          alt={displayName} 
-          fill
-          sizes="(max-width: 768px) 100vw, 48px"
-          className="object-cover animate-in fade-in duration-300"
-          onError={() => setImgError(true)}
-          priority={userId === 'currentUser'}
-        />
-      ) : (
-        <AvatarFallback className={cn("bg-primary/20 text-primary font-bold uppercase h-full w-full flex items-center justify-center", fallbackClassName)}>
-          {displayName.slice(0, 2)}
-        </AvatarFallback>
+    <div className="relative inline-block shrink-0">
+      <Avatar className={cn("shrink-0 relative overflow-hidden", className)}>
+        {!isLoading && displayAvatar && !imgError ? (
+          <Image 
+            key={displayAvatar}
+            src={displayAvatar} 
+            alt={displayName} 
+            fill
+            sizes="(max-width: 768px) 100vw, 48px"
+            className="object-cover animate-in fade-in duration-300"
+            onError={() => setImgError(true)}
+            priority={userId === 'currentUser'}
+          />
+        ) : (
+          <AvatarFallback className={cn("bg-primary/20 text-primary font-bold uppercase h-full w-full flex items-center justify-center", fallbackClassName)}>
+            {displayName.slice(0, 2)}
+          </AvatarFallback>
+        )}
+      </Avatar>
+      {isPremium && (
+        <div className="absolute -bottom-0.5 -right-0.5 bg-background rounded-full p-0.5 z-10">
+          <div className="bg-gradient-to-tr from-purple-500 to-accent p-0.5 rounded-full shadow-sm">
+            <Star className="w-2.5 h-2.5 text-white fill-white" />
+          </div>
+        </div>
       )}
-    </Avatar>
+    </div>
   );
 }

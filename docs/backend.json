@@ -48,6 +48,15 @@
         "isBanned": {
           "type": "boolean",
           "description": "Indicates if the user is globally banned from the application."
+        },
+        "isPremium": {
+          "type": "boolean",
+          "description": "Indicates if the user has a Nuxus Premium subscription."
+        },
+        "premiumUntil": {
+          "type": "string",
+          "description": "ISO timestamp until which the premium subscription is valid.",
+          "format": "date-time"
         }
       },
       "required": [

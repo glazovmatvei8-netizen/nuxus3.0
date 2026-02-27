@@ -16,7 +16,7 @@ import {
 import { useAuth, useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
-  LogOut, User, LayoutGrid, Palette, Loader2, Sparkles, Wand2, AtSign, Settings2, Check, ShieldCheck, Lock, UserX
+  LogOut, User, LayoutGrid, Palette, Loader2, Sparkles, Wand2, AtSign, Settings2, Check, ShieldCheck, Lock, UserX, Star, Crown
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { signOut } from 'firebase/auth';
@@ -164,6 +164,8 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
     }
   };
 
+  const isPremium = profile?.isPremium && profile.premiumUntil && new Date(profile.premiumUntil) > new Date();
+
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
@@ -177,6 +179,20 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
           
           <ScrollArea className="flex-1 overflow-y-auto">
             <div className="p-4 space-y-5 pb-8">
+              {isPremium && (
+                <div className="bg-gradient-to-r from-purple-500/20 via-accent/20 to-primary/20 p-4 rounded-2xl border border-purple-500/30 animate-pulse-slow">
+                  <div className="flex items-center gap-3">
+                    <div className="bg-gradient-to-tr from-purple-500 to-accent p-2 rounded-full shadow-lg">
+                      <Star className="w-5 h-5 text-white fill-white" />
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="text-sm font-bold text-accent">Nuxus Premium Активен</span>
+                      <span className="text-[10px] text-muted-foreground">До {new Date(profile.premiumUntil!).toLocaleDateString()}</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               <div className="flex flex-col items-center gap-4 py-2">
                 <div className="relative group cursor-pointer" onClick={() => avatarInputRef.current?.click()}>
                   <UserAvatar 
@@ -198,7 +214,10 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                   }} />
                 </div>
                 <div className="text-center">
-                  <h3 className="font-bold text-xl leading-tight">{formatDisplayName(form.name) || 'Без имени'}</h3>
+                  <h3 className="font-bold text-xl leading-tight flex items-center justify-center gap-2">
+                    {formatDisplayName(form.name) || 'Без имени'}
+                    {isPremium && <Star className="w-5 h-5 text-accent fill-accent" />}
+                  </h3>
                   <p className="text-sm text-muted-foreground">{form.username || '@username'}</p>
                 </div>
               </div>

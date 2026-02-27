@@ -2,7 +2,7 @@
 "use client"
 
 import React, { useState, useMemo, memo, useRef } from 'react';
-import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
+import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
   Popover, 
@@ -23,11 +23,11 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { format } from 'date-fns';
-import { SmilePlus, CornerUpLeft, Pencil, Trash2, Check, CheckCheck, ZoomIn, Pin, Play, Pause, Mic, Headphones } from 'lucide-react';
+import { SmilePlus, CornerUpLeft, Pencil, Trash2, Check, CheckCheck, ZoomIn, Pin, Play, Pause, Mic, Star } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { collection, doc } from 'firebase/firestore';
 import { deleteDocumentNonBlocking, addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
-import type { Message } from '@/lib/types';
+import type { Message, User } from '@/lib/types';
 import Image from 'next/image';
 
 interface MessageItemProps {
@@ -51,6 +51,13 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onEdit, size 
   const [isAudioPlaying, setIsAudioPlaying] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
+
+  const senderRef = useMemoFirebase(() => {
+    if (!db || !message.senderId || message.senderId === 'system') return null;
+    return doc(db, 'users', message.senderId);
+  }, [db, message.senderId]);
+  const { data: senderProfile } = useDoc<User>(senderRef);
+  const isSenderPremium = senderProfile?.isPremium && senderProfile?.premiumUntil && new Date(senderProfile.premiumUntil) > new Date();
 
   const formattedTime = useMemo(() => {
     if (!message.sentAt) return '';
@@ -254,8 +261,18 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onEdit, size 
         )}
         
         <div className={cn("flex flex-col gap-0.5", isMe ? "items-end" : "items-start", message.contentType === 'video' ? "items-center w-full" : "")}>
-          {!isMe && message.contentType !== 'video' && <span className="text-[10px] font-bold text-muted-foreground ml-2 opacity-70">{message.senderName}</span>}
-          {message.contentType === 'video' && <span className="text-[10px] font-bold text-primary uppercase tracking-widest mb-1">{message.senderName}</span>}
+          {!isMe && message.contentType !== 'video' && (
+            <span className="text-[10px] font-bold text-muted-foreground ml-2 opacity-70 flex items-center gap-1">
+              {message.senderName}
+              {isSenderPremium && <Star className="w-2.5 h-2.5 text-accent fill-accent" />}
+            </span>
+          )}
+          {message.contentType === 'video' && (
+            <span className="text-[10px] font-bold text-primary uppercase tracking-widest mb-1 flex items-center gap-1">
+              {message.senderName}
+              {isSenderPremium && <Star className="w-3 h-3 text-accent fill-accent" />}
+            </span>
+          )}
           
           <DropdownMenu>
             <DropdownMenuTrigger asChild>

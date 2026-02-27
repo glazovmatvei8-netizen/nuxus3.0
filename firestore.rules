@@ -31,7 +31,8 @@ service cloud.firestore {
     // Пользователи
     match /users/{userId} {
       allow read: if isSignedIn();
-      allow write: if isSignedIn() && request.auth.uid == userId;
+      // Пользователь может менять свой профиль, админ может менять любой (для Premium/Ban)
+      allow write: if isAdmin() || (isSignedIn() && request.auth.uid == userId);
     }
 
     // Чаты
@@ -52,12 +53,12 @@ service cloud.firestore {
         
         allow create: if isChatMember(chatId) && 
           request.resource.data.content is string && 
-          request.resource.data.content.size() < 5000;
+          request.resource.data.content.size() < 10000; // Увеличил размер для видео/аудио данных
           
         allow update: if isChatMember(chatId) && 
           request.auth.uid == resource.data.senderId &&
           request.resource.data.content is string && 
-          request.resource.data.content.size() < 5000;
+          request.resource.data.content.size() < 10000;
           
         allow delete: if isAdmin() || (isSignedIn() && request.auth.uid == resource.data.senderId);
 
