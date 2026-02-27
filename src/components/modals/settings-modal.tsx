@@ -18,8 +18,8 @@ import {
 import { useAuth, useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
-  LogOut, User as UserIcon, LayoutGrid, Palette, Loader2, Sparkles, Wand2, AtSign, Settings2, Check, 
-  ShieldCheck, Lock, UserX, Crown, Bell, ShoppingBag, CreditCard, Copy, Info, Type, Hexagon
+  LogOut, User as UserIcon, Palette, Loader2, ShoppingBag, CreditCard, Copy, Info, Type, Hexagon,
+  ShieldCheck, Lock, Eye, Users, MessageCircle, Crown, Settings2, Check
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { signOut } from 'firebase/auth';
@@ -242,6 +242,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                 </div>
               ) : (
                 <div className="flex flex-col">
+                  {/* Профиль шапка */}
                   <div className="flex flex-col items-center gap-4 py-6 bg-gradient-to-b from-primary/10 to-transparent">
                     <div className="relative">
                       <UserAvatar userId={user?.uid} manualAvatarUrl={form.avatarUrl} className="h-28 w-28 border-4 border-background" fallbackName={form.name} />
@@ -250,58 +251,124 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                       </div>
                     </div>
                     <div className="text-center px-4">
-                      <h3 className="font-bold text-xl flex items-center justify-center gap-2">{form.name || 'Пользователь'}</h3>
+                      <h3 className="font-bold text-xl flex items-center justify-center gap-2">
+                        {form.name || 'Пользователь'}
+                        {isPremium && <Crown className="w-4 h-4 text-accent" />}
+                      </h3>
                       <p className="text-sm text-muted-foreground">{form.username}</p>
                     </div>
                   </div>
 
-                  <div className="p-4 space-y-6">
+                  <div className="p-4 space-y-8">
+                    {/* Личные данные */}
                     <div className="space-y-4">
-                      <div className="space-y-1.5">
-                        <Label className="text-xs text-muted-foreground">Имя</Label>
-                        <Input value={form.name} onChange={e => setForm({...form, name: e.target.value})} className="bg-muted/30 border-none h-11 rounded-xl" />
-                      </div>
-                      <div className="space-y-1.5">
-                        <Label className="text-xs text-muted-foreground">Никнейм</Label>
-                        <Input value={form.username} onChange={e => setForm({...form, username: e.target.value})} className="bg-muted/30 border-none h-11 rounded-xl" />
-                      </div>
-                      <div className="space-y-1.5">
-                        <Label className="text-xs text-muted-foreground">Био</Label>
-                        <Textarea value={form.bio} onChange={e => setForm({...form, bio: e.target.value})} className="bg-muted/30 border-none rounded-xl resize-none h-20" placeholder="Кратко о себе..." />
+                      <h4 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground px-1">Профиль</h4>
+                      <div className="space-y-4">
+                        <div className="space-y-1.5">
+                          <Label className="text-xs text-muted-foreground ml-1">Имя</Label>
+                          <Input value={form.name} onChange={e => setForm({...form, name: e.target.value})} className="bg-muted/30 border-none h-11 rounded-xl" />
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label className="text-xs text-muted-foreground ml-1">Никнейм</Label>
+                          <Input value={form.username} onChange={e => setForm({...form, username: e.target.value})} className="bg-muted/30 border-none h-11 rounded-xl" />
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label className="text-xs text-muted-foreground ml-1">Био</Label>
+                          <Textarea value={form.bio} onChange={e => setForm({...form, bio: e.target.value})} className="bg-muted/30 border-none rounded-xl resize-none h-20" placeholder="Кратко о себе..." />
+                        </div>
                       </div>
                     </div>
 
-                    <div className="p-4 rounded-2xl bg-muted/30 border border-border/40 cursor-pointer" onClick={() => setShowStore(true)}>
+                    {/* Premium карточка */}
+                    <div className="p-4 rounded-2xl bg-muted/30 border border-border/40 cursor-pointer group hover:border-primary/30 transition-colors" onClick={() => setShowStore(true)}>
                       <div className="flex items-center justify-between mb-4">
                         <div className="flex items-center gap-2">
                           <Crown className={cn("w-5 h-5", isPremium ? "text-accent" : "text-muted-foreground")} />
                           <span className="font-bold text-sm">Nuxus Premium</span>
                         </div>
-                        {isPremium && <Check className="text-accent w-5 h-5" />}
+                        {isPremium ? (
+                          <Check className="text-accent w-5 h-5" />
+                        ) : (
+                          <div className="text-[10px] font-bold text-primary uppercase tracking-widest">Купить</div>
+                        )}
                       </div>
-                      {!isPremium && <Button variant="outline" className="w-full h-9 rounded-xl text-xs font-bold">Подключить</Button>}
+                      {!isPremium && <p className="text-[10px] text-muted-foreground leading-relaxed mb-4">Разблокируйте видеосообщения, эксклюзивные иконки и AI-функции.</p>}
+                      {!isPremium && <Button variant="outline" className="w-full h-9 rounded-xl text-xs font-bold border-primary/20">Подключить</Button>}
                     </div>
 
+                    {/* Оформление */}
                     <div className="space-y-4">
-                      <div className="space-y-1.5">
-                        <Label className="text-xs flex items-center gap-2"><Type className="w-3 h-3" /> Текст</Label>
-                        <Select value={form.messageSize} onValueChange={(val) => setForm({...form, messageSize: val as any})}>
-                          <SelectTrigger className="bg-background/50 border-none rounded-xl h-10"><SelectValue /></SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="small">Мелкий</SelectItem>
-                            <SelectItem value="medium">Средний</SelectItem>
-                            <SelectItem value="large">Крупный</SelectItem>
-                          </SelectContent>
-                        </Select>
+                      <h4 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground px-1">Оформление</h4>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-1.5">
+                          <Label className="text-xs flex items-center gap-2"><Type className="w-3 h-3" /> Текст</Label>
+                          <Select value={form.messageSize} onValueChange={(val) => setForm({...form, messageSize: val as any})}>
+                            <SelectTrigger className="bg-background/50 border-none rounded-xl h-10"><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="small">Мелкий</SelectItem>
+                              <SelectItem value="medium">Средний</SelectItem>
+                              <SelectItem value="large">Крупный</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label className="text-xs flex items-center gap-2"><Palette className="w-3 h-3" /> Обои</Label>
+                          <Select value={form.chatBackground} onValueChange={(val) => setForm({...form, chatBackground: val})}>
+                            <SelectTrigger className="bg-background/50 border-none rounded-xl h-10"><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              {BACKGROUNDS.map(bg => <SelectItem key={bg.value} value={bg.value}>{bg.name}</SelectItem>)}
+                            </SelectContent>
+                          </Select>
+                        </div>
                       </div>
-                      <div className="space-y-1.5">
-                        <Label className="text-xs">Обои чата</Label>
-                        <Select value={form.chatBackground} onValueChange={(val) => setForm({...form, chatBackground: val})}>
-                          <SelectTrigger className="bg-background/50 border-none rounded-xl h-10"><SelectValue /></SelectTrigger>
-                          <SelectContent>
-                            {BACKGROUNDS.map(bg => <SelectItem key={bg.value} value={bg.value}>{bg.name}</SelectItem>)}
-                          </SelectContent>
-                        </Select>
+                    </div>
+
+                    {/* Конфиденциальность */}
+                    <div className="space-y-4">
+                      <h4 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground px-1">Конфиденциальность</h4>
+                      <div className="space-y-4 bg-muted/20 p-4 rounded-2xl border border-border/20">
+                        <div className="space-y-1.5">
+                          <Label className="text-[10px] flex items-center gap-2 text-muted-foreground"><Eye className="w-3 h-3" /> Кто видит мой номер</Label>
+                          <Select value={form.phoneVisibility} onValueChange={(val) => setForm({...form, phoneVisibility: val as any})}>
+                            <SelectTrigger className="bg-background/50 border-none rounded-xl h-10"><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="everybody">Все</SelectItem>
+                              <SelectItem value="contacts">Контакты</SelectItem>
+                              <SelectItem value="nobody">Никто</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label className="text-[10px] flex items-center gap-2 text-muted-foreground"><ShieldCheck className="w-3 h-3" /> Последний вход</Label>
+                          <Select value={form.lastSeenVisibility} onValueChange={(val) => setForm({...form, lastSeenVisibility: val as any})}>
+                            <SelectTrigger className="bg-background/50 border-none rounded-xl h-10"><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="everybody">Все</SelectItem>
+                              <SelectItem value="nobody">Никто (был недавно)</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label className="text-[10px] flex items-center gap-2 text-muted-foreground"><Users className="w-3 h-3" /> Кто может добавить в группы</Label>
+                          <Select value={form.allowGroupsFrom} onValueChange={(val) => setForm({...form, allowGroupsFrom: val as any})}>
+                            <SelectTrigger className="bg-background/50 border-none rounded-xl h-10"><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="everybody">Все</SelectItem>
+                              <SelectItem value="contacts">Контакты</SelectItem>
+                              <SelectItem value="nobody">Никто</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label className="text-[10px] flex items-center gap-2 text-muted-foreground"><MessageCircle className="w-3 h-3" /> Кто может мне писать</Label>
+                          <Select value={form.whoCanMessageMe} onValueChange={(val) => setForm({...form, whoCanMessageMe: val as any})}>
+                            <SelectTrigger className="bg-background/50 border-none rounded-xl h-10"><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="everybody">Все</SelectItem>
+                              <SelectItem value="premium">Только Premium</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
                       </div>
                     </div>
 
@@ -317,8 +384,10 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
           </div>
 
           {!showStore && (
-            <div className="p-4 border-t border-border/20 bg-muted/20">
-              <Button className="w-full h-12 rounded-xl font-bold" onClick={handleSave}><Check className="w-5 h-5 mr-2" /> Применить</Button>
+            <div className="p-4 border-t border-border/20 bg-muted/20 shrink-0">
+              <Button className="w-full h-12 rounded-xl font-bold bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20" onClick={handleSave}>
+                <Check className="w-5 h-5 mr-2" /> Применить
+              </Button>
             </div>
           )}
         </DialogContent>
