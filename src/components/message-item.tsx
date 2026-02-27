@@ -23,7 +23,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { format } from 'date-fns';
-import { SmilePlus, CornerUpLeft, Pencil, Trash2, Check, CheckCheck, ZoomIn, Pin, Play, Pause, Mic, Star, Languages, Loader2 } from 'lucide-react';
+import { SmilePlus, CornerUpLeft, Pencil, Trash2, Check, CheckCheck, ZoomIn, Pin, Play, Pause, Mic, Star, Languages, Loader2, Lock } from 'lucide-react';
 import { cn, isUserPremium } from '@/lib/utils';
 import { collection, doc } from 'firebase/firestore';
 import { deleteDocumentNonBlocking, addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
@@ -353,7 +353,7 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onEdit, size 
                       {message.editedAt && <span>изменено</span>}
                       <span>{formattedTime}</span>
                       {isMe && (
-                        message.isRead ? <CheckCheck className="w-3 h-3 text-accent" /> : <Check className="w-3 h-3" />
+                        message.isRead ? <CheckCheck className="w-3 h-3 text-accent" /> : <Check className="w-3 h-3 text-white/70" />
                       )}
                     </div>
                   )}

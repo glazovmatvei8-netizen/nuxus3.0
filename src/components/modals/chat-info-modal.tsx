@@ -4,7 +4,7 @@
 import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { UserAvatar } from '@/components/user-avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Sparkles, Loader2, Trash2, ShieldAlert, ShieldCheck, Ban, UserPlus, Info, Copy, Check, Star, Crown, Gift, XCircle, Calendar } from 'lucide-react';
@@ -162,7 +162,6 @@ export function ChatInfoModal({ open, onOpenChange, chat }: ChatInfoModalProps) 
   };
 
   const chatName = formatDisplayName(chat.name || (otherUserProfile?.name) || 'Чат');
-  const chatAvatar = chat.avatarUrl || otherUserProfile?.avatarUrl;
 
   return (
     <>
@@ -170,15 +169,12 @@ export function ChatInfoModal({ open, onOpenChange, chat }: ChatInfoModalProps) 
         <DialogContent className="max-w-md bg-card/95 backdrop-blur-xl border-border/40 p-0 overflow-hidden h-[90vh] flex flex-col">
           <DialogHeader className="p-6 bg-primary/5 border-b border-border/40 text-center flex flex-col items-center shrink-0">
             <div className="relative mb-4">
-              <Avatar className="h-24 w-24 ring-4 ring-primary/10 shadow-xl">
-                <AvatarImage src={chatAvatar || ''} className="object-cover" />
-                <AvatarFallback className="text-2xl font-bold bg-primary/20 text-primary">{chatName.slice(0, 2)}</AvatarFallback>
-              </Avatar>
-              {isTargetPremium && (
-                <div className="absolute -bottom-1 -right-1 bg-gradient-to-tr from-purple-500 to-accent p-1.5 rounded-full shadow-lg border-4 border-background">
-                  <Star className="w-4 h-4 text-white fill-white" />
-                </div>
-              )}
+              <UserAvatar 
+                userId={isPrivate ? otherId : null} 
+                manualAvatarUrl={chat.avatarUrl}
+                className="h-24 w-24 ring-4 ring-primary/10 shadow-xl"
+                fallbackName={chatName}
+              />
             </div>
             <DialogTitle className="text-xl flex items-center justify-center gap-2">
               {chatName}
@@ -305,10 +301,11 @@ export function ChatInfoModal({ open, onOpenChange, chat }: ChatInfoModalProps) 
                     {members?.map(userMember => (
                       <div key={userMember.id} className="flex items-center justify-between p-3 rounded-xl hover:bg-muted/40 transition-colors group">
                         <div className="flex items-center gap-3">
-                          <Avatar className="h-10 w-10">
-                            <AvatarImage src={userMember.avatarUrl || ''} className="object-cover" />
-                            <AvatarFallback className="bg-primary/20 text-primary font-bold uppercase">{userMember.name?.slice(0, 2)}</AvatarFallback>
-                          </Avatar>
+                          <UserAvatar 
+                            userId={userMember.id} 
+                            className="h-10 w-10"
+                            fallbackName={userMember.name}
+                          />
                           <div className="flex flex-col">
                             <span className="text-sm font-semibold flex items-center gap-1">
                               {formatDisplayName(userMember.name)}

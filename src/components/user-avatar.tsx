@@ -20,6 +20,7 @@ interface UserAvatarProps {
 
 /**
  * Умный компонент аватарки с поддержкой Premium-значка.
+ * Позиционирование звезды исправлено: теперь она сидит ровно в углу.
  */
 export function UserAvatar({ userId, className, fallbackName, fallbackClassName, manualAvatarUrl }: UserAvatarProps) {
   const db = useFirestore();
@@ -45,14 +46,13 @@ export function UserAvatar({ userId, className, fallbackName, fallbackClassName,
       <Avatar className={cn("shrink-0 relative overflow-hidden", className)}>
         {!isLoading && displayAvatar && !imgError ? (
           <Image 
-            key={displayAvatar}
+            key={displayAvatar || 'placeholder'}
             src={displayAvatar} 
             alt={displayName} 
             fill
-            sizes="(max-width: 768px) 100vw, 48px"
+            sizes="(max-width: 768px) 100vw, 128px"
             className="object-cover animate-in fade-in duration-300"
             onError={() => setImgError(true)}
-            priority={userId === 'currentUser'}
           />
         ) : (
           <AvatarFallback className={cn("bg-primary/20 text-primary font-bold uppercase h-full w-full flex items-center justify-center", fallbackClassName)}>
@@ -61,9 +61,11 @@ export function UserAvatar({ userId, className, fallbackName, fallbackClassName,
         )}
       </Avatar>
       {premium && (
-        <div className="absolute bottom-0 right-0 z-10 p-[1px] bg-background rounded-full overflow-hidden translate-x-[15%] translate-y-[15%]">
-          <div className="bg-gradient-to-tr from-purple-500 to-accent p-[2px] rounded-full shadow-sm">
-            <Star className="w-3 h-3 text-white fill-white" />
+        <div className="absolute bottom-0 right-0 z-10 translate-x-[10%] translate-y-[10%]">
+          <div className="bg-background rounded-full p-[2px]">
+            <div className="bg-gradient-to-tr from-purple-500 to-accent p-[2px] rounded-full shadow-lg border border-background/20">
+              <Star className="w-3 h-3 text-white fill-white" />
+            </div>
           </div>
         </div>
       )}
