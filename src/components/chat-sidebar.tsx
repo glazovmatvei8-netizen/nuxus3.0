@@ -13,10 +13,11 @@ import { CreateChatModal } from './modals/create-chat-modal';
 import { SettingsModal } from './modals/settings-modal';
 import type { ChatType, User, Message, Chat } from '@/lib/types';
 import { useFirestore, useUser, useCollection, useDoc, useMemoFirebase } from '@/firebase';
-import { collection, query, where, doc, getDocs, addDoc, limit } from 'firebase/firestore';
+import { collection, query, where, doc, getDocs, addDoc, limit, arrayUnion, arrayRemove } from 'firebase/firestore';
 import { formatLastSeen, formatDisplayName, cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
+import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 export default function ChatSidebar() {
   const { user } = useUser();
@@ -47,6 +48,16 @@ export default function ChatSidebar() {
   const { data: chats, isLoading: isChatsLoading } = useCollection<Chat>(chatsQuery);
 
   const pinnedIds = profile?.pinnedChatIds || [];
+
+  const handleTogglePin = (chatId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!db || !user || !userProfileRef) return;
+    const isPinned = pinnedIds.includes(chatId);
+    updateDocumentNonBlocking(userProfileRef, {
+      pinnedChatIds: isPinned ? arrayRemove(chatId) : arrayUnion(chatId)
+    });
+    toast({ title: isPinned ? "Чат откреплен" : "Чат закреплен" });
+  };
 
   // Эффект для глобального поиска по @username
   useEffect(() => {
@@ -114,6 +125,7 @@ export default function ChatSidebar() {
           participantIds: [user.uid],
           adminIds: [user.uid],
           createdAt: new Date().toISOString(),
+          lastMessageAt: new Date().toISOString(),
           avatarUrl: null
         });
         setCurrentChatId(newSaved.id);
@@ -125,7 +137,21 @@ export default function ChatSidebar() {
     }
   };
 
-  const allFilteredChats = (chats || []).filter(chat => {
+  const sortedChats = useMemo(() => {
+    if (!chats) return [];
+    return [...chats].sort((a, b) => {
+      const aPinned = pinnedIds.includes(a.id);
+      const bPinned = pinnedIds.includes(b.id);
+      if (aPinned && !bPinned) return -1;
+      if (!aPinned && bPinned) return 1;
+      
+      const aTime = a.lastMessageAt ? new Date(a.lastMessageAt).getTime() : new Date(a.createdAt).getTime();
+      const bTime = b.lastMessageAt ? new Date(b.lastMessageAt).getTime() : new Date(b.createdAt).getTime();
+      return bTime - aTime;
+    });
+  }, [chats, pinnedIds]);
+
+  const filteredChats = sortedChats.filter(chat => {
     if (chat.type === 'saved') return false; 
     const otherId = chat.type === 'private' && user && chat.participantIds
       ? chat.participantIds.find((id: string) => id !== user.uid)
@@ -234,7 +260,7 @@ export default function ChatSidebar() {
               </div>
             )}
 
-            {allFilteredChats.map(chat => {
+            {filteredChats.map(chat => {
               const otherId = chat.type === 'private' && user ? chat.participantIds?.find((id: string) => id !== user.uid) : null;
               const chatDisplayName = otherId && chat.metadata && chat.metadata[otherId] ? chat.metadata[otherId].name : chat.name;
               const chatAvatarUrl = otherId && chat.metadata && chat.metadata[otherId] ? chat.metadata[otherId].avatarUrl : chat.avatarUrl;
@@ -248,11 +274,12 @@ export default function ChatSidebar() {
                   manualAvatarUrl={chatAvatarUrl}
                   onClick={() => setCurrentChatId(chat.id)}
                   isPinned={pinnedIds.includes(chat.id)}
+                  onTogglePin={(e: any) => handleTogglePin(chat.id, e)}
                 />
               );
             })}
 
-            {!isSearchingGlobal && searchQuery.length > 0 && allFilteredChats.length === 0 && !globalSearchResult && (
+            {!isSearchingGlobal && searchQuery.length > 0 && filteredChats.length === 0 && !globalSearchResult && (
               <div className="p-8 text-center text-muted-foreground text-xs italic">
                 Ничего не найдено
               </div>
@@ -282,7 +309,7 @@ export default function ChatSidebar() {
   );
 }
 
-function ChatListItem({ chat, isActive, otherId, cachedDisplayName, manualAvatarUrl, onClick, isPinned, isGlobalResult }: any) {
+function ChatListItem({ chat, isActive, otherId, cachedDisplayName, manualAvatarUrl, onClick, isPinned, isGlobalResult, onTogglePin }: any) {
   const db = useFirestore();
   const { user } = useUser();
   const [status, setStatus] = useState<string>('');
@@ -351,6 +378,19 @@ function ChatListItem({ chat, isActive, otherId, cachedDisplayName, manualAvatar
             {isPinned && <Pin className="w-3 h-3 rotate-45 shrink-0" />}
           </span>
           <div className="flex items-center gap-1">
+            {onTogglePin && (
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className={cn(
+                  "h-6 w-6 rounded-full md:opacity-0 group-hover:opacity-100 transition-opacity",
+                  isPinned ? "text-accent" : "text-muted-foreground"
+                )}
+                onClick={onTogglePin}
+              >
+                <Pin className={cn("w-3 h-3", isPinned && "fill-accent")} />
+              </Button>
+            )}
             {unreadCount > 0 && !isActive && (
               <Badge variant="default" className="bg-accent text-white rounded-full h-5 min-w-5 flex items-center justify-center text-[10px] font-bold px-1">
                 {unreadCount}

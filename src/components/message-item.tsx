@@ -106,7 +106,9 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onEdit, size 
     } catch (e) {} finally { setIsTranscribing(false); }
   };
 
-  const handlePaymentAction = async (action: 'confirm' | 'reject') => {
+  const handlePaymentAction = async (action: 'confirm' | 'reject', e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
     if (!isAdmin || !db || !message.paymentData || isActionLoading) return;
     setIsActionLoading(true);
 
@@ -116,9 +118,9 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onEdit, size 
 
       if (action === 'confirm') {
         if (message.paymentData.type === 'premium') {
-          // Получаем текущего пользователя для расчета даты
-          const targetUserSnap = await useDoc(targetUserRef);
-          const currentExpiry = targetUserSnap.data?.premiumUntil ? new Date(targetUserSnap.data.premiumUntil) : new Date();
+          const targetUserSnap = await getDocs(query(collection(db, 'users'), where('id', '==', message.paymentData.targetUserId), limit(1)));
+          const targetData = targetUserSnap.docs[0]?.data();
+          const currentExpiry = targetData?.premiumUntil ? new Date(targetData.premiumUntil) : new Date();
           const newExpiry = message.paymentData.unit === 'months' 
             ? addMonths(currentExpiry, message.paymentData.amount || 1).toISOString()
             : addYears(currentExpiry, message.paymentData.amount || 1).toISOString();
@@ -197,7 +199,7 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onEdit, size 
               <Button 
                 size="sm" 
                 className="flex-1 bg-primary hover:bg-primary/90 rounded-xl h-9 text-xs font-bold"
-                onClick={() => handlePaymentAction('confirm')}
+                onClick={(e) => handlePaymentAction('confirm', e)}
                 disabled={isActionLoading}
               >
                 {isActionLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4 mr-1" />}
@@ -207,7 +209,7 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onEdit, size 
                 size="sm" 
                 variant="outline" 
                 className="flex-1 border-destructive/20 text-destructive hover:bg-destructive/10 rounded-xl h-9 text-xs font-bold"
-                onClick={() => handlePaymentAction('reject')}
+                onClick={(e) => handlePaymentAction('reject', e)}
                 disabled={isActionLoading}
               >
                 {isActionLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <XCircle className="w-4 h-4 mr-1" />}
@@ -263,15 +265,17 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onEdit, size 
     
     if (message.contentType === 'audio') {
       return (
-        <div className="flex items-center gap-2 p-2 bg-muted/20 rounded-xl mt-1">
-          <Mic className="w-4 h-4 text-primary" />
-          <span className="text-xs">Голосовое сообщение</span>
-          {amIPremium && !transcription && (
-            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={handleTranscribe} disabled={isTranscribing}>
-              {isTranscribing ? <Loader2 className="w-3 h-3 animate-spin" /> : <Languages className="w-3 h-3" />}
-            </Button>
-          )}
-          {transcription && <p className="text-[10px] italic opacity-80 mt-1">{transcription}</p>}
+        <div className="flex flex-col gap-1 mt-1">
+          <div className="flex items-center gap-2 p-2 bg-muted/20 rounded-xl">
+            <Mic className="w-4 h-4 text-primary" />
+            <span className="text-xs">Голосовое сообщение</span>
+            {amIPremium && !transcription && (
+              <Button variant="ghost" size="icon" className="h-6 w-6" onClick={handleTranscribe} disabled={isTranscribing}>
+                {isTranscribing ? <Loader2 className="w-3 h-3 animate-spin" /> : <Languages className="w-3 h-3" />}
+              </Button>
+            )}
+          </div>
+          {transcription && <p className="text-[10px] italic opacity-80 p-2 bg-primary/5 rounded-lg border border-primary/10">{transcription}</p>}
         </div>
       );
     }

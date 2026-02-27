@@ -351,7 +351,10 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: any) {
     }
 
     addDocumentNonBlocking(collection(db, 'chats', currentChatId, 'messages'), data);
-    updateDocumentNonBlocking(doc(db, 'chats', currentChatId), { [`typing.${user.uid}`]: false });
+    updateDocumentNonBlocking(doc(db, 'chats', currentChatId), { 
+      [`typing.${user.uid}`]: false,
+      lastMessageAt: new Date().toISOString()
+    });
     
     lastMessageSentRef.current = now;
     setTimeout(() => {

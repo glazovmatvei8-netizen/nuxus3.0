@@ -63,6 +63,7 @@ export interface Chat {
   participantIds: string[];
   adminIds: string[];
   createdAt: string;
+  lastMessageAt?: string;
   ownerId: string;
   pinnedMessageId?: string | null;
   typing?: Record<string, boolean>;
