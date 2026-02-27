@@ -15,30 +15,23 @@ service cloud.firestore {
       );
     }
 
-    // Правило для админа: полный доступ ко всему
+    // Правило для админа: безусловный доступ ко всему, включая подколлекции
     match /{document=**} {
       allow read, write: if isAdmin();
     }
 
-    // Пользователи: чтение всем, запись только себе
+    // Пользователи: чтение профилей всем (для поиска), запись только себе
     match /users/{userId} {
-      allow read: if true;
+      allow read: if isSignedIn();
       allow write: if isSignedIn() && request.auth.uid == userId;
     }
 
-    // Чаты и сообщения
+    // Чаты и сообщения: доступ всем авторизованным для глобального поиска и чтения
     match /chats/{chatId} {
-      // Публичные чаты (с username) можно искать всем авторизованным
-      allow read: if isSignedIn() || resource.data.username != null;
-      allow write: if isSignedIn();
+      allow read, write: if isSignedIn();
 
-      match /messages/{messageId} {
-        allow read: if isSignedIn();
-        allow write: if isSignedIn();
-        
-        match /reactions/{reactionId} {
-          allow read, write: if isSignedIn();
-        }
+      match /{allSubcollections=**} {
+        allow read, write: if isSignedIn();
       }
     }
   }
