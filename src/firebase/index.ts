@@ -7,29 +7,30 @@ import { getAuth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 import { initializeAppCheck, ReCaptchaEnterpriseProvider } from 'firebase/app-check';
 
-// Инициализация Firebase с поддержкой App Check
+// Инициализация Firebase с максимально надежной обработкой App Check
 export function initializeFirebase() {
   if (!getApps().length) {
     let firebaseApp;
     try {
       firebaseApp = initializeApp(firebaseConfig);
     } catch (e) {
-      console.error('Firebase initialization failed:', e);
+      console.error('Firebase initialization critical failure:', e);
+      // Если инициализация упала совсем, пробуем еще раз (редкий случай)
       firebaseApp = initializeApp(firebaseConfig);
     }
 
-    // App Check помогает защитить ваш проект от несанкционированного доступа ботов.
-    // Если у вас нет ключа ReCaptcha Enterprise, этот блок можно пропустить.
+    // App Check инициализируется только в браузере и не блокирует работу если упадет
     if (typeof window !== 'undefined') {
       try {
-        // Мы используем тот же API ключ для инициализации провайдера
+        // Мы используем тот же API ключ для инициализации провайдера ReCaptcha
+        // Если вы видите ошибки 403 в консоли, проверьте настройки ReCaptcha в Google Cloud
         initializeAppCheck(firebaseApp, {
           provider: new ReCaptchaEnterpriseProvider(firebaseConfig.apiKey),
           isTokenAutoRefreshEnabled: true,
         });
       } catch (err) {
-        // Не блокируем работу приложения, если App Check не инициализировался
-        console.warn('App Check failed to initialize, continuing without it:', err);
+        // Логируем, но не падаем, чтобы Auth работал
+        console.warn('App Check failed to start. App will work without enhanced protection:', err);
       }
     }
 
