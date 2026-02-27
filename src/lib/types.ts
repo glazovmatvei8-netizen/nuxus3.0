@@ -1,5 +1,5 @@
 
-export type MessageType = 'text' | 'image' | 'service' | 'audio' | 'video';
+export type MessageType = 'text' | 'image' | 'service';
 
 export interface Reaction {
   emoji: string;
@@ -33,13 +33,11 @@ export interface Chat {
   adminIds: string[];
   createdAt: string;
   ownerId: string;
-  pinnedMessageId?: string | null;
   typing?: Record<string, boolean>;
   metadata?: Record<string, {
     name: string;
     username: string;
     avatarUrl: string | null;
-    bio?: string;
   }>;
 }
 
@@ -61,11 +59,9 @@ export interface User {
   phone: string;
   name: string;
   username: string;
-  bio?: string;
   avatarUrl: string | null;
   lastSeen?: string;
   createdAt: string;
-  inactivityDeletion: '1-month' | '3-months' | '6-months' | '1-year' | 'never';
   settings?: UserSettings;
   blockedUserIds?: string[];
   pinnedChatIds?: string[];

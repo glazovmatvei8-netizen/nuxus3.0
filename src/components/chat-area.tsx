@@ -16,13 +16,11 @@ import { MessageItem } from './message-item';
 import { useToast } from '@/hooks/use-toast';
 import { ChatInfoModal } from './modals/chat-info-modal';
 import { useFirestore, useUser, useCollection, useDoc, useMemoFirebase } from '@/firebase';
-import { collection, query, orderBy, doc, arrayUnion } from 'firebase/firestore';
+import { collection, query, orderBy, doc } from 'firebase/firestore';
 import { addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { suggestMessageDraft } from '@/ai/flows/ai-message-drafting-flow';
-import { cn, formatDisplayName } from '@/lib/utils';
-import { formatLastSeen } from '@/lib/utils';
+import { cn, formatDisplayName, formatLastSeen } from '@/lib/utils';
 import type { Message, User } from '@/lib/types';
-import Image from 'next/image';
 
 const ChatInput = React.memo(({ 
   onSend, 
@@ -127,8 +125,6 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: any) {
   }, [db, user]);
   const { data: userProfile } = useDoc<User>(userProfileRef);
 
-  const isAdmin = userProfile?.phone === '+79513332147' || user?.email === '79513332147@nuxus.chat';
-
   const chatRef = useMemoFirebase(() => {
     if (!db || !currentChatId) return null;
     return doc(db, 'chats', currentChatId);
@@ -165,6 +161,10 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: any) {
   const handleTyping = useCallback((isTyping: boolean) => {
     if (!currentChatId || !user || !db || isBlocked) return;
     
+    // Блокировка для удаленных
+    const isOtherDeleted = otherUserProfile?.isBanned || otherUserProfile?.name?.includes('Удалённый Аккаунт');
+    if (isOtherDeleted) return;
+
     const now = Date.now();
     const chatDocRef = doc(db, 'chats', currentChatId);
 
@@ -185,7 +185,7 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: any) {
       updateDocumentNonBlocking(chatDocRef, { [`typing.${user.uid}`]: false });
       lastTypingSignalRef.current = 0;
     }
-  }, [currentChatId, user, db, isBlocked]);
+  }, [currentChatId, user, db, isBlocked, otherUserProfile]);
 
   useEffect(() => {
     const isOtherDeleted = otherUserProfile?.isBanned || otherUserProfile?.name?.includes('Удалённый Аккаунт');
@@ -338,7 +338,7 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: any) {
               {pendingPhotos.length > 0 && (
                 <div className="bg-card/90 backdrop-blur-md p-4 rounded-2xl mb-2 border border-primary/20 animate-in slide-in-from-bottom-5">
                   <div className="flex items-center justify-between mb-3">
-                    <span className="text-xs font-bold text-primary flex items-center gap-2"><Images className="w-4 h-4" />Выбрано фото ({pendingPhotos.length})</span>
+                    <span className="text-xs font-bold text-primary flex items-center gap-2">Выбрано фото ({pendingPhotos.length})</span>
                     <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setPendingPhotos([])}><X className="w-4 h-4" /></Button>
                   </div>
                   <div className="mt-3 flex gap-2">

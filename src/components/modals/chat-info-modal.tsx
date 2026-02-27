@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { Sparkles, Loader2, Trash2, ShieldAlert, ShieldCheck, Ban, Gavel, UserX, UserPlus, Info } from 'lucide-react';
+import { Sparkles, Loader2, Trash2, ShieldAlert, ShieldCheck, Ban, UserPlus, Info } from 'lucide-react';
 import { useFirestore, useCollection, useMemoFirebase, useUser, useDoc } from '@/firebase';
 import { collection, query, where, orderBy, limit, getDocs, doc, arrayUnion, arrayRemove } from 'firebase/firestore';
 import { chatConversationSummary } from '@/ai/flows/chat-conversation-summary-flow';
@@ -149,13 +149,13 @@ export function ChatInfoModal({ open, onOpenChange, chat }: ChatInfoModalProps) 
 
             <ScrollArea className="flex-1">
               <TabsContent value="info" className="p-6 space-y-6 m-0">
-                {(otherUserProfile?.bio || chat.description) && (
+                {chat.description && (
                   <div className="space-y-2">
                     <h3 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-2">
                       <Info className="w-3 h-3" /> Описание
                     </h3>
                     <p className="text-sm bg-muted/10 p-3 rounded-lg border border-border/20 italic">
-                      {isPrivate ? otherUserProfile?.bio : chat.description}
+                      {chat.description}
                     </p>
                   </div>
                 )}

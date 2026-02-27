@@ -4,7 +4,6 @@
 import React, { useState, useMemo, memo } from 'react';
 import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { UserAvatar } from '@/components/user-avatar';
-import { Button } from '@/components/ui/button';
 import { 
   Popover, 
   PopoverContent, 
@@ -27,7 +26,7 @@ import { format } from 'date-fns';
 import { SmilePlus, CornerUpLeft, Pencil, Trash2, Check, CheckCheck, ZoomIn } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { collection, doc } from 'firebase/firestore';
-import { addDocumentNonBlocking, deleteDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { deleteDocumentNonBlocking, addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import type { Message } from '@/lib/types';
 import Image from 'next/image';
 
@@ -43,7 +42,7 @@ interface MessageItemProps {
 const REACTIONS = ['❤️', '👍', '😂', '😮', '😢', '🔥', '👏'];
 
 export const MessageItem = memo(({ message, isMe, chatId, onReply, onEdit, size = 'medium' }: MessageItemProps) => {
-  const { user } = user || useUser();
+  const { user } = useUser();
   const db = useFirestore();
   const [isReactionPickerOpen, setIsReactionPickerOpen] = useState(false);
   const [isImageFullViewOpen, setIsImageFullViewOpen] = useState(false);

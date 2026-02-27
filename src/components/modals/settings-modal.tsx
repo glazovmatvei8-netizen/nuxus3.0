@@ -6,7 +6,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { 
   Select, 
   SelectContent, 
@@ -17,7 +16,7 @@ import {
 import { useAuth, useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
-  LogOut, User, LayoutGrid, Palette, Loader2, Sparkles, X, Wand2, AtSign, Settings2, Check, ShieldCheck, Lock, Trash2, UserX, Users, FileText
+  LogOut, User, LayoutGrid, Palette, Loader2, Sparkles, Wand2, AtSign, Settings2, Check, ShieldCheck, Lock, UserX
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { signOut } from 'firebase/auth';
@@ -59,13 +58,11 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
   const [form, setForm] = useState({
     name: '',
     username: '',
-    bio: '',
     avatarUrl: '',
     chatBackground: 'default',
     phoneVisibility: 'nobody',
     lastSeenVisibility: 'everybody',
     allowGroupsFrom: 'everybody',
-    inactivityDeletion: 'never',
   });
 
   const [showBrandVisual, setShowBrandVisual] = useState(false);
@@ -79,13 +76,11 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
       setForm({
         name: profile.name || '',
         username: profile.username || '',
-        bio: profile.bio || '',
         avatarUrl: profile.avatarUrl || '',
         chatBackground: profile.settings?.chatBackground || 'default',
         phoneVisibility: profile.settings?.privacy?.phoneVisibility || 'nobody',
         lastSeenVisibility: profile.settings?.privacy?.lastSeenVisibility || 'everybody',
         allowGroupsFrom: profile.settings?.privacy?.allowGroupsFrom || 'everybody',
-        inactivityDeletion: profile.inactivityDeletion || 'never',
       });
       if (open) isInitialized.current = true;
     }
@@ -102,9 +97,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
     updateDocumentNonBlocking(userRef, {
       name: form.name,
       username: form.username,
-      bio: form.bio,
       avatarUrl: form.avatarUrl,
-      inactivityDeletion: form.inactivityDeletion,
       settings: {
         ...profile?.settings,
         chatBackground: form.chatBackground,
@@ -126,7 +119,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
   };
 
   const handleDeleteAccount = async () => {
-    if (!userRef || !confirm('Внимание! Это действие необратимо. Ваш аккаунт будет полностью удален, а номер телефона заблокирован. Продолжить?')) return;
+    if (!userRef || !confirm('Внимание! Это действие необратимо. Ваш аккаунт будет полностью удален. Продолжить?')) return;
     
     setIsDeleting(true);
     try {
@@ -134,9 +127,6 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
         isBanned: true,
         name: "Удалённый Аккаунт🚫",
         username: "@deleted",
-        phone: profile?.phone || 'deleted',
-        avatarUrl: null,
-        lastSeen: null,
         deletedAt: new Date().toISOString()
       });
       toast({ title: "Аккаунт удален" });
@@ -198,7 +188,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                   <div className="absolute bottom-0 right-0 bg-primary p-2 rounded-full border-2 border-background shadow-lg">
                     <LayoutGrid className="w-4 h-4 text-white" />
                   </div>
-                  <input type="file" key={form.avatarUrl} ref={avatarInputRef} className="hidden" accept="image/*" onChange={(e) => {
+                  <input type="file" ref={avatarInputRef} className="hidden" accept="image/*" onChange={(e) => {
                     const f = e.target.files?.[0];
                     if (f) {
                       const r = new FileReader();
@@ -238,17 +228,6 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                       />
                     </div>
                   </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-xs ml-1 font-semibold text-muted-foreground flex items-center gap-2">
-                      <FileText className="w-3 h-3" /> О себе (Био)
-                    </Label>
-                    <Textarea 
-                      className="bg-background/50 rounded-xl border-border/20 min-h-[80px] resize-none" 
-                      placeholder="Расскажите о себе..."
-                      value={form.bio} 
-                      onChange={e => setForm({...form, bio: e.target.value})} 
-                    />
-                  </div>
                 </div>
               </div>
 
@@ -260,7 +239,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                 
                 <div className="space-y-4">
                   <div className="space-y-1.5">
-                    <Label className="text-xs ml-1 font-semibold text-muted-foreground">Номер телефона</Label>
+                    <Label className="text-xs ml-1 font-semibold text-muted-foreground">Кто видит номер телефона</Label>
                     <Select value={form.phoneVisibility} onValueChange={(val) => setForm({...form, phoneVisibility: val as any})}>
                       <SelectTrigger className="bg-background/50 h-11 rounded-xl">
                         <SelectValue />
@@ -287,9 +266,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                   </div>
 
                   <div className="space-y-1.5">
-                    <Label className="text-xs ml-1 font-semibold text-muted-foreground flex items-center gap-2">
-                      <Users className="w-3 h-3" /> Кто может добавлять меня в группы
-                    </Label>
+                    <Label className="text-xs ml-1 font-semibold text-muted-foreground">Кто может добавлять в группы</Label>
                     <Select value={form.allowGroupsFrom} onValueChange={(val) => setForm({...form, allowGroupsFrom: val as any})}>
                       <SelectTrigger className="bg-background/50 h-11 rounded-xl">
                         <SelectValue />
@@ -298,22 +275,6 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                         <SelectItem value="everybody">Все</SelectItem>
                         <SelectItem value="contacts">Мои контакты</SelectItem>
                         <SelectItem value="nobody">Никто</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <Label className="text-xs ml-1 font-semibold text-muted-foreground">Удалить аккаунт при неактивности</Label>
-                    <Select value={form.inactivityDeletion} onValueChange={(val) => setForm({...form, inactivityDeletion: val as any})}>
-                      <SelectTrigger className="bg-background/50 h-11 rounded-xl">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="1-month">Через 1 месяц</SelectItem>
-                        <SelectItem value="3-months">Через 3 месяца</SelectItem>
-                        <SelectItem value="6-months">Через 6 месяцев</SelectItem>
-                        <SelectItem value="1-year">Через 1 год</SelectItem>
-                        <SelectItem value="never">Никогда</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
