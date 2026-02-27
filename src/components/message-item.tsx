@@ -23,10 +23,10 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { format } from 'date-fns';
-import { SmilePlus, CornerUpLeft, Pencil, Trash2, Check, CheckCheck, ZoomIn } from 'lucide-react';
+import { SmilePlus, CornerUpLeft, Pencil, Trash2, Check, CheckCheck, ZoomIn, Pin } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { collection, doc } from 'firebase/firestore';
-import { deleteDocumentNonBlocking, addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { deleteDocumentNonBlocking, addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import type { Message } from '@/lib/types';
 import Image from 'next/image';
 
@@ -37,11 +37,12 @@ interface MessageItemProps {
   onReply?: () => void;
   onEdit?: () => void;
   size?: 'small' | 'medium' | 'large';
+  isAdmin?: boolean;
 }
 
 const REACTIONS = ['❤️', '👍', '😂', '😮', '😢', '🔥', '👏'];
 
-export const MessageItem = memo(({ message, isMe, chatId, onReply, onEdit, size = 'medium' }: MessageItemProps) => {
+export const MessageItem = memo(({ message, isMe, chatId, onReply, onEdit, size = 'medium', isAdmin = false }: MessageItemProps) => {
   const { user } = useUser();
   const db = useFirestore();
   const [isReactionPickerOpen, setIsReactionPickerOpen] = useState(false);
@@ -84,6 +85,21 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onEdit, size 
     deleteDocumentNonBlocking(doc(db, 'chats', chatId, 'messages', message.id));
   };
 
+  const handlePin = () => {
+    if (!db || !chatId || !message.id) return;
+    updateDocumentNonBlocking(doc(db, 'chats', chatId), { pinnedMessageId: message.id });
+    
+    // Отправляем системное сообщение о закреплении
+    addDocumentNonBlocking(collection(db, 'chats', chatId, 'messages'), {
+      chatId: chatId,
+      senderId: 'system',
+      senderName: 'Nuxus',
+      content: `${user?.displayName || 'Пользователь'} закрепил(а) сообщение`,
+      contentType: 'service',
+      sentAt: new Date().toISOString()
+    });
+  };
+
   const groupedReactions = useMemo(() => {
     return (reactionsData || []).reduce((acc: Record<string, string[]>, curr) => {
       if (!acc[curr.emoji]) acc[curr.emoji] = [];
@@ -120,7 +136,7 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onEdit, size 
         );
       case 'service':
         return (
-          <div className="flex justify-center my-4 w-full text-center">
+          <div className="flex justify-center my-4 w-full text-center px-4">
             <span className="bg-muted/30 px-4 py-1.5 rounded-full text-[10px] uppercase font-bold tracking-wider text-muted-foreground border border-border/20">
               {message.content}
             </span>
@@ -142,7 +158,7 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onEdit, size 
   return (
     <>
       <div id={`msg-${message.id}`} className={cn(
-        "flex gap-3 max-w-[85%] animate-in fade-in duration-150 px-1 py-0.5",
+        "flex gap-3 max-w-[85%] animate-in fade-in duration-150 px-1 py-0.5 transition-colors",
         isMe ? "ml-auto flex-row-reverse" : "mr-auto"
       )}>
         {!isMe && (
@@ -192,9 +208,12 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onEdit, size 
               {isMe && message.contentType === 'text' && (
                 <DropdownMenuItem onClick={onEdit} className="gap-2"><Pencil className="w-4 h-4" /> Изменить</DropdownMenuItem>
               )}
+              {isAdmin && (
+                <DropdownMenuItem onClick={handlePin} className="gap-2"><Pin className="w-4 h-4" /> Закрепить</DropdownMenuItem>
+              )}
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => setIsReactionPickerOpen(true)} className="gap-2"><SmilePlus className="w-4 h-4" /> Реакция</DropdownMenuItem>
-              {isMe && <DropdownMenuItem onClick={handleDelete} className="gap-2 text-destructive focus:text-destructive"><Trash2 className="w-4 h-4" /> Удалить</DropdownMenuItem>}
+              {(isMe || isAdmin) && <DropdownMenuItem onClick={handleDelete} className="gap-2 text-destructive focus:text-destructive"><Trash2 className="w-4 h-4" /> Удалить</DropdownMenuItem>}
             </DropdownMenuContent>
           </DropdownMenu>
 
@@ -252,7 +271,8 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onEdit, size 
   return prev.message.id === next.message.id && 
          prev.message.isRead === next.message.isRead && 
          prev.message.content === next.message.content &&
-         prev.message.editedAt === next.message.editedAt;
+         prev.message.editedAt === next.message.editedAt &&
+         prev.isAdmin === next.isAdmin;
 });
 
 MessageItem.displayName = 'MessageItem';

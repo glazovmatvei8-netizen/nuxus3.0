@@ -9,7 +9,7 @@ import { UserAvatar } from '@/components/user-avatar';
 import { 
   Send, Paperclip, Sparkles, MessageSquare, Info, X, 
   CornerUpLeft, Loader2, ShieldAlert, ChevronLeft, ChevronDown,
-  Search, MoreVertical, Mic, UserPlus
+  Search, MoreVertical, Mic, UserPlus, Pin
 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { MessageItem } from './message-item';
@@ -20,7 +20,7 @@ import { collection, query, orderBy, doc, arrayUnion } from 'firebase/firestore'
 import { addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { suggestMessageDraft } from '@/ai/flows/ai-message-drafting-flow';
 import { cn, formatDisplayName, formatLastSeen } from '@/lib/utils';
-import type { Message, User } from '@/lib/types';
+import type { Message, User as UserType, Chat } from '@/lib/types';
 
 const ChatInput = React.memo(({ 
   onSend, 
@@ -138,13 +138,19 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: any) {
     if (!db || !user) return null;
     return doc(db, 'users', user.uid);
   }, [db, user]);
-  const { data: userProfile } = useDoc<User>(userProfileRef);
+  const { data: userProfile } = useDoc<UserType>(userProfileRef);
 
   const chatRef = useMemoFirebase(() => {
     if (!db || !currentChatId) return null;
     return doc(db, 'chats', currentChatId);
   }, [db, currentChatId]);
-  const { data: chat } = useDoc(chatRef);
+  const { data: chat } = useDoc<Chat>(chatRef);
+
+  const pinnedMessageRef = useMemoFirebase(() => {
+    if (!db || !currentChatId || !chat?.pinnedMessageId) return null;
+    return doc(db, 'chats', currentChatId, 'messages', chat.pinnedMessageId);
+  }, [db, currentChatId, chat?.pinnedMessageId]);
+  const { data: pinnedMessage } = useDoc<Message>(pinnedMessageRef);
 
   const isParticipant = chat?.participantIds?.includes(user?.uid || '');
 
@@ -159,7 +165,7 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: any) {
     if (!db || !otherId) return null;
     return doc(db, 'users', otherId);
   }, [db, otherId]);
-  const { data: otherUserProfile, isLoading: isOtherProfileLoading } = useDoc<User>(otherUserProfileRef);
+  const { data: otherUserProfile, isLoading: isOtherProfileLoading } = useDoc<UserType>(otherUserProfileRef);
 
   const isBlockedByMe = userProfile?.blockedUserIds?.includes(otherId || '');
   const isBlockedByThem = otherUserProfile?.blockedUserIds?.includes(user?.uid || '');
@@ -192,6 +198,15 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: any) {
       }
     }
   }, []);
+
+  const scrollToMessage = (msgId: string) => {
+    const el = document.getElementById(`msg-${msgId}`);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      el.classList.add('bg-primary/20');
+      setTimeout(() => el.classList.remove('bg-primary/20'), 2000);
+    }
+  };
 
   useEffect(() => {
     if (messages && messages.length > 0) {
@@ -313,6 +328,13 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: any) {
     }
   };
 
+  const handleUnpin = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!db || !currentChatId) return;
+    updateDocumentNonBlocking(doc(db, 'chats', currentChatId), { pinnedMessageId: null });
+    toast({ title: "Сообщение откреплено" });
+  };
+
   const handleAISuggest = useCallback(async (currentInput: string) => {
     if (!messages || messages.length === 0) return null;
     setIsSuggesting(true);
@@ -353,44 +375,69 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: any) {
 
   return (
     <div className="flex-1 flex flex-col h-[100dvh] bg-background relative overflow-hidden">
-      <header className="h-16 flex items-center justify-between px-4 border-b border-border/40 bg-card/20 backdrop-blur-xl z-20 shrink-0">
-        <div className="flex items-center gap-2 min-w-0 flex-1">
-          <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setCurrentChatId(null)}><ChevronLeft className="w-5 h-5" /></Button>
-          
-          {isSearchOpen ? (
-            <div className="flex items-center gap-2 flex-1 animate-in fade-in slide-in-from-left-2">
-              <Input 
-                autoFocus
-                placeholder="Поиск сообщений..." 
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="bg-muted/40 h-9 rounded-xl border-none focus:ring-1 focus:ring-primary text-base"
-              />
-              <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => { setIsSearchOpen(false); setSearchQuery(''); }}><X className="w-5 h-5" /></Button>
-            </div>
-          ) : (
-            <div className="flex items-center gap-3 cursor-pointer min-w-0" onClick={() => setIsChatInfoOpen(true)}>
-              <UserAvatar userId={chat?.type === 'private' ? otherId : null} fallbackName={chatDisplayName} className="h-9 w-9 ring-2 ring-primary/20" />
-              <div className="flex flex-col min-w-0">
-                <span className="font-semibold text-sm truncate">{chatDisplayName}</span>
-                <div className={cn("text-[10px] truncate leading-none mt-0.5", (statusString === 'печатает...' || isBlocked) ? 'text-accent font-bold' : 'text-muted-foreground')}>
-                  {statusString === 'печатает...' ? (
-                    <span className="flex items-center gap-0.5">печатает<span className="animate-typing-dot">.</span><span className="animate-typing-dot [animation-delay:0.2s]">.</span><span className="animate-typing-dot [animation-delay:0.4s]">.</span></span>
-                  ) : statusString}
+      <header className="h-16 flex flex-col justify-center border-b border-border/40 bg-card/20 backdrop-blur-xl z-20 shrink-0">
+        <div className="flex items-center justify-between px-4 h-full">
+          <div className="flex items-center gap-2 min-w-0 flex-1">
+            <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setCurrentChatId(null)}><ChevronLeft className="w-5 h-5" /></Button>
+            
+            {isSearchOpen ? (
+              <div className="flex items-center gap-2 flex-1 animate-in fade-in slide-in-from-left-2">
+                <Input 
+                  autoFocus
+                  placeholder="Поиск сообщений..." 
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="bg-muted/40 h-9 rounded-xl border-none focus:ring-1 focus:ring-primary text-base"
+                />
+                <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => { setIsSearchOpen(false); setSearchQuery(''); }}><X className="w-5 h-5" /></Button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-3 cursor-pointer min-w-0" onClick={() => setIsChatInfoOpen(true)}>
+                <UserAvatar userId={chat?.type === 'private' ? otherId : null} fallbackName={chatDisplayName} className="h-9 w-9 ring-2 ring-primary/20" />
+                <div className="flex flex-col min-w-0">
+                  <span className="font-semibold text-sm truncate">{chatDisplayName}</span>
+                  <div className={cn("text-[10px] truncate leading-none mt-0.5", (statusString === 'печатает...' || isBlocked) ? 'text-accent font-bold' : 'text-muted-foreground')}>
+                    {statusString === 'печатает...' ? (
+                      <span className="flex items-center gap-0.5">печатает<span className="animate-typing-dot">.</span><span className="animate-typing-dot [animation-delay:0.2s]">.</span><span className="animate-typing-dot [animation-delay:0.4s]">.</span></span>
+                    ) : statusString}
+                  </div>
                 </div>
               </div>
+            )}
+          </div>
+          
+          {!isSearchOpen && (
+            <div className="flex items-center gap-1">
+              <Button variant="ghost" size="icon" onClick={() => setIsSearchOpen(true)} className="rounded-full"><Search className="w-5 h-5" /></Button>
+              <Button variant="ghost" size="icon" onClick={() => setIsChatInfoOpen(true)} className="rounded-full"><Info className="w-5 h-5" /></Button>
+              <Button variant="ghost" size="icon" className="rounded-full"><MoreVertical className="w-5 h-5" /></Button>
             </div>
           )}
         </div>
-        
-        {!isSearchOpen && (
-          <div className="flex items-center gap-1">
-            <Button variant="ghost" size="icon" onClick={() => setIsSearchOpen(true)} className="rounded-full"><Search className="w-5 h-5" /></Button>
-            <Button variant="ghost" size="icon" onClick={() => setIsChatInfoOpen(true)} className="rounded-full"><Info className="w-5 h-5" /></Button>
-            <Button variant="ghost" size="icon" className="rounded-full"><MoreVertical className="w-5 h-5" /></Button>
-          </div>
-        )}
       </header>
+
+      {/* Pinned Message Bar */}
+      {pinnedMessage && (
+        <div 
+          onClick={() => scrollToMessage(pinnedMessage.id)}
+          className="h-11 bg-card/60 backdrop-blur-md border-b border-border/20 px-4 flex items-center justify-between cursor-pointer hover:bg-card/80 transition-all z-20 animate-in slide-in-from-top-full duration-300"
+        >
+          <div className="flex items-center gap-3 min-w-0 flex-1">
+            <Pin className="w-3.5 h-3.5 text-primary shrink-0" />
+            <div className="flex flex-col min-w-0">
+              <span className="text-[10px] font-bold text-primary uppercase leading-tight">Закреплённое сообщение</span>
+              <span className="text-[11px] text-foreground/80 truncate">
+                {pinnedMessage.contentType === 'text' ? pinnedMessage.content : `[${pinnedMessage.contentType}]`}
+              </span>
+            </div>
+          </div>
+          {(chat?.ownerId === user?.uid || chat?.adminIds?.includes(user?.uid || '')) && (
+            <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full hover:bg-muted/40" onClick={handleUnpin}>
+              <X className="w-3.5 h-3.5" />
+            </Button>
+          )}
+        </div>
+      )}
 
       <div className="flex-1 relative z-10 overflow-hidden">
         {customBackground && customBackground !== 'default' && <div className="absolute inset-0 z-[-1]" style={bgStyle} />}
@@ -413,6 +460,7 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: any) {
                 onReply={() => setReplyTo(msg)} 
                 onEdit={() => setEditMessage(msg)} 
                 size={userProfile?.settings?.messageSize} 
+                isAdmin={chat?.ownerId === user?.uid || chat?.adminIds?.includes(user?.uid || '')}
               />
             ))}
             {isMessagesLoading && <div className="flex justify-center p-8"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>}
