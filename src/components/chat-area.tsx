@@ -9,7 +9,7 @@ import { UserAvatar } from '@/components/user-avatar';
 import { 
   Send, Paperclip, Sparkles, MessageSquare, Info, X, 
   CornerUpLeft, Loader2, ShieldAlert, ChevronLeft, ChevronDown,
-  Search, MoreVertical
+  Search, MoreVertical, Mic
 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { MessageItem } from './message-item';
@@ -73,8 +73,8 @@ const ChatInput = React.memo(({
       <div className="flex items-end gap-2">
         <div className="flex items-center gap-1 mb-1">
           <input type="file" ref={fileInputRef} className="hidden" accept="image/*" multiple onChange={onFileSelect} />
-          <Button variant="ghost" size="icon" onClick={() => fileInputRef.current?.click()}><Paperclip className="w-5 h-5" /></Button>
-          <Button variant="ghost" size="icon" onClick={handleSuggest} disabled={isSuggesting}><Sparkles className={cn("w-5 h-5 text-accent", isSuggesting && "animate-spin")} /></Button>
+          <Button variant="ghost" size="icon" onClick={() => fileInputRef.current?.click()} className="rounded-full"><Paperclip className="w-5 h-5" /></Button>
+          <Button variant="ghost" size="icon" onClick={handleSuggest} disabled={isSuggesting} className="rounded-full"><Sparkles className={cn("w-5 h-5 text-accent", isSuggesting && "animate-spin")} /></Button>
         </div>
         <div className="flex-1 relative">
           <Input 
@@ -82,16 +82,22 @@ const ChatInput = React.memo(({
             value={text} 
             onChange={handleChange}
             onKeyDown={e => e.key === 'Enter' && handleSend()} 
-            className="bg-muted/40 rounded-2xl h-11 pr-12 focus:ring-1 focus:ring-primary border-none" 
+            className="bg-muted/40 rounded-2xl h-11 pr-12 focus:ring-1 focus:ring-primary border-none text-base" 
             disabled={isBlocked}
           />
-          <Button 
-            size="icon" 
-            className={cn("absolute right-1 top-1 w-9 h-9 rounded-xl transition-all duration-200", text.trim() ? 'scale-100 opacity-100' : 'scale-0 opacity-0')} 
-            onClick={handleSend}
-          >
-            <Send className="w-4 h-4" />
-          </Button>
+          {text.trim() ? (
+            <Button 
+              size="icon" 
+              className="absolute right-1 top-1 w-9 h-9 rounded-xl transition-all duration-200" 
+              onClick={handleSend}
+            >
+              <Send className="w-4 h-4" />
+            </Button>
+          ) : (
+            <Button variant="ghost" size="icon" className="absolute right-1 top-1 w-9 h-9 rounded-full text-muted-foreground">
+              <Mic className="w-4 h-4" />
+            </Button>
+          )}
         </div>
       </div>
     </div>
@@ -108,7 +114,6 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: any) {
   const [isSuggesting, setIsSuggesting] = useState(false);
   const [showScrollDown, setShowScrollDown] = useState(false);
   
-  // Search state
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   
@@ -162,7 +167,6 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: any) {
   
   const { data: messages, isLoading: isMessagesLoading } = useCollection<Message>(messagesQuery);
 
-  // Filter messages based on search
   const filteredMessages = useMemo(() => {
     if (!messages) return [];
     if (!isSearchOpen || !searchQuery.trim()) return messages;
@@ -175,7 +179,7 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: any) {
   const handleTyping = useCallback((isTyping: boolean) => {
     if (!currentChatId || !user || !db || isBlocked) return;
     
-    // Блокировка анимации для удаленных/забаненных
+    // Блокировка анимации для удаленных
     const isOtherDeleted = otherUserProfile?.isBanned || otherUserProfile?.name?.includes('Удалённый Аккаунт');
     if (isOtherDeleted) return;
 
@@ -183,7 +187,7 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: any) {
     const chatDocRef = doc(db, 'chats', currentChatId);
 
     if (isTyping) {
-      if (now - lastTypingSignalRef.current > 3000) {
+      if (now - lastTypingSignalRef.current > 3500) {
         updateDocumentNonBlocking(chatDocRef, { [`typing.${user.uid}`]: true });
         lastTypingSignalRef.current = now;
       }
@@ -317,7 +321,7 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: any) {
                 placeholder="Поиск сообщений..." 
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="bg-muted/40 h-9 rounded-xl border-none focus:ring-1 focus:ring-primary"
+                className="bg-muted/40 h-9 rounded-xl border-none focus:ring-1 focus:ring-primary text-base"
               />
               <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => { setIsSearchOpen(false); setSearchQuery(''); }}><X className="w-5 h-5" /></Button>
             </div>
@@ -338,9 +342,9 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: any) {
         
         {!isSearchOpen && (
           <div className="flex items-center gap-1">
-            <Button variant="ghost" size="icon" onClick={() => setIsSearchOpen(true)}><Search className="w-5 h-5" /></Button>
-            <Button variant="ghost" size="icon" onClick={() => setIsChatInfoOpen(true)}><Info className="w-5 h-5" /></Button>
-            <Button variant="ghost" size="icon"><MoreVertical className="w-5 h-5" /></Button>
+            <Button variant="ghost" size="icon" onClick={() => setIsSearchOpen(true)} className="rounded-full"><Search className="w-5 h-5" /></Button>
+            <Button variant="ghost" size="icon" onClick={() => setIsChatInfoOpen(true)} className="rounded-full"><Info className="w-5 h-5" /></Button>
+            <Button variant="ghost" size="icon" className="rounded-full"><MoreVertical className="w-5 h-5" /></Button>
           </div>
         )}
       </header>
@@ -350,7 +354,15 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: any) {
         <ScrollArea ref={scrollRef} className="h-full px-4 py-4" onScroll={(e: any) => setShowScrollDown(e.currentTarget.scrollHeight - e.currentTarget.scrollTop - e.currentTarget.clientHeight > 300)}>
           <div className="flex flex-col gap-2 max-w-4xl mx-auto pb-4">
             {filteredMessages.map(msg => (
-              <MessageItem key={msg.id} message={msg} isMe={msg.senderId === user?.uid} chatId={currentChatId} onReply={() => setReplyTo(msg)} onEdit={() => setEditMessage(msg)} size={userProfile?.settings?.messageSize} />
+              <MessageItem 
+                key={msg.id} 
+                message={msg} 
+                isMe={msg.senderId === user?.uid} 
+                chatId={currentChatId} 
+                onReply={() => setReplyTo(msg)} 
+                onEdit={() => setEditMessage(msg)} 
+                size={userProfile?.settings?.messageSize} 
+              />
             ))}
             {isMessagesLoading && <div className="flex justify-center p-8"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>}
             {!isMessagesLoading && isSearchOpen && searchQuery.trim() && filteredMessages.length === 0 && (

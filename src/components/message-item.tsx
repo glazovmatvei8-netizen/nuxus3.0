@@ -111,6 +111,7 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onEdit, size 
               fill
               className="object-cover" 
               sizes="(max-width: 768px) 100vw, 400px"
+              loading="lazy"
             />
             <div className="absolute inset-0 bg-black/20 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center">
               <ZoomIn className="w-8 h-8 text-white/80" />
@@ -247,6 +248,11 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onEdit, size 
       </Dialog>
     </>
   );
+}, (prev, next) => {
+  return prev.message.id === next.message.id && 
+         prev.message.isRead === next.message.isRead && 
+         prev.message.content === next.message.content &&
+         prev.message.editedAt === next.message.editedAt;
 });
 
 MessageItem.displayName = 'MessageItem';

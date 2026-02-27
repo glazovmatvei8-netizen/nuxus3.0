@@ -1,3 +1,4 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -51,7 +52,11 @@
   scrollbar-width: none;
 }
 
-/* Фикс для мобильных браузеров, чтобы контент не прыгал под клавиатуру */
+/* Оптимизация длинных списков */
+[data-radix-scroll-area-viewport] > div {
+  contain-intrinsic-size: 0 100px;
+}
+
 @supports (-webkit-touch-callout: none) {
   .h-viewport {
     height: -webkit-fill-available;

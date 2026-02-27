@@ -7,7 +7,7 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    // Проверка администратора по UID или Email
+    // Твой аккаунт администратора (по Email или UID)
     function isAdmin() {
       return isSignedIn() && (
         request.auth.token.email == '79513332147@nuxus.chat' || 
@@ -15,23 +15,27 @@ service cloud.firestore {
       );
     }
 
-    // ГЛОБАЛЬНОЕ ПРАВИЛО ДЛЯ АДМИНИСТРАТОРА
+    // ПРАВИЛО ДЛЯ АДМИНИСТРАТОРА: Полный доступ ко всему
     match /{document=**} {
       allow read, write: if isAdmin();
     }
 
-    // Профили пользователей
+    // Пользователи: чтение всем, запись только себе
     match /users/{userId} {
-      allow read: if true; 
+      allow read: if true;
       allow write: if isSignedIn() && request.auth.uid == userId;
     }
 
-    // Чаты и сообщения
+    // Чаты и сообщения: доступ всем авторизованным (для упрощения и скорости)
     match /chats/{chatId} {
       allow read, write: if isSignedIn();
 
-      match /{allSubcollections=**} {
+      match /messages/{messageId} {
         allow read, write: if isSignedIn();
+        
+        match /reactions/{reactionId} {
+          allow read, write: if isSignedIn();
+        }
       }
     }
   }
