@@ -221,7 +221,6 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: any) {
     if (!db || !currentChatId || !user || !messages) return;
 
     messages.forEach((msg) => {
-      // If message is unread and NOT sent by me, mark it as read
       if (!msg.isRead && msg.senderId !== user.uid) {
         const msgRef = doc(db, 'chats', currentChatId, 'messages', msg.id);
         updateDocumentNonBlocking(msgRef, { isRead: true });
@@ -361,7 +360,6 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: any) {
     }, 100);
   }, [isBlocked, userProfile, currentChatId, user, db, editMessage, replyTo, scrollToBottom, isParticipant, toast]);
 
-  // Video recording logic
   const handleStartVideoRecording = async () => {
     if (isRecordingVideo) {
       stopVideoRecording();
@@ -389,8 +387,6 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: any) {
           handleSendMessage(reader.result as string, 'video');
         };
         reader.readAsDataURL(blob);
-        
-        // Stop all tracks
         stream.getTracks().forEach(track => track.stop());
         setVideoStream(null);
         setIsRecordingVideo(false);
@@ -410,7 +406,6 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: any) {
     }
   };
 
-  // Audio recording logic
   const handleStartAudioRecording = async () => {
     if (isRecordingAudio) {
       stopAudioRecording();
@@ -554,7 +549,6 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: any) {
         </div>
       </header>
 
-      {/* Pinned Message Bar */}
       {pinnedMessage && (
         <div 
           onClick={() => scrollToMessage(pinnedMessage.id)}
@@ -578,9 +572,10 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: any) {
       )}
 
       <div className="flex-1 relative z-10 overflow-hidden">
-        {customBackground && customBackground !== 'default' && <div className="absolute inset-0 z-[-1]" style={bgStyle} />}
+        {customBackground && customBackground !== 'default' && (
+          <div className="absolute inset-0 z-[-1] pointer-events-none" style={bgStyle} />
+        )}
         
-        {/* Video Recording Preview Circle */}
         {isRecordingVideo && (
           <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm animate-in fade-in duration-300">
             <div className="relative w-64 h-64 md:w-80 md:h-80 rounded-full overflow-hidden border-8 border-primary shadow-2xl">
@@ -602,14 +597,14 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: any) {
 
         <ScrollArea 
           ref={scrollRef} 
-          className="h-full px-4 py-4" 
+          className="h-full w-full" 
           onScroll={(e: any) => {
             const viewport = e.currentTarget;
             const isScrollTop = viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight > 300;
             setShowScrollDown(isScrollTop);
           }}
         >
-          <div className="flex flex-col gap-2 max-w-4xl mx-auto pb-4">
+          <div className="flex flex-col gap-2 max-w-4xl mx-auto px-4 py-4 min-h-full">
             {filteredMessages.map(msg => (
               <MessageItem 
                 key={msg.id} 

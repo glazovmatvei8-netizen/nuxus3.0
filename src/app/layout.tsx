@@ -1,3 +1,4 @@
+
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import { AppProvider } from '@/lib/store';
@@ -59,7 +60,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ru" className={`dark ${inter.variable}`} suppressHydrationWarning>
-      <body className="font-sans antialiased bg-background text-foreground overflow-hidden h-[100dvh] touch-none">
+      <body className="font-sans antialiased bg-background text-foreground overflow-hidden h-[100dvh]">
         <FirebaseClientProvider>
           <AppProvider>
             {children}

@@ -120,7 +120,7 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onEdit, size 
     if (message.contentType === 'gift') {
       const Icon = GIFT_ICONS[message.content] || Gift;
       return (
-        <div className="flex flex-col items-center justify-center my-6 w-full animate-in zoom-in-95 duration-500">
+        <div className="flex flex-col items-center justify-center my-4 w-full animate-in zoom-in-95 duration-500">
           <div className={cn(
             "bg-card/40 backdrop-blur-2xl p-6 rounded-[32px] border border-white/10 shadow-xl flex flex-col items-center gap-3 max-w-[280px] relative overflow-hidden",
             message.isNFT && "ring-2 ring-accent/40"
@@ -142,44 +142,133 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onEdit, size 
         </div>
       );
     }
-    // ... other content types (already implemented in original but simplified here)
-    if (message.contentType === 'image') return <Image src={message.content} alt="" fill className="object-cover" />;
-    if (message.contentType === 'video') return <video src={message.content} controls className="rounded-full w-48 h-48 object-cover" />;
-    if (message.contentType === 'audio') return <div className="p-2 bg-muted/30 rounded-xl">Голосовое сообщение</div>;
-    if (message.contentType === 'service') return <div className="text-center p-2 text-[10px] text-muted-foreground uppercase">{message.content}</div>;
-    return <div className="whitespace-pre-wrap">{message.content}</div>;
+    
+    if (message.contentType === 'image') {
+      return (
+        <div className="relative w-full max-w-[300px] aspect-square rounded-xl overflow-hidden mt-1">
+          <Image src={message.content} alt="" fill className="object-cover" />
+        </div>
+      );
+    }
+    
+    if (message.contentType === 'video') {
+      return (
+        <div className="relative w-60 h-60 rounded-full overflow-hidden mt-1 border-4 border-primary/20">
+          <video src={message.content} autoPlay muted loop className="w-full h-full object-cover" />
+        </div>
+      );
+    }
+    
+    if (message.contentType === 'audio') {
+      return (
+        <div className="flex items-center gap-2 p-2 bg-muted/20 rounded-xl mt-1">
+          <Mic className="w-4 h-4 text-primary" />
+          <span className="text-xs">Голосовое сообщение</span>
+          {amIPremium && !transcription && (
+            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={handleTranscribe} disabled={isTranscribing}>
+              {isTranscribing ? <Loader2 className="w-3 h-3 animate-spin" /> : <Languages className="w-3 h-3" />}
+            </Button>
+          )}
+          {transcription && <p className="text-[10px] italic opacity-80 mt-1">{transcription}</p>}
+        </div>
+      );
+    }
+    
+    if (message.contentType === 'service') {
+      return <div className="text-center p-2 text-[10px] text-muted-foreground uppercase tracking-widest">{message.content}</div>;
+    }
+    
+    return <div className="whitespace-pre-wrap text-sm break-words">{message.content}</div>;
   };
 
-  if (message.contentType === 'gift' || message.contentType === 'service') return renderContent();
+  if (message.contentType === 'service') {
+    return (
+      <div className="w-full flex justify-center my-2">
+        {renderContent()}
+      </div>
+    );
+  }
 
   return (
-    <div id={`msg-${message.id}`} className={cn("flex gap-2 max-w-[85%] animate-in fade-in", isMe ? "ml-auto flex-row-reverse" : "mr-auto")}>
-      {!isMe && <UserAvatar userId={message.senderId} className="h-8 w-8 mt-auto" fallbackName={message.senderName} />}
-      <div className={cn("flex flex-col", isMe ? "items-end" : "items-start")}>
+    <div id={`msg-${message.id}`} className={cn("flex gap-2 max-w-[85%] animate-in fade-in relative", isMe ? "ml-auto flex-row-reverse" : "mr-auto")}>
+      {!isMe && <UserAvatar userId={message.senderId} className="h-8 w-8 mt-auto shrink-0" fallbackName={message.senderName} />}
+      <div className={cn("flex flex-col min-w-0", isMe ? "items-end" : "items-start")}>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <div className={cn("p-3 rounded-2xl cursor-pointer shadow-sm border", isMe ? "bg-primary text-white border-primary" : "bg-card border-border")}>
+            <div className={cn(
+              "p-3 rounded-2xl cursor-pointer shadow-sm border transition-all hover:brightness-110 relative",
+              isMe ? "bg-primary text-white border-primary" : "bg-card border-border text-foreground"
+            )}>
               {renderContent()}
-              <div className="text-[9px] mt-1 opacity-50 flex justify-end gap-1">
-                {formattedTime} {isMe && (message.isRead ? <CheckCheck className="w-3 h-3" /> : <Check className="w-3 h-3" />)}
+              <div className="flex items-center justify-end gap-1 mt-1 opacity-60">
+                <span className="text-[9px] font-mono">{formattedTime}</span>
+                {isMe && (
+                  message.isRead ? <CheckCheck className="w-3 h-3 text-accent" /> : <Check className="w-3 h-3" />
+                )}
               </div>
             </div>
           </DropdownMenuTrigger>
-          <DropdownMenuContent>
-            <DropdownMenuItem onClick={onReply}>Ответить</DropdownMenuItem>
-            {isMe && <DropdownMenuItem onClick={onEdit}>Изменить</DropdownMenuItem>}
-            <DropdownMenuItem onClick={() => setIsReactionPickerOpen(true)}>Реакция</DropdownMenuItem>
-            {(isMe || isAdmin) && <DropdownMenuItem onClick={() => deleteDocumentNonBlocking(doc(db, 'chats', chatId, 'messages', message.id))} className="text-destructive">Удалить</DropdownMenuItem>}
+          <DropdownMenuContent align={isMe ? 'end' : 'start'} className="w-48 bg-card/95 backdrop-blur-xl">
+            <DropdownMenuItem onClick={onReply} className="gap-2">
+              <CornerUpLeft className="w-4 h-4" /> Ответить
+            </DropdownMenuItem>
+            {isMe && message.contentType === 'text' && (
+              <DropdownMenuItem onClick={onEdit} className="gap-2">
+                <Pencil className="w-4 h-4" /> Изменить
+              </DropdownMenuItem>
+            )}
+            <DropdownMenuItem onClick={() => setIsReactionPickerOpen(true)} className="gap-2">
+              <SmilePlus className="w-4 h-4" /> Реакция
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            {(isMe || isAdmin) && (
+              <DropdownMenuItem 
+                onClick={() => deleteDocumentNonBlocking(doc(db, 'chats', chatId, 'messages', message.id))} 
+                className="text-destructive gap-2"
+              >
+                <Trash2 className="w-4 h-4" /> Удалить
+              </DropdownMenuItem>
+            )}
           </DropdownMenuContent>
         </DropdownMenu>
+
         {Object.keys(groupedReactions).length > 0 && (
-          <div className="flex gap-1 mt-1">
+          <div className="flex flex-wrap gap-1 mt-1">
             {Object.entries(groupedReactions).map(([emoji, uids]: any) => (
-              <div key={emoji} className="bg-muted/40 px-2 rounded-full text-[10px]">{emoji} {uids.length}</div>
+              <button 
+                key={emoji} 
+                onClick={() => handleAddReaction(emoji)}
+                className={cn(
+                  "bg-muted/40 backdrop-blur-md px-2 py-0.5 rounded-full text-[10px] border border-white/5 hover:bg-muted/60 transition-colors",
+                  uids.includes(user?.uid) && "ring-1 ring-primary/40 bg-primary/10"
+                )}
+              >
+                {emoji} {uids.length}
+              </button>
             ))}
           </div>
         )}
       </div>
+      
+      {isReactionPickerOpen && (
+        <Dialog open={isReactionPickerOpen} onOpenChange={setIsReactionPickerOpen}>
+          <DialogContent className="max-w-[280px] p-2 bg-card/95 backdrop-blur-xl border-border/40">
+            <div className="grid grid-cols-4 gap-1">
+              {REACTIONS.map(emoji => (
+                <button 
+                  key={emoji} 
+                  className="p-3 text-2xl hover:bg-primary/10 rounded-xl transition-all hover:scale-125"
+                  onClick={() => handleAddReaction(emoji)}
+                >
+                  {emoji}
+                </button>
+              ))}
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 });
+
+MessageItem.displayName = 'MessageItem';
