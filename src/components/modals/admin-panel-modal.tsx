@@ -20,6 +20,9 @@ import type { User } from '@/lib/types';
 import { formatDisplayName, cn } from '@/lib/utils';
 import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
+/**
+ * Продвинутая панель управления Nuxus (Ядро Админа v2.0)
+ */
 export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const db = useFirestore();
   const { toast } = useToast();
