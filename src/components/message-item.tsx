@@ -1,7 +1,7 @@
 
 "use client"
 
-import React, { useState, useMemo, memo } from 'react';
+import React, { useState, memo } from 'react';
 import { useUser, useFirestore } from '@/firebase';
 import { useAppState } from '@/lib/store';
 import { UserAvatar } from '@/components/user-avatar';
@@ -28,7 +28,6 @@ import { collection, doc, query, where, getDocs, limit } from 'firebase/firestor
 import { deleteDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { transcribeVoice } from '@/ai/flows/voice-to-text-flow';
 import type { Message } from '@/lib/types';
-import Image from 'next/image';
 import { Button } from './ui/button';
 import { useToast } from '@/hooks/use-toast';
 
@@ -219,14 +218,14 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, amIPremium = 
   }
 
   return (
-    <div id={`msg-${message.id}`} className={cn("flex gap-2 max-w-[85%] relative", isMe ? "ml-auto self-end flex-row-reverse" : "mr-auto self-start")}>
+    <div id={`msg-${message.id}`} className={cn("flex gap-2 max-w-[85%] relative w-full", isMe ? "justify-end" : "justify-start")}>
       {!isMe && <UserAvatar userId={null} manualAvatarUrl={senderAvatarUrl} className="h-8 w-8 mt-auto shrink-0" fallbackName={message.senderName} />}
       <div className={cn("flex flex-col min-w-0", isMe ? "items-end" : "items-start")}>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <div className={cn(
-              "p-3 rounded-2xl cursor-pointer shadow-sm border transition-all hover:bg-muted/5 relative",
-              isMe ? "message-bubble-me border-none text-white" : "bg-card border-white/5 text-foreground",
+              "p-3 rounded-2xl cursor-pointer shadow-sm border transition-all hover:opacity-90 relative",
+              isMe ? "message-bubble-me border-none" : "bg-card border-white/5 text-foreground",
               message.contentType === 'video' && "p-1 rounded-full bg-transparent border-none shadow-none"
             )}>
               {renderContent()}

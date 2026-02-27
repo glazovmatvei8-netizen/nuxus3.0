@@ -164,7 +164,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
           </DialogTitle>
         </DialogHeader>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0">
+        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className="flex-1 flex flex-col min-h-0">
           <TabsList className="grid grid-cols-4 bg-muted/50 p-1 mx-4 mt-4 rounded-xl shrink-0">
             <TabsTrigger value="profile" className="text-[10px] uppercase font-bold">Профиль</TabsTrigger>
             <TabsTrigger value="privacy" className="text-[10px] uppercase font-bold">Защита</TabsTrigger>
@@ -193,11 +193,26 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
               <div className="bg-muted/20 p-5 rounded-2xl border border-border/20 space-y-4">
                 <div className="space-y-1.5">
                   <Label className="text-[10px] flex items-center gap-2 uppercase font-bold"><Eye className="w-3 h-3" /> Номер телефона</Label>
-                  <Input value={form.phoneVisibility} readOnly className="bg-muted/30" />
+                  <select 
+                    value={form.phoneVisibility} 
+                    onChange={e => setForm({...form, phoneVisibility: e.target.value as any})}
+                    className="w-full h-11 bg-muted/30 rounded-xl px-3 border-none outline-none text-sm"
+                  >
+                    <option value="everybody">Все</option>
+                    <option value="contacts">Контакты</option>
+                    <option value="nobody">Никто</option>
+                  </select>
                 </div>
                 <div className="space-y-1.5">
                   <Label className="text-[10px] flex items-center gap-2 uppercase font-bold"><ShieldCheck className="w-3 h-3" /> Статус сети</Label>
-                  <Input value={form.lastSeenVisibility} readOnly className="bg-muted/30" />
+                   <select 
+                    value={form.lastSeenVisibility} 
+                    onChange={e => setForm({...form, lastSeenVisibility: e.target.value as any})}
+                    className="w-full h-11 bg-muted/30 rounded-xl px-3 border-none outline-none text-sm"
+                  >
+                    <option value="everybody">Все</option>
+                    <option value="nobody">Никто</option>
+                  </select>
                 </div>
               </div>
             </TabsContent>
