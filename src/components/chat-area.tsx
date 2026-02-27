@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useRef, useEffect, useMemo, useCallback, memo } from 'react';
@@ -6,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
-  Send, Info, ChevronLeft, Loader2, MessageSquare, Pin, X, Forward, Camera
+  Send, Info, ChevronLeft, Loader2, MessageSquare, Pin, X, Forward, Camera, Video, Circle
 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { MessageItem } from './message-item';
@@ -17,10 +18,8 @@ import { collection, query, orderBy, doc } from 'firebase/firestore';
 import { addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { formatDisplayName, isUserPremium } from '@/lib/utils';
 import type { Message, User as UserType, Chat } from '@/lib/types';
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 
-/**
- * Optimized message list to prevent re-renders of the entire chat area.
- */
 const MessageList = memo(({ 
   messages, 
   userId, 
@@ -60,6 +59,13 @@ export default function ChatArea() {
   const [replyTo, setReplyTo] = useState<Message | null>(null);
   const [messageInput, setMessageInput] = useState('');
   
+  // Video Message state
+  const [isRecordingVideo, setIsRecordingVideo] = useState(false);
+  const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const [videoChunks, setVideoChunks] = useState<Blob[]>([]);
+
   const scrollRef = useRef<HTMLDivElement>(null);
   const dataLoadedRef = useRef(false);
   const { toast } = useToast();
@@ -88,12 +94,6 @@ export default function ChatArea() {
     return null;
   }, [otherId, chat]);
 
-  const pinnedMessageRef = useMemoFirebase(() => {
-    if (!db || !currentChatId || !chat?.pinnedMessageId) return null;
-    return doc(db, 'chats', currentChatId, 'messages', chat.pinnedMessageId);
-  }, [db, currentChatId, chat?.pinnedMessageId]);
-  const { data: pinnedMessage } = useDoc<Message>(pinnedMessageRef);
-
   const messagesQuery = useMemoFirebase(() => {
     if (!db || !currentChatId) return null;
     return query(collection(db, 'chats', currentChatId, 'messages'), orderBy('sentAt', 'asc'));
@@ -108,15 +108,6 @@ export default function ChatArea() {
     }
   }, []);
 
-  const scrollToMessage = (messageId: string) => {
-    const el = document.getElementById(`msg-${messageId}`);
-    if (el) {
-      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      el.classList.add('bg-primary/20');
-      setTimeout(() => el.classList.remove('bg-primary/20'), 2000);
-    }
-  };
-
   useEffect(() => {
     if (messages?.length) {
       if (!dataLoadedRef.current) {
@@ -130,17 +121,17 @@ export default function ChatArea() {
 
   useEffect(() => { dataLoadedRef.current = false; }, [currentChatId]);
 
-  const handleSendMessage = useCallback(() => {
-    const content = messageInput.trim();
-    if (!content || !currentChatId || !user || !db) return;
+  const handleSendMessage = useCallback((content: string = messageInput, type: 'text' | 'video' = 'text') => {
+    const trimmedContent = content.trim();
+    if (!trimmedContent || !currentChatId || !user || !db) return;
     
     setIsSending(true);
     const msgData: any = { 
       chatId: currentChatId, 
       senderId: user.uid, 
       senderName: userProfile?.name || 'User', 
-      content, 
-      contentType: 'text', 
+      content: trimmedContent, 
+      contentType: type, 
       sentAt: new Date().toISOString(), 
       isRead: false 
     };
@@ -156,14 +147,48 @@ export default function ChatArea() {
       lastMessageAt: new Date().toISOString()
     });
     
-    setMessageInput('');
+    if (type === 'text') setMessageInput('');
     setIsSending(false);
     setTimeout(() => scrollToBottom('smooth'), 100);
   }, [messageInput, currentChatId, user, db, userProfile, replyTo, scrollToBottom]);
 
-  const unpinMessage = () => {
-    if (!db || !currentChatId) return;
-    updateDocumentNonBlocking(doc(db, 'chats', currentChatId), { pinnedMessageId: null });
+  // Video Recording Logic
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 480, height: 480 }, audio: true });
+      setHasCameraPermission(true);
+      setIsRecordingVideo(true);
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+      }
+
+      const mediaRecorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = mediaRecorder;
+      const chunks: Blob[] = [];
+      mediaRecorder.ondataavailable = (e) => chunks.push(e.data);
+      mediaRecorder.onstop = async () => {
+        const blob = new Blob(chunks, { type: 'video/mp4' });
+        const reader = new FileReader();
+        reader.readAsDataURL(blob);
+        reader.onloadend = () => {
+          const base64data = reader.result as string;
+          handleSendMessage(base64data, 'video');
+        };
+        stream.getTracks().forEach(track => track.stop());
+      };
+      mediaRecorder.start();
+    } catch (err) {
+      console.error('Camera access error:', err);
+      setHasCameraPermission(false);
+      toast({ variant: 'destructive', title: 'Ошибка камеры', description: 'Разрешите доступ к камере для видеосообщений.' });
+    }
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+      mediaRecorderRef.current.stop();
+    }
+    setIsRecordingVideo(false);
   };
 
   const chatDisplayName = useMemo(() => {
@@ -213,21 +238,6 @@ export default function ChatArea() {
         </Button>
       </header>
 
-      {pinnedMessage && (
-        <div className="h-12 bg-primary/5 border-b border-primary/10 px-4 flex items-center justify-between z-30 shrink-0">
-          <div className="flex items-center gap-3 cursor-pointer min-w-0 flex-1" onClick={() => scrollToMessage(pinnedMessage.id)}>
-            <Pin className="w-3.5 h-3.5 text-primary rotate-45" />
-            <div className="flex flex-col min-w-0">
-              <span className="text-[9px] font-bold text-primary uppercase tracking-widest">Закреплено</span>
-              <span className="text-xs truncate text-muted-foreground">{pinnedMessage.content}</span>
-            </div>
-          </div>
-          <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg" onClick={unpinMessage}>
-            <X className="w-4 h-4" />
-          </Button>
-        </div>
-      )}
-
       <ScrollArea ref={scrollRef} className="flex-1 w-full relative z-10 scrollbar-hide">
         {messages && (
           <MessageList 
@@ -275,8 +285,34 @@ export default function ChatArea() {
               </Button>
             </div>
           )}
+
+          {isRecordingVideo && (
+            <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+              <div className="relative flex flex-col items-center gap-6">
+                <div className="w-64 h-64 md:w-80 md:h-80 rounded-full overflow-hidden border-4 border-primary shadow-2xl bg-black">
+                  <video ref={videoRef} className="w-full h-full object-cover" autoPlay muted playsInline />
+                </div>
+                {hasCameraPermission === false && (
+                  <Alert variant="destructive" className="max-w-xs">
+                    <AlertTitle>Доступ ограничен</AlertTitle>
+                    <AlertDescription>Пожалуйста, разрешите доступ к камере в настройках браузера.</AlertDescription>
+                  </Alert>
+                )}
+                <div className="flex gap-4">
+                  <Button variant="outline" size="lg" className="rounded-full h-16 w-16" onClick={() => setIsRecordingVideo(false)}>
+                    <X className="w-6 h-6" />
+                  </Button>
+                  <Button variant="default" size="lg" className="rounded-full h-16 w-16 bg-red-500 hover:bg-red-600 animate-pulse" onClick={stopRecording}>
+                    <Circle className="w-8 h-8 fill-white" />
+                  </Button>
+                </div>
+                <div className="text-white font-bold uppercase tracking-widest text-sm animate-pulse">Запись видеосообщения...</div>
+              </div>
+            </div>
+          )}
+
           <div className="flex gap-2 items-end">
-            <Button variant="ghost" size="icon" className="h-11 w-11 rounded-xl shrink-0 bg-muted hover:bg-muted/80">
+            <Button variant="ghost" size="icon" className="h-11 w-11 rounded-xl shrink-0 bg-muted hover:bg-muted/80" onClick={() => toast({ title: "Скоро", description: "Функция фото находится в разработке" })}>
               <Camera className="w-5 h-5 text-muted-foreground" />
             </Button>
             <div className="flex-1">
@@ -289,9 +325,15 @@ export default function ChatArea() {
                 disabled={isSending}
               />
             </div>
-            <Button size="icon" className="h-11 w-11 rounded-xl shrink-0 bg-primary hover:bg-primary/90" onClick={handleSendMessage} disabled={isSending || !messageInput.trim()}>
-              {isSending ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
-            </Button>
+            {!messageInput.trim() ? (
+              <Button size="icon" className="h-11 w-11 rounded-xl shrink-0 bg-primary hover:bg-primary/90" onClick={startRecording}>
+                <Video className="w-5 h-5" />
+              </Button>
+            ) : (
+              <Button size="icon" className="h-11 w-11 rounded-xl shrink-0 bg-primary hover:bg-primary/90" onClick={() => handleSendMessage()} disabled={isSending}>
+                {isSending ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
+              </Button>
+            )}
           </div>
         </div>
       </footer>

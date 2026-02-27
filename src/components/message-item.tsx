@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useMemo, memo } from 'react';
@@ -20,7 +21,7 @@ import {
   Plane, Sun, Moon, Cloud, Snowflake, Trees, Flower2, Dog, Cat, Bird, 
   Fish, Bitcoin, Coins, Gamepad2, Music, Smile, ThumbsUp, Bell, Mail, 
   Key, Lock, Shield, Sword, Anchor, Compass, Map, Flag, Briefcase, GraduationCap,
-  Pin, Forward, Gift
+  Pin, Forward, Gift, PlayCircle
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { collection, doc, query, where, getDocs, limit } from 'firebase/firestore';
@@ -185,6 +186,24 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, amIPremium = 
         </div>
       );
     }
+
+    if (message.contentType === 'video') {
+      return (
+        <div className="relative w-48 h-48 rounded-full overflow-hidden border-2 border-primary/30 mt-1 bg-black">
+          <video 
+            src={message.content} 
+            className="w-full h-full object-cover" 
+            autoPlay 
+            loop 
+            muted 
+            playsInline
+          />
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-0 hover:opacity-100 transition-opacity bg-black/20">
+            <PlayCircle className="w-10 h-10 text-white" />
+          </div>
+        </div>
+      );
+    }
     
     if (message.contentType === 'audio') {
       return (
@@ -228,10 +247,11 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, amIPremium = 
           <DropdownMenuTrigger asChild>
             <div className={cn(
               "p-3 rounded-2xl cursor-pointer shadow-sm border transition-all hover:bg-muted/10",
-              isMe ? "bg-primary text-white border-primary" : "bg-card border-white/5 text-foreground"
+              isMe ? "bg-primary text-white border-primary" : "bg-card border-white/5 text-foreground",
+              message.contentType === 'video' && "p-1 rounded-full bg-transparent border-none shadow-none"
             )}>
               {renderContent()}
-              <div className="flex items-center justify-end gap-1 mt-1 opacity-60">
+              <div className={cn("flex items-center justify-end gap-1 mt-1 opacity-60", message.contentType === 'video' && "absolute bottom-2 right-6 bg-black/40 px-1.5 py-0.5 rounded-full")}>
                 <span className="text-[9px]">{formattedTime}</span>
                 {isMe && (message.isRead ? <CheckCheck className="w-3 h-3 text-accent" /> : <Check className="w-3 h-3" />)}
               </div>
