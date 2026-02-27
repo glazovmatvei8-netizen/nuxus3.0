@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
@@ -219,13 +220,15 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: any) {
 
   useEffect(() => {
     const isTyping = chat?.typing && otherId && chat.typing[otherId];
+    const isOtherDeleted = otherUserProfile?.isBanned || otherUserProfile?.name?.includes('Удалённый Аккаунт');
+
     if (isBlockedByMe) setStatusString('Пользователь заблокирован');
     else if (isBlockedByThem) setStatusString('Вы заблокированы');
-    else if (isTyping) setStatusString('печатает...');
+    else if (isTyping && !isOtherDeleted) setStatusString('печатает...');
     else if (isOtherProfileLoading) setStatusString('загрузка...');
-    else if (chat?.type === 'private') setStatusString(formatLastSeen(otherUserProfile?.lastSeen, otherUserProfile?.settings?.privacy?.lastSeenVisibility));
+    else if (chat?.type === 'private') setStatusString(formatLastSeen(otherUserProfile?.lastSeen, otherUserProfile?.settings?.privacy?.lastSeenVisibility, isOtherDeleted));
     else setStatusString(chat?.type === 'group' ? 'Группа' : 'Канал');
-  }, [isOtherProfileLoading, otherUserProfile?.lastSeen, otherUserProfile?.settings?.privacy?.lastSeenVisibility, chat?.type, chat?.typing, otherId, isBlockedByMe, isBlockedByThem]);
+  }, [isOtherProfileLoading, otherUserProfile, chat?.type, chat?.typing, otherId, isBlockedByMe, isBlockedByThem]);
 
   useEffect(() => {
     if (messages && user && currentChatId && chat && isParticipant && db) {
@@ -336,7 +339,6 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: any) {
     });
   };
 
-  // Приоритет имени из актуального профиля (для отображения "Удаленный аккаунт")
   const chatDisplayName = formatDisplayName(otherUserProfile?.name || (otherId && chat?.metadata && chat.metadata[otherId] ? chat.metadata[otherId].name : chat?.name));
 
   if (!currentChatId) {
@@ -440,7 +442,7 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: any) {
                   editMessage={editMessage}
                   onCancelEdit={() => setEditMessage(null)}
                   replyTo={replyTo}
-                  onCancelReply={() => setReplyTo(null)}
+                  onCancelReply={() => setEditMessage(null)}
                 />
               </>
             )}

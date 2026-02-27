@@ -14,7 +14,7 @@ export function cn(...inputs: ClassValue[]) {
 export function formatDisplayName(name: string | undefined | null): string {
   if (!name) return 'Пользователь';
   const lower = name.toLowerCase();
-  if (lower.includes('удаленный аккаунт') || lower.includes('удалённый аккаунт')) {
+  if (lower.includes('удаленный аккаунт') || lower.includes('удалённый аккаунт') || lower.includes('@deleted')) {
     return 'Удалённый Аккаунт🚫';
   }
   return name;
@@ -22,10 +22,14 @@ export function formatDisplayName(name: string | undefined | null): string {
 
 /**
  * Форматирует статус последней активности пользователя в стиле Telegram.
- * Учитывает настройки конфиденциальности.
+ * Учитывает настройки конфиденциальности и статус удаления.
  */
-export function formatLastSeen(lastSeenIso: string | undefined | null, visibility: 'everybody' | 'nobody' = 'everybody'): string {
-  if (!lastSeenIso) return 'Был(а) давно';
+export function formatLastSeen(
+  lastSeenIso: string | undefined | null, 
+  visibility: 'everybody' | 'nobody' = 'everybody',
+  isDeleted: boolean = false
+): string {
+  if (isDeleted || !lastSeenIso) return 'Был(а) давно';
   if (visibility === 'nobody') return 'был(а) недавно';
   
   try {

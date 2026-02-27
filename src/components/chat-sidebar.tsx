@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useEffect } from 'react';
@@ -164,14 +165,17 @@ function ChatListItem({ chat, isActive, otherId, cachedDisplayName, manualAvatar
   const { data: otherProfile } = useDoc<User>(userProfileRef);
 
   useEffect(() => {
+    const isOtherDeleted = otherProfile?.isBanned || otherProfile?.name?.includes('Удалённый Аккаунт');
     if (otherId) {
-      setStatus(formatLastSeen(otherProfile?.lastSeen, otherProfile?.settings?.privacy?.lastSeenVisibility));
+      setStatus(formatLastSeen(otherProfile?.lastSeen, otherProfile?.settings?.privacy?.lastSeenVisibility, isOtherDeleted));
     } else {
       setStatus(chat.type === 'group' ? 'Группа' : 'Канал');
     }
-  }, [otherId, otherProfile?.lastSeen, otherProfile?.settings?.privacy?.lastSeenVisibility, chat.type]);
+  }, [otherId, otherProfile, chat.type]);
 
   const isTyping = chat?.typing && otherId && chat.typing[otherId];
+  const isOtherDeleted = otherProfile?.isBanned || otherProfile?.name?.includes('Удалённый Аккаунт');
+  const showTyping = isTyping && !isOtherDeleted;
   
   const finalDisplayName = formatDisplayName(otherProfile?.name || cachedDisplayName || 'Пользователь');
 
@@ -190,7 +194,7 @@ function ChatListItem({ chat, isActive, otherId, cachedDisplayName, manualAvatar
           className="h-11 w-11 md:h-12 md:w-12 border-2 border-transparent group-hover:border-primary/20 transition-all" 
           fallbackName={finalDisplayName}
         />
-        {(status === 'в сети' || isTyping) && (
+        {(status === 'в сети' || showTyping) && !isOtherDeleted && (
           <span className="absolute bottom-0 right-0 w-3 h-3 bg-accent rounded-full border-2 border-background shadow-sm" />
         )}
       </div>
@@ -201,9 +205,9 @@ function ChatListItem({ chat, isActive, otherId, cachedDisplayName, manualAvatar
         <div className="flex items-center justify-between">
           <div className={cn(
             "text-[10px] truncate transition-colors",
-            isActive ? 'text-white/80' : (isTyping || status === 'в сети' ? 'text-accent font-bold' : 'text-muted-foreground')
+            isActive ? 'text-white/80' : (showTyping || status === 'в сети' ? 'text-accent font-bold' : 'text-muted-foreground')
           )}>
-            {isTyping ? (
+            {showTyping ? (
               <span className="flex items-center gap-0.5">
                 печатает
                 <span className="animate-typing-dot">.</span>
