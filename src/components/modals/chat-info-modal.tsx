@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState } from 'react';
@@ -6,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { Sparkles, Loader2, Trash2, ShieldAlert, ShieldCheck, Ban, Gavel, UserX, UserPlus } from 'lucide-react';
+import { Sparkles, Loader2, Trash2, ShieldAlert, ShieldCheck, Ban, Gavel, UserX, UserPlus, Info } from 'lucide-react';
 import { useFirestore, useCollection, useMemoFirebase, useUser, useDoc } from '@/firebase';
 import { collection, query, where, orderBy, limit, getDocs, doc, arrayUnion, arrayRemove } from 'firebase/firestore';
 import { chatConversationSummary } from '@/ai/flows/chat-conversation-summary-flow';
@@ -44,6 +45,13 @@ export function ChatInfoModal({ open, onOpenChange, chat }: ChatInfoModalProps) 
   const { data: currentUserProfile } = useDoc<User>(userProfileRef);
 
   const isAdmin = currentUserProfile?.phone === '+79513332147' || user?.email === '79513332147@nuxus.chat';
+  
+  const otherUserProfileRef = useMemoFirebase(() => {
+    if (!db || !otherId) return null;
+    return doc(db, 'users', otherId);
+  }, [db, otherId]);
+  const { data: otherUserProfile } = useDoc<User>(otherUserProfileRef);
+
   const isBlockedByMe = currentUserProfile?.blockedUserIds?.includes(otherId || '');
 
   const membersQuery = useMemoFirebase(() => {
@@ -157,6 +165,13 @@ export function ChatInfoModal({ open, onOpenChange, chat }: ChatInfoModalProps) 
 
             <ScrollArea className="h-[350px]">
               <TabsContent value="info" className="p-6 space-y-6">
+                {isPrivate && otherUserProfile?.bio && (
+                  <div className="space-y-2">
+                    <h3 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-2"><Info className="w-3 h-3" /> О себе</h3>
+                    <p className="text-sm bg-muted/10 p-3 rounded-lg border border-border/20 italic">{otherUserProfile.bio}</p>
+                  </div>
+                )}
+
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <h3 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">AI Суммаризация</h3>

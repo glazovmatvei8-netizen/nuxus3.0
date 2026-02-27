@@ -33,11 +33,13 @@ export interface Chat {
   adminIds: string[];
   createdAt: string;
   ownerId: string;
+  pinnedMessageId?: string | null;
   typing?: Record<string, boolean>;
   metadata?: Record<string, {
     name: string;
     username: string;
     avatarUrl: string | null;
+    bio?: string;
   }>;
 }
 
@@ -59,6 +61,7 @@ export interface User {
   phone: string;
   name: string;
   username: string;
+  bio?: string;
   avatarUrl: string | null;
   lastSeen?: string;
   createdAt: string;

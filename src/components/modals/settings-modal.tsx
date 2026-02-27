@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useRef, useEffect } from 'react';
@@ -5,6 +6,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { 
   Select, 
   SelectContent, 
@@ -15,7 +17,7 @@ import {
 import { useAuth, useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
-  LogOut, User, LayoutGrid, Palette, Loader2, Sparkles, X, Wand2, AtSign, Settings2, Check, ShieldCheck, Lock, Trash2, UserX, Users
+  LogOut, User, LayoutGrid, Palette, Loader2, Sparkles, X, Wand2, AtSign, Settings2, Check, ShieldCheck, Lock, Trash2, UserX, Users, FileText
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { signOut } from 'firebase/auth';
@@ -57,6 +59,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
   const [form, setForm] = useState({
     name: '',
     username: '',
+    bio: '',
     avatarUrl: '',
     chatBackground: 'default',
     phoneVisibility: 'nobody',
@@ -76,6 +79,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
       setForm({
         name: profile.name || '',
         username: profile.username || '',
+        bio: profile.bio || '',
         avatarUrl: profile.avatarUrl || '',
         chatBackground: profile.settings?.chatBackground || 'default',
         phoneVisibility: profile.settings?.privacy?.phoneVisibility || 'nobody',
@@ -98,6 +102,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
     updateDocumentNonBlocking(userRef, {
       name: form.name,
       username: form.username,
+      bio: form.bio,
       avatarUrl: form.avatarUrl,
       inactivityDeletion: form.inactivityDeletion,
       settings: {
@@ -232,6 +237,17 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                         onChange={e => setForm({...form, username: e.target.value})} 
                       />
                     </div>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs ml-1 font-semibold text-muted-foreground flex items-center gap-2">
+                      <FileText className="w-3 h-3" /> О себе (Био)
+                    </Label>
+                    <Textarea 
+                      className="bg-background/50 rounded-xl border-border/20 min-h-[80px] resize-none" 
+                      placeholder="Расскажите о себе..."
+                      value={form.bio} 
+                      onChange={e => setForm({...form, bio: e.target.value})} 
+                    />
                   </div>
                 </div>
               </div>

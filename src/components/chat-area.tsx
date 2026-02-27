@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
@@ -9,7 +8,7 @@ import { UserAvatar } from '@/components/user-avatar';
 import { 
   Send, Paperclip, Sparkles, MessageSquare, Info, Mic, Camera, X, 
   CornerUpLeft, Loader2, ShieldAlert, Trash, Check, MoreVertical, ChevronLeft, ChevronDown,
-  Images
+  Images, Pin, Search as SearchIcon, Forward
 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { MessageItem } from './message-item';
@@ -37,7 +36,10 @@ const ChatInput = React.memo(({
   editMessage,
   onCancelEdit,
   replyTo,
-  onCancelReply
+  onCancelReply,
+  forwardingMessage,
+  onCancelForward,
+  isRecordingAudio
 }: any) => {
   const [text, setText] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -76,6 +78,18 @@ const ChatInput = React.memo(({
           <Button size="icon" variant="ghost" onClick={onCancelReply} className="h-6 w-6"><X className="w-4 h-4" /></Button>
         </div>
       )}
+      {forwardingMessage && (
+        <div className="flex items-center justify-between bg-accent/10 p-2 rounded-xl border-l-4 border-accent mb-1 animate-in slide-in-from-bottom-1">
+          <div className="flex items-center gap-3 truncate">
+            <Forward className="w-4 h-4 text-accent" />
+            <div className="flex flex-col">
+              <span className="text-[10px] font-bold text-accent uppercase">Переслать сообщение</span>
+              <span className="text-xs truncate italic">{forwardingMessage.content}</span>
+            </div>
+          </div>
+          <Button size="icon" variant="ghost" onClick={onCancelForward} className="h-6 w-6"><X className="w-4 h-4" /></Button>
+        </div>
+      )}
       <div className="flex items-end gap-2">
         <div className="flex items-center gap-1 mb-1">
           <input type="file" ref={fileInputRef} className="hidden" accept="image/*" multiple onChange={onFileSelect} />
@@ -83,16 +97,26 @@ const ChatInput = React.memo(({
           <Button variant="ghost" size="icon" onClick={handleSuggest} disabled={isSuggesting}><Sparkles className={cn("w-5 h-5 text-accent", isSuggesting && "animate-spin")} /></Button>
         </div>
         <div className="flex-1 relative">
-          <Input 
-            placeholder={editMessage ? "Изменить..." : "Сообщение..."} 
-            value={text} 
-            onChange={handleChange}
-            onKeyDown={e => e.key === 'Enter' && handleSend()} 
-            className="bg-muted/40 rounded-2xl h-11 pr-12 focus:ring-1 focus:ring-primary border-none" 
-          />
+          {isRecordingAudio ? (
+            <div className="flex items-center justify-between bg-accent/20 h-11 rounded-2xl px-4 border border-accent/40 animate-pulse">
+               <div className="flex items-center gap-2">
+                 <div className="w-2 h-2 bg-red-500 rounded-full animate-ping" />
+                 <span className="text-xs font-bold text-accent">ЗАПИСЬ...</span>
+               </div>
+               <span className="text-xs font-mono">00:00</span>
+            </div>
+          ) : (
+            <Input 
+              placeholder={editMessage ? "Изменить..." : "Сообщение..."} 
+              value={text} 
+              onChange={handleChange}
+              onKeyDown={e => e.key === 'Enter' && handleSend()} 
+              className="bg-muted/40 rounded-2xl h-11 pr-12 focus:ring-1 focus:ring-primary border-none" 
+            />
+          )}
           <Button 
             size="icon" 
-            className={cn("absolute right-1 top-1 w-9 h-9 rounded-xl transition-all duration-200", text.trim() ? 'scale-100 opacity-100' : 'scale-0 opacity-0')} 
+            className={cn("absolute right-1 top-1 w-9 h-9 rounded-xl transition-all duration-200", (text.trim() || forwardingMessage) ? 'scale-100 opacity-100' : 'scale-0 opacity-0')} 
             onClick={handleSend}
           >
             <Send className="w-4 h-4" />
@@ -100,7 +124,14 @@ const ChatInput = React.memo(({
         </div>
         <div className="flex gap-1 mb-1">
           <Button variant="ghost" size="icon" onClick={onStartVideo}><Camera className="w-5 h-5" /></Button>
-          <Button variant="ghost" size="icon" onClick={onStartAudio}><Mic className="w-5 h-5" /></Button>
+          <Button 
+            variant={isRecordingAudio ? "default" : "ghost"} 
+            size="icon" 
+            onClick={onStartAudio}
+            className={isRecordingAudio ? "bg-red-500 hover:bg-red-600 text-white animate-pulse" : ""}
+          >
+            <Mic className="w-5 h-5" />
+          </Button>
         </div>
       </div>
     </div>
@@ -112,22 +143,25 @@ ChatInput.displayName = 'ChatInput';
 export default function ChatArea({ toggleSidebar, isSidebarOpen }: any) {
   const { user } = useUser();
   const db = useFirestore();
-  const { currentChatId, setCurrentChatId } = useAppState();
+  const { currentChatId, setCurrentChatId, forwardingMessage, setForwardingMessage } = useAppState();
   const [isChatInfoOpen, setIsChatInfoOpen] = useState(false);
   const [isSuggesting, setIsSuggesting] = useState(false);
   const [showScrollDown, setShowScrollDown] = useState(false);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
   
   const [replyTo, setReplyTo] = useState<Message | null>(null);
   const [editMessage, setEditMessage] = useState<Message | null>(null);
   
   const [isRecordingVideo, setIsRecordingVideo] = useState(false);
+  const [isRecordingAudio, setIsRecordingAudio] = useState(false);
   const [statusString, setStatusString] = useState<string>('');
   const [pendingPhotos, setPendingPhotos] = useState<string[]>([]);
   
   const [activeStream, setActiveStream] = useState<MediaStream | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const videoPreviewRef = useRef<HTMLVideoElement>(null);
-  const audioChunksRef = useRef<Blob[]>([]);
+  const chunksRef = useRef<Blob[]>([]);
   const isCancelledRef = useRef(false);
   
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -149,6 +183,12 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: any) {
     return doc(db, 'chats', currentChatId);
   }, [db, currentChatId]);
   const { data: chat, isLoading: isChatLoading } = useDoc(chatRef);
+
+  const pinnedMessageRef = useMemoFirebase(() => {
+    if (!db || !currentChatId || !chat?.pinnedMessageId) return null;
+    return doc(db, 'chats', currentChatId, 'messages', chat.pinnedMessageId);
+  }, [db, currentChatId, chat?.pinnedMessageId]);
+  const { data: pinnedMessage } = useDoc<Message>(pinnedMessageRef);
 
   const isParticipant = useMemo(() => {
     if (!chat || !user) return false;
@@ -181,7 +221,12 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: any) {
     );
   }, [db, currentChatId, isParticipant]);
   
-  const { data: messages, isLoading: isMessagesLoading } = useCollection<Message>(messagesQuery);
+  const { data: allMessages, isLoading: isMessagesLoading } = useCollection<Message>(messagesQuery);
+
+  const messages = useMemo(() => {
+    if (!searchQuery.trim()) return allMessages;
+    return allMessages?.filter(m => m.content.toLowerCase().includes(searchQuery.toLowerCase()));
+  }, [allMessages, searchQuery]);
 
   const handleTyping = useCallback((isTyping: boolean) => {
     if (!currentChatId || !user || !isParticipant || !db || isBlocked) return;
@@ -209,16 +254,6 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: any) {
   }, [currentChatId, user, db, isParticipant, isBlocked]);
 
   useEffect(() => {
-    return () => {
-      if (currentChatId && user && db) {
-        const chatDocRef = doc(db, 'chats', currentChatId);
-        updateDocumentNonBlocking(chatDocRef, { [`typing.${user.uid}`]: false });
-      }
-      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
-    };
-  }, [currentChatId, user, db]);
-
-  useEffect(() => {
     const isTyping = chat?.typing && otherId && chat.typing[otherId];
     const isOtherDeleted = otherUserProfile?.isBanned || otherUserProfile?.name?.includes('Удалённый Аккаунт');
 
@@ -231,17 +266,13 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: any) {
   }, [isOtherProfileLoading, otherUserProfile, chat?.type, chat?.typing, otherId, isBlockedByMe, isBlockedByThem]);
 
   useEffect(() => {
-    if (messages && user && currentChatId && chat && isParticipant && db) {
-      const unread = messages.filter(msg => !msg.isRead && msg.senderId !== user.uid);
+    if (allMessages && user && currentChatId && chat && isParticipant && db) {
+      const unread = allMessages.filter(msg => !msg.isRead && msg.senderId !== user.uid);
       unread.forEach(msg => {
         updateDocumentNonBlocking(doc(db, 'chats', currentChatId, 'messages', msg.id), { isRead: true });
       });
     }
-  }, [messages, user, currentChatId, isParticipant, db, chat]);
-
-  useEffect(() => {
-    if (scrollRef.current && !showScrollDown) scrollToBottom();
-  }, [messages]);
+  }, [allMessages, user, currentChatId, isParticipant, db, chat]);
 
   const scrollToBottom = useCallback(() => {
     if (scrollRef.current) {
@@ -276,6 +307,13 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: any) {
       isRead: false
     };
 
+    if (forwardingMessage) {
+      data.content = forwardingMessage.content;
+      data.contentType = forwardingMessage.contentType;
+      data.senderName = `${userProfile?.name} (переслано от ${forwardingMessage.senderName})`;
+      setForwardingMessage(null);
+    }
+
     if (replyTo) {
       data.replyToId = replyTo.id;
       data.replyToContent = replyTo.contentType === 'text' ? replyTo.content : `[${replyTo.contentType}]`;
@@ -283,27 +321,44 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: any) {
     }
 
     addDocumentNonBlocking(collection(db, 'chats', currentChatId, 'messages'), data);
-    
     updateDocumentNonBlocking(doc(db, 'chats', currentChatId), { [`typing.${user.uid}`]: false });
-    
     setTimeout(scrollToBottom, 50);
-  }, [isBlocked, userProfile, currentChatId, user, isParticipant, db, editMessage, replyTo, scrollToBottom]);
+  }, [isBlocked, userProfile, currentChatId, user, isParticipant, db, editMessage, replyTo, forwardingMessage, scrollToBottom]);
 
-  const handleAISuggest = useCallback(async (currentInput: string) => {
-    if (!messages || messages.length === 0) return null;
-    setIsSuggesting(true);
+  const scrollToMessage = (msgId: string) => {
+    const el = document.getElementById(`msg-${msgId}`);
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  };
+
+  const startAudioRecording = async () => {
+    if (isBlocked || userProfile?.isBanned) return;
+    if (isRecordingAudio) {
+       mediaRecorderRef.current?.stop();
+       setIsRecordingAudio(false);
+       return;
+    }
+    isCancelledRef.current = false;
     try {
-      const history = messages.slice(-5).map(m => ({
-        sender: m.senderName,
-        message: m.contentType === 'text' ? m.content : `[${m.contentType}]`
-      }));
-      const { draftMessage } = await suggestMessageDraft({ conversationHistory: history, currentUserInput: currentInput });
-      return draftMessage;
-    } catch (e) {
-      toast({ title: "Ошибка AI", variant: "destructive" });
-      return null;
-    } finally { setIsSuggesting(false); }
-  }, [messages, toast]);
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      setActiveStream(stream);
+      setIsRecordingAudio(true);
+      const mediaRecorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = mediaRecorder;
+      chunksRef.current = [];
+      mediaRecorder.ondataavailable = e => { if (e.data.size > 0) chunksRef.current.push(e.data); };
+      mediaRecorder.onstop = () => {
+        if (!isCancelledRef.current && chunksRef.current.length > 0) {
+          const blob = new Blob(chunksRef.current, { type: 'audio/webm' });
+          const reader = new FileReader();
+          reader.onloadend = () => handleSendMessage(reader.result as string, 'audio');
+          reader.readAsDataURL(blob);
+        }
+        stream.getTracks().forEach(t => t.stop());
+        setActiveStream(null);
+      };
+      mediaRecorder.start();
+    } catch (e) { toast({ title: "Ошибка микрофона", variant: "destructive" }); }
+  };
 
   const startVideoRecording = async () => {
     if (isBlocked || userProfile?.isBanned) return;
@@ -314,11 +369,11 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: any) {
       setIsRecordingVideo(true);
       const mediaRecorder = new MediaRecorder(stream, { mimeType: 'video/webm' });
       mediaRecorderRef.current = mediaRecorder;
-      audioChunksRef.current = [];
-      mediaRecorder.ondataavailable = e => { if (e.data.size > 0) audioChunksRef.current.push(e.data); };
+      chunksRef.current = [];
+      mediaRecorder.ondataavailable = e => { if (e.data.size > 0) chunksRef.current.push(e.data); };
       mediaRecorder.onstop = () => {
-        if (!isCancelledRef.current && audioChunksRef.current.length > 0) {
-          const blob = new Blob(audioChunksRef.current, { type: 'video/webm' });
+        if (!isCancelledRef.current && chunksRef.current.length > 0) {
+          const blob = new Blob(chunksRef.current, { type: 'video/webm' });
           const reader = new FileReader();
           reader.onloadend = () => handleSendMessage(reader.result as string, 'video');
           reader.readAsDataURL(blob);
@@ -329,6 +384,22 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: any) {
       mediaRecorder.start();
     } catch (e) { toast({ title: "Ошибка камеры", variant: "destructive" }); }
   };
+
+  const handleAISuggest = useCallback(async (currentInput: string) => {
+    if (!allMessages || allMessages.length === 0) return null;
+    setIsSuggesting(true);
+    try {
+      const history = allMessages.slice(-5).map(m => ({
+        sender: m.senderName,
+        message: m.contentType === 'text' ? m.content : `[${m.contentType}]`
+      }));
+      const { draftMessage } = await suggestMessageDraft({ conversationHistory: history, currentUserInput: currentInput });
+      return draftMessage;
+    } catch (e) {
+      toast({ title: "Ошибка AI", variant: "destructive" });
+      return null;
+    } finally { setIsSuggesting(false); }
+  }, [allMessages, toast]);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []).slice(0, 10);
@@ -371,10 +442,40 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: any) {
           </div>
         </div>
         <div className="flex items-center gap-1">
+          <Button variant="ghost" size="icon" onClick={() => setIsSearchOpen(!isSearchOpen)} className={isSearchOpen ? "text-primary bg-primary/10" : ""}><SearchIcon className="w-5 h-5" /></Button>
           <Button variant="ghost" size="icon" onClick={() => setIsChatInfoOpen(true)}><Info className="w-5 h-5" /></Button>
           <Button variant="ghost" size="icon"><MoreVertical className="w-5 h-5" /></Button>
         </div>
       </header>
+
+      {isSearchOpen && (
+        <div className="bg-card/40 backdrop-blur-md px-4 py-2 border-b border-border/40 flex items-center gap-2 animate-in slide-in-from-top duration-200">
+          <Input 
+            autoFocus
+            placeholder="Поиск сообщений..." 
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            className="h-9 bg-muted/30 border-none rounded-xl"
+          />
+          <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => { setIsSearchOpen(false); setSearchQuery(''); }}><X className="w-4 h-4" /></Button>
+        </div>
+      )}
+
+      {chat?.pinnedMessageId && pinnedMessage && (
+        <div 
+          className="bg-primary/10 backdrop-blur-md px-4 py-2 border-b border-primary/20 flex items-center gap-3 cursor-pointer hover:bg-primary/15 transition-colors z-10 shrink-0"
+          onClick={() => scrollToMessage(pinnedMessage.id)}
+        >
+          <Pin className="w-3 h-3 text-primary rotate-45 shrink-0" />
+          <div className="flex-1 min-w-0 flex flex-col">
+            <span className="text-[10px] font-bold text-primary uppercase tracking-wider">Закреплённое сообщение</span>
+            <span className="text-xs truncate text-muted-foreground italic">
+              {pinnedMessage.contentType === 'text' ? pinnedMessage.content : `[${pinnedMessage.contentType}]`}
+            </span>
+          </div>
+          <Button variant="ghost" size="icon" className="h-6 w-6 rounded-full" onClick={(e) => { e.stopPropagation(); updateDocumentNonBlocking(chatRef!, { pinnedMessageId: null }); }}><X className="w-3 h-3" /></Button>
+        </div>
+      )}
 
       <div className="flex-1 relative z-10 overflow-hidden">
         {customBackground && customBackground !== 'default' && <div className="absolute inset-0 z-[-1]" style={bgStyle} />}
@@ -384,6 +485,7 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: any) {
               <MessageItem key={msg.id} message={msg} isMe={msg.senderId === user?.uid} chatId={currentChatId} onReply={() => setReplyTo(msg)} onEdit={() => setEditMessage(msg)} size={userProfile?.settings?.messageSize} />
             ))}
             {isMessagesLoading && <div className="flex justify-center p-8"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>}
+            {messages?.length === 0 && searchQuery && <div className="text-center p-8 text-muted-foreground italic text-sm">Ничего не найдено</div>}
           </div>
         </ScrollArea>
         {showScrollDown && <Button size="icon" variant="secondary" className="absolute bottom-4 right-4 rounded-full shadow-lg z-30" onClick={scrollToBottom}><ChevronDown className="w-5 h-5" /></Button>}
@@ -436,13 +538,16 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: any) {
                   onSuggest={handleAISuggest}
                   onFileSelect={handleFileSelect}
                   onStartVideo={startVideoRecording}
-                  onStartAudio={() => {}} 
+                  onStartAudio={startAudioRecording} 
                   isBlocked={isBlocked}
                   isBanned={userProfile?.isBanned}
                   editMessage={editMessage}
                   onCancelEdit={() => setEditMessage(null)}
                   replyTo={replyTo}
-                  onCancelReply={() => setEditMessage(null)}
+                  onCancelReply={() => setReplyTo(null)}
+                  forwardingMessage={forwardingMessage}
+                  onCancelForward={() => setForwardingMessage(null)}
+                  isRecordingAudio={isRecordingAudio}
                 />
               </>
             )}
