@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { MessageSquareText, Loader2, Smartphone, UserCircle, AtSign, ShieldCheck, KeyRound, ArrowRight, LogIn, UserPlus } from 'lucide-react';
+import { MessageSquareText, Loader2, Smartphone, UserCircle, AtSign, ShieldCheck, KeyRound, ArrowRight } from 'lucide-react';
 import { useAuth, useFirestore } from '@/firebase';
 import { 
   RecaptchaVerifier, 
@@ -36,17 +36,29 @@ export default function AuthScreen() {
     code: ''
   });
 
-  const recaptchaRef = useRef<HTMLDivElement>(null);
   const recaptchaVerifier = useRef<RecaptchaVerifier | null>(null);
 
   useEffect(() => {
-    if (typeof window !== 'undefined' && auth && !recaptchaVerifier.current) {
-      recaptchaVerifier.current = new RecaptchaVerifier(auth, 'recaptcha-container', {
-        size: 'invisible',
-        callback: () => {}
-      });
+    return () => {
+      if (recaptchaVerifier.current) {
+        recaptchaVerifier.current.clear();
+        recaptchaVerifier.current = null;
+      }
+    };
+  }, []);
+
+  const initRecaptcha = () => {
+    if (!recaptchaVerifier.current && auth) {
+      try {
+        recaptchaVerifier.current = new RecaptchaVerifier(auth, 'recaptcha-container', {
+          size: 'invisible',
+          callback: () => {}
+        });
+      } catch (err) {
+        console.error("Recaptcha init error:", err);
+      }
     }
-  }, [auth]);
+  };
 
   const normalizePhone = (phone: string) => {
     let digits = phone.replace(/\D/g, '');
@@ -60,14 +72,13 @@ export default function AuthScreen() {
     const fullPhone = normalizePhone(formData.phone);
     
     if (fullPhone.length < 11) {
-      toast({ title: "Ошибка", description: "Введите корректный номер", variant: "destructive" });
+      toast({ title: "Ошибка", description: "Введите корректный номер (например, +7...)", variant: "destructive" });
       return;
     }
 
     setIsLoading(true);
     try {
       if (mode === 'register') {
-        // Проверка ника перед отправкой SMS
         const username = formData.username.startsWith('@') ? formData.username.toLowerCase() : '@' + formData.username.toLowerCase();
         const q = query(collection(db, 'users'), where('username', '==', username), limit(1));
         const snap = await getDocs(q);
@@ -78,14 +89,22 @@ export default function AuthScreen() {
         }
       }
 
-      if (!recaptchaVerifier.current) throw new Error("Recaptcha not ready");
+      initRecaptcha();
+      if (!recaptchaVerifier.current) throw new Error("Не удалось инициализировать защиту ReCAPTCHA");
+
       const result = await signInWithPhoneNumber(auth, fullPhone, recaptchaVerifier.current);
       setConfirmationResult(result);
       setStep('code');
       toast({ title: "SMS отправлено", description: "Введите код из сообщения" });
     } catch (err: any) {
-      console.error(err);
-      toast({ title: "Ошибка", description: "Не удалось отправить SMS. Попробуйте позже.", variant: "destructive" });
+      console.error("Firebase Auth Error:", err);
+      let errMsg = "Не удалось отправить SMS. ";
+      if (err.code === 'auth/invalid-phone-number') errMsg += "Неверный формат номера.";
+      else if (err.code === 'auth/too-many-requests') errMsg += "Слишком много попыток. Попробуйте позже.";
+      else if (err.code === 'auth/operation-not-allowed') errMsg += "Вход по телефону не включен в консоли Firebase.";
+      else errMsg += `Ошибка: ${err.code || err.message}`;
+      
+      toast({ title: "Ошибка", description: errMsg, variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
@@ -156,7 +175,7 @@ export default function AuthScreen() {
           </div>
           <CardTitle className="text-2xl font-bold tracking-tight text-white">NuxusChat</CardTitle>
           <CardDescription>
-            {step === 'phone' ? (mode === 'login' ? 'Вход по номеру телефона' : 'Регистрация') : 'Подтверждение кода'}
+            {step === 'phone' ? (mode === 'login' ? 'Вход по номеру' : 'Регистрация') : 'Подтверждение кода'}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -209,7 +228,7 @@ export default function AuthScreen() {
           
           <div className="mt-4 text-center">
             <button onClick={() => { setMode(mode === 'login' ? 'register' : 'login'); setStep('phone'); }} className="text-sm text-muted-foreground hover:text-primary transition-colors">
-              {mode === 'login' ? "Нет аккаунта? Зарегистрироваться" : "Уже есть аккаунт? Войти"}
+              {mode === 'login' ? "Нет аккаунта? Регистрация" : "Уже есть аккаунт? Войти"}
             </button>
           </div>
         </CardContent>
