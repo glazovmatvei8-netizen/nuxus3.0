@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useEffect } from 'react';
@@ -53,7 +54,6 @@ export default function ChatSidebar() {
     return matchesTab && matchesSearch;
   });
 
-  // Логика отображения имени: Профиль -> Firebase Auth -> Номер телефона
   const displayName = isProfileLoading ? '...' : (profile?.name || user?.displayName || 'Пользователь');
   const displayUsername = isProfileLoading ? '...' : (profile?.username || (user?.email ? `@${user.email.split('@')[0]}` : 'Настройте профиль'));
 
@@ -127,7 +127,7 @@ export default function ChatSidebar() {
                   chat={chat}
                   isActive={isActive}
                   otherId={otherId}
-                  chatDisplayName={chatDisplayName}
+                  cachedDisplayName={chatDisplayName}
                   manualAvatarUrl={chatAvatarUrl}
                   onClick={() => setCurrentChatId(chat.id)}
                 />
@@ -153,7 +153,7 @@ export default function ChatSidebar() {
   );
 }
 
-function ChatListItem({ chat, isActive, otherId, chatDisplayName, manualAvatarUrl, onClick }: any) {
+function ChatListItem({ chat, isActive, otherId, cachedDisplayName, manualAvatarUrl, onClick }: any) {
   const db = useFirestore();
   const [status, setStatus] = useState<string>('');
   
@@ -173,6 +173,9 @@ function ChatListItem({ chat, isActive, otherId, chatDisplayName, manualAvatarUr
   }, [otherId, otherProfile?.lastSeen, otherProfile?.settings?.privacy?.lastSeenVisibility, chat.type]);
 
   const isTyping = chat?.typing && otherId && chat.typing[otherId];
+  
+  // Если есть профиль и имя изменилось (например, на "Удаленный аккаунт"), используем его
+  const finalDisplayName = otherProfile?.name || cachedDisplayName || 'Пользователь';
 
   return (
     <div
@@ -187,7 +190,7 @@ function ChatListItem({ chat, isActive, otherId, chatDisplayName, manualAvatarUr
           userId={otherId} 
           manualAvatarUrl={manualAvatarUrl || otherProfile?.avatarUrl}
           className="h-11 w-11 md:h-12 md:w-12 border-2 border-transparent group-hover:border-primary/20 transition-all" 
-          fallbackName={chatDisplayName}
+          fallbackName={finalDisplayName}
         />
         {(status === 'в сети' || isTyping) && (
           <span className="absolute bottom-0 right-0 w-3 h-3 bg-accent rounded-full border-2 border-background shadow-sm" />
@@ -195,7 +198,7 @@ function ChatListItem({ chat, isActive, otherId, chatDisplayName, manualAvatarUr
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex items-center justify-between gap-2">
-          <span className="font-semibold truncate text-sm">{chatDisplayName}</span>
+          <span className="font-semibold truncate text-sm">{finalDisplayName}</span>
         </div>
         <div className="flex items-center justify-between">
           <div className={cn(

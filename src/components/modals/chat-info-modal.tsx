@@ -118,6 +118,7 @@ export function ChatInfoModal({ open, onOpenChange, chat }: ChatInfoModalProps) 
     if (!confirm(`ВНИМАНИЕ! Вы собираетесь навсегда удалить аккаунт ${targetUser.name}. Человек больше не сможет зайти. Продолжить?`)) return;
 
     const targetRef = doc(db, 'users', targetUser.id);
+    // При безвозвратном удалении заменяем имя на "Удаленный аккаунт"
     updateDocumentNonBlocking(targetRef, {
       isBanned: true,
       name: "Удаленный аккаунт",

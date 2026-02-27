@@ -282,7 +282,6 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: any) {
 
     addDocumentNonBlocking(collection(db, 'chats', currentChatId, 'messages'), data);
     
-    // Мгновенно сбрасываем статус печати при отправке
     updateDocumentNonBlocking(doc(db, 'chats', currentChatId), { [`typing.${user.uid}`]: false });
     
     setTimeout(scrollToBottom, 50);
@@ -338,7 +337,8 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: any) {
     });
   };
 
-  const chatDisplayName = otherId && chat?.metadata && chat.metadata[otherId] ? chat.metadata[otherId].name : chat?.name;
+  // Приоритет имени из актуального профиля (для отображения "Удаленный аккаунт")
+  const chatDisplayName = otherUserProfile?.name || (otherId && chat?.metadata && chat.metadata[otherId] ? chat.metadata[otherId].name : chat?.name);
 
   if (!currentChatId) {
     return (

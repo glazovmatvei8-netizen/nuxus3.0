@@ -8,10 +8,10 @@ const nextConfig: NextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
-  // В Next.js 15 allowedDevOrigins находится на верхнем уровне
   devIndicators: {
     appIsrStatus: false,
   },
+  // В Next.js 15 allowedDevOrigins может быть вынесен на верхний уровень или в devIndicators
   images: {
     remotePatterns: [
       {
