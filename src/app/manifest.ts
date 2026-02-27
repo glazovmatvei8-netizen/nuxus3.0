@@ -1,9 +1,10 @@
+
 import { MetadataRoute } from 'next'
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: 'NuxusChat — Премиальный мессенджер',
-    short_name: 'NuxusChat',
+    name: 'Nuxus — Премиальный мессенджер',
+    short_name: 'Nuxus',
     description: 'Современный мессенджер с поддержкой AI и видеосообщений.',
     start_url: '/',
     display: 'standalone',

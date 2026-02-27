@@ -13,32 +13,32 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: 'NuxusChat — Премиальный мессенджер',
+  title: 'Nuxus — Премиальная связь',
   description: 'Современный и безопасный мессенджер для общения в реальном времени с поддержкой AI и видеосообщений.',
-  keywords: ['чат', 'мессенджер', 'безопасность', 'AI', 'видеосообщения', 'NuxusChat'],
+  keywords: ['чат', 'мессенджер', 'безопасность', 'AI', 'видеосообщения', 'Nuxus'],
   authors: [{ name: 'Nuxus Team' }],
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
-    title: 'NuxusChat',
+    title: 'Nuxus',
   },
   openGraph: {
     type: 'website',
     locale: 'ru_RU',
-    url: 'https://nuxus.chat',
-    title: 'NuxusChat — Премиальный мессенджер',
+    url: 'https://nuxus.app',
+    title: 'Nuxus — Премиальный опыт общения',
     description: 'Общайтесь красиво и безопасно.',
-    siteName: 'NuxusChat',
+    siteName: 'Nuxus',
     images: [{
       url: 'https://picsum.photos/seed/nuxus/1200/630',
       width: 1200,
       height: 630,
-      alt: 'NuxusChat Preview',
+      alt: 'Nuxus Preview',
     }],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'NuxusChat',
+    title: 'Nuxus',
     description: 'Премиальный опыт общения.',
     images: ['https://picsum.photos/seed/nuxus/1200/630'],
   },

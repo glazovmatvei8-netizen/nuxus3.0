@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState } from 'react';
@@ -6,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { MessageSquareText, Loader2, Smartphone, UserCircle, AtSign, Lock, ArrowRight, ShieldCheck } from 'lucide-react';
+import { Hexagon, Zap, Loader2, Smartphone, UserCircle, AtSign, Lock, ArrowRight, ShieldCheck } from 'lucide-react';
 import { useAuth, useFirestore } from '@/firebase';
 import { 
   signInWithEmailAndPassword,
@@ -43,7 +44,7 @@ export default function AuthScreen() {
 
   const getVirtualEmail = (phone: string) => {
     const digits = normalizePhone(phone).replace('+', '');
-    return `${digits}@nuxus.chat`;
+    return `${digits}@nuxus.app`;
   };
 
   const handleAuth = async (e: React.FormEvent) => {
@@ -136,27 +137,29 @@ export default function AuthScreen() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4 relative overflow-hidden">
-      {/* Футуристичные блюр-акценты */}
-      <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-primary/20 blur-[120px] rounded-full -z-10" />
-      <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-accent/10 blur-[120px] rounded-full -z-10" />
+      <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-primary/10 blur-[120px] rounded-full -z-10" />
+      <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-accent/5 blur-[120px] rounded-full -z-10" />
       
       <div className="w-full max-w-sm relative z-10 animate-in fade-in zoom-in duration-500">
         <div className="flex justify-center mb-8">
-          <div className="relative">
-            <div className="absolute inset-0 bg-primary blur-2xl opacity-20 animate-pulse" />
-            <div className="bg-primary p-5 rounded-[2rem] shadow-2xl shadow-primary/30 relative animate-float">
-              <MessageSquareText className="w-12 h-12 text-white" />
+          <div className="relative group">
+            <div className="absolute inset-0 bg-primary blur-3xl opacity-20 group-hover:opacity-40 transition-opacity" />
+            <div className="bg-primary p-5 rounded-[1.75rem] shadow-2xl shadow-primary/30 relative animate-float">
+              <div className="relative">
+                <Hexagon className="w-12 h-12 text-white" />
+                <Zap className="w-6 h-6 text-white absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 fill-white" />
+              </div>
             </div>
           </div>
         </div>
 
         <Card className="border-white/5 bg-card/40 backdrop-blur-2xl shadow-2xl rounded-[2rem] overflow-hidden">
           <CardHeader className="text-center pb-2 pt-8">
-            <CardTitle className="text-4xl font-black tracking-tighter text-white uppercase italic leading-none">
-              Nuxus<span className="text-primary">Chat</span>
+            <CardTitle className="text-5xl font-black tracking-tighter text-white uppercase italic leading-none">
+              Nuxus
             </CardTitle>
-            <CardDescription className="text-muted-foreground/60 mt-2 font-medium tracking-wide uppercase text-[10px]">
-              {mode === 'login' ? 'Вход в систему' : 'Создание аккаунта'}
+            <CardDescription className="text-muted-foreground/60 mt-3 font-medium tracking-widest uppercase text-[9px]">
+              {mode === 'login' ? 'Authenticating User' : 'Creating Identity'}
             </CardDescription>
           </CardHeader>
           

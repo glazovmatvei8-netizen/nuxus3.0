@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
-  Send, Info, ChevronLeft, Loader2, MessageSquare, Pin, X, Forward, Camera, Video, Circle
+  Send, Info, ChevronLeft, Loader2, Bookmark, Pin, X, Forward, Camera, Video, Circle
 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { MessageItem } from './message-item';
@@ -64,7 +64,6 @@ export default function ChatArea() {
   const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const [videoChunks, setVideoChunks] = useState<Blob[]>([]);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const dataLoadedRef = useRef(false);
@@ -152,7 +151,6 @@ export default function ChatArea() {
     setTimeout(() => scrollToBottom('smooth'), 100);
   }, [messageInput, currentChatId, user, db, userProfile, replyTo, scrollToBottom]);
 
-  // Video Recording Logic
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 480, height: 480 }, audio: true });
@@ -207,7 +205,7 @@ export default function ChatArea() {
   if (!currentChatId) return (
     <div className="flex-1 flex flex-col items-center justify-center text-center p-8 bg-background relative overflow-hidden">
       <div className="bg-muted p-10 rounded-full mb-6 animate-float">
-        <MessageSquare className="w-16 h-16 text-muted-foreground/30" />
+        <Bookmark className="w-16 h-16 text-muted-foreground/30" />
       </div>
       <h2 className="text-xl font-bold text-muted-foreground uppercase tracking-widest">Выберите диалог</h2>
     </div>
@@ -306,13 +304,13 @@ export default function ChatArea() {
                     <Circle className="w-8 h-8 fill-white" />
                   </Button>
                 </div>
-                <div className="text-white font-bold uppercase tracking-widest text-sm animate-pulse">Запись видеосообщения...</div>
+                <div className="text-white font-bold uppercase tracking-widest text-sm animate-pulse">Запись...</div>
               </div>
             </div>
           )}
 
           <div className="flex gap-2 items-end">
-            <Button variant="ghost" size="icon" className="h-11 w-11 rounded-xl shrink-0 bg-muted hover:bg-muted/80" onClick={() => toast({ title: "Скоро", description: "Функция фото находится в разработке" })}>
+            <Button variant="ghost" size="icon" className="h-11 w-11 rounded-xl shrink-0 bg-muted hover:bg-muted/80" onClick={() => toast({ title: "Скоро", description: "Функция фото в разработке" })}>
               <Camera className="w-5 h-5 text-muted-foreground" />
             </Button>
             <div className="flex-1">

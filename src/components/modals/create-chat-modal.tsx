@@ -58,7 +58,7 @@ export function CreateChatModal({ open, onOpenChange }: CreateChatModalProps) {
   const startPrivateChat = async (otherUser: User) => {
     if (!db || !user || !currentUserProfile) return;
 
-    // Проверка приватности: может ли писать не-премиум пользователь?
+    // Проверка приватности
     const otherCanBeMessagedBy = otherUser.settings?.privacy?.whoCanMessageMe || 'everybody';
     if (otherCanBeMessagedBy === 'premium' && !isUserPremium(currentUserProfile)) {
       toast({ 
@@ -170,10 +170,10 @@ export function CreateChatModal({ open, onOpenChange }: CreateChatModalProps) {
         <DialogHeader className="p-6 pb-2">
           <DialogTitle className="text-xl font-bold flex items-center gap-2">
             {step === 'select' ? <MessageSquarePlus className="w-5 h-5 text-primary" /> : <ArrowRight className="w-5 h-5 text-primary" />}
-            {step === 'select' ? 'Новое сообщение' : `Создание ${type === 'group' ? 'группы' : 'канала'}`}
+            {step === 'select' ? 'Новая связь' : `Создание ${type === 'group' ? 'группы' : 'канала'}`}
           </DialogTitle>
           <DialogDescription>
-            {step === 'select' ? 'Найдите друга по имени, @нику или телефону' : 'Укажите детали вашего сообщества'}
+            {step === 'select' ? 'Найдите пользователя для общения' : 'Укажите детали вашего сообщества'}
           </DialogDescription>
         </DialogHeader>
 
@@ -202,7 +202,7 @@ export function CreateChatModal({ open, onOpenChange }: CreateChatModalProps) {
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input 
-                  placeholder="Имя, @ник или номер телефона..." 
+                  placeholder="Поиск..." 
                   className="pl-9 h-11 bg-muted/30 border-muted-foreground/10 rounded-xl"
                   value={search}
                   onChange={e => setSearch(e.target.value)}
@@ -218,7 +218,7 @@ export function CreateChatModal({ open, onOpenChange }: CreateChatModalProps) {
                       <Contact className="w-6 h-6 text-muted-foreground" />
                     </div>
                     <p className="text-xs text-muted-foreground italic">
-                      Начните вводить данные для поиска ваших контактов
+                      Введите ник или телефон для поиска
                     </p>
                   </div>
                 ) : filteredUsers.length > 0 ? (
@@ -253,7 +253,7 @@ export function CreateChatModal({ open, onOpenChange }: CreateChatModalProps) {
                   ))
                 ) : (
                   <div className="p-8 text-center text-muted-foreground text-sm italic">
-                    Пользователи не найдены
+                    Никто не найден
                   </div>
                 )}
               </div>
@@ -287,7 +287,7 @@ export function CreateChatModal({ open, onOpenChange }: CreateChatModalProps) {
                 onClick={createGroupOrChannel}
                 disabled={isLoading}
               >
-                {isLoading ? <Loader2 className="animate-spin" /> : `Создать ${type === 'group' ? 'группу' : 'канал'}`}
+                {isLoading ? <Loader2 className="animate-spin" /> : `Создать`}
               </Button>
             </div>
           </div>

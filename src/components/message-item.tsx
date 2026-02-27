@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useMemo, memo } from 'react';
@@ -74,7 +75,7 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, amIPremium = 
 
   const handleForward = () => {
     setForwardingMessage(message);
-    toast({ title: "Выберите чат для пересылки" });
+    toast({ title: "Выберите контакт для пересылки" });
   };
 
   const handlePaymentAction = async (action: 'confirm' | 'reject', e: React.MouseEvent) => {

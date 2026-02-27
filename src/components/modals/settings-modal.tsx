@@ -19,13 +19,12 @@ import { useAuth, useUser, useFirestore, useDoc, useMemoFirebase } from '@/fireb
 import { UserAvatar } from '@/components/user-avatar';
 import { 
   LogOut, User as UserIcon, LayoutGrid, Palette, Loader2, Sparkles, Wand2, AtSign, Settings2, Check, 
-  ShieldCheck, Lock, UserX, Crown, Bell, ShoppingBag, CreditCard, Copy, Info, Type
+  ShieldCheck, Lock, UserX, Crown, Bell, ShoppingBag, CreditCard, Copy, Info, Type, Hexagon
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { signOut } from 'firebase/auth';
 import { doc, collection, query, where, limit, getDocs, addDoc } from 'firebase/firestore';
 import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
-import { generateAiAvatar } from '@/ai/flows/generate-ai-avatar-flow';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { formatDisplayName, isUserPremium, cn } from '@/lib/utils';
 import type { User } from '@/lib/types';
@@ -60,7 +59,6 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
   const db = useFirestore();
   const { user } = useUser();
   const { toast } = useToast();
-  const avatarInputRef = useRef<HTMLInputElement>(null);
   const isInitialized = useRef(false);
 
   const userRef = useMemoFirebase(() => (!db || !user) ? null : doc(db, 'users', user.uid), [db, user]);
@@ -82,7 +80,6 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
     sounds: true,
   });
 
-  const [isGeneratingAvatar, setIsGeneratingAvatar] = useState(false);
   const [showStore, setShowStore] = useState(false);
   const [isSubmittingPayment, setIsSubmittingPayment] = useState(false);
   const [pendingPayment, setPendingPayment] = useState<{ type: 'premium', item: any } | null>(null);
@@ -157,7 +154,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
       if (chatSnap.empty) {
         const newChatRef = await addDoc(collection(db, 'chats'), {
           type: 'private',
-          name: 'Nuxus',
+          name: 'Nuxus Support',
           username: '@nuxus_bot',
           ownerId: adminId,
           participantIds: [user.uid, adminId],
@@ -174,7 +171,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
         chatId: adminChatId,
         senderId: 'nuxus_bot',
         senderName: 'Nuxus',
-        content: `📦 Пользователь оплатил: ${itemName}`,
+        content: `📦 Заявка на оплату: ${itemName}`,
         contentType: 'payment_request',
         sentAt: new Date().toISOString(),
         isRead: false,
@@ -223,7 +220,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                 <div className="p-6 space-y-8 pb-12">
                   <div className="space-y-4">
                     <h3 className="text-lg font-bold flex items-center gap-2 text-primary">
-                      <Crown className="w-5 h-5" /> Подписки Nuxus Premium
+                      <Crown className="w-5 h-5" /> Nuxus Premium
                     </h3>
                     <div className="space-y-3">
                       {PREMIUM_PLANS.map(plan => (
@@ -235,7 +232,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                         >
                           <div className="flex flex-col items-start">
                             <span className="text-sm font-bold">{plan.name}</span>
-                            <span className="text-[10px] text-muted-foreground">Полный доступ</span>
+                            <span className="text-[10px] text-muted-foreground">Эксклюзивные функции</span>
                           </div>
                           <span className="font-black text-primary">{plan.price} ₽</span>
                         </Button>
@@ -246,7 +243,12 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
               ) : (
                 <div className="flex flex-col">
                   <div className="flex flex-col items-center gap-4 py-6 bg-gradient-to-b from-primary/10 to-transparent">
-                    <UserAvatar userId={user?.uid} manualAvatarUrl={form.avatarUrl} className="h-28 w-28 border-4 border-background" fallbackName={form.name} />
+                    <div className="relative">
+                      <UserAvatar userId={user?.uid} manualAvatarUrl={form.avatarUrl} className="h-28 w-28 border-4 border-background" fallbackName={form.name} />
+                      <div className="absolute -bottom-1 -right-1 bg-primary p-1 rounded-xl border-4 border-background">
+                        <Hexagon className="w-4 h-4 text-white" />
+                      </div>
+                    </div>
                     <div className="text-center px-4">
                       <h3 className="font-bold text-xl flex items-center justify-center gap-2">{form.name || 'Пользователь'}</h3>
                       <p className="text-sm text-muted-foreground">{form.username}</p>
@@ -264,8 +266,8 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                         <Input value={form.username} onChange={e => setForm({...form, username: e.target.value})} className="bg-muted/30 border-none h-11 rounded-xl" />
                       </div>
                       <div className="space-y-1.5">
-                        <Label className="text-xs text-muted-foreground">О себе (Био)</Label>
-                        <Textarea value={form.bio} onChange={e => setForm({...form, bio: e.target.value})} className="bg-muted/30 border-none rounded-xl resize-none h-20" placeholder="Расскажите о себе..." />
+                        <Label className="text-xs text-muted-foreground">Био</Label>
+                        <Textarea value={form.bio} onChange={e => setForm({...form, bio: e.target.value})} className="bg-muted/30 border-none rounded-xl resize-none h-20" placeholder="Кратко о себе..." />
                       </div>
                     </div>
 
@@ -277,12 +279,12 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                         </div>
                         {isPremium && <Check className="text-accent w-5 h-5" />}
                       </div>
-                      {!isPremium && <Button variant="outline" className="w-full h-9 rounded-xl text-xs font-bold">Купить подписку</Button>}
+                      {!isPremium && <Button variant="outline" className="w-full h-9 rounded-xl text-xs font-bold">Подключить</Button>}
                     </div>
 
                     <div className="space-y-4">
                       <div className="space-y-1.5">
-                        <Label className="text-xs flex items-center gap-2"><Type className="w-3 h-3" /> Размер текста</Label>
+                        <Label className="text-xs flex items-center gap-2"><Type className="w-3 h-3" /> Текст</Label>
                         <Select value={form.messageSize} onValueChange={(val) => setForm({...form, messageSize: val as any})}>
                           <SelectTrigger className="bg-background/50 border-none rounded-xl h-10"><SelectValue /></SelectTrigger>
                           <SelectContent>
@@ -293,7 +295,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                         </Select>
                       </div>
                       <div className="space-y-1.5">
-                        <Label className="text-xs">Фон чатов</Label>
+                        <Label className="text-xs">Обои чата</Label>
                         <Select value={form.chatBackground} onValueChange={(val) => setForm({...form, chatBackground: val})}>
                           <SelectTrigger className="bg-background/50 border-none rounded-xl h-10"><SelectValue /></SelectTrigger>
                           <SelectContent>
@@ -331,7 +333,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
           </DialogHeader>
           <div className="p-6 space-y-6">
             <div className="bg-background/50 p-4 rounded-2xl border border-white/5">
-              <span className="text-[10px] font-bold text-muted-foreground uppercase">Реквизиты (ЮMoney)</span>
+              <span className="text-[10px] font-bold text-muted-foreground uppercase">Реквизиты</span>
               <div className="text-lg font-mono font-bold text-white tracking-wider flex items-center justify-between mt-1">
                 {CARD_NUMBER}
                 <Button variant="ghost" size="icon" onClick={() => { navigator.clipboard.writeText(CARD_NUMBER.replace(/\s/g, '')); toast({ title: "Копировано" }); }}>
@@ -342,10 +344,10 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
             <div className="space-y-3">
               <div className="flex items-start gap-3 p-3 bg-muted/20 rounded-xl">
                 <Info className="w-4 h-4 text-primary shrink-0" />
-                <p className="text-[11px] text-muted-foreground leading-relaxed">После перевода {pendingPayment?.item.price} ₽ нажмите кнопку ниже для подтверждения.</p>
+                <p className="text-[11px] text-muted-foreground leading-relaxed">Переведите {pendingPayment?.item.price} ₽ и нажмите кнопку ниже.</p>
               </div>
               <Button className="w-full h-12 rounded-xl font-bold" onClick={handleConfirmPayment} disabled={isSubmittingPayment}>
-                {isSubmittingPayment && <Loader2 className="w-4 h-4 animate-spin mr-2" />} Я оплатил(а)
+                {isSubmittingPayment && <Loader2 className="w-4 h-4 animate-spin mr-2" />} Готово
               </Button>
             </div>
           </div>

@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useMemo, useEffect } from 'react';
@@ -5,7 +6,7 @@ import { useAppState } from '@/lib/store';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { UserAvatar } from '@/components/user-avatar';
-import { Search, Settings, Plus, Loader2, Bookmark, Pin, Globe, Star } from 'lucide-react';
+import { Search, Settings, Plus, Loader2, Bookmark, Pin, Globe, Star, Hexagon, Zap } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { CreateChatModal } from './modals/create-chat-modal';
@@ -203,12 +204,17 @@ export default function ChatSidebar() {
             className="flex items-center gap-3 cursor-pointer group min-w-0"
             onClick={() => setIsSettingsOpen(true)}
           >
-            <UserAvatar 
-              userId={user?.uid} 
-              className="h-10 w-10 border border-primary group-hover:scale-105 transition-all"
-              fallbackName={displayName}
-              manualAvatarUrl={profile?.avatarUrl}
-            />
+            <div className="relative shrink-0">
+               <UserAvatar 
+                userId={user?.uid} 
+                className="h-11 w-11 border-2 border-primary group-hover:scale-105 transition-all"
+                fallbackName={displayName}
+                manualAvatarUrl={profile?.avatarUrl}
+              />
+              <div className="absolute -top-1 -left-1 bg-primary p-0.5 rounded-lg">
+                <Hexagon className="w-3 h-3 text-white" />
+              </div>
+            </div>
             <div className="flex flex-col min-w-0">
               <span className="font-bold text-sm truncate flex items-center gap-1">
                 {displayName}
@@ -313,7 +319,7 @@ export default function ChatSidebar() {
           onClick={() => setIsCreateModalOpen(true)}
         >
           <Plus className="w-5 h-5 mr-2" />
-          Новый чат
+          Новая связь
         </Button>
       </div>
 
