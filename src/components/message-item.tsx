@@ -23,7 +23,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { format } from 'date-fns';
-import { SmilePlus, CornerUpLeft, Pencil, Trash2, Check, CheckCheck, ZoomIn, Pin, Play, Pause, Mic, Star, Languages, Loader2, Lock, Gift, Crown, Diamond } from 'lucide-react';
+import { SmilePlus, CornerUpLeft, Pencil, Trash2, Check, CheckCheck, ZoomIn, Pin, Play, Pause, Mic, Star, Languages, Loader2, Lock, Gift, Crown, Diamond, Rocket, Flame, Heart, Zap, Trophy } from 'lucide-react';
 import { cn, isUserPremium } from '@/lib/utils';
 import { collection, doc } from 'firebase/firestore';
 import { deleteDocumentNonBlocking, addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
@@ -287,19 +287,27 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onEdit, size 
           </div>
         );
       case 'gift':
-        const giftIcon = message.content === 'gift_star' ? <Star className="w-16 h-16 text-yellow-400 fill-yellow-400" /> :
-                        message.content === 'gift_diamond' ? <Diamond className="w-16 h-16 text-blue-400 fill-blue-400" /> :
-                        <Crown className="w-16 h-16 text-purple-400 fill-purple-400" />;
-        const giftTitle = message.content === 'gift_star' ? 'Звезда Nuxus' :
-                         message.content === 'gift_diamond' ? 'Бриллиант' : 'Корона Premium';
+        let GiftIcon = Gift;
+        let giftTitle = 'Подарок Nuxus';
+        let giftColor = 'text-primary';
+
+        if (message.content === 'gift_star') { GiftIcon = Star; giftTitle = 'Звезда Nuxus'; giftColor = 'text-yellow-400'; }
+        else if (message.content === 'gift_diamond') { GiftIcon = Diamond; giftTitle = 'Бриллиант'; giftColor = 'text-blue-400'; }
+        else if (message.content === 'gift_crown') { GiftIcon = Crown; giftTitle = 'Корона Premium'; giftColor = 'text-purple-400'; }
+        else if (message.content === 'gift_rocket') { GiftIcon = Rocket; giftTitle = 'Ракета Nuxus'; giftColor = 'text-orange-500'; }
+        else if (message.content === 'gift_heart') { GiftIcon = Heart; giftTitle = 'Сердце Nuxus'; giftColor = 'text-red-500'; }
+        else if (message.content === 'gift_fire') { GiftIcon = Flame; giftTitle = 'Огонь Nuxus'; giftColor = 'text-orange-600'; }
+        else if (message.content === 'gift_zap') { GiftIcon = Zap; giftTitle = 'Молния Nuxus'; giftColor = 'text-yellow-300'; }
+        else if (message.content === 'gift_trophy') { GiftIcon = Trophy; giftTitle = 'Трофей'; giftColor = 'text-amber-500'; }
+
         return (
           <div className="flex flex-col items-center justify-center my-8 w-full animate-in zoom-in-50 duration-500">
             <div className="bg-muted/20 backdrop-blur-xl p-8 rounded-[40px] border-2 border-white/10 shadow-[0_0_50px_rgba(var(--primary),0.2)] flex flex-col items-center gap-4 group/gift cursor-default">
               <div className="text-[12px] font-bold text-primary uppercase tracking-[0.2em] mb-2">Вам отправили подарок</div>
               <div className="relative">
-                <div className="absolute inset-0 blur-2xl bg-primary/20 rounded-full scale-150 group-hover/gift:scale-[2] transition-transform duration-700" />
+                <div className={cn("absolute inset-0 blur-2xl rounded-full scale-150 group-hover/gift:scale-[2] transition-transform duration-700 opacity-20", giftColor.replace('text-', 'bg-'))} />
                 <div className="relative animate-bounce [animation-duration:3s]">
-                  {giftIcon}
+                  <GiftIcon className={cn("w-16 h-16 fill-current", giftColor)} />
                 </div>
               </div>
               <div className="text-xl font-black text-white mt-4 drop-shadow-lg">{giftTitle}</div>

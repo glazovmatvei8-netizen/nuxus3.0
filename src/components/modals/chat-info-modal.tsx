@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { UserAvatar } from '@/components/user-avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { Sparkles, Loader2, Trash2, ShieldAlert, ShieldCheck, Ban, UserPlus, Info, Copy, Check, Star, Crown, Gift, XCircle, Calendar, Diamond, Rocket } from 'lucide-react';
+import { Sparkles, Loader2, Trash2, ShieldAlert, ShieldCheck, Ban, UserPlus, Info, Copy, Check, Star, Crown, Gift, XCircle, Calendar, Diamond, Rocket, Flame, Heart, Zap, Trophy, Gem } from 'lucide-react';
 import { useFirestore, useCollection, useMemoFirebase, useUser, useDoc } from '@/firebase';
 import { collection, query, where, orderBy, limit, getDocs, doc, arrayUnion, arrayRemove } from 'firebase/firestore';
 import { chatConversationSummary } from '@/ai/flows/chat-conversation-summary-flow';
@@ -15,7 +15,7 @@ import { useToast } from '@/hooks/use-toast';
 import { deleteDocumentNonBlocking, updateDocumentNonBlocking, addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { useAppState } from '@/lib/store';
 import { cn, formatDisplayName, isUserPremium } from '@/lib/utils';
-import type { Message, User } from '@/lib/types';
+import type { Message, User, ReceivedGift } from '@/lib/types';
 import { AddMemberModal } from './add-member-modal';
 import { addMonths, addYears } from 'date-fns';
 
@@ -24,6 +24,17 @@ interface ChatInfoModalProps {
   onOpenChange: (open: boolean) => void;
   chat: any;
 }
+
+const AVAILABLE_GIFTS = [
+  { id: 'gift_star', name: 'Звезда', icon: Star, color: 'text-yellow-400' },
+  { id: 'gift_diamond', name: 'Алмаз', icon: Diamond, color: 'text-blue-400' },
+  { id: 'gift_crown', name: 'Корона', icon: Crown, color: 'text-purple-400' },
+  { id: 'gift_rocket', name: 'Ракета', icon: Rocket, color: 'text-orange-500' },
+  { id: 'gift_heart', name: 'Сердце', icon: Heart, color: 'text-red-500' },
+  { id: 'gift_fire', name: 'Огонь', icon: Flame, color: 'text-orange-600' },
+  { id: 'gift_zap', name: 'Молния', icon: Zap, color: 'text-yellow-300' },
+  { id: 'gift_trophy', name: 'Трофей', icon: Trophy, color: 'text-amber-500' },
+];
 
 export function ChatInfoModal({ open, onOpenChange, chat }: ChatInfoModalProps) {
   const db = useFirestore();
@@ -34,6 +45,7 @@ export function ChatInfoModal({ open, onOpenChange, chat }: ChatInfoModalProps) 
   const [isDeleting, setIsDeleting] = useState(false);
   const [isAddMemberOpen, setIsAddMemberOpen] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
+  const [showGiftSelection, setShowGiftSelection] = useState(false);
   const { toast } = useToast();
 
   const isOwner = user && chat.ownerId === user.uid;
@@ -65,6 +77,12 @@ export function ChatInfoModal({ open, onOpenChange, chat }: ChatInfoModalProps) 
   }, [db, chat.participantIds]);
 
   const { data: members } = useCollection<User>(membersQuery);
+
+  const receivedGiftsQuery = useMemoFirebase(() => {
+    if (!db || !otherId) return null;
+    return collection(db, 'users', otherId, 'receivedGifts');
+  }, [db, otherId]);
+  const { data: receivedGifts } = useCollection<ReceivedGift>(receivedGiftsQuery);
 
   const handleSummarize = async () => {
     if (!db || !chat.id) return;
@@ -107,9 +125,10 @@ export function ChatInfoModal({ open, onOpenChange, chat }: ChatInfoModalProps) 
     toast({ title: "Nuxus Premium выдан!", description: `Статус активен до ${new Date(premiumUntil).toLocaleDateString()}` });
   };
 
-  const handleSendGift = (giftType: 'gift_star' | 'gift_diamond' | 'gift_crown') => {
-    if (!isAdmin || !db || !chat.id) return;
+  const handleSendGift = (giftType: string) => {
+    if (!isAdmin || !db || !chat.id || !otherId) return;
     
+    // Отправляем сообщение в чат
     addDocumentNonBlocking(collection(db, 'chats', chat.id, 'messages'), {
       chatId: chat.id,
       senderId: user?.uid || 'admin',
@@ -119,8 +138,17 @@ export function ChatInfoModal({ open, onOpenChange, chat }: ChatInfoModalProps) 
       sentAt: new Date().toISOString(),
       isRead: false
     });
+
+    // Сохраняем в витрину пользователя
+    addDocumentNonBlocking(collection(db, 'users', otherId, 'receivedGifts'), {
+      giftType,
+      senderId: user?.uid || 'admin',
+      senderName: currentUserProfile?.name || 'Admin',
+      receivedAt: new Date().toISOString(),
+    });
     
-    toast({ title: "Подарок отправлен!", description: "Пользователь увидит его в чате" });
+    setShowGiftSelection(false);
+    toast({ title: "Подарок отправлен!", description: "Пользователь увидит его в чате и профиле" });
   };
 
   const handleRevokePremium = () => {
@@ -220,6 +248,63 @@ export function ChatInfoModal({ open, onOpenChange, chat }: ChatInfoModalProps) 
             <TabsContent value="info" className="flex-1 min-h-0 m-0 overflow-hidden">
               <ScrollArea className="h-full">
                 <div className="p-6 space-y-6">
+                  {/* Gifts Section */}
+                  {isPrivate && otherId && (
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <h3 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+                          <Gift className="w-3 h-3" /> Подарки
+                        </h3>
+                        {isAdmin && (
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className="h-7 text-xs text-primary font-bold"
+                            onClick={() => setShowGiftSelection(!showGiftSelection)}
+                          >
+                            Подарить
+                          </Button>
+                        )}
+                      </div>
+                      
+                      {showGiftSelection && isAdmin && (
+                        <div className="grid grid-cols-4 gap-2 p-3 bg-primary/5 rounded-2xl border border-primary/20 animate-in zoom-in-95 duration-200">
+                          {AVAILABLE_GIFTS.map(g => (
+                            <button
+                              key={g.id}
+                              onClick={() => handleSendGift(g.id)}
+                              className="flex flex-col items-center gap-1.5 p-2 rounded-xl hover:bg-primary/10 transition-colors group"
+                            >
+                              <g.icon className={cn("w-6 h-6 group-hover:scale-110 transition-transform", g.color)} />
+                              <span className="text-[8px] font-bold uppercase">{g.name}</span>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+
+                      <div className="flex flex-wrap gap-2 p-3 bg-muted/20 rounded-2xl border border-border/20 min-h-[60px]">
+                        {receivedGifts && receivedGifts.length > 0 ? (
+                          receivedGifts.map(g => {
+                            const giftInfo = AVAILABLE_GIFTS.find(ag => ag.id === g.giftType);
+                            const GiftIcon = giftInfo?.icon || Gift;
+                            return (
+                              <div key={g.id} className="relative group">
+                                <div className={cn("p-2 rounded-xl bg-muted/30 border border-white/5 shadow-sm", giftInfo?.color)}>
+                                  <GiftIcon className="w-6 h-6" />
+                                </div>
+                                <div className="absolute -bottom-1 -right-1 bg-primary text-[6px] px-1 rounded-full text-white font-bold opacity-0 group-hover:opacity-100 transition-opacity">
+                                  {g.senderName.split(' ')[0]}
+                                </div>
+                              </div>
+                            );
+                          })
+                        ) : (
+                          <p className="text-[10px] text-muted-foreground italic w-full text-center py-2">Пока нет подарков</p>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
                   {isAdmin && isPrivate && otherId && (
                     <div className="bg-gradient-to-br from-primary/10 to-accent/10 p-4 rounded-2xl border border-primary/20 space-y-4">
                       <h3 className="text-[10px] font-bold uppercase tracking-widest text-primary flex items-center gap-2">
@@ -240,21 +325,6 @@ export function ChatInfoModal({ open, onOpenChange, chat }: ChatInfoModalProps) 
                         </Button>
                         <Button variant="outline" size="sm" className="h-9 rounded-xl text-[10px] gap-2 font-bold col-span-2" onClick={() => handleGrantPremium(2, 'years')}>
                           <Crown className="w-3 h-3" /> 2 Года
-                        </Button>
-                      </div>
-
-                      <h3 className="text-[10px] font-bold uppercase tracking-widest text-accent flex items-center gap-2 mt-4">
-                        <Gift className="w-3 h-3" /> Отправить подарок
-                      </h3>
-                      <div className="grid grid-cols-3 gap-2">
-                        <Button variant="outline" size="sm" className="h-16 flex-col rounded-xl gap-1 text-[9px] font-bold border-yellow-500/20 hover:bg-yellow-500/10" onClick={() => handleSendGift('gift_star')}>
-                          <Star className="w-5 h-5 text-yellow-500 fill-yellow-500" /> Звезда
-                        </Button>
-                        <Button variant="outline" size="sm" className="h-16 flex-col rounded-xl gap-1 text-[9px] font-bold border-blue-500/20 hover:bg-blue-500/10" onClick={() => handleSendGift('gift_diamond')}>
-                          <Diamond className="w-5 h-5 text-blue-500 fill-blue-500" /> Алмаз
-                        </Button>
-                        <Button variant="outline" size="sm" className="h-16 flex-col rounded-xl gap-1 text-[9px] font-bold border-purple-500/20 hover:bg-purple-500/10" onClick={() => handleSendGift('gift_crown')}>
-                          <Crown className="w-5 h-5 text-purple-500 fill-purple-500" /> Корона
                         </Button>
                       </div>
 

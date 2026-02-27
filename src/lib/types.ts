@@ -20,6 +20,14 @@ export interface Message {
   isRead?: boolean;
 }
 
+export interface ReceivedGift {
+  id: string;
+  giftType: string;
+  senderName: string;
+  senderId: string;
+  receivedAt: string;
+}
+
 export type ChatType = 'private' | 'group' | 'channel' | 'saved';
 
 export interface Chat {
