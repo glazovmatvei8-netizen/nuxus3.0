@@ -20,7 +20,7 @@ export interface Message {
   isRead?: boolean;
 }
 
-export type ChatType = 'private' | 'group' | 'channel';
+export type ChatType = 'private' | 'group' | 'channel' | 'saved';
 
 export interface Chat {
   id: string;
@@ -65,5 +65,6 @@ export interface User {
   inactivityDeletion: '1-month' | '3-months' | '6-months' | '1-year' | 'never';
   settings?: UserSettings;
   blockedUserIds?: string[];
+  pinnedChatIds?: string[];
   isBanned?: boolean;
 }

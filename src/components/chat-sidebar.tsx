@@ -1,30 +1,34 @@
 
 "use client"
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useAppState } from '@/lib/store';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { UserAvatar } from '@/components/user-avatar';
-import { Search, Settings, Plus, Loader2 } from 'lucide-react';
+import { Search, Settings, Plus, Loader2, Bookmark, Pin, PinOff } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { CreateChatModal } from './modals/create-chat-modal';
 import { SettingsModal } from './modals/settings-modal';
-import type { ChatType, User, Message } from '@/lib/types';
+import type { ChatType, User, Message, Chat } from '@/lib/types';
 import { useFirestore, useUser, useCollection, useDoc, useMemoFirebase } from '@/firebase';
-import { collection, query, where, doc } from 'firebase/firestore';
+import { collection, query, where, doc, getDocs, addDoc, limit } from 'firebase/firestore';
 import { formatLastSeen, formatDisplayName, cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
+import { useToast } from '@/hooks/use-toast';
+import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 export default function ChatSidebar() {
   const { user } = useUser();
   const db = useFirestore();
+  const { toast } = useToast();
   const { currentChatId, setCurrentChatId } = useAppState();
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState<ChatType | 'all'>('all');
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isCreatingSaved, setIsCreatingSaved] = useState(false);
 
   const userProfileRef = useMemoFirebase(() => {
     if (!db || !user) return null;
@@ -39,9 +43,72 @@ export default function ChatSidebar() {
       where('participantIds', 'array-contains', user.uid)
     );
   }, [db, user]);
-  const { data: chats, isLoading: isChatsLoading } = useCollection(chatsQuery);
+  const { data: chats, isLoading: isChatsLoading } = useCollection<Chat>(chatsQuery);
 
-  const filteredChats = (chats || []).filter(chat => {
+  const pinnedIds = profile?.pinnedChatIds || [];
+
+  const handleTogglePin = (e: React.MouseEvent, chatId: string) => {
+    e.stopPropagation();
+    if (!userProfileRef || !profile) return;
+    
+    let newPinned = [...pinnedIds];
+    if (newPinned.includes(chatId)) {
+      newPinned = newPinned.filter(id => id !== chatId);
+      toast({ title: "Чат откреплен" });
+    } else {
+      if (newPinned.length >= 5) {
+        toast({ title: "Лимит достигнут", description: "Максимум 5 закрепленных чатов", variant: "destructive" });
+        return;
+      }
+      newPinned = [chatId, ...newPinned];
+      toast({ title: "Чат закреплен" });
+    }
+    updateDocumentNonBlocking(userProfileRef, { pinnedChatIds: newPinned });
+  };
+
+  const handleOpenSavedMessages = async () => {
+    if (!db || !user || !profile) return;
+    
+    // Проверяем, есть ли уже чат "Избранное"
+    const savedChat = chats?.find(c => c.type === 'saved');
+    if (savedChat) {
+      setCurrentChatId(savedChat.id);
+      return;
+    }
+
+    setIsCreatingSaved(true);
+    try {
+      const q = query(
+        collection(db, 'chats'),
+        where('type', '==', 'saved'),
+        where('ownerId', '==', user.uid),
+        limit(1)
+      );
+      const snap = await getDocs(q);
+      if (!snap.empty) {
+        setCurrentChatId(snap.docs[0].id);
+      } else {
+        const newSaved = await addDoc(collection(db, 'chats'), {
+          type: 'saved',
+          name: 'Избранное',
+          username: '@saved',
+          ownerId: user.uid,
+          participantIds: [user.uid],
+          adminIds: [user.uid],
+          createdAt: new Date().toISOString(),
+          avatarUrl: null
+        });
+        setCurrentChatId(newSaved.id);
+      }
+    } catch (e) {
+      toast({ title: "Ошибка", description: "Не удалось открыть Избранное", variant: "destructive" });
+    } finally {
+      setIsCreatingSaved(false);
+    }
+  };
+
+  const allFilteredChats = (chats || []).filter(chat => {
+    if (chat.type === 'saved') return false; // Избранное рисуем отдельно сверху
     const otherId = chat.type === 'private' && user && chat.participantIds
       ? chat.participantIds.find((id: string) => id !== user.uid)
       : null;
@@ -54,6 +121,9 @@ export default function ChatSidebar() {
     const matchesSearch = chatName?.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesTab && matchesSearch;
   });
+
+  const pinnedChats = allFilteredChats.filter(c => pinnedIds.includes(c.id));
+  const unpinnedChats = allFilteredChats.filter(c => !pinnedIds.includes(c.id));
 
   const displayName = isProfileLoading ? '...' : formatDisplayName(profile?.name || user?.displayName);
   const displayUsername = isProfileLoading ? '...' : (profile?.username || (user?.email ? `@${user.email.split('@')[0]}` : 'Настройте профиль'));
@@ -115,22 +185,63 @@ export default function ChatSidebar() {
           </div>
         ) : (
           <div className="space-y-1">
-            {filteredChats.map(chat => {
+            {/* Избранное всегда сверху */}
+            {activeTab === 'all' && (
+              <div
+                onClick={handleOpenSavedMessages}
+                className={cn(
+                  "flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all duration-200 group relative",
+                  chats?.find(c => c.type === 'saved')?.id === currentChatId ? 'bg-primary shadow-lg shadow-primary/20 text-white' : 'hover:bg-muted/40 text-foreground'
+                )}
+              >
+                <div className="h-11 w-11 md:h-12 md:w-12 rounded-full bg-accent/20 flex items-center justify-center shrink-0">
+                  {isCreatingSaved ? <Loader2 className="w-5 h-5 animate-spin" /> : <Bookmark className="w-6 h-6 text-accent" />}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <span className="font-semibold text-sm">Избранное</span>
+                  <div className="text-[10px] text-muted-foreground">Заметки и файлы</div>
+                </div>
+              </div>
+            )}
+
+            {/* Закрепленные чаты */}
+            {pinnedChats.map(chat => {
               const otherId = chat.type === 'private' && user ? chat.participantIds?.find((id: string) => id !== user.uid) : null;
               const chatDisplayName = otherId && chat.metadata && chat.metadata[otherId] ? chat.metadata[otherId].name : chat.name;
               const chatAvatarUrl = otherId && chat.metadata && chat.metadata[otherId] ? chat.metadata[otherId].avatarUrl : chat.avatarUrl;
-              
-              const isActive = currentChatId === chat.id;
-
               return (
                 <ChatListItem 
                   key={chat.id}
                   chat={chat}
-                  isActive={isActive}
+                  isActive={currentChatId === chat.id}
                   otherId={otherId}
                   cachedDisplayName={chatDisplayName}
                   manualAvatarUrl={chatAvatarUrl}
                   onClick={() => setCurrentChatId(chat.id)}
+                  isPinned={true}
+                  onTogglePin={handleTogglePin}
+                />
+              );
+            })}
+
+            {pinnedChats.length > 0 && unpinnedChats.length > 0 && <div className="h-px bg-border/20 my-2 mx-4" />}
+
+            {/* Обычные чаты */}
+            {unpinnedChats.map(chat => {
+              const otherId = chat.type === 'private' && user ? chat.participantIds?.find((id: string) => id !== user.uid) : null;
+              const chatDisplayName = otherId && chat.metadata && chat.metadata[otherId] ? chat.metadata[otherId].name : chat.name;
+              const chatAvatarUrl = otherId && chat.metadata && chat.metadata[otherId] ? chat.metadata[otherId].avatarUrl : chat.avatarUrl;
+              return (
+                <ChatListItem 
+                  key={chat.id}
+                  chat={chat}
+                  isActive={currentChatId === chat.id}
+                  otherId={otherId}
+                  cachedDisplayName={chatDisplayName}
+                  manualAvatarUrl={chatAvatarUrl}
+                  onClick={() => setCurrentChatId(chat.id)}
+                  isPinned={false}
+                  onTogglePin={handleTogglePin}
                 />
               );
             })}
@@ -154,7 +265,7 @@ export default function ChatSidebar() {
   );
 }
 
-function ChatListItem({ chat, isActive, otherId, cachedDisplayName, manualAvatarUrl, onClick }: any) {
+function ChatListItem({ chat, isActive, otherId, cachedDisplayName, manualAvatarUrl, onClick, isPinned, onTogglePin }: any) {
   const db = useFirestore();
   const { user } = useUser();
   const [status, setStatus] = useState<string>('');
@@ -166,7 +277,6 @@ function ChatListItem({ chat, isActive, otherId, cachedDisplayName, manualAvatar
   
   const { data: otherProfile } = useDoc<User>(userProfileRef);
 
-  // Unread messages count logic
   const unreadQuery = useMemoFirebase(() => {
     if (!db || !chat.id || !user) return null;
     return query(
@@ -214,12 +324,25 @@ function ChatListItem({ chat, isActive, otherId, cachedDisplayName, manualAvatar
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex items-center justify-between gap-2">
-          <span className="font-semibold truncate text-sm">{finalDisplayName}</span>
-          {unreadCount > 0 && !isActive && (
-            <Badge variant="default" className="bg-accent text-white rounded-full h-5 min-w-5 flex items-center justify-center text-[10px] font-bold px-1 animate-in zoom-in-50 duration-200">
-              {unreadCount}
-            </Badge>
-          )}
+          <span className="font-semibold truncate text-sm flex items-center gap-1">
+            {finalDisplayName}
+            {isPinned && <Pin className="w-3 h-3 rotate-45" />}
+          </span>
+          <div className="flex items-center gap-1">
+            <Button 
+              size="icon" 
+              variant="ghost" 
+              className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+              onClick={(e) => onTogglePin(e, chat.id)}
+            >
+              {isPinned ? <PinOff className="w-3 h-3" /> : <Pin className="w-3 h-3" />}
+            </Button>
+            {unreadCount > 0 && !isActive && (
+              <Badge variant="default" className="bg-accent text-white rounded-full h-5 min-w-5 flex items-center justify-center text-[10px] font-bold px-1 animate-in zoom-in-50 duration-200">
+                {unreadCount}
+              </Badge>
+            )}
+          </div>
         </div>
         <div className="flex items-center justify-between">
           <div className={cn(
