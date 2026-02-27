@@ -160,7 +160,7 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, amIPremium = 
         <div className="flex flex-col items-center justify-center my-2 p-4 bg-card/40 rounded-3xl border border-white/5">
           <Icon className={cn("w-14 h-14 mb-2 text-primary")} />
           <div className="text-sm font-black text-white">{message.giftValue} ₽</div>
-          {message.giftMessage && <p className="text-[10px] italic text-muted-foreground mt-1">"{message.giftMessage}"</p>}
+          {message.giftMessage && <p className="text-[10px] italic text-muted-foreground mt-1 text-center">"{message.giftMessage}"</p>}
         </div>
       );
     }
@@ -186,7 +186,7 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, amIPremium = 
               </Button>
             )}
           </div>
-          {transcription && <p className="text-[10px] italic opacity-80 p-2 bg-primary/5 rounded-lg">{transcription}</p>}
+          {transcription && <p className="text-[10px] italic opacity-80 p-2 bg-primary/5 rounded-lg text-left">{transcription}</p>}
         </div>
       );
     }
@@ -216,7 +216,7 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, amIPremium = 
   if (message.contentType === 'service') {
     return (
       <div className="w-full flex justify-center my-4 px-4">
-        <div className="max-w-[90%] bg-white/5 backdrop-blur-md px-6 py-2 rounded-full border border-white/10 shadow-sm">
+        <div className="max-w-[90%] bg-white/5 backdrop-blur-md px-6 py-2 rounded-full border border-white/10 shadow-sm overflow-hidden">
           <p className="text-[9px] text-muted-foreground uppercase font-black tracking-[0.2em] text-center whitespace-normal leading-relaxed break-words">
             {message.content}
           </p>
@@ -233,7 +233,7 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, amIPremium = 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <div className={cn(
-                "p-3 rounded-2xl cursor-pointer shadow-md border transition-all hover:opacity-95 relative inline-block break-words",
+                "p-3 rounded-2xl cursor-pointer shadow-md border transition-all hover:opacity-95 relative inline-block break-words overflow-hidden",
                 isMe ? "message-bubble-me border-none self-end text-white ml-auto" : "bg-card border-white/5 text-foreground",
                 message.contentType === 'video' && "p-1 rounded-full bg-transparent border-none shadow-none"
               )}>
