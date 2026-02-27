@@ -4,6 +4,7 @@
 import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { UserAvatar } from '@/components/user-avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
@@ -26,14 +27,14 @@ interface ChatInfoModalProps {
 }
 
 const AVAILABLE_GIFTS = [
-  { id: 'gift_star', name: 'Звезда', icon: Star, color: 'text-yellow-400' },
-  { id: 'gift_diamond', name: 'Алмаз', icon: Diamond, color: 'text-blue-400' },
-  { id: 'gift_crown', name: 'Корона', icon: Crown, color: 'text-purple-400' },
-  { id: 'gift_rocket', name: 'Ракета', icon: Rocket, color: 'text-orange-500' },
-  { id: 'gift_heart', name: 'Сердце', icon: Heart, color: 'text-red-500' },
-  { id: 'gift_fire', name: 'Огонь', icon: Flame, color: 'text-orange-600' },
-  { id: 'gift_zap', name: 'Молния', icon: Zap, color: 'text-yellow-300' },
-  { id: 'gift_trophy', name: 'Трофей', icon: Trophy, color: 'text-amber-500' },
+  { id: 'gift_star', name: 'Звезда', icon: Star, color: 'text-yellow-400', value: 50 },
+  { id: 'gift_diamond', name: 'Алмаз', icon: Diamond, color: 'text-blue-400', value: 500 },
+  { id: 'gift_crown', name: 'Корона', icon: Crown, color: 'text-purple-400', value: 5000 },
+  { id: 'gift_rocket', name: 'Ракета', icon: Rocket, color: 'text-orange-500', value: 1000 },
+  { id: 'gift_heart', name: 'Сердце', icon: Heart, color: 'text-red-500', value: 100 },
+  { id: 'gift_fire', name: 'Огонь', icon: Flame, color: 'text-orange-600', value: 75 },
+  { id: 'gift_zap', name: 'Молния', icon: Zap, color: 'text-yellow-300', value: 150 },
+  { id: 'gift_trophy', name: 'Трофей', icon: Trophy, color: 'text-amber-500', value: 300 },
 ];
 
 export function ChatInfoModal({ open, onOpenChange, chat }: ChatInfoModalProps) {
@@ -46,6 +47,7 @@ export function ChatInfoModal({ open, onOpenChange, chat }: ChatInfoModalProps) 
   const [isAddMemberOpen, setIsAddMemberOpen] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
   const [showGiftSelection, setShowGiftSelection] = useState(false);
+  const [giftMessage, setGiftMessage] = useState('');
   const { toast } = useToast();
 
   const isOwner = user && chat.ownerId === user.uid;
@@ -80,7 +82,7 @@ export function ChatInfoModal({ open, onOpenChange, chat }: ChatInfoModalProps) 
 
   const receivedGiftsQuery = useMemoFirebase(() => {
     if (!db || !otherId) return null;
-    return collection(db, 'users', otherId, 'receivedGifts');
+    return query(collection(db, 'users', otherId, 'receivedGifts'), orderBy('receivedAt', 'desc'));
   }, [db, otherId]);
   const { data: receivedGifts } = useCollection<ReceivedGift>(receivedGiftsQuery);
 
@@ -125,7 +127,7 @@ export function ChatInfoModal({ open, onOpenChange, chat }: ChatInfoModalProps) 
     toast({ title: "Nuxus Premium выдан!", description: `Статус активен до ${new Date(premiumUntil).toLocaleDateString()}` });
   };
 
-  const handleSendGift = (giftType: string) => {
+  const handleSendGift = (giftType: string, value: number) => {
     if (!isAdmin || !db || !chat.id || !otherId) return;
     
     // Отправляем сообщение в чат
@@ -135,6 +137,8 @@ export function ChatInfoModal({ open, onOpenChange, chat }: ChatInfoModalProps) 
       senderName: currentUserProfile?.name || 'Admin',
       content: giftType,
       contentType: 'gift',
+      giftMessage: giftMessage.trim() || undefined,
+      giftValue: value,
       sentAt: new Date().toISOString(),
       isRead: false
     });
@@ -144,9 +148,12 @@ export function ChatInfoModal({ open, onOpenChange, chat }: ChatInfoModalProps) 
       giftType,
       senderId: user?.uid || 'admin',
       senderName: currentUserProfile?.name || 'Admin',
+      message: giftMessage.trim() || undefined,
+      value: value,
       receivedAt: new Date().toISOString(),
     });
     
+    setGiftMessage('');
     setShowGiftSelection(false);
     toast({ title: "Подарок отправлен!", description: "Пользователь увидит его в чате и профиле" });
   };
@@ -250,7 +257,7 @@ export function ChatInfoModal({ open, onOpenChange, chat }: ChatInfoModalProps) 
                 <div className="p-6 space-y-6">
                   {/* Gifts Section */}
                   {isPrivate && otherId && (
-                    <div className="space-y-3">
+                    <div className="space-y-4">
                       <div className="flex items-center justify-between">
                         <h3 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-2">
                           <Gift className="w-3 h-3" /> Подарки
@@ -268,17 +275,28 @@ export function ChatInfoModal({ open, onOpenChange, chat }: ChatInfoModalProps) 
                       </div>
                       
                       {showGiftSelection && isAdmin && (
-                        <div className="grid grid-cols-4 gap-2 p-3 bg-primary/5 rounded-2xl border border-primary/20 animate-in zoom-in-95 duration-200">
-                          {AVAILABLE_GIFTS.map(g => (
-                            <button
-                              key={g.id}
-                              onClick={() => handleSendGift(g.id)}
-                              className="flex flex-col items-center gap-1.5 p-2 rounded-xl hover:bg-primary/10 transition-colors group"
-                            >
-                              <g.icon className={cn("w-6 h-6 group-hover:scale-110 transition-transform", g.color)} />
-                              <span className="text-[8px] font-bold uppercase">{g.name}</span>
-                            </button>
-                          ))}
+                        <div className="space-y-3 p-3 bg-primary/5 rounded-2xl border border-primary/20 animate-in zoom-in-95 duration-200">
+                          <Input 
+                            placeholder="Личное сообщение к подарку..." 
+                            value={giftMessage}
+                            onChange={(e) => setGiftMessage(e.target.value)}
+                            className="h-9 bg-background/50 border-none rounded-xl text-xs"
+                          />
+                          <div className="grid grid-cols-4 gap-2">
+                            {AVAILABLE_GIFTS.map(g => (
+                              <button
+                                key={g.id}
+                                onClick={() => handleSendGift(g.id, g.value)}
+                                className="flex flex-col items-center gap-1.5 p-2 rounded-xl hover:bg-primary/10 transition-colors group"
+                              >
+                                <g.icon className={cn("w-6 h-6 group-hover:scale-110 transition-transform", g.color)} />
+                                <div className="flex flex-col items-center leading-none">
+                                  <span className="text-[8px] font-bold uppercase">{g.name}</span>
+                                  <span className="text-[7px] text-accent font-black mt-0.5">{g.value}⭐</span>
+                                </div>
+                              </button>
+                            ))}
+                          </div>
                         </div>
                       )}
 
@@ -288,12 +306,12 @@ export function ChatInfoModal({ open, onOpenChange, chat }: ChatInfoModalProps) 
                             const giftInfo = AVAILABLE_GIFTS.find(ag => ag.id === g.giftType);
                             const GiftIcon = giftInfo?.icon || Gift;
                             return (
-                              <div key={g.id} className="relative group">
+                              <div key={g.id} className="relative group cursor-help">
                                 <div className={cn("p-2 rounded-xl bg-muted/30 border border-white/5 shadow-sm", giftInfo?.color)}>
                                   <GiftIcon className="w-6 h-6" />
                                 </div>
                                 <div className="absolute -bottom-1 -right-1 bg-primary text-[6px] px-1 rounded-full text-white font-bold opacity-0 group-hover:opacity-100 transition-opacity">
-                                  {g.senderName.split(' ')[0]}
+                                  {g.value || giftInfo?.value}⭐
                                 </div>
                               </div>
                             );

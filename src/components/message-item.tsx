@@ -302,16 +302,26 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onEdit, size 
 
         return (
           <div className="flex flex-col items-center justify-center my-8 w-full animate-in zoom-in-50 duration-500">
-            <div className="bg-muted/20 backdrop-blur-xl p-8 rounded-[40px] border-2 border-white/10 shadow-[0_0_50px_rgba(var(--primary),0.2)] flex flex-col items-center gap-4 group/gift cursor-default">
-              <div className="text-[12px] font-bold text-primary uppercase tracking-[0.2em] mb-2">Вам отправили подарок</div>
+            <div className="bg-muted/20 backdrop-blur-xl p-8 rounded-[40px] border-2 border-white/10 shadow-[0_0_50px_rgba(var(--primary),0.2)] flex flex-col items-center gap-4 group/gift cursor-default max-w-sm">
+              <div className="flex items-center gap-2">
+                <div className="text-[12px] font-bold text-primary uppercase tracking-[0.2em]">Вам отправили подарок</div>
+                {message.giftValue && <div className="bg-accent/20 px-2 py-0.5 rounded-full text-[10px] text-accent font-black">{message.giftValue}⭐</div>}
+              </div>
               <div className="relative">
                 <div className={cn("absolute inset-0 blur-2xl rounded-full scale-150 group-hover/gift:scale-[2] transition-transform duration-700 opacity-20", giftColor.replace('text-', 'bg-'))} />
                 <div className="relative animate-bounce [animation-duration:3s]">
                   <GiftIcon className={cn("w-16 h-16 fill-current", giftColor)} />
                 </div>
               </div>
-              <div className="text-xl font-black text-white mt-4 drop-shadow-lg">{giftTitle}</div>
-              <div className="text-[10px] text-muted-foreground/60 font-medium uppercase tracking-widest mt-1">От {message.senderName}</div>
+              <div className="flex flex-col items-center text-center gap-1">
+                <div className="text-xl font-black text-white drop-shadow-lg">{giftTitle}</div>
+                {message.giftMessage && (
+                  <div className="bg-background/40 p-3 rounded-2xl border border-white/5 mt-2 animate-in slide-in-from-bottom-2">
+                    <p className="text-xs italic text-foreground/80 leading-relaxed font-medium">"{message.giftMessage}"</p>
+                  </div>
+                )}
+                <div className="text-[10px] text-muted-foreground/60 font-medium uppercase tracking-widest mt-2">От {message.senderName}</div>
+              </div>
             </div>
           </div>
         );

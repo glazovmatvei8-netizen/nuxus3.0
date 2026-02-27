@@ -18,6 +18,8 @@ export interface Message {
   replyToContent?: string;
   editedAt?: string;
   isRead?: boolean;
+  giftMessage?: string; // Личное сообщение к подарку
+  giftValue?: number;   // Ценность подарка в звездах
 }
 
 export interface ReceivedGift {
@@ -26,6 +28,8 @@ export interface ReceivedGift {
   senderName: string;
   senderId: string;
   receivedAt: string;
+  message?: string;     // Сохраненное сообщение
+  value?: number;       // Сохраненная ценность
 }
 
 export type ChatType = 'private' | 'group' | 'channel' | 'saved';
