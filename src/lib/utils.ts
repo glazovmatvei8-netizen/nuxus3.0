@@ -9,20 +9,20 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 /**
- * Форматирует имя пользователя. Если аккаунт помечен как удаленный, добавляет эмодзи.
+ * Форматирует имя пользователя. Если аккаунт помечен как удаленный, возвращает системную строку.
  */
 export function formatDisplayName(name: string | undefined | null): string {
   if (!name) return 'Пользователь';
   const lower = name.toLowerCase();
-  if (lower.includes('удаленный аккаунт') || lower.includes('удалённый аккаунт') || lower.includes('@deleted')) {
+  if (lower.includes('удаленный') || lower.includes('удалённый') || lower.includes('@deleted') || lower.includes('🚫')) {
     return 'Удалённый Аккаунт🚫';
   }
   return name;
 }
 
 /**
- * Форматирует статус последней активности пользователя в стиле Telegram.
- * Учитывает настройки конфиденциальности и статус удаления.
+ * Форматирует статус последней активности пользователя.
+ * Для удаленных аккаунтов всегда возвращает "Был(а) давно".
  */
 export function formatLastSeen(
   lastSeenIso: string | undefined | null, 

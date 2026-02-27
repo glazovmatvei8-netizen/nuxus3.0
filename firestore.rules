@@ -22,14 +22,14 @@ service cloud.firestore {
     }
 
     match /users/{userId} {
-      allow get, list: if isSignedIn(); 
+      // Разрешаем публичный поиск для регистрации и поиска контактов
+      allow get, list: if true; 
       allow create: if isSignedIn() && request.auth.uid == userId;
       allow update: if (isSignedIn() && request.auth.uid == userId) || isAdmin();
       allow delete: if isAdmin();
     }
 
     match /chats/{chatId} {
-      // Админ видит всё. Пользователи — только свои чаты.
       allow list: if isAdmin() || (isSignedIn() && isNotBanned());
       allow get: if isAdmin() || (isSignedIn() && isNotBanned() && (request.auth.uid in resource.data.participantIds));
       allow create: if isSignedIn() && isNotBanned();
