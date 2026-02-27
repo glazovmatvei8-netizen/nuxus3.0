@@ -1,5 +1,5 @@
 
-export type MessageType = 'text' | 'image' | 'audio' | 'video' | 'service';
+export type MessageType = 'text' | 'image' | 'audio' | 'video' | 'service' | 'gift';
 
 export interface Reaction {
   emoji: string;

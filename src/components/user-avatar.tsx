@@ -20,7 +20,7 @@ interface UserAvatarProps {
 
 /**
  * Умный компонент аватарки с поддержкой Premium-значка.
- * Позиционирование звезды исправлено: теперь она сидит ровно в углу.
+ * Позиционирование звезды исправлено: теперь она сидит ровно в углу с обводкой.
  */
 export function UserAvatar({ userId, className, fallbackName, fallbackClassName, manualAvatarUrl }: UserAvatarProps) {
   const db = useFirestore();
@@ -61,10 +61,10 @@ export function UserAvatar({ userId, className, fallbackName, fallbackClassName,
         )}
       </Avatar>
       {premium && (
-        <div className="absolute bottom-0 right-0 z-10 translate-x-[10%] translate-y-[10%]">
-          <div className="bg-background rounded-full p-[2px]">
-            <div className="bg-gradient-to-tr from-purple-500 to-accent p-[2px] rounded-full shadow-lg border border-background/20">
-              <Star className="w-3 h-3 text-white fill-white" />
+        <div className="absolute bottom-0 right-0 z-10 translate-x-[5%] translate-y-[5%]">
+          <div className="bg-background rounded-full p-[1.5px] shadow-sm">
+            <div className="bg-gradient-to-tr from-purple-500 to-accent p-[1.5px] rounded-full shadow-lg border border-white/20">
+              <Star className="w-2.5 h-2.5 text-white fill-white" />
             </div>
           </div>
         </div>

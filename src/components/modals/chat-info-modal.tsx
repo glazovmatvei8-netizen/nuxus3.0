@@ -7,12 +7,12 @@ import { Button } from '@/components/ui/button';
 import { UserAvatar } from '@/components/user-avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { Sparkles, Loader2, Trash2, ShieldAlert, ShieldCheck, Ban, UserPlus, Info, Copy, Check, Star, Crown, Gift, XCircle, Calendar } from 'lucide-react';
+import { Sparkles, Loader2, Trash2, ShieldAlert, ShieldCheck, Ban, UserPlus, Info, Copy, Check, Star, Crown, Gift, XCircle, Calendar, Diamond, Rocket } from 'lucide-react';
 import { useFirestore, useCollection, useMemoFirebase, useUser, useDoc } from '@/firebase';
 import { collection, query, where, orderBy, limit, getDocs, doc, arrayUnion, arrayRemove } from 'firebase/firestore';
 import { chatConversationSummary } from '@/ai/flows/chat-conversation-summary-flow';
 import { useToast } from '@/hooks/use-toast';
-import { deleteDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { deleteDocumentNonBlocking, updateDocumentNonBlocking, addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { useAppState } from '@/lib/store';
 import { cn, formatDisplayName, isUserPremium } from '@/lib/utils';
 import type { Message, User } from '@/lib/types';
@@ -105,6 +105,22 @@ export function ChatInfoModal({ open, onOpenChange, chat }: ChatInfoModalProps) 
       premiumUntil: premiumUntil
     });
     toast({ title: "Nuxus Premium выдан!", description: `Статус активен до ${new Date(premiumUntil).toLocaleDateString()}` });
+  };
+
+  const handleSendGift = (giftType: 'gift_star' | 'gift_diamond' | 'gift_crown') => {
+    if (!isAdmin || !db || !chat.id) return;
+    
+    addDocumentNonBlocking(collection(db, 'chats', chat.id, 'messages'), {
+      chatId: chat.id,
+      senderId: user?.uid || 'admin',
+      senderName: currentUserProfile?.name || 'Admin',
+      content: giftType,
+      contentType: 'gift',
+      sentAt: new Date().toISOString(),
+      isRead: false
+    });
+    
+    toast({ title: "Подарок отправлен!", description: "Пользователь увидит его в чате" });
   };
 
   const handleRevokePremium = () => {
@@ -226,6 +242,22 @@ export function ChatInfoModal({ open, onOpenChange, chat }: ChatInfoModalProps) 
                           <Crown className="w-3 h-3" /> 2 Года
                         </Button>
                       </div>
+
+                      <h3 className="text-[10px] font-bold uppercase tracking-widest text-accent flex items-center gap-2 mt-4">
+                        <Gift className="w-3 h-3" /> Отправить подарок
+                      </h3>
+                      <div className="grid grid-cols-3 gap-2">
+                        <Button variant="outline" size="sm" className="h-16 flex-col rounded-xl gap-1 text-[9px] font-bold border-yellow-500/20 hover:bg-yellow-500/10" onClick={() => handleSendGift('gift_star')}>
+                          <Star className="w-5 h-5 text-yellow-500 fill-yellow-500" /> Звезда
+                        </Button>
+                        <Button variant="outline" size="sm" className="h-16 flex-col rounded-xl gap-1 text-[9px] font-bold border-blue-500/20 hover:bg-blue-500/10" onClick={() => handleSendGift('gift_diamond')}>
+                          <Diamond className="w-5 h-5 text-blue-500 fill-blue-500" /> Алмаз
+                        </Button>
+                        <Button variant="outline" size="sm" className="h-16 flex-col rounded-xl gap-1 text-[9px] font-bold border-purple-500/20 hover:bg-purple-500/10" onClick={() => handleSendGift('gift_crown')}>
+                          <Crown className="w-5 h-5 text-purple-500 fill-purple-500" /> Корона
+                        </Button>
+                      </div>
+
                       {isTargetPremium && (
                         <Button variant="ghost" size="sm" className="w-full h-8 text-[10px] text-destructive hover:bg-destructive/10 rounded-lg gap-2" onClick={handleRevokePremium}>
                           <XCircle className="w-3 h-3" /> Отозвать подписку
