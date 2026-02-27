@@ -24,9 +24,8 @@ import { formatDisplayName, cn } from '@/lib/utils';
 import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 /**
- * Nuxus Admin Core v4.0 "Nuclear"
- * Финальная версия пульта управления. 
- * Добавлены разделы Безопасности, Базы данных и расширенный мониторинг.
+ * Nuxus Admin Core v4.1 "Nuclear Russian Edition"
+ * Полный перевод на русский язык и расширенный мониторинг.
  */
 export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const db = useFirestore();
@@ -37,20 +36,21 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
   const [alertText, setAlertText] = useState('');
   const [userSearch, setUserSearch] = useState('');
 
-  // Состояние ресурсов v4
+  // Состояние ресурсов v4.1
   const [cpuLoad, setCpuLoad] = useState(8);
   const [memoryUsage, setMemoryUsage] = useState(24);
   const [networkTraffic, setNetworkTraffic] = useState(1.2);
   const [dbRequests, setDbRequests] = useState(42);
 
-  // Системные логи v4
+  // Системные логи v4.1 на русском
   const [logs, setLogs] = useState<string[]>([
-    "[SYSTEM] Nuxus Nuclear Core v4.0 initialized.",
-    "[SECURITY] Firewall active. Port 9002 monitoring...",
-    "[DATABASE] Connection pool: Healthy."
+    "[СИСТЕМА] Ядро Nuxus Nuclear Core v4.1 инициализировано.",
+    "[ЗАЩИТА] Файрвол активен. Мониторинг порта 9002...",
+    "[БАЗА] Пул соединений: Стабильно.",
+    "[СЕРВЕР] Узел в Москве: Подключен."
   ]);
 
-  // Глобальные настройки v4
+  // Глобальные настройки v4.1
   const [maintenanceMode, setMaintenanceMode] = useState(false);
   const [registrationOpen, setRegistrationOpen] = useState(true);
   const [featureVoice, setFeatureVoice] = useState(true);
@@ -61,7 +61,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
   const usersQuery = useMemoFirebase(() => (!db ? null : query(collection(db, 'users'), limit(500))), [db]);
   const { data: users, isLoading: isUsersLoading } = useCollection<User>(usersQuery);
 
-  // Живое обновление ресурсов v4 (каждые 10 секунд)
+  // Живое обновление ресурсов v4.1 (каждые 10 секунд)
   useEffect(() => {
     if (!open) return;
     const interval = setInterval(() => {
@@ -71,11 +71,12 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
       setDbRequests(prev => Math.floor(Math.max(10, prev + (Math.random() * 20 - 10))));
 
       const events = [
-        `[NETWORK] Incoming handshake from edge node.`,
-        `[DATABASE] Periodic index cleanup completed.`,
-        `[SECURITY] Identity validation successful for user.`,
-        `[SYSTEM] Heartbeat: OK.`,
-        `[CORE] Cache re-synchronization initiated.`
+        `[СЕТЬ] Входящее рукопожатие от узла в Европе.`,
+        `[БАЗА] Периодическая очистка индексов завершена.`,
+        `[ЗАЩИТА] Проверка личности успешна для пользователя.`,
+        `[СИСТЕМА] Пульс ядра: В НОРМЕ.`,
+        `[КЭШ] Инициализирована ре-синхронизация кэша.`,
+        `[ТРАФИК] Обнаружен всплеск активности в групповых чатах.`
       ];
       if (Math.random() > 0.7) {
         setLogs(prev => [events[Math.floor(Math.random() * events.length)], ...prev].slice(0, 100));
@@ -107,9 +108,10 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
   const toggleBan = (targetUser: User) => {
     if (!db) return;
     const userRef = doc(db, 'users', targetUser.id);
-    updateDocumentNonBlocking(userRef, { isBanned: !targetUser.isBanned });
-    toast({ title: targetUser.isBanned ? "Доступ восстановлен" : "Аккаунт заблокирован" });
-    setLogs(prev => [`[MODERATION] ${targetUser.username} ${targetUser.isBanned ? 'unbanned' : 'banned'}.`, ...prev]);
+    const newStatus = !targetUser.isBanned;
+    updateDocumentNonBlocking(userRef, { isBanned: newStatus });
+    toast({ title: newStatus ? "Аккаунт заблокирован" : "Доступ восстановлен" });
+    setLogs(prev => [`[МОДЕРАЦИЯ] Пользователь ${targetUser.username} ${newStatus ? 'заблокирован' : 'разблокирован'}.`, ...prev]);
   };
 
   const togglePremium = (targetUser: User) => {
@@ -121,7 +123,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
       premiumUntil: isNowPremium ? new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString() : null
     });
     toast({ title: isNowPremium ? "Premium выдан" : "Premium аннулирован" });
-    setLogs(prev => [`[BILLING] Premium ${isNowPremium ? 'granted to' : 'revoked from'} ${targetUser.username}.`, ...prev]);
+    setLogs(prev => [`[БИЛЛИНГ] Premium ${isNowPremium ? 'выдан' : 'аннулирован'} для ${targetUser.username}.`, ...prev]);
   };
 
   const handleOptimize = async () => {
@@ -134,13 +136,13 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
       if (db) {
         await setDoc(doc(db, 'system', 'maintenance'), {
           lastOptimizationAt: new Date().toISOString(),
-          coreVersion: '4.0.0',
+          coreVersion: '4.1.0',
           status: 'healthy'
         }, { merge: true });
       }
       await new Promise(r => setTimeout(r, 2000));
       toast({ title: "Ядро оптимизировано", description: "Кэш очищен, индексы обновлены." });
-      setLogs(prev => [`[SYSTEM] Full core optimization performed.`, ...prev]);
+      setLogs(prev => [`[СИСТЕМА] Полная оптимизация ядра выполнена успешно.`, ...prev]);
     } finally {
       setIsOptimizing(false);
     }
@@ -156,14 +158,14 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
                 <ShieldAlert className="w-6 h-6 text-white" />
               </div>
               <div className="flex flex-col leading-none">
-                <span>Nuclear Core v4.0</span>
-                <span className="text-[9px] font-bold tracking-[0.4em] text-primary-foreground opacity-70 mt-1 uppercase">Advanced Administration</span>
+                <span>Ядро Nuxus v4.1</span>
+                <span className="text-[9px] font-bold tracking-[0.4em] text-primary-foreground opacity-70 mt-1 uppercase">Расширенное управление</span>
               </div>
             </div>
             <div className="flex items-center gap-3">
               <div className="hidden md:flex flex-col items-end mr-4">
-                <span className="text-[9px] font-black text-green-500 uppercase tracking-widest">System Stable</span>
-                <span className="text-[8px] text-muted-foreground">Uptime: 100%</span>
+                <span className="text-[9px] font-black text-green-500 uppercase tracking-widest">Система стабильна</span>
+                <span className="text-[8px] text-muted-foreground">Аптайм: 100%</span>
               </div>
               <div className="w-10 h-10 rounded-full border-2 border-primary/20 flex items-center justify-center animate-spin-slow">
                 <Zap className="w-5 h-5 text-primary" />
@@ -184,7 +186,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
           <TabsContent value="stats" className="flex-1 p-6 space-y-6 overflow-y-auto m-0">
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div className="p-5 bg-primary/5 rounded-[2rem] border border-primary/10 shadow-inner">
-                <span className="text-[10px] font-bold text-primary uppercase tracking-[0.2em] block mb-2">Total Users</span>
+                <span className="text-[10px] font-bold text-primary uppercase tracking-[0.2em] block mb-2">Всего юзеров</span>
                 <div className="text-4xl font-black italic text-white tracking-tighter">{stats.total}</div>
               </div>
               <div className="p-5 bg-accent/5 rounded-[2rem] border border-accent/10 shadow-inner">
@@ -192,12 +194,12 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
                 <div className="text-4xl font-black italic text-white tracking-tighter">{stats.premium}</div>
               </div>
               <div className="p-5 bg-destructive/5 rounded-[2rem] border border-destructive/10 shadow-inner">
-                <span className="text-[10px] font-bold text-destructive uppercase tracking-[0.2em] block mb-2">Banned</span>
+                <span className="text-[10px] font-bold text-destructive uppercase tracking-[0.2em] block mb-2">Забанено</span>
                 <div className="text-4xl font-black italic text-white tracking-tighter">{stats.banned}</div>
               </div>
               <div className="p-5 bg-green-500/5 rounded-[2rem] border border-green-500/10 shadow-inner">
-                <span className="text-[10px] font-bold text-green-500 uppercase tracking-[0.2em] block mb-2">Network</span>
-                <div className="text-4xl font-black italic text-white tracking-tighter">{networkTraffic.toFixed(1)} <span className="text-xs">MB/s</span></div>
+                <span className="text-[10px] font-bold text-green-500 uppercase tracking-[0.2em] block mb-2">Трафик</span>
+                <div className="text-4xl font-black italic text-white tracking-tighter">{networkTraffic.toFixed(1)} <span className="text-xs">МБ/с</span></div>
               </div>
             </div>
 
@@ -206,19 +208,19 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <Activity className="w-5 h-5 text-primary" />
-                    <span className="text-xs font-black uppercase tracking-widest text-white">Resource Monitor v4</span>
+                    <span className="text-xs font-black uppercase tracking-widest text-white">Мониторинг ресурсов v4.1</span>
                   </div>
-                  <div className="text-[9px] text-muted-foreground uppercase font-bold">Refresh: 10s</div>
+                  <div className="text-[9px] text-muted-foreground uppercase font-bold">Обновление: 10с</div>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                   <div className="space-y-3">
-                    <div className="flex justify-between text-[9px] font-bold uppercase opacity-60 text-white"><span>CPU Load</span><span>{Math.round(cpuLoad)}%</span></div>
+                    <div className="flex justify-between text-[9px] font-bold uppercase opacity-60 text-white"><span>Загрузка CPU</span><span>{Math.round(cpuLoad)}%</span></div>
                     <div className="h-2.5 w-full bg-black/40 rounded-full overflow-hidden border border-white/5">
                       <div className="h-full bg-gradient-to-r from-primary to-accent transition-all duration-1000" style={{ width: `${cpuLoad}%` }} />
                     </div>
                   </div>
                   <div className="space-y-3">
-                    <div className="flex justify-between text-[9px] font-bold uppercase opacity-60 text-white"><span>RAM Usage</span><span>{Math.round(memoryUsage)}%</span></div>
+                    <div className="flex justify-between text-[9px] font-bold uppercase opacity-60 text-white"><span>Память RAM</span><span>{Math.round(memoryUsage)}%</span></div>
                     <div className="h-2.5 w-full bg-black/40 rounded-full overflow-hidden border border-white/5">
                       <div className="h-full bg-gradient-to-r from-accent to-primary transition-all duration-1000" style={{ width: `${memoryUsage}%` }} />
                     </div>
@@ -229,15 +231,15 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
               <div className="p-6 bg-primary/10 rounded-[2.5rem] border border-primary/20 flex flex-col items-center justify-center text-center space-y-4">
                 <Cpu className="w-10 h-10 text-primary opacity-50 animate-pulse" />
                 <div className="space-y-1">
-                  <p className="text-[11px] font-black uppercase tracking-widest text-white">Maintenance Hub</p>
-                  <p className="text-[9px] text-muted-foreground">Clean caches & sync databases</p>
+                  <p className="text-[11px] font-black uppercase tracking-widest text-white">Центр обслуживания</p>
+                  <p className="text-[9px] text-muted-foreground">Очистка кэша и синхронизация</p>
                 </div>
                 <Button 
                   className="w-full h-12 rounded-2xl bg-primary hover:bg-primary/90 text-[10px] uppercase font-bold tracking-[0.2em] shadow-lg shadow-primary/20"
                   onClick={handleOptimize}
                   disabled={isOptimizing}
                 >
-                  {isOptimizing ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Run System Optimization'}
+                  {isOptimizing ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Запустить оптимизацию'}
                 </Button>
               </div>
             </div>
@@ -248,7 +250,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input 
-                  placeholder="Search Users by Name, @ID or Phone..." 
+                  placeholder="Поиск юзеров по имени, @ID или телефону..." 
                   value={userSearch}
                   onChange={e => setUserSearch(e.target.value)}
                   className="bg-card border-white/10 h-12 rounded-2xl pl-10 text-sm focus:ring-primary/40"
@@ -288,12 +290,12 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
                         onClick={() => toggleBan(u)}
                       >
                         {u.isBanned ? <ShieldCheck className="w-4 h-4 mr-2" /> : <Shield className="w-4 h-4 mr-2" />}
-                        {u.isBanned ? "Unban" : "Ban"}
+                        {u.isBanned ? "Разбанить" : "Бан"}
                       </Button>
                     </div>
                   </div>
                 )) : (
-                  <div className="p-12 text-center text-muted-foreground italic text-sm">No users found.</div>
+                  <div className="p-12 text-center text-muted-foreground italic text-sm">Пользователи не найдены.</div>
                 )}
               </div>
             </ScrollArea>
@@ -304,16 +306,16 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
               <div className="p-6 bg-destructive/5 rounded-[2.5rem] border border-destructive/10 space-y-6">
                 <div className="flex items-center gap-2">
                   <ShieldAlert className="w-5 h-5 text-destructive" />
-                  <span className="text-xs font-black uppercase tracking-widest text-white">Critical Protocols</span>
+                  <span className="text-xs font-black uppercase tracking-widest text-white">Критические протоколы</span>
                 </div>
                 <div className="space-y-4">
                   <div className="flex items-center justify-between p-3 bg-destructive/10 rounded-2xl border border-destructive/20">
-                    <div className="flex flex-col"><span className="text-[10px] font-bold text-white uppercase">Maintenance Mode</span><span className="text-[8px] text-muted-foreground">Block all non-admin access</span></div>
+                    <div className="flex flex-col"><span className="text-[10px] font-bold text-white uppercase">Режим обслуживания</span><span className="text-[8px] text-muted-foreground">Блокировка входа для всех</span></div>
                     <Switch checked={maintenanceMode} onCheckedChange={setMaintenanceMode} />
                   </div>
                   <div className="flex items-center justify-between p-3 bg-muted/20 rounded-2xl border border-white/5">
-                    <div className="flex flex-col"><span className="text-[10px] font-bold text-white uppercase">Force Log Out All</span><span className="text-[8px] text-muted-foreground">Reset all active sessions</span></div>
-                    <Button variant="outline" size="sm" className="h-8 text-[8px] uppercase font-bold text-destructive border-destructive/20" onClick={() => setLogs(prev => ["[SECURITY] All users forcefully logged out.", ...prev])}>Execute</Button>
+                    <div className="flex flex-col"><span className="text-[10px] font-bold text-white uppercase">Кикнуть всех юзеров</span><span className="text-[8px] text-muted-foreground">Сброс всех активных сессий</span></div>
+                    <Button variant="outline" size="sm" className="h-8 text-[8px] uppercase font-bold text-destructive border-destructive/20" onClick={() => setLogs(prev => ["[ЗАЩИТА] Все пользователи были принудительно разлогинены.", ...prev])}>Выполнить</Button>
                   </div>
                 </div>
               </div>
@@ -321,15 +323,15 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
               <div className="p-6 bg-accent/5 rounded-[2.5rem] border border-accent/10 space-y-6">
                 <div className="flex items-center gap-2">
                   <ShieldCheck className="w-5 h-5 text-accent" />
-                  <span className="text-xs font-black uppercase tracking-widest text-white">Security Guards</span>
+                  <span className="text-xs font-black uppercase tracking-widest text-white">Стражи безопасности</span>
                 </div>
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
-                    <div className="flex flex-col"><span className="text-[10px] font-bold text-white uppercase">High Security Mode</span><span className="text-[8px] text-muted-foreground">Aggressive content filtering</span></div>
+                    <div className="flex flex-col"><span className="text-[10px] font-bold text-white uppercase">Строгий режим</span><span className="text-[8px] text-muted-foreground">Агрессивная фильтрация контента</span></div>
                     <Switch checked={highSecurity} onCheckedChange={setHighSecurity} />
                   </div>
                   <div className="flex items-center justify-between">
-                    <div className="flex flex-col"><span className="text-[10px] font-bold text-white uppercase">Allow Registration</span><span className="text-[8px] text-muted-foreground">Enable new account creation</span></div>
+                    <div className="flex flex-col"><span className="text-[10px] font-bold text-white uppercase">Разрешить регистрацию</span><span className="text-[8px] text-muted-foreground">Включение создания новых аккаунтов</span></div>
                     <Switch checked={registrationOpen} onCheckedChange={setRegistrationOpen} />
                   </div>
                 </div>
@@ -341,24 +343,24 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="p-5 bg-card border border-white/5 rounded-3xl flex flex-col items-center text-center">
                 <Database className="w-8 h-8 text-primary mb-3" />
-                <span className="text-[9px] font-bold text-muted-foreground uppercase">Messages</span>
+                <span className="text-[9px] font-bold text-muted-foreground uppercase">Сообщений</span>
                 <div className="text-2xl font-black text-white italic">{(dbRequests * 1420).toLocaleString()}</div>
               </div>
               <div className="p-5 bg-card border border-white/5 rounded-3xl flex flex-col items-center text-center">
                 <Cpu className="w-8 h-8 text-accent mb-3" />
-                <span className="text-[9px] font-bold text-muted-foreground uppercase">Requests/Min</span>
+                <span className="text-[9px] font-bold text-muted-foreground uppercase">Запросов/мин</span>
                 <div className="text-2xl font-black text-white italic">{dbRequests}</div>
               </div>
               <div className="p-5 bg-card border border-white/5 rounded-3xl flex flex-col items-center text-center">
                 <Network className="w-8 h-8 text-green-500 mb-3" />
-                <span className="text-[9px] font-bold text-muted-foreground uppercase">Latencies</span>
-                <div className="text-2xl font-black text-white italic">14ms</div>
+                <span className="text-[9px] font-bold text-muted-foreground uppercase">Задержка</span>
+                <div className="text-2xl font-black text-white italic">14мс</div>
               </div>
             </div>
             <div className="bg-black/40 p-6 rounded-[2.5rem] border border-white/5 flex flex-col h-64">
               <div className="flex items-center gap-2 mb-4">
                 <Terminal className="w-4 h-4 text-green-500" />
-                <span className="text-[11px] font-black uppercase text-green-500/80">Kernel Event Streams</span>
+                <span className="text-[11px] font-black uppercase text-green-500/80">Поток системных событий</span>
               </div>
               <ScrollArea className="flex-1 font-mono text-[9px] text-green-500/60 leading-relaxed">
                 <div className="space-y-1">
@@ -378,27 +380,27 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
               <div className="p-6 bg-muted/20 rounded-[2.5rem] border border-white/5 space-y-6">
                 <div className="flex items-center gap-2 mb-2">
                   <Shield className="w-5 h-5 text-primary" />
-                  <span className="text-[11px] font-black uppercase tracking-widest text-white">Feature Toggles</span>
+                  <span className="text-[11px] font-black uppercase tracking-widest text-white">Переключатели функций</span>
                 </div>
                 <div className="space-y-5">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <div className="p-2 bg-primary/10 rounded-lg"><Mic className="w-4 h-4 text-primary" /></div>
-                      <div className="flex flex-col"><span className="text-[10px] font-bold text-white uppercase">Voice Notes</span><span className="text-[8px] text-muted-foreground">Audio recording</span></div>
+                      <div className="flex flex-col"><span className="text-[10px] font-bold text-white uppercase">Голосовые заметки</span><span className="text-[8px] text-muted-foreground">Запись аудиосообщений</span></div>
                     </div>
                     <Switch checked={featureVoice} onCheckedChange={setFeatureVoice} />
                   </div>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <div className="p-2 bg-accent/10 rounded-lg"><Video className="w-4 h-4 text-accent" /></div>
-                      <div className="flex flex-col"><span className="text-[10px] font-bold text-white uppercase">Video Circle</span><span className="text-[8px] text-muted-foreground">Round video messages</span></div>
+                      <div className="flex flex-col"><span className="text-[10px] font-bold text-white uppercase">Кружочки</span><span className="text-[8px] text-muted-foreground">Круглые видеосообщения</span></div>
                     </div>
                     <Switch checked={featureVideo} onCheckedChange={setFeatureVideo} />
                   </div>
                    <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <div className="p-2 bg-primary/10 rounded-lg"><Zap className="w-4 h-4 text-primary" /></div>
-                      <div className="flex flex-col"><span className="text-[10px] font-bold text-white uppercase">AI Assistant</span><span className="text-[8px] text-muted-foreground">Message drafting</span></div>
+                      <div className="flex flex-col"><span className="text-[10px] font-bold text-white uppercase">ИИ Помощник</span><span className="text-[8px] text-muted-foreground">Генерация ответов</span></div>
                     </div>
                     <Switch checked={featureAI} onCheckedChange={setFeatureAI} />
                   </div>
@@ -406,10 +408,10 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
               </div>
 
               <div className="p-6 bg-primary/10 rounded-[2.5rem] border border-primary/20 space-y-4 flex flex-col">
-                <div className="flex items-center gap-2"><Globe className="w-4 h-4 text-primary" /><span className="text-[11px] font-black uppercase tracking-widest text-white">Global Broadcast</span></div>
-                <p className="text-[9px] text-muted-foreground italic mb-2">Message will be sent to all users in the system.</p>
+                <div className="flex items-center gap-2"><Globe className="w-4 h-4 text-primary" /><span className="text-[11px] font-black uppercase tracking-widest text-white">Глобальная рассылка</span></div>
+                <p className="text-[9px] text-muted-foreground italic mb-2">Сообщение будет отправлено всем пользователям системы.</p>
                 <Input 
-                  placeholder="Notification text..." 
+                  placeholder="Текст уведомления..." 
                   value={alertText}
                   onChange={e => setAlertText(e.target.value)}
                   className="bg-card border-white/10 h-14 rounded-2xl text-white text-sm"
@@ -422,13 +424,13 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
                     setTimeout(() => {
                       setIsSendingAlert(false);
                       setAlertText('');
-                      toast({ title: "Broadcast Sent", description: "Successfully pushed to all active nodes." });
-                      setLogs(prev => [`[BROADCAST] Sent: ${alertText.slice(0, 30)}...`, ...prev]);
+                      toast({ title: "Рассылка отправлена", description: "Успешно доставлено всем активным узлам." });
+                      setLogs(prev => [`[РАССЫЛКА] Отправлено: ${alertText.slice(0, 30)}...`, ...prev]);
                     }, 1000);
                   }}
                   disabled={isSendingAlert || !alertText.trim()}
                 >
-                  {isSendingAlert ? <Loader2 className="animate-spin w-6 h-6" /> : <><Send className="w-5 h-5 mr-2" /> Send Global Alert</>}
+                  {isSendingAlert ? <Loader2 className="animate-spin w-6 h-6" /> : <><Send className="w-5 h-5 mr-2" /> Отправить всем</>}
                 </Button>
               </div>
             </div>

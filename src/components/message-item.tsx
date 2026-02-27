@@ -47,9 +47,8 @@ const GIFT_ICONS: Record<string, any> = {
 };
 
 /**
- * MessageItem v4.0.0
- * Фиксированная верстка с защитой от "улетания" сообщений.
- * Использован flex-row-reverse для Me сообщений и центрирование сервисных сообщений.
+ * MessageItem v4.1.0
+ * Оптимизированная верстка с абсолютной фиксацией "Me" сообщений у правого края.
  */
 export const MessageItem = memo(({ message, isMe, chatId, onReply, amIPremium = false, isAdmin = false, senderAvatarUrl = null, onEdit }: any) => {
   const { user } = useUser();
@@ -221,7 +220,7 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, amIPremium = 
   if (message.contentType === 'service') {
     return (
       <div className="w-full flex justify-center my-6 px-4 shrink-0 overflow-hidden">
-        <div className="max-w-[80%] bg-white/5 backdrop-blur-md px-6 py-2.5 rounded-full border border-white/10 shadow-sm">
+        <div className="max-w-[90%] bg-white/5 backdrop-blur-md px-6 py-2.5 rounded-full border border-white/10 shadow-sm">
           <p className="text-[9px] text-muted-foreground uppercase font-black tracking-[0.2em] text-center whitespace-normal leading-relaxed break-words">
             {message.content}
           </p>
@@ -239,7 +238,7 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, amIPremium = 
             <DropdownMenuTrigger asChild>
               <div className={cn(
                 "p-3 rounded-2xl cursor-pointer shadow-md border transition-all hover:opacity-95 relative inline-block break-words overflow-hidden",
-                isMe ? "message-bubble-me border-none self-end text-white" : "bg-card border-white/5 text-foreground",
+                isMe ? "message-bubble-me border-none self-end text-white ml-auto" : "bg-card border-white/5 text-foreground mr-auto",
                 message.contentType === 'video' && "p-1 rounded-full bg-transparent border-none shadow-none"
               )}>
                 {renderContent()}
