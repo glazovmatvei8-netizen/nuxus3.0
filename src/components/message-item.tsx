@@ -1,14 +1,9 @@
 
 "use client"
 
-import React, { useState, useMemo, memo, useRef, useCallback } from 'react';
-import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase';
+import React, { useState, useMemo, memo, useCallback } from 'react';
+import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { UserAvatar } from '@/components/user-avatar';
-import { 
-  Popover, 
-  PopoverContent, 
-  PopoverTrigger 
-} from '@/components/ui/popover';
 import { 
   DropdownMenu,
   DropdownMenuContent,
@@ -18,18 +13,18 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { format, addMonths, addYears } from 'date-fns';
 import { 
-  SmilePlus, CornerUpLeft, Pencil, Trash2, Check, CheckCheck, Pin, Play, Pause, Mic, Star, 
+  SmilePlus, CornerUpLeft, Pencil, Trash2, Check, CheckCheck, Mic, Star, 
   Languages, Loader2, Lock, Gift, Crown, Diamond, Rocket, Flame, Heart, Zap, Trophy, PartyPopper, 
   Cookie, Ghost, Gem, Music, Gamepad2, Coffee, Pizza, Beer, Wine, Camera, Laptop, Watch, Smartphone, 
   Car, Plane, Anchor, Sun, Moon, Cloud, Snowflake, Trees, Flower2, Dog, Cat, Bird, Fish, Smile, 
   ThumbsUp, Bell, Mail, Key, Shield, Sword, Compass, Map, Flag, Briefcase, GraduationCap, Bitcoin, Coins,
-  Calendar, User as UserIcon, ShieldCheck, XCircle
+  Calendar, User as UserIcon, XCircle
 } from 'lucide-react';
-import { cn, isUserPremium } from '@/lib/utils';
+import { cn } from '@/lib/utils';
 import { collection, doc, increment, query, where, getDocs, limit } from 'firebase/firestore';
 import { deleteDocumentNonBlocking, addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { transcribeVoice } from '@/ai/flows/voice-to-text-flow';
-import type { Message, User } from '@/lib/types';
+import type { Message } from '@/lib/types';
 import Image from 'next/image';
 import { Button } from './ui/button';
 import { useToast } from '@/hooks/use-toast';
@@ -49,7 +44,7 @@ const GIFT_ICONS: Record<string, any> = {
   gift_briefcase: Briefcase, gift_grad: GraduationCap
 };
 
-export const MessageItem = memo(({ message, isMe, chatId, onReply, onEdit, onOpenReactions, size = 'medium', isAdmin = false }: any) => {
+export const MessageItem = memo(({ message, isMe, chatId, onReply, onEdit, onOpenReactions, amIPremium = false, isAdmin = false, senderAvatarUrl = null }: any) => {
   const { user } = useUser();
   const db = useFirestore();
   const { toast } = useToast();
@@ -57,25 +52,13 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onEdit, onOpe
   const [transcription, setTranscription] = useState<string | null>(null);
   const [isActionLoading, setIsActionLoading] = useState(false);
 
-  const senderRef = useMemoFirebase(() => {
-    if (!db || !message.senderId || message.senderId === 'system') return null;
-    return doc(db, 'users', message.senderId);
-  }, [db, message.senderId]);
-  const { data: senderProfile } = useDoc<User>(senderRef);
-
-  const meRef = useMemoFirebase(() => {
-    if (!db || !user) return null;
-    return doc(db, 'users', user.uid);
-  }, [db, user]);
-  const { data: meProfile } = useDoc<User>(meRef);
-  const amIPremium = isUserPremium(meProfile);
-
   const formattedTime = useMemo(() => message.sentAt ? format(new Date(message.sentAt), 'HH:mm') : '', [message.sentAt]);
 
   const reactionsQuery = useMemoFirebase(() => {
     if (!db || !chatId || !message.id) return null;
     return collection(db, 'chats', chatId, 'messages', message.id, 'reactions');
   }, [db, chatId, message.id]);
+  
   const { data: reactionsData } = useCollection(reactionsQuery);
 
   const handleToggleReaction = useCallback((emoji: string) => {
@@ -118,14 +101,9 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onEdit, onOpe
             ? addMonths(currentExpiry, message.paymentData.amount || 1).toISOString()
             : addYears(currentExpiry, message.paymentData.amount || 1).toISOString();
           
-          updateDocumentNonBlocking(targetUserRef, {
-            isPremium: true,
-            premiumUntil: newExpiry
-          });
+          updateDocumentNonBlocking(targetUserRef, { isPremium: true, premiumUntil: newExpiry });
         } else if (message.paymentData.type === 'stars') {
-          updateDocumentNonBlocking(targetUserRef, {
-            stars: increment(message.paymentData.stars || 0)
-          });
+          updateDocumentNonBlocking(targetUserRef, { stars: increment(message.paymentData.stars || 0) });
         }
 
         updateDocumentNonBlocking(msgRef, {
@@ -171,7 +149,6 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onEdit, onOpe
               <span className="text-sm font-black text-white">{data.itemName}</span>
             </div>
           </div>
-
           <div className="space-y-2 text-xs">
             <div className="flex items-center justify-between text-muted-foreground">
               <span className="flex items-center gap-1"><UserIcon className="w-3 h-3" /> Пользователь:</span>
@@ -179,33 +156,19 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onEdit, onOpe
             </div>
             <div className="flex items-center justify-between text-muted-foreground">
               <span className="flex items-center gap-1"><Calendar className="w-3 h-3" /> Дата:</span>
-              <span className="text-white font-medium">{format(new Date(message.sentAt), 'dd.MM.yyyy HH:mm')}</span>
+              <span className="text-white font-medium">{formattedTime}</span>
             </div>
             <div className="flex items-center justify-between pt-2 border-t border-white/5">
               <span className="font-bold">К оплате:</span>
               <span className="text-accent font-black text-sm">{data.price} ₽</span>
             </div>
           </div>
-
           {isAdmin && data.status === 'pending' && (
             <div className="flex gap-2 pt-2">
-              <Button 
-                size="sm" 
-                className="flex-1 bg-primary hover:bg-primary/90 rounded-xl h-9 text-xs font-bold"
-                onClick={(e) => handlePaymentAction('confirm', e)}
-                disabled={isActionLoading}
-              >
-                {isActionLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4 mr-1" />}
-                Подтвердить
+              <Button size="sm" className="flex-1 rounded-xl" onClick={(e) => handlePaymentAction('confirm', e)} disabled={isActionLoading}>
+                {isActionLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4 mr-1" />} Принять
               </Button>
-              <Button 
-                size="sm" 
-                variant="outline" 
-                className="flex-1 border-destructive/20 text-destructive hover:bg-destructive/10 rounded-xl h-9 text-xs font-bold"
-                onClick={(e) => handlePaymentAction('reject', e)}
-                disabled={isActionLoading}
-              >
-                {isActionLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <XCircle className="w-4 h-4 mr-1" />}
+              <Button size="sm" variant="outline" className="flex-1 rounded-xl" onClick={(e) => handlePaymentAction('reject', e)} disabled={isActionLoading}>
                 Отказать
               </Button>
             </div>
@@ -217,23 +180,14 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onEdit, onOpe
     if (message.contentType === 'gift') {
       const Icon = GIFT_ICONS[message.content] || Gift;
       return (
-        <div className="flex flex-col items-center justify-center my-4 w-full animate-in zoom-in-95 duration-500">
-          <div className={cn(
-            "bg-card/40 backdrop-blur-2xl p-6 rounded-[32px] border border-white/10 shadow-xl flex flex-col items-center gap-3 max-w-[280px] relative overflow-hidden",
-            message.isNFT && "ring-2 ring-accent/40"
-          )}>
-            {message.isNFT && <div className="absolute top-0 right-0 bg-accent text-[8px] px-3 py-1 rounded-bl-xl font-black text-white tracking-widest">NFT COLLECTIBLE</div>}
-            <div className="text-[10px] font-black text-primary uppercase tracking-widest opacity-60">
-              {message.isNFT ? 'Лимитированный подарок' : 'Вам отправили подарок'}
-            </div>
-            <div className="relative py-2">
-              <Icon className={cn("w-16 h-16 drop-shadow-2xl", message.isNFT ? "text-accent" : "text-primary")} />
-              {message.isNFT && <div className="absolute -bottom-2 -right-2 bg-background/80 px-2 py-0.5 rounded-full text-[10px] font-mono font-bold text-accent">#{message.serialNumber}</div>}
-            </div>
+        <div className="flex flex-col items-center justify-center my-4 w-full">
+          <div className={cn("bg-card/40 backdrop-blur-2xl p-6 rounded-[32px] border border-white/10 shadow-xl flex flex-col items-center gap-3 max-w-[280px] relative overflow-hidden", message.isNFT && "ring-2 ring-accent/40")}>
+            {message.isNFT && <div className="absolute top-0 right-0 bg-accent text-[8px] px-3 py-1 rounded-bl-xl font-black text-white tracking-widest">NFT</div>}
+            <div className="text-[10px] font-black text-primary uppercase tracking-widest opacity-60">ПОДАРОК</div>
+            <Icon className={cn("w-16 h-16 drop-shadow-2xl", message.isNFT ? "text-accent" : "text-primary")} />
             <div className="text-center">
               <div className="text-lg font-black text-white">{message.giftValue} ⭐</div>
-              {message.giftMessage && <p className="text-xs italic text-muted-foreground mt-2 line-clamp-3">"{message.giftMessage}"</p>}
-              <div className="text-[9px] text-muted-foreground uppercase mt-2 opacity-50">от {message.senderName}</div>
+              {message.giftMessage && <p className="text-xs italic text-muted-foreground mt-2">"{message.giftMessage}"</p>}
             </div>
           </div>
         </div>
@@ -261,103 +215,55 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onEdit, onOpe
         <div className="flex flex-col gap-1 mt-1">
           <div className="flex items-center gap-2 p-2 bg-muted/20 rounded-xl">
             <Mic className="w-4 h-4 text-primary" />
-            <span className="text-xs">Голосовое сообщение</span>
-            {amIPremium && !transcription && (
+            <span className="text-xs">Голос</span>
+            {amIPremium && (
               <Button variant="ghost" size="icon" className="h-6 w-6" onClick={handleTranscribe} disabled={isTranscribing}>
                 {isTranscribing ? <Loader2 className="w-3 h-3 animate-spin" /> : <Languages className="w-3 h-3" />}
               </Button>
             )}
           </div>
-          {transcription && <p className="text-[10px] italic opacity-80 p-2 bg-primary/5 rounded-lg border border-primary/10">{transcription}</p>}
+          {transcription && <p className="text-[10px] italic opacity-80 p-2 bg-primary/5 rounded-lg">{transcription}</p>}
         </div>
       );
-    }
-    
-    if (message.contentType === 'service') {
-      return <div className="text-center p-2 text-[10px] text-muted-foreground uppercase tracking-widest">{message.content}</div>;
     }
     
     return <div className="whitespace-pre-wrap text-sm break-words">{message.content}</div>;
   };
 
   if (message.contentType === 'service') {
-    return (
-      <div className="w-full flex justify-center my-2">
-        {renderContent()}
-      </div>
-    );
+    return <div className="w-full flex justify-center my-2 text-center p-2 text-[10px] text-muted-foreground uppercase tracking-widest">{message.content}</div>;
   }
 
-  const handleReplyClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    onReply(message);
-  };
-
-  const handleEditClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    onEdit(message);
-  };
-
-  const handleReactionsClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    onOpenReactions(message);
-  };
-
   return (
-    <div id={`msg-${message.id}`} className={cn("flex gap-2 max-w-[85%] animate-in fade-in relative", isMe ? "ml-auto flex-row-reverse" : "mr-auto")}>
-      {!isMe && <UserAvatar userId={message.senderId} className="h-8 w-8 mt-auto shrink-0" fallbackName={message.senderName} manualAvatarUrl={senderProfile?.avatarUrl} />}
+    <div id={`msg-${message.id}`} className={cn("flex gap-2 max-w-[85%] relative", isMe ? "ml-auto flex-row-reverse" : "mr-auto")}>
+      {!isMe && <UserAvatar userId={null} manualAvatarUrl={senderAvatarUrl} className="h-8 w-8 mt-auto shrink-0" fallbackName={message.senderName} />}
       <div className={cn("flex flex-col min-w-0", isMe ? "items-end" : "items-start")}>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <div className={cn(
-              "p-3 rounded-2xl cursor-pointer shadow-sm border transition-all hover:brightness-110 relative",
-              isMe ? "bg-primary text-white border-primary" : "bg-card border-border text-foreground",
-              message.contentType === 'payment_request' && "border-primary/40 bg-primary/5"
+              "p-3 rounded-2xl cursor-pointer shadow-sm border transition-all hover:brightness-105",
+              isMe ? "bg-primary text-white border-primary" : "bg-card border-border text-foreground"
             )}>
               {renderContent()}
               <div className="flex items-center justify-end gap-1 mt-1 opacity-60">
-                <span className="text-[9px] font-mono">{formattedTime}</span>
-                {isMe && (
-                  message.isRead ? <CheckCheck className="w-3 h-3 text-accent" /> : <Check className="w-3 h-3" />
-                )}
+                <span className="text-[9px]">{formattedTime}</span>
+                {isMe && (message.isRead ? <CheckCheck className="w-3 h-3 text-accent" /> : <Check className="w-3 h-3" />)}
               </div>
             </div>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align={isMe ? 'end' : 'start'} className="w-48 bg-card/95 backdrop-blur-xl">
-            <DropdownMenuItem onClick={handleReplyClick} className="gap-2">
-              <CornerUpLeft className="w-4 h-4" /> Ответить
-            </DropdownMenuItem>
-            {isMe && message.contentType === 'text' && (
-              <DropdownMenuItem onClick={handleEditClick} className="gap-2">
-                <Pencil className="w-4 h-4" /> Изменить
-              </DropdownMenuItem>
-            )}
-            <DropdownMenuItem onClick={handleReactionsClick} className="gap-2">
-              <SmilePlus className="w-4 h-4" /> Реакция
-            </DropdownMenuItem>
+          <DropdownMenuContent align={isMe ? 'end' : 'start'} className="w-48">
+            <DropdownMenuItem onClick={() => onReply(message)} className="gap-2"><CornerUpLeft className="w-4 h-4" /> Ответить</DropdownMenuItem>
+            {isMe && message.contentType === 'text' && <DropdownMenuItem onClick={() => onEdit(message)} className="gap-2"><Pencil className="w-4 h-4" /> Изменить</DropdownMenuItem>}
+            <DropdownMenuItem onClick={() => onOpenReactions(message)} className="gap-2"><SmilePlus className="w-4 h-4" /> Реакция</DropdownMenuItem>
             <DropdownMenuSeparator />
-            {(isMe || isAdmin) && (
-              <DropdownMenuItem 
-                onClick={(e) => { e.stopPropagation(); deleteDocumentNonBlocking(doc(db, 'chats', chatId, 'messages', message.id)); }} 
-                className="text-destructive gap-2"
-              >
-                <Trash2 className="w-4 h-4" /> Удалить
-              </DropdownMenuItem>
-            )}
+            {(isMe || isAdmin) && <DropdownMenuItem onClick={() => deleteDocumentNonBlocking(doc(db, 'chats', chatId, 'messages', message.id))} className="text-destructive gap-2"><Trash2 className="w-4 h-4" /> Удалить</DropdownMenuItem>}
           </DropdownMenuContent>
         </DropdownMenu>
 
         {Object.keys(groupedReactions).length > 0 && (
           <div className="flex flex-wrap gap-1 mt-1">
             {Object.entries(groupedReactions).map(([emoji, uids]: any) => (
-              <button 
-                key={emoji} 
-                onClick={() => handleToggleReaction(emoji)}
-                className={cn(
-                  "bg-muted/40 backdrop-blur-md px-2 py-0.5 rounded-full text-[10px] border border-white/5 hover:bg-muted/60 transition-colors",
-                  uids.includes(user?.uid) && "ring-1 ring-primary/40 bg-primary/10"
-                )}
-              >
+              <button key={emoji} onClick={() => handleToggleReaction(emoji)} className={cn("bg-muted/40 px-2 py-0.5 rounded-full text-[10px] border border-white/5", uids.includes(user?.uid) && "ring-1 ring-primary/40 bg-primary/10")}>
                 {emoji} {uids.length}
               </button>
             ))}
@@ -366,6 +272,13 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onEdit, onOpe
       </div>
     </div>
   );
+}, (prev, next) => {
+  return prev.message.id === next.message.id && 
+         prev.message.content === next.message.content && 
+         prev.message.isRead === next.message.isRead &&
+         prev.amIPremium === next.amIPremium &&
+         prev.isAdmin === next.isAdmin &&
+         prev.senderAvatarUrl === next.senderAvatarUrl;
 });
 
 MessageItem.displayName = 'MessageItem';

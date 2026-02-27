@@ -10,7 +10,7 @@ import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { 
   Send, Paperclip, Sparkles, MessageSquare, Info, X, 
   CornerUpLeft, Loader2, ShieldAlert, ChevronLeft, ChevronDown,
-  Search, MoreVertical, Mic, UserPlus, Pin, Camera, StopCircle, Square, SmilePlus
+  Search, MoreVertical, Mic, UserPlus, Pin, Camera, StopCircle
 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { MessageItem } from './message-item';
@@ -18,122 +18,15 @@ import { useToast } from '@/hooks/use-toast';
 import { ChatInfoModal } from './modals/chat-info-modal';
 import { useFirestore, useUser, useCollection, useDoc, useMemoFirebase } from '@/firebase';
 import { collection, query, orderBy, doc, arrayUnion } from 'firebase/firestore';
-import { addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { suggestMessageDraft } from '@/ai/flows/ai-message-drafting-flow';
-import { cn, formatDisplayName, formatLastSeen } from '@/lib/utils';
+import { cn, formatDisplayName, formatLastSeen, isUserPremium } from '@/lib/utils';
 import type { Message, User as UserType, Chat } from '@/lib/types';
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 
-const REACTIONS = ['❤️', '👍', '😂', '😮', '😢', '🔥', '👏', '🎉', '💎', '🦄', '⚡'];
+const REACTIONS = ['❤️', '👍', '😂', '😮', '😢', '🔥', '👏', '🎉', '💎', '⚡'];
 
-const ChatInput = React.memo(({ 
-  onSend, 
-  onTyping, 
-  isSuggesting, 
-  onSuggest, 
-  onFileSelect, 
-  isBlocked, 
-  editMessage,
-  replyTo,
-  onCancelReply,
-  isSending,
-  onStartVideo,
-  isRecordingVideo,
-  onStartAudio,
-  isRecordingAudio,
-}: any) => {
-  const [text, setText] = useState('');
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    if (editMessage) setText(editMessage.content);
-    else setText('');
-  }, [editMessage]);
-
-  const handleSend = () => {
-    if (!text.trim() || isSending) return;
-    onSend(text, 'text');
-    setText('');
-    onTyping(false);
-  };
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = e.target.value;
-    setText(val);
-    onTyping(val.length > 0);
-  };
-
-  const handleSuggest = async () => {
-    const draft = await onSuggest(text);
-    if (draft) setText(draft);
-  };
-
-  return (
-    <div className="flex flex-col gap-2 max-w-4xl mx-auto w-full">
-      {replyTo && (
-        <div className="flex items-center justify-between bg-muted/40 p-2 rounded-xl border-l-4 border-primary mb-1 animate-in slide-in-from-bottom-1">
-          <div className="flex items-center gap-3 truncate">
-            <CornerUpLeft className="w-4 h-4 text-primary" />
-            <span className="text-xs truncate italic">{replyTo.content}</span>
-          </div>
-          <Button size="icon" variant="ghost" onClick={onCancelReply} className="h-6 w-6"><X className="w-4 h-4" /></Button>
-        </div>
-      )}
-      <div className="flex items-end gap-2">
-        <div className="flex items-center gap-1 mb-1">
-          <input type="file" ref={fileInputRef} className="hidden" accept="image/*" multiple onChange={onFileSelect} />
-          <Button variant="ghost" size="icon" onClick={() => fileInputRef.current?.click()} className="rounded-full"><Paperclip className="w-5 h-5" /></Button>
-          <Button variant="ghost" size="icon" onClick={handleSuggest} disabled={isSuggesting} className="rounded-full"><Sparkles className={cn("w-5 h-5 text-accent", isSuggesting && "animate-spin")} /></Button>
-        </div>
-        <div className="flex-1 relative">
-          <Input 
-            placeholder={editMessage ? "Изменить..." : (isRecordingVideo ? "Идет запись видео..." : (isRecordingAudio ? "Запись голоса..." : "Сообщение..."))} 
-            value={text} 
-            onChange={handleChange}
-            onKeyDown={e => e.key === 'Enter' && handleSend()} 
-            className="bg-muted/40 rounded-2xl h-11 pr-12 focus:ring-1 focus:ring-primary border-none text-base" 
-            disabled={isBlocked || isSending || isRecordingVideo || isRecordingAudio}
-          />
-          {text.trim() ? (
-            <Button 
-              size="icon" 
-              className="absolute right-1 top-1 w-9 h-9 rounded-xl transition-all duration-200" 
-              onClick={handleSend}
-              disabled={isSending}
-            >
-              {isSending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-            </Button>
-          ) : (
-            <div className="absolute right-1 top-1 flex items-center gap-1">
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                onClick={onStartVideo}
-                className={cn("w-9 h-9 rounded-full transition-all", isRecordingVideo ? "text-destructive animate-pulse" : "text-primary")}
-                disabled={isRecordingAudio}
-              >
-                <Camera className="w-5 h-5" />
-              </Button>
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                onClick={onStartAudio}
-                className={cn("w-9 h-9 rounded-full transition-all", isRecordingAudio ? "text-destructive animate-pulse" : "text-muted-foreground")}
-                disabled={isRecordingVideo}
-              >
-                {isRecordingAudio ? <StopCircle className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
-              </Button>
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-});
-
-ChatInput.displayName = 'ChatInput';
-
-export default function ChatArea({ toggleSidebar, isSidebarOpen }: any) {
+export default function ChatArea() {
   const { user } = useUser();
   const db = useFirestore();
   const { currentChatId, setCurrentChatId } = useAppState();
@@ -142,129 +35,60 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: any) {
   const [showScrollDown, setShowScrollDown] = useState(false);
   const [isJoining, setIsJoining] = useState(false);
   const [isSending, setIsSending] = useState(false);
-  
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  
   const [replyTo, setReplyTo] = useState<Message | null>(null);
   const [editMessage, setEditMessage] = useState<Message | null>(null);
   const [statusString, setStatusString] = useState<string>('');
   const [pendingPhotos, setPendingPhotos] = useState<string[]>([]);
-
-  // Reaction state
   const [reactionTarget, setReactionTarget] = useState<Message | null>(null);
-
-  // Video circle recording state
   const [isRecordingVideo, setIsRecordingVideo] = useState(false);
   const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
-  const [videoStream, setVideoStream] = useState<MediaStream | null>(null);
   const videoPreviewRef = useRef<HTMLVideoElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const videoChunksRef = useRef<Blob[]>([]);
-
-  // Audio recording state
-  const [isRecordingAudio, setIsRecordingAudio] = useState(false);
-  const audioRecorderRef = useRef<MediaRecorder | null>(null);
-  const audioChunksRef = useRef<Blob[]>([]);
-  
   const scrollRef = useRef<HTMLDivElement>(null);
   const lastTypingSignalRef = useRef<number>(0);
-  const lastMessageSentRef = useRef<number>(0);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const dataLoadedRef = useRef(false);
-  
   const { toast } = useToast();
 
-  const userProfileRef = useMemoFirebase(() => {
-    if (!db || !user) return null;
-    return doc(db, 'users', user.uid);
-  }, [db, user]);
+  const userProfileRef = useMemoFirebase(() => (!db || !user) ? null : doc(db, 'users', user.uid), [db, user]);
   const { data: userProfile } = useDoc<UserType>(userProfileRef);
+  const amIPremium = isUserPremium(userProfile);
 
-  const chatRef = useMemoFirebase(() => {
-    if (!db || !currentChatId) return null;
-    return doc(db, 'chats', currentChatId);
-  }, [db, currentChatId]);
+  const chatRef = useMemoFirebase(() => (!db || !currentChatId) ? null : doc(db, 'chats', currentChatId), [db, currentChatId]);
   const { data: chat } = useDoc<Chat>(chatRef);
 
-  const pinnedMessageRef = useMemoFirebase(() => {
-    if (!db || !currentChatId || !chat?.pinnedMessageId) return null;
-    return doc(db, 'chats', currentChatId, 'messages', chat.pinnedMessageId);
-  }, [db, currentChatId, chat?.pinnedMessageId]);
+  const pinnedMessageRef = useMemoFirebase(() => (!db || !currentChatId || !chat?.pinnedMessageId) ? null : doc(db, 'chats', currentChatId, 'messages', chat.pinnedMessageId), [db, currentChatId, chat?.pinnedMessageId]);
   const { data: pinnedMessage } = useDoc<Message>(pinnedMessageRef);
 
+  const otherId = useMemo(() => (chat?.type === 'private' && user) ? chat.participantIds?.find((id: string) => id !== user.uid) : null, [chat, user]);
+  const otherUserProfileRef = useMemoFirebase(() => (!db || !otherId) ? null : doc(db, 'users', otherId), [db, otherId]);
+  const { data: otherUserProfile } = useDoc<UserType>(otherUserProfileRef);
+
+  const isBlocked = userProfile?.blockedUserIds?.includes(otherId || '') || otherUserProfile?.blockedUserIds?.includes(user?.uid || '');
   const isParticipant = chat?.participantIds?.includes(user?.uid || '');
 
-  const otherId = useMemo(() => {
-    if (chat?.type === 'private' && user) {
-      return chat.participantIds?.find((id: string) => id !== user.uid);
-    }
-    return null;
-  }, [chat, user]);
-
-  const otherUserProfileRef = useMemoFirebase(() => {
-    if (!db || !otherId) return null;
-    return doc(db, 'users', otherId);
-  }, [db, otherId]);
-  const { data: otherUserProfile, isLoading: isOtherProfileLoading } = useDoc<UserType>(otherUserProfileRef);
-
-  const isBlockedByMe = userProfile?.blockedUserIds?.includes(otherId || '');
-  const isBlockedByThem = otherUserProfile?.blockedUserIds?.includes(user?.uid || '');
-  const isBlocked = isBlockedByMe || isBlockedByThem;
-
-  const messagesQuery = useMemoFirebase(() => {
-    if (!db || !currentChatId) return null;
-    return query(
-      collection(db, 'chats', currentChatId, 'messages'),
-      orderBy('sentAt', 'asc')
-    );
-  }, [db, currentChatId]);
-  
+  const messagesQuery = useMemoFirebase(() => (!db || !currentChatId) ? null : query(collection(db, 'chats', currentChatId, 'messages'), orderBy('sentAt', 'asc')), [db, currentChatId]);
   const { data: messages, isLoading: isMessagesLoading } = useCollection<Message>(messagesQuery);
-
-  // LOGIC: Mark messages as read automatically
-  useEffect(() => {
-    if (!db || !currentChatId || !user || !messages) return;
-
-    messages.forEach((msg) => {
-      if (!msg.isRead && msg.senderId !== user.uid) {
-        const msgRef = doc(db, 'chats', currentChatId, 'messages', msg.id);
-        updateDocumentNonBlocking(msgRef, { isRead: true });
-      }
-    });
-  }, [messages, currentChatId, user, db]);
 
   const filteredMessages = useMemo(() => {
     if (!messages) return [];
     if (!isSearchOpen || !searchQuery.trim()) return messages;
-    return messages.filter(msg => 
-      msg.contentType === 'text' && 
-      msg.content.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+    return messages.filter(msg => msg.contentType === 'text' && msg.content.toLowerCase().includes(searchQuery.toLowerCase()));
   }, [messages, isSearchOpen, searchQuery]);
 
   const scrollToBottom = useCallback((behavior: ScrollBehavior = 'auto') => {
     if (scrollRef.current) {
       const viewport = scrollRef.current.querySelector('[data-radix-scroll-area-viewport]');
-      if (viewport) {
-        viewport.scrollTo({ top: viewport.scrollHeight, behavior });
-      }
+      if (viewport) viewport.scrollTo({ top: viewport.scrollHeight, behavior });
     }
   }, []);
 
-  const scrollToMessage = (msgId: string) => {
-    const el = document.getElementById(`msg-${msgId}`);
-    if (el) {
-      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      el.classList.add('bg-primary/20');
-      setTimeout(() => el.classList.remove('bg-primary/20'), 2000);
-    }
-  };
-
   useEffect(() => {
-    if (messages && messages.length > 0) {
-      const isInitial = !dataLoadedRef.current;
-      if (isInitial) {
+    if (messages?.length) {
+      if (!dataLoadedRef.current) {
         setTimeout(() => scrollToBottom('instant' as any), 50);
         dataLoadedRef.current = true;
       } else {
@@ -273,268 +97,28 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: any) {
     }
   }, [messages, currentChatId, scrollToBottom]);
 
-  useEffect(() => {
-    dataLoadedRef.current = false;
-  }, [currentChatId]);
-
-  const handleTyping = useCallback((isTyping: boolean) => {
-    if (!currentChatId || !user || !db || isBlocked || !isParticipant) return;
-    
-    const isOtherDeleted = otherUserProfile?.isBanned || otherUserProfile?.name?.includes('Удалённый Аккаунт');
-    if (isOtherDeleted) return;
-
-    const now = Date.now();
-    const chatDocRef = doc(db, 'chats', currentChatId);
-
-    if (isTyping) {
-      if (now - lastTypingSignalRef.current > 3500) {
-        updateDocumentNonBlocking(chatDocRef, { [`typing.${user.uid}`]: true });
-        lastTypingSignalRef.current = now;
-      }
-      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
-      typingTimeoutRef.current = setTimeout(() => {
-        if (db && currentChatId && user) {
-          updateDocumentNonBlocking(doc(db, 'chats', currentChatId), { [`typing.${user.uid}`]: false });
-        }
-        lastTypingSignalRef.current = 0;
-      }, 5000);
-    } else {
-      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
-      updateDocumentNonBlocking(chatDocRef, { [`typing.${user.uid}`]: false });
-      lastTypingSignalRef.current = 0;
-    }
-  }, [currentChatId, user, db, isBlocked, otherUserProfile, isParticipant]);
-
-  useEffect(() => {
-    const isOtherDeleted = otherUserProfile?.isBanned || otherUserProfile?.name?.includes('Удалённый Аккаунт');
-    const isTyping = chat?.typing && otherId && chat.typing[otherId] && !isOtherDeleted;
-
-    if (isBlockedByMe) setStatusString('Пользователь заблокирован');
-    else if (isBlockedByThem) setStatusString('Вы заблокированы');
-    else if (isTyping) setStatusString('печатает...');
-    else if (isOtherProfileLoading) setStatusString('загрузка...');
-    else if (chat?.type === 'private') setStatusString(formatLastSeen(otherUserProfile?.lastSeen, otherUserProfile?.settings?.privacy?.lastSeenVisibility, isOtherDeleted));
-    else setStatusString(chat?.type === 'group' ? 'Группа' : (chat?.type === 'channel' ? 'Канал' : 'Избранное'));
-  }, [isOtherProfileLoading, otherUserProfile, chat?.type, chat?.typing, otherId, isBlockedByMe, isBlockedByThem]);
+  useEffect(() => { dataLoadedRef.current = false; }, [currentChatId]);
 
   const handleSendMessage = useCallback((content: string, type: string = 'text') => {
-    if (isBlocked || userProfile?.isBanned || !isParticipant) return;
-    if (!content.trim() && type === 'text') return;
-    if (!currentChatId || !user || !db) return;
-
-    const now = Date.now();
-    if (now - lastMessageSentRef.current < 1500 && type === 'text') {
-      toast({ title: "Слишком часто", description: "Пожалуйста, подождите немного", variant: "destructive" });
-      return;
-    }
-    
+    if (isBlocked || !isParticipant || (!content.trim() && type === 'text') || !currentChatId || !user || !db) return;
     setIsSending(true);
-    
-    if (editMessage && type === 'text') {
-      updateDocumentNonBlocking(doc(db, 'chats', currentChatId, 'messages', editMessage.id), { 
-        content: content.trim(), 
-        editedAt: new Date().toISOString() 
-      });
-      setEditMessage(null);
-      setIsSending(false);
-      return;
-    }
-
-    const data: Partial<Message> = {
-      chatId: currentChatId,
-      senderId: user.uid,
-      senderName: userProfile?.name || 'User',
-      content: content.trim(),
-      contentType: type as any,
-      sentAt: new Date().toISOString(),
-      isRead: false
-    };
-
-    if (replyTo) {
-      data.replyToId = replyTo.id;
-      data.replyToContent = replyTo.contentType === 'text' ? replyTo.content : `[${replyTo.contentType}]`;
-      setReplyTo(null);
-    }
-
-    addDocumentNonBlocking(collection(db, 'chats', currentChatId, 'messages'), data);
-    updateDocumentNonBlocking(doc(db, 'chats', currentChatId), { 
-      [`typing.${user.uid}`]: false,
-      lastMessageAt: new Date().toISOString()
-    });
-    
-    lastMessageSentRef.current = now;
-    setTimeout(() => {
-      scrollToBottom('smooth');
-      setIsSending(false);
-    }, 100);
-  }, [isBlocked, userProfile, currentChatId, user, db, editMessage, replyTo, scrollToBottom, isParticipant, toast]);
-
-  const handleStartVideoRecording = async () => {
-    if (isRecordingVideo) {
-      stopVideoRecording();
-      return;
-    }
-
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-      setVideoStream(stream);
-      setHasCameraPermission(true);
-      if (videoPreviewRef.current) videoPreviewRef.current.srcObject = stream;
-
-      const mediaRecorder = new MediaRecorder(stream, { mimeType: 'video/webm' });
-      mediaRecorderRef.current = mediaRecorder;
-      videoChunksRef.current = [];
-
-      mediaRecorder.ondataavailable = (e) => {
-        if (e.data.size > 0) videoChunksRef.current.push(e.data);
-      };
-
-      mediaRecorder.onstop = () => {
-        const blob = new Blob(videoChunksRef.current, { type: 'video/webm' });
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          handleSendMessage(reader.result as string, 'video');
-        };
-        reader.readAsDataURL(blob);
-        stream.getTracks().forEach(track => track.stop());
-        setVideoStream(null);
-        setIsRecordingVideo(false);
-      };
-
-      mediaRecorder.start();
-      setIsRecordingVideo(true);
-    } catch (err) {
-      setHasCameraPermission(false);
-      toast({ title: "Ошибка", description: "Нет доступа к камере", variant: "destructive" });
-    }
-  };
-
-  const stopVideoRecording = () => {
-    if (mediaRecorderRef.current && isRecordingVideo) {
-      mediaRecorderRef.current.stop();
-    }
-  };
-
-  const handleStartAudioRecording = async () => {
-    if (isRecordingAudio) {
-      stopAudioRecording();
-      return;
-    }
-
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mediaRecorder = new MediaRecorder(stream);
-      audioRecorderRef.current = mediaRecorder;
-      audioChunksRef.current = [];
-
-      mediaRecorder.ondataavailable = (e) => {
-        if (e.data.size > 0) audioChunksRef.current.push(e.data);
-      };
-
-      mediaRecorder.onstop = () => {
-        const blob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          handleSendMessage(reader.result as string, 'audio');
-        };
-        reader.readAsDataURL(blob);
-        stream.getTracks().forEach(track => track.stop());
-        setIsRecordingAudio(false);
-      };
-
-      mediaRecorder.start();
-      setIsRecordingAudio(true);
-    } catch (err) {
-      toast({ title: "Ошибка", description: "Нет доступа к микрофону", variant: "destructive" });
-    }
-  };
-
-  const stopAudioRecording = () => {
-    if (audioRecorderRef.current && isRecordingAudio) {
-      audioRecorderRef.current.stop();
-    }
-  };
-
-  const handleJoinChat = async () => {
-    if (!db || !currentChatId || !user || isJoining) return;
-    setIsJoining(true);
-    try {
-      await updateDocumentNonBlocking(doc(db, 'chats', currentChatId), {
-        participantIds: arrayUnion(user.uid)
-      });
-      toast({ title: "Успех", description: "Вы вступили в чат!" });
-    } catch (e: any) {
-      toast({ title: "Ошибка", description: e.message, variant: "destructive" });
-    } finally {
-      setIsJoining(false);
-    }
-  };
-
-  const handleUnpin = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (!db || !currentChatId) return;
-    updateDocumentNonBlocking(doc(db, 'chats', currentChatId), { pinnedMessageId: null });
-    toast({ title: "Сообщение откреплено" });
-  };
-
-  const handleAISuggest = useCallback(async (currentInput: string) => {
-    if (!messages || messages.length === 0) return null;
-    setIsSuggesting(true);
-    try {
-      const history = messages.slice(-5).map(m => ({
-        sender: m.senderName,
-        message: m.contentType === 'text' ? m.content : `[${m.contentType}]`
-      }));
-      const { draftMessage } = await suggestMessageDraft({ conversationHistory: history, currentUserInput: currentInput });
-      return draftMessage;
-    } catch (e) {
-      return null;
-    } finally { setIsSuggesting(false); }
-  }, [messages]);
-
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []).slice(0, 10);
-    files.forEach(file => {
-      const reader = new FileReader();
-      reader.onloadend = () => setPendingPhotos(prev => [...prev, reader.result as string]);
-      reader.readAsDataURL(file);
-    });
-  };
-
-  const handleReply = useCallback((msg: Message) => setReplyTo(msg), []);
-  const handleEdit = useCallback((msg: Message) => setEditMessage(msg), []);
-  const handleOpenReactions = useCallback((msg: Message) => setReactionTarget(msg), []);
+    const msgData: any = { chatId: currentChatId, senderId: user.uid, senderName: userProfile?.name || 'User', content: content.trim(), contentType: type, sentAt: new Date().toISOString(), isRead: false };
+    if (replyTo) { msgData.replyToId = replyTo.id; msgData.replyToContent = replyTo.contentType === 'text' ? replyTo.content : `[${replyTo.contentType}]`; setReplyTo(null); }
+    addDocumentNonBlocking(collection(db, 'chats', currentChatId, 'messages'), msgData);
+    updateDocumentNonBlocking(doc(db, 'chats', currentChatId), { lastMessageAt: new Date().toISOString(), [`typing.${user.uid}`]: false });
+    setTimeout(() => { scrollToBottom('smooth'); setIsSending(false); }, 100);
+  }, [isBlocked, isParticipant, currentChatId, user, db, userProfile, replyTo, scrollToBottom]);
 
   const handleAddReaction = (emoji: string) => {
     if (!user || !db || !reactionTarget || !currentChatId) return;
-    
-    // We fetch reactions once to check existing, but it's better to just toggle in Firestore logic
-    const reactionsRef = collection(db, 'chats', currentChatId, 'messages', reactionTarget.id, 'reactions');
-    
-    // Optimistic non-blocking write
-    addDocumentNonBlocking(reactionsRef, {
-      messageId: reactionTarget.id,
-      reactorId: user.uid,
-      emoji,
-      reactedAt: new Date().toISOString(),
-    });
-
+    addDocumentNonBlocking(collection(db, 'chats', currentChatId, 'messages', reactionTarget.id, 'reactions'), { messageId: reactionTarget.id, reactorId: user.uid, emoji, reactedAt: new Date().toISOString() });
     setReactionTarget(null);
   };
 
   const chatDisplayName = formatDisplayName(otherUserProfile?.name || (otherId && chat?.metadata && chat.metadata[otherId] ? chat.metadata[otherId].name : chat?.name));
+  const otherAvatarUrl = otherUserProfile?.avatarUrl || (otherId && chat?.metadata && chat.metadata[otherId] ? chat.metadata[otherId].avatarUrl : null);
 
-  if (!currentChatId) {
-    return (
-      <div className="flex-1 flex flex-col items-center justify-center text-center p-8 bg-background">
-        <MessageSquare className="w-16 h-16 text-primary/20 mb-4" />
-        <h2 className="text-xl font-bold opacity-60">Выберите чат</h2>
-      </div>
-    );
-  }
-
-  const customBackground = userProfile?.settings?.chatBackground;
-  const bgStyle = customBackground && customBackground !== 'default' ? { backgroundImage: `url(${customBackground})`, backgroundSize: 'cover', backgroundPosition: 'center' } : {};
+  if (!currentChatId) return <div className="flex-1 flex flex-col items-center justify-center text-center p-8 bg-background"><MessageSquare className="w-16 h-16 text-primary/20 mb-4" /><h2 className="text-xl font-bold opacity-60">Выберите чат</h2></div>;
 
   return (
     <div className="flex-1 flex flex-col h-[100dvh] bg-background relative overflow-hidden">
@@ -542,211 +126,59 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: any) {
         <div className="flex items-center justify-between px-4 h-full">
           <div className="flex items-center gap-2 min-w-0 flex-1">
             <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setCurrentChatId(null)}><ChevronLeft className="w-5 h-5" /></Button>
-            
-            {isSearchOpen ? (
-              <div className="flex items-center gap-2 flex-1 animate-in fade-in slide-in-from-left-2">
-                <Input 
-                  autoFocus
-                  placeholder="Поиск сообщений..." 
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="bg-muted/40 h-9 rounded-xl border-none focus:ring-1 focus:ring-primary text-base"
-                />
-                <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => { setIsSearchOpen(false); setSearchQuery(''); }}><X className="w-5 h-5" /></Button>
-              </div>
-            ) : (
-              <div className="flex items-center gap-3 cursor-pointer min-w-0" onClick={() => setIsChatInfoOpen(true)}>
-                <UserAvatar userId={chat?.type === 'private' ? otherId : null} fallbackName={chatDisplayName} className="h-9 w-9 ring-2 ring-primary/20" />
-                <div className="flex flex-col min-w-0">
-                  <span className="font-semibold text-sm truncate">{chatDisplayName}</span>
-                  <div className={cn("text-[10px] truncate leading-none mt-0.5", (statusString === 'печатает...' || isBlocked) ? 'text-accent font-bold' : 'text-muted-foreground')}>
-                    {statusString === 'печатает...' ? (
-                      <span className="flex items-center gap-0.5">печатает<span className="animate-typing-dot">.</span><span className="animate-typing-dot [animation-delay:0.2s]">.</span><span className="animate-typing-dot [animation-delay:0.4s]">.</span></span>
-                    ) : statusString}
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-          
-          {!isSearchOpen && (
-            <div className="flex items-center gap-1">
-              <Button variant="ghost" size="icon" onClick={() => setIsSearchOpen(true)} className="rounded-full"><Search className="w-5 h-5" /></Button>
-              <Button variant="ghost" size="icon" onClick={() => setIsChatInfoOpen(true)} className="rounded-full"><Info className="w-5 h-5" /></Button>
-              <Button variant="ghost" size="icon" className="rounded-full"><MoreVertical className="w-5 h-5" /></Button>
+            <div className="flex items-center gap-3 cursor-pointer min-w-0" onClick={() => setIsChatInfoOpen(true)}>
+              <UserAvatar userId={null} manualAvatarUrl={otherAvatarUrl} className="h-9 w-9" fallbackName={chatDisplayName} />
+              <div className="flex flex-col min-w-0"><span className="font-semibold text-sm truncate">{chatDisplayName}</span></div>
             </div>
-          )}
+          </div>
+          <Button variant="ghost" size="icon" onClick={() => setIsChatInfoOpen(true)} className="rounded-full"><Info className="w-5 h-5" /></Button>
         </div>
       </header>
 
-      {pinnedMessage && (
-        <div 
-          onClick={() => scrollToMessage(pinnedMessage.id)}
-          className="h-11 bg-card/60 backdrop-blur-md border-b border-border/20 px-4 flex items-center justify-between cursor-pointer hover:bg-card/80 transition-all z-20 animate-in slide-in-from-top-full duration-300"
-        >
-          <div className="flex items-center gap-3 min-w-0 flex-1">
-            <Pin className="w-3.5 h-3.5 text-primary shrink-0" />
-            <div className="flex flex-col min-w-0">
-              <span className="text-[10px] font-bold text-primary uppercase leading-tight">Закреплённое сообщение</span>
-              <span className="text-[11px] text-foreground/80 truncate">
-                {pinnedMessage.contentType === 'text' ? pinnedMessage.content : `[${pinnedMessage.contentType}]`}
-              </span>
-            </div>
-          </div>
-          {(chat?.ownerId === user?.uid || chat?.adminIds?.includes(user?.uid || '')) && (
-            <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full hover:bg-muted/40" onClick={handleUnpin}>
-              <X className="w-3.5 h-3.5" />
-            </Button>
-          )}
+      <ScrollArea ref={scrollRef} className="flex-1 w-full relative z-10">
+        <div className="flex flex-col gap-2 max-w-4xl mx-auto px-4 py-4 min-h-full">
+          {filteredMessages.map(msg => (
+            <MessageItem 
+              key={msg.id} 
+              message={msg} 
+              isMe={msg.senderId === user?.uid} 
+              chatId={currentChatId} 
+              onReply={setReplyTo} 
+              onEdit={setEditMessage} 
+              onOpenReactions={setReactionTarget}
+              amIPremium={amIPremium}
+              isAdmin={chat?.ownerId === user?.uid || chat?.adminIds?.includes(user?.uid || '')}
+              senderAvatarUrl={msg.senderId === user?.uid ? userProfile?.avatarUrl : otherAvatarUrl}
+            />
+          ))}
+          {isMessagesLoading && <div className="flex justify-center p-8"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>}
         </div>
-      )}
-
-      <div className="flex-1 relative z-10 overflow-hidden">
-        {customBackground && customBackground !== 'default' && (
-          <div className="absolute inset-0 z-[-1] pointer-events-none" style={bgStyle} />
-        )}
-        
-        {isRecordingVideo && (
-          <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm animate-in fade-in duration-300">
-            <div className="relative w-64 h-64 md:w-80 md:h-80 rounded-full overflow-hidden border-8 border-primary shadow-2xl">
-              <video ref={videoPreviewRef} autoPlay muted className="w-full h-full object-cover" />
-              <div className="absolute bottom-6 left-1/2 -translate-x-1/2">
-                <Button size="lg" variant="destructive" className="rounded-full px-6 gap-2" onClick={stopVideoRecording}>
-                  <StopCircle className="w-6 h-6" /> Стоп
-                </Button>
-              </div>
-            </div>
-            {hasCameraPermission === false && (
-              <Alert variant="destructive" className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[90%] max-w-sm">
-                <AlertTitle>Доступ запрещен</AlertTitle>
-                <AlertDescription>Разрешите доступ к камере в настройках браузера.</AlertDescription>
-              </Alert>
-            )}
-          </div>
-        )}
-
-        <ScrollArea 
-          ref={scrollRef} 
-          className="h-full w-full" 
-          onScroll={(e: any) => {
-            const viewport = e.currentTarget;
-            const isScrollTop = viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight > 300;
-            setShowScrollDown(isScrollTop);
-          }}
-        >
-          <div className="flex flex-col gap-2 max-w-4xl mx-auto px-4 py-4 min-h-full">
-            {filteredMessages.map(msg => (
-              <MessageItem 
-                key={msg.id} 
-                message={msg} 
-                isMe={msg.senderId === user?.uid} 
-                chatId={currentChatId} 
-                onReply={handleReply} 
-                onEdit={handleEdit} 
-                onOpenReactions={handleOpenReactions}
-                size={userProfile?.settings?.messageSize} 
-                isAdmin={chat?.ownerId === user?.uid || chat?.adminIds?.includes(user?.uid || '')}
-              />
-            ))}
-            {isMessagesLoading && <div className="flex justify-center p-8"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>}
-          </div>
-        </ScrollArea>
-        {showScrollDown && (
-          <Button 
-            size="icon" 
-            variant="secondary" 
-            className="absolute bottom-4 right-4 rounded-full shadow-lg z-30 animate-in fade-in zoom-in duration-200" 
-            onClick={() => scrollToBottom('smooth')}
-          >
-            <ChevronDown className="w-5 h-5" />
-          </Button>
-        )}
-      </div>
+      </ScrollArea>
 
       <footer className="p-3 bg-card/20 backdrop-blur-xl border-t border-border/40 z-20 shrink-0">
-        <div className="flex flex-col gap-2 max-w-4xl mx-auto">
-          {isBlocked || userProfile?.isBanned || !isParticipant ? (
-            <div className="flex items-center justify-center h-14 bg-muted/20 rounded-xl border border-border/40 px-4">
-              {userProfile?.isBanned ? (
-                <div className="text-muted-foreground text-xs font-semibold flex items-center gap-2">
-                  <ShieldAlert className="w-4 h-4" /> Аккаунт заблокирован
-                </div>
-              ) : !isParticipant ? (
-                <Button 
-                  className="w-full h-10 rounded-xl font-bold flex items-center gap-2"
-                  onClick={handleJoinChat}
-                  disabled={isJoining}
-                >
-                  {isJoining ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserPlus className="w-4 h-4" />}
-                  {chat?.type === 'channel' ? 'Подписаться' : 'Вступить в группу'}
-                </Button>
-              ) : (
-                <div className="text-muted-foreground text-xs font-semibold flex items-center gap-2">
-                  <ShieldAlert className="w-4 h-4" /> Общение ограничено
-                </div>
-              )}
-            </div>
-          ) : (
-            <>
-              {pendingPhotos.length > 0 && (
-                <div className="bg-card/90 backdrop-blur-md p-4 rounded-2xl mb-2 border border-primary/20 animate-in slide-in-from-bottom-5">
-                  <div className="flex items-center justify-between mb-3">
-                    <span className="text-xs font-bold text-primary flex items-center gap-2">Выбрано фото ({pendingPhotos.length})</span>
-                    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setPendingPhotos([])}><X className="w-4 h-4" /></Button>
-                  </div>
-                  <div className="mt-3 flex gap-2">
-                    <Button 
-                      className="flex-1 h-9 font-bold" 
-                      disabled={isSending}
-                      onClick={() => { pendingPhotos.forEach(p => handleSendMessage(p, 'image')); setPendingPhotos([]); }}
-                    >
-                      {isSending ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Отправить все'}
-                    </Button>
-                  </div>
-                </div>
-              )}
-              <ChatInput 
-                onSend={handleSendMessage}
-                onTyping={handleTyping}
-                isSuggesting={isSuggesting}
-                onSuggest={handleAISuggest}
-                onFileSelect={handleFileSelect}
-                isBlocked={isBlocked}
-                editMessage={editMessage}
-                onCancelEdit={() => setEditMessage(null)}
-                replyTo={replyTo}
-                onCancelReply={() => setReplyTo(null)}
-                isSending={isSending}
-                onStartVideo={handleStartVideoRecording}
-                isRecordingVideo={isRecordingVideo}
-                onStartAudio={handleStartAudioRecording}
-                isRecordingAudio={isRecordingAudio}
-              />
-            </>
-          )}
+        <div className="flex gap-2 max-w-4xl mx-auto items-end">
+          <Input 
+            placeholder="Сообщение..." 
+            className="bg-muted/40 rounded-xl h-11 border-none" 
+            onKeyDown={e => e.key === 'Enter' && handleSendMessage((e.target as any).value)}
+          />
+          <Button size="icon" className="h-11 w-11 rounded-xl"><Send className="w-5 h-5" /></Button>
         </div>
       </footer>
-      {chat && <ChatInfoModal open={isChatInfoOpen} onOpenChange={setIsChatInfoOpen} chat={chat as any} />}
-      
-      {/* Shared Reaction Picker to optimize performance */}
-      <Dialog open={!!reactionTarget} onOpenChange={(val) => !val && setReactionTarget(null)}>
-        <DialogContent className="max-w-[280px] p-2 bg-card/95 backdrop-blur-xl border-border/40 rounded-3xl">
-          <DialogTitle className="sr-only">Выбор реакции</DialogTitle>
-          <DialogDescription className="sr-only">Выберите эмодзи для реакции на сообщение</DialogDescription>
-          <div className="grid grid-cols-4 gap-1">
+
+      <Dialog open={!!reactionTarget} onOpenChange={val => !val && setReactionTarget(null)}>
+        <DialogContent className="max-w-[280px] p-2 bg-card/95 backdrop-blur-xl rounded-3xl">
+          <DialogTitle className="sr-only">Реакции</DialogTitle>
+          <DialogDescription className="sr-only">Выберите эмодзи</DialogDescription>
+          <div className="grid grid-cols-5 gap-1">
             {REACTIONS.map(emoji => (
-              <button 
-                key={emoji} 
-                className="p-3 text-2xl hover:bg-primary/10 rounded-xl transition-all hover:scale-125"
-                onClick={() => handleAddReaction(emoji)}
-              >
-                {emoji}
-              </button>
+              <button key={emoji} className="p-3 text-2xl hover:bg-primary/10 rounded-xl transition-all hover:scale-125" onClick={() => handleAddReaction(emoji)}>{emoji}</button>
             ))}
           </div>
         </DialogContent>
       </Dialog>
+
+      {chat && <ChatInfoModal open={isChatInfoOpen} onOpenChange={setIsChatInfoOpen} chat={chat as any} />}
     </div>
   );
 }
-
