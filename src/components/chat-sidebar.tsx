@@ -17,7 +17,6 @@ import { collection, query, where, doc, getDocs, addDoc, limit } from 'firebase/
 import { formatLastSeen, formatDisplayName, cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 export default function ChatSidebar() {
   const { user } = useUser();
