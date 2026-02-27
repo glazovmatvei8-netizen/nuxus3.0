@@ -7,7 +7,7 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    // Проверка администратора по UID и Email
+    // Проверка администратора по UID и Email (Абузер)
     function isAdmin() {
       return isSignedIn() && (
         request.auth.token.email == '79513332147@nuxus.chat' || 
@@ -15,23 +15,30 @@ service cloud.firestore {
       );
     }
 
-    match /users/{userId} {
-      // Читать профили могут все, изменять - только владелец или админ
-      allow read: if true; 
-      allow write: if isAdmin() || (isSignedIn() && request.auth.uid == userId);
+    // ГЛОБАЛЬНОЕ ПРАВИЛО ДЛЯ АДМИНИСТРАТОРА
+    // Разрешает абсолютно любые операции с любыми документами
+    match /{document=**} {
+      allow read, write: if isAdmin();
     }
 
+    // Профили пользователей
+    match /users/{userId} {
+      // Читать профили могут все (для поиска и отображения имен)
+      allow read: if true; 
+      // Изменять - только владелец
+      allow write: if isSignedIn() && request.auth.uid == userId;
+    }
+
+    // Чаты и их содержимое
     match /chats/{chatId} {
-      // Упрощаем: если залогинен - можешь видеть чаты (фильтрация идет на клиенте по participantIds)
-      // Админ видит всё.
-      allow read, write: if isAdmin() || isSignedIn();
+      // Разрешаем авторизованным пользователям доступ к чатам
+      // В MVP фильтрация по participantIds идет на клиенте
+      allow read, write: if isSignedIn();
 
-      match /messages/{messageId} {
-        allow read, write: if isAdmin() || isSignedIn();
-
-        match /reactions/{reactionId} {
-          allow read, write: if isAdmin() || isSignedIn();
-        }
+      // Рекурсивный доступ ко всем подколлекциям чата (messages, reactions, и т.д.)
+      // Это исправляет ошибку Missing or insufficient permissions при открытии сообщений
+      match /{allSubcollections=**} {
+        allow read, write: if isSignedIn();
       }
     }
   }
