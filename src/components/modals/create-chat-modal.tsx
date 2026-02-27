@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { useAppState } from '@/lib/store';
 import { useFirestore, useUser, useCollection, useMemoFirebase, useDoc } from '@/firebase';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Search, Users, Radio, MessageSquarePlus, ArrowRight, Loader2, Contact, Lock } from 'lucide-react';
+import { Search, Users, Radio, MessageSquarePlus, ArrowRight, Loader2, Contact, Lock, Star } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
 import type { ChatType, User } from '@/lib/types';

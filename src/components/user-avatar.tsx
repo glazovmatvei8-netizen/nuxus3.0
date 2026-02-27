@@ -61,9 +61,9 @@ export function UserAvatar({ userId, className, fallbackName, fallbackClassName,
         )}
       </Avatar>
       {premium && (
-        <div className="absolute bottom-0 right-0 bg-background rounded-full p-0.5 z-10">
-          <div className="bg-gradient-to-tr from-purple-500 to-accent p-0.5 rounded-full shadow-sm">
-            <Star className="w-2.5 h-2.5 text-white fill-white" />
+        <div className="absolute bottom-0 right-0 z-10 p-[1px] bg-background rounded-full overflow-hidden translate-x-[15%] translate-y-[15%]">
+          <div className="bg-gradient-to-tr from-purple-500 to-accent p-[2px] rounded-full shadow-sm">
+            <Star className="w-3 h-3 text-white fill-white" />
           </div>
         </div>
       )}
