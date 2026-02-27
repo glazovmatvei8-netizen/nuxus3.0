@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useMemo, useEffect } from 'react';
@@ -86,7 +85,6 @@ export default function ChatSidebar() {
     setCurrentChatId(chat.id);
   };
 
-  // Эффект для глобального поиска по @username
   useEffect(() => {
     const searchGlobal = async () => {
       if (!db || !searchQuery.startsWith('@') || searchQuery.length < 3) {
@@ -155,8 +153,6 @@ export default function ChatSidebar() {
           lastMessageAt: new Date().toISOString(),
           avatarUrl: null
         });
-        const newSavedDoc = doc(db, 'chats', newSaved.id);
-        const newSavedSnap = await getDocs(query(collection(db, 'chats'), where('id', '==', newSaved.id), limit(1))); // dummy but for types
         handleChatClick({ id: newSaved.id } as any);
       }
     } catch (e) {
@@ -200,67 +196,67 @@ export default function ChatSidebar() {
   const isPremium = profile?.isPremium && profile.premiumUntil && new Date(profile.premiumUntil) > new Date();
 
   return (
-    <div className="flex flex-col h-full bg-card/30 backdrop-blur-sm overflow-hidden">
-      <div className="p-4 border-b border-border/40 space-y-4 shrink-0">
+    <div className="flex flex-col h-full bg-card/20 backdrop-blur-2xl overflow-hidden">
+      <div className="p-6 space-y-6 shrink-0 border-b border-white/5 bg-gradient-to-b from-white/5 to-transparent">
         <div className="flex items-center justify-between">
           <div 
-            className="flex items-center gap-3 cursor-pointer group min-w-0"
+            className="flex items-center gap-4 cursor-pointer group min-w-0"
             onClick={() => setIsSettingsOpen(true)}
           >
             <UserAvatar 
               userId={user?.uid} 
-              className="h-10 w-10 border-2 border-primary/20 ring-primary/10 ring-offset-2 ring-offset-background group-hover:scale-105 transition-transform shrink-0"
+              className="h-12 w-12 border-2 border-primary/40 ring-2 ring-primary/10 ring-offset-4 ring-offset-background group-hover:scale-110 transition-all duration-500 shrink-0"
               fallbackName={displayName}
               manualAvatarUrl={profile?.avatarUrl}
             />
             <div className="flex flex-col min-w-0">
-              <span className="font-semibold text-sm leading-tight group-hover:text-primary transition-colors truncate flex items-center gap-1">
+              <span className="font-black text-sm uppercase tracking-tighter group-hover:text-primary transition-colors truncate flex items-center gap-1">
                 {displayName}
                 {isPremium && <Star className="w-3 h-3 text-accent fill-accent" />}
               </span>
-              <span className="text-xs text-muted-foreground truncate">
+              <span className="text-[10px] uppercase font-bold text-muted-foreground/60 tracking-widest truncate">
                 {displayUsername}
               </span>
             </div>
           </div>
-          <Button variant="ghost" size="icon" className="rounded-full hover:bg-muted/50 shrink-0" onClick={() => setIsSettingsOpen(true)}>
-            <Settings className="w-5 h-5 text-muted-foreground" />
+          <Button variant="ghost" size="icon" className="rounded-2xl hover:bg-white/5 hover:text-primary shrink-0 transition-all" onClick={() => setIsSettingsOpen(true)}>
+            <Settings className="w-5 h-5" />
           </Button>
         </div>
 
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+        <div className="relative group">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground transition-colors group-focus-within:text-primary" />
           <Input 
-            placeholder="Поиск чатов..." 
-            className="pl-9 bg-muted/30 border-muted-foreground/10 rounded-xl h-10 focus:ring-1 focus:ring-primary/40 w-full"
+            placeholder="Поиск..." 
+            className="pl-11 bg-white/5 border-white/5 rounded-2xl h-12 focus:ring-1 focus:ring-primary/40 transition-all w-full placeholder:uppercase placeholder:text-[10px] placeholder:font-black placeholder:tracking-widest"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
         </div>
       </div>
 
-      <div className="px-2 py-2 border-b border-border/40 shrink-0">
+      <div className="px-3 py-3 shrink-0">
         <Tabs value={activeTab} onValueChange={(val) => setActiveTab(val as any)} className="w-full">
-          <TabsList className="grid w-full grid-cols-4 h-9 bg-transparent p-0 gap-1">
-            <TabsTrigger value="all" className="rounded-lg text-[10px] md:text-xs">Все</TabsTrigger>
-            <TabsTrigger value="private" className="rounded-lg text-[10px] md:text-xs">Чаты</TabsTrigger>
-            <TabsTrigger value="group" className="rounded-lg text-[10px] md:text-xs">Группы</TabsTrigger>
-            <TabsTrigger value="channel" className="rounded-lg text-[10px] md:text-xs">Каналы</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-4 h-11 bg-white/5 rounded-2xl p-1 gap-1 border border-white/5">
+            <TabsTrigger value="all" className="rounded-xl text-[10px] font-black uppercase tracking-tighter data-[state=active]:bg-primary">Все</TabsTrigger>
+            <TabsTrigger value="private" className="rounded-xl text-[10px] font-black uppercase tracking-tighter data-[state=active]:bg-primary">Чаты</TabsTrigger>
+            <TabsTrigger value="group" className="rounded-xl text-[10px] font-black uppercase tracking-tighter data-[state=active]:bg-primary">Группы</TabsTrigger>
+            <TabsTrigger value="channel" className="rounded-xl text-[10px] font-black uppercase tracking-tighter data-[state=active]:bg-primary">Инфо</TabsTrigger>
           </TabsList>
         </Tabs>
       </div>
 
-      <ScrollArea className="flex-1 px-2 py-2 overflow-y-auto">
+      <ScrollArea className="flex-1 px-3 py-2">
         {isChatsLoading ? (
-          <div className="flex justify-center p-4">
-            <Loader2 className="w-6 h-6 animate-spin text-primary" />
+          <div className="flex justify-center p-12">
+            <Loader2 className="w-8 h-8 animate-spin text-primary opacity-50" />
           </div>
         ) : (
-          <div className="space-y-1">
+          <div className="space-y-2 pb-24">
             {globalSearchResult && (
               <div className="mb-4">
-                <div className="px-3 py-1 text-[10px] font-bold text-primary flex items-center gap-1 uppercase tracking-widest">
-                  <Globe className="w-3 h-3" /> Глобальный поиск
+                <div className="px-3 py-1 text-[10px] font-black text-primary flex items-center gap-1 uppercase tracking-widest mb-1">
+                  <Globe className="w-3 h-3" /> Глобальный результат
                 </div>
                 <ChatListItem 
                   chat={globalSearchResult}
@@ -275,16 +271,16 @@ export default function ChatSidebar() {
               <div
                 onClick={handleOpenSavedMessages}
                 className={cn(
-                  "flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all duration-200 group relative",
-                  chats?.find(c => c.type === 'saved')?.id === currentChatId ? 'bg-primary text-white' : 'hover:bg-muted/40 text-foreground'
+                  "flex items-center gap-4 p-4 rounded-3xl cursor-pointer transition-all duration-300 group relative border border-transparent",
+                  chats?.find(c => c.type === 'saved')?.id === currentChatId ? 'bg-primary text-white shadow-xl shadow-primary/20' : 'hover:bg-white/5 text-foreground'
                 )}
               >
-                <div className="h-11 w-11 md:h-12 md:w-12 rounded-full bg-accent/20 flex items-center justify-center shrink-0">
+                <div className="h-12 w-12 rounded-2xl bg-accent/20 flex items-center justify-center shrink-0 shadow-inner">
                   {isCreatingSaved ? <Loader2 className="w-5 h-5 animate-spin" /> : <Bookmark className="w-6 h-6 text-accent" />}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <span className="font-semibold text-sm">Избранное</span>
-                  <div className="text-[10px] text-muted-foreground">Заметки и файлы</div>
+                  <span className="font-black text-sm uppercase tracking-tighter">Избранное</span>
+                  <div className="text-[10px] uppercase font-bold text-muted-foreground/60">Личные заметки</div>
                 </div>
               </div>
             )}
@@ -307,27 +303,16 @@ export default function ChatSidebar() {
                 />
               );
             })}
-
-            {!isSearchingGlobal && searchQuery.length > 0 && filteredChats.length === 0 && !globalSearchResult && (
-              <div className="p-8 text-center text-muted-foreground text-xs italic">
-                Ничего не найдено
-              </div>
-            )}
-            {isSearchingGlobal && (
-              <div className="flex justify-center p-4">
-                <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
-              </div>
-            )}
           </div>
         )}
       </ScrollArea>
 
-      <div className="p-4 bg-muted/20 backdrop-blur-md border-t border-border/40 shrink-0">
+      <div className="absolute bottom-6 left-0 w-full px-6 pointer-events-none">
         <Button 
-          className="w-full rounded-xl h-11 shadow-lg shadow-primary/20 flex items-center justify-center gap-2 group"
+          className="w-full rounded-2xl h-14 shadow-2xl shadow-primary/40 bg-gradient-to-r from-primary to-primary/80 font-black uppercase tracking-widest pointer-events-auto transition-transform hover:scale-[1.02] active:scale-95 group"
           onClick={() => setIsCreateModalOpen(true)}
         >
-          <Plus className="w-4 h-4 group-hover:rotate-90 transition-transform" />
+          <Plus className="w-5 h-5 mr-2 group-hover:rotate-90 transition-transform" />
           Новый чат
         </Button>
       </div>
@@ -363,7 +348,7 @@ function ChatListItem({ chat, isActive, otherId, cachedDisplayName, manualAvatar
 
   useEffect(() => {
     if (isGlobalResult) {
-      setStatus(chat.type === 'group' ? 'Публичная группа' : 'Публичный канал');
+      setStatus(chat.type === 'group' ? 'Группа' : 'Канал');
       return;
     }
     const isOtherDeleted = otherProfile?.isBanned || otherProfile?.name?.includes('Удалённый Аккаунт');
@@ -378,30 +363,30 @@ function ChatListItem({ chat, isActive, otherId, cachedDisplayName, manualAvatar
   const isTyping = chat?.typing && otherId && chat.typing[otherId] && !isOtherDeleted;
   const isOtherPremium = otherProfile?.isPremium && otherProfile?.premiumUntil && new Date(otherProfile.premiumUntil) > new Date();
   
-  const finalDisplayName = formatDisplayName(otherProfile?.name || cachedDisplayName || chat.name || 'Пользователь');
+  const finalDisplayName = formatDisplayName(otherProfile?.name || cachedDisplayName || chat.name || 'Юзер');
 
   return (
     <div
       onClick={onClick}
       className={cn(
-        "flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all duration-200 group relative",
-        isActive ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'hover:bg-muted/40 text-foreground'
+        "flex items-center gap-4 p-4 rounded-3xl cursor-pointer transition-all duration-300 group relative border border-transparent",
+        isActive ? 'bg-primary text-white shadow-xl shadow-primary/30 z-10' : 'hover:bg-white/5 text-foreground'
       )}
     >
       <div className="relative shrink-0">
         <UserAvatar 
           userId={otherId} 
           manualAvatarUrl={manualAvatarUrl || otherProfile?.avatarUrl || chat.avatarUrl}
-          className="h-11 w-11 md:h-12 md:w-12" 
+          className="h-12 w-12 rounded-2xl" 
           fallbackName={finalDisplayName}
         />
         {(status === 'в сети' || isTyping) && !isOtherDeleted && !isGlobalResult && (
-          <span className="absolute bottom-0 right-0 w-3 h-3 bg-accent rounded-full border-2 border-background" />
+          <span className="absolute -bottom-1 -right-1 w-3.5 h-3.5 bg-accent rounded-full border-[3px] border-background animate-pulse" />
         )}
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex items-center justify-between gap-2">
-          <span className="font-semibold truncate text-sm flex items-center gap-1">
+          <span className="font-black text-sm uppercase tracking-tighter truncate flex items-center gap-1">
             {finalDisplayName}
             {isOtherPremium && <Star className="w-3 h-3 text-accent fill-accent shrink-0" />}
             {isPinned && <Pin className="w-3 h-3 rotate-45 shrink-0" />}
@@ -412,16 +397,16 @@ function ChatListItem({ chat, isActive, otherId, cachedDisplayName, manualAvatar
                 variant="ghost" 
                 size="icon" 
                 className={cn(
-                  "h-6 w-6 rounded-full md:opacity-0 group-hover:opacity-100 transition-opacity",
+                  "h-7 w-7 rounded-xl md:opacity-0 group-hover:opacity-100 transition-all",
                   isPinned ? "text-accent" : "text-muted-foreground"
                 )}
                 onClick={onTogglePin}
               >
-                <Pin className={cn("w-3 h-3", isPinned && "fill-accent")} />
+                <Pin className={cn("w-3.5 h-3.5", isPinned && "fill-accent")} />
               </Button>
             )}
             {unreadCount > 0 && !isActive && (
-              <Badge variant="default" className="bg-accent text-white rounded-full h-5 min-w-5 flex items-center justify-center text-[10px] font-bold px-1">
+              <Badge variant="default" className="bg-accent text-accent-foreground rounded-lg h-5 min-w-5 flex items-center justify-center text-[10px] font-black px-1 border-none">
                 {unreadCount}
               </Badge>
             )}
@@ -429,14 +414,14 @@ function ChatListItem({ chat, isActive, otherId, cachedDisplayName, manualAvatar
         </div>
         <div className="flex items-center justify-between">
           <div className={cn(
-            "text-[10px] truncate transition-colors",
-            isActive ? 'text-white/80' : (isTyping || status === 'в сети' ? 'text-accent font-bold' : 'text-muted-foreground')
+            "text-[10px] uppercase font-bold tracking-widest truncate transition-colors",
+            isActive ? 'text-white/80' : (isTyping || status === 'в сети' ? 'text-accent' : 'text-muted-foreground/60')
           )}>
             {isTyping ? (
               <span className="flex items-center gap-0.5">печатает<span className="animate-typing-dot">.</span><span className="animate-typing-dot [animation-delay:0.2s]">.</span><span className="animate-typing-dot [animation-delay:0.4s]">.</span></span>
             ) : status}
           </div>
-          {isGlobalResult && <div className="text-[9px] opacity-60">{chat.username}</div>}
+          {isGlobalResult && <div className="text-[9px] font-black opacity-40 uppercase tracking-tighter">{chat.username}</div>}
         </div>
       </div>
     </div>

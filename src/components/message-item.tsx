@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useMemo, memo } from 'react';
@@ -230,7 +229,7 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, amIPremium = 
           <DropdownMenuTrigger asChild>
             <div className={cn(
               "p-3 rounded-2xl cursor-pointer shadow-sm border transition-all hover:brightness-105 active:scale-[0.98]",
-              isMe ? "bg-primary text-white border-primary" : "bg-card border-border text-foreground"
+              isMe ? "bg-gradient-to-br from-primary to-primary/80 text-white border-primary shadow-primary/20" : "bg-card/50 backdrop-blur-md border-white/5 text-foreground"
             )}>
               {renderContent()}
               <div className="flex items-center justify-end gap-1 mt-1 opacity-60">

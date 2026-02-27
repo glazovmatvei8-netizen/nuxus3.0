@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useRef, useEffect, useMemo, useCallback, memo } from 'react';
@@ -29,7 +28,7 @@ const MessageList = memo(({
   otherAvatarUrl 
 }: any) => {
   return (
-    <div className="flex flex-col gap-2 max-w-4xl mx-auto px-4 py-4 min-h-full">
+    <div className="flex flex-col gap-3 max-w-4xl mx-auto px-6 py-8 min-h-full">
       {messages.map((msg: Message) => (
         <MessageItem 
           key={msg.id} 
@@ -177,54 +176,57 @@ export default function ChatArea() {
   }, [otherMetadata, chat, otherProfile]);
 
   if (!currentChatId) return (
-    <div className="flex-1 flex flex-col items-center justify-center text-center p-8 bg-background">
-      <div className="bg-primary/5 p-6 rounded-full mb-4">
-        <MessageSquare className="w-16 h-16 text-primary/20" />
+    <div className="flex-1 flex flex-col items-center justify-center text-center p-8 bg-background relative overflow-hidden">
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-primary/5 via-transparent to-transparent opacity-50" />
+      <div className="bg-primary/5 p-10 rounded-full mb-6 relative z-10 animate-float">
+        <MessageSquare className="w-20 h-20 text-primary/30" />
       </div>
-      <h2 className="text-xl font-bold opacity-60">Выберите чат, чтобы начать общение</h2>
+      <h2 className="text-2xl font-black uppercase tracking-widest text-white/40 relative z-10">Выберите диалог</h2>
     </div>
   );
 
   return (
     <div className="flex-1 flex flex-col h-[100dvh] bg-background relative overflow-hidden">
-      <header className="h-16 flex flex-col justify-center border-b border-border/40 bg-card/20 backdrop-blur-xl z-20 shrink-0">
-        <div className="flex items-center justify-between px-4 h-full">
-          <div className="flex items-center gap-2 min-w-0 flex-1">
-            <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setCurrentChatId(null)}>
-              <ChevronLeft className="w-5 h-5" />
+      <header className="h-20 flex flex-col justify-center border-b border-white/5 bg-card/40 backdrop-blur-3xl z-30 shrink-0">
+        <div className="flex items-center justify-between px-6 h-full">
+          <div className="flex items-center gap-4 min-w-0 flex-1">
+            <Button variant="ghost" size="icon" className="md:hidden rounded-2xl" onClick={() => setCurrentChatId(null)}>
+              <ChevronLeft className="w-6 h-6" />
             </Button>
-            <div className="flex items-center gap-3 cursor-pointer min-w-0" onClick={() => setIsChatInfoOpen(true)}>
-              <UserAvatar userId={otherId} manualAvatarUrl={otherMetadata?.avatarUrl} className="h-9 w-9" fallbackName={chatDisplayName} />
+            <div className="flex items-center gap-4 cursor-pointer min-w-0 group" onClick={() => setIsChatInfoOpen(true)}>
+              <UserAvatar userId={otherId} manualAvatarUrl={otherMetadata?.avatarUrl} className="h-11 w-11 rounded-2xl ring-2 ring-primary/20 ring-offset-2 ring-offset-background group-hover:scale-105 transition-all" fallbackName={chatDisplayName} />
               <div className="flex flex-col min-w-0">
-                <span className="font-semibold text-sm truncate">{formatDisplayName(chatDisplayName)}</span>
-                <span className="text-[10px] text-muted-foreground truncate">{chatDisplayUsername}</span>
+                <span className="font-black text-sm uppercase tracking-tighter truncate group-hover:text-primary transition-colors">{formatDisplayName(chatDisplayName)}</span>
+                <span className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest truncate">{chatDisplayUsername}</span>
               </div>
             </div>
           </div>
-          <div className="flex items-center gap-1">
-            <Button variant="ghost" size="icon" onClick={() => setIsChatInfoOpen(true)} className="rounded-full">
-              <Info className="w-5 h-5" />
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" size="icon" onClick={() => setIsChatInfoOpen(true)} className="rounded-2xl hover:bg-white/5 hover:text-primary transition-all">
+              <Info className="w-6 h-6" />
             </Button>
           </div>
         </div>
       </header>
 
       {pinnedMessage && (
-        <div className="h-12 bg-card/40 backdrop-blur-md border-b border-border/20 px-4 flex items-center justify-between z-10 shrink-0 animate-in slide-in-from-top duration-300">
-          <div className="flex items-center gap-3 cursor-pointer min-w-0 flex-1" onClick={() => scrollToMessage(pinnedMessage.id)}>
-            <Pin className="w-3 h-3 text-primary shrink-0" />
+        <div className="h-14 bg-primary/10 backdrop-blur-2xl border-b border-primary/20 px-6 flex items-center justify-between z-20 shrink-0 animate-in slide-in-from-top duration-500">
+          <div className="flex items-center gap-4 cursor-pointer min-w-0 flex-1" onClick={() => scrollToMessage(pinnedMessage.id)}>
+            <div className="bg-primary/20 p-2 rounded-xl">
+              <Pin className="w-3.5 h-3.5 text-primary" />
+            </div>
             <div className="flex flex-col min-w-0">
-              <span className="text-[10px] font-bold text-primary uppercase tracking-wider">Закрепленное сообщение</span>
-              <span className="text-xs truncate opacity-70">{pinnedMessage.content}</span>
+              <span className="text-[9px] font-black text-primary uppercase tracking-[0.2em]">Закреплено</span>
+              <span className="text-xs truncate text-white/80 font-medium">{pinnedMessage.content}</span>
             </div>
           </div>
-          <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full" onClick={unpinMessage}>
-            <X className="w-4 h-4" />
+          <Button variant="ghost" size="icon" className="h-10 w-10 rounded-2xl hover:bg-white/5" onClick={unpinMessage}>
+            <X className="w-5 h-5" />
           </Button>
         </div>
       )}
 
-      <ScrollArea ref={scrollRef} className="flex-1 w-full relative z-10">
+      <ScrollArea ref={scrollRef} className="flex-1 w-full relative z-10 scrollbar-hide">
         {messages && (
           <MessageList 
             messages={messages}
@@ -237,54 +239,60 @@ export default function ChatArea() {
           />
         )}
         {isMessagesLoading && (
-          <div className="flex flex-col items-center justify-center p-12 gap-2">
-            <Loader2 className="w-8 h-8 animate-spin text-primary" />
-            <span className="text-xs text-muted-foreground font-medium">Загрузка истории...</span>
+          <div className="flex flex-col items-center justify-center p-24 gap-4">
+            <Loader2 className="w-10 h-10 animate-spin text-primary opacity-30" />
+            <span className="text-[10px] uppercase font-black tracking-widest text-muted-foreground/50">Синхронизация...</span>
           </div>
         )}
       </ScrollArea>
 
-      <footer className="p-3 bg-card/20 backdrop-blur-xl border-t border-border/40 z-20 shrink-0">
-        {forwardingMessage && (
-          <div className="max-w-4xl mx-auto mb-2 p-3 bg-primary/10 rounded-xl border border-primary/20 flex items-center justify-between animate-in slide-in-from-bottom-2">
-            <div className="flex items-center gap-3 min-w-0">
-              <Forward className="w-4 h-4 text-primary" />
-              <div className="flex flex-col min-w-0">
-                <span className="text-[10px] font-bold text-primary uppercase">Пересылка сообщения</span>
-                <span className="text-xs truncate opacity-70">От: {forwardingMessage.senderName}</span>
+      <footer className="p-4 bg-card/60 backdrop-blur-3xl border-t border-white/5 z-30 shrink-0">
+        <div className="max-w-4xl mx-auto space-y-3">
+          {forwardingMessage && (
+            <div className="mb-2 p-4 bg-primary/10 rounded-2xl border border-primary/20 flex items-center justify-between animate-in slide-in-from-bottom-4">
+              <div className="flex items-center gap-4 min-w-0">
+                <div className="bg-primary/20 p-2 rounded-xl">
+                  <Forward className="w-4 h-4 text-primary" />
+                </div>
+                <div className="flex flex-col min-w-0">
+                  <span className="text-[9px] font-black text-primary uppercase tracking-widest">Пересылка</span>
+                  <span className="text-xs truncate text-white/70 font-medium">От: {forwardingMessage.senderName}</span>
+                </div>
               </div>
+              <Button variant="ghost" size="icon" className="h-10 w-10 rounded-2xl" onClick={() => setForwardingMessage(null)}>
+                <X className="w-5 h-5" />
+              </Button>
             </div>
-            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setForwardingMessage(null)}>
-              <X className="w-4 h-4" />
+          )}
+          {replyTo && (
+            <div className="mb-2 p-3 bg-white/5 rounded-2xl border-l-4 border-primary flex items-center justify-between animate-in slide-in-from-bottom-4">
+              <div className="flex flex-col min-w-0 pl-2">
+                <span className="text-[9px] font-black text-primary uppercase tracking-widest">Ответ: {replyTo.senderName}</span>
+                <span className="text-xs truncate text-white/60 italic">{replyTo.content}</span>
+              </div>
+              <Button variant="ghost" size="icon" className="h-8 w-8 rounded-xl" onClick={() => setReplyTo(null)}>
+                <X className="w-4 h-4" />
+              </Button>
+            </div>
+          )}
+          <div className="flex gap-3 items-end">
+            <Button variant="ghost" size="icon" className="h-14 w-14 rounded-2xl shrink-0 bg-white/5 hover:bg-white/10 text-muted-foreground hover:text-primary transition-all">
+              <Camera className="w-6 h-6" />
+            </Button>
+            <div className="flex-1 relative">
+              <Input 
+                placeholder="Напишите что-нибудь..." 
+                className="bg-white/5 rounded-2xl h-14 border-white/5 focus-visible:ring-1 focus-visible:ring-primary/40 transition-all text-sm px-6 placeholder:uppercase placeholder:text-[10px] placeholder:font-black placeholder:tracking-widest" 
+                value={messageInput}
+                onChange={e => setMessageInput(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && !e.shiftKey && handleSendMessage()}
+                disabled={isSending}
+              />
+            </div>
+            <Button size="icon" className="h-14 w-14 rounded-2xl shrink-0 shadow-2xl shadow-primary/40 bg-gradient-to-br from-primary to-primary/80 transition-transform active:scale-90" onClick={handleSendMessage} disabled={isSending || !messageInput.trim()}>
+              {isSending ? <Loader2 className="w-6 h-6 animate-spin" /> : <Send className="w-6 h-6" />}
             </Button>
           </div>
-        )}
-        {replyTo && (
-          <div className="max-w-4xl mx-auto mb-2 p-2 bg-primary/5 rounded-xl border-l-4 border-primary flex items-center justify-between animate-in slide-in-from-bottom-2">
-            <div className="flex flex-col min-w-0">
-              <span className="text-[10px] font-bold text-primary uppercase">Ответ для {replyTo.senderName}</span>
-              <span className="text-xs truncate opacity-70">{replyTo.content}</span>
-            </div>
-            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setReplyTo(null)}>
-              <X className="w-4 h-4" />
-            </Button>
-          </div>
-        )}
-        <div className="flex gap-2 max-w-4xl mx-auto items-end">
-          <Button variant="ghost" size="icon" className="h-11 w-11 rounded-xl shrink-0 text-muted-foreground hover:text-primary">
-            <Camera className="w-5 h-5" />
-          </Button>
-          <Input 
-            placeholder="Сообщение..." 
-            className="bg-muted/40 rounded-xl h-11 border-none focus-visible:ring-1 focus-visible:ring-primary/30" 
-            value={messageInput}
-            onChange={e => setMessageInput(e.target.value)}
-            onKeyDown={e => e.key === 'Enter' && handleSendMessage()}
-            disabled={isSending}
-          />
-          <Button size="icon" className="h-11 w-11 rounded-xl shrink-0 shadow-lg shadow-primary/20" onClick={handleSendMessage} disabled={isSending || !messageInput.trim()}>
-            {isSending ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
-          </Button>
         </div>
       </footer>
 

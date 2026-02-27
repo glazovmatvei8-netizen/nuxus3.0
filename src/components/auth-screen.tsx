@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState } from 'react';
@@ -72,7 +71,6 @@ export default function AuthScreen() {
       if (mode === 'register') {
         const username = formData.username.startsWith('@') ? formData.username.toLowerCase() : '@' + formData.username.toLowerCase();
         
-        // 1. Проверка уникальности ника (теперь правила Firestore позволяют это)
         const q = query(collection(db, 'users'), where('username', '==', username), limit(1));
         const snap = await getDocs(q);
         if (!snap.empty) {
@@ -86,7 +84,6 @@ export default function AuthScreen() {
           const result = await createUserWithEmailAndPassword(auth, virtualEmail, formData.password);
           user = result.user;
         } catch (authErr: any) {
-          // Если аккаунт уже есть в Auth, но мы здесь (значит профиль в Firestore не создался ранее)
           if (authErr.code === 'auth/email-already-in-use') {
             const result = await signInWithEmailAndPassword(auth, virtualEmail, formData.password);
             user = result.user;
@@ -95,7 +92,6 @@ export default function AuthScreen() {
           }
         }
 
-        // 2. Создание профиля
         await setDoc(doc(db, 'users', user.uid), {
           id: user.uid,
           name: formData.name,
@@ -105,7 +101,7 @@ export default function AuthScreen() {
           createdAt: new Date().toISOString(),
           lastSeen: new Date().toISOString(),
           isBanned: false,
-          isPremium: fullPhone === '+79513332147', // Вечный премиум админу
+          isPremium: fullPhone === '+79513332147',
           settings: {
             theme: 'default',
             chatBackground: 'default',
@@ -130,25 +126,10 @@ export default function AuthScreen() {
         }
       }
     } catch (err: any) {
-      console.error("Auth System Error:", err.code, err.message);
       setLastError(err.code || "unknown");
-      
-      let errorMessage = "Проверьте данные или настройки Firebase";
-      if (err.code === 'permission-denied') {
-        errorMessage = "Ошибка доступа к базе данных. Проверьте правила Firestore.";
-      } else if (err.code === 'auth/operation-not-allowed') {
-        errorMessage = "Метод 'Email/Password' отключен в консоли Firebase.";
-      } else if (err.code === 'auth/email-already-in-use') {
-        errorMessage = "Этот номер уже зарегистрирован. Попробуйте войти.";
-      } else if (err.code === 'auth/wrong-password') {
-        errorMessage = "Неверный пароль.";
-      } else if (err.code === 'auth/user-not-found') {
-        errorMessage = "Аккаунт не найден.";
-      }
-
       toast({ 
         title: `Ошибка: ${err.code || 'System'}`, 
-        description: errorMessage, 
+        description: "Проверьте данные или соединение.", 
         variant: "destructive" 
       });
     } finally {
@@ -157,17 +138,21 @@ export default function AuthScreen() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-primary/20 via-background to-background">
-      <Card className="w-full max-sm:max-w-none max-w-sm border-primary/20 bg-card/50 backdrop-blur-xl shadow-2xl">
+    <div className="min-h-screen flex items-center justify-center bg-background p-4 overflow-hidden relative">
+      <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-primary/20 blur-[120px] rounded-full animate-pulse" />
+      <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-accent/20 blur-[120px] rounded-full animate-pulse" />
+      
+      <Card className="w-full max-sm:max-w-none max-w-sm border-white/5 bg-card/40 backdrop-blur-3xl shadow-2xl relative z-10 overflow-hidden">
+        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary via-accent to-primary animate-shimmer" />
         <CardHeader className="text-center pb-2">
-          <div className="flex justify-center mb-4">
-            <div className="bg-primary p-3 rounded-2xl shadow-xl shadow-primary/20 animate-in zoom-in-50 duration-500">
-              <MessageSquareText className="w-8 h-8 text-white" />
+          <div className="flex justify-center mb-6">
+            <div className="bg-gradient-to-br from-primary to-primary/80 p-4 rounded-3xl shadow-2xl shadow-primary/40 animate-float">
+              <MessageSquareText className="w-10 h-10 text-white" />
             </div>
           </div>
-          <CardTitle className="text-2xl font-bold tracking-tight text-white">NuxusChat</CardTitle>
-          <CardDescription>
-            {mode === 'login' ? 'Вход по номеру и паролю' : 'Создать новый аккаунт'}
+          <CardTitle className="text-3xl font-black tracking-tighter text-white uppercase italic">NuxusChat</CardTitle>
+          <CardDescription className="text-muted-foreground/80 mt-1">
+            {mode === 'login' ? 'Вход в систему' : 'Создание аккаунта'}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -175,61 +160,44 @@ export default function AuthScreen() {
             {mode === 'register' && (
               <>
                 <div className="space-y-1.5">
-                  <Label className="text-xs uppercase text-muted-foreground ml-1">Ваше имя</Label>
+                  <Label className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground ml-1">Ваше имя</Label>
                   <div className="relative">
-                    <UserCircle className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <Input placeholder="Имя" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="bg-muted/30 pl-9 rounded-xl border-none focus:ring-1 focus:ring-primary" required />
+                    <UserCircle className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-primary" />
+                    <Input placeholder="Имя" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="bg-white/5 border-white/10 pl-10 rounded-2xl focus:ring-1 focus:ring-primary/50" required />
                   </div>
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-xs uppercase text-muted-foreground ml-1">Желаемый никнейм</Label>
+                  <Label className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground ml-1">Желаемый никнейм</Label>
                   <div className="relative">
-                    <AtSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <Input placeholder="@username" value={formData.username} onChange={e => setFormData({...formData, username: e.target.value})} className="bg-muted/30 pl-9 rounded-xl border-none focus:ring-1 focus:ring-primary" required />
+                    <AtSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-primary" />
+                    <Input placeholder="@username" value={formData.username} onChange={e => setFormData({...formData, username: e.target.value})} className="bg-white/5 border-white/10 pl-10 rounded-2xl focus:ring-1 focus:ring-primary/50" required />
                   </div>
                 </div>
               </>
             )}
             <div className="space-y-1.5">
-              <Label className="text-xs uppercase text-muted-foreground ml-1">Номер телефона</Label>
+              <Label className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground ml-1">Номер телефона</Label>
               <div className="relative">
-                <Smartphone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <Input placeholder="+7 900 000 00 00" type="tel" value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} className="bg-muted/30 pl-9 rounded-xl border-none focus:ring-1 focus:ring-primary" required />
+                <Smartphone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-primary" />
+                <Input placeholder="+7 900 000 00 00" type="tel" value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} className="bg-white/5 border-white/10 pl-10 rounded-2xl focus:ring-1 focus:ring-primary/50" required />
               </div>
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs uppercase text-muted-foreground ml-1">Пароль</Label>
+              <Label className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground ml-1">Пароль</Label>
               <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <Input type="password" placeholder="Мин. 6 символов" value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} className="bg-muted/30 pl-9 rounded-xl border-none focus:ring-1 focus:ring-primary" required />
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-primary" />
+                <Input type="password" placeholder="••••••••" value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} className="bg-white/5 border-white/10 pl-10 rounded-2xl focus:ring-1 focus:ring-primary/50" required />
               </div>
             </div>
-            <Button type="submit" disabled={isLoading} className="w-full h-12 text-md font-bold shadow-lg shadow-primary/20 rounded-xl transition-all active:scale-95">
-              {isLoading ? <Loader2 className="animate-spin" /> : <span className="flex items-center gap-2">{mode === 'login' ? 'Войти' : 'Начать общение'} <ArrowRight className="w-4 h-4" /></span>}
+            <Button type="submit" disabled={isLoading} className="w-full h-14 text-md font-black uppercase tracking-tighter bg-gradient-to-r from-primary to-primary/80 shadow-2xl shadow-primary/20 rounded-2xl transition-all active:scale-95 group">
+              {isLoading ? <Loader2 className="animate-spin" /> : <span className="flex items-center gap-2">{mode === 'login' ? 'Войти' : 'Начать'} <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" /></span>}
             </Button>
           </form>
           
-          <div className="mt-4 text-center">
-            <button onClick={() => setMode(mode === 'login' ? 'register' : 'login')} className="text-sm text-muted-foreground hover:text-primary transition-colors font-medium">
-              {mode === 'login' ? "Нет аккаунта? Зарегистрироваться" : "Уже есть аккаунт? Войти"}
+          <div className="mt-6 text-center">
+            <button onClick={() => setMode(mode === 'login' ? 'register' : 'login')} className="text-sm text-muted-foreground hover:text-primary transition-colors font-bold uppercase tracking-widest">
+              {mode === 'login' ? "Создать аккаунт" : "Уже есть аккаунт?"}
             </button>
-          </div>
-          
-          {lastError && (
-            <div className="mt-4 p-3 bg-destructive/10 rounded-xl border border-destructive/20 flex items-start gap-2 animate-in fade-in slide-in-from-top-2">
-              <AlertTriangle className="w-4 h-4 text-destructive shrink-0 mt-0.5" />
-              <div className="text-[10px] text-destructive leading-tight">
-                <strong>Техническая ошибка:</strong> {lastError}<br/>
-                Если это 'permission-denied', проверьте правила Firestore в консоли.
-              </div>
-            </div>
-          )}
-
-          <div className="mt-6 flex items-start gap-2 p-3 bg-primary/5 rounded-xl border border-primary/10">
-            <HelpCircle className="w-4 h-4 text-primary shrink-0 mt-0.5" />
-            <p className="text-[11px] text-muted-foreground leading-tight">
-              Используйте номер телефона для идентификации. Пароль нужен для входа без SMS.
-            </p>
           </div>
         </CardContent>
       </Card>
