@@ -15,13 +15,13 @@ import {
 import { format, addMonths, addYears } from 'date-fns';
 import { 
   CornerUpLeft, Trash2, Check, CheckCheck, Mic, Star, 
-  Languages, Loader2, Crown, User as UserIcon, Calendar, Diamond, 
+  Languages, Loader2, Crown, Diamond, 
   Rocket, Flame, Heart, Zap, Trophy, Gem, PartyPopper, Cookie, Ghost, 
   Coffee, Pizza, Beer, Wine, Camera, Laptop, Watch, Smartphone, Car, 
   Plane, Sun, Moon, Cloud, Snowflake, Trees, Flower2, Dog, Cat, Bird, 
   Fish, Bitcoin, Coins, Gamepad2, Music, Smile, ThumbsUp, Bell, Mail, 
   Key, Lock, Shield, Sword, Anchor, Compass, Map, Flag, Briefcase, GraduationCap,
-  Pin, Forward, Gift, PlayCircle, Edit2, Copy, Wand2
+  Pin, Forward, Gift, PlayCircle, Edit2, Copy
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { collection, doc, query, where, getDocs, limit } from 'firebase/firestore';
@@ -218,14 +218,14 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, amIPremium = 
   }
 
   return (
-    <div id={`msg-${message.id}`} className={cn("flex gap-2 max-w-[85%] relative w-full", isMe ? "justify-end self-end" : "justify-start self-start")}>
+    <div id={`msg-${message.id}`} className={cn("flex gap-2 max-w-[85%] relative w-full px-2", isMe ? "justify-end ml-auto" : "justify-start mr-auto")}>
       {!isMe && <UserAvatar userId={null} manualAvatarUrl={senderAvatarUrl} className="h-8 w-8 mt-auto shrink-0" fallbackName={message.senderName} />}
-      <div className={cn("flex flex-col min-w-0", isMe ? "items-end" : "items-start")}>
+      <div className={cn("flex flex-col min-w-0 max-w-full", isMe ? "items-end" : "items-start")}>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <div className={cn(
               "p-3 rounded-2xl cursor-pointer shadow-sm border transition-all hover:opacity-90 relative",
-              isMe ? "message-bubble-me border-none ml-auto" : "bg-card border-white/5 text-foreground mr-auto",
+              isMe ? "message-bubble-me border-none" : "bg-card border-white/5 text-foreground",
               message.contentType === 'video' && "p-1 rounded-full bg-transparent border-none shadow-none"
             )}>
               {renderContent()}

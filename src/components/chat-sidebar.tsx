@@ -6,11 +6,12 @@ import { useAppState } from '@/lib/store';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { UserAvatar } from '@/components/user-avatar';
-import { Search, Settings, Plus, Loader2, Bookmark, Pin, Globe, Star, Hexagon, Zap } from 'lucide-react';
+import { Search, Settings, Plus, Loader2, Bookmark, Pin, Globe, Star, Hexagon, ShieldAlert } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { CreateChatModal } from './modals/create-chat-modal';
 import { SettingsModal } from './modals/settings-modal';
+import { AdminPanelModal } from './modals/admin-panel-modal';
 import type { ChatType, User, Message, Chat } from '@/lib/types';
 import { useFirestore, useUser, useCollection, useDoc, useMemoFirebase } from '@/firebase';
 import { collection, query, where, doc, getDocs, addDoc, limit, arrayUnion, arrayRemove, updateDoc } from 'firebase/firestore';
@@ -28,6 +29,7 @@ export default function ChatSidebar() {
   const [activeTab, setActiveTab] = useState<ChatType | 'all'>('all');
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isAdminPanelOpen, setIsAdminPanelOpen] = useState(false);
   const [isCreatingSaved, setIsCreatingSaved] = useState(false);
   const [globalSearchResult, setGlobalSearchResult] = useState<Chat | null>(null);
   const [isSearchingGlobal, setIsSearchingGlobal] = useState(false);
@@ -37,6 +39,8 @@ export default function ChatSidebar() {
     return doc(db, 'users', user.uid);
   }, [db, user]);
   const { data: profile, isLoading: isProfileLoading } = useDoc<User>(userProfileRef);
+
+  const isAdmin = profile?.phone === '+79513332147' || user?.uid === 'GCvLucN8CjNcdaxPO2vmpZ84hNl1';
 
   const chatsQuery = useMemoFirebase(() => {
     if (!db || !user) return null;
@@ -241,9 +245,16 @@ export default function ChatSidebar() {
               </span>
             </div>
           </div>
-          <Button variant="ghost" size="icon" className="rounded-xl" onClick={() => setIsSettingsOpen(true)}>
-            <Settings className="w-5 h-5" />
-          </Button>
+          <div className="flex items-center gap-1">
+            {isAdmin && (
+               <Button variant="ghost" size="icon" className="rounded-xl text-primary" onClick={() => setIsAdminPanelOpen(true)}>
+                <ShieldAlert className="w-5 h-5" />
+              </Button>
+            )}
+            <Button variant="ghost" size="icon" className="rounded-xl" onClick={() => setIsSettingsOpen(true)}>
+              <Settings className="w-5 h-5" />
+            </Button>
+          </div>
         </div>
 
         <div className="relative">
@@ -347,6 +358,7 @@ export default function ChatSidebar() {
 
       <CreateChatModal open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen} />
       <SettingsModal open={isSettingsOpen} onOpenChange={setIsSettingsOpen} />
+      <AdminPanelModal open={isAdminPanelOpen} onOpenChange={setIsAdminPanelOpen} />
     </div>
   );
 }
