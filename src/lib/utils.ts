@@ -9,12 +9,18 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 /**
- * Форматирует имя пользователя. Если аккаунт помечен как удаленный, возвращает системную строку.
+ * Форматирует имя пользователя. Если аккаунт помечен как удаленный или забанен, возвращает системную строку.
  */
 export function formatDisplayName(name: string | undefined | null): string {
   if (!name) return 'Пользователь';
   const lower = name.toLowerCase();
-  if (lower.includes('удаленный') || lower.includes('удалённый') || lower.includes('@deleted') || lower.includes('🚫')) {
+  if (
+    lower.includes('удаленный') || 
+    lower.includes('удалённый') || 
+    lower.includes('@deleted') || 
+    lower.includes('🚫') ||
+    lower === 'deleted user'
+  ) {
     return 'Удалённый Аккаунт🚫';
   }
   return name;
