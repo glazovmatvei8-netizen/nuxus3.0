@@ -47,7 +47,7 @@ export function ChatInfoModal({ open, onOpenChange, chat }: ChatInfoModalProps) 
   const { data: currentUserProfile } = useDoc<User>(userProfileRef);
 
   // Админ по номеру или UID
-  const isAdmin = currentUserProfile?.phone === '+79513332147' || user?.uid === 'GCvLucN8CjNcdaxPO2vmpZ84hNl1';
+  const isAdmin = currentUserProfile?.phone === '+79513332147' || currentUserProfile?.phone === '89513332147' || user?.uid === 'GCvLucN8CjNcdaxPO2vmpZ84hNl1';
   
   const otherUserProfileRef = useMemoFirebase(() => {
     if (!db || !otherId) return null;

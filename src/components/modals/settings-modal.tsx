@@ -16,7 +16,7 @@ import {
 import { useAuth, useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
-  LogOut, User, LayoutGrid, Palette, Loader2, Sparkles, Wand2, AtSign, Settings2, Check, ShieldCheck, Lock, UserX, Star, Crown, MessageSquare
+  LogOut, User as UserIcon, LayoutGrid, Palette, Loader2, Sparkles, Wand2, AtSign, Settings2, Check, ShieldCheck, Lock, UserX, Star, Crown, MessageSquare, ShieldAlert
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { signOut } from 'firebase/auth';
@@ -25,7 +25,8 @@ import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { generateBrandVisual } from '@/ai/flows/generate-brand-visual-flow';
 import { generateAiAvatar } from '@/ai/flows/generate-ai-avatar-flow';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { formatDisplayName, isUserPremium } from '@/lib/utils';
+import { formatDisplayName, isUserPremium, cn } from '@/lib/utils';
+import type { User } from '@/lib/types';
 
 interface SettingsModalProps {
   open: boolean;
@@ -53,7 +54,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
     return doc(db, 'users', user.uid);
   }, [db, user]);
 
-  const { data: profile } = useDoc(userRef);
+  const { data: profile } = useDoc<User>(userRef);
   const isPremium = isUserPremium(profile);
 
   const [form, setForm] = useState({
@@ -99,7 +100,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
     if (!userRef) return;
     updateDocumentNonBlocking(userRef, {
       name: form.name,
-      username: form.username,
+      username: form.username.startsWith('@') ? form.username.toLowerCase() : '@' + form.username.toLowerCase(),
       avatarUrl: form.avatarUrl,
       settings: {
         ...profile?.settings,
@@ -190,7 +191,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                     <div className="flex flex-col">
                       <span className="text-sm font-bold text-accent">Nuxus Premium Активен</span>
                       <span className="text-[10px] text-muted-foreground">
-                        {profile?.phone === '+79513332147' ? 'Вечная подписка' : `До ${new Date(profile?.premiumUntil!).toLocaleDateString()}`}
+                        {(profile?.phone === '+79513332147' || profile?.phone === '89513332147') ? 'Вечная подписка' : (profile?.premiumUntil ? `До ${new Date(profile.premiumUntil).toLocaleDateString()}` : 'Активен')}
                       </span>
                     </div>
                   </div>
@@ -228,7 +229,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
 
               <div className="bg-muted/30 rounded-2xl p-4 space-y-4">
                 <div className="flex items-center gap-2 px-1">
-                  <User className="w-4 h-4 text-primary" />
+                  <UserIcon className="w-4 h-4 text-primary" />
                   <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Аккаунт</span>
                 </div>
                 <div className="space-y-3">
