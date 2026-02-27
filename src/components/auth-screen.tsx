@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { MessageSquareText, Loader2, Smartphone, UserCircle, AtSign, Lock, ArrowRight, HelpCircle, ShieldAlert } from 'lucide-react';
+import { MessageSquareText, Loader2, Smartphone, UserCircle, AtSign, Lock, ArrowRight, HelpCircle, ShieldAlert, AlertTriangle } from 'lucide-react';
 import { useAuth, useFirestore } from '@/firebase';
 import { 
   signInWithEmailAndPassword,
@@ -116,12 +116,12 @@ export default function AuthScreen() {
         }
       }
     } catch (err: any) {
-      console.error("Auth Error:", err.code, err.message);
+      console.error("Auth Error Detail:", err.code, err.message);
       setLastError(err.code);
       
       let errorMessage = "Проверьте данные или настройки Firebase";
       if (err.code === 'auth/operation-not-allowed') {
-        errorMessage = "Метод входа 'Email/Password' отключен в Firebase Console.";
+        errorMessage = "Метод 'Email/Password' отключен в Firebase Console -> Authentication -> Sign-in method.";
       } else if (err.code === 'auth/email-already-in-use') {
         errorMessage = "Этот номер уже зарегистрирован. Попробуйте войти.";
       } else if (err.code === 'auth/wrong-password') {
@@ -129,7 +129,7 @@ export default function AuthScreen() {
       } else if (err.code === 'auth/user-not-found') {
         errorMessage = "Аккаунт не найден.";
       } else if (err.code === 'auth/admin-restricted-operation' || err.code === 'auth/unauthorized-domain') {
-        errorMessage = "Домен не авторизован. Добавьте текущий URL в Authorized Domains в Firebase.";
+        errorMessage = "Домен не авторизован! Добавьте текущий URL в Firebase -> Settings -> Authorized Domains.";
       }
 
       toast({ 
@@ -203,10 +203,10 @@ export default function AuthScreen() {
           
           {lastError && (
             <div className="mt-4 p-3 bg-destructive/10 rounded-xl border border-destructive/20 flex items-start gap-2 animate-in fade-in slide-in-from-top-2">
-              <ShieldAlert className="w-4 h-4 text-destructive shrink-0 mt-0.5" />
+              <AlertTriangle className="w-4 h-4 text-destructive shrink-0 mt-0.5" />
               <div className="text-[10px] text-destructive leading-tight">
                 <strong>Техническая ошибка:</strong> {lastError}<br/>
-                Если это 'auth/admin-restricted-operation', добавьте домен в Authorized Domains в консоли Firebase.
+                Если это 'auth/admin-restricted-operation', проверьте раздел <strong>Authorized Domains</strong> в консоли Firebase.
               </div>
             </div>
           )}
@@ -214,7 +214,7 @@ export default function AuthScreen() {
           <div className="mt-6 flex items-start gap-2 p-3 bg-primary/5 rounded-xl border border-primary/10">
             <HelpCircle className="w-4 h-4 text-primary shrink-0 mt-0.5" />
             <p className="text-[11px] text-muted-foreground leading-tight">
-              Используйте любой номер телефона. Мы используем метод "Электронная почта/пароль" для входа без SMS.
+              Используйте номер телефона для идентификации. Пароль нужен для входа без SMS.
             </p>
           </div>
         </CardContent>
