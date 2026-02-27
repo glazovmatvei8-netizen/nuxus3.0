@@ -1,7 +1,7 @@
 
 "use client"
 
-import React, { useState, useMemo, memo, useRef } from 'react';
+import React, { useState, useMemo, memo, useRef, useCallback } from 'react';
 import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
@@ -16,15 +16,9 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator
 } from "@/components/ui/dropdown-menu";
-import {
-  Dialog,
-  DialogContent,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
 import { format, addMonths, addYears } from 'date-fns';
 import { 
-  SmilePlus, CornerUpLeft, Pencil, Trash2, Check, CheckCheck, ZoomIn, Pin, Play, Pause, Mic, Star, 
+  SmilePlus, CornerUpLeft, Pencil, Trash2, Check, CheckCheck, Pin, Play, Pause, Mic, Star, 
   Languages, Loader2, Lock, Gift, Crown, Diamond, Rocket, Flame, Heart, Zap, Trophy, PartyPopper, 
   Cookie, Ghost, Gem, Music, Gamepad2, Coffee, Pizza, Beer, Wine, Camera, Laptop, Watch, Smartphone, 
   Car, Plane, Anchor, Sun, Moon, Cloud, Snowflake, Trees, Flower2, Dog, Cat, Bird, Fish, Smile, 
@@ -55,13 +49,10 @@ const GIFT_ICONS: Record<string, any> = {
   gift_briefcase: Briefcase, gift_grad: GraduationCap
 };
 
-const REACTIONS = ['❤️', '👍', '😂', '😮', '😢', '🔥', '👏', '🎉', '💎', '🦄', '⚡'];
-
-export const MessageItem = memo(({ message, isMe, chatId, onReply, onEdit, size = 'medium', isAdmin = false }: any) => {
+export const MessageItem = memo(({ message, isMe, chatId, onReply, onEdit, onOpenReactions, size = 'medium', isAdmin = false }: any) => {
   const { user } = useUser();
   const db = useFirestore();
   const { toast } = useToast();
-  const [isReactionPickerOpen, setIsReactionPickerOpen] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
   const [transcription, setTranscription] = useState<string | null>(null);
   const [isActionLoading, setIsActionLoading] = useState(false);
@@ -87,15 +78,17 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onEdit, size 
   }, [db, chatId, message.id]);
   const { data: reactionsData } = useCollection(reactionsQuery);
 
-  const handleAddReaction = (emoji: string) => {
+  const handleToggleReaction = useCallback((emoji: string) => {
     if (!user || !db) return;
     const existing = reactionsData?.find(r => r.emoji === emoji && r.reactorId === user.uid);
-    if (existing) deleteDocumentNonBlocking(doc(db, 'chats', chatId, 'messages', message.id, 'reactions', existing.id));
-    else addDocumentNonBlocking(collection(db, 'chats', chatId, 'messages', message.id, 'reactions'), {
-      messageId: message.id, reactorId: user.uid, emoji, reactedAt: new Date().toISOString(),
-    });
-    setIsReactionPickerOpen(false);
-  };
+    if (existing) {
+      deleteDocumentNonBlocking(doc(db, 'chats', chatId, 'messages', message.id, 'reactions', existing.id));
+    } else {
+      addDocumentNonBlocking(collection(db, 'chats', chatId, 'messages', message.id, 'reactions'), {
+        messageId: message.id, reactorId: user.uid, emoji, reactedAt: new Date().toISOString(),
+      });
+    }
+  }, [reactionsData, user, db, chatId, message.id]);
 
   const handleTranscribe = async () => {
     if (!amIPremium || transcription) { setTranscription(null); return; }
@@ -295,9 +288,24 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onEdit, size 
     );
   }
 
+  const handleReplyClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onReply(message);
+  };
+
+  const handleEditClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onEdit(message);
+  };
+
+  const handleReactionsClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onOpenReactions(message);
+  };
+
   return (
     <div id={`msg-${message.id}`} className={cn("flex gap-2 max-w-[85%] animate-in fade-in relative", isMe ? "ml-auto flex-row-reverse" : "mr-auto")}>
-      {!isMe && <UserAvatar userId={message.senderId} className="h-8 w-8 mt-auto shrink-0" fallbackName={message.senderName} />}
+      {!isMe && <UserAvatar userId={message.senderId} className="h-8 w-8 mt-auto shrink-0" fallbackName={message.senderName} manualAvatarUrl={senderProfile?.avatarUrl} />}
       <div className={cn("flex flex-col min-w-0", isMe ? "items-end" : "items-start")}>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -316,21 +324,21 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onEdit, size 
             </div>
           </DropdownMenuTrigger>
           <DropdownMenuContent align={isMe ? 'end' : 'start'} className="w-48 bg-card/95 backdrop-blur-xl">
-            <DropdownMenuItem onClick={onReply} className="gap-2">
+            <DropdownMenuItem onClick={handleReplyClick} className="gap-2">
               <CornerUpLeft className="w-4 h-4" /> Ответить
             </DropdownMenuItem>
             {isMe && message.contentType === 'text' && (
-              <DropdownMenuItem onClick={onEdit} className="gap-2">
+              <DropdownMenuItem onClick={handleEditClick} className="gap-2">
                 <Pencil className="w-4 h-4" /> Изменить
               </DropdownMenuItem>
             )}
-            <DropdownMenuItem onClick={() => setIsReactionPickerOpen(true)} className="gap-2">
+            <DropdownMenuItem onClick={handleReactionsClick} className="gap-2">
               <SmilePlus className="w-4 h-4" /> Реакция
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             {(isMe || isAdmin) && (
               <DropdownMenuItem 
-                onClick={() => deleteDocumentNonBlocking(doc(db, 'chats', chatId, 'messages', message.id))} 
+                onClick={(e) => { e.stopPropagation(); deleteDocumentNonBlocking(doc(db, 'chats', chatId, 'messages', message.id)); }} 
                 className="text-destructive gap-2"
               >
                 <Trash2 className="w-4 h-4" /> Удалить
@@ -344,7 +352,7 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onEdit, size 
             {Object.entries(groupedReactions).map(([emoji, uids]: any) => (
               <button 
                 key={emoji} 
-                onClick={() => handleAddReaction(emoji)}
+                onClick={() => handleToggleReaction(emoji)}
                 className={cn(
                   "bg-muted/40 backdrop-blur-md px-2 py-0.5 rounded-full text-[10px] border border-white/5 hover:bg-muted/60 transition-colors",
                   uids.includes(user?.uid) && "ring-1 ring-primary/40 bg-primary/10"
@@ -356,26 +364,6 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onEdit, size 
           </div>
         )}
       </div>
-      
-      {isReactionPickerOpen && (
-        <Dialog open={isReactionPickerOpen} onOpenChange={setIsReactionPickerOpen}>
-          <DialogContent className="max-w-[280px] p-2 bg-card/95 backdrop-blur-xl border-border/40">
-            <DialogTitle className="sr-only">Выбор реакции</DialogTitle>
-            <DialogDescription className="sr-only">Выберите эмодзи для реакции на сообщение</DialogDescription>
-            <div className="grid grid-cols-4 gap-1">
-              {REACTIONS.map(emoji => (
-                <button 
-                  key={emoji} 
-                  className="p-3 text-2xl hover:bg-primary/10 rounded-xl transition-all hover:scale-125"
-                  onClick={() => handleAddReaction(emoji)}
-                >
-                  {emoji}
-                </button>
-              ))}
-            </div>
-          </DialogContent>
-        </Dialog>
-      )}
     </div>
   );
 });

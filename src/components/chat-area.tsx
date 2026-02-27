@@ -10,7 +10,7 @@ import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { 
   Send, Paperclip, Sparkles, MessageSquare, Info, X, 
   CornerUpLeft, Loader2, ShieldAlert, ChevronLeft, ChevronDown,
-  Search, MoreVertical, Mic, UserPlus, Pin, Camera, StopCircle, Square
+  Search, MoreVertical, Mic, UserPlus, Pin, Camera, StopCircle, Square, SmilePlus
 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { MessageItem } from './message-item';
@@ -18,10 +18,13 @@ import { useToast } from '@/hooks/use-toast';
 import { ChatInfoModal } from './modals/chat-info-modal';
 import { useFirestore, useUser, useCollection, useDoc, useMemoFirebase } from '@/firebase';
 import { collection, query, orderBy, doc, arrayUnion } from 'firebase/firestore';
-import { addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { suggestMessageDraft } from '@/ai/flows/ai-message-drafting-flow';
 import { cn, formatDisplayName, formatLastSeen } from '@/lib/utils';
 import type { Message, User as UserType, Chat } from '@/lib/types';
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+
+const REACTIONS = ['❤️', '👍', '😂', '😮', '😢', '🔥', '👏', '🎉', '💎', '🦄', '⚡'];
 
 const ChatInput = React.memo(({ 
   onSend, 
@@ -147,6 +150,9 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: any) {
   const [editMessage, setEditMessage] = useState<Message | null>(null);
   const [statusString, setStatusString] = useState<string>('');
   const [pendingPhotos, setPendingPhotos] = useState<string[]>([]);
+
+  // Reaction state
+  const [reactionTarget, setReactionTarget] = useState<Message | null>(null);
 
   // Video circle recording state
   const [isRecordingVideo, setIsRecordingVideo] = useState(false);
@@ -495,6 +501,27 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: any) {
     });
   };
 
+  const handleReply = useCallback((msg: Message) => setReplyTo(msg), []);
+  const handleEdit = useCallback((msg: Message) => setEditMessage(msg), []);
+  const handleOpenReactions = useCallback((msg: Message) => setReactionTarget(msg), []);
+
+  const handleAddReaction = (emoji: string) => {
+    if (!user || !db || !reactionTarget || !currentChatId) return;
+    
+    // We fetch reactions once to check existing, but it's better to just toggle in Firestore logic
+    const reactionsRef = collection(db, 'chats', currentChatId, 'messages', reactionTarget.id, 'reactions');
+    
+    // Optimistic non-blocking write
+    addDocumentNonBlocking(reactionsRef, {
+      messageId: reactionTarget.id,
+      reactorId: user.uid,
+      emoji,
+      reactedAt: new Date().toISOString(),
+    });
+
+    setReactionTarget(null);
+  };
+
   const chatDisplayName = formatDisplayName(otherUserProfile?.name || (otherId && chat?.metadata && chat.metadata[otherId] ? chat.metadata[otherId].name : chat?.name));
 
   if (!currentChatId) {
@@ -614,8 +641,9 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: any) {
                 message={msg} 
                 isMe={msg.senderId === user?.uid} 
                 chatId={currentChatId} 
-                onReply={() => setReplyTo(msg)} 
-                onEdit={() => setEditMessage(msg)} 
+                onReply={handleReply} 
+                onEdit={handleEdit} 
+                onOpenReactions={handleOpenReactions}
                 size={userProfile?.settings?.messageSize} 
                 isAdmin={chat?.ownerId === user?.uid || chat?.adminIds?.includes(user?.uid || '')}
               />
@@ -699,6 +727,26 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: any) {
         </div>
       </footer>
       {chat && <ChatInfoModal open={isChatInfoOpen} onOpenChange={setIsChatInfoOpen} chat={chat as any} />}
+      
+      {/* Shared Reaction Picker to optimize performance */}
+      <Dialog open={!!reactionTarget} onOpenChange={(val) => !val && setReactionTarget(null)}>
+        <DialogContent className="max-w-[280px] p-2 bg-card/95 backdrop-blur-xl border-border/40 rounded-3xl">
+          <DialogTitle className="sr-only">Выбор реакции</DialogTitle>
+          <DialogDescription className="sr-only">Выберите эмодзи для реакции на сообщение</DialogDescription>
+          <div className="grid grid-cols-4 gap-1">
+            {REACTIONS.map(emoji => (
+              <button 
+                key={emoji} 
+                className="p-3 text-2xl hover:bg-primary/10 rounded-xl transition-all hover:scale-125"
+                onClick={() => handleAddReaction(emoji)}
+              >
+                {emoji}
+              </button>
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
+
