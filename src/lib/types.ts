@@ -55,6 +55,10 @@ export interface UserSettings {
   chatBackground: string;
   messageSize: 'small' | 'medium' | 'large';
   privacy: UserPrivacy;
+  notifications?: {
+    showPreview: boolean;
+    sounds: boolean;
+  };
 }
 
 export interface User {
@@ -62,6 +66,7 @@ export interface User {
   phone: string;
   name: string;
   username: string;
+  bio?: string;
   avatarUrl: string | null;
   lastSeen?: string;
   createdAt: string;
