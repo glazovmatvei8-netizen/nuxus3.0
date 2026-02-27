@@ -14,11 +14,12 @@ import {
 import { format, addMonths, addYears } from 'date-fns';
 import { 
   SmilePlus, CornerUpLeft, Pencil, Trash2, Check, CheckCheck, Mic, Star, 
-  Languages, Loader2, Lock, Gift, Crown, Diamond, Rocket, Flame, Heart, Zap, Trophy, PartyPopper, 
-  Cookie, Ghost, Gem, Music, Gamepad2, Coffee, Pizza, Beer, Wine, Camera, Laptop, Watch, Smartphone, 
-  Car, Plane, Anchor, Sun, Moon, Cloud, Snowflake, Trees, Flower2, Dog, Cat, Bird, Fish, Smile, 
-  ThumbsUp, Bell, Mail, Key, Shield, Sword, Compass, Map, Flag, Briefcase, GraduationCap, Bitcoin, Coins,
-  Calendar, User as UserIcon, XCircle
+  Languages, Loader2, Crown, Gift, User as UserIcon, Calendar, Diamond, 
+  Rocket, Flame, Heart, Zap, Trophy, Gem, PartyPopper, Cookie, Ghost, 
+  Coffee, Pizza, Beer, Wine, Camera, Laptop, Watch, Smartphone, Car, 
+  Plane, Sun, Moon, Cloud, Snowflake, Trees, Flower2, Dog, Cat, Bird, 
+  Fish, Bitcoin, Coins, Gamepad2, Music, Smile, ThumbsUp, Bell, Mail, 
+  Key, Lock, Shield, Sword, Anchor, Compass, Map, Flag, Briefcase, GraduationCap
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { collection, doc, increment, query, where, getDocs, limit } from 'firebase/firestore';
@@ -144,12 +145,12 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onEdit, onOpe
             <div className="bg-primary/20 p-2 rounded-xl">
               {data.type === 'premium' ? <Crown className="w-5 h-5 text-primary" /> : <Star className="w-5 h-5 text-accent" />}
             </div>
-            <div className="flex flex-col">
-              <span className="text-xs font-bold uppercase tracking-widest text-primary">Запрос оплаты</span>
+            <div className="flex flex-col text-left">
+              <span className="text-[10px] font-bold uppercase tracking-widest text-primary">Запрос оплаты</span>
               <span className="text-sm font-black text-white">{data.itemName}</span>
             </div>
           </div>
-          <div className="space-y-2 text-xs">
+          <div className="space-y-2 text-[10px]">
             <div className="flex items-center justify-between text-muted-foreground">
               <span className="flex items-center gap-1"><UserIcon className="w-3 h-3" /> Пользователь:</span>
               <span className="text-white font-medium">{data.targetUserUsername}</span>
@@ -165,10 +166,10 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onEdit, onOpe
           </div>
           {isAdmin && data.status === 'pending' && (
             <div className="flex gap-2 pt-2">
-              <Button size="sm" className="flex-1 rounded-xl" onClick={(e) => handlePaymentAction('confirm', e)} disabled={isActionLoading}>
-                {isActionLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4 mr-1" />} Принять
+              <Button size="sm" className="flex-1 rounded-xl h-8 text-[10px]" onClick={(e) => handlePaymentAction('confirm', e)} disabled={isActionLoading}>
+                {isActionLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3 mr-1" />} Принять
               </Button>
-              <Button size="sm" variant="outline" className="flex-1 rounded-xl" onClick={(e) => handlePaymentAction('reject', e)} disabled={isActionLoading}>
+              <Button size="sm" variant="outline" className="flex-1 rounded-xl h-8 text-[10px]" onClick={(e) => handlePaymentAction('reject', e)} disabled={isActionLoading}>
                 Отказать
               </Button>
             </div>
@@ -202,14 +203,6 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onEdit, onOpe
       );
     }
     
-    if (message.contentType === 'video') {
-      return (
-        <div className="relative w-60 h-60 rounded-full overflow-hidden mt-1 border-4 border-primary/20">
-          <video src={message.content} autoPlay muted loop className="w-full h-full object-cover" />
-        </div>
-      );
-    }
-    
     if (message.contentType === 'audio') {
       return (
         <div className="flex flex-col gap-1 mt-1">
@@ -217,7 +210,7 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onEdit, onOpe
             <Mic className="w-4 h-4 text-primary" />
             <span className="text-xs">Голос</span>
             {amIPremium && (
-              <Button variant="ghost" size="icon" className="h-6 w-6" onClick={handleTranscribe} disabled={isTranscribing}>
+              <Button variant="ghost" size="icon" className="h-6 w-6" onClick={(e) => { e.stopPropagation(); handleTranscribe(); }} disabled={isTranscribing}>
                 {isTranscribing ? <Loader2 className="w-3 h-3 animate-spin" /> : <Languages className="w-3 h-3" />}
               </Button>
             )}
@@ -227,7 +220,7 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onEdit, onOpe
       );
     }
     
-    return <div className="whitespace-pre-wrap text-sm break-words">{message.content}</div>;
+    return <div className="whitespace-pre-wrap text-sm break-words text-left">{message.content}</div>;
   };
 
   if (message.contentType === 'service') {
@@ -241,7 +234,7 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onEdit, onOpe
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <div className={cn(
-              "p-3 rounded-2xl cursor-pointer shadow-sm border transition-all hover:brightness-105",
+              "p-3 rounded-2xl cursor-pointer shadow-sm border transition-all hover:brightness-105 active:scale-[0.98]",
               isMe ? "bg-primary text-white border-primary" : "bg-card border-border text-foreground"
             )}>
               {renderContent()}
@@ -251,19 +244,29 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onEdit, onOpe
               </div>
             </div>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align={isMe ? 'end' : 'start'} className="w-48">
+          <DropdownMenuContent align={isMe ? 'end' : 'start'} className="w-48 bg-card/95 backdrop-blur-xl border-white/10">
             <DropdownMenuItem onClick={() => onReply(message)} className="gap-2"><CornerUpLeft className="w-4 h-4" /> Ответить</DropdownMenuItem>
-            {isMe && message.contentType === 'text' && <DropdownMenuItem onClick={() => onEdit(message)} className="gap-2"><Pencil className="w-4 h-4" /> Изменить</DropdownMenuItem>}
             <DropdownMenuItem onClick={() => onOpenReactions(message)} className="gap-2"><SmilePlus className="w-4 h-4" /> Реакция</DropdownMenuItem>
-            <DropdownMenuSeparator />
-            {(isMe || isAdmin) && <DropdownMenuItem onClick={() => deleteDocumentNonBlocking(doc(db, 'chats', chatId, 'messages', message.id))} className="text-destructive gap-2"><Trash2 className="w-4 h-4" /> Удалить</DropdownMenuItem>}
+            <DropdownMenuSeparator className="bg-white/5" />
+            {(isMe || isAdmin) && (
+              <DropdownMenuItem onClick={() => deleteDocumentNonBlocking(doc(db, 'chats', chatId, 'messages', message.id))} className="text-destructive gap-2">
+                <Trash2 className="w-4 h-4" /> Удалить
+              </DropdownMenuItem>
+            )}
           </DropdownMenuContent>
         </DropdownMenu>
 
         {Object.keys(groupedReactions).length > 0 && (
           <div className="flex flex-wrap gap-1 mt-1">
             {Object.entries(groupedReactions).map(([emoji, uids]: any) => (
-              <button key={emoji} onClick={() => handleToggleReaction(emoji)} className={cn("bg-muted/40 px-2 py-0.5 rounded-full text-[10px] border border-white/5", uids.includes(user?.uid) && "ring-1 ring-primary/40 bg-primary/10")}>
+              <button 
+                key={emoji} 
+                onClick={() => handleToggleReaction(emoji)} 
+                className={cn(
+                  "bg-muted/40 px-2 py-0.5 rounded-full text-[10px] border border-white/5 transition-all active:scale-90", 
+                  uids.includes(user?.uid) && "ring-1 ring-primary/40 bg-primary/10"
+                )}
+              >
                 {emoji} {uids.length}
               </button>
             ))}
@@ -273,12 +276,14 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onEdit, onOpe
     </div>
   );
 }, (prev, next) => {
+  // Очень важная проверка для предотвращения лишних перерисовок
   return prev.message.id === next.message.id && 
          prev.message.content === next.message.content && 
          prev.message.isRead === next.message.isRead &&
          prev.amIPremium === next.amIPremium &&
          prev.isAdmin === next.isAdmin &&
-         prev.senderAvatarUrl === next.senderAvatarUrl;
+         prev.senderAvatarUrl === next.senderAvatarUrl &&
+         prev.chatId === next.chatId;
 });
 
 MessageItem.displayName = 'MessageItem';
