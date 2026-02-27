@@ -167,7 +167,7 @@ export function ChatInfoModal({ open, onOpenChange, chat }: ChatInfoModalProps) 
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-md bg-card/95 backdrop-blur-xl border-border/40 p-0 overflow-hidden max-h-[90vh] flex flex-col">
+        <DialogContent className="max-w-md bg-card/95 backdrop-blur-xl border-border/40 p-0 overflow-hidden h-[90vh] flex flex-col">
           <DialogHeader className="p-6 bg-primary/5 border-b border-border/40 text-center flex flex-col items-center shrink-0">
             <div className="relative mb-4">
               <Avatar className="h-24 w-24 ring-4 ring-primary/10 shadow-xl">
@@ -205,10 +205,9 @@ export function ChatInfoModal({ open, onOpenChange, chat }: ChatInfoModalProps) 
               <TabsTrigger value="members" className="rounded-lg text-xs">Участники</TabsTrigger>
             </TabsList>
 
-            <ScrollArea className="flex-1">
-              <div className="flex flex-col">
-                <TabsContent value="info" className="p-6 space-y-6 m-0 flex-1">
-                  {/* Admin Actions for Premium */}
+            <TabsContent value="info" className="flex-1 min-h-0 m-0 overflow-hidden">
+              <ScrollArea className="h-full">
+                <div className="p-6 space-y-6">
                   {isAdmin && isPrivate && otherId && (
                     <div className="bg-gradient-to-br from-primary/10 to-accent/10 p-4 rounded-2xl border border-primary/20 space-y-4">
                       <h3 className="text-[10px] font-bold uppercase tracking-widest text-primary flex items-center gap-2">
@@ -263,7 +262,7 @@ export function ChatInfoModal({ open, onOpenChange, chat }: ChatInfoModalProps) 
                     </div>
                   </div>
 
-                  <div className="pt-4 space-y-3 pb-6">
+                  <div className="pt-4 space-y-3 pb-12">
                     {isPrivate && otherId && (
                       <Button 
                         variant={isBlockedByMe ? "outline" : "ghost"} 
@@ -286,9 +285,13 @@ export function ChatInfoModal({ open, onOpenChange, chat }: ChatInfoModalProps) 
                       </Button>
                     )}
                   </div>
-                </TabsContent>
+                </div>
+              </ScrollArea>
+            </TabsContent>
 
-                <TabsContent value="members" className="p-4 space-y-2 m-0 flex-1">
+            <TabsContent value="members" className="flex-1 min-h-0 m-0 overflow-hidden">
+              <ScrollArea className="h-full">
+                <div className="p-4 space-y-2">
                   {(isOwner || isAdmin || chat.type === 'group') && (
                     <Button 
                       variant="outline" 
@@ -298,7 +301,7 @@ export function ChatInfoModal({ open, onOpenChange, chat }: ChatInfoModalProps) 
                       <UserPlus className="w-4 h-4 mr-2" /> Добавить участников
                     </Button>
                   )}
-                  <div className="space-y-1 pb-6">
+                  <div className="space-y-1 pb-12">
                     {members?.map(userMember => (
                       <div key={userMember.id} className="flex items-center justify-between p-3 rounded-xl hover:bg-muted/40 transition-colors group">
                         <div className="flex items-center gap-3">
@@ -327,9 +330,9 @@ export function ChatInfoModal({ open, onOpenChange, chat }: ChatInfoModalProps) 
                       </div>
                     ))}
                   </div>
-                </TabsContent>
-              </div>
-            </ScrollArea>
+                </div>
+              </ScrollArea>
+            </TabsContent>
           </Tabs>
         </DialogContent>
       </Dialog>
@@ -344,3 +347,4 @@ export function ChatInfoModal({ open, onOpenChange, chat }: ChatInfoModalProps) 
     </>
   );
 }
+

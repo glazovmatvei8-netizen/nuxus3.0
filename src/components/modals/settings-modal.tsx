@@ -145,7 +145,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md bg-card/95 backdrop-blur-2xl border-border/40 p-0 overflow-hidden max-h-[90vh] flex flex-col rounded-t-3xl sm:rounded-2xl shadow-2xl">
+      <DialogContent className="max-w-md bg-card/95 backdrop-blur-2xl border-border/40 p-0 overflow-hidden h-[90vh] flex flex-col rounded-t-3xl sm:rounded-2xl shadow-2xl">
         <DialogHeader className="p-4 border-b border-border/20 bg-muted/30 shrink-0">
           <DialogTitle className="flex items-center gap-2 text-lg font-bold">
             <Settings2 className="w-5 h-5 text-primary" />
@@ -153,7 +153,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
           </DialogTitle>
         </DialogHeader>
         
-        <ScrollArea className="flex-1">
+        <ScrollArea className="flex-1 overflow-y-auto">
           <div className="flex flex-col">
             <div className="flex flex-col items-center gap-4 py-6 bg-gradient-to-b from-primary/10 to-transparent shrink-0">
               <div className="relative group cursor-pointer" onClick={() => avatarInputRef.current?.click()}>
@@ -185,7 +185,6 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
             </div>
 
             <div className="p-4 space-y-6">
-              {/* Account Info Section */}
               <div className="space-y-4">
                 <div className="flex items-center gap-2 text-primary font-bold text-xs uppercase tracking-widest">
                   <UserIcon className="w-4 h-4" /> Аккаунт
@@ -214,7 +213,6 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                 </div>
               </div>
 
-              {/* Premium Section */}
               <div className={cn(
                 "p-4 rounded-2xl border transition-all",
                 isPremium ? "bg-gradient-to-br from-purple-500/20 via-accent/10 to-primary/10 border-purple-500/30" : "bg-muted/30 border-border/40"
@@ -228,7 +226,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                 </div>
                 <p className="text-[11px] text-muted-foreground mb-4">
                   {isPremium 
-                    ? "Все возможности Telegram Premium доступны в вашем профиле." 
+                    ? "Все возможности Nuxus Premium доступны в вашем профиле." 
                     : "Получите уникальные реакции, расшифровку голоса и другие возможности."}
                 </p>
                 {!isPremium && (
@@ -238,9 +236,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                 )}
               </div>
 
-              {/* Advanced Settings Sections */}
               <div className="space-y-4">
-                {/* Notifications */}
                 <div className="flex items-center justify-between p-3 bg-muted/20 rounded-xl">
                   <div className="flex items-center gap-3">
                     <Bell className="w-5 h-5 text-primary" />
@@ -249,7 +245,6 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                   <Switch checked={form.sounds} onCheckedChange={(val) => setForm({...form, sounds: val})} />
                 </div>
 
-                {/* Privacy */}
                 <div className="space-y-2 p-4 bg-muted/20 rounded-2xl">
                   <div className="flex items-center gap-2 mb-2">
                     <ShieldCheck className="w-4 h-4 text-accent" />
@@ -270,7 +265,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                         {!isPremium && <Lock className="w-3 h-3 text-muted-foreground" />}
                       </div>
                       <Select disabled={!isPremium} value={form.whoCanMessageMe} onValueChange={(val) => setForm({...form, whoCanMessageMe: val as any})}>
-                        <SelectTrigger className={cn("w-24 h-8 text-[10px] bg-background/50 border-none rounded-lg", !isPremium && "opacity-50")}>
+                        <SelectTrigger className={cn("w-28 h-8 text-[10px] bg-background/50 border-none rounded-lg", !isPremium && "opacity-50")}>
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -282,7 +277,6 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                   </div>
                 </div>
 
-                {/* Chat Settings */}
                 <div className="space-y-4 p-4 bg-muted/20 rounded-2xl">
                   <div className="flex items-center gap-2 mb-2">
                     <Palette className="w-4 h-4 text-accent" />
@@ -292,7 +286,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                     <div className="space-y-1.5">
                       <Label className="text-xs flex items-center gap-2"><Type className="w-3 h-3" /> Размер текста</Label>
                       <Select value={form.messageSize} onValueChange={(val) => setForm({...form, messageSize: val as any})}>
-                        <SelectTrigger className="bg-background/50 border-none rounded-xl">
+                        <SelectTrigger className="bg-background/50 border-none rounded-xl h-10">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -305,7 +299,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                     <div className="space-y-1.5">
                       <Label className="text-xs">Фон чатов</Label>
                       <Select value={form.chatBackground} onValueChange={(val) => setForm({...form, chatBackground: val})}>
-                        <SelectTrigger className="bg-background/50 border-none rounded-xl">
+                        <SelectTrigger className="bg-background/50 border-none rounded-xl h-10">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -318,23 +312,6 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                   </div>
                 </div>
 
-                {/* Data and Language Placeholders */}
-                <div className="grid grid-cols-1 gap-2">
-                  <div className="flex items-center gap-3 p-3 hover:bg-muted/40 transition-colors rounded-xl cursor-not-allowed opacity-60">
-                    <Database className="w-5 h-5 text-muted-foreground" />
-                    <span className="text-sm font-medium">Данные и память</span>
-                  </div>
-                  <div className="flex items-center gap-3 p-3 hover:bg-muted/40 transition-colors rounded-xl cursor-not-allowed opacity-60">
-                    <Smartphone className="w-5 h-5 text-muted-foreground" />
-                    <span className="text-sm font-medium">Устройства</span>
-                  </div>
-                  <div className="flex items-center gap-3 p-3 hover:bg-muted/40 transition-colors rounded-xl cursor-not-allowed opacity-60">
-                    <Globe className="w-5 h-5 text-muted-foreground" />
-                    <span className="text-sm font-medium">Язык (Русский)</span>
-                  </div>
-                </div>
-
-                {/* AI Lab */}
                 <div className="p-4 bg-primary/5 rounded-2xl border border-primary/20 space-y-3">
                   <div className="flex items-center gap-2 text-primary font-bold text-[10px] uppercase tracking-widest">
                     <Sparkles className="w-3 h-3" /> AI Лаборатория
@@ -353,8 +330,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                 </div>
               </div>
 
-              {/* Logout and Delete */}
-              <div className="pt-4 space-y-2 pb-6">
+              <div className="pt-4 space-y-2 pb-12">
                 <Button 
                   variant="ghost" 
                   className="w-full h-11 rounded-xl text-destructive hover:bg-destructive/10 justify-start gap-3"
