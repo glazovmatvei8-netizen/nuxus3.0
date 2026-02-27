@@ -218,14 +218,14 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, amIPremium = 
   }
 
   return (
-    <div id={`msg-${message.id}`} className={cn("flex gap-2 max-w-[85%] relative w-full px-2", isMe ? "justify-end ml-auto" : "justify-start mr-auto")}>
+    <div id={`msg-${message.id}`} className={cn("flex gap-2 max-w-[85%] relative w-full px-2 mb-1", isMe ? "justify-end ml-auto" : "justify-start mr-auto")}>
       {!isMe && <UserAvatar userId={null} manualAvatarUrl={senderAvatarUrl} className="h-8 w-8 mt-auto shrink-0" fallbackName={message.senderName} />}
-      <div className={cn("flex flex-col min-w-0 max-w-full", isMe ? "items-end" : "items-start")}>
+      <div className={cn("flex flex-col min-w-0 max-w-full relative", isMe ? "items-end" : "items-start")}>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <div className={cn(
-              "p-3 rounded-2xl cursor-pointer shadow-sm border transition-all hover:opacity-90 relative",
-              isMe ? "message-bubble-me border-none" : "bg-card border-white/5 text-foreground",
+              "p-3 rounded-2xl cursor-pointer shadow-sm border transition-all hover:opacity-90 relative inline-block",
+              isMe ? "message-bubble-me border-none self-end text-white" : "bg-card border-white/5 text-foreground",
               message.contentType === 'video' && "p-1 rounded-full bg-transparent border-none shadow-none"
             )}>
               {renderContent()}

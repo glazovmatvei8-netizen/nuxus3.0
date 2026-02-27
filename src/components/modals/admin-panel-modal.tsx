@@ -13,7 +13,7 @@ import { UserAvatar } from '@/components/user-avatar';
 import { ShieldAlert, Users, CreditCard, Send, ShieldCheck, Loader2, Star, Ban } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import type { User, Message } from '@/lib/types';
-import { formatDisplayName } from '@/lib/utils';
+import { formatDisplayName, cn } from '@/lib/utils';
 import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
@@ -36,7 +36,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
     if (!alertText.trim() || !db) return;
     setIsSendingAlert(true);
     try {
-      // Имитация рассылки или создание системного чата
+      // Имитация рассылки
       toast({ title: "Рассылка отправлена (имитация)", description: "Функция будет доступна в следующем ядре." });
       setAlertText('');
     } catch (e) {
