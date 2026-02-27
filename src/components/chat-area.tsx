@@ -176,6 +176,30 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: any) {
     );
   }, [messages, isSearchOpen, searchQuery]);
 
+  const scrollToBottom = useCallback((behavior: ScrollBehavior = 'auto') => {
+    if (scrollRef.current) {
+      const viewport = scrollRef.current.querySelector('[data-radix-scroll-area-viewport]');
+      if (viewport) {
+        viewport.scrollTo({ top: viewport.scrollHeight, behavior });
+      }
+    }
+  }, []);
+
+  // Авто-скролл при открытии чата и при новых сообщениях
+  useEffect(() => {
+    if (messages && messages.length > 0) {
+      // Используем instant для первой загрузки и auto/smooth для новых
+      const isInitial = !dataLoadedRef.current;
+      scrollToBottom(isInitial ? 'instant' as any : 'auto');
+      dataLoadedRef.current = true;
+    }
+  }, [messages, currentChatId, scrollToBottom]);
+
+  const dataLoadedRef = useRef(false);
+  useEffect(() => {
+    dataLoadedRef.current = false;
+  }, [currentChatId]);
+
   const handleTyping = useCallback((isTyping: boolean) => {
     if (!currentChatId || !user || !db || isBlocked) return;
     
@@ -187,6 +211,7 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: any) {
     const chatDocRef = doc(db, 'chats', currentChatId);
 
     if (isTyping) {
+      // Throttling: отправляем сигнал не чаще чем раз в 3.5 секунды
       if (now - lastTypingSignalRef.current > 3500) {
         updateDocumentNonBlocking(chatDocRef, { [`typing.${user.uid}`]: true });
         lastTypingSignalRef.current = now;
@@ -226,15 +251,6 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: any) {
     }
   }, [messages, user, currentChatId, db, chat]);
 
-  const scrollToBottom = useCallback(() => {
-    if (scrollRef.current) {
-      const viewport = scrollRef.current.querySelector('[data-radix-scroll-area-viewport]');
-      if (viewport) {
-        viewport.scrollTo({ top: viewport.scrollHeight, behavior: 'auto' });
-      }
-    }
-  }, []);
-
   const handleSendMessage = useCallback((content: string, type: string = 'text') => {
     if (isBlocked || userProfile?.isBanned) return;
     if (!content.trim() && type === 'text') return;
@@ -267,7 +283,7 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: any) {
 
     addDocumentNonBlocking(collection(db, 'chats', currentChatId, 'messages'), data);
     updateDocumentNonBlocking(doc(db, 'chats', currentChatId), { [`typing.${user.uid}`]: false });
-    setTimeout(scrollToBottom, 50);
+    setTimeout(() => scrollToBottom('smooth'), 50);
   }, [isBlocked, userProfile, currentChatId, user, db, editMessage, replyTo, scrollToBottom]);
 
   const handleAISuggest = useCallback(async (currentInput: string) => {
@@ -351,7 +367,15 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: any) {
 
       <div className="flex-1 relative z-10 overflow-hidden">
         {customBackground && customBackground !== 'default' && <div className="absolute inset-0 z-[-1]" style={bgStyle} />}
-        <ScrollArea ref={scrollRef} className="h-full px-4 py-4" onScroll={(e: any) => setShowScrollDown(e.currentTarget.scrollHeight - e.currentTarget.scrollTop - e.currentTarget.clientHeight > 300)}>
+        <ScrollArea 
+          ref={scrollRef} 
+          className="h-full px-4 py-4" 
+          onScroll={(e: any) => {
+            const viewport = e.currentTarget;
+            const isScrollTop = viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight > 300;
+            setShowScrollDown(isScrollTop);
+          }}
+        >
           <div className="flex flex-col gap-2 max-w-4xl mx-auto pb-4">
             {filteredMessages.map(msg => (
               <MessageItem 
@@ -373,7 +397,16 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: any) {
             )}
           </div>
         </ScrollArea>
-        {showScrollDown && <Button size="icon" variant="secondary" className="absolute bottom-4 right-4 rounded-full shadow-lg z-30" onClick={scrollToBottom}><ChevronDown className="w-5 h-5" /></Button>}
+        {showScrollDown && (
+          <Button 
+            size="icon" 
+            variant="secondary" 
+            className="absolute bottom-4 right-4 rounded-full shadow-lg z-30 animate-in fade-in zoom-in duration-200" 
+            onClick={() => scrollToBottom('smooth')}
+          >
+            <ChevronDown className="w-5 h-5" />
+          </Button>
+        )}
       </div>
 
       <footer className="p-3 bg-card/20 backdrop-blur-xl border-t border-border/40 z-20 shrink-0">

@@ -15,7 +15,7 @@ service cloud.firestore {
       );
     }
 
-    // ПРАВИЛО ДЛЯ АДМИНИСТРАТОРА: Полный доступ ко всему
+    // ПРАВИЛО ДЛЯ АДМИНИСТРАТОРА: Полный доступ ко всему рекурсивно
     match /{document=**} {
       allow read, write: if isAdmin();
     }
@@ -26,7 +26,7 @@ service cloud.firestore {
       allow write: if isSignedIn() && request.auth.uid == userId;
     }
 
-    // Чаты и сообщения: доступ всем авторизованным (для упрощения и скорости)
+    // Чаты и сообщения: доступ всем авторизованным (упрощено для стабильности)
     match /chats/{chatId} {
       allow read, write: if isSignedIn();
 
