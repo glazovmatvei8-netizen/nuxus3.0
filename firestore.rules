@@ -10,7 +10,7 @@ service cloud.firestore {
     // Твой аккаунт администратора по номеру телефона
     function isAdmin() {
       return isSignedIn() && (
-        request.auth.token.phone_number == '+79513332147' || 
+        request.auth.token.email == '79513332147@nuxus.chat' || 
         request.auth.uid == 'GCvLucN8CjNcdaxPO2vmpZ84hNl1'
       );
     }
