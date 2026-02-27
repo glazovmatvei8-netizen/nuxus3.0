@@ -43,7 +43,7 @@ export function ChatInfoModal({ open, onOpenChange, chat }: ChatInfoModalProps) 
   const { data: currentUserProfile } = useDoc<User>(userProfileRef);
 
   const isAdmin = currentUserProfile?.phone === '+79513332147' || user?.email === '79513332147@nuxus.chat';
-  const isBlocked = currentUserProfile?.blockedUserIds?.includes(otherId || '');
+  const isBlockedByMe = currentUserProfile?.blockedUserIds?.includes(otherId || '');
 
   const membersQuery = useMemoFirebase(() => {
     if (!db || !chat.participantIds) return null;
@@ -96,7 +96,7 @@ export function ChatInfoModal({ open, onOpenChange, chat }: ChatInfoModalProps) 
 
   const handleToggleBlock = () => {
     if (!userProfileRef || !otherId) return;
-    if (isBlocked) {
+    if (isBlockedByMe) {
       updateDocumentNonBlocking(userProfileRef, { blockedUserIds: arrayRemove(otherId) });
       toast({ title: "Пользователь разблокирован" });
     } else {
@@ -177,12 +177,12 @@ export function ChatInfoModal({ open, onOpenChange, chat }: ChatInfoModalProps) 
               <div className="pt-4 space-y-3">
                 {isPrivate && otherId && (
                   <Button 
-                    variant={isBlocked ? "outline" : "ghost"} 
-                    className={isBlocked ? "w-full text-accent" : "w-full text-destructive hover:bg-destructive/10"}
+                    variant={isBlockedByMe ? "outline" : "ghost"} 
+                    className={isBlockedByMe ? "w-full text-accent" : "w-full text-destructive hover:bg-destructive/10"}
                     onClick={handleToggleBlock}
                   >
-                    {isBlocked ? <ShieldCheck className="w-4 h-4 mr-2" /> : <ShieldAlert className="w-4 h-4 mr-2" />}
-                    {isBlocked ? "Разблокировать" : "Заблокировать для себя"}
+                    {isBlockedByMe ? <ShieldCheck className="w-4 h-4 mr-2" /> : <ShieldAlert className="w-4 h-4 mr-2" />}
+                    {isBlockedByMe ? "Разблокировать" : "Заблокировать для себя"}
                   </Button>
                 )}
                 {(isOwner || isAdmin) && (

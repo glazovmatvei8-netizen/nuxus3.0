@@ -35,7 +35,7 @@ export default function Home() {
     return <AuthScreen />;
   }
 
-  // Проверка на глобальный бан
+  // Проверка на бан
   if (profile?.isBanned) {
     return (
       <div className="h-screen w-full flex flex-col items-center justify-center bg-background p-6 text-center">

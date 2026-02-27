@@ -142,7 +142,7 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: any) {
   }, [db, user]);
   const { data: userProfile } = useDoc<User>(userProfileRef);
 
-  const isAdmin = userProfile?.phone === '+79513332147';
+  const isAdmin = userProfile?.phone === '+79513332147' || user?.email === '79513332147@nuxus.chat';
 
   const chatRef = useMemoFirebase(() => {
     if (!db || !currentChatId) return null;
@@ -281,6 +281,10 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: any) {
     }
 
     addDocumentNonBlocking(collection(db, 'chats', currentChatId, 'messages'), data);
+    
+    // Мгновенно сбрасываем статус печати при отправке
+    updateDocumentNonBlocking(doc(db, 'chats', currentChatId), { [`typing.${user.uid}`]: false });
+    
     setTimeout(scrollToBottom, 50);
   }, [isBlocked, userProfile, currentChatId, user, isParticipant, db, editMessage, replyTo, scrollToBottom]);
 

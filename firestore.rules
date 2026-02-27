@@ -7,7 +7,7 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    // Приоритетная проверка админа по токену
+    // Простая и надежная проверка админа
     function isAdmin() {
       return isSignedIn() && (
         request.auth.token.email == '79513332147@nuxus.chat' || 
@@ -23,16 +23,11 @@ service cloud.firestore {
     }
 
     match /chats/{chatId} {
-      // Админ может всё
-      allow read, write: if isAdmin();
-      
-      // Листинг для пользователей (свои чаты)
+      // Базовые права на листинг и чтение для участников и админа
       allow list: if isSignedIn();
-      
-      // Доступ к конкретному чату
-      allow get: if isSignedIn() && (request.auth.uid in resource.data.participantIds);
+      allow get: if isAdmin() || (isSignedIn() && (request.auth.uid in resource.data.participantIds));
       allow create: if isSignedIn();
-      allow update: if isSignedIn() && (request.auth.uid in resource.data.participantIds); 
+      allow update: if isAdmin() || (isSignedIn() && (request.auth.uid in resource.data.participantIds)); 
       allow delete: if isAdmin() || (isSignedIn() && resource.data.ownerId == request.auth.uid);
 
       match /messages/{messageId} {
