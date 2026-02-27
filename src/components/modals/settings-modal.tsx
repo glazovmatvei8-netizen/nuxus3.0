@@ -12,7 +12,7 @@ import { useAuth, useUser, useFirestore, useDoc, useMemoFirebase } from '@/fireb
 import { UserAvatar } from '@/components/user-avatar';
 import { 
   LogOut, Palette, Loader2, CreditCard, Copy, Info, Type,
-  ShieldCheck, Eye, Users, Crown, Settings2, Check, HardDrive, Archive, Smile, Image as ImageIcon
+  ShieldCheck, Eye, Users, Crown, Settings2, Check, HardDrive, Archive, Smile, Image as ImageIcon, Upload
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { signOut } from 'firebase/auth';
@@ -39,10 +39,10 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
   const { user } = useUser();
   const { toast } = useToast();
   const isInitialized = useRef(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const userRef = useMemoFirebase(() => (!db || !user) ? null : doc(db, 'users', user.uid), [db, user]);
   const { data: profile } = useDoc<User>(userRef);
-  const isPremium = isUserPremium(profile);
 
   const [form, setForm] = useState({
     name: '',
@@ -109,6 +109,24 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
     toast({ title: "Настройки сохранены" });
   };
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 2 * 1024 * 1024) {
+      toast({ title: "Файл слишком большой", description: "Максимальный размер 2МБ", variant: "destructive" });
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const base64String = reader.result as string;
+      setForm(prev => ({ ...prev, avatarUrl: base64String }));
+      toast({ title: "Фото загружено", description: "Нажмите 'Сохранить', чтобы применить изменения." });
+    };
+    reader.readAsDataURL(file);
+  };
+
   const handleConfirmPayment = async () => {
     if (!pendingPayment || !db || !user || isSubmittingPayment) return;
     setIsSubmittingPayment(true);
@@ -123,7 +141,17 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
 
       await addDoc(collection(db, 'chats', chatId, 'messages'), {
         chatId, senderId: 'nuxus_bot', senderName: 'Nuxus', contentType: 'payment_request', sentAt: new Date().toISOString(),
-        paymentData: { type: 'premium', itemName: `Premium: ${pendingPayment.name}`, targetUserId: user.uid, amount: pendingPayment.amount, unit: pendingPayment.unit, price: pendingPayment.price, status: 'pending' }
+        paymentData: { 
+          type: 'premium', 
+          itemName: `Premium: ${pendingPayment.name}`, 
+          targetUserId: user.uid, 
+          targetUserName: profile?.name || 'User',
+          targetUserUsername: profile?.username || '@user',
+          amount: pendingPayment.amount, 
+          unit: pendingPayment.unit, 
+          price: pendingPayment.price, 
+          status: 'pending' 
+        }
       });
       toast({ title: "Заявка отправлена" });
       setPendingPayment(null);
@@ -155,25 +183,22 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
           <ScrollArea className="flex-1">
             <TabsContent value="profile" className="p-6 space-y-6 m-0">
               <div className="flex flex-col items-center gap-4 py-4">
-                <UserAvatar userId={user?.uid} manualAvatarUrl={form.avatarUrl} className="h-32 w-32 border-4 border-background" fallbackName={form.name} />
+                <div className="relative group cursor-pointer" onClick={() => fileInputRef.current?.click()}>
+                  <UserAvatar userId={user?.uid} manualAvatarUrl={form.avatarUrl} className="h-32 w-32 border-4 border-background" fallbackName={form.name} />
+                  <div className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                    <Upload className="w-8 h-8 text-white" />
+                  </div>
+                  <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleFileChange} />
+                </div>
+                <Button variant="outline" size="sm" className="rounded-xl h-8 text-[10px] uppercase font-bold tracking-widest" onClick={() => fileInputRef.current?.click()}>
+                  Сменить фото
+                </Button>
                 <div className="flex gap-2 w-full">
                   <Input placeholder="🚀" value={form.statusEmoji} onChange={e => setForm({...form, statusEmoji: e.target.value})} className="w-12 text-center bg-muted/30 border-none h-11 rounded-xl" />
                   <Input placeholder="Ваш статус..." value={form.statusText} onChange={e => setForm({...form, statusText: e.target.value})} className="flex-1 bg-muted/30 border-none h-11 rounded-xl" />
                 </div>
               </div>
               <div className="space-y-4">
-                <div className="space-y-1.5">
-                  <Label className="text-xs uppercase font-bold">Ссылка на аватарку</Label>
-                  <div className="relative">
-                    <ImageIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <Input 
-                      placeholder="https://images.unsplash.com/..." 
-                      value={form.avatarUrl} 
-                      onChange={e => setForm({...form, avatarUrl: e.target.value})} 
-                      className="bg-muted/30 border-none h-11 rounded-xl pl-10" 
-                    />
-                  </div>
-                </div>
                 <div className="space-y-1.5"><Label className="text-xs uppercase font-bold">Имя</Label><Input value={form.name} onChange={e => setForm({...form, name: e.target.value})} className="bg-muted/30 border-none h-11 rounded-xl" /></div>
                 <div className="space-y-1.5"><Label className="text-xs uppercase font-bold">Никнейм</Label><Input value={form.username} onChange={e => setForm({...form, username: e.target.value})} className="bg-muted/30 border-none h-11 rounded-xl" /></div>
                 <div className="space-y-1.5"><Label className="text-xs uppercase font-bold">О себе</Label><Textarea value={form.bio} onChange={e => setForm({...form, bio: e.target.value})} className="bg-muted/30 border-none rounded-xl" /></div>
