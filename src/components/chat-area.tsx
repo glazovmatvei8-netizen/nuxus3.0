@@ -6,10 +6,11 @@ import { useAppState } from '@/lib/store';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { UserAvatar } from '@/components/user-avatar';
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { 
   Send, Paperclip, Sparkles, MessageSquare, Info, X, 
   CornerUpLeft, Loader2, ShieldAlert, ChevronLeft, ChevronDown,
-  Search, MoreVertical, Mic, UserPlus, Pin
+  Search, MoreVertical, Mic, UserPlus, Pin, Camera, StopCircle
 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { MessageItem } from './message-item';
@@ -33,6 +34,8 @@ const ChatInput = React.memo(({
   replyTo,
   onCancelReply,
   isSending,
+  onStartVideo,
+  isRecordingVideo,
 }: any) => {
   const [text, setText] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -79,12 +82,12 @@ const ChatInput = React.memo(({
         </div>
         <div className="flex-1 relative">
           <Input 
-            placeholder={editMessage ? "Изменить..." : "Сообщение..."} 
+            placeholder={editMessage ? "Изменить..." : (isRecordingVideo ? "Идет запись..." : "Сообщение...")} 
             value={text} 
             onChange={handleChange}
             onKeyDown={e => e.key === 'Enter' && handleSend()} 
             className="bg-muted/40 rounded-2xl h-11 pr-12 focus:ring-1 focus:ring-primary border-none text-base" 
-            disabled={isBlocked || isSending}
+            disabled={isBlocked || isSending || isRecordingVideo}
           />
           {text.trim() ? (
             <Button 
@@ -96,9 +99,19 @@ const ChatInput = React.memo(({
               {isSending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
             </Button>
           ) : (
-            <Button variant="ghost" size="icon" className="absolute right-1 top-1 w-9 h-9 rounded-full text-muted-foreground">
-              <Mic className="w-4 h-4" />
-            </Button>
+            <div className="absolute right-1 top-1 flex items-center gap-1">
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={onStartVideo}
+                className={cn("w-9 h-9 rounded-full transition-all", isRecordingVideo ? "text-destructive animate-pulse" : "text-primary")}
+              >
+                <Camera className="w-5 h-5" />
+              </Button>
+              <Button variant="ghost" size="icon" className="w-9 h-9 rounded-full text-muted-foreground">
+                <Mic className="w-5 h-5" />
+              </Button>
+            </div>
           )}
         </div>
       </div>
@@ -125,6 +138,14 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: any) {
   const [editMessage, setEditMessage] = useState<Message | null>(null);
   const [statusString, setStatusString] = useState<string>('');
   const [pendingPhotos, setPendingPhotos] = useState<string[]>([]);
+
+  // Video circle recording state
+  const [isRecordingVideo, setIsRecordingVideo] = useState(false);
+  const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
+  const [videoStream, setVideoStream] = useState<MediaStream | null>(null);
+  const videoPreviewRef = useRef<HTMLVideoElement>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const videoChunksRef = useRef<Blob[]>([]);
   
   const scrollRef = useRef<HTMLDivElement>(null);
   const lastTypingSignalRef = useRef<number>(0);
@@ -270,7 +291,7 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: any) {
     if (!currentChatId || !user || !db) return;
 
     const now = Date.now();
-    if (now - lastMessageSentRef.current < 1500) {
+    if (now - lastMessageSentRef.current < 1500 && type === 'text') {
       toast({ title: "Слишком часто", description: "Пожалуйста, подождите немного", variant: "destructive" });
       return;
     }
@@ -312,6 +333,55 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: any) {
       setIsSending(false);
     }, 100);
   }, [isBlocked, userProfile, currentChatId, user, db, editMessage, replyTo, scrollToBottom, isParticipant, toast]);
+
+  // Video recording logic
+  const handleStartVideoRecording = async () => {
+    if (isRecordingVideo) {
+      stopVideoRecording();
+      return;
+    }
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+      setVideoStream(stream);
+      setHasCameraPermission(true);
+      if (videoPreviewRef.current) videoPreviewRef.current.srcObject = stream;
+
+      const mediaRecorder = new MediaRecorder(stream, { mimeType: 'video/webm' });
+      mediaRecorderRef.current = mediaRecorder;
+      videoChunksRef.current = [];
+
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data.size > 0) videoChunksRef.current.push(e.data);
+      };
+
+      mediaRecorder.onstop = () => {
+        const blob = new Blob(videoChunksRef.current, { type: 'video/webm' });
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          handleSendMessage(reader.result as string, 'video');
+        };
+        reader.readAsDataURL(blob);
+        
+        // Stop all tracks
+        stream.getTracks().forEach(track => track.stop());
+        setVideoStream(null);
+        setIsRecordingVideo(false);
+      };
+
+      mediaRecorder.start();
+      setIsRecordingVideo(true);
+    } catch (err) {
+      setHasCameraPermission(false);
+      toast({ title: "Ошибка", description: "Нет доступа к камере", variant: "destructive" });
+    }
+  };
+
+  const stopVideoRecording = () => {
+    if (mediaRecorderRef.current && isRecordingVideo) {
+      mediaRecorderRef.current.stop();
+    }
+  };
 
   const handleJoinChat = async () => {
     if (!db || !currentChatId || !user || isJoining) return;
@@ -441,6 +511,27 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: any) {
 
       <div className="flex-1 relative z-10 overflow-hidden">
         {customBackground && customBackground !== 'default' && <div className="absolute inset-0 z-[-1]" style={bgStyle} />}
+        
+        {/* Video Recording Preview Circle */}
+        {isRecordingVideo && (
+          <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm animate-in fade-in duration-300">
+            <div className="relative w-64 h-64 md:w-80 md:h-80 rounded-full overflow-hidden border-8 border-primary shadow-2xl">
+              <video ref={videoPreviewRef} autoPlay muted className="w-full h-full object-cover" />
+              <div className="absolute bottom-6 left-1/2 -translate-x-1/2">
+                <Button size="lg" variant="destructive" className="rounded-full px-6 gap-2" onClick={stopVideoRecording}>
+                  <StopCircle className="w-6 h-6" /> Стоп
+                </Button>
+              </div>
+            </div>
+            {hasCameraPermission === false && (
+              <Alert variant="destructive" className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[90%] max-w-sm">
+                <AlertTitle>Доступ запрещен</AlertTitle>
+                <AlertDescription>Разрешите доступ к камере в настройках браузера.</AlertDescription>
+              </Alert>
+            )}
+          </div>
+        )}
+
         <ScrollArea 
           ref={scrollRef} 
           className="h-full px-4 py-4" 
@@ -532,6 +623,8 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: any) {
                 replyTo={replyTo}
                 onCancelReply={() => setReplyTo(null)}
                 isSending={isSending}
+                onStartVideo={handleStartVideoRecording}
+                isRecordingVideo={isRecordingVideo}
               />
             </>
           )}

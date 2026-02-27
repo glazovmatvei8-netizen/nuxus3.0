@@ -1,7 +1,7 @@
 
 "use client"
 
-import React, { useState, useMemo, memo } from 'react';
+import React, { useState, useMemo, memo, useRef } from 'react';
 import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
@@ -23,7 +23,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { format } from 'date-fns';
-import { SmilePlus, CornerUpLeft, Pencil, Trash2, Check, CheckCheck, ZoomIn, Pin } from 'lucide-react';
+import { SmilePlus, CornerUpLeft, Pencil, Trash2, Check, CheckCheck, ZoomIn, Pin, Play, Pause } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { collection, doc } from 'firebase/firestore';
 import { deleteDocumentNonBlocking, addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
@@ -47,6 +47,8 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onEdit, size 
   const db = useFirestore();
   const [isReactionPickerOpen, setIsReactionPickerOpen] = useState(false);
   const [isImageFullViewOpen, setIsImageFullViewOpen] = useState(false);
+  const [isVideoPlaying, setIsVideoPlaying] = useState(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
 
   const formattedTime = useMemo(() => {
     if (!message.sentAt) return '';
@@ -89,7 +91,6 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onEdit, size 
     if (!db || !chatId || !message.id) return;
     updateDocumentNonBlocking(doc(db, 'chats', chatId), { pinnedMessageId: message.id });
     
-    // Отправляем системное сообщение о закреплении
     addDocumentNonBlocking(collection(db, 'chats', chatId, 'messages'), {
       chatId: chatId,
       senderId: 'system',
@@ -98,6 +99,19 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onEdit, size 
       contentType: 'service',
       sentAt: new Date().toISOString()
     });
+  };
+
+  const toggleVideo = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (videoRef.current) {
+      if (videoRef.current.paused) {
+        videoRef.current.play();
+        setIsVideoPlaying(true);
+      } else {
+        videoRef.current.pause();
+        setIsVideoPlaying(false);
+      }
+    }
   };
 
   const groupedReactions = useMemo(() => {
@@ -114,7 +128,6 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onEdit, size 
         return (
           <div 
             className="mt-1 rounded-lg overflow-hidden border border-border/20 max-w-sm relative aspect-video min-w-[200px] cursor-zoom-in group/img"
-            onPointerDown={(e) => e.stopPropagation()}
             onClick={(e) => { 
               e.preventDefault();
               e.stopPropagation(); 
@@ -132,6 +145,33 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onEdit, size 
             <div className="absolute inset-0 bg-black/20 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center">
               <ZoomIn className="w-8 h-8 text-white/80" />
             </div>
+          </div>
+        );
+      case 'video':
+        return (
+          <div 
+            className="mt-1 relative w-48 h-48 md:w-56 md:h-56 rounded-full overflow-hidden border-4 border-primary/20 shadow-2xl cursor-pointer group/video self-center mx-auto"
+            onClick={toggleVideo}
+          >
+            <video 
+              ref={videoRef}
+              src={message.content} 
+              className="w-full h-full object-cover"
+              loop
+              playsInline
+              onPlay={() => setIsVideoPlaying(true)}
+              onPause={() => setIsVideoPlaying(false)}
+            />
+            {!isVideoPlaying && (
+              <div className="absolute inset-0 flex items-center justify-center bg-black/30 group-hover/video:bg-black/40 transition-all">
+                <Play className="w-12 h-12 text-white fill-white" />
+              </div>
+            )}
+            {isVideoPlaying && (
+              <div className="absolute inset-0 flex items-center justify-center bg-transparent opacity-0 group-hover/video:opacity-100 transition-all">
+                <Pause className="w-12 h-12 text-white fill-white" />
+              </div>
+            )}
           </div>
         );
       case 'service':
@@ -159,19 +199,21 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onEdit, size 
     <>
       <div id={`msg-${message.id}`} className={cn(
         "flex gap-3 max-w-[85%] animate-in fade-in duration-150 px-1 py-0.5 transition-colors",
-        isMe ? "ml-auto flex-row-reverse" : "mr-auto"
+        isMe ? "ml-auto flex-row-reverse" : "mr-auto",
+        message.contentType === 'video' ? "w-full max-w-none justify-center" : ""
       )}>
-        {!isMe && (
+        {!isMe && message.contentType !== 'video' && (
           <UserAvatar userId={message.senderId} className={cn("mt-auto shrink-0 ring-2 ring-primary/10", size === 'large' ? 'h-10 w-10' : 'h-8 w-8')} fallbackName={message.senderName} />
         )}
         
-        <div className={cn("flex flex-col gap-0.5", isMe ? "items-end" : "items-start")}>
-          {!isMe && <span className="text-[10px] font-bold text-muted-foreground ml-2 opacity-70">{message.senderName}</span>}
+        <div className={cn("flex flex-col gap-0.5", isMe ? "items-end" : "items-start", message.contentType === 'video' ? "items-center w-full" : "")}>
+          {!isMe && message.contentType !== 'video' && <span className="text-[10px] font-bold text-muted-foreground ml-2 opacity-70">{message.senderName}</span>}
+          {message.contentType === 'video' && <span className="text-[10px] font-bold text-primary uppercase tracking-widest mb-1">{message.senderName}</span>}
           
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <div className="relative group cursor-pointer active:scale-[0.98] transition-transform outline-none">
-                {message.replyToId && (
+              <div className={cn("relative group cursor-pointer active:scale-[0.98] transition-transform outline-none", message.contentType === 'video' ? "w-full flex flex-col items-center" : "")}>
+                {message.replyToId && message.contentType !== 'video' && (
                   <div className={cn(
                     "px-3 py-1.5 rounded-t-xl text-[10px] border-l-2 border-primary max-w-full truncate opacity-70 mb-[-4px]",
                     isMe ? "bg-white/10" : "bg-black/5"
@@ -183,24 +225,33 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onEdit, size 
 
                 <div className={cn(
                   "rounded-2xl shadow-sm relative group-hover:shadow-md transition-shadow",
-                  message.contentType !== 'image' ? sizeClasses[size] : "p-0.5",
-                  isMe 
-                    ? "bg-primary text-white rounded-br-none" 
-                    : "bg-card text-foreground rounded-bl-none border border-border/40",
+                  (message.contentType !== 'image' && message.contentType !== 'video') ? sizeClasses[size] : "p-0.5",
+                  message.contentType === 'video' ? "bg-transparent shadow-none border-none p-0" :
+                  (isMe ? "bg-primary text-white rounded-br-none" : "bg-card text-foreground rounded-bl-none border border-border/40"),
                   message.replyToId ? "rounded-tr-none rounded-tl-none" : ""
                 )}>
                   {renderContent()}
-                  <div className={cn(
-                    "flex items-center justify-end gap-1 mt-1 text-[9px] select-none pb-1 pr-2",
-                    isMe ? "text-white/60" : "text-muted-foreground/60"
-                  )}>
-                    {message.editedAt && <span>изменено</span>}
-                    <span>{formattedTime}</span>
-                    {isMe && (
-                      message.isRead ? <CheckCheck className="w-3 h-3 text-accent" /> : <Check className="w-3 h-3" />
-                    )}
-                  </div>
+                  {message.contentType !== 'video' && (
+                    <div className={cn(
+                      "flex items-center justify-end gap-1 mt-1 text-[9px] select-none pb-1 pr-2",
+                      isMe ? "text-white/60" : "text-muted-foreground/60"
+                    )}>
+                      {message.editedAt && <span>изменено</span>}
+                      <span>{formattedTime}</span>
+                      {isMe && (
+                        message.isRead ? <CheckCheck className="w-3 h-3 text-accent" /> : <Check className="w-3 h-3" />
+                      )}
+                    </div>
+                  )}
                 </div>
+                {message.contentType === 'video' && (
+                  <div className="flex items-center gap-2 mt-2 bg-card/40 backdrop-blur-md px-3 py-1 rounded-full border border-border/20">
+                     <span className="text-[10px] font-bold text-muted-foreground">{formattedTime}</span>
+                     {isMe && (
+                        message.isRead ? <CheckCheck className="w-3 h-3 text-accent" /> : <Check className="w-3 h-3 text-muted-foreground" />
+                      )}
+                  </div>
+                )}
               </div>
             </DropdownMenuTrigger>
             <DropdownMenuContent className="w-48 bg-card/95 backdrop-blur-xl border-border/40">
@@ -218,7 +269,7 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onEdit, size 
           </DropdownMenu>
 
           {Object.entries(groupedReactions).length > 0 && (
-            <div className={cn("flex flex-wrap gap-1 mt-0.5", isMe ? "justify-end" : "justify-start")}>
+            <div className={cn("flex flex-wrap gap-1 mt-0.5", isMe ? "justify-end" : "justify-start", message.contentType === 'video' ? "justify-center" : "")}>
               {Object.entries(groupedReactions).map(([emoji, reactorIds]) => (
                 <button
                   key={emoji}
