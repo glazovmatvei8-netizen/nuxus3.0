@@ -9,7 +9,7 @@ import { UserAvatar } from '@/components/user-avatar';
 import { 
   Send, Paperclip, Sparkles, MessageSquare, Info, X, 
   CornerUpLeft, Loader2, ShieldAlert, ChevronLeft, ChevronDown,
-  Images, MoreVertical
+  Search, MoreVertical
 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { MessageItem } from './message-item';
@@ -108,6 +108,10 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: any) {
   const [isSuggesting, setIsSuggesting] = useState(false);
   const [showScrollDown, setShowScrollDown] = useState(false);
   
+  // Search state
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  
   const [replyTo, setReplyTo] = useState<Message | null>(null);
   const [editMessage, setEditMessage] = useState<Message | null>(null);
   const [statusString, setStatusString] = useState<string>('');
@@ -158,10 +162,20 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: any) {
   
   const { data: messages, isLoading: isMessagesLoading } = useCollection<Message>(messagesQuery);
 
+  // Filter messages based on search
+  const filteredMessages = useMemo(() => {
+    if (!messages) return [];
+    if (!isSearchOpen || !searchQuery.trim()) return messages;
+    return messages.filter(msg => 
+      msg.contentType === 'text' && 
+      msg.content.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  }, [messages, isSearchOpen, searchQuery]);
+
   const handleTyping = useCallback((isTyping: boolean) => {
     if (!currentChatId || !user || !db || isBlocked) return;
     
-    // Блокировка для удаленных
+    // Блокировка анимации для удаленных/забаненных
     const isOtherDeleted = otherUserProfile?.isBanned || otherUserProfile?.name?.includes('Удалённый Аккаунт');
     if (isOtherDeleted) return;
 
@@ -293,34 +307,58 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: any) {
   return (
     <div className="flex-1 flex flex-col h-[100dvh] bg-background relative overflow-hidden">
       <header className="h-16 flex items-center justify-between px-4 border-b border-border/40 bg-card/20 backdrop-blur-xl z-20 shrink-0">
-        <div className="flex items-center gap-2 min-w-0">
+        <div className="flex items-center gap-2 min-w-0 flex-1">
           <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setCurrentChatId(null)}><ChevronLeft className="w-5 h-5" /></Button>
-          <div className="flex items-center gap-3 cursor-pointer min-w-0" onClick={() => setIsChatInfoOpen(true)}>
-            <UserAvatar userId={chat?.type === 'private' ? otherId : null} fallbackName={chatDisplayName} className="h-9 w-9 ring-2 ring-primary/20" />
-            <div className="flex flex-col min-w-0">
-              <span className="font-semibold text-sm truncate">{chatDisplayName}</span>
-              <div className={cn("text-[10px] truncate leading-none mt-0.5", (statusString === 'печатает...' || isBlocked) ? 'text-accent font-bold' : 'text-muted-foreground')}>
-                {statusString === 'печатает...' ? (
-                  <span className="flex items-center gap-0.5">печатает<span className="animate-typing-dot">.</span><span className="animate-typing-dot [animation-delay:0.2s]">.</span><span className="animate-typing-dot [animation-delay:0.4s]">.</span></span>
-                ) : statusString}
+          
+          {isSearchOpen ? (
+            <div className="flex items-center gap-2 flex-1 animate-in fade-in slide-in-from-left-2">
+              <Input 
+                autoFocus
+                placeholder="Поиск сообщений..." 
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="bg-muted/40 h-9 rounded-xl border-none focus:ring-1 focus:ring-primary"
+              />
+              <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => { setIsSearchOpen(false); setSearchQuery(''); }}><X className="w-5 h-5" /></Button>
+            </div>
+          ) : (
+            <div className="flex items-center gap-3 cursor-pointer min-w-0" onClick={() => setIsChatInfoOpen(true)}>
+              <UserAvatar userId={chat?.type === 'private' ? otherId : null} fallbackName={chatDisplayName} className="h-9 w-9 ring-2 ring-primary/20" />
+              <div className="flex flex-col min-w-0">
+                <span className="font-semibold text-sm truncate">{chatDisplayName}</span>
+                <div className={cn("text-[10px] truncate leading-none mt-0.5", (statusString === 'печатает...' || isBlocked) ? 'text-accent font-bold' : 'text-muted-foreground')}>
+                  {statusString === 'печатает...' ? (
+                    <span className="flex items-center gap-0.5">печатает<span className="animate-typing-dot">.</span><span className="animate-typing-dot [animation-delay:0.2s]">.</span><span className="animate-typing-dot [animation-delay:0.4s]">.</span></span>
+                  ) : statusString}
+                </div>
               </div>
             </div>
+          )}
+        </div>
+        
+        {!isSearchOpen && (
+          <div className="flex items-center gap-1">
+            <Button variant="ghost" size="icon" onClick={() => setIsSearchOpen(true)}><Search className="w-5 h-5" /></Button>
+            <Button variant="ghost" size="icon" onClick={() => setIsChatInfoOpen(true)}><Info className="w-5 h-5" /></Button>
+            <Button variant="ghost" size="icon"><MoreVertical className="w-5 h-5" /></Button>
           </div>
-        </div>
-        <div className="flex items-center gap-1">
-          <Button variant="ghost" size="icon" onClick={() => setIsChatInfoOpen(true)}><Info className="w-5 h-5" /></Button>
-          <Button variant="ghost" size="icon"><MoreVertical className="w-5 h-5" /></Button>
-        </div>
+        )}
       </header>
 
       <div className="flex-1 relative z-10 overflow-hidden">
         {customBackground && customBackground !== 'default' && <div className="absolute inset-0 z-[-1]" style={bgStyle} />}
         <ScrollArea ref={scrollRef} className="h-full px-4 py-4" onScroll={(e: any) => setShowScrollDown(e.currentTarget.scrollHeight - e.currentTarget.scrollTop - e.currentTarget.clientHeight > 300)}>
           <div className="flex flex-col gap-2 max-w-4xl mx-auto pb-4">
-            {messages?.map(msg => (
+            {filteredMessages.map(msg => (
               <MessageItem key={msg.id} message={msg} isMe={msg.senderId === user?.uid} chatId={currentChatId} onReply={() => setReplyTo(msg)} onEdit={() => setEditMessage(msg)} size={userProfile?.settings?.messageSize} />
             ))}
             {isMessagesLoading && <div className="flex justify-center p-8"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>}
+            {!isMessagesLoading && isSearchOpen && searchQuery.trim() && filteredMessages.length === 0 && (
+              <div className="flex flex-col items-center justify-center p-12 text-center opacity-40">
+                <Search className="w-12 h-12 mb-2" />
+                <p className="text-sm">Ничего не найдено</p>
+              </div>
+            )}
           </div>
         </ScrollArea>
         {showScrollDown && <Button size="icon" variant="secondary" className="absolute bottom-4 right-4 rounded-full shadow-lg z-30" onClick={scrollToBottom}><ChevronDown className="w-5 h-5" /></Button>}
@@ -356,7 +394,7 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: any) {
                 editMessage={editMessage}
                 onCancelEdit={() => setEditMessage(null)}
                 replyTo={replyTo}
-                onCancelReply={() => setReplyTo(null)}
+                onCancelReply={() => setEditMessage(null)}
               />
             </>
           )}
