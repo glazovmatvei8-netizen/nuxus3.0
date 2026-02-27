@@ -23,7 +23,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { format } from 'date-fns';
-import { SmilePlus, CornerUpLeft, Pencil, Trash2, Check, CheckCheck, ZoomIn, Pin, Play, Pause } from 'lucide-react';
+import { SmilePlus, CornerUpLeft, Pencil, Trash2, Check, CheckCheck, ZoomIn, Pin, Play, Pause, Mic, Headphones } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { collection, doc } from 'firebase/firestore';
 import { deleteDocumentNonBlocking, addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
@@ -48,7 +48,9 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onEdit, size 
   const [isReactionPickerOpen, setIsReactionPickerOpen] = useState(false);
   const [isImageFullViewOpen, setIsImageFullViewOpen] = useState(false);
   const [isVideoPlaying, setIsVideoPlaying] = useState(false);
+  const [isAudioPlaying, setIsAudioPlaying] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const audioRef = useRef<HTMLAudioElement>(null);
 
   const formattedTime = useMemo(() => {
     if (!message.sentAt) return '';
@@ -114,6 +116,19 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onEdit, size 
     }
   };
 
+  const toggleAudio = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (audioRef.current) {
+      if (audioRef.current.paused) {
+        audioRef.current.play();
+        setIsAudioPlaying(true);
+      } else {
+        audioRef.current.pause();
+        setIsAudioPlaying(false);
+      }
+    }
+  };
+
   const groupedReactions = useMemo(() => {
     return (reactionsData || []).reduce((acc: Record<string, string[]>, curr) => {
       if (!acc[curr.emoji]) acc[curr.emoji] = [];
@@ -174,6 +189,38 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onEdit, size 
             )}
           </div>
         );
+      case 'audio':
+        return (
+          <div 
+            className={cn(
+              "mt-1 flex items-center gap-3 p-2 rounded-xl border border-border/20 min-w-[200px]",
+              isMe ? "bg-primary/20" : "bg-muted/30"
+            )}
+            onClick={toggleAudio}
+          >
+            <Button size="icon" variant="ghost" className="h-9 w-9 rounded-full bg-primary text-white shrink-0">
+              {isAudioPlaying ? <Pause className="w-4 h-4 fill-white" /> : <Play className="w-4 h-4 fill-white" />}
+            </Button>
+            <div className="flex flex-col gap-0.5 flex-1 overflow-hidden">
+              <div className="flex items-center gap-2">
+                <Mic className="w-3 h-3 text-primary" />
+                <span className="text-[10px] font-bold uppercase tracking-widest opacity-70">Голосовое</span>
+              </div>
+              <div className="h-4 w-full flex items-center gap-1">
+                {[...Array(12)].map((_, i) => (
+                  <div key={i} className={cn("w-0.5 rounded-full bg-primary/40", i % 2 === 0 ? "h-2" : "h-3", isAudioPlaying && "animate-pulse")} />
+                ))}
+              </div>
+            </div>
+            <audio 
+              ref={audioRef} 
+              src={message.content} 
+              onPlay={() => setIsAudioPlaying(true)} 
+              onPause={() => setIsAudioPlaying(false)}
+              onEnded={() => setIsAudioPlaying(false)}
+            />
+          </div>
+        );
       case 'service':
         return (
           <div className="flex justify-center my-4 w-full text-center px-4">
@@ -225,7 +272,7 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onEdit, size 
 
                 <div className={cn(
                   "rounded-2xl shadow-sm relative group-hover:shadow-md transition-shadow",
-                  (message.contentType !== 'image' && message.contentType !== 'video') ? sizeClasses[size] : "p-0.5",
+                  (message.contentType !== 'image' && message.contentType !== 'video' && message.contentType !== 'audio') ? sizeClasses[size] : "p-0.5",
                   message.contentType === 'video' ? "bg-transparent shadow-none border-none p-0" :
                   (isMe ? "bg-primary text-white rounded-br-none" : "bg-card text-foreground rounded-bl-none border border-border/40"),
                   message.replyToId ? "rounded-tr-none rounded-tl-none" : ""

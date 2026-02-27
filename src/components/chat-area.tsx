@@ -10,7 +10,7 @@ import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { 
   Send, Paperclip, Sparkles, MessageSquare, Info, X, 
   CornerUpLeft, Loader2, ShieldAlert, ChevronLeft, ChevronDown,
-  Search, MoreVertical, Mic, UserPlus, Pin, Camera, StopCircle
+  Search, MoreVertical, Mic, UserPlus, Pin, Camera, StopCircle, Square
 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { MessageItem } from './message-item';
@@ -36,6 +36,8 @@ const ChatInput = React.memo(({
   isSending,
   onStartVideo,
   isRecordingVideo,
+  onStartAudio,
+  isRecordingAudio,
 }: any) => {
   const [text, setText] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -82,12 +84,12 @@ const ChatInput = React.memo(({
         </div>
         <div className="flex-1 relative">
           <Input 
-            placeholder={editMessage ? "Изменить..." : (isRecordingVideo ? "Идет запись..." : "Сообщение...")} 
+            placeholder={editMessage ? "Изменить..." : (isRecordingVideo ? "Идет запись видео..." : (isRecordingAudio ? "Запись голоса..." : "Сообщение..."))} 
             value={text} 
             onChange={handleChange}
             onKeyDown={e => e.key === 'Enter' && handleSend()} 
             className="bg-muted/40 rounded-2xl h-11 pr-12 focus:ring-1 focus:ring-primary border-none text-base" 
-            disabled={isBlocked || isSending || isRecordingVideo}
+            disabled={isBlocked || isSending || isRecordingVideo || isRecordingAudio}
           />
           {text.trim() ? (
             <Button 
@@ -105,11 +107,18 @@ const ChatInput = React.memo(({
                 size="icon" 
                 onClick={onStartVideo}
                 className={cn("w-9 h-9 rounded-full transition-all", isRecordingVideo ? "text-destructive animate-pulse" : "text-primary")}
+                disabled={isRecordingAudio}
               >
                 <Camera className="w-5 h-5" />
               </Button>
-              <Button variant="ghost" size="icon" className="w-9 h-9 rounded-full text-muted-foreground">
-                <Mic className="w-5 h-5" />
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={onStartAudio}
+                className={cn("w-9 h-9 rounded-full transition-all", isRecordingAudio ? "text-destructive animate-pulse" : "text-muted-foreground")}
+                disabled={isRecordingVideo}
+              >
+                {isRecordingAudio ? <StopCircle className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
               </Button>
             </div>
           )}
@@ -146,6 +155,11 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: any) {
   const videoPreviewRef = useRef<HTMLVideoElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const videoChunksRef = useRef<Blob[]>([]);
+
+  // Audio recording state
+  const [isRecordingAudio, setIsRecordingAudio] = useState(false);
+  const audioRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
   
   const scrollRef = useRef<HTMLDivElement>(null);
   const lastTypingSignalRef = useRef<number>(0);
@@ -380,6 +394,47 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: any) {
   const stopVideoRecording = () => {
     if (mediaRecorderRef.current && isRecordingVideo) {
       mediaRecorderRef.current.stop();
+    }
+  };
+
+  // Audio recording logic
+  const handleStartAudioRecording = async () => {
+    if (isRecordingAudio) {
+      stopAudioRecording();
+      return;
+    }
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream);
+      audioRecorderRef.current = mediaRecorder;
+      audioChunksRef.current = [];
+
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data.size > 0) audioChunksRef.current.push(e.data);
+      };
+
+      mediaRecorder.onstop = () => {
+        const blob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          handleSendMessage(reader.result as string, 'audio');
+        };
+        reader.readAsDataURL(blob);
+        stream.getTracks().forEach(track => track.stop());
+        setIsRecordingAudio(false);
+      };
+
+      mediaRecorder.start();
+      setIsRecordingAudio(true);
+    } catch (err) {
+      toast({ title: "Ошибка", description: "Нет доступа к микрофону", variant: "destructive" });
+    }
+  };
+
+  const stopAudioRecording = () => {
+    if (audioRecorderRef.current && isRecordingAudio) {
+      audioRecorderRef.current.stop();
     }
   };
 
@@ -625,6 +680,8 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: any) {
                 isSending={isSending}
                 onStartVideo={handleStartVideoRecording}
                 isRecordingVideo={isRecordingVideo}
+                onStartAudio={handleStartAudioRecording}
+                isRecordingAudio={isRecordingAudio}
               />
             </>
           )}
