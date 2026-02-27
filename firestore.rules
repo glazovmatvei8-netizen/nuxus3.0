@@ -15,7 +15,7 @@ service cloud.firestore {
       );
     }
 
-    // Проверка на отсутствие бана (безопасная проверка существования)
+    // Проверка на отсутствие бана (безопасная проверка через токен, если возможно, или документ)
     function isNotBanned() {
       let userPath = /databases/$(database)/documents/users/$(request.auth.uid);
       return isSignedIn() && (!exists(userPath) || get(userPath).data.isBanned != true);
