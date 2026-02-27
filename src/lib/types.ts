@@ -88,4 +88,5 @@ export interface User {
   isBanned?: boolean;
   isPremium?: boolean;
   premiumUntil?: string | null;
+  stars?: number; // Баланс звезд пользователя
 }

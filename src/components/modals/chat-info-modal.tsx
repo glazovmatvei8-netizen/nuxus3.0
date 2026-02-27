@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { UserAvatar } from '@/components/user-avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { Sparkles, Loader2, Trash2, ShieldAlert, ShieldCheck, Ban, UserPlus, Info, Copy, Check, Star, Crown, Gift, XCircle, Calendar, Diamond, Rocket, Flame, Heart, Zap, Trophy, Gem } from 'lucide-react';
+import { Sparkles, Loader2, Trash2, ShieldAlert, ShieldCheck, Ban, UserPlus, Info, Copy, Check, Star, Crown, Gift, XCircle, Calendar, Diamond, Rocket, Flame, Heart, Zap, Trophy, Gem, PartyPopper, Cookie, Ghost } from 'lucide-react';
 import { useFirestore, useCollection, useMemoFirebase, useUser, useDoc } from '@/firebase';
 import { collection, query, where, orderBy, limit, getDocs, doc, arrayUnion, arrayRemove } from 'firebase/firestore';
 import { chatConversationSummary } from '@/ai/flows/chat-conversation-summary-flow';
@@ -27,14 +27,18 @@ interface ChatInfoModalProps {
 }
 
 const AVAILABLE_GIFTS = [
-  { id: 'gift_star', name: 'Звезда', icon: Star, color: 'text-yellow-400', value: 50 },
-  { id: 'gift_diamond', name: 'Алмаз', icon: Diamond, color: 'text-blue-400', value: 500 },
-  { id: 'gift_crown', name: 'Корона', icon: Crown, color: 'text-purple-400', value: 5000 },
-  { id: 'gift_rocket', name: 'Ракета', icon: Rocket, color: 'text-orange-500', value: 1000 },
-  { id: 'gift_heart', name: 'Сердце', icon: Heart, color: 'text-red-500', value: 100 },
-  { id: 'gift_fire', name: 'Огонь', icon: Flame, color: 'text-orange-600', value: 75 },
-  { id: 'gift_zap', name: 'Молния', icon: Zap, color: 'text-yellow-300', value: 150 },
-  { id: 'gift_trophy', name: 'Трофей', icon: Trophy, color: 'text-amber-500', value: 300 },
+  { id: 'gift_star', name: 'Звезда', icon: Star, color: 'text-yellow-400', value: 100 },
+  { id: 'gift_heart', name: 'Сердце', icon: Heart, color: 'text-red-500', value: 150 },
+  { id: 'gift_zap', name: 'Молния', icon: Zap, color: 'text-yellow-300', value: 250 },
+  { id: 'gift_fire', name: 'Огонь', icon: Flame, color: 'text-orange-600', value: 300 },
+  { id: 'gift_trophy', name: 'Трофей', icon: Trophy, color: 'text-amber-500', value: 500 },
+  { id: 'gift_rocket', name: 'Ракета', icon: Rocket, color: 'text-orange-500', value: 1500 },
+  { id: 'gift_diamond', name: 'Алмаз', icon: Diamond, color: 'text-blue-400', value: 5000 },
+  { id: 'gift_crown', name: 'Корона', icon: Crown, color: 'text-purple-400', value: 10000 },
+  { id: 'gift_cake', name: 'Торт', icon: Cookie, color: 'text-pink-400', value: 200 },
+  { id: 'gift_popper', name: 'Хлопушка', icon: PartyPopper, color: 'text-green-400', value: 120 },
+  { id: 'gift_ghost', name: 'Привидение', icon: Ghost, color: 'text-gray-400', value: 400 },
+  { id: 'gift_gem', name: 'Изумруд', icon: Gem, color: 'text-emerald-400', value: 2500 },
 ];
 
 export function ChatInfoModal({ open, onOpenChange, chat }: ChatInfoModalProps) {
@@ -330,19 +334,19 @@ export function ChatInfoModal({ open, onOpenChange, chat }: ChatInfoModalProps) 
                       </h3>
                       <div className="grid grid-cols-2 gap-2">
                         <Button variant="outline" size="sm" className="h-9 rounded-xl text-[10px] gap-2 font-bold" onClick={() => handleGrantPremium(1, 'months')}>
-                          <Gift className="w-3 h-3" /> 1 Месяц
+                          <Gift className="w-3 h-3" /> 1 Месяц (200₽)
                         </Button>
                         <Button variant="outline" size="sm" className="h-9 rounded-xl text-[10px] gap-2 font-bold" onClick={() => handleGrantPremium(3, 'months')}>
-                          <Gift className="w-3 h-3" /> 3 Месяца
+                          <Gift className="w-3 h-3" /> 3 Месяца (500₽)
                         </Button>
                         <Button variant="outline" size="sm" className="h-9 rounded-xl text-[10px] gap-2 font-bold" onClick={() => handleGrantPremium(6, 'months')}>
-                          <Gift className="w-3 h-3" /> 6 Месяцев
+                          <Gift className="w-3 h-3" /> 6 Месяцев (1700₽)
                         </Button>
                         <Button variant="outline" size="sm" className="h-9 rounded-xl text-[10px] gap-2 font-bold" onClick={() => handleGrantPremium(1, 'years')}>
-                          <Calendar className="w-3 h-3" /> 1 Год
+                          <Calendar className="w-3 h-3" /> 1 Год (2000₽)
                         </Button>
                         <Button variant="outline" size="sm" className="h-9 rounded-xl text-[10px] gap-2 font-bold col-span-2" onClick={() => handleGrantPremium(2, 'years')}>
-                          <Crown className="w-3 h-3" /> 2 Года
+                          <Crown className="w-3 h-3" /> 2 Года (2200₽)
                         </Button>
                       </div>
 

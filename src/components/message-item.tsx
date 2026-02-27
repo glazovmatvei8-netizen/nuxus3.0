@@ -23,7 +23,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { format } from 'date-fns';
-import { SmilePlus, CornerUpLeft, Pencil, Trash2, Check, CheckCheck, ZoomIn, Pin, Play, Pause, Mic, Star, Languages, Loader2, Lock, Gift, Crown, Diamond, Rocket, Flame, Heart, Zap, Trophy } from 'lucide-react';
+import { SmilePlus, CornerUpLeft, Pencil, Trash2, Check, CheckCheck, ZoomIn, Pin, Play, Pause, Mic, Star, Languages, Loader2, Lock, Gift, Crown, Diamond, Rocket, Flame, Heart, Zap, Trophy, PartyPopper, Cookie, Ghost, Gem } from 'lucide-react';
 import { cn, isUserPremium } from '@/lib/utils';
 import { collection, doc } from 'firebase/firestore';
 import { deleteDocumentNonBlocking, addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
@@ -299,6 +299,10 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onEdit, size 
         else if (message.content === 'gift_fire') { GiftIcon = Flame; giftTitle = 'Огонь Nuxus'; giftColor = 'text-orange-600'; }
         else if (message.content === 'gift_zap') { GiftIcon = Zap; giftTitle = 'Молния Nuxus'; giftColor = 'text-yellow-300'; }
         else if (message.content === 'gift_trophy') { GiftIcon = Trophy; giftTitle = 'Трофей'; giftColor = 'text-amber-500'; }
+        else if (message.content === 'gift_cake') { GiftIcon = Cookie; giftTitle = 'Праздничный Торт'; giftColor = 'text-pink-400'; }
+        else if (message.content === 'gift_popper') { GiftIcon = PartyPopper; giftTitle = 'Хлопушка'; giftColor = 'text-green-400'; }
+        else if (message.content === 'gift_ghost') { GiftIcon = Ghost; giftTitle = 'Привидение'; giftColor = 'text-gray-400'; }
+        else if (message.content === 'gift_gem') { GiftIcon = Gem; giftTitle = 'Изумруд'; giftColor = 'text-emerald-400'; }
 
         return (
           <div className="flex flex-col items-center justify-center my-8 w-full animate-in zoom-in-50 duration-500">
