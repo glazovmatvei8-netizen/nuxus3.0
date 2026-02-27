@@ -293,8 +293,9 @@ function ChatListItem({ chat, isActive, otherId, cachedDisplayName, manualAvatar
     }
   }, [otherId, otherProfile, chat.type]);
 
-  const isTyping = chat?.typing && otherId && chat.typing[otherId];
   const isOtherDeleted = otherProfile?.isBanned || otherProfile?.name?.includes('Удалённый Аккаунт');
+  const isTyping = chat?.typing && otherId && chat.typing[otherId];
+  // Блокируем отображение анимации печати для удаленных аккаунтов
   const showTyping = isTyping && !isOtherDeleted;
   
   const finalDisplayName = formatDisplayName(otherProfile?.name || cachedDisplayName || 'Пользователь');
