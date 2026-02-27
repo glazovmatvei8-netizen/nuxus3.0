@@ -7,14 +7,14 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
-  Send, Info, ChevronLeft, Loader2, Bookmark, Pin, X, Forward, Camera, Video, Circle, Wand2
+  Send, Info, ChevronLeft, Loader2, Bookmark, Pin, X, Forward, Camera, Video, Circle, Wand2, Phone
 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { MessageItem } from './message-item';
 import { useToast } from '@/hooks/use-toast';
 import { ChatInfoModal } from './modals/chat-info-modal';
 import { useFirestore, useUser, useCollection, useDoc, useMemoFirebase } from '@/firebase';
-import { collection, query, orderBy, doc, limit } from 'firebase/firestore';
+import { collection, query, orderBy, doc, limit, addDoc } from 'firebase/firestore';
 import { addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { formatDisplayName, isUserPremium } from '@/lib/utils';
 import type { Message, User as UserType, Chat } from '@/lib/types';
@@ -53,7 +53,7 @@ MessageList.displayName = 'MessageList';
 export default function ChatArea() {
   const { user } = useUser();
   const db = useFirestore();
-  const { currentChatId, setCurrentChatId, forwardingMessage, setForwardingMessage } = useAppState();
+  const { currentChatId, setCurrentChatId, forwardingMessage, setForwardingMessage, setActiveCallId } = useAppState();
   
   const [isChatInfoOpen, setIsChatInfoOpen] = useState(false);
   const [isSending, setIsSending] = useState(false);
@@ -174,6 +174,27 @@ export default function ChatArea() {
     }
   };
 
+  const startCall = async (type: 'audio' | 'video') => {
+    if (!db || !user || !otherId || !currentChatId) return;
+    
+    try {
+      const callData = {
+        callerId: user.uid,
+        callerName: userProfile?.name || 'Пользователь',
+        receiverId: otherId,
+        chatId: currentChatId,
+        type,
+        status: 'calling',
+        createdAt: new Date().toISOString()
+      };
+      
+      const callDoc = await addDoc(collection(db, 'calls'), callData);
+      setActiveCallId(callDoc.id);
+    } catch (e) {
+      toast({ title: "Ошибка", description: "Не удалось начать вызов.", variant: "destructive" });
+    }
+  };
+
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 480, height: 480 }, audio: true });
@@ -255,9 +276,22 @@ export default function ChatArea() {
             </div>
           </div>
         </div>
-        <Button variant="ghost" size="icon" onClick={() => setIsChatInfoOpen(true)} className="rounded-lg">
-          <Info className="w-5 h-5" />
-        </Button>
+        
+        <div className="flex items-center gap-1">
+          {chat?.type === 'private' && (
+            <>
+              <Button variant="ghost" size="icon" onClick={() => startCall('audio')} className="rounded-lg text-primary">
+                <Phone className="w-5 h-5" />
+              </Button>
+              <Button variant="ghost" size="icon" onClick={() => startCall('video')} className="rounded-lg text-primary">
+                <Video className="w-5 h-5" />
+              </Button>
+            </>
+          )}
+          <Button variant="ghost" size="icon" onClick={() => setIsChatInfoOpen(true)} className="rounded-lg">
+            <Info className="w-5 h-5" />
+          </Button>
+        </div>
       </header>
 
       <ScrollArea ref={scrollRef} className="flex-1 w-full relative z-10 scrollbar-hide">
@@ -360,7 +394,7 @@ export default function ChatArea() {
             
             {!messageInput.trim() ? (
               <Button size="icon" className="h-11 w-11 rounded-xl shrink-0 bg-primary hover:bg-primary/90" onClick={startRecording}>
-                <Video className="w-5 h-5" />
+                <Circle className="w-5 h-5" />
               </Button>
             ) : (
               <Button size="icon" className="h-11 w-11 rounded-xl shrink-0 bg-primary hover:bg-primary/90" onClick={() => handleSendMessage()} disabled={isSending}>

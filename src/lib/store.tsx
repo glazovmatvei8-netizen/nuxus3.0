@@ -2,13 +2,15 @@
 "use client"
 
 import React, { createContext, useContext, useState } from 'react';
-import type { Message } from './types';
+import type { Message, Call } from './types';
 
 interface AppState {
   currentChatId: string | null;
   setCurrentChatId: (id: string | null) => void;
   forwardingMessage: Message | null;
   setForwardingMessage: (msg: Message | null) => void;
+  activeCallId: string | null;
+  setActiveCallId: (id: string | null) => void;
 }
 
 const AppContext = createContext<AppState | undefined>(undefined);
@@ -16,13 +18,16 @@ const AppContext = createContext<AppState | undefined>(undefined);
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const [currentChatId, setCurrentChatId] = useState<string | null>(null);
   const [forwardingMessage, setForwardingMessage] = useState<Message | null>(null);
+  const [activeCallId, setActiveCallId] = useState<string | null>(null);
 
   return (
     <AppContext.Provider value={{
       currentChatId,
       setCurrentChatId,
       forwardingMessage,
-      setForwardingMessage
+      setForwardingMessage,
+      activeCallId,
+      setActiveCallId
     }}>
       {children}
     </AppContext.Provider>

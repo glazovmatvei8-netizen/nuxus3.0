@@ -23,8 +23,7 @@ export interface Message {
   giftType?: string;
   isNFT?: boolean;
   serialNumber?: number;
-  forwardFrom?: string; // Имя первоначального отправителя при пересылке
-  // Поля для запроса оплаты
+  forwardFrom?: string;
   paymentData?: {
     type: 'premium' | 'stars';
     itemName: string;
@@ -37,6 +36,19 @@ export interface Message {
     price: number;
     status: 'pending' | 'confirmed' | 'rejected';
   };
+}
+
+export interface Call {
+  id: string;
+  callerId: string;
+  callerName?: string;
+  receiverId: string;
+  chatId: string;
+  type: 'audio' | 'video';
+  status: 'calling' | 'active' | 'ended' | 'rejected' | 'missed';
+  createdAt: string;
+  startedAt?: string;
+  endedAt?: string;
 }
 
 export interface ReceivedGift {

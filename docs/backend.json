@@ -5,134 +5,34 @@
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "UserProfile",
       "type": "object",
-      "description": "Represents a user's profile information within the NuxusChat application, enabling personalized interactions and identification.",
+      "description": "Represents a user's profile information within the Nuxus application.",
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the UserProfile entity."
-        },
-        "name": {
-          "type": "string",
-          "description": "The full display name of the user."
-        },
-        "username": {
-          "type": "string",
-          "description": "A unique public identifier for the user, typically starting with '@'. Used for search and direct mentions."
-        },
-        "phone": {
-          "type": "string",
-          "description": "The user's phone number, used as a unique contact identifier for registration and login."
-        },
-        "avatarUrl": {
-          "type": "string",
-          "description": "URL to the user's profile picture.",
-          "format": "uri"
-        },
-        "lastSeen": {
-          "type": "string",
-          "description": "ISO timestamp of the last time the user was active.",
-          "format": "date-time"
-        },
-        "createdAt": {
-          "type": "string",
-          "description": "Timestamp indicating when the user profile was created.",
-          "format": "date-time"
-        },
-        "blockedUserIds": {
-          "type": "array",
-          "description": "List of user IDs that this user has blocked.",
-          "items": {
-            "type": "string"
-          }
-        },
-        "isBanned": {
-          "type": "boolean",
-          "description": "Indicates if the user is globally banned from the application."
-        },
-        "isPremium": {
-          "type": "boolean",
-          "description": "Indicates if the user has a Nuxus Premium subscription."
-        },
-        "premiumUntil": {
-          "type": "string",
-          "description": "ISO timestamp until which the premium subscription is valid.",
-          "format": "date-time"
-        }
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "username": { "type": "string" },
+        "phone": { "type": "string" },
+        "avatarUrl": { "type": "string", "format": "uri" },
+        "lastSeen": { "type": "string", "format": "date-time" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "isPremium": { "type": "boolean" },
+        "premiumUntil": { "type": "string", "format": "date-time" },
+        "isBanned": { "type": "boolean" }
       },
-      "required": [
-        "id",
-        "name",
-        "username",
-        "phone",
-        "createdAt"
-      ]
+      "required": ["id", "name", "username", "phone", "createdAt"]
     },
     "Chat": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Chat",
       "type": "object",
-      "description": "Represents a conversation, which can be a private direct message, a multi-user group, or a broadcast channel.",
+      "description": "Represents a conversation.",
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the Chat entity."
-        },
-        "type": {
-          "type": "string",
-          "description": "The classification of the chat, either 'private', 'group', or 'channel'."
-        },
-        "name": {
-          "type": "string",
-          "description": "The display name of the chat."
-        },
-        "username": {
-          "type": "string",
-          "description": "A unique public identifier for group or channel chats."
-        },
-        "description": {
-          "type": "string",
-          "description": "A descriptive text providing information about the channel or group."
-        },
-        "avatarUrl": {
-          "type": "string",
-          "description": "URL to the chat's avatar image.",
-          "format": "uri"
-        },
-        "createdAt": {
-          "type": "string",
-          "description": "Timestamp indicating when the chat was created.",
-          "format": "date-time"
-        },
-        "ownerId": {
-          "type": "string",
-          "description": "UserProfile ID who owns this chat."
-        },
-        "participantIds": {
-          "type": "array",
-          "description": "References to UserProfile IDs who are participants.",
-          "items": {
-            "type": "string"
-          }
-        },
-        "adminIds": {
-          "type": "array",
-          "description": "References to UserProfile IDs who are admins.",
-          "items": {
-            "type": "string"
-          }
-        },
-        "typing": {
-          "type": "object",
-          "description": "Map of user IDs to typing status."
-        }
+        "id": { "type": "string" },
+        "type": { "type": "string" },
+        "name": { "type": "string" },
+        "participantIds": { "type": "array", "items": { "type": "string" } },
+        "createdAt": { "type": "string", "format": "date-time" }
       },
-      "required": [
-        "id",
-        "type",
-        "name",
-        "createdAt",
-        "participantIds"
-      ]
+      "required": ["id", "type", "name", "createdAt", "participantIds"]
     },
     "Message": {
       "$schema": "http://json-schema.org/draft-07/schema#",
@@ -140,100 +40,54 @@
       "type": "object",
       "description": "Represents a single message.",
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier."
-        },
-        "chatId": {
-          "type": "string",
-          "description": "Chat reference."
-        },
-        "senderId": {
-          "type": "string",
-          "description": "Sender reference."
-        },
-        "senderName": {
-          "type": "string",
-          "description": "Cached sender name."
-        },
-        "content": {
-          "type": "string",
-          "description": "Textual content or media URL."
-        },
-        "contentType": {
-          "type": "string",
-          "description": "Content type: 'text', 'image', 'audio', 'video', 'service'."
-        },
-        "sentAt": {
-          "type": "string",
-          "description": "Sent timestamp.",
-          "format": "date-time"
-        },
-        "replyToId": {
-          "type": "string",
-          "description": "Reference to another Message ID."
-        },
-        "replyToContent": {
-          "type": "string",
-          "description": "Snippet of replied message."
-        },
-        "editedAt": {
-          "type": "string",
-          "description": "Last edited timestamp.",
-          "format": "date-time"
-        },
-        "isRead": {
-          "type": "boolean",
-          "description": "Read status."
-        }
+        "id": { "type": "string" },
+        "chatId": { "type": "string" },
+        "senderId": { "type": "string" },
+        "content": { "type": "string" },
+        "contentType": { "type": "string" },
+        "sentAt": { "type": "string", "format": "date-time" }
       },
-      "required": [
-        "id",
-        "chatId",
-        "senderId",
-        "content",
-        "contentType",
-        "sentAt"
-      ]
+      "required": ["id", "chatId", "senderId", "content", "contentType", "sentAt"]
+    },
+    "Call": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Call",
+      "type": "object",
+      "description": "Represents an active or historical call session.",
+      "properties": {
+        "id": { "type": "string" },
+        "callerId": { "type": "string" },
+        "receiverId": { "type": "string" },
+        "chatId": { "type": "string" },
+        "type": { "type": "string", "enum": ["audio", "video"] },
+        "status": { "type": "string", "enum": ["calling", "active", "ended", "rejected", "missed"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "startedAt": { "type": "string", "format": "date-time" },
+        "endedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "callerId", "receiverId", "type", "status", "createdAt"]
     }
   },
   "auth": {
-    "providers": [
-      "password",
-      "anonymous"
-    ]
+    "providers": ["password", "anonymous"]
   },
   "firestore": {
     "structure": [
       {
         "path": "/users/{userId}",
-        "definition": {
-          "entityName": "UserProfile",
-          "schema": {
-            "$ref": "#/backend/entities/UserProfile"
-          },
-          "description": "Stores individual user profile information."
-        }
+        "definition": { "entityName": "UserProfile", "schema": { "$ref": "#/backend/entities/UserProfile" }, "description": "Stores user profiles." }
       },
       {
         "path": "/chats/{chatId}",
-        "definition": {
-          "entityName": "Chat",
-          "schema": {
-            "$ref": "#/backend/entities/Chat"
-          },
-          "description": "Stores metadata for all conversation types."
-        }
+        "definition": { "entityName": "Chat", "schema": { "$ref": "#/backend/entities/Chat" }, "description": "Stores chat metadata." }
       },
       {
         "path": "/chats/{chatId}/messages/{messageId}",
-        "definition": {
-          "entityName": "Message",
-          "schema": {
-            "$ref": "#/backend/entities/Message"
-          },
-          "description": "Stores individual messages for a specific chat."
-        }
+        "definition": { "entityName": "Message", "schema": { "$ref": "#/backend/entities/Message" }, "description": "Stores chat messages." }
+      },
+      {
+        "path": "/calls/{callId}",
+        "definition": { "entityName": "Call", "schema": { "$ref": "#/backend/entities/Call" }, "description": "Stores call signaling data." }
       }
     ]
   }
