@@ -130,7 +130,7 @@ export default function AuthScreen() {
           if (err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') {
             toast({ 
               title: "Ошибка входа", 
-              description: "Проверьте номер или пароль. Если у вас нет аккаунта, переключитесь на Регистрацию.", 
+              description: "Проверьте номер или пароль. Если вы не регистрировались ранее, переключитесь на вкладку Регистрация.", 
               variant: "destructive" 
             });
             setIsLoading(false);
@@ -143,7 +143,7 @@ export default function AuthScreen() {
       console.error(err);
       toast({ 
         title: "Системная ошибка", 
-        description: "Проверьте соединение с интернетом или настройки сети.", 
+        description: err.message || "Проверьте соединение с интернетом.", 
         variant: "destructive" 
       });
     } finally {
@@ -156,7 +156,7 @@ export default function AuthScreen() {
       <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-primary/20 blur-[120px] rounded-full -z-10 animate-pulse-glow" />
       <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-accent/10 blur-[120px] rounded-full -z-10 animate-pulse-glow" style={{ animationDelay: '2s' }} />
       
-      <div className="w-full max-w-sm relative z-10 animate-in fade-in zoom-in duration-700">
+      <div className="w-full max-w-sm relative z-10">
         <div className="flex justify-center mb-10">
           <div className="relative group">
             <div className="absolute inset-0 bg-primary blur-3xl opacity-20 group-hover:opacity-40 transition-opacity" />
