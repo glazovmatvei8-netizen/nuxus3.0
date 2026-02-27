@@ -107,49 +107,34 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onEdit, size 
     switch (message.contentType) {
       case 'image':
         return (
-          <>
-            <div 
-              className="mt-1 rounded-lg overflow-hidden border border-border/20 max-w-sm relative aspect-video min-w-[200px] cursor-zoom-in group/img active:scale-[0.98] transition-transform"
-              onClick={(e) => { e.stopPropagation(); setIsImageFullViewOpen(true); }}
-            >
-              <Image 
-                src={message.content} 
-                alt="Sent Image" 
-                fill
-                className="object-cover" 
-                sizes="(max-width: 768px) 100vw, 400px"
-              />
-              <div className="absolute inset-0 bg-black/20 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center">
-                <ZoomIn className="w-8 h-8 text-white/80" />
-              </div>
+          <div 
+            className="mt-1 rounded-lg overflow-hidden border border-border/20 max-w-sm relative aspect-video min-w-[200px] cursor-zoom-in group/img active:scale-[0.98] transition-transform"
+            onPointerDown={(e) => e.stopPropagation()} // Блокируем Radix Menu Trigger
+            onClick={(e) => { 
+              e.preventDefault();
+              e.stopPropagation(); 
+              setIsImageFullViewOpen(true); 
+            }}
+          >
+            <Image 
+              src={message.content} 
+              alt="Sent Image" 
+              fill
+              className="object-cover" 
+              sizes="(max-width: 768px) 100vw, 400px"
+            />
+            <div className="absolute inset-0 bg-black/20 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center">
+              <ZoomIn className="w-8 h-8 text-white/80" />
             </div>
-            
-            <Dialog open={isImageFullViewOpen} onOpenChange={setIsImageFullViewOpen}>
-              <DialogContent className="max-w-[95vw] max-h-[95vh] p-0 bg-black/95 border-none overflow-hidden flex items-center justify-center z-[100]">
-                <DialogTitle className="sr-only">Просмотр изображения</DialogTitle>
-                <DialogDescription className="sr-only">Полноэкранный просмотр присланной фотографии</DialogDescription>
-                <div className="relative w-full h-full flex items-center justify-center p-4">
-                  <img 
-                    src={message.content} 
-                    alt="Full View" 
-                    className="max-w-full max-h-[90vh] object-contain animate-in zoom-in-95 duration-300"
-                  />
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    className="absolute top-4 right-4 text-white hover:bg-white/20 rounded-full h-12 w-12 z-10"
-                    onClick={() => setIsImageFullViewOpen(false)}
-                  >
-                    <X className="w-8 h-8" />
-                  </Button>
-                </div>
-              </DialogContent>
-            </Dialog>
-          </>
+          </div>
         );
       case 'audio':
         return (
-          <div className="flex items-center gap-3 p-2 bg-black/10 rounded-xl min-w-[200px]">
+          <div 
+            className="flex items-center gap-3 p-2 bg-black/10 rounded-xl min-w-[200px]"
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={(e) => e.stopPropagation()}
+          >
             <Button size="icon" variant="ghost" className="h-8 w-8 rounded-full bg-primary/20" onClick={toggleAudio}>
               {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4 ml-0.5" />}
             </Button>
@@ -161,7 +146,11 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onEdit, size 
         );
       case 'video':
         return (
-          <div className="mt-1 flex justify-center">
+          <div 
+            className="mt-1 flex justify-center"
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="relative w-48 h-48 rounded-full overflow-hidden border-4 border-primary/40 bg-black shadow-lg">
               <video src={message.content} controls className="w-full h-full object-cover" />
             </div>
@@ -189,97 +178,122 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onEdit, size 
   };
 
   return (
-    <div id={`msg-${message.id}`} className={cn(
-      "flex gap-3 max-w-[85%] animate-in fade-in duration-150 px-1 py-0.5",
-      isMe ? "ml-auto flex-row-reverse" : "mr-auto"
-    )}>
-      {!isMe && (
-        <UserAvatar userId={message.senderId} className={cn("mt-auto shrink-0 ring-2 ring-primary/10", size === 'large' ? 'h-10 w-10' : 'h-8 w-8')} fallbackName={message.senderName} />
-      )}
-      
-      <div className={cn("flex flex-col gap-0.5", isMe ? "items-end" : "items-start")}>
-        {!isMe && <span className="text-[10px] font-bold text-muted-foreground ml-2 opacity-70">{message.senderName}</span>}
+    <>
+      <div id={`msg-${message.id}`} className={cn(
+        "flex gap-3 max-w-[85%] animate-in fade-in duration-150 px-1 py-0.5",
+        isMe ? "ml-auto flex-row-reverse" : "mr-auto"
+      )}>
+        {!isMe && (
+          <UserAvatar userId={message.senderId} className={cn("mt-auto shrink-0 ring-2 ring-primary/10", size === 'large' ? 'h-10 w-10' : 'h-8 w-8')} fallbackName={message.senderName} />
+        )}
         
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <div className="relative group cursor-pointer active:scale-[0.98] transition-transform">
-              {message.replyToId && (
-                <div className={cn(
-                  "px-3 py-1.5 rounded-t-xl text-[10px] border-l-2 border-primary max-w-full truncate opacity-70 mb-[-4px]",
-                  isMe ? "bg-white/10" : "bg-black/5"
-                )}>
-                  <span className="font-bold block text-primary">Ответ</span>
-                  <span className="truncate block italic">{message.replyToContent}</span>
-                </div>
-              )}
+        <div className={cn("flex flex-col gap-0.5", isMe ? "items-end" : "items-start")}>
+          {!isMe && <span className="text-[10px] font-bold text-muted-foreground ml-2 opacity-70">{message.senderName}</span>}
+          
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <div className="relative group cursor-pointer active:scale-[0.98] transition-transform outline-none">
+                {message.replyToId && (
+                  <div className={cn(
+                    "px-3 py-1.5 rounded-t-xl text-[10px] border-l-2 border-primary max-w-full truncate opacity-70 mb-[-4px]",
+                    isMe ? "bg-white/10" : "bg-black/5"
+                  )}>
+                    <span className="font-bold block text-primary">Ответ</span>
+                    <span className="truncate block italic">{message.replyToContent}</span>
+                  </div>
+                )}
 
-              <div className={cn(
-                "rounded-2xl shadow-sm relative group-hover:shadow-md transition-shadow",
-                message.contentType !== 'video' && message.contentType !== 'image' ? sizeClasses[size] : (message.contentType === 'image' ? "p-0.5" : "p-1"),
-                isMe 
-                  ? "bg-primary text-white rounded-br-none" 
-                  : "bg-card text-foreground rounded-bl-none border border-border/40",
-                message.replyToId ? "rounded-tr-none rounded-tl-none" : ""
-              )}>
-                {renderContent()}
                 <div className={cn(
-                  "flex items-center justify-end gap-1 mt-1 text-[9px] select-none pb-1 pr-2",
-                  isMe ? "text-white/60" : "text-muted-foreground/60"
+                  "rounded-2xl shadow-sm relative group-hover:shadow-md transition-shadow",
+                  message.contentType !== 'video' && message.contentType !== 'image' ? sizeClasses[size] : (message.contentType === 'image' ? "p-0.5" : "p-1"),
+                  isMe 
+                    ? "bg-primary text-white rounded-br-none" 
+                    : "bg-card text-foreground rounded-bl-none border border-border/40",
+                  message.replyToId ? "rounded-tr-none rounded-tl-none" : ""
                 )}>
-                  {message.editedAt && <span>изменено</span>}
-                  <span>{formattedTime}</span>
-                  {isMe && (
-                    message.isRead ? <CheckCheck className="w-3 h-3 text-accent" /> : <Check className="w-3 h-3" />
-                  )}
+                  {renderContent()}
+                  <div className={cn(
+                    "flex items-center justify-end gap-1 mt-1 text-[9px] select-none pb-1 pr-2",
+                    isMe ? "text-white/60" : "text-muted-foreground/60"
+                  )}>
+                    {message.editedAt && <span>изменено</span>}
+                    <span>{formattedTime}</span>
+                    {isMe && (
+                      message.isRead ? <CheckCheck className="w-3 h-3 text-accent" /> : <Check className="w-3 h-3" />
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent className="w-48 bg-card/95 backdrop-blur-xl border-border/40">
-            <DropdownMenuItem onClick={onReply} className="gap-2"><CornerUpLeft className="w-4 h-4" /> Ответить</DropdownMenuItem>
-            {isMe && message.contentType === 'text' && (
-              <DropdownMenuItem onClick={onEdit} className="gap-2"><Pencil className="w-4 h-4" /> Изменить</DropdownMenuItem>
-            )}
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => setIsReactionPickerOpen(true)} className="gap-2"><SmilePlus className="w-4 h-4" /> Реакция</DropdownMenuItem>
-            {isMe && <DropdownMenuItem onClick={handleDelete} className="gap-2 text-destructive focus:text-destructive"><Trash2 className="w-4 h-4" /> Удалить</DropdownMenuItem>}
-          </DropdownMenuContent>
-        </DropdownMenu>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent className="w-48 bg-card/95 backdrop-blur-xl border-border/40">
+              <DropdownMenuItem onClick={onReply} className="gap-2"><CornerUpLeft className="w-4 h-4" /> Ответить</DropdownMenuItem>
+              {isMe && message.contentType === 'text' && (
+                <DropdownMenuItem onClick={onEdit} className="gap-2"><Pencil className="w-4 h-4" /> Изменить</DropdownMenuItem>
+              )}
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => setIsReactionPickerOpen(true)} className="gap-2"><SmilePlus className="w-4 h-4" /> Реакция</DropdownMenuItem>
+              {isMe && <DropdownMenuItem onClick={handleDelete} className="gap-2 text-destructive focus:text-destructive"><Trash2 className="w-4 h-4" /> Удалить</DropdownMenuItem>}
+            </DropdownMenuContent>
+          </DropdownMenu>
 
-        {Object.entries(groupedReactions).length > 0 && (
-          <div className={cn("flex flex-wrap gap-1 mt-0.5", isMe ? "justify-end" : "justify-start")}>
-            {Object.entries(groupedReactions).map(([emoji, reactorIds]) => (
-              <button
-                key={emoji}
-                onClick={() => handleAddReaction(emoji as string)}
-                className={cn(
-                  "flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] border transition-all",
-                  (reactorIds as string[]).includes(user?.uid || '')
-                    ? "bg-primary/20 border-primary/40 text-primary font-bold"
-                    : "bg-muted/20 border-border/40 text-muted-foreground hover:bg-muted/40"
-                )}
-              >
-                <span>{emoji}</span>
-                <span className="font-mono">{(reactorIds as string[]).length}</span>
-              </button>
-            ))}
-          </div>
+          {Object.entries(groupedReactions).length > 0 && (
+            <div className={cn("flex flex-wrap gap-1 mt-0.5", isMe ? "justify-end" : "justify-start")}>
+              {Object.entries(groupedReactions).map(([emoji, reactorIds]) => (
+                <button
+                  key={emoji}
+                  onClick={(e) => { e.stopPropagation(); handleAddReaction(emoji as string); }}
+                  className={cn(
+                    "flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] border transition-all",
+                    (reactorIds as string[]).includes(user?.uid || '')
+                      ? "bg-primary/20 border-primary/40 text-primary font-bold"
+                      : "bg-muted/20 border-border/40 text-muted-foreground hover:bg-muted/40"
+                  )}
+                >
+                  <span>{emoji}</span>
+                  <span className="font-mono">{(reactorIds as string[]).length}</span>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {isReactionPickerOpen && (
+          <Popover open={isReactionPickerOpen} onOpenChange={setIsReactionPickerOpen}>
+            <PopoverTrigger asChild><div className="hidden" /></PopoverTrigger>
+            <PopoverContent className="w-auto p-1 rounded-full border-border/40 backdrop-blur-xl bg-card/60" side="top">
+              <div className="flex gap-1">
+                {REACTIONS.map(emoji => (
+                  <button key={emoji} onClick={() => handleAddReaction(emoji)} className="hover:scale-125 transition-transform p-1 text-lg">{emoji}</button>
+                ))}
+              </div>
+            </PopoverContent>
+          </Popover>
         )}
       </div>
 
-      {isReactionPickerOpen && (
-        <Popover open={isReactionPickerOpen} onOpenChange={setIsReactionPickerOpen}>
-          <PopoverTrigger asChild><div className="hidden" /></PopoverTrigger>
-          <PopoverContent className="w-auto p-1 rounded-full border-border/40 backdrop-blur-xl bg-card/60" side="top">
-            <div className="flex gap-1">
-              {REACTIONS.map(emoji => (
-                <button key={emoji} onClick={() => handleAddReaction(emoji)} className="hover:scale-125 transition-transform p-1 text-lg">{emoji}</button>
-              ))}
-            </div>
-          </PopoverContent>
-        </Popover>
-      )}
-    </div>
+      {/* Полноэкранный просмотр вынесен из Trigger */}
+      <Dialog open={isImageFullViewOpen} onOpenChange={setIsImageFullViewOpen}>
+        <DialogContent className="max-w-[95vw] max-h-[95vh] p-0 bg-black/95 border-none overflow-hidden flex items-center justify-center z-[100]">
+          <DialogTitle className="sr-only">Просмотр изображения</DialogTitle>
+          <DialogDescription className="sr-only">Полноэкранный просмотр присланной фотографии</DialogDescription>
+          <div className="relative w-full h-full flex items-center justify-center p-4">
+            <img 
+              src={message.content} 
+              alt="Full View" 
+              className="max-w-full max-h-[90vh] object-contain animate-in zoom-in-95 duration-300"
+            />
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="absolute top-4 right-4 text-white hover:bg-white/20 rounded-full h-12 w-12 z-10"
+              onClick={() => setIsImageFullViewOpen(false)}
+            >
+              <X className="w-8 h-8" />
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }, (prevProps, nextProps) => {
   return (
