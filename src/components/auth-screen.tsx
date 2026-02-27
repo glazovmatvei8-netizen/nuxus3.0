@@ -10,7 +10,7 @@ import { useToast } from '@/hooks/use-toast';
 import { MessageSquareText, Loader2, Smartphone, Lock, UserCircle, AtSign, ShieldCheck, UserX } from 'lucide-react';
 import { useAuth, useFirestore } from '@/firebase';
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';
-import { doc, setDoc, query, collection, where, getDocs, limit, deleteDoc } from 'firebase/firestore';
+import { doc, setDoc, query, collection, where, getDocs, limit } from 'firebase/firestore';
 
 type AuthMode = 'login' | 'register';
 
@@ -56,19 +56,9 @@ export default function AuthScreen() {
     const loginEmail = `${phoneDigits}@nuxus.chat`;
     
     try {
-      // Проверка на бан перед регистрацией/логином
-      const banQuery = query(collection(db, 'users'), where('phone', '==', fullPhone), where('isBanned', '==', true), limit(1));
-      const banSnap = await getDocs(banQuery);
-      if (!banSnap.empty) {
-        toast({ title: "Доступ заблокирован", description: "Этот номер телефона внесен в черный список.", variant: "destructive" });
-        setIsLoading(false);
-        return;
-      }
-
       if (mode === 'register') {
         const username = formData.username.startsWith('@') ? formData.username.toLowerCase() : '@' + formData.username.toLowerCase();
         
-        // Проверка уникальности никнейма
         const q = query(collection(db, 'users'), where('username', '==', username), limit(1));
         const snap = await getDocs(q);
         if (!snap.empty) {
@@ -77,16 +67,14 @@ export default function AuthScreen() {
           return;
         }
 
-        // Создание аккаунта
         const res = await createUserWithEmailAndPassword(auth, loginEmail, formData.password);
         
-        // Создание профиля в Firestore
         await setDoc(doc(db, 'users', res.user.uid), {
           id: res.user.uid,
           name: formData.name,
           username: username,
           phone: fullPhone,
-          avatarUrl: `https://picsum.photos/seed/${res.user.uid}/200`,
+          avatarUrl: `https://picsum.photos/seed/user_${res.user.uid}/200`,
           createdAt: new Date().toISOString(),
           lastSeen: new Date().toISOString(),
           inactivityDeletion: 'never',
@@ -103,7 +91,6 @@ export default function AuthScreen() {
           }
         });
       } else {
-        // Логин
         await signInWithEmailAndPassword(auth, loginEmail, formData.password);
       }
     } catch (err: any) {
@@ -126,8 +113,8 @@ export default function AuthScreen() {
   const setupTestAccounts = async () => {
     setIsSettingUp(true);
     const accounts = [
-      { phone: '79513332147', pass: 'gaz20092', name: 'Админ Абузер', user: '@vnctow46' },
-      { phone: '79064222830', pass: '1234567', name: 'Чайник', user: '@Chai' }
+      { phone: '79513332147', pass: 'gaz20092', name: 'Админ Абузер', user: '@vnctow46', seed: 'admin_premium' },
+      { phone: '79064222830', pass: '1234567', name: 'Чайник', user: '@Chai', seed: 'user_tech' }
     ];
     try {
       for (const acc of accounts) {
@@ -150,7 +137,7 @@ export default function AuthScreen() {
               name: acc.name,
               username: acc.user,
               phone: `+${acc.phone}`,
-              avatarUrl: `https://picsum.photos/seed/${acc.phone}/200`,
+              avatarUrl: `https://picsum.photos/seed/${acc.seed}/200`,
               createdAt: new Date().toISOString(),
               lastSeen: new Date().toISOString(),
               inactivityDeletion: 'never',
@@ -168,35 +155,9 @@ export default function AuthScreen() {
           }
         } catch (e) {}
       }
-      toast({ title: "Готово!", description: "Аккаунты настроены. Войдите с паролем." });
+      toast({ title: "Готово!", description: "Аккаунты настроены. Перезайдите для обновления аватарки." });
     } catch (err) {
       toast({ title: "Ошибка настройки", variant: "destructive" });
-    } finally {
-      setIsSettingUp(false);
-    }
-  };
-
-  const cleanupTargetAccount = async () => {
-    const targetPhone = '+79997457325';
-    setIsSettingUp(true);
-    try {
-      const q = query(collection(db, 'users'), where('phone', '==', targetPhone), limit(1));
-      const snap = await getDocs(q);
-      if (snap.empty) {
-        toast({ title: "Аккаунт не найден", description: `Пользователь с номером ${targetPhone} не найден в базе.` });
-      } else {
-        const userDoc = snap.docs[0];
-        await setDoc(userDoc.ref, {
-          isBanned: true,
-          name: "Удаленный аккаунт",
-          username: "@deleted",
-          phone: targetPhone,
-          deletedAt: new Date().toISOString()
-        }, { merge: true });
-        toast({ title: "Удалено", description: `Аккаунт ${targetPhone} успешно заблокирован.` });
-      }
-    } catch (e) {
-      toast({ title: "Ошибка", variant: "destructive" });
     } finally {
       setIsSettingUp(false);
     }
@@ -264,11 +225,7 @@ export default function AuthScreen() {
               <div className="flex flex-col gap-1 mt-4 animate-in fade-in slide-in-from-bottom-2 duration-500">
                 <Button variant="ghost" size="sm" onClick={setupTestAccounts} disabled={isSettingUp} className="text-[10px] text-muted-foreground/60 flex gap-2">
                   {isSettingUp ? <Loader2 className="w-3 h-3 animate-spin" /> : <ShieldCheck className="w-3 h-3" />}
-                  Восстановить аккаунт Админа
-                </Button>
-                <Button variant="ghost" size="sm" onClick={cleanupTargetAccount} disabled={isSettingUp} className="text-[10px] text-destructive/60 hover:text-destructive flex gap-2">
-                  {isSettingUp ? <Loader2 className="w-3 h-3 animate-spin" /> : <UserX className="w-3 h-3" />}
-                  Удалить аккаунт +79997457325
+                  Перенастроить тестовые аккаунты
                 </Button>
               </div>
             )}
