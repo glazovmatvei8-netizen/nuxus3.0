@@ -6,7 +6,7 @@ import { useAppState } from '@/lib/store';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { UserAvatar } from '@/components/user-avatar';
-import { Search, Settings, Plus, Loader2, Bookmark, Pin, Globe, Star, Hexagon, ShieldAlert } from 'lucide-react';
+import { Search, Settings, Plus, Loader2, Bookmark, Pin, Globe, Star, Hexagon, ShieldAlert, Zap } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { CreateChatModal } from './modals/create-chat-modal';
@@ -40,6 +40,7 @@ export default function ChatSidebar() {
   }, [db, user]);
   const { data: profile, isLoading: isProfileLoading } = useDoc<User>(userProfileRef);
 
+  // Ваша проверка на админа (+79513332147 или UID)
   const isAdmin = profile?.phone === '+79513332147' || user?.uid === 'GCvLucN8CjNcdaxPO2vmpZ84hNl1';
 
   const chatsQuery = useMemoFirebase(() => {
@@ -227,7 +228,7 @@ export default function ChatSidebar() {
             <div className="relative shrink-0">
                <UserAvatar 
                 userId={user?.uid} 
-                className="h-11 w-11 border-2 border-primary group-hover:scale-105 transition-all"
+                className="h-11 w-11 border-2 border-primary group-hover:scale-105 transition-all shadow-xl shadow-primary/10"
                 fallbackName={displayName}
                 manualAvatarUrl={profile?.avatarUrl}
               />
@@ -247,8 +248,14 @@ export default function ChatSidebar() {
           </div>
           <div className="flex items-center gap-1">
             {isAdmin && (
-               <Button variant="ghost" size="icon" className="rounded-xl text-primary" onClick={() => setIsAdminPanelOpen(true)}>
-                <ShieldAlert className="w-5 h-5" />
+               <Button variant="ghost" size="icon" className="rounded-xl text-primary hover:bg-primary/10 transition-colors" onClick={() => setIsAdminPanelOpen(true)}>
+                <div className="relative">
+                  <ShieldAlert className="w-5 h-5" />
+                  <span className="absolute -top-1 -right-1 flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
+                  </span>
+                </div>
               </Button>
             )}
             <Button variant="ghost" size="icon" className="rounded-xl" onClick={() => setIsSettingsOpen(true)}>
@@ -260,8 +267,8 @@ export default function ChatSidebar() {
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input 
-            placeholder="Поиск по нику @username..." 
-            className="pl-9 bg-muted border-none rounded-xl h-10 text-sm"
+            placeholder="Search by username @id..." 
+            className="pl-9 bg-muted border-none rounded-xl h-10 text-sm focus:ring-1 focus:ring-primary/20"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
@@ -270,19 +277,20 @@ export default function ChatSidebar() {
 
       <div className="px-3 py-2 shrink-0">
         <Tabs value={activeTab} onValueChange={(val) => setActiveTab(val as any)} className="w-full">
-          <TabsList className="grid w-full grid-cols-4 h-9 bg-muted rounded-xl p-1 gap-1">
-            <TabsTrigger value="all" className="rounded-lg text-[9px] font-bold uppercase tracking-widest">Все</TabsTrigger>
-            <TabsTrigger value="private" className="rounded-lg text-[9px] font-bold uppercase tracking-widest">Чаты</TabsTrigger>
-            <TabsTrigger value="group" className="rounded-lg text-[9px] font-bold uppercase tracking-widest">Группы</TabsTrigger>
-            <TabsTrigger value="channel" className="rounded-lg text-[9px] font-bold uppercase tracking-widest">Инфо</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-4 h-9 bg-muted/50 rounded-xl p-1 gap-1 border border-white/5">
+            <TabsTrigger value="all" className="rounded-lg text-[9px] font-bold uppercase tracking-widest">All</TabsTrigger>
+            <TabsTrigger value="private" className="rounded-lg text-[9px] font-bold uppercase tracking-widest">Chats</TabsTrigger>
+            <TabsTrigger value="group" className="rounded-lg text-[9px] font-bold uppercase tracking-widest">Groups</TabsTrigger>
+            <TabsTrigger value="channel" className="rounded-lg text-[9px] font-bold uppercase tracking-widest">Info</TabsTrigger>
           </TabsList>
         </Tabs>
       </div>
 
-      <ScrollArea className="flex-1 px-3 py-2">
+      <ScrollArea className="flex-1 px-3 py-2 scrollbar-hide">
         {isChatsLoading ? (
-          <div className="flex justify-center p-12">
-            <Loader2 className="w-6 h-6 animate-spin text-primary opacity-50" />
+          <div className="flex flex-col items-center justify-center p-12 gap-3 opacity-50">
+            <Loader2 className="w-6 h-6 animate-spin text-primary" />
+            <span className="text-[10px] uppercase font-bold tracking-widest">Syncing Core...</span>
           </div>
         ) : (
           <div className="space-y-1 pb-24">
@@ -294,7 +302,7 @@ export default function ChatSidebar() {
             {globalSearchResult && (
               <div className="mb-4">
                 <div className="px-3 py-1 text-[10px] font-black text-primary flex items-center gap-1 uppercase tracking-widest mb-1">
-                  <Globe className="w-3 h-3" /> Глобальный результат
+                  <Globe className="w-3 h-3" /> Global Search
                 </div>
                 <ChatListItem 
                   chat={globalSearchResult}
@@ -348,11 +356,11 @@ export default function ChatSidebar() {
 
       <div className="p-4 border-t border-white/5 bg-card">
         <Button 
-          className="w-full rounded-xl h-11 font-bold uppercase tracking-widest"
+          className="w-full rounded-xl h-12 font-black uppercase tracking-[0.2em] italic bg-primary shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all text-[10px]"
           onClick={() => setIsCreateModalOpen(true)}
         >
           <Plus className="w-5 h-5 mr-2" />
-          Новое сообщество
+          Create Community
         </Button>
       </div>
 
@@ -388,14 +396,14 @@ function ChatListItem({ chat, isActive, otherId, cachedDisplayName, manualAvatar
 
   useEffect(() => {
     if (isGlobalResult) {
-      setStatus(chat.type === 'group' ? 'Группа' : 'Канал');
+      setStatus(chat.type === 'group' ? 'Community' : 'Channel');
       return;
     }
     const isOtherDeleted = otherProfile?.isBanned || otherProfile?.name?.includes('Удалённый Аккаунт');
     if (otherId) {
       setStatus(formatLastSeen(otherProfile?.lastSeen, otherProfile?.settings?.privacy?.lastSeenVisibility, isOtherDeleted));
     } else {
-      setStatus(chat.type === 'group' ? 'Группа' : (chat.type === 'channel' ? 'Канал' : 'Избранное'));
+      setStatus(chat.type === 'group' ? 'Group' : (chat.type === 'channel' ? 'Channel' : 'Saved'));
     }
   }, [otherId, otherProfile, chat.type, isGlobalResult]);
 
@@ -403,13 +411,13 @@ function ChatListItem({ chat, isActive, otherId, cachedDisplayName, manualAvatar
   const isTyping = chat?.typing && otherId && chat.typing[otherId] && !isOtherDeleted;
   const isOtherPremium = otherProfile?.isPremium && otherProfile?.premiumUntil && new Date(otherProfile.premiumUntil) > new Date();
   
-  const finalDisplayName = formatDisplayName(otherProfile?.name || cachedDisplayName || chat.name || 'Юзер');
+  const finalDisplayName = formatDisplayName(otherProfile?.name || cachedDisplayName || chat.name || 'User');
 
   return (
     <div
       onClick={onClick}
       className={cn(
-        "flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all",
+        "flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all border border-transparent",
         isActive ? 'bg-primary text-white shadow-lg shadow-primary/20 z-10' : 'hover:bg-muted text-foreground'
       )}
     >
@@ -445,11 +453,11 @@ function ChatListItem({ chat, isActive, otherId, cachedDisplayName, manualAvatar
             isActive ? 'text-white/80' : (isTyping || status === 'в сети' ? 'text-accent' : 'text-muted-foreground/60')
           )}>
             {isTyping ? (
-              <span className="flex items-center gap-0.5">печатает<span className="animate-typing-dot">.</span><span className="animate-typing-dot [animation-delay:0.2s]">.</span><span className="animate-typing-dot [animation-delay:0.4s]">.</span></span>
+              <span className="flex items-center gap-0.5">typing<span className="animate-typing-dot">.</span><span className="animate-typing-dot [animation-delay:0.2s]">.</span><span className="animate-typing-dot [animation-delay:0.4s]">.</span></span>
             ) : status}
           </div>
           {isGlobalResult ? (
-            <Button size="sm" variant="outline" className="h-6 text-[8px] uppercase px-2 rounded-lg" onClick={(e) => { e.stopPropagation(); onJoin(); }}>Вступить</Button>
+            <Button size="sm" variant="outline" className="h-6 text-[8px] uppercase px-2 rounded-lg" onClick={(e) => { e.stopPropagation(); onJoin(); }}>Join</Button>
           ) : isPinned && !isActive && (
              <Button 
                 variant="ghost" 

@@ -32,7 +32,7 @@ import { Button } from './ui/button';
 import { useToast } from '@/hooks/use-toast';
 
 const GIFT_ICONS: Record<string, any> = {
-  gift_star: Star, gift_heart: Heart, gift_zap: Zap, gift_fire: Flame, gift_trophy: Trophy, 
+  gift_heart: Heart, gift_zap: Zap, gift_fire: Flame, gift_trophy: Trophy, 
   gift_rocket: Rocket, gift_diamond: Diamond, gift_crown: Crown, gift_cake: Cookie, 
   gift_popper: PartyPopper, gift_ghost: Ghost, gift_gem: Gem, gift_coffee: Coffee,
   gift_pizza: Pizza, gift_beer: Beer, gift_wine: Wine, gift_camera: Camera,
@@ -46,6 +46,11 @@ const GIFT_ICONS: Record<string, any> = {
   gift_briefcase: Briefcase, gift_grad: GraduationCap
 };
 
+/**
+ * MessageItem v4.0.0
+ * Фиксированная верстка с защитой от "улетания" сообщений.
+ * Использован flex-row-reverse для Me сообщений и центрирование сервисных сообщений.
+ */
 export const MessageItem = memo(({ message, isMe, chatId, onReply, amIPremium = false, isAdmin = false, senderAvatarUrl = null, onEdit }: any) => {
   const { user } = useUser();
   const db = useFirestore();
@@ -215,8 +220,8 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, amIPremium = 
 
   if (message.contentType === 'service') {
     return (
-      <div className="w-full flex justify-center my-4 px-4 shrink-0">
-        <div className="max-w-[80%] bg-white/5 backdrop-blur-md px-6 py-2 rounded-full border border-white/10 shadow-sm overflow-hidden">
+      <div className="w-full flex justify-center my-6 px-4 shrink-0 overflow-hidden">
+        <div className="max-w-[80%] bg-white/5 backdrop-blur-md px-6 py-2.5 rounded-full border border-white/10 shadow-sm">
           <p className="text-[9px] text-muted-foreground uppercase font-black tracking-[0.2em] text-center whitespace-normal leading-relaxed break-words">
             {message.content}
           </p>
@@ -226,8 +231,8 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, amIPremium = 
   }
 
   return (
-    <div id={`msg-${message.id}`} className={cn("w-full flex mb-2 px-2", isMe ? "justify-end" : "justify-start")}>
-      <div className={cn("flex gap-3 max-w-[85%] relative", isMe ? "flex-row-reverse" : "flex-row")}>
+    <div id={`msg-${message.id}`} className={cn("w-full flex mb-2 px-2 transition-all", isMe ? "justify-end" : "justify-start")}>
+      <div className={cn("flex gap-3 max-w-[88%] relative group", isMe ? "flex-row-reverse" : "flex-row")}>
         {!isMe && <UserAvatar userId={null} manualAvatarUrl={senderAvatarUrl} className="h-9 w-9 mt-auto shrink-0" fallbackName={message.senderName} />}
         <div className={cn("flex flex-col min-w-0 max-w-full relative", isMe ? "items-end ml-auto" : "items-start mr-auto")}>
           <DropdownMenu>

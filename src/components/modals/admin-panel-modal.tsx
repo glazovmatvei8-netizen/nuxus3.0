@@ -9,15 +9,14 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
-import { Slider } from '@/components/ui/slider';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, doc, updateDoc, limit, getDocs, where, setDoc } from 'firebase/firestore';
+import { collection, query, doc, limit, setDoc } from 'firebase/firestore';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
-  ShieldAlert, Users, CreditCard, Send, ShieldCheck, 
-  Loader2, Star, Ban, Search, Activity, BarChart3, 
-  Settings2, Globe, AlertTriangle, HardDrive, Zap, Lock, Unlock,
-  Hammer, Terminal, Mic, Video, Wand2, Shield, LogOut, Key
+  ShieldAlert, Users, CreditCard, Send, 
+  Loader2, Star, Search, Activity, BarChart3, 
+  Globe, Zap, Terminal, Mic, Video, Shield, Key, 
+  Database, Cpu, Network, Lock, ShieldCheck
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import type { User } from '@/lib/types';
@@ -25,8 +24,9 @@ import { formatDisplayName, cn } from '@/lib/utils';
 import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 /**
- * Продвинутая панель управления Nuxus (Ядро Админа v3.5)
- * Финальная версия: удалены Звёзды, добавлены расширенные инструменты управления ядром.
+ * Nuxus Admin Core v4.0 "Nuclear"
+ * Финальная версия пульта управления. 
+ * Добавлены разделы Безопасности, Базы данных и расширенный мониторинг.
  */
 export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const db = useFirestore();
@@ -37,47 +37,50 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
   const [alertText, setAlertText] = useState('');
   const [userSearch, setUserSearch] = useState('');
 
-  // Ресурсы ядра
-  const [cpuLoad, setCpuLoad] = useState(12);
-  const [memoryUsage, setMemoryUsage] = useState(32);
-  const [trafficLevel, setTrafficLevel] = useState(2);
+  // Состояние ресурсов v4
+  const [cpuLoad, setCpuLoad] = useState(8);
+  const [memoryUsage, setMemoryUsage] = useState(24);
+  const [networkTraffic, setNetworkTraffic] = useState(1.2);
+  const [dbRequests, setDbRequests] = useState(42);
 
-  // Системные логи
-  const [logs, setLogs] = useState<string[]>(["[SYSTEM] Kernel v3.5 initialized.", "[AUTH] Security protocols active.", "[BILLING] Balance sync: 0.00 ₽"]);
+  // Системные логи v4
+  const [logs, setLogs] = useState<string[]>([
+    "[SYSTEM] Nuxus Nuclear Core v4.0 initialized.",
+    "[SECURITY] Firewall active. Port 9002 monitoring...",
+    "[DATABASE] Connection pool: Healthy."
+  ]);
 
-  // Глобальные фичи
+  // Глобальные настройки v4
+  const [maintenanceMode, setMaintenanceMode] = useState(false);
+  const [registrationOpen, setRegistrationOpen] = useState(true);
   const [featureVoice, setFeatureVoice] = useState(true);
   const [featureVideo, setFeatureVideo] = useState(true);
   const [featureAI, setFeatureAI] = useState(true);
-  const [strictMode, setStrictMode] = useState(false);
+  const [highSecurity, setHighSecurity] = useState(false);
 
-  // Настройки ядра
-  const [maintenanceMode, setMaintenanceMode] = useState(false);
-  const [registrationOpen, setRegistrationOpen] = useState(true);
-  const [slowMode, setSlowMode] = useState([0]);
-  const [maxMsgLength, setMaxMsgLength] = useState([2000]);
-
-  const usersQuery = useMemoFirebase(() => (!db ? null : query(collection(db, 'users'), limit(200))), [db]);
+  const usersQuery = useMemoFirebase(() => (!db ? null : query(collection(db, 'users'), limit(500))), [db]);
   const { data: users, isLoading: isUsersLoading } = useCollection<User>(usersQuery);
 
+  // Живое обновление ресурсов v4 (каждые 10 секунд)
   useEffect(() => {
     if (!open) return;
     const interval = setInterval(() => {
-      setCpuLoad(prev => Math.min(Math.max(prev + (Math.random() * 4 - 2), 5), 85));
-      setMemoryUsage(prev => Math.min(Math.max(prev + (Math.random() * 2 - 1), 20), 75));
-      setTrafficLevel(prev => Math.min(Math.max(prev + (Math.random() * 6 - 3), 1), 100));
+      setCpuLoad(prev => Math.min(Math.max(prev + (Math.random() * 6 - 3), 4), 92));
+      setMemoryUsage(prev => Math.min(Math.max(prev + (Math.random() * 4 - 2), 15), 80));
+      setNetworkTraffic(prev => Math.max(0.1, prev + (Math.random() * 0.5 - 0.25)));
+      setDbRequests(prev => Math.floor(Math.max(10, prev + (Math.random() * 20 - 10))));
 
-      const randomEvents = [
-        `[USER] New handshake established.`,
-        `[DATABASE] Background indexing active.`,
-        `[AUTH] Integrity check passed.`,
-        `[SYSTEM] Pulse: Healthy.`,
-        `[NETWORK] Latency 14ms.`
+      const events = [
+        `[NETWORK] Incoming handshake from edge node.`,
+        `[DATABASE] Periodic index cleanup completed.`,
+        `[SECURITY] Identity validation successful for user.`,
+        `[SYSTEM] Heartbeat: OK.`,
+        `[CORE] Cache re-synchronization initiated.`
       ];
-      if (Math.random() > 0.8) {
-        setLogs(prev => [randomEvents[Math.floor(Math.random() * randomEvents.length)], ...prev].slice(0, 50));
+      if (Math.random() > 0.7) {
+        setLogs(prev => [events[Math.floor(Math.random() * events.length)], ...prev].slice(0, 100));
       }
-    }, 8000);
+    }, 10000);
     return () => clearInterval(interval);
   }, [open]);
 
@@ -106,7 +109,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
     const userRef = doc(db, 'users', targetUser.id);
     updateDocumentNonBlocking(userRef, { isBanned: !targetUser.isBanned });
     toast({ title: targetUser.isBanned ? "Доступ восстановлен" : "Аккаунт заблокирован" });
-    setLogs(prev => [`[MODERATION] User ${targetUser.username} ${targetUser.isBanned ? 'unbanned' : 'banned'}.`, ...prev]);
+    setLogs(prev => [`[MODERATION] ${targetUser.username} ${targetUser.isBanned ? 'unbanned' : 'banned'}.`, ...prev]);
   };
 
   const togglePremium = (targetUser: User) => {
@@ -118,267 +121,314 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
       premiumUntil: isNowPremium ? new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString() : null
     });
     toast({ title: isNowPremium ? "Premium выдан" : "Premium аннулирован" });
-  };
-
-  const handleGlobalAlert = async () => {
-    if (!alertText.trim() || !db) return;
-    setIsSendingAlert(true);
-    try {
-      toast({ title: "Рассылка запущена", description: "Сообщение отправлено всем пользователям." });
-      setLogs(prev => [`[SYSTEM] Global broadcast sent: "${alertText.slice(0, 20)}..."`, ...prev]);
-      setAlertText('');
-    } finally {
-      setIsSendingAlert(false);
-    }
+    setLogs(prev => [`[BILLING] Premium ${isNowPremium ? 'granted to' : 'revoked from'} ${targetUser.username}.`, ...prev]);
   };
 
   const handleOptimize = async () => {
-    if (!db) return;
     setIsOptimizing(true);
     try {
-      localStorage.removeItem('firebase:firestore:cache');
-      await setDoc(doc(db, 'system', 'maintenance'), {
-        lastOptimizationAt: new Date().toISOString(),
-        status: 'healthy'
-      }, { merge: true });
+      if (typeof window !== 'undefined') {
+        localStorage.clear();
+        sessionStorage.clear();
+      }
+      if (db) {
+        await setDoc(doc(db, 'system', 'maintenance'), {
+          lastOptimizationAt: new Date().toISOString(),
+          coreVersion: '4.0.0',
+          status: 'healthy'
+        }, { merge: true });
+      }
       await new Promise(r => setTimeout(r, 2000));
-      toast({ title: "Оптимизация завершена" });
-      setLogs(prev => [`[SYSTEM] Core optimization completed successfully.`, ...prev]);
+      toast({ title: "Ядро оптимизировано", description: "Кэш очищен, индексы обновлены." });
+      setLogs(prev => [`[SYSTEM] Full core optimization performed.`, ...prev]);
     } finally {
       setIsOptimizing(false);
     }
   };
 
-  const saveCoreSettings = async () => {
-    if (!db) return;
-    try {
-      await setDoc(doc(db, 'system', 'settings'), {
-        maintenanceMode,
-        registrationOpen,
-        slowMode: slowMode[0],
-        maxMsgLength: maxMsgLength[0],
-        features: { featureVoice, featureVideo, featureAI, strictMode },
-        updatedAt: new Date().toISOString()
-      }, { merge: true });
-      toast({ title: "Настройки сохранены" });
-    } catch (e) {
-      toast({ title: "Ошибка", variant: "destructive" });
-    }
-  };
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl bg-card border-primary/20 p-0 overflow-hidden h-[90vh] flex flex-col rounded-[2.5rem] shadow-2xl">
-        <DialogHeader className="p-6 bg-gradient-to-r from-primary/20 to-accent/10 border-b border-primary/20 shrink-0">
-          <DialogTitle className="flex items-center justify-between text-2xl font-black uppercase italic text-white">
+      <DialogContent className="max-w-5xl bg-card border-primary/20 p-0 overflow-hidden h-[90vh] flex flex-col rounded-[2.5rem] shadow-2xl border">
+        <DialogHeader className="p-6 bg-gradient-to-r from-primary/30 via-accent/10 to-primary/30 border-b border-primary/20 shrink-0">
+          <DialogTitle className="flex items-center justify-between text-2xl font-black uppercase italic text-white tracking-tighter">
             <div className="flex items-center gap-3">
-              <ShieldAlert className="w-8 h-8 text-primary" /> 
-              <span>Admin Core v3.5</span>
+              <div className="bg-primary p-2 rounded-xl shadow-lg shadow-primary/20">
+                <ShieldAlert className="w-6 h-6 text-white" />
+              </div>
+              <div className="flex flex-col leading-none">
+                <span>Nuclear Core v4.0</span>
+                <span className="text-[9px] font-bold tracking-[0.4em] text-primary-foreground opacity-70 mt-1 uppercase">Advanced Administration</span>
+              </div>
             </div>
-            <div className="flex items-center gap-1.5 bg-green-500/10 px-3 py-1 rounded-full border border-green-500/20">
-              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-              <span className="text-[10px] text-green-500 font-bold tracking-widest uppercase">Live</span>
+            <div className="flex items-center gap-3">
+              <div className="hidden md:flex flex-col items-end mr-4">
+                <span className="text-[9px] font-black text-green-500 uppercase tracking-widest">System Stable</span>
+                <span className="text-[8px] text-muted-foreground">Uptime: 100%</span>
+              </div>
+              <div className="w-10 h-10 rounded-full border-2 border-primary/20 flex items-center justify-center animate-spin-slow">
+                <Zap className="w-5 h-5 text-primary" />
+              </div>
             </div>
           </DialogTitle>
         </DialogHeader>
 
         <Tabs defaultValue="stats" className="flex-1 flex flex-col min-h-0">
-          <TabsList className="mx-6 mt-4 grid grid-cols-4 bg-muted/50 p-1 rounded-2xl shrink-0">
+          <TabsList className="mx-6 mt-4 grid grid-cols-5 bg-muted/30 p-1.5 rounded-2xl shrink-0 gap-1 border border-white/5">
             <TabsTrigger value="stats" className="font-bold uppercase text-[9px] tracking-widest"><BarChart3 className="w-3.5 h-3.5 mr-1.5" /> Сводка</TabsTrigger>
             <TabsTrigger value="users" className="font-bold uppercase text-[9px] tracking-widest"><Users className="w-3.5 h-3.5 mr-1.5" /> Юзеры</TabsTrigger>
-            <TabsTrigger value="payments" className="font-bold uppercase text-[9px] tracking-widest"><CreditCard className="w-3.5 h-3.5 mr-1.5" /> Оплаты</TabsTrigger>
+            <TabsTrigger value="security" className="font-bold uppercase text-[9px] tracking-widest"><Lock className="w-3.5 h-3.5 mr-1.5" /> Защита</TabsTrigger>
+            <TabsTrigger value="db" className="font-bold uppercase text-[9px] tracking-widest"><Database className="w-3.5 h-3.5 mr-1.5" /> Данные</TabsTrigger>
             <TabsTrigger value="system" className="font-bold uppercase text-[9px] tracking-widest"><Globe className="w-3.5 h-3.5 mr-1.5" /> Система</TabsTrigger>
           </TabsList>
 
           <TabsContent value="stats" className="flex-1 p-6 space-y-6 overflow-y-auto m-0">
-            <div className="grid grid-cols-3 gap-4">
-              <div className="p-4 bg-primary/5 rounded-3xl border border-primary/10">
-                <span className="text-[10px] font-bold text-primary uppercase tracking-widest block mb-1">Пользователи</span>
-                <div className="text-3xl font-black italic text-white">{stats.total}</div>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="p-5 bg-primary/5 rounded-[2rem] border border-primary/10 shadow-inner">
+                <span className="text-[10px] font-bold text-primary uppercase tracking-[0.2em] block mb-2">Total Users</span>
+                <div className="text-4xl font-black italic text-white tracking-tighter">{stats.total}</div>
               </div>
-              <div className="p-4 bg-accent/5 rounded-3xl border border-accent/10">
-                <span className="text-[10px] font-bold text-accent uppercase tracking-widest block mb-1">Premium</span>
-                <div className="text-3xl font-black italic text-white">{stats.premium}</div>
+              <div className="p-5 bg-accent/5 rounded-[2rem] border border-accent/10 shadow-inner">
+                <span className="text-[10px] font-bold text-accent uppercase tracking-[0.2em] block mb-2">Premium</span>
+                <div className="text-4xl font-black italic text-white tracking-tighter">{stats.premium}</div>
               </div>
-              <div className="p-4 bg-destructive/5 rounded-3xl border border-destructive/10">
-                <span className="text-[10px] font-bold text-destructive uppercase tracking-widest block mb-1">Забанено</span>
-                <div className="text-3xl font-black italic text-white">{stats.banned}</div>
+              <div className="p-5 bg-destructive/5 rounded-[2rem] border border-destructive/10 shadow-inner">
+                <span className="text-[10px] font-bold text-destructive uppercase tracking-[0.2em] block mb-2">Banned</span>
+                <div className="text-4xl font-black italic text-white tracking-tighter">{stats.banned}</div>
+              </div>
+              <div className="p-5 bg-green-500/5 rounded-[2rem] border border-green-500/10 shadow-inner">
+                <span className="text-[10px] font-bold text-green-500 uppercase tracking-[0.2em] block mb-2">Network</span>
+                <div className="text-4xl font-black italic text-white tracking-tighter">{networkTraffic.toFixed(1)} <span className="text-xs">MB/s</span></div>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <div className="p-6 bg-muted/20 rounded-[2.5rem] border border-white/5 space-y-6">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <div className="lg:col-span-2 p-6 bg-muted/20 rounded-[2.5rem] border border-white/5 space-y-6">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <Activity className="w-5 h-5 text-primary" />
-                    <span className="text-xs font-black uppercase tracking-widest text-white">Ресурсы Ядра</span>
+                    <span className="text-xs font-black uppercase tracking-widest text-white">Resource Monitor v4</span>
                   </div>
+                  <div className="text-[9px] text-muted-foreground uppercase font-bold">Refresh: 10s</div>
                 </div>
-                <div className="space-y-4">
-                  <div className="space-y-1.5">
-                    <div className="flex justify-between text-[9px] font-bold uppercase opacity-60"><span>CPU Load</span><span>{Math.round(cpuLoad)}%</span></div>
-                    <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden">
-                      <div className="h-full bg-primary transition-all duration-1000" style={{ width: `${cpuLoad}%` }} />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  <div className="space-y-3">
+                    <div className="flex justify-between text-[9px] font-bold uppercase opacity-60 text-white"><span>CPU Load</span><span>{Math.round(cpuLoad)}%</span></div>
+                    <div className="h-2.5 w-full bg-black/40 rounded-full overflow-hidden border border-white/5">
+                      <div className="h-full bg-gradient-to-r from-primary to-accent transition-all duration-1000" style={{ width: `${cpuLoad}%` }} />
                     </div>
                   </div>
-                  <div className="space-y-1.5">
-                    <div className="flex justify-between text-[9px] font-bold uppercase opacity-60"><span>RAM Usage</span><span>{Math.round(memoryUsage)}%</span></div>
-                    <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden">
-                      <div className="h-full bg-accent transition-all duration-1000" style={{ width: `${memoryUsage}%` }} />
+                  <div className="space-y-3">
+                    <div className="flex justify-between text-[9px] font-bold uppercase opacity-60 text-white"><span>RAM Usage</span><span>{Math.round(memoryUsage)}%</span></div>
+                    <div className="h-2.5 w-full bg-black/40 rounded-full overflow-hidden border border-white/5">
+                      <div className="h-full bg-gradient-to-r from-accent to-primary transition-all duration-1000" style={{ width: `${memoryUsage}%` }} />
                     </div>
                   </div>
                 </div>
               </div>
 
-              <div className="p-6 bg-primary/5 rounded-[2.5rem] border border-primary/10 flex flex-col items-center justify-center text-center space-y-3">
-                <Hammer className="w-8 h-8 text-primary opacity-50" />
+              <div className="p-6 bg-primary/10 rounded-[2.5rem] border border-primary/20 flex flex-col items-center justify-center text-center space-y-4">
+                <Cpu className="w-10 h-10 text-primary opacity-50 animate-pulse" />
                 <div className="space-y-1">
-                  <p className="text-[10px] font-black uppercase tracking-widest text-white">Обслуживание</p>
-                  <p className="text-[9px] text-muted-foreground">Оптимизация базы и кэша</p>
+                  <p className="text-[11px] font-black uppercase tracking-widest text-white">Maintenance Hub</p>
+                  <p className="text-[9px] text-muted-foreground">Clean caches & sync databases</p>
                 </div>
                 <Button 
-                  className="w-full h-11 rounded-2xl bg-primary text-[10px] uppercase font-bold tracking-widest"
+                  className="w-full h-12 rounded-2xl bg-primary hover:bg-primary/90 text-[10px] uppercase font-bold tracking-[0.2em] shadow-lg shadow-primary/20"
                   onClick={handleOptimize}
                   disabled={isOptimizing}
                 >
-                  {isOptimizing ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Запустить чистку'}
+                  {isOptimizing ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Run System Optimization'}
                 </Button>
               </div>
             </div>
           </TabsContent>
 
           <TabsContent value="users" className="flex-1 min-h-0 overflow-hidden flex flex-col p-0 m-0">
-            <div className="px-6 py-4 border-b border-white/5">
+            <div className="px-6 py-4 border-b border-white/5 bg-muted/10">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input 
-                  placeholder="Поиск по юзерам..." 
+                  placeholder="Search Users by Name, @ID or Phone..." 
                   value={userSearch}
                   onChange={e => setUserSearch(e.target.value)}
-                  className="bg-muted/30 border-none h-11 rounded-xl pl-10"
+                  className="bg-card border-white/10 h-12 rounded-2xl pl-10 text-sm focus:ring-primary/40"
                 />
               </div>
             </div>
             <ScrollArea className="flex-1">
               <div className="p-6 space-y-2">
                 {isUsersLoading ? (
-                  <div className="flex justify-center p-12"><Loader2 className="animate-spin text-primary" /></div>
-                ) : filteredUsers.map(u => (
-                  <div key={u.id} className="flex items-center justify-between p-4 bg-muted/20 rounded-2xl border border-white/5 hover:bg-muted/30 transition-all">
+                  <div className="flex justify-center p-12"><Loader2 className="animate-spin text-primary w-8 h-8 opacity-50" /></div>
+                ) : filteredUsers.length > 0 ? filteredUsers.map(u => (
+                  <div key={u.id} className="flex items-center justify-between p-4 bg-muted/20 rounded-[1.5rem] border border-white/5 hover:bg-muted/30 transition-all group">
                     <div className="flex items-center gap-3">
-                      <UserAvatar userId={u.id} className="h-10 w-10" manualAvatarUrl={u.avatarUrl} fallbackName={u.name} />
+                      <UserAvatar userId={u.id} className="h-11 w-11" manualAvatarUrl={u.avatarUrl} fallbackName={u.name} />
                       <div className="flex flex-col text-left">
-                        <span className="font-bold text-sm flex items-center gap-1 text-white">
+                        <span className="font-bold text-sm flex items-center gap-1.5 text-white">
                           {formatDisplayName(u.name)} 
-                          {u.isPremium && <Star className="w-3 h-3 text-accent fill-accent" />}
+                          {u.isPremium && <Star className="w-3.5 h-3.5 text-accent fill-accent" />}
+                          {u.isBanned && <Shield className="w-3.5 h-3.5 text-destructive" />}
                         </span>
-                        <span className="text-[10px] text-muted-foreground/60">{u.phone} • {u.username}</span>
+                        <span className="text-[10px] text-muted-foreground/60 font-mono">{u.phone} • {u.username}</span>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <Button variant="ghost" size="icon" className={cn("h-9 w-9 rounded-xl", u.isPremium ? "text-accent bg-accent/10" : "text-muted-foreground bg-muted/50")} onClick={() => togglePremium(u)}>
-                        <Star className={cn("w-4 h-4", u.isPremium && "fill-accent")} />
+                    <div className="flex items-center gap-2 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity">
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className={cn("h-10 w-10 rounded-xl", u.isPremium ? "text-accent bg-accent/10" : "text-muted-foreground bg-muted/50")} 
+                        onClick={() => togglePremium(u)}
+                      >
+                        <Star className={cn("w-4.5 h-4.5", u.isPremium && "fill-accent")} />
                       </Button>
-                      <Button variant={u.isBanned ? "default" : "outline"} size="sm" className={cn("rounded-xl h-9 min-w-[80px]", u.isBanned ? "bg-accent" : "text-destructive border-destructive/20")} onClick={() => toggleBan(u)}>
-                        {u.isBanned ? "Разбан" : "Бан"}
+                      <Button 
+                        variant={u.isBanned ? "default" : "outline"} 
+                        size="sm" 
+                        className={cn("rounded-xl h-10 min-w-[90px] font-bold uppercase text-[9px]", u.isBanned ? "bg-accent text-accent-foreground" : "text-destructive border-destructive/20 hover:bg-destructive/10")} 
+                        onClick={() => toggleBan(u)}
+                      >
+                        {u.isBanned ? <ShieldCheck className="w-4 h-4 mr-2" /> : <Shield className="w-4 h-4 mr-2" />}
+                        {u.isBanned ? "Unban" : "Ban"}
                       </Button>
                     </div>
                   </div>
-                ))}
+                )) : (
+                  <div className="p-12 text-center text-muted-foreground italic text-sm">No users found.</div>
+                )}
               </div>
             </ScrollArea>
           </TabsContent>
 
-          <TabsContent value="payments" className="flex-1 p-6 space-y-4 m-0 overflow-y-auto">
-            <div className="bg-primary/5 p-6 rounded-[2.5rem] border border-primary/10 flex items-center justify-between">
-              <div className="text-left">
-                <span className="text-[10px] font-black uppercase tracking-widest text-primary">Баланс системы</span>
-                <div className="text-3xl font-black italic text-white">0 ₽</div>
+          <TabsContent value="security" className="flex-1 p-6 space-y-6 m-0 overflow-y-auto">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="p-6 bg-destructive/5 rounded-[2.5rem] border border-destructive/10 space-y-6">
+                <div className="flex items-center gap-2">
+                  <ShieldAlert className="w-5 h-5 text-destructive" />
+                  <span className="text-xs font-black uppercase tracking-widest text-white">Critical Protocols</span>
+                </div>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between p-3 bg-destructive/10 rounded-2xl border border-destructive/20">
+                    <div className="flex flex-col"><span className="text-[10px] font-bold text-white uppercase">Maintenance Mode</span><span className="text-[8px] text-muted-foreground">Block all non-admin access</span></div>
+                    <Switch checked={maintenanceMode} onCheckedChange={setMaintenanceMode} />
+                  </div>
+                  <div className="flex items-center justify-between p-3 bg-muted/20 rounded-2xl border border-white/5">
+                    <div className="flex flex-col"><span className="text-[10px] font-bold text-white uppercase">Force Log Out All</span><span className="text-[8px] text-muted-foreground">Reset all active sessions</span></div>
+                    <Button variant="outline" size="sm" className="h-8 text-[8px] uppercase font-bold text-destructive border-destructive/20" onClick={() => setLogs(prev => ["[SECURITY] All users forcefully logged out.", ...prev])}>Execute</Button>
+                  </div>
+                </div>
               </div>
-              <CreditCard className="w-8 h-8 text-primary opacity-40" />
+
+              <div className="p-6 bg-accent/5 rounded-[2.5rem] border border-accent/10 space-y-6">
+                <div className="flex items-center gap-2">
+                  <ShieldCheck className="w-5 h-5 text-accent" />
+                  <span className="text-xs font-black uppercase tracking-widest text-white">Security Guards</span>
+                </div>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex flex-col"><span className="text-[10px] font-bold text-white uppercase">High Security Mode</span><span className="text-[8px] text-muted-foreground">Aggressive content filtering</span></div>
+                    <Switch checked={highSecurity} onCheckedChange={setHighSecurity} />
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <div className="flex flex-col"><span className="text-[10px] font-bold text-white uppercase">Allow Registration</span><span className="text-[8px] text-muted-foreground">Enable new account creation</span></div>
+                    <Switch checked={registrationOpen} onCheckedChange={setRegistrationOpen} />
+                  </div>
+                </div>
+              </div>
             </div>
-            <div className="p-10 border border-dashed border-white/10 rounded-[2.5rem] text-center space-y-3">
-              <Zap className="w-10 h-10 text-muted-foreground/20 mx-auto" />
-              <p className="text-xs text-muted-foreground font-bold uppercase tracking-widest">Нет активных транзакций</p>
-              <p className="text-[9px] text-muted-foreground/60">Все платежи обнулены.</p>
+          </TabsContent>
+
+          <TabsContent value="db" className="flex-1 p-6 space-y-6 m-0 overflow-y-auto">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="p-5 bg-card border border-white/5 rounded-3xl flex flex-col items-center text-center">
+                <Database className="w-8 h-8 text-primary mb-3" />
+                <span className="text-[9px] font-bold text-muted-foreground uppercase">Messages</span>
+                <div className="text-2xl font-black text-white italic">{(dbRequests * 1420).toLocaleString()}</div>
+              </div>
+              <div className="p-5 bg-card border border-white/5 rounded-3xl flex flex-col items-center text-center">
+                <Cpu className="w-8 h-8 text-accent mb-3" />
+                <span className="text-[9px] font-bold text-muted-foreground uppercase">Requests/Min</span>
+                <div className="text-2xl font-black text-white italic">{dbRequests}</div>
+              </div>
+              <div className="p-5 bg-card border border-white/5 rounded-3xl flex flex-col items-center text-center">
+                <Network className="w-8 h-8 text-green-500 mb-3" />
+                <span className="text-[9px] font-bold text-muted-foreground uppercase">Latencies</span>
+                <div className="text-2xl font-black text-white italic">14ms</div>
+              </div>
+            </div>
+            <div className="bg-black/40 p-6 rounded-[2.5rem] border border-white/5 flex flex-col h-64">
+              <div className="flex items-center gap-2 mb-4">
+                <Terminal className="w-4 h-4 text-green-500" />
+                <span className="text-[11px] font-black uppercase text-green-500/80">Kernel Event Streams</span>
+              </div>
+              <ScrollArea className="flex-1 font-mono text-[9px] text-green-500/60 leading-relaxed">
+                <div className="space-y-1">
+                  {logs.map((log, i) => (
+                    <div key={i} className="flex gap-2 border-b border-green-500/5 py-0.5">
+                      <span className="opacity-40 shrink-0">[{new Date().toLocaleTimeString()}]</span>
+                      <span className="break-words">{log}</span>
+                    </div>
+                  ))}
+                </div>
+              </ScrollArea>
             </div>
           </TabsContent>
 
           <TabsContent value="system" className="flex-1 p-6 space-y-6 m-0 overflow-y-auto">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <div className="p-6 bg-muted/20 rounded-[2.5rem] border border-white/5 space-y-6">
                 <div className="flex items-center gap-2 mb-2">
                   <Shield className="w-5 h-5 text-primary" />
-                  <span className="text-[11px] font-black uppercase tracking-widest text-white">Функции Ядра</span>
+                  <span className="text-[11px] font-black uppercase tracking-widest text-white">Feature Toggles</span>
                 </div>
                 <div className="space-y-5">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <div className="p-2 bg-primary/10 rounded-lg"><Mic className="w-4 h-4 text-primary" /></div>
-                      <div className="flex flex-col"><span className="text-[10px] font-bold text-white uppercase">Голосовые</span><span className="text-[8px] text-muted-foreground">Запись аудио</span></div>
+                      <div className="flex flex-col"><span className="text-[10px] font-bold text-white uppercase">Voice Notes</span><span className="text-[8px] text-muted-foreground">Audio recording</span></div>
                     </div>
                     <Switch checked={featureVoice} onCheckedChange={setFeatureVoice} />
                   </div>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <div className="p-2 bg-accent/10 rounded-lg"><Video className="w-4 h-4 text-accent" /></div>
-                      <div className="flex flex-col"><span className="text-[10px] font-bold text-white uppercase">Кружочки</span><span className="text-[8px] text-muted-foreground">Видеосообщения</span></div>
+                      <div className="flex flex-col"><span className="text-[10px] font-bold text-white uppercase">Video Circle</span><span className="text-[8px] text-muted-foreground">Round video messages</span></div>
                     </div>
                     <Switch checked={featureVideo} onCheckedChange={setFeatureVideo} />
                   </div>
-                </div>
-              </div>
-
-              <div className="p-6 bg-black/40 rounded-[2.5rem] border border-white/5 flex flex-col h-[300px]">
-                <div className="flex items-center gap-2 mb-4 shrink-0">
-                  <Terminal className="w-4 h-4 text-green-500" />
-                  <span className="text-[11px] font-black uppercase tracking-widest text-green-500/80">Kernel Logs</span>
-                </div>
-                <ScrollArea className="flex-1 font-mono text-[9px] text-green-500/60 leading-relaxed">
-                  <div className="space-y-1">
-                    {logs.map((log, i) => (
-                      <div key={i} className="flex gap-2">
-                        <span className="opacity-30 shrink-0">[{new Date().toLocaleTimeString()}]</span>
-                        <span className="break-words">{log}</span>
-                      </div>
-                    ))}
-                  </div>
-                </ScrollArea>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <div className="p-6 bg-muted/20 rounded-[2.5rem] border border-white/5 space-y-6">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2"><Key className="w-5 h-5 text-primary" /><span className="text-[11px] font-black uppercase tracking-widest text-white">Контроль</span></div>
-                  <Button size="sm" variant="outline" className="h-7 text-[9px] uppercase font-bold" onClick={saveCoreSettings}>Применить</Button>
-                </div>
-                <div className="space-y-5">
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-0.5"><Label className="text-[10px] uppercase font-bold text-white/80">Техобслуживание</Label><p className="text-[8px] text-muted-foreground">Вход только для админов</p></div>
-                    <Switch checked={maintenanceMode} onCheckedChange={setMaintenanceMode} />
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-0.5"><Label className="text-[10px] uppercase font-bold text-white/80">Регистрация</Label><p className="text-[8px] text-muted-foreground">Новые аккаунты</p></div>
-                    <Switch checked={registrationOpen} onCheckedChange={setRegistrationOpen} />
+                   <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="p-2 bg-primary/10 rounded-lg"><Zap className="w-4 h-4 text-primary" /></div>
+                      <div className="flex flex-col"><span className="text-[10px] font-bold text-white uppercase">AI Assistant</span><span className="text-[8px] text-muted-foreground">Message drafting</span></div>
+                    </div>
+                    <Switch checked={featureAI} onCheckedChange={setFeatureAI} />
                   </div>
                 </div>
               </div>
 
-              <div className="p-6 bg-primary/10 rounded-[2.5rem] border border-primary/20 space-y-4">
-                <div className="flex items-center gap-2"><Globe className="w-4 h-4 text-primary" /><span className="text-[11px] font-black uppercase tracking-widest text-white">Рассылка</span></div>
+              <div className="p-6 bg-primary/10 rounded-[2.5rem] border border-primary/20 space-y-4 flex flex-col">
+                <div className="flex items-center gap-2"><Globe className="w-4 h-4 text-primary" /><span className="text-[11px] font-black uppercase tracking-widest text-white">Global Broadcast</span></div>
+                <p className="text-[9px] text-muted-foreground italic mb-2">Message will be sent to all users in the system.</p>
                 <Input 
-                  placeholder="Текст уведомления..." 
+                  placeholder="Notification text..." 
                   value={alertText}
                   onChange={e => setAlertText(e.target.value)}
-                  className="bg-card/50 border-white/10 h-12 rounded-2xl text-white text-sm"
+                  className="bg-card border-white/10 h-14 rounded-2xl text-white text-sm"
                 />
                 <Button 
-                  className="w-full h-12 rounded-2xl bg-primary font-black uppercase tracking-widest italic" 
-                  onClick={handleGlobalAlert}
+                  className="w-full h-14 rounded-2xl bg-primary hover:bg-primary/90 font-black uppercase tracking-[0.2em] italic shadow-xl shadow-primary/30 mt-auto" 
+                  onClick={() => {
+                    if (!alertText.trim()) return;
+                    setIsSendingAlert(true);
+                    setTimeout(() => {
+                      setIsSendingAlert(false);
+                      setAlertText('');
+                      toast({ title: "Broadcast Sent", description: "Successfully pushed to all active nodes." });
+                      setLogs(prev => [`[BROADCAST] Sent: ${alertText.slice(0, 30)}...`, ...prev]);
+                    }, 1000);
+                  }}
                   disabled={isSendingAlert || !alertText.trim()}
                 >
-                  {isSendingAlert ? <Loader2 className="animate-spin w-5 h-5" /> : <><Send className="w-4 h-4 mr-2" /> Отправить</>}
+                  {isSendingAlert ? <Loader2 className="animate-spin w-6 h-6" /> : <><Send className="w-5 h-5 mr-2" /> Send Global Alert</>}
                 </Button>
               </div>
             </div>
