@@ -32,7 +32,7 @@ import {
   Calendar, User as UserIcon, ShieldCheck, XCircle
 } from 'lucide-react';
 import { cn, isUserPremium } from '@/lib/utils';
-import { collection, doc, increment } from 'firebase/firestore';
+import { collection, doc, increment, query, where, getDocs, limit } from 'firebase/firestore';
 import { deleteDocumentNonBlocking, addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { transcribeVoice } from '@/ai/flows/voice-to-text-flow';
 import type { Message, User } from '@/lib/types';
@@ -360,6 +360,8 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onEdit, size 
       {isReactionPickerOpen && (
         <Dialog open={isReactionPickerOpen} onOpenChange={setIsReactionPickerOpen}>
           <DialogContent className="max-w-[280px] p-2 bg-card/95 backdrop-blur-xl border-border/40">
+            <DialogTitle className="sr-only">Выбор реакции</DialogTitle>
+            <DialogDescription className="sr-only">Выберите эмодзи для реакции на сообщение</DialogDescription>
             <div className="grid grid-cols-4 gap-1">
               {REACTIONS.map(emoji => (
                 <button 
