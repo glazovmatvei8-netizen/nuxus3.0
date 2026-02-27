@@ -11,10 +11,11 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { CreateChatModal } from './modals/create-chat-modal';
 import { SettingsModal } from './modals/settings-modal';
-import type { ChatType, User } from '@/lib/types';
+import type { ChatType, User, Message } from '@/lib/types';
 import { useFirestore, useUser, useCollection, useDoc, useMemoFirebase } from '@/firebase';
 import { collection, query, where, doc } from 'firebase/firestore';
 import { formatLastSeen, formatDisplayName, cn } from '@/lib/utils';
+import { Badge } from '@/components/ui/badge';
 
 export default function ChatSidebar() {
   const { user } = useUser();
@@ -155,6 +156,7 @@ export default function ChatSidebar() {
 
 function ChatListItem({ chat, isActive, otherId, cachedDisplayName, manualAvatarUrl, onClick }: any) {
   const db = useFirestore();
+  const { user } = useUser();
   const [status, setStatus] = useState<string>('');
   
   const userProfileRef = useMemoFirebase(() => {
@@ -163,6 +165,18 @@ function ChatListItem({ chat, isActive, otherId, cachedDisplayName, manualAvatar
   }, [db, otherId]);
   
   const { data: otherProfile } = useDoc<User>(userProfileRef);
+
+  // Unread messages count logic
+  const unreadQuery = useMemoFirebase(() => {
+    if (!db || !chat.id || !user) return null;
+    return query(
+      collection(db, 'chats', chat.id, 'messages'),
+      where('isRead', '==', false)
+    );
+  }, [db, chat.id, user]);
+
+  const { data: unreadData } = useCollection<Message>(unreadQuery);
+  const unreadCount = (unreadData || []).filter(m => m.senderId !== user?.uid).length;
 
   useEffect(() => {
     const isOtherDeleted = otherProfile?.isBanned || otherProfile?.name?.includes('Удалённый Аккаунт');
@@ -183,7 +197,7 @@ function ChatListItem({ chat, isActive, otherId, cachedDisplayName, manualAvatar
     <div
       onClick={onClick}
       className={cn(
-        "flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all duration-200 group",
+        "flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all duration-200 group relative",
         isActive ? 'bg-primary shadow-lg shadow-primary/20 text-white' : 'hover:bg-muted/40 text-foreground'
       )}
     >
@@ -201,6 +215,11 @@ function ChatListItem({ chat, isActive, otherId, cachedDisplayName, manualAvatar
       <div className="flex-1 min-w-0">
         <div className="flex items-center justify-between gap-2">
           <span className="font-semibold truncate text-sm">{finalDisplayName}</span>
+          {unreadCount > 0 && !isActive && (
+            <Badge variant="default" className="bg-accent text-white rounded-full h-5 min-w-5 flex items-center justify-center text-[10px] font-bold px-1 animate-in zoom-in-50 duration-200">
+              {unreadCount}
+            </Badge>
+          )}
         </div>
         <div className="flex items-center justify-between">
           <div className={cn(

@@ -37,9 +37,9 @@ service cloud.firestore {
       allow delete: if isAdmin() || (isSignedIn() && resource.data.ownerId == request.auth.uid);
 
       match /messages/{messageId} {
-        allow read: if isAdmin() || (isSignedIn() && isNotBanned() && (request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participantIds));
+        allow read, list: if isAdmin() || (isSignedIn() && isNotBanned() && (request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participantIds));
         allow create: if isSignedIn() && isNotBanned() && (request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participantIds);
-        allow update, delete: if isAdmin() || (isSignedIn() && resource.data.senderId == request.auth.uid);
+        allow update, delete: if isAdmin() || (isSignedIn() && (resource.data.senderId == request.auth.uid || request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participantIds));
 
         match /reactions/{reactionId} {
           allow read: if isAdmin() || (isSignedIn() && isNotBanned() && (request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participantIds));
