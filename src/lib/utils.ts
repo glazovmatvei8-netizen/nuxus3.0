@@ -43,8 +43,8 @@ export function formatLastSeen(
     const now = new Date();
     const diffSeconds = Math.max(0, differenceInSeconds(now, lastSeen));
 
-    if (diffSeconds < 30) return 'в сети';
-    if (diffSeconds < 60) return 'был(а) только что';
+    // Если прошло меньше минуты - считаем онлайн
+    if (diffSeconds < 60) return 'в сети';
     
     return `был(а) ${formatDistanceToNow(lastSeen, { addSuffix: true, locale: ru })}`;
   } catch (e) {
