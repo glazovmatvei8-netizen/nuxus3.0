@@ -19,7 +19,6 @@ import { addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/no
 import { formatDisplayName, isUserPremium } from '@/lib/utils';
 import type { Message, User as UserType, Chat } from '@/lib/types';
 
-// Изолированный список сообщений для предотвращения перерисовок всего ChatArea
 const MessageList = memo(({ 
   messages, 
   userId, 
@@ -75,6 +74,9 @@ export default function ChatArea() {
     }
     return null;
   }, [chat, user]);
+
+  const otherProfileRef = useMemoFirebase(() => (!db || !otherId) ? null : doc(db, 'users', otherId), [db, otherId]);
+  const { data: otherProfile } = useDoc<UserType>(otherProfileRef);
 
   const otherMetadata = useMemo(() => {
     if (otherId && chat?.metadata && chat.metadata[otherId]) {
@@ -142,16 +144,17 @@ export default function ChatArea() {
   }, [messageInput, currentChatId, user, db, userProfile, replyTo, scrollToBottom]);
 
   const chatDisplayName = useMemo(() => {
-    if (!chat) return '...';
-    if (otherMetadata) return otherMetadata.name;
-    return chat.name;
-  }, [chat, otherMetadata]);
+    if (otherProfile?.name) return otherProfile.name;
+    if (otherMetadata?.name) return otherMetadata.name;
+    return chat?.name || '...';
+  }, [chat, otherMetadata, otherProfile]);
 
   const chatDisplayUsername = useMemo(() => {
+    if (otherProfile?.username) return otherProfile.username;
     if (otherMetadata?.username) return otherMetadata.username;
     if (chat?.username) return chat.username;
     return '';
-  }, [otherMetadata, chat]);
+  }, [otherMetadata, chat, otherProfile]);
 
   if (!currentChatId) return (
     <div className="flex-1 flex flex-col items-center justify-center text-center p-8 bg-background">
@@ -193,7 +196,7 @@ export default function ChatArea() {
             onReply={setReplyTo}
             amIPremium={amIPremium}
             isAdmin={chat?.ownerId === user?.uid || chat?.adminIds?.includes(user?.uid || '')}
-            otherAvatarUrl={otherMetadata?.avatarUrl}
+            otherAvatarUrl={otherProfile?.avatarUrl || otherMetadata?.avatarUrl}
           />
         )}
         {isMessagesLoading && (
