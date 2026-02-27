@@ -126,6 +126,7 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: any) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const lastTypingSignalRef = useRef<number>(0);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const dataLoadedRef = useRef(false);
   
   const { toast } = useToast();
 
@@ -192,12 +193,18 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: any) {
   useEffect(() => {
     if (messages && messages.length > 0) {
       const isInitial = !dataLoadedRef.current;
-      scrollToBottom(isInitial ? 'instant' as any : 'auto');
-      dataLoadedRef.current = true;
+      if (isInitial) {
+        // Мгновенный скролл без анимации при первом открытии
+        setTimeout(() => scrollToBottom('instant' as any), 10);
+        dataLoadedRef.current = true;
+      } else {
+        // Плавный скролл при новых сообщениях
+        scrollToBottom('smooth');
+      }
     }
   }, [messages, currentChatId, scrollToBottom]);
 
-  const dataLoadedRef = useRef(false);
+  // Сброс флага загрузки при смене чата
   useEffect(() => {
     dataLoadedRef.current = false;
   }, [currentChatId]);
@@ -205,6 +212,7 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: any) {
   const handleTyping = useCallback((isTyping: boolean) => {
     if (!currentChatId || !user || !db || isBlocked || !isParticipant) return;
     
+    // Блокировка печати для удаленных пользователей
     const isOtherDeleted = otherUserProfile?.isBanned || otherUserProfile?.name?.includes('Удалённый Аккаунт');
     if (isOtherDeleted) return;
 
@@ -212,7 +220,7 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: any) {
     const chatDocRef = doc(db, 'chats', currentChatId);
 
     if (isTyping) {
-      // Throttling: отправляем сигнал не чаще раза в 3.5 сек
+      // Throttling: отправляем сигнал не чаще раза в 3.5 сек для скорости
       if (now - lastTypingSignalRef.current > 3500) {
         updateDocumentNonBlocking(chatDocRef, { [`typing.${user.uid}`]: true });
         lastTypingSignalRef.current = now;
@@ -242,15 +250,6 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: any) {
     else if (chat?.type === 'private') setStatusString(formatLastSeen(otherUserProfile?.lastSeen, otherUserProfile?.settings?.privacy?.lastSeenVisibility, isOtherDeleted));
     else setStatusString(chat?.type === 'group' ? 'Группа' : (chat?.type === 'channel' ? 'Канал' : 'Избранное'));
   }, [isOtherProfileLoading, otherUserProfile, chat?.type, chat?.typing, otherId, isBlockedByMe, isBlockedByThem]);
-
-  useEffect(() => {
-    if (messages && user && currentChatId && chat && db && isParticipant) {
-      const unread = messages.filter(msg => !msg.isRead && msg.senderId !== user.uid);
-      unread.forEach(msg => {
-        updateDocumentNonBlocking(doc(db, 'chats', currentChatId, 'messages', msg.id), { isRead: true });
-      });
-    }
-  }, [messages, user, currentChatId, db, chat, isParticipant]);
 
   const handleSendMessage = useCallback((content: string, type: string = 'text') => {
     if (isBlocked || userProfile?.isBanned || !isParticipant) return;
@@ -405,12 +404,6 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: any) {
               />
             ))}
             {isMessagesLoading && <div className="flex justify-center p-8"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>}
-            {!isMessagesLoading && isSearchOpen && searchQuery.trim() && filteredMessages.length === 0 && (
-              <div className="flex flex-col items-center justify-center p-12 text-center opacity-40">
-                <Search className="w-12 h-12 mb-2" />
-                <p className="text-sm">Ничего не найдено</p>
-              </div>
-            )}
           </div>
         </ScrollArea>
         {showScrollDown && (

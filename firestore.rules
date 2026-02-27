@@ -7,7 +7,7 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    // Твой аккаунт администратора
+    // Твой аккаунт администратора (GCvLucN8CjNcdaxPO2vmpZ84hNl1)
     function isAdmin() {
       return isSignedIn() && (
         request.auth.token.email == '79513332147@nuxus.chat' || 
@@ -28,7 +28,7 @@ service cloud.firestore {
 
     // Чаты и сообщения
     match /chats/{chatId} {
-      // Публичные чаты (с username) можно искать всем
+      // Публичные чаты (с username) можно искать всем авторизованным
       allow read: if isSignedIn() || resource.data.username != null;
       allow write: if isSignedIn();
 
