@@ -44,7 +44,7 @@ export interface Chat {
 export interface UserPrivacy {
   phoneVisibility: 'everybody' | 'contacts' | 'nobody';
   lastSeenVisibility: 'everybody' | 'nobody';
-  allowGroupsFrom: 'everybody' | 'contacts';
+  allowGroupsFrom: 'everybody' | 'contacts' | 'nobody';
 }
 
 export interface UserSettings {

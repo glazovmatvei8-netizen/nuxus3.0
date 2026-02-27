@@ -16,7 +16,7 @@ import {
 import { useAuth, useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
-  LogOut, User, LayoutGrid, Palette, Loader2, Sparkles, X, Wand2, AtSign, Settings2, Check, ShieldCheck, Lock, Trash2, UserX
+  LogOut, User, LayoutGrid, Palette, Loader2, Sparkles, X, Wand2, AtSign, Settings2, Check, ShieldCheck, Lock, Trash2, UserX, Users
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { signOut } from 'firebase/auth';
@@ -62,6 +62,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
     chatBackground: 'default',
     phoneVisibility: 'nobody',
     lastSeenVisibility: 'everybody',
+    allowGroupsFrom: 'everybody',
     inactivityDeletion: 'never',
   });
 
@@ -80,6 +81,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
         chatBackground: profile.settings?.chatBackground || 'default',
         phoneVisibility: profile.settings?.privacy?.phoneVisibility || 'nobody',
         lastSeenVisibility: profile.settings?.privacy?.lastSeenVisibility || 'everybody',
+        allowGroupsFrom: profile.settings?.privacy?.allowGroupsFrom || 'everybody',
         inactivityDeletion: profile.inactivityDeletion || 'never',
       });
       if (open) isInitialized.current = true;
@@ -106,6 +108,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
           ...profile?.settings?.privacy,
           phoneVisibility: form.phoneVisibility,
           lastSeenVisibility: form.lastSeenVisibility,
+          allowGroupsFrom: form.allowGroupsFrom,
         }
       }
     });
@@ -268,6 +271,22 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="everybody">Все</SelectItem>
+                        <SelectItem value="nobody">Никто</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label className="text-xs ml-1 font-semibold text-muted-foreground flex items-center gap-2">
+                      <Users className="w-3 h-3" /> Кто может добавлять меня в группы
+                    </Label>
+                    <Select value={form.allowGroupsFrom} onValueChange={(val) => setForm({...form, allowGroupsFrom: val as any})}>
+                      <SelectTrigger className="bg-background/50 h-11 rounded-xl">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="everybody">Все</SelectItem>
+                        <SelectItem value="contacts">Мои контакты</SelectItem>
                         <SelectItem value="nobody">Никто</SelectItem>
                       </SelectContent>
                     </Select>

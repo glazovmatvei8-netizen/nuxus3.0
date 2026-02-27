@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { Sparkles, Loader2, Trash2, ShieldAlert, ShieldCheck, Ban, Gavel, UserX, X } from 'lucide-react';
+import { Sparkles, Loader2, Trash2, ShieldAlert, ShieldCheck, Ban, Gavel, UserX, X, UserPlus } from 'lucide-react';
 import { useFirestore, useCollection, useMemoFirebase, useUser, useDoc } from '@/firebase';
 import { collection, query, where, orderBy, limit, getDocs, doc, arrayUnion, arrayRemove } from 'firebase/firestore';
 import { chatConversationSummary } from '@/ai/flows/chat-conversation-summary-flow';
@@ -16,6 +16,7 @@ import { deleteDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase
 import { useAppState } from '@/lib/store';
 import { cn, formatDisplayName } from '@/lib/utils';
 import type { Message, User } from '@/lib/types';
+import { AddMemberModal } from './add-member-modal';
 
 interface ChatInfoModalProps {
   open: boolean;
@@ -30,6 +31,7 @@ export function ChatInfoModal({ open, onOpenChange, chat }: ChatInfoModalProps) 
   const [summary, setSummary] = useState<string | null>(null);
   const [isSummarizing, setIsSummarizing] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isAddMemberOpen, setIsAddMemberOpen] = useState(false);
   const { toast } = useToast();
 
   const isOwner = user && chat.ownerId === user.uid;
@@ -133,116 +135,137 @@ export function ChatInfoModal({ open, onOpenChange, chat }: ChatInfoModalProps) 
   const chatAvatar = chat.avatarUrl;
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md bg-card/95 backdrop-blur-xl border-border/40 p-0 overflow-hidden max-h-[90vh] flex flex-col">
-        <DialogHeader className="p-6 bg-primary/5 border-b border-border/40 text-center flex flex-col items-center relative">
-           <Button variant="ghost" size="icon" className="absolute right-4 top-4" onClick={() => onOpenChange(false)}><X className="w-5 h-5" /></Button>
-          <Avatar className="h-24 w-24 mb-4 ring-4 ring-primary/10">
-            <AvatarImage src={chatAvatar || ''} />
-            <AvatarFallback className="text-2xl font-bold">{chatName.slice(0, 2)}</AvatarFallback>
-          </Avatar>
-          <DialogTitle className="text-xl flex items-center gap-2">
-            {chatName}
-            {isAdmin && <ShieldCheck className="w-4 h-4 text-accent" />}
-          </DialogTitle>
-          <DialogDescription className="text-xs">{chat.username}</DialogDescription>
-        </DialogHeader>
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="max-w-md bg-card/95 backdrop-blur-xl border-border/40 p-0 overflow-hidden max-h-[90vh] flex flex-col">
+          <DialogHeader className="p-6 bg-primary/5 border-b border-border/40 text-center flex flex-col items-center relative">
+             <Button variant="ghost" size="icon" className="absolute right-4 top-4" onClick={() => onOpenChange(false)}><X className="w-5 h-5" /></Button>
+            <Avatar className="h-24 w-24 mb-4 ring-4 ring-primary/10">
+              <AvatarImage src={chatAvatar || ''} />
+              <AvatarFallback className="text-2xl font-bold">{chatName.slice(0, 2)}</AvatarFallback>
+            </Avatar>
+            <DialogTitle className="text-xl flex items-center gap-2">
+              {chatName}
+              {isAdmin && <ShieldCheck className="w-4 h-4 text-accent" />}
+            </DialogTitle>
+            <DialogDescription className="text-xs">{chat.username}</DialogDescription>
+          </DialogHeader>
 
-        <Tabs defaultValue="info" className="flex-1 overflow-hidden">
-          <TabsList className="grid w-full grid-cols-2 h-12 bg-muted/30 p-1">
-            <TabsTrigger value="info" className="rounded-lg">Инфо</TabsTrigger>
-            <TabsTrigger value="members" className="rounded-lg">Участники</TabsTrigger>
-          </TabsList>
+          <Tabs defaultValue="info" className="flex-1 overflow-hidden">
+            <TabsList className="grid w-full grid-cols-2 h-12 bg-muted/30 p-1">
+              <TabsTrigger value="info" className="rounded-lg">Инфо</TabsTrigger>
+              <TabsTrigger value="members" className="rounded-lg">Участники</TabsTrigger>
+            </TabsList>
 
-          <ScrollArea className="h-[350px]">
-            <TabsContent value="info" className="p-6 space-y-6">
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">AI Суммаризация</h3>
-                  <Button variant="ghost" size="sm" className="h-7 text-xs text-primary" onClick={handleSummarize} disabled={isSummarizing}>
-                    {isSummarizing ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3 mr-1" />}
-                    Обновить
-                  </Button>
-                </div>
-                <div className="bg-muted/30 p-4 rounded-xl border border-border/40">
-                  {summary ? <p className="text-sm italic leading-relaxed">{summary}</p> : <p className="text-xs text-muted-foreground italic text-center">Суммаризация последних сообщений поможет быстро войти в курс дела.</p>}
-                </div>
-              </div>
-              
-              <div className="space-y-2">
-                <h3 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Описание</h3>
-                <p className="text-sm bg-muted/10 p-3 rounded-lg border border-border/20">{chat.description || 'Нет описания'}</p>
-              </div>
-
-              <div className="pt-4 space-y-3">
-                {isPrivate && otherId && (
-                  <Button 
-                    variant={isBlockedByMe ? "outline" : "ghost"} 
-                    className={isBlockedByMe ? "w-full text-accent" : "w-full text-destructive hover:bg-destructive/10"}
-                    onClick={handleToggleBlock}
-                  >
-                    {isBlockedByMe ? <ShieldCheck className="w-4 h-4 mr-2" /> : <ShieldAlert className="w-4 h-4 mr-2" />}
-                    {isBlockedByMe ? "Разблокировать" : "Заблокировать для себя"}
-                  </Button>
-                )}
-                {(isOwner || isAdmin) && (
-                  <Button 
-                    variant="ghost" 
-                    className="w-full text-destructive hover:bg-destructive/10" 
-                    onClick={handleDeleteChat}
-                    disabled={isDeleting}
-                  >
-                    {isDeleting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Trash2 className="w-4 h-4 mr-2" />}
-                    {isAdmin && !isOwner ? "Удалить чат (Админ)" : "Удалить чат для всех"}
-                  </Button>
-                )}
-              </div>
-            </TabsContent>
-
-            <TabsContent value="members" className="p-4 space-y-1">
-              {members?.map(userMember => (
-                <div key={userMember.id} className="flex items-center justify-between p-3 rounded-xl hover:bg-muted/40 transition-colors group">
-                  <div className="flex items-center gap-3">
-                    <Avatar className="h-10 w-10">
-                      <AvatarImage src={userMember.avatarUrl || ''} />
-                      <AvatarFallback className="bg-primary/20 text-primary font-bold">{userMember.name?.slice(0, 2)}</AvatarFallback>
-                    </Avatar>
-                    <div className="flex flex-col">
-                      <div className="flex items-center gap-1">
-                        <span className="text-sm font-semibold">{formatDisplayName(userMember.name)}</span>
-                        {userMember.isBanned && <Ban className="w-3 h-3 text-destructive" />}
-                      </div>
-                      <span className="text-[10px] text-muted-foreground">{userMember.username}</span>
-                    </div>
+            <ScrollArea className="h-[350px]">
+              <TabsContent value="info" className="p-6 space-y-6">
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">AI Суммаризация</h3>
+                    <Button variant="ghost" size="sm" className="h-7 text-xs text-primary" onClick={handleSummarize} disabled={isSummarizing}>
+                      {isSummarizing ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3 mr-1" />}
+                      Обновить
+                    </Button>
                   </div>
-                  {isAdmin && userMember.id !== user?.uid && (
-                    <div className="flex gap-1">
-                      <Button 
-                        size="icon" 
-                        variant="ghost" 
-                        className={cn("h-8 w-8 rounded-full", userMember.isBanned ? "text-accent" : "text-destructive opacity-0 group-hover:opacity-100")} 
-                        onClick={() => handleToggleBan(userMember)}
-                        title={userMember.isBanned ? "Разбанить" : "Забанить"}
-                      >
-                        {userMember.isBanned ? <ShieldCheck className="w-4 h-4" /> : <Gavel className="w-4 h-4" />}
-                      </Button>
-                      <Button 
-                        size="icon" 
-                        variant="ghost" 
-                        className="h-8 w-8 rounded-full text-destructive opacity-0 group-hover:opacity-100"
-                        onClick={() => handlePermanentDelete(userMember)}
-                        title="Удалить навсегда"
-                      >
-                        <UserX className="w-4 h-4" />
-                      </Button>
-                    </div>
+                  <div className="bg-muted/30 p-4 rounded-xl border border-border/40">
+                    {summary ? <p className="text-sm italic leading-relaxed">{summary}</p> : <p className="text-xs text-muted-foreground italic text-center">Суммаризация последних сообщений поможет быстро войти в курс дела.</p>}
+                  </div>
+                </div>
+                
+                <div className="space-y-2">
+                  <h3 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Описание</h3>
+                  <p className="text-sm bg-muted/10 p-3 rounded-lg border border-border/20">{chat.description || 'Нет описания'}</p>
+                </div>
+
+                <div className="pt-4 space-y-3">
+                  {isPrivate && otherId && (
+                    <Button 
+                      variant={isBlockedByMe ? "outline" : "ghost"} 
+                      className={isBlockedByMe ? "w-full text-accent" : "w-full text-destructive hover:bg-destructive/10"}
+                      onClick={handleToggleBlock}
+                    >
+                      {isBlockedByMe ? <ShieldCheck className="w-4 h-4 mr-2" /> : <ShieldAlert className="w-4 h-4 mr-2" />}
+                      {isBlockedByMe ? "Разблокировать" : "Заблокировать для себя"}
+                    </Button>
+                  )}
+                  {(isOwner || isAdmin) && (
+                    <Button 
+                      variant="ghost" 
+                      className="w-full text-destructive hover:bg-destructive/10" 
+                      onClick={handleDeleteChat}
+                      disabled={isDeleting}
+                    >
+                      {isDeleting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Trash2 className="w-4 h-4 mr-2" />}
+                      {isAdmin && !isOwner ? "Удалить чат (Админ)" : "Удалить чат для всех"}
+                    </Button>
                   )}
                 </div>
-              ))}
-            </TabsContent>
-          </ScrollArea>
-        </Tabs>
-      </DialogContent>
-    </Dialog>
+              </TabsContent>
+
+              <TabsContent value="members" className="p-4 space-y-2">
+                {(isOwner || isAdmin || chat.type === 'group') && (
+                  <Button 
+                    variant="outline" 
+                    className="w-full h-11 rounded-xl mb-4 border-primary/20 hover:bg-primary/5 text-primary font-bold gap-2"
+                    onClick={() => setIsAddMemberOpen(true)}
+                  >
+                    <UserPlus className="w-4 h-4" /> Добавить участников
+                  </Button>
+                )}
+                <div className="space-y-1">
+                  {members?.map(userMember => (
+                    <div key={userMember.id} className="flex items-center justify-between p-3 rounded-xl hover:bg-muted/40 transition-colors group">
+                      <div className="flex items-center gap-3">
+                        <Avatar className="h-10 w-10">
+                          <AvatarImage src={userMember.avatarUrl || ''} />
+                          <AvatarFallback className="bg-primary/20 text-primary font-bold">{userMember.name?.slice(0, 2)}</AvatarFallback>
+                        </Avatar>
+                        <div className="flex flex-col">
+                          <div className="flex items-center gap-1">
+                            <span className="text-sm font-semibold">{formatDisplayName(userMember.name)}</span>
+                            {userMember.isBanned && <Ban className="w-3 h-3 text-destructive" />}
+                          </div>
+                          <span className="text-[10px] text-muted-foreground">{userMember.username}</span>
+                        </div>
+                      </div>
+                      {isAdmin && userMember.id !== user?.uid && (
+                        <div className="flex gap-1">
+                          <Button 
+                            size="icon" 
+                            variant="ghost" 
+                            className={cn("h-8 w-8 rounded-full", userMember.isBanned ? "text-accent" : "text-destructive opacity-0 group-hover:opacity-100")} 
+                            onClick={() => handleToggleBan(userMember)}
+                            title={userMember.isBanned ? "Разбанить" : "Забанить"}
+                          >
+                            {userMember.isBanned ? <ShieldCheck className="w-4 h-4" /> : <Gavel className="w-4 h-4" />}
+                          </Button>
+                          <Button 
+                            size="icon" 
+                            variant="ghost" 
+                            className="h-8 w-8 rounded-full text-destructive opacity-0 group-hover:opacity-100"
+                            onClick={() => handlePermanentDelete(userMember)}
+                            title="Удалить навсегда"
+                          >
+                            <UserX className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </TabsContent>
+            </ScrollArea>
+          </Tabs>
+        </DialogContent>
+      </Dialog>
+      {chat.id && (
+        <AddMemberModal 
+          open={isAddMemberOpen} 
+          onOpenChange={setIsAddMemberOpen} 
+          chatId={chat.id} 
+          currentParticipantIds={chat.participantIds} 
+        />
+      )}
+    </>
   );
 }
