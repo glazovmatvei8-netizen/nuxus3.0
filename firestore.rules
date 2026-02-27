@@ -15,23 +15,61 @@ service cloud.firestore {
       );
     }
 
-    // Правило для админа: безусловный доступ ко всему, включая подколлекции
+    // Проверка членства в чате
+    function isChatMember(chatId) {
+      return isSignedIn() && (
+        exists(/databases/$(database)/documents/chats/$(chatId)) &&
+        request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participantIds
+      );
+    }
+
+    // Глобальное правило для админа: полный доступ
     match /{document=**} {
       allow read, write: if isAdmin();
     }
 
-    // Пользователи: чтение профилей всем (для поиска), запись только себе
+    // Пользователи
     match /users/{userId} {
+      // Профили доступны для поиска всем авторизованным
       allow read: if isSignedIn();
+      // Запись только в свой профиль
       allow write: if isSignedIn() && request.auth.uid == userId;
     }
 
-    // Чаты и сообщения: доступ всем авторизованным для глобального поиска и чтения
+    // Чаты
     match /chats/{chatId} {
-      allow read, write: if isSignedIn();
+      // Читать чат могут только участники или для глобального поиска (если есть username)
+      allow read: if isSignedIn() && (
+        (resource != null && request.auth.uid in resource.data.participantIds) || 
+        (resource != null && resource.data.username != null) ||
+        isAdmin()
+      );
+      
+      // Создавать может любой, обновлять только участник
+      allow create: if isSignedIn();
+      allow update: if isSignedIn() && (request.auth.uid in resource.data.participantIds || isAdmin());
+      allow delete: if isAdmin() || (isSignedIn() && request.auth.uid == resource.data.ownerId);
 
-      match /{allSubcollections=**} {
-        allow read, write: if isSignedIn();
+      // Сообщения
+      match /messages/{messageId} {
+        // Доступ только если ты в чате
+        allow read: if isChatMember(chatId) || isAdmin();
+        
+        allow create: if isChatMember(chatId) && 
+          request.resource.data.content is string && 
+          request.resource.data.content.size() < 5000;
+          
+        allow update: if isChatMember(chatId) && 
+          request.auth.uid == resource.data.senderId &&
+          request.resource.data.content is string && 
+          request.resource.data.content.size() < 5000;
+          
+        allow delete: if isAdmin() || (isSignedIn() && request.auth.uid == resource.data.senderId);
+
+        // Реакции внутри сообщений
+        match /reactions/{reactionId} {
+          allow read, write: if isChatMember(chatId) || isAdmin();
+        }
       }
     }
   }

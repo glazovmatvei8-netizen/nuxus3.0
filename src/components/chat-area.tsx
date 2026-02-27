@@ -32,6 +32,7 @@ const ChatInput = React.memo(({
   editMessage,
   replyTo,
   onCancelReply,
+  isSending,
 }: any) => {
   const [text, setText] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -42,7 +43,7 @@ const ChatInput = React.memo(({
   }, [editMessage]);
 
   const handleSend = () => {
-    if (!text.trim()) return;
+    if (!text.trim() || isSending) return;
     onSend(text, 'text');
     setText('');
     onTyping(false);
@@ -83,15 +84,16 @@ const ChatInput = React.memo(({
             onChange={handleChange}
             onKeyDown={e => e.key === 'Enter' && handleSend()} 
             className="bg-muted/40 rounded-2xl h-11 pr-12 focus:ring-1 focus:ring-primary border-none text-base" 
-            disabled={isBlocked}
+            disabled={isBlocked || isSending}
           />
           {text.trim() ? (
             <Button 
               size="icon" 
               className="absolute right-1 top-1 w-9 h-9 rounded-xl transition-all duration-200" 
               onClick={handleSend}
+              disabled={isSending}
             >
-              <Send className="w-4 h-4" />
+              {isSending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
             </Button>
           ) : (
             <Button variant="ghost" size="icon" className="absolute right-1 top-1 w-9 h-9 rounded-full text-muted-foreground">
@@ -114,6 +116,7 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: any) {
   const [isSuggesting, setIsSuggesting] = useState(false);
   const [showScrollDown, setShowScrollDown] = useState(false);
   const [isJoining, setIsJoining] = useState(false);
+  const [isSending, setIsSending] = useState(false);
   
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -125,6 +128,7 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: any) {
   
   const scrollRef = useRef<HTMLDivElement>(null);
   const lastTypingSignalRef = useRef<number>(0);
+  const lastMessageSentRef = useRef<number>(0);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const dataLoadedRef = useRef(false);
   
@@ -189,22 +193,18 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: any) {
     }
   }, []);
 
-  // Авто-скролл при загрузке новых сообщений или открытии чата
   useEffect(() => {
     if (messages && messages.length > 0) {
       const isInitial = !dataLoadedRef.current;
       if (isInitial) {
-        // Мгновенный скролл без анимации при первом открытии
         setTimeout(() => scrollToBottom('instant' as any), 10);
         dataLoadedRef.current = true;
       } else {
-        // Плавный скролл при новых сообщениях
         scrollToBottom('smooth');
       }
     }
   }, [messages, currentChatId, scrollToBottom]);
 
-  // Сброс флага загрузки при смене чата
   useEffect(() => {
     dataLoadedRef.current = false;
   }, [currentChatId]);
@@ -212,7 +212,6 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: any) {
   const handleTyping = useCallback((isTyping: boolean) => {
     if (!currentChatId || !user || !db || isBlocked || !isParticipant) return;
     
-    // Блокировка печати для удаленных пользователей
     const isOtherDeleted = otherUserProfile?.isBanned || otherUserProfile?.name?.includes('Удалённый Аккаунт');
     if (isOtherDeleted) return;
 
@@ -220,7 +219,7 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: any) {
     const chatDocRef = doc(db, 'chats', currentChatId);
 
     if (isTyping) {
-      // Throttling: отправляем сигнал не чаще раза в 3.5 сек для скорости
+      // Throttling: раз в 3.5 сек для защиты от DDoS сигналов
       if (now - lastTypingSignalRef.current > 3500) {
         updateDocumentNonBlocking(chatDocRef, { [`typing.${user.uid}`]: true });
         lastTypingSignalRef.current = now;
@@ -255,6 +254,15 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: any) {
     if (isBlocked || userProfile?.isBanned || !isParticipant) return;
     if (!content.trim() && type === 'text') return;
     if (!currentChatId || !user || !db) return;
+
+    // Анти-флуд: защита от DDoS на уровне клиента (1.5 сек между сообщениями)
+    const now = Date.now();
+    if (now - lastMessageSentRef.current < 1500) {
+      toast({ title: "Слишком часто", description: "Пожалуйста, подождите немного", variant: "destructive" });
+      return;
+    }
+    
+    setIsSending(true);
     
     if (editMessage && type === 'text') {
       updateDocumentNonBlocking(doc(db, 'chats', currentChatId, 'messages', editMessage.id), { 
@@ -262,6 +270,7 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: any) {
         editedAt: new Date().toISOString() 
       });
       setEditMessage(null);
+      setIsSending(false);
       return;
     }
 
@@ -283,8 +292,13 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: any) {
 
     addDocumentNonBlocking(collection(db, 'chats', currentChatId, 'messages'), data);
     updateDocumentNonBlocking(doc(db, 'chats', currentChatId), { [`typing.${user.uid}`]: false });
-    setTimeout(() => scrollToBottom('smooth'), 50);
-  }, [isBlocked, userProfile, currentChatId, user, db, editMessage, replyTo, scrollToBottom, isParticipant]);
+    
+    lastMessageSentRef.current = now;
+    setTimeout(() => {
+      scrollToBottom('smooth');
+      setIsSending(false);
+    }, 50);
+  }, [isBlocked, userProfile, currentChatId, user, db, editMessage, replyTo, scrollToBottom, isParticipant, toast]);
 
   const handleJoinChat = async () => {
     if (!db || !currentChatId || !user || isJoining) return;
@@ -450,7 +464,13 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: any) {
                     <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setPendingPhotos([])}><X className="w-4 h-4" /></Button>
                   </div>
                   <div className="mt-3 flex gap-2">
-                    <Button className="flex-1 h-9 font-bold" onClick={() => { pendingPhotos.forEach(p => handleSendMessage(p, 'image')); setPendingPhotos([]); }}>Отправить все</Button>
+                    <Button 
+                      className="flex-1 h-9 font-bold" 
+                      disabled={isSending}
+                      onClick={() => { pendingPhotos.forEach(p => handleSendMessage(p, 'image')); setPendingPhotos([]); }}
+                    >
+                      {isSending ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Отправить все'}
+                    </Button>
                   </div>
                 </div>
               )}
@@ -464,7 +484,8 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: any) {
                 editMessage={editMessage}
                 onCancelEdit={() => setEditMessage(null)}
                 replyTo={replyTo}
-                onCancelReply={() => setEditMessage(null)}
+                onCancelReply={() => setReplyTo(null)}
+                isSending={isSending}
               />
             </>
           )}
