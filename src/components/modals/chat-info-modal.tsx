@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState } from 'react';
@@ -7,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { Sparkles, Loader2, Trash2, ShieldAlert, ShieldCheck, Ban, Gavel, UserX, X, UserPlus } from 'lucide-react';
+import { Sparkles, Loader2, Trash2, ShieldAlert, ShieldCheck, Ban, Gavel, UserX, UserPlus } from 'lucide-react';
 import { useFirestore, useCollection, useMemoFirebase, useUser, useDoc } from '@/firebase';
 import { collection, query, where, orderBy, limit, getDocs, doc, arrayUnion, arrayRemove } from 'firebase/firestore';
 import { chatConversationSummary } from '@/ai/flows/chat-conversation-summary-flow';
@@ -138,8 +137,7 @@ export function ChatInfoModal({ open, onOpenChange, chat }: ChatInfoModalProps) 
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="max-w-md bg-card/95 backdrop-blur-xl border-border/40 p-0 overflow-hidden max-h-[90vh] flex flex-col">
-          <DialogHeader className="p-6 bg-primary/5 border-b border-border/40 text-center flex flex-col items-center relative">
-             <Button variant="ghost" size="icon" className="absolute right-4 top-4" onClick={() => onOpenChange(false)}><X className="w-5 h-5" /></Button>
+          <DialogHeader className="p-6 bg-primary/5 border-b border-border/40 text-center flex flex-col items-center">
             <Avatar className="h-24 w-24 mb-4 ring-4 ring-primary/10">
               <AvatarImage src={chatAvatar || ''} />
               <AvatarFallback className="text-2xl font-bold">{chatName.slice(0, 2)}</AvatarFallback>

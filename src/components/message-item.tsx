@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useEffect, memo, useMemo } from 'react';
@@ -109,7 +108,7 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onEdit, size 
         return (
           <div 
             className="mt-1 rounded-lg overflow-hidden border border-border/20 max-w-sm relative aspect-video min-w-[200px] cursor-zoom-in group/img active:scale-[0.98] transition-transform"
-            onPointerDown={(e) => e.stopPropagation()} // Блокируем Radix Menu Trigger
+            onPointerDown={(e) => e.stopPropagation()}
             onClick={(e) => { 
               e.preventDefault();
               e.stopPropagation(); 
@@ -271,7 +270,6 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onEdit, size 
         )}
       </div>
 
-      {/* Полноэкранный просмотр вынесен из Trigger */}
       <Dialog open={isImageFullViewOpen} onOpenChange={setIsImageFullViewOpen}>
         <DialogContent className="max-w-[95vw] max-h-[95vh] p-0 bg-black/95 border-none overflow-hidden flex items-center justify-center z-[100]">
           <DialogTitle className="sr-only">Просмотр изображения</DialogTitle>
@@ -282,14 +280,6 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onEdit, size 
               alt="Full View" 
               className="max-w-full max-h-[90vh] object-contain animate-in zoom-in-95 duration-300"
             />
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              className="absolute top-4 right-4 text-white hover:bg-white/20 rounded-full h-12 w-12 z-10"
-              onClick={() => setIsImageFullViewOpen(false)}
-            >
-              <X className="w-8 h-8" />
-            </Button>
           </div>
         </DialogContent>
       </Dialog>

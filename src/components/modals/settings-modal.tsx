@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useRef, useEffect } from 'react';
@@ -175,14 +174,9 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="max-w-md bg-card/95 backdrop-blur-2xl border-border/40 p-0 overflow-hidden max-h-[90vh] flex flex-col rounded-t-3xl sm:rounded-2xl">
           <DialogHeader className="p-4 border-b border-border/20 bg-muted/30 shrink-0">
-            <DialogTitle className="flex items-center justify-between">
-              <div className="flex items-center gap-2 text-lg font-bold">
-                <Settings2 className="w-5 h-5 text-primary" />
-                <span>Настройки</span>
-              </div>
-              <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full" onClick={() => onOpenChange(false)}>
-                <X className="w-5 h-5" />
-              </Button>
+            <DialogTitle className="flex items-center gap-2 text-lg font-bold">
+              <Settings2 className="w-5 h-5 text-primary" />
+              <span>Настройки</span>
             </DialogTitle>
           </DialogHeader>
           
@@ -389,14 +383,6 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
       <Dialog open={showBrandVisual} onOpenChange={setShowBrandVisual}>
         <DialogContent className="max-w-3xl bg-black/90 border-none p-0 overflow-hidden">
           <div className="relative aspect-video flex items-center justify-center">
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              className="absolute top-4 right-4 z-10 text-white"
-              onClick={() => setShowBrandVisual(false)}
-            >
-              <X className="w-6 h-6" />
-            </Button>
             {brandImageUrl && <img src={brandImageUrl} alt="NuxusChat Visual" className="w-full h-full object-contain" />}
           </div>
         </DialogContent>
