@@ -17,8 +17,14 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator
 } from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import { format } from 'date-fns';
-import { SmilePlus, Play, Pause, CornerUpLeft, Pencil, Trash2, Check, CheckCheck } from 'lucide-react';
+import { SmilePlus, Play, Pause, CornerUpLeft, Pencil, Trash2, Check, CheckCheck, X, ZoomIn } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { collection, doc } from 'firebase/firestore';
 import { addDocumentNonBlocking, deleteDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
@@ -41,6 +47,7 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onEdit, size 
   const db = useFirestore();
   const [isReactionPickerOpen, setIsReactionPickerOpen] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [isImageFullViewOpen, setIsImageFullViewOpen] = useState(false);
   const audioRef = React.useRef<HTMLAudioElement>(null);
 
   const formattedTime = useMemo(() => {
@@ -100,15 +107,45 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onEdit, size 
     switch (message.contentType) {
       case 'image':
         return (
-          <div className="mt-1 rounded-lg overflow-hidden border border-border/20 max-w-sm relative aspect-video min-w-[200px]">
-            <Image 
-              src={message.content} 
-              alt="Sent Image" 
-              fill
-              className="object-cover" 
-              sizes="(max-width: 768px) 100vw, 400px"
-            />
-          </div>
+          <>
+            <div 
+              className="mt-1 rounded-lg overflow-hidden border border-border/20 max-w-sm relative aspect-video min-w-[200px] cursor-zoom-in group/img active:scale-[0.98] transition-transform"
+              onClick={(e) => { e.stopPropagation(); setIsImageFullViewOpen(true); }}
+            >
+              <Image 
+                src={message.content} 
+                alt="Sent Image" 
+                fill
+                className="object-cover" 
+                sizes="(max-width: 768px) 100vw, 400px"
+              />
+              <div className="absolute inset-0 bg-black/20 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center">
+                <ZoomIn className="w-8 h-8 text-white/80" />
+              </div>
+            </div>
+            
+            <Dialog open={isImageFullViewOpen} onOpenChange={setIsImageFullViewOpen}>
+              <DialogContent className="max-w-[95vw] max-h-[95vh] p-0 bg-black/95 border-none overflow-hidden flex items-center justify-center z-[100]">
+                <DialogTitle className="sr-only">Просмотр изображения</DialogTitle>
+                <DialogDescription className="sr-only">Полноэкранный просмотр присланной фотографии</DialogDescription>
+                <div className="relative w-full h-full flex items-center justify-center p-4">
+                  <img 
+                    src={message.content} 
+                    alt="Full View" 
+                    className="max-w-full max-h-[90vh] object-contain animate-in zoom-in-95 duration-300"
+                  />
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="absolute top-4 right-4 text-white hover:bg-white/20 rounded-full h-12 w-12 z-10"
+                    onClick={() => setIsImageFullViewOpen(false)}
+                  >
+                    <X className="w-8 h-8" />
+                  </Button>
+                </div>
+              </DialogContent>
+            </Dialog>
+          </>
         );
       case 'audio':
         return (
@@ -178,7 +215,7 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onEdit, size 
 
               <div className={cn(
                 "rounded-2xl shadow-sm relative group-hover:shadow-md transition-shadow",
-                message.contentType !== 'video' ? sizeClasses[size] : "p-1",
+                message.contentType !== 'video' && message.contentType !== 'image' ? sizeClasses[size] : (message.contentType === 'image' ? "p-0.5" : "p-1"),
                 isMe 
                   ? "bg-primary text-white rounded-br-none" 
                   : "bg-card text-foreground rounded-bl-none border border-border/40",
@@ -186,7 +223,7 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onEdit, size 
               )}>
                 {renderContent()}
                 <div className={cn(
-                  "flex items-center justify-end gap-1 mt-1 text-[9px] select-none",
+                  "flex items-center justify-end gap-1 mt-1 text-[9px] select-none pb-1 pr-2",
                   isMe ? "text-white/60" : "text-muted-foreground/60"
                 )}>
                   {message.editedAt && <span>изменено</span>}
