@@ -15,7 +15,7 @@ service cloud.firestore {
       );
     }
 
-    // Проверка на отсутствие бана (безопасная проверка через токен, если возможно, или документ)
+    // Проверка на отсутствие бана
     function isNotBanned() {
       let userPath = /databases/$(database)/documents/users/$(request.auth.uid);
       return isSignedIn() && (!exists(userPath) || get(userPath).data.isBanned != true);
@@ -29,7 +29,7 @@ service cloud.firestore {
     }
 
     match /chats/{chatId} {
-      // Админ может видеть все чаты, пользователи - только где они участники и не забанены
+      // Админ видит всё. Пользователи — только свои чаты.
       allow list: if isAdmin() || (isSignedIn() && isNotBanned());
       allow get: if isAdmin() || (isSignedIn() && isNotBanned() && (request.auth.uid in resource.data.participantIds));
       allow create: if isSignedIn() && isNotBanned();
