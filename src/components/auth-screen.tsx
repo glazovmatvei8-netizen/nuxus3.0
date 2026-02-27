@@ -153,48 +153,49 @@ export default function AuthScreen() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4 relative overflow-hidden">
-      <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-primary/10 blur-[120px] rounded-full -z-10" />
-      <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-accent/5 blur-[120px] rounded-full -z-10" />
+      {/* Dynamic Energy Orbs */}
+      <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-primary/20 blur-[120px] rounded-full -z-10 animate-pulse-glow" />
+      <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-accent/10 blur-[120px] rounded-full -z-10 animate-pulse-glow" style={{ animationDelay: '2s' }} />
       
-      <div className="w-full max-w-sm relative z-10 animate-in fade-in zoom-in duration-500">
-        <div className="flex justify-center mb-8">
+      <div className="w-full max-w-sm relative z-10 animate-in fade-in zoom-in duration-700">
+        <div className="flex justify-center mb-10">
           <div className="relative group">
             <div className="absolute inset-0 bg-primary blur-3xl opacity-20 group-hover:opacity-40 transition-opacity" />
-            <div className="bg-primary p-5 rounded-[1.75rem] shadow-2xl shadow-primary/30 relative animate-float">
+            <div className="bg-primary p-6 rounded-[2rem] shadow-2xl shadow-primary/40 relative animate-float">
               <div className="relative">
-                <Hexagon className="w-12 h-12 text-white" />
-                <Zap className="w-6 h-6 text-white absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 fill-white" />
+                <Hexagon className="w-14 h-14 text-white" />
+                <Zap className="w-7 h-7 text-white absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 fill-white" />
               </div>
             </div>
           </div>
         </div>
 
-        <Card className="border-white/5 bg-card/40 backdrop-blur-2xl shadow-2xl rounded-[2.5rem] overflow-hidden border">
-          <CardHeader className="text-center pb-2 pt-8">
-            <CardTitle className="text-5xl font-black tracking-tighter text-white uppercase italic leading-none">
+        <Card className="border-white/5 bg-card/40 backdrop-blur-3xl shadow-2xl rounded-[3rem] overflow-hidden border">
+          <CardHeader className="text-center pb-2 pt-10">
+            <CardTitle className="text-6xl font-black tracking-tighter text-white uppercase italic leading-none">
               Nuxus
             </CardTitle>
-            <CardDescription className="text-muted-foreground/60 mt-3 font-medium tracking-widest uppercase text-[9px]">
-              {mode === 'login' ? 'Energy Core Authorization' : 'Creating New Neural Identity'}
+            <CardDescription className="text-muted-foreground/60 mt-4 font-bold tracking-[0.4em] uppercase text-[10px]">
+              {mode === 'login' ? 'Energy Authorization' : 'New Identity Core'}
             </CardDescription>
           </CardHeader>
           
-          <CardContent className="px-8 pb-10">
-            <form onSubmit={handleAuth} className="space-y-5">
+          <CardContent className="px-10 pb-12">
+            <form onSubmit={handleAuth} className="space-y-6">
               {mode === 'register' && (
                 <>
                   <div className="space-y-1.5">
                     <Label className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground/80 ml-1">Имя</Label>
                     <div className="relative group">
                       <UserCircle className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
-                      <Input placeholder="Ваше имя" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="bg-white/5 border-white/10 pl-10 h-12 rounded-2xl focus:border-primary/50 transition-all" required />
+                      <Input placeholder="Ваше имя" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="bg-white/5 border-white/10 pl-10 h-14 rounded-2xl focus:border-primary/50 transition-all" required />
                     </div>
                   </div>
                   <div className="space-y-1.5">
                     <Label className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground/80 ml-1">Никнейм</Label>
                     <div className="relative group">
                       <AtSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
-                      <Input placeholder="username" value={formData.username} onChange={e => setFormData({...formData, username: e.target.value})} className="bg-white/5 border-white/10 pl-10 h-12 rounded-2xl focus:border-primary/50 transition-all" required />
+                      <Input placeholder="username" value={formData.username} onChange={e => setFormData({...formData, username: e.target.value})} className="bg-white/5 border-white/10 pl-10 h-14 rounded-2xl focus:border-primary/50 transition-all" required />
                     </div>
                   </div>
                 </>
@@ -204,7 +205,7 @@ export default function AuthScreen() {
                 <Label className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground/80 ml-1">Номер телефона</Label>
                 <div className="relative group">
                   <Smartphone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
-                  <Input placeholder="8 900 000 00 00" type="tel" value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} className="bg-white/5 border-white/10 pl-10 h-12 rounded-2xl focus:border-primary/50 transition-all" required />
+                  <Input placeholder="8 900 000 00 00" type="tel" value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} className="bg-white/5 border-white/10 pl-10 h-14 rounded-2xl focus:border-primary/50 transition-all" required />
                 </div>
               </div>
 
@@ -212,11 +213,11 @@ export default function AuthScreen() {
                 <Label className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground/80 ml-1">Пароль</Label>
                 <div className="relative group">
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
-                  <Input type="password" placeholder="••••••••" value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} className="bg-white/5 border-white/10 pl-10 h-12 rounded-2xl focus:border-primary/50 transition-all" required />
+                  <Input type="password" placeholder="••••••••" value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} className="bg-white/5 border-white/10 pl-10 h-14 rounded-2xl focus:border-primary/50 transition-all" required />
                 </div>
               </div>
 
-              <Button type="submit" disabled={isLoading} className="w-full h-14 text-xs font-black uppercase tracking-[0.2em] bg-primary hover:bg-primary/90 rounded-2xl transition-all shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-95">
+              <Button type="submit" disabled={isLoading} className="w-full h-14 text-xs font-black uppercase tracking-[0.25em] bg-primary hover:bg-primary/90 rounded-2xl transition-all shadow-xl shadow-primary/30 hover:scale-[1.02] active:scale-95">
                 {isLoading ? (
                   <Loader2 className="animate-spin w-5 h-5" />
                 ) : (
@@ -230,7 +231,7 @@ export default function AuthScreen() {
             <div className="mt-8 text-center">
               <button 
                 onClick={() => setMode(mode === 'login' ? 'register' : 'login')} 
-                className="text-[10px] text-muted-foreground hover:text-primary transition-colors font-black uppercase tracking-widest"
+                className="text-[10px] text-muted-foreground/60 hover:text-primary transition-colors font-black uppercase tracking-widest"
               >
                 {mode === 'login' ? "Нет аккаунта? Регистрация" : "Уже есть аккаунт? Вход"}
               </button>
@@ -238,8 +239,10 @@ export default function AuthScreen() {
           </CardContent>
         </Card>
         
-        <div className="mt-8 flex items-center justify-center gap-2 text-muted-foreground/40 text-[9px] uppercase font-bold tracking-[0.3em]">
+        <div className="mt-10 flex items-center justify-center gap-3 text-muted-foreground/40 text-[9px] uppercase font-bold tracking-[0.4em]">
+          <div className="w-8 h-[1px] bg-white/10" />
           <ShieldCheck className="w-3 h-3" /> Secure Nuxus Connection
+          <div className="w-8 h-[1px] bg-white/10" />
         </div>
       </div>
     </div>

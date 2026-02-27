@@ -7,18 +7,19 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
-  Send, Info, ChevronLeft, Loader2, Bookmark, Pin, X, Forward, Camera, Video, Circle
+  Send, Info, ChevronLeft, Loader2, Bookmark, Pin, X, Forward, Camera, Video, Circle, Wand2
 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { MessageItem } from './message-item';
 import { useToast } from '@/hooks/use-toast';
 import { ChatInfoModal } from './modals/chat-info-modal';
 import { useFirestore, useUser, useCollection, useDoc, useMemoFirebase } from '@/firebase';
-import { collection, query, orderBy, doc } from 'firebase/firestore';
+import { collection, query, orderBy, doc, limit } from 'firebase/firestore';
 import { addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { formatDisplayName, isUserPremium } from '@/lib/utils';
 import type { Message, User as UserType, Chat } from '@/lib/types';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
+import { suggestMessageDraft } from '@/ai/flows/ai-message-drafting-flow';
 
 const MessageList = memo(({ 
   messages, 
@@ -56,6 +57,7 @@ export default function ChatArea() {
   
   const [isChatInfoOpen, setIsChatInfoOpen] = useState(false);
   const [isSending, setIsSending] = useState(false);
+  const [isDrafting, setIsDrafting] = useState(false);
   const [replyTo, setReplyTo] = useState<Message | null>(null);
   const [messageInput, setMessageInput] = useState('');
   
@@ -151,6 +153,27 @@ export default function ChatArea() {
     setTimeout(() => scrollToBottom('smooth'), 100);
   }, [messageInput, currentChatId, user, db, userProfile, replyTo, scrollToBottom]);
 
+  const handleAiDraft = async () => {
+    if (!messages || !amIPremium) return;
+    setIsDrafting(true);
+    try {
+      const history = messages.slice(-5).map(m => ({
+        sender: m.senderName,
+        message: m.content
+      }));
+      const { draftMessage } = await suggestMessageDraft({
+        conversationHistory: history,
+        currentUserInput: messageInput
+      });
+      setMessageInput(draftMessage);
+      toast({ title: "AI предложил ответ", description: "Текст вставлен в поле ввода." });
+    } catch (e) {
+      toast({ title: "Ошибка AI", description: "Не удалось сформировать черновик.", variant: "destructive" });
+    } finally {
+      setIsDrafting(false);
+    }
+  };
+
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 480, height: 480 }, audio: true });
@@ -204,10 +227,11 @@ export default function ChatArea() {
 
   if (!currentChatId) return (
     <div className="flex-1 flex flex-col items-center justify-center text-center p-8 bg-background relative overflow-hidden">
-      <div className="bg-muted p-10 rounded-full mb-6 animate-float">
-        <Bookmark className="w-16 h-16 text-muted-foreground/30" />
+      <div className="bg-muted p-10 rounded-full mb-6 animate-float relative overflow-hidden">
+        <div className="absolute inset-0 bg-primary/20 blur-3xl animate-pulse-glow" />
+        <Bookmark className="w-16 h-16 text-muted-foreground/30 relative z-10" />
       </div>
-      <h2 className="text-xl font-bold text-muted-foreground uppercase tracking-widest">Выберите диалог</h2>
+      <h2 className="text-xl font-bold text-muted-foreground uppercase tracking-[0.3em]">Выберите диалог</h2>
     </div>
   );
 
@@ -313,16 +337,27 @@ export default function ChatArea() {
             <Button variant="ghost" size="icon" className="h-11 w-11 rounded-xl shrink-0 bg-muted hover:bg-muted/80" onClick={() => toast({ title: "Скоро", description: "Функция фото в разработке" })}>
               <Camera className="w-5 h-5 text-muted-foreground" />
             </Button>
-            <div className="flex-1">
+            
+            <div className="flex-1 relative">
               <Input 
                 placeholder="Напишите сообщение..." 
-                className="bg-muted border-none rounded-xl h-11 text-sm px-4" 
+                className="bg-muted border-none rounded-xl h-11 text-sm px-4 pr-10" 
                 value={messageInput}
                 onChange={e => setMessageInput(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && !e.shiftKey && handleSendMessage()}
                 disabled={isSending}
               />
+              {amIPremium && (
+                <button 
+                  onClick={handleAiDraft}
+                  disabled={isDrafting}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-primary hover:scale-110 transition-transform disabled:opacity-30"
+                >
+                  {isDrafting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wand2 className="w-4 h-4" />}
+                </button>
+              )}
             </div>
+            
             {!messageInput.trim() ? (
               <Button size="icon" className="h-11 w-11 rounded-xl shrink-0 bg-primary hover:bg-primary/90" onClick={startRecording}>
                 <Video className="w-5 h-5" />
