@@ -1,10 +1,5 @@
 
-export type MessageType = 'text' | 'image' | 'audio' | 'video' | 'service' | 'gift' | 'payment_request';
-
-export interface Reaction {
-  emoji: string;
-  users: string[]; 
-}
+export type MessageType = 'text' | 'image' | 'audio' | 'video' | 'service' | 'gift' | 'payment_request' | 'stars_transfer';
 
 export interface Message {
   id: string;
@@ -24,7 +19,8 @@ export interface Message {
   isNFT?: boolean;
   serialNumber?: number;
   forwardFrom?: string;
-  reactions?: Record<string, string[]>; // emoji -> [userIds]
+  translation?: string;
+  starsAmount?: number;
   paymentData?: {
     type: 'premium' | 'stars';
     itemName: string;
@@ -101,10 +97,8 @@ export interface UserSettings {
   chatBackground: string;
   messageSize: 'small' | 'medium' | 'large';
   privacy: UserPrivacy;
-  notifications?: {
-    showPreview: boolean;
-    sounds: boolean;
-  };
+  statusEmoji?: string;
+  statusText?: string;
 }
 
 export interface User {
@@ -123,4 +117,5 @@ export interface User {
   isPremium?: boolean;
   premiumUntil?: string | null;
   stars?: number;
+  isArchived?: string[]; // array of chatIds
 }

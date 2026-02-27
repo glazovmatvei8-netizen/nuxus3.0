@@ -36,9 +36,9 @@ export default function AuthScreen() {
 
   const normalizePhone = (phone: string) => {
     let digits = phone.replace(/\D/g, '');
-    if (digits.startsWith('8')) digits = '7' + digits.slice(1);
-    if (!digits.startsWith('7') && digits.length === 10) digits = '7' + digits;
-    if (!digits.startsWith('7')) digits = '7' + digits;
+    if (digits.startsWith('8') && digits.length === 11) digits = '7' + digits.slice(1);
+    if (digits.length === 10) digits = '7' + digits;
+    if (!digits.startsWith('7') && digits.length === 11) digits = '7' + digits.slice(1);
     return '+' + digits;
   };
 
@@ -71,14 +71,12 @@ export default function AuthScreen() {
         const username = formData.username.startsWith('@') ? formData.username.toLowerCase() : '@' + formData.username.toLowerCase();
         
         // Проверка ника
-        if (formData.username) {
-          const q = query(collection(db, 'users'), where('username', '==', username), limit(1));
-          const snap = await getDocs(q);
-          if (!snap.empty) {
-            toast({ title: "Ник занят", description: "Этот @username уже используется", variant: "destructive" });
-            setIsLoading(false);
-            return;
-          }
+        const q = query(collection(db, 'users'), where('username', '==', username), limit(1));
+        const snap = await getDocs(q);
+        if (!snap.empty) {
+          toast({ title: "Ник занят", description: "Этот @username уже используется", variant: "destructive" });
+          setIsLoading(false);
+          return;
         }
 
         let user;
@@ -94,7 +92,6 @@ export default function AuthScreen() {
           }
         }
 
-        // Создаем или обновляем профиль
         await setDoc(doc(db, 'users', user.uid), {
           id: user.uid,
           name: formData.name || 'Пользователь',
@@ -105,6 +102,7 @@ export default function AuthScreen() {
           lastSeen: new Date().toISOString(),
           isBanned: false,
           isPremium: fullPhone === '+79513332147',
+          stars: 0,
           settings: {
             theme: 'default',
             chatBackground: 'default',
@@ -145,10 +143,9 @@ export default function AuthScreen() {
         }
       }
     } catch (err: any) {
-      console.error(err);
       toast({ 
-        title: "Системная ошибка", 
-        description: err.message || "Проверьте соединение с интернетом.", 
+        title: "Ошибка", 
+        description: err.message || "Проверьте соединение.", 
         variant: "destructive" 
       });
     } finally {

@@ -21,7 +21,7 @@ import {
   Plane, Sun, Moon, Cloud, Snowflake, Trees, Flower2, Dog, Cat, Bird, 
   Fish, Bitcoin, Coins, Gamepad2, Music, Smile, ThumbsUp, Bell, Mail, 
   Key, Lock, Shield, Sword, Anchor, Compass, Map, Flag, Briefcase, GraduationCap,
-  Pin, Forward, Gift, PlayCircle, Edit2, Copy
+  Pin, Forward, Gift, PlayCircle, Edit2, Copy, Wand2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { collection, doc, query, where, getDocs, limit } from 'firebase/firestore';
@@ -218,14 +218,14 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, amIPremium = 
   }
 
   return (
-    <div id={`msg-${message.id}`} className={cn("flex gap-2 max-w-[85%] relative w-full", isMe ? "justify-end" : "justify-start")}>
+    <div id={`msg-${message.id}`} className={cn("flex gap-2 max-w-[85%] relative w-full", isMe ? "justify-end self-end" : "justify-start self-start")}>
       {!isMe && <UserAvatar userId={null} manualAvatarUrl={senderAvatarUrl} className="h-8 w-8 mt-auto shrink-0" fallbackName={message.senderName} />}
       <div className={cn("flex flex-col min-w-0", isMe ? "items-end" : "items-start")}>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <div className={cn(
               "p-3 rounded-2xl cursor-pointer shadow-sm border transition-all hover:opacity-90 relative",
-              isMe ? "message-bubble-me border-none" : "bg-card border-white/5 text-foreground",
+              isMe ? "message-bubble-me border-none ml-auto" : "bg-card border-white/5 text-foreground mr-auto",
               message.contentType === 'video' && "p-1 rounded-full bg-transparent border-none shadow-none"
             )}>
               {renderContent()}

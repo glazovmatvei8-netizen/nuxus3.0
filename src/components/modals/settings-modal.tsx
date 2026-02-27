@@ -12,7 +12,7 @@ import { useAuth, useUser, useFirestore, useDoc, useMemoFirebase } from '@/fireb
 import { UserAvatar } from '@/components/user-avatar';
 import { 
   LogOut, Palette, Loader2, CreditCard, Copy, Info, Type,
-  ShieldCheck, Eye, Users, Crown, Settings2, Check, Wand2, HardDrive, Archive
+  ShieldCheck, Eye, Users, Crown, Settings2, Check, Wand2, HardDrive, Archive, Smile
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { signOut } from 'firebase/auth';
@@ -22,13 +22,6 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { isUserPremium } from '@/lib/utils';
 import { generateAiAvatar } from '@/ai/flows/generate-ai-avatar-flow';
 import type { User } from '@/lib/types';
-
-const BACKGROUNDS = [
-  { name: 'Стандарт', value: 'default' },
-  { name: 'Ночной город', value: 'https://images.unsplash.com/photo-1514565131-fce0801e5785?auto=format&fit=crop&q=80&w=800' },
-  { name: 'Минимализм', value: 'https://images.unsplash.com/photo-1557683316-973673baf926?auto=format&fit=crop&q=80&w=800' },
-  { name: 'Абстракция', value: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&q=80&w=800' },
-];
 
 const PREMIUM_PLANS = [
   { id: '1m', name: '1 Месяц', price: 200, unit: 'months', amount: 1 },
@@ -63,6 +56,8 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
     lastSeenVisibility: 'everybody',
     allowGroupsFrom: 'everybody',
     whoCanMessageMe: 'everybody',
+    statusEmoji: '',
+    statusText: '',
   });
 
   const [activeTab, setActiveTab] = useState('profile');
@@ -83,6 +78,8 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         lastSeenVisibility: profile.settings?.privacy?.lastSeenVisibility || 'everybody',
         allowGroupsFrom: profile.settings?.privacy?.allowGroupsFrom || 'everybody',
         whoCanMessageMe: profile.settings?.privacy?.whoCanMessageMe || 'everybody',
+        statusEmoji: profile.settings?.statusEmoji || '',
+        statusText: profile.settings?.statusText || '',
       });
       isInitialized.current = true;
     }
@@ -99,6 +96,8 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         ...profile?.settings,
         chatBackground: form.chatBackground,
         messageSize: form.messageSize,
+        statusEmoji: form.statusEmoji,
+        statusText: form.statusText,
         privacy: {
           ...profile?.settings?.privacy,
           phoneVisibility: form.phoneVisibility,
@@ -181,6 +180,10 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                     {isGeneratingAvatar ? <Loader2 className="w-5 h-5 animate-spin text-white" /> : <Wand2 className="w-5 h-5 text-white" />}
                   </button>
                 </div>
+                <div className="flex gap-2 w-full">
+                  <Input placeholder="🚀" value={form.statusEmoji} onChange={e => setForm({...form, statusEmoji: e.target.value})} className="w-12 text-center bg-muted/30 border-none h-11 rounded-xl" />
+                  <Input placeholder="Ваш статус..." value={form.statusText} onChange={e => setForm({...form, statusText: e.target.value})} className="flex-1 bg-muted/30 border-none h-11 rounded-xl" />
+                </div>
               </div>
               <div className="space-y-4">
                 <div className="space-y-1.5"><Label className="text-xs uppercase font-bold">Имя</Label><Input value={form.name} onChange={e => setForm({...form, name: e.target.value})} className="bg-muted/30 border-none h-11 rounded-xl" /></div>
@@ -193,11 +196,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
               <div className="bg-muted/20 p-5 rounded-2xl border border-border/20 space-y-4">
                 <div className="space-y-1.5">
                   <Label className="text-[10px] flex items-center gap-2 uppercase font-bold"><Eye className="w-3 h-3" /> Номер телефона</Label>
-                  <select 
-                    value={form.phoneVisibility} 
-                    onChange={e => setForm({...form, phoneVisibility: e.target.value as any})}
-                    className="w-full h-11 bg-muted/30 rounded-xl px-3 border-none outline-none text-sm"
-                  >
+                  <select value={form.phoneVisibility} onChange={e => setForm({...form, phoneVisibility: e.target.value as any})} className="w-full h-11 bg-muted/30 rounded-xl px-3 border-none outline-none text-sm">
                     <option value="everybody">Все</option>
                     <option value="contacts">Контакты</option>
                     <option value="nobody">Никто</option>
@@ -205,11 +204,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                 </div>
                 <div className="space-y-1.5">
                   <Label className="text-[10px] flex items-center gap-2 uppercase font-bold"><ShieldCheck className="w-3 h-3" /> Статус сети</Label>
-                   <select 
-                    value={form.lastSeenVisibility} 
-                    onChange={e => setForm({...form, lastSeenVisibility: e.target.value as any})}
-                    className="w-full h-11 bg-muted/30 rounded-xl px-3 border-none outline-none text-sm"
-                  >
+                   <select value={form.lastSeenVisibility} onChange={e => setForm({...form, lastSeenVisibility: e.target.value as any})} className="w-full h-11 bg-muted/30 rounded-xl px-3 border-none outline-none text-sm">
                     <option value="everybody">Все</option>
                     <option value="nobody">Никто</option>
                   </select>
@@ -231,6 +226,10 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3"><HardDrive className="w-5 h-5 text-primary" /><span className="text-sm font-bold">Кэш медиа</span></div>
                   <Button variant="ghost" size="sm">Очистить</Button>
+                </div>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3"><Archive className="w-5 h-5 text-primary" /><span className="text-sm font-bold">Архивные чаты</span></div>
+                  <Button variant="ghost" size="sm">Управлять</Button>
                 </div>
               </div>
             </TabsContent>
