@@ -20,7 +20,8 @@ import { useAuth, useUser, useFirestore, useDoc, useMemoFirebase } from '@/fireb
 import { UserAvatar } from '@/components/user-avatar';
 import { 
   LogOut, User as UserIcon, Palette, Loader2, ShoppingBag, CreditCard, Copy, Info, Type, Hexagon,
-  ShieldCheck, Lock, Eye, Users, MessageCircle, Crown, Settings2, Check, Wand2, Sparkles, UserX, UserCheck
+  ShieldCheck, Lock, Eye, Users, MessageCircle, Crown, Settings2, Check, Wand2, Sparkles, UserX, UserCheck,
+  Archive, BellOff, HardDrive
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { signOut } from 'firebase/auth';
@@ -82,8 +83,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
     sounds: true,
   });
 
-  const [showStore, setShowStore] = useState(false);
-  const [activeTab, setActiveTab] = useState<'profile' | 'privacy' | 'store'>('profile');
+  const [activeTab, setActiveTab] = useState<'profile' | 'privacy' | 'store' | 'storage'>('profile');
   const [isSubmittingPayment, setIsSubmittingPayment] = useState(false);
   const [isGeneratingAvatar, setIsGeneratingAvatar] = useState(false);
   const [pendingPayment, setPendingPayment] = useState<{ type: 'premium', item: any } | null>(null);
@@ -226,15 +226,16 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
           <DialogHeader className="p-4 border-b border-border bg-muted/30 shrink-0">
             <DialogTitle className="flex items-center gap-2 text-lg font-bold">
               <Settings2 className="w-5 h-5 text-primary" />
-              <span>Настройки</span>
+              <span>Настройки Nuxus</span>
             </DialogTitle>
           </DialogHeader>
 
           <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className="flex-1 flex flex-col min-h-0">
-            <TabsList className="grid grid-cols-3 bg-muted/50 p-1 mx-4 mt-4 rounded-xl">
-              <TabsTrigger value="profile">Профиль</TabsTrigger>
-              <TabsTrigger value="privacy">Защита</TabsTrigger>
-              <TabsTrigger value="store">Premium</TabsTrigger>
+            <TabsList className="grid grid-cols-4 bg-muted/50 p-1 mx-4 mt-4 rounded-xl">
+              <TabsTrigger value="profile" className="text-[10px] uppercase font-bold">Профиль</TabsTrigger>
+              <TabsTrigger value="privacy" className="text-[10px] uppercase font-bold">Защита</TabsTrigger>
+              <TabsTrigger value="store" className="text-[10px] uppercase font-bold">Premium</TabsTrigger>
+              <TabsTrigger value="storage" className="text-[10px] uppercase font-bold">Данные</TabsTrigger>
             </TabsList>
 
             <div className="flex-1 overflow-hidden">
@@ -255,21 +256,21 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
 
                   <div className="space-y-4">
                     <div className="space-y-1.5">
-                      <Label className="text-xs text-muted-foreground ml-1">Имя</Label>
+                      <Label className="text-xs text-muted-foreground ml-1 uppercase font-bold">Имя</Label>
                       <Input value={form.name} onChange={e => setForm({...form, name: e.target.value})} className="bg-muted/30 border-none h-11 rounded-xl" />
                     </div>
                     <div className="space-y-1.5">
-                      <Label className="text-xs text-muted-foreground ml-1">Никнейм</Label>
+                      <Label className="text-xs text-muted-foreground ml-1 uppercase font-bold">Никнейм</Label>
                       <Input value={form.username} onChange={e => setForm({...form, username: e.target.value})} className="bg-muted/30 border-none h-11 rounded-xl" />
                     </div>
                     <div className="space-y-1.5">
-                      <Label className="text-xs text-muted-foreground ml-1">О себе</Label>
-                      <Textarea value={form.bio} onChange={e => setForm({...form, bio: e.target.value})} className="bg-muted/30 border-none rounded-xl resize-none h-24" placeholder="Напишите немного о себе..." />
+                      <Label className="text-xs text-muted-foreground ml-1 uppercase font-bold">О себе</Label>
+                      <Textarea value={form.bio} onChange={e => setForm({...form, bio: e.target.value})} className="bg-muted/30 border-none rounded-xl resize-none h-24" placeholder="Ваша биография..." />
                     </div>
                     
                     <div className="grid grid-cols-2 gap-4 pt-2">
                       <div className="space-y-1.5">
-                        <Label className="text-xs flex items-center gap-2"><Type className="w-3 h-3" /> Текст</Label>
+                        <Label className="text-xs flex items-center gap-2 uppercase font-bold"><Type className="w-3 h-3" /> Текст</Label>
                         <Select value={form.messageSize} onValueChange={(val) => setForm({...form, messageSize: val as any})}>
                           <SelectTrigger className="bg-background/50 border-none rounded-xl h-10"><SelectValue /></SelectTrigger>
                           <SelectContent>
@@ -280,7 +281,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                         </Select>
                       </div>
                       <div className="space-y-1.5">
-                        <Label className="text-xs flex items-center gap-2"><Palette className="w-3 h-3" /> Обои</Label>
+                        <Label className="text-xs flex items-center gap-2 uppercase font-bold"><Palette className="w-3 h-3" /> Обои</Label>
                         <Select value={form.chatBackground} onValueChange={(val) => setForm({...form, chatBackground: val})}>
                           <SelectTrigger className="bg-background/50 border-none rounded-xl h-10"><SelectValue /></SelectTrigger>
                           <SelectContent>
@@ -294,21 +295,21 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
 
                 <TabsContent value="privacy" className="p-6 space-y-6 m-0">
                   <div className="space-y-4">
-                    <h4 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground px-1">Приватность</h4>
+                    <h4 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground px-1">Конфиденциальность</h4>
                     <div className="space-y-4 bg-muted/20 p-5 rounded-2xl border border-border/20">
                       <div className="space-y-1.5">
-                        <Label className="text-[10px] flex items-center gap-2 text-muted-foreground"><Eye className="w-3 h-3" /> Номер телефона</Label>
+                        <Label className="text-[10px] flex items-center gap-2 text-muted-foreground uppercase font-bold"><Eye className="w-3 h-3" /> Номер телефона</Label>
                         <Select value={form.phoneVisibility} onValueChange={(val) => setForm({...form, phoneVisibility: val as any})}>
                           <SelectTrigger className="bg-background/50 border-none rounded-xl h-10"><SelectValue /></SelectTrigger>
                           <SelectContent>
                             <SelectItem value="everybody">Все</SelectItem>
-                            <SelectItem value="contacts">Мои контакты</SelectItem>
+                            <SelectItem value="contacts">Контакты</SelectItem>
                             <SelectItem value="nobody">Никто</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
                       <div className="space-y-1.5">
-                        <Label className="text-[10px] flex items-center gap-2 text-muted-foreground"><ShieldCheck className="w-3 h-3" /> Последняя активность</Label>
+                        <Label className="text-[10px] flex items-center gap-2 text-muted-foreground uppercase font-bold"><ShieldCheck className="w-3 h-3" /> Последняя активность</Label>
                         <Select value={form.lastSeenVisibility} onValueChange={(val) => setForm({...form, lastSeenVisibility: val as any})}>
                           <SelectTrigger className="bg-background/50 border-none rounded-xl h-10"><SelectValue /></SelectTrigger>
                           <SelectContent>
@@ -318,49 +319,23 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                         </Select>
                       </div>
                       <div className="space-y-1.5">
-                        <Label className="text-[10px] flex items-center gap-2 text-muted-foreground"><Users className="w-3 h-3" /> Добавление в группы</Label>
+                        <Label className="text-[10px] flex items-center gap-2 text-muted-foreground uppercase font-bold"><Users className="w-3 h-3" /> Добавление в группы</Label>
                         <Select value={form.allowGroupsFrom} onValueChange={(val) => setForm({...form, allowGroupsFrom: val as any})}>
                           <SelectTrigger className="bg-background/50 border-none rounded-xl h-10"><SelectValue /></SelectTrigger>
                           <SelectContent>
                             <SelectItem value="everybody">Все</SelectItem>
-                            <SelectItem value="contacts">Мои контакты</SelectItem>
+                            <SelectItem value="contacts">Контакты</SelectItem>
                             <SelectItem value="nobody">Никто</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="space-y-1.5">
-                        <Label className="text-[10px] flex items-center gap-2 text-muted-foreground"><MessageCircle className="w-3 h-3" /> Кто может мне писать</Label>
-                        <Select value={form.whoCanMessageMe} onValueChange={(val) => setForm({...form, whoCanMessageMe: val as any})}>
-                          <SelectTrigger className="bg-background/50 border-none rounded-xl h-10"><SelectValue /></SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="everybody">Все</SelectItem>
-                            <SelectItem value="premium">Только Premium</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
                     </div>
                   </div>
-
-                  {profile?.blockedUserIds && profile.blockedUserIds.length > 0 && (
-                    <div className="space-y-4">
-                      <h4 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground px-1">Заблокированные пользователи</h4>
-                      <div className="bg-muted/20 p-2 rounded-2xl border border-border/20 space-y-1">
-                        {profile.blockedUserIds.map(bid => (
-                          <div key={bid} className="flex items-center justify-between p-2 hover:bg-muted/30 rounded-lg">
-                            <span className="text-xs">Пользователь {bid.slice(0, 8)}...</span>
-                            <Button variant="ghost" size="icon" className="h-7 w-7 text-primary" onClick={() => updateDocumentNonBlocking(userRef!, { blockedUserIds: arrayRemove(bid) })}>
-                              <UserCheck className="w-4 h-4" />
-                            </Button>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
                 </TabsContent>
 
                 <TabsContent value="store" className="p-6 space-y-8 m-0">
                   <div className="space-y-4">
-                    <h3 className="text-lg font-bold flex items-center gap-2 text-primary">
+                    <h3 className="text-lg font-bold flex items-center gap-2 text-primary uppercase">
                       <Crown className="w-5 h-5" /> Nuxus Premium
                     </h3>
                     <div className="space-y-3">
@@ -373,11 +348,39 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                         >
                           <div className="flex flex-col items-start">
                             <span className="text-sm font-bold">{plan.name}</span>
-                            <span className="text-[10px] text-muted-foreground">Эксклюзивные функции Nuxus</span>
+                            <span className="text-[10px] text-muted-foreground uppercase">Расширенные лимиты</span>
                           </div>
                           <span className="font-black text-primary">{plan.price} ₽</span>
                         </Button>
                       ))}
+                    </div>
+                  </div>
+                </TabsContent>
+
+                <TabsContent value="storage" className="p-6 space-y-6 m-0">
+                   <div className="space-y-4">
+                    <h4 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground px-1">Использование данных</h4>
+                    <div className="bg-muted/20 p-5 rounded-2xl border border-border/20 space-y-6">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <HardDrive className="w-5 h-5 text-primary" />
+                          <div className="flex flex-col">
+                            <span className="text-sm font-bold">Кэш медиа</span>
+                            <span className="text-[10px] text-muted-foreground uppercase">Фото, видео, кружочки</span>
+                          </div>
+                        </div>
+                        <Button variant="ghost" size="sm" className="h-8 text-[10px] uppercase font-bold" onClick={() => toast({ title: "Кэш очищен" })}>Очистить</Button>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <Archive className="w-5 h-5 text-accent" />
+                          <div className="flex flex-col">
+                            <span className="text-sm font-bold">Архив</span>
+                            <span className="text-[10px] text-muted-foreground uppercase">Управление скрытыми чатами</span>
+                          </div>
+                        </div>
+                        <Button variant="ghost" size="sm" className="h-8 text-[10px] uppercase font-bold" onClick={() => toast({ title: "Архив пуст" })}>Открыть</Button>
+                      </div>
                     </div>
                   </div>
                 </TabsContent>
@@ -387,7 +390,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
 
           <div className="p-4 border-t border-border/20 bg-muted/20 shrink-0 flex gap-2">
             <Button variant="ghost" className="flex-1 h-12 rounded-xl text-destructive hover:bg-destructive/10 justify-start gap-3" onClick={() => signOut(auth)}>
-              <LogOut className="w-5 h-5" /> <span className="font-bold">Выход</span>
+              <LogOut className="w-5 h-5" /> <span className="font-bold uppercase text-[10px]">Выход</span>
             </Button>
             {activeTab !== 'store' && (
               <Button className="flex-[2] h-12 rounded-xl font-bold uppercase tracking-widest bg-primary hover:bg-primary/90" onClick={handleSave}>
@@ -401,7 +404,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
       <Dialog open={!!pendingPayment} onOpenChange={(val) => !val && setPendingPayment(null)}>
         <DialogContent className="max-w-sm bg-card border-primary/20 p-0 overflow-hidden rounded-[2.5rem]">
           <DialogHeader className="p-6 bg-primary/10 border-b border-white/5">
-            <DialogTitle className="text-xl font-bold flex items-center gap-2 text-white">
+            <DialogTitle className="text-xl font-bold flex items-center gap-2 text-white uppercase">
               <CreditCard className="w-6 h-6 text-primary" /> Оплата заказа
             </DialogTitle>
           </DialogHeader>

@@ -21,7 +21,7 @@ import {
   Plane, Sun, Moon, Cloud, Snowflake, Trees, Flower2, Dog, Cat, Bird, 
   Fish, Bitcoin, Coins, Gamepad2, Music, Smile, ThumbsUp, Bell, Mail, 
   Key, Lock, Shield, Sword, Anchor, Compass, Map, Flag, Briefcase, GraduationCap,
-  Pin, Forward, Gift, PlayCircle, Edit2, Copy
+  Pin, Forward, Gift, PlayCircle, Edit2, Copy, EyeOff
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { collection, doc, query, where, getDocs, limit } from 'firebase/firestore';
@@ -92,23 +92,6 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, amIPremium = 
     }
   };
 
-  const handleReaction = (emoji: string) => {
-    if (!db || !user || !chatId) return;
-    const msgRef = doc(db, 'chats', chatId, 'messages', message.id);
-    const reactions = { ...(message.reactions || {}) };
-    
-    if (!reactions[emoji]) reactions[emoji] = [];
-    
-    if (reactions[emoji].includes(user.uid)) {
-      reactions[emoji] = reactions[emoji].filter(id => id !== user.uid);
-      if (reactions[emoji].length === 0) delete reactions[emoji];
-    } else {
-      reactions[emoji].push(user.uid);
-    }
-    
-    updateDocumentNonBlocking(msgRef, { reactions });
-  };
-
   const handlePaymentAction = async (action: 'confirm' | 'reject', e: React.MouseEvent) => {
     e.stopPropagation();
     e.preventDefault();
@@ -150,6 +133,18 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, amIPremium = 
     } finally {
       setIsActionLoading(false);
     }
+  };
+
+  // Simple Markdown Parser for messages
+  const parseMarkdown = (text: string) => {
+    if (!text) return text;
+    // Bold
+    let formatted = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+    // Italic
+    formatted = formatted.replace(/\*(.*?)\*/g, '<em>$1</em>');
+    // Inline Code
+    formatted = formatted.replace(/`(.*?)`/g, '<code class="bg-black/20 px-1 rounded">$1</code>');
+    return <span dangerouslySetInnerHTML={{ __html: formatted }} />;
   };
 
   const renderContent = () => {
@@ -271,7 +266,7 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, amIPremium = 
           </div>
         )}
         <div className="whitespace-pre-wrap text-sm break-words">
-          {message.content}
+          {message.contentType === 'text' ? parseMarkdown(message.content) : message.content}
           {message.editedAt && <span className="text-[8px] ml-1 opacity-40 uppercase">(ред.)</span>}
         </div>
       </div>
@@ -282,16 +277,14 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, amIPremium = 
     return <div className="w-full flex justify-center my-2 text-center p-2 text-[10px] text-muted-foreground uppercase tracking-widest">{message.content}</div>;
   }
 
-  const reactionsList = Object.entries(message.reactions || {});
-
   return (
-    <div id={`msg-${message.id}`} className={cn("flex gap-2 max-w-[85%] relative transition-colors duration-1000", isMe ? "ml-auto flex-row-reverse" : "mr-auto")}>
+    <div id={`msg-${message.id}`} className={cn("flex gap-2 max-w-[85%] relative", isMe ? "ml-auto flex-row-reverse" : "mr-auto")}>
       {!isMe && <UserAvatar userId={null} manualAvatarUrl={senderAvatarUrl} className="h-8 w-8 mt-auto shrink-0" fallbackName={message.senderName} />}
       <div className={cn("flex flex-col min-w-0", isMe ? "items-end" : "items-start")}>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <div className={cn(
-              "p-3 rounded-2xl cursor-pointer shadow-sm border transition-all hover:bg-muted/10 relative",
+              "p-3 rounded-2xl cursor-pointer shadow-sm border transition-all hover:bg-muted/5 relative",
               isMe ? "message-bubble-me border-none" : "bg-card border-white/5 text-foreground",
               message.contentType === 'video' && "p-1 rounded-full bg-transparent border-none shadow-none"
             )}>
@@ -300,37 +293,9 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, amIPremium = 
                 <span className="text-[9px]">{formattedTime}</span>
                 {isMe && (message.isRead ? <CheckCheck className="w-3 h-3 text-accent" /> : <Check className="w-3 h-3" />)}
               </div>
-              
-              {reactionsList.length > 0 && (
-                <div className={cn("absolute -bottom-2 flex gap-1", isMe ? "right-2" : "left-2")}>
-                  {reactionsList.map(([emoji, users]) => (
-                    <button 
-                      key={emoji}
-                      onClick={(e) => { e.stopPropagation(); handleReaction(emoji); }}
-                      className={cn(
-                        "bg-card border border-white/5 rounded-full px-1.5 py-0.5 text-[10px] flex items-center gap-1 shadow-md hover:scale-110 transition-transform",
-                        users.includes(user?.uid || '') && "bg-primary/20 border-primary/40"
-                      )}
-                    >
-                      {emoji} <span className="font-bold opacity-60">{users.length}</span>
-                    </button>
-                  ))}
-                </div>
-              )}
             </div>
           </DropdownMenuTrigger>
           <DropdownMenuContent align={isMe ? 'end' : 'start'} className="w-48 bg-card border-white/10">
-            <div className="flex gap-1 p-2 border-b border-white/5 justify-between">
-              {['👍', '❤️', '🔥', '😂', '😮', '😢'].map(emoji => (
-                <button 
-                  key={emoji} 
-                  onClick={() => handleReaction(emoji)}
-                  className="hover:scale-125 transition-transform p-1 rounded-lg hover:bg-white/5"
-                >
-                  {emoji}
-                </button>
-              ))}
-            </div>
             <DropdownMenuItem onClick={() => onReply(message)} className="gap-2"><CornerUpLeft className="w-4 h-4" /> Ответить</DropdownMenuItem>
             {isMe && message.contentType === 'text' && (
               <DropdownMenuItem onClick={() => onEdit(message)} className="gap-2"><Edit2 className="w-4 h-4" /> Изменить</DropdownMenuItem>
@@ -354,7 +319,6 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, amIPremium = 
          prev.message.content === next.message.content && 
          prev.message.isRead === next.message.isRead &&
          prev.message.editedAt === next.message.editedAt &&
-         JSON.stringify(prev.message.reactions) === JSON.stringify(next.message.reactions) &&
          prev.amIPremium === next.amIPremium &&
          prev.isAdmin === next.isAdmin &&
          prev.senderAvatarUrl === next.senderAvatarUrl &&

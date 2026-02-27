@@ -7,14 +7,15 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
-  Send, Info, ChevronLeft, Loader2, Bookmark, Pin, X, Forward, Camera, Video, Circle, Wand2, Phone, Search as SearchIcon
+  Send, Info, ChevronLeft, Loader2, Bookmark, Pin, X, Forward, Camera, Video, Circle, Wand2, Phone, Search as SearchIcon,
+  Search, Archive, BellOff, MoreVertical
 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { MessageItem } from './message-item';
 import { useToast } from '@/hooks/use-toast';
 import { ChatInfoModal } from './modals/chat-info-modal';
 import { useFirestore, useUser, useCollection, useDoc, useMemoFirebase } from '@/firebase';
-import { collection, query, orderBy, doc, limit, addDoc, updateDoc } from 'firebase/firestore';
+import { collection, query, orderBy, doc, limit, addDoc, updateDoc, where } from 'firebase/firestore';
 import { addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { formatDisplayName, isUserPremium } from '@/lib/utils';
 import type { Message, User as UserType, Chat } from '@/lib/types';
@@ -64,6 +65,8 @@ export default function ChatArea() {
   const [editingMsg, setEditingMsg] = useState<Message | null>(null);
   const [messageInput, setMessageInput] = useState('');
   const [localDrafts, setLocalDrafts] = useState<Record<string, string>>({});
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isSearchingLocal, setIsSearchingLocal] = useState(false);
   
   // Video Message state
   const [isRecordingVideo, setIsRecordingVideo] = useState(false);
@@ -104,7 +107,16 @@ export default function ChatArea() {
     return query(collection(db, 'chats', currentChatId, 'messages'), orderBy('sentAt', 'asc'));
   }, [db, currentChatId]);
   
-  const { data: messages, isLoading: isMessagesLoading } = useCollection<Message>(messagesQuery);
+  const { data: rawMessages, isLoading: isMessagesLoading } = useCollection<Message>(messagesQuery);
+
+  const messages = useMemo(() => {
+    if (!rawMessages) return null;
+    if (!searchQuery.trim()) return rawMessages;
+    return rawMessages.filter(m => 
+      m.contentType === 'text' && 
+      m.content.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  }, [rawMessages, searchQuery]);
 
   const scrollToBottom = useCallback((behavior: ScrollBehavior = 'auto') => {
     if (scrollRef.current) {
@@ -113,23 +125,19 @@ export default function ChatArea() {
     }
   }, []);
 
-  // Handle typing indicator
   useEffect(() => {
     if (!db || !currentChatId || !user) return;
     const typingRef = doc(db, 'chats', currentChatId);
-    
     if (messageInput.length > 0) {
       updateDoc(typingRef, { [`typing.${user.uid}`]: true });
     } else {
       updateDoc(typingRef, { [`typing.${user.uid}`]: false });
     }
-    
     return () => {
       updateDoc(typingRef, { [`typing.${user.uid}`]: false });
     };
   }, [messageInput, currentChatId, user, db]);
 
-  // Handle local drafts when switching chats
   useEffect(() => {
     if (currentChatId) {
       setMessageInput(localDrafts[currentChatId] || '');
@@ -225,7 +233,6 @@ export default function ChatArea() {
 
   const startCall = async (type: 'audio' | 'video') => {
     if (!db || !user || !otherId || !currentChatId) return;
-    
     try {
       const callData = {
         callerId: user.uid,
@@ -236,7 +243,6 @@ export default function ChatArea() {
         status: 'calling',
         createdAt: new Date().toISOString()
       };
-      
       const callDoc = await addDoc(collection(db, 'calls'), callData);
       setActiveCallId(callDoc.id);
     } catch (e) {
@@ -249,10 +255,7 @@ export default function ChatArea() {
       const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 480, height: 480 }, audio: true });
       setHasCameraPermission(true);
       setIsRecordingVideo(true);
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-      }
-
+      if (videoRef.current) videoRef.current.srcObject = stream;
       const mediaRecorder = new MediaRecorder(stream);
       mediaRecorderRef.current = mediaRecorder;
       const chunks: Blob[] = [];
@@ -269,9 +272,8 @@ export default function ChatArea() {
       };
       mediaRecorder.start();
     } catch (err) {
-      console.error('Camera access error:', err);
       setHasCameraPermission(false);
-      toast({ variant: 'destructive', title: 'Ошибка камеры', description: 'Разрешите доступ к камере для видеосообщений.' });
+      toast({ variant: 'destructive', title: 'Ошибка камеры' });
     }
   };
 
@@ -294,20 +296,13 @@ export default function ChatArea() {
     return chat?.name || '...';
   }, [chat, otherMetadata, otherProfile]);
 
-  const chatDisplayUsername = useMemo(() => {
-    if (otherProfile?.username) return otherProfile.username;
-    if (otherMetadata?.username) return otherMetadata.username;
-    if (chat?.username) return chat.username;
-    return '';
-  }, [otherMetadata, chat, otherProfile]);
-
   if (!currentChatId) return (
     <div className="flex-1 flex flex-col items-center justify-center text-center p-8 bg-background relative overflow-hidden">
       <div className="bg-muted p-10 rounded-full mb-6 animate-float relative overflow-hidden">
         <div className="absolute inset-0 bg-primary/20 blur-3xl animate-pulse-glow" />
         <Bookmark className="w-16 h-16 text-muted-foreground/30 relative z-10" />
       </div>
-      <h2 className="text-xl font-bold text-muted-foreground uppercase tracking-[0.3em]">Выберите диалог</h2>
+      <h2 className="text-xl font-bold text-muted-foreground uppercase tracking-[0.3em]">Выберите диалог Nuxus</h2>
     </div>
   );
 
@@ -323,19 +318,37 @@ export default function ChatArea() {
           >
             <ChevronLeft className="w-6 h-6" />
           </Button>
-          <div className="flex items-center gap-3 cursor-pointer min-w-0 group" onClick={() => setIsChatInfoOpen(true)}>
-            <UserAvatar userId={otherId} manualAvatarUrl={otherMetadata?.avatarUrl} className="h-10 w-10" fallbackName={chatDisplayName} />
-            <div className="flex flex-col min-w-0">
-              <span className="font-bold text-sm truncate group-hover:text-primary transition-colors">{formatDisplayName(chatDisplayName)}</span>
-              <span className="text-[10px] text-muted-foreground/60 tracking-widest truncate">{chatDisplayUsername}</span>
+          {isSearchingLocal ? (
+            <div className="flex-1 flex items-center gap-2">
+              <SearchIcon className="w-4 h-4 text-muted-foreground" />
+              <Input 
+                autoFocus
+                placeholder="Поиск сообщений..." 
+                className="bg-transparent border-none h-8 text-sm focus-visible:ring-0"
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+              />
+              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setIsSearchingLocal(false); setSearchQuery(''); }}>
+                <X className="w-4 h-4" />
+              </Button>
             </div>
-          </div>
+          ) : (
+            <div className="flex items-center gap-3 cursor-pointer min-w-0 group" onClick={() => setIsChatInfoOpen(true)}>
+              <UserAvatar userId={otherId} manualAvatarUrl={otherMetadata?.avatarUrl} className="h-10 w-10" fallbackName={chatDisplayName} />
+              <div className="flex flex-col min-w-0">
+                <span className="font-bold text-sm truncate group-hover:text-primary transition-colors">{formatDisplayName(chatDisplayName)}</span>
+                <span className="text-[10px] text-muted-foreground/60 tracking-widest truncate uppercase">Nuxus Core</span>
+              </div>
+            </div>
+          )}
         </div>
         
         <div className="flex items-center gap-1">
-          <Button variant="ghost" size="icon" className="rounded-lg opacity-40 hover:opacity-100" onClick={() => toast({ title: "Поиск", description: "Функция скоро появится" })}>
-            <SearchIcon className="w-5 h-5" />
-          </Button>
+          {!isSearchingLocal && (
+            <Button variant="ghost" size="icon" className="rounded-lg" onClick={() => setIsSearchingLocal(true)}>
+              <SearchIcon className="w-5 h-5" />
+            </Button>
+          )}
           {chat?.type === 'private' && (
             <>
               <Button variant="ghost" size="icon" onClick={() => startCall('audio')} className="rounded-lg text-primary">
@@ -361,34 +374,14 @@ export default function ChatArea() {
             onReply={setReplyTo}
             onEdit={handleEditMessage}
             amIPremium={amIPremium}
-            isAdmin={chat?.ownerId === user?.uid || chat?.adminIds?.includes(user?.uid || '')}
+            isAdmin={chat?.ownerId === user?.uid}
             otherAvatarUrl={otherProfile?.avatarUrl || otherMetadata?.avatarUrl}
           />
-        )}
-        {isMessagesLoading && (
-          <div className="flex flex-col items-center justify-center p-24 gap-4">
-            <Loader2 className="w-8 h-8 animate-spin text-primary opacity-30" />
-            <span className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground/50">Загрузка...</span>
-          </div>
         )}
       </ScrollArea>
 
       <footer className="p-3 bg-card border-t border-white/5 shrink-0">
         <div className="max-w-4xl mx-auto space-y-2">
-          {forwardingMessage && (
-            <div className="p-2 bg-primary/5 rounded-xl border border-primary/10 flex items-center justify-between">
-              <div className="flex items-center gap-3 min-w-0">
-                <Forward className="w-4 h-4 text-primary" />
-                <div className="flex flex-col min-w-0">
-                  <span className="text-[9px] font-bold text-primary uppercase">Пересылка</span>
-                  <span className="text-xs truncate text-muted-foreground">От: {forwardingMessage.senderName}</span>
-                </div>
-              </div>
-              <Button variant="ghost" size="icon" className="h-7 w-7 rounded-lg" onClick={() => setForwardingMessage(null)}>
-                <X className="w-4 h-4" />
-              </Button>
-            </div>
-          )}
           {replyTo && (
             <div className="p-2 bg-muted/50 rounded-xl border-l-4 border-primary flex items-center justify-between">
               <div className="flex flex-col min-w-0 pl-2">
@@ -400,62 +393,43 @@ export default function ChatArea() {
               </Button>
             </div>
           )}
-          {editingMsg && (
-            <div className="p-2 bg-accent/5 rounded-xl border-l-4 border-accent flex items-center justify-between">
-              <div className="flex flex-col min-w-0 pl-2">
-                <span className="text-[9px] font-bold text-accent uppercase tracking-widest">Редактирование</span>
-                <span className="text-xs truncate text-muted-foreground italic">{editingMsg.content}</span>
-              </div>
-              <Button variant="ghost" size="icon" className="h-7 w-7 rounded-lg" onClick={() => { setEditingMsg(null); setMessageInput(''); }}>
-                <X className="w-4 h-4" />
-              </Button>
-            </div>
-          )}
-
+          
           {isRecordingVideo && (
             <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
               <div className="relative flex flex-col items-center gap-6">
                 <div className="w-64 h-64 md:w-80 md:h-80 rounded-full overflow-hidden border-4 border-primary shadow-2xl bg-black">
                   <video ref={videoRef} className="w-full h-full object-cover" autoPlay muted playsInline />
                 </div>
-                {hasCameraPermission === false && (
-                  <Alert variant="destructive" className="max-w-xs">
-                    <AlertTitle>Доступ ограничен</AlertTitle>
-                    <AlertDescription>Пожалуйста, разрешите доступ к камере в настройках браузера.</AlertDescription>
-                  </Alert>
-                )}
                 <div className="flex gap-4">
                   <Button variant="outline" size="lg" className="rounded-full h-16 w-16" onClick={() => setIsRecordingVideo(false)}>
                     <X className="w-6 h-6" />
                   </Button>
-                  <Button variant="default" size="lg" className="rounded-full h-16 w-16 bg-red-500 hover:bg-red-600 animate-pulse" onClick={stopRecording}>
+                  <Button variant="default" size="lg" className="rounded-full h-16 w-16 bg-red-500 hover:bg-red-600" onClick={stopRecording}>
                     <Circle className="w-8 h-8 fill-white" />
                   </Button>
                 </div>
-                <div className="text-white font-bold uppercase tracking-widest text-sm animate-pulse">Запись...</div>
               </div>
             </div>
           )}
 
           <div className="flex gap-2 items-end">
-            <Button variant="ghost" size="icon" className="h-11 w-11 rounded-xl shrink-0 bg-muted hover:bg-muted/80" onClick={() => toast({ title: "Скоро", description: "Функция фото в разработке" })}>
+            <Button variant="ghost" size="icon" className="h-11 w-11 rounded-xl shrink-0 bg-muted" onClick={() => toast({ title: "Камера скоро" })}>
               <Camera className="w-5 h-5 text-muted-foreground" />
             </Button>
             
             <div className="flex-1 relative">
               <Input 
                 placeholder="Напишите сообщение..." 
-                className="bg-muted border-none rounded-xl h-11 text-sm px-4 pr-10" 
+                className="bg-muted border-none rounded-xl h-11 text-sm px-4" 
                 value={messageInput}
                 onChange={e => onInputChange(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && !e.shiftKey && handleSendMessage()}
-                disabled={isSending}
               />
               {amIPremium && !editingMsg && (
                 <button 
                   onClick={handleAiDraft}
                   disabled={isDrafting}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-primary hover:scale-110 transition-transform disabled:opacity-30"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-primary hover:scale-110"
                 >
                   {isDrafting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wand2 className="w-4 h-4" />}
                 </button>
@@ -463,12 +437,12 @@ export default function ChatArea() {
             </div>
             
             {!messageInput.trim() ? (
-              <Button size="icon" className="h-11 w-11 rounded-xl shrink-0 bg-primary hover:bg-primary/90" onClick={startRecording}>
+              <Button size="icon" className="h-11 w-11 rounded-xl shrink-0 bg-primary" onClick={startRecording}>
                 <Circle className="w-5 h-5" />
               </Button>
             ) : (
-              <Button size="icon" className="h-11 w-11 rounded-xl shrink-0 bg-primary hover:bg-primary/90" onClick={() => handleSendMessage()} disabled={isSending}>
-                {isSending ? <Loader2 className="w-5 h-5 animate-spin" /> : (editingMsg ? <Check className="w-5 h-5" /> : <Send className="w-5 h-5" />)}
+              <Button size="icon" className="h-11 w-11 rounded-xl shrink-0 bg-primary" onClick={() => handleSendMessage()} disabled={isSending}>
+                {isSending ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
               </Button>
             )}
           </div>
