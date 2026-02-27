@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
@@ -19,7 +18,7 @@ import { useFirestore, useUser, useCollection, useDoc, useMemoFirebase } from '@
 import { collection, query, orderBy, doc, arrayUnion } from 'firebase/firestore';
 import { addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { suggestMessageDraft } from '@/ai/flows/ai-message-drafting-flow';
-import { cn } from '@/lib/utils';
+import { cn, formatDisplayName } from '@/lib/utils';
 import { formatLastSeen } from '@/lib/utils';
 import type { Message, User } from '@/lib/types';
 import Image from 'next/image';
@@ -338,7 +337,7 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: any) {
   };
 
   // Приоритет имени из актуального профиля (для отображения "Удаленный аккаунт")
-  const chatDisplayName = otherUserProfile?.name || (otherId && chat?.metadata && chat.metadata[otherId] ? chat.metadata[otherId].name : chat?.name);
+  const chatDisplayName = formatDisplayName(otherUserProfile?.name || (otherId && chat?.metadata && chat.metadata[otherId] ? chat.metadata[otherId].name : chat?.name));
 
   if (!currentChatId) {
     return (

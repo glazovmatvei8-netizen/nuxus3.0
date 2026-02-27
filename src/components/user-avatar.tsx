@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useDoc, useMemoFirebase, useFirestore } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { cn } from '@/lib/utils';
+import { cn, formatDisplayName } from '@/lib/utils';
 import Image from 'next/image';
 
 interface UserAvatarProps {
@@ -30,7 +30,7 @@ export function UserAvatar({ userId, className, fallbackName, fallbackClassName,
   const { data: profile, isLoading } = useDoc(userRef);
 
   const displayAvatar = profile?.avatarUrl || manualAvatarUrl;
-  const displayName = profile?.name || fallbackName || '??';
+  const displayName = formatDisplayName(profile?.name || fallbackName || '??');
 
   useEffect(() => {
     setImgError(false);

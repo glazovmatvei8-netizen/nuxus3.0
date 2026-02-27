@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useEffect } from 'react';
@@ -14,7 +13,7 @@ import { SettingsModal } from './modals/settings-modal';
 import type { ChatType, User } from '@/lib/types';
 import { useFirestore, useUser, useCollection, useDoc, useMemoFirebase } from '@/firebase';
 import { collection, query, where, doc } from 'firebase/firestore';
-import { formatLastSeen, cn } from '@/lib/utils';
+import { formatLastSeen, formatDisplayName, cn } from '@/lib/utils';
 
 export default function ChatSidebar() {
   const { user } = useUser();
@@ -54,7 +53,7 @@ export default function ChatSidebar() {
     return matchesTab && matchesSearch;
   });
 
-  const displayName = isProfileLoading ? '...' : (profile?.name || user?.displayName || 'Пользователь');
+  const displayName = isProfileLoading ? '...' : formatDisplayName(profile?.name || user?.displayName);
   const displayUsername = isProfileLoading ? '...' : (profile?.username || (user?.email ? `@${user.email.split('@')[0]}` : 'Настройте профиль'));
 
   return (
@@ -174,8 +173,7 @@ function ChatListItem({ chat, isActive, otherId, cachedDisplayName, manualAvatar
 
   const isTyping = chat?.typing && otherId && chat.typing[otherId];
   
-  // Если есть профиль и имя изменилось (например, на "Удаленный аккаунт"), используем его
-  const finalDisplayName = otherProfile?.name || cachedDisplayName || 'Пользователь';
+  const finalDisplayName = formatDisplayName(otherProfile?.name || cachedDisplayName || 'Пользователь');
 
   return (
     <div

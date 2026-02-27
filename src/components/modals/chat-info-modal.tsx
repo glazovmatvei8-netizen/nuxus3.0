@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState } from 'react';
@@ -14,7 +13,7 @@ import { chatConversationSummary } from '@/ai/flows/chat-conversation-summary-fl
 import { useToast } from '@/hooks/use-toast';
 import { deleteDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { useAppState } from '@/lib/store';
-import { cn } from '@/lib/utils';
+import { cn, formatDisplayName } from '@/lib/utils';
 import type { Message, User } from '@/lib/types';
 
 interface ChatInfoModalProps {
@@ -118,10 +117,9 @@ export function ChatInfoModal({ open, onOpenChange, chat }: ChatInfoModalProps) 
     if (!confirm(`ВНИМАНИЕ! Вы собираетесь навсегда удалить аккаунт ${targetUser.name}. Человек больше не сможет зайти. Продолжить?`)) return;
 
     const targetRef = doc(db, 'users', targetUser.id);
-    // При безвозвратном удалении заменяем имя на "Удаленный аккаунт"
     updateDocumentNonBlocking(targetRef, {
       isBanned: true,
-      name: "Удаленный аккаунт",
+      name: "Удалённый Аккаунт🚫",
       username: "@deleted",
       avatarUrl: null,
       lastSeen: null,
@@ -130,7 +128,7 @@ export function ChatInfoModal({ open, onOpenChange, chat }: ChatInfoModalProps) 
     toast({ title: "Аккаунт удален и номер заблокирован", variant: "destructive" });
   };
 
-  const chatName = chat.name || 'Чат';
+  const chatName = formatDisplayName(chat.name || 'Чат');
   const chatAvatar = chat.avatarUrl;
 
   return (
@@ -210,7 +208,7 @@ export function ChatInfoModal({ open, onOpenChange, chat }: ChatInfoModalProps) 
                     </Avatar>
                     <div className="flex flex-col">
                       <div className="flex items-center gap-1">
-                        <span className="text-sm font-semibold">{userMember.name}</span>
+                        <span className="text-sm font-semibold">{formatDisplayName(userMember.name)}</span>
                         {userMember.isBanned && <Ban className="w-3 h-3 text-destructive" />}
                       </div>
                       <span className="text-[10px] text-muted-foreground">{userMember.username}</span>

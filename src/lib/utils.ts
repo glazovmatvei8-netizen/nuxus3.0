@@ -1,4 +1,3 @@
-
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
 import { formatDistanceToNow, parseISO, differenceInSeconds } from 'date-fns';
@@ -9,12 +8,24 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 /**
+ * Форматирует имя пользователя. Если аккаунт помечен как удаленный, добавляет эмодзи.
+ */
+export function formatDisplayName(name: string | undefined | null): string {
+  if (!name) return 'Пользователь';
+  const lower = name.toLowerCase();
+  if (lower.includes('удаленный аккаунт') || lower.includes('удалённый аккаунт')) {
+    return 'Удалённый Аккаунт🚫';
+  }
+  return name;
+}
+
+/**
  * Форматирует статус последней активности пользователя в стиле Telegram.
  * Учитывает настройки конфиденциальности.
  */
-export function formatLastSeen(lastSeenIso: string | undefined, visibility: 'everybody' | 'nobody' = 'everybody'): string {
+export function formatLastSeen(lastSeenIso: string | undefined | null, visibility: 'everybody' | 'nobody' = 'everybody'): string {
+  if (!lastSeenIso) return 'Был(а) давно';
   if (visibility === 'nobody') return 'был(а) недавно';
-  if (!lastSeenIso) return 'был(а) недавно';
   
   try {
     const lastSeen = parseISO(lastSeenIso);
@@ -26,6 +37,6 @@ export function formatLastSeen(lastSeenIso: string | undefined, visibility: 'eve
     
     return `был(а) ${formatDistanceToNow(lastSeen, { addSuffix: true, locale: ru })}`;
   } catch (e) {
-    return 'был(а) недавно';
+    return 'Был(а) давно';
   }
 }

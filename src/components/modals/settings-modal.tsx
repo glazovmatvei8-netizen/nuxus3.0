@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useRef, useEffect } from 'react';
@@ -25,6 +24,7 @@ import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { generateBrandVisual } from '@/ai/flows/generate-brand-visual-flow';
 import { generateAiAvatar } from '@/ai/flows/generate-ai-avatar-flow';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { formatDisplayName } from '@/lib/utils';
 
 interface SettingsModalProps {
   open: boolean;
@@ -124,10 +124,11 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
     try {
       updateDocumentNonBlocking(userRef, {
         isBanned: true,
-        name: "Удаленный аккаунт",
+        name: "Удалённый Аккаунт🚫",
         username: "@deleted",
         phone: profile?.phone || 'deleted',
         avatarUrl: null,
+        lastSeen: null,
         deletedAt: new Date().toISOString()
       });
       toast({ title: "Аккаунт удален" });
@@ -204,7 +205,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                   }} />
                 </div>
                 <div className="text-center">
-                  <h3 className="font-bold text-xl leading-tight">{form.name || 'Без имени'}</h3>
+                  <h3 className="font-bold text-xl leading-tight">{formatDisplayName(form.name) || 'Без имени'}</h3>
                   <p className="text-sm text-muted-foreground">{form.username || '@username'}</p>
                 </div>
               </div>
