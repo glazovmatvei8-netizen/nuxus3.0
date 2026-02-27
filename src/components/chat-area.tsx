@@ -219,7 +219,6 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: any) {
     const chatDocRef = doc(db, 'chats', currentChatId);
 
     if (isTyping) {
-      // Throttling: раз в 3.5 сек для защиты от DDoS сигналов
       if (now - lastTypingSignalRef.current > 3500) {
         updateDocumentNonBlocking(chatDocRef, { [`typing.${user.uid}`]: true });
         lastTypingSignalRef.current = now;
@@ -255,7 +254,6 @@ export default function ChatArea({ toggleSidebar, isSidebarOpen }: any) {
     if (!content.trim() && type === 'text') return;
     if (!currentChatId || !user || !db) return;
 
-    // Анти-флуд: защита от DDoS на уровне клиента (1.5 сек между сообщениями)
     const now = Date.now();
     if (now - lastMessageSentRef.current < 1500) {
       toast({ title: "Слишком часто", description: "Пожалуйста, подождите немного", variant: "destructive" });
