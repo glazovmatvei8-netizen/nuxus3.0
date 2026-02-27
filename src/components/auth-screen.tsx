@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { MessageSquareText, Loader2, Smartphone, Lock, UserCircle, AtSign, Sparkles } from 'lucide-react';
+import { MessageSquareText, Loader2, Smartphone, Lock, UserCircle, AtSign } from 'lucide-react';
 import { useAuth, useFirestore } from '@/firebase';
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';
 import { doc, setDoc, query, collection, where, getDocs, limit } from 'firebase/firestore';
@@ -37,18 +37,17 @@ export default function AuthScreen() {
     return digits;
   };
 
-  const handleAuth = async (e?: React.FormEvent, customData?: typeof formData) => {
-    if (e) e.preventDefault();
-    const activeData = customData || formData;
+  const handleAuth = async (e: React.FormEvent) => {
+    e.preventDefault();
     
-    const phoneDigits = normalizePhone(activeData.phone);
+    const phoneDigits = normalizePhone(formData.phone);
     const fullPhone = `+${phoneDigits}`;
     
     if (!phoneDigits || phoneDigits.length < 10) {
       toast({ title: "Ошибка", description: "Введите корректный номер телефона", variant: "destructive" });
       return;
     }
-    if (activeData.password.length < 6) {
+    if (formData.password.length < 6) {
       toast({ title: "Слишком короткий пароль", description: "Минимум 6 символов", variant: "destructive" });
       return;
     }
@@ -57,7 +56,7 @@ export default function AuthScreen() {
     const loginEmail = `${phoneDigits}@nuxus.chat`;
     
     try {
-      if (mode === 'register' || customData) {
+      if (mode === 'register') {
         // Проверка на заблокированный номер
         const banCheck = await getDocs(query(collection(db, 'users'), where('phone', '==', fullPhone), where('isBanned', '==', true), limit(1)));
         if (!banCheck.empty) {
@@ -66,34 +65,22 @@ export default function AuthScreen() {
           return;
         }
 
-        const username = activeData.username.startsWith('@') ? activeData.username.toLowerCase() : '@' + activeData.username.toLowerCase();
+        const username = formData.username.startsWith('@') ? formData.username.toLowerCase() : '@' + formData.username.toLowerCase();
         
-        // Проверка ника только при регистрации
-        if (mode === 'register' || customData) {
-            const q = query(collection(db, 'users'), where('username', '==', username), limit(1));
-            const snap = await getDocs(q);
-            if (!snap.empty && !customData) { // Для Gwenda пропустим если уже есть
-                toast({ title: "Ник занят", description: "Выберите другой @username", variant: "destructive" });
-                setIsLoading(false);
-                return;
-            }
+        // Проверка ника
+        const q = query(collection(db, 'users'), where('username', '==', username), limit(1));
+        const snap = await getDocs(q);
+        if (!snap.empty) {
+          toast({ title: "Ник занят", description: "Выберите другой @username", variant: "destructive" });
+          setIsLoading(false);
+          return;
         }
 
-        let res;
-        try {
-            res = await createUserWithEmailAndPassword(auth, loginEmail, activeData.password);
-        } catch (authErr: any) {
-            if (authErr.code === 'auth/email-already-in-use' && customData) {
-                // Если Gwenda уже есть в Auth, просто входим
-                await signInWithEmailAndPassword(auth, loginEmail, activeData.password);
-                return;
-            }
-            throw authErr;
-        }
+        const res = await createUserWithEmailAndPassword(auth, loginEmail, formData.password);
         
         await setDoc(doc(db, 'users', res.user.uid), {
           id: res.user.uid,
-          name: activeData.name,
+          name: formData.name,
           username: username,
           phone: fullPhone,
           avatarUrl: `https://picsum.photos/seed/user_${res.user.uid}/200`,
@@ -113,7 +100,7 @@ export default function AuthScreen() {
           }
         });
       } else {
-        await signInWithEmailAndPassword(auth, loginEmail, activeData.password);
+        await signInWithEmailAndPassword(auth, loginEmail, formData.password);
       }
     } catch (err: any) {
       console.error(err);
@@ -130,16 +117,6 @@ export default function AuthScreen() {
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const registerGwenda = () => {
-    const gwendaData = {
-      name: 'Gwenda Sprunki',
-      username: '@gwendasprunki',
-      phone: '+79141161345',
-      password: '123456'
-    };
-    handleAuth(undefined, gwendaData);
   };
 
   return (
@@ -195,16 +172,10 @@ export default function AuthScreen() {
             </Button>
           </form>
           
-          <div className="mt-4 flex flex-col gap-3">
-            <button onClick={() => setMode(mode === 'login' ? 'register' : 'login')} className="text-sm text-muted-foreground hover:text-primary transition-colors text-center">
+          <div className="mt-4 text-center">
+            <button onClick={() => setMode(mode === 'login' ? 'register' : 'login')} className="text-sm text-muted-foreground hover:text-primary transition-colors">
               {mode === 'login' ? "Нет аккаунта? Зарегистрироваться" : "Уже есть аккаунт? Войти"}
             </button>
-            
-            {mode === 'register' && (
-              <Button variant="ghost" size="sm" onClick={registerGwenda} disabled={isLoading} className="text-[10px] text-muted-foreground/60 hover:text-primary rounded-xl flex items-center gap-1.5 h-8">
-                <Sparkles className="w-3 h-3" /> Зарегистрировать Gwenda
-              </Button>
-            )}
           </div>
         </CardContent>
       </Card>
