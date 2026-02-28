@@ -21,7 +21,7 @@ import {
   Plane, Sun, Moon, Cloud, Snowflake, Trees, Flower2, Dog, Cat, Bird, 
   Fish, Bitcoin, Coins, Gamepad2, Music, Smile, ThumbsUp, Bell, Mail, 
   Key, Lock, Shield, Sword, Anchor, Compass, Map, Flag, Briefcase, GraduationCap,
-  Pin, Forward, Gift, PlayCircle, Edit2, Copy, Timer, EyeOff, Clock, Search
+  Pin, Forward, Gift, PlayCircle, Edit2, Copy, Timer, EyeOff, Clock, Search, X
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { collection, doc, query, where, getDocs, limit } from 'firebase/firestore';
@@ -73,7 +73,7 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, amIPremium = 
         deleteDocumentNonBlocking(doc(db, 'chats', chatId, 'messages', message.id));
         return;
       }
-      const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
+      const timer = setTimeout(() => setCountdown(countdown! - 1), 1000);
       return () => clearTimeout(timer);
     }
   }, [countdown, chatId, message.id, db]);
