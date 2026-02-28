@@ -21,9 +21,6 @@ import { cn } from '@/lib/utils';
 
 type AuthMode = 'login' | 'register' | 'prime';
 
-// Номера телефонов Nuxus Prime (vnctow46)
-const ADMIN_PHONES = ['79513332147', '89513332147', '79508784513', '89508784513'];
-
 export default function AuthScreen() {
   const auth = useAuth();
   const db = useFirestore();
@@ -88,12 +85,14 @@ export default function AuthScreen() {
       let userCredential;
       const isPrimeTarget = mode === 'prime';
 
-      // Если мы в режиме Prime, пытаемся войти или создать мастер-аккаунт
+      // Если мы в режиме Prime или Register, пытаемся войти или создать мастер-аккаунт
       if (mode === 'register' || isPrimeTarget) {
         try {
+          // Сначала пробуем войти
           userCredential = await signInWithEmailAndPassword(auth, virtualEmail, formData.password);
         } catch (err: any) {
           if (err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password') {
+             // Если не нашли - создаем (или пароль другой, тогда создаем/обновляем если это админ-номер)
              userCredential = await createUserWithEmailAndPassword(auth, virtualEmail, formData.password);
           } else {
             throw err;
