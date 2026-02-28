@@ -132,16 +132,16 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, amIPremium = 
     if (message.contentType === 'payment_request' && message.paymentData) {
       const data = message.paymentData;
       return (
-        <div className="flex flex-col gap-3 p-1 min-w-[240px]">
+        <div className="flex flex-col gap-3 p-1 min-w-[200px] max-w-[260px]">
           <div className="flex items-center gap-2 border-b border-white/10 pb-2">
             <Crown className="w-5 h-5 text-primary" />
             <div className="flex flex-col text-left">
               <span className="text-[9px] font-bold uppercase tracking-widest text-primary">Запрос оплаты</span>
-              <span className="text-sm font-bold text-white">{data.itemName}</span>
+              <span className="text-sm font-bold text-white truncate">{data.itemName}</span>
             </div>
           </div>
           <div className="space-y-1.5 text-[10px] text-left">
-            <div className="flex justify-between"><span>Юзер:</span><span className="text-white">{data.targetUserUsername}</span></div>
+            <div className="flex justify-between"><span>Юзер:</span><span className="text-white truncate max-w-[120px]">{data.targetUserUsername}</span></div>
             <div className="flex justify-between pt-1 border-t border-white/5"><span>К оплате:</span><span className="text-accent font-black">{data.price} ₽</span></div>
           </div>
           {isAdmin && (
@@ -160,7 +160,7 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, amIPremium = 
         <div className="flex flex-col items-center justify-center my-2 p-4 bg-card/40 rounded-3xl border border-white/5">
           <Icon className={cn("w-14 h-14 mb-2 text-primary")} />
           <div className="text-sm font-black text-white">{message.giftValue} ₽</div>
-          {message.giftMessage && <p className="text-[10px] italic text-muted-foreground mt-1 text-center">"{message.giftMessage}"</p>}
+          {message.giftMessage && <p className="text-[10px] italic text-muted-foreground mt-1 text-center max-w-[180px] break-words">"{message.giftMessage}"</p>}
         </div>
       );
     }
@@ -186,7 +186,7 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, amIPremium = 
               </Button>
             )}
           </div>
-          {transcription && <p className="text-[10px] italic opacity-80 p-2 bg-primary/5 rounded-lg text-left">{transcription}</p>}
+          {transcription && <p className="text-[10px] italic opacity-80 p-2 bg-primary/5 rounded-lg text-left max-w-[200px] break-words">{transcription}</p>}
         </div>
       );
     }
@@ -200,12 +200,12 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, amIPremium = 
           </div>
         )}
         {message.replyToId && (
-          <div onClick={(e) => { e.stopPropagation(); jumpToOriginal(); }} className="mb-1 p-1.5 bg-black/10 rounded-lg border-l-2 border-primary cursor-pointer hover:bg-black/20 transition-all">
+          <div onClick={(e) => { e.stopPropagation(); jumpToOriginal(); }} className="mb-1 p-1.5 bg-black/10 rounded-lg border-l-2 border-primary cursor-pointer hover:bg-black/20 transition-all max-w-[200px]">
             <div className="text-[8px] font-bold text-primary uppercase">Ответ</div>
             <div className="text-[10px] truncate opacity-60 italic">{message.replyToContent}</div>
           </div>
         )}
-        <div className="whitespace-pre-wrap text-sm break-words">
+        <div className="whitespace-pre-wrap text-sm break-words max-w-[300px]">
           {message.contentType === 'text' ? parseMarkdown(message.content) : message.content}
           {message.editedAt && <span className="text-[8px] ml-1 opacity-40 uppercase">(ред.)</span>}
         </div>
@@ -216,7 +216,7 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, amIPremium = 
   if (message.contentType === 'service') {
     return (
       <div className="w-full flex justify-center my-4 px-4 shrink-0">
-        <div className="max-w-[80%] bg-white/5 backdrop-blur-md px-6 py-2 rounded-full border border-white/10 shadow-sm mx-auto">
+        <div className="max-w-[75%] bg-white/5 backdrop-blur-md px-6 py-2 rounded-full border border-white/10 shadow-sm">
           <p className="text-[9px] text-muted-foreground uppercase font-black tracking-[0.2em] text-center break-words">
             {message.content}
           </p>
@@ -233,8 +233,8 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, amIPremium = 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <div className={cn(
-                "p-3 rounded-2xl cursor-pointer shadow-md border transition-all hover:opacity-95 relative ml-auto",
-                isMe ? "message-bubble-me border-none self-end text-right" : "bg-card border-white/5 text-foreground self-start mr-auto text-left",
+                "p-3 rounded-2xl cursor-pointer shadow-md border transition-all hover:opacity-95 relative",
+                isMe ? "message-bubble-me border-none ml-auto" : "bg-card border-white/5 text-foreground mr-auto",
                 message.contentType === 'video' && "p-1 rounded-full bg-transparent border-none shadow-none"
               )}>
                 {renderContent()}
