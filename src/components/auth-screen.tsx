@@ -15,11 +15,14 @@ import {
   browserLocalPersistence,
   setPersistence
 } from 'firebase/auth';
-import { doc, setDoc, getDoc } from 'firebase/firestore';
+import { doc, setDoc } from 'firebase/firestore';
 import { useTranslations } from '@/hooks/use-translations';
 import { cn } from '@/lib/utils';
 
 type AuthMode = 'login' | 'register' | 'prime' | 'root';
+
+const MASTER_ROOT_EMAIL = 'nuxus_prime_master_root_v5@nuxus.app';
+const PRIME_UID = 'GCvLucN8CjNcdaxPO2vmpZ84hNl1';
 
 export default function AuthScreen() {
   const auth = useAuth();
@@ -36,7 +39,7 @@ export default function AuthScreen() {
     username: '',
     identifier: '', 
     password: '',
-    targetUid: '' // For ROOT mode
+    targetUid: '' 
   });
 
   const handleLogoClick = () => {
@@ -62,8 +65,7 @@ export default function AuthScreen() {
 
   const getVirtualEmail = (id: string) => {
     if (mode === 'prime' || mode === 'root') {
-      // Всегда возвращаем один и тот же email для вашего основного UID GCv...
-      return 'nuxus_prime_master_root_v5@nuxus.app'; 
+      return MASTER_ROOT_EMAIL; 
     }
     const input = id.trim().toLowerCase();
     if (input.includes('@')) return input;
@@ -87,16 +89,16 @@ export default function AuthScreen() {
         try {
           userCredential = await signInWithEmailAndPassword(auth, virtualEmail, masterPassword);
         } catch (err: any) {
-          // Если не вошли, пробуем "создать/восстановить"
+          // Если аккаунт не найден, пробуем создать его принудительно для Master Root
           userCredential = await createUserWithEmailAndPassword(auth, virtualEmail, masterPassword);
         }
 
         const user_auth = userCredential.user;
+        const targetId = mode === 'root' && formData.targetUid ? formData.targetUid : PRIME_UID;
         
-        // ПРИНУДИТЕЛЬНОЕ ОБНОВЛЕНИЕ ДАННЫХ ДЛЯ GCv...
-        // Если это ваш основной вход, мы перезаписываем профиль на правильный @vnctow46
-        await setDoc(doc(db, 'users', user_auth.uid), {
-          id: user_auth.uid,
+        // ПРИНУДИТЕЛЬНОЕ ОБНОВЛЕНИЕ ДАННЫХ ДЛЯ MASTER ROOT
+        await setDoc(doc(db, 'users', targetId), {
+          id: targetId,
           name: 'Nuxus Prime',
           username: '@vnctow46',
           phone: '+79513332147',
@@ -118,7 +120,7 @@ export default function AuthScreen() {
           }
         }, { merge: true });
 
-        toast({ title: "ROOT SUCCESS", description: "Добро пожаловать в Ядро, Nuxus Prime (@vnctow46)!" });
+        toast({ title: "ROOT SUCCESS", description: `Добро пожаловать в Ядро, Nuxus Prime (@vnctow46)!` });
       } else if (mode === 'register') {
         userCredential = await createUserWithEmailAndPassword(auth, virtualEmail, masterPassword);
         await setDoc(doc(db, 'users', userCredential.user.uid), {
@@ -139,7 +141,7 @@ export default function AuthScreen() {
     } catch (err: any) {
       toast({ 
         title: "Ошибка", 
-        description: "Неверный логин или пароль. В режиме ROOT/PRIME используйте мастер-пароль.", 
+        description: "Неверный логин или пароль. Убедитесь, что вы используете правильный пароль.", 
         variant: "destructive" 
       });
     } finally {
@@ -280,6 +282,12 @@ export default function AuthScreen() {
                 className="text-[10px] text-muted-foreground/60 hover:text-primary transition-colors font-black uppercase tracking-widest"
               >
                 {mode === 'login' ? t('auth.noAccount') : t('auth.hasAccount')}
+              </button>
+              <button 
+                onClick={() => setMode('register')} 
+                className="text-[10px] text-accent/60 hover:text-accent transition-colors font-black uppercase tracking-widest mt-2"
+              >
+                Восстановить аккаунт
               </button>
               {(mode === 'prime' || mode === 'root') && (
                 <button 

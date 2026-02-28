@@ -8,19 +8,21 @@ import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, doc, limit, where, getDocs } from 'firebase/firestore';
+import { collection, query, doc, limit, where, getDocs, writeBatch } from 'firebase/firestore';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
   ShieldAlert, Users, Send, 
   Loader2, Star, Search, Activity, BarChart3, 
   Globe, Zap, Terminal, Shield, Trash2, Eraser,
-  Database, Server, Cpu, RefreshCw, ShieldCheck
+  Database, Server, Cpu, RefreshCw, ShieldCheck, Bomb
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import type { User } from '@/lib/types';
+import type { User, Chat } from '@/lib/types';
 import { formatDisplayName, cn, isGlobalAdmin } from '@/lib/utils';
 import { updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { addMonths } from 'date-fns';
+
+const PRIME_UID = 'GCvLucN8CjNcdaxPO2vmpZ84hNl1';
 
 const CoreMetrics = memo(() => {
   const [cpu, setCpu] = useState(12);
@@ -116,7 +118,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
 
   const toggleAdmin = (targetUser: User) => {
     if (!db) return;
-    if (targetUser.phone === '+79513332147') {
+    if (targetUser.id === PRIME_UID) {
       toast({ title: "Ошибка", description: "Нельзя снять права с Главного Админа", variant: "destructive" });
       return;
     }
@@ -125,14 +127,38 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
     toast({ title: isNowAdmin ? "Назначен Глобальным Админом" : "Права Админа отозваны" });
   };
 
-  const handleQuickCleanup = async () => {
-    if (!db || !confirm('Удалить всех заблокированных?')) return;
+  const handleDuplicateCleanup = async () => {
+    if (!db || !users || !confirm('Внимание: Это удалит все твинки без чатов! Вы уверены?')) return;
     setIsCleaning(true);
     try {
-      const q = query(collection(db, 'users'), where('isBanned', '==', true));
-      const snap = await getDocs(q);
-      snap.forEach(d => deleteDocumentNonBlocking(d.ref));
-      toast({ title: "База данных очищена" });
+      const chatsSnap = await getDocs(collection(db, 'chats'));
+      const activeUserIds = new Set<string>();
+      chatsSnap.forEach(chatDoc => {
+        const data = chatDoc.data() as Chat;
+        data.participantIds?.forEach(id => activeUserIds.add(id));
+      });
+
+      let deletedCount = 0;
+      const batch = writeBatch(db);
+
+      for (const u of users) {
+        // Никогда не удаляем Prime UID
+        if (u.id === PRIME_UID) continue;
+
+        // Если это твинк (такой же телефон как у Prime) ИЛИ у него нет активных чатов
+        const isDuplicatePhone = u.phone === '+79513332147' || u.phone === '+79508784513';
+        const hasNoChats = !activeUserIds.has(u.id);
+
+        if (isDuplicatePhone || hasNoChats) {
+          batch.delete(doc(db, 'users', u.id));
+          deletedCount++;
+        }
+      }
+
+      await batch.commit();
+      toast({ title: "Очистка завершена", description: `Удалено ${deletedCount} неактивных аккаунтов.` });
+    } catch (e: any) {
+      toast({ title: "Ошибка очистки", description: e.message, variant: "destructive" });
     } finally {
       setIsCleaning(false);
     }
@@ -142,7 +168,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl bg-card border-primary/20 p-0 overflow-hidden h-[85vh] flex flex-col rounded-[2.5rem] shadow-2xl border">
         <DialogHeader className="sr-only">
-          <DialogTitle>Админ-панель Nuxus v5.0</DialogTitle>
+          <DialogTitle>Админ-панель Nuxus v5.3</DialogTitle>
           <DialogDescription>Управление ядром системы</DialogDescription>
         </DialogHeader>
 
@@ -153,7 +179,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
                 <ShieldAlert className="w-5 h-5 text-white" />
               </div>
               <div className="flex flex-col leading-none">
-                <span>Nuxus v5.0</span>
+                <span>Nuxus v5.3</span>
                 <span className="text-[9px] font-bold tracking-[0.4em] text-primary-foreground opacity-70 mt-1 uppercase">Консоль управления</span>
               </div>
             </div>
@@ -277,12 +303,15 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
                   <div className="p-6 bg-muted/20 rounded-[2rem] border border-white/5 space-y-4">
                     <div className="flex items-center gap-2 mb-2">
                       <Terminal className="w-4 h-4 text-primary" />
-                      <span className="text-[10px] font-black uppercase tracking-widest text-white">Инструменты</span>
+                      <span className="text-[10px] font-black uppercase tracking-widest text-white">Инструменты очистки</span>
                     </div>
-                    <Button variant="destructive" className="w-full h-11 rounded-xl text-[9px] uppercase font-bold tracking-widest" onClick={handleQuickCleanup} disabled={isCleaning}>
-                      {isCleaning ? <Loader2 className="w-3 h-3 animate-spin mr-2" /> : <Eraser className="w-3 h-3 mr-2" />}
-                      Удалить забаненных
-                    </Button>
+                    <div className="space-y-3">
+                      <Button variant="destructive" className="w-full h-11 rounded-xl text-[9px] uppercase font-bold tracking-widest bg-red-600/20 text-red-400 hover:bg-red-600 hover:text-white" onClick={handleDuplicateCleanup} disabled={isCleaning}>
+                        {isCleaning ? <Loader2 className="w-3 h-3 animate-spin mr-2" /> : <Bomb className="w-3 h-3 mr-2" />}
+                        Cleanup Duplicates
+                      </Button>
+                      <p className="text-[8px] text-muted-foreground text-center italic uppercase">Удалит аккаунты без чатов и дубликаты Prime</p>
+                    </div>
                   </div>
                   <div className="p-6 bg-primary/10 rounded-[2rem] border border-primary/20 space-y-4">
                     <div className="flex items-center gap-2 mb-2">
