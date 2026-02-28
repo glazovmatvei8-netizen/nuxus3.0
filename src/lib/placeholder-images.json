@@ -2,15 +2,15 @@
   "placeholderImages": [
     {
       "id": "og-image",
-      "description": "OpenGraph Preview Image",
-      "imageUrl": "https://images.unsplash.com/photo-1601751839176-7d023cb55ed8?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw3fHx0ZWNoJTIwbWVzc2VuZ2VyfGVufDB8fHx8MTc3MjExNDEwNHww&ixlib=rb-4.1.0&q=80&w=1080",
-      "imageHint": "tech messenger"
+      "description": "Nuxus Prime Branding Visual",
+      "imageUrl": "https://images.unsplash.com/photo-1614850523296-d8c1af93d400?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1080",
+      "imageHint": "abstract core"
     },
     {
       "id": "pwa-icon",
-      "description": "App Icon",
-      "imageUrl": "https://images.unsplash.com/photo-1754838880357-60c7c468180f?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw5fHxhYnN0cmFjdCUyMGljb258ZW58MHx8fHwxNzcyMDMzNjQyfDA&ixlib=rb-4.1.0&q=80&w=1080",
-      "imageHint": "abstract icon"
+      "description": "Nuxus App Icon",
+      "imageUrl": "https://picsum.photos/seed/nuxus-core/1024/1024",
+      "imageHint": "nexus icon"
     }
   ]
 }

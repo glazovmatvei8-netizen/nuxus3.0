@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
-  Send, Info, ChevronLeft, Loader2, Bookmark, X, Forward, Video, Circle, Wand2, Phone, Search as SearchIcon,
+  Send, Info, ChevronLeft, Loader2, Bookmark, X, Video, Circle, Wand2, Phone, Search as SearchIcon,
   Zap, Calendar as CalendarIcon
 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -66,7 +66,7 @@ export default function ChatArea() {
   const { user: firebaseUser } = useUser();
   const db = useFirestore();
   const { t } = useTranslations();
-  const { currentChatId, setCurrentChatId, forwardingMessage, setForwardingMessage, setActiveCallId } = useAppState();
+  const { currentChatId, setCurrentChatId, setForwardingMessage, setActiveCallId } = useAppState();
   
   const [isChatInfoOpen, setIsChatInfoOpen] = useState(false);
   const [isSending, setIsSending] = useState(false);

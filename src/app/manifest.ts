@@ -8,18 +8,18 @@ export default function manifest(): MetadataRoute.Manifest {
     description: 'Современный мессенджер с поддержкой AI и видеосообщений.',
     start_url: '/',
     display: 'standalone',
-    background_color: '#1a1b26',
-    theme_color: '#3b4261',
+    background_color: '#0a0a0c',
+    theme_color: '#8b5cf6',
     lang: 'ru',
     icons: [
       {
-        src: 'https://picsum.photos/seed/nuxus/192/192',
+        src: 'https://picsum.photos/seed/nuxus-core/192/192',
         sizes: '192x192',
         type: 'image/png',
         purpose: 'maskable'
       },
       {
-        src: 'https://picsum.photos/seed/nuxus/512/512',
+        src: 'https://picsum.photos/seed/nuxus-core/512/512',
         sizes: '512x512',
         type: 'image/png',
         purpose: 'any'

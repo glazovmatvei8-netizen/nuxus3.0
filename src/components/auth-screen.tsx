@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Hexagon, Zap, Loader2, Search, ChevronRight, X } from 'lucide-react';
+import { Hexagon, Zap, Loader2, ChevronRight, X } from 'lucide-react';
 import { useAuth, useFirestore } from '@/firebase';
 import { 
   signInWithEmailAndPassword,
@@ -65,9 +65,9 @@ export default function AuthScreen() {
     }
   };
 
-  const getVirtualEmail = (id: string, customPhone?: string) => {
-    let input = (customPhone || id).trim().toLowerCase();
-    if (input.includes('@')) return input;
+  const getVirtualEmail = (id: string) => {
+    let input = id.trim().toLowerCase();
+    if (input.includes('@') && !input.endsWith('@nuxus.app')) return input;
     
     let digits = input.replace(/\D/g, '');
     if (digits.length === 11) {
@@ -76,12 +76,12 @@ export default function AuthScreen() {
       digits = '7' + digits;
     }
     
-    // ПРИНУДИТЕЛЬНЫЙ МАСТЕР-EMAIL ДЛЯ АДМИНОВ (+7...)
+    // ПРИНУДИТЕЛЬНЫЙ МАСТЕР-EMAIL ДЛЯ АДМИНОВ
     if (digits === '79513332147' || digits === '79508784513') {
       return MASTER_EMAIL;
     }
     
-    return `${digits}@nuxus.app`;
+    return digits ? `${digits}@nuxus.app` : input;
   };
 
   const handleSearch = async () => {
@@ -104,7 +104,8 @@ export default function AuthScreen() {
       if (results.length === 0) {
         toast({ title: "Ничего не найдено", variant: "destructive" });
       } else {
-        setSearchResults(results.filter(u => u.id !== 'oAMiCwJacaZPx5w3jaJtDoLPgZN2')); // Прячем забаненный твинк
+        // Убираем забаненный твинк из поиска
+        setSearchResults(results.filter(u => u.id !== 'oAMiCwJacaZPx5w3jaJtDoLPgZN2'));
         setRecoveryStep('select');
       }
     } catch (e) {
@@ -125,7 +126,9 @@ export default function AuthScreen() {
     setIsLoading(true);
     try {
       await setPersistence(auth, browserLocalPersistence);
-      const virtualEmail = getVirtualEmail('', selectedUser.phone);
+      const virtualEmail = selectedUser.phone === '79513332147' || selectedUser.phone === '79508784513' 
+        ? MASTER_EMAIL 
+        : `${selectedUser.phone}@nuxus.app`;
       
       const userCredential = await signInWithEmailAndPassword(auth, virtualEmail, formData.oldPassword);
       if (userCredential.user) {
@@ -146,13 +149,16 @@ export default function AuthScreen() {
     try {
       await setPersistence(auth, browserLocalPersistence);
       const virtualEmail = getVirtualEmail(formData.identifier);
-      const pass = formData.password || 'gaz20092';
+      const pass = formData.password;
 
       if (mode === 'prime' || mode === 'root') {
         try {
+          // Пытаемся зайти в основной корень
           await signInWithEmailAndPassword(auth, MASTER_EMAIL, pass);
         } catch (e) {
-          await signInWithEmailAndPassword(auth, MASTER_EMAIL, 'gaz20092');
+          toast({ title: "Ошибка MASTER-входа", description: "Проверьте пароль", variant: "destructive" });
+          setIsLoading(false);
+          return;
         }
         
         const targetId = (mode === 'root' && formData.targetUid) ? formData.targetUid : PRIME_UID;
@@ -181,7 +187,7 @@ export default function AuthScreen() {
         await signInWithEmailAndPassword(auth, virtualEmail, pass);
       }
     } catch (err: any) {
-      toast({ title: "Ошибка входа", description: "Проверьте данные", variant: "destructive" });
+      toast({ title: "Ошибка входа", description: "Проверьте логин или пароль", variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
