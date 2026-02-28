@@ -20,7 +20,7 @@ import { useTranslations } from '@/hooks/use-translations';
 
 type AuthMode = 'login' | 'register';
 
-const ADMIN_PHONES = ['+79513332147', '+79508784513'];
+const ADMIN_PHONES = ['+79513332147', '+79508784513', '79513332147', '79508784513', '89513332147', '89508784513'];
 
 export default function AuthScreen() {
   const auth = useAuth();
@@ -54,15 +54,15 @@ export default function AuthScreen() {
     const input = id.trim().toLowerCase();
     if (input.includes('@')) return input;
     let digits = input.replace(/\D/g, '');
-    if (digits.length === 11 && digits.startsWith('8')) {
-      digits = '7' + digits.slice(1);
-    }
     
-    // Маппинг второго админ-номера на основной аккаунт для дублирования
-    if (digits === '79508784513') {
+    // Принудительное объединение админ-аккаунтов в один корень
+    if (digits === '79513332147' || digits === '89513332147' || digits === '79508784513' || digits === '89508784513') {
       return '79513332147@nuxus.app';
     }
     
+    if (digits.length === 11 && digits.startsWith('8')) {
+      digits = '7' + digits.slice(1);
+    }
     return `${digits}@nuxus.app`;
   };
 
@@ -72,7 +72,7 @@ export default function AuthScreen() {
     const normalizedPhone = !formData.identifier.includes('@') ? normalizePhoneForDb(formData.identifier) : '';
 
     if (!formData.identifier.trim()) {
-      toast({ title: "Error", description: "Enter login details", variant: "destructive" });
+      toast({ title: "Ошибка", description: "Введите данные для входа", variant: "destructive" });
       return;
     }
 
@@ -83,11 +83,10 @@ export default function AuthScreen() {
       if (mode === 'register') {
         const username = formData.username.startsWith('@') ? formData.username.toLowerCase() : '@' + formData.username.toLowerCase();
         
-        // Проверка на существование ника
         const q = query(collection(db, 'users'), where('username', '==', username), limit(1));
         const snap = await getDocs(q);
         if (!snap.empty) {
-          toast({ title: "Username taken", description: "This @username is already in use", variant: "destructive" });
+          toast({ title: "Никнейм занят", description: "Этот @username уже используется", variant: "destructive" });
           setIsLoading(false);
           return;
         }
@@ -104,7 +103,7 @@ export default function AuthScreen() {
         }
 
         const user = userCredential.user;
-        const isAdmin = ADMIN_PHONES.includes(normalizedPhone);
+        const isAdmin = ADMIN_PHONES.includes(normalizedPhone.replace('+', '')) || normalizedPhone === '+79513332147' || normalizedPhone === '+79508784513';
 
         await setDoc(doc(db, 'users', user.uid), {
           id: user.uid,
@@ -131,25 +130,25 @@ export default function AuthScreen() {
           }
         }, { merge: true });
 
-        toast({ title: "Success", description: isAdmin ? "Welcome, Nuxus Prime!" : "Welcome to Nuxus!" });
+        toast({ title: "Успех", description: isAdmin ? "Добро пожаловать, Nuxus Prime!" : "Добро пожаловать в Nuxus!" });
       } else {
         const result = await signInWithEmailAndPassword(auth, virtualEmail, formData.password);
         const user = result.user;
         const userDoc = await getDoc(doc(db, 'users', user.uid));
         
         if (userDoc.exists() && userDoc.data()?.isBanned) {
-          toast({ title: "Access denied", description: "Account blocked", variant: "destructive" });
+          toast({ title: "Доступ запрещен", description: "Аккаунт заблокирован", variant: "destructive" });
           await auth.signOut();
           setIsLoading(false);
           return;
         }
         
-        toast({ title: "Logged in", description: `Welcome back, ${userDoc.data()?.name || 'User'}` });
+        toast({ title: "Вход выполнен", description: `С возвращением, ${userDoc.data()?.name || 'User'}` });
       }
     } catch (err: any) {
       toast({ 
-        title: "Error", 
-        description: mode === 'login' ? "Invalid login or password" : err.message, 
+        title: "Ошибка", 
+        description: mode === 'login' ? "Неверный логин или пароль" : err.message, 
         variant: "destructive" 
       });
     } finally {
@@ -188,7 +187,7 @@ export default function AuthScreen() {
                     <Label className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground/80 ml-1">{t('settings.labels.name')}</Label>
                     <div className="relative group">
                       <UserCircle className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
-                      <Input placeholder="Your Name" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="bg-white/5 border-white/10 pl-10 h-14 rounded-2xl focus:border-primary/50 transition-all" />
+                      <Input placeholder="Ваше Имя" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="bg-white/5 border-white/10 pl-10 h-14 rounded-2xl focus:border-primary/50 transition-all" />
                     </div>
                   </div>
                   <div className="space-y-1.5">
@@ -202,15 +201,15 @@ export default function AuthScreen() {
               )}
               
               <div className="space-y-1.5">
-                <Label className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground/80 ml-1">PHONE OR EMAIL</Label>
+                <Label className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground/80 ml-1">ТЕЛЕФОН ИЛИ EMAIL</Label>
                 <div className="relative group">
                   <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
-                  <Input placeholder="8 9XX... or email" value={formData.identifier} onChange={e => setFormData({...formData, identifier: e.target.value})} className="bg-white/5 border-white/10 pl-10 h-14 rounded-2xl focus:border-primary/50 transition-all" required />
+                  <Input placeholder="8 9XX... или email" value={formData.identifier} onChange={e => setFormData({...formData, identifier: e.target.value})} className="bg-white/5 border-white/10 pl-10 h-14 rounded-2xl focus:border-primary/50 transition-all" required />
                 </div>
               </div>
 
               <div className="space-y-1.5">
-                <Label className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground/80 ml-1">PASSWORD</Label>
+                <Label className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground/80 ml-1">ПАРОЛЬ</Label>
                 <div className="relative group">
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
                   <Input type="password" placeholder="••••••••" value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} className="bg-white/5 border-white/10 pl-10 h-14 rounded-2xl focus:border-primary/50 transition-all" required />
@@ -240,7 +239,7 @@ export default function AuthScreen() {
         </Card>
         
         <div className="mt-10 flex items-center justify-center gap-3 text-muted-foreground/40 text-[9px] uppercase font-bold tracking-[0.4em]">
-          <ShieldCheck className="w-3 h-3" /> AES-256 ENCRYPTION
+          <ShieldCheck className="w-3 h-3" /> AES-256 ШИФРОВАНИЕ
         </div>
       </div>
     </div>
