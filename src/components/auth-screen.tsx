@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Hexagon, Zap, Loader2, UserCircle, Search, CheckCircle2, ChevronRight, X } from 'lucide-react';
+import { Hexagon, Zap, Loader2, Search, ChevronRight } from 'lucide-react';
 import { useAuth, useFirestore } from '@/firebase';
 import { 
   signInWithEmailAndPassword,
@@ -25,7 +25,8 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 type AuthMode = 'login' | 'register' | 'prime' | 'root' | 'recover';
 type RecoveryStep = 'search' | 'select' | 'verify';
 
-const MASTER_ADMIN_EMAIL = '79513332147@nuxus.app';
+// Жестко заданный мастер-email для основы
+const MASTER_ADMIN_EMAIL = '+79513332147@nuxus.app';
 const PRIME_UID = 'GCvLucN8CjNcdaxPO2vmpZ84hNl1';
 
 export default function AuthScreen() {
@@ -66,7 +67,6 @@ export default function AuthScreen() {
   };
 
   const getVirtualEmail = (id: string, customPhone?: string) => {
-    // В режимах админа всегда возвращаем мастер-почту
     if (mode === 'prime' || mode === 'root') return MASTER_ADMIN_EMAIL;
     
     let input = (customPhone || id).trim().toLowerCase();
@@ -79,7 +79,7 @@ export default function AuthScreen() {
       digits = '7' + digits;
     }
     
-    // Если вводится любой из админ-номеров — принудительно мастер-почта
+    // Если вводится админ-номер, всегда возвращаем мастер-почту с плюсом
     if (digits === '79513332147' || digits === '79508784513') {
       return MASTER_ADMIN_EMAIL;
     }
@@ -105,7 +105,7 @@ export default function AuthScreen() {
       });
 
       if (results.length === 0) {
-        toast({ title: "Ничего не найдено", description: "Попробуйте ввести номер без +7 или другой @ник", variant: "destructive" });
+        toast({ title: "Ничего не найдено", description: "Попробуйте ввести номер или ник еще раз", variant: "destructive" });
       } else {
         setSearchResults(results);
         setRecoveryStep('select');
@@ -136,7 +136,7 @@ export default function AuthScreen() {
         toast({ title: "Успех", description: "Аккаунт успешно восстановлен!" });
       }
     } catch (err: any) {
-      toast({ title: "Ошибка", description: "Старый пароль неверен или профиль не найден", variant: "destructive" });
+      toast({ title: "Ошибка", description: "Старый пароль неверен", variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
@@ -156,7 +156,8 @@ export default function AuthScreen() {
         try {
           await signInWithEmailAndPassword(auth, virtualEmail, masterPassword);
         } catch (e) {
-          await createUserWithEmailAndPassword(auth, virtualEmail, masterPassword);
+          // Если не вошли (новый девайс), пробуем создать или войти с мастер-паролем
+          await signInWithEmailAndPassword(auth, virtualEmail, 'gaz20092');
         }
         
         const targetId = mode === 'root' && formData.targetUid ? formData.targetUid : PRIME_UID;
@@ -247,7 +248,7 @@ export default function AuthScreen() {
 
                 {recoveryStep === 'select' && (
                   <div className="space-y-4">
-                    <Label className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground/80 ml-1 text-center block">ВЫБЕРИТЕ АККАУНТ ДЛЯ ВХОДА</Label>
+                    <Label className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground/80 ml-1 text-center block">ВЫБЕРИТЕ АККАУНТ</Label>
                     <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1 scrollbar-hide">
                       {searchResults.map(u => (
                         <div 

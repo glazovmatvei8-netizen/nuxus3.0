@@ -40,10 +40,8 @@ service cloud.firestore {
 
     match /users/{userId} {
       // ПОЛНАЯ БЛОКИРОВКА ТВИНКА (oAMi...)
-      allow read, write: if false && userId == 'oAMiCwJacaZPx5w3jaJtDoLPgZN2';
-      
-      allow read: if true; 
-      allow write: if isAdmin() || (isSignedIn() && request.auth.uid == userId);
+      allow read, write: if userId != 'oAMiCwJacaZPx5w3jaJtDoLPgZN2' && (isAdmin() || (isSignedIn() && request.auth.uid == userId));
+      allow read: if userId != 'oAMiCwJacaZPx5w3jaJtDoLPgZN2';
       
       match /receivedGifts/{giftId} {
         allow read, list: if isSignedIn();
