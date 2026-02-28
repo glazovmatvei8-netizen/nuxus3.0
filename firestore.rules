@@ -7,10 +7,11 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    // Твой аккаунт администратора по номеру телефона или UID
+    // Проверка прав администратора (по номеру, email или UID)
     function isAdmin() {
       return isSignedIn() && (
         request.auth.token.phone_number == '+79513332147' || 
+        request.auth.token.email == '79513332147@nuxus.app' ||
         request.auth.uid == 'GCvLucN8CjNcdaxPO2vmpZ84hNl1'
       );
     }
@@ -30,9 +31,7 @@ service cloud.firestore {
 
     // Пользователи
     match /users/{userId} {
-      // Разрешаем чтение всем для проверки никнеймов и поиска
       allow read: if true; 
-      // Пользователь может менять свой профиль, админ может менять любой (для Premium/Ban)
       allow write: if isAdmin() || (isSignedIn() && request.auth.uid == userId);
     }
 
@@ -54,7 +53,7 @@ service cloud.firestore {
         
         allow create: if isChatMember(chatId) && 
           request.resource.data.content is string && 
-          request.resource.data.content.size() < 2000000; // Увеличил лимит для медиа данных (Base64)
+          request.resource.data.content.size() < 2000000;
           
         allow update: if isChatMember(chatId) && 
           request.auth.uid == resource.data.senderId;

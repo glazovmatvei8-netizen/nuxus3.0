@@ -35,24 +35,20 @@ export default function AuthScreen() {
   });
 
   /**
-   * Улучшенная нормализация номера телефона.
-   * Преобразует 8951..., 7951..., +7951... в единый формат +7951...
+   * Гарантированная нормализация номера телефона для администратора и пользователей.
+   * Любой ввод (8951..., 7951..., +7951...) приводится к формату +7951...
    */
   const normalizePhone = (phone: string) => {
     let digits = phone.replace(/\D/g, '');
     
-    // Если номер начинается с 8 и имеет длину 11, меняем 8 на 7
     if (digits.startsWith('8') && digits.length === 11) {
       digits = '7' + digits.slice(1);
     }
     
-    // Если номер без кода страны (10 цифр), добавляем 7
     if (digits.length === 10) {
       digits = '7' + digits;
     }
     
-    // Если номер начинается не с 7, но имеет длину 11 (например, 9... случайно ввели 11 цифр), 
-    // пробуем привести к стандарту, если это российская нумерация
     if (!digits.startsWith('7') && digits.length === 11) {
         digits = '7' + digits.slice(1);
     }
@@ -70,12 +66,7 @@ export default function AuthScreen() {
     const fullPhone = normalizePhone(formData.phone);
     
     if (fullPhone.length < 11) {
-      toast({ title: "Ошибка", description: "Введите корректный номер (+7...)", variant: "destructive" });
-      return;
-    }
-
-    if (formData.password.length < 6) {
-      toast({ title: "Ошибка", description: "Пароль слишком короткий (мин. 6 симв.)", variant: "destructive" });
+      toast({ title: "Ошибка", description: "Введите корректный номер", variant: "destructive" });
       return;
     }
 
@@ -83,7 +74,6 @@ export default function AuthScreen() {
     const virtualEmail = getVirtualEmail(formData.phone);
 
     try {
-      // Принудительно устанавливаем сохранение сессии в браузере
       await setPersistence(auth, browserLocalPersistence);
 
       if (mode === 'register') {
@@ -103,6 +93,7 @@ export default function AuthScreen() {
           user = result.user;
         } catch (authErr: any) {
           if (authErr.code === 'auth/email-already-in-use') {
+            // Если email уже есть, пробуем войти (это решает проблему повторной регистрации админа)
             const result = await signInWithEmailAndPassword(auth, virtualEmail, formData.password);
             user = result.user;
           } else {
@@ -147,10 +138,10 @@ export default function AuthScreen() {
             return;
           }
         } catch (err: any) {
-          if (err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential' || err.code === 'auth/wrong-password') {
+          if (err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential' || err.code === 'auth/wrong-password' || err.code === 'auth/invalid-email') {
             toast({ 
               title: "Ошибка входа", 
-              description: "Проверьте номер и пароль.", 
+              description: "Проверьте номер и пароль. Если вы еще не создали аккаунт, перейдите в раздел 'Регистрация'.", 
               variant: "destructive" 
             });
             setIsLoading(false);
@@ -219,7 +210,7 @@ export default function AuthScreen() {
                 <Label className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground/80 ml-1">Номер телефона</Label>
                 <div className="relative group">
                   <Smartphone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
-                  <Input placeholder="8 900 000 00 00" type="tel" value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} className="bg-white/5 border-white/10 pl-10 h-14 rounded-2xl focus:border-primary/50 transition-all" required />
+                  <Input placeholder="8 951 333 21 47" type="tel" value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} className="bg-white/5 border-white/10 pl-10 h-14 rounded-2xl focus:border-primary/50 transition-all" required />
                 </div>
               </div>
 
