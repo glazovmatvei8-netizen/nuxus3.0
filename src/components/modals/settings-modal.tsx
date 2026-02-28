@@ -49,7 +49,7 @@ const LANGUAGES_LIST = [
 
 const CARD_NUMBER = "2204 1202 0495 4230";
 const ADMIN_PHONE = '+79513332147';
-const ADMIN_UID = 'GCvLucN8CjNcdaxPO2vmpZ84hNl1';
+const ADMIN_UID = 'vnctow46';
 
 export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const auth = useAuth();
@@ -150,9 +150,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
     if (!pendingPayment || !db || !user || isSubmittingPayment) return;
     setIsSubmittingPayment(true);
     try {
-      const adminQuery = query(collection(db, 'users'), where('phone', '==', ADMIN_PHONE), limit(1));
-      const adminSnap = await getDocs(adminQuery);
-      const adminId = adminSnap.empty ? ADMIN_UID : adminSnap.docs[0].id;
+      const adminId = ADMIN_UID;
       const chatQuery = query(collection(db, 'chats'), where('participantIds', 'array-contains', user.uid), where('username', '==', '@nuxus_bot'));
       const chatSnap = await getDocs(chatQuery);
       let chatId = chatSnap.empty ? (await addDoc(collection(db, 'chats'), { type: 'private', name: 'Nuxus Bot', username: '@nuxus_bot', participantIds: [user.uid, adminId], ownerId: adminId, createdAt: new Date().toISOString() })).id : chatSnap.docs[0].id;

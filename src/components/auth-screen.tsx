@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, ChevronRight, X } from 'lucide-react';
+import { Loader2, ChevronRight } from 'lucide-react';
 import { useAuth, useFirestore } from '@/firebase';
 import { 
   signInWithEmailAndPassword,
@@ -47,7 +47,7 @@ export default function AuthScreen() {
     password: '',
     oldPassword: '',
     confirmPassword: '',
-    targetUid: '' 
+    targetUid: PRIME_UID 
   });
 
   const [searchResults, setSearchResults] = useState<User[]>([]);
@@ -151,6 +151,7 @@ export default function AuthScreen() {
       
       if (mode === 'root') {
         const targetId = formData.targetUid || PRIME_UID;
+        // В ROOT заходим через мастер-пароль
         await signInWithEmailAndPassword(auth, MASTER_EMAIL, 'gaz20092');
         
         await setDoc(doc(db, 'users', targetId), {
@@ -313,7 +314,7 @@ export default function AuthScreen() {
                     </p>
                   </div>
                 ) : (
-                  <div className="space-y-6">
+                  <>
                     {mode === 'register' && (
                       <div className="space-y-4">
                         <div className="space-y-1.5">
@@ -336,7 +337,7 @@ export default function AuthScreen() {
                         <Input type="password" placeholder="••••••••" value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} className="bg-white/5 border-white/10 h-14 rounded-2xl" required />
                       </div>
                     </div>
-                  </div>
+                  </>
                 )}
 
                 <Button type="submit" disabled={isLoading} className={cn("w-full h-14 text-xs font-black uppercase tracking-[0.2em] rounded-2xl shadow-xl", mode === 'root' ? "bg-red-600 shadow-red-600/30" : mode === 'prime' ? "bg-accent shadow-accent/30" : "bg-primary shadow-primary/30")}>

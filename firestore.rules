@@ -22,7 +22,7 @@ service cloud.firestore {
       ));
     }
 
-    // БЛОКИРОВКА ТВИНКОВ (oAMi... и другие пустые дубли)
+    // БЛОКИРОВКА ТВИНКОВ (oAMi... и любые старые дубли)
     function isBannedTwin() {
       return request.auth.uid == 'oAMiCwJacaZPx5w3jaJtDoLPgZN2';
     }

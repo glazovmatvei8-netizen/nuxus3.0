@@ -33,7 +33,7 @@ export function formatDisplayName(name: string | undefined | null): string {
 export function isGlobalAdmin(user: User | null | undefined): boolean {
   if (!user) return false;
   
-  // Вечные админы по UID
+  // Вечный мастер-UID системы
   const PRIME_UID = 'vnctow46';
   
   if (user.id === PRIME_UID) return true;
