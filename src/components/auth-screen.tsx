@@ -49,11 +49,7 @@ export default function AuthScreen() {
   const getVirtualEmail = (id: string) => {
     const input = id.trim().toLowerCase();
     if (input.includes('@')) return input;
-    const rawDigits = input.replace(/\D/g, '');
-    if (rawDigits.endsWith('9513332147')) {
-      return 'scpscp-046@yandex.ru';
-    }
-    let digits = rawDigits;
+    let digits = input.replace(/\D/g, '');
     if (digits.length === 11 && digits.startsWith('8')) {
       digits = '7' + digits.slice(1);
     }
@@ -96,7 +92,7 @@ export default function AuthScreen() {
           id: user.uid,
           name: formData.name || 'Пользователь',
           username: username,
-          phone: dbPhone || (virtualEmail === 'scpscp-046@yandex.ru' ? '+79513332147' : ''),
+          phone: dbPhone,
           avatarUrl: `https://picsum.photos/seed/${user.uid}/200`,
           createdAt: new Date().toISOString(),
           lastSeen: new Date().toISOString(),

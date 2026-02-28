@@ -9,7 +9,6 @@ service cloud.firestore {
 
     function isAdmin() {
       return isSignedIn() && (
-        request.auth.token.email == 'scpscp-046@yandex.ru' || 
         request.auth.uid == 'GCvLucN8CjNcdaxPO2vmpZ84hNl1' ||
         request.auth.token.phone_number == '+79513332147' ||
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true
