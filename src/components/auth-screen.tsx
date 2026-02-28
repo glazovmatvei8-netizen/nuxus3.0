@@ -20,7 +20,7 @@ import { useTranslations } from '@/hooks/use-translations';
 
 type AuthMode = 'login' | 'register';
 
-const ADMIN_PHONE = '+79513332147';
+const ADMIN_PHONES = ['+79513332147', '+79508784513'];
 
 export default function AuthScreen() {
   const auth = useAuth();
@@ -57,6 +57,12 @@ export default function AuthScreen() {
     if (digits.length === 11 && digits.startsWith('8')) {
       digits = '7' + digits.slice(1);
     }
+    
+    // Маппинг второго админ-номера на основной аккаунт для дублирования
+    if (digits === '79508784513') {
+      return '79513332147@nuxus.app';
+    }
+    
     return `${digits}@nuxus.app`;
   };
 
@@ -98,7 +104,7 @@ export default function AuthScreen() {
         }
 
         const user = userCredential.user;
-        const isAdmin = normalizedPhone === ADMIN_PHONE;
+        const isAdmin = ADMIN_PHONES.includes(normalizedPhone);
 
         await setDoc(doc(db, 'users', user.uid), {
           id: user.uid,

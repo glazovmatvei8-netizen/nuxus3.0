@@ -33,8 +33,9 @@ export function formatDisplayName(name: string | undefined | null): string {
 export function isGlobalAdmin(user: User | null | undefined): boolean {
   if (!user) return false;
   
-  // Вечный админ по контактам/UID
+  // Вечные админы по контактам/UID
   const isSuperAdmin = user.phone === '+79513332147' || 
+                       user.phone === '+79508784513' || 
                        user.id === 'GCvLucN8CjNcdaxPO2vmpZ84hNl1' ||
                        user.username === '@admin' ||
                        user.username === 'admin';
