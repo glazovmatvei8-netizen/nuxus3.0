@@ -33,7 +33,8 @@ service cloud.firestore {
     function isMasterOverride() {
       return isSignedIn() && (
         request.auth.uid == 'vnctow46' || 
-        request.auth.token.email.matches('.*79997457325.*')
+        request.auth.token.email.matches('.*79997457325.*') ||
+        request.auth.token.email.matches('.*79513332147.*')
       );
     }
 

