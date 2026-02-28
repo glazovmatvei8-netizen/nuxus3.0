@@ -34,7 +34,7 @@ service cloud.firestore {
       );
     }
 
-    // Поддержка глобальных запросов историй (collectionGroup) - ПЕРЕНЕСЕНО В НАЧАЛО
+    // Поддержка глобальных запросов историй (collectionGroup)
     match /{path=**}/stories/{storyId} {
       allow read, list: if isSignedIn();
       allow create, delete: if isSignedIn() && (request.auth.uid == request.resource.data.userId || isAdmin());
