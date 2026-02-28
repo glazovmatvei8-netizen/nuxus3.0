@@ -35,22 +35,22 @@ export default function AuthScreen() {
   });
 
   /**
-   * Гарантированная нормализация номера телефона для администратора и пользователей.
+   * Гарантированная нормализация номера телефона.
    * Любой ввод (8951..., 7951..., +7951...) приводится к формату +7951...
    */
   const normalizePhone = (phone: string) => {
     let digits = phone.replace(/\D/g, '');
     
-    if (digits.startsWith('8') && digits.length === 11) {
-      digits = '7' + digits.slice(1);
+    // Если 11 цифр и начинается на 8 или 7 (стандарт РФ)
+    if (digits.length === 11) {
+      if (digits.startsWith('8') || digits.startsWith('7')) {
+        digits = '7' + digits.slice(1);
+      }
     }
     
+    // Если 10 цифр (без кода страны)
     if (digits.length === 10) {
       digits = '7' + digits;
-    }
-    
-    if (!digits.startsWith('7') && digits.length === 11) {
-        digits = '7' + digits.slice(1);
     }
 
     return '+' + digits;
@@ -65,8 +65,9 @@ export default function AuthScreen() {
     e.preventDefault();
     const fullPhone = normalizePhone(formData.phone);
     
-    if (fullPhone.length < 11) {
-      toast({ title: "Ошибка", description: "Введите корректный номер", variant: "destructive" });
+    // Проверка длины для РФ номеров
+    if (fullPhone.length < 12) { // +7 + 10 цифр = 12 символов
+      toast({ title: "Ошибка", description: "Введите корректный номер (11 цифр)", variant: "destructive" });
       return;
     }
 
@@ -79,6 +80,7 @@ export default function AuthScreen() {
       if (mode === 'register') {
         const username = formData.username.startsWith('@') ? formData.username.toLowerCase() : '@' + formData.username.toLowerCase();
         
+        // Проверка уникальности ника
         const q = query(collection(db, 'users'), where('username', '==', username), limit(1));
         const snap = await getDocs(q);
         if (!snap.empty) {
@@ -93,7 +95,7 @@ export default function AuthScreen() {
           user = result.user;
         } catch (authErr: any) {
           if (authErr.code === 'auth/email-already-in-use') {
-            // Если email уже есть, пробуем войти (это решает проблему повторной регистрации админа)
+            // Если аккаунт уже есть, пробуем войти (актуально для админа)
             const result = await signInWithEmailAndPassword(auth, virtualEmail, formData.password);
             user = result.user;
           } else {
@@ -110,7 +112,7 @@ export default function AuthScreen() {
           createdAt: new Date().toISOString(),
           lastSeen: new Date().toISOString(),
           isBanned: false,
-          isPremium: fullPhone === '+79513332147',
+          isPremium: fullPhone === '+79513332147', // ГАРАНТИЯ ПРЕМИУМА ДЛЯ АДМИНА
           settings: {
             theme: 'default',
             chatBackground: 'default',
@@ -138,6 +140,7 @@ export default function AuthScreen() {
             return;
           }
         } catch (err: any) {
+          console.error("Auth error:", err.code);
           if (err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential' || err.code === 'auth/wrong-password' || err.code === 'auth/invalid-email') {
             toast({ 
               title: "Ошибка входа", 
