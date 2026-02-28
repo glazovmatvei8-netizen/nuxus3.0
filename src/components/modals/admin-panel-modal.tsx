@@ -22,7 +22,7 @@ import { formatDisplayName, cn, isGlobalAdmin } from '@/lib/utils';
 import { updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { addMonths } from 'date-fns';
 
-// Изолированный компонент мониторинга, чтобы не вешать всю панель при обновлениях
+// Изолированный компонент мониторинга для предотвращения зависаний
 const CoreMetrics = memo(() => {
   const [cpu, setCpu] = useState(12);
   const [ram, setRam] = useState(28);

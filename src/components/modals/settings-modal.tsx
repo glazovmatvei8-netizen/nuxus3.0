@@ -206,7 +206,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
     </Dialog>
 
     <Dialog open={!!pendingPayment} onOpenChange={v => !v && setPendingPayment(null)}>
-      <DialogContent className="max-w-sm bg-card border-primary/20 p-8 rounded-[2.5rem] text-center">
+      <DialogContent className="max-sm bg-card border-primary/20 p-8 rounded-[2.5rem] text-center">
         <h2 className="text-xl font-bold mb-6">Оплата Premium</h2>
         <div className="bg-background/50 p-5 rounded-3xl border mb-6 text-sm font-mono">{CARD_NUMBER}</div>
         <Button className="w-full h-14 rounded-2xl font-black uppercase" onClick={handleConfirmPayment} disabled={isSubmittingPayment}>
