@@ -30,14 +30,15 @@ import {
 import { cn, isUserPremium } from '@/lib/utils';
 import type { User } from '@/lib/types';
 import { generateAiAvatar } from '@/ai/flows/generate-ai-avatar-flow';
+import { useTranslations } from '@/hooks/use-translations';
 
 const PREMIUM_PLANS = [
-  { id: '1m', name: '1 Месяц', price: 200, unit: 'months', amount: 1 },
-  { id: '3m', name: '3 Месяца', price: 500, unit: 'months', amount: 3 },
-  { id: '1y', name: '1 Год', price: 1500, unit: 'years', amount: 1 },
+  { id: '1m', name: '1 Month', price: 200, unit: 'months', amount: 1 },
+  { id: '3m', name: '3 Months', price: 500, unit: 'months', amount: 3 },
+  { id: '1y', name: '1 Year', price: 1500, unit: 'years', amount: 1 },
 ];
 
-const LANGUAGES = [
+const LANGUAGES_LIST = [
   { id: 'ru', name: 'Русский' },
   { id: 'en', name: 'English' },
   { id: 'de', name: 'Deutsch' },
@@ -56,6 +57,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
   const db = useFirestore();
   const { user } = useUser();
   const { toast } = useToast();
+  const { t } = useTranslations();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const userRef = useMemoFirebase(() => (!db || !user) ? null : doc(db, 'users', user.uid), [db, user]);
@@ -120,7 +122,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
       }
     });
     onOpenChange(false);
-    toast({ title: "Настройки обновлены" });
+    toast({ title: "Settings Updated" });
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -137,9 +139,9 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
     try {
       const { imageUrl } = await generateAiAvatar();
       setForm(prev => ({ ...prev, avatarUrl: imageUrl }));
-      toast({ title: "Аватар сгенерирован!" });
+      toast({ title: "Avatar Generated!" });
     } catch (e) {
-      toast({ title: "Ошибка ИИ", description: "Не удалось создать аватар", variant: "destructive" });
+      toast({ title: "AI Error", description: "Failed to create avatar", variant: "destructive" });
     } finally {
       setIsGeneratingAvatar(false);
     }
@@ -164,7 +166,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
           amount: pendingPayment.amount, unit: pendingPayment.unit, price: pendingPayment.price, status: 'pending' 
         }
       });
-      toast({ title: "Заявка на оплату отправлена в Nuxus Bot" });
+      toast({ title: "Payment request sent to Nuxus Bot" });
       setPendingPayment(null);
     } finally {
       setIsSubmittingPayment(false);
@@ -177,16 +179,16 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
       <DialogContent className="max-w-md bg-card border-border p-0 overflow-hidden h-[90vh] flex flex-col rounded-[2.5rem] shadow-2xl">
         <DialogHeader className="p-6 border-b border-border bg-muted/30 shrink-0">
           <DialogTitle className="flex items-center gap-2 text-xl font-bold italic uppercase tracking-tighter">
-            <Settings2 className="w-5 h-5 text-primary" /> Профиль
+            <Settings2 className="w-5 h-5 text-primary" /> {t('settings.title')}
           </DialogTitle>
         </DialogHeader>
         <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className="flex-1 flex flex-col min-h-0">
           <TabsList className="grid grid-cols-5 bg-muted/50 p-1 mx-6 mt-4 rounded-2xl shrink-0 border border-white/5">
-            <TabsTrigger value="profile" className="text-[8px] uppercase font-black tracking-widest px-1">Профиль</TabsTrigger>
-            <TabsTrigger value="appearance" className="text-[8px] uppercase font-black tracking-widest px-1">Стиль</TabsTrigger>
-            <TabsTrigger value="privacy" className="text-[8px] uppercase font-black tracking-widest px-1">Защита</TabsTrigger>
-            <TabsTrigger value="language" className="text-[8px] uppercase font-black tracking-widest px-1">Язык</TabsTrigger>
-            <TabsTrigger value="store" className="text-[8px] uppercase font-black tracking-widest px-1">Prime</TabsTrigger>
+            <TabsTrigger value="profile" className="text-[8px] uppercase font-black tracking-widest px-1">{t('settings.tabs.profile')}</TabsTrigger>
+            <TabsTrigger value="appearance" className="text-[8px] uppercase font-black tracking-widest px-1">{t('settings.tabs.style')}</TabsTrigger>
+            <TabsTrigger value="privacy" className="text-[8px] uppercase font-black tracking-widest px-1">{t('settings.tabs.privacy')}</TabsTrigger>
+            <TabsTrigger value="language" className="text-[8px] uppercase font-black tracking-widest px-1">{t('settings.tabs.language')}</TabsTrigger>
+            <TabsTrigger value="store" className="text-[8px] uppercase font-black tracking-widest px-1">{t('settings.tabs.prime')}</TabsTrigger>
           </TabsList>
           <ScrollArea className="flex-1 px-6">
             <TabsContent value="profile" className="space-y-6 m-0 py-6">
@@ -198,39 +200,39 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                 </div>
                 {isUserPremium(profile) && (
                   <Button variant="outline" className="h-9 rounded-xl gap-2 text-xs border-primary/20 bg-primary/5 hover:bg-primary/10" onClick={handleAiAvatar} disabled={isGeneratingAvatar}>
-                    {isGeneratingAvatar ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4 text-primary" />} Генерировать ИИ-аватар
+                    {isGeneratingAvatar ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4 text-primary" />} {t('settings.labels.avatar')}
                   </Button>
                 )}
                 <div className="space-y-4 w-full">
-                  <div className="space-y-1.5"><Label className="text-[10px] uppercase font-black tracking-[0.2em] text-muted-foreground ml-1">Имя</Label><Input value={form.name} onChange={e => setForm({...form, name: e.target.value})} className="bg-muted/30 border-white/5 h-12 rounded-2xl" /></div>
-                  <div className="space-y-1.5"><Label className="text-[10px] uppercase font-black tracking-[0.2em] text-muted-foreground ml-1">Никнейм</Label><Input value={form.username} onChange={e => setForm({...form, username: e.target.value})} className="bg-muted/30 border-white/5 h-12 rounded-2xl" /></div>
-                  <div className="space-y-1.5"><Label className="text-[10px] uppercase font-black tracking-[0.2em] text-muted-foreground ml-1">О себе</Label><Textarea value={form.bio} onChange={e => setForm({...form, bio: e.target.value})} className="bg-muted/30 border-white/5 rounded-2xl min-h-[80px]" /></div>
+                  <div className="space-y-1.5"><Label className="text-[10px] uppercase font-black tracking-[0.2em] text-muted-foreground ml-1">{t('settings.labels.name')}</Label><Input value={form.name} onChange={e => setForm({...form, name: e.target.value})} className="bg-muted/30 border-white/5 h-12 rounded-2xl" /></div>
+                  <div className="space-y-1.5"><Label className="text-[10px] uppercase font-black tracking-[0.2em] text-muted-foreground ml-1">{t('settings.labels.username')}</Label><Input value={form.username} onChange={e => setForm({...form, username: e.target.value})} className="bg-muted/30 border-white/5 h-12 rounded-2xl" /></div>
+                  <div className="space-y-1.5"><Label className="text-[10px] uppercase font-black tracking-[0.2em] text-muted-foreground ml-1">{t('settings.labels.bio')}</Label><Textarea value={form.bio} onChange={e => setForm({...form, bio: e.target.value})} className="bg-muted/30 border-white/5 rounded-2xl min-h-[80px]" /></div>
                 </div>
               </div>
             </TabsContent>
             <TabsContent value="appearance" className="space-y-6 m-0 py-6">
               <div className="bg-muted/20 p-6 rounded-[2rem] border border-white/5 space-y-6">
                 <div className="space-y-4">
-                  <Label className="text-[10px] uppercase font-black tracking-[0.2em] text-primary flex items-center gap-2"><Palette className="w-3.5 h-3.5" /> Тема оформления</Label>
+                  <Label className="text-[10px] uppercase font-black tracking-[0.2em] text-primary flex items-center gap-2"><Palette className="w-3.5 h-3.5" /> {t('settings.labels.theme')}</Label>
                   <div className="grid grid-cols-3 gap-3">
                     {['default', 'midnight', 'ocean'].map(t => (
                       <button key={t} onClick={() => setForm({...form, theme: t as any})} className={cn("flex flex-col items-center gap-2 p-3 rounded-2xl border transition-all", form.theme === t ? "bg-primary/20 border-primary text-primary" : "bg-black/20 border-white/5 text-muted-foreground hover:bg-black/40")}>
                         {t === 'default' && <Monitor className="w-5 h-5" />}{t === 'midnight' && <Moon className="w-5 h-5" />}{t === 'ocean' && <Droplets className="w-5 h-5" />}
-                        <span className="text-[9px] uppercase font-bold tracking-widest">{t === 'default' ? 'Стандарт' : t === 'midnight' ? 'Полночь' : 'Океан'}</span>
+                        <span className="text-[9px] uppercase font-bold tracking-widest">{t === 'default' ? 'Default' : t === 'midnight' ? 'Midnight' : 'Ocean'}</span>
                       </button>
                     ))}
                   </div>
                 </div>
-                <div className="space-y-4 pt-4 border-t border-white/5"><Label className="text-[10px] uppercase font-black tracking-[0.2em] text-primary flex items-center gap-2"><Type className="w-3.5 h-3.5" /> Размер текста</Label><Select value={form.messageSize} onValueChange={(v) => setForm({...form, messageSize: v as any})}><SelectTrigger className="h-12 rounded-2xl bg-black/20 border-white/5"><SelectValue /></SelectTrigger><SelectContent className="bg-card border-white/10 rounded-2xl"><SelectItem value="small">Маленький</SelectItem><SelectItem value="medium">Средний</SelectItem><SelectItem value="large">Большой</SelectItem></SelectContent></Select></div>
+                <div className="space-y-4 pt-4 border-t border-white/5"><Label className="text-[10px] uppercase font-black tracking-[0.2em] text-primary flex items-center gap-2"><Type className="w-3.5 h-3.5" /> {t('settings.labels.textSize')}</Label><Select value={form.messageSize} onValueChange={(v) => setForm({...form, messageSize: v as any})}><SelectTrigger className="h-12 rounded-2xl bg-black/20 border-white/5"><SelectValue /></SelectTrigger><SelectContent className="bg-card border-white/10 rounded-2xl"><SelectItem value="small">Small</SelectItem><SelectItem value="medium">Medium</SelectItem><SelectItem value="large">Large</SelectItem></SelectContent></Select></div>
               </div>
             </TabsContent>
             <TabsContent value="privacy" className="space-y-6 m-0 py-6">
               <div className="bg-muted/20 p-6 rounded-[2rem] border border-white/5 space-y-6">
                 <div className="space-y-4">
-                  <Label className="text-[10px] uppercase font-black tracking-[0.2em] text-accent flex items-center gap-2"><ShieldCheck className="w-3.5 h-3.5" /> Защита данных</Label>
+                  <Label className="text-[10px] uppercase font-black tracking-[0.2em] text-accent flex items-center gap-2"><ShieldCheck className="w-3.5 h-3.5" /> Data Security</Label>
                   <div className="space-y-4">
-                    <div className="space-y-2"><Label className="text-[9px] uppercase font-bold text-muted-foreground ml-1">Видимость номера</Label><Select value={form.phoneVisibility} onValueChange={(v) => setForm({...form, phoneVisibility: v as any})}><SelectTrigger className="h-11 rounded-xl bg-black/20 border-white/5"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="everybody">Все</SelectItem><SelectItem value="contacts">Контакты</SelectItem><SelectItem value="nobody">Никто</SelectItem></SelectContent></Select></div>
-                    <div className="space-y-2"><Label className="text-[9px] uppercase font-bold text-muted-foreground ml-1">Кто может писать мне</Label><Select value={form.whoCanMessageMe} onValueChange={(v) => setForm({...form, whoCanMessageMe: v as any})}><SelectTrigger className="h-11 rounded-xl bg-black/20 border-white/5"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="everybody">Все</SelectItem><SelectItem value="premium">Только Prime</SelectItem></SelectContent></Select></div>
+                    <div className="space-y-2"><Label className="text-[9px] uppercase font-bold text-muted-foreground ml-1">Phone Visibility</Label><Select value={form.phoneVisibility} onValueChange={(v) => setForm({...form, phoneVisibility: v as any})}><SelectTrigger className="h-11 rounded-xl bg-black/20 border-white/5"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="everybody">Everyone</SelectItem><SelectItem value="contacts">Contacts</SelectItem><SelectItem value="nobody">Nobody</SelectItem></SelectContent></Select></div>
+                    <div className="space-y-2"><Label className="text-[9px] uppercase font-bold text-muted-foreground ml-1">Who can message me</Label><Select value={form.whoCanMessageMe} onValueChange={(v) => setForm({...form, whoCanMessageMe: v as any})}><SelectTrigger className="h-11 rounded-xl bg-black/20 border-white/5"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="everybody">Everyone</SelectItem><SelectItem value="premium">Only Prime</SelectItem></SelectContent></Select></div>
                   </div>
                 </div>
               </div>
@@ -238,10 +240,10 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
             <TabsContent value="language" className="space-y-6 m-0 py-6">
               <div className="bg-muted/20 p-6 rounded-[2rem] border border-white/5 space-y-4">
                 <Label className="text-[10px] uppercase font-black tracking-[0.2em] text-primary flex items-center gap-2">
-                  <Globe className="w-4 h-4" /> Выбор языка системы
+                  <Globe className="w-4 h-4" /> {t('settings.tabs.language')}
                 </Label>
                 <div className="grid grid-cols-1 gap-2">
-                  {LANGUAGES.map((lang) => (
+                  {LANGUAGES_LIST.map((lang) => (
                     <button
                       key={lang.id}
                       onClick={() => setForm({ ...form, language: lang.id })}
@@ -269,7 +271,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
           </ScrollArea>
           <div className="p-6 border-t border-white/5 bg-muted/20 shrink-0 flex gap-3">
             <Button variant="ghost" className="h-14 w-14 rounded-2xl bg-destructive/10 text-destructive hover:bg-destructive hover:text-white transition-all shrink-0" onClick={() => signOut(auth)}><LogOut className="w-6 h-6" /></Button>
-            <Button className="flex-1 h-14 rounded-2xl font-black uppercase tracking-[0.2em] italic bg-primary shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all text-xs" onClick={handleSave}><Check className="w-5 h-5 mr-2" /> Сохранить</Button>
+            <Button className="flex-1 h-14 rounded-2xl font-black uppercase tracking-[0.2em] italic bg-primary shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all text-xs" onClick={handleSave}><Check className="w-5 h-5 mr-2" /> {t('settings.labels.save')}</Button>
           </div>
         </Tabs>
       </DialogContent>
@@ -277,12 +279,12 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
     <Dialog open={!!pendingPayment} onOpenChange={v => !v && setPendingPayment(null)}>
       <DialogContent className="max-w-sm bg-card border-primary/20 p-8 rounded-[3rem] text-center shadow-2xl">
         <Crown className="w-16 h-16 text-primary mx-auto mb-6 animate-float" />
-        <h2 className="text-2xl font-black text-white italic tracking-tighter mb-2">Оплата Prime</h2>
-        <div className="bg-black/40 p-6 rounded-3xl border border-white/10 mb-8 group cursor-pointer relative overflow-hidden" onClick={() => { navigator.clipboard.writeText(CARD_NUMBER.replace(/\s/g, '')); toast({ title: "Номер карты скопирован" }); }}>
-          <div className="text-[10px] uppercase font-bold text-muted-foreground mb-1">Номер карты</div>
+        <h2 className="text-2xl font-black text-white italic tracking-tighter mb-2">Prime Payment</h2>
+        <div className="bg-black/40 p-6 rounded-3xl border border-white/10 mb-8 group cursor-pointer relative overflow-hidden" onClick={() => { navigator.clipboard.writeText(CARD_NUMBER.replace(/\s/g, '')); toast({ title: "Card number copied" }); }}>
+          <div className="text-[10px] uppercase font-bold text-muted-foreground mb-1">Card Number</div>
           <div className="text-lg font-mono font-black text-white tracking-widest">{CARD_NUMBER}</div>
         </div>
-        <Button className="w-full h-14 rounded-2xl font-black uppercase tracking-[0.2em] bg-primary shadow-xl shadow-primary/30" onClick={handleConfirmPayment} disabled={isSubmittingPayment}>{isSubmittingPayment ? <Loader2 className="animate-spin w-6 h-6" /> : "Я оплатил(а)"}</Button>
+        <Button className="w-full h-14 rounded-2xl font-black uppercase tracking-[0.2em] bg-primary shadow-xl shadow-primary/30" onClick={handleConfirmPayment} disabled={isSubmittingPayment}>{isSubmittingPayment ? <Loader2 className="animate-spin w-6 h-6" /> : "I Paid"}</Button>
       </DialogContent>
     </Dialog>
     </>

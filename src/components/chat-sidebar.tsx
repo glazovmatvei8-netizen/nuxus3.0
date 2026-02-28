@@ -19,18 +19,19 @@ import { formatLastSeen, formatDisplayName, cn, isGlobalAdmin, isUserPremium } f
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { updateDocumentNonBlocking, addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { useTranslations } from '@/hooks/use-translations';
 
 export default function ChatSidebar() {
   const { user } = useUser();
   const db = useFirestore();
   const { toast } = useToast();
+  const { t } = useTranslations();
   const { currentChatId, setCurrentChatId, forwardingMessage, setForwardingMessage } = useAppState();
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState<ChatType | 'all'>('all');
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isAdminPanelOpen, setIsAdminPanelOpen] = useState(false);
-  const [isCreatingSaved, setIsCreatingSaved] = useState(false);
   const [globalSearchResult, setGlobalSearchResult] = useState<Chat | null>(null);
   const [isSearchingGlobal, setIsSearchingGlobal] = useState(false);
 
@@ -172,7 +173,7 @@ export default function ChatSidebar() {
   });
 
   const displayName = isProfileLoading ? '...' : formatDisplayName(profile?.name || user?.displayName);
-  const displayUsername = isProfileLoading ? '...' : (profile?.username || (user?.email ? `@${user.email.split('@')[0]}` : 'Настройте профиль'));
+  const displayUsername = isProfileLoading ? '...' : (profile?.username || (user?.email ? `@${user.email.split('@')[0]}` : 'Nuxus ID'));
   const isPremium = isUserPremium(profile);
 
   return (
@@ -225,7 +226,7 @@ export default function ChatSidebar() {
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input 
-            placeholder="Поиск..." 
+            placeholder={t('sidebar.search')} 
             className="pl-9 bg-muted border-none rounded-xl h-10 text-sm focus:ring-1 focus:ring-primary/20"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
@@ -236,10 +237,10 @@ export default function ChatSidebar() {
       <div className="px-3 py-2 shrink-0">
         <Tabs value={activeTab} onValueChange={(val) => setActiveTab(val as any)} className="w-full">
           <TabsList className="grid w-full grid-cols-4 h-9 bg-muted/50 rounded-xl p-1 gap-1 border border-white/5">
-            <TabsTrigger value="all" className="rounded-lg text-[9px] font-bold uppercase tracking-widest">Все</TabsTrigger>
-            <TabsTrigger value="private" className="rounded-lg text-[9px] font-bold uppercase tracking-widest">Чаты</TabsTrigger>
-            <TabsTrigger value="group" className="rounded-lg text-[9px] font-bold uppercase tracking-widest">Группы</TabsTrigger>
-            <TabsTrigger value="channel" className="rounded-lg text-[9px] font-bold uppercase tracking-widest">Каналы</TabsTrigger>
+            <TabsTrigger value="all" className="rounded-lg text-[9px] font-bold uppercase tracking-widest">{t('sidebar.all')}</TabsTrigger>
+            <TabsTrigger value="private" className="rounded-lg text-[9px] font-bold uppercase tracking-widest">{t('sidebar.private')}</TabsTrigger>
+            <TabsTrigger value="group" className="rounded-lg text-[9px] font-bold uppercase tracking-widest">{t('sidebar.groups')}</TabsTrigger>
+            <TabsTrigger value="channel" className="rounded-lg text-[9px] font-bold uppercase tracking-widest">{t('sidebar.channels')}</TabsTrigger>
           </TabsList>
         </Tabs>
       </div>
@@ -248,7 +249,7 @@ export default function ChatSidebar() {
         {isChatsLoading ? (
           <div className="flex flex-col items-center justify-center p-12 gap-3 opacity-50">
             <Loader2 className="w-6 h-6 animate-spin text-primary" />
-            <span className="text-[10px] uppercase font-bold tracking-widest">Синхронизация...</span>
+            <span className="text-[10px] uppercase font-bold tracking-widest">{t('sidebar.sync')}</span>
           </div>
         ) : (
           <div className="space-y-1 pb-24">
@@ -260,7 +261,7 @@ export default function ChatSidebar() {
             {globalSearchResult && (
               <div className="mb-4">
                 <div className="px-3 py-1 text-[10px] font-black text-primary flex items-center gap-1 uppercase tracking-widest mb-1">
-                  <Globe className="w-3 h-3" /> Глобальный поиск
+                  <Globe className="w-3 h-3" /> Global Search
                 </div>
                 <ChatListItem 
                   chat={globalSearchResult}
@@ -300,7 +301,7 @@ export default function ChatSidebar() {
           onClick={() => setIsCreateModalOpen(true)}
         >
           <Plus className="w-5 h-5 mr-2" />
-          Создать сообщество
+          {t('sidebar.create')}
         </Button>
       </div>
 
@@ -314,6 +315,7 @@ export default function ChatSidebar() {
 function ChatListItem({ chat, isActive, otherId, cachedDisplayName, manualAvatarUrl, onClick, isPinned, isGlobalResult, onTogglePin, onJoin }: any) {
   const db = useFirestore();
   const { user } = useUser();
+  const { t } = useTranslations();
   const [status, setStatus] = useState<string>('');
   
   const userProfileRef = useMemoFirebase(() => {
@@ -336,22 +338,22 @@ function ChatListItem({ chat, isActive, otherId, cachedDisplayName, manualAvatar
 
   useEffect(() => {
     if (isGlobalResult) {
-      setStatus(chat.type === 'group' ? 'Сообщество' : 'Канал');
+      setStatus(chat.type === 'group' ? 'Public Group' : 'Public Channel');
       return;
     }
-    const isOtherDeleted = otherProfile?.isBanned || otherProfile?.name?.includes('Удалённый Аккаунт');
+    const isOtherDeleted = otherProfile?.isBanned || otherProfile?.name?.includes('Deleted');
     if (otherId) {
       setStatus(formatLastSeen(otherProfile?.lastSeen, otherProfile?.settings?.privacy?.lastSeenVisibility, isOtherDeleted));
     } else {
-      setStatus(chat.type === 'group' ? 'Группа' : (chat.type === 'channel' ? 'Канал' : 'Избранное'));
+      setStatus(chat.type === 'group' ? t('sidebar.groups') : (chat.type === 'channel' ? t('sidebar.channels') : 'Saved'));
     }
-  }, [otherId, otherProfile, chat.type, isGlobalResult]);
+  }, [otherId, otherProfile, chat.type, isGlobalResult, t]);
 
-  const isOtherDeleted = otherProfile?.isBanned || otherProfile?.name?.includes('Удалённый Аккаунт');
+  const isOtherDeleted = otherProfile?.isBanned || otherProfile?.name?.includes('Deleted');
   const isTyping = chat?.typing && otherId && chat.typing[otherId] && !isOtherDeleted;
   const isOtherPremium = isUserPremium(otherProfile);
   
-  const finalDisplayName = formatDisplayName(otherProfile?.name || cachedDisplayName || chat.name || 'Пользователь');
+  const finalDisplayName = formatDisplayName(otherProfile?.name || cachedDisplayName || chat.name || 'User');
 
   return (
     <div
@@ -368,7 +370,7 @@ function ChatListItem({ chat, isActive, otherId, cachedDisplayName, manualAvatar
           className="h-10 w-10" 
           fallbackName={finalDisplayName}
         />
-        {(status === 'в сети' || isTyping) && !isOtherDeleted && !isGlobalResult && (
+        {(status === 'online' || status === 'в сети' || isTyping) && !isOtherDeleted && !isGlobalResult && (
           <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-accent rounded-full border-2 border-card" />
         )}
       </div>
@@ -390,14 +392,14 @@ function ChatListItem({ chat, isActive, otherId, cachedDisplayName, manualAvatar
         <div className="flex items-center justify-between">
           <div className={cn(
             "text-[9px] uppercase font-bold tracking-widest truncate",
-            isActive ? 'text-white/80' : (isTyping || status === 'в сети' ? 'text-accent' : 'text-muted-foreground/60')
+            isActive ? 'text-white/80' : (isTyping || status === 'online' || status === 'в сети' ? 'text-accent' : 'text-muted-foreground/60')
           )}>
             {isTyping ? (
-              <span className="flex items-center gap-0.5">печатает<span className="animate-typing-dot">.</span><span className="animate-typing-dot [animation-delay:0.2s]">.</span><span className="animate-typing-dot [animation-delay:0.4s]">.</span></span>
+              <span className="flex items-center gap-0.5">{t('chat.typing')}<span className="animate-typing-dot">.</span><span className="animate-typing-dot [animation-delay:0.2s]">.</span><span className="animate-typing-dot [animation-delay:0.4s]">.</span></span>
             ) : status}
           </div>
           {isGlobalResult ? (
-            <Button size="sm" variant="outline" className="h-6 text-[8px] uppercase px-2 rounded-lg" onClick={(e) => { e.stopPropagation(); onJoin(); }}>Вступить</Button>
+            <Button size="sm" variant="outline" className="h-6 text-[8px] uppercase px-2 rounded-lg" onClick={(e) => { e.stopPropagation(); onJoin(); }}>Join</Button>
           ) : isPinned && !isActive && (
              <Button 
                 variant="ghost" 
