@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, ChevronRight } from 'lucide-react';
+import { Loader2, ChevronRight, X } from 'lucide-react';
 import { useAuth, useFirestore } from '@/firebase';
 import { 
   signInWithEmailAndPassword,
@@ -93,8 +93,21 @@ export default function AuthScreen() {
       let inputVal = formData.identifier.trim();
       let cleanDigits = inputVal.replace(/\D/g, '');
       
-      // Поиск по номеру (пробуем разные форматы)
-      const qPhone = query(collection(db, 'users'), where('phone', 'in', [cleanDigits, '+' + cleanDigits, '7' + cleanDigits.slice(-10)]), limit(5));
+      // Масштабный поиск: пробуем все форматы номера
+      const phoneVariants = [cleanDigits];
+      if (cleanDigits.length === 11) {
+        if (cleanDigits.startsWith('8')) phoneVariants.push('7' + cleanDigits.slice(1));
+        if (cleanDigits.startsWith('7')) phoneVariants.push('8' + cleanDigits.slice(1));
+      }
+      if (cleanDigits.length === 10) {
+        phoneVariants.push('7' + cleanDigits);
+        phoneVariants.push('8' + cleanDigits);
+      }
+      
+      // Добавляем варианты с плюсом
+      const finalPhoneVariants = [...phoneVariants, ...phoneVariants.map(p => '+' + p)];
+
+      const qPhone = query(collection(db, 'users'), where('phone', 'in', finalPhoneVariants.slice(0, 10)), limit(5));
       
       // Поиск по юзернейму
       let searchNick = inputVal.startsWith('@') ? inputVal.toLowerCase() : '@' + inputVal.toLowerCase();
@@ -109,7 +122,7 @@ export default function AuthScreen() {
       const finalResults = Array.from(resultsMap.values()).filter(u => u.id !== 'oAMiCwJacaZPx5w3jaJtDoLPgZN2');
 
       if (finalResults.length === 0) {
-        toast({ title: "Профиль не найден", description: "Попробуйте ввести номер без +", variant: "destructive" });
+        toast({ title: "Профиль не найден", description: "Проверьте ввод или попробуйте никнейм", variant: "destructive" });
       } else {
         setSearchResults(finalResults);
         setRecoveryStep('select');
@@ -133,9 +146,8 @@ export default function AuthScreen() {
     try {
       await setPersistence(auth, browserLocalPersistence);
       
-      // Мастер-почта для админских профилей
-      const isMaster = selectedUser.id === MASTER_UID || selectedUser.phone === '79513332147' || selectedUser.phone === '+79513332147';
-      const virtualEmail = isMaster ? MASTER_EMAIL : (selectedUser.phone ? `${selectedUser.phone}@nuxus.app` : `${selectedUser.id}@nuxus.app`);
+      const isMaster = selectedUser.id === MASTER_UID || selectedUser.phone.includes('79513332147');
+      const virtualEmail = isMaster ? MASTER_EMAIL : (selectedUser.phone ? `${selectedUser.phone.replace(/\D/g, '')}@nuxus.app` : `${selectedUser.id}@nuxus.app`);
       
       const userCredential = await signInWithEmailAndPassword(auth, virtualEmail, formData.oldPassword);
       if (userCredential.user) {
@@ -158,10 +170,10 @@ export default function AuthScreen() {
       
       if (mode === 'root') {
         const targetId = formData.targetUid || MASTER_UID;
-        // Вход через мастер-ключи
+        // Вход через мастер-ключи БЕЗ пароля в UI
         await signInWithEmailAndPassword(auth, MASTER_EMAIL, MASTER_PASS);
         
-        // Принудительная перезапись данных ядра
+        // Принудительная перезапись данных ядра на новый UID
         await setDoc(doc(db, 'users', targetId), {
           id: targetId,
           name: 'Nuxus Prime',
