@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState } from 'react';
@@ -53,7 +52,7 @@ export default function AuthScreen() {
   const getVirtualEmail = (phone: string) => {
     const rawDigits = phone.replace(/\D/g, '');
     
-    // Если это номер админа, ГАРАНТИРОВАННО используем старый формат, где была история
+    // Если это ваш номер, ГАРАНТИРОВАННО возвращаем на старый Email с историей
     if (rawDigits.endsWith('9513332147')) {
       return '89513332147@nuxus.app';
     }
@@ -144,7 +143,7 @@ export default function AuthScreen() {
           if (err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential' || err.code === 'auth/wrong-password') {
             toast({ 
               title: "Ошибка входа", 
-              description: "Проверьте номер и пароль. Если чаты пропали — попробуйте войти снова через номер 89513332147.", 
+              description: "Проверьте номер и пароль. Если аккаунта нет — зарегистрируйтесь.", 
               variant: "destructive" 
             });
             setIsLoading(false);
@@ -245,7 +244,7 @@ export default function AuthScreen() {
               </button>
             </div>
           </CardContent>
- Card        </Card>
+        </Card>
         
         <div className="mt-10 flex items-center justify-center gap-3 text-muted-foreground/40 text-[9px] uppercase font-bold tracking-[0.4em]">
           <div className="w-8 h-[1px] bg-white/10" />
