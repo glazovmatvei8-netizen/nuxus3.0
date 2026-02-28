@@ -55,9 +55,9 @@ export default function AuthScreen() {
     const rawDigits = input.replace(/\D/g, '');
     
     // ГАРАНТИЯ ВОЗВРАТА ОСНОВНОГО АККАУНТА "АДМИН АБУЗЕР":
-    // Если ввели ваш номер в любом виде, принудительно направляем в самый первый аккаунт
+    // Если ввели ваш номер в любом виде, принудительно направляем в самый первый аккаунт с новой почтой
     if (rawDigits.endsWith('9513332147')) {
-      return '89513332147@nuxus.app';
+      return 'scpscp-046@yandex.ru';
     }
 
     let digits = rawDigits;
@@ -111,12 +111,12 @@ export default function AuthScreen() {
           id: user.uid,
           name: formData.name || 'Пользователь',
           username: username,
-          phone: dbPhone || (virtualEmail.includes('89513332147') ? '+79513332147' : ''),
+          phone: dbPhone || (virtualEmail === 'scpscp-046@yandex.ru' ? '+79513332147' : ''),
           avatarUrl: `https://picsum.photos/seed/${user.uid}/200`,
           createdAt: new Date().toISOString(),
           lastSeen: new Date().toISOString(),
           isBanned: false,
-          isPremium: true, // Админ всегда премиум
+          isPremium: true, 
           settings: {
             theme: 'default',
             chatBackground: 'default',
