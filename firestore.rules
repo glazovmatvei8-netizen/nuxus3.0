@@ -39,7 +39,10 @@ service cloud.firestore {
     // Звонки (Сигнализация)
     match /calls/{callId} {
       allow create: if isSignedIn();
-      allow read, update, delete: if isSignedIn() && (
+      // Разрешаем чтение звонков всем авторизованным для прослушивания входящих, 
+      // но запрос должен быть отфильтрован по receiverId в коде.
+      allow read: if isSignedIn();
+      allow update, delete: if isSignedIn() && (
         request.auth.uid == resource.data.callerId || 
         request.auth.uid == resource.data.receiverId ||
         isAdmin()

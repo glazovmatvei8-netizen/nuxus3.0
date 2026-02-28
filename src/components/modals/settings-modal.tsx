@@ -62,7 +62,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
   const [isSubmittingPayment, setIsSubmittingPayment] = useState(false);
   const [pendingPayment, setPendingPayment] = useState<any>(null);
 
-  // Инициализация формы при загрузке профиля
+  // Инициализация формы только при открытии и наличии данных
   useEffect(() => {
     if (profile && open) {
       setForm({
