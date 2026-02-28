@@ -10,8 +10,10 @@ service cloud.firestore {
     function isAdmin() {
       return isSignedIn() && (
         request.auth.uid == 'GCvLucN8CjNcdaxPO2vmpZ84hNl1' ||
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true ||
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.phone == '+79513332147'
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && (
+          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true ||
+          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.phone == '+79513332147'
+        ))
       );
     }
 
@@ -31,6 +33,13 @@ service cloud.firestore {
       );
     }
 
+    // Поддержка глобальных запросов историй (collectionGroup)
+    match /{path=**}/stories/{storyId} {
+      allow read: if isSignedIn();
+      allow create, delete: if isSignedIn() && request.auth.uid == resource.data.userId;
+      allow update: if isSignedIn();
+    }
+
     match /{document=**} {
       allow read, write: if isAdmin();
     }
@@ -39,12 +48,6 @@ service cloud.firestore {
       allow read: if true; 
       allow write: if isAdmin() || (isSignedIn() && request.auth.uid == userId);
       
-      match /stories/{storyId} {
-        allow read: if isSignedIn();
-        allow create, delete: if isSignedIn() && request.auth.uid == userId;
-        allow update: if isSignedIn();
-      }
-
       match /receivedGifts/{giftId} {
         allow read, list: if isSignedIn();
         allow write: if isAdmin();

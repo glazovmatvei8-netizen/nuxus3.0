@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
-  Send, Info, ChevronLeft, Loader2, Bookmark, Pin, X, Forward, Camera, Video, Circle, Wand2, Phone, Search as SearchIcon,
+  Send, Info, ChevronLeft, Loader2, Bookmark, X, Forward, Camera, Video, Circle, Wand2, Phone, Search as SearchIcon,
   Archive, BellOff, MoreVertical, PlayCircle, Clock, Zap, EyeOff, Calendar as CalendarIcon, Timer
 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -15,7 +15,7 @@ import { MessageItem } from './message-item';
 import { useToast } from '@/hooks/use-toast';
 import { ChatInfoModal } from './modals/chat-info-modal';
 import { useFirestore, useUser, useCollection, useDoc, useMemoFirebase } from '@/firebase';
-import { collection, query, orderBy, doc, limit, addDoc, updateDoc, where, getDocs } from 'firebase/firestore';
+import { collection, query, orderBy, doc, addDoc, updateDoc } from 'firebase/firestore';
 import { addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { formatDisplayName, isUserPremium } from '@/lib/utils';
 import type { Message, User as UserType, Chat } from '@/lib/types';
@@ -137,7 +137,7 @@ export default function ChatArea() {
     }
     const lastMsg = messages[messages.length - 1];
     if (lastMsg && lastMsg.senderId !== firebaseUser.uid && !lastMsg.isRead) {
-      if (audioRef.current) audioRef.current.play().catch(e => console.log('Аудио заблокировано'));
+      if (audioRef.current) audioRef.current.play().catch(() => {});
       if (typeof window !== 'undefined' && document.hidden && Notification.permission === 'granted') {
         new Notification(`Nuxus: ${lastMsg.senderName}`, {
           body: lastMsg.contentType === 'text' ? lastMsg.content : `Отправил ${lastMsg.contentType}`,
@@ -157,9 +157,9 @@ export default function ChatArea() {
   useEffect(() => {
     if (!db || !currentChatId || !firebaseUser) return;
     const typingRef = doc(db, 'chats', currentChatId);
-    if (messageInput.length > 0) updateDoc(typingRef, { [`typing.${firebaseUser.uid}`]: true });
-    else updateDoc(typingRef, { [`typing.${firebaseUser.uid}`]: false });
-    return () => { updateDoc(typingRef, { [`typing.${firebaseUser.uid}`]: false }); };
+    if (messageInput.length > 0) updateDoc(typingRef, { [`typing.${firebaseUser.uid}`]: true }).catch(() => {});
+    else updateDoc(typingRef, { [`typing.${firebaseUser.uid}`]: false }).catch(() => {});
+    return () => { updateDoc(typingRef, { [`typing.${firebaseUser.uid}`]: false }).catch(() => {}); };
   }, [messageInput, currentChatId, firebaseUser, db]);
 
   useEffect(() => {
