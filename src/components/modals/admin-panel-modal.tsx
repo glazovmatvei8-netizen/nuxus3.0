@@ -23,8 +23,8 @@ import { formatDisplayName, cn } from '@/lib/utils';
 import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 /**
- * Nuxus Admin Core v4.1 "Nuclear Russian Edition"
- * Полный перевод на русский язык и расширенный мониторинг.
+ * Nuxus Admin Core v4.1 "Nuclear Core"
+ * Полная локализация и расширенный мониторинг.
  */
 export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const db = useFirestore();
@@ -158,13 +158,13 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
               </div>
               <div className="flex flex-col leading-none">
                 <span>Ядро Nuxus v4.1</span>
-                <span className="text-[9px] font-bold tracking-[0.4em] text-primary-foreground opacity-70 mt-1 uppercase">Расширенное управление</span>
+                <span className="text-[9px] font-bold tracking-[0.4em] text-primary-foreground opacity-70 mt-1 uppercase">Системное Управление</span>
               </div>
             </div>
             <div className="flex items-center gap-3">
               <div className="hidden md:flex flex-col items-end mr-4">
-                <span className="text-[9px] font-black text-green-500 uppercase tracking-widest">Система стабильна</span>
-                <span className="text-[8px] text-muted-foreground">Аптайм: 100%</span>
+                <span className="text-[9px] font-black text-green-500 uppercase tracking-widest">Ядро Активно</span>
+                <span className="text-[8px] text-muted-foreground">Статус: Стабильно</span>
               </div>
               <div className="w-10 h-10 rounded-full border-2 border-primary/20 flex items-center justify-center animate-spin-slow">
                 <Zap className="w-5 h-5 text-primary" />
@@ -207,13 +207,13 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <Activity className="w-5 h-5 text-primary" />
-                    <span className="text-xs font-black uppercase tracking-widest text-white">Мониторинг ресурсов v4.1</span>
+                    <span className="text-xs font-black uppercase tracking-widest text-white">Живые Ресурсы v4.1</span>
                   </div>
-                  <div className="text-[9px] text-muted-foreground uppercase font-bold">Обновление: 10с</div>
+                  <div className="text-[9px] text-muted-foreground uppercase font-bold">Пульс: 10с</div>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                   <div className="space-y-3">
-                    <div className="flex justify-between text-[9px] font-bold uppercase opacity-60 text-white"><span>Загрузка CPU</span><span>{Math.round(cpuLoad)}%</span></div>
+                    <div className="flex justify-between text-[9px] font-bold uppercase opacity-60 text-white"><span>Нагрузка CPU</span><span>{Math.round(cpuLoad)}%</span></div>
                     <div className="h-2.5 w-full bg-black/40 rounded-full overflow-hidden border border-white/5">
                       <div className="h-full bg-gradient-to-r from-primary to-accent transition-all duration-1000" style={{ width: `${cpuLoad}%` }} />
                     </div>
@@ -230,15 +230,15 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
               <div className="p-6 bg-primary/10 rounded-[2.5rem] border border-primary/20 flex flex-col items-center justify-center text-center space-y-4">
                 <Cpu className="w-10 h-10 text-primary opacity-50 animate-pulse" />
                 <div className="space-y-1">
-                  <p className="text-[11px] font-black uppercase tracking-widest text-white">Центр обслуживания</p>
-                  <p className="text-[9px] text-muted-foreground">Очистка кэша и синхронизация</p>
+                  <p className="text-[11px] font-black uppercase tracking-widest text-white">Техническое обслуживание</p>
+                  <p className="text-[9px] text-muted-foreground">Очистка кэша и индексов</p>
                 </div>
                 <Button 
                   className="w-full h-12 rounded-2xl bg-primary hover:bg-primary/90 text-[10px] uppercase font-bold tracking-[0.2em] shadow-lg shadow-primary/20"
                   onClick={handleOptimize}
                   disabled={isOptimizing}
                 >
-                  {isOptimizing ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Запустить оптимизацию'}
+                  {isOptimizing ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Запустить Оптимизацию'}
                 </Button>
               </div>
             </div>
@@ -249,7 +249,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input 
-                  placeholder="Поиск юзеров по имени, @ID или телефону..." 
+                  placeholder="Поиск по имени, @ID или номеру..." 
                   value={userSearch}
                   onChange={e => setUserSearch(e.target.value)}
                   className="bg-card border-white/10 h-12 rounded-2xl pl-10 text-sm focus:ring-primary/40"
@@ -309,12 +309,12 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
                 </div>
                 <div className="space-y-4">
                   <div className="flex items-center justify-between p-3 bg-destructive/10 rounded-2xl border border-destructive/20">
-                    <div className="flex flex-col"><span className="text-[10px] font-bold text-white uppercase">Режим обслуживания</span><span className="text-[8px] text-muted-foreground">Блокировка входа для всех</span></div>
+                    <div className="flex flex-col"><span className="text-[10px] font-bold text-white uppercase">Режим обслуживания</span><span className="text-[8px] text-muted-foreground">Закрыть вход для всех пользователей</span></div>
                     <Switch checked={maintenanceMode} onCheckedChange={setMaintenanceMode} />
                   </div>
                   <div className="flex items-center justify-between p-3 bg-muted/20 rounded-2xl border border-white/5">
-                    <div className="flex flex-col"><span className="text-[10px] font-bold text-white uppercase">Кикнуть всех юзеров</span><span className="text-[8px] text-muted-foreground">Сброс всех активных сессий</span></div>
-                    <Button variant="outline" size="sm" className="h-8 text-[8px] uppercase font-bold text-destructive border-destructive/20" onClick={() => setLogs(prev => ["[ЗАЩИТА] Все пользователи были принудительно разлогинены.", ...prev])}>Выполнить</Button>
+                    <div className="flex flex-col"><span className="text-[10px] font-bold text-white uppercase">Сброс сессий</span><span className="text-[8px] text-muted-foreground">Принудительно разлогинить всех</span></div>
+                    <Button variant="outline" size="sm" className="h-8 text-[8px] uppercase font-bold text-destructive border-destructive/20" onClick={() => setLogs(prev => ["[ЗАЩИТА] Все активные сессии сброшены администратором.", ...prev])}>Сбросить</Button>
                   </div>
                 </div>
               </div>
@@ -322,11 +322,11 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
               <div className="p-6 bg-accent/5 rounded-[2.5rem] border border-accent/10 space-y-6">
                 <div className="flex items-center gap-2">
                   <ShieldCheck className="w-5 h-5 text-accent" />
-                  <span className="text-xs font-black uppercase tracking-widest text-white">Стражи безопасности</span>
+                  <span className="text-xs font-black uppercase tracking-widest text-white">Параметры безопасности</span>
                 </div>
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
-                    <div className="flex flex-col"><span className="text-[10px] font-bold text-white uppercase">Строгий режим</span><span className="text-[8px] text-muted-foreground">Агрессивная фильтрация контента</span></div>
+                    <div className="flex flex-col"><span className="text-[10px] font-bold text-white uppercase">Строгий режим</span><span className="text-[8px] text-muted-foreground">Усиленная фильтрация трафика</span></div>
                     <Switch checked={highSecurity} onCheckedChange={setHighSecurity} />
                   </div>
                   <div className="flex items-center justify-between">
@@ -342,8 +342,8 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="p-5 bg-card border border-white/5 rounded-3xl flex flex-col items-center text-center">
                 <Database className="w-8 h-8 text-primary mb-3" />
-                <span className="text-[9px] font-bold text-muted-foreground uppercase">Сообщений</span>
-                <div className="text-2xl font-black text-white italic">{(dbRequests * 1420).toLocaleString()}</div>
+                <span className="text-[9px] font-bold text-muted-foreground uppercase">База Сообщений</span>
+                <div className="text-2xl font-black text-white italic">{(dbRequests * 142).toLocaleString()}</div>
               </div>
               <div className="p-5 bg-card border border-white/5 rounded-3xl flex flex-col items-center text-center">
                 <Cpu className="w-8 h-8 text-accent mb-3" />
@@ -353,13 +353,13 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
               <div className="p-5 bg-card border border-white/5 rounded-3xl flex flex-col items-center text-center">
                 <Network className="w-8 h-8 text-green-500 mb-3" />
                 <span className="text-[9px] font-bold text-muted-foreground uppercase">Задержка</span>
-                <div className="text-2xl font-black text-white italic">14мс</div>
+                <div className="text-2xl font-black text-white italic">12мс</div>
               </div>
             </div>
             <div className="bg-black/40 p-6 rounded-[2.5rem] border border-white/5 flex flex-col h-64">
               <div className="flex items-center gap-2 mb-4">
                 <Terminal className="w-4 h-4 text-green-500" />
-                <span className="text-[11px] font-black uppercase text-green-500/80">Поток системных событий</span>
+                <span className="text-[11px] font-black uppercase text-green-500/80">Логи системных событий v4.1</span>
               </div>
               <ScrollArea className="flex-1 font-mono text-[9px] text-green-500/60 leading-relaxed">
                 <div className="space-y-1">
@@ -379,27 +379,27 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
               <div className="p-6 bg-muted/20 rounded-[2.5rem] border border-white/5 space-y-6">
                 <div className="flex items-center gap-2 mb-2">
                   <Shield className="w-5 h-5 text-primary" />
-                  <span className="text-[11px] font-black uppercase tracking-widest text-white">Переключатели функций</span>
+                  <span className="text-[11px] font-black uppercase tracking-widest text-white">Управление функциями</span>
                 </div>
                 <div className="space-y-5">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <div className="p-2 bg-primary/10 rounded-lg"><Mic className="w-4 h-4 text-primary" /></div>
-                      <div className="flex flex-col"><span className="text-[10px] font-bold text-white uppercase">Голосовые заметки</span><span className="text-[8px] text-muted-foreground">Запись аудиосообщений</span></div>
+                      <div className="flex flex-col"><span className="text-[10px] font-bold text-white uppercase">Голосовые Сообщения</span><span className="text-[8px] text-muted-foreground">Глобальное включение/выключение</span></div>
                     </div>
                     <Switch checked={featureVoice} onCheckedChange={setFeatureVoice} />
                   </div>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <div className="p-2 bg-accent/10 rounded-lg"><Video className="w-4 h-4 text-accent" /></div>
-                      <div className="flex flex-col"><span className="text-[10px] font-bold text-white uppercase">Кружочки</span><span className="text-[8px] text-muted-foreground">Круглые видеосообщения</span></div>
+                      <div className="flex flex-col"><span className="text-[10px] font-bold text-white uppercase">Видеосообщения (Круги)</span><span className="text-[8px] text-muted-foreground">Глобальное включение/выключение</span></div>
                     </div>
                     <Switch checked={featureVideo} onCheckedChange={setFeatureVideo} />
                   </div>
                    <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <div className="p-2 bg-primary/10 rounded-lg"><Zap className="w-4 h-4 text-primary" /></div>
-                      <div className="flex flex-col"><span className="text-[10px] font-bold text-white uppercase">ИИ Помощник</span><span className="text-[8px] text-muted-foreground">Генерация ответов</span></div>
+                      <div className="flex flex-col"><span className="text-[10px] font-bold text-white uppercase">ИИ Помощник</span><span className="text-[8px] text-muted-foreground">Глобальное включение/выключение</span></div>
                     </div>
                     <Switch checked={featureAI} onCheckedChange={setFeatureAI} />
                   </div>
@@ -407,8 +407,8 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
               </div>
 
               <div className="p-6 bg-primary/10 rounded-[2.5rem] border border-primary/20 space-y-4 flex flex-col">
-                <div className="flex items-center gap-2"><Globe className="w-4 h-4 text-primary" /><span className="text-[11px] font-black uppercase tracking-widest text-white">Глобальная рассылка</span></div>
-                <p className="text-[9px] text-muted-foreground italic mb-2">Сообщение будет отправлено всем пользователям системы.</p>
+                <div className="flex items-center gap-2"><Globe className="w-4 h-4 text-primary" /><span className="text-[11px] font-black uppercase tracking-widest text-white">Глобальная Рассылка</span></div>
+                <p className="text-[9px] text-muted-foreground italic mb-2">Сообщение будет мгновенно отправлено всем пользователям Nuxus.</p>
                 <Input 
                   placeholder="Текст уведомления..." 
                   value={alertText}
@@ -423,13 +423,13 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
                     setTimeout(() => {
                       setIsSendingAlert(false);
                       setAlertText('');
-                      toast({ title: "Рассылка отправлена", description: "Успешно доставлено всем активным узлам." });
+                      toast({ title: "Рассылка отправлена", description: "Успешно доставлено всем активным пользователям." });
                       setLogs(prev => [`[РАССЫЛКА] Отправлено: ${alertText.slice(0, 30)}...`, ...prev]);
                     }, 1000);
                   }}
                   disabled={isSendingAlert || !alertText.trim()}
                 >
-                  {isSendingAlert ? <Loader2 className="animate-spin w-6 h-6" /> : <><Send className="w-5 h-5 mr-2" /> Отправить всем</>}
+                  {isSendingAlert ? <Loader2 className="animate-spin w-6 h-6" /> : <><Send className="w-5 h-5 mr-2" /> Отправить Всем</>}
                 </Button>
               </div>
             </div>
