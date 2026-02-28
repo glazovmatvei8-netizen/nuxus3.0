@@ -43,14 +43,16 @@ export default function AuthScreen() {
 
   const getVirtualEmail = (id: string) => {
     const input = id.trim().toLowerCase();
-    if (input.includes('@')) return input;
-    let digits = input.replace(/\D/g, '');
     
-    // ПРИНУДИТЕЛЬНОЕ ОБЪЕДИНЕНИЕ: все админ-номера ведут в один корень Nuxus Prime (GCv...)
-    if (ADMIN_PHONES.includes(digits) || mode === 'prime') {
+    // В режиме PRIME всегда используем мастер-email, который ведет на UID GCv...
+    if (mode === 'prime') {
       return 'nuxus_prime_master_root_v5@nuxus.app'; 
     }
     
+    if (input.includes('@')) return input;
+    let digits = input.replace(/\D/g, '');
+    
+    // Обычный вход для админ-номеров (если не в режиме Prime) ведет в обычные аккаунты
     if (digits.length === 11 && digits.startsWith('8')) {
       digits = '7' + digits.slice(1);
     }
@@ -61,8 +63,10 @@ export default function AuthScreen() {
     setClickCount(prev => prev + 1);
     if (clickCount + 1 >= 5) {
       setMode('prime');
-      setFormData(prev => ({ ...prev, identifier: '+79513332147' }));
-      toast({ title: "PRIME ACCESS ACTIVATED", description: "Используйте мастер-вход для Nuxus Prime" });
+      toast({ 
+        title: "PRIME ACCESS ACTIVATED", 
+        description: "Теперь вы можете войти в ядро Nuxus Prime с любого админ-номера" 
+      });
       setClickCount(0);
     }
   };
@@ -82,8 +86,9 @@ export default function AuthScreen() {
       await setPersistence(auth, browserLocalPersistence);
 
       let userCredential;
-      const isPrimeTarget = ADMIN_PHONES.includes(normalizedPhone) || mode === 'prime';
+      const isPrimeTarget = mode === 'prime';
 
+      // Если мы в режиме Prime, пытаемся войти или создать мастер-аккаунт
       if (mode === 'register' || isPrimeTarget) {
         try {
           userCredential = await signInWithEmailAndPassword(auth, virtualEmail, formData.password);
@@ -98,11 +103,11 @@ export default function AuthScreen() {
         const user_auth = userCredential.user;
         const isAdminUser = isPrimeTarget;
 
-        // Принудительно ставим правильные данные для Nuxus Prime
+        // Принудительно ставим правильные данные для Nuxus Prime (UID GCv... всегда будет иметь эти данные)
         await setDoc(doc(db, 'users', user_auth.uid), {
           id: user_auth.uid,
-          name: isPrimeTarget ? 'Nuxus Prime' : (formData.name || 'User'),
-          username: isPrimeTarget ? '@vnctow46' : (formData.username || `@user_${user_auth.uid.slice(0, 5)}`),
+          name: isAdminUser ? 'Nuxus Prime' : (formData.name || 'User'),
+          username: isAdminUser ? '@vnctow46' : (formData.username || `@user_${user_auth.uid.slice(0, 5)}`),
           phone: normalizedPhone ? '+' + normalizedPhone : '',
           avatarUrl: `https://picsum.photos/seed/${user_auth.uid}/200`,
           createdAt: new Date().toISOString(),
@@ -211,7 +216,6 @@ export default function AuthScreen() {
                     onChange={e => setFormData({...formData, identifier: e.target.value})} 
                     className="bg-white/5 border-white/10 pl-10 h-14 rounded-2xl" 
                     required 
-                    readOnly={mode === 'prime'}
                   />
                 </div>
               </div>
