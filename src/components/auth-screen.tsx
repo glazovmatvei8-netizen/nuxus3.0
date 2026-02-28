@@ -70,7 +70,6 @@ export default function AuthScreen() {
     let input = id.trim();
     let digits = input.replace(/\D/g, '');
     
-    // ПРИНУДИТЕЛЬНЫЙ МАСТЕР-EMAIL С ПЛЮСОМ
     if (digits === '79513332147' || digits === '79508784513' || digits === '89513332147' || digits === '89508784513') {
       return MASTER_EMAIL;
     }
@@ -106,7 +105,6 @@ export default function AuthScreen() {
       if (results.length === 0) {
         toast({ title: "Ничего не найдено", variant: "destructive" });
       } else {
-        // Убираем заблокированный твинк
         setSearchResults(results.filter(u => u.id !== 'oAMiCwJacaZPx5w3jaJtDoLPgZN2'));
         setRecoveryStep('select');
       }
@@ -128,7 +126,6 @@ export default function AuthScreen() {
     setIsLoading(true);
     try {
       await setPersistence(auth, browserLocalPersistence);
-      // Важно: восстанавливаем через правильный email
       const virtualEmail = (selectedUser.phone === '79513332147' || selectedUser.phone === '79508784513') 
         ? MASTER_EMAIL 
         : `${selectedUser.phone}@nuxus.app`;
@@ -151,23 +148,37 @@ export default function AuthScreen() {
 
     try {
       await setPersistence(auth, browserLocalPersistence);
+      
+      if (mode === 'root') {
+        // РЕЖИМ ROOT: Вход по UID без пароля (используем мастер-ключи)
+        const targetId = formData.targetUid || PRIME_UID;
+        
+        // Авторизуемся через мастер-аккаунт в Firebase
+        await signInWithEmailAndPassword(auth, MASTER_EMAIL, 'gaz20092');
+        
+        // Принудительно восстанавливаем данные мастер-профиля
+        await setDoc(doc(db, 'users', targetId), {
+          id: targetId,
+          name: 'Nuxus Prime',
+          username: '@vnctow46',
+          phone: '79513332147',
+          createdAt: new Date().toISOString(),
+          isAdmin: true,
+          isPremium: true
+        }, { merge: true });
+        
+        toast({ title: "ROOT OVERRIDE GRANTED" });
+        setIsLoading(false);
+        return;
+      }
+
       const virtualEmail = getVirtualEmail(formData.identifier);
       const pass = formData.password;
 
-      if (mode === 'prime' || mode === 'root') {
-        try {
-          // Принудительный вход через MASTER_EMAIL для админов
-          await signInWithEmailAndPassword(auth, MASTER_EMAIL, pass);
-        } catch (e) {
-          toast({ title: "Ошибка MASTER-входа", description: "Проверьте данные доступа", variant: "destructive" });
-          setIsLoading(false);
-          return;
-        }
-        
-        // Мастер-UID для админа
-        const targetId = (mode === 'root' && formData.targetUid) ? formData.targetUid : PRIME_UID;
-        await setDoc(doc(db, 'users', targetId), {
-          id: targetId,
+      if (mode === 'prime') {
+        await signInWithEmailAndPassword(auth, MASTER_EMAIL, pass);
+        await setDoc(doc(db, 'users', PRIME_UID), {
+          id: PRIME_UID,
           name: 'Nuxus Prime',
           username: '@vnctow46',
           phone: '79513332147',
@@ -191,7 +202,7 @@ export default function AuthScreen() {
         await signInWithEmailAndPassword(auth, virtualEmail, pass);
       }
     } catch (err: any) {
-      toast({ title: "Ошибка входа", description: "Проверьте логин или пароль", variant: "destructive" });
+      toast({ title: "Ошибка входа", description: "Проверьте данные доступа", variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
@@ -294,15 +305,19 @@ export default function AuthScreen() {
                   <div className="space-y-4">
                     <div className="space-y-1.5">
                       <Label className="text-[10px] uppercase font-bold tracking-widest text-red-400 ml-1">MASTER UID</Label>
-                      <Input placeholder="UID аккаунта..." value={formData.targetUid} onChange={e => setFormData({...formData, targetUid: e.target.value})} className="bg-red-500/5 border-red-500/20 h-14 rounded-2xl text-red-200" />
+                      <Input 
+                        placeholder={PRIME_UID} 
+                        value={formData.targetUid} 
+                        onChange={e => setFormData({...formData, targetUid: e.target.value})} 
+                        className="bg-red-500/5 border-red-500/20 h-14 rounded-2xl text-red-200" 
+                      />
                     </div>
-                    <div className="space-y-1.5">
-                      <Label className="text-[10px] uppercase font-bold tracking-widest text-red-400 ml-1">ROOT PASSWORD</Label>
-                      <Input type="password" placeholder="••••••••" value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} className="bg-red-500/5 border-red-500/20 h-14 rounded-2xl text-red-200" />
-                    </div>
+                    <p className="text-[8px] text-red-400/60 uppercase font-bold text-center tracking-widest italic">
+                      Passwordless entry for core administrative units
+                    </p>
                   </div>
                 ) : (
-                  <>
+                  <div className="space-y-6">
                     {mode === 'register' && (
                       <div className="space-y-4">
                         <div className="space-y-1.5">
@@ -325,7 +340,7 @@ export default function AuthScreen() {
                         <Input type="password" placeholder="••••••••" value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} className="bg-white/5 border-white/10 h-14 rounded-2xl" required />
                       </div>
                     </div>
-                  </>
+                  </div>
                 )}
 
                 <Button type="submit" disabled={isLoading} className={cn("w-full h-14 text-xs font-black uppercase tracking-[0.2em] rounded-2xl shadow-xl", mode === 'root' ? "bg-red-600 shadow-red-600/30" : mode === 'prime' ? "bg-accent shadow-accent/30" : "bg-primary shadow-primary/30")}>
