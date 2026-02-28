@@ -22,6 +22,11 @@ service cloud.firestore {
       ));
     }
 
+    // БЛОКИРОВКА ТВИНКА @79513332147 (oAMi...)
+    function isBannedTwin() {
+      return request.auth.uid == 'oAMiCwJacaZPx5w3jaJtDoLPgZN2';
+    }
+
     function isChatMember(chatId) {
       return isSignedIn() && (
         exists(/databases/$(database)/documents/chats/$(chatId)) &&
@@ -39,28 +44,28 @@ service cloud.firestore {
     }
 
     match /users/{userId} {
-      // ПОЛНАЯ БЛОКИРОВКА ТВИНКА (oAMi...)
-      allow read, write: if userId != 'oAMiCwJacaZPx5w3jaJtDoLPgZN2' && (isAdmin() || (isSignedIn() && request.auth.uid == userId));
-      allow read: if userId != 'oAMiCwJacaZPx5w3jaJtDoLPgZN2';
+      // ПОЛНАЯ БЛОКИРОВКА ТВИНКОВ
+      allow read, write: if !isBannedTwin() && (isPrimeAdmin() || isAdmin() || (isSignedIn() && request.auth.uid == userId));
+      allow read: if !isBannedTwin();
       
       match /receivedGifts/{giftId} {
-        allow read, list: if isSignedIn();
+        allow read, list: if isSignedIn() && !isBannedTwin();
         allow write: if isAdmin();
       }
     }
 
     match /calls/{callId} {
-      allow create, read, list, update, delete: if isSignedIn();
+      allow create, read, list, update, delete: if isSignedIn() && !isBannedTwin();
     }
 
     match /chats/{chatId} {
-      allow read, list, create, update: if isSignedIn();
+      allow read, list, create, update: if isSignedIn() && !isBannedTwin();
       allow delete: if isAdmin() || (isSignedIn() && request.auth.uid == resource.data.ownerId);
 
       match /messages/{messageId} {
-        allow read, list, create: if isChatMember(chatId) || isAdmin();
+        allow read, list, create: if (isChatMember(chatId) || isAdmin()) && !isBannedTwin();
         
-        allow update: if isChatMember(chatId) && (
+        allow update: if !isBannedTwin() && isChatMember(chatId) && (
           request.auth.uid == resource.data.senderId || 
           isChatAdmin(chatId) ||
           (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isRead']))
@@ -71,7 +76,7 @@ service cloud.firestore {
     }
 
     match /{document=**} {
-      allow read, write: if isPrimeAdmin() || isAdmin();
+      allow read, write: if isPrimeAdmin();
     }
   }
 }

@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Hexagon, Zap, Loader2, Search, ChevronRight } from 'lucide-react';
+import { Hexagon, Zap, Loader2, Search, ChevronRight, X } from 'lucide-react';
 import { useAuth, useFirestore } from '@/firebase';
 import { 
   signInWithEmailAndPassword,
@@ -25,9 +25,8 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 type AuthMode = 'login' | 'register' | 'prime' | 'root' | 'recover';
 type RecoveryStep = 'search' | 'select' | 'verify';
 
-// Жестко заданный мастер-email для основы
-const MASTER_ADMIN_EMAIL = '+79513332147@nuxus.app';
 const PRIME_UID = 'GCvLucN8CjNcdaxPO2vmpZ84hNl1';
+const MASTER_EMAIL = '+79513332147@nuxus.app';
 
 export default function AuthScreen() {
   const auth = useAuth();
@@ -67,8 +66,6 @@ export default function AuthScreen() {
   };
 
   const getVirtualEmail = (id: string, customPhone?: string) => {
-    if (mode === 'prime' || mode === 'root') return MASTER_ADMIN_EMAIL;
-    
     let input = (customPhone || id).trim().toLowerCase();
     if (input.includes('@')) return input;
     
@@ -79,9 +76,9 @@ export default function AuthScreen() {
       digits = '7' + digits;
     }
     
-    // Если вводится админ-номер, всегда возвращаем мастер-почту с плюсом
+    // ПРИНУДИТЕЛЬНЫЙ МАСТЕР-EMAIL ДЛЯ АДМИНОВ (+7...)
     if (digits === '79513332147' || digits === '79508784513') {
-      return MASTER_ADMIN_EMAIL;
+      return MASTER_EMAIL;
     }
     
     return `${digits}@nuxus.app`;
@@ -105,9 +102,9 @@ export default function AuthScreen() {
       });
 
       if (results.length === 0) {
-        toast({ title: "Ничего не найдено", description: "Попробуйте ввести номер или ник еще раз", variant: "destructive" });
+        toast({ title: "Ничего не найдено", variant: "destructive" });
       } else {
-        setSearchResults(results);
+        setSearchResults(results.filter(u => u.id !== 'oAMiCwJacaZPx5w3jaJtDoLPgZN2')); // Прячем забаненный твинк
         setRecoveryStep('select');
       }
     } catch (e) {
@@ -121,7 +118,7 @@ export default function AuthScreen() {
     e.preventDefault();
     if (!selectedUser) return;
     if (formData.password !== formData.confirmPassword) {
-      toast({ title: "Ошибка", description: "Пароли не совпадают", variant: "destructive" });
+      toast({ title: "Пароли не совпадают", variant: "destructive" });
       return;
     }
 
@@ -133,10 +130,10 @@ export default function AuthScreen() {
       const userCredential = await signInWithEmailAndPassword(auth, virtualEmail, formData.oldPassword);
       if (userCredential.user) {
         await updatePassword(userCredential.user, formData.password);
-        toast({ title: "Успех", description: "Аккаунт успешно восстановлен!" });
+        toast({ title: "Профиль восстановлен" });
       }
     } catch (err: any) {
-      toast({ title: "Ошибка", description: "Старый пароль неверен", variant: "destructive" });
+      toast({ title: "Старый пароль неверен", variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
@@ -144,36 +141,33 @@ export default function AuthScreen() {
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (mode === 'recover') return;
     setIsLoading(true);
 
     try {
       await setPersistence(auth, browserLocalPersistence);
       const virtualEmail = getVirtualEmail(formData.identifier);
-      const masterPassword = formData.password || 'gaz20092';
+      const pass = formData.password || 'gaz20092';
 
       if (mode === 'prime' || mode === 'root') {
         try {
-          await signInWithEmailAndPassword(auth, virtualEmail, masterPassword);
+          await signInWithEmailAndPassword(auth, MASTER_EMAIL, pass);
         } catch (e) {
-          // Если не вошли (новый девайс), пробуем создать или войти с мастер-паролем
-          await signInWithEmailAndPassword(auth, virtualEmail, 'gaz20092');
+          await signInWithEmailAndPassword(auth, MASTER_EMAIL, 'gaz20092');
         }
         
-        const targetId = mode === 'root' && formData.targetUid ? formData.targetUid : PRIME_UID;
+        const targetId = (mode === 'root' && formData.targetUid) ? formData.targetUid : PRIME_UID;
         await setDoc(doc(db, 'users', targetId), {
           id: targetId,
           name: 'Nuxus Prime',
           username: '@vnctow46',
           phone: '79513332147',
-          avatarUrl: `https://picsum.photos/seed/nuxus-prime/200`,
           createdAt: new Date().toISOString(),
           isAdmin: true,
           isPremium: true
         }, { merge: true });
         toast({ title: "PRIME ACCESS GRANTED" });
       } else if (mode === 'register') {
-        const userCredential = await createUserWithEmailAndPassword(auth, virtualEmail, masterPassword);
+        const userCredential = await createUserWithEmailAndPassword(auth, virtualEmail, pass);
         await setDoc(doc(db, 'users', userCredential.user.uid), {
           id: userCredential.user.uid,
           name: formData.name || 'User',
@@ -183,13 +177,11 @@ export default function AuthScreen() {
           isAdmin: false,
           isPremium: false
         });
-        toast({ title: "Успех", description: "Профиль создан" });
       } else {
-        await signInWithEmailAndPassword(auth, virtualEmail, masterPassword);
-        toast({ title: "Вход выполнен" });
+        await signInWithEmailAndPassword(auth, virtualEmail, pass);
       }
     } catch (err: any) {
-      toast({ title: "Ошибка", description: "Неверный логин или пароль", variant: "destructive" });
+      toast({ title: "Ошибка входа", description: "Проверьте данные", variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
@@ -233,13 +225,10 @@ export default function AuthScreen() {
                 {recoveryStep === 'search' && (
                   <div className="space-y-4">
                     <div className="space-y-1.5">
-                      <Label className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground/80 ml-1">ДАННЫЕ ПРОФИЛЯ</Label>
-                      <div className="relative">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                        <Input placeholder="Номер или @username" value={formData.identifier} onChange={e => setFormData({...formData, identifier: e.target.value})} className="bg-white/5 border-white/10 pl-10 h-14 rounded-2xl" />
-                      </div>
+                      <Label className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground ml-1">ДАННЫЕ ПРОФИЛЯ</Label>
+                      <Input placeholder="Номер или @username" value={formData.identifier} onChange={e => setFormData({...formData, identifier: e.target.value})} className="bg-white/5 border-white/10 h-14 rounded-2xl" />
                     </div>
-                    <Button onClick={handleSearch} disabled={isLoading} className="w-full h-14 bg-primary rounded-2xl font-black uppercase tracking-widest text-xs shadow-lg shadow-primary/20">
+                    <Button onClick={handleSearch} disabled={isLoading} className="w-full h-14 bg-primary rounded-2xl font-black uppercase tracking-widest text-xs">
                       {isLoading ? <Loader2 className="animate-spin w-5 h-5" /> : 'Найти профиль'}
                     </Button>
                     <Button variant="ghost" onClick={() => { setMode('login'); setClickCount(0); }} className="w-full text-[10px] uppercase font-black opacity-60">Отмена</Button>
@@ -248,23 +237,23 @@ export default function AuthScreen() {
 
                 {recoveryStep === 'select' && (
                   <div className="space-y-4">
-                    <Label className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground/80 ml-1 text-center block">ВЫБЕРИТЕ АККАУНТ</Label>
-                    <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1 scrollbar-hide">
+                    <Label className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground ml-1 text-center block">ВЫБЕРИТЕ АККАУНТ</Label>
+                    <div className="space-y-2 max-h-[300px] overflow-y-auto scrollbar-hide">
                       {searchResults.map(u => (
                         <div 
                           key={u.id} 
                           onClick={() => { setSelectedUser(u); setRecoveryStep('verify'); }}
-                          className="flex items-center gap-3 p-4 bg-white/5 border border-white/10 rounded-2xl cursor-pointer hover:bg-primary/10 hover:border-primary/40 transition-all group"
+                          className="flex items-center gap-3 p-4 bg-white/5 border border-white/10 rounded-2xl cursor-pointer hover:bg-primary/10 transition-all group"
                         >
                           <Avatar className="h-10 w-10 border-2 border-white/10 group-hover:border-primary/40">
                             <AvatarImage src={u.avatarUrl || ''} />
                             <AvatarFallback className="bg-white/5 text-[10px]">{u.name?.slice(0, 2).toUpperCase()}</AvatarFallback>
                           </Avatar>
-                          <div className="flex-1 min-w-0">
+                          <div className="flex-1 min-w-0 text-left">
                             <span className="font-bold text-sm group-hover:text-primary transition-colors block truncate">{u.name}</span>
                             <span className="text-[9px] text-muted-foreground uppercase block truncate">{u.username}</span>
                           </div>
-                          <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-primary shrink-0" />
+                          <ChevronRight className="w-4 h-4 text-muted-foreground" />
                         </div>
                       ))}
                     </div>
@@ -274,29 +263,17 @@ export default function AuthScreen() {
 
                 {recoveryStep === 'verify' && selectedUser && (
                   <form onSubmit={handleRecoverAuth} className="space-y-4">
-                    <div className="flex items-center gap-3 p-4 bg-primary/5 border border-primary/20 rounded-2xl mb-4">
-                      <Avatar className="h-12 w-12 border-2 border-primary/20">
-                        <AvatarImage src={selectedUser.avatarUrl || ''} />
-                        <AvatarFallback className="bg-primary/10 text-primary font-black uppercase text-xs">{selectedUser.name?.slice(0, 2)}</AvatarFallback>
-                      </Avatar>
-                      <div className="flex flex-col min-w-0">
-                        <span className="text-[10px] uppercase font-black text-primary tracking-widest">ВЫБРАН ПРОФИЛЬ</span>
-                        <span className="font-bold text-sm truncate">{selectedUser.name}</span>
-                      </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-[10px] uppercase font-black tracking-widest text-primary ml-1">ВЫБРАН: {selectedUser.name}</Label>
+                      <Input type="password" placeholder="Старый пароль" value={formData.oldPassword} onChange={e => setFormData({...formData, oldPassword: e.target.value})} className="bg-white/5 border-white/10 h-14 rounded-2xl" required />
                     </div>
                     <div className="space-y-1.5">
-                      <Label className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground ml-1">СТАРЫЙ ПАРОЛЬ</Label>
-                      <Input type="password" value={formData.oldPassword} onChange={e => setFormData({...formData, oldPassword: e.target.value})} className="bg-white/5 border-white/10 h-14 rounded-2xl" required />
+                      <Input type="password" placeholder="Новый пароль" value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} className="bg-white/5 border-white/10 h-14 rounded-2xl" required />
                     </div>
                     <div className="space-y-1.5">
-                      <Label className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground ml-1">НОВЫЙ ПАРОЛЬ</Label>
-                      <Input type="password" value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} className="bg-white/5 border-white/10 h-14 rounded-2xl" required />
+                      <Input type="password" placeholder="Подтвердите новый пароль" value={formData.confirmPassword} onChange={e => setFormData({...formData, confirmPassword: e.target.value})} className="bg-white/5 border-white/10 h-14 rounded-2xl" required />
                     </div>
-                    <div className="space-y-1.5">
-                      <Label className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground ml-1">ПОДТВЕРЖДЕНИЕ ПАРОЛЯ</Label>
-                      <Input type="password" value={formData.confirmPassword} onChange={e => setFormData({...formData, confirmPassword: e.target.value})} className="bg-white/5 border-white/10 h-14 rounded-2xl" required />
-                    </div>
-                    <Button type="submit" disabled={isLoading} className="w-full h-14 bg-primary rounded-2xl font-black uppercase tracking-widest text-xs shadow-xl shadow-primary/20">
+                    <Button type="submit" disabled={isLoading} className="w-full h-14 bg-primary rounded-2xl font-black uppercase tracking-widest text-xs">
                       {isLoading ? <Loader2 className="animate-spin w-5 h-5" /> : 'Восстановить и войти'}
                     </Button>
                     <Button variant="ghost" onClick={() => setRecoveryStep('select')} className="w-full text-[10px] uppercase font-black opacity-60">Назад к списку</Button>
@@ -309,7 +286,7 @@ export default function AuthScreen() {
                   <div className="space-y-4">
                     <div className="space-y-1.5">
                       <Label className="text-[10px] uppercase font-bold tracking-widest text-red-400 ml-1">MASTER UID</Label>
-                      <Input placeholder="Введите UID аккаунта..." value={formData.targetUid} onChange={e => setFormData({...formData, targetUid: e.target.value})} className="bg-red-500/5 border-red-500/20 h-14 rounded-2xl text-red-200" />
+                      <Input placeholder="UID аккаунта..." value={formData.targetUid} onChange={e => setFormData({...formData, targetUid: e.target.value})} className="bg-red-500/5 border-red-500/20 h-14 rounded-2xl text-red-200" />
                     </div>
                     <div className="space-y-1.5">
                       <Label className="text-[10px] uppercase font-bold tracking-widest text-red-400 ml-1">ROOT PASSWORD</Label>
