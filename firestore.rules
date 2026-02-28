@@ -7,7 +7,7 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    // Главный корень Nuxus Prime (GCv...)
+    // ГЛАВНЫЙ КОРЕНЬ NUXUS PRIME (GCv...)
     function isPrimeAdmin() {
       return isSignedIn() && request.auth.uid == 'GCvLucN8CjNcdaxPO2vmpZ84hNl1';
     }
@@ -39,7 +39,7 @@ service cloud.firestore {
     }
 
     match /users/{userId} {
-      // ПОЛНАЯ БЛОКИРОВКА ТВИНКА
+      // ПОЛНАЯ БЛОКИРОВКА ТВИНКА (oAMi...)
       allow read, write: if false && userId == 'oAMiCwJacaZPx5w3jaJtDoLPgZN2';
       
       allow read: if true; 
