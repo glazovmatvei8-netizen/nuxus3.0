@@ -74,8 +74,12 @@ service cloud.firestore {
           request.resource.data.content is string && 
           request.resource.data.content.size() < 2000000;
           
-        allow update: if isChatMember(chatId) && 
-          request.auth.uid == resource.data.senderId;
+        // Разрешаем обновлять если ты автор (редактирование) 
+        // ИЛИ если ты участник и меняешь только статус прочтения (isRead)
+        allow update: if isChatMember(chatId) && (
+          request.auth.uid == resource.data.senderId || 
+          (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isRead']))
+        );
           
         allow delete: if isAdmin() || (isSignedIn() && request.auth.uid == resource.data.senderId);
 
