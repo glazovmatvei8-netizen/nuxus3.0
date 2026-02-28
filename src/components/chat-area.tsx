@@ -53,7 +53,8 @@ const MessageList = memo(({
 MessageList.displayName = 'MessageList';
 
 export default function ChatArea() {
-  const { user } = useUser();
+  const { user } = user;
+  const { user: firebaseUser } = useUser();
   const db = useFirestore();
   const { currentChatId, setCurrentChatId, forwardingMessage, setForwardingMessage, setActiveCallId } = useAppState();
   
@@ -67,9 +68,7 @@ export default function ChatArea() {
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchingLocal, setIsSearchingLocal] = useState(false);
   
-  // Video Message state
   const [isRecordingVideo, setIsRecordingVideo] = useState(false);
-  const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
 
@@ -77,7 +76,7 @@ export default function ChatArea() {
   const dataLoadedRef = useRef(false);
   const { toast } = useToast();
 
-  const userProfileRef = useMemoFirebase(() => (!db || !user) ? null : doc(db, 'users', user.uid), [db, user]);
+  const userProfileRef = useMemoFirebase(() => (!db || !firebaseUser) ? null : doc(db, 'users', firebaseUser.uid), [db, firebaseUser]);
   const { data: userProfile } = useDoc<UserType>(userProfileRef);
   const amIPremium = useMemo(() => isUserPremium(userProfile), [userProfile]);
 
@@ -85,11 +84,11 @@ export default function ChatArea() {
   const { data: chat } = useDoc<Chat>(chatRef);
 
   const otherId = useMemo(() => {
-    if (chat?.type === 'private' && user) {
-      return chat.participantIds?.find((id: string) => id !== user.uid);
+    if (chat?.type === 'private' && firebaseUser) {
+      return chat.participantIds?.find((id: string) => id !== firebaseUser.uid);
     }
     return null;
-  }, [chat, user]);
+  }, [chat, firebaseUser]);
 
   const otherProfileRef = useMemoFirebase(() => (!db || !otherId) ? null : doc(db, 'users', otherId), [db, otherId]);
   const { data: otherProfile } = useDoc<UserType>(otherProfileRef);
@@ -117,7 +116,7 @@ export default function ChatArea() {
     );
   }, [rawMessages, searchQuery]);
 
-  // Request Notification permission
+  // Request Notification permission on mount
   useEffect(() => {
     if (typeof window !== 'undefined' && "Notification" in window) {
       if (Notification.permission === 'default') {
@@ -126,11 +125,11 @@ export default function ChatArea() {
     }
   }, []);
 
-  // Handle Notifications and Auto-Read
+  // Handle Auto-Read and Notifications
   useEffect(() => {
-    if (!messages || !user || !currentChatId || !db) return;
+    if (!messages || !firebaseUser || !currentChatId || !db) return;
 
-    const unreadFromOthers = messages.filter(m => !m.isRead && m.senderId !== user.uid);
+    const unreadFromOthers = messages.filter(m => !m.isRead && m.senderId !== firebaseUser.uid);
     
     // Auto-read messages when chat is open
     if (unreadFromOthers.length > 0) {
@@ -139,9 +138,9 @@ export default function ChatArea() {
       });
     }
 
-    // Browser Notification for new messages
+    // Windows Notification for new messages
     const lastMsg = messages[messages.length - 1];
-    if (lastMsg && lastMsg.senderId !== user.uid && !lastMsg.isRead) {
+    if (lastMsg && lastMsg.senderId !== firebaseUser.uid && !lastMsg.isRead) {
       if (typeof window !== 'undefined' && document.hidden && Notification.permission === 'granted') {
         new Notification(`Nuxus: ${lastMsg.senderName}`, {
           body: lastMsg.contentType === 'text' ? lastMsg.content : `Отправил ${lastMsg.contentType}`,
@@ -149,7 +148,7 @@ export default function ChatArea() {
         });
       }
     }
-  }, [messages, user, currentChatId, db]);
+  }, [messages, firebaseUser, currentChatId, db]);
 
   const scrollToBottom = useCallback((behavior: ScrollBehavior = 'auto') => {
     if (scrollRef.current) {
@@ -159,17 +158,17 @@ export default function ChatArea() {
   }, []);
 
   useEffect(() => {
-    if (!db || !currentChatId || !user) return;
+    if (!db || !currentChatId || !firebaseUser) return;
     const typingRef = doc(db, 'chats', currentChatId);
     if (messageInput.length > 0) {
-      updateDoc(typingRef, { [`typing.${user.uid}`]: true });
+      updateDoc(typingRef, { [`typing.${firebaseUser.uid}`]: true });
     } else {
-      updateDoc(typingRef, { [`typing.${user.uid}`]: false });
+      updateDoc(typingRef, { [`typing.${firebaseUser.uid}`]: false });
     }
     return () => {
-      updateDoc(typingRef, { [`typing.${user.uid}`]: false });
+      updateDoc(typingRef, { [`typing.${firebaseUser.uid}`]: false });
     };
-  }, [messageInput, currentChatId, user, db]);
+  }, [messageInput, currentChatId, firebaseUser, db]);
 
   useEffect(() => {
     if (currentChatId) {
@@ -199,7 +198,7 @@ export default function ChatArea() {
 
   const handleSendMessage = useCallback((content: string = messageInput, type: 'text' | 'video' = 'text') => {
     const trimmedContent = content.trim();
-    if (!trimmedContent || !currentChatId || !user || !db) return;
+    if (!trimmedContent || !currentChatId || !firebaseUser || !db) return;
     
     setIsSending(true);
 
@@ -216,7 +215,7 @@ export default function ChatArea() {
 
     const msgData: any = { 
       chatId: currentChatId, 
-      senderId: user.uid, 
+      senderId: firebaseUser.uid, 
       senderName: userProfile?.name || 'User', 
       content: trimmedContent, 
       contentType: type, 
@@ -241,7 +240,7 @@ export default function ChatArea() {
     }
     setIsSending(false);
     setTimeout(() => scrollToBottom('smooth'), 100);
-  }, [messageInput, currentChatId, user, db, userProfile, replyTo, editingMsg, scrollToBottom]);
+  }, [messageInput, currentChatId, firebaseUser, db, userProfile, replyTo, editingMsg, scrollToBottom]);
 
   const handleAiDraft = async () => {
     if (!messages || !amIPremium) return;
@@ -265,10 +264,10 @@ export default function ChatArea() {
   };
 
   const startCall = async (type: 'audio' | 'video') => {
-    if (!db || !user || !otherId || !currentChatId) return;
+    if (!db || !firebaseUser || !otherId || !currentChatId) return;
     try {
       const callData = {
-        callerId: user.uid,
+        callerId: firebaseUser.uid,
         callerName: userProfile?.name || 'Пользователь',
         receiverId: otherId,
         chatId: currentChatId,
@@ -286,7 +285,6 @@ export default function ChatArea() {
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 480, height: 480 }, audio: true });
-      setHasCameraPermission(true);
       setIsRecordingVideo(true);
       if (videoRef.current) videoRef.current.srcObject = stream;
       const mediaRecorder = new MediaRecorder(stream);
@@ -305,8 +303,7 @@ export default function ChatArea() {
       };
       mediaRecorder.start();
     } catch (err) {
-      setHasCameraPermission(false);
-      toast({ variant: 'destructive', title: 'Ошибка камеры' });
+      toast({ variant: 'destructive', title: 'Ошибка камеры', description: 'Разрешите доступ к камере в настройках браузера.' });
     }
   };
 
@@ -402,12 +399,12 @@ export default function ChatArea() {
         {messages && (
           <MessageList 
             messages={messages}
-            userId={user?.uid}
+            userId={firebaseUser?.uid}
             chatId={currentChatId}
             onReply={setReplyTo}
             onEdit={handleEditMessage}
             amIPremium={amIPremium}
-            isAdmin={chat?.ownerId === user?.uid}
+            isAdmin={chat?.ownerId === firebaseUser?.uid}
             otherAvatarUrl={otherProfile?.avatarUrl || otherMetadata?.avatarUrl}
           />
         )}

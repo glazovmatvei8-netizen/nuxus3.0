@@ -12,13 +12,21 @@ import { useAuth, useUser, useFirestore, useDoc, useMemoFirebase } from '@/fireb
 import { UserAvatar } from '@/components/user-avatar';
 import { 
   LogOut, Palette, Loader2, CreditCard, Copy, Info, Type,
-  ShieldCheck, Eye, Users, Crown, Settings2, Check, HardDrive, Archive, Upload
+  ShieldCheck, Eye, Users, Crown, Settings2, Check, HardDrive, Archive, Upload,
+  Moon, Sun, Droplets, Monitor
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { signOut } from 'firebase/auth';
 import { doc, collection, query, where, limit, getDocs, addDoc } from 'firebase/firestore';
 import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { 
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import type { User } from '@/lib/types';
 
 const PREMIUM_PLANS = [
@@ -46,6 +54,8 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
     username: '',
     bio: '',
     avatarUrl: '',
+    theme: 'default',
+    messageSize: 'medium',
     phoneVisibility: 'nobody',
     lastSeenVisibility: 'everybody',
     allowGroupsFrom: 'everybody',
@@ -56,7 +66,6 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
   const [isSubmittingPayment, setIsSubmittingPayment] = useState(false);
   const [pendingPayment, setPendingPayment] = useState<any>(null);
 
-  // Синхронизация данных при открытии и получении профиля
   useEffect(() => {
     if (profile && open) {
       setForm({
@@ -64,6 +73,8 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         username: profile.username || '',
         bio: profile.bio || '',
         avatarUrl: profile.avatarUrl || '',
+        theme: profile.settings?.theme || 'default',
+        messageSize: profile.settings?.messageSize || 'medium',
         phoneVisibility: profile.settings?.privacy?.phoneVisibility || 'nobody',
         lastSeenVisibility: profile.settings?.privacy?.lastSeenVisibility || 'everybody',
         allowGroupsFrom: profile.settings?.privacy?.allowGroupsFrom || 'everybody',
@@ -81,6 +92,8 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
       avatarUrl: form.avatarUrl,
       settings: {
         ...profile?.settings,
+        theme: form.theme,
+        messageSize: form.messageSize,
         privacy: {
           ...profile?.settings?.privacy,
           phoneVisibility: form.phoneVisibility,
@@ -91,7 +104,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
       }
     });
     onOpenChange(false);
-    toast({ title: "Сохранено" });
+    toast({ title: "Настройки обновлены" });
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -123,7 +136,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
           amount: pendingPayment.amount, unit: pendingPayment.unit, price: pendingPayment.price, status: 'pending' 
         }
       });
-      toast({ title: "Заявка отправлена" });
+      toast({ title: "Заявка на оплату отправлена в Nuxus Bot" });
       setPendingPayment(null);
     } finally {
       setIsSubmittingPayment(false);
@@ -133,84 +146,188 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
   return (
     <>
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md bg-card border-border p-0 overflow-hidden h-[90vh] flex flex-col rounded-3xl">
-        <DialogHeader className="p-4 border-b border-border bg-muted/30 shrink-0">
-          <DialogTitle className="flex items-center gap-2 text-lg font-bold"><Settings2 className="w-5 h-5 text-primary" /> Настройки</DialogTitle>
+      <DialogContent className="max-w-md bg-card border-border p-0 overflow-hidden h-[90vh] flex flex-col rounded-[2.5rem] shadow-2xl">
+        <DialogHeader className="p-6 border-b border-border bg-muted/30 shrink-0">
+          <DialogTitle className="flex items-center gap-2 text-xl font-bold italic uppercase tracking-tighter">
+            <Settings2 className="w-5 h-5 text-primary" /> 
+            Identity Hub
+          </DialogTitle>
         </DialogHeader>
 
         <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className="flex-1 flex flex-col min-h-0">
-          <TabsList className="grid grid-cols-4 bg-muted/50 p-1 mx-4 mt-4 rounded-xl shrink-0">
-            <TabsTrigger value="profile" className="text-[10px] uppercase font-bold">Профиль</TabsTrigger>
-            <TabsTrigger value="privacy" className="text-[10px] uppercase font-bold">Защита</TabsTrigger>
-            <TabsTrigger value="store" className="text-[10px] uppercase font-bold">Premium</TabsTrigger>
-            <TabsTrigger value="storage" className="text-[10px] uppercase font-bold">Данные</TabsTrigger>
+          <TabsList className="grid grid-cols-4 bg-muted/50 p-1 mx-6 mt-4 rounded-2xl shrink-0 border border-white/5">
+            <TabsTrigger value="profile" className="text-[9px] uppercase font-black tracking-widest">Core</TabsTrigger>
+            <TabsTrigger value="appearance" className="text-[9px] uppercase font-black tracking-widest">Style</TabsTrigger>
+            <TabsTrigger value="privacy" className="text-[9px] uppercase font-black tracking-widest">Guard</TabsTrigger>
+            <TabsTrigger value="store" className="text-[9px] uppercase font-black tracking-widest">Prime</TabsTrigger>
           </TabsList>
 
-          <ScrollArea className="flex-1">
-            <TabsContent value="profile" className="p-6 space-y-6 m-0">
-              <div className="flex flex-col items-center gap-4 py-4">
+          <ScrollArea className="flex-1 px-6">
+            <TabsContent value="profile" className="space-y-6 m-0 py-6">
+              <div className="flex flex-col items-center gap-6">
                 <div className="relative group cursor-pointer" onClick={() => fileInputRef.current?.click()}>
-                  <UserAvatar userId={user?.uid} manualAvatarUrl={form.avatarUrl} className="h-32 w-32 border-4 border-background" fallbackName={form.name} />
-                  <div className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                  <UserAvatar userId={user?.uid} manualAvatarUrl={form.avatarUrl} className="h-32 w-32 border-4 border-primary/20 shadow-2xl" fallbackName={form.name} />
+                  <div className="absolute inset-0 bg-black/60 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all backdrop-blur-sm">
                     <Upload className="w-8 h-8 text-white" />
                   </div>
                   <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleFileChange} />
                 </div>
                 <div className="space-y-4 w-full">
-                  <div className="space-y-1.5"><Label className="text-xs uppercase font-bold">Имя</Label><Input value={form.name} onChange={e => setForm({...form, name: e.target.value})} className="bg-muted/30 border-none h-11 rounded-xl" /></div>
-                  <div className="space-y-1.5"><Label className="text-xs uppercase font-bold">Никнейм</Label><Input value={form.username} onChange={e => setForm({...form, username: e.target.value})} className="bg-muted/30 border-none h-11 rounded-xl" /></div>
-                  <div className="space-y-1.5"><Label className="text-xs uppercase font-bold">О себе</Label><Textarea value={form.bio} onChange={e => setForm({...form, bio: e.target.value})} className="bg-muted/30 border-none rounded-xl" /></div>
+                  <div className="space-y-1.5">
+                    <Label className="text-[10px] uppercase font-black tracking-[0.2em] text-muted-foreground ml-1">Display Name</Label>
+                    <Input value={form.name} onChange={e => setForm({...form, name: e.target.value})} className="bg-muted/30 border-white/5 h-12 rounded-2xl focus:border-primary/50 transition-all" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-[10px] uppercase font-black tracking-[0.2em] text-muted-foreground ml-1">Username</Label>
+                    <Input value={form.username} onChange={e => setForm({...form, username: e.target.value})} className="bg-muted/30 border-white/5 h-12 rounded-2xl focus:border-primary/50 transition-all" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-[10px] uppercase font-black tracking-[0.2em] text-muted-foreground ml-1">Biographical Data</Label>
+                    <Textarea value={form.bio} onChange={e => setForm({...form, bio: e.target.value})} className="bg-muted/30 border-white/5 rounded-2xl min-h-[100px] focus:border-primary/50 transition-all resize-none" placeholder="Расскажите о себе..." />
+                  </div>
                 </div>
               </div>
             </TabsContent>
 
-            <TabsContent value="privacy" className="p-6 space-y-4 m-0">
-              <div className="bg-muted/20 p-5 rounded-2xl space-y-4">
-                <div className="space-y-1.5">
-                  <Label className="text-[10px] uppercase font-bold">Номер телефона</Label>
-                  <select value={form.phoneVisibility} onChange={e => setForm({...form, phoneVisibility: e.target.value as any})} className="w-full h-11 bg-muted/30 rounded-xl px-3 outline-none text-sm">
-                    <option value="everybody">Все</option><option value="nobody">Никто</option>
-                  </select>
+            <TabsContent value="appearance" className="space-y-6 m-0 py-6">
+              <div className="bg-muted/20 p-6 rounded-[2rem] border border-white/5 space-y-6">
+                <div className="space-y-4">
+                  <Label className="text-[10px] uppercase font-black tracking-[0.2em] text-primary flex items-center gap-2">
+                    <Palette className="w-3.5 h-3.5" /> Visual Theme
+                  </Label>
+                  <div className="grid grid-cols-3 gap-3">
+                    {['default', 'midnight', 'ocean'].map(t => (
+                      <button 
+                        key={t}
+                        onClick={() => setForm({...form, theme: t as any})}
+                        className={cn(
+                          "flex flex-col items-center gap-2 p-3 rounded-2xl border transition-all",
+                          form.theme === t ? "bg-primary/20 border-primary text-primary" : "bg-black/20 border-white/5 text-muted-foreground hover:bg-black/40"
+                        )}
+                      >
+                        {t === 'default' && <Monitor className="w-5 h-5" />}
+                        {t === 'midnight' && <Moon className="w-5 h-5" />}
+                        {t === 'ocean' && <Droplets className="w-5 h-5" />}
+                        <span className="text-[9px] uppercase font-bold tracking-widest">{t}</span>
+                      </button>
+                    ))}
+                  </div>
                 </div>
-                <div className="space-y-1.5">
-                  <Label className="text-[10px] uppercase font-bold">Кто может писать первым</Label>
-                   <select value={form.whoCanMessageMe} onChange={e => setForm({...form, whoCanMessageMe: e.target.value as any})} className="w-full h-11 bg-muted/30 rounded-xl px-3 outline-none text-sm">
-                    <option value="everybody">Все</option><option value="premium">Только Premium</option>
-                  </select>
+
+                <div className="space-y-4 pt-4 border-t border-white/5">
+                  <Label className="text-[10px] uppercase font-black tracking-[0.2em] text-primary flex items-center gap-2">
+                    <Type className="w-3.5 h-3.5" /> Message Size
+                  </Label>
+                  <Select value={form.messageSize} onValueChange={(v) => setForm({...form, messageSize: v as any})}>
+                    <SelectTrigger className="h-12 rounded-2xl bg-black/20 border-white/5">
+                      <SelectValue placeholder="Размер шрифта" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-card border-white/10 rounded-2xl">
+                      <SelectItem value="small">Small (12px)</SelectItem>
+                      <SelectItem value="medium">Medium (14px)</SelectItem>
+                      <SelectItem value="large">Large (16px)</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
             </TabsContent>
 
-            <TabsContent value="store" className="p-6 space-y-4 m-0">
-              {PREMIUM_PLANS.map(plan => (
-                <Button key={plan.id} variant="outline" className="w-full h-14 rounded-2xl flex justify-between px-6" onClick={() => setPendingPayment(plan)}>
-                  <span className="font-bold">{plan.name}</span><span className="font-black text-primary">{plan.price} ₽</span>
-                </Button>
-              ))}
+            <TabsContent value="privacy" className="space-y-6 m-0 py-6">
+              <div className="bg-muted/20 p-6 rounded-[2rem] border border-white/5 space-y-6">
+                <div className="space-y-4">
+                  <Label className="text-[10px] uppercase font-black tracking-[0.2em] text-accent flex items-center gap-2">
+                    <ShieldCheck className="w-3.5 h-3.5" /> Data Protection
+                  </Label>
+                  
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label className="text-[9px] uppercase font-bold text-muted-foreground ml-1">Phone Number Visibility</Label>
+                      <Select value={form.phoneVisibility} onValueChange={(v) => setForm({...form, phoneVisibility: v as any})}>
+                        <SelectTrigger className="h-11 rounded-xl bg-black/20 border-white/5">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="bg-card border-white/10">
+                          <SelectItem value="everybody">Everybody</SelectItem>
+                          <SelectItem value="contacts">Contacts Only</SelectItem>
+                          <SelectItem value="nobody">Nobody</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label className="text-[9px] uppercase font-bold text-muted-foreground ml-1">Incoming Signal Filter</Label>
+                      <Select value={form.whoCanMessageMe} onValueChange={(v) => setForm({...form, whoCanMessageMe: v as any})}>
+                        <SelectTrigger className="h-11 rounded-xl bg-black/20 border-white/5">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="bg-card border-white/10">
+                          <SelectItem value="everybody">Open (All)</SelectItem>
+                          <SelectItem value="premium">Nuxus Prime Only</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <p className="text-[8px] text-muted-foreground/60 px-1">Ограничить входящие сообщения только пользователями с Prime-статусом.</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </TabsContent>
 
-            <TabsContent value="storage" className="p-6 space-y-4 m-0">
-              <div className="bg-muted/20 p-5 rounded-2xl space-y-4 text-center">
-                <Archive className="w-10 h-10 mx-auto text-primary opacity-50" />
-                <p className="text-xs text-muted-foreground uppercase font-bold">Управление данными скоро будет доступно</p>
+            <TabsContent value="store" className="space-y-6 m-0 py-6">
+              <div className="relative p-6 rounded-[2rem] bg-gradient-to-br from-primary/20 to-accent/10 border border-primary/20 overflow-hidden group">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-primary/20 blur-[60px] rounded-full group-hover:bg-primary/40 transition-all" />
+                <Crown className="w-12 h-12 text-primary mb-4 relative z-10" />
+                <h3 className="text-xl font-black text-white italic tracking-tighter mb-2 relative z-10">NUXUS PRIME</h3>
+                <p className="text-xs text-muted-foreground mb-6 relative z-10">Разблокируйте AI-черновики, расшифровку голоса и эксклюзивные аватары.</p>
+                <div className="space-y-3 relative z-10">
+                  {PREMIUM_PLANS.map(plan => (
+                    <button 
+                      key={plan.id} 
+                      onClick={() => setPendingPayment(plan)}
+                      className="w-full h-14 rounded-2xl bg-black/40 border border-white/10 flex items-center justify-between px-6 hover:bg-black/60 hover:border-primary/50 transition-all"
+                    >
+                      <span className="font-bold text-sm">{plan.name}</span>
+                      <span className="font-black text-primary italic">{plan.price} ₽</span>
+                    </button>
+                  ))}
+                </div>
               </div>
             </TabsContent>
           </ScrollArea>
 
-          <div className="p-4 border-t border-border/20 bg-muted/20 shrink-0 flex gap-2">
-            <Button variant="ghost" className="flex-1 h-12 rounded-xl text-destructive" onClick={() => signOut(auth)}><LogOut className="w-5 h-5" /></Button>
-            <Button className="flex-[2] h-12 rounded-xl font-bold uppercase bg-primary" onClick={handleSave}><Check className="w-5 h-5 mr-2" /> Сохранить</Button>
+          <div className="p-6 border-t border-white/5 bg-muted/20 shrink-0 flex gap-3">
+            <Button variant="ghost" className="h-14 w-14 rounded-2xl bg-destructive/10 text-destructive hover:bg-destructive hover:text-white transition-all shrink-0" onClick={() => signOut(auth)}>
+              <LogOut className="w-6 h-6" />
+            </Button>
+            <Button className="flex-1 h-14 rounded-2xl font-black uppercase tracking-[0.2em] italic bg-primary shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all text-xs" onClick={handleSave}>
+              <Check className="w-5 h-5 mr-2" /> 
+              Save Changes
+            </Button>
           </div>
         </Tabs>
       </DialogContent>
     </Dialog>
 
     <Dialog open={!!pendingPayment} onOpenChange={v => !v && setPendingPayment(null)}>
-      <DialogContent className="max-sm bg-card border-primary/20 p-8 rounded-[2.5rem] text-center">
-        <h2 className="text-xl font-bold mb-6">Оплата Premium</h2>
-        <div className="bg-background/50 p-5 rounded-3xl border mb-6 text-sm font-mono">{CARD_NUMBER}</div>
-        <Button className="w-full h-14 rounded-2xl font-black uppercase" onClick={handleConfirmPayment} disabled={isSubmittingPayment}>
-          {isSubmittingPayment ? <Loader2 className="animate-spin" /> : "Я оплатил(а)"}
+      <DialogContent className="max-w-sm bg-card border-primary/20 p-8 rounded-[3rem] text-center shadow-2xl">
+        <Crown className="w-16 h-16 text-primary mx-auto mb-6 animate-float" />
+        <h2 className="text-2xl font-black text-white italic tracking-tighter mb-2">Оплата Prime</h2>
+        <p className="text-xs text-muted-foreground mb-8">Переведите сумму на карту и нажмите кнопку ниже. Заявка будет обработана администратором.</p>
+        
+        <div className="bg-black/40 p-6 rounded-3xl border border-white/10 mb-8 group cursor-pointer relative overflow-hidden" onClick={() => { navigator.clipboard.writeText(CARD_NUMBER.replace(/\s/g, '')); toast({ title: "Номер карты скопирован" }); }}>
+          <div className="absolute inset-0 bg-primary/5 opacity-0 group-hover:opacity-100 transition-opacity" />
+          <div className="text-[10px] uppercase font-bold text-muted-foreground mb-1 flex items-center justify-center gap-2">
+            <CreditCard className="w-3 h-3" /> Номер карты
+          </div>
+          <div className="text-lg font-mono font-black text-white tracking-widest">{CARD_NUMBER}</div>
+          <div className="text-[8px] uppercase font-bold text-primary mt-2 opacity-0 group-hover:opacity-100 transition-all">Click to copy</div>
+        </div>
+
+        <Button 
+          className="w-full h-14 rounded-2xl font-black uppercase tracking-[0.2em] bg-primary shadow-xl shadow-primary/30 hover:scale-[1.02] transition-all" 
+          onClick={handleConfirmPayment} 
+          disabled={isSubmittingPayment}
+        >
+          {isSubmittingPayment ? <Loader2 className="animate-spin w-6 h-6" /> : "Я оплатил(а)"}
         </Button>
       </DialogContent>
     </Dialog>
