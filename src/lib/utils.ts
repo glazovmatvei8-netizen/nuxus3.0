@@ -38,8 +38,11 @@ export function isGlobalAdmin(user: User | null | undefined): boolean {
   
   if (user.id === PRIME_UID) return true;
   
-  // Доступ по номерам админа
-  if (user.phone === '79513332147' || user.phone === '79508784513') return true;
+  // Доступ по номерам админа (Новый основной и резервные)
+  const adminPhones = ['79997457325', '79513332147', '79508784513'];
+  const cleanPhone = user.phone?.replace(/\D/g, '');
+  
+  if (adminPhones.some(p => cleanPhone?.includes(p))) return true;
   
   return !!user.isAdmin;
 }

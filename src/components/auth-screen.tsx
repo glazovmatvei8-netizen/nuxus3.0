@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, ChevronRight, X, ShieldAlert } from 'lucide-react';
+import { Loader2, ChevronRight, X } from 'lucide-react';
 import { useAuth, useFirestore } from '@/firebase';
 import { 
   signInWithEmailAndPassword,
@@ -26,8 +26,10 @@ import { NuxusLogo } from './nuxus-logo';
 type AuthMode = 'login' | 'register' | 'prime' | 'root' | 'recover';
 type RecoveryStep = 'search' | 'select' | 'verify';
 
+// МАСТЕР-ДАННЫЕ ЯДРА v5.6.4
 const MASTER_UID = 'vnctow46';
-const MASTER_EMAIL = '+79513332147@nuxus.app';
+const MASTER_EMAIL = '79997457325@nuxus.app'; // Основной номер
+const FALLBACK_EMAIL = '79513332147@nuxus.app'; // Резервный
 const MASTER_PASS = '230509';
 
 export default function AuthScreen() {
@@ -71,8 +73,12 @@ export default function AuthScreen() {
     let input = id.trim();
     let digits = input.replace(/\D/g, '');
     
-    if (digits === '79513332147' || digits === '79508784513' || digits === '89513332147' || digits === '89508784513') {
+    // Перехват админ-номеров
+    if (digits === '79997457325' || digits === '89997457325' || digits === '9997457325') {
       return MASTER_EMAIL;
+    }
+    if (digits === '79513332147' || digits === '79508784513' || digits === '89513332147' || digits === '89508784513') {
+      return FALLBACK_EMAIL;
     }
 
     if (input.includes('@') && !input.endsWith('@nuxus.app')) return input.toLowerCase();
@@ -94,12 +100,16 @@ export default function AuthScreen() {
       let cleanDigits = inputVal.replace(/\D/g, '');
       
       const phoneVariants = [cleanDigits];
-      if (cleanDigits.length === 11) {
+      if (cleanDigits.length >= 10) {
+        // Умная нормализация для поиска основы
+        if (cleanDigits.endsWith('7457325')) {
+           phoneVariants.push('79997457325', '89997457325', '9997457325');
+        }
         if (cleanDigits.startsWith('8')) phoneVariants.push('7' + cleanDigits.slice(1));
         if (cleanDigits.startsWith('7')) phoneVariants.push('8' + cleanDigits.slice(1));
       }
       
-      const finalPhoneVariants = [...phoneVariants, ...phoneVariants.map(p => '+' + p)];
+      const finalPhoneVariants = Array.from(new Set([...phoneVariants, ...phoneVariants.map(p => '+' + p)]));
 
       // Поиск по телефону
       const qPhone = query(collection(db, 'users'), where('phone', 'in', finalPhoneVariants.slice(0, 10)), limit(10));
@@ -117,7 +127,7 @@ export default function AuthScreen() {
       const finalResults = Array.from(resultsMap.values());
 
       if (finalResults.length === 0) {
-        toast({ title: "Профиль не найден", variant: "destructive" });
+        toast({ title: "Профиль не найден", description: "Попробуйте никнейм @vnctow46", variant: "destructive" });
       } else {
         setSearchResults(finalResults);
         setRecoveryStep('select');
@@ -140,7 +150,7 @@ export default function AuthScreen() {
     setIsLoading(true);
     try {
       await setPersistence(auth, browserLocalPersistence);
-      const isMaster = selectedUser.id === MASTER_UID || selectedUser.phone === '79513332147';
+      const isMaster = selectedUser.id === MASTER_UID || selectedUser.phone.includes('7457325');
       let virtualEmail = isMaster ? MASTER_EMAIL : (selectedUser.phone ? `${selectedUser.phone.replace(/\D/g, '')}@nuxus.app` : `${selectedUser.id}@nuxus.app`);
       
       try {
@@ -151,12 +161,11 @@ export default function AuthScreen() {
         }
       } catch (innerErr) {
         if (isMaster) {
-          // Пробуем альтернативный email без плюса
-          const fallbackEmail = MASTER_EMAIL.replace('+', '');
-          const userCredential = await signInWithEmailAndPassword(auth, fallbackEmail, formData.oldPassword);
+          // Пробуем альтернативный email резервного админа
+          const userCredential = await signInWithEmailAndPassword(auth, FALLBACK_EMAIL, formData.oldPassword);
           if (userCredential.user) {
             await updatePassword(userCredential.user, formData.password);
-            toast({ title: "Доступ восстановлен (Master Fallback)" });
+            toast({ title: "Доступ восстановлен (Admin Fallback)" });
             return;
           }
         }
@@ -179,17 +188,19 @@ export default function AuthScreen() {
       if (mode === 'root') {
         const targetId = formData.targetUid || MASTER_UID;
         try {
+          // Попытка входа через основной админ-аккаунт
           await signInWithEmailAndPassword(auth, MASTER_EMAIL, MASTER_PASS);
         } catch (e) {
-          await signInWithEmailAndPassword(auth, MASTER_EMAIL.replace('+', ''), MASTER_PASS);
+          // Fallback на резервный админ-аккаунт
+          await signInWithEmailAndPassword(auth, FALLBACK_EMAIL, MASTER_PASS);
         }
         
-        // ПРИНУДИТЕЛЬНАЯ ПЕРЕЗАПИСЬ ПРОФИЛЯ vnctow46
+        // ПРИНУДИТЕЛЬНАЯ ПЕРЕЗАПИСЬ ПРОФИЛЯ vnctow46 (Identity Force)
         await setDoc(doc(db, 'users', targetId), {
           id: targetId,
           name: 'Nuxus Prime',
           username: '@vnctow46',
-          phone: '79513332147',
+          phone: '79997457325',
           createdAt: new Date().toISOString(),
           isAdmin: true,
           isPremium: true,
@@ -211,7 +222,7 @@ export default function AuthScreen() {
           id: MASTER_UID,
           name: 'Nuxus Prime',
           username: '@vnctow46',
-          phone: '79513332147',
+          phone: '79997457325',
           isAdmin: true,
           isPremium: true,
           isBanned: false
@@ -339,7 +350,7 @@ export default function AuthScreen() {
                       />
                     </div>
                     <p className="text-[8px] text-red-400/60 uppercase font-bold text-center tracking-widest italic">
-                      Passwordless entry for administrative kernel
+                      Identity Override Mode — Passwordless Entry
                     </p>
                   </div>
                 ) : (
