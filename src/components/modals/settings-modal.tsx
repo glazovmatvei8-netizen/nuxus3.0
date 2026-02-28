@@ -62,7 +62,6 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
   const [isSubmittingPayment, setIsSubmittingPayment] = useState(false);
   const [pendingPayment, setPendingPayment] = useState<any>(null);
 
-  // Инициализация формы только при открытии и наличии данных
   useEffect(() => {
     if (profile && open) {
       setForm({
@@ -121,7 +120,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
     reader.onloadend = () => {
       const base64String = reader.result as string;
       setForm(prev => ({ ...prev, avatarUrl: base64String }));
-      toast({ title: "Фото загружено", description: "Нажмите 'Сохранить', чтобы применить изменения." });
+      toast({ title: "Фото загружено" });
     };
     reader.readAsDataURL(file);
   };

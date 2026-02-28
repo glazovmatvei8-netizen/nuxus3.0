@@ -116,7 +116,7 @@ export default function AuthScreen() {
           createdAt: new Date().toISOString(),
           lastSeen: new Date().toISOString(),
           isBanned: false,
-          isPremium: false, // ТЕПЕРЬ ПО УМОЛЧАНИЮ FALSE
+          isPremium: false,
           settings: {
             theme: 'default',
             chatBackground: 'default',
