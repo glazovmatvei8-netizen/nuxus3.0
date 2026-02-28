@@ -38,7 +38,6 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
   const db = useFirestore();
   const { user } = useUser();
   const { toast } = useToast();
-  const isInitialized = useRef(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const userRef = useMemoFirebase(() => (!db || !user) ? null : doc(db, 'users', user.uid), [db, user]);
@@ -63,8 +62,9 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
   const [isSubmittingPayment, setIsSubmittingPayment] = useState(false);
   const [pendingPayment, setPendingPayment] = useState<any>(null);
 
+  // Инициализация формы при загрузке профиля
   useEffect(() => {
-    if (profile && !isInitialized.current) {
+    if (profile && open) {
       setForm({
         name: profile.name || '',
         username: profile.username || '',
@@ -79,9 +79,8 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         statusEmoji: profile.settings?.statusEmoji || '',
         statusText: profile.settings?.statusText || '',
       });
-      isInitialized.current = true;
     }
-  }, [profile]);
+  }, [profile, open]);
 
   const handleSave = () => {
     if (!userRef) return;

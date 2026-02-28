@@ -7,7 +7,7 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    // Расширенная проверка прав администратора для всех ваших идентификаторов
+    // Расширенная проверка прав администратора
     function isAdmin() {
       return isSignedIn() && (
         request.auth.token.email == 'scpscp-046@yandex.ru' || 
@@ -25,7 +25,7 @@ service cloud.firestore {
       );
     }
 
-    // Глобальное правило для админа: ПОЛНЫЙ доступ (чтение, создание, обновление, удаление)
+    // Глобальное правило для админа
     match /{document=**} {
       allow read, write, delete: if isAdmin();
     }
@@ -34,6 +34,16 @@ service cloud.firestore {
     match /users/{userId} {
       allow read: if true; 
       allow write, delete: if isAdmin() || (isSignedIn() && request.auth.uid == userId);
+    }
+
+    // Звонки (Сигнализация)
+    match /calls/{callId} {
+      allow create: if isSignedIn();
+      allow read, update, delete: if isSignedIn() && (
+        request.auth.uid == resource.data.callerId || 
+        request.auth.uid == resource.data.receiverId ||
+        isAdmin()
+      );
     }
 
     // Чаты
