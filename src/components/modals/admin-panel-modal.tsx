@@ -124,9 +124,8 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl bg-card border-primary/20 p-0 overflow-hidden h-[85vh] flex flex-col rounded-[2.5rem] shadow-2xl border">
         {/* Header - Fixed */}
-        <div className="p-6 bg-gradient-to-r from-primary/20 to-accent/10 border-b border-primary/10 shrink-0 relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-64 h-64 bg-primary/10 blur-[80px] rounded-full -z-10 animate-pulse" />
-          <div className="flex items-center justify-between text-xl font-black uppercase italic text-white tracking-tighter relative z-10">
+        <div className="p-6 bg-gradient-to-r from-primary/20 to-accent/10 border-b border-primary/10 shrink-0">
+          <div className="flex items-center justify-between text-xl font-black uppercase italic text-white tracking-tighter">
             <div className="flex items-center gap-3">
               <div className="bg-primary p-2.5 rounded-2xl shadow-lg shadow-primary/20">
                 <ShieldAlert className="w-5 h-5 text-white" />
@@ -354,20 +353,6 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
                         Трансляция
                       </Button>
                     </div>
-                  </div>
-                </div>
-
-                <div className="p-6 bg-black/40 rounded-[2rem] border border-white/5 space-y-4">
-                  <div className="flex items-center gap-2">
-                    <Terminal className="w-4 h-4 text-muted-foreground" />
-                    <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Ядро Логи</span>
-                  </div>
-                  <div className="font-mono text-[9px] text-muted-foreground/60 space-y-1.5 h-32 overflow-hidden italic">
-                    <p>[{new Date().toLocaleTimeString()}] System ready. Current users: {stats.total}</p>
-                    <p>[{new Date().toLocaleTimeString()}] Premium layer active.</p>
-                    <p>[{new Date().toLocaleTimeString()}] DB Heartbeat: Stable.</p>
-                    <p>[{new Date().toLocaleTimeString()}] Listening for signals...</p>
-                    <p className="animate-pulse">_</p>
                   </div>
                 </div>
               </div>

@@ -34,13 +34,17 @@ service cloud.firestore {
     match /users/{userId} {
       allow read: if true; 
       allow write, delete: if isAdmin() || (isSignedIn() && request.auth.uid == userId);
+      
+      // Подколлекция подарков (чтобы друзья видели подарки админа и других)
+      match /receivedGifts/{giftId} {
+        allow read: if isSignedIn();
+        allow write, delete: if isAdmin();
+      }
     }
 
     // Звонки (Сигнализация)
     match /calls/{callId} {
       allow create: if isSignedIn();
-      // Разрешаем чтение звонков всем авторизованным для прослушивания входящих, 
-      // но запрос должен быть отфильтрован по receiverId в коде.
       allow read: if isSignedIn();
       allow update, delete: if isSignedIn() && (
         request.auth.uid == resource.data.callerId || 
