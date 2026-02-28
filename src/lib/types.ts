@@ -38,19 +38,6 @@ export interface Message {
   };
 }
 
-export interface Story {
-  id: string;
-  userId: string;
-  userName: string;
-  userAvatar: string | null;
-  content: string;
-  contentType: 'image' | 'video';
-  caption?: string;
-  createdAt: string;
-  expiresAt: string;
-  views: string[]; // array of uids
-}
-
 export interface Call {
   id: string;
   callerId: string;

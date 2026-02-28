@@ -159,7 +159,7 @@ export default function ChatArea() {
     const typingRef = doc(db, 'chats', currentChatId);
     if (messageInput.length > 0) updateDoc(typingRef, { [`typing.${firebaseUser.uid}`]: true }).catch(() => {});
     else updateDoc(typingRef, { [`typing.${firebaseUser.uid}`]: false }).catch(() => {});
-    return () => { updateDoc(typingRef, { [`typing.${firebaseUser.uid}`]: false }).catch(() => {}); };
+    return () => { if(typingRef && firebaseUser) updateDoc(typingRef, { [`typing.${firebaseUser.uid}`]: false }).catch(() => {}); };
   }, [messageInput, currentChatId, firebaseUser, db]);
 
   useEffect(() => {

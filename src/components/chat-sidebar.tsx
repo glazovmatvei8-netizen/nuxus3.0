@@ -9,7 +9,6 @@ import { UserAvatar } from '@/components/user-avatar';
 import { Search, Settings, Plus, Loader2, Bookmark, Pin, Globe, Star, Hexagon, ShieldAlert } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { StoriesBar } from './stories-bar';
 import { CreateChatModal } from './modals/create-chat-modal';
 import { SettingsModal } from './modals/settings-modal';
 import { AdminPanelModal } from './modals/admin-panel-modal';
@@ -233,8 +232,6 @@ export default function ChatSidebar() {
           />
         </div>
       </div>
-
-      <StoriesBar />
 
       <div className="px-3 py-2 shrink-0">
         <Tabs value={activeTab} onValueChange={(val) => setActiveTab(val as any)} className="w-full">
