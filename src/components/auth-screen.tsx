@@ -53,7 +53,7 @@ export default function AuthScreen() {
     
     // Если номер начинается не с 7, но имеет длину 11 (например, 9... случайно ввели 11 цифр), 
     // пробуем привести к стандарту, если это российская нумерация
-    if (!digits.startsWith('7') && digits.length === 11 && digits.startsWith('8')) {
+    if (!digits.startsWith('7') && digits.length === 11) {
         digits = '7' + digits.slice(1);
     }
 
@@ -150,7 +150,7 @@ export default function AuthScreen() {
           if (err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential' || err.code === 'auth/wrong-password') {
             toast({ 
               title: "Ошибка входа", 
-              description: "Проверьте номер и пароль. Для админа используйте новый пароль.", 
+              description: "Проверьте номер и пароль.", 
               variant: "destructive" 
             });
             setIsLoading(false);
@@ -171,7 +171,7 @@ export default function AuthScreen() {
       <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-primary/20 blur-[120px] rounded-full -z-10 animate-pulse-glow" />
       <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-accent/10 blur-[120px] rounded-full -z-10 animate-pulse-glow" style={{ animationDelay: '2s' }} />
       
-      <div className="w-full max-sm relative z-10">
+      <div className="w-full max-w-sm relative z-10">
         <div className="flex justify-center mb-10">
           <div className="relative group">
             <div className="absolute inset-0 bg-primary blur-3xl opacity-20 group-hover:opacity-40 transition-opacity" />
