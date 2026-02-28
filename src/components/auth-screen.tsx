@@ -30,7 +30,7 @@ export default function AuthScreen() {
   const [formData, setFormData] = useState({
     name: '',
     username: '',
-    identifier: '', // Телефон или Email
+    identifier: '', 
     password: ''
   });
 
@@ -54,8 +54,8 @@ export default function AuthScreen() {
 
     const rawDigits = input.replace(/\D/g, '');
     
-    // ГАРАНТИЯ ВОЗВРАТА ОСНОВНОГО АККАУНТА "АДМИН АБУЗЕР":
-    // Если ввели ваш номер в любом виде, принудительно направляем в самый первый аккаунт с новой почтой
+    // ГАРАНТИЯ ВОЗВРАТА ОСНОВНОГО АККАУНТА:
+    // Если ввели ваш номер в любом виде, принудительно направляем в scpscp-046@yandex.ru
     if (rawDigits.endsWith('9513332147')) {
       return 'scpscp-046@yandex.ru';
     }
