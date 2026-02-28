@@ -27,6 +27,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { cn } from '@/lib/utils';
 import type { User } from '@/lib/types';
 
 const PREMIUM_PLANS = [
