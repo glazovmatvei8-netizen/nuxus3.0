@@ -137,16 +137,6 @@ export default function ChatArea() {
     if (unreadFromOthers.length > 0) {
       unreadFromOthers.forEach(msg => updateDocumentNonBlocking(doc(db, 'chats', currentChatId, 'messages', msg.id), { isRead: true }));
     }
-    const lastMsg = messages[messages.length - 1];
-    if (lastMsg && lastMsg.senderId !== firebaseUser.uid && !lastMsg.isRead) {
-      if (audioRef.current) audioRef.current.play().catch(() => {});
-      if (typeof window !== 'undefined' && document.hidden && Notification.permission === 'granted') {
-        new Notification(`Nuxus: ${lastMsg.senderName}`, {
-          body: lastMsg.contentType === 'text' ? lastMsg.content : `Отправил ${lastMsg.contentType}`,
-          icon: 'https://picsum.photos/seed/nuxus/192/192'
-        });
-      }
-    }
   }, [messages, firebaseUser, currentChatId, db]);
 
   const scrollToBottom = useCallback((behavior: ScrollBehavior = 'auto') => {
@@ -161,7 +151,6 @@ export default function ChatArea() {
     const typingRef = doc(db, 'chats', currentChatId);
     if (messageInput.length > 0) updateDoc(typingRef, { [`typing.${firebaseUser.uid}`]: true }).catch(() => {});
     else updateDoc(typingRef, { [`typing.${firebaseUser.uid}`]: false }).catch(() => {});
-    return () => { if(typingRef && firebaseUser) updateDoc(typingRef, { [`typing.${firebaseUser.uid}`]: false }).catch(() => {}); };
   }, [messageInput, currentChatId, firebaseUser, db]);
 
   useEffect(() => {
@@ -351,26 +340,6 @@ export default function ChatArea() {
               <Button variant="ghost" size="icon" className="h-7 w-7 rounded-lg" onClick={() => setReplyTo(null)}><X className="w-4 h-4" /></Button>
             </div>
           )}
-          {(scheduledDate || expiryTime || isOneTime) && (
-            <div className="flex flex-wrap gap-2 p-1.5 bg-primary/5 rounded-xl border border-primary/10 mb-1 animate-in fade-in slide-in-from-bottom-2">
-              {scheduledDate && <div className="flex items-center gap-1.5 px-2 py-1 bg-primary/10 rounded-lg text-[10px] font-bold text-primary uppercase tracking-wider"><Clock className="w-3 h-3" /> {scheduledDate.toLocaleString()} <X className="w-3 h-3 cursor-pointer" onClick={() => setScheduledDate(undefined)} /></div>}
-              {expiryTime && <div className="flex items-center gap-1.5 px-2 py-1 bg-red-500/10 rounded-lg text-[10px] font-bold text-red-500 uppercase tracking-wider"><Timer className="w-3 h-3" /> {expiryTime}с <X className="w-3 h-3 cursor-pointer" onClick={() => setExpiryTime(null)} /></div>}
-              {isOneTime && <div className="flex items-center gap-1.5 px-2 py-1 bg-accent/10 rounded-lg text-[10px] font-bold text-accent uppercase tracking-wider"><EyeOff className="w-3 h-3" /> Один просмотр <X className="w-3 h-3 cursor-pointer" onClick={() => setIsOneTime(false)} /></div>}
-            </div>
-          )}
-          {isRecordingVideo && (
-            <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-              <div className="relative flex flex-col items-center gap-6">
-                <div className="w-64 h-64 md:w-80 md:h-80 rounded-full overflow-hidden border-4 border-primary shadow-2xl bg-black">
-                  <video ref={videoRef} className="w-full h-full object-cover" autoPlay muted playsInline />
-                </div>
-                <div className="flex gap-4">
-                  <Button variant="outline" size="lg" className="rounded-full h-16 w-16" onClick={() => setIsRecordingVideo(false)}><X className="w-6 h-6" /></Button>
-                  <Button variant="default" size="lg" className="rounded-full h-16 w-16 bg-red-500 hover:bg-red-600" onClick={stopRecording}><Circle className="w-8 h-8 fill-white" /></Button>
-                </div>
-              </div>
-            </div>
-          )}
           <div className="flex gap-2 items-end">
             <Popover>
               <PopoverTrigger asChild>
@@ -396,7 +365,6 @@ export default function ChatArea() {
                 </div>
               </PopoverContent>
             </Popover>
-            <Button variant="ghost" size="icon" className="h-11 w-11 rounded-xl shrink-0 bg-muted" onClick={() => toast({ title: "Камера скоро появится" })}><Camera className="w-5 h-5 text-muted-foreground" /></Button>
             <div className="flex-1 relative">
               <Input placeholder={t('chat.placeholder')} className="bg-muted border-none rounded-xl h-11 text-sm px-4" value={messageInput} onChange={e => onInputChange(e.target.value)} onKeyDown={e => e.key === 'Enter' && !e.shiftKey && handleSendMessage()} />
               {amIPremium && !editingMsg && (<button onClick={handleAiDraft} disabled={isDrafting} className="absolute right-3 top-1/2 -translate-y-1/2 text-primary hover:scale-110">{isDrafting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wand2 className="w-4 h-4" />}</button>)}

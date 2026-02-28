@@ -122,7 +122,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
       }
     });
     onOpenChange(false);
-    toast({ title: t('settings.labels.save') + " " + "Ok" });
+    toast({ title: t('settings.labels.save') });
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {

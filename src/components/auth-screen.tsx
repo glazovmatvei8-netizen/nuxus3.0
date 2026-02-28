@@ -20,7 +20,7 @@ import { useTranslations } from '@/hooks/use-translations';
 
 type AuthMode = 'login' | 'register';
 
-// Номера телефонов, которые ведут в один и тот же аккаунт Nuxus Prime
+// Номера телефонов, которые ведут в основной аккаунт Nuxus Prime
 const ADMIN_PHONES = ['79513332147', '89513332147', '79508784513', '89508784513'];
 
 export default function AuthScreen() {
@@ -39,26 +39,14 @@ export default function AuthScreen() {
     password: ''
   });
 
-  const normalizePhoneForDb = (phone: string) => {
-    let digits = phone.replace(/\D/g, '');
-    if (digits.length === 11) {
-      if (digits.startsWith('8') || digits.startsWith('7')) {
-        digits = '7' + digits.slice(1);
-      }
-    } else if (digits.length === 10) {
-      digits = '7' + digits;
-    }
-    return '+' + digits;
-  };
-
   const getVirtualEmail = (id: string) => {
     const input = id.trim().toLowerCase();
     if (input.includes('@')) return input;
     let digits = input.replace(/\D/g, '');
     
-    // ПРИНУДИТЕЛЬНОЕ ОБЪЕДИНЕНИЕ: все админ-номера ведут в один корень
+    // ПРИНУДИТЕЛЬНОЕ ОБЪЕДИНЕНИЕ: все админ-номера ведут в один корень Nuxus Prime
     if (ADMIN_PHONES.includes(digits)) {
-      return 'prime_admin_root@nuxus.app'; 
+      return 'nuxus_prime_official_v5@nuxus.app'; 
     }
     
     if (digits.length === 11 && digits.startsWith('8')) {
@@ -70,7 +58,7 @@ export default function AuthScreen() {
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     const virtualEmail = getVirtualEmail(formData.identifier);
-    const normalizedPhone = !formData.identifier.includes('@') ? normalizePhoneForDb(formData.identifier) : '';
+    const normalizedPhone = !formData.identifier.includes('@') ? formData.identifier.replace(/\D/g, '') : '';
 
     if (!formData.identifier.trim()) {
       toast({ title: "Ошибка", description: "Введите данные для входа", variant: "destructive" });
@@ -82,16 +70,6 @@ export default function AuthScreen() {
       await setPersistence(auth, browserLocalPersistence);
 
       if (mode === 'register') {
-        const username = formData.username.startsWith('@') ? formData.username.toLowerCase() : '@' + formData.username.toLowerCase();
-        
-        const q = query(collection(db, 'users'), where('username', '==', username), limit(1));
-        const snap = await getDocs(q);
-        if (!snap.empty) {
-          toast({ title: "Никнейм занят", description: "Этот @username уже используется", variant: "destructive" });
-          setIsLoading(false);
-          return;
-        }
-
         let userCredential;
         try {
           userCredential = await createUserWithEmailAndPassword(auth, virtualEmail, formData.password);
@@ -104,13 +82,14 @@ export default function AuthScreen() {
         }
 
         const user_auth = userCredential.user;
-        const isAdminUser = ADMIN_PHONES.includes(normalizedPhone.replace('+', '')) || normalizedPhone === '+79513332147' || normalizedPhone === '+79508784513';
+        const isAdminUser = ADMIN_PHONES.includes(normalizedPhone);
 
+        // Обновляем или создаем профиль
         await setDoc(doc(db, 'users', user_auth.uid), {
           id: user_auth.uid,
-          name: formData.name || 'User',
-          username: username,
-          phone: normalizedPhone,
+          name: formData.name || (isAdminUser ? 'Nuxus Prime' : 'User'),
+          username: formData.username ? (formData.username.startsWith('@') ? formData.username.toLowerCase() : '@' + formData.username.toLowerCase()) : (isAdminUser ? '@admin' : `@user_${user_auth.uid.slice(0, 5)}`),
+          phone: normalizedPhone ? '+' + normalizedPhone : '',
           avatarUrl: `https://picsum.photos/seed/${user_auth.uid}/200`,
           createdAt: new Date().toISOString(),
           lastSeen: new Date().toISOString(),
@@ -134,8 +113,7 @@ export default function AuthScreen() {
         toast({ title: "Успех", description: isAdminUser ? "Добро пожаловать, Nuxus Prime!" : "Добро пожаловать в Nuxus!" });
       } else {
         const result = await signInWithEmailAndPassword(auth, virtualEmail, formData.password);
-        const user_auth = result.user;
-        const userDoc = await getDoc(doc(db, 'users', user_auth.uid));
+        const userDoc = await getDoc(doc(db, 'users', result.user.uid));
         
         if (userDoc.exists() && userDoc.data()?.isBanned) {
           toast({ title: "Доступ запрещен", description: "Аккаунт заблокирован", variant: "destructive" });
@@ -149,7 +127,7 @@ export default function AuthScreen() {
     } catch (err: any) {
       toast({ 
         title: "Ошибка", 
-        description: mode === 'login' ? "Неверный логин или пароль" : err.message, 
+        description: mode === 'login' ? "Неверный логин или пароль. Попробуйте вкладку Регистрация для первого входа." : err.message, 
         variant: "destructive" 
       });
     } finally {
@@ -164,7 +142,6 @@ export default function AuthScreen() {
       <div className="w-full max-w-sm relative z-10">
         <div className="flex justify-center mb-10">
           <div className="bg-primary p-6 rounded-[2.5rem] shadow-2xl shadow-primary/40 animate-float relative overflow-hidden group">
-            <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity" />
             <Hexagon className="w-16 h-16 text-white" />
             <Zap className="w-8 h-8 text-white absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 fill-white" />
           </div>
@@ -188,14 +165,14 @@ export default function AuthScreen() {
                     <Label className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground/80 ml-1">{t('settings.labels.name')}</Label>
                     <div className="relative group">
                       <UserCircle className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
-                      <Input placeholder="Ваше Имя" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="bg-white/5 border-white/10 pl-10 h-14 rounded-2xl focus:border-primary/50 transition-all" />
+                      <Input placeholder="Ваше Имя" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="bg-white/5 border-white/10 pl-10 h-14 rounded-2xl" />
                     </div>
                   </div>
                   <div className="space-y-1.5">
                     <Label className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground/80 ml-1">{t('settings.labels.username')}</Label>
                     <div className="relative group">
                       <AtSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
-                      <Input placeholder="username" value={formData.username} onChange={e => setFormData({...formData, username: e.target.value})} className="bg-white/5 border-white/10 pl-10 h-14 rounded-2xl focus:border-primary/50 transition-all" />
+                      <Input placeholder="username" value={formData.username} onChange={e => setFormData({...formData, username: e.target.value})} className="bg-white/5 border-white/10 pl-10 h-14 rounded-2xl" />
                     </div>
                   </div>
                 </>
@@ -205,7 +182,7 @@ export default function AuthScreen() {
                 <Label className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground/80 ml-1">ТЕЛЕФОН ИЛИ EMAIL</Label>
                 <div className="relative group">
                   <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
-                  <Input placeholder="8 9XX... или email" value={formData.identifier} onChange={e => setFormData({...formData, identifier: e.target.value})} className="bg-white/5 border-white/10 pl-10 h-14 rounded-2xl focus:border-primary/50 transition-all" required />
+                  <Input placeholder="8 9XX... или email" value={formData.identifier} onChange={e => setFormData({...formData, identifier: e.target.value})} className="bg-white/5 border-white/10 pl-10 h-14 rounded-2xl" required />
                 </div>
               </div>
 
@@ -213,11 +190,11 @@ export default function AuthScreen() {
                 <Label className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground/80 ml-1">ПАРОЛЬ</Label>
                 <div className="relative group">
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
-                  <Input type="password" placeholder="••••••••" value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} className="bg-white/5 border-white/10 pl-10 h-14 rounded-2xl focus:border-primary/50 transition-all" required />
+                  <Input type="password" placeholder="••••••••" value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} className="bg-white/5 border-white/10 pl-10 h-14 rounded-2xl" required />
                 </div>
               </div>
 
-              <Button type="submit" disabled={isLoading} className="w-full h-14 text-xs font-black uppercase tracking-[0.25em] bg-primary hover:bg-primary/90 rounded-2xl transition-all shadow-xl shadow-primary/30 hover:scale-[1.02] active:scale-95">
+              <Button type="submit" disabled={isLoading} className="w-full h-14 text-xs font-black uppercase tracking-[0.2em] bg-primary hover:bg-primary/90 rounded-2xl transition-all shadow-xl shadow-primary/30">
                 {isLoading ? (
                   <Loader2 className="animate-spin w-5 h-5" />
                 ) : (
@@ -238,10 +215,6 @@ export default function AuthScreen() {
             </div>
           </CardContent>
         </Card>
-        
-        <div className="mt-10 flex items-center justify-center gap-3 text-muted-foreground/40 text-[9px] uppercase font-bold tracking-[0.4em]">
-          <ShieldCheck className="w-3 h-3" /> AES-256 ШИФРОВАНИЕ
-        </div>
       </div>
     </div>
   );

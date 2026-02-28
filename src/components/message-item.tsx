@@ -104,13 +104,6 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, amIPremium = 
     }
   };
 
-  const jumpToOriginal = () => {
-    if (message.replyToId) {
-      const el = document.getElementById(`msg-${message.replyToId}`);
-      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }
-  };
-
   const handleOpenOneTime = () => {
     if (message.isExpired) return;
     setShowOneTimeView(true);
@@ -120,33 +113,6 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, amIPremium = 
     setShowOneTimeView(false);
     if (!isMe && message.isOneTimeView) {
       updateDocumentNonBlocking(doc(db, 'chats', chatId, 'messages', message.id), { isExpired: true });
-    }
-  };
-
-  const handlePaymentAction = async (action: 'confirm' | 'reject', e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (!isAdmin || !db || !message.paymentData || isActionLoading) return;
-    setIsActionLoading(true);
-    try {
-      const msgRef = doc(db, 'chats', chatId, 'messages', message.id);
-      const targetUserRef = doc(db, 'users', message.paymentData.targetUserId);
-      if (action === 'confirm') {
-        const targetData = (await getDocs(query(collection(db, 'users'), where('id', '==', message.paymentData.targetUserId), limit(1)))).docs[0]?.data();
-        const currentExpiry = targetData?.premiumUntil ? new Date(targetData.premiumUntil) : new Date();
-        const newExpiry = message.paymentData.unit === 'months' 
-          ? addMonths(currentExpiry, message.paymentData.amount || 1).toISOString()
-          : addYears(currentExpiry, message.paymentData.amount || 1).toISOString();
-        updateDocumentNonBlocking(targetUserRef, { isPremium: true, premiumUntil: newExpiry });
-        updateDocumentNonBlocking(msgRef, { contentType: 'service', content: `✅ Оплата принята: ${message.paymentData.itemName}` });
-        toast({ title: "Оплата подтверждена" });
-      } else {
-        updateDocumentNonBlocking(msgRef, { contentType: 'service', content: `❌ Оплата отклонена: ${message.paymentData.itemName}` });
-        toast({ title: "Оплата отклонена" });
-      }
-    } catch (e: any) {
-      toast({ title: "Ошибка", description: e.message, variant: "destructive" });
-    } finally {
-      setIsActionLoading(false);
     }
   };
 
@@ -161,9 +127,8 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, amIPremium = 
   const renderContent = () => {
     if (message.scheduledAt && new Date(message.scheduledAt).getTime() > Date.now()) {
       return (
-        <div className="flex items-center gap-2 py-1 px-2 opacity-50">
-          <Clock className="w-4 h-4" />
-          <span className="text-[10px] font-bold uppercase tracking-widest italic">Запланировано</span>
+        <div className="flex items-center gap-2 py-1 px-2 opacity-50 italic text-[10px]">
+          <Clock className="w-4 h-4" /> Запланировано
         </div>
       );
     }
@@ -171,26 +136,6 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, amIPremium = 
       return (
         <div className="flex items-center gap-2 py-1 px-2 opacity-50 italic text-[10px]">
           <EyeOff className="w-4 h-4" /> Сообщение просмотрено
-        </div>
-      );
-    }
-    if (message.contentType === 'payment_request' && message.paymentData) {
-      const data = message.paymentData;
-      return (
-        <div className="flex flex-col gap-3 p-1 min-w-[200px] max-w-[260px]">
-          <div className="flex items-center gap-2 border-b border-white/10 pb-2">
-            <Crown className="w-5 h-5 text-primary" />
-            <div className="flex flex-col text-left">
-              <span className="text-[9px] font-bold uppercase tracking-widest text-primary">Запрос оплаты</span>
-              <span className="text-sm font-bold text-white truncate">{data.itemName}</span>
-            </div>
-          </div>
-          {isAdmin && (
-            <div className="flex gap-2 pt-1">
-              <Button size="sm" className="flex-1 h-7 text-[9px]" onClick={(e) => handlePaymentAction('confirm', e)} disabled={isActionLoading}>Принять</Button>
-              <Button size="sm" variant="outline" className="flex-1 h-7 text-[9px]" onClick={(e) => handlePaymentAction('reject', e)} disabled={isActionLoading}>Отказать</Button>
-            </div>
-          )}
         </div>
       );
     }
@@ -230,7 +175,6 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, amIPremium = 
     return (
       <div className="flex flex-col text-left">
         {message.forwardFrom && (<div className="flex items-center gap-1.5 mb-1 opacity-50 border-l-2 border-white/10 pl-2"><Forward className="w-2.5 h-2.5" /><span className="text-[8px] font-bold uppercase">Переслано от {message.forwardFrom}</span></div>)}
-        {message.replyToId && (<div onClick={(e) => { e.stopPropagation(); jumpToOriginal(); }} className="mb-1 p-1.5 bg-black/10 rounded-lg border-l-2 border-primary cursor-pointer hover:bg-black/20 transition-all max-w-[200px]"><div className="text-[8px] font-bold text-primary uppercase">Ответ</div><div className="text-[10px] truncate opacity-60 italic">{message.replyToContent}</div></div>)}
         <div className="whitespace-pre-wrap text-sm break-words max-w-[300px]">{message.contentType === 'text' ? parseMarkdown(message.content) : message.content}{message.editedAt && <span className="text-[8px] ml-1 opacity-40 uppercase">(ред.)</span>}</div>
       </div>
     );
@@ -255,9 +199,12 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, amIPremium = 
           <div className="flex items-center gap-1.5 mb-0.5">{countdown !== null && (<div className="flex items-center gap-1 px-1.5 py-0.5 bg-red-500/10 rounded-full text-[8px] font-black text-red-500 animate-pulse"><Timer className="w-2.5 h-2.5" /> {countdown}</div>)}</div>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <div className={cn("p-3 rounded-2xl cursor-pointer shadow-md border transition-all hover:opacity-95 relative", isMe ? "message-bubble-me border-none ml-auto" : "bg-card border-white/5 text-foreground mr-auto", (message.contentType === 'video' || message.contentType === 'image') && "p-1 rounded-3xl bg-card border-white/5 shadow-none")}>
+              <div className={cn("p-3 rounded-2xl cursor-pointer shadow-md border transition-all hover:opacity-95 relative", isMe ? "message-bubble-me border-none ml-auto" : "bg-card border-white/5 text-foreground mr-auto")}>
                 {renderContent()}
-                <div className={cn("flex items-center justify-end gap-1 mt-1 opacity-60", (message.contentType === 'video' || message.contentType === 'image') && "absolute bottom-3 right-5 bg-black/40 px-1.5 py-0.5 rounded-full")}><span className="text-[9px]">{formattedTime}</span>{isMe && (message.isRead ? <CheckCheck className="w-3 h-3 text-accent" /> : <Check className="w-3 h-3" />)}</div>
+                <div className={cn("flex items-center justify-end gap-1 mt-1 opacity-60")}>
+                  <span className="text-[9px]">{formattedTime}</span>
+                  {isMe && (message.isRead ? <CheckCheck className="w-3 h-3 text-accent" /> : <Check className="w-3 h-3" />)}
+                </div>
               </div>
             </DropdownMenuTrigger>
             <DropdownMenuContent align={isMe ? 'end' : 'start'} className="w-48 bg-card border-white/10">

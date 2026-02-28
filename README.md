@@ -1,5 +1,5 @@
 
-# NuxusChat — Премиальный опыт общения (v5.3)
+# NuxusChat — Премиальный опыт общения (v5.3.1)
 
 Добро пожаловать в NuxusChat! Приложение полностью готово к публичному запуску.
 
@@ -17,10 +17,10 @@ npx nativefier --name "Nuxus" --icon "https://picsum.photos/seed/nuxus-core/1024
 npx nativefier --name "Nuxus" --platform "linux" --icon "https://picsum.photos/seed/nuxus-core/1024/1024" --internal-urls ".*" "ВАША_ССЫЛКА_ИЗ_БРАУЗЕРА"
 ```
 
-## 🔒 Данные Администратора
+## 🔒 Данные Администратора (Nuxus Prime)
 - **Номер телефона**: +79513332147 или +79508784513
-- **Пароль**: gaz2009
-- **Никнейм**: @admin (Nuxus Prime)
+- **Пароль**: gaz20092
+- **UID**: GCvLucN8CjNcdaxPO2vmpZ84hNl1
 
 ## ✨ Премиум-функции (v5.3)
 - **ИИ-Генератор Аватаров**: Создание уникальных 3D-аватаров прямо в приложении.
