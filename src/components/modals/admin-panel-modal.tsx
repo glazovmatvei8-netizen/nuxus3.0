@@ -2,7 +2,7 @@
 "use client"
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -123,6 +123,11 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl bg-card border-primary/20 p-0 overflow-hidden h-[85vh] flex flex-col rounded-[2.5rem] shadow-2xl border">
+        <DialogHeader className="sr-only">
+          <DialogTitle>Nuxus Core Admin Panel</DialogTitle>
+          <DialogDescription>Central control unit for Nuxus Messenger</DialogDescription>
+        </DialogHeader>
+
         {/* Header - Fixed */}
         <div className="p-6 bg-gradient-to-r from-primary/20 to-accent/10 border-b border-primary/10 shrink-0 z-50">
           <div className="flex items-center justify-between text-xl font-black uppercase italic text-white tracking-tighter">

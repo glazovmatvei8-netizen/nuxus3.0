@@ -65,20 +65,21 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
   // Стабильное обновление формы при получении профиля
   useEffect(() => {
     if (profile && open) {
-      setForm({
-        name: profile.name || '',
-        username: profile.username || '',
-        bio: profile.bio || '',
-        avatarUrl: profile.avatarUrl || '',
-        chatBackground: profile.settings?.chatBackground || 'default',
-        messageSize: profile.settings?.messageSize || 'medium',
-        phoneVisibility: profile.settings?.privacy?.phoneVisibility || 'nobody',
-        lastSeenVisibility: profile.settings?.privacy?.lastSeenVisibility || 'everybody',
-        allowGroupsFrom: profile.settings?.privacy?.allowGroupsFrom || 'everybody',
-        whoCanMessageMe: profile.settings?.privacy?.whoCanMessageMe || 'everybody',
-        statusEmoji: profile.settings?.statusEmoji || '',
-        statusText: profile.settings?.statusText || '',
-      });
+      setForm(prev => ({
+        ...prev,
+        name: profile.name || prev.name,
+        username: profile.username || prev.username,
+        bio: profile.bio || prev.bio,
+        avatarUrl: profile.avatarUrl || prev.avatarUrl,
+        chatBackground: profile.settings?.chatBackground || prev.chatBackground,
+        messageSize: profile.settings?.messageSize || prev.messageSize,
+        phoneVisibility: profile.settings?.privacy?.phoneVisibility || prev.phoneVisibility,
+        lastSeenVisibility: profile.settings?.privacy?.lastSeenVisibility || prev.lastSeenVisibility,
+        allowGroupsFrom: profile.settings?.privacy?.allowGroupsFrom || prev.allowGroupsFrom,
+        whoCanMessageMe: profile.settings?.privacy?.whoCanMessageMe || prev.whoCanMessageMe,
+        statusEmoji: profile.settings?.statusEmoji || prev.statusEmoji,
+        statusText: profile.settings?.statusText || prev.statusText,
+      }));
     }
   }, [profile, open]);
 

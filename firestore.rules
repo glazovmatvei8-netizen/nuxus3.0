@@ -34,10 +34,11 @@ service cloud.firestore {
     match /users/{userId} {
       allow read: if true; 
       allow write: if isAdmin() || (isSignedIn() && request.auth.uid == userId);
+      allow delete: if isAdmin();
       
       // Подколлекция подарков (явно разрешаем чтение всем авторизованным)
       match /receivedGifts/{giftId} {
-        allow read: if isSignedIn();
+        allow read, list: if isSignedIn();
         allow write: if isAdmin();
       }
     }
@@ -45,7 +46,7 @@ service cloud.firestore {
     // Звонки (Сигнализация)
     match /calls/{callId} {
       allow create: if isSignedIn();
-      allow read: if isSignedIn();
+      allow read, list: if isSignedIn();
       allow update, delete: if isSignedIn() && (
         request.auth.uid == resource.data.callerId || 
         request.auth.uid == resource.data.receiverId ||
@@ -67,7 +68,7 @@ service cloud.firestore {
 
       // Сообщения
       match /messages/{messageId} {
-        allow read: if isChatMember(chatId) || isAdmin();
+        allow read, list: if isChatMember(chatId) || isAdmin();
         
         allow create: if isChatMember(chatId) && 
           request.resource.data.content is string && 
