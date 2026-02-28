@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState } from 'react';
@@ -6,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Hexagon, Zap, Loader2, Smartphone, UserCircle, AtSign, Lock, ArrowRight, ShieldCheck } from 'lucide-react';
+import { Hexagon, Zap, Loader2, Smartphone, UserCircle, AtSign, Lock, ArrowRight, ShieldCheck, Mail } from 'lucide-react';
 import { useAuth, useFirestore } from '@/firebase';
 import { 
   signInWithEmailAndPassword,
@@ -29,7 +30,7 @@ export default function AuthScreen() {
   const [formData, setFormData] = useState({
     name: '',
     username: '',
-    phone: '',
+    identifier: '', // Телефон или Email
     password: ''
   });
 
@@ -45,14 +46,14 @@ export default function AuthScreen() {
     return '+' + digits;
   };
 
-  /**
-   * КРИТИЧЕСКИЙ ФИКС: Для вашего номера ГАРАНТИРОВАННО используем старый Email на 8...,
-   * чтобы восстановить ваши чаты («Чайник» и другие).
-   */
-  const getVirtualEmail = (phone: string) => {
-    const rawDigits = phone.replace(/\D/g, '');
+  const getVirtualEmail = (id: string) => {
+    // Если ввели Email напрямую
+    if (id.includes('@')) return id.trim().toLowerCase();
+
+    const rawDigits = id.replace(/\D/g, '');
     
-    // Если это ваш номер, ГАРАНТИРОВАННО возвращаем на старый Email с историей
+    // КРИТИЧЕСКИЙ ФИКС: Для вашего номера ГАРАНТИРОВАННО используем старый Email на 8...,
+    // чтобы восстановить ваши чаты («Чайник» и другие).
     if (rawDigits.endsWith('9513332147')) {
       return '89513332147@nuxus.app';
     }
@@ -66,11 +67,10 @@ export default function AuthScreen() {
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
-    const virtualEmail = getVirtualEmail(formData.phone);
-    const dbPhone = normalizePhoneForDb(formData.phone);
+    const virtualEmail = getVirtualEmail(formData.identifier);
     
-    if (formData.phone.replace(/\D/g, '').length < 10) {
-      toast({ title: "Ошибка", description: "Введите корректный номер", variant: "destructive" });
+    if (!formData.identifier.trim()) {
+      toast({ title: "Ошибка", description: "Введите телефон или email", variant: "destructive" });
       return;
     }
 
@@ -103,6 +103,8 @@ export default function AuthScreen() {
           }
         }
 
+        const dbPhone = formData.identifier.includes('@') ? '' : normalizePhoneForDb(formData.identifier);
+
         await setDoc(doc(db, 'users', user.uid), {
           id: user.uid,
           name: formData.name || 'Пользователь',
@@ -112,7 +114,7 @@ export default function AuthScreen() {
           createdAt: new Date().toISOString(),
           lastSeen: new Date().toISOString(),
           isBanned: false,
-          isPremium: dbPhone === '+79513332147',
+          isPremium: dbPhone === '+79513332147' || virtualEmail === '89513332147@nuxus.app',
           settings: {
             theme: 'default',
             chatBackground: 'default',
@@ -143,7 +145,7 @@ export default function AuthScreen() {
           if (err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential' || err.code === 'auth/wrong-password') {
             toast({ 
               title: "Ошибка входа", 
-              description: "Проверьте номер и пароль. Если аккаунта нет — зарегистрируйтесь.", 
+              description: "Проверьте данные. Если аккаунта нет — зарегистрируйтесь.", 
               variant: "destructive" 
             });
             setIsLoading(false);
@@ -183,7 +185,7 @@ export default function AuthScreen() {
               Nuxus
             </CardTitle>
             <CardDescription className="text-muted-foreground/60 mt-4 font-bold tracking-[0.4em] uppercase text-[10px]">
-              {mode === 'login' ? 'Energy Authorization' : 'New Identity Core'}
+              {mode === 'login' ? 'Identity Verification' : 'New Identity Core'}
             </CardDescription>
           </CardHeader>
           
@@ -209,10 +211,10 @@ export default function AuthScreen() {
               )}
               
               <div className="space-y-1.5">
-                <Label className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground/80 ml-1">Номер телефона</Label>
+                <Label className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground/80 ml-1">Телефон или Email</Label>
                 <div className="relative group">
-                  <Smartphone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
-                  <Input placeholder="8 9XX XXX XX XX" type="tel" value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} className="bg-white/5 border-white/10 pl-10 h-14 rounded-2xl focus:border-primary/50 transition-all" required />
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
+                  <Input placeholder="8 9XX... или email@nuxus.app" value={formData.identifier} onChange={e => setFormData({...formData, identifier: e.target.value})} className="bg-white/5 border-white/10 pl-10 h-14 rounded-2xl focus:border-primary/50 transition-all" required />
                 </div>
               </div>
 
