@@ -19,6 +19,8 @@ import { doc, setDoc, query, collection, where, getDocs, limit, getDoc } from 'f
 
 type AuthMode = 'login' | 'register';
 
+const ADMIN_PHONE = '+79513332147';
+
 export default function AuthScreen() {
   const auth = useAuth();
   const db = useFirestore();
@@ -59,15 +61,21 @@ export default function AuthScreen() {
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     const virtualEmail = getVirtualEmail(formData.identifier);
+    const normalizedPhone = !formData.identifier.includes('@') ? normalizePhoneForDb(formData.identifier) : '';
+
     if (!formData.identifier.trim()) {
       toast({ title: "Ошибка", description: "Введите данные для входа", variant: "destructive" });
       return;
     }
+
     setIsLoading(true);
     try {
       await setPersistence(auth, browserLocalPersistence);
+
       if (mode === 'register') {
         const username = formData.username.startsWith('@') ? formData.username.toLowerCase() : '@' + formData.username.toLowerCase();
+        
+        // Проверка на существование ника
         const q = query(collection(db, 'users'), where('username', '==', username), limit(1));
         const snap = await getDocs(q);
         if (!snap.empty) {
@@ -75,29 +83,32 @@ export default function AuthScreen() {
           setIsLoading(false);
           return;
         }
-        let user;
+
+        let userCredential;
         try {
-          const result = await createUserWithEmailAndPassword(auth, virtualEmail, formData.password);
-          user = result.user;
+          userCredential = await createUserWithEmailAndPassword(auth, virtualEmail, formData.password);
         } catch (authErr: any) {
           if (authErr.code === 'auth/email-already-in-use') {
-            const result = await signInWithEmailAndPassword(auth, virtualEmail, formData.password);
-            user = result.user;
+            userCredential = await signInWithEmailAndPassword(auth, virtualEmail, formData.password);
           } else {
             throw authErr;
           }
         }
-        const dbPhone = formData.identifier.includes('@') ? '' : normalizePhoneForDb(formData.identifier);
+
+        const user = userCredential.user;
+        const isAdmin = normalizedPhone === ADMIN_PHONE;
+
         await setDoc(doc(db, 'users', user.uid), {
           id: user.uid,
           name: formData.name || 'Пользователь',
           username: username,
-          phone: dbPhone,
+          phone: normalizedPhone,
           avatarUrl: `https://picsum.photos/seed/${user.uid}/200`,
           createdAt: new Date().toISOString(),
           lastSeen: new Date().toISOString(),
           isBanned: false,
-          isPremium: false,
+          isPremium: isAdmin,
+          isAdmin: isAdmin,
           settings: {
             theme: 'default',
             chatBackground: 'default',
@@ -110,30 +121,28 @@ export default function AuthScreen() {
             }
           }
         }, { merge: true });
-        toast({ title: "Успех", description: "Добро пожаловать в Nuxus!" });
+
+        toast({ title: "Успех", description: isAdmin ? "Добро пожаловать, Nuxus Prime!" : "Добро пожаловать в Nuxus!" });
       } else {
-        try {
-          const result = await signInWithEmailAndPassword(auth, virtualEmail, formData.password);
-          const user = result.user;
-          const userDoc = await getDoc(doc(db, 'users', user.uid));
-          if (userDoc.exists() && userDoc.data()?.isBanned) {
-            toast({ title: "Доступ запрещен", description: "Ваш аккаунт заблокирован", variant: "destructive" });
-            await auth.signOut();
-            setIsLoading(false);
-            return;
-          }
-        } catch (err: any) {
-          toast({ 
-            title: "Ошибка входа", 
-            description: "Проверьте данные. Если аккаунта нет — зарегистрируйтесь.", 
-            variant: "destructive" 
-          });
+        const result = await signInWithEmailAndPassword(auth, virtualEmail, formData.password);
+        const user = result.user;
+        const userDoc = await getDoc(doc(db, 'users', user.uid));
+        
+        if (userDoc.exists() && userDoc.data()?.isBanned) {
+          toast({ title: "Доступ запрещен", description: "Ваш аккаунт заблокирован", variant: "destructive" });
+          await auth.signOut();
           setIsLoading(false);
           return;
         }
+        
+        toast({ title: "Вход выполнен", description: `С возвращением, ${userDoc.data()?.name || 'Пользователь'}` });
       }
     } catch (err: any) {
-      toast({ title: "Ошибка", description: err.message, variant: "destructive" });
+      toast({ 
+        title: "Ошибка", 
+        description: mode === 'login' ? "Неверный логин или пароль" : err.message, 
+        variant: "destructive" 
+      });
     } finally {
       setIsLoading(false);
     }
