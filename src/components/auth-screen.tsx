@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, ChevronRight, Sparkles } from 'lucide-react';
+import { Loader2, ChevronRight, Sparkles, X } from 'lucide-react';
 import { useAuth, useFirestore } from '@/firebase';
 import { 
   signInWithEmailAndPassword,
@@ -21,7 +21,7 @@ import { useTranslations } from '@/hooks/use-translations';
 import { cn } from '@/lib/utils';
 import type { User } from '@/lib/types';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import Image from 'next/image';
+import { NuxusLogo } from './nuxus-logo';
 
 type AuthMode = 'login' | 'register' | 'prime' | 'root' | 'recover';
 type RecoveryStep = 'search' | 'select' | 'verify';
@@ -70,7 +70,7 @@ export default function AuthScreen() {
     let input = id.trim();
     let digits = input.replace(/\D/g, '');
     
-    // ПРИНУДИТЕЛЬНЫЙ МАСТЕР-EMAIL С ПЛЮСОМ ДЛЯ АДМИНОВ
+    // ПРИНУДИТЕЛЬНЫЙ МАСТЕР-EMAIL С ПЛЮСОМ
     if (digits === '79513332147' || digits === '79508784513' || digits === '89513332147' || digits === '89508784513') {
       return MASTER_EMAIL;
     }
@@ -106,6 +106,7 @@ export default function AuthScreen() {
       if (results.length === 0) {
         toast({ title: "Ничего не найдено", variant: "destructive" });
       } else {
+        // Убираем заблокированный твинк
         setSearchResults(results.filter(u => u.id !== 'oAMiCwJacaZPx5w3jaJtDoLPgZN2'));
         setRecoveryStep('select');
       }
@@ -127,6 +128,7 @@ export default function AuthScreen() {
     setIsLoading(true);
     try {
       await setPersistence(auth, browserLocalPersistence);
+      // Важно: восстанавливаем через правильный email
       const virtualEmail = (selectedUser.phone === '79513332147' || selectedUser.phone === '79508784513') 
         ? MASTER_EMAIL 
         : `${selectedUser.phone}@nuxus.app`;
@@ -154,6 +156,7 @@ export default function AuthScreen() {
 
       if (mode === 'prime' || mode === 'root') {
         try {
+          // Принудительный вход через MASTER_EMAIL для админов
           await signInWithEmailAndPassword(auth, MASTER_EMAIL, pass);
         } catch (e) {
           toast({ title: "Ошибка MASTER-входа", description: "Проверьте данные доступа", variant: "destructive" });
@@ -161,6 +164,7 @@ export default function AuthScreen() {
           return;
         }
         
+        // Мастер-UID для админа
         const targetId = (mode === 'root' && formData.targetUid) ? formData.targetUid : PRIME_UID;
         await setDoc(doc(db, 'users', targetId), {
           id: targetId,
@@ -202,20 +206,11 @@ export default function AuthScreen() {
           <div 
             onClick={handleLogoClick}
             className={cn(
-              "w-32 h-32 rounded-[3rem] shadow-2xl transition-all cursor-pointer animate-float relative overflow-hidden group border-2",
-              mode === 'prime' ? "border-accent shadow-accent/40 scale-110" : 
-              mode === 'root' ? "border-red-500 shadow-red-500/40 scale-125" : "border-primary/40 shadow-primary/40"
+              "transition-all cursor-pointer hover:scale-105 active:scale-95",
+              mode === 'root' ? "scale-125" : ""
             )}
           >
-            <Image 
-              src="https://picsum.photos/seed/nuxus-prime-core-v5/1024/1024"
-              alt="Nuxus Core"
-              fill
-              className="object-cover"
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex items-center justify-center">
-              <Sparkles className="w-10 h-10 text-white animate-pulse" />
-            </div>
+            <NuxusLogo size={mode === 'root' ? 160 : 120} />
           </div>
         </div>
 
