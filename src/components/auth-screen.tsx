@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Hexagon, Zap, Loader2, ChevronRight, X } from 'lucide-react';
+import { Hexagon, Zap, Loader2, ChevronRight, X, Sparkles } from 'lucide-react';
 import { useAuth, useFirestore } from '@/firebase';
 import { 
   signInWithEmailAndPassword,
@@ -21,12 +21,13 @@ import { useTranslations } from '@/hooks/use-translations';
 import { cn } from '@/lib/utils';
 import type { User } from '@/lib/types';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import Image from 'next/image';
 
 type AuthMode = 'login' | 'register' | 'prime' | 'root' | 'recover';
 type RecoveryStep = 'search' | 'select' | 'verify';
 
 const PRIME_UID = 'GCvLucN8CjNcdaxPO2vmpZ84hNl1';
-const MASTER_EMAIL = '+79513332147@nuxus.app';
+const MASTER_EMAIL = '+79513332147@nuxus.app'; // ПРАВИЛЬНАЯ ПОЧТА ОСНОВЫ
 
 export default function AuthScreen() {
   const auth = useAuth();
@@ -66,22 +67,23 @@ export default function AuthScreen() {
   };
 
   const getVirtualEmail = (id: string) => {
-    let input = id.trim().toLowerCase();
-    if (input.includes('@') && !input.endsWith('@nuxus.app')) return input;
+    let input = id.trim();
     
+    // Если это одна из админ-вариаций, возвращаем мастер-email с ПЛЮСОМ
     let digits = input.replace(/\D/g, '');
+    if (digits === '79513332147' || digits === '79508784513' || digits === '89513332147' || digits === '89508784513') {
+      return MASTER_EMAIL;
+    }
+
+    if (input.includes('@') && !input.endsWith('@nuxus.app')) return input.toLowerCase();
+    
     if (digits.length === 11) {
       if (digits.startsWith('8')) digits = '7' + digits.slice(1);
     } else if (digits.length === 10) {
       digits = '7' + digits;
     }
     
-    // ПРИНУДИТЕЛЬНЫЙ МАСТЕР-EMAIL ДЛЯ АДМИНОВ
-    if (digits === '79513332147' || digits === '79508784513') {
-      return MASTER_EMAIL;
-    }
-    
-    return digits ? `${digits}@nuxus.app` : input;
+    return digits ? `${digits}@nuxus.app` : input.toLowerCase();
   };
 
   const handleSearch = async () => {
@@ -91,7 +93,7 @@ export default function AuthScreen() {
       let cleanId = formData.identifier.replace(/\D/g, '');
       if (cleanId.length === 11 && cleanId.startsWith('8')) cleanId = '7' + cleanId.slice(1);
       
-      const qPhone = query(collection(db, 'users'), where('phone', '==', cleanId), limit(10));
+      const qPhone = query(collection(db, 'users'), where('phone', '==', cleanId || formData.identifier), limit(10));
       const qUsername = query(collection(db, 'users'), where('username', '==', formData.identifier.startsWith('@') ? formData.identifier.toLowerCase() : '@' + formData.identifier.toLowerCase()), limit(10));
       
       const [snapPhone, snapUser] = await Promise.all([getDocs(qPhone), getDocs(qUsername)]);
@@ -126,7 +128,7 @@ export default function AuthScreen() {
     setIsLoading(true);
     try {
       await setPersistence(auth, browserLocalPersistence);
-      const virtualEmail = selectedUser.phone === '79513332147' || selectedUser.phone === '79508784513' 
+      const virtualEmail = (selectedUser.phone === '79513332147' || selectedUser.phone === '79508784513') 
         ? MASTER_EMAIL 
         : `${selectedUser.phone}@nuxus.app`;
       
@@ -136,7 +138,7 @@ export default function AuthScreen() {
         toast({ title: "Профиль восстановлен" });
       }
     } catch (err: any) {
-      toast({ title: "Старый пароль неверен", variant: "destructive" });
+      toast({ title: "Ошибка верификации", description: "Старый пароль неверен", variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
@@ -153,10 +155,9 @@ export default function AuthScreen() {
 
       if (mode === 'prime' || mode === 'root') {
         try {
-          // Пытаемся зайти в основной корень
           await signInWithEmailAndPassword(auth, MASTER_EMAIL, pass);
         } catch (e) {
-          toast({ title: "Ошибка MASTER-входа", description: "Проверьте пароль", variant: "destructive" });
+          toast({ title: "Ошибка MASTER-входа", description: "Проверьте данные доступа", variant: "destructive" });
           setIsLoading(false);
           return;
         }
@@ -202,13 +203,20 @@ export default function AuthScreen() {
           <div 
             onClick={handleLogoClick}
             className={cn(
-              "p-6 rounded-[2.5rem] shadow-2xl transition-all cursor-pointer animate-float relative overflow-hidden group",
-              mode === 'prime' ? "bg-accent shadow-accent/40 scale-110" : 
-              mode === 'root' ? "bg-red-500 shadow-red-500/40 scale-125" : "bg-primary shadow-primary/40"
+              "w-28 h-28 rounded-[2.5rem] shadow-2xl transition-all cursor-pointer animate-float relative overflow-hidden group border-2",
+              mode === 'prime' ? "border-accent shadow-accent/40 scale-110" : 
+              mode === 'root' ? "border-red-500 shadow-red-500/40 scale-125" : "border-primary/40 shadow-primary/40"
             )}
           >
-            <Hexagon className="w-16 h-16 text-white" />
-            <Zap className="w-8 h-8 text-white absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 fill-white" />
+            <Image 
+              src="https://picsum.photos/seed/nuxus-core-render/800/800"
+              alt="Nuxus Logo"
+              fill
+              className="object-cover"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex items-center justify-center">
+              <Sparkles className="w-8 h-8 text-white animate-pulse" />
+            </div>
           </div>
         </div>
 

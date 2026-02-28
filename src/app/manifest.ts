@@ -13,13 +13,13 @@ export default function manifest(): MetadataRoute.Manifest {
     lang: 'ru',
     icons: [
       {
-        src: 'https://picsum.photos/seed/nuxus-core/192/192',
+        src: 'https://picsum.photos/seed/nuxus-prime-core-v5/192/192',
         sizes: '192x192',
         type: 'image/png',
         purpose: 'maskable'
       },
       {
-        src: 'https://picsum.photos/seed/nuxus-core/512/512',
+        src: 'https://picsum.photos/seed/nuxus-prime-core-v5/512/512',
         sizes: '512x512',
         type: 'image/png',
         purpose: 'any'

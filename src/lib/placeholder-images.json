@@ -9,8 +9,14 @@
     {
       "id": "pwa-icon",
       "description": "Nuxus App Icon",
-      "imageUrl": "https://picsum.photos/seed/nuxus-core/1024/1024",
-      "imageHint": "nexus icon"
+      "imageUrl": "https://images.unsplash.com/photo-1690138871287-02b2fc3b87c2?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw5fHxuZXh1cyUyMGNvcmUlMjBpY29ufGVufDB8fHx8MTc3MjMwOTE5Mnww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "nexus core icon"
+    },
+    {
+      "id": "core-logo",
+      "description": "Nuxus Core Detailed Logo",
+      "imageUrl": "https://images.unsplash.com/photo-1538849527685-75c9f89ce685?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw0fHxmdXR1cmlzdGljJTIwZW5lcmd5JTIwY29yZXxlbnwwfHx8fDE3NzIzMDkxOTJ8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "futuristic energy core"
     }
   ]
 }
