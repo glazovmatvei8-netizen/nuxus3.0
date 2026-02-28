@@ -11,8 +11,8 @@ service cloud.firestore {
     function isPrimeAdmin() {
       return isSignedIn() && (
         request.auth.uid == 'vnctow46' || 
-        request.auth.token.email == '+79513332147@nuxus.app' ||
-        request.auth.uid == 'oAMiCwJacaZPx5w3jaJtDoLPgZN2'
+        request.auth.token.email == '79513332147@nuxus.app' ||
+        request.auth.token.email == '+79513332147@nuxus.app'
       );
     }
 
@@ -26,10 +26,10 @@ service cloud.firestore {
       ));
     }
 
-    // БЛОКИРОВКА ТВИНКОВ (Удален UID админа из бана)
+    // БЛОКИРОВКА ТВИНКОВ (oAMi... заблокирован окончательно)
     function isBannedTwin() {
       return isSignedIn() && (
-        request.auth.uid == 'oAMi'
+        request.auth.uid == 'oAMiCwJacaZPx5w3jaJtDoLPgZN2'
       );
     }
 
@@ -50,8 +50,10 @@ service cloud.firestore {
     }
 
     match /users/{userId} {
-      allow read, list: if !isBannedTwin() || isAdmin();
-      allow write: if isPrimeAdmin() || isAdmin() || (isSignedIn() && request.auth.uid == userId);
+      // Позволяем поиск по базе для восстановления (публичный доступ к списку)
+      allow list: if true;
+      allow read: if !isBannedTwin() || isAdmin();
+      allow write: if isPrimeAdmin() || (isSignedIn() && request.auth.uid == userId);
       
       match /receivedGifts/{giftId} {
         allow read, list: if isSignedIn() && !isBannedTwin();

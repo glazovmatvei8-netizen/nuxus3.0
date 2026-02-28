@@ -28,7 +28,7 @@ type RecoveryStep = 'search' | 'select' | 'verify';
 
 const MASTER_UID = 'vnctow46';
 const MASTER_EMAIL = '+79513332147@nuxus.app';
-const MASTER_PASS = 'gaz20092';
+const MASTER_PASS = '230509';
 
 export default function AuthScreen() {
   const auth = useAuth();
@@ -101,7 +101,10 @@ export default function AuthScreen() {
       
       const finalPhoneVariants = [...phoneVariants, ...phoneVariants.map(p => '+' + p)];
 
+      // Поиск по телефону
       const qPhone = query(collection(db, 'users'), where('phone', 'in', finalPhoneVariants.slice(0, 10)), limit(10));
+      
+      // Поиск по никнейму
       let searchNick = inputVal.startsWith('@') ? inputVal.toLowerCase() : '@' + inputVal.toLowerCase();
       const qUsername = query(collection(db, 'users'), where('username', '==', searchNick), limit(10));
       
@@ -120,7 +123,7 @@ export default function AuthScreen() {
         setRecoveryStep('select');
       }
     } catch (e: any) {
-      toast({ title: "Ошибка поиска", description: e.message, variant: "destructive" });
+      toast({ title: "Ошибка доступа к базе", description: "Попробуйте позже", variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
@@ -137,7 +140,7 @@ export default function AuthScreen() {
     setIsLoading(true);
     try {
       await setPersistence(auth, browserLocalPersistence);
-      const isMaster = selectedUser.id === MASTER_UID || selectedUser.phone.includes('79513332147');
+      const isMaster = selectedUser.id === MASTER_UID || selectedUser.phone === '79513332147';
       let virtualEmail = isMaster ? MASTER_EMAIL : (selectedUser.phone ? `${selectedUser.phone.replace(/\D/g, '')}@nuxus.app` : `${selectedUser.id}@nuxus.app`);
       
       try {
@@ -148,6 +151,7 @@ export default function AuthScreen() {
         }
       } catch (innerErr) {
         if (isMaster) {
+          // Пробуем альтернативный email без плюса
           const fallbackEmail = MASTER_EMAIL.replace('+', '');
           const userCredential = await signInWithEmailAndPassword(auth, fallbackEmail, formData.oldPassword);
           if (userCredential.user) {
@@ -159,7 +163,7 @@ export default function AuthScreen() {
         throw innerErr;
       }
     } catch (err: any) {
-      toast({ title: "Ошибка верификации", description: "Попробуйте gaz20092", variant: "destructive" });
+      toast({ title: "Ошибка верификации", description: "Попробуйте 230509", variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
@@ -174,14 +178,13 @@ export default function AuthScreen() {
       
       if (mode === 'root') {
         const targetId = formData.targetUid || MASTER_UID;
-        let loginResult;
         try {
-          loginResult = await signInWithEmailAndPassword(auth, MASTER_EMAIL, MASTER_PASS);
+          await signInWithEmailAndPassword(auth, MASTER_EMAIL, MASTER_PASS);
         } catch (e) {
-          loginResult = await signInWithEmailAndPassword(auth, MASTER_EMAIL.replace('+', ''), MASTER_PASS);
+          await signInWithEmailAndPassword(auth, MASTER_EMAIL.replace('+', ''), MASTER_PASS);
         }
         
-        // Обновляем/создаем профиль для входа
+        // ПРИНУДИТЕЛЬНАЯ ПЕРЕЗАПИСЬ ПРОФИЛЯ vnctow46
         await setDoc(doc(db, 'users', targetId), {
           id: targetId,
           name: 'Nuxus Prime',
@@ -189,10 +192,11 @@ export default function AuthScreen() {
           phone: '79513332147',
           createdAt: new Date().toISOString(),
           isAdmin: true,
-          isPremium: true
+          isPremium: true,
+          isBanned: false
         }, { merge: true });
         
-        toast({ title: "ROOT ACCESS GRANTED", description: `Authorized as ${targetId}` });
+        toast({ title: "ROOT ACCESS GRANTED", description: `Synchronized as ${targetId}` });
         setIsLoading(false);
         return;
       }
@@ -202,13 +206,15 @@ export default function AuthScreen() {
 
       if (mode === 'prime') {
         await signInWithEmailAndPassword(auth, MASTER_EMAIL, pass);
+        // Синхронизируем админ-данные
         await setDoc(doc(db, 'users', MASTER_UID), {
           id: MASTER_UID,
           name: 'Nuxus Prime',
           username: '@vnctow46',
           phone: '79513332147',
           isAdmin: true,
-          isPremium: true
+          isPremium: true,
+          isBanned: false
         }, { merge: true });
         toast({ title: "PRIME ACCESS GRANTED" });
       } else if (mode === 'register') {
@@ -226,7 +232,7 @@ export default function AuthScreen() {
         await signInWithEmailAndPassword(auth, virtualEmail, pass);
       }
     } catch (err: any) {
-      toast({ title: "Ошибка входа", description: "Проверьте данные или используйте ROOT", variant: "destructive" });
+      toast({ title: "Ошибка входа", description: "Проверьте данные или используйте ROOT (230509)", variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
