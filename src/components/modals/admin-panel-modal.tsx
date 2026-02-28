@@ -22,7 +22,6 @@ import { formatDisplayName, cn, isGlobalAdmin } from '@/lib/utils';
 import { updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { addMonths } from 'date-fns';
 
-// Изолированный компонент мониторинга для предотвращения зависаний всей панели
 const CoreMetrics = memo(() => {
   const [cpu, setCpu] = useState(12);
   const [ram, setRam] = useState(28);
@@ -166,14 +165,14 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
           </div>
         </div>
 
-        <Tabs defaultValue="stats" className="flex-1 flex flex-col min-h-0">
+        <Tabs defaultValue="stats" className="flex-1 flex flex-col min-h-0 overflow-hidden">
           <TabsList className="mx-6 mt-4 grid grid-cols-3 bg-muted/30 p-1 rounded-2xl shrink-0 border border-white/5">
             <TabsTrigger value="stats" className="font-bold uppercase text-[9px] tracking-widest"><BarChart3 className="w-3.5 h-3.5 mr-1.5" /> Сводка</TabsTrigger>
             <TabsTrigger value="users" className="font-bold uppercase text-[9px] tracking-widest"><Users className="w-3.5 h-3.5 mr-1.5" /> Юзеры</TabsTrigger>
             <TabsTrigger value="system" className="font-bold uppercase text-[9px] tracking-widest"><Terminal className="w-3.5 h-3.5 mr-1.5" /> Система</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="stats" className="flex-1 min-h-0 m-0 overflow-hidden">
+          <TabsContent value="stats" className="flex-1 min-h-0 m-0 overflow-hidden outline-none">
             <ScrollArea className="h-full">
               <div className="p-6 space-y-6 pb-20">
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
@@ -183,11 +182,11 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
                     { label: 'Админы', val: stats.admins, color: 'blue-500', icon: ShieldCheck },
                     { label: 'Бан', val: stats.banned, color: 'destructive', icon: Shield },
                   ].map((s, idx) => (
-                    <div key={idx} className={cn("p-5 rounded-[2rem] border", `bg-${s.color}/5 border-${s.color}/10`)}>
-                      <span className={cn("text-[10px] font-bold uppercase tracking-widest block mb-2", `text-${s.color}`)}>{s.label}</span>
+                    <div key={idx} className={cn("p-5 rounded-[2rem] border", s.color === 'primary' ? 'bg-primary/5 border-primary/10' : s.color === 'accent' ? 'bg-accent/5 border-accent/10' : s.color === 'blue-500' ? 'bg-blue-500/5 border-blue-500/10' : 'bg-destructive/5 border-destructive/10')}>
+                      <span className={cn("text-[10px] font-bold uppercase tracking-widest block mb-2", s.color === 'primary' ? 'text-primary' : s.color === 'accent' ? 'text-accent' : s.color === 'blue-500' ? 'text-blue-500' : 'text-destructive')}>{s.label}</span>
                       <div className="text-2xl font-black italic text-white flex items-center justify-between">
                         {s.val}
-                        <s.icon className={cn("w-5 h-5 opacity-20", `text-${s.color}`)} />
+                        <s.icon className={cn("w-5 h-5 opacity-20", s.color === 'primary' ? 'text-primary' : s.color === 'accent' ? 'text-accent' : s.color === 'blue-500' ? 'text-blue-500' : 'text-destructive')} />
                       </div>
                     </div>
                   ))}
@@ -223,7 +222,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
             </ScrollArea>
           </TabsContent>
 
-          <TabsContent value="users" className="flex-1 min-h-0 overflow-hidden flex flex-col p-0 m-0">
+          <TabsContent value="users" className="flex-1 min-h-0 overflow-hidden flex flex-col p-0 m-0 outline-none">
             <div className="px-6 py-4 border-b border-white/5 bg-muted/10">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -274,7 +273,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
             </ScrollArea>
           </TabsContent>
 
-          <TabsContent value="system" className="flex-1 min-h-0 m-0 overflow-hidden relative">
+          <TabsContent value="system" className="flex-1 min-h-0 m-0 overflow-hidden outline-none">
             <ScrollArea className="h-full">
               <div className="p-6 space-y-6 pb-24">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

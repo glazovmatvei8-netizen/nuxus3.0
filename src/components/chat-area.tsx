@@ -21,6 +21,8 @@ import { formatDisplayName, isUserPremium } from '@/lib/utils';
 import type { Message, User as UserType, Chat } from '@/lib/types';
 import { suggestMessageDraft } from '@/ai/flows/ai-message-drafting-flow';
 
+const NOTIFICATION_SOUND_URL = 'https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3';
+
 const MessageList = memo(({ 
   messages, 
   userId, 
@@ -70,6 +72,7 @@ export default function ChatArea() {
   const [isRecordingVideo, setIsRecordingVideo] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const dataLoadedRef = useRef(false);
@@ -115,31 +118,37 @@ export default function ChatArea() {
     );
   }, [rawMessages, searchQuery]);
 
-  // Request Notification permission on mount
+  // Инициализация звука и разрешений
   useEffect(() => {
-    if (typeof window !== 'undefined' && "Notification" in window) {
-      if (Notification.permission === 'default') {
+    if (typeof window !== 'undefined') {
+      audioRef.current = new Audio(NOTIFICATION_SOUND_URL);
+      if ("Notification" in window && Notification.permission === 'default') {
         Notification.requestPermission();
       }
     }
   }, []);
 
-  // Handle Auto-Read and Notifications
+  // Обработка уведомлений и звука
   useEffect(() => {
     if (!messages || !firebaseUser || !currentChatId || !db) return;
 
     const unreadFromOthers = messages.filter(m => !m.isRead && m.senderId !== firebaseUser.uid);
     
-    // Auto-read messages when chat is open
+    // Помечаем как прочитанные
     if (unreadFromOthers.length > 0) {
       unreadFromOthers.forEach(msg => {
         updateDocumentNonBlocking(doc(db, 'chats', currentChatId, 'messages', msg.id), { isRead: true });
       });
     }
 
-    // Windows Notification for new messages
     const lastMsg = messages[messages.length - 1];
     if (lastMsg && lastMsg.senderId !== firebaseUser.uid && !lastMsg.isRead) {
+      // Проигрываем звук, если сообщение новое
+      if (audioRef.current) {
+        audioRef.current.play().catch(e => console.log('Audio playback prevented'));
+      }
+
+      // Показываем уведомление, если окно не в фокусе
       if (typeof window !== 'undefined' && document.hidden && Notification.permission === 'granted') {
         new Notification(`Nuxus: ${lastMsg.senderName}`, {
           body: lastMsg.contentType === 'text' ? lastMsg.content : `Отправил ${lastMsg.contentType}`,
