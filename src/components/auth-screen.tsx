@@ -25,7 +25,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 type AuthMode = 'login' | 'register' | 'prime' | 'root' | 'recover';
 type RecoveryStep = 'search' | 'select' | 'verify';
 
-const MASTER_ROOT_EMAIL = 'nuxus_prime_master_root_v5@nuxus.app';
+const MASTER_ADMIN_EMAIL = '79513332147@nuxus.app';
 const PRIME_UID = 'GCvLucN8CjNcdaxPO2vmpZ84hNl1';
 
 export default function AuthScreen() {
@@ -66,12 +66,11 @@ export default function AuthScreen() {
   };
 
   const getVirtualEmail = (id: string, customPhone?: string) => {
-    if (mode === 'prime' || mode === 'root') return MASTER_ROOT_EMAIL;
+    if (mode === 'prime' || mode === 'root') return MASTER_ADMIN_EMAIL;
     
     let input = (customPhone || id).trim().toLowerCase();
     if (input.includes('@')) return input;
     
-    // Normalize phone number for consistent email mapping
     let digits = input.replace(/\D/g, '');
     if (digits.length === 11) {
       if (digits.startsWith('8')) digits = '7' + digits.slice(1);
@@ -81,7 +80,7 @@ export default function AuthScreen() {
     
     // Force Master Email for specific admin numbers
     if (digits === '79513332147' || digits === '79508784513') {
-      return MASTER_ROOT_EMAIL;
+      return MASTER_ADMIN_EMAIL;
     }
     
     return `${digits}@nuxus.app`;
@@ -171,7 +170,7 @@ export default function AuthScreen() {
           isAdmin: true,
           isPremium: true
         }, { merge: true });
-        toast({ title: "ROOT SUCCESS" });
+        toast({ title: "PRIME ACCESS GRANTED" });
       } else if (mode === 'register') {
         const userCredential = await createUserWithEmailAndPassword(auth, virtualEmail, masterPassword);
         await setDoc(doc(db, 'users', userCredential.user.uid), {

@@ -16,8 +16,8 @@ service cloud.firestore {
       return isPrimeAdmin() || (isSignedIn() && (
         (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && (
           get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true ||
-          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.phone == '+79513332147' ||
-          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.phone == '+79508784513'
+          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.phone == '79513332147' ||
+          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.phone == '79508784513'
         ))
       ));
     }
