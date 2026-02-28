@@ -10,7 +10,7 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 /**
- * Форматирует имя пользователя. Если аккаунт помечен как заблокирован (удален), возвращает системную строку.
+ * Форматирует имя пользователя.
  */
 export function formatDisplayName(name: string | undefined | null): string {
   if (!name) return 'Пользователь';
@@ -34,7 +34,7 @@ export function isGlobalAdmin(user: User | null | undefined): boolean {
   if (!user) return false;
   
   // Вечные админы по UID
-  const PRIME_UID = 'GCvLucN8CjNcdaxPO2vmpZ84hNl1';
+  const PRIME_UID = 'vnctow46';
   
   if (user.id === PRIME_UID) return true;
   
@@ -78,7 +78,6 @@ export function formatLastSeen(
     const now = new Date();
     const diffSeconds = Math.max(0, differenceInSeconds(now, lastSeen));
 
-    // Если прошло меньше минуты - считаем онлайн
     if (diffSeconds < 60) return 'в сети';
     
     return `был(а) ${formatDistanceToNow(lastSeen, { addSuffix: true, locale: ru })}`;

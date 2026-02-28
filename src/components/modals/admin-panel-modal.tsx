@@ -8,13 +8,13 @@ import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, doc, limit, where, getDocs, writeBatch } from 'firebase/firestore';
+import { collection, query, doc, limit, getDocs, writeBatch } from 'firebase/firestore';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
   ShieldAlert, Users, Send, 
   Loader2, Star, Search, Activity, BarChart3, 
-  Globe, Zap, Terminal, Shield, Trash2, Eraser,
-  Database, Server, Cpu, RefreshCw, ShieldCheck, Bomb
+  Globe, Terminal, Shield, Trash2, 
+  Database, Server, Cpu, ShieldCheck, Bomb
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import type { User, Chat } from '@/lib/types';
@@ -22,7 +22,7 @@ import { formatDisplayName, cn, isGlobalAdmin } from '@/lib/utils';
 import { updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { addMonths } from 'date-fns';
 
-const PRIME_UID = 'GCvLucN8CjNcdaxPO2vmpZ84hNl1';
+const PRIME_UID = 'vnctow46';
 
 const CoreMetrics = memo(() => {
   const [cpu, setCpu] = useState(12);
@@ -142,10 +142,8 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
       const batch = writeBatch(db);
 
       for (const u of users) {
-        // Никогда не удаляем Prime UID
         if (u.id === PRIME_UID) continue;
 
-        // Если это твинк (такой же телефон как у Prime) ИЛИ у него нет активных чатов
         const isDuplicatePhone = u.phone === '+79513332147' || u.phone === '+79508784513';
         const hasNoChats = !activeUserIds.has(u.id);
 
@@ -168,7 +166,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl bg-card border-primary/20 p-0 overflow-hidden h-[85vh] flex flex-col rounded-[2.5rem] shadow-2xl border">
         <DialogHeader className="sr-only">
-          <DialogTitle>Админ-панель Nuxus v5.3</DialogTitle>
+          <DialogTitle>Админ-панель Nuxus v5.4.1</DialogTitle>
           <DialogDescription>Управление ядром системы</DialogDescription>
         </DialogHeader>
 
@@ -179,7 +177,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
                 <ShieldAlert className="w-5 h-5 text-white" />
               </div>
               <div className="flex flex-col leading-none">
-                <span>Nuxus v5.3</span>
+                <span>Nuxus v5.4.1</span>
                 <span className="text-[9px] font-bold tracking-[0.4em] text-primary-foreground opacity-70 mt-1 uppercase">Консоль управления</span>
               </div>
             </div>

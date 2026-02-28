@@ -9,7 +9,7 @@ import { UserAvatar } from '@/components/user-avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { 
-  Sparkles, Loader2, Gift, Crown, Star, Info, LogOut, UserPlus, Shield, UserMinus, UserCheck
+  Sparkles, Gift, Crown, Star, LogOut, UserPlus, Shield, UserMinus, UserCheck
 } from 'lucide-react';
 import { 
   Star as StarIcon, Heart, Zap, Flame, Trophy, Rocket, Diamond, 
@@ -21,7 +21,7 @@ import {
   Flag, Briefcase, GraduationCap 
 } from 'lucide-react';
 import { useFirestore, useCollection, useMemoFirebase, useUser, useDoc } from '@/firebase';
-import { collection, query, where, orderBy, limit, getDocs, doc, updateDoc, arrayRemove, arrayUnion } from 'firebase/firestore';
+import { collection, query, orderBy, limit, getDocs, doc, updateDoc, arrayRemove, arrayUnion } from 'firebase/firestore';
 import { chatConversationSummary } from '@/ai/flows/chat-conversation-summary-flow';
 import { useToast } from '@/hooks/use-toast';
 import { deleteDocumentNonBlocking, addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
@@ -29,6 +29,8 @@ import { useAppState } from '@/lib/store';
 import { cn, formatDisplayName, isUserPremium } from '@/lib/utils';
 import type { User, ReceivedGift } from '@/lib/types';
 import { AddMemberModal } from './add-member-modal';
+
+const PRIME_UID = 'vnctow46';
 
 export const AVAILABLE_GIFTS = [
   { id: 'gift_star', name: 'Звезда', icon: StarIcon, color: 'text-yellow-400', value: 100 },
@@ -59,7 +61,7 @@ export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onO
 
   const userProfileRef = useMemoFirebase(() => (!db || !user) ? null : doc(db, 'users', user.uid), [db, user]);
   const { data: currentUserProfile } = useDoc<User>(userProfileRef);
-  const isGlobalAdmin = currentUserProfile?.phone === '+79513332147' || user?.uid === 'GCvLucN8CjNcdaxPO2vmpZ84hNl1';
+  const isGlobalAdmin = currentUserProfile?.phone === '+79513332147' || user?.uid === PRIME_UID;
   
   const otherUserProfileRef = useMemoFirebase(() => (!db || !otherId) ? null : doc(db, 'users', otherId), [db, otherId]);
   const { data: otherUserProfile } = useDoc<User>(otherUserProfileRef);

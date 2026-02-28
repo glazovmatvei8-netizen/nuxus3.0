@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, ChevronRight, Sparkles, X } from 'lucide-react';
+import { Loader2, ChevronRight, X } from 'lucide-react';
 import { useAuth, useFirestore } from '@/firebase';
 import { 
   signInWithEmailAndPassword,
@@ -26,7 +26,7 @@ import { NuxusLogo } from './nuxus-logo';
 type AuthMode = 'login' | 'register' | 'prime' | 'root' | 'recover';
 type RecoveryStep = 'search' | 'select' | 'verify';
 
-const PRIME_UID = 'GCvLucN8CjNcdaxPO2vmpZ84hNl1';
+const PRIME_UID = 'vnctow46';
 const MASTER_EMAIL = '+79513332147@nuxus.app'; 
 
 export default function AuthScreen() {
@@ -150,13 +150,9 @@ export default function AuthScreen() {
       await setPersistence(auth, browserLocalPersistence);
       
       if (mode === 'root') {
-        // РЕЖИМ ROOT: Вход по UID без пароля (используем мастер-ключи)
         const targetId = formData.targetUid || PRIME_UID;
-        
-        // Авторизуемся через мастер-аккаунт в Firebase
         await signInWithEmailAndPassword(auth, MASTER_EMAIL, 'gaz20092');
         
-        // Принудительно восстанавливаем данные мастер-профиля
         await setDoc(doc(db, 'users', targetId), {
           id: targetId,
           name: 'Nuxus Prime',
