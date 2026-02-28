@@ -151,15 +151,15 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         <DialogHeader className="p-6 border-b border-border bg-muted/30 shrink-0">
           <DialogTitle className="flex items-center gap-2 text-xl font-bold italic uppercase tracking-tighter">
             <Settings2 className="w-5 h-5 text-primary" /> 
-            Identity Hub
+            Профиль
           </DialogTitle>
         </DialogHeader>
 
         <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className="flex-1 flex flex-col min-h-0">
           <TabsList className="grid grid-cols-4 bg-muted/50 p-1 mx-6 mt-4 rounded-2xl shrink-0 border border-white/5">
-            <TabsTrigger value="profile" className="text-[9px] uppercase font-black tracking-widest">Core</TabsTrigger>
-            <TabsTrigger value="appearance" className="text-[9px] uppercase font-black tracking-widest">Style</TabsTrigger>
-            <TabsTrigger value="privacy" className="text-[9px] uppercase font-black tracking-widest">Guard</TabsTrigger>
+            <TabsTrigger value="profile" className="text-[9px] uppercase font-black tracking-widest">Профиль</TabsTrigger>
+            <TabsTrigger value="appearance" className="text-[9px] uppercase font-black tracking-widest">Стиль</TabsTrigger>
+            <TabsTrigger value="privacy" className="text-[9px] uppercase font-black tracking-widest">Защита</TabsTrigger>
             <TabsTrigger value="store" className="text-[9px] uppercase font-black tracking-widest">Prime</TabsTrigger>
           </TabsList>
 
@@ -175,15 +175,15 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                 </div>
                 <div className="space-y-4 w-full">
                   <div className="space-y-1.5">
-                    <Label className="text-[10px] uppercase font-black tracking-[0.2em] text-muted-foreground ml-1">Display Name</Label>
+                    <Label className="text-[10px] uppercase font-black tracking-[0.2em] text-muted-foreground ml-1">Отображаемое имя</Label>
                     <Input value={form.name} onChange={e => setForm({...form, name: e.target.value})} className="bg-muted/30 border-white/5 h-12 rounded-2xl focus:border-primary/50 transition-all" />
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-[10px] uppercase font-black tracking-[0.2em] text-muted-foreground ml-1">Username</Label>
+                    <Label className="text-[10px] uppercase font-black tracking-[0.2em] text-muted-foreground ml-1">Никнейм</Label>
                     <Input value={form.username} onChange={e => setForm({...form, username: e.target.value})} className="bg-muted/30 border-white/5 h-12 rounded-2xl focus:border-primary/50 transition-all" />
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-[10px] uppercase font-black tracking-[0.2em] text-muted-foreground ml-1">Biographical Data</Label>
+                    <Label className="text-[10px] uppercase font-black tracking-[0.2em] text-muted-foreground ml-1">О себе</Label>
                     <Textarea value={form.bio} onChange={e => setForm({...form, bio: e.target.value})} className="bg-muted/30 border-white/5 rounded-2xl min-h-[100px] focus:border-primary/50 transition-all resize-none" placeholder="Расскажите о себе..." />
                   </div>
                 </div>
@@ -194,7 +194,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
               <div className="bg-muted/20 p-6 rounded-[2rem] border border-white/5 space-y-6">
                 <div className="space-y-4">
                   <Label className="text-[10px] uppercase font-black tracking-[0.2em] text-primary flex items-center gap-2">
-                    <Palette className="w-3.5 h-3.5" /> Visual Theme
+                    <Palette className="w-3.5 h-3.5" /> Тема оформления
                   </Label>
                   <div className="grid grid-cols-3 gap-3">
                     {['default', 'midnight', 'ocean'].map(t => (
@@ -209,7 +209,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                         {t === 'default' && <Monitor className="w-5 h-5" />}
                         {t === 'midnight' && <Moon className="w-5 h-5" />}
                         {t === 'ocean' && <Droplets className="w-5 h-5" />}
-                        <span className="text-[9px] uppercase font-bold tracking-widest">{t}</span>
+                        <span className="text-[9px] uppercase font-bold tracking-widest">{t === 'default' ? 'Стандарт' : t === 'midnight' ? 'Полночь' : 'Океан'}</span>
                       </button>
                     ))}
                   </div>
@@ -217,16 +217,16 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
 
                 <div className="space-y-4 pt-4 border-t border-white/5">
                   <Label className="text-[10px] uppercase font-black tracking-[0.2em] text-primary flex items-center gap-2">
-                    <Type className="w-3.5 h-3.5" /> Message Size
+                    <Type className="w-3.5 h-3.5" /> Размер текста
                   </Label>
                   <Select value={form.messageSize} onValueChange={(v) => setForm({...form, messageSize: v as any})}>
                     <SelectTrigger className="h-12 rounded-2xl bg-black/20 border-white/5">
                       <SelectValue placeholder="Размер шрифта" />
                     </SelectTrigger>
                     <SelectContent className="bg-card border-white/10 rounded-2xl">
-                      <SelectItem value="small">Small (12px)</SelectItem>
-                      <SelectItem value="medium">Medium (14px)</SelectItem>
-                      <SelectItem value="large">Large (16px)</SelectItem>
+                      <SelectItem value="small">Маленький (12px)</SelectItem>
+                      <SelectItem value="medium">Средний (14px)</SelectItem>
+                      <SelectItem value="large">Большой (16px)</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -237,33 +237,33 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
               <div className="bg-muted/20 p-6 rounded-[2rem] border border-white/5 space-y-6">
                 <div className="space-y-4">
                   <Label className="text-[10px] uppercase font-black tracking-[0.2em] text-accent flex items-center gap-2">
-                    <ShieldCheck className="w-3.5 h-3.5" /> Data Protection
+                    <ShieldCheck className="w-3.5 h-3.5" /> Защита данных
                   </Label>
                   
                   <div className="space-y-4">
                     <div className="space-y-2">
-                      <Label className="text-[9px] uppercase font-bold text-muted-foreground ml-1">Phone Number Visibility</Label>
+                      <Label className="text-[9px] uppercase font-bold text-muted-foreground ml-1">Видимость номера</Label>
                       <Select value={form.phoneVisibility} onValueChange={(v) => setForm({...form, phoneVisibility: v as any})}>
                         <SelectTrigger className="h-11 rounded-xl bg-black/20 border-white/5">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent className="bg-card border-white/10">
-                          <SelectItem value="everybody">Everybody</SelectItem>
-                          <SelectItem value="contacts">Contacts Only</SelectItem>
-                          <SelectItem value="nobody">Nobody</SelectItem>
+                          <SelectItem value="everybody">Все</SelectItem>
+                          <SelectItem value="contacts">Только контакты</SelectItem>
+                          <SelectItem value="nobody">Никто</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
 
                     <div className="space-y-2">
-                      <Label className="text-[9px] uppercase font-bold text-muted-foreground ml-1">Incoming Signal Filter</Label>
+                      <Label className="text-[9px] uppercase font-bold text-muted-foreground ml-1">Кто может писать мне</Label>
                       <Select value={form.whoCanMessageMe} onValueChange={(v) => setForm({...form, whoCanMessageMe: v as any})}>
                         <SelectTrigger className="h-11 rounded-xl bg-black/20 border-white/5">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent className="bg-card border-white/10">
-                          <SelectItem value="everybody">Open (All)</SelectItem>
-                          <SelectItem value="premium">Nuxus Prime Only</SelectItem>
+                          <SelectItem value="everybody">Все</SelectItem>
+                          <SelectItem value="premium">Только Nuxus Prime</SelectItem>
                         </SelectContent>
                       </Select>
                       <p className="text-[8px] text-muted-foreground/60 px-1">Ограничить входящие сообщения только пользователями с Prime-статусом.</p>
@@ -301,7 +301,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
             </Button>
             <Button className="flex-1 h-14 rounded-2xl font-black uppercase tracking-[0.2em] italic bg-primary shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all text-xs" onClick={handleSave}>
               <Check className="w-5 h-5 mr-2" /> 
-              Save Changes
+              Сохранить
             </Button>
           </div>
         </Tabs>
@@ -320,7 +320,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
             <CreditCard className="w-3 h-3" /> Номер карты
           </div>
           <div className="text-lg font-mono font-black text-white tracking-widest">{CARD_NUMBER}</div>
-          <div className="text-[8px] uppercase font-bold text-primary mt-2 opacity-0 group-hover:opacity-100 transition-all">Click to copy</div>
+          <div className="text-[8px] uppercase font-bold text-primary mt-2 opacity-0 group-hover:opacity-100 transition-all">Нажмите, чтобы скопировать</div>
         </div>
 
         <Button 

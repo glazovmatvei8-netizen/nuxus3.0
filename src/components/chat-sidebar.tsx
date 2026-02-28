@@ -40,7 +40,6 @@ export default function ChatSidebar() {
   }, [db, user]);
   const { data: profile, isLoading: isProfileLoading } = useDoc<User>(userProfileRef);
 
-  // Используем универсальный хелпер для проверки админки
   const isAdmin = isGlobalAdmin(profile);
 
   const chatsQuery = useMemoFirebase(() => {
@@ -267,7 +266,7 @@ export default function ChatSidebar() {
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input 
-            placeholder="Search by username @id..." 
+            placeholder="Поиск по @нику..." 
             className="pl-9 bg-muted border-none rounded-xl h-10 text-sm focus:ring-1 focus:ring-primary/20"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
@@ -278,10 +277,10 @@ export default function ChatSidebar() {
       <div className="px-3 py-2 shrink-0">
         <Tabs value={activeTab} onValueChange={(val) => setActiveTab(val as any)} className="w-full">
           <TabsList className="grid w-full grid-cols-4 h-9 bg-muted/50 rounded-xl p-1 gap-1 border border-white/5">
-            <TabsTrigger value="all" className="rounded-lg text-[9px] font-bold uppercase tracking-widest">All</TabsTrigger>
-            <TabsTrigger value="private" className="rounded-lg text-[9px] font-bold uppercase tracking-widest">Chats</TabsTrigger>
-            <TabsTrigger value="group" className="rounded-lg text-[9px] font-bold uppercase tracking-widest">Groups</TabsTrigger>
-            <TabsTrigger value="channel" className="rounded-lg text-[9px] font-bold uppercase tracking-widest">Info</TabsTrigger>
+            <TabsTrigger value="all" className="rounded-lg text-[9px] font-bold uppercase tracking-widest">Все</TabsTrigger>
+            <TabsTrigger value="private" className="rounded-lg text-[9px] font-bold uppercase tracking-widest">Чаты</TabsTrigger>
+            <TabsTrigger value="group" className="rounded-lg text-[9px] font-bold uppercase tracking-widest">Группы</TabsTrigger>
+            <TabsTrigger value="channel" className="rounded-lg text-[9px] font-bold uppercase tracking-widest">Каналы</TabsTrigger>
           </TabsList>
         </Tabs>
       </div>
@@ -290,7 +289,7 @@ export default function ChatSidebar() {
         {isChatsLoading ? (
           <div className="flex flex-col items-center justify-center p-12 gap-3 opacity-50">
             <Loader2 className="w-6 h-6 animate-spin text-primary" />
-            <span className="text-[10px] uppercase font-bold tracking-widest">Syncing Core...</span>
+            <span className="text-[10px] uppercase font-bold tracking-widest">Синхронизация...</span>
           </div>
         ) : (
           <div className="space-y-1 pb-24">
@@ -302,7 +301,7 @@ export default function ChatSidebar() {
             {globalSearchResult && (
               <div className="mb-4">
                 <div className="px-3 py-1 text-[10px] font-black text-primary flex items-center gap-1 uppercase tracking-widest mb-1">
-                  <Globe className="w-3 h-3" /> Global Search
+                  <Globe className="w-3 h-3" /> Глобальный поиск
                 </div>
                 <ChatListItem 
                   chat={globalSearchResult}
@@ -360,7 +359,7 @@ export default function ChatSidebar() {
           onClick={() => setIsCreateModalOpen(true)}
         >
           <Plus className="w-5 h-5 mr-2" />
-          Create Community
+          Создать сообщество
         </Button>
       </div>
 
@@ -396,14 +395,14 @@ function ChatListItem({ chat, isActive, otherId, cachedDisplayName, manualAvatar
 
   useEffect(() => {
     if (isGlobalResult) {
-      setStatus(chat.type === 'group' ? 'Community' : 'Channel');
+      setStatus(chat.type === 'group' ? 'Сообщество' : 'Канал');
       return;
     }
     const isOtherDeleted = otherProfile?.isBanned || otherProfile?.name?.includes('Удалённый Аккаунт');
     if (otherId) {
       setStatus(formatLastSeen(otherProfile?.lastSeen, otherProfile?.settings?.privacy?.lastSeenVisibility, isOtherDeleted));
     } else {
-      setStatus(chat.type === 'group' ? 'Group' : (chat.type === 'channel' ? 'Channel' : 'Saved'));
+      setStatus(chat.type === 'group' ? 'Группа' : (chat.type === 'channel' ? 'Канал' : 'Избранное'));
     }
   }, [otherId, otherProfile, chat.type, isGlobalResult]);
 
@@ -411,7 +410,7 @@ function ChatListItem({ chat, isActive, otherId, cachedDisplayName, manualAvatar
   const isTyping = chat?.typing && otherId && chat.typing[otherId] && !isOtherDeleted;
   const isOtherPremium = isUserPremium(otherProfile);
   
-  const finalDisplayName = formatDisplayName(otherProfile?.name || cachedDisplayName || chat.name || 'User');
+  const finalDisplayName = formatDisplayName(otherProfile?.name || cachedDisplayName || chat.name || 'Пользователь');
 
   return (
     <div
@@ -453,11 +452,11 @@ function ChatListItem({ chat, isActive, otherId, cachedDisplayName, manualAvatar
             isActive ? 'text-white/80' : (isTyping || status === 'в сети' ? 'text-accent' : 'text-muted-foreground/60')
           )}>
             {isTyping ? (
-              <span className="flex items-center gap-0.5">typing<span className="animate-typing-dot">.</span><span className="animate-typing-dot [animation-delay:0.2s]">.</span><span className="animate-typing-dot [animation-delay:0.4s]">.</span></span>
+              <span className="flex items-center gap-0.5">печатает<span className="animate-typing-dot">.</span><span className="animate-typing-dot [animation-delay:0.2s]">.</span><span className="animate-typing-dot [animation-delay:0.4s]">.</span></span>
             ) : status}
           </div>
           {isGlobalResult ? (
-            <Button size="sm" variant="outline" className="h-6 text-[8px] uppercase px-2 rounded-lg" onClick={(e) => { e.stopPropagation(); onJoin(); }}>Join</Button>
+            <Button size="sm" variant="outline" className="h-6 text-[8px] uppercase px-2 rounded-lg" onClick={(e) => { e.stopPropagation(); onJoin(); }}>Вступить</Button>
           ) : isPinned && !isActive && (
              <Button 
                 variant="ghost" 

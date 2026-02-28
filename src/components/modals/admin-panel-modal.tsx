@@ -38,12 +38,12 @@ const CoreMetrics = memo(() => {
     <div className="p-6 bg-muted/20 rounded-[2rem] border border-white/5 space-y-6">
       <div className="flex items-center gap-2">
         <Activity className="w-4 h-4 text-primary" />
-        <span className="text-[10px] font-black uppercase tracking-widest text-white">Живая нагрузка ядра</span>
+        <span className="text-[10px] font-black uppercase tracking-widest text-white">Нагрузка ядра</span>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="space-y-3">
           <div className="flex justify-between text-[9px] font-bold uppercase opacity-60 text-white">
-            <div className="flex items-center gap-1"><Cpu className="w-3 h-3" /> CPU Usage</div>
+            <div className="flex items-center gap-1"><Cpu className="w-3 h-3" /> CPU</div>
             <span>{cpu}%</span>
           </div>
           <div className="h-1.5 w-full bg-black/40 rounded-full overflow-hidden">
@@ -52,7 +52,7 @@ const CoreMetrics = memo(() => {
         </div>
         <div className="space-y-3">
           <div className="flex justify-between text-[9px] font-bold uppercase opacity-60 text-white">
-            <div className="flex items-center gap-1"><Server className="w-3 h-3" /> RAM Allocation</div>
+            <div className="flex items-center gap-1"><Server className="w-3 h-3" /> RAM</div>
             <span>{ram}%</span>
           </div>
           <div className="h-1.5 w-full bg-black/40 rounded-full overflow-hidden">
@@ -112,13 +112,13 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
       isPremium: isNowPremium,
       premiumUntil: expiry
     });
-    toast({ title: isNowPremium ? "Prime выдан на 1 мес." : "Prime отозван" });
+    toast({ title: isNowPremium ? "Premium выдан" : "Premium отозван" });
   };
 
   const toggleAdmin = (targetUser: User) => {
     if (!db) return;
     if (targetUser.phone === '+79513332147') {
-      toast({ title: "Ошибка", description: "Нельзя снять права с Nuxus Prime", variant: "destructive" });
+      toast({ title: "Ошибка", description: "Нельзя снять права с Главного Админа", variant: "destructive" });
       return;
     }
     const isNowAdmin = !targetUser.isAdmin;
@@ -133,7 +133,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
       const q = query(collection(db, 'users'), where('isBanned', '==', true));
       const snap = await getDocs(q);
       snap.forEach(d => deleteDocumentNonBlocking(d.ref));
-      toast({ title: "База данных очищена от заблокированных" });
+      toast({ title: "База данных очищена" });
     } finally {
       setIsCleaning(false);
     }
@@ -143,7 +143,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl bg-card border-primary/20 p-0 overflow-hidden h-[85vh] flex flex-col rounded-[2.5rem] shadow-2xl border">
         <DialogHeader className="sr-only">
-          <DialogTitle>Админ-панель Nuxus v4.3</DialogTitle>
+          <DialogTitle>Админ-панель Nuxus v4.6</DialogTitle>
           <DialogDescription>Управление ядром системы</DialogDescription>
         </DialogHeader>
 
@@ -154,13 +154,13 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
                 <ShieldAlert className="w-5 h-5 text-white" />
               </div>
               <div className="flex flex-col leading-none">
-                <span>Nuxus v4.3</span>
-                <span className="text-[9px] font-bold tracking-[0.4em] text-primary-foreground opacity-70 mt-1 uppercase">Global Controller</span>
+                <span>Nuxus v4.6</span>
+                <span className="text-[9px] font-bold tracking-[0.4em] text-primary-foreground opacity-70 mt-1 uppercase">Консоль управления</span>
               </div>
             </div>
             <div className="flex items-center gap-1.5 px-3 py-1 bg-green-500/10 border border-green-500/20 rounded-full">
               <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" />
-              <span className="text-[8px] text-green-500 font-black">CORE ONLINE</span>
+              <span className="text-[8px] text-green-500 font-black">СИСТЕМА ONLINE</span>
             </div>
           </div>
         </div>
@@ -198,23 +198,21 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
                    <div className="p-6 bg-muted/20 rounded-[2.5rem] border border-white/5 space-y-4">
                     <div className="flex items-center gap-2 mb-2">
                       <Database className="w-4 h-4 text-primary" />
-                      <span className="text-[10px] font-black uppercase tracking-widest text-white">Статус Базы Данных</span>
+                      <span className="text-[10px] font-black uppercase tracking-widest text-white">Статус БД</span>
                     </div>
                     <div className="space-y-3">
-                      <div className="flex justify-between text-[11px] font-bold text-muted-foreground"><span>Доступность</span><span className="text-green-500">Full Access</span></div>
-                      <div className="flex justify-between text-[11px] font-bold text-muted-foreground"><span>Шифрование</span><span className="text-white">AES-256 Enabled</span></div>
-                      <div className="flex justify-between text-[11px] font-bold text-muted-foreground"><span>Узлы Firestore</span><span className="text-white">Global Edge</span></div>
+                      <div className="flex justify-between text-[11px] font-bold text-muted-foreground"><span>Доступность</span><span className="text-green-500">Полная</span></div>
+                      <div className="flex justify-between text-[11px] font-bold text-muted-foreground"><span>Шифрование</span><span className="text-white">AES-256</span></div>
                     </div>
                   </div>
                   <div className="p-6 bg-muted/20 rounded-[2.5rem] border border-white/5 space-y-4">
                     <div className="flex items-center gap-2 mb-2">
                       <Globe className="w-4 h-4 text-accent" />
-                      <span className="text-[10px] font-black uppercase tracking-widest text-white">Сетевой Мониторинг</span>
+                      <span className="text-[10px] font-black uppercase tracking-widest text-white">Сеть</span>
                     </div>
                     <div className="space-y-3">
-                      <div className="flex justify-between text-[11px] font-bold text-muted-foreground"><span>Средний пинг</span><span className="text-white">~12ms</span></div>
-                      <div className="flex justify-between text-[11px] font-bold text-muted-foreground"><span>Трафик</span><span className="text-green-500">Optimal</span></div>
-                      <div className="flex justify-between text-[11px] font-bold text-muted-foreground"><span>CDN Статус</span><span className="text-white">Distributed</span></div>
+                      <div className="flex justify-between text-[11px] font-bold text-muted-foreground"><span>Пинг</span><span className="text-white">~12ms</span></div>
+                      <div className="flex justify-between text-[11px] font-bold text-muted-foreground"><span>Трафик</span><span className="text-green-500">Оптимально</span></div>
                     </div>
                   </div>
                 </div>
@@ -227,7 +225,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input 
-                  placeholder="Никнейм, ID или Телефон..." 
+                  placeholder="Поиск по нику, ID или телефону..." 
                   value={userSearch}
                   onChange={e => setUserSearch(e.target.value)}
                   className="bg-card border-white/10 h-11 rounded-xl pl-10 text-sm focus:border-primary/50"
@@ -239,7 +237,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
                 {isUsersLoading ? (
                   <div className="flex flex-col items-center justify-center p-12 gap-3 opacity-50">
                     <Loader2 className="animate-spin text-primary w-6 h-6" />
-                    <span className="text-[9px] font-bold uppercase tracking-widest">Core Synchronizing...</span>
+                    <span className="text-[9px] font-bold uppercase tracking-widest">Загрузка...</span>
                   </div>
                 ) : filteredUsers.map(u => (
                   <div key={u.id} className="flex items-center justify-between p-3 bg-muted/20 rounded-2xl border border-white/5 hover:bg-muted/30 transition-all">
@@ -254,16 +252,16 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
                       </div>
                     </div>
                     <div className="flex items-center gap-1">
-                      <Button variant="ghost" size="icon" className={cn("h-8 w-8", u.isAdmin ? "text-blue-400" : "text-muted-foreground")} onClick={() => toggleAdmin(u)} title="Назначить Админом">
+                      <Button variant="ghost" size="icon" className={cn("h-8 w-8", u.isAdmin ? "text-blue-400" : "text-muted-foreground")} onClick={() => toggleAdmin(u)}>
                         <ShieldCheck className={cn("w-4 h-4", u.isAdmin && "fill-blue-400/20")} />
                       </Button>
-                      <Button variant="ghost" size="icon" className={cn("h-8 w-8", u.isPremium ? "text-accent" : "text-muted-foreground")} onClick={() => togglePremium(u)} title="Выдать Premium">
+                      <Button variant="ghost" size="icon" className={cn("h-8 w-8", u.isPremium ? "text-accent" : "text-muted-foreground")} onClick={() => togglePremium(u)}>
                         <Star className={cn("w-4 h-4", u.isPremium && "fill-accent")} />
                       </Button>
-                      <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground" onClick={() => toggleBan(u)} title="Забанить">
+                      <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground" onClick={() => toggleBan(u)}>
                         <Shield className={cn("w-4 h-4", u.isBanned && "fill-destructive text-destructive")} />
                       </Button>
-                      <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" onClick={() => deleteDocumentNonBlocking(doc(db, 'users', u.id))} title="Удалить">
+                      <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" onClick={() => deleteDocumentNonBlocking(doc(db, 'users', u.id))}>
                         <Trash2 className="w-4 h-4" />
                       </Button>
                     </div>
@@ -280,31 +278,27 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
                   <div className="p-6 bg-muted/20 rounded-[2rem] border border-white/5 space-y-4">
                     <div className="flex items-center gap-2 mb-2">
                       <Terminal className="w-4 h-4 text-primary" />
-                      <span className="text-[10px] font-black uppercase tracking-widest text-white">Maintenance Tools</span>
+                      <span className="text-[10px] font-black uppercase tracking-widest text-white">Инструменты</span>
                     </div>
                     <Button variant="destructive" className="w-full h-11 rounded-xl text-[9px] uppercase font-bold tracking-widest" onClick={handleQuickCleanup} disabled={isCleaning}>
                       {isCleaning ? <Loader2 className="w-3 h-3 animate-spin mr-2" /> : <Eraser className="w-3 h-3 mr-2" />}
-                      Удалить всех забаненных
-                    </Button>
-                    <Button variant="outline" className="w-full h-11 rounded-xl text-[9px] uppercase font-bold tracking-widest border-primary/20 text-primary" onClick={() => { setIsCheckingDb(true); setTimeout(() => setIsCheckingDb(false), 1500); }}>
-                      {isCheckingDb ? <Loader2 className="w-3 h-3 animate-spin mr-2" /> : <RefreshCw className="w-3 h-3 mr-2" />}
-                      Перестроить индексы БД
+                      Удалить забаненных
                     </Button>
                   </div>
                   <div className="p-6 bg-primary/10 rounded-[2rem] border border-primary/20 space-y-4">
                     <div className="flex items-center gap-2 mb-2">
                       <Globe className="w-4 h-4 text-primary" />
-                      <span className="text-[10px] font-black uppercase tracking-widest text-white">Global Broadcast</span>
+                      <span className="text-[10px] font-black uppercase tracking-widest text-white">Рассылка</span>
                     </div>
                     <textarea 
-                      placeholder="Текст системного уведомления..." 
+                      placeholder="Текст уведомления..." 
                       value={alertText}
                       onChange={e => setAlertText(e.target.value)}
                       className="w-full bg-card border border-white/10 h-24 rounded-xl text-xs p-3 focus:outline-none focus:border-primary/50 resize-none"
                     />
                     <Button 
                       className="w-full h-11 rounded-xl bg-primary hover:bg-primary/90 font-black uppercase tracking-widest text-[10px]" 
-                      onClick={() => { setAlertText(''); toast({ title: "Уведомление разослано по всем каналам" }); }}
+                      onClick={() => { setAlertText(''); toast({ title: "Разослано" }); }}
                       disabled={!alertText.trim()}
                     >
                       <Send className="w-4 h-4 mr-2" /> Трансляция

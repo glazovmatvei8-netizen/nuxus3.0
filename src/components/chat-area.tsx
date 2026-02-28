@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
   Send, Info, ChevronLeft, Loader2, Bookmark, Pin, X, Forward, Camera, Video, Circle, Wand2, Phone, Search as SearchIcon,
-  Search, Archive, BellOff, MoreVertical, PlayCircle, Clock, Zap, EyeOff, Calendar as CalendarIcon, Timer
+  Archive, BellOff, MoreVertical, PlayCircle, Clock, Zap, EyeOff, Calendar as CalendarIcon, Timer
 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { MessageItem } from './message-item';
@@ -37,7 +37,6 @@ const MessageList = memo(({
 }: any) => {
   if (!messages) return null;
   
-  // Фильтрация запланированных сообщений для получателя
   const visibleMessages = messages.filter((m: Message) => {
     if (m.senderId === userId) return true;
     if (m.scheduledAt) {
@@ -81,7 +80,6 @@ export default function ChatArea() {
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchingLocal, setIsSearchingLocal] = useState(false);
   
-  // Спец-функции
   const [scheduledDate, setScheduledDate] = useState<Date | undefined>(undefined);
   const [expiryTime, setExpiryTime] = useState<number | null>(null);
   const [isOneTime, setIsOneTime] = useState(false);
@@ -158,7 +156,7 @@ export default function ChatArea() {
     const lastMsg = messages[messages.length - 1];
     if (lastMsg && lastMsg.senderId !== firebaseUser.uid && !lastMsg.isRead) {
       if (audioRef.current) {
-        audioRef.current.play().catch(e => console.log('Audio playback prevented'));
+        audioRef.current.play().catch(e => console.log('Аудио заблокировано'));
       }
       if (typeof window !== 'undefined' && document.hidden && Notification.permission === 'granted') {
         new Notification(`Nuxus: ${lastMsg.senderName}`, {
@@ -235,7 +233,7 @@ export default function ChatArea() {
     const msgData: Partial<Message> = { 
       chatId: currentChatId, 
       senderId: firebaseUser.uid, 
-      senderName: userProfile?.name || 'User', 
+      senderName: userProfile?.name || 'Пользователь', 
       content: trimmedContent, 
       contentType: type, 
       sentAt: new Date().toISOString(), 
@@ -256,7 +254,6 @@ export default function ChatArea() {
       lastMessageAt: new Date().toISOString()
     });
     
-    // Сброс спец-параметров
     setScheduledDate(undefined);
     setExpiryTime(null);
     setIsOneTime(false);
@@ -394,7 +391,7 @@ export default function ChatArea() {
               <UserAvatar userId={otherId} manualAvatarUrl={otherMetadata?.avatarUrl} className="h-10 w-10" fallbackName={chatDisplayName} />
               <div className="flex flex-col min-w-0">
                 <span className="font-bold text-sm truncate group-hover:text-primary transition-colors">{formatDisplayName(chatDisplayName)}</span>
-                <span className="text-[10px] text-muted-foreground/60 tracking-widest truncate uppercase">Nuxus Core</span>
+                <span className="text-[10px] text-muted-foreground/60 tracking-widest truncate uppercase">Ядро Nuxus</span>
               </div>
             </div>
           )}

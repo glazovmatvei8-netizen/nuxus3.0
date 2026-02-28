@@ -60,7 +60,6 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, amIPremium = 
 
   const formattedTime = message.sentAt ? format(new Date(message.sentAt), 'HH:mm') : '';
 
-  // Таймер исчезновения
   useEffect(() => {
     if (message.expiresInSeconds && !message.isExpired && !countdown) {
       setCountdown(message.expiresInSeconds);
@@ -254,7 +253,7 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, amIPremium = 
         <div className="flex flex-col gap-1 mt-1">
           <div className="flex items-center gap-2 p-2 bg-muted/20 rounded-xl">
             <Mic className="w-4 h-4 text-primary" />
-            <span className="text-xs">Голос</span>
+            <span className="text-xs">Голосовое сообщение</span>
             {amIPremium && (
               <Button variant="ghost" size="icon" className="h-6 w-6" onClick={(e) => { e.stopPropagation(); handleTranscribe(); }} disabled={isTranscribing}>
                 {isTranscribing ? <Loader2 className="w-3 h-3 animate-spin" /> : <Languages className="w-3 h-3" />}
