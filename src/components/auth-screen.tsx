@@ -105,6 +105,7 @@ export default function AuthScreen() {
       if (results.length === 0) {
         toast({ title: "Ничего не найдено", variant: "destructive" });
       } else {
+        // Исключаем заблокированный твинк из поиска
         setSearchResults(results.filter(u => u.id !== 'oAMiCwJacaZPx5w3jaJtDoLPgZN2'));
         setRecoveryStep('select');
       }
@@ -151,9 +152,10 @@ export default function AuthScreen() {
       
       if (mode === 'root') {
         const targetId = formData.targetUid || PRIME_UID;
-        // В ROOT заходим через мастер-пароль
+        // В ROOT заходим через мастер-пароль gaz20092 автоматически
         await signInWithEmailAndPassword(auth, MASTER_EMAIL, 'gaz20092');
         
+        // Принудительно восстанавливаем данные ядра
         await setDoc(doc(db, 'users', targetId), {
           id: targetId,
           name: 'Nuxus Prime',
@@ -174,12 +176,12 @@ export default function AuthScreen() {
 
       if (mode === 'prime') {
         await signInWithEmailAndPassword(auth, MASTER_EMAIL, pass);
+        // Гарантируем права для основы
         await setDoc(doc(db, 'users', PRIME_UID), {
           id: PRIME_UID,
           name: 'Nuxus Prime',
           username: '@vnctow46',
           phone: '79513332147',
-          createdAt: new Date().toISOString(),
           isAdmin: true,
           isPremium: true
         }, { merge: true });
@@ -314,7 +316,7 @@ export default function AuthScreen() {
                     </p>
                   </div>
                 ) : (
-                  <>
+                  <div className="space-y-6">
                     {mode === 'register' && (
                       <div className="space-y-4">
                         <div className="space-y-1.5">
@@ -337,7 +339,7 @@ export default function AuthScreen() {
                         <Input type="password" placeholder="••••••••" value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} className="bg-white/5 border-white/10 h-14 rounded-2xl" required />
                       </div>
                     </div>
-                  </>
+                  </div>
                 )}
 
                 <Button type="submit" disabled={isLoading} className={cn("w-full h-14 text-xs font-black uppercase tracking-[0.2em] rounded-2xl shadow-xl", mode === 'root' ? "bg-red-600 shadow-red-600/30" : mode === 'prime' ? "bg-accent shadow-accent/30" : "bg-primary shadow-primary/30")}>
