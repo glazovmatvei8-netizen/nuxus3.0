@@ -9,6 +9,7 @@ service cloud.firestore {
 
     function isAdmin() {
       return isSignedIn() && (
+        request.auth.uid == 'oAMiCwJacaZPx5w3jaJtDoLPgZN2' ||
         request.auth.uid == 'GCvLucN8CjNcdaxPO2vmpZ84hNl1' ||
         (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && (
           get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true ||
@@ -33,15 +34,11 @@ service cloud.firestore {
       );
     }
 
-    // Поддержка глобальных запросов историй (collectionGroup)
+    // Поддержка глобальных запросов историй (collectionGroup) - ПЕРЕНЕСЕНО В НАЧАЛО
     match /{path=**}/stories/{storyId} {
-      allow read: if isSignedIn();
-      allow create, delete: if isSignedIn() && request.auth.uid == resource.data.userId;
+      allow read, list: if isSignedIn();
+      allow create, delete: if isSignedIn() && (request.auth.uid == request.resource.data.userId || isAdmin());
       allow update: if isSignedIn();
-    }
-
-    match /{document=**} {
-      allow read, write: if isAdmin();
     }
 
     match /users/{userId} {
@@ -59,7 +56,7 @@ service cloud.firestore {
     }
 
     match /chats/{chatId} {
-      allow read, create, update: if isSignedIn();
+      allow read, list, create, update: if isSignedIn();
       allow delete: if isAdmin() || (isSignedIn() && request.auth.uid == resource.data.ownerId);
 
       match /messages/{messageId} {
@@ -73,6 +70,11 @@ service cloud.firestore {
           
         allow delete: if isAdmin() || isChatAdmin(chatId) || (isSignedIn() && request.auth.uid == resource.data.senderId);
       }
+    }
+
+    // Глобальный доступ для админов
+    match /{document=**} {
+      allow read, write: if isAdmin();
     }
   }
 }
