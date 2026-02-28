@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Hexagon, Zap, Loader2, Smartphone, UserCircle, AtSign, Lock, ArrowRight, ShieldCheck, Mail } from 'lucide-react';
+import { Hexagon, Zap, Loader2, UserCircle, AtSign, Lock, ArrowRight, ShieldCheck, Mail } from 'lucide-react';
 import { useAuth, useFirestore } from '@/firebase';
 import { 
   signInWithEmailAndPassword,
@@ -47,13 +47,13 @@ export default function AuthScreen() {
   };
 
   const getVirtualEmail = (id: string) => {
-    // Если ввели Email напрямую
+    // Если ввели Email напрямую (например, ваш старый 89513332147@nuxus.app)
     if (id.includes('@')) return id.trim().toLowerCase();
 
     const rawDigits = id.replace(/\D/g, '');
     
-    // КРИТИЧЕСКИЙ ФИКС: Для вашего номера ГАРАНТИРОВАННО используем старый Email на 8...,
-    // чтобы восстановить ваши чаты («Чайник» и другие).
+    // ГАРАНТИЯ ВОЗВРАТА СТАРЫХ ЧАТОВ:
+    // Если ввели ваш номер, принудительно направляем в аккаунт на "8...", где лежит вся история
     if (rawDigits.endsWith('9513332147')) {
       return '89513332147@nuxus.app';
     }
@@ -70,7 +70,7 @@ export default function AuthScreen() {
     const virtualEmail = getVirtualEmail(formData.identifier);
     
     if (!formData.identifier.trim()) {
-      toast({ title: "Ошибка", description: "Введите телефон или email", variant: "destructive" });
+      toast({ title: "Ошибка", description: "Введите данные для входа", variant: "destructive" });
       return;
     }
 
@@ -142,16 +142,13 @@ export default function AuthScreen() {
             return;
           }
         } catch (err: any) {
-          if (err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential' || err.code === 'auth/wrong-password') {
-            toast({ 
-              title: "Ошибка входа", 
-              description: "Проверьте данные. Если аккаунта нет — зарегистрируйтесь.", 
-              variant: "destructive" 
-            });
-            setIsLoading(false);
-            return;
-          }
-          throw err;
+          toast({ 
+            title: "Ошибка входа", 
+            description: "Проверьте данные. Если аккаунта нет — зарегистрируйтесь.", 
+            variant: "destructive" 
+          });
+          setIsLoading(false);
+          return;
         }
       }
     } catch (err: any) {
@@ -164,18 +161,12 @@ export default function AuthScreen() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4 relative overflow-hidden">
       <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-primary/20 blur-[120px] rounded-full -z-10 animate-pulse-glow" />
-      <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-accent/10 blur-[120px] rounded-full -z-10 animate-pulse-glow" style={{ animationDelay: '2s' }} />
       
       <div className="w-full max-w-sm relative z-10">
         <div className="flex justify-center mb-10">
-          <div className="relative group">
-            <div className="absolute inset-0 bg-primary blur-3xl opacity-20 group-hover:opacity-40 transition-opacity" />
-            <div className="bg-primary p-6 rounded-[2rem] shadow-2xl shadow-primary/40 relative animate-float">
-              <div className="relative">
-                <Hexagon className="w-14 h-14 text-white" />
-                <Zap className="w-7 h-7 text-white absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 fill-white" />
-              </div>
-            </div>
+          <div className="bg-primary p-6 rounded-[2rem] shadow-2xl shadow-primary/40 animate-float">
+            <Hexagon className="w-14 h-14 text-white" />
+            <Zap className="w-7 h-7 text-white absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 fill-white" />
           </div>
         </div>
 
@@ -185,7 +176,7 @@ export default function AuthScreen() {
               Nuxus
             </CardTitle>
             <CardDescription className="text-muted-foreground/60 mt-4 font-bold tracking-[0.4em] uppercase text-[10px]">
-              {mode === 'login' ? 'Identity Verification' : 'New Identity Core'}
+              {mode === 'login' ? 'Verification Core' : 'New Identity Core'}
             </CardDescription>
           </CardHeader>
           
@@ -249,9 +240,7 @@ export default function AuthScreen() {
         </Card>
         
         <div className="mt-10 flex items-center justify-center gap-3 text-muted-foreground/40 text-[9px] uppercase font-bold tracking-[0.4em]">
-          <div className="w-8 h-[1px] bg-white/10" />
-          <ShieldCheck className="w-3 h-3" /> Secure Nuxus Connection
-          <div className="w-8 h-[1px] bg-white/10" />
+          <ShieldCheck className="w-3 h-3" /> Secure Connection
         </div>
       </div>
     </div>

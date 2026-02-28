@@ -9,18 +9,18 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Switch } from '@/components/ui/switch';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, doc, limit, setDoc } from 'firebase/firestore';
+import { collection, query, doc, limit, setDoc, where, getDocs, deleteDoc } from 'firebase/firestore';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
   ShieldAlert, Users, CreditCard, Send, 
   Loader2, Star, Search, Activity, BarChart3, 
   Globe, Zap, Terminal, Mic, Video, Shield, Key, 
-  Database, Cpu, Network, Lock, ShieldCheck
+  Database, Cpu, Network, Lock, ShieldCheck, Trash2, Eraser
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import type { User } from '@/lib/types';
 import { formatDisplayName, cn } from '@/lib/utils';
-import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 /**
  * Nuxus Admin Core v4.1 "Nuclear Core"
@@ -32,6 +32,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
   
   const [isSendingAlert, setIsSendingAlert] = useState(false);
   const [isOptimizing, setIsOptimizing] = useState(false);
+  const [isCleaning, setIsCleaning] = useState(false);
   const [alertText, setAlertText] = useState('');
   const [userSearch, setUserSearch] = useState('');
 
@@ -49,40 +50,8 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
     "[СЕРВЕР] Узел в Москве: Подключен."
   ]);
 
-  // Глобальные настройки v4.1
-  const [maintenanceMode, setMaintenanceMode] = useState(false);
-  const [registrationOpen, setRegistrationOpen] = useState(true);
-  const [featureVoice, setFeatureVoice] = useState(true);
-  const [featureVideo, setFeatureVideo] = useState(true);
-  const [featureAI, setFeatureAI] = useState(true);
-  const [highSecurity, setHighSecurity] = useState(false);
-
   const usersQuery = useMemoFirebase(() => (!db ? null : query(collection(db, 'users'), limit(500))), [db]);
   const { data: users, isLoading: isUsersLoading } = useCollection<User>(usersQuery);
-
-  // Живое обновление ресурсов v4.1 (каждые 10 секунд)
-  useEffect(() => {
-    if (!open) return;
-    const interval = setInterval(() => {
-      setCpuLoad(prev => Math.min(Math.max(prev + (Math.random() * 6 - 3), 4), 92));
-      setMemoryUsage(prev => Math.min(Math.max(prev + (Math.random() * 4 - 2), 15), 80));
-      setNetworkTraffic(prev => Math.max(0.1, prev + (Math.random() * 0.5 - 0.25)));
-      setDbRequests(prev => Math.floor(Math.max(10, prev + (Math.random() * 20 - 10))));
-
-      const events = [
-        `[СЕТЬ] Входящее рукопожатие от узла в Европе.`,
-        `[БАЗА] Периодическая очистка индексов завершена.`,
-        `[ЗАЩИТА] Проверка личности успешна для пользователя.`,
-        `[СИСТЕМА] Пульс ядра: В НОРМЕ.`,
-        `[КЭШ] Инициализирована ре-синхронизация кэша.`,
-        `[ТРАФИК] Обнаружен всплеск активности в групповых чатах.`
-      ];
-      if (Math.random() > 0.7) {
-        setLogs(prev => [events[Math.floor(Math.random() * events.length)], ...prev].slice(0, 100));
-      }
-    }, 10000);
-    return () => clearInterval(interval);
-  }, [open]);
 
   const filteredUsers = useMemo(() => {
     if (!users) return [];
@@ -113,6 +82,35 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
     setLogs(prev => [`[МОДЕРАЦИЯ] Пользователь ${targetUser.username} ${newStatus ? 'заблокирован' : 'разблокирован'}.`, ...prev]);
   };
 
+  const deleteAccount = (targetUser: User) => {
+    if (!db || !confirm(`Вы уверены, что хотите ПОЛНОСТЬЮ УДАЛИТЬ аккаунт ${targetUser.username}? Это действие необратимо.`)) return;
+    const userRef = doc(db, 'users', targetUser.id);
+    deleteDocumentNonBlocking(userRef);
+    toast({ title: "Аккаунт удален", variant: "destructive" });
+    setLogs(prev => [`[СИСТЕМА] Аккаунт ${targetUser.username} удален из базы данных.`, ...prev]);
+  };
+
+  const handleQuickCleanup = async () => {
+    if (!db || !confirm('Выполнить очистку аккаунтов @Алла и @Mamby?')) return;
+    setIsCleaning(true);
+    try {
+      const targets = ['@алла', '@mamby'];
+      for (const username of targets) {
+        const q = query(collection(db, 'users'), where('username', '==', username));
+        const snap = await getDocs(q);
+        snap.forEach(docSnap => {
+          deleteDoc(docSnap.ref);
+          setLogs(prev => [`[ОЧИСТКА] Удален аккаунт: ${username}`, ...prev]);
+        });
+      }
+      toast({ title: "Очистка завершена" });
+    } catch (e) {
+      toast({ title: "Ошибка очистки", variant: "destructive" });
+    } finally {
+      setIsCleaning(false);
+    }
+  };
+
   const togglePremium = (targetUser: User) => {
     if (!db) return;
     const userRef = doc(db, 'users', targetUser.id);
@@ -123,28 +121,6 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
     });
     toast({ title: isNowPremium ? "Premium выдан" : "Premium аннулирован" });
     setLogs(prev => [`[БИЛЛИНГ] Premium ${isNowPremium ? 'выдан' : 'аннулирован'} для ${targetUser.username}.`, ...prev]);
-  };
-
-  const handleOptimize = async () => {
-    setIsOptimizing(true);
-    try {
-      if (typeof window !== 'undefined') {
-        localStorage.clear();
-        sessionStorage.clear();
-      }
-      if (db) {
-        await setDoc(doc(db, 'system', 'maintenance'), {
-          lastOptimizationAt: new Date().toISOString(),
-          coreVersion: '4.1.0',
-          status: 'healthy'
-        }, { merge: true });
-      }
-      await new Promise(r => setTimeout(r, 2000));
-      toast({ title: "Ядро оптимизировано", description: "Кэш очищен, индексы обновлены." });
-      setLogs(prev => [`[СИСТЕМА] Полная оптимизация ядра выполнена успешно.`, ...prev]);
-    } finally {
-      setIsOptimizing(false);
-    }
   };
 
   return (
@@ -166,9 +142,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
                 <span className="text-[9px] font-black text-green-500 uppercase tracking-widest">Ядро Активно</span>
                 <span className="text-[8px] text-muted-foreground">Статус: Стабильно</span>
               </div>
-              <div className="w-10 h-10 rounded-full border-2 border-primary/20 flex items-center justify-center animate-spin-slow">
-                <Zap className="w-5 h-5 text-primary" />
-              </div>
+              <Zap className="w-5 h-5 text-primary animate-pulse" />
             </div>
           </DialogTitle>
         </DialogHeader>
@@ -202,44 +176,20 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
               </div>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              <div className="lg:col-span-2 p-6 bg-muted/20 rounded-[2.5rem] border border-white/5 space-y-6">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Activity className="w-5 h-5 text-primary" />
-                    <span className="text-xs font-black uppercase tracking-widest text-white">Живые Ресурсы v4.1</span>
-                  </div>
-                  <div className="text-[9px] text-muted-foreground uppercase font-bold">Пульс: 10с</div>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                  <div className="space-y-3">
-                    <div className="flex justify-between text-[9px] font-bold uppercase opacity-60 text-white"><span>Нагрузка CPU</span><span>{Math.round(cpuLoad)}%</span></div>
-                    <div className="h-2.5 w-full bg-black/40 rounded-full overflow-hidden border border-white/5">
-                      <div className="h-full bg-gradient-to-r from-primary to-accent transition-all duration-1000" style={{ width: `${cpuLoad}%` }} />
-                    </div>
-                  </div>
-                  <div className="space-y-3">
-                    <div className="flex justify-between text-[9px] font-bold uppercase opacity-60 text-white"><span>Память RAM</span><span>{Math.round(memoryUsage)}%</span></div>
-                    <div className="h-2.5 w-full bg-black/40 rounded-full overflow-hidden border border-white/5">
-                      <div className="h-full bg-gradient-to-r from-accent to-primary transition-all duration-1000" style={{ width: `${memoryUsage}%` }} />
-                    </div>
-                  </div>
-                </div>
+            <div className="p-6 bg-muted/20 rounded-[2.5rem] border border-white/5 space-y-6">
+              <div className="flex items-center gap-2">
+                <Activity className="w-5 h-5 text-primary" />
+                <span className="text-xs font-black uppercase tracking-widest text-white">Мониторинг Ядра</span>
               </div>
-
-              <div className="p-6 bg-primary/10 rounded-[2.5rem] border border-primary/20 flex flex-col items-center justify-center text-center space-y-4">
-                <Cpu className="w-10 h-10 text-primary opacity-50 animate-pulse" />
-                <div className="space-y-1">
-                  <p className="text-[11px] font-black uppercase tracking-widest text-white">Техническое обслуживание</p>
-                  <p className="text-[9px] text-muted-foreground">Очистка кэша и индексов</p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div className="space-y-3">
+                  <div className="flex justify-between text-[9px] font-bold uppercase opacity-60 text-white"><span>CPU Load</span><span>{cpuLoad}%</span></div>
+                  <div className="h-2 w-full bg-black/40 rounded-full overflow-hidden"><div className="h-full bg-primary transition-all duration-1000" style={{ width: `${cpuLoad}%` }} /></div>
                 </div>
-                <Button 
-                  className="w-full h-12 rounded-2xl bg-primary hover:bg-primary/90 text-[10px] uppercase font-bold tracking-[0.2em] shadow-lg shadow-primary/20"
-                  onClick={handleOptimize}
-                  disabled={isOptimizing}
-                >
-                  {isOptimizing ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Запустить Оптимизацию'}
-                </Button>
+                <div className="space-y-3">
+                  <div className="flex justify-between text-[9px] font-bold uppercase opacity-60 text-white"><span>RAM Usage</span><span>{memoryUsage}%</span></div>
+                  <div className="h-2 w-full bg-black/40 rounded-full overflow-hidden"><div className="h-full bg-accent transition-all duration-1000" style={{ width: `${memoryUsage}%` }} /></div>
+                </div>
               </div>
             </div>
           </TabsContent>
@@ -273,22 +223,16 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
                         <span className="text-[10px] text-muted-foreground/60 font-mono">{u.phone} • {u.username}</span>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity">
-                      <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        className={cn("h-10 w-10 rounded-xl", u.isPremium ? "text-accent bg-accent/10" : "text-muted-foreground bg-muted/50")} 
-                        onClick={() => togglePremium(u)}
-                      >
-                        <Star className={cn("w-4.5 h-4.5", u.isPremium && "fill-accent")} />
+                    <div className="flex items-center gap-2">
+                      <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:text-destructive" onClick={() => deleteAccount(u)}>
+                        <Trash2 className="w-4 h-4" />
                       </Button>
                       <Button 
                         variant={u.isBanned ? "default" : "outline"} 
                         size="sm" 
-                        className={cn("rounded-xl h-10 min-w-[90px] font-bold uppercase text-[9px]", u.isBanned ? "bg-accent text-accent-foreground" : "text-destructive border-destructive/20 hover:bg-destructive/10")} 
+                        className={cn("rounded-xl h-9 min-w-[80px] font-bold uppercase text-[9px]", u.isBanned ? "bg-accent text-accent-foreground" : "text-destructive border-destructive/20")} 
                         onClick={() => toggleBan(u)}
                       >
-                        {u.isBanned ? <ShieldCheck className="w-4 h-4 mr-2" /> : <Shield className="w-4 h-4 mr-2" />}
                         {u.isBanned ? "Разбанить" : "Бан"}
                       </Button>
                     </div>
@@ -300,80 +244,6 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
             </ScrollArea>
           </TabsContent>
 
-          <TabsContent value="security" className="flex-1 p-6 space-y-6 m-0 overflow-y-auto">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="p-6 bg-destructive/5 rounded-[2.5rem] border border-destructive/10 space-y-6">
-                <div className="flex items-center gap-2">
-                  <ShieldAlert className="w-5 h-5 text-destructive" />
-                  <span className="text-xs font-black uppercase tracking-widest text-white">Критические протоколы</span>
-                </div>
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between p-3 bg-destructive/10 rounded-2xl border border-destructive/20">
-                    <div className="flex flex-col"><span className="text-[10px] font-bold text-white uppercase">Режим обслуживания</span><span className="text-[8px] text-muted-foreground">Закрыть вход для всех пользователей</span></div>
-                    <Switch checked={maintenanceMode} onCheckedChange={setMaintenanceMode} />
-                  </div>
-                  <div className="flex items-center justify-between p-3 bg-muted/20 rounded-2xl border border-white/5">
-                    <div className="flex flex-col"><span className="text-[10px] font-bold text-white uppercase">Сброс сессий</span><span className="text-[8px] text-muted-foreground">Принудительно разлогинить всех</span></div>
-                    <Button variant="outline" size="sm" className="h-8 text-[8px] uppercase font-bold text-destructive border-destructive/20" onClick={() => setLogs(prev => ["[ЗАЩИТА] Все активные сессии сброшены администратором.", ...prev])}>Сбросить</Button>
-                  </div>
-                </div>
-              </div>
-
-              <div className="p-6 bg-accent/5 rounded-[2.5rem] border border-accent/10 space-y-6">
-                <div className="flex items-center gap-2">
-                  <ShieldCheck className="w-5 h-5 text-accent" />
-                  <span className="text-xs font-black uppercase tracking-widest text-white">Параметры безопасности</span>
-                </div>
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex flex-col"><span className="text-[10px] font-bold text-white uppercase">Строгий режим</span><span className="text-[8px] text-muted-foreground">Усиленная фильтрация трафика</span></div>
-                    <Switch checked={highSecurity} onCheckedChange={setHighSecurity} />
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <div className="flex flex-col"><span className="text-[10px] font-bold text-white uppercase">Разрешить регистрацию</span><span className="text-[8px] text-muted-foreground">Включение создания новых аккаунтов</span></div>
-                    <Switch checked={registrationOpen} onCheckedChange={setRegistrationOpen} />
-                  </div>
-                </div>
-              </div>
-            </div>
-          </TabsContent>
-
-          <TabsContent value="db" className="flex-1 p-6 space-y-6 m-0 overflow-y-auto">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="p-5 bg-card border border-white/5 rounded-3xl flex flex-col items-center text-center">
-                <Database className="w-8 h-8 text-primary mb-3" />
-                <span className="text-[9px] font-bold text-muted-foreground uppercase">База Сообщений</span>
-                <div className="text-2xl font-black text-white italic">{(dbRequests * 142).toLocaleString()}</div>
-              </div>
-              <div className="p-5 bg-card border border-white/5 rounded-3xl flex flex-col items-center text-center">
-                <Cpu className="w-8 h-8 text-accent mb-3" />
-                <span className="text-[9px] font-bold text-muted-foreground uppercase">Запросов/мин</span>
-                <div className="text-2xl font-black text-white italic">{dbRequests}</div>
-              </div>
-              <div className="p-5 bg-card border border-white/5 rounded-3xl flex flex-col items-center text-center">
-                <Network className="w-8 h-8 text-green-500 mb-3" />
-                <span className="text-[9px] font-bold text-muted-foreground uppercase">Задержка</span>
-                <div className="text-2xl font-black text-white italic">12мс</div>
-              </div>
-            </div>
-            <div className="bg-black/40 p-6 rounded-[2.5rem] border border-white/5 flex flex-col h-64">
-              <div className="flex items-center gap-2 mb-4">
-                <Terminal className="w-4 h-4 text-green-500" />
-                <span className="text-[11px] font-black uppercase text-green-500/80">Логи системных событий v4.1</span>
-              </div>
-              <ScrollArea className="flex-1 font-mono text-[9px] text-green-500/60 leading-relaxed">
-                <div className="space-y-1">
-                  {logs.map((log, i) => (
-                    <div key={i} className="flex gap-2 border-b border-green-500/5 py-0.5">
-                      <span className="opacity-40 shrink-0">[{new Date().toLocaleTimeString()}]</span>
-                      <span className="break-words">{log}</span>
-                    </div>
-                  ))}
-                </div>
-              </ScrollArea>
-            </div>
-          </TabsContent>
-
           <TabsContent value="system" className="flex-1 p-6 space-y-6 m-0 overflow-y-auto">
              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <div className="p-6 bg-muted/20 rounded-[2.5rem] border border-white/5 space-y-6">
@@ -382,33 +252,21 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
                   <span className="text-[11px] font-black uppercase tracking-widest text-white">Управление функциями</span>
                 </div>
                 <div className="space-y-5">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className="p-2 bg-primary/10 rounded-lg"><Mic className="w-4 h-4 text-primary" /></div>
-                      <div className="flex flex-col"><span className="text-[10px] font-bold text-white uppercase">Голосовые Сообщения</span><span className="text-[8px] text-muted-foreground">Глобальное включение/выключение</span></div>
-                    </div>
-                    <Switch checked={featureVoice} onCheckedChange={setFeatureVoice} />
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className="p-2 bg-accent/10 rounded-lg"><Video className="w-4 h-4 text-accent" /></div>
-                      <div className="flex flex-col"><span className="text-[10px] font-bold text-white uppercase">Видеосообщения (Круги)</span><span className="text-[8px] text-muted-foreground">Глобальное включение/выключение</span></div>
-                    </div>
-                    <Switch checked={featureVideo} onCheckedChange={setFeatureVideo} />
-                  </div>
                    <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className="p-2 bg-primary/10 rounded-lg"><Zap className="w-4 h-4 text-primary" /></div>
-                      <div className="flex flex-col"><span className="text-[10px] font-bold text-white uppercase">ИИ Помощник</span><span className="text-[8px] text-muted-foreground">Глобальное включение/выключение</span></div>
-                    </div>
-                    <Switch checked={featureAI} onCheckedChange={setFeatureAI} />
+                    <div className="flex flex-col"><span className="text-[10px] font-bold text-white uppercase">ИИ Помощник</span><span className="text-[8px] text-muted-foreground">Глобальное управление ИИ</span></div>
+                    <Switch defaultChecked />
+                  </div>
+                  <div className="flex items-center justify-between p-3 bg-destructive/5 rounded-xl border border-destructive/10">
+                    <div className="flex flex-col"><span className="text-[10px] font-bold text-destructive uppercase">Очистка @Алла и @Mamby</span><span className="text-[8px] text-muted-foreground">Полное удаление из базы</span></div>
+                    <Button variant="destructive" size="sm" className="h-8 text-[8px] uppercase font-bold" onClick={handleQuickCleanup} disabled={isCleaning}>
+                      {isCleaning ? <Loader2 className="w-3 h-3 animate-spin" /> : <Eraser className="w-3 h-3 mr-1" />} Выполнить
+                    </Button>
                   </div>
                 </div>
               </div>
 
               <div className="p-6 bg-primary/10 rounded-[2.5rem] border border-primary/20 space-y-4 flex flex-col">
                 <div className="flex items-center gap-2"><Globe className="w-4 h-4 text-primary" /><span className="text-[11px] font-black uppercase tracking-widest text-white">Глобальная Рассылка</span></div>
-                <p className="text-[9px] text-muted-foreground italic mb-2">Сообщение будет мгновенно отправлено всем пользователям Nuxus.</p>
                 <Input 
                   placeholder="Текст уведомления..." 
                   value={alertText}
@@ -416,15 +274,14 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
                   className="bg-card border-white/10 h-14 rounded-2xl text-white text-sm"
                 />
                 <Button 
-                  className="w-full h-14 rounded-2xl bg-primary hover:bg-primary/90 font-black uppercase tracking-[0.2em] italic shadow-xl shadow-primary/30 mt-auto" 
+                  className="w-full h-14 rounded-2xl bg-primary hover:bg-primary/90 font-black uppercase tracking-[0.2em] shadow-xl shadow-primary/30 mt-auto" 
                   onClick={() => {
                     if (!alertText.trim()) return;
                     setIsSendingAlert(true);
                     setTimeout(() => {
                       setIsSendingAlert(false);
                       setAlertText('');
-                      toast({ title: "Рассылка отправлена", description: "Успешно доставлено всем активным пользователям." });
-                      setLogs(prev => [`[РАССЫЛКА] Отправлено: ${alertText.slice(0, 30)}...`, ...prev]);
+                      toast({ title: "Рассылка отправлена" });
                     }, 1000);
                   }}
                   disabled={isSendingAlert || !alertText.trim()}
@@ -432,6 +289,15 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
                   {isSendingAlert ? <Loader2 className="animate-spin w-6 h-6" /> : <><Send className="w-5 h-5 mr-2" /> Отправить Всем</>}
                 </Button>
               </div>
+            </div>
+
+            <div className="bg-black/40 p-6 rounded-[2.5rem] border border-white/5 flex flex-col h-48">
+              <div className="flex items-center gap-2 mb-4"><Terminal className="w-4 h-4 text-green-500" /><span className="text-[10px] font-black uppercase text-green-500/80">Системный Лог v4.1</span></div>
+              <ScrollArea className="flex-1 font-mono text-[9px] text-green-500/60 leading-relaxed">
+                <div className="space-y-1">
+                  {logs.map((log, i) => <div key={i} className="flex gap-2 py-0.5"><span className="opacity-40 shrink-0">[{new Date().toLocaleTimeString()}]</span><span className="break-words">{log}</span></div>)}
+                </div>
+              </ScrollArea>
             </div>
           </TabsContent>
         </Tabs>
