@@ -10,7 +10,7 @@ interface NuxusLogoProps {
 }
 
 /**
- * Гипердетализированное программное Ядро Nuxus v5.6.
+ * Гипердетализированное программное Ядро Nuxus v5.6.1.
  * Использует многослойные SVG-анимации, градиенты и динамические частицы.
  */
 export function NuxusLogo({ className, size = 120 }: NuxusLogoProps) {

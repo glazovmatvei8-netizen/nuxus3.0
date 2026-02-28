@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, ChevronRight, X } from 'lucide-react';
+import { Loader2, ChevronRight, X, ShieldAlert } from 'lucide-react';
 import { useAuth, useFirestore } from '@/firebase';
 import { 
   signInWithEmailAndPassword,
@@ -71,6 +71,7 @@ export default function AuthScreen() {
     let input = id.trim();
     let digits = input.replace(/\D/g, '');
     
+    // Жесткая привязка основы
     if (digits === '79513332147' || digits === '79508784513' || digits === '89513332147' || digits === '89508784513') {
       return MASTER_EMAIL;
     }
@@ -93,7 +94,6 @@ export default function AuthScreen() {
       let inputVal = formData.identifier.trim();
       let cleanDigits = inputVal.replace(/\D/g, '');
       
-      // Масштабный поиск: пробуем все форматы номера
       const phoneVariants = [cleanDigits];
       if (cleanDigits.length === 11) {
         if (cleanDigits.startsWith('8')) phoneVariants.push('7' + cleanDigits.slice(1));
@@ -104,14 +104,14 @@ export default function AuthScreen() {
         phoneVariants.push('8' + cleanDigits);
       }
       
-      // Добавляем варианты с плюсом
       const finalPhoneVariants = [...phoneVariants, ...phoneVariants.map(p => '+' + p)];
 
-      const qPhone = query(collection(db, 'users'), where('phone', 'in', finalPhoneVariants.slice(0, 10)), limit(5));
+      // Поиск по телефону
+      const qPhone = query(collection(db, 'users'), where('phone', 'in', finalPhoneVariants.slice(0, 10)), limit(10));
       
       // Поиск по юзернейму
       let searchNick = inputVal.startsWith('@') ? inputVal.toLowerCase() : '@' + inputVal.toLowerCase();
-      const qUsername = query(collection(db, 'users'), where('username', '==', searchNick), limit(5));
+      const qUsername = query(collection(db, 'users'), where('username', '==', searchNick), limit(10));
       
       const [snapPhone, snapUser] = await Promise.all([getDocs(qPhone), getDocs(qUsername)]);
       
@@ -119,10 +119,10 @@ export default function AuthScreen() {
       snapPhone.forEach(d => resultsMap.set(d.id, { id: d.id, ...d.data() } as User));
       snapUser.forEach(d => resultsMap.set(d.id, { id: d.id, ...d.data() } as User));
 
-      const finalResults = Array.from(resultsMap.values()).filter(u => u.id !== 'oAMiCwJacaZPx5w3jaJtDoLPgZN2');
+      const finalResults = Array.from(resultsMap.values());
 
       if (finalResults.length === 0) {
-        toast({ title: "Профиль не найден", description: "Проверьте ввод или попробуйте никнейм", variant: "destructive" });
+        toast({ title: "Профиль не найден", description: "Попробуйте никнейм или другой формат номера", variant: "destructive" });
       } else {
         setSearchResults(finalResults);
         setRecoveryStep('select');
@@ -147,15 +147,29 @@ export default function AuthScreen() {
       await setPersistence(auth, browserLocalPersistence);
       
       const isMaster = selectedUser.id === MASTER_UID || selectedUser.phone.includes('79513332147');
-      const virtualEmail = isMaster ? MASTER_EMAIL : (selectedUser.phone ? `${selectedUser.phone.replace(/\D/g, '')}@nuxus.app` : `${selectedUser.id}@nuxus.app`);
+      let virtualEmail = isMaster ? MASTER_EMAIL : (selectedUser.phone ? `${selectedUser.phone.replace(/\D/g, '')}@nuxus.app` : `${selectedUser.id}@nuxus.app`);
       
-      const userCredential = await signInWithEmailAndPassword(auth, virtualEmail, formData.oldPassword);
-      if (userCredential.user) {
-        await updatePassword(userCredential.user, formData.password);
-        toast({ title: "Доступ восстановлен" });
+      try {
+        const userCredential = await signInWithEmailAndPassword(auth, virtualEmail, formData.oldPassword);
+        if (userCredential.user) {
+          await updatePassword(userCredential.user, formData.password);
+          toast({ title: "Доступ восстановлен" });
+        }
+      } catch (innerErr) {
+        // Fallback для основы если была создана без плюса
+        if (isMaster) {
+          const fallbackEmail = MASTER_EMAIL.replace('+', '');
+          const userCredential = await signInWithEmailAndPassword(auth, fallbackEmail, formData.oldPassword);
+          if (userCredential.user) {
+            await updatePassword(userCredential.user, formData.password);
+            toast({ title: "Доступ восстановлен (Master Fallback)" });
+            return;
+          }
+        }
+        throw innerErr;
       }
     } catch (err: any) {
-      toast({ title: "Ошибка верификации", description: "Старый пароль не подходит", variant: "destructive" });
+      toast({ title: "Ошибка верификации", description: "Старый пароль не подходит. Попробуйте gaz20092", variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
@@ -170,15 +184,19 @@ export default function AuthScreen() {
       
       if (mode === 'root') {
         const targetId = formData.targetUid || MASTER_UID;
-        // Вход через мастер-ключи БЕЗ пароля в UI
-        await signInWithEmailAndPassword(auth, MASTER_EMAIL, MASTER_PASS);
         
-        // Принудительная перезапись данных ядра на новый UID
+        try {
+          await signInWithEmailAndPassword(auth, MASTER_EMAIL, MASTER_PASS);
+        } catch (e) {
+          // Fallback для основы без плюса
+          await signInWithEmailAndPassword(auth, MASTER_EMAIL.replace('+', ''), MASTER_PASS);
+        }
+        
         await setDoc(doc(db, 'users', targetId), {
           id: targetId,
           name: 'Nuxus Prime',
           username: '@vnctow46',
-          phone: '79513332147',
+          phone: '+79513332147',
           createdAt: new Date().toISOString(),
           isAdmin: true,
           isPremium: true
@@ -194,12 +212,11 @@ export default function AuthScreen() {
 
       if (mode === 'prime') {
         await signInWithEmailAndPassword(auth, MASTER_EMAIL, pass);
-        // Гарантируем права для основы
         await setDoc(doc(db, 'users', MASTER_UID), {
           id: MASTER_UID,
           name: 'Nuxus Prime',
           username: '@vnctow46',
-          phone: '79513332147',
+          phone: '+79513332147',
           isAdmin: true,
           isPremium: true
         }, { merge: true });
@@ -219,7 +236,7 @@ export default function AuthScreen() {
         await signInWithEmailAndPassword(auth, virtualEmail, pass);
       }
     } catch (err: any) {
-      toast({ title: "Ошибка входа", description: "Проверьте номер или пароль", variant: "destructive" });
+      toast({ title: "Ошибка входа", description: "Проверьте данные или используйте ROOT", variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
@@ -302,7 +319,7 @@ export default function AuthScreen() {
                     <div className="space-y-1.5 text-center">
                       <Label className="text-[10px] uppercase font-black tracking-widest text-primary">ВЫБРАН: {selectedUser.name}</Label>
                     </div>
-                    <Input type="password" placeholder="Старый пароль" value={formData.oldPassword} onChange={e => setFormData({...formData, oldPassword: e.target.value})} className="bg-white/5 border-white/10 h-14 rounded-2xl" required />
+                    <Input type="password" placeholder="Старый пароль (gaz20092)" value={formData.oldPassword} onChange={e => setFormData({...formData, oldPassword: e.target.value})} className="bg-white/5 border-white/10 h-14 rounded-2xl" required />
                     <Input type="password" placeholder="Новый пароль" value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} className="bg-white/5 border-white/10 h-14 rounded-2xl" required />
                     <Input type="password" placeholder="Повторите пароль" value={formData.confirmPassword} onChange={e => setFormData({...formData, confirmPassword: e.target.value})} className="bg-white/5 border-white/10 h-14 rounded-2xl" required />
                     <Button type="submit" disabled={isLoading} className="w-full h-14 bg-primary rounded-2xl font-black uppercase tracking-widest text-xs">
