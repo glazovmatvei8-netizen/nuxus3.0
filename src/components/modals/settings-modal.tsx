@@ -13,7 +13,7 @@ import { UserAvatar } from '@/components/user-avatar';
 import { 
   LogOut, Palette, Loader2, CreditCard, Copy, Info, Type,
   ShieldCheck, Eye, Users, Crown, Settings2, Check, HardDrive, Archive, Upload,
-  Moon, Sun, Droplets, Monitor, Sparkles
+  Moon, Sun, Droplets, Monitor, Sparkles, Languages, Globe
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { signOut } from 'firebase/auth';
@@ -37,6 +37,16 @@ const PREMIUM_PLANS = [
   { id: '1y', name: '1 Год', price: 1500, unit: 'years', amount: 1 },
 ];
 
+const LANGUAGES = [
+  { id: 'ru', name: 'Русский' },
+  { id: 'en', name: 'English' },
+  { id: 'de', name: 'Deutsch' },
+  { id: 'ua', name: 'Українська' },
+  { id: 'tr', name: 'Türkçe' },
+  { id: 'pl', name: 'Polski' },
+  { id: 'es', name: 'Español' },
+];
+
 const CARD_NUMBER = "2204 1202 0495 4230";
 const ADMIN_PHONE = '+79513332147';
 const ADMIN_UID = 'GCvLucN8CjNcdaxPO2vmpZ84hNl1';
@@ -58,6 +68,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
     avatarUrl: '',
     theme: 'default',
     messageSize: 'medium',
+    language: 'ru',
     phoneVisibility: 'nobody',
     lastSeenVisibility: 'everybody',
     allowGroupsFrom: 'everybody',
@@ -78,6 +89,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         avatarUrl: profile.avatarUrl || '',
         theme: profile.settings?.theme || 'default',
         messageSize: profile.settings?.messageSize || 'medium',
+        language: profile.settings?.language || 'ru',
         phoneVisibility: profile.settings?.privacy?.phoneVisibility || 'nobody',
         lastSeenVisibility: profile.settings?.privacy?.lastSeenVisibility || 'everybody',
         allowGroupsFrom: profile.settings?.privacy?.allowGroupsFrom || 'everybody',
@@ -97,6 +109,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         ...profile?.settings,
         theme: form.theme,
         messageSize: form.messageSize,
+        language: form.language,
         privacy: {
           ...profile?.settings?.privacy,
           phoneVisibility: form.phoneVisibility,
@@ -168,11 +181,12 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
           </DialogTitle>
         </DialogHeader>
         <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className="flex-1 flex flex-col min-h-0">
-          <TabsList className="grid grid-cols-4 bg-muted/50 p-1 mx-6 mt-4 rounded-2xl shrink-0 border border-white/5">
-            <TabsTrigger value="profile" className="text-[9px] uppercase font-black tracking-widest">Профиль</TabsTrigger>
-            <TabsTrigger value="appearance" className="text-[9px] uppercase font-black tracking-widest">Стиль</TabsTrigger>
-            <TabsTrigger value="privacy" className="text-[9px] uppercase font-black tracking-widest">Защита</TabsTrigger>
-            <TabsTrigger value="store" className="text-[9px] uppercase font-black tracking-widest">Prime</TabsTrigger>
+          <TabsList className="grid grid-cols-5 bg-muted/50 p-1 mx-6 mt-4 rounded-2xl shrink-0 border border-white/5">
+            <TabsTrigger value="profile" className="text-[8px] uppercase font-black tracking-widest px-1">Профиль</TabsTrigger>
+            <TabsTrigger value="appearance" className="text-[8px] uppercase font-black tracking-widest px-1">Стиль</TabsTrigger>
+            <TabsTrigger value="privacy" className="text-[8px] uppercase font-black tracking-widest px-1">Защита</TabsTrigger>
+            <TabsTrigger value="language" className="text-[8px] uppercase font-black tracking-widest px-1">Язык</TabsTrigger>
+            <TabsTrigger value="store" className="text-[8px] uppercase font-black tracking-widest px-1">Prime</TabsTrigger>
           </TabsList>
           <ScrollArea className="flex-1 px-6">
             <TabsContent value="profile" className="space-y-6 m-0 py-6">
@@ -218,6 +232,30 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                     <div className="space-y-2"><Label className="text-[9px] uppercase font-bold text-muted-foreground ml-1">Видимость номера</Label><Select value={form.phoneVisibility} onValueChange={(v) => setForm({...form, phoneVisibility: v as any})}><SelectTrigger className="h-11 rounded-xl bg-black/20 border-white/5"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="everybody">Все</SelectItem><SelectItem value="contacts">Контакты</SelectItem><SelectItem value="nobody">Никто</SelectItem></SelectContent></Select></div>
                     <div className="space-y-2"><Label className="text-[9px] uppercase font-bold text-muted-foreground ml-1">Кто может писать мне</Label><Select value={form.whoCanMessageMe} onValueChange={(v) => setForm({...form, whoCanMessageMe: v as any})}><SelectTrigger className="h-11 rounded-xl bg-black/20 border-white/5"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="everybody">Все</SelectItem><SelectItem value="premium">Только Prime</SelectItem></SelectContent></Select></div>
                   </div>
+                </div>
+              </div>
+            </TabsContent>
+            <TabsContent value="language" className="space-y-6 m-0 py-6">
+              <div className="bg-muted/20 p-6 rounded-[2rem] border border-white/5 space-y-4">
+                <Label className="text-[10px] uppercase font-black tracking-[0.2em] text-primary flex items-center gap-2">
+                  <Globe className="w-4 h-4" /> Выбор языка системы
+                </Label>
+                <div className="grid grid-cols-1 gap-2">
+                  {LANGUAGES.map((lang) => (
+                    <button
+                      key={lang.id}
+                      onClick={() => setForm({ ...form, language: lang.id })}
+                      className={cn(
+                        "flex items-center justify-between p-4 rounded-2xl border transition-all",
+                        form.language === lang.id
+                          ? "bg-primary/10 border-primary text-white"
+                          : "bg-black/20 border-white/5 text-muted-foreground hover:bg-black/40"
+                      )}
+                    >
+                      <span className="text-sm font-bold">{lang.name}</span>
+                      {form.language === lang.id && <Check className="w-4 h-4 text-primary" />}
+                    </button>
+                  ))}
                 </div>
               </div>
             </TabsContent>
