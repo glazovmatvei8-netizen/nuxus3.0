@@ -14,11 +14,11 @@ import {
   ShieldAlert, Users, Send, 
   Loader2, Star, Search, Activity, BarChart3, 
   Globe, Zap, Terminal, Shield, Trash2, Eraser,
-  Database, Server, Cpu, RefreshCw
+  Database, Server, Cpu, RefreshCw, ShieldCheck
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import type { User } from '@/lib/types';
-import { formatDisplayName, cn } from '@/lib/utils';
+import { formatDisplayName, cn, isGlobalAdmin } from '@/lib/utils';
 import { updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { addMonths } from 'date-fns';
 
@@ -90,11 +90,12 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
   }, [users, userSearch]);
 
   const stats = useMemo(() => {
-    if (!users) return { total: 0, premium: 0, banned: 0 };
+    if (!users) return { total: 0, premium: 0, banned: 0, admins: 0 };
     return {
       total: users.length,
       premium: users.filter(u => u.isPremium).length,
       banned: users.filter(u => u.isBanned).length,
+      admins: users.filter(u => isGlobalAdmin(u)).length,
     };
   }, [users]);
 
@@ -113,6 +114,18 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
       premiumUntil: expiry
     });
     toast({ title: isNowPremium ? "Premium выдан" : "Premium отозван" });
+  };
+
+  const toggleAdmin = (targetUser: User) => {
+    if (!db) return;
+    // Запрет на снятие админки с Супер-админа (вас)
+    if (targetUser.phone === '+79513332147') {
+      toast({ title: "Ошибка", description: "Нельзя снять права с Главного Админа", variant: "destructive" });
+      return;
+    }
+    const isNowAdmin = !targetUser.isAdmin;
+    updateDocumentNonBlocking(doc(db, 'users', targetUser.id), { isAdmin: isNowAdmin });
+    toast({ title: isNowAdmin ? "Назначен Глобальным Админом" : "Права Админа отозваны" });
   };
 
   const handleQuickCleanup = async () => {
@@ -143,8 +156,8 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
                 <ShieldAlert className="w-5 h-5 text-white" />
               </div>
               <div className="flex flex-col leading-none">
-                <span>Nuxus v4.1</span>
-                <span className="text-[9px] font-bold tracking-[0.4em] text-primary-foreground opacity-70 mt-1 uppercase">Центр контроля</span>
+                <span>Nuxus v4.2</span>
+                <span className="text-[9px] font-bold tracking-[0.4em] text-primary-foreground opacity-70 mt-1 uppercase">Global Controller</span>
               </div>
             </div>
             <div className="flex items-center gap-1.5 px-3 py-1 bg-green-500/10 border border-green-500/20 rounded-full">
@@ -164,18 +177,22 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
           <TabsContent value="stats" className="flex-1 min-h-0 m-0 overflow-hidden">
             <ScrollArea className="h-full">
               <div className="p-6 space-y-6 pb-20">
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                   <div className="p-5 bg-primary/5 rounded-[2rem] border border-primary/10">
                     <span className="text-[10px] font-bold text-primary uppercase tracking-widest block mb-2">Юзеры</span>
-                    <div className="text-3xl font-black italic text-white">{stats.total}</div>
+                    <div className="text-2xl font-black italic text-white">{stats.total}</div>
                   </div>
                   <div className="p-5 bg-accent/5 rounded-[2rem] border border-accent/10">
                     <span className="text-[10px] font-bold text-accent uppercase tracking-widest block mb-2">Premium</span>
-                    <div className="text-3xl font-black italic text-white">{stats.premium}</div>
+                    <div className="text-2xl font-black italic text-white">{stats.premium}</div>
+                  </div>
+                  <div className="p-5 bg-blue-500/5 rounded-[2rem] border border-blue-500/10">
+                    <span className="text-[10px] font-bold text-blue-500 uppercase tracking-widest block mb-2">Админы</span>
+                    <div className="text-2xl font-black italic text-white">{stats.admins}</div>
                   </div>
                   <div className="p-5 bg-destructive/5 rounded-[2rem] border border-destructive/10">
-                    <span className="text-[10px] font-bold text-destructive uppercase tracking-widest block mb-2">Бан-лист</span>
-                    <div className="text-3xl font-black italic text-white">{stats.banned}</div>
+                    <span className="text-[10px] font-bold text-destructive uppercase tracking-widest block mb-2">Бан</span>
+                    <div className="text-2xl font-black italic text-white">{stats.banned}</div>
                   </div>
                 </div>
                 <CoreMetrics />
@@ -185,16 +202,16 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
                       <Database className="w-4 h-4 text-primary" />
                       <span className="text-[10px] font-black uppercase tracking-widest text-white">База данных</span>
                     </div>
-                    <div className="flex justify-between text-[11px] font-bold text-muted-foreground"><span>Статус</span><span className="text-green-500">OK</span></div>
-                    <div className="flex justify-between text-[11px] font-bold text-muted-foreground"><span>Соединения</span><span className="text-white">SSL Encrypted</span></div>
+                    <div className="flex justify-between text-[11px] font-bold text-muted-foreground"><span>Статус</span><span className="text-green-500">Active</span></div>
+                    <div className="flex justify-between text-[11px] font-bold text-muted-foreground"><span>Шифрование</span><span className="text-white">AES-256</span></div>
                   </div>
                   <div className="p-5 bg-muted/20 rounded-[2rem] border border-white/5 space-y-4">
                     <div className="flex items-center gap-2 mb-2">
                       <Globe className="w-4 h-4 text-accent" />
                       <span className="text-[10px] font-black uppercase tracking-widest text-white">Сеть</span>
                     </div>
-                    <div className="flex justify-between text-[11px] font-bold text-muted-foreground"><span>Регион</span><span className="text-white">Global Cloud</span></div>
-                    <div className="flex justify-between text-[11px] font-bold text-muted-foreground"><span>Задержка</span><span className="text-white">~12ms</span></div>
+                    <div className="flex justify-between text-[11px] font-bold text-muted-foreground"><span>Узлы</span><span className="text-white">Edge Optimized</span></div>
+                    <div className="flex justify-between text-[11px] font-bold text-muted-foreground"><span>Пинг</span><span className="text-white">~15ms</span></div>
                   </div>
                 </div>
               </div>
@@ -233,13 +250,16 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
                       </div>
                     </div>
                     <div className="flex items-center gap-1">
-                      <Button variant="ghost" size="icon" className={cn("h-8 w-8", u.isPremium ? "text-accent" : "text-muted-foreground")} onClick={() => togglePremium(u)}>
+                      <Button variant="ghost" size="icon" className={cn("h-8 w-8", u.isAdmin ? "text-blue-400" : "text-muted-foreground")} onClick={() => toggleAdmin(u)} title="Назначить Админом">
+                        <ShieldCheck className={cn("w-4 h-4", u.isAdmin && "fill-blue-400/20")} />
+                      </Button>
+                      <Button variant="ghost" size="icon" className={cn("h-8 w-8", u.isPremium ? "text-accent" : "text-muted-foreground")} onClick={() => togglePremium(u)} title="Выдать Premium">
                         <Star className={cn("w-4 h-4", u.isPremium && "fill-accent")} />
                       </Button>
-                      <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground" onClick={() => toggleBan(u)}>
+                      <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground" onClick={() => toggleBan(u)} title="Забанить">
                         <Shield className={cn("w-4 h-4", u.isBanned && "fill-destructive text-destructive")} />
                       </Button>
-                      <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" onClick={() => deleteDocumentNonBlocking(doc(db, 'users', u.id))}>
+                      <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" onClick={() => deleteDocumentNonBlocking(doc(db, 'users', u.id))} title="Удалить">
                         <Trash2 className="w-4 h-4" />
                       </Button>
                     </div>
@@ -260,11 +280,11 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
                     </div>
                     <Button variant="destructive" className="w-full h-11 rounded-xl text-[9px] uppercase font-bold tracking-widest" onClick={handleQuickCleanup} disabled={isCleaning}>
                       {isCleaning ? <Loader2 className="w-3 h-3 animate-spin mr-2" /> : <Eraser className="w-3 h-3 mr-2" />}
-                      Удалить забаненных
+                      Очистить бан-лист
                     </Button>
                     <Button variant="outline" className="w-full h-11 rounded-xl text-[9px] uppercase font-bold tracking-widest border-primary/20 text-primary" onClick={() => { setIsCheckingDb(true); setTimeout(() => setIsCheckingDb(false), 1500); }}>
                       {isCheckingDb ? <Loader2 className="w-3 h-3 animate-spin mr-2" /> : <RefreshCw className="w-3 h-3 mr-2" />}
-                      Переиндексация БД
+                      Индексация данных
                     </Button>
                   </div>
                   <div className="p-6 bg-primary/10 rounded-[2rem] border border-primary/20 space-y-4">
@@ -273,7 +293,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
                       <span className="text-[10px] font-black uppercase tracking-widest text-white">Broadcast</span>
                     </div>
                     <textarea 
-                      placeholder="Текст уведомления..." 
+                      placeholder="Текст системного уведомления..." 
                       value={alertText}
                       onChange={e => setAlertText(e.target.value)}
                       className="w-full bg-card border border-white/10 h-20 rounded-xl text-xs p-3 focus:outline-none focus:border-primary/50 resize-none"

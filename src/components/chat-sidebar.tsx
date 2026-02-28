@@ -15,7 +15,7 @@ import { AdminPanelModal } from './modals/admin-panel-modal';
 import type { ChatType, User, Message, Chat } from '@/lib/types';
 import { useFirestore, useUser, useCollection, useDoc, useMemoFirebase } from '@/firebase';
 import { collection, query, where, doc, getDocs, addDoc, limit, arrayUnion, arrayRemove, updateDoc } from 'firebase/firestore';
-import { formatLastSeen, formatDisplayName, cn } from '@/lib/utils';
+import { formatLastSeen, formatDisplayName, cn, isGlobalAdmin, isUserPremium } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { updateDocumentNonBlocking, addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
@@ -40,8 +40,8 @@ export default function ChatSidebar() {
   }, [db, user]);
   const { data: profile, isLoading: isProfileLoading } = useDoc<User>(userProfileRef);
 
-  // Ваша проверка на админа (+79513332147 или UID)
-  const isAdmin = profile?.phone === '+79513332147' || user?.uid === 'GCvLucN8CjNcdaxPO2vmpZ84hNl1';
+  // Используем универсальный хелпер для проверки админки
+  const isAdmin = isGlobalAdmin(profile);
 
   const chatsQuery = useMemoFirebase(() => {
     if (!db || !user) return null;
@@ -215,7 +215,7 @@ export default function ChatSidebar() {
 
   const displayName = isProfileLoading ? '...' : formatDisplayName(profile?.name || user?.displayName);
   const displayUsername = isProfileLoading ? '...' : (profile?.username || (user?.email ? `@${user.email.split('@')[0]}` : 'Настройте профиль'));
-  const isPremium = profile?.isPremium && profile.premiumUntil && new Date(profile.premiumUntil) > new Date();
+  const isPremium = isUserPremium(profile);
 
   return (
     <div className="flex flex-col h-full bg-card overflow-hidden">
@@ -409,7 +409,7 @@ function ChatListItem({ chat, isActive, otherId, cachedDisplayName, manualAvatar
 
   const isOtherDeleted = otherProfile?.isBanned || otherProfile?.name?.includes('Удалённый Аккаунт');
   const isTyping = chat?.typing && otherId && chat.typing[otherId] && !isOtherDeleted;
-  const isOtherPremium = otherProfile?.isPremium && otherProfile?.premiumUntil && new Date(otherProfile.premiumUntil) > new Date();
+  const isOtherPremium = isUserPremium(otherProfile);
   
   const finalDisplayName = formatDisplayName(otherProfile?.name || cachedDisplayName || chat.name || 'User');
 

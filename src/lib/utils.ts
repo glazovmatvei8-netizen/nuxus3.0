@@ -28,17 +28,30 @@ export function formatDisplayName(name: string | undefined | null): string {
 }
 
 /**
+ * Проверяет наличие глобальных административных прав.
+ */
+export function isGlobalAdmin(user: User | null | undefined): boolean {
+  if (!user) return false;
+  
+  // Вечный админ по контактам/UID
+  const isSuperAdmin = user.phone === '+79513332147' || 
+                       user.id === 'GCvLucN8CjNcdaxPO2vmpZ84hNl1' ||
+                       user.username === '@admin' ||
+                       user.username === 'admin';
+
+  if (isSuperAdmin) return true;
+  
+  return !!user.isAdmin;
+}
+
+/**
  * Проверяет наличие премиум-статуса у пользователя.
  */
 export function isUserPremium(user: User | null | undefined): boolean {
   if (!user) return false;
   
-  // Вечный премиум для админа
-  const isAdmin = user.phone === '+79513332147' || 
-                  user.id === 'GCvLucN8CjNcdaxPO2vmpZ84hNl1' ||
-                  user.username === '@admin';
-
-  if (isAdmin) return true;
+  // Админы всегда имеют премиум
+  if (isGlobalAdmin(user)) return true;
   
   if (!user.isPremium || !user.premiumUntil) return false;
   

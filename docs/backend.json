@@ -16,7 +16,8 @@
         "createdAt": { "type": "string", "format": "date-time" },
         "isPremium": { "type": "boolean" },
         "premiumUntil": { "type": "string", "format": "date-time" },
-        "isBanned": { "type": "boolean" }
+        "isBanned": { "type": "boolean" },
+        "isAdmin": { "type": "boolean", "description": "Whether the user has global administrative privileges." }
       },
       "required": ["id", "name", "username", "phone", "createdAt"]
     },
