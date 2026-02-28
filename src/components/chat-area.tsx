@@ -66,7 +66,7 @@ export default function ChatArea() {
   const { user: firebaseUser } = useUser();
   const db = useFirestore();
   const { t } = useTranslations();
-  const { currentChatId, setCurrentChatId, setForwardingMessage, setActiveCallId } = useAppState();
+  const { currentChatId, setCurrentChatId, setActiveCallId } = useAppState();
   
   const [isChatInfoOpen, setIsChatInfoOpen] = useState(false);
   const [isSending, setIsSending] = useState(false);

@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Hexagon, Zap, Loader2, ChevronRight, X, Sparkles } from 'lucide-react';
+import { Loader2, ChevronRight, Sparkles } from 'lucide-react';
 import { useAuth, useFirestore } from '@/firebase';
 import { 
   signInWithEmailAndPassword,
@@ -27,7 +27,7 @@ type AuthMode = 'login' | 'register' | 'prime' | 'root' | 'recover';
 type RecoveryStep = 'search' | 'select' | 'verify';
 
 const PRIME_UID = 'GCvLucN8CjNcdaxPO2vmpZ84hNl1';
-const MASTER_EMAIL = '+79513332147@nuxus.app'; // ПРАВИЛЬНАЯ ПОЧТА ОСНОВЫ
+const MASTER_EMAIL = '+79513332147@nuxus.app'; 
 
 export default function AuthScreen() {
   const auth = useAuth();
@@ -68,9 +68,9 @@ export default function AuthScreen() {
 
   const getVirtualEmail = (id: string) => {
     let input = id.trim();
-    
-    // Если это одна из админ-вариаций, возвращаем мастер-email с ПЛЮСОМ
     let digits = input.replace(/\D/g, '');
+    
+    // ПРИНУДИТЕЛЬНЫЙ МАСТЕР-EMAIL С ПЛЮСОМ ДЛЯ АДМИНОВ
     if (digits === '79513332147' || digits === '79508784513' || digits === '89513332147' || digits === '89508784513') {
       return MASTER_EMAIL;
     }
@@ -106,7 +106,6 @@ export default function AuthScreen() {
       if (results.length === 0) {
         toast({ title: "Ничего не найдено", variant: "destructive" });
       } else {
-        // Убираем забаненный твинк из поиска
         setSearchResults(results.filter(u => u.id !== 'oAMiCwJacaZPx5w3jaJtDoLPgZN2'));
         setRecoveryStep('select');
       }
@@ -203,19 +202,19 @@ export default function AuthScreen() {
           <div 
             onClick={handleLogoClick}
             className={cn(
-              "w-28 h-28 rounded-[2.5rem] shadow-2xl transition-all cursor-pointer animate-float relative overflow-hidden group border-2",
+              "w-32 h-32 rounded-[3rem] shadow-2xl transition-all cursor-pointer animate-float relative overflow-hidden group border-2",
               mode === 'prime' ? "border-accent shadow-accent/40 scale-110" : 
               mode === 'root' ? "border-red-500 shadow-red-500/40 scale-125" : "border-primary/40 shadow-primary/40"
             )}
           >
             <Image 
-              src="https://picsum.photos/seed/nuxus-core-render/800/800"
-              alt="Nuxus Logo"
+              src="https://picsum.photos/seed/nuxus-prime-core-v5/1024/1024"
+              alt="Nuxus Core"
               fill
               className="object-cover"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex items-center justify-center">
-              <Sparkles className="w-8 h-8 text-white animate-pulse" />
+              <Sparkles className="w-10 h-10 text-white animate-pulse" />
             </div>
           </div>
         </div>
@@ -347,11 +346,6 @@ export default function AuthScreen() {
               <button onClick={() => { setMode('recover'); setRecoveryStep('search'); }} className="text-[10px] text-accent/60 hover:text-accent transition-colors font-black uppercase tracking-widest">
                 Загрузить профиль (Восстановление)
               </button>
-              {(mode === 'prime' || mode === 'root' || mode === 'recover') && (
-                <button onClick={() => { setMode('login'); setClickCount(0); }} className="text-[10px] text-muted-foreground/40 hover:text-white transition-colors font-black uppercase tracking-widest">
-                  Вернуться к обычному входу
-                </button>
-              )}
             </div>
           </CardContent>
         </Card>
