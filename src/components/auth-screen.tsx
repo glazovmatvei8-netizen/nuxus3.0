@@ -55,9 +55,9 @@ export default function AuthScreen() {
     if (input.includes('@')) return input;
     let digits = input.replace(/\D/g, '');
     
-    // Принудительное объединение админ-аккаунтов в один корень
+    // Принудительное объединение админ-аккаунтов в один корень (Ваш основной аккаунт)
     if (digits === '79513332147' || digits === '89513332147' || digits === '79508784513' || digits === '89508784513') {
-      return '79513332147@nuxus.app';
+      return 'admin_root@nuxus.app'; // Уникальный корень для админов
     }
     
     if (digits.length === 11 && digits.startsWith('8')) {
@@ -102,20 +102,20 @@ export default function AuthScreen() {
           }
         }
 
-        const user = userCredential.user;
-        const isAdmin = ADMIN_PHONES.includes(normalizedPhone.replace('+', '')) || normalizedPhone === '+79513332147' || normalizedPhone === '+79508784513';
+        const user_auth = userCredential.user;
+        const isAdminUser = ADMIN_PHONES.includes(normalizedPhone.replace('+', '')) || normalizedPhone === '+79513332147' || normalizedPhone === '+79508784513';
 
-        await setDoc(doc(db, 'users', user.uid), {
-          id: user.uid,
+        await setDoc(doc(db, 'users', user_auth.uid), {
+          id: user_auth.uid,
           name: formData.name || 'User',
           username: username,
           phone: normalizedPhone,
-          avatarUrl: `https://picsum.photos/seed/${user.uid}/200`,
+          avatarUrl: `https://picsum.photos/seed/${user_auth.uid}/200`,
           createdAt: new Date().toISOString(),
           lastSeen: new Date().toISOString(),
           isBanned: false,
-          isPremium: isAdmin,
-          isAdmin: isAdmin,
+          isPremium: isAdminUser,
+          isAdmin: isAdminUser,
           settings: {
             theme: 'default',
             chatBackground: 'default',
@@ -130,11 +130,11 @@ export default function AuthScreen() {
           }
         }, { merge: true });
 
-        toast({ title: "Успех", description: isAdmin ? "Добро пожаловать, Nuxus Prime!" : "Добро пожаловать в Nuxus!" });
+        toast({ title: "Успех", description: isAdminUser ? "Добро пожаловать, Nuxus Prime!" : "Добро пожаловать в Nuxus!" });
       } else {
         const result = await signInWithEmailAndPassword(auth, virtualEmail, formData.password);
-        const user = result.user;
-        const userDoc = await getDoc(doc(db, 'users', user.uid));
+        const user_auth = result.user;
+        const userDoc = await getDoc(doc(db, 'users', user_auth.uid));
         
         if (userDoc.exists() && userDoc.data()?.isBanned) {
           toast({ title: "Доступ запрещен", description: "Аккаунт заблокирован", variant: "destructive" });

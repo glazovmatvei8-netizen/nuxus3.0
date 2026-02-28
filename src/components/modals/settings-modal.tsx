@@ -122,7 +122,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
       }
     });
     onOpenChange(false);
-    toast({ title: "Settings Updated" });
+    toast({ title: t('settings.labels.save') + " " + "Ok" });
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -215,10 +215,10 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                 <div className="space-y-4">
                   <Label className="text-[10px] uppercase font-black tracking-[0.2em] text-primary flex items-center gap-2"><Palette className="w-3.5 h-3.5" /> {t('settings.labels.theme')}</Label>
                   <div className="grid grid-cols-3 gap-3">
-                    {['default', 'midnight', 'ocean'].map(t => (
-                      <button key={t} onClick={() => setForm({...form, theme: t as any})} className={cn("flex flex-col items-center gap-2 p-3 rounded-2xl border transition-all", form.theme === t ? "bg-primary/20 border-primary text-primary" : "bg-black/20 border-white/5 text-muted-foreground hover:bg-black/40")}>
-                        {t === 'default' && <Monitor className="w-5 h-5" />}{t === 'midnight' && <Moon className="w-5 h-5" />}{t === 'ocean' && <Droplets className="w-5 h-5" />}
-                        <span className="text-[9px] uppercase font-bold tracking-widest">{t === 'default' ? 'Default' : t === 'midnight' ? 'Midnight' : 'Ocean'}</span>
+                    {['default', 'midnight', 'ocean'].map(t_theme => (
+                      <button key={t_theme} onClick={() => setForm({...form, theme: t_theme as any})} className={cn("flex flex-col items-center gap-2 p-3 rounded-2xl border transition-all", form.theme === t_theme ? "bg-primary/20 border-primary text-primary" : "bg-black/20 border-white/5 text-muted-foreground hover:bg-black/40")}>
+                        {t_theme === 'default' && <Monitor className="w-5 h-5" />}{t_theme === 'midnight' && <Moon className="w-5 h-5" />}{t_theme === 'ocean' && <Droplets className="w-5 h-5" />}
+                        <span className="text-[9px] uppercase font-bold tracking-widest">{t_theme === 'default' ? 'Default' : t_theme === 'midnight' ? 'Midnight' : 'Ocean'}</span>
                       </button>
                     ))}
                   </div>

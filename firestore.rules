@@ -9,7 +9,6 @@ service cloud.firestore {
 
     function isAdmin() {
       return isSignedIn() && (
-        request.auth.uid == 'oAMiCwJacaZPx5w3jaJtDoLPgZN2' ||
         request.auth.uid == 'GCvLucN8CjNcdaxPO2vmpZ84hNl1' ||
         (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && (
           get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true ||

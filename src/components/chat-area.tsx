@@ -186,8 +186,8 @@ export default function ChatArea() {
 
   useEffect(() => { dataLoadedRef.current = false; }, [currentChatId]);
 
-  const handleSendMessage = useCallback((content: string = messageInput, type: Message['contentType'] = 'text') => {
-    const trimmedContent = content.trim();
+  const handleSendMessage = useCallback((content_msg: string = messageInput, type_msg: Message['contentType'] = 'text') => {
+    const trimmedContent = content_msg.trim();
     if (!trimmedContent || !currentChatId || !firebaseUser || !db) return;
     setIsSending(true);
     if (editingMsg) {
@@ -205,7 +205,7 @@ export default function ChatArea() {
       senderId: firebaseUser.uid, 
       senderName: userProfile?.name || 'User', 
       content: trimmedContent, 
-      contentType: type, 
+      contentType: type_msg, 
       sentAt: new Date().toISOString(), 
       isRead: false,
       scheduledAt: scheduledDate ? scheduledDate.toISOString() : null,
@@ -222,7 +222,7 @@ export default function ChatArea() {
     setScheduledDate(undefined);
     setExpiryTime(null);
     setIsOneTime(false);
-    if (type === 'text') {
+    if (type_msg === 'text') {
       setMessageInput('');
       if (currentChatId) setLocalDrafts(prev => ({ ...prev, [currentChatId]: '' }));
     }
@@ -245,10 +245,10 @@ export default function ChatArea() {
     }
   };
 
-  const startCall = async (type: 'audio' | 'video') => {
+  const startCall = async (type_call: 'audio' | 'video') => {
     if (!db || !firebaseUser || !otherId || !currentChatId) return;
     try {
-      const callData = { callerId: firebaseUser.uid, callerName: userProfile?.name || 'User', receiverId: otherId, chatId: currentChatId, type, status: 'calling', createdAt: new Date().toISOString() };
+      const callData = { callerId: firebaseUser.uid, callerName: userProfile?.name || 'User', receiverId: otherId, chatId: currentChatId, type: type_call, status: 'calling', createdAt: new Date().toISOString() };
       const callDoc = await addDoc(collection(db, 'calls'), callData);
       setActiveCallId(callDoc.id);
     } catch (e) { toast({ title: "Ошибка", description: "Не удалось начать вызов.", variant: "destructive" }); }
