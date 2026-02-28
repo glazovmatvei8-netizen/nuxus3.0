@@ -12,20 +12,18 @@ import { useAuth, useUser, useFirestore, useDoc, useMemoFirebase } from '@/fireb
 import { UserAvatar } from '@/components/user-avatar';
 import { 
   LogOut, Palette, Loader2, CreditCard, Copy, Info, Type,
-  ShieldCheck, Eye, Users, Crown, Settings2, Check, HardDrive, Archive, Smile, Image as ImageIcon, Upload
+  ShieldCheck, Eye, Users, Crown, Settings2, Check, HardDrive, Archive, Upload
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { signOut } from 'firebase/auth';
 import { doc, collection, query, where, limit, getDocs, addDoc } from 'firebase/firestore';
 import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { isUserPremium } from '@/lib/utils';
 import type { User } from '@/lib/types';
 
 const PREMIUM_PLANS = [
   { id: '1m', name: '1 Месяц', price: 200, unit: 'months', amount: 1 },
   { id: '3m', name: '3 Месяца', price: 500, unit: 'months', amount: 3 },
-  { id: '6m', name: '6 Месяцев', price: 900, unit: 'months', amount: 6 },
   { id: '1y', name: '1 Год', price: 1500, unit: 'years', amount: 1 },
 ];
 
@@ -48,38 +46,29 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
     username: '',
     bio: '',
     avatarUrl: '',
-    chatBackground: 'default',
-    messageSize: 'medium',
     phoneVisibility: 'nobody',
     lastSeenVisibility: 'everybody',
     allowGroupsFrom: 'everybody',
     whoCanMessageMe: 'everybody',
-    statusEmoji: '',
-    statusText: '',
   });
 
   const [activeTab, setActiveTab] = useState('profile');
   const [isSubmittingPayment, setIsSubmittingPayment] = useState(false);
   const [pendingPayment, setPendingPayment] = useState<any>(null);
 
-  // Стабильное обновление формы при получении профиля
+  // Синхронизация данных при открытии и получении профиля
   useEffect(() => {
     if (profile && open) {
-      setForm(prev => ({
-        ...prev,
-        name: profile.name || prev.name,
-        username: profile.username || prev.username,
-        bio: profile.bio || prev.bio,
-        avatarUrl: profile.avatarUrl || prev.avatarUrl,
-        chatBackground: profile.settings?.chatBackground || prev.chatBackground,
-        messageSize: profile.settings?.messageSize || prev.messageSize,
-        phoneVisibility: profile.settings?.privacy?.phoneVisibility || prev.phoneVisibility,
-        lastSeenVisibility: profile.settings?.privacy?.lastSeenVisibility || prev.lastSeenVisibility,
-        allowGroupsFrom: profile.settings?.privacy?.allowGroupsFrom || prev.allowGroupsFrom,
-        whoCanMessageMe: profile.settings?.privacy?.whoCanMessageMe || prev.whoCanMessageMe,
-        statusEmoji: profile.settings?.statusEmoji || prev.statusEmoji,
-        statusText: profile.settings?.statusText || prev.statusText,
-      }));
+      setForm({
+        name: profile.name || '',
+        username: profile.username || '',
+        bio: profile.bio || '',
+        avatarUrl: profile.avatarUrl || '',
+        phoneVisibility: profile.settings?.privacy?.phoneVisibility || 'nobody',
+        lastSeenVisibility: profile.settings?.privacy?.lastSeenVisibility || 'everybody',
+        allowGroupsFrom: profile.settings?.privacy?.allowGroupsFrom || 'everybody',
+        whoCanMessageMe: profile.settings?.privacy?.whoCanMessageMe || 'everybody',
+      });
     }
   }, [profile, open]);
 
@@ -92,10 +81,6 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
       avatarUrl: form.avatarUrl,
       settings: {
         ...profile?.settings,
-        chatBackground: form.chatBackground,
-        messageSize: form.messageSize,
-        statusEmoji: form.statusEmoji,
-        statusText: form.statusText,
         privacy: {
           ...profile?.settings?.privacy,
           phoneVisibility: form.phoneVisibility,
@@ -106,24 +91,14 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
       }
     });
     onOpenChange(false);
-    toast({ title: "Настройки сохранены" });
+    toast({ title: "Сохранено" });
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
-    if (file.size > 2 * 1024 * 1024) {
-      toast({ title: "Файл слишком большой", description: "Максимальный размер 2МБ", variant: "destructive" });
-      return;
-    }
-
     const reader = new FileReader();
-    reader.onloadend = () => {
-      const base64String = reader.result as string;
-      setForm(prev => ({ ...prev, avatarUrl: base64String }));
-      toast({ title: "Фото загружено" });
-    };
+    reader.onloadend = () => setForm(prev => ({ ...prev, avatarUrl: reader.result as string }));
     reader.readAsDataURL(file);
   };
 
@@ -142,21 +117,14 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
       await addDoc(collection(db, 'chats', chatId, 'messages'), {
         chatId, senderId: 'nuxus_bot', senderName: 'Nuxus', contentType: 'payment_request', sentAt: new Date().toISOString(),
         paymentData: { 
-          type: 'premium', 
-          itemName: `Premium: ${pendingPayment.name}`, 
-          targetUserId: user.uid, 
-          targetUserName: profile?.name || 'User',
+          type: 'premium', itemName: `Premium: ${pendingPayment.name}`, 
+          targetUserId: user.uid, targetUserName: profile?.name || 'User',
           targetUserUsername: profile?.username || '@user',
-          amount: pendingPayment.amount, 
-          unit: pendingPayment.unit, 
-          price: pendingPayment.price, 
-          status: 'pending' 
+          amount: pendingPayment.amount, unit: pendingPayment.unit, price: pendingPayment.price, status: 'pending' 
         }
       });
       toast({ title: "Заявка отправлена" });
       setPendingPayment(null);
-    } catch (e) {
-      toast({ title: "Ошибка", variant: "destructive" });
     } finally {
       setIsSubmittingPayment(false);
     }
@@ -167,9 +135,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md bg-card border-border p-0 overflow-hidden h-[90vh] flex flex-col rounded-3xl">
         <DialogHeader className="p-4 border-b border-border bg-muted/30 shrink-0">
-          <DialogTitle className="flex items-center gap-2 text-lg font-bold">
-            <Settings2 className="w-5 h-5 text-primary" /> Настройки Nuxus
-          </DialogTitle>
+          <DialogTitle className="flex items-center gap-2 text-lg font-bold"><Settings2 className="w-5 h-5 text-primary" /> Настройки</DialogTitle>
         </DialogHeader>
 
         <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className="flex-1 flex flex-col min-h-0">
@@ -190,51 +156,26 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                   </div>
                   <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleFileChange} />
                 </div>
-                <Button variant="outline" size="sm" className="rounded-xl h-8 text-[10px] uppercase font-bold tracking-widest" onClick={() => fileInputRef.current?.click()}>
-                  Сменить фото
-                </Button>
-                <div className="flex gap-2 w-full">
-                  <Input placeholder="🚀" value={form.statusEmoji} onChange={e => setForm({...form, statusEmoji: e.target.value})} className="w-12 text-center bg-muted/30 border-none h-11 rounded-xl" />
-                  <Input placeholder="Ваш статус..." value={form.statusText} onChange={e => setForm({...form, statusText: e.target.value})} className="flex-1 bg-muted/30 border-none h-11 rounded-xl" />
+                <div className="space-y-4 w-full">
+                  <div className="space-y-1.5"><Label className="text-xs uppercase font-bold">Имя</Label><Input value={form.name} onChange={e => setForm({...form, name: e.target.value})} className="bg-muted/30 border-none h-11 rounded-xl" /></div>
+                  <div className="space-y-1.5"><Label className="text-xs uppercase font-bold">Никнейм</Label><Input value={form.username} onChange={e => setForm({...form, username: e.target.value})} className="bg-muted/30 border-none h-11 rounded-xl" /></div>
+                  <div className="space-y-1.5"><Label className="text-xs uppercase font-bold">О себе</Label><Textarea value={form.bio} onChange={e => setForm({...form, bio: e.target.value})} className="bg-muted/30 border-none rounded-xl" /></div>
                 </div>
-              </div>
-              <div className="space-y-4">
-                <div className="space-y-1.5"><Label className="text-xs uppercase font-bold">Имя</Label><Input value={form.name} onChange={e => setForm({...form, name: e.target.value})} className="bg-muted/30 border-none h-11 rounded-xl" /></div>
-                <div className="space-y-1.5"><Label className="text-xs uppercase font-bold">Никнейм</Label><Input value={form.username} onChange={e => setForm({...form, username: e.target.value})} className="bg-muted/30 border-none h-11 rounded-xl" /></div>
-                <div className="space-y-1.5"><Label className="text-xs uppercase font-bold">О себе</Label><Textarea value={form.bio} onChange={e => setForm({...form, bio: e.target.value})} className="bg-muted/30 border-none rounded-xl" /></div>
               </div>
             </TabsContent>
 
             <TabsContent value="privacy" className="p-6 space-y-4 m-0">
-              <div className="bg-muted/20 p-5 rounded-2xl border border-border/20 space-y-4">
+              <div className="bg-muted/20 p-5 rounded-2xl space-y-4">
                 <div className="space-y-1.5">
-                  <Label className="text-[10px] flex items-center gap-2 uppercase font-bold"><Eye className="w-3 h-3" /> Номер телефона</Label>
-                  <select value={form.phoneVisibility} onChange={e => setForm({...form, phoneVisibility: e.target.value as any})} className="w-full h-11 bg-muted/30 rounded-xl px-3 border-none outline-none text-sm">
-                    <option value="everybody">Все</option>
-                    <option value="contacts">Контакты</option>
-                    <option value="nobody">Никто</option>
+                  <Label className="text-[10px] uppercase font-bold">Номер телефона</Label>
+                  <select value={form.phoneVisibility} onChange={e => setForm({...form, phoneVisibility: e.target.value as any})} className="w-full h-11 bg-muted/30 rounded-xl px-3 outline-none text-sm">
+                    <option value="everybody">Все</option><option value="nobody">Никто</option>
                   </select>
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-[10px] flex items-center gap-2 uppercase font-bold"><ShieldCheck className="w-3 h-3" /> Статус сети</Label>
-                   <select value={form.lastSeenVisibility} onChange={e => setForm({...form, lastSeenVisibility: e.target.value as any})} className="w-full h-11 bg-muted/30 rounded-xl px-3 border-none outline-none text-sm">
-                    <option value="everybody">Все</option>
-                    <option value="nobody">Никто</option>
-                  </select>
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="text-[10px] flex items-center gap-2 uppercase font-bold"><Users className="w-3 h-3" /> Кто может приглашать в группы</Label>
-                   <select value={form.allowGroupsFrom} onChange={e => setForm({...form, allowGroupsFrom: e.target.value as any})} className="w-full h-11 bg-muted/30 rounded-xl px-3 border-none outline-none text-sm">
-                    <option value="everybody">Все</option>
-                    <option value="contacts">Контакты</option>
-                    <option value="nobody">Никто</option>
-                  </select>
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="text-[10px] flex items-center gap-2 uppercase font-bold"><Crown className="w-3 h-3" /> Кто может писать первым</Label>
-                   <select value={form.whoCanMessageMe} onChange={e => setForm({...form, whoCanMessageMe: e.target.value as any})} className="w-full h-11 bg-muted/30 rounded-xl px-3 border-none outline-none text-sm">
-                    <option value="everybody">Все</option>
-                    <option value="premium">Только Premium</option>
+                  <Label className="text-[10px] uppercase font-bold">Кто может писать первым</Label>
+                   <select value={form.whoCanMessageMe} onChange={e => setForm({...form, whoCanMessageMe: e.target.value as any})} className="w-full h-11 bg-muted/30 rounded-xl px-3 outline-none text-sm">
+                    <option value="everybody">Все</option><option value="premium">Только Premium</option>
                   </select>
                 </div>
               </div>
@@ -242,23 +183,16 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
 
             <TabsContent value="store" className="p-6 space-y-4 m-0">
               {PREMIUM_PLANS.map(plan => (
-                <Button key={plan.id} variant="outline" className="w-full h-14 rounded-2xl flex justify-between px-6 border-primary/20" onClick={() => setPendingPayment(plan)}>
-                  <span className="font-bold">{plan.name}</span>
-                  <span className="font-black text-primary">{plan.price} ₽</span>
+                <Button key={plan.id} variant="outline" className="w-full h-14 rounded-2xl flex justify-between px-6" onClick={() => setPendingPayment(plan)}>
+                  <span className="font-bold">{plan.name}</span><span className="font-black text-primary">{plan.price} ₽</span>
                 </Button>
               ))}
             </TabsContent>
 
             <TabsContent value="storage" className="p-6 space-y-4 m-0">
-              <div className="bg-muted/20 p-5 rounded-2xl space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3"><HardDrive className="w-5 h-5 text-primary" /><span className="text-sm font-bold">Кэш медиа</span></div>
-                  <Button variant="ghost" size="sm">Очистить</Button>
-                </div>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3"><Archive className="w-5 h-5 text-primary" /><span className="text-sm font-bold">Архивные чаты</span></div>
-                  <Button variant="ghost" size="sm">Управлять</Button>
-                </div>
+              <div className="bg-muted/20 p-5 rounded-2xl space-y-4 text-center">
+                <Archive className="w-10 h-10 mx-auto text-primary opacity-50" />
+                <p className="text-xs text-muted-foreground uppercase font-bold">Управление данными скоро будет доступно</p>
               </div>
             </TabsContent>
           </ScrollArea>
@@ -273,13 +207,8 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
 
     <Dialog open={!!pendingPayment} onOpenChange={v => !v && setPendingPayment(null)}>
       <DialogContent className="max-w-sm bg-card border-primary/20 p-8 rounded-[2.5rem] text-center">
-        <h2 className="text-xl font-bold flex items-center gap-2 justify-center mb-6"><CreditCard className="w-6 h-6 text-primary" /> Оплата</h2>
-        <div className="bg-background/50 p-5 rounded-3xl border mb-6">
-          <p className="text-[10px] uppercase font-bold opacity-60">Карта для перевода</p>
-          <div className="text-lg font-mono font-bold mt-2 flex items-center justify-center gap-2">
-            {CARD_NUMBER} <Copy className="w-4 h-4 cursor-pointer" onClick={() => { navigator.clipboard.writeText(CARD_NUMBER.replace(/\s/g, '')); toast({ title: "Скопировано" }); }} />
-          </div>
-        </div>
+        <h2 className="text-xl font-bold mb-6">Оплата Premium</h2>
+        <div className="bg-background/50 p-5 rounded-3xl border mb-6 text-sm font-mono">{CARD_NUMBER}</div>
         <Button className="w-full h-14 rounded-2xl font-black uppercase" onClick={handleConfirmPayment} disabled={isSubmittingPayment}>
           {isSubmittingPayment ? <Loader2 className="animate-spin" /> : "Я оплатил(а)"}
         </Button>

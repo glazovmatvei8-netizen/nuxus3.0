@@ -9,7 +9,7 @@ import { UserAvatar } from '@/components/user-avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { 
-  Sparkles, Loader2, Trash2, Gift, XCircle, Crown, Star, Info, MessageSquare, ShieldAlert, LogOut, UserPlus, Shield, ShieldCheck, UserMinus, UserCheck
+  Sparkles, Loader2, Gift, Crown, Star, Info, LogOut, UserPlus, Shield, UserMinus, UserCheck
 } from 'lucide-react';
 import { 
   Star as StarIcon, Heart, Zap, Flame, Trophy, Rocket, Diamond, 
@@ -24,11 +24,10 @@ import { useFirestore, useCollection, useMemoFirebase, useUser, useDoc } from '@
 import { collection, query, where, orderBy, limit, getDocs, doc, updateDoc, arrayRemove, arrayUnion } from 'firebase/firestore';
 import { chatConversationSummary } from '@/ai/flows/chat-conversation-summary-flow';
 import { useToast } from '@/hooks/use-toast';
-import { deleteDocumentNonBlocking, updateDocumentNonBlocking, addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { deleteDocumentNonBlocking, addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { useAppState } from '@/lib/store';
 import { cn, formatDisplayName, isUserPremium } from '@/lib/utils';
-import type { Message, User, ReceivedGift } from '@/lib/types';
-import { addMonths, addYears } from 'date-fns';
+import type { User, ReceivedGift } from '@/lib/types';
 import { AddMemberModal } from './add-member-modal';
 
 export const AVAILABLE_GIFTS = [
@@ -40,9 +39,6 @@ export const AVAILABLE_GIFTS = [
   { id: 'gift_rocket', name: 'Ракета', icon: Rocket, color: 'text-orange-500', value: 1500, isNFT: true },
   { id: 'gift_diamond', name: 'Алмаз', icon: Diamond, color: 'text-blue-400', value: 5000, isNFT: true },
   { id: 'gift_crown', name: 'Корона', icon: Crown, color: 'text-purple-400', value: 10000, isNFT: true },
-  { id: 'gift_cake', name: 'Торт', icon: Cookie, color: 'text-pink-400', value: 200 },
-  { id: 'gift_popper', name: 'Хлопушка', icon: PartyPopper, color: 'text-green-400', value: 120 },
-  { id: 'gift_ghost', name: 'Привидение', icon: Ghost, color: 'text-gray-400', value: 400 },
   { id: 'gift_gem', name: 'Изумруд', icon: Gem, color: 'text-emerald-400', value: 2500, isNFT: true },
 ];
 
@@ -77,8 +73,6 @@ export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onO
   const handleSendGift = async (gift: typeof AVAILABLE_GIFTS[0]) => {
     if (!isGlobalAdmin || !db || !chat.id || !otherId) return;
     
-    const serialNumber = gift.isNFT ? Math.floor(Math.random() * 500) + 1 : undefined;
-
     const messageData: any = {
       chatId: chat.id,
       senderId: user?.uid || 'admin',
@@ -92,7 +86,6 @@ export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onO
     };
 
     if (giftMessage.trim()) messageData.giftMessage = giftMessage.trim();
-    if (serialNumber) messageData.serialNumber = serialNumber;
 
     const giftDocData: any = {
       giftType: gift.id,
@@ -105,7 +98,6 @@ export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onO
     };
 
     if (giftMessage.trim()) giftDocData.message = giftMessage.trim();
-    if (serialNumber) giftDocData.serialNumber = serialNumber;
 
     addDocumentNonBlocking(collection(db, 'chats', chat.id, 'messages'), messageData);
     addDocumentNonBlocking(collection(db, 'users', otherId, 'receivedGifts'), giftDocData);
@@ -157,7 +149,7 @@ export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onO
       await updateDoc(chatRef, {
         adminIds: isAdmin ? arrayUnion(targetUserId) : arrayRemove(targetUserId)
       });
-      toast({ title: isAdmin ? "Участник назначен админом" : "Права админа отозваны" });
+      toast({ title: isAdmin ? "Назначен админом" : "Снят с админки" });
     } catch (e) {
       toast({ title: "Ошибка", variant: "destructive" });
     }
@@ -190,7 +182,7 @@ export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onO
                 {isPrivate && otherId && (
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
-                      <h3 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-2"><Gift className="w-3 h-3" /> Подарки и NFT</h3>
+                      <h3 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-2"><Gift className="w-3 h-3" /> Подарки</h3>
                       {isGlobalAdmin && <Button variant="ghost" size="sm" className="h-7 text-xs text-primary font-bold" onClick={() => setShowGiftSelection(!showGiftSelection)}>Подарить</Button>}
                     </div>
                     
@@ -199,7 +191,7 @@ export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onO
                         <Input placeholder="Сообщение..." value={giftMessage} onChange={e => setGiftMessage(e.target.value)} className="h-9 text-xs" />
                         <div className="grid grid-cols-4 gap-2 max-h-60 overflow-y-auto pr-1">
                           {AVAILABLE_GIFTS.map(g => (
-                            <button key={g.id} onClick={() => handleSendGift(g)} className="flex flex-col items-center gap-1 p-2 rounded-xl hover:bg-muted transition-colors group relative">
+                            <button key={g.id} onClick={() => handleSendGift(g)} className="flex flex-col items-center gap-1 p-2 rounded-xl hover:bg-muted transition-colors group">
                               <g.icon className={cn("w-6 h-6", g.color)} />
                               <span className="text-[8px] font-bold uppercase truncate w-full text-center">{g.name}</span>
                             </button>
@@ -213,7 +205,7 @@ export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onO
                         const giftInfo = AVAILABLE_GIFTS.find(ag => ag.id === g.giftType);
                         const Icon = giftInfo?.icon || Gift;
                         return (
-                          <div key={g.id} className="relative group p-2 rounded-xl bg-muted/30 border border-white/5 flex flex-col items-center gap-1">
+                          <div key={g.id} className="relative p-2 rounded-xl bg-muted/30 border border-white/5 flex flex-col items-center gap-1">
                             <Icon className={cn("w-6 h-6", giftInfo?.color)} />
                             <span className="text-[7px] font-bold text-center truncate w-full">{giftInfo?.name}</span>
                           </div>
@@ -224,9 +216,9 @@ export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onO
                 )}
 
                 <div className="space-y-2">
-                  <h3 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-2"><Sparkles className="w-3 h-3" /> AI Суммаризация</h3>
+                  <h3 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-2"><Sparkles className="w-3 h-3" /> AI Summary</h3>
                   <div className="bg-muted/30 p-4 rounded-xl border border-border">
-                    {summary ? <p className="text-sm italic">{summary}</p> : <Button variant="ghost" size="sm" className="w-full text-xs" onClick={handleSummarize} disabled={isSummarizing}>Суммаризировать последние сообщения</Button>}
+                    {summary ? <p className="text-sm italic">{summary}</p> : <Button variant="ghost" size="sm" className="w-full text-xs" onClick={handleSummarize} disabled={isSummarizing}>Краткий обзор чата</Button>}
                   </div>
                 </div>
 
@@ -237,7 +229,7 @@ export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onO
                     </Button>
                   )}
                   <Button variant="ghost" className="w-full text-destructive hover:bg-destructive/10" onClick={() => {
-                    if (confirm('Вы уверены, что хотите удалить этот чат навсегда?')) {
+                    if (confirm('Удалить чат?')) {
                       deleteDocumentNonBlocking(doc(db, 'chats', chat.id));
                       setCurrentChatId(null);
                       onOpenChange(false);
@@ -311,7 +303,7 @@ function MemberRow({ userId, ownerId, adminIds, isOwner, onToggleAdmin }: {
             {isUserPremium(m) && <Star className="w-3 h-3 text-accent fill-accent" />}
             {isTargetOwner ? <Crown className="w-3 h-3 text-primary" /> : isTargetAdmin && <Shield className="w-3 h-3 text-primary" />}
           </span>
-          <span className="text-[10px] text-muted-foreground truncate max-w-[150px]">{m.username}</span>
+          <span className="text-[10px] text-muted-foreground">{m.username}</span>
         </div>
       </div>
       
@@ -326,7 +318,6 @@ function MemberRow({ userId, ownerId, adminIds, isOwner, onToggleAdmin }: {
             {isTargetAdmin ? <UserMinus className="w-4 h-4" /> : <UserCheck className="w-4 h-4" />}
           </Button>
         )}
-        {isTargetOwner && <span className="text-[8px] font-black uppercase text-primary border border-primary/20 px-1.5 py-0.5 rounded-lg">Владелец</span>}
       </div>
     </div>
   );
