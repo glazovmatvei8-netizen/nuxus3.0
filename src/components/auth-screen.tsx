@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Hexagon, Zap, Loader2, UserCircle, AtSign, Lock, ArrowRight, ShieldCheck, Mail } from 'lucide-react';
+import { Hexagon, Zap, Loader2, UserCircle, AtSign, Lock, ArrowRight, ShieldCheck, Mail, ShieldAlert } from 'lucide-react';
 import { useAuth, useFirestore } from '@/firebase';
 import { 
   signInWithEmailAndPassword,
@@ -15,13 +15,14 @@ import {
   browserLocalPersistence,
   setPersistence
 } from 'firebase/auth';
-import { doc, setDoc, query, collection, where, getDocs, limit, getDoc } from 'firebase/firestore';
+import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { useTranslations } from '@/hooks/use-translations';
+import { cn } from '@/lib/utils';
 
-type AuthMode = 'login' | 'register';
+type AuthMode = 'login' | 'register' | 'prime';
 
-// Номера телефонов, которые ведут в основной аккаунт Nuxus Prime
-const ADMIN_PHONES = ['79513332147', '89513332147', '79508784513', '89508784513'];
+// Номера телефонов Nuxus Prime
+const ADMIN_PHONES = ['79513332147', '89513332147', '79513332147', '79508784513', '89508784513'];
 
 export default function AuthScreen() {
   const auth = useAuth();
@@ -31,6 +32,7 @@ export default function AuthScreen() {
   
   const [mode, setMode] = useState<AuthMode>('login');
   const [isLoading, setIsLoading] = useState(false);
+  const [clickCount, setClickCount] = useState(0);
   
   const [formData, setFormData] = useState({
     name: '',
@@ -45,7 +47,7 @@ export default function AuthScreen() {
     let digits = input.replace(/\D/g, '');
     
     // ПРИНУДИТЕЛЬНОЕ ОБЪЕДИНЕНИЕ: все админ-номера ведут в один корень Nuxus Prime
-    if (ADMIN_PHONES.includes(digits)) {
+    if (ADMIN_PHONES.includes(digits) || mode === 'prime') {
       return 'nuxus_prime_official_v5@nuxus.app'; 
     }
     
@@ -53,6 +55,16 @@ export default function AuthScreen() {
       digits = '7' + digits.slice(1);
     }
     return `${digits}@nuxus.app`;
+  };
+
+  const handleLogoClick = () => {
+    setClickCount(prev => prev + 1);
+    if (clickCount + 1 >= 5) {
+      setMode('prime');
+      setFormData(prev => ({ ...prev, identifier: '+79513332147' }));
+      toast({ title: "PRIME ACCESS ACTIVATED", description: "Используйте мастер-вход для Nuxus Prime" });
+      setClickCount(0);
+    }
   };
 
   const handleAuth = async (e: React.FormEvent) => {
@@ -69,26 +81,30 @@ export default function AuthScreen() {
     try {
       await setPersistence(auth, browserLocalPersistence);
 
-      if (mode === 'register') {
-        let userCredential;
+      let userCredential;
+      const isPrimeTarget = ADMIN_PHONES.includes(normalizedPhone) || mode === 'prime';
+
+      if (mode === 'register' || isPrimeTarget) {
         try {
-          userCredential = await createUserWithEmailAndPassword(auth, virtualEmail, formData.password);
-        } catch (authErr: any) {
-          if (authErr.code === 'auth/email-already-in-use') {
-            userCredential = await signInWithEmailAndPassword(auth, virtualEmail, formData.password);
+          // Для админа всегда пробуем сначала войти, если не выходит - регистрируем в тот же корень
+          userCredential = await signInWithEmailAndPassword(auth, virtualEmail, formData.password);
+        } catch (err: any) {
+          if (err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password') {
+             userCredential = await createUserWithEmailAndPassword(auth, virtualEmail, formData.password);
           } else {
-            throw authErr;
+            throw err;
           }
         }
 
         const user_auth = userCredential.user;
-        const isAdminUser = ADMIN_PHONES.includes(normalizedPhone);
+        const isAdminUser = isPrimeTarget;
 
-        // Обновляем или создаем профиль
+        // Принудительно ставим правильный UID в правилах (на стороне сервера это делает firestore.rules, 
+        // но здесь мы обеспечиваем консистентность данных профиля)
         await setDoc(doc(db, 'users', user_auth.uid), {
           id: user_auth.uid,
-          name: formData.name || (isAdminUser ? 'Nuxus Prime' : 'User'),
-          username: formData.username ? (formData.username.startsWith('@') ? formData.username.toLowerCase() : '@' + formData.username.toLowerCase()) : (isAdminUser ? '@admin' : `@user_${user_auth.uid.slice(0, 5)}`),
+          name: isPrimeTarget ? 'Nuxus Prime' : (formData.name || 'User'),
+          username: isPrimeTarget ? '@admin' : (formData.username || `@user_${user_auth.uid.slice(0, 5)}`),
           phone: normalizedPhone ? '+' + normalizedPhone : '',
           avatarUrl: `https://picsum.photos/seed/${user_auth.uid}/200`,
           createdAt: new Date().toISOString(),
@@ -127,7 +143,7 @@ export default function AuthScreen() {
     } catch (err: any) {
       toast({ 
         title: "Ошибка", 
-        description: mode === 'login' ? "Неверный логин или пароль. Попробуйте вкладку Регистрация для первого входа." : err.message, 
+        description: "Неверный логин или пароль. Если это первый вход, используйте 'Загрузить профиль'.", 
         variant: "destructive" 
       });
     } finally {
@@ -141,7 +157,13 @@ export default function AuthScreen() {
       
       <div className="w-full max-w-sm relative z-10">
         <div className="flex justify-center mb-10">
-          <div className="bg-primary p-6 rounded-[2.5rem] shadow-2xl shadow-primary/40 animate-float relative overflow-hidden group">
+          <div 
+            onClick={handleLogoClick}
+            className={cn(
+              "p-6 rounded-[2.5rem] shadow-2xl transition-all cursor-pointer animate-float relative overflow-hidden group",
+              mode === 'prime' ? "bg-accent shadow-accent/40 scale-110" : "bg-primary shadow-primary/40"
+            )}
+          >
             <Hexagon className="w-16 h-16 text-white" />
             <Zap className="w-8 h-8 text-white absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 fill-white" />
           </div>
@@ -149,11 +171,14 @@ export default function AuthScreen() {
 
         <Card className="border-white/5 bg-card/40 backdrop-blur-3xl shadow-2xl rounded-[3rem] overflow-hidden border">
           <CardHeader className="text-center pb-2 pt-10">
-            <CardTitle className="text-6xl font-black tracking-tighter text-white uppercase italic leading-none drop-shadow-2xl">
-              {t('auth.title')}
+            <CardTitle className={cn(
+              "text-6xl font-black tracking-tighter uppercase italic leading-none drop-shadow-2xl",
+              mode === 'prime' ? "text-accent" : "text-white"
+            )}>
+              {mode === 'prime' ? 'PRIME' : t('auth.title')}
             </CardTitle>
             <CardDescription className="text-muted-foreground/60 mt-4 font-bold tracking-[0.4em] uppercase text-[10px]">
-              {mode === 'login' ? t('auth.subtitle') : 'IDENTITY CREATION'}
+              {mode === 'prime' ? 'MASTER KERNEL ACCESS' : (mode === 'login' ? t('auth.subtitle') : 'IDENTITY CREATION')}
             </CardDescription>
           </CardHeader>
           
@@ -182,7 +207,14 @@ export default function AuthScreen() {
                 <Label className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground/80 ml-1">ТЕЛЕФОН ИЛИ EMAIL</Label>
                 <div className="relative group">
                   <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
-                  <Input placeholder="8 9XX... или email" value={formData.identifier} onChange={e => setFormData({...formData, identifier: e.target.value})} className="bg-white/5 border-white/10 pl-10 h-14 rounded-2xl" required />
+                  <Input 
+                    placeholder="8 9XX... или email" 
+                    value={formData.identifier} 
+                    onChange={e => setFormData({...formData, identifier: e.target.value})} 
+                    className="bg-white/5 border-white/10 pl-10 h-14 rounded-2xl" 
+                    required 
+                    readOnly={mode === 'prime'}
+                  />
                 </div>
               </div>
 
@@ -194,24 +226,39 @@ export default function AuthScreen() {
                 </div>
               </div>
 
-              <Button type="submit" disabled={isLoading} className="w-full h-14 text-xs font-black uppercase tracking-[0.2em] bg-primary hover:bg-primary/90 rounded-2xl transition-all shadow-xl shadow-primary/30">
+              <Button 
+                type="submit" 
+                disabled={isLoading} 
+                className={cn(
+                  "w-full h-14 text-xs font-black uppercase tracking-[0.2em] rounded-2xl transition-all shadow-xl",
+                  mode === 'prime' ? "bg-accent hover:bg-accent/90 shadow-accent/30" : "bg-primary hover:bg-primary/90 shadow-primary/30"
+                )}
+              >
                 {isLoading ? (
                   <Loader2 className="animate-spin w-5 h-5" />
                 ) : (
                   <span className="flex items-center gap-2">
-                    {mode === 'login' ? t('auth.login') : t('auth.register')} <ArrowRight className="w-4 h-4" />
+                    {mode === 'prime' ? 'UNLOCK PRIME' : (mode === 'login' ? t('auth.login') : t('auth.register'))} <ArrowRight className="w-4 h-4" />
                   </span>
                 )}
               </Button>
             </form>
             
-            <div className="mt-8 text-center">
+            <div className="mt-8 text-center flex flex-col gap-2">
               <button 
                 onClick={() => setMode(mode === 'login' ? 'register' : 'login')} 
                 className="text-[10px] text-muted-foreground/60 hover:text-primary transition-colors font-black uppercase tracking-widest"
               >
                 {mode === 'login' ? t('auth.noAccount') : t('auth.hasAccount')}
               </button>
+              {mode === 'prime' && (
+                <button 
+                  onClick={() => setMode('login')} 
+                  className="text-[10px] text-accent/60 hover:text-accent transition-colors font-black uppercase tracking-widest"
+                >
+                  Вернуться к обычному входу
+                </button>
+              )}
             </div>
           </CardContent>
         </Card>

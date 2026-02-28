@@ -7,8 +7,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
-  Send, Info, ChevronLeft, Loader2, Bookmark, X, Forward, Camera, Video, Circle, Wand2, Phone, Search as SearchIcon,
-  Archive, BellOff, MoreVertical, PlayCircle, Clock, Zap, EyeOff, Calendar as CalendarIcon, Timer
+  Send, Info, ChevronLeft, Loader2, Bookmark, X, Forward, Video, Circle, Wand2, Phone, Search as SearchIcon,
+  Zap, Calendar as CalendarIcon
 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { MessageItem } from './message-item';

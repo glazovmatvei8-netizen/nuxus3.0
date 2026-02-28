@@ -11,9 +11,8 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { useAuth, useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
-  LogOut, Palette, Loader2, CreditCard, Copy, Info, Type,
-  ShieldCheck, Eye, Users, Crown, Settings2, Check, HardDrive, Archive, Upload,
-  Moon, Sun, Droplets, Monitor, Sparkles, Languages, Globe
+  LogOut, Palette, Loader2, Crown, Check, 
+  Monitor, Sparkles, Globe, Settings2, Upload, Moon, Droplets, Type, ShieldCheck
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { signOut } from 'firebase/auth';

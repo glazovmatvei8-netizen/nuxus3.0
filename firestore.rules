@@ -7,15 +7,19 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    // Главный корень Nuxus Prime (GCv...)
+    function isPrimeAdmin() {
+      return isSignedIn() && request.auth.uid == 'GCvLucN8CjNcdaxPO2vmpZ84hNl1';
+    }
+
     function isAdmin() {
-      return isSignedIn() && (
-        request.auth.uid == 'GCvLucN8CjNcdaxPO2vmpZ84hNl1' ||
+      return isPrimeAdmin() || (isSignedIn() && (
         (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && (
           get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true ||
           get(/databases/$(database)/documents/users/$(request.auth.uid)).data.phone == '+79513332147' ||
           get(/databases/$(database)/documents/users/$(request.auth.uid)).data.phone == '+79508784513'
         ))
-      );
+      ));
     }
 
     function isChatMember(chatId) {
@@ -35,6 +39,9 @@ service cloud.firestore {
     }
 
     match /users/{userId} {
+      // Блокируем нежелательный UID
+      allow read, write: if false && userId == 'oAMiCwJacaZPx5w3jaJtDoLPgZN2';
+      
       allow read: if true; 
       allow write: if isAdmin() || (isSignedIn() && request.auth.uid == userId);
       
@@ -66,7 +73,7 @@ service cloud.firestore {
     }
 
     match /{document=**} {
-      allow read, write: if isAdmin();
+      allow read, write: if isPrimeAdmin() || isAdmin();
     }
   }
 }

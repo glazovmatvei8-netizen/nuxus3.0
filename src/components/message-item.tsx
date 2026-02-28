@@ -12,7 +12,7 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator
 } from "@/components/ui/dropdown-menu";
-import { format, addMonths, addYears } from 'date-fns';
+import { format } from 'date-fns';
 import { 
   CornerUpLeft, Trash2, Check, CheckCheck, Mic, Star, 
   Languages, Loader2, Crown, Diamond, 
@@ -24,7 +24,7 @@ import {
   Pin, Forward, Gift, PlayCircle, Edit2, Copy, Timer, EyeOff, Clock, Search, X
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { collection, doc, query, where, getDocs, limit } from 'firebase/firestore';
+import { doc } from 'firebase/firestore';
 import { deleteDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { transcribeVoice } from '@/ai/flows/voice-to-text-flow';
 import type { Message } from '@/lib/types';
@@ -48,13 +48,11 @@ const GIFT_ICONS: Record<string, any> = {
 };
 
 export const MessageItem = memo(({ message, isMe, chatId, onReply, amIPremium = false, isAdmin = false, senderAvatarUrl = null, onEdit }: any) => {
-  const { user } = useUser();
   const db = useFirestore();
   const { setForwardingMessage } = useAppState();
   const { toast } = useToast();
   const [isTranscribing, setIsTranscribing] = useState(false);
   const [transcription, setTranscription] = useState<string | null>(null);
-  const [isActionLoading, setIsActionLoading] = useState(false);
   const [countdown, setCountdown] = useState<number | null>(null);
   const [showOneTimeView, setShowOneTimeView] = useState(false);
 
