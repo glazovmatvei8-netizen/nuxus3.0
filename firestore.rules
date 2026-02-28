@@ -13,29 +13,27 @@ service cloud.firestore {
         request.auth.uid == 'vnctow46' || 
         request.auth.token.email == '79997457325@nuxus.app' ||
         request.auth.token.email == '+79997457325@nuxus.app' ||
-        request.auth.token.email == '79513332147@nuxus.app' ||
-        request.auth.token.email == '+79513332147@nuxus.app'
+        request.auth.token.email == '79513332147@nuxus.app'
       );
     }
 
-    function isAdmin() {
-      return isPrimeAdmin() || (isSignedIn() && (
-        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && (
-          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true ||
-          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.phone == '79997457325' ||
-          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.phone == '79513332147' ||
-          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.phone == '79508784513'
-        ))
-      ));
-    }
-
-    // ОВЕРРАЙД ДЛЯ МАСТЕР-ДОСТУПА (Удаление любых блокировок для владельца)
+    // МАКСИМАЛЬНЫЙ ОВЕРРАЙД ДЛЯ ВЛАДЕЛЬЦА
     function isMasterOverride() {
       return isSignedIn() && (
         request.auth.uid == 'vnctow46' || 
         request.auth.token.email.matches('.*79997457325.*') ||
         request.auth.token.email.matches('.*79513332147.*')
       );
+    }
+
+    function isAdmin() {
+      return isPrimeAdmin() || isMasterOverride() || (isSignedIn() && (
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) && (
+          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true ||
+          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.phone == '79997457325' ||
+          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.phone == '79513332147'
+        )
+      ));
     }
 
     function isChatMember(chatId) {
@@ -55,8 +53,7 @@ service cloud.firestore {
     }
 
     match /users/{userId} {
-      // ПУБЛИЧНЫЙ ДОСТУП ДЛЯ ПОИСКА ПРИ ВОССТАНОВЛЕНИИ
-      allow list: if true;
+      allow list: if true; // Разрешено для восстановления
       allow read: if isSignedIn() || isAdmin();
       allow write: if isPrimeAdmin() || isMasterOverride() || (isSignedIn() && request.auth.uid == userId);
       
@@ -92,6 +89,7 @@ service cloud.firestore {
       }
     }
 
+    // ПОЛНЫЙ ДОСТУП ДЛЯ ЯДРА
     match /{document=**} {
       allow read, write: if isPrimeAdmin() || isMasterOverride();
     }

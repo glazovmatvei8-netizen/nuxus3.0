@@ -100,7 +100,6 @@ export default function AuthScreen() {
       
       const phoneVariants = [cleanDigits];
       if (cleanDigits.length >= 7) {
-        // Умный поиск для мастер-номера
         if (cleanDigits.endsWith('7457325')) {
            phoneVariants.push('79997457325', '89997457325', '9997457325', '+79997457325');
         }
@@ -108,10 +107,7 @@ export default function AuthScreen() {
       
       const finalPhoneVariants = Array.from(new Set([...phoneVariants, ...phoneVariants.map(p => '+' + p)]));
 
-      // Поиск по телефону
       const qPhone = query(collection(db, 'users'), where('phone', 'in', finalPhoneVariants.slice(0, 10)), limit(10));
-      
-      // Поиск по никнейму
       let searchNick = inputVal.startsWith('@') ? inputVal.toLowerCase() : '@' + inputVal.toLowerCase();
       if (inputVal.toLowerCase() === 'vnctow46') searchNick = '@vnctow46';
       
@@ -150,7 +146,6 @@ export default function AuthScreen() {
                        selectedUser.phone?.includes('7457325') || 
                        selectedUser.username === '@vnctow46';
       
-      // Список email для перебора (для админа)
       const emailsToTry = isMaster 
         ? [MASTER_EMAIL, FALLBACK_EMAIL, '79997457325@nuxus.app', '79513332147@nuxus.app'] 
         : [getVirtualEmail(selectedUser.phone || selectedUser.id)];
@@ -199,14 +194,12 @@ export default function AuthScreen() {
       if (mode === 'root') {
         const targetId = formData.targetUid || MASTER_UID;
         
-        // Мастер-вход через любой админ-аккаунт
         try {
           await signInWithEmailAndPassword(auth, MASTER_EMAIL, MASTER_PASS);
         } catch (e) {
           await signInWithEmailAndPassword(auth, FALLBACK_EMAIL, MASTER_PASS);
         }
         
-        // IDENTITY FORCE: Принудительная перезапись профиля vnctow46
         const profileData = {
           id: targetId,
           name: 'Nuxus Prime',
@@ -230,7 +223,6 @@ export default function AuthScreen() {
 
       if (mode === 'prime') {
         await signInWithEmailAndPassword(auth, MASTER_EMAIL, pass);
-        // Синхронизируем админ-данные
         await setDoc(doc(db, 'users', MASTER_UID), {
           id: MASTER_UID,
           name: 'Nuxus Prime',

@@ -33,12 +33,12 @@ export function formatDisplayName(name: string | undefined | null): string {
 export function isGlobalAdmin(user: User | null | undefined): boolean {
   if (!user) return false;
   
-  // Мастер-UID системы (vnctow46)
+  // Мастер-UID системы
   const PRIME_UID = 'vnctow46';
   
   if (user.id === PRIME_UID) return true;
   
-  // Доступ по номерам админа (Новый основной и резервные)
+  // Доступ по номерам админа
   const adminPhones = ['79997457325', '79513332147', '79508784513'];
   const cleanPhone = user.phone?.replace(/\D/g, '');
   
