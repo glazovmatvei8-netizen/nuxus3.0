@@ -47,13 +47,13 @@ export default function AuthScreen() {
   };
 
   const getVirtualEmail = (id: string) => {
-    // Если ввели Email напрямую (например, ваш старый 89513332147@nuxus.app)
+    // Если ввели Email напрямую (например, старый 89513332147@nuxus.app)
     if (id.includes('@')) return id.trim().toLowerCase();
 
     const rawDigits = id.replace(/\D/g, '');
     
-    // ГАРАНТИЯ ВОЗВРАТА СТАРЫХ ЧАТОВ:
-    // Если ввели ваш номер, принудительно направляем в аккаунт на "8...", где лежит вся история
+    // ГАРАНТИЯ ВОЗВРАТА СТАРЫХ ЧАТОВ АДМИНА:
+    // Если ввели ваш номер в любом виде, принудительно направляем в самый первый аккаунт
     if (rawDigits.endsWith('9513332147')) {
       return '89513332147@nuxus.app';
     }
@@ -188,14 +188,14 @@ export default function AuthScreen() {
                     <Label className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground/80 ml-1">Имя</Label>
                     <div className="relative group">
                       <UserCircle className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
-                      <Input placeholder="Ваше имя" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="bg-white/5 border-white/10 pl-10 h-14 rounded-2xl focus:border-primary/50 transition-all" required={mode === 'register'} />
+                      <Input placeholder="Ваше имя" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="bg-white/5 border-white/10 pl-10 h-14 rounded-2xl focus:border-primary/50 transition-all" />
                     </div>
                   </div>
                   <div className="space-y-1.5">
                     <Label className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground/80 ml-1">Никнейм</Label>
                     <div className="relative group">
                       <AtSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
-                      <Input placeholder="username" value={formData.username} onChange={e => setFormData({...formData, username: e.target.value})} className="bg-white/5 border-white/10 pl-10 h-14 rounded-2xl focus:border-primary/50 transition-all" required={mode === 'register'} />
+                      <Input placeholder="username" value={formData.username} onChange={e => setFormData({...formData, username: e.target.value})} className="bg-white/5 border-white/10 pl-10 h-14 rounded-2xl focus:border-primary/50 transition-all" />
                     </div>
                   </div>
                 </>
