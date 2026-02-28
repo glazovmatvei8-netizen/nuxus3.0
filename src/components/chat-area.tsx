@@ -8,18 +8,17 @@ import { Input } from '@/components/ui/input';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
   Send, Info, ChevronLeft, Loader2, Bookmark, Pin, X, Forward, Camera, Video, Circle, Wand2, Phone, Search as SearchIcon,
-  Search, Archive, BellOff, MoreVertical
+  Search, Archive, BellOff, MoreVertical, PlayCircle
 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { MessageItem } from './message-item';
 import { useToast } from '@/hooks/use-toast';
 import { ChatInfoModal } from './modals/chat-info-modal';
 import { useFirestore, useUser, useCollection, useDoc, useMemoFirebase } from '@/firebase';
-import { collection, query, orderBy, doc, limit, addDoc, updateDoc, where } from 'firebase/firestore';
+import { collection, query, orderBy, doc, limit, addDoc, updateDoc, where, getDocs } from 'firebase/firestore';
 import { addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { formatDisplayName, isUserPremium } from '@/lib/utils';
 import type { Message, User as UserType, Chat } from '@/lib/types';
-import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { suggestMessageDraft } from '@/ai/flows/ai-message-drafting-flow';
 
 const MessageList = memo(({ 
@@ -117,6 +116,40 @@ export default function ChatArea() {
       m.content.toLowerCase().includes(searchQuery.toLowerCase())
     );
   }, [rawMessages, searchQuery]);
+
+  // Request Notification permission
+  useEffect(() => {
+    if (typeof window !== 'undefined' && "Notification" in window) {
+      if (Notification.permission === 'default') {
+        Notification.requestPermission();
+      }
+    }
+  }, []);
+
+  // Handle Notifications and Auto-Read
+  useEffect(() => {
+    if (!messages || !user || !currentChatId || !db) return;
+
+    const unreadFromOthers = messages.filter(m => !m.isRead && m.senderId !== user.uid);
+    
+    // Auto-read messages when chat is open
+    if (unreadFromOthers.length > 0) {
+      unreadFromOthers.forEach(msg => {
+        updateDocumentNonBlocking(doc(db, 'chats', currentChatId, 'messages', msg.id), { isRead: true });
+      });
+    }
+
+    // Browser Notification for new messages
+    const lastMsg = messages[messages.length - 1];
+    if (lastMsg && lastMsg.senderId !== user.uid && !lastMsg.isRead) {
+      if (typeof window !== 'undefined' && document.hidden && Notification.permission === 'granted') {
+        new Notification(`Nuxus: ${lastMsg.senderName}`, {
+          body: lastMsg.contentType === 'text' ? lastMsg.content : `Отправил ${lastMsg.contentType}`,
+          icon: '/favicon.ico'
+        });
+      }
+    }
+  }, [messages, user, currentChatId, db]);
 
   const scrollToBottom = useCallback((behavior: ScrollBehavior = 'auto') => {
     if (scrollRef.current) {
