@@ -53,7 +53,6 @@ const MessageList = memo(({
 MessageList.displayName = 'MessageList';
 
 export default function ChatArea() {
-  const { user } = user;
   const { user: firebaseUser } = useUser();
   const db = useFirestore();
   const { currentChatId, setCurrentChatId, forwardingMessage, setForwardingMessage, setActiveCallId } = useAppState();
@@ -144,7 +143,7 @@ export default function ChatArea() {
       if (typeof window !== 'undefined' && document.hidden && Notification.permission === 'granted') {
         new Notification(`Nuxus: ${lastMsg.senderName}`, {
           body: lastMsg.contentType === 'text' ? lastMsg.content : `Отправил ${lastMsg.contentType}`,
-          icon: '/favicon.ico'
+          icon: 'https://picsum.photos/seed/nuxus/192/192'
         });
       }
     }
