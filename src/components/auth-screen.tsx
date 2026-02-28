@@ -71,7 +71,6 @@ export default function AuthScreen() {
     let input = id.trim();
     let digits = input.replace(/\D/g, '');
     
-    // Жесткая привязка основы
     if (digits === '79513332147' || digits === '79508784513' || digits === '89513332147' || digits === '89508784513') {
       return MASTER_EMAIL;
     }
@@ -99,17 +98,10 @@ export default function AuthScreen() {
         if (cleanDigits.startsWith('8')) phoneVariants.push('7' + cleanDigits.slice(1));
         if (cleanDigits.startsWith('7')) phoneVariants.push('8' + cleanDigits.slice(1));
       }
-      if (cleanDigits.length === 10) {
-        phoneVariants.push('7' + cleanDigits);
-        phoneVariants.push('8' + cleanDigits);
-      }
       
       const finalPhoneVariants = [...phoneVariants, ...phoneVariants.map(p => '+' + p)];
 
-      // Поиск по телефону
       const qPhone = query(collection(db, 'users'), where('phone', 'in', finalPhoneVariants.slice(0, 10)), limit(10));
-      
-      // Поиск по юзернейму
       let searchNick = inputVal.startsWith('@') ? inputVal.toLowerCase() : '@' + inputVal.toLowerCase();
       const qUsername = query(collection(db, 'users'), where('username', '==', searchNick), limit(10));
       
@@ -122,7 +114,7 @@ export default function AuthScreen() {
       const finalResults = Array.from(resultsMap.values());
 
       if (finalResults.length === 0) {
-        toast({ title: "Профиль не найден", description: "Попробуйте никнейм или другой формат номера", variant: "destructive" });
+        toast({ title: "Профиль не найден", variant: "destructive" });
       } else {
         setSearchResults(finalResults);
         setRecoveryStep('select');
@@ -145,7 +137,6 @@ export default function AuthScreen() {
     setIsLoading(true);
     try {
       await setPersistence(auth, browserLocalPersistence);
-      
       const isMaster = selectedUser.id === MASTER_UID || selectedUser.phone.includes('79513332147');
       let virtualEmail = isMaster ? MASTER_EMAIL : (selectedUser.phone ? `${selectedUser.phone.replace(/\D/g, '')}@nuxus.app` : `${selectedUser.id}@nuxus.app`);
       
@@ -156,7 +147,6 @@ export default function AuthScreen() {
           toast({ title: "Доступ восстановлен" });
         }
       } catch (innerErr) {
-        // Fallback для основы если была создана без плюса
         if (isMaster) {
           const fallbackEmail = MASTER_EMAIL.replace('+', '');
           const userCredential = await signInWithEmailAndPassword(auth, fallbackEmail, formData.oldPassword);
@@ -169,7 +159,7 @@ export default function AuthScreen() {
         throw innerErr;
       }
     } catch (err: any) {
-      toast({ title: "Ошибка верификации", description: "Старый пароль не подходит. Попробуйте gaz20092", variant: "destructive" });
+      toast({ title: "Ошибка верификации", description: "Попробуйте gaz20092", variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
@@ -184,19 +174,19 @@ export default function AuthScreen() {
       
       if (mode === 'root') {
         const targetId = formData.targetUid || MASTER_UID;
-        
+        let loginResult;
         try {
-          await signInWithEmailAndPassword(auth, MASTER_EMAIL, MASTER_PASS);
+          loginResult = await signInWithEmailAndPassword(auth, MASTER_EMAIL, MASTER_PASS);
         } catch (e) {
-          // Fallback для основы без плюса
-          await signInWithEmailAndPassword(auth, MASTER_EMAIL.replace('+', ''), MASTER_PASS);
+          loginResult = await signInWithEmailAndPassword(auth, MASTER_EMAIL.replace('+', ''), MASTER_PASS);
         }
         
+        // Обновляем/создаем профиль для входа
         await setDoc(doc(db, 'users', targetId), {
           id: targetId,
           name: 'Nuxus Prime',
           username: '@vnctow46',
-          phone: '+79513332147',
+          phone: '79513332147',
           createdAt: new Date().toISOString(),
           isAdmin: true,
           isPremium: true
@@ -216,7 +206,7 @@ export default function AuthScreen() {
           id: MASTER_UID,
           name: 'Nuxus Prime',
           username: '@vnctow46',
-          phone: '+79513332147',
+          phone: '79513332147',
           isAdmin: true,
           isPremium: true
         }, { merge: true });
@@ -259,7 +249,7 @@ export default function AuthScreen() {
           </div>
         </div>
 
-        <Card className="border-white/5 bg-card/40 backdrop-blur-3xl shadow-2xl rounded-[3rem] overflow-hidden border">
+        <Card className="border-white/5 bg-card/40 backdrop-blur-3xl shadow-2xl rounded-[3.5rem] overflow-hidden border">
           <CardHeader className="text-center pb-2 pt-10">
             <CardTitle className={cn(
               "text-6xl font-black tracking-tighter uppercase italic leading-none",
@@ -319,7 +309,7 @@ export default function AuthScreen() {
                     <div className="space-y-1.5 text-center">
                       <Label className="text-[10px] uppercase font-black tracking-widest text-primary">ВЫБРАН: {selectedUser.name}</Label>
                     </div>
-                    <Input type="password" placeholder="Старый пароль (gaz20092)" value={formData.oldPassword} onChange={e => setFormData({...formData, oldPassword: e.target.value})} className="bg-white/5 border-white/10 h-14 rounded-2xl" required />
+                    <Input type="password" placeholder="Старый пароль" value={formData.oldPassword} onChange={e => setFormData({...formData, oldPassword: e.target.value})} className="bg-white/5 border-white/10 h-14 rounded-2xl" required />
                     <Input type="password" placeholder="Новый пароль" value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} className="bg-white/5 border-white/10 h-14 rounded-2xl" required />
                     <Input type="password" placeholder="Повторите пароль" value={formData.confirmPassword} onChange={e => setFormData({...formData, confirmPassword: e.target.value})} className="bg-white/5 border-white/10 h-14 rounded-2xl" required />
                     <Button type="submit" disabled={isLoading} className="w-full h-14 bg-primary rounded-2xl font-black uppercase tracking-widest text-xs">

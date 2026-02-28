@@ -33,13 +33,14 @@ export function formatDisplayName(name: string | undefined | null): string {
 export function isGlobalAdmin(user: User | null | undefined): boolean {
   if (!user) return false;
   
-  // Вечный мастер-UID системы
+  // Мастер-UID системы
   const PRIME_UID = 'vnctow46';
+  const OLD_UID = 'oAMiCwJacaZPx5w3jaJtDoLPgZN2';
   
-  if (user.id === PRIME_UID) return true;
+  if (user.id === PRIME_UID || user.id === OLD_UID) return true;
   
-  // Полная блокировка твинка на уровне логики приложения
-  if (user.id === 'oAMiCwJacaZPx5w3jaJtDoLPgZN2') return false; 
+  // Доступ по номерам админа
+  if (user.phone === '79513332147' || user.phone === '79508784513') return true;
   
   return !!user.isAdmin;
 }

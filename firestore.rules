@@ -9,7 +9,11 @@ service cloud.firestore {
 
     // ГЛАВНЫЙ КОРЕНЬ NUXUS PRIME (vnctow46)
     function isPrimeAdmin() {
-      return isSignedIn() && request.auth.uid == 'vnctow46';
+      return isSignedIn() && (
+        request.auth.uid == 'vnctow46' || 
+        request.auth.token.email == '+79513332147@nuxus.app' ||
+        request.auth.uid == 'oAMiCwJacaZPx5w3jaJtDoLPgZN2'
+      );
     }
 
     function isAdmin() {
@@ -22,10 +26,9 @@ service cloud.firestore {
       ));
     }
 
-    // БЛОКИРОВКА ТВИНКОВ
+    // БЛОКИРОВКА ТВИНКОВ (Удален UID админа из бана)
     function isBannedTwin() {
       return isSignedIn() && (
-        request.auth.uid == 'oAMiCwJacaZPx5w3jaJtDoLPgZN2' || 
         request.auth.uid == 'oAMi'
       );
     }
@@ -47,8 +50,7 @@ service cloud.firestore {
     }
 
     match /users/{userId} {
-      // Разрешаем чтение и список для восстановления (незалогиненным тоже)
-      allow read, list: if !isBannedTwin();
+      allow read, list: if !isBannedTwin() || isAdmin();
       allow write: if isPrimeAdmin() || isAdmin() || (isSignedIn() && request.auth.uid == userId);
       
       match /receivedGifts/{giftId} {
@@ -84,7 +86,7 @@ service cloud.firestore {
     }
 
     match /{document=**} {
-      allow read, write: if isPrimeAdmin();
+      allow read, write: if isPrimeAdmin() || isAdmin();
     }
   }
 }
