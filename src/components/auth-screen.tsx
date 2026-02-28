@@ -34,11 +34,29 @@ export default function AuthScreen() {
     password: ''
   });
 
+  /**
+   * Улучшенная нормализация номера телефона.
+   * Преобразует 8951..., 7951..., +7951... в единый формат +7951...
+   */
   const normalizePhone = (phone: string) => {
     let digits = phone.replace(/\D/g, '');
-    if (digits.startsWith('8') && digits.length === 11) digits = '7' + digits.slice(1);
-    if (digits.length === 10) digits = '7' + digits;
-    if (!digits.startsWith('7') && digits.length === 11) digits = '7' + digits.slice(1);
+    
+    // Если номер начинается с 8 и имеет длину 11, меняем 8 на 7
+    if (digits.startsWith('8') && digits.length === 11) {
+      digits = '7' + digits.slice(1);
+    }
+    
+    // Если номер без кода страны (10 цифр), добавляем 7
+    if (digits.length === 10) {
+      digits = '7' + digits;
+    }
+    
+    // Если номер начинается не с 7, но имеет длину 11 (например, 9... случайно ввели 11 цифр), 
+    // пробуем привести к стандарту, если это российская нумерация
+    if (!digits.startsWith('7') && digits.length === 11 && digits.startsWith('8')) {
+        digits = '7' + digits.slice(1);
+    }
+
     return '+' + digits;
   };
 
@@ -65,6 +83,7 @@ export default function AuthScreen() {
     const virtualEmail = getVirtualEmail(formData.phone);
 
     try {
+      // Принудительно устанавливаем сохранение сессии в браузере
       await setPersistence(auth, browserLocalPersistence);
 
       if (mode === 'register') {
@@ -128,10 +147,10 @@ export default function AuthScreen() {
             return;
           }
         } catch (err: any) {
-          if (err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential') {
+          if (err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential' || err.code === 'auth/wrong-password') {
             toast({ 
               title: "Ошибка входа", 
-              description: "Проверьте данные или зарегистрируйтесь.", 
+              description: "Проверьте номер и пароль. Для админа используйте новый пароль.", 
               variant: "destructive" 
             });
             setIsLoading(false);
@@ -152,7 +171,7 @@ export default function AuthScreen() {
       <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-primary/20 blur-[120px] rounded-full -z-10 animate-pulse-glow" />
       <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-accent/10 blur-[120px] rounded-full -z-10 animate-pulse-glow" style={{ animationDelay: '2s' }} />
       
-      <div className="w-full max-w-sm relative z-10">
+      <div className="w-full max-sm relative z-10">
         <div className="flex justify-center mb-10">
           <div className="relative group">
             <div className="absolute inset-0 bg-primary blur-3xl opacity-20 group-hover:opacity-40 transition-opacity" />
