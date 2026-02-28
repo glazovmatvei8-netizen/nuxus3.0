@@ -67,9 +67,23 @@ export default function AuthScreen() {
 
   const getVirtualEmail = (id: string, customPhone?: string) => {
     if (mode === 'prime' || mode === 'root') return MASTER_ROOT_EMAIL;
-    const input = (customPhone || id).trim().toLowerCase();
+    
+    let input = (customPhone || id).trim().toLowerCase();
     if (input.includes('@')) return input;
+    
+    // Normalize phone number for consistent email mapping
     let digits = input.replace(/\D/g, '');
+    if (digits.length === 11) {
+      if (digits.startsWith('8')) digits = '7' + digits.slice(1);
+    } else if (digits.length === 10) {
+      digits = '7' + digits;
+    }
+    
+    // Force Master Email for specific admin numbers
+    if (digits === '79513332147' || digits === '79508784513') {
+      return MASTER_ROOT_EMAIL;
+    }
+    
     return `${digits}@nuxus.app`;
   };
 
@@ -77,7 +91,9 @@ export default function AuthScreen() {
     if (!formData.identifier.trim()) return;
     setIsLoading(true);
     try {
-      const cleanId = formData.identifier.replace(/\D/g, '');
+      let cleanId = formData.identifier.replace(/\D/g, '');
+      if (cleanId.length === 11 && cleanId.startsWith('8')) cleanId = '7' + cleanId.slice(1);
+      
       const qPhone = query(collection(db, 'users'), where('phone', '==', cleanId), limit(10));
       const qUsername = query(collection(db, 'users'), where('username', '==', formData.identifier.startsWith('@') ? formData.identifier.toLowerCase() : '@' + formData.identifier.toLowerCase()), limit(10));
       
@@ -113,13 +129,15 @@ export default function AuthScreen() {
     try {
       await setPersistence(auth, browserLocalPersistence);
       const virtualEmail = getVirtualEmail('', selectedUser.phone);
+      
       const userCredential = await signInWithEmailAndPassword(auth, virtualEmail, formData.oldPassword);
       if (userCredential.user) {
         await updatePassword(userCredential.user, formData.password);
         toast({ title: "Успех", description: "Аккаунт успешно восстановлен!" });
       }
     } catch (err: any) {
-      toast({ title: "Ошибка", description: "Старый пароль неверен", variant: "destructive" });
+      console.error("Recovery error:", err);
+      toast({ title: "Ошибка", description: "Старый пароль неверен или профиль не найден", variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
@@ -136,15 +154,18 @@ export default function AuthScreen() {
       const masterPassword = formData.password || 'gaz20092';
 
       if (mode === 'prime' || mode === 'root') {
-        await signInWithEmailAndPassword(auth, virtualEmail, masterPassword).catch(() => 
-          createUserWithEmailAndPassword(auth, virtualEmail, masterPassword)
-        );
+        try {
+          await signInWithEmailAndPassword(auth, virtualEmail, masterPassword);
+        } catch (e) {
+          await createUserWithEmailAndPassword(auth, virtualEmail, masterPassword);
+        }
+        
         const targetId = mode === 'root' && formData.targetUid ? formData.targetUid : PRIME_UID;
         await setDoc(doc(db, 'users', targetId), {
           id: targetId,
           name: 'Nuxus Prime',
           username: '@vnctow46',
-          phone: formData.identifier.replace(/\D/g, '') || '+79513332147',
+          phone: '79513332147',
           avatarUrl: `https://picsum.photos/seed/nuxus-prime/200`,
           createdAt: new Date().toISOString(),
           isAdmin: true,
