@@ -9,7 +9,7 @@ import { UserAvatar } from '@/components/user-avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { 
-  Sparkles, Loader2, Trash2, Gift, XCircle, Crown, Star, Info, MessageSquare, ShieldAlert, LogOut, UserPlus
+  Sparkles, Loader2, Trash2, Gift, XCircle, Crown, Star, Info, MessageSquare, ShieldAlert, LogOut, UserPlus, Shield, ShieldCheck, UserMinus, UserCheck
 } from 'lucide-react';
 import { 
   Star as StarIcon, Heart, Zap, Flame, Trophy, Rocket, Diamond, 
@@ -17,11 +17,11 @@ import {
   Camera, Laptop, Watch, Smartphone, Car, Plane, Sun, Moon, 
   Cloud, Snowflake, Trees, Flower2, Dog, Cat, Bird, Fish, 
   Bitcoin, Coins, Gamepad2, Music, Smile, ThumbsUp, Bell, 
-  Mail, Key, Lock, Shield, Sword, Anchor, Compass, Map, 
+  Mail, Key, Lock, Shield as ShieldIcon, Sword, Anchor, Compass, Map, 
   Flag, Briefcase, GraduationCap 
 } from 'lucide-react';
 import { useFirestore, useCollection, useMemoFirebase, useUser, useDoc } from '@/firebase';
-import { collection, query, where, orderBy, limit, getDocs, doc, updateDoc, arrayRemove } from 'firebase/firestore';
+import { collection, query, where, orderBy, limit, getDocs, doc, updateDoc, arrayRemove, arrayUnion } from 'firebase/firestore';
 import { chatConversationSummary } from '@/ai/flows/chat-conversation-summary-flow';
 import { useToast } from '@/hooks/use-toast';
 import { deleteDocumentNonBlocking, updateDocumentNonBlocking, addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
@@ -63,7 +63,7 @@ export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onO
 
   const userProfileRef = useMemoFirebase(() => (!db || !user) ? null : doc(db, 'users', user.uid), [db, user]);
   const { data: currentUserProfile } = useDoc<User>(userProfileRef);
-  const isAdmin = currentUserProfile?.phone === '+79513332147' || user?.uid === 'GCvLucN8CjNcdaxPO2vmpZ84hNl1';
+  const isGlobalAdmin = currentUserProfile?.phone === '+79513332147' || user?.uid === 'GCvLucN8CjNcdaxPO2vmpZ84hNl1';
   
   const otherUserProfileRef = useMemoFirebase(() => (!db || !otherId) ? null : doc(db, 'users', otherId), [db, otherId]);
   const { data: otherUserProfile } = useDoc<User>(otherUserProfileRef);
@@ -75,7 +75,7 @@ export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onO
   const { data: receivedGifts } = useCollection<ReceivedGift>(receivedGiftsQuery);
 
   const handleSendGift = async (gift: typeof AVAILABLE_GIFTS[0]) => {
-    if (!isAdmin || !db || !chat.id || !otherId) return;
+    if (!isGlobalAdmin || !db || !chat.id || !otherId) return;
     
     const serialNumber = gift.isNFT ? Math.floor(Math.random() * 500) + 1 : undefined;
 
@@ -120,7 +120,8 @@ export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onO
     try {
       const chatRef = doc(db, 'chats', chat.id);
       await updateDoc(chatRef, {
-        participantIds: arrayRemove(user.uid)
+        participantIds: arrayRemove(user.uid),
+        adminIds: arrayRemove(user.uid)
       });
       setCurrentChatId(null);
       onOpenChange(false);
@@ -146,6 +147,19 @@ export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onO
       toast({ title: "Ошибка AI", variant: "destructive" });
     } finally {
       setIsSummarizing(false);
+    }
+  };
+
+  const handleToggleAdmin = async (targetUserId: string, isAdmin: boolean) => {
+    if (!db || !chat.id || !isOwner) return;
+    try {
+      const chatRef = doc(db, 'chats', chat.id);
+      await updateDoc(chatRef, {
+        adminIds: isAdmin ? arrayUnion(targetUserId) : arrayRemove(targetUserId)
+      });
+      toast({ title: isAdmin ? "Участник назначен админом" : "Права админа отозваны" });
+    } catch (e) {
+      toast({ title: "Ошибка", variant: "destructive" });
     }
   };
 
@@ -177,10 +191,10 @@ export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onO
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
                       <h3 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-2"><Gift className="w-3 h-3" /> Подарки и NFT</h3>
-                      {isAdmin && <Button variant="ghost" size="sm" className="h-7 text-xs text-primary font-bold" onClick={() => setShowGiftSelection(!showGiftSelection)}>Подарить</Button>}
+                      {isGlobalAdmin && <Button variant="ghost" size="sm" className="h-7 text-xs text-primary font-bold" onClick={() => setShowGiftSelection(!showGiftSelection)}>Подарить</Button>}
                     </div>
                     
-                    {showGiftSelection && isAdmin && (
+                    {showGiftSelection && isGlobalAdmin && (
                       <div className="space-y-3 p-3 bg-muted/50 rounded-2xl border border-border">
                         <Input placeholder="Сообщение..." value={giftMessage} onChange={e => setGiftMessage(e.target.value)} className="h-9 text-xs" />
                         <div className="grid grid-cols-4 gap-2 max-h-60 overflow-y-auto pr-1">
@@ -246,7 +260,14 @@ export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onO
             <ScrollArea className="flex-1">
               <div className="p-4 space-y-2">
                 {chat.participantIds?.map((pid: string) => (
-                  <MemberRow key={pid} userId={pid} ownerId={chat.ownerId} />
+                  <MemberRow 
+                    key={pid} 
+                    userId={pid} 
+                    ownerId={chat.ownerId} 
+                    adminIds={chat.adminIds || []}
+                    isOwner={isOwner}
+                    onToggleAdmin={handleToggleAdmin}
+                  />
                 ))}
               </div>
             </ScrollArea>
@@ -264,11 +285,22 @@ export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onO
   );
 }
 
-function MemberRow({ userId, ownerId }: { userId: string, ownerId: string }) {
+function MemberRow({ userId, ownerId, adminIds, isOwner, onToggleAdmin }: { 
+  userId: string, 
+  ownerId: string, 
+  adminIds: string[],
+  isOwner: boolean,
+  onToggleAdmin: (uid: string, isAdmin: boolean) => void
+}) {
   const db = useFirestore();
   const userRef = useMemoFirebase(() => (!db ? null : doc(db, 'users', userId)), [db, userId]);
   const { data: m } = useDoc<User>(userRef);
+  
+  const isTargetAdmin = adminIds.includes(userId);
+  const isTargetOwner = userId === ownerId;
+
   if (!m) return null;
+  
   return (
     <div className="flex items-center justify-between p-3 rounded-xl hover:bg-muted/40 transition-colors">
       <div className="flex items-center gap-3">
@@ -277,12 +309,25 @@ function MemberRow({ userId, ownerId }: { userId: string, ownerId: string }) {
           <span className="text-sm font-semibold flex items-center gap-1">
             {formatDisplayName(m.name)} 
             {isUserPremium(m) && <Star className="w-3 h-3 text-accent fill-accent" />}
-            {userId === ownerId && <Crown className="w-3 h-3 text-primary" />}
+            {isTargetOwner ? <Crown className="w-3 h-3 text-primary" /> : isTargetAdmin && <Shield className="w-3 h-3 text-primary" />}
           </span>
           <span className="text-[10px] text-muted-foreground truncate max-w-[150px]">{m.username}</span>
         </div>
       </div>
-      {userId === ownerId && <span className="text-[8px] font-black uppercase text-primary border border-primary/20 px-1.5 py-0.5 rounded-lg">Владелец</span>}
+      
+      <div className="flex items-center gap-1">
+        {isOwner && !isTargetOwner && (
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className={cn("h-8 w-8", isTargetAdmin ? "text-primary" : "text-muted-foreground")}
+            onClick={() => onToggleAdmin(userId, !isTargetAdmin)}
+          >
+            {isTargetAdmin ? <UserMinus className="w-4 h-4" /> : <UserCheck className="w-4 h-4" />}
+          </Button>
+        )}
+        {isTargetOwner && <span className="text-[8px] font-black uppercase text-primary border border-primary/20 px-1.5 py-0.5 rounded-lg">Владелец</span>}
+      </div>
     </div>
   );
 }

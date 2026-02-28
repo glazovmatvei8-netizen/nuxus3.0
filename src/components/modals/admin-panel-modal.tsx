@@ -32,7 +32,6 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
   const [alertText, setAlertText] = useState('');
   const [userSearch, setUserSearch] = useState('');
 
-  // Имитация нагрузки ресурсов
   const [cpuLoad, setCpuLoad] = useState(12);
   const [memoryUsage, setMemoryUsage] = useState(28);
 
@@ -128,7 +127,6 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
           <DialogDescription>Central control unit for Nuxus Messenger</DialogDescription>
         </DialogHeader>
 
-        {/* Header - Fixed */}
         <div className="p-6 bg-gradient-to-r from-primary/20 to-accent/10 border-b border-primary/10 shrink-0 z-50">
           <div className="flex items-center justify-between text-xl font-black uppercase italic text-white tracking-tighter">
             <div className="flex items-center gap-3">
@@ -157,26 +155,25 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
             <TabsTrigger value="system" className="font-bold uppercase text-[9px] tracking-widest transition-all"><Globe className="w-3.5 h-3.5 mr-1.5" /> Система</TabsTrigger>
           </TabsList>
 
-          {/* Stats Content */}
           <TabsContent value="stats" className="flex-1 min-h-0 m-0 overflow-hidden relative">
             <ScrollArea className="h-full">
               <div className="p-6 space-y-6">
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                  <div className="p-5 bg-primary/5 rounded-[2rem] border border-primary/10 hover:bg-primary/10 transition-all cursor-default">
+                  <div className="p-5 bg-primary/5 rounded-[2rem] border border-primary/10 hover:bg-primary/10 transition-all">
                     <div className="flex justify-between items-start mb-2">
                       <span className="text-[10px] font-bold text-primary uppercase tracking-[0.2em]">Юзеры</span>
                       <Users className="w-4 h-4 text-primary/40" />
                     </div>
                     <div className="text-3xl font-black italic text-white">{stats.total}</div>
                   </div>
-                  <div className="p-5 bg-accent/5 rounded-[2rem] border border-accent/10 hover:bg-accent/10 transition-all cursor-default">
+                  <div className="p-5 bg-accent/5 rounded-[2rem] border border-accent/10 hover:bg-accent/10 transition-all">
                     <div className="flex justify-between items-start mb-2">
                       <span className="text-[10px] font-bold text-accent uppercase tracking-[0.2em]">Premium</span>
                       <Star className="w-4 h-4 text-accent/40" />
                     </div>
                     <div className="text-3xl font-black italic text-white">{stats.premium}</div>
                   </div>
-                  <div className="p-5 bg-destructive/5 rounded-[2rem] border border-destructive/10 hover:bg-destructive/10 transition-all cursor-default">
+                  <div className="p-5 bg-destructive/5 rounded-[2rem] border border-destructive/10 hover:bg-destructive/10 transition-all">
                     <div className="flex justify-between items-start mb-2">
                       <span className="text-[10px] font-bold text-destructive uppercase tracking-[0.2em]">Бан-лист</span>
                       <Shield className="w-4 h-4 text-destructive/40" />
@@ -255,8 +252,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
             </ScrollArea>
           </TabsContent>
 
-          {/* Users Content */}
-          <TabsContent value="users" className="flex-1 min-h-0 overflow-hidden flex flex-col p-0 m-0 relative">
+          <TabsContent value="users" className="flex-1 min-h-0 overflow-hidden flex flex-col p-0 m-0">
             <div className="px-6 py-4 border-b border-white/5 bg-muted/10">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -276,7 +272,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
                     <span className="text-[9px] font-bold uppercase tracking-widest">Загрузка базы...</span>
                   </div>
                 ) : filteredUsers.length > 0 ? filteredUsers.map(u => (
-                  <div key={u.id} className="flex items-center justify-between p-3 bg-muted/20 rounded-2xl border border-white/5 hover:bg-muted/30 transition-all group">
+                  <div key={u.id} className="flex items-center justify-between p-3 bg-muted/20 rounded-2xl border border-white/5 hover:bg-muted/30 transition-all">
                     <div className="flex items-center gap-3">
                       <UserAvatar userId={u.id} className="h-10 w-10" manualAvatarUrl={u.avatarUrl} fallbackName={u.name} />
                       <div className="flex flex-col text-left">
@@ -307,7 +303,6 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
             </ScrollArea>
           </TabsContent>
 
-          {/* System Content */}
           <TabsContent value="system" className="flex-1 min-h-0 m-0 overflow-hidden relative">
             <ScrollArea className="h-full">
               <div className="p-6 space-y-6 pb-24">

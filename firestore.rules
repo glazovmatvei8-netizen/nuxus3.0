@@ -7,7 +7,7 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    // Расширенная проверка прав администратора
+    // Расширенная проверка прав глобального администратора
     function isAdmin() {
       return isSignedIn() && (
         request.auth.token.email == 'scpscp-046@yandex.ru' || 
@@ -24,6 +24,16 @@ service cloud.firestore {
         request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participantIds
       );
     }
+    
+    // Проверка прав администратора чата (модератора)
+    function isChatAdmin(chatId) {
+      return isSignedIn() && (
+        exists(/databases/$(database)/documents/chats/$(chatId)) &&
+        (request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.adminIds ||
+         request.auth.uid == get(/databases/$(database)/documents/chats/$(chatId)).data.ownerId ||
+         isAdmin())
+      );
+    }
 
     // Глобальное правило для админа
     match /{document=**} {
@@ -36,7 +46,6 @@ service cloud.firestore {
       allow write: if isAdmin() || (isSignedIn() && request.auth.uid == userId);
       allow delete: if isAdmin();
       
-      // Подколлекция подарков (явно разрешаем чтение всем авторизованным)
       match /receivedGifts/{giftId} {
         allow read, list: if isSignedIn();
         allow write: if isAdmin();
@@ -74,14 +83,15 @@ service cloud.firestore {
           request.resource.data.content is string && 
           request.resource.data.content.size() < 2000000;
           
-        // Разрешаем обновлять если ты автор (редактирование) 
-        // ИЛИ если ты участник и меняешь только статус прочтения (isRead)
+        // Разрешаем обновлять если ты автор ИЛИ если ты участник и меняешь только статус прочтения (isRead)
+        // ИЛИ если ты админ чата
         allow update: if isChatMember(chatId) && (
           request.auth.uid == resource.data.senderId || 
+          isChatAdmin(chatId) ||
           (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isRead']))
         );
           
-        allow delete: if isAdmin() || (isSignedIn() && request.auth.uid == resource.data.senderId);
+        allow delete: if isAdmin() || isChatAdmin(chatId) || (isSignedIn() && request.auth.uid == resource.data.senderId);
 
         match /reactions/{reactionId} {
           allow read, write: if isChatMember(chatId) || isAdmin();
