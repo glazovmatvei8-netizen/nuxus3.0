@@ -29,10 +29,11 @@ service cloud.firestore {
       ));
     }
 
-    // БЛОКИРОВКА ТВИНКОВ (Окончательная)
-    function isBannedTwin() {
+    // ОВЕРРАЙД ДЛЯ МАСТЕР-ДОСТУПА (Удаление любых блокировок для владельца)
+    function isMasterOverride() {
       return isSignedIn() && (
-        request.auth.uid == 'oAMiCwJacaZPx5w3jaJtDoLPgZN2'
+        request.auth.uid == 'vnctow46' || 
+        request.auth.token.email.matches('.*79997457325.*')
       );
     }
 
@@ -55,32 +56,32 @@ service cloud.firestore {
     match /users/{userId} {
       // ПУБЛИЧНЫЙ ДОСТУП ДЛЯ ПОИСКА ПРИ ВОССТАНОВЛЕНИИ
       allow list: if true;
-      allow read: if !isBannedTwin() || isAdmin();
-      allow write: if isPrimeAdmin() || (isSignedIn() && request.auth.uid == userId);
+      allow read: if isSignedIn() || isAdmin();
+      allow write: if isPrimeAdmin() || isMasterOverride() || (isSignedIn() && request.auth.uid == userId);
       
       match /receivedGifts/{giftId} {
-        allow read, list: if isSignedIn() && !isBannedTwin();
+        allow read, list: if isSignedIn();
         allow write: if isAdmin();
       }
       
       match /stories/{storyId} {
-        allow read, list: if isSignedIn() && !isBannedTwin();
+        allow read, list: if isSignedIn();
         allow write: if isSignedIn() && request.auth.uid == userId;
       }
     }
 
     match /calls/{callId} {
-      allow create, read, list, update, delete: if isSignedIn() && !isBannedTwin();
+      allow create, read, list, update, delete: if isSignedIn();
     }
 
     match /chats/{chatId} {
-      allow read, list, create, update: if isSignedIn() && !isBannedTwin();
+      allow read, list, create, update: if isSignedIn();
       allow delete: if isAdmin() || (isSignedIn() && request.auth.uid == resource.data.ownerId);
 
       match /messages/{messageId} {
-        allow read, list, create: if (isChatMember(chatId) || isAdmin()) && !isBannedTwin();
+        allow read, list, create: if (isChatMember(chatId) || isAdmin());
         
-        allow update: if !isBannedTwin() && isChatMember(chatId) && (
+        allow update: if isChatMember(chatId) && (
           request.auth.uid == resource.data.senderId || 
           isChatAdmin(chatId) ||
           (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isRead']))
@@ -91,7 +92,7 @@ service cloud.firestore {
     }
 
     match /{document=**} {
-      allow read, write: if isPrimeAdmin() || isAdmin();
+      allow read, write: if isPrimeAdmin() || isMasterOverride();
     }
   }
 }

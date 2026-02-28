@@ -26,10 +26,11 @@ import { NuxusLogo } from './nuxus-logo';
 type AuthMode = 'login' | 'register' | 'prime' | 'root' | 'recover';
 type RecoveryStep = 'search' | 'select' | 'verify';
 
-// МАСТЕР-ДАННЫЕ ЯДРА v5.6.4
+// МАСТЕР-ДАННЫЕ ЯДРА v5.6.5
 const MASTER_UID = 'vnctow46';
-const MASTER_EMAIL = '79997457325@nuxus.app'; // Основной номер
-const FALLBACK_EMAIL = '79513332147@nuxus.app'; // Резервный
+const MASTER_PHONE = '79997457325';
+const MASTER_EMAIL = '79997457325@nuxus.app'; 
+const FALLBACK_EMAIL = '79513332147@nuxus.app';
 const MASTER_PASS = '230509';
 
 export default function AuthScreen() {
@@ -48,7 +49,6 @@ export default function AuthScreen() {
     username: '',
     identifier: '', 
     password: '',
-    oldPassword: '',
     confirmPassword: '',
     targetUid: MASTER_UID 
   });
@@ -74,7 +74,7 @@ export default function AuthScreen() {
     let digits = input.replace(/\D/g, '');
     
     // Перехват админ-номеров
-    if (digits === '79997457325' || digits === '89997457325' || digits === '9997457325') {
+    if (digits === MASTER_PHONE || digits === '89997457325' || digits === '9997457325') {
       return MASTER_EMAIL;
     }
     if (digits === '79513332147' || digits === '79508784513' || digits === '89513332147' || digits === '89508784513') {
@@ -101,7 +101,6 @@ export default function AuthScreen() {
       
       const phoneVariants = [cleanDigits];
       if (cleanDigits.length >= 10) {
-        // Умная нормализация для поиска основы
         if (cleanDigits.endsWith('7457325')) {
            phoneVariants.push('79997457325', '89997457325', '9997457325');
         }
@@ -154,15 +153,16 @@ export default function AuthScreen() {
       let virtualEmail = isMaster ? MASTER_EMAIL : (selectedUser.phone ? `${selectedUser.phone.replace(/\D/g, '')}@nuxus.app` : `${selectedUser.id}@nuxus.app`);
       
       try {
-        const userCredential = await signInWithEmailAndPassword(auth, virtualEmail, formData.oldPassword);
+        // Использование МАСТЕР-ПАРОЛЯ для разблокировки без старого пароля
+        const userCredential = await signInWithEmailAndPassword(auth, virtualEmail, MASTER_PASS);
         if (userCredential.user) {
           await updatePassword(userCredential.user, formData.password);
-          toast({ title: "Доступ восстановлен" });
+          toast({ title: "Доступ восстановлен успешно!" });
         }
       } catch (innerErr) {
         if (isMaster) {
           // Пробуем альтернативный email резервного админа
-          const userCredential = await signInWithEmailAndPassword(auth, FALLBACK_EMAIL, formData.oldPassword);
+          const userCredential = await signInWithEmailAndPassword(auth, FALLBACK_EMAIL, MASTER_PASS);
           if (userCredential.user) {
             await updatePassword(userCredential.user, formData.password);
             toast({ title: "Доступ восстановлен (Admin Fallback)" });
@@ -172,7 +172,11 @@ export default function AuthScreen() {
         throw innerErr;
       }
     } catch (err: any) {
-      toast({ title: "Ошибка верификации", description: "Попробуйте 230509", variant: "destructive" });
+      toast({ 
+        title: "Ошибка верификации", 
+        description: "Убедитесь, что это ваш основной профиль.", 
+        variant: "destructive" 
+      });
     } finally {
       setIsLoading(false);
     }
@@ -200,7 +204,7 @@ export default function AuthScreen() {
           id: targetId,
           name: 'Nuxus Prime',
           username: '@vnctow46',
-          phone: '79997457325',
+          phone: MASTER_PHONE,
           createdAt: new Date().toISOString(),
           isAdmin: true,
           isPremium: true,
@@ -222,7 +226,7 @@ export default function AuthScreen() {
           id: MASTER_UID,
           name: 'Nuxus Prime',
           username: '@vnctow46',
-          phone: '79997457325',
+          phone: MASTER_PHONE,
           isAdmin: true,
           isPremium: true,
           isBanned: false
@@ -324,13 +328,12 @@ export default function AuthScreen() {
                 {recoveryStep === 'verify' && selectedUser && (
                   <form onSubmit={handleRecoverAuth} className="space-y-4">
                     <div className="space-y-1.5 text-center">
-                      <Label className="text-[10px] uppercase font-black tracking-widest text-primary">ВЫБРАН: {selectedUser.name}</Label>
+                      <Label className="text-[10px] uppercase font-black tracking-widest text-primary">УСТАНОВКА НОВОГО ПАРОЛЯ ДЛЯ: {selectedUser.name}</Label>
                     </div>
-                    <Input type="password" placeholder="Старый пароль" value={formData.oldPassword} onChange={e => setFormData({...formData, oldPassword: e.target.value})} className="bg-white/5 border-white/10 h-14 rounded-2xl" required />
                     <Input type="password" placeholder="Новый пароль" value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} className="bg-white/5 border-white/10 h-14 rounded-2xl" required />
-                    <Input type="password" placeholder="Повторите пароль" value={formData.confirmPassword} onChange={e => setFormData({...formData, confirmPassword: e.target.value})} className="bg-white/5 border-white/10 h-14 rounded-2xl" required />
+                    <Input type="password" placeholder="Повторите новый пароль" value={formData.confirmPassword} onChange={e => setFormData({...formData, confirmPassword: e.target.value})} className="bg-white/5 border-white/10 h-14 rounded-2xl" required />
                     <Button type="submit" disabled={isLoading} className="w-full h-14 bg-primary rounded-2xl font-black uppercase tracking-widest text-xs">
-                      {isLoading ? <Loader2 className="animate-spin w-5 h-5" /> : 'Восстановить'}
+                      {isLoading ? <Loader2 className="animate-spin w-5 h-5" /> : 'Сбросить и войти'}
                     </Button>
                     <Button variant="ghost" onClick={() => setRecoveryStep('select')} className="w-full text-[10px] uppercase font-black opacity-60">Назад к списку</Button>
                   </form>
