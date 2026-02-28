@@ -47,12 +47,14 @@ export default function AuthScreen() {
   };
 
   const getVirtualEmail = (id: string) => {
-    // Если ввели Email напрямую (например, старый 89513332147@nuxus.app)
-    if (id.includes('@')) return id.trim().toLowerCase();
-
-    const rawDigits = id.replace(/\D/g, '');
+    const input = id.trim().toLowerCase();
     
-    // ГАРАНТИЯ ВОЗВРАТА СТАРЫХ ЧАТОВ АДМИНА:
+    // Если ввели Email напрямую
+    if (input.includes('@')) return input;
+
+    const rawDigits = input.replace(/\D/g, '');
+    
+    // ГАРАНТИЯ ВОЗВРАТА ОСНОВНОГО АККАУНТА "АДМИН АБУЗЕР":
     // Если ввели ваш номер в любом виде, принудительно направляем в самый первый аккаунт
     if (rawDigits.endsWith('9513332147')) {
       return '89513332147@nuxus.app';
@@ -109,12 +111,12 @@ export default function AuthScreen() {
           id: user.uid,
           name: formData.name || 'Пользователь',
           username: username,
-          phone: dbPhone,
+          phone: dbPhone || (virtualEmail.includes('89513332147') ? '+79513332147' : ''),
           avatarUrl: `https://picsum.photos/seed/${user.uid}/200`,
           createdAt: new Date().toISOString(),
           lastSeen: new Date().toISOString(),
           isBanned: false,
-          isPremium: dbPhone === '+79513332147' || virtualEmail === '89513332147@nuxus.app',
+          isPremium: true, // Админ всегда премиум
           settings: {
             theme: 'default',
             chatBackground: 'default',
@@ -205,7 +207,7 @@ export default function AuthScreen() {
                 <Label className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground/80 ml-1">Телефон или Email</Label>
                 <div className="relative group">
                   <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
-                  <Input placeholder="8 9XX... или email@nuxus.app" value={formData.identifier} onChange={e => setFormData({...formData, identifier: e.target.value})} className="bg-white/5 border-white/10 pl-10 h-14 rounded-2xl focus:border-primary/50 transition-all" required />
+                  <Input placeholder="8 9XX... или email" value={formData.identifier} onChange={e => setFormData({...formData, identifier: e.target.value})} className="bg-white/5 border-white/10 pl-10 h-14 rounded-2xl focus:border-primary/50 transition-all" required />
                 </div>
               </div>
 
