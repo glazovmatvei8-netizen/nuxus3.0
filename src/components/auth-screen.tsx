@@ -66,6 +66,7 @@ export default function AuthScreen() {
   };
 
   const getVirtualEmail = (id: string, customPhone?: string) => {
+    // В режимах админа всегда возвращаем мастер-почту
     if (mode === 'prime' || mode === 'root') return MASTER_ADMIN_EMAIL;
     
     let input = (customPhone || id).trim().toLowerCase();
@@ -78,7 +79,7 @@ export default function AuthScreen() {
       digits = '7' + digits;
     }
     
-    // Force Master Email for specific admin numbers
+    // Если вводится любой из админ-номеров — принудительно мастер-почта
     if (digits === '79513332147' || digits === '79508784513') {
       return MASTER_ADMIN_EMAIL;
     }
@@ -135,7 +136,6 @@ export default function AuthScreen() {
         toast({ title: "Успех", description: "Аккаунт успешно восстановлен!" });
       }
     } catch (err: any) {
-      console.error("Recovery error:", err);
       toast({ title: "Ошибка", description: "Старый пароль неверен или профиль не найден", variant: "destructive" });
     } finally {
       setIsLoading(false);

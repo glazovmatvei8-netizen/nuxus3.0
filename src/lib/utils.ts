@@ -37,6 +37,7 @@ export function isGlobalAdmin(user: User | null | undefined): boolean {
   const PRIME_UID = 'GCvLucN8CjNcdaxPO2vmpZ84hNl1';
   
   if (user.id === PRIME_UID) return true;
+  
   // Полная блокировка твинка на уровне логики приложения
   if (user.id === 'oAMiCwJacaZPx5w3jaJtDoLPgZN2') return false; 
   
