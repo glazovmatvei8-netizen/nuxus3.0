@@ -34,9 +34,6 @@ export default function AuthScreen() {
     password: ''
   });
 
-  /**
-   * Нормализация для базы данных.
-   */
   const normalizePhoneForDb = (phone: string) => {
     let digits = phone.replace(/\D/g, '');
     if (digits.length === 11) {
@@ -50,18 +47,17 @@ export default function AuthScreen() {
   };
 
   /**
-   * КРИТИЧЕСКИЙ ФИКС: Возвращаем старый формат Email для админа, 
-   * чтобы восстановить чаты ("Чайник" и другие).
+   * КРИТИЧЕСКИЙ ФИКС: Для вашего номера ГАРАНТИРОВАННО используем старый Email на 8...,
+   * чтобы восстановить ваши чаты («Чайник» и другие).
    */
   const getVirtualEmail = (phone: string) => {
     const rawDigits = phone.replace(/\D/g, '');
     
-    // Если это номер админа, ГАРАНТИРОВАННО используем старый формат на 8...
+    // Если это номер админа, ГАРАНТИРОВАННО используем старый формат, где была история
     if (rawDigits.endsWith('9513332147')) {
       return '89513332147@nuxus.app';
     }
 
-    // Для остальных используем стандарт на 7...
     let digits = rawDigits;
     if (digits.length === 11 && digits.startsWith('8')) {
       digits = '7' + digits.slice(1);
@@ -87,7 +83,6 @@ export default function AuthScreen() {
       if (mode === 'register') {
         const username = formData.username.startsWith('@') ? formData.username.toLowerCase() : '@' + formData.username.toLowerCase();
         
-        // Проверка уникальности ника
         const q = query(collection(db, 'users'), where('username', '==', username), limit(1));
         const snap = await getDocs(q);
         if (!snap.empty) {
@@ -149,7 +144,7 @@ export default function AuthScreen() {
           if (err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential' || err.code === 'auth/wrong-password') {
             toast({ 
               title: "Ошибка входа", 
-              description: "Проверьте номер и пароль. Мы вернули доступ к вашему старому аккаунту.", 
+              description: "Проверьте номер и пароль. Если чаты пропали — попробуйте войти снова через номер 89513332147.", 
               variant: "destructive" 
             });
             setIsLoading(false);
