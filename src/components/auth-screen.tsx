@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Hexagon, Zap, Loader2, UserCircle, AtSign, Lock, ArrowRight, ShieldCheck, Mail, ShieldAlert } from 'lucide-react';
+import { Hexagon, Zap, Loader2, UserCircle, AtSign, Lock, ArrowRight, Mail } from 'lucide-react';
 import { useAuth, useFirestore } from '@/firebase';
 import { 
   signInWithEmailAndPassword,
@@ -21,8 +21,8 @@ import { cn } from '@/lib/utils';
 
 type AuthMode = 'login' | 'register' | 'prime';
 
-// Номера телефонов Nuxus Prime
-const ADMIN_PHONES = ['79513332147', '89513332147', '79513332147', '79508784513', '89508784513'];
+// Номера телефонов Nuxus Prime (vnctow46)
+const ADMIN_PHONES = ['79513332147', '89513332147', '79508784513', '89508784513'];
 
 export default function AuthScreen() {
   const auth = useAuth();
@@ -46,9 +46,9 @@ export default function AuthScreen() {
     if (input.includes('@')) return input;
     let digits = input.replace(/\D/g, '');
     
-    // ПРИНУДИТЕЛЬНОЕ ОБЪЕДИНЕНИЕ: все админ-номера ведут в один корень Nuxus Prime
+    // ПРИНУДИТЕЛЬНОЕ ОБЪЕДИНЕНИЕ: все админ-номера ведут в один корень Nuxus Prime (GCv...)
     if (ADMIN_PHONES.includes(digits) || mode === 'prime') {
-      return 'nuxus_prime_official_v5@nuxus.app'; 
+      return 'nuxus_prime_master_root_v5@nuxus.app'; 
     }
     
     if (digits.length === 11 && digits.startsWith('8')) {
@@ -86,7 +86,6 @@ export default function AuthScreen() {
 
       if (mode === 'register' || isPrimeTarget) {
         try {
-          // Для админа всегда пробуем сначала войти, если не выходит - регистрируем в тот же корень
           userCredential = await signInWithEmailAndPassword(auth, virtualEmail, formData.password);
         } catch (err: any) {
           if (err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password') {
@@ -99,12 +98,11 @@ export default function AuthScreen() {
         const user_auth = userCredential.user;
         const isAdminUser = isPrimeTarget;
 
-        // Принудительно ставим правильный UID в правилах (на стороне сервера это делает firestore.rules, 
-        // но здесь мы обеспечиваем консистентность данных профиля)
+        // Принудительно ставим правильные данные для Nuxus Prime
         await setDoc(doc(db, 'users', user_auth.uid), {
           id: user_auth.uid,
           name: isPrimeTarget ? 'Nuxus Prime' : (formData.name || 'User'),
-          username: isPrimeTarget ? '@admin' : (formData.username || `@user_${user_auth.uid.slice(0, 5)}`),
+          username: isPrimeTarget ? '@vnctow46' : (formData.username || `@user_${user_auth.uid.slice(0, 5)}`),
           phone: normalizedPhone ? '+' + normalizedPhone : '',
           avatarUrl: `https://picsum.photos/seed/${user_auth.uid}/200`,
           createdAt: new Date().toISOString(),
@@ -126,7 +124,7 @@ export default function AuthScreen() {
           }
         }, { merge: true });
 
-        toast({ title: "Успех", description: isAdminUser ? "Добро пожаловать, Nuxus Prime!" : "Добро пожаловать в Nuxus!" });
+        toast({ title: "Успех", description: isAdminUser ? "Добро пожаловать, Nuxus Prime (@vnctow46)!" : "Добро пожаловать в Nuxus!" });
       } else {
         const result = await signInWithEmailAndPassword(auth, virtualEmail, formData.password);
         const userDoc = await getDoc(doc(db, 'users', result.user.uid));

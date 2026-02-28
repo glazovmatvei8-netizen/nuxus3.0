@@ -39,7 +39,7 @@ service cloud.firestore {
     }
 
     match /users/{userId} {
-      // Блокируем нежелательный UID
+      // ПОЛНАЯ БЛОКИРОВКА ТВИНКА
       allow read, write: if false && userId == 'oAMiCwJacaZPx5w3jaJtDoLPgZN2';
       
       allow read: if true; 

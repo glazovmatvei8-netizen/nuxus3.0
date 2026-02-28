@@ -276,7 +276,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
       </DialogContent>
     </Dialog>
     <Dialog open={!!pendingPayment} onOpenChange={v => !v && setPendingPayment(null)}>
-      <DialogContent className="max-w-sm bg-card border-primary/20 p-8 rounded-[3rem] text-center shadow-2xl">
+      <DialogContent className="max-sm bg-card border-primary/20 p-8 rounded-[3rem] text-center shadow-2xl">
         <Crown className="w-16 h-16 text-primary mx-auto mb-6 animate-float" />
         <h2 className="text-2xl font-black text-white italic tracking-tighter mb-2">Prime Payment</h2>
         <div className="bg-black/40 p-6 rounded-3xl border border-white/10 mb-8 group cursor-pointer relative overflow-hidden" onClick={() => { navigator.clipboard.writeText(CARD_NUMBER.replace(/\s/g, '')); toast({ title: "Card number copied" }); }}>
