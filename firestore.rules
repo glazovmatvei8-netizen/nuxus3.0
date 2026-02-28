@@ -7,12 +7,12 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    // Проверка прав администратора (учитываем оба формата Email для обратной совместимости)
+    // Проверка прав администратора
     function isAdmin() {
       return isSignedIn() && (
         request.auth.token.phone_number == '+79513332147' || 
-        request.auth.token.email == '79513332147@nuxus.app' ||
         request.auth.token.email == '89513332147@nuxus.app' ||
+        request.auth.token.email == '79513332147@nuxus.app' ||
         request.auth.uid == 'GCvLucN8CjNcdaxPO2vmpZ84hNl1'
       );
     }

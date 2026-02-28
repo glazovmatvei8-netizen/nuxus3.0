@@ -245,7 +245,7 @@ export default function AuthScreen() {
               </button>
             </div>
           </CardContent>
-        </Card>
+ Card        </Card>
         
         <div className="mt-10 flex items-center justify-center gap-3 text-muted-foreground/40 text-[9px] uppercase font-bold tracking-[0.4em]">
           <div className="w-8 h-[1px] bg-white/10" />

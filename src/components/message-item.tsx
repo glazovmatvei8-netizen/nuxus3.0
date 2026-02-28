@@ -215,8 +215,8 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, amIPremium = 
 
   if (message.contentType === 'service') {
     return (
-      <div className="w-full flex justify-center my-4 px-4 shrink-0 pointer-events-none">
-        <div className="max-w-[80%] bg-white/5 backdrop-blur-md px-6 py-2 rounded-full border border-white/10 shadow-sm">
+      <div className="w-full flex justify-center my-4 px-4 shrink-0">
+        <div className="max-w-[80%] bg-white/5 backdrop-blur-md px-6 py-2 rounded-full border border-white/10 shadow-sm mx-auto">
           <p className="text-[9px] text-muted-foreground uppercase font-black tracking-[0.2em] text-center break-words">
             {message.content}
           </p>
@@ -233,8 +233,8 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, amIPremium = 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <div className={cn(
-                "p-3 rounded-2xl cursor-pointer shadow-md border transition-all hover:opacity-95 relative",
-                isMe ? "message-bubble-me border-none self-end ml-auto text-right" : "bg-card border-white/5 text-foreground self-start mr-auto text-left",
+                "p-3 rounded-2xl cursor-pointer shadow-md border transition-all hover:opacity-95 relative ml-auto",
+                isMe ? "message-bubble-me border-none self-end text-right" : "bg-card border-white/5 text-foreground self-start mr-auto text-left",
                 message.contentType === 'video' && "p-1 rounded-full bg-transparent border-none shadow-none"
               )}>
                 {renderContent()}

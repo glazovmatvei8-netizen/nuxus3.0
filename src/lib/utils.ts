@@ -33,9 +33,8 @@ export function formatDisplayName(name: string | undefined | null): string {
 export function isUserPremium(user: User | null | undefined): boolean {
   if (!user) return false;
   
-  // Вечный премиум для админа (проверяем все форматы номера)
-  const adminPhones = ['+79513332147', '89513332147', '79513332147'];
-  const isAdmin = adminPhones.includes(user.phone) || 
+  // Вечный премиум для админа
+  const isAdmin = user.phone === '+79513332147' || 
                   user.id === 'GCvLucN8CjNcdaxPO2vmpZ84hNl1' ||
                   user.username === '@admin';
 
