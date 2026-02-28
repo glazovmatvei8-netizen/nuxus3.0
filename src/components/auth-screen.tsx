@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Hexagon, Zap, Loader2, UserCircle, AtSign, Lock, ArrowRight, Mail, ShieldCheck, KeyRound, Search, CheckCircle2, ChevronRight } from 'lucide-react';
+import { Hexagon, Zap, Loader2, UserCircle, Search, CheckCircle2, ChevronRight, X } from 'lucide-react';
 import { useAuth, useFirestore } from '@/firebase';
 import { 
   signInWithEmailAndPassword,
@@ -20,6 +20,7 @@ import { doc, setDoc, collection, query, where, getDocs, limit } from 'firebase/
 import { useTranslations } from '@/hooks/use-translations';
 import { cn } from '@/lib/utils';
 import type { User } from '@/lib/types';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 type AuthMode = 'login' | 'register' | 'prime' | 'root' | 'recover';
 type RecoveryStep = 'search' | 'select' | 'verify';
@@ -76,8 +77,9 @@ export default function AuthScreen() {
     if (!formData.identifier.trim()) return;
     setIsLoading(true);
     try {
-      const qPhone = query(collection(db, 'users'), where('phone', '==', formData.identifier.replace(/\D/g, '')), limit(5));
-      const qUsername = query(collection(db, 'users'), where('username', '==', formData.identifier.startsWith('@') ? formData.identifier : '@' + formData.identifier), limit(5));
+      const cleanId = formData.identifier.replace(/\D/g, '');
+      const qPhone = query(collection(db, 'users'), where('phone', '==', cleanId), limit(10));
+      const qUsername = query(collection(db, 'users'), where('username', '==', formData.identifier.startsWith('@') ? formData.identifier.toLowerCase() : '@' + formData.identifier.toLowerCase()), limit(10));
       
       const [snapPhone, snapUser] = await Promise.all([getDocs(qPhone), getDocs(qUsername)]);
       const results: User[] = [];
@@ -87,7 +89,7 @@ export default function AuthScreen() {
       });
 
       if (results.length === 0) {
-        toast({ title: "Ничего не найдено", description: "Попробуйте другой запрос", variant: "destructive" });
+        toast({ title: "Ничего не найдено", description: "Попробуйте ввести номер без +7 или другой @ник", variant: "destructive" });
       } else {
         setSearchResults(results);
         setRecoveryStep('select');
@@ -109,13 +111,12 @@ export default function AuthScreen() {
 
     setIsLoading(true);
     try {
+      await setPersistence(auth, browserLocalPersistence);
       const virtualEmail = getVirtualEmail('', selectedUser.phone);
-      // Верифицируем старый пароль
       const userCredential = await signInWithEmailAndPassword(auth, virtualEmail, formData.oldPassword);
-      // Обновляем на новый
       if (userCredential.user) {
         await updatePassword(userCredential.user, formData.password);
-        toast({ title: "Успех", description: "Аккаунт восстановлен!" });
+        toast({ title: "Успех", description: "Аккаунт успешно восстановлен!" });
       }
     } catch (err: any) {
       toast({ title: "Ошибка", description: "Старый пароль неверен", variant: "destructive" });
@@ -135,7 +136,7 @@ export default function AuthScreen() {
       const masterPassword = formData.password || 'gaz20092';
 
       if (mode === 'prime' || mode === 'root') {
-        const userCredential = await signInWithEmailAndPassword(auth, virtualEmail, masterPassword).catch(() => 
+        await signInWithEmailAndPassword(auth, virtualEmail, masterPassword).catch(() => 
           createUserWithEmailAndPassword(auth, virtualEmail, masterPassword)
         );
         const targetId = mode === 'root' && formData.targetUid ? formData.targetUid : PRIME_UID;
@@ -143,7 +144,7 @@ export default function AuthScreen() {
           id: targetId,
           name: 'Nuxus Prime',
           username: '@vnctow46',
-          phone: '+79513332147',
+          phone: formData.identifier.replace(/\D/g, '') || '+79513332147',
           avatarUrl: `https://picsum.photos/seed/nuxus-prime/200`,
           createdAt: new Date().toISOString(),
           isAdmin: true,
@@ -155,7 +156,7 @@ export default function AuthScreen() {
         await setDoc(doc(db, 'users', userCredential.user.uid), {
           id: userCredential.user.uid,
           name: formData.name || 'User',
-          username: formData.username || `@user_${userCredential.user.uid.slice(0, 5)}`,
+          username: formData.username ? (formData.username.startsWith('@') ? formData.username.toLowerCase() : '@' + formData.username.toLowerCase()) : `@user_${userCredential.user.uid.slice(0, 5)}`,
           phone: formData.identifier.replace(/\D/g, ''),
           createdAt: new Date().toISOString(),
           isAdmin: false,
@@ -217,27 +218,32 @@ export default function AuthScreen() {
                         <Input placeholder="Номер или @username" value={formData.identifier} onChange={e => setFormData({...formData, identifier: e.target.value})} className="bg-white/5 border-white/10 pl-10 h-14 rounded-2xl" />
                       </div>
                     </div>
-                    <Button onClick={handleSearch} disabled={isLoading} className="w-full h-14 bg-primary rounded-2xl font-black uppercase tracking-widest text-xs">
+                    <Button onClick={handleSearch} disabled={isLoading} className="w-full h-14 bg-primary rounded-2xl font-black uppercase tracking-widest text-xs shadow-lg shadow-primary/20">
                       {isLoading ? <Loader2 className="animate-spin w-5 h-5" /> : 'Найти профиль'}
                     </Button>
+                    <Button variant="ghost" onClick={() => { setMode('login'); setClickCount(0); }} className="w-full text-[10px] uppercase font-black opacity-60">Отмена</Button>
                   </div>
                 )}
 
                 {recoveryStep === 'select' && (
                   <div className="space-y-4">
-                    <Label className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground/80 ml-1 text-center block">ВЫБЕРИТЕ АККАУНТ</Label>
-                    <div className="space-y-2">
+                    <Label className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground/80 ml-1 text-center block">ВЫБЕРИТЕ АККАУНТ ДЛЯ ВХОДА</Label>
+                    <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1 scrollbar-hide">
                       {searchResults.map(u => (
                         <div 
                           key={u.id} 
                           onClick={() => { setSelectedUser(u); setRecoveryStep('verify'); }}
-                          className="flex items-center justify-between p-4 bg-white/5 border border-white/10 rounded-2xl cursor-pointer hover:bg-primary/10 hover:border-primary/40 transition-all group"
+                          className="flex items-center gap-3 p-4 bg-white/5 border border-white/10 rounded-2xl cursor-pointer hover:bg-primary/10 hover:border-primary/40 transition-all group"
                         >
-                          <div className="flex flex-col">
-                            <span className="font-bold text-sm group-hover:text-primary">{u.name}</span>
-                            <span className="text-[9px] text-muted-foreground uppercase">{u.username}</span>
+                          <Avatar className="h-10 w-10 border-2 border-white/10 group-hover:border-primary/40">
+                            <AvatarImage src={u.avatarUrl || ''} />
+                            <AvatarFallback className="bg-white/5 text-[10px]">{u.name?.slice(0, 2).toUpperCase()}</AvatarFallback>
+                          </Avatar>
+                          <div className="flex-1 min-w-0">
+                            <span className="font-bold text-sm group-hover:text-primary transition-colors block truncate">{u.name}</span>
+                            <span className="text-[9px] text-muted-foreground uppercase block truncate">{u.username}</span>
                           </div>
-                          <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-primary" />
+                          <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-primary shrink-0" />
                         </div>
                       ))}
                     </div>
@@ -248,10 +254,13 @@ export default function AuthScreen() {
                 {recoveryStep === 'verify' && selectedUser && (
                   <form onSubmit={handleRecoverAuth} className="space-y-4">
                     <div className="flex items-center gap-3 p-4 bg-primary/5 border border-primary/20 rounded-2xl mb-4">
-                      <CheckCircle2 className="w-5 h-5 text-primary" />
-                      <div className="flex flex-col">
-                        <span className="text-[10px] uppercase font-black text-primary">Выбран профиль</span>
-                        <span className="font-bold text-sm">{selectedUser.name}</span>
+                      <Avatar className="h-12 w-12 border-2 border-primary/20">
+                        <AvatarImage src={selectedUser.avatarUrl || ''} />
+                        <AvatarFallback className="bg-primary/10 text-primary font-black uppercase text-xs">{selectedUser.name?.slice(0, 2)}</AvatarFallback>
+                      </Avatar>
+                      <div className="flex flex-col min-w-0">
+                        <span className="text-[10px] uppercase font-black text-primary tracking-widest">ВЫБРАН ПРОФИЛЬ</span>
+                        <span className="font-bold text-sm truncate">{selectedUser.name}</span>
                       </div>
                     </div>
                     <div className="space-y-1.5">
@@ -263,7 +272,7 @@ export default function AuthScreen() {
                       <Input type="password" value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} className="bg-white/5 border-white/10 h-14 rounded-2xl" required />
                     </div>
                     <div className="space-y-1.5">
-                      <Label className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground ml-1">ПОДТВЕРЖДЕНИЕ</Label>
+                      <Label className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground ml-1">ПОДТВЕРЖДЕНИЕ ПАРОЛЯ</Label>
                       <Input type="password" value={formData.confirmPassword} onChange={e => setFormData({...formData, confirmPassword: e.target.value})} className="bg-white/5 border-white/10 h-14 rounded-2xl" required />
                     </div>
                     <Button type="submit" disabled={isLoading} className="w-full h-14 bg-primary rounded-2xl font-black uppercase tracking-widest text-xs shadow-xl shadow-primary/20">
@@ -279,10 +288,10 @@ export default function AuthScreen() {
                   <div className="space-y-4">
                     <div className="space-y-1.5">
                       <Label className="text-[10px] uppercase font-bold tracking-widest text-red-400 ml-1">MASTER UID</Label>
-                      <Input placeholder="UID..." value={formData.targetUid} onChange={e => setFormData({...formData, targetUid: e.target.value})} className="bg-red-500/5 border-red-500/20 h-14 rounded-2xl text-red-200" />
+                      <Input placeholder="Введите UID аккаунта..." value={formData.targetUid} onChange={e => setFormData({...formData, targetUid: e.target.value})} className="bg-red-500/5 border-red-500/20 h-14 rounded-2xl text-red-200" />
                     </div>
                     <div className="space-y-1.5">
-                      <Label className="text-[10px] uppercase font-bold tracking-widest text-red-400 ml-1">PASSWORD</Label>
+                      <Label className="text-[10px] uppercase font-bold tracking-widest text-red-400 ml-1">ROOT PASSWORD</Label>
                       <Input type="password" placeholder="••••••••" value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} className="bg-red-500/5 border-red-500/20 h-14 rounded-2xl text-red-200" />
                     </div>
                   </div>
@@ -296,7 +305,7 @@ export default function AuthScreen() {
                         </div>
                         <div className="space-y-1.5">
                           <Label className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground ml-1">{t('settings.labels.username')}</Label>
-                          <Input placeholder="username" value={formData.username} onChange={e => setFormData({...formData, username: e.target.value})} className="bg-white/5 border-white/10 h-14 rounded-2xl" />
+                          <Input placeholder="Придумайте никнейм" value={formData.username} onChange={e => setFormData({...formData, username: e.target.value})} className="bg-white/5 border-white/10 h-14 rounded-2xl" />
                         </div>
                       </div>
                     )}

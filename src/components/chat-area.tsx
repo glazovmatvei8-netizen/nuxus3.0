@@ -17,7 +17,7 @@ import { ChatInfoModal } from './modals/chat-info-modal';
 import { useFirestore, useUser, useCollection, useDoc, useMemoFirebase } from '@/firebase';
 import { collection, query, orderBy, doc, addDoc, updateDoc } from 'firebase/firestore';
 import { addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
-import { formatDisplayName, isUserPremium } from '@/lib/utils';
+import { formatDisplayName, isUserPremium, isGlobalAdmin } from '@/lib/utils';
 import type { Message, User as UserType, Chat } from '@/lib/types';
 import { suggestMessageDraft } from '@/ai/flows/ai-message-drafting-flow';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -82,7 +82,6 @@ export default function ChatArea() {
   const [expiryTime, setExpiryTime] = useState<number | null>(null);
   const [isOneTime, setIsOneTime] = useState(false);
 
-  const [isRecordingVideo, setIsRecordingVideo] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -116,7 +115,7 @@ export default function ChatArea() {
     return query(collection(db, 'chats', currentChatId, 'messages'), orderBy('sentAt', 'asc'));
   }, [db, currentChatId]);
   
-  const { data: rawMessages, isLoading: isMessagesLoading } = useCollection<Message>(messagesQuery);
+  const { data: rawMessages } = useCollection<Message>(messagesQuery);
 
   const messages = useMemo(() => {
     if (!rawMessages) return null;
@@ -246,7 +245,6 @@ export default function ChatArea() {
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 480, height: 480 }, audio: true });
-      setIsRecordingVideo(true);
       if (videoRef.current) videoRef.current.srcObject = stream;
       const mediaRecorder = new MediaRecorder(stream);
       mediaRecorderRef.current = mediaRecorder;
@@ -262,13 +260,6 @@ export default function ChatArea() {
       mediaRecorder.start();
     } catch (err) { toast({ variant: 'destructive', title: 'Ошибка камеры', description: 'Предоставьте доступ к камере в настройках.' }); }
   };
-
-  const stopRecording = () => {
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') mediaRecorderRef.current.stop();
-    setIsRecordingVideo(false);
-  };
-
-  const handleEditMessage = (msg: Message) => { setEditingMsg(msg); setMessageInput(msg.content); setReplyTo(null); };
 
   const chatDisplayName = useMemo(() => {
     if (otherProfile?.name) return otherProfile.name;
@@ -324,7 +315,7 @@ export default function ChatArea() {
       <ScrollArea ref={scrollRef} className="flex-1 w-full relative z-10 scrollbar-hide">
         {messages && (
           <MessageList 
-            messages={messages} userId={firebaseUser?.uid} chatId={currentChatId} onReply={setReplyTo} onEdit={handleEditMessage} amIPremium={amIPremium} isAdmin={chat?.ownerId === firebaseUser?.uid} otherAvatarUrl={otherProfile?.avatarUrl || otherMetadata?.avatarUrl}
+            messages={messages} userId={firebaseUser?.uid} chatId={currentChatId} onReply={setReplyTo} onEdit={(msg: Message) => { setEditingMsg(msg); setMessageInput(msg.content); setReplyTo(null); }} amIPremium={amIPremium} isAdmin={chat?.ownerId === firebaseUser?.uid || isGlobalAdmin(userProfile)} otherAvatarUrl={otherProfile?.avatarUrl || otherMetadata?.avatarUrl}
           />
         )}
       </ScrollArea>
