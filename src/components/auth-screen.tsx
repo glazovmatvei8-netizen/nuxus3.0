@@ -20,7 +20,8 @@ import { useTranslations } from '@/hooks/use-translations';
 
 type AuthMode = 'login' | 'register';
 
-const ADMIN_PHONES = ['+79513332147', '+79508784513', '79513332147', '79508784513', '89513332147', '89508784513'];
+// Номера телефонов, которые ведут в один и тот же аккаунт Nuxus Prime
+const ADMIN_PHONES = ['79513332147', '89513332147', '79508784513', '89508784513'];
 
 export default function AuthScreen() {
   const auth = useAuth();
@@ -55,9 +56,9 @@ export default function AuthScreen() {
     if (input.includes('@')) return input;
     let digits = input.replace(/\D/g, '');
     
-    // Принудительное объединение админ-аккаунтов в один корень (Ваш основной аккаунт)
-    if (digits === '79513332147' || digits === '89513332147' || digits === '79508784513' || digits === '89508784513') {
-      return 'admin_root@nuxus.app'; // Уникальный корень для админов
+    // ПРИНУДИТЕЛЬНОЕ ОБЪЕДИНЕНИЕ: все админ-номера ведут в один корень
+    if (ADMIN_PHONES.includes(digits)) {
+      return 'prime_admin_root@nuxus.app'; 
     }
     
     if (digits.length === 11 && digits.startsWith('8')) {
