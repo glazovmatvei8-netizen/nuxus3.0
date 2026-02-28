@@ -6,9 +6,10 @@ import { useAppState } from '@/lib/store';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { UserAvatar } from '@/components/user-avatar';
-import { Search, Settings, Plus, Loader2, Bookmark, Pin, Globe, Star, Hexagon, ShieldAlert, Zap } from 'lucide-react';
+import { Search, Settings, Plus, Loader2, Bookmark, Pin, Globe, Star, Hexagon, ShieldAlert } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { StoriesBar } from './stories-bar';
 import { CreateChatModal } from './modals/create-chat-modal';
 import { SettingsModal } from './modals/settings-modal';
 import { AdminPanelModal } from './modals/admin-panel-modal';
@@ -142,47 +143,6 @@ export default function ChatSidebar() {
     return () => clearTimeout(timer);
   }, [searchQuery, db, user?.uid]);
 
-  const handleOpenSavedMessages = async () => {
-    if (!db || !user || !profile) return;
-    
-    const savedChat = chats?.find(c => c.type === 'saved');
-    if (savedChat) {
-      handleChatClick(savedChat);
-      return;
-    }
-
-    setIsCreatingSaved(true);
-    try {
-      const q = query(
-        collection(db, 'chats'),
-        where('type', '==', 'saved'),
-        where('ownerId', '==', user.uid),
-        limit(1)
-      );
-      const snap = await getDocs(q);
-      if (!snap.empty) {
-        handleChatClick({ id: snap.docs[0].id, ...snap.docs[0].data() } as any);
-      } else {
-        const newSaved = await addDoc(collection(db, 'chats'), {
-          type: 'saved',
-          name: 'Избранное',
-          username: '@saved',
-          ownerId: user.uid,
-          participantIds: [user.uid],
-          adminIds: [user.uid],
-          createdAt: new Date().toISOString(),
-          lastMessageAt: new Date().toISOString(),
-          avatarUrl: null
-        });
-        handleChatClick({ id: newSaved.id } as any);
-      }
-    } catch (e) {
-      toast({ title: "Ошибка", description: "Не удалось открыть Избранное", variant: "destructive" });
-    } finally {
-      setIsCreatingSaved(false);
-    }
-  };
-
   const sortedChats = useMemo(() => {
     if (!chats) return [];
     return [...chats].sort((a, b) => {
@@ -266,13 +226,15 @@ export default function ChatSidebar() {
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input 
-            placeholder="Поиск по @нику..." 
+            placeholder="Поиск..." 
             className="pl-9 bg-muted border-none rounded-xl h-10 text-sm focus:ring-1 focus:ring-primary/20"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
         </div>
       </div>
+
+      <StoriesBar />
 
       <div className="px-3 py-2 shrink-0">
         <Tabs value={activeTab} onValueChange={(val) => setActiveTab(val as any)} className="w-full">
@@ -310,24 +272,6 @@ export default function ChatSidebar() {
                   isGlobalResult
                   onJoin={() => handleJoinPublicChat(globalSearchResult)}
                 />
-              </div>
-            )}
-
-            {activeTab === 'all' && searchQuery.length === 0 && (
-              <div
-                onClick={handleOpenSavedMessages}
-                className={cn(
-                  "flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all",
-                  chats?.find(c => c.type === 'saved')?.id === currentChatId ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'hover:bg-muted text-foreground'
-                )}
-              >
-                <div className="h-10 w-10 rounded-xl bg-accent/20 flex items-center justify-center shrink-0">
-                  {isCreatingSaved ? <Loader2 className="w-5 h-5 animate-spin" /> : <Bookmark className="w-5 h-5 text-accent" />}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <span className="font-bold text-sm">Избранное</span>
-                  <div className="text-[10px] uppercase font-bold text-muted-foreground/60">Личные заметки</div>
-                </div>
               </div>
             )}
 

@@ -20,7 +20,6 @@ export interface Message {
   serialNumber?: number;
   forwardFrom?: string;
   translation?: string;
-  // Новые поля для спец-функций
   scheduledAt?: string | null;
   expiresAt?: string | null;
   expiresInSeconds?: number | null;
@@ -37,6 +36,19 @@ export interface Message {
     price: number;
     status: 'pending' | 'confirmed' | 'rejected';
   };
+}
+
+export interface Story {
+  id: string;
+  userId: string;
+  userName: string;
+  userAvatar: string | null;
+  content: string;
+  contentType: 'image' | 'video';
+  caption?: string;
+  createdAt: string;
+  expiresAt: string;
+  views: string[]; // array of uids
 }
 
 export interface Call {

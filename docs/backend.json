@@ -50,23 +50,24 @@
       },
       "required": ["id", "chatId", "senderId", "content", "contentType", "sentAt"]
     },
-    "Call": {
+    "Story": {
       "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Call",
+      "title": "Story",
       "type": "object",
-      "description": "Represents an active or historical call session.",
+      "description": "Represents a user's story (status).",
       "properties": {
         "id": { "type": "string" },
-        "callerId": { "type": "string" },
-        "receiverId": { "type": "string" },
-        "chatId": { "type": "string" },
-        "type": { "type": "string", "enum": ["audio", "video"] },
-        "status": { "type": "string", "enum": ["calling", "active", "ended", "rejected", "missed"] },
+        "userId": { "type": "string" },
+        "userName": { "type": "string" },
+        "userAvatar": { "type": "string" },
+        "content": { "type": "string", "description": "Data URI of photo or video." },
+        "contentType": { "type": "string", "enum": ["image", "video"] },
+        "caption": { "type": "string" },
         "createdAt": { "type": "string", "format": "date-time" },
-        "startedAt": { "type": "string", "format": "date-time" },
-        "endedAt": { "type": "string", "format": "date-time" }
+        "expiresAt": { "type": "string", "format": "date-time" },
+        "views": { "type": "array", "items": { "type": "string" } }
       },
-      "required": ["id", "callerId", "receiverId", "type", "status", "createdAt"]
+      "required": ["id", "userId", "content", "contentType", "createdAt", "expiresAt"]
     }
   },
   "auth": {
@@ -77,6 +78,10 @@
       {
         "path": "/users/{userId}",
         "definition": { "entityName": "UserProfile", "schema": { "$ref": "#/backend/entities/UserProfile" }, "description": "Stores user profiles." }
+      },
+      {
+        "path": "/users/{userId}/stories/{storyId}",
+        "definition": { "entityName": "Story", "schema": { "$ref": "#/backend/entities/Story" }, "description": "Stores user stories." }
       },
       {
         "path": "/chats/{chatId}",
