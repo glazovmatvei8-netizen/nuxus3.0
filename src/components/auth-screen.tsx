@@ -48,18 +48,11 @@ export default function AuthScreen() {
 
   const getVirtualEmail = (id: string) => {
     const input = id.trim().toLowerCase();
-    
-    // Если ввели Email напрямую
     if (input.includes('@')) return input;
-
     const rawDigits = input.replace(/\D/g, '');
-    
-    // ГАРАНТИЯ ВОЗВРАТА ОСНОВНОГО АККАУНТА:
-    // Если ввели ваш номер в любом виде, принудительно направляем в scpscp-046@yandex.ru
     if (rawDigits.endsWith('9513332147')) {
       return 'scpscp-046@yandex.ru';
     }
-
     let digits = rawDigits;
     if (digits.length === 11 && digits.startsWith('8')) {
       digits = '7' + digits.slice(1);
@@ -70,20 +63,15 @@ export default function AuthScreen() {
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     const virtualEmail = getVirtualEmail(formData.identifier);
-    
     if (!formData.identifier.trim()) {
       toast({ title: "Ошибка", description: "Введите данные для входа", variant: "destructive" });
       return;
     }
-
     setIsLoading(true);
-
     try {
       await setPersistence(auth, browserLocalPersistence);
-
       if (mode === 'register') {
         const username = formData.username.startsWith('@') ? formData.username.toLowerCase() : '@' + formData.username.toLowerCase();
-        
         const q = query(collection(db, 'users'), where('username', '==', username), limit(1));
         const snap = await getDocs(q);
         if (!snap.empty) {
@@ -91,7 +79,6 @@ export default function AuthScreen() {
           setIsLoading(false);
           return;
         }
-
         let user;
         try {
           const result = await createUserWithEmailAndPassword(auth, virtualEmail, formData.password);
@@ -104,9 +91,7 @@ export default function AuthScreen() {
             throw authErr;
           }
         }
-
         const dbPhone = formData.identifier.includes('@') ? '' : normalizePhoneForDb(formData.identifier);
-
         await setDoc(doc(db, 'users', user.uid), {
           id: user.uid,
           name: formData.name || 'Пользователь',
@@ -129,13 +114,11 @@ export default function AuthScreen() {
             }
           }
         }, { merge: true });
-        
         toast({ title: "Успех", description: "Добро пожаловать в Nuxus!" });
       } else {
         try {
           const result = await signInWithEmailAndPassword(auth, virtualEmail, formData.password);
           const user = result.user;
-
           const userDoc = await getDoc(doc(db, 'users', user.uid));
           if (userDoc.exists() && userDoc.data()?.isBanned) {
             toast({ title: "Доступ запрещен", description: "Ваш аккаунт заблокирован", variant: "destructive" });
@@ -166,19 +149,20 @@ export default function AuthScreen() {
       
       <div className="w-full max-w-sm relative z-10">
         <div className="flex justify-center mb-10">
-          <div className="bg-primary p-6 rounded-[2rem] shadow-2xl shadow-primary/40 animate-float">
-            <Hexagon className="w-14 h-14 text-white" />
-            <Zap className="w-7 h-7 text-white absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 fill-white" />
+          <div className="bg-primary p-6 rounded-[2.5rem] shadow-2xl shadow-primary/40 animate-float relative overflow-hidden group">
+            <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity" />
+            <Hexagon className="w-16 h-16 text-white" />
+            <Zap className="w-8 h-8 text-white absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 fill-white" />
           </div>
         </div>
 
         <Card className="border-white/5 bg-card/40 backdrop-blur-3xl shadow-2xl rounded-[3rem] overflow-hidden border">
           <CardHeader className="text-center pb-2 pt-10">
-            <CardTitle className="text-6xl font-black tracking-tighter text-white uppercase italic leading-none">
+            <CardTitle className="text-6xl font-black tracking-tighter text-white uppercase italic leading-none drop-shadow-2xl">
               Nuxus
             </CardTitle>
             <CardDescription className="text-muted-foreground/60 mt-4 font-bold tracking-[0.4em] uppercase text-[10px]">
-              {mode === 'login' ? 'Verification Core' : 'New Identity Core'}
+              {mode === 'login' ? 'Ядро Авторизации' : 'Создание Личности'}
             </CardDescription>
           </CardHeader>
           
@@ -224,7 +208,7 @@ export default function AuthScreen() {
                   <Loader2 className="animate-spin w-5 h-5" />
                 ) : (
                   <span className="flex items-center gap-2">
-                    {mode === 'login' ? 'Войти' : 'Создать'} <ArrowRight className="w-4 h-4" />
+                    {mode === 'login' ? 'Войти в Ядро' : 'Загрузить профиль'} <ArrowRight className="w-4 h-4" />
                   </span>
                 )}
               </Button>
@@ -242,7 +226,7 @@ export default function AuthScreen() {
         </Card>
         
         <div className="mt-10 flex items-center justify-center gap-3 text-muted-foreground/40 text-[9px] uppercase font-bold tracking-[0.4em]">
-          <ShieldCheck className="w-3 h-3" /> Secure Connection
+          <ShieldCheck className="w-3 h-3" /> Шифрование AES-256
         </div>
       </div>
     </div>

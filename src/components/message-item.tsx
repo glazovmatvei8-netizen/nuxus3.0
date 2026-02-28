@@ -130,14 +130,12 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, amIPremium = 
     try {
       const msgRef = doc(db, 'chats', chatId, 'messages', message.id);
       const targetUserRef = doc(db, 'users', message.paymentData.targetUserId);
-
       if (action === 'confirm') {
         const targetData = (await getDocs(query(collection(db, 'users'), where('id', '==', message.paymentData.targetUserId), limit(1)))).docs[0]?.data();
         const currentExpiry = targetData?.premiumUntil ? new Date(targetData.premiumUntil) : new Date();
         const newExpiry = message.paymentData.unit === 'months' 
           ? addMonths(currentExpiry, message.paymentData.amount || 1).toISOString()
           : addYears(currentExpiry, message.paymentData.amount || 1).toISOString();
-        
         updateDocumentNonBlocking(targetUserRef, { isPremium: true, premiumUntil: newExpiry });
         updateDocumentNonBlocking(msgRef, { contentType: 'service', content: `✅ Оплата принята: ${message.paymentData.itemName}` });
         toast({ title: "Оплата подтверждена" });
@@ -169,7 +167,6 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, amIPremium = 
         </div>
       );
     }
-
     if (message.isExpired) {
       return (
         <div className="flex items-center gap-2 py-1 px-2 opacity-50 italic text-[10px]">
@@ -177,7 +174,6 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, amIPremium = 
         </div>
       );
     }
-
     if (message.contentType === 'payment_request' && message.paymentData) {
       const data = message.paymentData;
       return (
@@ -189,10 +185,6 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, amIPremium = 
               <span className="text-sm font-bold text-white truncate">{data.itemName}</span>
             </div>
           </div>
-          <div className="space-y-1.5 text-[10px] text-left">
-            <div className="flex justify-between"><span>Юзер:</span><span className="text-white truncate max-w-[120px]">{data.targetUserUsername}</span></div>
-            <div className="flex justify-between pt-1 border-t border-white/5"><span>К оплате:</span><span className="text-accent font-black">{data.price} ₽</span></div>
-          </div>
           {isAdmin && (
             <div className="flex gap-2 pt-1">
               <Button size="sm" className="flex-1 h-7 text-[9px]" onClick={(e) => handlePaymentAction('confirm', e)} disabled={isActionLoading}>Принять</Button>
@@ -202,87 +194,44 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, amIPremium = 
         </div>
       );
     }
-
     if (message.contentType === 'gift') {
       const Icon = GIFT_ICONS[message.content] || Gift;
       return (
         <div className="flex flex-col items-center justify-center my-2 p-4 bg-card/40 rounded-3xl border border-white/5">
           <Icon className={cn("w-14 h-14 mb-2 text-primary")} />
           <div className="text-sm font-black text-white">{message.giftValue} ₽</div>
-          {message.giftMessage && <p className="text-[10px] italic text-muted-foreground mt-1 text-center max-w-[180px] break-words">"{message.giftMessage}"</p>}
         </div>
       );
     }
-    
     if (message.contentType === 'video' || message.contentType === 'image') {
       const isOneTime = message.isOneTimeView;
       return (
         <div className="flex flex-col gap-1">
-          {isOneTime && (
-            <div className="flex items-center gap-1.5 mb-1 px-1">
-              <EyeOff className="w-3 h-3 text-accent" />
-              <span className="text-[8px] font-bold uppercase text-accent tracking-widest">Один просмотр</span>
-            </div>
-          )}
-          <div 
-            onClick={isOneTime ? handleOpenOneTime : undefined}
-            className={cn(
-              "relative w-48 h-48 rounded-2xl overflow-hidden border-2 border-primary/30 bg-black mt-1 group",
-              isOneTime && "cursor-pointer"
-            )}
-          >
-            {message.contentType === 'video' ? (
-              <video src={message.content} className={cn("w-full h-full object-cover", isOneTime && "blur-2xl opacity-40")} autoPlay loop muted playsInline />
-            ) : (
-              <img src={message.content} className={cn("w-full h-full object-cover", isOneTime && "blur-2xl opacity-40")} />
-            )}
-            {isOneTime ? (
-              <div className="absolute inset-0 flex items-center justify-center">
-                <Search className="w-10 h-10 text-white/70" />
-              </div>
-            ) : (
-              <PlayCircle className="absolute inset-0 m-auto w-10 h-10 text-white/50 pointer-events-none" />
-            )}
+          {isOneTime && <div className="flex items-center gap-1.5 mb-1 px-1"><EyeOff className="w-3 h-3 text-accent" /><span className="text-[8px] font-bold uppercase text-accent tracking-widest">Один просмотр</span></div>}
+          <div onClick={isOneTime ? handleOpenOneTime : undefined} className={cn("relative w-48 h-48 rounded-2xl overflow-hidden border-2 border-primary/30 bg-black mt-1 group", isOneTime && "cursor-pointer")}>
+            {message.contentType === 'video' ? (<video src={message.content} className={cn("w-full h-full object-cover", isOneTime && "blur-2xl opacity-40")} autoPlay loop muted playsInline />) : (<img src={message.content} className={cn("w-full h-full object-cover", isOneTime && "blur-2xl opacity-40")} />)}
+            {isOneTime ? (<div className="absolute inset-0 flex items-center justify-center"><Search className="w-10 h-10 text-white/70" /></div>) : (<PlayCircle className="absolute inset-0 m-auto w-10 h-10 text-white/50 pointer-events-none" />)}
           </div>
         </div>
       );
     }
-    
     if (message.contentType === 'audio') {
       return (
         <div className="flex flex-col gap-1 mt-1">
           <div className="flex items-center gap-2 p-2 bg-muted/20 rounded-xl">
             <Mic className="w-4 h-4 text-primary" />
             <span className="text-xs">Голосовое сообщение</span>
-            {amIPremium && (
-              <Button variant="ghost" size="icon" className="h-6 w-6" onClick={(e) => { e.stopPropagation(); handleTranscribe(); }} disabled={isTranscribing}>
-                {isTranscribing ? <Loader2 className="w-3 h-3 animate-spin" /> : <Languages className="w-3 h-3" />}
-              </Button>
-            )}
+            {amIPremium && (<Button variant="ghost" size="icon" className="h-6 w-6" onClick={(e) => { e.stopPropagation(); handleTranscribe(); }} disabled={isTranscribing}>{isTranscribing ? <Loader2 className="w-3 h-3 animate-spin" /> : <Languages className="w-3 h-3" />}</Button>)}
           </div>
           {transcription && <p className="text-[10px] italic opacity-80 p-2 bg-primary/5 rounded-lg text-left max-w-[200px] break-words">{transcription}</p>}
         </div>
       );
     }
-    
     return (
       <div className="flex flex-col text-left">
-        {message.forwardFrom && (
-          <div className="flex items-center gap-1.5 mb-1 opacity-50 border-l-2 border-white/10 pl-2">
-            <Forward className="w-2.5 h-2.5" />
-            <span className="text-[8px] font-bold uppercase">Переслано от {message.forwardFrom}</span>
-          </div>
-        )}
-        {message.replyToId && (
-          <div onClick={(e) => { e.stopPropagation(); jumpToOriginal(); }} className="mb-1 p-1.5 bg-black/10 rounded-lg border-l-2 border-primary cursor-pointer hover:bg-black/20 transition-all max-w-[200px]">
-            <div className="text-[8px] font-bold text-primary uppercase">Ответ</div>
-            <div className="text-[10px] truncate opacity-60 italic">{message.replyToContent}</div>
-          </div>
-        )}
-        <div className="whitespace-pre-wrap text-sm break-words max-w-[300px]">
-          {message.contentType === 'text' ? parseMarkdown(message.content) : message.content}
-          {message.editedAt && <span className="text-[8px] ml-1 opacity-40 uppercase">(ред.)</span>}
-        </div>
+        {message.forwardFrom && (<div className="flex items-center gap-1.5 mb-1 opacity-50 border-l-2 border-white/10 pl-2"><Forward className="w-2.5 h-2.5" /><span className="text-[8px] font-bold uppercase">Переслано от {message.forwardFrom}</span></div>)}
+        {message.replyToId && (<div onClick={(e) => { e.stopPropagation(); jumpToOriginal(); }} className="mb-1 p-1.5 bg-black/10 rounded-lg border-l-2 border-primary cursor-pointer hover:bg-black/20 transition-all max-w-[200px]"><div className="text-[8px] font-bold text-primary uppercase">Ответ</div><div className="text-[10px] truncate opacity-60 italic">{message.replyToContent}</div></div>)}
+        <div className="whitespace-pre-wrap text-sm break-words max-w-[300px]">{message.contentType === 'text' ? parseMarkdown(message.content) : message.content}{message.editedAt && <span className="text-[8px] ml-1 opacity-40 uppercase">(ред.)</span>}</div>
       </div>
     );
   };
@@ -291,9 +240,7 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, amIPremium = 
     return (
       <div className="w-full flex justify-center my-4 px-4 shrink-0">
         <div className="max-w-[75%] bg-white/5 backdrop-blur-md px-6 py-2 rounded-full border border-white/10 shadow-sm">
-          <p className="text-[9px] text-muted-foreground uppercase font-black tracking-[0.2em] text-center break-words">
-            {message.content}
-          </p>
+          <p className="text-[9px] text-muted-foreground uppercase font-black tracking-[0.2em] text-center break-words">{message.content}</p>
         </div>
       </div>
     );
@@ -305,66 +252,33 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, amIPremium = 
       <div className={cn("flex gap-3 max-w-[85%] relative group px-2 items-end", isMe ? "flex-row-reverse ml-auto" : "flex-row mr-auto")}>
         {!isMe && <UserAvatar userId={null} manualAvatarUrl={senderAvatarUrl} className="h-9 w-9 shrink-0" fallbackName={message.senderName} />}
         <div className={cn("flex flex-col min-w-0 max-w-full relative", isMe ? "items-end ml-auto" : "items-start mr-auto")}>
-          <div className="flex items-center gap-1.5 mb-0.5">
-            {countdown !== null && (
-               <div className="flex items-center gap-1 px-1.5 py-0.5 bg-red-500/10 rounded-full text-[8px] font-black text-red-500 animate-pulse">
-                <Timer className="w-2.5 h-2.5" /> {countdown}
-              </div>
-            )}
-          </div>
+          <div className="flex items-center gap-1.5 mb-0.5">{countdown !== null && (<div className="flex items-center gap-1 px-1.5 py-0.5 bg-red-500/10 rounded-full text-[8px] font-black text-red-500 animate-pulse"><Timer className="w-2.5 h-2.5" /> {countdown}</div>)}</div>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <div className={cn(
-                "p-3 rounded-2xl cursor-pointer shadow-md border transition-all hover:opacity-95 relative",
-                isMe ? "message-bubble-me border-none ml-auto" : "bg-card border-white/5 text-foreground mr-auto",
-                (message.contentType === 'video' || message.contentType === 'image') && "p-1 rounded-3xl bg-card border-white/5 shadow-none"
-              )}>
+              <div className={cn("p-3 rounded-2xl cursor-pointer shadow-md border transition-all hover:opacity-95 relative", isMe ? "message-bubble-me border-none ml-auto" : "bg-card border-white/5 text-foreground mr-auto", (message.contentType === 'video' || message.contentType === 'image') && "p-1 rounded-3xl bg-card border-white/5 shadow-none")}>
                 {renderContent()}
-                <div className={cn("flex items-center justify-end gap-1 mt-1 opacity-60", (message.contentType === 'video' || message.contentType === 'image') && "absolute bottom-3 right-5 bg-black/40 px-1.5 py-0.5 rounded-full")}>
-                  <span className="text-[9px]">{formattedTime}</span>
-                  {isMe && (message.isRead ? <CheckCheck className="w-3 h-3 text-accent" /> : <Check className="w-3 h-3" />)}
-                </div>
+                <div className={cn("flex items-center justify-end gap-1 mt-1 opacity-60", (message.contentType === 'video' || message.contentType === 'image') && "absolute bottom-3 right-5 bg-black/40 px-1.5 py-0.5 rounded-full")}><span className="text-[9px]">{formattedTime}</span>{isMe && (message.isRead ? <CheckCheck className="w-3 h-3 text-accent" /> : <Check className="w-3 h-3" />)}</div>
               </div>
             </DropdownMenuTrigger>
             <DropdownMenuContent align={isMe ? 'end' : 'start'} className="w-48 bg-card border-white/10">
               <DropdownMenuItem onClick={() => onReply(message)} className="gap-2"><CornerUpLeft className="w-4 h-4" /> Ответить</DropdownMenuItem>
-              {isMe && message.contentType === 'text' && (
-                <DropdownMenuItem onClick={() => onEdit(message)} className="gap-2"><Edit2 className="w-4 h-4" /> Изменить</DropdownMenuItem>
-              )}
+              {isMe && message.contentType === 'text' && (<DropdownMenuItem onClick={() => onEdit(message)} className="gap-2"><Edit2 className="w-4 h-4" /> Изменить</DropdownMenuItem>)}
               <DropdownMenuItem onClick={handleCopy} className="gap-2"><Copy className="w-4 h-4" /> Копировать</DropdownMenuItem>
               <DropdownMenuItem onClick={handleForward} className="gap-2"><Forward className="w-4 h-4" /> Переслать</DropdownMenuItem>
               {isAdmin && <DropdownMenuItem onClick={handlePin} className="gap-2"><Pin className="w-4 h-4" /> Закрепить</DropdownMenuItem>}
               <DropdownMenuSeparator className="bg-white/5" />
-              {(isMe || isAdmin) && (
-                <DropdownMenuItem onClick={() => deleteDocumentNonBlocking(doc(db, 'chats', chatId, 'messages', message.id))} className="text-destructive gap-2">
-                  <Trash2 className="w-4 h-4" /> Удалить
-                </DropdownMenuItem>
-              )}
+              {(isMe || isAdmin) && (<DropdownMenuItem onClick={() => deleteDocumentNonBlocking(doc(db, 'chats', chatId, 'messages', message.id))} className="text-destructive gap-2"><Trash2 className="w-4 h-4" /> Удалить</DropdownMenuItem>)}
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
       </div>
     </div>
-
     <Dialog open={showOneTimeView} onOpenChange={handleCloseOneTime}>
       <DialogContent className="max-w-3xl bg-black/95 border-none p-0 overflow-hidden flex items-center justify-center">
-        <DialogHeader className="sr-only">
-          <DialogTitle>Один просмотр</DialogTitle>
-        </DialogHeader>
+        <DialogHeader className="sr-only"><DialogTitle>Один просмотр</DialogTitle></DialogHeader>
         <div className="relative w-full aspect-square md:aspect-video flex items-center justify-center">
-           {message.contentType === 'video' ? (
-              <video src={message.content} className="w-full h-full object-contain" autoPlay controls />
-            ) : (
-              <img src={message.content} className="w-full h-full object-contain" />
-            )}
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              className="absolute top-4 right-4 bg-white/10 hover:bg-white/20 rounded-full"
-              onClick={handleCloseOneTime}
-            >
-              <X className="w-6 h-6" />
-            </Button>
+           {message.contentType === 'video' ? (<video src={message.content} className="w-full h-full object-contain" autoPlay controls />) : (<img src={message.content} className="w-full h-full object-contain" />)}
+            <Button variant="ghost" size="icon" className="absolute top-4 right-4 bg-white/10 hover:bg-white/20 rounded-full" onClick={handleCloseOneTime}><X className="w-6 h-6" /></Button>
         </div>
       </DialogContent>
     </Dialog>
