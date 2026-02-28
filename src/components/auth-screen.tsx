@@ -35,13 +35,10 @@ export default function AuthScreen() {
   });
 
   /**
-   * Гарантированная нормализация. 
-   * Все варианты (8..., 7..., +7...) приводятся к формату +7... для базы
-   * и к 7... для Email.
+   * Нормализация для базы данных.
    */
-  const normalizePhone = (phone: string) => {
+  const normalizePhoneForDb = (phone: string) => {
     let digits = phone.replace(/\D/g, '');
-    
     if (digits.length === 11) {
       if (digits.startsWith('8') || digits.startsWith('7')) {
         digits = '7' + digits.slice(1);
@@ -49,24 +46,36 @@ export default function AuthScreen() {
     } else if (digits.length === 10) {
       digits = '7' + digits;
     }
-
     return '+' + digits;
   };
 
+  /**
+   * КРИТИЧЕСКИЙ ФИКС: Возвращаем старый формат Email для админа, 
+   * чтобы восстановить чаты ("Чайник" и другие).
+   */
   const getVirtualEmail = (phone: string) => {
-    const digits = normalizePhone(phone).replace('+', '');
-    // Мы всегда используем формат начинающийся на 7 для Email, 
-    // чтобы и 8 и 7 вели в один аккаунт.
+    const rawDigits = phone.replace(/\D/g, '');
+    
+    // Если это номер админа, ГАРАНТИРОВАННО используем старый формат на 8...
+    if (rawDigits.endsWith('9513332147')) {
+      return '89513332147@nuxus.app';
+    }
+
+    // Для остальных используем стандарт на 7...
+    let digits = rawDigits;
+    if (digits.length === 11 && digits.startsWith('8')) {
+      digits = '7' + digits.slice(1);
+    }
     return `${digits}@nuxus.app`;
   };
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
-    const fullPhone = normalizePhone(formData.phone);
     const virtualEmail = getVirtualEmail(formData.phone);
+    const dbPhone = normalizePhoneForDb(formData.phone);
     
-    if (fullPhone.length < 12) {
-      toast({ title: "Ошибка", description: "Введите корректный номер (11 цифр)", variant: "destructive" });
+    if (formData.phone.replace(/\D/g, '').length < 10) {
+      toast({ title: "Ошибка", description: "Введите корректный номер", variant: "destructive" });
       return;
     }
 
@@ -103,13 +112,13 @@ export default function AuthScreen() {
         await setDoc(doc(db, 'users', user.uid), {
           id: user.uid,
           name: formData.name || 'Пользователь',
-          username: username || `@user_${user.uid.slice(0, 5)}`,
-          phone: fullPhone,
+          username: username,
+          phone: dbPhone,
           avatarUrl: `https://picsum.photos/seed/${user.uid}/200`,
           createdAt: new Date().toISOString(),
           lastSeen: new Date().toISOString(),
           isBanned: false,
-          isPremium: fullPhone === '+79513332147',
+          isPremium: dbPhone === '+79513332147',
           settings: {
             theme: 'default',
             chatBackground: 'default',
@@ -140,7 +149,7 @@ export default function AuthScreen() {
           if (err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential' || err.code === 'auth/wrong-password') {
             toast({ 
               title: "Ошибка входа", 
-              description: "Проверьте номер и пароль. Если аккаунт был создан на 8..., теперь он доступен и через +7...", 
+              description: "Проверьте номер и пароль. Мы вернули доступ к вашему старому аккаунту.", 
               variant: "destructive" 
             });
             setIsLoading(false);
