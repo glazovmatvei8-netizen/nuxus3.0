@@ -31,7 +31,6 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
   const { toast } = useToast();
   
   const [isSendingAlert, setIsSendingAlert] = useState(false);
-  const [isOptimizing, setIsOptimizing] = useState(false);
   const [isCleaning, setIsCleaning] = useState(false);
   const [alertText, setAlertText] = useState('');
   const [userSearch, setUserSearch] = useState('');
@@ -51,7 +50,6 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
     return () => clearInterval(interval);
   }, [open]);
 
-  // Системные логи v4.1 на русском
   const [logs, setLogs] = useState<string[]>([
     "[СИСТЕМА] Ядро Nuxus Nuclear Core v4.1 инициализировано.",
     "[ЗАЩИТА] Файрвол активен. Мониторинг порта 9002...",
@@ -91,26 +89,32 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
     setLogs(prev => [`[МОДЕРАЦИЯ] Пользователь ${targetUser.username} ${newStatus ? 'заблокирован' : 'разблокирован'}.`, ...prev]);
   };
 
-  const deleteAccount = (targetUser: User) => {
-    if (!db || !confirm(`Вы уверены, что хотите ПОЛНОСТЬЮ УДАЛИТЬ аккаунт ${targetUser.username}? Это действие необратимо.`)) return;
-    const userRef = doc(db, 'users', targetUser.id);
-    deleteDocumentNonBlocking(userRef);
-    toast({ title: "Аккаунт удален", variant: "destructive" });
-    setLogs(prev => [`[СИСТЕМА] Аккаунт ${targetUser.username} удален из базы данных.`, ...prev]);
+  const deleteAccount = async (targetUser: User) => {
+    if (!db || !confirm(`УДАЛИТЬ аккаунт ${targetUser.username} навсегда?`)) return;
+    
+    try {
+      const userRef = doc(db, 'users', targetUser.id);
+      // Принудительное удаление через SDK для мгновенной реакции
+      await deleteDoc(userRef);
+      toast({ title: "Аккаунт удален успешно" });
+      setLogs(prev => [`[СИСТЕМА] Аккаунт ${targetUser.username} удален из базы.`, ...prev]);
+    } catch (e: any) {
+      toast({ title: "Ошибка удаления", description: e.message, variant: "destructive" });
+    }
   };
 
   const handleQuickCleanup = async () => {
-    if (!db || !confirm('Выполнить очистку аккаунтов @Алла и @Mamby?')) return;
+    if (!db || !confirm('Очистить аккаунты @Алла и @Mamby?')) return;
     setIsCleaning(true);
     try {
       const targets = ['@алла', '@mamby'];
       for (const username of targets) {
         const q = query(collection(db, 'users'), where('username', '==', username));
         const snap = await getDocs(q);
-        snap.forEach(docSnap => {
-          deleteDoc(docSnap.ref);
+        for (const docSnap of snap.docs) {
+          await deleteDoc(docSnap.ref);
           setLogs(prev => [`[ОЧИСТКА] Удален аккаунт: ${username}`, ...prev]);
-        });
+        }
       }
       toast({ title: "Очистка завершена" });
     } catch (e) {
@@ -135,10 +139,6 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
               </div>
             </div>
             <div className="flex items-center gap-3">
-              <div className="hidden md:flex flex-col items-end mr-4">
-                <span className="text-[9px] font-black text-green-500 uppercase tracking-widest">Ядро Активно</span>
-                <span className="text-[8px] text-muted-foreground">Статус: Стабильно</span>
-              </div>
               <Zap className="w-5 h-5 text-primary animate-pulse" />
             </div>
           </DialogTitle>

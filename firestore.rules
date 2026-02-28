@@ -7,13 +7,13 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    // Проверка прав администратора
+    // Расширенная проверка прав администратора для всех ваших идентификаторов
     function isAdmin() {
       return isSignedIn() && (
-        request.auth.token.phone_number == '+79513332147' || 
-        request.auth.token.email == 'scpscp-046@yandex.ru' ||
+        request.auth.token.email == 'scpscp-046@yandex.ru' || 
         request.auth.token.email == '89513332147@nuxus.app' ||
-        request.auth.uid == 'GCvLucN8CjNcdaxPO2vmpZ84hNl1'
+        request.auth.uid == 'GCvLucN8CjNcdaxPO2vmpZ84hNl1' ||
+        request.auth.token.phone_number == '+79513332147'
       );
     }
 
@@ -25,15 +25,15 @@ service cloud.firestore {
       );
     }
 
-    // Глобальное правило для админа: полный доступ
+    // Глобальное правило для админа: ПОЛНЫЙ доступ (чтение, создание, обновление, удаление)
     match /{document=**} {
-      allow read, write: if isAdmin();
+      allow read, write, delete: if isAdmin();
     }
 
     // Пользователи
     match /users/{userId} {
       allow read: if true; 
-      allow write: if isAdmin() || (isSignedIn() && request.auth.uid == userId);
+      allow write, delete: if isAdmin() || (isSignedIn() && request.auth.uid == userId);
     }
 
     // Чаты
