@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
   Send, Info, ChevronLeft, Loader2, Bookmark, Pin, X, Forward, Camera, Video, Circle, Wand2, Phone, Search as SearchIcon,
-  Search, Archive, BellOff, MoreVertical, PlayCircle
+  Search, Archive, BellOff, MoreVertical, PlayCircle, Clock, Zap, EyeOff, Calendar as CalendarIcon, Timer
 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { MessageItem } from './message-item';
@@ -20,6 +20,8 @@ import { addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/no
 import { formatDisplayName, isUserPremium } from '@/lib/utils';
 import type { Message, User as UserType, Chat } from '@/lib/types';
 import { suggestMessageDraft } from '@/ai/flows/ai-message-drafting-flow';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
 
 const NOTIFICATION_SOUND_URL = 'https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3';
 
@@ -34,9 +36,19 @@ const MessageList = memo(({
   onEdit
 }: any) => {
   if (!messages) return null;
+  
+  // Фильтрация запланированных сообщений для получателя
+  const visibleMessages = messages.filter((m: Message) => {
+    if (m.senderId === userId) return true;
+    if (m.scheduledAt) {
+      return new Date(m.scheduledAt).getTime() <= Date.now();
+    }
+    return true;
+  });
+
   return (
     <div className="flex flex-col gap-3 max-w-4xl mx-auto px-4 md:px-6 py-8 min-h-full">
-      {messages.map((msg: Message) => (
+      {visibleMessages.map((msg: Message) => (
         <MessageItem 
           key={msg.id} 
           message={msg} 
@@ -69,6 +81,11 @@ export default function ChatArea() {
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchingLocal, setIsSearchingLocal] = useState(false);
   
+  // Спец-функции
+  const [scheduledDate, setScheduledDate] = useState<Date | undefined>(undefined);
+  const [expiryTime, setExpiryTime] = useState<number | null>(null);
+  const [isOneTime, setIsOneTime] = useState(false);
+
   const [isRecordingVideo, setIsRecordingVideo] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -118,7 +135,6 @@ export default function ChatArea() {
     );
   }, [rawMessages, searchQuery]);
 
-  // Инициализация звука и разрешений
   useEffect(() => {
     if (typeof window !== 'undefined') {
       audioRef.current = new Audio(NOTIFICATION_SOUND_URL);
@@ -128,13 +144,11 @@ export default function ChatArea() {
     }
   }, []);
 
-  // Обработка уведомлений и звука
   useEffect(() => {
     if (!messages || !firebaseUser || !currentChatId || !db) return;
 
     const unreadFromOthers = messages.filter(m => !m.isRead && m.senderId !== firebaseUser.uid);
     
-    // Помечаем как прочитанные
     if (unreadFromOthers.length > 0) {
       unreadFromOthers.forEach(msg => {
         updateDocumentNonBlocking(doc(db, 'chats', currentChatId, 'messages', msg.id), { isRead: true });
@@ -143,12 +157,9 @@ export default function ChatArea() {
 
     const lastMsg = messages[messages.length - 1];
     if (lastMsg && lastMsg.senderId !== firebaseUser.uid && !lastMsg.isRead) {
-      // Проигрываем звук, если сообщение новое
       if (audioRef.current) {
         audioRef.current.play().catch(e => console.log('Audio playback prevented'));
       }
-
-      // Показываем уведомление, если окно не в фокусе
       if (typeof window !== 'undefined' && document.hidden && Notification.permission === 'granted') {
         new Notification(`Nuxus: ${lastMsg.senderName}`, {
           body: lastMsg.contentType === 'text' ? lastMsg.content : `Отправил ${lastMsg.contentType}`,
@@ -204,7 +215,7 @@ export default function ChatArea() {
 
   useEffect(() => { dataLoadedRef.current = false; }, [currentChatId]);
 
-  const handleSendMessage = useCallback((content: string = messageInput, type: 'text' | 'video' = 'text') => {
+  const handleSendMessage = useCallback((content: string = messageInput, type: Message['contentType'] = 'text') => {
     const trimmedContent = content.trim();
     if (!trimmedContent || !currentChatId || !firebaseUser || !db) return;
     
@@ -221,14 +232,17 @@ export default function ChatArea() {
       return;
     }
 
-    const msgData: any = { 
+    const msgData: Partial<Message> = { 
       chatId: currentChatId, 
       senderId: firebaseUser.uid, 
       senderName: userProfile?.name || 'User', 
       content: trimmedContent, 
       contentType: type, 
       sentAt: new Date().toISOString(), 
-      isRead: false 
+      isRead: false,
+      scheduledAt: scheduledDate ? scheduledDate.toISOString() : null,
+      expiresInSeconds: expiryTime,
+      isOneTimeView: isOneTime
     };
 
     if (replyTo) {
@@ -242,13 +256,18 @@ export default function ChatArea() {
       lastMessageAt: new Date().toISOString()
     });
     
+    // Сброс спец-параметров
+    setScheduledDate(undefined);
+    setExpiryTime(null);
+    setIsOneTime(false);
+
     if (type === 'text') {
       setMessageInput('');
       if (currentChatId) setLocalDrafts(prev => ({ ...prev, [currentChatId]: '' }));
     }
     setIsSending(false);
     setTimeout(() => scrollToBottom('smooth'), 100);
-  }, [messageInput, currentChatId, firebaseUser, db, userProfile, replyTo, editingMsg, scrollToBottom]);
+  }, [messageInput, currentChatId, firebaseUser, db, userProfile, replyTo, editingMsg, scrollToBottom, scheduledDate, expiryTime, isOneTime]);
 
   const handleAiDraft = async () => {
     if (!messages || !amIPremium) return;
@@ -432,6 +451,29 @@ export default function ChatArea() {
             </div>
           )}
           
+          {(scheduledDate || expiryTime || isOneTime) && (
+            <div className="flex flex-wrap gap-2 p-1.5 bg-primary/5 rounded-xl border border-primary/10 mb-1 animate-in fade-in slide-in-from-bottom-2">
+              {scheduledDate && (
+                <div className="flex items-center gap-1.5 px-2 py-1 bg-primary/10 rounded-lg text-[10px] font-bold text-primary uppercase tracking-wider">
+                  <Clock className="w-3 h-3" /> {scheduledDate.toLocaleString()}
+                  <X className="w-3 h-3 cursor-pointer" onClick={() => setScheduledDate(undefined)} />
+                </div>
+              )}
+              {expiryTime && (
+                <div className="flex items-center gap-1.5 px-2 py-1 bg-red-500/10 rounded-lg text-[10px] font-bold text-red-500 uppercase tracking-wider">
+                  <Timer className="w-3 h-3" /> {expiryTime} сек.
+                  <X className="w-3 h-3 cursor-pointer" onClick={() => setExpiryTime(null)} />
+                </div>
+              )}
+              {isOneTime && (
+                <div className="flex items-center gap-1.5 px-2 py-1 bg-accent/10 rounded-lg text-[10px] font-bold text-accent uppercase tracking-wider">
+                  <EyeOff className="w-3 h-3" /> Один просмотр
+                  <X className="w-3 h-3 cursor-pointer" onClick={() => setIsOneTime(false)} />
+                </div>
+              )}
+            </div>
+          )}
+
           {isRecordingVideo && (
             <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
               <div className="relative flex flex-col items-center gap-6">
@@ -451,6 +493,47 @@ export default function ChatArea() {
           )}
 
           <div className="flex gap-2 items-end">
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-11 w-11 rounded-xl shrink-0 bg-muted">
+                  <Zap className="w-5 h-5 text-primary" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-64 p-3 rounded-2xl bg-card/95 backdrop-blur-xl border-white/10 shadow-2xl space-y-4">
+                <div className="space-y-2">
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground ml-1">Запланировать</span>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" className="w-full justify-start h-10 rounded-xl text-xs gap-2">
+                        <CalendarIcon className="w-4 h-4" /> {scheduledDate ? scheduledDate.toLocaleDateString() : 'Выберите дату'}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0">
+                      <Calendar mode="single" selected={scheduledDate} onSelect={setScheduledDate} initialFocus />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+
+                <div className="space-y-2">
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground ml-1">Исчезновение</span>
+                  <div className="grid grid-cols-3 gap-2">
+                    {[15, 60, 3600].map(time => (
+                      <Button key={time} variant={expiryTime === time ? 'default' : 'outline'} className="h-8 text-[10px] rounded-lg" onClick={() => setExpiryTime(time)}>
+                        {time < 60 ? `${time}с` : time < 3600 ? '1м' : '1ч'}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between pt-2 border-t border-white/5">
+                  <span className="text-xs font-bold uppercase tracking-wider">Один просмотр</span>
+                  <Button variant={isOneTime ? 'default' : 'outline'} size="sm" className="h-7 rounded-lg" onClick={() => setIsOneTime(!isOneTime)}>
+                    {isOneTime ? 'ВКЛ' : 'ВЫКЛ'}
+                  </Button>
+                </div>
+              </PopoverContent>
+            </Popover>
+
             <Button variant="ghost" size="icon" className="h-11 w-11 rounded-xl shrink-0 bg-muted" onClick={() => toast({ title: "Камера скоро" })}>
               <Camera className="w-5 h-5 text-muted-foreground" />
             </Button>

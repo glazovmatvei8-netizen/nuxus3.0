@@ -20,6 +20,12 @@ export interface Message {
   serialNumber?: number;
   forwardFrom?: string;
   translation?: string;
+  // Новые поля для спец-функций
+  scheduledAt?: string | null;
+  expiresAt?: string | null;
+  expiresInSeconds?: number | null;
+  isOneTimeView?: boolean;
+  isExpired?: boolean;
   paymentData?: {
     type: 'premium';
     itemName: string;

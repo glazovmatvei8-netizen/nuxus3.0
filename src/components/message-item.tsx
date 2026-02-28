@@ -1,7 +1,7 @@
 
 "use client"
 
-import React, { useState, memo } from 'react';
+import React, { useState, useEffect, memo } from 'react';
 import { useUser, useFirestore } from '@/firebase';
 import { useAppState } from '@/lib/store';
 import { UserAvatar } from '@/components/user-avatar';
@@ -21,7 +21,7 @@ import {
   Plane, Sun, Moon, Cloud, Snowflake, Trees, Flower2, Dog, Cat, Bird, 
   Fish, Bitcoin, Coins, Gamepad2, Music, Smile, ThumbsUp, Bell, Mail, 
   Key, Lock, Shield, Sword, Anchor, Compass, Map, Flag, Briefcase, GraduationCap,
-  Pin, Forward, Gift, PlayCircle, Edit2, Copy
+  Pin, Forward, Gift, PlayCircle, Edit2, Copy, Timer, EyeOff, Clock, Search
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { collection, doc, query, where, getDocs, limit } from 'firebase/firestore';
@@ -30,6 +30,7 @@ import { transcribeVoice } from '@/ai/flows/voice-to-text-flow';
 import type { Message } from '@/lib/types';
 import { Button } from './ui/button';
 import { useToast } from '@/hooks/use-toast';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 const GIFT_ICONS: Record<string, any> = {
   gift_heart: Heart, gift_zap: Zap, gift_fire: Flame, gift_trophy: Trophy, 
@@ -54,8 +55,28 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, amIPremium = 
   const [isTranscribing, setIsTranscribing] = useState(false);
   const [transcription, setTranscription] = useState<string | null>(null);
   const [isActionLoading, setIsActionLoading] = useState(false);
+  const [countdown, setCountdown] = useState<number | null>(null);
+  const [showOneTimeView, setShowOneTimeView] = useState(false);
 
   const formattedTime = message.sentAt ? format(new Date(message.sentAt), 'HH:mm') : '';
+
+  // Таймер исчезновения
+  useEffect(() => {
+    if (message.expiresInSeconds && !message.isExpired && !countdown) {
+      setCountdown(message.expiresInSeconds);
+    }
+  }, [message]);
+
+  useEffect(() => {
+    if (countdown !== null) {
+      if (countdown <= 0) {
+        deleteDocumentNonBlocking(doc(db, 'chats', chatId, 'messages', message.id));
+        return;
+      }
+      const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [countdown, chatId, message.id, db]);
 
   const handleTranscribe = async () => {
     if (!amIPremium || transcription) { setTranscription(null); return; }
@@ -88,6 +109,18 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, amIPremium = 
     if (message.replyToId) {
       const el = document.getElementById(`msg-${message.replyToId}`);
       if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  };
+
+  const handleOpenOneTime = () => {
+    if (message.isExpired) return;
+    setShowOneTimeView(true);
+  };
+
+  const handleCloseOneTime = () => {
+    setShowOneTimeView(false);
+    if (!isMe && message.isOneTimeView) {
+      updateDocumentNonBlocking(doc(db, 'chats', chatId, 'messages', message.id), { isExpired: true });
     }
   };
 
@@ -129,6 +162,23 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, amIPremium = 
   };
 
   const renderContent = () => {
+    if (message.scheduledAt && new Date(message.scheduledAt).getTime() > Date.now()) {
+      return (
+        <div className="flex items-center gap-2 py-1 px-2 opacity-50">
+          <Clock className="w-4 h-4" />
+          <span className="text-[10px] font-bold uppercase tracking-widest italic">Запланировано</span>
+        </div>
+      );
+    }
+
+    if (message.isExpired) {
+      return (
+        <div className="flex items-center gap-2 py-1 px-2 opacity-50 italic text-[10px]">
+          <EyeOff className="w-4 h-4" /> Сообщение просмотрено
+        </div>
+      );
+    }
+
     if (message.contentType === 'payment_request' && message.paymentData) {
       const data = message.paymentData;
       return (
@@ -165,11 +215,36 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, amIPremium = 
       );
     }
     
-    if (message.contentType === 'video') {
+    if (message.contentType === 'video' || message.contentType === 'image') {
+      const isOneTime = message.isOneTimeView;
       return (
-        <div className="relative w-48 h-48 rounded-full overflow-hidden border-2 border-primary/30 bg-black mt-1">
-          <video src={message.content} className="w-full h-full object-cover" autoPlay loop muted playsInline />
-          <PlayCircle className="absolute inset-0 m-auto w-10 h-10 text-white/50 pointer-events-none" />
+        <div className="flex flex-col gap-1">
+          {isOneTime && (
+            <div className="flex items-center gap-1.5 mb-1 px-1">
+              <EyeOff className="w-3 h-3 text-accent" />
+              <span className="text-[8px] font-bold uppercase text-accent tracking-widest">Один просмотр</span>
+            </div>
+          )}
+          <div 
+            onClick={isOneTime ? handleOpenOneTime : undefined}
+            className={cn(
+              "relative w-48 h-48 rounded-2xl overflow-hidden border-2 border-primary/30 bg-black mt-1 group",
+              isOneTime && "cursor-pointer"
+            )}
+          >
+            {message.contentType === 'video' ? (
+              <video src={message.content} className={cn("w-full h-full object-cover", isOneTime && "blur-2xl opacity-40")} autoPlay loop muted playsInline />
+            ) : (
+              <img src={message.content} className={cn("w-full h-full object-cover", isOneTime && "blur-2xl opacity-40")} />
+            )}
+            {isOneTime ? (
+              <div className="absolute inset-0 flex items-center justify-center">
+                <Search className="w-10 h-10 text-white/70" />
+              </div>
+            ) : (
+              <PlayCircle className="absolute inset-0 m-auto w-10 h-10 text-white/50 pointer-events-none" />
+            )}
+          </div>
         </div>
       );
     }
@@ -226,19 +301,27 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, amIPremium = 
   }
 
   return (
+    <>
     <div id={`msg-${message.id}`} className={cn("w-full flex mb-2 transition-all", isMe ? "justify-end" : "justify-start")}>
       <div className={cn("flex gap-3 max-w-[85%] relative group px-2 items-end", isMe ? "flex-row-reverse ml-auto" : "flex-row mr-auto")}>
         {!isMe && <UserAvatar userId={null} manualAvatarUrl={senderAvatarUrl} className="h-9 w-9 shrink-0" fallbackName={message.senderName} />}
         <div className={cn("flex flex-col min-w-0 max-w-full relative", isMe ? "items-end ml-auto" : "items-start mr-auto")}>
+          <div className="flex items-center gap-1.5 mb-0.5">
+            {countdown !== null && (
+               <div className="flex items-center gap-1 px-1.5 py-0.5 bg-red-500/10 rounded-full text-[8px] font-black text-red-500 animate-pulse">
+                <Timer className="w-2.5 h-2.5" /> {countdown}
+              </div>
+            )}
+          </div>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <div className={cn(
                 "p-3 rounded-2xl cursor-pointer shadow-md border transition-all hover:opacity-95 relative",
                 isMe ? "message-bubble-me border-none ml-auto" : "bg-card border-white/5 text-foreground mr-auto",
-                message.contentType === 'video' && "p-1 rounded-full bg-transparent border-none shadow-none"
+                (message.contentType === 'video' || message.contentType === 'image') && "p-1 rounded-3xl bg-card border-white/5 shadow-none"
               )}>
                 {renderContent()}
-                <div className={cn("flex items-center justify-end gap-1 mt-1 opacity-60", message.contentType === 'video' && "absolute bottom-2 right-6 bg-black/40 px-1.5 py-0.5 rounded-full")}>
+                <div className={cn("flex items-center justify-end gap-1 mt-1 opacity-60", (message.contentType === 'video' || message.contentType === 'image') && "absolute bottom-3 right-5 bg-black/40 px-1.5 py-0.5 rounded-full")}>
                   <span className="text-[9px]">{formattedTime}</span>
                   {isMe && (message.isRead ? <CheckCheck className="w-3 h-3 text-accent" /> : <Check className="w-3 h-3" />)}
                 </div>
@@ -263,6 +346,30 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, amIPremium = 
         </div>
       </div>
     </div>
+
+    <Dialog open={showOneTimeView} onOpenChange={handleCloseOneTime}>
+      <DialogContent className="max-w-3xl bg-black/95 border-none p-0 overflow-hidden flex items-center justify-center">
+        <DialogHeader className="sr-only">
+          <DialogTitle>Один просмотр</DialogTitle>
+        </DialogHeader>
+        <div className="relative w-full aspect-square md:aspect-video flex items-center justify-center">
+           {message.contentType === 'video' ? (
+              <video src={message.content} className="w-full h-full object-contain" autoPlay controls />
+            ) : (
+              <img src={message.content} className="w-full h-full object-contain" />
+            )}
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="absolute top-4 right-4 bg-white/10 hover:bg-white/20 rounded-full"
+              onClick={handleCloseOneTime}
+            >
+              <X className="w-6 h-6" />
+            </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+    </>
   );
 });
 MessageItem.displayName = 'MessageItem';
