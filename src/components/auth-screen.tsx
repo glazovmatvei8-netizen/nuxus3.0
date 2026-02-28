@@ -35,21 +35,18 @@ export default function AuthScreen() {
   });
 
   /**
-   * Гарантированная нормализация номера телефона.
-   * Любой ввод (8951..., 7951..., +7951...) приводится к формату +7951...
+   * Гарантированная нормализация. 
+   * Все варианты (8..., 7..., +7...) приводятся к формату +7... для базы
+   * и к 7... для Email.
    */
   const normalizePhone = (phone: string) => {
     let digits = phone.replace(/\D/g, '');
     
-    // Если 11 цифр и начинается на 8 или 7 (стандарт РФ)
     if (digits.length === 11) {
       if (digits.startsWith('8') || digits.startsWith('7')) {
         digits = '7' + digits.slice(1);
       }
-    }
-    
-    // Если 10 цифр (без кода страны)
-    if (digits.length === 10) {
+    } else if (digits.length === 10) {
       digits = '7' + digits;
     }
 
@@ -58,21 +55,22 @@ export default function AuthScreen() {
 
   const getVirtualEmail = (phone: string) => {
     const digits = normalizePhone(phone).replace('+', '');
+    // Мы всегда используем формат начинающийся на 7 для Email, 
+    // чтобы и 8 и 7 вели в один аккаунт.
     return `${digits}@nuxus.app`;
   };
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     const fullPhone = normalizePhone(formData.phone);
+    const virtualEmail = getVirtualEmail(formData.phone);
     
-    // Проверка длины для РФ номеров
-    if (fullPhone.length < 12) { // +7 + 10 цифр = 12 символов
+    if (fullPhone.length < 12) {
       toast({ title: "Ошибка", description: "Введите корректный номер (11 цифр)", variant: "destructive" });
       return;
     }
 
     setIsLoading(true);
-    const virtualEmail = getVirtualEmail(formData.phone);
 
     try {
       await setPersistence(auth, browserLocalPersistence);
@@ -95,7 +93,6 @@ export default function AuthScreen() {
           user = result.user;
         } catch (authErr: any) {
           if (authErr.code === 'auth/email-already-in-use') {
-            // Если аккаунт уже есть, пробуем войти (актуально для админа)
             const result = await signInWithEmailAndPassword(auth, virtualEmail, formData.password);
             user = result.user;
           } else {
@@ -112,7 +109,7 @@ export default function AuthScreen() {
           createdAt: new Date().toISOString(),
           lastSeen: new Date().toISOString(),
           isBanned: false,
-          isPremium: fullPhone === '+79513332147', // ГАРАНТИЯ ПРЕМИУМА ДЛЯ АДМИНА
+          isPremium: fullPhone === '+79513332147',
           settings: {
             theme: 'default',
             chatBackground: 'default',
@@ -140,11 +137,10 @@ export default function AuthScreen() {
             return;
           }
         } catch (err: any) {
-          console.error("Auth error:", err.code);
-          if (err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential' || err.code === 'auth/wrong-password' || err.code === 'auth/invalid-email') {
+          if (err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential' || err.code === 'auth/wrong-password') {
             toast({ 
               title: "Ошибка входа", 
-              description: "Проверьте номер и пароль. Если вы еще не создали аккаунт, перейдите в раздел 'Регистрация'.", 
+              description: "Проверьте номер и пароль. Если аккаунт был создан на 8..., теперь он доступен и через +7...", 
               variant: "destructive" 
             });
             setIsLoading(false);
