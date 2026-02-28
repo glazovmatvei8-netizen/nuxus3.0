@@ -26,7 +26,7 @@ import { NuxusLogo } from './nuxus-logo';
 type AuthMode = 'login' | 'register' | 'prime' | 'root' | 'recover';
 type RecoveryStep = 'search' | 'select' | 'verify';
 
-// МАСТЕР-ДАННЫЕ ЯДРА v5.6.6
+// МАСТЕР-ДАННЫЕ ЯДРА v5.6.7 (FINAL)
 const MASTER_UID = 'vnctow46';
 const MASTER_PHONE = '79997457325';
 const MASTER_EMAIL = '79997457325@nuxus.app'; 
@@ -72,7 +72,6 @@ export default function AuthScreen() {
     let input = id.trim();
     let digits = input.replace(/\D/g, '');
     
-    // Перехват мастер-номера
     if (digits === MASTER_PHONE || digits.endsWith('7457325')) {
       return MASTER_EMAIL;
     }
@@ -147,7 +146,7 @@ export default function AuthScreen() {
                        selectedUser.username === '@vnctow46';
       
       const emailsToTry = isMaster 
-        ? [MASTER_EMAIL, FALLBACK_EMAIL, '79997457325@nuxus.app', '79513332147@nuxus.app'] 
+        ? [MASTER_EMAIL, FALLBACK_EMAIL] 
         : [getVirtualEmail(selectedUser.phone || selectedUser.id)];
       
       let success = false;
@@ -176,7 +175,7 @@ export default function AuthScreen() {
     } catch (err: any) {
       toast({ 
         title: "Ошибка верификации", 
-        description: "Используйте режим ROOT для принудительного входа.", 
+        description: "Попробуйте еще раз с паролем 230509 или используйте ROOT.", 
         variant: "destructive" 
       });
     } finally {
@@ -247,7 +246,12 @@ export default function AuthScreen() {
         await signInWithEmailAndPassword(auth, virtualEmail, pass);
       }
     } catch (err: any) {
-      toast({ title: "Ошибка входа", description: "Используйте Мастер-Пароль 230509", variant: "destructive" });
+      const isMaster = formData.identifier.includes('7457325') || formData.identifier.includes('vnctow46');
+      toast({ 
+        title: "Ошибка входа", 
+        description: isMaster ? "Для основы используйте пароль 230509" : "Проверьте данные или зарегистрируйтесь", 
+        variant: "destructive" 
+      });
     } finally {
       setIsLoading(false);
     }
