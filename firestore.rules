@@ -33,12 +33,12 @@ service cloud.firestore {
     // Пользователи
     match /users/{userId} {
       allow read: if true; 
-      allow write, delete: if isAdmin() || (isSignedIn() && request.auth.uid == userId);
+      allow write: if isAdmin() || (isSignedIn() && request.auth.uid == userId);
       
-      // Подколлекция подарков (чтобы друзья видели подарки админа и других)
+      // Подколлекция подарков (явно разрешаем чтение всем авторизованным)
       match /receivedGifts/{giftId} {
         allow read: if isSignedIn();
-        allow write, delete: if isAdmin();
+        allow write: if isAdmin();
       }
     }
 

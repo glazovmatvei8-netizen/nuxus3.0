@@ -124,7 +124,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl bg-card border-primary/20 p-0 overflow-hidden h-[85vh] flex flex-col rounded-[2.5rem] shadow-2xl border">
         {/* Header - Fixed */}
-        <div className="p-6 bg-gradient-to-r from-primary/20 to-accent/10 border-b border-primary/10 shrink-0">
+        <div className="p-6 bg-gradient-to-r from-primary/20 to-accent/10 border-b border-primary/10 shrink-0 z-50">
           <div className="flex items-center justify-between text-xl font-black uppercase italic text-white tracking-tighter">
             <div className="flex items-center gap-3">
               <div className="bg-primary p-2.5 rounded-2xl shadow-lg shadow-primary/20">
@@ -145,7 +145,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
           </div>
         </div>
 
-        <Tabs defaultValue="stats" className="flex-1 flex flex-col min-h-0">
+        <Tabs defaultValue="stats" className="flex-1 flex flex-col min-h-0 relative z-10">
           <TabsList className="mx-6 mt-4 grid grid-cols-3 bg-muted/30 p-1 rounded-2xl shrink-0 gap-1 border border-white/5">
             <TabsTrigger value="stats" className="font-bold uppercase text-[9px] tracking-widest transition-all"><BarChart3 className="w-3.5 h-3.5 mr-1.5" /> Сводка</TabsTrigger>
             <TabsTrigger value="users" className="font-bold uppercase text-[9px] tracking-widest transition-all"><Users className="w-3.5 h-3.5 mr-1.5" /> Юзеры</TabsTrigger>
@@ -218,7 +218,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
                   </div>
                 </div>
 
-                <div className="p-6 bg-muted/20 rounded-[2rem] border border-white/5 space-y-6">
+                <div className="p-6 bg-muted/20 rounded-[2rem] border border-white/5 space-y-6 mb-8">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <Activity className="w-4 h-4 text-primary" />
@@ -251,7 +251,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
           </TabsContent>
 
           {/* Users Content */}
-          <TabsContent value="users" className="flex-1 min-h-0 overflow-hidden flex flex-col p-0 m-0">
+          <TabsContent value="users" className="flex-1 min-h-0 overflow-hidden flex flex-col p-0 m-0 relative">
             <div className="px-6 py-4 border-b border-white/5 bg-muted/10">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -264,7 +264,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
               </div>
             </div>
             <ScrollArea className="flex-1">
-              <div className="p-4 space-y-2 pb-20">
+              <div className="p-4 space-y-2 pb-24">
                 {isUsersLoading ? (
                   <div className="flex flex-col items-center justify-center p-12 gap-3 opacity-50">
                     <Loader2 className="animate-spin text-primary w-6 h-6" />
@@ -303,7 +303,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
           </TabsContent>
 
           {/* System Content */}
-          <TabsContent value="system" className="flex-1 min-h-0 m-0 overflow-hidden">
+          <TabsContent value="system" className="flex-1 min-h-0 m-0 overflow-hidden relative">
             <ScrollArea className="h-full">
               <div className="p-6 space-y-6 pb-24">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
