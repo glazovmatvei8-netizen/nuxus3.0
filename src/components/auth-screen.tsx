@@ -26,8 +26,9 @@ import { NuxusLogo } from './nuxus-logo';
 type AuthMode = 'login' | 'register' | 'prime' | 'root' | 'recover';
 type RecoveryStep = 'search' | 'select' | 'verify';
 
-const PRIME_UID = 'vnctow46';
-const MASTER_EMAIL = '+79513332147@nuxus.app'; 
+const MASTER_UID = 'vnctow46';
+const MASTER_EMAIL = '+79513332147@nuxus.app';
+const MASTER_PASS = 'gaz20092';
 
 export default function AuthScreen() {
   const auth = useAuth();
@@ -47,7 +48,7 @@ export default function AuthScreen() {
     password: '',
     oldPassword: '',
     confirmPassword: '',
-    targetUid: PRIME_UID 
+    targetUid: MASTER_UID 
   });
 
   const [searchResults, setSearchResults] = useState<User[]>([]);
@@ -89,28 +90,32 @@ export default function AuthScreen() {
     if (!formData.identifier.trim()) return;
     setIsLoading(true);
     try {
-      let cleanId = formData.identifier.replace(/\D/g, '');
-      if (cleanId.length === 11 && cleanId.startsWith('8')) cleanId = '7' + cleanId.slice(1);
+      let inputVal = formData.identifier.trim();
+      let cleanDigits = inputVal.replace(/\D/g, '');
       
-      const qPhone = query(collection(db, 'users'), where('phone', '==', cleanId || formData.identifier), limit(10));
-      const qUsername = query(collection(db, 'users'), where('username', '==', formData.identifier.startsWith('@') ? formData.identifier.toLowerCase() : '@' + formData.identifier.toLowerCase()), limit(10));
+      // Поиск по номеру (пробуем разные форматы)
+      const qPhone = query(collection(db, 'users'), where('phone', 'in', [cleanDigits, '+' + cleanDigits, '7' + cleanDigits.slice(-10)]), limit(5));
+      
+      // Поиск по юзернейму
+      let searchNick = inputVal.startsWith('@') ? inputVal.toLowerCase() : '@' + inputVal.toLowerCase();
+      const qUsername = query(collection(db, 'users'), where('username', '==', searchNick), limit(5));
       
       const [snapPhone, snapUser] = await Promise.all([getDocs(qPhone), getDocs(qUsername)]);
-      const results: User[] = [];
-      snapPhone.forEach(d => results.push({ id: d.id, ...d.data() } as User));
-      snapUser.forEach(d => {
-        if (!results.find(r => r.id === d.id)) results.push({ id: d.id, ...d.data() } as User);
-      });
+      
+      const resultsMap = new Map<string, User>();
+      snapPhone.forEach(d => resultsMap.set(d.id, { id: d.id, ...d.data() } as User));
+      snapUser.forEach(d => resultsMap.set(d.id, { id: d.id, ...d.data() } as User));
 
-      if (results.length === 0) {
-        toast({ title: "Ничего не найдено", variant: "destructive" });
+      const finalResults = Array.from(resultsMap.values()).filter(u => u.id !== 'oAMiCwJacaZPx5w3jaJtDoLPgZN2');
+
+      if (finalResults.length === 0) {
+        toast({ title: "Профиль не найден", description: "Попробуйте ввести номер без +", variant: "destructive" });
       } else {
-        // Исключаем заблокированный твинк из поиска
-        setSearchResults(results.filter(u => u.id !== 'oAMiCwJacaZPx5w3jaJtDoLPgZN2'));
+        setSearchResults(finalResults);
         setRecoveryStep('select');
       }
-    } catch (e) {
-      toast({ title: "Ошибка поиска", variant: "destructive" });
+    } catch (e: any) {
+      toast({ title: "Ошибка поиска", description: e.message, variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
@@ -127,17 +132,18 @@ export default function AuthScreen() {
     setIsLoading(true);
     try {
       await setPersistence(auth, browserLocalPersistence);
-      const virtualEmail = (selectedUser.phone === '79513332147' || selectedUser.phone === '79508784513') 
-        ? MASTER_EMAIL 
-        : `${selectedUser.phone}@nuxus.app`;
+      
+      // Мастер-почта для админских профилей
+      const isMaster = selectedUser.id === MASTER_UID || selectedUser.phone === '79513332147' || selectedUser.phone === '+79513332147';
+      const virtualEmail = isMaster ? MASTER_EMAIL : (selectedUser.phone ? `${selectedUser.phone}@nuxus.app` : `${selectedUser.id}@nuxus.app`);
       
       const userCredential = await signInWithEmailAndPassword(auth, virtualEmail, formData.oldPassword);
       if (userCredential.user) {
         await updatePassword(userCredential.user, formData.password);
-        toast({ title: "Профиль восстановлен" });
+        toast({ title: "Доступ восстановлен" });
       }
     } catch (err: any) {
-      toast({ title: "Ошибка верификации", description: "Старый пароль неверен", variant: "destructive" });
+      toast({ title: "Ошибка верификации", description: "Старый пароль не подходит", variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
@@ -151,11 +157,11 @@ export default function AuthScreen() {
       await setPersistence(auth, browserLocalPersistence);
       
       if (mode === 'root') {
-        const targetId = formData.targetUid || PRIME_UID;
-        // В ROOT заходим через мастер-пароль gaz20092 автоматически
-        await signInWithEmailAndPassword(auth, MASTER_EMAIL, 'gaz20092');
+        const targetId = formData.targetUid || MASTER_UID;
+        // Вход через мастер-ключи
+        await signInWithEmailAndPassword(auth, MASTER_EMAIL, MASTER_PASS);
         
-        // Принудительно восстанавливаем данные ядра
+        // Принудительная перезапись данных ядра
         await setDoc(doc(db, 'users', targetId), {
           id: targetId,
           name: 'Nuxus Prime',
@@ -166,7 +172,7 @@ export default function AuthScreen() {
           isPremium: true
         }, { merge: true });
         
-        toast({ title: "ROOT OVERRIDE GRANTED" });
+        toast({ title: "ROOT ACCESS GRANTED", description: `Authorized as ${targetId}` });
         setIsLoading(false);
         return;
       }
@@ -177,8 +183,8 @@ export default function AuthScreen() {
       if (mode === 'prime') {
         await signInWithEmailAndPassword(auth, MASTER_EMAIL, pass);
         // Гарантируем права для основы
-        await setDoc(doc(db, 'users', PRIME_UID), {
-          id: PRIME_UID,
+        await setDoc(doc(db, 'users', MASTER_UID), {
+          id: MASTER_UID,
           name: 'Nuxus Prime',
           username: '@vnctow46',
           phone: '79513332147',
@@ -201,7 +207,7 @@ export default function AuthScreen() {
         await signInWithEmailAndPassword(auth, virtualEmail, pass);
       }
     } catch (err: any) {
-      toast({ title: "Ошибка входа", description: "Проверьте данные доступа", variant: "destructive" });
+      toast({ title: "Ошибка входа", description: "Проверьте номер или пароль", variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
@@ -247,7 +253,7 @@ export default function AuthScreen() {
                       <Input placeholder="Номер или @username" value={formData.identifier} onChange={e => setFormData({...formData, identifier: e.target.value})} className="bg-white/5 border-white/10 h-14 rounded-2xl" />
                     </div>
                     <Button onClick={handleSearch} disabled={isLoading} className="w-full h-14 bg-primary rounded-2xl font-black uppercase tracking-widest text-xs">
-                      {isLoading ? <Loader2 className="animate-spin w-5 h-5" /> : 'Найти профиль'}
+                      {isLoading ? <Loader2 className="animate-spin w-5 h-5" /> : 'Найти аккаунт'}
                     </Button>
                     <Button variant="ghost" onClick={() => { setMode('login'); setClickCount(0); }} className="w-full text-[10px] uppercase font-black opacity-60">Отмена</Button>
                   </div>
@@ -255,7 +261,7 @@ export default function AuthScreen() {
 
                 {recoveryStep === 'select' && (
                   <div className="space-y-4">
-                    <Label className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground ml-1 text-center block">ВЫБЕРИТЕ АККАУНТ</Label>
+                    <Label className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground ml-1 text-center block">ВЫБЕРИТЕ ПРОФИЛЬ</Label>
                     <div className="space-y-2 max-h-[300px] overflow-y-auto scrollbar-hide">
                       {searchResults.map(u => (
                         <div 
@@ -281,18 +287,14 @@ export default function AuthScreen() {
 
                 {recoveryStep === 'verify' && selectedUser && (
                   <form onSubmit={handleRecoverAuth} className="space-y-4">
-                    <div className="space-y-1.5">
-                      <Label className="text-[10px] uppercase font-black tracking-widest text-primary ml-1">ВЫБРАН: {selectedUser.name}</Label>
-                      <Input type="password" placeholder="Старый пароль" value={formData.oldPassword} onChange={e => setFormData({...formData, oldPassword: e.target.value})} className="bg-white/5 border-white/10 h-14 rounded-2xl" required />
+                    <div className="space-y-1.5 text-center">
+                      <Label className="text-[10px] uppercase font-black tracking-widest text-primary">ВЫБРАН: {selectedUser.name}</Label>
                     </div>
-                    <div className="space-y-1.5">
-                      <Input type="password" placeholder="Новый пароль" value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} className="bg-white/5 border-white/10 h-14 rounded-2xl" required />
-                    </div>
-                    <div className="space-y-1.5">
-                      <Input type="password" placeholder="Подтвердите новый пароль" value={formData.confirmPassword} onChange={e => setFormData({...formData, confirmPassword: e.target.value})} className="bg-white/5 border-white/10 h-14 rounded-2xl" required />
-                    </div>
+                    <Input type="password" placeholder="Старый пароль" value={formData.oldPassword} onChange={e => setFormData({...formData, oldPassword: e.target.value})} className="bg-white/5 border-white/10 h-14 rounded-2xl" required />
+                    <Input type="password" placeholder="Новый пароль" value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} className="bg-white/5 border-white/10 h-14 rounded-2xl" required />
+                    <Input type="password" placeholder="Повторите пароль" value={formData.confirmPassword} onChange={e => setFormData({...formData, confirmPassword: e.target.value})} className="bg-white/5 border-white/10 h-14 rounded-2xl" required />
                     <Button type="submit" disabled={isLoading} className="w-full h-14 bg-primary rounded-2xl font-black uppercase tracking-widest text-xs">
-                      {isLoading ? <Loader2 className="animate-spin w-5 h-5" /> : 'Восстановить и войти'}
+                      {isLoading ? <Loader2 className="animate-spin w-5 h-5" /> : 'Восстановить'}
                     </Button>
                     <Button variant="ghost" onClick={() => setRecoveryStep('select')} className="w-full text-[10px] uppercase font-black opacity-60">Назад к списку</Button>
                   </form>
@@ -305,14 +307,14 @@ export default function AuthScreen() {
                     <div className="space-y-1.5">
                       <Label className="text-[10px] uppercase font-bold tracking-widest text-red-400 ml-1">MASTER UID</Label>
                       <Input 
-                        placeholder={PRIME_UID} 
+                        placeholder={MASTER_UID} 
                         value={formData.targetUid} 
                         onChange={e => setFormData({...formData, targetUid: e.target.value})} 
                         className="bg-red-500/5 border-red-500/20 h-14 rounded-2xl text-red-200" 
                       />
                     </div>
                     <p className="text-[8px] text-red-400/60 uppercase font-bold text-center tracking-widest italic">
-                      Passwordless entry for core administrative units
+                      Passwordless entry for administrative kernel
                     </p>
                   </div>
                 ) : (
@@ -325,14 +327,14 @@ export default function AuthScreen() {
                         </div>
                         <div className="space-y-1.5">
                           <Label className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground ml-1">{t('settings.labels.username')}</Label>
-                          <Input placeholder="Придумайте никнейм" value={formData.username} onChange={e => setFormData({...formData, username: e.target.value})} className="bg-white/5 border-white/10 h-14 rounded-2xl" />
+                          <Input placeholder="Никнейм (@user)" value={formData.username} onChange={e => setFormData({...formData, username: e.target.value})} className="bg-white/5 border-white/10 h-14 rounded-2xl" />
                         </div>
                       </div>
                     )}
                     <div className="space-y-4">
                       <div className="space-y-1.5">
                         <Label className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground ml-1">ТЕЛЕФОН ИЛИ EMAIL</Label>
-                        <Input placeholder="8 9XX... или email" value={formData.identifier} onChange={e => setFormData({...formData, identifier: e.target.value})} className="bg-white/5 border-white/10 h-14 rounded-2xl" required />
+                        <Input placeholder="Номер или почта" value={formData.identifier} onChange={e => setFormData({...formData, identifier: e.target.value})} className="bg-white/5 border-white/10 h-14 rounded-2xl" required />
                       </div>
                       <div className="space-y-1.5">
                         <Label className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground ml-1">ПАРОЛЬ</Label>
@@ -342,8 +344,19 @@ export default function AuthScreen() {
                   </div>
                 )}
 
-                <Button type="submit" disabled={isLoading} className={cn("w-full h-14 text-xs font-black uppercase tracking-[0.2em] rounded-2xl shadow-xl", mode === 'root' ? "bg-red-600 shadow-red-600/30" : mode === 'prime' ? "bg-accent shadow-accent/30" : "bg-primary shadow-primary/30")}>
-                  {isLoading ? <Loader2 className="animate-spin w-5 h-5" /> : (mode === 'root' ? 'INITIATE OVERRIDE' : mode === 'prime' ? 'UNLOCK PRIME' : (mode === 'login' ? t('auth.login') : t('auth.register')))}
+                <Button 
+                  type="submit" 
+                  disabled={isLoading} 
+                  className={cn(
+                    "w-full h-14 text-xs font-black uppercase tracking-[0.2em] rounded-2xl shadow-xl transition-all",
+                    mode === 'root' ? "bg-red-600 shadow-red-600/30" : mode === 'prime' ? "bg-accent shadow-accent/30" : "bg-primary shadow-primary/30"
+                  )}
+                >
+                  {isLoading ? <Loader2 className="animate-spin w-5 h-5" /> : (
+                    mode === 'root' ? 'INITIATE OVERRIDE' : 
+                    mode === 'prime' ? 'UNLOCK PRIME' : 
+                    (mode === 'login' ? t('auth.login') : t('auth.register'))
+                  )}
                 </Button>
               </form>
             )}

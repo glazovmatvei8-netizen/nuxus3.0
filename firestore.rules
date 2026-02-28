@@ -22,9 +22,12 @@ service cloud.firestore {
       ));
     }
 
-    // БЛОКИРОВКА ТВИНКОВ (oAMi... и любые старые дубли)
+    // БЛОКИРОВКА ТВИНКОВ
     function isBannedTwin() {
-      return request.auth.uid == 'oAMiCwJacaZPx5w3jaJtDoLPgZN2';
+      return isSignedIn() && (
+        request.auth.uid == 'oAMiCwJacaZPx5w3jaJtDoLPgZN2' || 
+        request.auth.uid == 'oAMi'
+      );
     }
 
     function isChatMember(chatId) {
@@ -44,12 +47,18 @@ service cloud.firestore {
     }
 
     match /users/{userId} {
-      allow read, write: if !isBannedTwin() && (isPrimeAdmin() || isAdmin() || (isSignedIn() && request.auth.uid == userId));
-      allow read: if !isBannedTwin();
+      // Разрешаем чтение и список для восстановления (незалогиненным тоже)
+      allow read, list: if !isBannedTwin();
+      allow write: if isPrimeAdmin() || isAdmin() || (isSignedIn() && request.auth.uid == userId);
       
       match /receivedGifts/{giftId} {
         allow read, list: if isSignedIn() && !isBannedTwin();
         allow write: if isAdmin();
+      }
+      
+      match /stories/{storyId} {
+        allow read, list: if isSignedIn() && !isBannedTwin();
+        allow write: if isSignedIn() && request.auth.uid == userId;
       }
     }
 
