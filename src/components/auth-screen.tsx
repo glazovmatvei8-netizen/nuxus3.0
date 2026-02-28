@@ -213,7 +213,7 @@ export default function AuthScreen() {
                 <Label className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground/80 ml-1">Номер телефона</Label>
                 <div className="relative group">
                   <Smartphone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
-                  <Input placeholder="8 951 333 21 47" type="tel" value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} className="bg-white/5 border-white/10 pl-10 h-14 rounded-2xl focus:border-primary/50 transition-all" required />
+                  <Input placeholder="8 9XX XXX XX XX" type="tel" value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} className="bg-white/5 border-white/10 pl-10 h-14 rounded-2xl focus:border-primary/50 transition-all" required />
                 </div>
               </div>
 
