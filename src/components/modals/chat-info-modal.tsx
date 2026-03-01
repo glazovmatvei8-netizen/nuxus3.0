@@ -1,20 +1,23 @@
 
 "use client"
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { UserAvatar } from '@/components/user-avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { 
-  Sparkles, Gift, Crown, Star, LogOut, UserPlus, Shield, UserMinus, UserCheck
+  Sparkles, Gift, Crown, Star, LogOut, UserPlus, Shield, UserMinus, UserCheck,
+  Settings2, Upload, Camera, Check, Info, Users, MessageSquare
 } from 'lucide-react';
 import { 
   Star as StarIcon, Heart, Zap, Flame, Trophy, Rocket, Diamond, 
   Cookie, PartyPopper, Ghost, Gem, Coffee, Pizza, Beer, Wine, 
-  Camera, Laptop, Watch, Smartphone, Car, Plane, Sun, Moon, 
+  Camera as CameraIcon, Laptop, Watch, Smartphone, Car, Plane, Sun, Moon, 
   Cloud, Snowflake, Trees, Flower2, Dog, Cat, Bird, Fish, 
   Bitcoin, Coins, Gamepad2, Music, Smile, ThumbsUp, Bell, 
   Mail, Key, Lock, Shield as ShieldIcon, Sword, Anchor, Compass, Map, 
@@ -24,10 +27,10 @@ import { useFirestore, useCollection, useMemoFirebase, useUser, useDoc } from '@
 import { collection, query, orderBy, limit, getDocs, doc, updateDoc, arrayRemove, arrayUnion } from 'firebase/firestore';
 import { chatConversationSummary } from '@/ai/flows/chat-conversation-summary-flow';
 import { useToast } from '@/hooks/use-toast';
-import { deleteDocumentNonBlocking, addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { deleteDocumentNonBlocking, addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { useAppState } from '@/lib/store';
 import { cn, formatDisplayName, isUserPremium } from '@/lib/utils';
-import type { User, ReceivedGift } from '@/lib/types';
+import type { User, ReceivedGift, Chat } from '@/lib/types';
 import { AddMemberModal } from './add-member-modal';
 
 const PRIME_UID = 'vnctow46';
@@ -44,7 +47,7 @@ export const AVAILABLE_GIFTS = [
   { id: 'gift_gem', name: 'Изумруд', icon: Gem, color: 'text-emerald-400', value: 2500, isNFT: true },
 ];
 
-export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onOpenChange: (o: boolean) => void, chat: any }) {
+export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onOpenChange: (o: boolean) => void, chat: Chat }) {
   const db = useFirestore();
   const { user } = useUser();
   const { setCurrentChatId } = useAppState();
@@ -53,15 +56,36 @@ export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onO
   const [showGiftSelection, setShowGiftSelection] = useState(false);
   const [giftMessage, setGiftMessage] = useState('');
   const [isAddMemberOpen, setIsAddMemberOpen] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
   const isOwner = user && chat.ownerId === user.uid;
+  const isChatAdmin = isOwner || (user && chat.adminIds?.includes(user.uid));
   const isPrivate = chat.type === 'private';
   const otherId = isPrivate && user ? chat.participantIds?.find((id: string) => id !== user.uid) : null;
 
+  const [editForm, setEditForm] = useState({
+    name: chat.name || '',
+    username: chat.username || '',
+    description: chat.description || '',
+    avatarUrl: chat.avatarUrl || ''
+  });
+
+  useEffect(() => {
+    if (open) {
+      setEditForm({
+        name: chat.name || '',
+        username: chat.username || '',
+        description: chat.description || '',
+        avatarUrl: chat.avatarUrl || ''
+      });
+    }
+  }, [open, chat]);
+
   const userProfileRef = useMemoFirebase(() => (!db || !user) ? null : doc(db, 'users', user.uid), [db, user]);
   const { data: currentUserProfile } = useDoc<User>(userProfileRef);
-  const isGlobalAdmin = currentUserProfile?.phone === '+79513332147' || user?.uid === PRIME_UID;
+  const isGlobalAdminUser = currentUserProfile?.phone === '+79513332147' || user?.uid === PRIME_UID;
   
   const otherUserProfileRef = useMemoFirebase(() => (!db || !otherId) ? null : doc(db, 'users', otherId), [db, otherId]);
   const { data: otherUserProfile } = useDoc<User>(otherUserProfileRef);
@@ -73,7 +97,7 @@ export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onO
   const { data: receivedGifts } = useCollection<ReceivedGift>(receivedGiftsQuery);
 
   const handleSendGift = async (gift: typeof AVAILABLE_GIFTS[0]) => {
-    if (!isGlobalAdmin || !db || !chat.id || !otherId) return;
+    if (!isGlobalAdminUser || !db || !chat.id || !otherId) return;
     
     const messageData: any = {
       chatId: chat.id,
@@ -157,15 +181,61 @@ export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onO
     }
   };
 
+  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onloadend = () => setEditForm(prev => ({ ...prev, avatarUrl: reader.result as string }));
+    reader.readAsDataURL(file);
+  };
+
+  const handleSaveSettings = async () => {
+    if (!db || !chat.id || !isChatAdmin) return;
+    setIsSaving(true);
+    try {
+      const chatRef = doc(db, 'chats', chat.id);
+      const updatedUsername = editForm.username.startsWith('@') ? editForm.username.toLowerCase() : '@' + editForm.username.toLowerCase();
+      
+      await updateDoc(chatRef, {
+        name: editForm.name,
+        username: updatedUsername,
+        description: editForm.description,
+        avatarUrl: editForm.avatarUrl || null
+      });
+      
+      toast({ title: "Настройки сохранены" });
+    } catch (e: any) {
+      toast({ title: "Ошибка сохранения", description: e.message, variant: "destructive" });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   const chatName = formatDisplayName(chat.name || otherUserProfile?.name || 'Чат');
   const chatUsername = otherUserProfile?.username || chat.username;
 
   return (
     <>
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md bg-card border-border p-0 overflow-hidden h-[90vh] flex flex-col">
+      <DialogContent className="max-w-md bg-card border-border p-0 overflow-hidden h-[90vh] flex flex-col rounded-[2.5rem]">
         <DialogHeader className="p-6 bg-muted/30 border-b border-border text-center flex flex-col items-center shrink-0">
-          <UserAvatar userId={isPrivate ? otherId : null} manualAvatarUrl={chat.avatarUrl} className="h-20 w-20 mb-3" fallbackName={chatName} />
+          <div className="relative group">
+            <UserAvatar 
+              userId={isPrivate ? otherId : null} 
+              manualAvatarUrl={isChatAdmin ? editForm.avatarUrl : chat.avatarUrl} 
+              className="h-20 w-20 mb-3 border-2 border-primary/20" 
+              fallbackName={chatName} 
+            />
+            {isChatAdmin && (
+              <div 
+                onClick={() => fileInputRef.current?.click()}
+                className="absolute inset-0 h-20 w-20 rounded-full bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 cursor-pointer transition-all mb-3"
+              >
+                <Camera className="w-6 h-6 text-white" />
+              </div>
+            )}
+            <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleAvatarChange} />
+          </div>
           <DialogTitle className="text-xl flex items-center justify-center gap-2">
             {chatName} {isUserPremium(otherUserProfile) && <Star className="w-4 h-4 text-accent fill-accent" />}
           </DialogTitle>
@@ -173,22 +243,32 @@ export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onO
         </DialogHeader>
 
         <Tabs defaultValue="info" className="flex-1 overflow-hidden flex flex-col min-h-0">
-          <TabsList className="grid w-full grid-cols-2 h-10 bg-muted p-1 shrink-0">
-            <TabsTrigger value="info">Инфо</TabsTrigger>
-            <TabsTrigger value="members">Участники</TabsTrigger>
+          <TabsList className={cn("grid w-full h-10 bg-muted p-1 shrink-0", isChatAdmin && !isPrivate ? "grid-cols-3" : "grid-cols-2")}>
+            <TabsTrigger value="info" className="text-[10px] font-bold uppercase tracking-widest"><Info className="w-3 h-3 mr-1.5" /> Инфо</TabsTrigger>
+            <TabsTrigger value="members" className="text-[10px] font-bold uppercase tracking-widest"><Users className="w-3 h-3 mr-1.5" /> Участники</TabsTrigger>
+            {isChatAdmin && !isPrivate && (
+              <TabsTrigger value="manage" className="text-[10px] font-bold uppercase tracking-widest"><Settings2 className="w-3 h-3 mr-1.5" /> Управление</TabsTrigger>
+            )}
           </TabsList>
 
           <TabsContent value="info" className="flex-1 min-h-0 m-0 overflow-hidden">
             <ScrollArea className="h-full">
               <div className="p-6 space-y-6">
+                {chat.description && (
+                  <div className="space-y-2">
+                    <h3 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Описание</h3>
+                    <p className="text-sm bg-muted/20 p-3 rounded-xl border border-white/5">{chat.description}</p>
+                  </div>
+                )}
+
                 {isPrivate && otherId && (
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
                       <h3 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-2"><Gift className="w-3 h-3" /> Подарки</h3>
-                      {isGlobalAdmin && <Button variant="ghost" size="sm" className="h-7 text-xs text-primary font-bold" onClick={() => setShowGiftSelection(!showGiftSelection)}>Подарить</Button>}
+                      {isGlobalAdminUser && <Button variant="ghost" size="sm" className="h-7 text-xs text-primary font-bold" onClick={() => setShowGiftSelection(!showGiftSelection)}>Подарить</Button>}
                     </div>
                     
-                    {showGiftSelection && isGlobalAdmin && (
+                    {showGiftSelection && isGlobalAdminUser && (
                       <div className="space-y-3 p-3 bg-muted/50 rounded-2xl border border-border">
                         <Input placeholder="Сообщение..." value={giftMessage} onChange={e => setGiftMessage(e.target.value)} className="h-9 text-xs" />
                         <div className="grid grid-cols-4 gap-2 max-h-60 overflow-y-auto pr-1">
@@ -242,12 +322,12 @@ export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onO
             </ScrollArea>
           </TabsContent>
 
-          <TabsContent value="members" className="flex-1 min-h-0 m-0 overflow-hidden">
-            <div className="p-4 border-b border-border flex justify-between items-center">
-              <span className="text-[10px] font-bold uppercase text-muted-foreground">Участники: {chat.participantIds?.length}</span>
+          <TabsContent value="members" className="flex-1 min-h-0 m-0 overflow-hidden flex flex-col">
+            <div className="p-4 border-b border-border flex justify-between items-center bg-muted/10">
+              <span className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest">Участники: {chat.participantIds?.length}</span>
               {!isPrivate && (
-                <Button variant="ghost" size="sm" className="h-7 text-xs text-primary gap-1" onClick={() => setIsAddMemberOpen(true)}>
-                  <UserPlus className="w-3 h-3" /> Добавить
+                <Button variant="ghost" size="sm" className="h-7 text-xs text-primary gap-1 font-bold" onClick={() => setIsAddMemberOpen(true)}>
+                  <UserPlus className="w-3.5 h-3.5" /> Добавить
                 </Button>
               )}
             </div>
@@ -266,6 +346,51 @@ export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onO
               </div>
             </ScrollArea>
           </TabsContent>
+
+          {isChatAdmin && !isPrivate && (
+            <TabsContent value="manage" className="flex-1 min-h-0 m-0 overflow-hidden">
+              <ScrollArea className="h-full">
+                <div className="p-6 space-y-6 pb-24">
+                  <div className="space-y-4">
+                    <div className="space-y-1.5">
+                      <Label className="text-[10px] uppercase font-black tracking-widest text-muted-foreground ml-1">Название {chat.type === 'group' ? 'группы' : 'канала'}</Label>
+                      <Input 
+                        value={editForm.name} 
+                        onChange={e => setEditForm({...editForm, name: e.target.value})} 
+                        className="bg-muted/30 border-white/5 h-12 rounded-2xl" 
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-[10px] uppercase font-black tracking-widest text-muted-foreground ml-1">Никнейм сообщества</Label>
+                      <Input 
+                        value={editForm.username} 
+                        onChange={e => setEditForm({...editForm, username: e.target.value})} 
+                        className="bg-muted/30 border-white/5 h-12 rounded-2xl" 
+                        placeholder="@channel_id"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-[10px] uppercase font-black tracking-widest text-muted-foreground ml-1">Описание</Label>
+                      <Textarea 
+                        value={editForm.description} 
+                        onChange={e => setEditForm({...editForm, description: e.target.value})} 
+                        className="bg-muted/30 border-white/5 rounded-2xl min-h-[100px]" 
+                        placeholder="О чем ваше сообщество?"
+                      />
+                    </div>
+                  </div>
+
+                  <Button 
+                    className="w-full h-12 rounded-2xl font-bold bg-primary shadow-lg shadow-primary/20" 
+                    onClick={handleSaveSettings}
+                    disabled={isSaving}
+                  >
+                    {isSaving ? "Сохранение..." : "Сохранить изменения"}
+                  </Button>
+                </div>
+              </ScrollArea>
+            </TabsContent>
+          )}
         </Tabs>
       </DialogContent>
     </Dialog>
