@@ -6,13 +6,21 @@
 ## 💻 Установка на ПК (Windows App)
 1. Откройте мессенджер в **Google Chrome** или **Microsoft Edge**.
 2. В правой части адресной строки нажмите на иконку **«Установить NuxusChat»** (монитор со стрелкой).
-3. Приложение появится в меню Пуск и на рабочем столе.
+3. **Хакерский способ (PowerShell)**:
+   ```powershell
+   cd $env:USERPROFILE\Desktop
+   npx nativefier --name "NuxusChat" "https://9000-firebase-studio-1772042875348.cluster-kizalrzg35hz6u4i7pguwgt6ss.cloudworkstations.dev" --internal-urls ".*" --single-instance --tray
+   ```
 
-## 📱 Установка на Android
-1. Откройте сайт в **Google Chrome**.
-2. Нажмите на **три точки** (меню) в верхнем углу.
-3. Выберите **«Установить приложение»** или **«Добавить на главный экран»**.
-4. Теперь мессенджер работает как отдельное Android-приложение без строки браузера.
+## 📱 Установка на Android (Native APK)
+Чтобы создать настоящий установочный файл **.apk**, используйте Google Bubblewrap:
+1. Установите Node.js на ПК.
+2. В терминале выполните:
+   ```bash
+   npx @bubblewrap/cli init --manifest="https://9000-firebase-studio-1772042875348.cluster-kizalrzg35hz6u4i7pguwgt6ss.cloudworkstations.dev/manifest.json"
+   npx @bubblewrap/cli build
+   ```
+3. Полученный файл `app-release-signed.apk` можно скинуть на телефон и установить.
 
 ## 🍎 Установка на iPhone (iOS)
 1. Откройте сайт в **Safari**.
