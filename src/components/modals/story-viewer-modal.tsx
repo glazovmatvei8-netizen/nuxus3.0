@@ -122,9 +122,6 @@ export function StoryViewerModal({ stories, open, onOpenChange }: StoryViewerPro
                 <Trash2 className="w-5 h-5" />
               </Button>
             )}
-            <Button variant="ghost" size="icon" className="bg-white/10 hover:bg-white/20 rounded-full text-white" onClick={() => onOpenChange(false)}>
-              <X className="w-5 h-5" />
-            </Button>
           </div>
         </div>
 

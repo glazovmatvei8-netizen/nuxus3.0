@@ -151,7 +151,6 @@ export default function AuthScreen() {
         }
       }
     } catch (err: any) {
-      console.error("Auth Error:", err.code);
       let msg = "Ошибка доступа";
       if (err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential') msg = "Неверный номер или пароль";
       if (err.code === 'auth/wrong-password') msg = "Неверный пароль";
@@ -191,7 +190,6 @@ export default function AuthScreen() {
       setIs2FAVerified(true);
       toast({ title: "ROOT ACCESS GRANTED", className: "bg-primary text-white font-black" });
     } catch (err: any) {
-      console.error("Root Auth Error:", err);
       toast({ title: "Ошибка доступа", description: "Ядро отклонило запрос", variant: "destructive" });
       setClickCount(0);
     } finally {
