@@ -1,8 +1,7 @@
 
-/**
- * Nuxus Service Worker v1.0.0
- * Обеспечивает работу PWA и базовых фоновых функций.
- */
+// Nuxus Service Worker v22.0.0
+// Позволяет приложению работать в фоне и принимать Push-уведомления
+
 self.addEventListener('install', (event) => {
   self.skipWaiting();
 });
@@ -11,31 +10,22 @@ self.addEventListener('activate', (event) => {
   event.waitUntil(clients.claim());
 });
 
-self.addEventListener('fetch', (event) => {
-  // Базовый обработчик запросов для работы в режиме Standalone
-  return;
-});
-
 self.addEventListener('push', (event) => {
-  if (event.data) {
-    const data = event.data.json();
-    const options = {
-      body: data.body,
-      icon: '/icons/icon-192x192.png',
-      badge: '/icons/icon-192x192.png',
-      data: {
-        url: data.url || '/'
-      }
-    };
-    event.waitUntil(
-      self.registration.showNotification(data.title, options)
-    );
-  }
+  const data = event.data ? event.data.json() : {};
+  const title = data.title || 'NuxusChat';
+  const options = {
+    body: data.body || 'Новое сообщение',
+    icon: 'https://picsum.photos/seed/nuxus/192/192',
+    badge: 'https://picsum.photos/seed/nuxus/192/192',
+    data: data.url || '/'
+  };
+
+  event.waitUntil(self.registration.showNotification(title, options));
 });
 
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
   event.waitUntil(
-    clients.openWindow(event.notification.data.url)
+    clients.openWindow(event.notification.data)
   );
 });
