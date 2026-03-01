@@ -8,12 +8,12 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { useAuth, useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
+import { useAuth, useUser, useFirestore, useDoc, useCollection, useMemoFirebase } from '@/firebase';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
   LogOut, Palette, Loader2, Crown, Check, 
   Monitor, Sparkles, Globe, Settings2, Upload, Moon, Droplets, Type, ShieldCheck, Lock,
-  Users, Copy, Share2, Star
+  Users, Copy, Share2, Star, UserCheck
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { signOut, updatePassword, EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
@@ -28,7 +28,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { cn, isUserPremium, isGlobalAdmin } from '@/lib/utils';
+import { cn, isUserPremium, isGlobalAdmin, formatDisplayName } from '@/lib/utils';
 import type { User } from '@/lib/types';
 import { generateAiAvatar } from '@/ai/flows/generate-ai-avatar-flow';
 import { useTranslations } from '@/hooks/use-translations';
@@ -62,6 +62,13 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
 
   const userRef = useMemoFirebase(() => (!db || !user) ? null : doc(db, 'users', user.uid), [db, user]);
   const { data: profile } = useDoc<User>(userRef);
+
+  // Fetch invited friends
+  const invitedFriendsQuery = useMemoFirebase(() => {
+    if (!db || !user) return null;
+    return query(collection(db, 'users'), where('invitedBy', '==', user.uid), limit(50));
+  }, [db, user]);
+  const { data: invitedFriends, isLoading: isInvitedLoading } = useCollection<User>(invitedFriendsQuery);
 
   const [form, setForm] = useState({
     name: '',
@@ -140,7 +147,6 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
 
     setIsUpdatingPassword(true);
     try {
-      // Silent refresh for admin accounts if needed
       if (isGlobalAdmin(profile)) {
         const email = auth.currentUser.email;
         if (email) {
@@ -153,7 +159,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
       toast({ title: "Пароль успешно обновлен" });
       setPasswordForm({ new: '', confirm: '' });
     } catch (e: any) {
-      toast({ title: "Ошибка доступа. Попробуйте перезайти.", variant: "destructive" });
+      toast({ title: "Ошибка доступа", variant: "destructive" });
     } finally {
       setIsUpdatingPassword(false);
     }
@@ -217,7 +223,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
   };
 
   const referralCount = profile?.referralCount || 0;
-  const progressToNextReward = (referralCount % 5) * 20; // 5 friends = 100%
+  const progressToNextReward = (referralCount % 5) * 20;
 
   return (
     <>
@@ -333,6 +339,41 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                   <Button className="w-full h-11 rounded-xl bg-primary/20 hover:bg-primary text-primary hover:text-white transition-all font-black text-[10px] uppercase tracking-widest">
                     <Share2 className="w-4 h-4 mr-2" /> Поделиться
                   </Button>
+                </div>
+
+                {/* Invited Friends List */}
+                <div className="pt-6 border-t border-white/5 space-y-4">
+                  <Label className="text-[10px] uppercase font-black tracking-widest text-muted-foreground ml-1 flex items-center gap-2">
+                    <UserCheck className="w-3.5 h-3.5 text-primary" /> Ваши приглашенные ({invitedFriends?.length || 0})
+                  </Label>
+                  
+                  <div className="space-y-2">
+                    {isInvitedLoading ? (
+                      <div className="flex justify-center py-4"><Loader2 className="w-5 h-5 animate-spin text-primary/50" /></div>
+                    ) : invitedFriends && invitedFriends.length > 0 ? (
+                      invitedFriends.map(friend => (
+                        <div key={friend.id} className="flex items-center gap-3 p-3 bg-black/20 rounded-2xl border border-white/5 hover:bg-black/40 transition-all group">
+                          <UserAvatar 
+                            userId={friend.id} 
+                            className="h-9 w-9 border border-white/10 group-hover:border-primary/40 transition-colors" 
+                            manualAvatarUrl={friend.avatarUrl}
+                            fallbackName={friend.name}
+                          />
+                          <div className="flex flex-col min-w-0">
+                            <span className="text-xs font-bold text-white truncate flex items-center gap-1">
+                              {formatDisplayName(friend.name)}
+                              {isUserPremium(friend) && <Star className="w-2.5 h-2.5 text-accent fill-accent" />}
+                            </span>
+                            <span className="text-[9px] text-muted-foreground uppercase font-medium truncate">{friend.username}</span>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="text-center py-8 bg-black/10 rounded-2xl border border-dashed border-white/5">
+                        <p className="text-[9px] uppercase font-black tracking-widest text-muted-foreground/40 italic">У вас пока нет приглашенных</p>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             </TabsContent>
