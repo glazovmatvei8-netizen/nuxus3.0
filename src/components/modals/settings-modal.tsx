@@ -327,7 +327,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
           <div className="text-[10px] uppercase font-bold text-muted-foreground mb-1">Номер карты</div>
           <div className="text-lg font-mono font-black text-white tracking-widest">{CARD_NUMBER}</div>
         </div>
-        <Button className="w-full h-14 rounded-2xl font-black uppercase tracking-[0.2em] bg-primary shadow-xl shadow-primary/30" onClick={handleConfirmPayment} disabled={isSubmittingPayment}>{isSubmittingPassword ? <Loader2 className="animate-spin w-6 h-6" /> : "Я оплатил"}</Button>
+        <Button className="w-full h-14 rounded-2xl font-black uppercase tracking-[0.2em] bg-primary shadow-xl shadow-primary/30" onClick={handleConfirmPayment} disabled={isSubmittingPayment}>{isSubmittingPayment ? <Loader2 className="animate-spin w-6 h-6" /> : "Я оплатил"}</Button>
       </DialogContent>
     </Dialog>
     </>
