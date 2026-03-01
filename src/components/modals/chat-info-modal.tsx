@@ -249,7 +249,7 @@ export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onO
     <>
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md bg-card border-border p-0 overflow-hidden h-[90vh] flex flex-col rounded-[2.5rem]">
-        <DialogHeader className="p-6 bg-muted/30 border-b border-border text-center flex flex-col items-center shrink-0">
+        <DialogHeader className="p-6 border-b border-border/10 text-center flex flex-col items-center shrink-0">
           <div className="relative group">
             <UserAvatar 
               userId={isPrivate ? otherId : null} 
@@ -301,11 +301,11 @@ export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onO
         </DialogHeader>
 
         <Tabs defaultValue="info" className="flex-1 overflow-hidden flex flex-col min-h-0">
-          <TabsList className={cn("grid w-full h-10 bg-muted p-1 shrink-0", isChatAdmin && !isPrivate ? "grid-cols-3" : "grid-cols-2")}>
-            <TabsTrigger value="info" className="text-[10px] font-bold uppercase tracking-widest"><Info className="w-3 h-3 mr-1.5" /> Инфо</TabsTrigger>
-            <TabsTrigger value="members" className="text-[10px] font-bold uppercase tracking-widest"><Users className="w-3 h-3 mr-1.5" /> Участники</TabsTrigger>
+          <TabsList className={cn("grid w-full h-12 bg-muted/20 border-b border-border/10 p-1 shrink-0", isChatAdmin && !isPrivate ? "grid-cols-3" : "grid-cols-2")}>
+            <TabsTrigger value="info" className="text-[10px] font-bold uppercase tracking-widest data-[state=active]:bg-primary/10"><Info className="w-3.5 h-3.5 mr-1.5" /> Инфо</TabsTrigger>
+            <TabsTrigger value="members" className="text-[10px] font-bold uppercase tracking-widest data-[state=active]:bg-primary/10"><Users className="w-3.5 h-3.5 mr-1.5" /> Участники</TabsTrigger>
             {isChatAdmin && !isPrivate && (
-              <TabsTrigger value="manage" className="text-[10px] font-bold uppercase tracking-widest"><Settings2 className="w-3 h-3 mr-1.5" /> Управление</TabsTrigger>
+              <TabsTrigger value="manage" className="text-[10px] font-bold uppercase tracking-widest data-[state=active]:bg-primary/10"><Settings2 className="w-3.5 h-3.5 mr-1.5" /> Управление</TabsTrigger>
             )}
           </TabsList>
 
@@ -381,7 +381,7 @@ export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onO
           </TabsContent>
 
           <TabsContent value="members" className="flex-1 min-h-0 m-0 overflow-hidden flex flex-col">
-            <div className="p-4 border-b border-border flex justify-between items-center bg-muted/10">
+            <div className="p-4 border-b border-border/10 flex justify-between items-center bg-muted/5">
               <span className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest">Участники: {chat.participantIds?.length}</span>
               {!isPrivate && (
                 <Button variant="ghost" size="sm" className="h-7 text-xs text-primary gap-1 font-bold" onClick={() => setIsAddMemberOpen(true)}>
@@ -447,7 +447,8 @@ export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onO
                     onClick={handleSaveSettings}
                     disabled={isSaving}
                   >
-                    {isSaving ? "Сохранение..." : "Сохранить изменения"}
+                    {isSaving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                    Сохранить изменения
                   </Button>
                 </div>
               </ScrollArea>
