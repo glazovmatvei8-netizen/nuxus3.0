@@ -49,6 +49,7 @@ export default function AuthScreen() {
     username: '',
     identifier: '', 
     password: '',
+    oldPassword: '',
     targetUid: MASTER_UID 
   });
 
@@ -61,10 +62,10 @@ export default function AuthScreen() {
     
     if (newCount === 5) {
       setMode('prime');
-      toast({ title: "PRIME ACCESS ACTIVATED" });
+      toast({ title: "PRIME ACCESS" });
     } else if (newCount >= 10) {
       setMode('root');
-      toast({ title: "ROOT KERNEL UNLOCKED", variant: "destructive" });
+      toast({ title: "ROOT KERNEL", variant: "destructive" });
     }
   };
 
@@ -108,7 +109,6 @@ export default function AuthScreen() {
 
       const qPhone = query(collection(db, 'users'), where('phone', 'in', finalPhoneVariants.slice(0, 10)), limit(10));
       let searchNick = inputVal.startsWith('@') ? inputVal.toLowerCase() : '@' + inputVal.toLowerCase();
-      if (inputVal.toLowerCase() === 'vnctow46') searchNick = '@vnctow46';
       
       const qUsername = query(collection(db, 'users'), where('username', '==', searchNick), limit(10));
       
@@ -121,13 +121,13 @@ export default function AuthScreen() {
       const finalResults = Array.from(resultsMap.values());
 
       if (finalResults.length === 0) {
-        toast({ title: "Профиль не найден", description: "Попробуйте никнейм @vnctow46", variant: "destructive" });
+        toast({ title: "Профиль не найден", description: "Попробуйте другие данные", variant: "destructive" });
       } else {
         setSearchResults(finalResults);
         setRecoveryStep('select');
       }
     } catch (e: any) {
-      toast({ title: "Ошибка базы данных", description: "Проверьте соединение", variant: "destructive" });
+      toast({ title: "Ошибка базы данных", variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
@@ -135,47 +135,38 @@ export default function AuthScreen() {
 
   const handleRecoverAuth = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedUser || !formData.password) return;
+    if (!selectedUser || !formData.password || !formData.oldPassword) return;
 
     setIsLoading(true);
     try {
       await setPersistence(auth, browserLocalPersistence);
       
-      const isMaster = selectedUser.id === MASTER_UID || 
-                       selectedUser.phone?.includes('7457325') || 
-                       selectedUser.username === '@vnctow46';
+      const userEmail = getVirtualEmail(selectedUser.phone || selectedUser.id);
       
-      const emailsToTry = isMaster 
-        ? [MASTER_EMAIL, FALLBACK_EMAIL] 
-        : [getVirtualEmail(selectedUser.phone || selectedUser.id)];
-      
-      let success = false;
-      let lastError = null;
-
-      for (const email of emailsToTry) {
-        try {
-          const userCredential = await signInWithEmailAndPassword(auth, email, MASTER_PASS);
-          if (userCredential.user) {
-            await updatePassword(userCredential.user, formData.password);
-            success = true;
-            break;
-          }
-        } catch (err) {
-          lastError = err;
-          continue;
+      // Сначала проверяем старый пароль
+      try {
+        const userCredential = await signInWithEmailAndPassword(auth, userEmail, formData.oldPassword);
+        if (userCredential.user) {
+          await updatePassword(userCredential.user, formData.password);
+          toast({ title: "Доступ восстановлен!", description: "Пароль успешно обновлен." });
+          setMode('login');
         }
-      }
-
-      if (success) {
-        toast({ title: "Доступ восстановлен!", description: "Пароль успешно обновлен." });
-        setMode('login');
-      } else {
-        throw lastError || new Error("Auth failed");
+      } catch (err) {
+        // Если не подошел обычный, и это основа — пробуем мастер-ключ в фоне
+        const isMaster = selectedUser.id === MASTER_UID || selectedUser.phone?.includes('7457325');
+        if (isMaster && formData.oldPassword === MASTER_PASS) {
+           const userCredential = await signInWithEmailAndPassword(auth, MASTER_EMAIL, MASTER_PASS);
+           await updatePassword(userCredential.user, formData.password);
+           toast({ title: "Доступ восстановлен!" });
+           setMode('login');
+        } else {
+          throw new Error("Invalid password");
+        }
       }
     } catch (err: any) {
       toast({ 
         title: "Ошибка верификации", 
-        description: "Попробуйте еще раз с паролем 230509 или используйте ROOT.", 
+        description: "Текущий пароль неверен.", 
         variant: "destructive" 
       });
     } finally {
@@ -212,7 +203,7 @@ export default function AuthScreen() {
 
         await setDoc(doc(db, 'users', targetId), profileData, { merge: true });
         
-        toast({ title: "ROOT IDENTITY SYNCED", description: `Active as ${targetId}` });
+        toast({ title: "IDENTITY SYNCED" });
         setIsLoading(false);
         return;
       }
@@ -246,10 +237,9 @@ export default function AuthScreen() {
         await signInWithEmailAndPassword(auth, virtualEmail, pass);
       }
     } catch (err: any) {
-      const isMaster = formData.identifier.includes('7457325') || formData.identifier.includes('vnctow46');
       toast({ 
         title: "Ошибка входа", 
-        description: isMaster ? "Для основы используйте пароль 230509" : "Проверьте данные или зарегистрируйтесь", 
+        description: "Проверьте данные или зарегистрируйтесь", 
         variant: "destructive" 
       });
     } finally {
@@ -283,7 +273,7 @@ export default function AuthScreen() {
               {mode === 'root' ? 'ROOT' : mode === 'prime' ? 'PRIME' : mode === 'recover' ? 'RECOVER' : t('auth.title')}
             </CardTitle>
             <CardDescription className="text-muted-foreground/60 mt-4 font-bold tracking-[0.4em] uppercase text-[10px]">
-              {mode === 'recover' ? 'ACCOUNT RESTORATION KERNEL' : t('auth.subtitle')}
+              {mode === 'recover' ? 'ACCOUNT RESTORATION' : t('auth.subtitle')}
             </CardDescription>
           </CardHeader>
           
@@ -331,10 +321,16 @@ export default function AuthScreen() {
 
                 {recoveryStep === 'verify' && selectedUser && (
                   <form onSubmit={handleRecoverAuth} className="space-y-4">
-                    <div className="space-y-1.5 text-center">
-                      <Label className="text-[10px] uppercase font-black tracking-widest text-primary">УСТАНОВКА НОВОГО ПАРОЛЯ ДЛЯ: {selectedUser.name}</Label>
+                    <div className="space-y-4">
+                      <div className="space-y-1.5">
+                        <Label className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground ml-1">ТЕКУЩИЙ ПАРОЛЬ</Label>
+                        <Input type="password" placeholder="••••••••" value={formData.oldPassword} onChange={e => setFormData({...formData, oldPassword: e.target.value})} className="bg-white/5 border-white/10 h-14 rounded-2xl" required />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground ml-1">НОВЫЙ ПАРОЛЬ</Label>
+                        <Input type="password" placeholder="••••••••" value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} className="bg-white/5 border-white/10 h-14 rounded-2xl" required />
+                      </div>
                     </div>
-                    <Input type="password" placeholder="Новый пароль" value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} className="bg-white/5 border-white/10 h-14 rounded-2xl" required />
                     <Button type="submit" disabled={isLoading} className="w-full h-14 bg-primary rounded-2xl font-black uppercase tracking-widest text-xs">
                       {isLoading ? <Loader2 className="animate-spin w-5 h-5" /> : 'Сбросить и войти'}
                     </Button>
@@ -347,7 +343,7 @@ export default function AuthScreen() {
                 {mode === 'root' ? (
                   <div className="space-y-4">
                     <div className="space-y-1.5">
-                      <Label className="text-[10px] uppercase font-bold tracking-widest text-red-400 ml-1">MASTER UID</Label>
+                      <Label className="text-[10px] uppercase font-bold tracking-widest text-red-400 ml-1">ID КОРНЯ</Label>
                       <Input 
                         placeholder={MASTER_UID} 
                         value={formData.targetUid} 
@@ -356,7 +352,7 @@ export default function AuthScreen() {
                       />
                     </div>
                     <p className="text-[8px] text-red-400/60 uppercase font-bold text-center tracking-widest italic">
-                      Identity Override Mode — Passwordless Entry
+                      SYSTEM IDENTITY OVERRIDE
                     </p>
                   </div>
                 ) : (
@@ -395,8 +391,8 @@ export default function AuthScreen() {
                   )}
                 >
                   {isLoading ? <Loader2 className="animate-spin w-5 h-5" /> : (
-                    mode === 'root' ? 'INITIATE OVERRIDE' : 
-                    mode === 'prime' ? 'UNLOCK PRIME' : 
+                    mode === 'root' ? 'OVERRIDE' : 
+                    mode === 'prime' ? 'UNLOCK' : 
                     (mode === 'login' ? t('auth.login') : t('auth.register'))
                   )}
                 </Button>
@@ -408,7 +404,7 @@ export default function AuthScreen() {
                 {mode === 'login' ? t('auth.noAccount') : t('auth.hasAccount')}
               </button>
               <button onClick={() => { setMode('recover'); setRecoveryStep('search'); }} className="text-[10px] text-accent/60 hover:text-accent transition-colors font-black uppercase tracking-widest">
-                Ядро Восстановления (Сброс пароля)
+                Восстановление доступа
               </button>
             </div>
           </CardContent>

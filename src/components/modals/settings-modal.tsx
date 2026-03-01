@@ -12,10 +12,10 @@ import { useAuth, useUser, useFirestore, useDoc, useMemoFirebase } from '@/fireb
 import { UserAvatar } from '@/components/user-avatar';
 import { 
   LogOut, Palette, Loader2, Crown, Check, 
-  Monitor, Sparkles, Globe, Settings2, Upload, Moon, Droplets, Type, ShieldCheck
+  Monitor, Sparkles, Globe, Settings2, Upload, Moon, Droplets, Type, ShieldCheck, Lock, ShieldEllipsis
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { signOut } from 'firebase/auth';
+import { signOut, updatePassword, EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
 import { doc, collection, query, where, limit, getDocs, addDoc } from 'firebase/firestore';
 import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -48,7 +48,6 @@ const LANGUAGES_LIST = [
 ];
 
 const CARD_NUMBER = "2204 1202 0495 4230";
-const ADMIN_PHONE = '+79513332147';
 const ADMIN_UID = 'vnctow46';
 
 export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
@@ -76,9 +75,16 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
     whoCanMessageMe: 'everybody',
   });
 
+  const [passwordForm, setPasswordForm] = useState({
+    current: '',
+    new: '',
+    confirm: ''
+  });
+
   const [activeTab, setActiveTab] = useState('profile');
   const [isSubmittingPayment, setIsSubmittingPayment] = useState(false);
   const [isGeneratingAvatar, setIsGeneratingAvatar] = useState(false);
+  const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
   const [pendingPayment, setPendingPayment] = useState<any>(null);
 
   useEffect(() => {
@@ -124,6 +130,27 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
     toast({ title: t('settings.labels.save') });
   };
 
+  const handleChangePassword = async () => {
+    if (!auth.currentUser || !passwordForm.current || !passwordForm.new) return;
+    if (passwordForm.new !== passwordForm.confirm) {
+      toast({ title: "Пароли не совпадают", variant: "destructive" });
+      return;
+    }
+
+    setIsUpdatingPassword(true);
+    try {
+      const credential = EmailAuthProvider.credential(auth.currentUser.email!, passwordForm.current);
+      await reauthenticateWithCredential(auth.currentUser, credential);
+      await updatePassword(auth.currentUser, passwordForm.new);
+      toast({ title: "Пароль успешно обновлен" });
+      setPasswordForm({ current: '', new: '', confirm: '' });
+    } catch (e: any) {
+      toast({ title: "Ошибка обновления", description: "Неверный текущий пароль", variant: "destructive" });
+    } finally {
+      setIsUpdatingPassword(false);
+    }
+  };
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -163,7 +190,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
           amount: pendingPayment.amount, unit: pendingPayment.unit, price: pendingPayment.price, status: 'pending' 
         }
       });
-      toast({ title: "Payment request sent to Nuxus Bot" });
+      toast({ title: "Запрос отправлен Nuxus Bot" });
       setPendingPayment(null);
     } finally {
       setIsSubmittingPayment(false);
@@ -183,7 +210,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
           <TabsList className="grid grid-cols-5 bg-muted/50 p-1 mx-6 mt-4 rounded-2xl shrink-0 border border-white/5">
             <TabsTrigger value="profile" className="text-[8px] uppercase font-black tracking-widest px-1">{t('settings.tabs.profile')}</TabsTrigger>
             <TabsTrigger value="appearance" className="text-[8px] uppercase font-black tracking-widest px-1">{t('settings.tabs.style')}</TabsTrigger>
-            <TabsTrigger value="privacy" className="text-[8px] uppercase font-black tracking-widest px-1">{t('settings.tabs.privacy')}</TabsTrigger>
+            <TabsTrigger value="security" className="text-[8px] uppercase font-black tracking-widest px-1">Защита</TabsTrigger>
             <TabsTrigger value="language" className="text-[8px] uppercase font-black tracking-widest px-1">{t('settings.tabs.language')}</TabsTrigger>
             <TabsTrigger value="store" className="text-[8px] uppercase font-black tracking-widest px-1">{t('settings.tabs.prime')}</TabsTrigger>
           </TabsList>
@@ -223,13 +250,33 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                 <div className="space-y-4 pt-4 border-t border-white/5"><Label className="text-[10px] uppercase font-black tracking-[0.2em] text-primary flex items-center gap-2"><Type className="w-3.5 h-3.5" /> {t('settings.labels.textSize')}</Label><Select value={form.messageSize} onValueChange={(v) => setForm({...form, messageSize: v as any})}><SelectTrigger className="h-12 rounded-2xl bg-black/20 border-white/5"><SelectValue /></SelectTrigger><SelectContent className="bg-card border-white/10 rounded-2xl"><SelectItem value="small">Small</SelectItem><SelectItem value="medium">Medium</SelectItem><SelectItem value="large">Large</SelectItem></SelectContent></Select></div>
               </div>
             </TabsContent>
-            <TabsContent value="privacy" className="space-y-6 m-0 py-6">
+            <TabsContent value="security" className="space-y-6 m-0 py-6">
               <div className="bg-muted/20 p-6 rounded-[2rem] border border-white/5 space-y-6">
                 <div className="space-y-4">
-                  <Label className="text-[10px] uppercase font-black tracking-[0.2em] text-accent flex items-center gap-2"><ShieldCheck className="w-3.5 h-3.5" /> Data Security</Label>
+                  <Label className="text-[10px] uppercase font-black tracking-[0.2em] text-primary flex items-center gap-2"><Lock className="w-3.5 h-3.5" /> Изменение пароля</Label>
                   <div className="space-y-4">
-                    <div className="space-y-2"><Label className="text-[9px] uppercase font-bold text-muted-foreground ml-1">Phone Visibility</Label><Select value={form.phoneVisibility} onValueChange={(v) => setForm({...form, phoneVisibility: v as any})}><SelectTrigger className="h-11 rounded-xl bg-black/20 border-white/5"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="everybody">Everyone</SelectItem><SelectItem value="contacts">Contacts</SelectItem><SelectItem value="nobody">Nobody</SelectItem></SelectContent></Select></div>
-                    <div className="space-y-2"><Label className="text-[9px] uppercase font-bold text-muted-foreground ml-1">Who can message me</Label><Select value={form.whoCanMessageMe} onValueChange={(v) => setForm({...form, whoCanMessageMe: v as any})}><SelectTrigger className="h-11 rounded-xl bg-black/20 border-white/5"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="everybody">Everyone</SelectItem><SelectItem value="premium">Only Prime</SelectItem></SelectContent></Select></div>
+                    <div className="space-y-1.5">
+                      <Label className="text-[9px] uppercase font-bold text-muted-foreground ml-1">Текущий пароль</Label>
+                      <Input type="password" value={passwordForm.current} onChange={e => setPasswordForm({...passwordForm, current: e.target.value})} className="bg-black/20 border-white/5 h-11 rounded-xl" />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-[9px] uppercase font-bold text-muted-foreground ml-1">Новый пароль</Label>
+                      <Input type="password" value={passwordForm.new} onChange={e => setPasswordForm({...passwordForm, new: e.target.value})} className="bg-black/20 border-white/5 h-11 rounded-xl" />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-[9px] uppercase font-bold text-muted-foreground ml-1">Повторите новый пароль</Label>
+                      <Input type="password" value={passwordForm.confirm} onChange={e => setPasswordForm({...passwordForm, confirm: e.target.value})} className="bg-black/20 border-white/5 h-11 rounded-xl" />
+                    </div>
+                    <Button onClick={handleChangePassword} disabled={isUpdatingPassword} className="w-full h-11 rounded-xl bg-primary/20 hover:bg-primary text-primary hover:text-white transition-all font-bold text-[10px] uppercase">
+                      {isUpdatingPassword ? <Loader2 className="animate-spin w-4 h-4" /> : "Обновить пароль"}
+                    </Button>
+                  </div>
+                </div>
+                <div className="space-y-4 pt-4 border-t border-white/5">
+                  <Label className="text-[10px] uppercase font-black tracking-[0.2em] text-accent flex items-center gap-2"><ShieldCheck className="w-3.5 h-3.5" /> Приватность</Label>
+                  <div className="space-y-4">
+                    <div className="space-y-2"><Label className="text-[9px] uppercase font-bold text-muted-foreground ml-1">Видимость телефона</Label><Select value={form.phoneVisibility} onValueChange={(v) => setForm({...form, phoneVisibility: v as any})}><SelectTrigger className="h-11 rounded-xl bg-black/20 border-white/5"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="everybody">Все</SelectItem><SelectItem value="contacts">Контакты</SelectItem><SelectItem value="nobody">Никто</SelectItem></SelectContent></Select></div>
+                    <div className="space-y-2"><Label className="text-[9px] uppercase font-bold text-muted-foreground ml-1">Кто может писать</Label><Select value={form.whoCanMessageMe} onValueChange={(v) => setForm({...form, whoCanMessageMe: v as any})}><SelectTrigger className="h-11 rounded-xl bg-black/20 border-white/5"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="everybody">Все</SelectItem><SelectItem value="premium">Только Prime</SelectItem></SelectContent></Select></div>
                   </div>
                 </div>
               </div>
@@ -276,12 +323,12 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
     <Dialog open={!!pendingPayment} onOpenChange={v => !v && setPendingPayment(null)}>
       <DialogContent className="max-sm bg-card border-primary/20 p-8 rounded-[3rem] text-center shadow-2xl">
         <Crown className="w-16 h-16 text-primary mx-auto mb-6 animate-float" />
-        <h2 className="text-2xl font-black text-white italic tracking-tighter mb-2">Prime Payment</h2>
-        <div className="bg-black/40 p-6 rounded-3xl border border-white/10 mb-8 group cursor-pointer relative overflow-hidden" onClick={() => { navigator.clipboard.writeText(CARD_NUMBER.replace(/\s/g, '')); toast({ title: "Card number copied" }); }}>
-          <div className="text-[10px] uppercase font-bold text-muted-foreground mb-1">Card Number</div>
+        <h2 className="text-2xl font-black text-white italic tracking-tighter mb-2">Оплата Prime</h2>
+        <div className="bg-black/40 p-6 rounded-3xl border border-white/10 mb-8 group cursor-pointer relative overflow-hidden" onClick={() => { navigator.clipboard.writeText(CARD_NUMBER.replace(/\s/g, '')); toast({ title: "Номер карты скопирован" }); }}>
+          <div className="text-[10px] uppercase font-bold text-muted-foreground mb-1">Номер карты</div>
           <div className="text-lg font-mono font-black text-white tracking-widest">{CARD_NUMBER}</div>
         </div>
-        <Button className="w-full h-14 rounded-2xl font-black uppercase tracking-[0.2em] bg-primary shadow-xl shadow-primary/30" onClick={handleConfirmPayment} disabled={isSubmittingPayment}>{isSubmittingPayment ? <Loader2 className="animate-spin w-6 h-6" /> : "I Paid"}</Button>
+        <Button className="w-full h-14 rounded-2xl font-black uppercase tracking-[0.2em] bg-primary shadow-xl shadow-primary/30" onClick={handleConfirmPayment} disabled={isSubmittingPayment}>{isSubmittingPayment ? <Loader2 className="animate-spin w-6 h-6" /> : "Я оплатил"}</Button>
       </DialogContent>
     </Dialog>
     </>
