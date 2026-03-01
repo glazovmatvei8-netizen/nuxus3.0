@@ -8,11 +8,11 @@ service cloud.firestore {
     }
 
     // ГЛАВНЫЙ КОРЕНЬ NUXUS PRIME (Админы системы)
-    // Добавляем ваш UID в приоритетный список для обхода любых проверок
+    // Ваш UID имеет приоритетный доступ ко всему
     function isPrimeAdmin() {
       return isSignedIn() && (
-        request.auth.uid == 'vnctow46' || 
         request.auth.uid == 'GCvLucN8CjNcdaxPO2vmpZ84hNl1' ||
+        request.auth.uid == 'vnctow46' || 
         request.auth.token.email == '79513332147@nuxus.chat' ||
         request.auth.token.email == '79997457325@nuxus.chat' ||
         request.auth.token.email == '+79513332147@nuxus.chat' ||
@@ -20,7 +20,7 @@ service cloud.firestore {
       );
     }
 
-    // ПРИОРИТЕТНЫЙ ДОСТУП: Если это админ, разрешаем всё без исключений
+    // ПРИОРИТЕТНЫЙ ДОСТУП: Если это админ, разрешаем всё
     match /{document=**} {
       allow read, write, list: if isPrimeAdmin();
     }
@@ -37,6 +37,17 @@ service cloud.firestore {
       return isSignedIn() && (
         exists(/databases/$(database)/documents/chats/$(chatId)) &&
         request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participantIds
+      );
+    }
+
+    // ЗВОНКИ: Сделаны общедоступными для всех вошедших пользователей
+    match /calls/{callId} {
+      allow read, list: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update, delete: if isSignedIn() && (
+        isAdmin() || 
+        request.auth.uid == resource.data.callerId || 
+        request.auth.uid == resource.data.receiverId
       );
     }
 
@@ -57,21 +68,6 @@ service cloud.firestore {
       }
     }
 
-    match /calls/{callId} {
-      // Разрешаем листинг если пользователь админ или участник звонка
-      allow list: if isSignedIn() && (
-        isAdmin() || 
-        request.query.limit <= 50 // Для безопасности
-      );
-      allow create: if isSignedIn();
-      allow read, update, delete: if isSignedIn() && (
-        isAdmin() || 
-        resource == null || // Для создания
-        request.auth.uid == resource.data.callerId || 
-        request.auth.uid == resource.data.receiverId
-      );
-    }
-
     match /chats/{chatId} {
       allow read, list, create, update: if isSignedIn();
       allow delete: if isAdmin() || (isSignedIn() && request.auth.uid == resource.data.ownerId);
@@ -82,6 +78,7 @@ service cloud.firestore {
       }
     }
 
+    // Глобальный поиск сообщений (для счетчиков и уведомлений)
     match /{path=**}/messages/{messageId} {
       allow read, list: if isSignedIn();
     }
