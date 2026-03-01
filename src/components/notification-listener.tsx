@@ -30,6 +30,7 @@ export function NotificationListener() {
     }
 
     // CRITICAL: Workaround for browsers that block audio without user gesture
+    // We unlock audio on the very first interaction with the app
     const unlockAudio = () => {
       if (audioRef.current) {
         audioRef.current.play().then(() => {
@@ -37,16 +38,19 @@ export function NotificationListener() {
           audioRef.current!.currentTime = 0;
         }).catch(() => {});
       }
-      window.removeEventListener('click', unlockAudio);
+      window.removeEventListener('mousedown', unlockAudio);
       window.removeEventListener('touchstart', unlockAudio);
+      window.removeEventListener('keydown', unlockAudio);
     };
     
-    window.addEventListener('click', unlockAudio);
+    window.addEventListener('mousedown', unlockAudio);
     window.addEventListener('touchstart', unlockAudio);
+    window.addEventListener('keydown', unlockAudio);
 
     return () => {
-      window.removeEventListener('click', unlockAudio);
+      window.removeEventListener('mousedown', unlockAudio);
       window.removeEventListener('touchstart', unlockAudio);
+      window.removeEventListener('keydown', unlockAudio);
     };
   }, []);
 
@@ -74,7 +78,7 @@ export function NotificationListener() {
             // Play notification sound
             if (audioRef.current) {
               audioRef.current.currentTime = 0;
-              audioRef.current.play().catch(e => console.warn("Audio play blocked:", e));
+              audioRef.current.play().catch(e => console.warn("Audio play blocked by browser policies. Interaction required."));
             }
 
             // Show system notification
@@ -96,8 +100,7 @@ export function NotificationListener() {
         }
       });
     }, (error) => {
-      // If index is missing, we log it but don't crash. 
-      // User will see warning in console with a link to create index.
+      // Index errors handled gracefully
       console.warn("Notification stream limited (index required?):", error.message);
     });
 

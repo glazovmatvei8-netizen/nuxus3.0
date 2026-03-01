@@ -9,16 +9,16 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Switch } from '@/components/ui/switch';
-import { useAuth, useUser, useFirestore, useDoc, useCollection, useMemoFirebase } from '@/firebase';
+import { useAuth, useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
   LogOut, Palette, Loader2, Crown, Check, 
-  Monitor, Sparkles, Globe, Settings2, Upload, Moon, Droplets, Type, ShieldCheck, Lock,
-  Users, Copy, Share2, Star, UserCheck, Bell, BellOff, Info
+  Monitor, Sparkles, Globe, Settings2, Upload, Moon, Droplets, ShieldCheck, Lock,
+  Users, Share2, Star, Bell, BellOff, Info
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { signOut } from 'firebase/auth';
-import { doc, collection, query, where, limit } from 'firebase/firestore';
+import { doc } from 'firebase/firestore';
 import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Progress } from '@/components/ui/progress';
@@ -29,7 +29,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { cn, isUserPremium, formatDisplayName } from '@/lib/utils';
+import { cn, isUserPremium } from '@/lib/utils';
 import type { User } from '@/lib/types';
 import { generateAiAvatar } from '@/ai/flows/generate-ai-avatar-flow';
 import { useTranslations } from '@/hooks/use-translations';
@@ -132,7 +132,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
       toast({ 
         variant: 'destructive', 
         title: "Доступ заблокирован", 
-        description: "Пожалуйста, разрешите уведомления в настройках вашего браузера (иконка замочка в адресе)." 
+        description: "Нажмите на иконку замочка в адресной строке и разрешите уведомления." 
       });
       return;
     }
@@ -170,7 +170,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
     <>
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md bg-card border-border p-0 overflow-hidden h-[90vh] flex flex-col rounded-[2.5rem] shadow-2xl">
-        <DialogHeader className="p-6 border-b border-white/5 bg-muted/30 shrink-0">
+        <DialogHeader className="p-6 border-b border-white/5 shrink-0 bg-transparent">
           <DialogTitle className="flex items-center gap-2 text-xl font-black italic uppercase tracking-tighter">
             <Settings2 className="w-5 h-5 text-primary" /> {t('settings.title')}
           </DialogTitle>
@@ -206,19 +206,19 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
             <TabsContent value="appearance" className="space-y-6 m-0 py-6">
               <div className="bg-muted/20 p-6 rounded-[2rem] border border-white/5 space-y-6">
                 <div className="space-y-4">
-                  <Label className="text-[10px] uppercase font-black tracking-widest text-primary flex items-center gap-2"><Monitor className="w-3.5 h-3.5" /> Уведомления</Label>
+                  <Label className="text-[10px] uppercase font-black tracking-widest text-primary flex items-center gap-2"><Bell className="w-3.5 h-3.5" /> Системные уведомления</Label>
                   <Button variant="outline" className={cn("w-full h-14 rounded-2xl gap-3 border-white/5 shadow-inner transition-all", notifPermission === 'granted' ? 'bg-green-500/10 text-green-500 border-green-500/20' : 'bg-black/20')} onClick={requestNotifs}>
                     {notifPermission === 'granted' ? <Bell className="w-5 h-5" /> : <BellOff className="w-5 h-5 text-muted-foreground" />}
                     <div className="flex flex-col items-start leading-none">
                       <span className="text-[10px] font-black uppercase tracking-widest">{notifPermission === 'granted' ? 'Уведомления Активны' : 'Включить Пуши'}</span>
-                      <span className="text-[8px] opacity-60 uppercase mt-1">{notifPermission === 'denied' ? 'Требуется сброс в браузере' : 'Звук + Визуальные'}</span>
+                      <span className="text-[8px] opacity-60 uppercase mt-1">{notifPermission === 'denied' ? 'Доступ Заблокирован' : 'Звук + Визуальные'}</span>
                     </div>
                   </Button>
                   {notifPermission === 'denied' && (
                     <div className="flex items-start gap-2 p-3 bg-destructive/10 rounded-xl border border-destructive/20 mt-2">
                       <Info className="w-4 h-4 text-destructive shrink-0 mt-0.5" />
                       <p className="text-[9px] text-destructive-foreground uppercase font-bold leading-tight">
-                        Доступ заблокирован браузером. Нажмите на иконку замочка в строке адреса и разрешите уведомления вручную.
+                        Нажмите на иконку «замочка» в адресной строке вашего браузера и переключите уведомления на «Разрешить».
                       </p>
                     </div>
                   )}

@@ -12,7 +12,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { 
   Sparkles, Gift, Crown, Star, LogOut, UserPlus, Shield, UserMinus, UserCheck,
-  Settings2, Upload, Camera, Check, Info, Users, MessageSquare, UserX, Loader2,
+  Settings2, Upload, Camera, Check, Info, Users, UserX, Loader2,
   Phone, UserPlus2, Link, Copy, Share2
 } from 'lucide-react';
 import { 
@@ -23,7 +23,7 @@ import { useFirestore, useCollection, useMemoFirebase, useUser, useDoc } from '@
 import { collection, query, orderBy, limit, getDocs, doc, updateDoc, arrayRemove, arrayUnion } from 'firebase/firestore';
 import { chatConversationSummary } from '@/ai/flows/chat-conversation-summary-flow';
 import { useToast } from '@/hooks/use-toast';
-import { deleteDocumentNonBlocking, addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { deleteDocumentNonBlocking, addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { useAppState } from '@/lib/store';
 import { cn, formatDisplayName, isUserPremium } from '@/lib/utils';
 import type { User, ReceivedGift, Chat } from '@/lib/types';
@@ -98,7 +98,7 @@ export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onO
 
   const inviteLink = useMemo(() => {
     if (typeof window === 'undefined' || isPrivate || !chat.username) return '';
-    return `${window.location.origin}/?join=${chat.username}`;
+    return `${window.location.origin}/?join=${chat.username.replace('@', '')}`;
   }, [chat.username, isPrivate]);
 
   const handleSendGift = async (gift: typeof AVAILABLE_GIFTS[0]) => {
