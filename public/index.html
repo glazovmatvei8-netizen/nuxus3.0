@@ -5,20 +5,17 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Nuxus Loading...</title>
     <style>
-      body { background: #0a0a0c; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; color: white; font-family: sans-serif; }
-      .loader { border: 2px solid rgba(255,255,255,0.1); border-left-color: #8B5CF6; border-radius: 50%; width: 24px; height: 24px; animation: spin 1s linear infinite; }
-      @keyframes spin { to { transform: rotate(360deg); } }
+      body { background: #0a0a0c; margin: 0; display: flex; align-items: center; justify-content: center; height: 100vh; color: #8B5CF6; font-family: sans-serif; }
+      .loader { border: 2px solid rgba(139, 92, 246, 0.1); border-top: 2px solid #8B5CF6; border-radius: 50%; width: 24px; height: 24px; animation: spin 1s linear infinite; }
+      @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
   </head>
   <body>
     <div class="loader"></div>
     <script>
-      // Если браузер загрузил этот файл вместо Next.js, пробуем очистить кэш и перезагрузить
-      if (window.location.pathname === '/') {
-        console.log('Nuxus Core: Overriding default hosting page...');
-        setTimeout(() => {
-          window.location.reload(true);
-        }, 1000);
+      // Если Hosting перекрывает Next.js, этот скрипт пытается очистить кэш
+      if (window.location.pathname === '/index.html') {
+        window.location.href = '/';
       }
     </script>
   </body>
