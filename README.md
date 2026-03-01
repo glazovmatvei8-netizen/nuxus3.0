@@ -17,16 +17,14 @@
 ## 📱 Установка на Android (Native APK)
 Чтобы создать настоящий установочный файл **.apk**, используйте Google Bubblewrap:
 1. Установите Node.js на ПК.
-2. В терминале (не в System32!) выполните:
+2. В терминале выполните:
    ```bash
    npx @bubblewrap/cli init --manifest="https://9000-firebase-studio-1772042875348.cluster-kizalrzg35hz6u4i7pguwgt6ss.cloudworkstations.dev/manifest.json"
    ```
-3. **Настройка JDK (ВАЖНО)**:
-   - Если Bubblewrap спрашивает путь к JDK 17, вводите его **БЕЗ КАВЫЧЕК**.
-   - **Правильно**: `C:\Program Files\Java\jdk-17.0.18`
-   - **Неправильно**: `"C:\Program Files\Java\jdk-17.0.18"` (кавычки вызывают ошибку lstat).
-   - Если вы не уверены, просто выберите **"Yes"**, чтобы Bubblewrap установил JDK автоматически.
-4. После инициализации выполните:
+3. **Ответы на вопросы Bubblewrap (ВАЖНО)**:
+   - **JDK 17**: Укажите путь БЕЗ кавычек (например, `C:\Program Files\Java\jdk-17.0.18`).
+   - **Android SDK**: Нажмите **"Yes"** (Y), чтобы Bubblewrap сам скачал и настроил все компоненты.
+4. После завершения инициализации (`init`), выполните команду сборки:
    ```bash
    npx @bubblewrap/cli build
    ```

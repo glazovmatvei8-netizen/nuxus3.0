@@ -1,19 +1,17 @@
-
 /**
- * Nuxus Core Service Worker v5.0
- * Обеспечивает работу Android APK и фоновые уведомления.
+ * Nuxus Service Worker v24.0.0
+ * Обеспечивает работу приложения в оффлайн-режиме и поддержку уведомлений на Android/iOS.
  */
 
 const CACHE_NAME = 'nuxus-cache-v1';
 const ASSETS_TO_CACHE = [
   '/',
   '/manifest.json',
-  'https://picsum.photos/seed/nuxus/192/192',
-  'https://picsum.photos/seed/nuxus/512/512'
+  'https://picsum.photos/seed/nuxus-prime-core-v5/192/192',
+  'https://picsum.photos/seed/nuxus-prime-core-v5/512/512'
 ];
 
 self.addEventListener('install', (event) => {
-  self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
       return cache.addAll(ASSETS_TO_CACHE);
@@ -21,30 +19,35 @@ self.addEventListener('install', (event) => {
   );
 });
 
-self.addEventListener('activate', (event) => {
-  event.waitUntil(clients.claim());
-});
-
 self.addEventListener('fetch', (event) => {
-  // Для Android APK важно, чтобы SW обрабатывал запросы
   event.respondWith(
     caches.match(event.request).then((response) => {
       return response || fetch(event.request);
-    }).catch(() => {
-      return fetch(event.request);
     })
   );
 });
 
-// Обработка клика по уведомлению в фоне
+// Слушатель для push-уведомлений
+self.addEventListener('push', (event) => {
+  const data = event.data ? event.data.json() : { title: 'NuxusChat', body: 'Новое сообщение' };
+  const options = {
+    body: data.body,
+    icon: 'https://picsum.photos/seed/nuxus-prime-core-v5/192/192',
+    badge: 'https://picsum.photos/seed/nuxus-prime-core-v5/192/192',
+    vibrate: [100, 50, 100],
+    data: {
+      url: data.url || '/'
+    }
+  };
+
+  event.waitUntil(
+    self.registration.showNotification(data.title, options)
+  );
+});
+
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
   event.waitUntil(
-    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
-      if (clientList.length > 0) {
-        return clientList[0].focus();
-      }
-      return clients.openWindow('/');
-    })
+    clients.openWindow(event.notification.data.url)
   );
 });
