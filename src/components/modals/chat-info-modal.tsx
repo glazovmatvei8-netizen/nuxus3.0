@@ -13,7 +13,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { 
   Sparkles, Gift, Crown, Star, LogOut, UserPlus, Shield, UserMinus, UserCheck,
   Settings2, Upload, Camera, Check, Info, Users, MessageSquare, UserX, Loader2,
-  Phone, UserPlus2
+  Phone, UserPlus2, Link, Copy, Share2
 } from 'lucide-react';
 import { 
   Star as StarIcon, Heart, Zap, Flame, Trophy, Rocket, Diamond, 
@@ -95,6 +95,11 @@ export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onO
     return query(collection(db, 'users', otherId, 'receivedGifts'), orderBy('receivedAt', 'desc'));
   }, [db, otherId]);
   const { data: receivedGifts } = useCollection<ReceivedGift>(receivedGiftsQuery);
+
+  const inviteLink = useMemo(() => {
+    if (typeof window === 'undefined' || isPrivate || !chat.username) return '';
+    return `${window.location.origin}/?join=${chat.username}`;
+  }, [chat.username, isPrivate]);
 
   const handleSendGift = async (gift: typeof AVAILABLE_GIFTS[0]) => {
     if (!isGlobalAdminUser || !db || !chat.id || !otherId) return;
@@ -249,7 +254,7 @@ export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onO
     <>
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md bg-card border-border p-0 overflow-hidden h-[90vh] flex flex-col rounded-[2.5rem]">
-        <DialogHeader className="p-6 border-b border-border/10 text-center flex flex-col items-center shrink-0">
+        <DialogHeader className="p-6 text-center flex flex-col items-center shrink-0">
           <div className="relative group">
             <UserAvatar 
               userId={isPrivate ? otherId : null} 
@@ -312,6 +317,23 @@ export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onO
           <TabsContent value="info" className="flex-1 min-h-0 m-0 overflow-hidden">
             <ScrollArea className="h-full">
               <div className="p-6 space-y-6">
+                {!isPrivate && inviteLink && (
+                  <div className="p-4 bg-primary/5 rounded-[1.5rem] border border-primary/10 space-y-3">
+                    <div className="flex items-center gap-2 text-[9px] font-black uppercase tracking-[0.2em] text-primary">
+                      <Link className="w-3 h-3" /> Ссылка на приглашение
+                    </div>
+                    <div className="flex gap-2">
+                      <Input readOnly value={inviteLink} className="bg-black/20 border-white/5 h-10 text-[10px] font-mono rounded-xl truncate" />
+                      <Button size="icon" variant="outline" className="h-10 w-10 shrink-0 rounded-xl border-white/10 hover:bg-primary/10" onClick={() => { navigator.clipboard.writeText(inviteLink); toast({ title: "Ссылка скопирована!" }); }}>
+                        <Copy className="w-4 h-4" />
+                      </Button>
+                    </div>
+                    <Button variant="ghost" className="w-full h-9 rounded-xl text-[9px] font-bold uppercase tracking-widest gap-2" onClick={async () => { if(navigator.share) try { await navigator.share({ title: chat.name, url: inviteLink }); } catch(e){} }}>
+                      <Share2 className="w-3 h-3" /> Поделиться ссылкой
+                    </Button>
+                  </div>
+                )}
+
                 {(chat.description || (isPrivate && otherUserProfile?.bio)) && (
                   <div className="space-y-2">
                     <h3 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Описание</h3>
