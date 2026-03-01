@@ -1,10 +1,14 @@
 
-const CACHE_NAME = 'nuxus-cache-v25';
+/**
+ * Nuxus Core Service Worker v25.1.0
+ * Обеспечивает работу PWA и фоновые уведомления на публичном домене.
+ */
+
+const CACHE_NAME = 'nuxus-cache-v1';
 const ASSETS_TO_CACHE = [
   '/',
   '/manifest.json',
-  'https://picsum.photos/seed/nuxus/32/32',
-  'https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3'
+  'https://picsum.photos/seed/nuxus/32/32'
 ];
 
 self.addEventListener('install', (event) => {
@@ -23,16 +27,26 @@ self.addEventListener('fetch', (event) => {
   );
 });
 
-self.addEventListener('activate', (event) => {
+self.addEventListener('push', (event) => {
+  const data = event.data ? event.data.json() : {};
+  const title = data.title || 'NuxusChat';
+  const options = {
+    body: data.body || 'Новое сообщение',
+    icon: 'https://picsum.photos/seed/nuxus/192/192',
+    badge: 'https://picsum.photos/seed/nuxus/192/192',
+    data: {
+      url: data.url || '/'
+    }
+  };
+
   event.waitUntil(
-    caches.keys().then((cacheNames) => {
-      return Promise.all(
-        cacheNames.map((cacheName) => {
-          if (cacheName !== CACHE_NAME) {
-            return caches.delete(cacheName);
-          }
-        })
-      );
-    })
+    self.registration.showNotification(title, options)
+  );
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  event.waitUntil(
+    clients.openWindow(event.notification.data.url)
   );
 });
