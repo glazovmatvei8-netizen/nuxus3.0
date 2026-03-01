@@ -1,48 +1,47 @@
 
 /**
- * Nuxus Service Worker v1.0.0
- * Обеспечивает работу PWA и фоновых уведомлений.
+ * Nuxus Service Worker v24.0.0
+ * Обеспечивает работу уведомлений и оффлайн-режима для Android/iOS.
  */
 
-const CACHE_NAME = 'nuxus-cache-v1';
-const OFFLINE_URL = '/';
+const CACHE_NAME = 'nuxus-v24';
+const ASSETS = [
+  '/',
+  '/manifest.json',
+  'https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3'
+];
 
-// Базовое кэширование для соответствия стандартам PWA
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll([OFFLINE_URL]);
+      return cache.addAll(ASSETS);
     })
   );
 });
 
 self.addEventListener('fetch', (event) => {
-  // На Android Chrome требует обработчик fetch для разрешения установки
   event.respondWith(
-    fetch(event.request).catch(() => {
-      return caches.match(event.request);
+    caches.match(event.request).then((response) => {
+      return response || fetch(event.request);
     })
   );
 });
 
-// Слушатель для входящих PUSH-уведомлений (будет использоваться сервером)
+// Слушатель пуш-уведомлений
 self.addEventListener('push', (event) => {
-  if (event.data) {
-    const data = event.data.json();
-    const options = {
-      body: data.body,
-      icon: 'https://picsum.photos/seed/nuxus/192/192',
-      badge: 'https://picsum.photos/seed/nuxus/96/96',
-      vibrate: [100, 50, 100],
-      data: {
-        url: data.url || '/'
-      }
-    };
+  const data = event.data ? event.data.json() : {};
+  const title = data.title || 'NuxusChat';
+  const options = {
+    body: data.body || 'Новое сообщение',
+    icon: '/icons/icon-192x192.png',
+    badge: '/icons/icon-192x192.png',
+    vibrate: [100, 50, 100],
+    data: {
+      url: data.url || '/'
+    }
+  };
 
-    event.waitUntil(
-      self.registration.showNotification(data.title || 'Nuxus', options)
-    );
-  }
+  event.waitUntil(self.registration.showNotification(title, options));
 });
 
 self.addEventListener('notificationclick', (event) => {
