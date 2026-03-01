@@ -14,7 +14,7 @@ import { UserAvatar } from '@/components/user-avatar';
 import { 
   LogOut, Palette, Loader2, Crown, Check, 
   Monitor, Sparkles, Globe, Settings2, Upload, Moon, Droplets, ShieldCheck, Lock,
-  Users, Share2, Star, Bell, BellOff, Info
+  Users, Share2, Star, Bell, BellOff, Info, Languages
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { signOut } from 'firebase/auth';
@@ -41,6 +41,26 @@ const PREMIUM_PLANS = [
 ];
 
 const CARD_NUMBER = "2204 1202 0495 4230";
+
+const LANGUAGES = [
+  { code: 'ru', name: 'Русский' },
+  { code: 'en', name: 'English' },
+  { code: 'de', name: 'Deutsch' },
+  { code: 'fr', name: 'Français' },
+  { code: 'it', name: 'Italiano' },
+  { code: 'es', name: 'Español' },
+  { code: 'pt', name: 'Português' },
+  { code: 'pl', name: 'Polski' },
+  { code: 'tr', name: 'Türkçe' },
+  { code: 'ua', name: 'Українська' },
+  { code: 'zh', name: '简体中文' },
+  { code: 'ja', name: '日本語' },
+  { code: 'ko', name: '한국어' },
+  { code: 'hi', name: 'हिन्दी' },
+  { code: 'ar', name: 'العربية' },
+  { code: 'vi', name: 'Tiếng Việt' },
+  { code: 'th', name: 'ไทย' },
+];
 
 export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const auth = useAuth();
@@ -223,8 +243,23 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                     </div>
                   )}
                 </div>
+
                 <div className="space-y-4 pt-4 border-t border-white/5">
-                  <Label className="text-[10px] uppercase font-black tracking-widest text-accent flex items-center gap-2"><Palette className="w-3.5 h-3.5" /> Тема оформления</Label>
+                  <Label className="text-[10px] uppercase font-black tracking-widest text-accent flex items-center gap-2"><Languages className="w-3.5 h-3.5" /> {t('settings.labels.language')}</Label>
+                  <Select value={form.language} onValueChange={(v) => setForm({...form, language: v})}>
+                    <SelectTrigger className="h-12 rounded-2xl bg-black/20 border-white/5 font-bold text-xs">
+                      <SelectValue placeholder="Выберите язык" />
+                    </SelectTrigger>
+                    <SelectContent className="rounded-2xl bg-card border-white/10">
+                      {LANGUAGES.map(lang => (
+                        <SelectItem key={lang.code} value={lang.code} className="text-xs font-bold uppercase">{lang.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-4 pt-4 border-t border-white/5">
+                  <Label className="text-[10px] uppercase font-black tracking-widest text-primary flex items-center gap-2"><Palette className="w-3.5 h-3.5" /> Тема оформления</Label>
                   <div className="grid grid-cols-3 gap-3">
                     {['default', 'midnight', 'ocean'].map(t_theme => (
                       <button key={t_theme} onClick={() => setForm({...form, theme: t_theme as any})} className={cn("flex flex-col items-center gap-2 p-3 rounded-2xl border transition-all", form.theme === t_theme ? "bg-primary/20 border-primary text-primary" : "bg-black/20 border-white/5 text-muted-foreground")}>
