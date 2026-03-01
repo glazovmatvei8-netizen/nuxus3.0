@@ -1,7 +1,7 @@
 
 "use client"
 
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect } from 'react';
 import ChatSidebar from './chat-sidebar';
 import ChatArea from './chat-area';
 import ContactsView from './contacts-view';
@@ -10,12 +10,12 @@ import ProfileView from './profile-view';
 import { useAppState } from '@/lib/store';
 import { cn } from '@/lib/utils';
 import { useFirestore, useUser, useCollection, useMemoFirebase, useDoc } from '@/firebase';
-import { collection, query, where, limit, doc, collectionGroup } from 'firebase/firestore';
+import { collection, query, where, limit, doc } from 'firebase/firestore';
 import { CallOverlay } from './modals/call-overlay';
 import { NotificationListener } from './notification-listener';
 import { SettingsModal } from './modals/settings-modal';
 import { UserAvatar } from './user-avatar';
-import type { Call, User as UserType, Chat, Message } from '@/lib/types';
+import type { Call, User as UserType } from '@/lib/types';
 import { Users, Phone, MessageCircle, Settings, Search } from 'lucide-react';
 
 export default function ChatMain() {
@@ -87,7 +87,9 @@ export default function ChatMain() {
               active={activeView === 'calls'} 
               onClick={() => setActiveView('calls')} 
             />
-            <ChatsNavButton 
+            <NavButton 
+              icon={MessageCircle} 
+              label="Чаты" 
               active={activeView === 'chats'} 
               onClick={() => setActiveView('chats')} 
             />
@@ -110,32 +112,6 @@ export default function ChatMain() {
       <CallOverlay />
       <SettingsModal open={isSettingsOpen} onOpenChange={setIsSettingsOpen} />
     </div>
-  );
-}
-
-function ChatsNavButton({ active, onClick }: { active: boolean, onClick: () => void }) {
-  const { user } = useUser();
-  const db = useFirestore();
-
-  const unreadMessagesQuery = useMemoFirebase(() => {
-    if (!db || !user) return null;
-    return query(collectionGroup(db, 'messages'), where('isRead', '==', false));
-  }, [db, user]);
-  const { data: unreadData } = useCollection<Message>(unreadMessagesQuery);
-
-  const unreadCount = useMemo(() => {
-    if (!unreadData || !user) return 0;
-    return unreadData.filter(m => m.senderId !== user.uid).length;
-  }, [unreadData, user]);
-
-  return (
-    <NavButton 
-      icon={MessageCircle} 
-      label="Чаты" 
-      active={active} 
-      badge={unreadCount > 0 ? unreadCount.toString() : undefined} 
-      onClick={onClick} 
-    />
   );
 }
 

@@ -16,7 +16,7 @@ import { CreateChatModal } from './modals/create-chat-modal';
 import { AdminPanelModal } from './modals/admin-panel-modal';
 import type { User, Message, Chat } from '@/lib/types';
 import { useFirestore, useUser, useCollection, useDoc, useMemoFirebase } from '@/firebase';
-import { collection, query, where, doc, limit, collectionGroup } from 'firebase/firestore';
+import { collection, query, where, doc, limit } from 'firebase/firestore';
 import { formatDisplayName, cn, isGlobalAdmin } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
@@ -142,23 +142,6 @@ export default function ChatSidebar() {
   }, [db, user]);
   const { data: chats } = useCollection<Chat>(chatsQuery);
 
-  const unreadMessagesQuery = useMemoFirebase(() => {
-    if (!db || !user) return null;
-    return query(collectionGroup(db, 'messages'), where('isRead', '==', false));
-  }, [db, user]);
-  const { data: allUnreadMessages } = useCollection<Message>(unreadMessagesQuery);
-
-  const stats = useMemo(() => {
-    if (!allUnreadMessages || !chats || !user) return { private: 0, channels: 0 };
-    const unreadFromOthers = allUnreadMessages.filter(m => m.senderId !== user.uid);
-    const privateChatIds = chats.filter(c => c.type === 'private' || c.type === 'saved').map(c => c.id);
-    const channelChatIds = chats.filter(c => c.type === 'channel').map(c => c.id);
-    return {
-      private: unreadFromOthers.filter(m => privateChatIds.includes(m.chatId)).length,
-      channels: unreadFromOthers.filter(m => channelChatIds.includes(m.chatId)).length
-    };
-  }, [allUnreadMessages, chats, user]);
-
   const pinnedIds = useMemo(() => profile?.pinnedChatIds || [], [profile]);
 
   const handleChatClick = (chat: Chat) => {
@@ -238,8 +221,8 @@ export default function ChatSidebar() {
         <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide py-1">
           {[
             { id: 'all', label: 'Все' },
-            { id: 'private', label: 'Личные', badge: stats.private > 0 ? stats.private.toString() : null, color: 'blue' },
-            { id: 'channels', label: 'Каналы', badge: stats.channels > 0 ? stats.channels.toString() : null, color: 'grey' },
+            { id: 'private', label: 'Личные' },
+            { id: 'channels', label: 'Каналы' },
             { id: 'bots', label: 'Боты' }
           ].map((tab) => (
             <button 
@@ -251,14 +234,6 @@ export default function ChatSidebar() {
               )}
             >
               {tab.label}
-              {tab.badge && (
-                <span className={cn(
-                  "text-[10px] px-1.5 py-0.5 rounded-full min-w-[18px]",
-                  tab.color === 'blue' ? "bg-[#007AFF] text-white" : "bg-[#3a3a3c] text-white/60"
-                )}>
-                  {tab.badge}
-                </span>
-              )}
             </button>
           ))}
         </div>
