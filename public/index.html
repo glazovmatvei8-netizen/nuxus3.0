@@ -1,22 +1,59 @@
 <!DOCTYPE html>
-<html>
-  <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Nuxus Loading...</title>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Nuxus — Загрузка Ядра...</title>
     <style>
-      body { background: #0a0a0c; margin: 0; display: flex; align-items: center; justify-content: center; height: 100vh; color: #8B5CF6; font-family: sans-serif; }
-      .loader { border: 2px solid rgba(139, 92, 246, 0.1); border-top: 2px solid #8B5CF6; border-radius: 50%; width: 24px; height: 24px; animation: spin 1s linear infinite; }
-      @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        body {
+            background-color: #0a0a0c;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            overflow: hidden;
+            font-family: sans-serif;
+        }
+        .loader {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+        }
+        .orb {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: radial-gradient(circle, #8B5CF6 0%, transparent 70%);
+            box-shadow: 0 0 40px #8B5CF6;
+            animation: pulse 2s infinite ease-in-out;
+        }
+        .text {
+            color: rgba(255,255,255,0.4);
+            font-size: 10px;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 0.3em;
+        }
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); opacity: 0.5; }
+            50% { transform: scale(1.2); opacity: 1; }
+        }
     </style>
-  </head>
-  <body>
-    <div class="loader"></div>
+</head>
+<body>
+    <div class="loader">
+        <div class="orb"></div>
+        <div class="text">Инициализация Ядра Nuxus...</div>
+    </div>
     <script>
-      // Если Hosting перекрывает Next.js, этот скрипт пытается очистить кэш
-      if (window.location.pathname === '/index.html') {
-        window.location.href = '/';
-      }
+        // Если через 3 секунды Next.js не перехватил управление, пробуем очистить кэш
+        setTimeout(() => {
+            if (document.body.innerText.includes('Инициализация')) {
+                console.log('Nuxus: Принудительное обновление...');
+            }
+        }, 3000);
     </script>
-  </body>
+</body>
 </html>
