@@ -14,7 +14,7 @@ import { SettingsModal } from './modals/settings-modal';
 import { AdminPanelModal } from './modals/admin-panel-modal';
 import type { ChatType, User, Message, Chat } from '@/lib/types';
 import { useFirestore, useUser, useCollection, useDoc, useMemoFirebase } from '@/firebase';
-import { collection, query, where, doc, getDocs, limit, arrayUnion, arrayRemove, updateDoc } from 'firebase/firestore';
+import { collection, query, where, doc, getDocs, limit, arrayUnion, arrayRemove, updateDoc, addDoc } from 'firebase/firestore';
 import { formatLastSeen, formatDisplayName, cn, isGlobalAdmin, isUserPremium } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
@@ -61,33 +61,55 @@ const ChatListItem = memo(({ chat, isActive, otherId, cachedDisplayName, manualA
 
   const status = useMemo(() => {
     if (isGlobalResult) return chat.type === 'group' ? 'Public Group' : 'Public Channel';
+    if (chat.type === 'saved') return 'Облачное хранилище';
     if (otherId) return formatLastSeen(otherProfile?.lastSeen, otherProfile?.settings?.privacy?.lastSeenVisibility);
     return chat.type === 'group' ? t('sidebar.groups') : (chat.type === 'channel' ? t('sidebar.channels') : 'Saved');
   }, [isGlobalResult, otherId, otherProfile, chat.type, t]);
 
   const isTyping = typingUsers.length > 0 && (otherId ? isActuallyOnline : true);
-  const finalDisplayName = formatDisplayName(otherProfile?.name || cachedDisplayName || chat.name || 'User');
+  
+  const finalDisplayName = useMemo(() => {
+    if (chat.type === 'saved') return 'Избранное';
+    return formatDisplayName(otherProfile?.name || cachedDisplayName || chat.name || 'User');
+  }, [chat.type, otherProfile?.name, cachedDisplayName, chat.name]);
 
   return (
     <div
       onClick={onClick}
       className={cn(
-        "flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all border border-transparent will-change-transform",
+        "flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all border border-transparent will-change-transform group",
         isActive ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'hover:bg-muted text-foreground'
       )}
     >
       <div className="relative shrink-0">
-        <UserAvatar userId={otherId} manualAvatarUrl={manualAvatarUrl || otherProfile?.avatarUrl || chat.avatarUrl} className="h-10 w-10" fallbackName={finalDisplayName} />
-        {isActuallyOnline && !isGlobalResult && <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-accent rounded-full border-2 border-card" />}
+        {chat.type === 'saved' ? (
+          <div className="h-10 w-10 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center shadow-lg">
+            <Bookmark className="w-5 h-5 text-white fill-white" />
+          </div>
+        ) : (
+          <UserAvatar userId={otherId} manualAvatarUrl={manualAvatarUrl || otherProfile?.avatarUrl || chat.avatarUrl} className="h-10 w-10" fallbackName={finalDisplayName} />
+        )}
+        {isActuallyOnline && !isGlobalResult && chat.type !== 'saved' && <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-accent rounded-full border-2 border-card" />}
       </div>
       <div className="flex-1 min-w-0 text-left">
         <div className="flex items-center justify-between gap-2">
           <span className="font-bold text-sm truncate flex items-center gap-1">
             {finalDisplayName}
             {(otherProfile?.isPremium || chat.isPremium) && <Star className="w-3 h-3 text-accent fill-accent shrink-0" />}
-            {isPinned && <Pin className="w-3 h-3 rotate-45 shrink-0 opacity-60" />}
+            {isPinned && <Pin className="w-3 h-3 rotate-45 shrink-0 text-accent opacity-100" />}
           </span>
-          {unreadCount > 0 && !isActive && <Badge variant="default" className="bg-accent text-accent-foreground rounded-full h-4 min-w-4 flex items-center justify-center text-[9px] font-bold px-1 border-none">{unreadCount}</Badge>}
+          <div className="flex items-center gap-2">
+            {unreadCount > 0 && !isActive && <Badge variant="default" className="bg-accent text-accent-foreground rounded-full h-4 min-w-4 flex items-center justify-center text-[9px] font-bold px-1 border-none">{unreadCount}</Badge>}
+            <button 
+              onClick={(e) => { e.stopPropagation(); onTogglePin(chat.id, e); }}
+              className={cn(
+                "p-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-all hover:bg-white/10",
+                isPinned && "opacity-100 text-accent"
+              )}
+            >
+              <Pin className={cn("w-3 h-3 transition-transform", isPinned ? "rotate-0" : "rotate-45")} />
+            </button>
+          </div>
         </div>
         <div className="flex items-center justify-between">
           <div className={cn("text-[9px] uppercase font-bold tracking-widest truncate", isActive ? 'text-white/80' : (isTyping ? 'text-accent' : 'text-muted-foreground/60'))}>
@@ -124,15 +146,53 @@ export default function ChatSidebar() {
     if (!db || !user) return null;
     return query(collection(db, 'chats'), where('participantIds', 'array-contains', user.uid));
   }, [db, user]);
-  const { data: chats, isLoading: isChatsLoading } = useCollection<Chat>(chatsQuery);
+  const { data: chats } = useCollection<Chat>(chatsQuery);
 
-  const pinnedIds = profile?.pinnedChatIds || [];
+  const pinnedIds = useMemo(() => profile?.pinnedChatIds || [], [profile]);
 
-  const handleTogglePin = (chatId: string, e: React.MouseEvent) => {
+  const handleTogglePin = async (chatId: string, e: React.MouseEvent) => {
     e.stopPropagation();
     if (!db || !user || !userProfileRef) return;
     const isPinned = pinnedIds.includes(chatId);
-    updateDocumentNonBlocking(userProfileRef, { pinnedChatIds: isPinned ? arrayRemove(chatId) : arrayUnion(chatId) });
+    
+    try {
+      await updateDoc(userProfileRef, {
+        pinnedChatIds: isPinned ? arrayRemove(chatId) : arrayUnion(chatId)
+      });
+      toast({ title: isPinned ? "Чат откреплен" : "Чат закреплен" });
+    } catch (e) {
+      console.error("Pin error:", e);
+    }
+  };
+
+  const handleOpenSaved = async () => {
+    if (!db || !user || !profile) return;
+    
+    // Check if saved chat exists
+    const savedChat = chats?.find(c => c.type === 'saved');
+    if (savedChat) {
+      setCurrentChatId(savedChat.id);
+      return;
+    }
+
+    // Create saved chat if doesn't exist
+    try {
+      const newSavedChat = {
+        type: 'saved' as const,
+        name: 'Избранное',
+        username: `@saved_${user.uid.slice(0, 5)}`,
+        participantIds: [user.uid],
+        adminIds: [user.uid],
+        ownerId: user.uid,
+        createdAt: new Date().toISOString(),
+        avatarUrl: null
+      };
+      const docRef = await addDoc(collection(db, 'chats'), newSavedChat);
+      setCurrentChatId(docRef.id);
+      toast({ title: "Чат 'Избранное' готов" });
+    } catch (e) {
+      toast({ title: "Ошибка", variant: "destructive" });
+    }
   };
 
   const handleChatClick = (chat: Chat) => {
@@ -177,8 +237,10 @@ export default function ChatSidebar() {
     return [...chats].sort((a, b) => {
       const aPinned = pinnedIds.includes(a.id);
       const bPinned = pinnedIds.includes(b.id);
+      
       if (aPinned && !bPinned) return -1;
       if (!aPinned && bPinned) return 1;
+      
       const aTime = a.lastMessageAt ? new Date(a.lastMessageAt).getTime() : new Date(a.createdAt).getTime();
       const bTime = b.lastMessageAt ? new Date(b.lastMessageAt).getTime() : new Date(b.createdAt).getTime();
       return bTime - aTime;
@@ -187,11 +249,14 @@ export default function ChatSidebar() {
 
   const filteredChats = useMemo(() => {
     return sortedChats.filter(chat => {
-      if (chat.type === 'saved') return false; 
+      // Show saved messages if search matches or if explicitly in 'all' or 'private' (private is used for saved in filters usually)
+      const isSaved = chat.type === 'saved';
       const otherId = chat.type === 'private' && user ? chat.participantIds?.find((id: string) => id !== user.uid) : null;
-      const chatName = otherId && chat.metadata && chat.metadata[otherId] ? chat.metadata[otherId].name : chat.name;
-      const matchesTab = activeTab === 'all' || chat.type === activeTab;
+      const chatName = isSaved ? 'Избранное' : (otherId && chat.metadata && chat.metadata[otherId] ? chat.metadata[otherId].name : chat.name);
+      
+      const matchesTab = activeTab === 'all' || chat.type === activeTab || (activeTab === 'private' && isSaved);
       const matchesSearch = chatName?.toLowerCase().includes(searchQuery.toLowerCase());
+      
       return matchesTab && matchesSearch;
     });
   }, [sortedChats, activeTab, searchQuery, user]);
@@ -211,6 +276,9 @@ export default function ChatSidebar() {
             </div>
           </div>
           <div className="flex items-center gap-1">
+            <Button variant="ghost" size="icon" className="rounded-xl text-accent hover:bg-accent/10" onClick={handleOpenSaved} title="Избранное">
+              <Bookmark className="w-5 h-5 fill-accent/20" />
+            </Button>
             {isAdmin && <Button variant="ghost" size="icon" className="rounded-xl text-primary hover:bg-primary/10" onClick={() => setIsAdminPanelOpen(true)}><ShieldAlert className="w-5 h-5" /></Button>}
             <Button variant="ghost" size="icon" className="rounded-xl" onClick={() => setIsSettingsOpen(true)}><Settings className="w-5 h-5" /></Button>
           </div>
@@ -239,7 +307,7 @@ export default function ChatSidebar() {
               key={chat.id} chat={chat} isActive={currentChatId === chat.id} 
               otherId={chat.type === 'private' && user ? chat.participantIds?.find((id: string) => id !== user.uid) : null} 
               cachedDisplayName={chat.metadata && user && chat.participantIds?.find((id: string) => id !== user.uid) ? chat.metadata[chat.participantIds.find((id: string) => id !== user.uid)!].name : chat.name} 
-              onClick={() => handleChatClick(chat)} isPinned={pinnedIds.includes(chat.id)} onTogglePin={(e: any) => handleTogglePin(chat.id, e)} 
+              onClick={() => handleChatClick(chat)} isPinned={pinnedIds.includes(chat.id)} onTogglePin={handleTogglePin} 
             />
           ))}
         </div>
