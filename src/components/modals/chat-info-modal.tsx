@@ -292,7 +292,9 @@ export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onO
                 </div>
               )}
               {!isMutualContact && isContact && (
-                <p className="text-[8px] text-muted-foreground uppercase font-bold italic">Номер станет виден, когда Klein добавит вас в ответ</p>
+                <p className="text-[8px] text-muted-foreground uppercase font-bold italic">
+                  Номер станет виден, когда {chatName} добавит вас в ответ
+                </p>
               )}
             </div>
           )}
