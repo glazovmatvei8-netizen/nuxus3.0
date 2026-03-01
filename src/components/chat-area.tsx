@@ -33,7 +33,7 @@ const MessageList = memo(({
   onReply, 
   amIPremium, 
   isAdmin, 
-  otherAvatarUrl,
+  isGroup,
   onEdit
 }: any) => {
   if (!messages) return null;
@@ -53,7 +53,7 @@ const MessageList = memo(({
           onReply={onReply} 
           amIPremium={amIPremium}
           isAdmin={isAdmin}
-          senderAvatarUrl={msg.senderId === userId ? null : otherAvatarUrl}
+          isGroup={isGroup}
           onEdit={onEdit}
         />
       ))}
@@ -437,7 +437,14 @@ export default function ChatArea() {
       <ScrollArea ref={scrollRef} className="flex-1 w-full relative z-10 scrollbar-hide">
         {messages && (
           <MessageList 
-            messages={messages} userId={firebaseUser?.uid} chatId={currentChatId} onReply={setReplyTo} onEdit={(msg: Message) => { setEditingMsg(msg); setMessageInput(msg.content); setReplyTo(null); }} amIPremium={amIPremium} isAdmin={chat?.ownerId === firebaseUser?.uid || isGlobalAdmin(userProfile)} otherAvatarUrl={headerAvatarUrl}
+            messages={messages} 
+            userId={firebaseUser?.uid} 
+            chatId={currentChatId} 
+            onReply={setReplyTo} 
+            onEdit={(msg: Message) => { setEditingMsg(msg); setMessageInput(msg.content); setReplyTo(null); }} 
+            amIPremium={amIPremium} 
+            isAdmin={chat?.ownerId === firebaseUser?.uid || isGlobalAdmin(userProfile)}
+            isGroup={chat?.type === 'group' || chat?.type === 'channel'}
           />
         )}
       </ScrollArea>

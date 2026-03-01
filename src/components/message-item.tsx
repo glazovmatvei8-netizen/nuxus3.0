@@ -48,7 +48,7 @@ const GIFT_ICONS: Record<string, any> = {
   gift_briefcase: Briefcase, gift_grad: GraduationCap
 };
 
-export const MessageItem = memo(({ message, isMe, chatId, onReply, amIPremium = false, isAdmin = false, senderAvatarUrl = null, onEdit }: any) => {
+export const MessageItem = memo(({ message, isMe, chatId, onReply, amIPremium = false, isAdmin = false, isGroup = false, onEdit }: any) => {
   const db = useFirestore();
   const { setForwardingMessage } = useAppState();
   const { toast } = useToast();
@@ -279,8 +279,13 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, amIPremium = 
     <>
     <div id={`msg-${message.id}`} className={cn("w-full flex mb-2 transition-all", isMe ? "justify-end" : "justify-start")}>
       <div className={cn("flex gap-3 max-w-[85%] relative group px-2 items-end", isMe ? "flex-row-reverse ml-auto" : "flex-row mr-auto")}>
-        {!isMe && <UserAvatar userId={null} manualAvatarUrl={senderAvatarUrl} className="h-9 w-9 shrink-0" fallbackName={message.senderName} />}
+        {!isMe && <UserAvatar userId={message.senderId} className="h-9 w-9 shrink-0" fallbackName={message.senderName} />}
         <div className={cn("flex flex-col min-w-0 max-w-full relative", isMe ? "items-end ml-auto" : "items-start mr-auto")}>
+          {!isMe && isGroup && (
+            <span className="text-[9px] font-black text-primary uppercase tracking-widest mb-1 ml-1 truncate max-w-[150px]">
+              {message.senderName}
+            </span>
+          )}
           <div className="flex items-center gap-1.5 mb-0.5">{countdown !== null && (<div className="flex items-center gap-1 px-1.5 py-0.5 bg-red-500/10 rounded-full text-[8px] font-black text-red-500 animate-pulse"><Timer className="w-2.5 h-2.5" /> {countdown}</div>)}</div>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
