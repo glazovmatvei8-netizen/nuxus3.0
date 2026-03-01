@@ -17,7 +17,7 @@ import { useToast } from '@/hooks/use-toast';
 import { ChatInfoModal } from './modals/chat-info-modal';
 import { CreatePollModal } from './modals/create-poll-modal';
 import { useFirestore, useUser, useCollection, useDoc, useMemoFirebase } from '@/firebase';
-import { collection, query, orderBy, doc, updateDoc, where } from 'firebase/firestore';
+import { collection, query, orderBy, doc, updateDoc, where, addDoc } from 'firebase/firestore';
 import { addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { formatDisplayName, isUserPremium, isGlobalAdmin, cn } from '@/lib/utils';
 import type { Message, User as UserType, Chat } from '@/lib/types';
@@ -128,7 +128,7 @@ export default function ChatArea() {
   const { user: firebaseUser } = useUser();
   const db = useFirestore();
   const { t } = useTranslations();
-  const { currentChatId, setCurrentChatId, setLocalDrafts, localDrafts } = useAppState();
+  const { currentChatId, setCurrentChatId, setLocalDrafts, localDrafts, setActiveCallId } = useAppState();
   
   const [isChatInfoOpen, setIsChatInfoOpen] = useState(false);
   const [isPollModalOpen, setIsPollModalOpen] = useState(false);
@@ -465,6 +465,24 @@ export default function ChatArea() {
     setPendingMedia(prev => prev.filter((_, i) => i !== index));
   };
 
+  const handleStartCall = async (type: 'audio' | 'video') => {
+    if (!db || !firebaseUser || !otherId || !currentChatId) return;
+    try {
+      const callData = {
+        callerId: firebaseUser.uid,
+        receiverId: otherId,
+        chatId: currentChatId,
+        type,
+        status: 'calling',
+        createdAt: new Date().toISOString()
+      };
+      const docRef = await addDoc(collection(db, 'calls'), callData);
+      setActiveCallId(docRef.id);
+    } catch (e: any) {
+      toast({ title: "Ошибка вызова", description: e.message, variant: "destructive" });
+    }
+  };
+
   // Improved Recording Logic with User Gesture requirement
   const startRecording = async () => {
     if (!navigator.mediaDevices) {
@@ -473,7 +491,6 @@ export default function ChatArea() {
     }
 
     try {
-      // Использование идеальных параметров вместо жестких для совместимости
       const constraints: MediaStreamConstraints = {
         audio: true,
         video: recordingMode === 'video' ? { 
@@ -600,8 +617,8 @@ export default function ChatArea() {
           {!isSearchingLocal && <Button variant="ghost" size="icon" className="rounded-lg" onClick={() => setIsSearchingLocal(true)}><SearchIcon className="w-5 h-5" /></Button>}
           {chat?.type === 'private' && (
             <>
-              <Button variant="ghost" size="icon" className="rounded-lg text-primary" onClick={() => startRecording()}><Phone className="w-5 h-5" /></Button>
-              <Button variant="ghost" size="icon" className="rounded-lg text-primary" onClick={() => setIsChatInfoOpen(true)}><Video className="w-5 h-5" /></Button>
+              <Button variant="ghost" size="icon" className="rounded-lg text-primary" onClick={() => handleStartCall('audio')}><Phone className="w-5 h-5" /></Button>
+              <Button variant="ghost" size="icon" className="rounded-lg text-primary" onClick={() => handleStartCall('video')}><Video className="w-5 h-5" /></Button>
             </>
           )}
           <Button variant="ghost" size="icon" onClick={() => setIsChatInfoOpen(true)} className="rounded-lg"><Info className="w-5 h-5" /></Button>
