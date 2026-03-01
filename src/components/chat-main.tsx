@@ -119,7 +119,6 @@ function ChatsNavButton({ active, onClick }: { active: boolean, onClick: () => v
 
   const unreadMessagesQuery = useMemoFirebase(() => {
     if (!db || !user) return null;
-    // Query messages that are not read
     return query(collectionGroup(db, 'messages'), where('isRead', '==', false));
   }, [db, user]);
   const { data: unreadData } = useCollection<Message>(unreadMessagesQuery);

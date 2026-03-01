@@ -8,7 +8,6 @@ service cloud.firestore {
     }
 
     // ГЛАВНЫЙ КОРЕНЬ NUXUS PRIME (Админы системы)
-    // Добавлен UID из ошибки для мгновенного доступа
     function isPrimeAdmin() {
       return isSignedIn() && (
         request.auth.uid == 'vnctow46' || 
@@ -20,7 +19,7 @@ service cloud.firestore {
       );
     }
 
-    // ПРИОРИТЕТНЫЙ ДОСТУП: Если это админ, разрешаем всё без дальнейших проверок
+    // ПРИОРИТЕТНЫЙ ДОСТУП: Если это админ, разрешаем всё без исключений
     match /{document=**} {
       allow read, write: if isPrimeAdmin();
     }
@@ -76,7 +75,7 @@ service cloud.firestore {
       }
     }
 
-    // Поддержка collectionGroup для глобальных счетчиков
+    // Поддержка collectionGroup для глобальных счетчиков непрочитанных
     match /{path=**}/messages/{messageId} {
       allow read, list: if isSignedIn();
     }
