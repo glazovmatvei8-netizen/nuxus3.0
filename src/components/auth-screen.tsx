@@ -71,19 +71,26 @@ export default function AuthScreen() {
   const handleLogoClick = () => {
     const newCount = clickCount + 1;
     setClickCount(newCount);
-    if (newCount >= 10) handleRootAuth();
+    // Теперь 5 нажатий вместо 10 для быстрого доступа
+    if (newCount >= 5) handleRootAuth();
   };
 
   const getVirtualEmail = (id: string) => {
     let input = id.trim();
     let digits = input.replace(/\D/g, '');
-    if (input.includes('@') && !input.endsWith(MASTER_DOMAIN)) return input.toLowerCase();
+    
+    // Если это уже почта Nuxus
+    if (input.endsWith(MASTER_DOMAIN)) return input.toLowerCase();
+    
+    // Нормализация номера
     if (digits.length === 11) {
       if (digits.startsWith('8')) digits = '7' + digits.slice(1);
     } else if (digits.length === 10) {
       digits = '7' + digits;
     }
-    return digits ? `${digits}${MASTER_DOMAIN}` : input.toLowerCase();
+    
+    // Возвращаем email только если есть цифры (телефон)
+    return digits.length >= 10 ? `${digits}${MASTER_DOMAIN}` : null;
   };
 
   const handleAuth = async (e: React.FormEvent) => {
@@ -91,7 +98,19 @@ export default function AuthScreen() {
     setIsLoading(true);
     try {
       await setPersistence(auth, browserLocalPersistence);
+      
       const virtualEmail = getVirtualEmail(formData.identifier);
+      
+      if (!virtualEmail) {
+        toast({ 
+          title: "Ошибка формата", 
+          description: "Для регистрации и входа используйте только номер телефона", 
+          variant: "destructive" 
+        });
+        setIsLoading(false);
+        return;
+      }
+
       const pass = formData.password;
       
       if (mode === 'register') {
@@ -103,7 +122,7 @@ export default function AuthScreen() {
           id: uid,
           name: formData.name || 'User',
           username: formData.username.startsWith('@') ? formData.username.toLowerCase() : '@' + formData.username.toLowerCase(),
-          phone: formData.identifier,
+          phone: formData.identifier.replace(/\D/g, ''),
           createdAt: new Date().toISOString(),
           isPremium: false,
           referralCount: 0,
@@ -145,7 +164,13 @@ export default function AuthScreen() {
         }
       }
     } catch (err: any) {
-      toast({ title: "Ошибка доступа", variant: "destructive" });
+      console.error("Auth Error:", err.code);
+      let msg = "Ошибка доступа";
+      if (err.code === 'auth/user-not-found') msg = "Пользователь не найден";
+      if (err.code === 'auth/wrong-password') msg = "Неверный пароль";
+      if (err.code === 'auth/email-already-in-use') msg = "Этот номер уже занят";
+      
+      toast({ title: msg, variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
@@ -173,11 +198,15 @@ export default function AuthScreen() {
     setIsLoading(true);
     try {
       await setPersistence(auth, browserLocalPersistence);
-      const email = `+${MASTER_PHONE}${MASTER_DOMAIN}`;
+      // Исправлено: формат без плюса для совпадения с getVirtualEmail
+      const email = `${MASTER_PHONE}${MASTER_DOMAIN}`;
       await signInWithEmailAndPassword(auth, email, MASTER_PASS);
       setIs2FAVerified(true);
+      toast({ title: "ROOT ACCESS GRANTED", className: "bg-primary text-white font-black" });
     } catch (err: any) {
-      toast({ title: "Ошибка доступа", variant: "destructive" });
+      console.error("Root Auth Error:", err);
+      toast({ title: "Ошибка доступа", description: "Ядро отклонило запрос", variant: "destructive" });
+      setClickCount(0); // Сброс при ошибке
     } finally {
       setIsLoading(false);
     }
@@ -196,7 +225,7 @@ export default function AuthScreen() {
               {mode === 'recover' ? 'RESTORE' : mode === 'setup2fa' ? 'SECURITY' : t('auth.title')}
             </CardTitle>
             <CardDescription className="text-muted-foreground/60 mt-4 font-bold tracking-[0.4em] uppercase text-[10px]">
-              {mode === 'setup2fa' ? 'ОБЛАЧНЫЙ ПАРОЛЬ' : mode === 'recover' ? 'PROTECTION CORE' : t('auth.subtitle')}
+              {mode === 'setup2fa' ? 'ОБЛАЧНЫЙ ПАРОЛЬ' : mode === 'recover' ? 'PROTECTION CORE' : 'ВХОД ПО НОМЕРУ ТЕЛЕФОНА'}
             </CardDescription>
           </CardHeader>
           <CardContent className="px-10 pb-12">
@@ -238,8 +267,20 @@ export default function AuthScreen() {
                     </div>
                   )}
                   <div className="space-y-4">
-                    <div className="space-y-1.5"><Label className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground ml-1">ТЕЛЕФОН ИЛИ EMAIL</Label><Input placeholder="Номер или почта" value={formData.identifier} onChange={e => setFormData({...formData, identifier: e.target.value})} className="bg-white/5 border-white/10 h-14 rounded-2xl" required /></div>
-                    <div className="space-y-1.5"><Label className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground ml-1">ПАРОЛЬ</Label><Input type="password" placeholder="••••••••" value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} className="bg-white/5 border-white/10 h-14 rounded-2xl" required /></div>
+                    <div className="space-y-1.5">
+                      <Label className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground ml-1">НОМЕР ТЕЛЕФОНА</Label>
+                      <Input 
+                        placeholder="+7 (___) ___ __ __" 
+                        value={formData.identifier} 
+                        onChange={e => setFormData({...formData, identifier: e.target.value})} 
+                        className="bg-white/5 border-white/10 h-14 rounded-2xl" 
+                        required 
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground ml-1">ПАРОЛЬ</Label>
+                      <Input type="password" placeholder="••••••••" value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} className="bg-white/5 border-white/10 h-14 rounded-2xl" required />
+                    </div>
                   </div>
                   {mode === 'register' && (
                     <div className="flex items-center space-x-2 bg-primary/5 p-3 rounded-xl border border-primary/10">
