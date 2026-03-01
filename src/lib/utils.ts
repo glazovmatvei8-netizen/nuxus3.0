@@ -11,10 +11,12 @@ export function cn(...inputs: ClassValue[]) {
 
 /**
  * Форматирует имя пользователя.
+ * Если имя стандартное или отсутствует, возвращает 'Nuxus User'
  */
 export function formatDisplayName(name: string | undefined | null): string {
   if (!name) return 'Пользователь';
   const lower = name.toLowerCase();
+  
   if (
     lower.includes('удаленный') || 
     lower.includes('удалённый') || 
@@ -24,6 +26,11 @@ export function formatDisplayName(name: string | undefined | null): string {
   ) {
     return 'Удалённый Аккаунт🚫';
   }
+
+  if (lower === 'user' || lower === 'пользователь') {
+    return 'Nuxus User';
+  }
+
   return name;
 }
 

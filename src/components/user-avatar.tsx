@@ -20,7 +20,7 @@ interface UserAvatarProps {
 
 /**
  * Умный компонент аватарки с поддержкой Premium-значка.
- * Позиционирование звезды исправлено: теперь она сидит ровно в углу с обводкой.
+ * Улучшена логика генерации инициалов (fallback).
  */
 export function UserAvatar({ userId, className, fallbackName, fallbackClassName, manualAvatarUrl }: UserAvatarProps) {
   const db = useFirestore();
@@ -34,7 +34,14 @@ export function UserAvatar({ userId, className, fallbackName, fallbackClassName,
   const { data: profile, isLoading } = useDoc<User>(userRef);
 
   const displayAvatar = profile?.avatarUrl || manualAvatarUrl;
-  const displayName = formatDisplayName(profile?.name || fallbackName || '??');
+  const rawDisplayName = profile?.name || fallbackName || '??';
+  const displayName = formatDisplayName(rawDisplayName);
+  
+  // Если имя стандартное, пытаемся использовать никнейм для инициалов
+  const initialsSource = (rawDisplayName.toLowerCase() === 'user' || rawDisplayName === '??') && profile?.username
+    ? profile.username.replace('@', '')
+    : displayName;
+
   const premium = isUserPremium(profile);
 
   useEffect(() => {
@@ -56,7 +63,7 @@ export function UserAvatar({ userId, className, fallbackName, fallbackClassName,
           />
         ) : (
           <AvatarFallback className={cn("bg-primary/20 text-primary font-bold uppercase h-full w-full flex items-center justify-center", fallbackClassName)}>
-            {displayName.slice(0, 2)}
+            {initialsSource.slice(0, 2)}
           </AvatarFallback>
         )}
       </Avatar>

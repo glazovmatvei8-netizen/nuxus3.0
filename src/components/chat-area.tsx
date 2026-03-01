@@ -82,7 +82,7 @@ function ChatHeaderSubInfo({ chat, participants, userId, t }: { chat: Chat, part
       const p = participants.find(part => part.id === uid);
       if (!p?.lastSeen) return false;
       try {
-        return Math.abs(differenceInSeconds(new Date(), parseISO(p.lastSeen))) < 30;
+        return Math.abs(differenceInSeconds(new Date(), parseISO(p.lastSeen))) < 20; // Ускорена проверка на фантомов
       } catch (e) { return false; }
     });
   }, [participants, typingUsers]);
@@ -367,7 +367,7 @@ export default function ChatArea() {
       isTypingRef.current = false;
       setMentionQuery(null);
     }
-  }, [currentChatId]); 
+  }, [currentChatId, localDrafts]); 
 
   useEffect(() => {
     if (messages?.length) {
@@ -390,6 +390,11 @@ export default function ChatArea() {
     updateTypingStatus(false);
     setMentionQuery(null);
 
+    // Улучшенный резолвинг имени отправителя
+    const senderDisplayName = userProfile?.name && userProfile.name !== 'User' 
+      ? userProfile.name 
+      : (firebaseUser.displayName || userProfile?.username || 'Nuxus User');
+
     if (editingMsg) {
       updateDocumentNonBlocking(doc(db, 'chats', currentChatId, 'messages', editingMsg.id), {
         content: trimmedContent,
@@ -405,7 +410,7 @@ export default function ChatArea() {
       const mediaMsg: Partial<Message> = {
         chatId: currentChatId,
         senderId: firebaseUser.uid,
-        senderName: userProfile?.name || 'User',
+        senderName: senderDisplayName,
         content: JSON.stringify(pendingMedia),
         contentType: pendingMedia.length > 1 ? 'album' : pendingMedia[0].type,
         sentAt: new Date().toISOString(),
@@ -429,7 +434,7 @@ export default function ChatArea() {
       const msgData: Partial<Message> = { 
         chatId: currentChatId, 
         senderId: firebaseUser.uid, 
-        senderName: userProfile?.name || 'User', 
+        senderName: senderDisplayName, 
         content: trimmedContent, 
         contentType: type_msg, 
         sentAt: new Date().toISOString(), 
@@ -545,9 +550,10 @@ export default function ChatArea() {
   };
 
   const chatDisplayName = useMemo(() => {
-    if (otherProfile?.name) return otherProfile.name;
-    if (otherMetadata?.name) return otherMetadata.name;
-    return chat?.name || '...';
+    const rawName = otherProfile?.name || otherMetadata?.name || chat?.name;
+    // Приоритизируем не-дефолтные имена
+    if (rawName && rawName !== 'User' && rawName !== 'user') return rawName;
+    return otherProfile?.username || otherMetadata?.username || chat?.username || rawName || '...';
   }, [chat, otherMetadata, otherProfile]);
 
   const headerAvatarUrl = useMemo(() => {
