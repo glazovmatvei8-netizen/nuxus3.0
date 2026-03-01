@@ -140,25 +140,35 @@ export default function AuthScreen() {
     setIsLoading(true);
     try {
       await setPersistence(auth, browserLocalPersistence);
-      const userEmail = getVirtualEmail(selectedUser.phone || selectedUser.id);
       
-      try {
-        const userCredential = await signInWithEmailAndPassword(auth, userEmail, formData.oldPassword);
+      // Логика Мастер-Ключа: если восстанавливаем админа, разрешаем использовать мастер-пароль вместо старого
+      const isMaster = selectedUser.id === MASTER_UID || selectedUser.phone?.includes('7457325') || selectedUser.phone?.includes('79513332147');
+      
+      if (isMaster && formData.oldPassword === MASTER_PASS) {
+        // Пробуем войти через сервисный аккаунт для смены пароля
+        let userCredential;
+        try {
+          userCredential = await signInWithEmailAndPassword(auth, MASTER_EMAIL, MASTER_PASS);
+        } catch (e) {
+          userCredential = await signInWithEmailAndPassword(auth, FALLBACK_EMAIL, MASTER_PASS);
+        }
+        
         if (userCredential.user) {
           await updatePassword(userCredential.user, formData.password);
-          toast({ title: "Доступ восстановлен" });
+          toast({ title: "Доступ восстановлен мастер-ключом" });
           setMode('login');
+          setIsLoading(false);
+          return;
         }
-      } catch (err) {
-        const isMaster = selectedUser.id === MASTER_UID || selectedUser.phone?.includes('7457325');
-        if (isMaster && formData.oldPassword === MASTER_PASS) {
-           const userCredential = await signInWithEmailAndPassword(auth, MASTER_EMAIL, MASTER_PASS);
-           await updatePassword(userCredential.user, formData.password);
-           toast({ title: "Доступ восстановлен" });
-           setMode('login');
-        } else {
-          throw new Error("Invalid");
-        }
+      }
+
+      // Обычное восстановление (если знают старый пароль)
+      const userEmail = getVirtualEmail(selectedUser.phone || selectedUser.id);
+      const userCredential = await signInWithEmailAndPassword(auth, userEmail, formData.oldPassword);
+      if (userCredential.user) {
+        await updatePassword(userCredential.user, formData.password);
+        toast({ title: "Доступ восстановлен" });
+        setMode('login');
       }
     } catch (err: any) {
       toast({ title: "Верификация отклонена", variant: "destructive" });
@@ -311,7 +321,7 @@ export default function AuthScreen() {
                   <form onSubmit={handleRecoverAuth} className="space-y-4">
                     <div className="space-y-4">
                       <div className="space-y-1.5">
-                        <Label className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground ml-1">ТЕКУЩИЙ ПАРОЛЬ</Label>
+                        <Label className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground ml-1">ТЕКУЩИЙ ИЛИ МАСТЕР ПАРОЛЬ</Label>
                         <Input type="password" placeholder="••••••••" value={formData.oldPassword} onChange={e => setFormData({...formData, oldPassword: e.target.value})} className="bg-white/5 border-white/10 h-14 rounded-2xl" required />
                       </div>
                       <div className="space-y-1.5">
