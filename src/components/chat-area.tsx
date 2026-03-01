@@ -85,6 +85,8 @@ export default function ChatArea() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const isTypingRef = useRef<boolean>(false);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const dataLoadedRef = useRef(false);
@@ -145,21 +147,41 @@ export default function ChatArea() {
     }
   }, []);
 
-  useEffect(() => {
-    if (!db || !currentChatId || !firebaseUser) return;
+  // Оптимизированная логика статуса печатания
+  const updateTypingStatus = useCallback((isTyping: boolean) => {
+    if (!db || !currentChatId || !firebaseUser || isTypingRef.current === isTyping) return;
+    
+    isTypingRef.current = isTyping;
     const typingRef = doc(db, 'chats', currentChatId);
-    if (messageInput.length > 0) updateDoc(typingRef, { [`typing.${firebaseUser.uid}`]: true }).catch(() => {});
-    else updateDoc(typingRef, { [`typing.${firebaseUser.uid}`]: false }).catch(() => {});
-  }, [messageInput, currentChatId, firebaseUser, db]);
-
-  useEffect(() => {
-    if (currentChatId) setMessageInput(localDrafts[currentChatId] || '');
-  }, [currentChatId, localDrafts]);
+    updateDoc(typingRef, { [`typing.${firebaseUser.uid}`]: isTyping }).catch(() => {});
+  }, [db, currentChatId, firebaseUser]);
 
   const onInputChange = (val: string) => {
     setMessageInput(val);
     if (currentChatId) setLocalDrafts(prev => ({ ...prev, [currentChatId]: val }));
+
+    // Логика дебаунса для печатания
+    if (val.length > 0) {
+      updateTypingStatus(true);
+      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+      typingTimeoutRef.current = setTimeout(() => {
+        updateTypingStatus(false);
+      }, 3000);
+    } else {
+      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+      updateTypingStatus(false);
+    }
   };
+
+  useEffect(() => {
+    if (currentChatId) {
+      setMessageInput(localDrafts[currentChatId] || '');
+      isTypingRef.current = false;
+    }
+    return () => {
+      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+    };
+  }, [currentChatId, localDrafts]);
 
   useEffect(() => {
     if (messages?.length) {
@@ -178,6 +200,11 @@ export default function ChatArea() {
     const trimmedContent = content_msg.trim();
     if (!trimmedContent || !currentChatId || !firebaseUser || !db) return;
     setIsSending(true);
+    
+    // Сразу сбрасываем статус печатания
+    updateTypingStatus(false);
+    if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+
     if (editingMsg) {
       updateDocumentNonBlocking(doc(db, 'chats', currentChatId, 'messages', editingMsg.id), {
         content: trimmedContent,
@@ -216,7 +243,7 @@ export default function ChatArea() {
     }
     setIsSending(false);
     setTimeout(() => scrollToBottom('smooth'), 100);
-  }, [messageInput, currentChatId, firebaseUser, db, userProfile, replyTo, editingMsg, scrollToBottom, scheduledDate, expiryTime, isOneTime]);
+  }, [messageInput, currentChatId, firebaseUser, db, userProfile, replyTo, editingMsg, scrollToBottom, scheduledDate, expiryTime, isOneTime, updateTypingStatus]);
 
   const handleAiDraft = async () => {
     if (!messages || !amIPremium) return;
@@ -357,7 +384,13 @@ export default function ChatArea() {
               </PopoverContent>
             </Popover>
             <div className="flex-1 relative">
-              <Input placeholder={t('chat.placeholder')} className="bg-muted border-none rounded-xl h-11 text-sm px-4" value={messageInput} onChange={e => onInputChange(e.target.value)} onKeyDown={e => e.key === 'Enter' && !e.shiftKey && handleSendMessage()} />
+              <Input 
+                placeholder={t('chat.placeholder')} 
+                className="bg-muted border-none rounded-xl h-11 text-sm px-4 focus-visible:ring-1 focus-visible:ring-primary/20" 
+                value={messageInput} 
+                onChange={e => onInputChange(e.target.value)} 
+                onKeyDown={e => e.key === 'Enter' && !e.shiftKey && handleSendMessage()} 
+              />
               {amIPremium && !editingMsg && (<button onClick={handleAiDraft} disabled={isDrafting} className="absolute right-3 top-1/2 -translate-y-1/2 text-primary hover:scale-110">{isDrafting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wand2 className="w-4 h-4" />}</button>)}
             </div>
             {!messageInput.trim() ? (<Button size="icon" className="h-11 w-11 rounded-xl shrink-0 bg-primary" onClick={startRecording}><Circle className="w-5 h-5" /></Button>) : (<Button size="icon" className="h-11 w-11 rounded-xl shrink-0 bg-primary" onClick={() => handleSendMessage()} disabled={isSending}>{isSending ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}</Button>)}
