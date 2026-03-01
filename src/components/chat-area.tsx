@@ -17,7 +17,7 @@ import { ChatInfoModal } from './modals/chat-info-modal';
 import { useFirestore, useUser, useCollection, useDoc, useMemoFirebase } from '@/firebase';
 import { collection, query, orderBy, doc, addDoc, updateDoc, where, limit } from 'firebase/firestore';
 import { addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
-import { formatDisplayName, isUserPremium, isGlobalAdmin } from '@/lib/utils';
+import { formatDisplayName, isUserPremium, isGlobalAdmin, cn } from '@/lib/utils';
 import type { Message, User as UserType, Chat } from '@/lib/types';
 import { suggestMessageDraft } from '@/ai/flows/ai-message-drafting-flow';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -96,7 +96,6 @@ export default function ChatArea() {
   const recordingIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   const inputRef = useRef<HTMLInputElement>(null);
-  const videoRef = useRef<HTMLVideoElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -117,7 +116,6 @@ export default function ChatArea() {
   // Fetch participants for mentions
   const participantsQuery = useMemoFirebase(() => {
     if (!db || !chat?.participantIds?.length) return null;
-    // Limit to 50 for performance
     return query(collection(db, 'users'), where('id', 'in', chat.participantIds.slice(0, 30)));
   }, [db, chat?.participantIds]);
   const { data: participants } = useCollection<UserType>(participantsQuery);
@@ -170,7 +168,10 @@ export default function ChatArea() {
 
   const updateTypingStatus = useCallback((isTyping: boolean, targetChatId?: string) => {
     const id = targetChatId || currentChatId;
-    if (!db || !id || !firebaseUser || (isTypingRef.current === isTyping && !targetChatId)) return;
+    if (!db || !id || !firebaseUser) return;
+    
+    // Предотвращаем лишние запросы, но всегда позволяем сбросить статус (isTyping === false)
+    if (isTypingRef.current === isTyping && isTyping) return;
     
     isTypingRef.current = isTyping;
     const typingRef = doc(db, 'chats', id);
@@ -180,15 +181,14 @@ export default function ChatArea() {
   useEffect(() => {
     const handleUnload = () => updateTypingStatus(false);
     window.addEventListener('beforeunload', handleUnload);
-    return () => window.removeEventListener('beforeunload', handleUnload);
-  }, [updateTypingStatus]);
-
-  useEffect(() => {
-    const prevId = currentChatId;
+    // Сбрасываем статус при входе в чат (на всякий случай)
+    updateTypingStatus(false);
+    
     return () => {
-      if (prevId) updateTypingStatus(false, prevId);
+      window.removeEventListener('beforeunload', handleUnload);
+      updateTypingStatus(false);
     };
-  }, [currentChatId, updateTypingStatus]);
+  }, [updateTypingStatus, currentChatId]);
 
   // Personal Mention Notification
   useEffect(() => {
@@ -263,7 +263,7 @@ export default function ChatArea() {
       if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
       typingTimeoutRef.current = setTimeout(() => {
         updateTypingStatus(false);
-      }, 3000);
+      }, 4000); // Увеличиваем до 4с для стабильности
     } else {
       if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
       updateTypingStatus(false);
@@ -570,7 +570,7 @@ export default function ChatArea() {
                         <UserAvatar userId={p.id} className="h-8 w-8" manualAvatarUrl={p.avatarUrl} fallbackName={p.name} />
                         <div className="flex flex-col min-w-0 text-left">
                           <span className="font-bold text-sm truncate flex items-center gap-1.5">
-                            {p.name} {isUserPremium(p) && <AtSign className="w-3 h-3 text-accent" />}
+                            {p.name} {isUserPremium(p) && <Star className="w-3 h-3 text-accent fill-accent" />}
                           </span>
                           <span className="text-[10px] text-muted-foreground font-mono truncate">{p.username}</span>
                         </div>

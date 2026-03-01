@@ -20,6 +20,7 @@ import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { updateDocumentNonBlocking, addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { useTranslations } from '@/hooks/use-translations';
+import { differenceInSeconds, parseISO } from 'date-fns';
 
 export default function ChatSidebar() {
   const { user } = useUser();
@@ -314,27 +315,31 @@ export default function ChatSidebar() {
 
 /**
  * Вспомогательный компонент для отображения имен печатающих пользователей.
+ * Включает проверку Heartbeat (lastSeen) для предотвращения "залипших" статусов.
  */
 function TypingIndicator({ uids, isPrivate, t }: { uids: string[], isPrivate: boolean, t: any }) {
   const db = useFirestore();
   
-  // Для простоты в MVP берем первого печатающего из группы или собеседника
+  // Берем первого печатающего для получения данных профиля
   const firstUid = uids[0];
   const userRef = useMemoFirebase(() => (!db || !firstUid) ? null : doc(db, 'users', firstUid), [db, firstUid]);
   const { data: profile } = useDoc<User>(userRef);
 
-  if (!profile && uids.length > 0) {
-    return (
-      <span className="flex items-center gap-0.5">
-        {t('chat.typing')}
-        <span className="animate-typing-dot">.</span>
-        <span className="animate-typing-dot [animation-delay:0.2s]">.</span>
-        <span className="animate-typing-dot [animation-delay:0.4s]">.</span>
-      </span>
-    );
-  }
+  // Проверка: если пользователь не проявлял активности более 60 секунд, 
+  // мы считаем статус печатания "фантомным" и скрываем его.
+  const isActuallyOnline = useMemo(() => {
+    if (!profile?.lastSeen) return false;
+    try {
+      const diff = Math.abs(differenceInSeconds(new Date(), parseISO(profile.lastSeen)));
+      return diff < 60; // Допуск 60 секунд (heartbeat идет каждые 30с)
+    } catch (e) {
+      return false;
+    }
+  }, [profile?.lastSeen]);
 
-  const name = formatDisplayName(profile?.name || 'Кто-то');
+  if (!profile || !isActuallyOnline) return null;
+
+  const name = formatDisplayName(profile.name || 'Кто-то');
   const text = isPrivate ? t('chat.typing') : (uids.length > 1 ? `${name} и еще ${uids.length - 1} печатают` : `${name} печатает`);
 
   return (

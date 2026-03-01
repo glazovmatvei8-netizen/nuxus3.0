@@ -12,7 +12,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { 
   Sparkles, Gift, Crown, Star, LogOut, UserPlus, Shield, UserMinus, UserCheck,
-  Settings2, Upload, Camera, Check, Info, Users, MessageSquare, UserX
+  Settings2, Upload, Camera, Check, Info, Users, MessageSquare, UserX, Loader2
 } from 'lucide-react';
 import { 
   Star as StarIcon, Heart, Zap, Flame, Trophy, Rocket, Diamond, 
@@ -57,6 +57,7 @@ export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onO
   const [giftMessage, setGiftMessage] = useState('');
   const [isAddMemberOpen, setIsAddMemberOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isKicking, setIsKicking] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
@@ -170,27 +171,35 @@ export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onO
 
   const handleToggleAdmin = async (targetUserId: string, isAdmin: boolean) => {
     if (!db || !chat.id || !isOwner) return;
-    const chatRef = doc(db, 'chats', chat.id);
-    updateDocumentNonBlocking(chatRef, {
-      adminIds: isAdmin ? arrayUnion(targetUserId) : arrayRemove(targetUserId)
-    });
-    toast({ title: isAdmin ? "Назначен админом" : "Снят с админки" });
+    try {
+      const chatRef = doc(db, 'chats', chat.id);
+      await updateDoc(chatRef, {
+        adminIds: isAdmin ? arrayUnion(targetUserId) : arrayRemove(targetUserId)
+      });
+      toast({ title: isAdmin ? "Назначен админом" : "Снят с админки" });
+    } catch (e: any) {
+      toast({ title: "Ошибка", description: "Недостаточно прав", variant: "destructive" });
+    }
   };
 
   const handleKickMember = async (targetUserId: string) => {
     if (!db || !chat.id || !user) return;
-    
-    // Предотвращаем кик самого себя владельцем через эту кнопку (есть кнопка Выйти)
     if (targetUserId === user.uid) return;
-
     if (!confirm('Вы уверены, что хотите исключить этого пользователя?')) return;
 
-    const chatRef = doc(db, 'chats', chat.id);
-    updateDocumentNonBlocking(chatRef, {
-      participantIds: arrayRemove(targetUserId),
-      adminIds: arrayRemove(targetUserId)
-    });
-    toast({ title: "Пользователь исключен" });
+    setIsKicking(targetUserId);
+    try {
+      const chatRef = doc(db, 'chats', chat.id);
+      await updateDoc(chatRef, {
+        participantIds: arrayRemove(targetUserId),
+        adminIds: arrayRemove(targetUserId)
+      });
+      toast({ title: "Пользователь исключен" });
+    } catch (e: any) {
+      toast({ title: "Ошибка", description: "Не удалось исключить участника", variant: "destructive" });
+    } finally {
+      setIsKicking(null);
+    }
   };
 
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -356,6 +365,7 @@ export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onO
                     viewerId={user?.uid || ''}
                     onToggleAdmin={handleToggleAdmin}
                     onKick={handleKickMember}
+                    isKicking={isKicking === pid}
                   />
                 ))}
               </div>
@@ -427,7 +437,8 @@ function MemberRow({
   isViewerAdmin,
   viewerId,
   onToggleAdmin, 
-  onKick 
+  onKick,
+  isKicking
 }: { 
   userId: string, 
   ownerId: string, 
@@ -436,7 +447,8 @@ function MemberRow({
   isViewerAdmin: boolean,
   viewerId: string,
   onToggleAdmin: (uid: string, isAdmin: boolean) => void,
-  onKick: (uid: string) => void
+  onKick: (uid: string) => void,
+  isKicking?: boolean
 }) {
   const db = useFirestore();
   const userRef = useMemoFirebase(() => (!db ? null : doc(db, 'users', userId)), [db, userId]);
@@ -484,9 +496,10 @@ function MemberRow({
             size="icon" 
             className="h-8 w-8 text-muted-foreground hover:text-destructive"
             onClick={() => onKick(userId)}
+            disabled={isKicking}
             title="Исключить из чата"
           >
-            <UserX className="w-4 h-4" />
+            {isKicking ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserX className="w-4 h-4" />}
           </Button>
         )}
       </div>
