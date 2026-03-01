@@ -4,9 +4,13 @@
 import React, { createContext, useContext, useState } from 'react';
 import type { Message } from './types';
 
+export type MainView = 'chats' | 'contacts' | 'calls' | 'profile';
+
 interface AppState {
   currentChatId: string | null;
   setCurrentChatId: (id: string | null) => void;
+  activeView: MainView;
+  setActiveView: (view: MainView) => void;
   forwardingMessage: Message | null;
   setForwardingMessage: (msg: Message | null) => void;
   activeCallId: string | null;
@@ -21,6 +25,7 @@ const AppContext = createContext<AppState | undefined>(undefined);
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const [currentChatId, setCurrentChatId] = useState<string | null>(null);
+  const [activeView, setActiveView] = useState<MainView>('chats');
   const [forwardingMessage, setForwardingMessage] = useState<Message | null>(null);
   const [activeCallId, setActiveCallId] = useState<string | null>(null);
   const [localDrafts, setLocalDrafts] = useState<Record<string, string>>({});
@@ -30,6 +35,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     <AppContext.Provider value={{
       currentChatId,
       setCurrentChatId,
+      activeView,
+      setActiveView,
       forwardingMessage,
       setForwardingMessage,
       activeCallId,

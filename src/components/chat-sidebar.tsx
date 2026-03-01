@@ -1,35 +1,31 @@
 
 "use client"
 
-import React, { useState, useMemo, useEffect, memo } from 'react';
+import React, { useState, useMemo, memo } from 'react';
 import { useAppState } from '@/lib/store';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
-  Search, Settings, Plus, Loader2, Bookmark, Pin, Globe, Star, 
-  Hexagon, ShieldAlert, MoreHorizontal, Check, CheckCheck, Circle,
-  MessageSquare, BellDot, Radio
+  Search, Plus, Bookmark, Pin, Star, 
+  MoreHorizontal, Check, CheckCheck,
+  MessageSquare, Shield
 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { CreateChatModal } from './modals/create-chat-modal';
 import { SettingsModal } from './modals/settings-modal';
 import { AdminPanelModal } from './modals/admin-panel-modal';
-import type { ChatType, User, Message, Chat } from '@/lib/types';
+import type { User, Message, Chat } from '@/lib/types';
 import { useFirestore, useUser, useCollection, useDoc, useMemoFirebase } from '@/firebase';
-import { collection, query, where, doc, getDocs, limit, arrayUnion, arrayRemove, updateDoc, addDoc } from 'firebase/firestore';
-import { formatLastSeen, formatDisplayName, cn, isGlobalAdmin, isUserPremium } from '@/lib/utils';
+import { collection, query, where, doc, limit } from 'firebase/firestore';
+import { formatDisplayName, cn, isGlobalAdmin } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { updateDocumentNonBlocking, addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
-import { useTranslations } from '@/hooks/use-translations';
-import { differenceInSeconds, parseISO, format } from 'date-fns';
+import { addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { differenceInSeconds, format } from 'date-fns';
 
-const ChatListItem = memo(({ chat, isActive, otherId, cachedDisplayName, manualAvatarUrl, onClick, isPinned, isGlobalResult, onTogglePin }: any) => {
+const ChatListItem = memo(({ chat, isActive, otherId, cachedDisplayName, manualAvatarUrl, onClick, isPinned, isGlobalResult, user }: any) => {
   const db = useFirestore();
-  const { user } = useUser();
-  const { t } = useTranslations();
   
   const userProfileRef = useMemoFirebase(() => {
     if (!db || !otherId) return null;
@@ -71,7 +67,7 @@ const ChatListItem = memo(({ chat, isActive, otherId, cachedDisplayName, manualA
 
   return (
     <div
-      onClick={onClick}
+      onClick={() => onClick(unreadCount)}
       className={cn(
         "flex items-center gap-3 px-4 py-3 cursor-pointer transition-all border-none group relative",
         isActive ? 'bg-white/5' : 'hover:bg-white/[0.03]'
@@ -120,7 +116,6 @@ export default function ChatSidebar() {
   const { user } = useUser();
   const db = useFirestore();
   const { toast } = useToast();
-  const { t } = useTranslations();
   const { currentChatId, setCurrentChatId, forwardingMessage, setForwardingMessage } = useAppState();
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState<'all' | 'unread' | 'channels'>('all');
@@ -171,17 +166,10 @@ export default function ChatSidebar() {
   const filteredChats = useMemo(() => {
     let result = sortedChats;
 
-    // Tab Filtering
-    if (activeTab === 'unread') {
-      // Logic for unread is handled partially by ChatListItem, 
-      // but for pure tab filtering we show chats that were recently active
-      // In a real scenario, we'd have unreadCount in the Chat object
-      result = result.filter(c => c.lastMessageAt); 
-    } else if (activeTab === 'channels') {
+    if (activeTab === 'channels') {
       result = result.filter(c => c.type === 'channel');
     }
 
-    // Search Filtering
     if (searchQuery.trim()) {
       result = result.filter(chat => {
         const isSaved = chat.type === 'saved';
@@ -194,13 +182,24 @@ export default function ChatSidebar() {
     return result;
   }, [sortedChats, searchQuery, user, activeTab]);
 
+  const isUnreadFilter = activeTab === 'unread';
+
   return (
     <div className="flex flex-col h-full bg-[#0a0a0c] overflow-hidden">
-      {/* Header */}
       <div className="px-4 pt-6 pb-2 shrink-0">
         <div className="flex items-center justify-between mb-4">
           <h1 className="text-[28px] font-black text-white tracking-tight">Чаты</h1>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
+            {isGlobalAdmin(profile) && (
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="h-10 w-10 rounded-full bg-primary/10 hover:bg-primary/20"
+                onClick={() => setIsAdminPanelOpen(true)}
+              >
+                <Shield className="w-5 h-5 text-primary" />
+              </Button>
+            )}
             <Button 
               variant="ghost" 
               size="icon" 
@@ -219,7 +218,6 @@ export default function ChatSidebar() {
           </div>
         </div>
 
-        {/* Search Bar */}
         <div className="relative mb-4">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/60" />
           <Input 
@@ -230,38 +228,20 @@ export default function ChatSidebar() {
           />
         </div>
 
-        {/* Tabs */}
         <div className="flex items-center gap-6 overflow-x-auto scrollbar-hide border-b border-white/[0.05]">
-          <button 
-            onClick={() => setActiveTab('all')}
-            className={cn(
-              "text-[15px] font-bold pb-2.5 transition-all relative",
-              activeTab === 'all' ? "text-white" : "text-muted-foreground/60"
-            )}
-          >
-            Все
-            {activeTab === 'all' && <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-[#007AFF] rounded-full" />}
-          </button>
-          <button 
-            onClick={() => setActiveTab('unread')}
-            className={cn(
-              "text-[15px] font-bold pb-2.5 transition-all flex items-center gap-1.5 relative",
-              activeTab === 'unread' ? "text-white" : "text-muted-foreground/60"
-            )}
-          >
-            Непрочитанные
-            {activeTab === 'unread' && <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-[#007AFF] rounded-full" />}
-          </button>
-          <button 
-            onClick={() => setActiveTab('channels')}
-            className={cn(
-              "text-[15px] font-bold pb-2.5 transition-all flex items-center gap-1.5 relative",
-              activeTab === 'channels' ? "text-white" : "text-muted-foreground/60"
-            )}
-          >
-            Каналы
-            {activeTab === 'channels' && <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-[#007AFF] rounded-full" />}
-          </button>
+          {['all', 'unread', 'channels'].map((tab) => (
+            <button 
+              key={tab}
+              onClick={() => setActiveTab(tab as any)}
+              className={cn(
+                "text-[15px] font-bold pb-2.5 transition-all relative whitespace-nowrap",
+                activeTab === tab ? "text-white" : "text-muted-foreground/60"
+              )}
+            >
+              {tab === 'all' ? 'Все' : tab === 'unread' ? 'Непрочитанные' : 'Каналы'}
+              {activeTab === tab && <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-[#007AFF] rounded-full" />}
+            </button>
+          ))}
         </div>
       </div>
 
@@ -269,12 +249,22 @@ export default function ChatSidebar() {
         <div className="pb-24">
           {filteredChats.length > 0 ? (
             filteredChats.map(chat => (
-              <ChatListItem 
-                key={chat.id} chat={chat} isActive={currentChatId === chat.id} 
-                otherId={chat.type === 'private' && user ? chat.participantIds?.find((id: string) => id !== user.uid) : null} 
-                cachedDisplayName={chat.metadata && user && chat.participantIds?.find((id: string) => id !== user.uid) ? chat.metadata[chat.participantIds.find((id: string) => id !== user.uid)!].name : chat.name} 
-                onClick={() => handleChatClick(chat)} isPinned={pinnedIds.includes(chat.id)} 
-              />
+              <UnreadFilterWrapper 
+                key={chat.id} 
+                chat={chat} 
+                user={user} 
+                enabled={isUnreadFilter}
+              >
+                <ChatListItem 
+                  chat={chat} 
+                  isActive={currentChatId === chat.id} 
+                  user={user}
+                  otherId={chat.type === 'private' && user ? chat.participantIds?.find((id: string) => id !== user.uid) : null} 
+                  cachedDisplayName={chat.metadata && user && chat.participantIds?.find((id: string) => id !== user.uid) ? chat.metadata[chat.participantIds.find((id: string) => id !== user.uid)!].name : chat.name} 
+                  onClick={() => handleChatClick(chat)} 
+                  isPinned={pinnedIds.includes(chat.id)} 
+                />
+              </UnreadFilterWrapper>
             ))
           ) : (
             <div className="flex flex-col items-center justify-center p-12 text-center opacity-40">
@@ -290,4 +280,19 @@ export default function ChatSidebar() {
       <AdminPanelModal open={isAdminPanelOpen} onOpenChange={setIsAdminPanelOpen} />
     </div>
   );
+}
+
+// Helper to handle unread filtering logic properly
+function UnreadFilterWrapper({ children, chat, user, enabled }: { children: React.ReactNode, chat: Chat, user: any, enabled: boolean }) {
+  const db = useFirestore();
+  const unreadQuery = useMemoFirebase(() => {
+    if (!db || !chat.id || !user) return null;
+    return query(collection(db, 'chats', chat.id, 'messages'), where('isRead', '==', false));
+  }, [db, chat.id, user]);
+  
+  const { data: unreadData } = useCollection<Message>(unreadQuery);
+  const unreadCount = (unreadData || []).filter(m => m.senderId !== user?.uid).length;
+
+  if (enabled && unreadCount === 0) return null;
+  return <>{children}</>;
 }
