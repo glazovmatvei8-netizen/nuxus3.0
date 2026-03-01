@@ -8,12 +8,13 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { Switch } from '@/components/ui/switch';
 import { useAuth, useUser, useFirestore, useDoc, useCollection, useMemoFirebase } from '@/firebase';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
   LogOut, Palette, Loader2, Crown, Check, 
   Monitor, Sparkles, Globe, Settings2, Upload, Moon, Droplets, Type, ShieldCheck, Lock,
-  Users, Copy, Share2, Star, UserCheck
+  Users, Copy, Share2, Star, UserCheck, Bell, BellOff
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { signOut, updatePassword, EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
@@ -53,7 +54,6 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
   const userRef = useMemoFirebase(() => (!db || !user) ? null : doc(db, 'users', user.uid), [db, user]);
   const { data: profile } = useDoc<User>(userRef);
 
-  // Fetch invited friends
   const invitedFriendsQuery = useMemoFirebase(() => {
     if (!db || !user) return null;
     return query(collection(db, 'users'), where('invitedBy', '==', user.uid), limit(50));
@@ -72,18 +72,17 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
     lastSeenVisibility: 'everybody',
     allowGroupsFrom: 'everybody',
     whoCanMessageMe: 'everybody',
+    twoFactorEnabled: false,
+    twoFactorPin: ''
   });
 
-  const [passwordForm, setPasswordForm] = useState({
-    new: '',
-    confirm: ''
-  });
-
+  const [passwordForm, setPasswordForm] = useState({ new: '', confirm: '' });
   const [activeTab, setActiveTab] = useState('profile');
   const [isSubmittingPayment, setIsSubmittingPayment] = useState(false);
   const [isGeneratingAvatar, setIsGeneratingAvatar] = useState(false);
   const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
   const [pendingPayment, setPendingPayment] = useState<any>(null);
+  const [notifPermission, setNotifPermission] = useState<string>('default');
 
   useEffect(() => {
     if (profile && open) {
@@ -99,7 +98,10 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         lastSeenVisibility: profile.settings?.privacy?.lastSeenVisibility || 'everybody',
         allowGroupsFrom: profile.settings?.privacy?.allowGroupsFrom || 'everybody',
         whoCanMessageMe: profile.settings?.privacy?.whoCanMessageMe || 'everybody',
+        twoFactorEnabled: !!profile.twoFactorEnabled,
+        twoFactorPin: profile.twoFactorPin || ''
       });
+      if ('Notification' in window) setNotifPermission(Notification.permission);
     }
   }, [profile, open]);
 
@@ -110,6 +112,8 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
       username: form.username.startsWith('@') ? form.username.toLowerCase() : '@' + form.username.toLowerCase(),
       bio: form.bio,
       avatarUrl: form.avatarUrl,
+      twoFactorEnabled: form.twoFactorEnabled,
+      twoFactorPin: form.twoFactorPin,
       settings: {
         ...profile?.settings,
         theme: form.theme,
@@ -128,39 +132,11 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
     toast({ title: t('settings.labels.save') });
   };
 
-  const handleChangePassword = async () => {
-    if (!auth.currentUser || !passwordForm.new) return;
-    if (passwordForm.new !== passwordForm.confirm) {
-      toast({ title: "Пароли не совпадают", variant: "destructive" });
-      return;
-    }
-
-    setIsUpdatingPassword(true);
-    try {
-      if (isGlobalAdmin(profile)) {
-        const email = auth.currentUser.email;
-        if (email) {
-          const credential = EmailAuthProvider.credential(email, MASTER_PASS);
-          await reauthenticateWithCredential(auth.currentUser, credential);
-        }
-      }
-      
-      await updatePassword(auth.currentUser, passwordForm.new);
-      toast({ title: "Пароль успешно обновлен" });
-      setPasswordForm({ new: '', confirm: '' });
-    } catch (e: any) {
-      toast({ title: "Ошибка доступа", variant: "destructive" });
-    } finally {
-      setIsUpdatingPassword(false);
-    }
-  };
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onloadend = () => setForm(prev => ({ ...prev, avatarUrl: reader.result as string }));
-    reader.readAsDataURL(file);
+  const requestNotifs = async () => {
+    if (!('Notification' in window)) return;
+    const res = await Notification.requestPermission();
+    setNotifPermission(res);
+    if (res === 'granted') toast({ title: "Уведомления включены!" });
   };
 
   const handleAiAvatar = async () => {
@@ -169,62 +145,30 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
     try {
       const { imageUrl } = await generateAiAvatar();
       setForm(prev => ({ ...prev, avatarUrl: imageUrl }));
-      toast({ title: "Avatar Generated!" });
+      toast({ title: "Аватар готов!" });
     } catch (e) {
-      toast({ title: "AI Error", variant: "destructive" });
+      toast({ title: "Ошибка AI", variant: "destructive" });
     } finally {
       setIsGeneratingAvatar(false);
     }
   };
 
-  const handleConfirmPayment = async () => {
-    if (!pendingPayment || !db || !user || isSubmittingPayment) return;
-    setIsSubmittingPayment(true);
-    try {
-      const adminId = 'vnctow46';
-      const chatQuery = query(collection(db, 'chats'), where('participantIds', 'array-contains', user.uid), where('username', '==', '@nuxus_bot'));
-      const chatSnap = await getDocs(chatQuery);
-      let chatId = chatSnap.empty ? (await addDoc(collection(db, 'chats'), { type: 'private', name: 'Nuxus Bot', username: '@nuxus_bot', participantIds: [user.uid, adminId], ownerId: adminId, createdAt: new Date().toISOString() })).id : chatSnap.docs[0].id;
-      await addDoc(collection(db, 'chats', chatId, 'messages'), {
-        chatId, senderId: 'nuxus_bot', senderName: 'Nuxus', contentType: 'payment_request', sentAt: new Date().toISOString(),
-        paymentData: { 
-          type: 'premium', itemName: `Premium: ${pendingPayment.name}`, 
-          targetUserId: user.uid, targetUserName: profile?.name || 'User',
-          targetUserUsername: profile?.username || '@user',
-          amount: pendingPayment.amount, unit: pendingPayment.unit, price: pendingPayment.price, status: 'pending' 
-        }
-      });
-      toast({ title: "Запрос отправлен Nuxus Bot" });
-      setPendingPayment(null);
-    } finally {
-      setIsSubmittingPayment(false);
-    }
-  };
-
-  const getReferralLink = () => {
-    if (typeof window === 'undefined' || !user) return '';
-    const baseUrl = window.location.origin;
-    return `${baseUrl}?ref=${user.uid}`;
-  };
-
   const copyReferralLink = () => {
-    navigator.clipboard.writeText(getReferralLink());
+    const url = typeof window !== 'undefined' ? `${window.location.origin}?ref=${user?.uid}` : '';
+    navigator.clipboard.writeText(url);
     toast({ title: "Ссылка скопирована!" });
   };
-
-  const referralCount = profile?.referralCount || 0;
-  const progressToNextReward = (referralCount % 5) * 20;
 
   return (
     <>
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md bg-card border-border p-0 overflow-hidden h-[90vh] flex flex-col rounded-[2.5rem] shadow-2xl">
-        <DialogHeader className="p-6 border-b border-border bg-muted/30 shrink-0">
-          <DialogTitle className="flex items-center gap-2 text-xl font-bold italic uppercase tracking-tighter">
+        <DialogHeader className="p-6 border-b border-white/5 bg-muted/30 shrink-0">
+          <DialogTitle className="flex items-center gap-2 text-xl font-black italic uppercase tracking-tighter">
             <Settings2 className="w-5 h-5 text-primary" /> {t('settings.title')}
           </DialogTitle>
         </DialogHeader>
-        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className="flex-1 flex flex-col min-h-0">
+        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v)} className="flex-1 flex flex-col min-h-0">
           <TabsList className="grid grid-cols-5 bg-muted/50 p-1 mx-6 mt-4 rounded-2xl shrink-0 border border-white/5">
             <TabsTrigger value="profile" className="text-[8px] uppercase font-black tracking-widest px-1">{t('settings.tabs.profile')}</TabsTrigger>
             <TabsTrigger value="appearance" className="text-[8px] uppercase font-black tracking-widest px-1">{t('settings.tabs.style')}</TabsTrigger>
@@ -238,7 +182,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                 <div className="relative group cursor-pointer" onClick={() => fileInputRef.current?.click()}>
                   <UserAvatar userId={user?.uid} manualAvatarUrl={form.avatarUrl} className="h-32 w-32 border-4 border-primary/20 shadow-2xl" fallbackName={form.name} />
                   <div className="absolute inset-0 bg-black/60 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all backdrop-blur-sm"><Upload className="w-8 h-8 text-white" /></div>
-                  <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleFileChange} />
+                  <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={(e) => { const f = e.target.files?.[0]; if(f) { const r = new FileReader(); r.onloadend = () => setForm({...form, avatarUrl: r.result as string}); r.readAsDataURL(f); } }} />
                 </div>
                 {isUserPremium(profile) && (
                   <Button variant="outline" className="h-9 rounded-xl gap-2 text-xs border-primary/20 bg-primary/5 hover:bg-primary/10" onClick={handleAiAvatar} disabled={isGeneratingAvatar}>
@@ -255,130 +199,86 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
             <TabsContent value="appearance" className="space-y-6 m-0 py-6">
               <div className="bg-muted/20 p-6 rounded-[2rem] border border-white/5 space-y-6">
                 <div className="space-y-4">
-                  <Label className="text-[10px] uppercase font-black tracking-widest text-primary flex items-center gap-2"><Palette className="w-3.5 h-3.5" /> {t('settings.labels.theme')}</Label>
+                  <Label className="text-[10px] uppercase font-black tracking-widest text-primary flex items-center gap-2"><Monitor className="w-3.5 h-3.5" /> Уведомления</Label>
+                  <Button variant="outline" className="w-full h-12 rounded-2xl gap-3 border-white/5 bg-black/20" onClick={requestNotifs}>
+                    {notifPermission === 'granted' ? <Bell className="w-5 h-5 text-green-500" /> : <BellOff className="w-5 h-5 text-destructive" />}
+                    <span className="text-[10px] font-bold uppercase">{notifPermission === 'granted' ? 'Активны' : 'Включить пуши'}</span>
+                  </Button>
+                </div>
+                <div className="space-y-4 pt-4 border-t border-white/5">
+                  <Label className="text-[10px] uppercase font-black tracking-widest text-accent flex items-center gap-2"><Palette className="w-3.5 h-3.5" /> Тема оформления</Label>
                   <div className="grid grid-cols-3 gap-3">
                     {['default', 'midnight', 'ocean'].map(t_theme => (
-                      <button key={t_theme} onClick={() => setForm({...form, theme: t_theme as any})} className={cn("flex flex-col items-center gap-2 p-3 rounded-2xl border transition-all", form.theme === t_theme ? "bg-primary/20 border-primary text-primary" : "bg-black/20 border-white/5 text-muted-foreground hover:bg-black/40")}>
-                        {t_theme === 'default' && <Monitor className="w-5 h-5" />}{t_theme === 'midnight' && <Moon className="w-5 h-5" />}{t_theme === 'ocean' && <Droplets className="w-5 h-5" />}
-                        <span className="text-[9px] uppercase font-bold tracking-widest">{t_theme === 'default' ? 'Default' : t_theme === 'midnight' ? 'Midnight' : 'Ocean'}</span>
+                      <button key={t_theme} onClick={() => setForm({...form, theme: t_theme as any})} className={cn("flex flex-col items-center gap-2 p-3 rounded-2xl border transition-all", form.theme === t_theme ? "bg-primary/20 border-primary text-primary" : "bg-black/20 border-white/5 text-muted-foreground")}>
+                        {t_theme === 'default' ? <Monitor className="w-5 h-5" /> : t_theme === 'midnight' ? <Moon className="w-5 h-5" /> : <Droplets className="w-5 h-5" />}
+                        <span className="text-[9px] font-black uppercase">{t_theme}</span>
                       </button>
                     ))}
                   </div>
                 </div>
-                <div className="space-y-4 pt-4 border-t border-white/5"><Label className="text-[10px] uppercase font-black tracking-widest text-primary flex items-center gap-2"><Type className="w-3.5 h-3.5" /> {t('settings.labels.textSize')}</Label><Select value={form.messageSize} onValueChange={(v) => setForm({...form, messageSize: v as any})}><SelectTrigger className="h-12 rounded-2xl bg-black/20 border-white/5"><SelectValue /></SelectTrigger><SelectContent className="bg-card border-white/10 rounded-2xl"><SelectItem value="small">Small</SelectItem><SelectItem value="medium">Medium</SelectItem><SelectItem value="large">Large</SelectItem></SelectContent></Select></div>
               </div>
             </TabsContent>
             <TabsContent value="security" className="space-y-6 m-0 py-6">
               <div className="bg-muted/20 p-6 rounded-[2rem] border border-white/5 space-y-6">
                 <div className="space-y-4">
-                  <Label className="text-[10px] uppercase font-black tracking-widest text-primary flex items-center gap-2"><Lock className="w-3.5 h-3.5" /> Изменение пароля</Label>
-                  <div className="space-y-4">
-                    <div className="space-y-1.5">
-                      <Label className="text-[9px] uppercase font-bold text-muted-foreground ml-1">Новый пароль</Label>
-                      <Input type="password" placeholder="••••••••" value={passwordForm.new} onChange={e => setPasswordForm({...passwordForm, new: e.target.value})} className="bg-black/20 border-white/5 h-11 rounded-xl" />
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label className="text-[9px] uppercase font-bold text-muted-foreground ml-1">Повторите новый пароль</Label>
-                      <Input type="password" placeholder="••••••••" value={passwordForm.confirm} onChange={e => setPasswordForm({...passwordForm, confirm: e.target.value})} className="bg-black/20 border-white/5 h-11 rounded-xl" />
-                    </div>
-                    <Button onClick={handleChangePassword} disabled={isUpdatingPassword} className="w-full h-11 rounded-xl bg-primary/20 hover:bg-primary text-primary hover:text-white transition-all font-bold text-[10px] uppercase">
-                      {isUpdatingPassword ? <Loader2 className="animate-spin w-4 h-4" /> : "Обновить пароль"}
-                    </Button>
+                  <div className="flex items-center justify-between">
+                    <Label className="text-[10px] uppercase font-black tracking-widest text-primary flex items-center gap-2"><ShieldCheck className="w-3.5 h-3.5" /> Двухфакторная 2FA</Label>
+                    <Switch checked={form.twoFactorEnabled} onCheckedChange={v => setForm({...form, twoFactorEnabled: v})} />
                   </div>
+                  {form.twoFactorEnabled && (
+                    <div className="space-y-2">
+                      <Label className="text-[9px] uppercase font-bold text-muted-foreground ml-1">Секретный PIN (6 цифр)</Label>
+                      <Input type="password" maxLength={6} placeholder="Введите новый PIN" value={form.twoFactorPin} onChange={e => setForm({...form, twoFactorPin: e.target.value.replace(/\D/g, '')})} className="bg-black/20 border-white/5 h-12 rounded-xl text-center text-lg tracking-[0.3em] font-black" />
+                    </div>
+                  )}
                 </div>
                 <div className="space-y-4 pt-4 border-t border-white/5">
-                  <Label className="text-[10px] uppercase font-black tracking-widest text-accent flex items-center gap-2"><ShieldCheck className="w-3.5 h-3.5" /> Приватность</Label>
+                  <Label className="text-[10px] uppercase font-black tracking-widest text-accent flex items-center gap-2"><Lock className="w-3.5 h-3.5" /> Приватность</Label>
                   <div className="space-y-4">
-                    <div className="space-y-2"><Label className="text-[9px] uppercase font-bold text-muted-foreground ml-1">Видимость телефона</Label><Select value={form.phoneVisibility} onValueChange={(v) => setForm({...form, phoneVisibility: v as any})}><SelectTrigger className="h-11 rounded-xl bg-black/20 border-white/5"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="everybody">Все</SelectItem><SelectItem value="contacts">Контакты</SelectItem><SelectItem value="nobody">Никто</SelectItem></SelectContent></Select></div>
-                    <div className="space-y-2"><Label className="text-[9px] uppercase font-bold text-muted-foreground ml-1">Кто может писать</Label><Select value={form.whoCanMessageMe} onValueChange={(v) => setForm({...form, whoCanMessageMe: v as any})}><SelectTrigger className="h-11 rounded-xl bg-black/20 border-white/5"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="everybody">Все</SelectItem><SelectItem value="premium">Только Prime</SelectItem></SelectContent></Select></div>
-                    <div className="space-y-2"><Label className="text-[9px] uppercase font-bold text-muted-foreground ml-1">Приглашения в группы</Label><Select value={form.allowGroupsFrom} onValueChange={(v) => setForm({...form, allowGroupsFrom: v as any})}><SelectTrigger className="h-11 rounded-xl bg-black/20 border-white/5"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="everybody">Все</SelectItem><SelectItem value="contacts">Только контакты</SelectItem><SelectItem value="premium">Только Premium</SelectItem><SelectItem value="nobody">Никто</SelectItem></SelectContent></Select></div>
+                    <div className="space-y-2">
+                      <Label className="text-[9px] uppercase font-bold text-muted-foreground ml-1">Видимость телефона</Label>
+                      <Select value={form.phoneVisibility} onValueChange={(v) => setForm({...form, phoneVisibility: v as any})}><SelectTrigger className="h-11 rounded-xl bg-black/20 border-white/5"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="everybody">Все</SelectItem><SelectItem value="contacts">Контакты</SelectItem><SelectItem value="nobody">Никто</SelectItem></SelectContent></Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-[9px] uppercase font-bold text-muted-foreground ml-1">Приглашения в группы</Label>
+                      <Select value={form.allowGroupsFrom} onValueChange={(v) => setForm({...form, allowGroupsFrom: v as any})}><SelectTrigger className="h-11 rounded-xl bg-black/20 border-white/5"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="everybody">Все</SelectItem><SelectItem value="contacts">Контакты</SelectItem><SelectItem value="premium">Premium</SelectItem><SelectItem value="nobody">Никто</SelectItem></SelectContent></Select>
+                    </div>
                   </div>
                 </div>
               </div>
             </TabsContent>
-            <TabsContent value="referral" className="space-y-6 m-0 py-6">
+            <TabsContent value="referral" className="py-6">
               <div className="bg-muted/20 p-6 rounded-[2rem] border border-white/5 space-y-6">
-                <div className="flex flex-col items-center text-center gap-4">
-                  <div className="bg-primary/10 p-4 rounded-3xl">
-                    <Users className="w-10 h-10 text-primary" />
-                  </div>
-                  <div className="space-y-1">
-                    <h3 className="text-lg font-black uppercase italic text-white tracking-tighter">Пригласи 5 друзей</h3>
-                    <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest leading-relaxed">Получи месяц Premium бесплатно за каждых 5 новых пользователей</p>
-                  </div>
+                <div className="text-center space-y-2">
+                  <div className="bg-primary/10 w-16 h-16 rounded-3xl flex items-center justify-center mx-auto mb-2"><Users className="w-8 h-8 text-primary" /></div>
+                  <h3 className="text-lg font-black uppercase italic text-white tracking-tighter">Пригласи 5 друзей</h3>
+                  <p className="text-[10px] font-bold text-muted-foreground uppercase leading-relaxed">Получи месяц Premium за каждых 5 новых пользователей</p>
                 </div>
-
                 <div className="space-y-3">
-                  <div className="flex justify-between text-[10px] font-black uppercase tracking-widest">
-                    <span className="text-muted-foreground">Твой прогресс</span>
-                    <span className="text-primary">{referralCount} / 5</span>
-                  </div>
-                  <Progress value={progressToNextReward} className="h-2 bg-black/40" />
-                  <p className="text-[8px] italic text-muted-foreground text-center uppercase tracking-tighter">
-                    {referralCount >= 5 ? `Всего приглашено: ${referralCount}` : `Осталось пригласить: ${5 - (referralCount % 5)}`}
-                  </p>
+                  <div className="flex justify-between text-[10px] font-black uppercase"><span className="text-muted-foreground">Прогресс</span><span className="text-primary">{profile?.referralCount || 0} / 5</span></div>
+                  <Progress value={((profile?.referralCount || 0) % 5) * 20} className="h-2" />
                 </div>
-
-                <div className="pt-4 border-t border-white/5 space-y-3">
-                  <Label className="text-[10px] uppercase font-black tracking-widest text-muted-foreground ml-1">Твоя ссылка</Label>
-                  <div className="flex gap-2">
-                    <Input readOnly value={getReferralLink()} className="bg-black/20 border-white/5 h-11 text-[10px] font-mono rounded-xl truncate" />
-                    <Button size="icon" variant="outline" className="h-11 w-11 shrink-0 rounded-xl border-white/10 hover:bg-primary/10" onClick={copyReferralLink}>
-                      <Copy className="w-4 h-4" />
-                    </Button>
-                  </div>
-                  <Button className="w-full h-11 rounded-xl bg-primary/20 hover:bg-primary text-primary hover:text-white transition-all font-black text-[10px] uppercase tracking-widest">
-                    <Share2 className="w-4 h-4 mr-2" /> Поделиться
-                  </Button>
-                </div>
-
-                {/* Invited Friends List */}
-                <div className="pt-6 border-t border-white/5 space-y-4">
-                  <Label className="text-[10px] uppercase font-black tracking-widest text-muted-foreground ml-1 flex items-center gap-2">
-                    <UserCheck className="w-3.5 h-3.5 text-primary" /> Ваши приглашенные ({invitedFriends?.length || 0})
-                  </Label>
-                  
-                  <div className="space-y-2">
-                    {isInvitedLoading ? (
-                      <div className="flex justify-center py-4"><Loader2 className="w-5 h-5 animate-spin text-primary/50" /></div>
-                    ) : invitedFriends && invitedFriends.length > 0 ? (
-                      invitedFriends.map(friend => (
-                        <div key={friend.id} className="flex items-center gap-3 p-3 bg-black/20 rounded-2xl border border-white/5 hover:bg-black/40 transition-all group">
-                          <UserAvatar 
-                            userId={friend.id} 
-                            className="h-9 w-9 border border-white/10 group-hover:border-primary/40 transition-colors" 
-                            manualAvatarUrl={friend.avatarUrl}
-                            fallbackName={friend.name}
-                          />
-                          <div className="flex flex-col min-w-0">
-                            <span className="text-xs font-bold text-white truncate flex items-center gap-1">
-                              {formatDisplayName(friend.name)}
-                              {isUserPremium(friend) && <Star className="w-2.5 h-2.5 text-accent fill-accent" />}
-                            </span>
-                            <span className="text-[9px] text-muted-foreground uppercase font-medium truncate">{friend.username}</span>
-                          </div>
-                        </div>
-                      ))
-                    ) : (
-                      <div className="text-center py-8 bg-black/10 rounded-2xl border border-dashed border-white/5">
-                        <p className="text-[9px] uppercase font-black tracking-widest text-muted-foreground/40 italic">У вас пока нет приглашенных</p>
-                      </div>
-                    )}
-                  </div>
-                </div>
+                <Button onClick={copyReferralLink} className="w-full h-12 rounded-2xl bg-primary/20 text-primary hover:bg-primary hover:text-white transition-all font-black uppercase text-[10px] tracking-widest"><Share2 className="w-4 h-4 mr-2" /> Поделиться ссылкой</Button>
               </div>
             </TabsContent>
-            <TabsContent value="store" className="space-y-6 m-0 py-6">
-              <div className="relative p-6 rounded-[2rem] bg-gradient-to-br from-primary/20 to-accent/10 border border-primary/20 overflow-hidden group">
-                <Crown className="w-12 h-12 text-primary mb-4 relative z-10" />
-                <h3 className="text-xl font-black text-white italic tracking-tighter mb-2 relative z-10">NUXUS PRIME</h3>
-                <div className="space-y-3 relative z-10">{PREMIUM_PLANS.map(plan => (<button key={plan.id} onClick={() => setPendingPayment(plan)} className="w-full h-14 rounded-2xl bg-black/40 border border-white/10 flex items-center justify-between px-6 hover:border-primary/50 transition-all"><span className="font-bold text-sm">{plan.name}</span><span className="font-black text-primary italic">{plan.price} ₽</span></button>))}</div>
+            <TabsContent value="store" className="py-6">
+              <div className="relative p-6 rounded-[2rem] bg-gradient-to-br from-primary/20 to-accent/10 border border-primary/20 overflow-hidden text-center">
+                <Crown className="w-12 h-12 text-primary mx-auto mb-4" />
+                <h3 className="text-xl font-black text-white italic tracking-tighter mb-4 uppercase">NUXUS PRIME</h3>
+                <div className="space-y-2">
+                  {PREMIUM_PLANS.map(plan => (
+                    <button key={plan.id} onClick={() => setPendingPayment(plan)} className="w-full h-14 rounded-2xl bg-black/40 border border-white/5 flex items-center justify-between px-6 hover:border-primary transition-all">
+                      <span className="font-bold text-xs uppercase">{plan.name}</span>
+                      <span className="font-black text-primary italic">{plan.price} ₽</span>
+                    </button>
+                  ))}
+                </div>
               </div>
             </TabsContent>
           </ScrollArea>
           <div className="p-6 border-t border-white/5 bg-muted/20 shrink-0 flex gap-3">
             <Button variant="ghost" className="h-14 w-14 rounded-2xl bg-destructive/10 text-destructive hover:bg-destructive hover:text-white transition-all shrink-0" onClick={() => signOut(auth)}><LogOut className="w-6 h-6" /></Button>
-            <Button className="flex-1 h-14 rounded-2xl font-black uppercase tracking-[0.2em] italic bg-primary shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all text-xs" onClick={handleSave}><Check className="w-5 h-5 mr-2" /> {t('settings.labels.save')}</Button>
+            <Button className="flex-1 h-14 rounded-2xl font-black uppercase tracking-[0.2em] italic bg-primary shadow-xl shadow-primary/20 text-xs" onClick={handleSave}><Check className="w-5 h-5 mr-2" /> {t('settings.labels.save')}</Button>
           </div>
         </Tabs>
       </DialogContent>
@@ -387,11 +287,11 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
       <DialogContent className="max-sm bg-card border-primary/20 p-8 rounded-[3rem] text-center shadow-2xl">
         <Crown className="w-16 h-16 text-primary mx-auto mb-6 animate-float" />
         <h2 className="text-2xl font-black text-white italic tracking-tighter mb-2">Оплата Prime</h2>
-        <div className="bg-black/40 p-6 rounded-3xl border border-white/10 mb-8 group cursor-pointer relative overflow-hidden" onClick={() => { navigator.clipboard.writeText(CARD_NUMBER.replace(/\s/g, '')); toast({ title: "Номер карты скопирован" }); }}>
+        <div className="bg-black/40 p-6 rounded-3xl border border-white/10 mb-8 cursor-pointer" onClick={() => { navigator.clipboard.writeText(CARD_NUMBER.replace(/\s/g, '')); toast({ title: "Карта скопирована" }); }}>
           <div className="text-[10px] uppercase font-bold text-muted-foreground mb-1">Номер карты</div>
           <div className="text-lg font-mono font-black text-white tracking-widest">{CARD_NUMBER}</div>
         </div>
-        <Button className="w-full h-14 rounded-2xl font-black uppercase tracking-[0.2em] bg-primary shadow-xl shadow-primary/30" onClick={handleConfirmPayment} disabled={isSubmittingPayment}>{isSubmittingPayment ? <Loader2 className="animate-spin w-6 h-6" /> : "Я оплатил"}</Button>
+        <Button className="w-full h-14 rounded-2xl font-black uppercase tracking-[0.2em] bg-primary shadow-xl shadow-primary/30" onClick={() => { toast({ title: "Запрос отправлен" }); setPendingPayment(null); }} disabled={isSubmittingPayment}>Я оплатил</Button>
       </DialogContent>
     </Dialog>
     </>

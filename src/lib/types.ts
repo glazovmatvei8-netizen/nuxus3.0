@@ -139,4 +139,6 @@ export interface User {
   isArchived?: string[]; // array of chatIds
   referralCount?: number;
   invitedBy?: string;
+  twoFactorEnabled?: boolean;
+  twoFactorPin?: string;
 }

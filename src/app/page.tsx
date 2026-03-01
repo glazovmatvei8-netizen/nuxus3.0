@@ -1,16 +1,16 @@
 
 "use client"
 
-import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
+import { useUser, useFirestore, useDoc, useMemoFirebase, useAuth } from '@/firebase';
 import { useAppState } from '@/lib/store';
 import AuthScreen from '@/components/auth-screen';
 import ChatMain from '@/components/chat-main';
-import { Loader2, ShieldAlert } from 'lucide-react';
+import { Loader2, ShieldAlert, Lock, ArrowRight } from 'lucide-react';
 import { doc, collection, query, where, limit, getDocs, arrayUnion, updateDoc } from 'firebase/firestore';
 import type { User as UserType, Chat } from '@/lib/types';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { signOut } from 'firebase/auth';
-import { useAuth } from '@/firebase';
 import { useEffect, useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 
@@ -18,9 +18,10 @@ export default function Home() {
   const { user, isUserLoading } = useUser();
   const db = useFirestore();
   const auth = useAuth();
-  const { setCurrentChatId } = useAppState();
+  const { setCurrentChatId, is2FAVerified, setIs2FAVerified } = useAppState();
   const { toast } = useToast();
   const [isJoining, setIsJoining] = useState(false);
+  const [twoFactorInput, setTwoFactorInput] = useState('');
 
   const userProfileRef = useMemoFirebase(() => {
     if (!db || !user) return null;
@@ -29,9 +30,9 @@ export default function Home() {
 
   const { data: profile, isLoading: isProfileLoading } = useDoc<UserType>(userProfileRef);
 
-  // Handle ?join=@username link logic with robust search
+  // Handle ?join=@username link logic
   useEffect(() => {
-    if (!user || !db || isJoining) return;
+    if (!user || !db || isJoining || !is2FAVerified && profile?.twoFactorEnabled) return;
 
     const params = new URLSearchParams(window.location.search);
     const joinParam = params.get('join');
@@ -40,59 +41,38 @@ export default function Home() {
       const handleJoin = async () => {
         setIsJoining(true);
         try {
-          // Normalize username for search (must be lowercase)
           const searchUsername = joinParam.startsWith('@') ? joinParam.toLowerCase() : '@' + joinParam.toLowerCase();
-          
-          const q = query(
-            collection(db, 'chats'), 
-            where('username', '==', searchUsername), 
-            limit(1)
-          );
-          
+          const q = query(collection(db, 'chats'), where('username', '==', searchUsername), limit(1));
           const snap = await getDocs(q);
 
           if (!snap.empty) {
             const chatDoc = snap.docs[0];
             const chatData = { id: chatDoc.id, ...chatDoc.data() } as Chat;
-            
             if (!chatData.participantIds.includes(user.uid)) {
-              await updateDoc(doc(db, 'chats', chatDoc.id), {
-                participantIds: arrayUnion(user.uid)
-              });
+              await updateDoc(doc(db, 'chats', chatDoc.id), { participantIds: arrayUnion(user.uid) });
               toast({ title: "Успех", description: `Вы вступили в ${chatData.name}` });
             }
-            
             setCurrentChatId(chatDoc.id);
-            // Clear URL params without reloading
             window.history.replaceState({}, document.title, window.location.pathname);
-          } else {
-            // Try exact match case just in case some old data exists
-            const qExact = query(collection(db, 'chats'), where('username', '==', joinParam.startsWith('@') ? joinParam : '@' + joinParam), limit(1));
-            const snapExact = await getDocs(qExact);
-            
-            if (!snapExact.empty) {
-              const chatDoc = snapExact.docs[0];
-              const chatData = { id: chatDoc.id, ...chatDoc.data() } as Chat;
-              if (!chatData.participantIds.includes(user.uid)) {
-                await updateDoc(doc(db, 'chats', chatDoc.id), { participantIds: arrayUnion(user.uid) });
-              }
-              setCurrentChatId(chatDoc.id);
-              window.history.replaceState({}, document.title, window.location.pathname);
-            } else {
-              toast({ title: "Ошибка", description: "Группа не найдена или ник указан неверно", variant: "destructive" });
-              window.history.replaceState({}, document.title, window.location.pathname);
-            }
           }
         } catch (e) {
           console.error("Join error:", e);
-          toast({ title: "Ошибка системы", description: "Не удалось обработать ссылку", variant: "destructive" });
         } finally {
           setIsJoining(false);
         }
       };
       handleJoin();
     }
-  }, [user, db, setCurrentChatId, toast, isJoining]);
+  }, [user, db, setCurrentChatId, toast, isJoining, is2FAVerified, profile]);
+
+  const handleVerify2FA = () => {
+    if (twoFactorInput === profile?.twoFactorPin) {
+      setIs2FAVerified(true);
+      toast({ title: "Доступ разрешен", description: "Двухфакторная проверка пройдена" });
+    } else {
+      toast({ title: "Ошибка кода", description: "Неверный PIN-код", variant: "destructive" });
+    }
+  };
 
   if (isUserLoading || isJoining) {
     return (
@@ -126,12 +106,45 @@ export default function Home() {
           <ShieldAlert className="w-16 h-16 text-destructive" />
         </div>
         <h1 className="text-3xl font-bold mb-4 text-white">Аккаунт заблокирован</h1>
-        <p className="text-muted-foreground max-w-md mb-8">
-          Ваш доступ к мессенджеру был ограничен за нарушение правил сообщества.
-        </p>
-        <Button variant="outline" onClick={() => signOut(auth)}>
-          Выйти
-        </Button>
+        <p className="text-muted-foreground max-w-md mb-8">Ваш доступ к мессенджеру был ограничен.</p>
+        <Button variant="outline" onClick={() => signOut(auth)}>Выйти</Button>
+      </div>
+    );
+  }
+
+  // 2FA Verification Overlay
+  if (profile?.twoFactorEnabled && !is2FAVerified) {
+    return (
+      <div className="h-screen w-full flex items-center justify-center bg-background relative overflow-hidden">
+        <div className="absolute inset-0 nuxus-core-glow opacity-20 animate-pulse-glow" />
+        <div className="relative z-10 w-full max-w-md p-8">
+          <div className="bg-card/40 backdrop-blur-3xl border border-white/5 rounded-[3rem] p-10 text-center space-y-8">
+            <div className="bg-primary/10 w-20 h-20 rounded-3xl flex items-center justify-center mx-auto shadow-2xl">
+              <Lock className="w-10 h-10 text-primary" />
+            </div>
+            <div className="space-y-2">
+              <h2 className="text-3xl font-black uppercase italic text-white tracking-tighter">Защита Nuxus</h2>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60 leading-relaxed">
+                Введите ваш секретный PIN-код для облачного подтверждения личности
+              </p>
+            </div>
+            <div className="space-y-4">
+              <Input 
+                type="password" 
+                placeholder="••••••" 
+                maxLength={6} 
+                className="bg-black/20 border-white/5 h-16 text-2xl tracking-[0.5em] text-center rounded-2xl font-black"
+                value={twoFactorInput}
+                onChange={e => setTwoFactorInput(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && handleVerify2FA()}
+              />
+              <Button onClick={handleVerify2FA} className="w-full h-14 rounded-2xl bg-primary font-black uppercase italic tracking-widest shadow-xl shadow-primary/20">
+                Подтвердить <ArrowRight className="w-5 h-5 ml-2" />
+              </Button>
+              <Button variant="ghost" onClick={() => signOut(auth)} className="w-full text-[10px] font-bold uppercase opacity-40">Выйти из аккаунта</Button>
+            </div>
+          </div>
+        </div>
       </div>
     );
   }

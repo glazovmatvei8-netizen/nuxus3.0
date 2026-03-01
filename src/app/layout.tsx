@@ -4,12 +4,12 @@ import './globals.css';
 import { AppProvider } from '@/lib/store';
 import { Toaster } from '@/components/ui/toaster';
 import { FirebaseClientProvider } from '@/firebase/client-provider';
-import { Inter } from 'next/font/google';
+import { Plus_Jakarta_Sans } from 'next/font/google';
 
-const inter = Inter({
+const font = Plus_Jakarta_Sans({
   subsets: ['latin', 'cyrillic'],
   display: 'swap',
-  variable: '--font-inter',
+  variable: '--font-jakarta',
 });
 
 export const metadata: Metadata = {
@@ -59,7 +59,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="ru" className={`dark ${inter.variable}`} suppressHydrationWarning>
+    <html lang="ru" className={`dark ${font.variable}`} suppressHydrationWarning>
       <body className="font-sans antialiased bg-background text-foreground overflow-hidden h-[100dvh]">
         <FirebaseClientProvider>
           <AppProvider>

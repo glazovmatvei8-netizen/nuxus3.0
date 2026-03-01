@@ -13,6 +13,8 @@ interface AppState {
   setActiveCallId: (id: string | null) => void;
   localDrafts: Record<string, string>;
   setLocalDrafts: React.Dispatch<React.SetStateAction<Record<string, string>>>;
+  is2FAVerified: boolean;
+  setIs2FAVerified: (v: boolean) => void;
 }
 
 const AppContext = createContext<AppState | undefined>(undefined);
@@ -22,6 +24,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [forwardingMessage, setForwardingMessage] = useState<Message | null>(null);
   const [activeCallId, setActiveCallId] = useState<string | null>(null);
   const [localDrafts, setLocalDrafts] = useState<Record<string, string>>({});
+  const [is2FAVerified, setIs2FAVerified] = useState(false);
 
   return (
     <AppContext.Provider value={{
@@ -32,7 +35,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       activeCallId,
       setActiveCallId,
       localDrafts,
-      setLocalDrafts
+      setLocalDrafts,
+      is2FAVerified,
+      setIs2FAVerified
     }}>
       {children}
     </AppContext.Provider>
