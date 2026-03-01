@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
   Send, Info, ChevronLeft, Loader2, Bookmark, X, Video, Circle, Wand2, Phone, Search as SearchIcon,
-  Zap, Calendar as CalendarIcon, Paperclip, Image as ImageIcon, Trash2
+  Zap, Calendar as CalendarIcon, Paperclip, Image as ImageIcon, Trash2, Mic, StopCircle
 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { MessageItem } from './message-item';
@@ -83,6 +83,13 @@ export default function ChatArea() {
   const [scheduledDate, setScheduledDate] = useState<Date | undefined>(undefined);
   const [expiryTime, setExpiryTime] = useState<number | null>(null);
   const [isOneTime, setIsOneTime] = useState(false);
+
+  // Audio Recording State
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingDuration, setRecordingDuration] = useState(0);
+  const audioRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const recordingIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -244,7 +251,6 @@ export default function ChatArea() {
         scheduledAt: scheduledDate ? scheduledDate.toISOString() : null
       };
       
-      // Если это одиночное медиа, перезаписываем content на URL для обратной совместимости
       if (pendingMedia.length === 1) {
         mediaMsg.content = pendingMedia[0].url;
       }
@@ -262,7 +268,7 @@ export default function ChatArea() {
         content: trimmedContent, 
         contentType: type_msg, 
         sentAt: new Date().toISOString(), 
-        isRead: false,
+        isRead: false, 
         scheduledAt: scheduledDate ? scheduledDate.toISOString() : null,
         expiresInSeconds: expiryTime,
         isOneTimeView: isOneTime
@@ -307,6 +313,47 @@ export default function ChatArea() {
     setPendingMedia(prev => prev.filter((_, i) => i !== index));
   };
 
+  const startAudioRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const recorder = new MediaRecorder(stream);
+      audioRecorderRef.current = recorder;
+      audioChunksRef.current = [];
+
+      recorder.ondataavailable = (e) => {
+        if (e.data.size > 0) audioChunksRef.current.push(e.data);
+      };
+
+      recorder.onstop = async () => {
+        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        const reader = new FileReader();
+        reader.readAsDataURL(audioBlob);
+        reader.onloadend = () => {
+          handleSendMessage(reader.result as string, 'audio');
+        };
+        stream.getTracks().forEach(track => track.stop());
+      };
+
+      recorder.start();
+      setIsRecording(true);
+      setRecordingDuration(0);
+      recordingIntervalRef.current = setInterval(() => {
+        setRecordingDuration(prev => prev + 1);
+      }, 1000);
+    } catch (err) {
+      toast({ variant: 'destructive', title: 'Ошибка микрофона', description: 'Разрешите доступ к микрофону.' });
+    }
+  };
+
+  const stopAudioRecording = (send: boolean = true) => {
+    if (audioRecorderRef.current && isRecording) {
+      if (!send) audioChunksRef.current = [];
+      audioRecorderRef.current.stop();
+      setIsRecording(false);
+      if (recordingIntervalRef.current) clearInterval(recordingIntervalRef.current);
+    }
+  };
+
   const handleAiDraft = async () => {
     if (!messages || !amIPremium) return;
     setIsDrafting(true);
@@ -331,30 +378,16 @@ export default function ChatArea() {
     } catch (e) { toast({ title: "Ошибка", description: "Не удалось начать вызов.", variant: "destructive" }); }
   };
 
-  const startRecording = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 480, height: 480 }, audio: true });
-      if (videoRef.current) videoRef.current.srcObject = stream;
-      const mediaRecorder = new MediaRecorder(stream);
-      mediaRecorderRef.current = mediaRecorder;
-      const chunks: Blob[] = [];
-      mediaRecorder.ondataavailable = (e) => chunks.push(e.data);
-      mediaRecorder.onstop = async () => {
-        const blob = new Blob(chunks, { type: 'video/mp4' });
-        const reader = new FileReader();
-        reader.readAsDataURL(blob);
-        reader.onloadend = () => { handleSendMessage(reader.result as string, 'video'); };
-        stream.getTracks().forEach(track => track.stop());
-      };
-      mediaRecorder.start();
-    } catch (err) { toast({ variant: 'destructive', title: 'Ошибка камеры', description: 'Предоставьте доступ к камере в настройках.' }); }
-  };
-
   const chatDisplayName = useMemo(() => {
     if (otherProfile?.name) return otherProfile.name;
     if (otherMetadata?.name) return otherMetadata.name;
     return chat?.name || '...';
   }, [chat, otherMetadata, otherProfile]);
+
+  const headerAvatarUrl = useMemo(() => {
+    if (otherId) return otherProfile?.avatarUrl || otherMetadata?.avatarUrl;
+    return chat?.avatarUrl;
+  }, [otherId, otherProfile, otherMetadata, chat]);
 
   if (!currentChatId) return (
     <div className="flex-1 flex flex-col items-center justify-center text-center p-8 bg-background relative overflow-hidden">
@@ -381,7 +414,7 @@ export default function ChatArea() {
             </div>
           ) : (
             <div className="flex items-center gap-3 cursor-pointer min-w-0 group" onClick={() => setIsChatInfoOpen(true)}>
-              <UserAvatar userId={otherId} manualAvatarUrl={otherMetadata?.avatarUrl} className="h-10 w-10" fallbackName={chatDisplayName} />
+              <UserAvatar userId={otherId} manualAvatarUrl={headerAvatarUrl} className="h-10 w-10" fallbackName={chatDisplayName} />
               <div className="flex flex-col min-w-0">
                 <span className="font-bold text-sm truncate group-hover:text-primary transition-colors">{formatDisplayName(chatDisplayName)}</span>
                 <span className="text-[10px] text-muted-foreground/60 tracking-widest truncate uppercase">Ядро Nuxus</span>
@@ -404,13 +437,25 @@ export default function ChatArea() {
       <ScrollArea ref={scrollRef} className="flex-1 w-full relative z-10 scrollbar-hide">
         {messages && (
           <MessageList 
-            messages={messages} userId={firebaseUser?.uid} chatId={currentChatId} onReply={setReplyTo} onEdit={(msg: Message) => { setEditingMsg(msg); setMessageInput(msg.content); setReplyTo(null); }} amIPremium={amIPremium} isAdmin={chat?.ownerId === firebaseUser?.uid || isGlobalAdmin(userProfile)} otherAvatarUrl={otherProfile?.avatarUrl || otherMetadata?.avatarUrl}
+            messages={messages} userId={firebaseUser?.uid} chatId={currentChatId} onReply={setReplyTo} onEdit={(msg: Message) => { setEditingMsg(msg); setMessageInput(msg.content); setReplyTo(null); }} amIPremium={amIPremium} isAdmin={chat?.ownerId === firebaseUser?.uid || isGlobalAdmin(userProfile)} otherAvatarUrl={headerAvatarUrl}
           />
         )}
       </ScrollArea>
 
       <footer className="p-3 bg-card border-t border-white/5 shrink-0">
         <div className="max-w-4xl mx-auto space-y-2">
+          {isRecording && (
+            <div className="flex items-center justify-between p-3 bg-red-500/10 rounded-2xl border border-red-500/20 animate-in slide-in-from-bottom-2">
+              <div className="flex items-center gap-3">
+                <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse" />
+                <span className="text-xs font-black text-red-500 uppercase tracking-widest">Запись: {Math.floor(recordingDuration / 60)}:{(recordingDuration % 60).toString().padStart(2, '0')}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button variant="ghost" size="sm" className="h-8 text-[10px] uppercase font-bold text-muted-foreground" onClick={() => stopAudioRecording(false)}>Отмена</Button>
+                <Button size="icon" className="h-9 w-9 rounded-xl bg-red-500 hover:bg-red-600" onClick={() => stopAudioRecording(true)}><StopCircle className="w-5 h-5" /></Button>
+              </div>
+            </div>
+          )}
           {pendingMedia.length > 0 && (
             <div className="flex gap-2 p-2 bg-muted/40 rounded-2xl overflow-x-auto scrollbar-hide">
               {pendingMedia.map((media, idx) => (
@@ -453,12 +498,13 @@ export default function ChatArea() {
               size="icon" 
               className="h-11 w-11 rounded-xl shrink-0 bg-muted"
               onClick={() => fileInputRef.current?.click()}
+              disabled={isRecording}
             >
               <Paperclip className="w-5 h-5 text-muted-foreground" />
             </Button>
             <Popover>
               <PopoverTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-11 w-11 rounded-xl shrink-0 bg-muted"><Zap className="w-5 h-5 text-primary" /></Button>
+                <Button variant="ghost" size="icon" className="h-11 w-11 rounded-xl shrink-0 bg-muted" disabled={isRecording}><Zap className="w-5 h-5 text-primary" /></Button>
               </PopoverTrigger>
               <PopoverContent className="w-64 p-3 rounded-2xl bg-card/95 backdrop-blur-xl border-white/10 shadow-2xl space-y-4">
                 <div className="space-y-2">
@@ -487,15 +533,18 @@ export default function ChatArea() {
                 value={messageInput} 
                 onChange={e => onInputChange(e.target.value)} 
                 onKeyDown={e => e.key === 'Enter' && !e.shiftKey && handleSendMessage()} 
+                disabled={isRecording}
               />
-              {amIPremium && !editingMsg && (<button onClick={handleAiDraft} disabled={isDrafting} className="absolute right-3 top-1/2 -translate-y-1/2 text-primary hover:scale-110">{isDrafting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wand2 className="w-4 h-4" />}</button>)}
+              {amIPremium && !editingMsg && (<button onClick={handleAiDraft} disabled={isDrafting || isRecording} className="absolute right-3 top-1/2 -translate-y-1/2 text-primary hover:scale-110">{isDrafting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wand2 className="w-4 h-4" />}</button>)}
             </div>
-            {(!messageInput.trim() && pendingMedia.length === 0) ? (
-              <Button size="icon" className="h-11 w-11 rounded-xl shrink-0 bg-primary" onClick={startRecording}><Circle className="w-5 h-5" /></Button>
+            {(!messageInput.trim() && pendingMedia.length === 0 && !isRecording) ? (
+              <Button size="icon" className="h-11 w-11 rounded-xl shrink-0 bg-primary" onClick={startAudioRecording}><Mic className="w-5 h-5" /></Button>
             ) : (
-              <Button size="icon" className="h-11 w-11 rounded-xl shrink-0 bg-primary" onClick={() => handleSendMessage()} disabled={isSending}>
-                {isSending ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
-              </Button>
+              !isRecording && (
+                <Button size="icon" className="h-11 w-11 rounded-xl shrink-0 bg-primary" onClick={() => handleSendMessage()} disabled={isSending}>
+                  {isSending ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
+                </Button>
+              )
             )}
           </div>
         </div>

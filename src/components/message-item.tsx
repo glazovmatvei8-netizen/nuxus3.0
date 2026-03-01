@@ -1,7 +1,7 @@
 
 "use client"
 
-import React, { useState, useEffect, memo, useMemo } from 'react';
+import React, { useState, useEffect, memo, useMemo, useRef } from 'react';
 import { useUser, useFirestore } from '@/firebase';
 import { useAppState } from '@/lib/store';
 import { UserAvatar } from '@/components/user-avatar';
@@ -22,7 +22,7 @@ import {
   Fish, Bitcoin, Coins, Gamepad2, Music, Smile, ThumbsUp, Bell, Mail, 
   Key, Lock, Shield, Sword, Anchor, Compass, Map, Flag, Briefcase, GraduationCap,
   Pin, Forward, Gift, PlayCircle, Edit2, Copy, Timer, EyeOff, Clock, Search, X,
-  ChevronLeft, ChevronRight
+  ChevronLeft, ChevronRight, Pause, Play
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { doc } from 'firebase/firestore';
@@ -61,6 +61,11 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, amIPremium = 
   const [galleryOpen, setGalleryOpen] = useState(false);
   const [galleryIndex, setGalleryIndex] = useState(0);
 
+  // Audio State
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [audioProgress, setAudioProgress] = useState(0);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
   const formattedTime = message.sentAt ? format(new Date(message.sentAt), 'HH:mm') : '';
 
   const albumMedia = useMemo(() => {
@@ -97,6 +102,27 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, amIPremium = 
       const { text } = await transcribeVoice({ audioDataUri: message.content });
       setTranscription(text);
     } catch (e) {} finally { setIsTranscribing(false); }
+  };
+
+  const toggleAudio = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!audioRef.current) {
+      audioRef.current = new Audio(message.content);
+      audioRef.current.addEventListener('timeupdate', () => {
+        if (audioRef.current) setAudioProgress((audioRef.current.currentTime / audioRef.current.duration) * 100);
+      });
+      audioRef.current.addEventListener('ended', () => {
+        setIsPlaying(false);
+        setAudioProgress(0);
+      });
+    }
+
+    if (isPlaying) {
+      audioRef.current.pause();
+    } else {
+      audioRef.current.play();
+    }
+    setIsPlaying(!isPlaying);
   };
 
   const handlePin = () => {
@@ -173,7 +199,6 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, amIPremium = 
       );
     }
 
-    // Рендеринг Альбомов и Медиа
     if (message.contentType === 'album' || message.contentType === 'image' || message.contentType === 'video') {
       const isOneTime = message.isOneTimeView;
       return (
@@ -213,13 +238,22 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, amIPremium = 
 
     if (message.contentType === 'audio') {
       return (
-        <div className="flex flex-col gap-1 mt-1">
-          <div className="flex items-center gap-2 p-2 bg-muted/20 rounded-xl">
-            <Mic className="w-4 h-4 text-primary" />
-            <span className="text-xs">Голосовое сообщение</span>
-            {amIPremium && (<Button variant="ghost" size="icon" className="h-6 w-6" onClick={(e) => { e.stopPropagation(); handleTranscribe(); }} disabled={isTranscribing}>{isTranscribing ? <Loader2 className="w-3 h-3 animate-spin" /> : <Languages className="w-3 h-3" />}</Button>)}
+        <div className="flex flex-col gap-2 mt-1 min-w-[200px]">
+          <div className="flex items-center gap-3 p-3 bg-muted/20 rounded-2xl border border-white/5">
+            <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full bg-primary/20 text-primary hover:bg-primary hover:text-white transition-all shrink-0" onClick={toggleAudio}>
+              {isPlaying ? <Pause className="w-5 h-5 fill-current" /> : <Play className="w-5 h-5 fill-current ml-0.5" />}
+            </Button>
+            <div className="flex-1 space-y-1.5">
+              <div className="h-1 w-full bg-white/10 rounded-full overflow-hidden">
+                <div className="h-full bg-primary transition-all duration-300" style={{ width: `${audioProgress}%` }} />
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-[10px] font-bold uppercase text-primary tracking-widest">Голосовое</span>
+                {amIPremium && (<Button variant="ghost" size="icon" className="h-6 w-6" onClick={(e) => { e.stopPropagation(); handleTranscribe(); }} disabled={isTranscribing}>{isTranscribing ? <Loader2 className="w-3 h-3 animate-spin" /> : <Languages className="w-3 h-3" />}</Button>)}
+              </div>
+            </div>
           </div>
-          {transcription && <p className="text-[10px] italic opacity-80 p-2 bg-primary/5 rounded-lg text-left max-w-[200px] break-words">{transcription}</p>}
+          {transcription && <p className="text-[10px] italic opacity-80 p-2 bg-primary/5 rounded-lg text-left break-words border border-primary/10">{transcription}</p>}
         </div>
       );
     }
@@ -272,12 +306,10 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, amIPremium = 
       </div>
     </div>
 
-    {/* Полноэкранная Галерея (Альбом / Медиа) */}
     <Dialog open={galleryOpen} onOpenChange={closeGallery}>
       <DialogContent className="max-w-4xl h-[90vh] bg-black/95 border-none p-0 overflow-hidden flex flex-col items-center justify-center">
         <DialogHeader className="sr-only"><DialogTitle>Галерея Nuxus</DialogTitle></DialogHeader>
         
-        {/* Header Controls */}
         <div className="absolute top-4 left-4 right-4 flex items-center justify-between z-50">
           <div className="text-white/60 text-[10px] font-bold uppercase tracking-widest">
             {galleryIndex + 1} / {albumMedia.length}
@@ -287,7 +319,6 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, amIPremium = 
           </Button>
         </div>
 
-        {/* Media Viewport */}
         <div className="relative w-full h-full flex items-center justify-center p-4">
           {albumMedia[galleryIndex]?.type === 'video' ? (
             <video 
@@ -305,7 +336,6 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, amIPremium = 
             />
           )}
 
-          {/* Navigation Controls */}
           {albumMedia.length > 1 && (
             <>
               <Button 
@@ -327,8 +357,6 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, amIPremium = 
             </>
           )}
         </div>
-        
-        {/* Caption Area (If needed in future) */}
       </DialogContent>
     </Dialog>
     </>
