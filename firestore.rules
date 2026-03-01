@@ -7,7 +7,7 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    // ГЛАВНЫЙ КОРЕНЬ NUXUS PRIME (vnctow46)
+    // ГЛАВНЫЙ КОРЕНЬ NUXUS PRIME (Админы)
     function isPrimeAdmin() {
       return isSignedIn() && (
         request.auth.uid == 'vnctow46' || 
@@ -17,18 +17,13 @@ service cloud.firestore {
       );
     }
 
-    // МАКСИМАЛЬНЫЙ ОВЕРРАЙД ДЛЯ ВЛАДЕЛЬЦА
-    function isMasterOverride() {
-      return isSignedIn() && (
-        request.auth.token.email != null && (
-          request.auth.token.email.matches('.*79997457325.*') ||
-          request.auth.token.email.matches('.*79513332147.*')
-        )
-      );
+    // ПРИОРИТЕТНЫЙ ДОСТУП ДЛЯ АДМИНОВ (Исправляет ошибку "/" path)
+    match /{document=**} {
+      allow read, list, write: if isPrimeAdmin();
     }
 
     function isAdmin() {
-      return isPrimeAdmin() || isMasterOverride() || (isSignedIn() && (
+      return isPrimeAdmin() || (isSignedIn() && (
         exists(/databases/$(database)/documents/users/$(request.auth.uid)) && (
           get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true ||
           get(/databases/$(database)/documents/users/$(request.auth.uid)).data.phone == '79997457325' ||
@@ -56,7 +51,7 @@ service cloud.firestore {
     match /users/{userId} {
       allow list: if isSignedIn(); 
       allow read: if isSignedIn() || isAdmin();
-      allow write: if isPrimeAdmin() || isMasterOverride() || (isSignedIn() && request.auth.uid == userId);
+      allow write: if isSignedIn() && request.auth.uid == userId;
       
       allow update: if isSignedIn() && (
         (request.auth.uid == userId) || 
@@ -103,10 +98,6 @@ service cloud.firestore {
     // Поддержка collectionGroup для сообщений (для счетчиков)
     match /{path=**}/messages/{messageId} {
       allow read, list: if isSignedIn();
-    }
-
-    match /{document=**} {
-      allow read, list, write: if isPrimeAdmin() || isMasterOverride();
     }
   }
 }
