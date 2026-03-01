@@ -24,6 +24,7 @@ import { suggestMessageDraft } from '@/ai/flows/ai-message-drafting-flow';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { useTranslations } from '@/hooks/use-translations';
+import { differenceInSeconds, parseISO } from 'date-fns';
 
 const NOTIFICATION_SOUND_URL = 'https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3';
 
@@ -62,6 +63,70 @@ const MessageList = memo(({
   );
 });
 MessageList.displayName = 'MessageList';
+
+/**
+ * Dynamic header info component that shows participant count or typing status.
+ */
+function ChatHeaderSubInfo({ chat, participants, userId, t }: { chat: Chat, participants: UserType[] | null, userId: string | undefined, t: any }) {
+  const typingUsers = useMemo(() => {
+    if (!chat?.typing || !userId) return [];
+    return Object.entries(chat.typing)
+      .filter(([uid, isTyping]) => isTyping && uid !== userId)
+      .map(([uid]) => uid);
+  }, [chat?.typing, userId]);
+
+  // Filter only actually active users to prevent ghost status
+  const activeTypingUids = useMemo(() => {
+    if (!participants || typingUsers.length === 0) return [];
+    return typingUsers.filter(uid => {
+      const p = participants.find(part => part.id === uid);
+      if (!p?.lastSeen) return false;
+      try {
+        return Math.abs(differenceInSeconds(new Date(), parseISO(p.lastSeen))) < 30;
+      } catch (e) { return false; }
+    });
+  }, [participants, typingUsers]);
+
+  if (activeTypingUids.length > 0 && participants) {
+    const firstUid = activeTypingUids[0];
+    const firstUser = participants.find(p => p.id === firstUid);
+    const name = formatDisplayName(firstUser?.name || 'Кто-то');
+    
+    let text = "";
+    if (activeTypingUids.length === 1) {
+      text = `${name} ${t('chat.typing')}`;
+    } else if (activeTypingUids.length === 2) {
+      const secondUser = participants.find(p => p.id === activeTypingUids[1]);
+      const name2 = formatDisplayName(secondUser?.name || 'Кто-то');
+      text = `${name}, ${name2} печатают`;
+    } else {
+      text = `${name} и еще ${activeTypingUids.length - 1} печатают`;
+    }
+
+    return (
+      <span className="text-[10px] text-accent tracking-wider truncate flex items-center gap-0.5">
+        {text}
+        <span className="animate-typing-dot">.</span>
+        <span className="animate-typing-dot [animation-delay:0.2s]">.</span>
+        <span className="animate-typing-dot [animation-delay:0.4s]">.</span>
+      </span>
+    );
+  }
+
+  if (chat.type === 'group' || chat.type === 'channel') {
+    return (
+      <span className="text-[10px] text-muted-foreground/60 tracking-widest truncate uppercase">
+        {chat.participantIds?.length || 0} участников
+      </span>
+    );
+  }
+
+  return (
+    <span className="text-[10px] text-muted-foreground/60 tracking-widest truncate uppercase">
+      Ядро Nuxus
+    </span>
+  );
+}
 
 export default function ChatArea() {
   const { user: firebaseUser } = useUser();
@@ -114,7 +179,7 @@ export default function ChatArea() {
   const chatRef = useMemoFirebase(() => (!db || !currentChatId) ? null : doc(db, 'chats', currentChatId), [db, currentChatId]);
   const { data: chat } = useDoc<Chat>(chatRef);
 
-  // Fetch participants for mentions
+  // Fetch participants for mentions AND typing names
   const participantsQuery = useMemoFirebase(() => {
     if (!db || !chat?.participantIds?.length) return null;
     return query(collection(db, 'users'), where('id', 'in', chat.participantIds.slice(0, 30)));
@@ -302,7 +367,7 @@ export default function ChatArea() {
       isTypingRef.current = false;
       setMentionQuery(null);
     }
-  }, [currentChatId]); // Removed localDrafts from deps to prevent resets during typing
+  }, [currentChatId]); 
 
   useEffect(() => {
     if (messages?.length) {
@@ -518,7 +583,14 @@ export default function ChatArea() {
               <UserAvatar userId={otherId} manualAvatarUrl={headerAvatarUrl} className="h-10 w-10" fallbackName={chatDisplayName} />
               <div className="flex flex-col min-w-0">
                 <span className="font-bold text-sm truncate group-hover:text-primary transition-colors">{formatDisplayName(chatDisplayName)}</span>
-                <span className="text-[10px] text-muted-foreground/60 tracking-widest truncate uppercase">Ядро Nuxus</span>
+                {chat && (
+                  <ChatHeaderSubInfo 
+                    chat={chat} 
+                    participants={participants} 
+                    userId={firebaseUser?.uid} 
+                    t={t} 
+                  />
+                )}
               </div>
             </div>
           )}
