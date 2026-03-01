@@ -2,14 +2,15 @@
 "use client"
 
 import { useEffect, useRef } from 'react';
-import { useUser, useFirestore } from '@/firebase';
-import { collectionGroup, query, where, onSnapshot } from 'firebase/firestore';
+import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
+import { collection, query, where, onSnapshot, orderBy, limit, getDocs } from 'firebase/firestore';
 import { useAppState } from '@/lib/store';
 import { useToast } from '@/hooks/use-toast';
+import type { Chat, Message } from '@/lib/types';
 
 /**
  * Handles system notifications and sound alerts for incoming messages.
- * Optimized for instant response and "before read" logic.
+ * Uses chat-based tracking to avoid complex collectionGroup indexes.
  */
 export function NotificationListener() {
   const { user } = useUser();
@@ -18,30 +19,20 @@ export function NotificationListener() {
   const { toast } = useToast();
   
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  const lastProcessedMessageId = useRef<string | null>(null);
-  // Track the start time to only notify about NEW messages
-  const startTime = useRef(new Date().toISOString());
-  
-  // Ref for activeChatId to check without re-running effect
-  const activeChatIdRef = useRef<string | null>(null);
-  useEffect(() => {
-    activeChatIdRef.current = currentChatId;
-  }, [currentChatId]);
+  const lastProcessedTimestamps = useRef<Record<string, string>>({});
+  const isFirstLoad = useRef(true);
 
-  // Spinner notification sound from user
-  const NOTIFICATION_SOUND = 'https://zvukitop.com/wp-content/uploads/2021/01/vrashenie-kak-spiner.mp3';
+  // Default Nuxus clean pop sound
+  const NOTIFICATION_SOUND = 'https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3';
 
   useEffect(() => {
-    // Initialize notification sound
     audioRef.current = new Audio(NOTIFICATION_SOUND);
     audioRef.current.preload = 'auto';
     
-    // Auto-request permission on mount
     if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'default') {
       Notification.requestPermission();
     }
 
-    // Critical: Unlock audio context on any user interaction
     const unlockAudio = () => {
       if (audioRef.current) {
         audioRef.current.play().then(() => {
@@ -49,80 +40,91 @@ export function NotificationListener() {
           audioRef.current!.currentTime = 0;
         }).catch(() => {});
       }
-      window.removeEventListener('mousedown', unlockAudio);
-      window.removeEventListener('touchstart', unlockAudio);
-      window.removeEventListener('keydown', unlockAudio);
+      window.removeEventListener('pointerdown', unlockAudio);
     };
-    
-    window.addEventListener('mousedown', unlockAudio);
-    window.addEventListener('touchstart', unlockAudio);
-    window.addEventListener('keydown', unlockAudio);
-
-    return () => {
-      window.removeEventListener('mousedown', unlockAudio);
-      window.removeEventListener('touchstart', unlockAudio);
-      window.removeEventListener('keydown', unlockAudio);
-    };
+    window.addEventListener('pointerdown', unlockAudio);
+    return () => window.removeEventListener('pointerdown', unlockAudio);
   }, []);
 
+  // Listen to CHATS where user is participant to detect new activity
+  const chatsQuery = useMemoFirebase(() => {
+    if (!db || !user) return null;
+    return query(collection(db, 'chats'), where('participantIds', 'array-contains', user.uid));
+  }, [db, user]);
+
   useEffect(() => {
-    if (!db || !user) return;
+    if (!db || !user || !chatsQuery) return;
 
-    // Fast global message listener for ALL messages
-    // Note: This requires an index if used with collectionGroup + where
-    // We use a broader query if index is not ready
-    const q = query(
-      collectionGroup(db, 'messages'),
-      where('sentAt', '>', startTime.current)
-    );
+    const unsubscribe = onSnapshot(chatsQuery, (snapshot) => {
+      snapshot.docChanges().forEach(async (change) => {
+        const chatData = change.doc.data() as Chat;
+        const chatId = change.doc.id;
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      snapshot.docChanges().forEach((change) => {
         if (change.type === 'added') {
-          const msg = change.doc.data();
-          
-          // 1. Skip my own messages
-          // 2. Skip already processed IDs
-          if (msg.senderId === user.uid || lastProcessedMessageId.current === change.doc.id) return;
-          
-          lastProcessedMessageId.current = change.doc.id;
+          if (chatData.lastMessageAt) {
+            lastProcessedTimestamps.current[chatId] = chatData.lastMessageAt;
+          }
+          return;
+        }
 
-          // 3. Notify ONLY if NOT in the current active chat
-          // This logic ensures you hear sound even if you haven't "read" the message yet
-          if (msg.chatId !== activeChatIdRef.current) {
-            // Instant sound feedback
-            if (audioRef.current) {
-              audioRef.current.currentTime = 0;
-              audioRef.current.play().catch(e => {
-                // Silently handle if audio is still blocked
-              });
-            }
+        if (change.type === 'modified') {
+          const lastTime = lastProcessedTimestamps.current[chatId];
+          const newTime = chatData.lastMessageAt;
 
-            // System Push Notification
-            if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
+          if (newTime && newTime !== lastTime) {
+            lastProcessedTimestamps.current[chatId] = newTime;
+
+            // Only notify if:
+            // 1. Not current open chat
+            // 2. Not the first load of the app
+            if (chatId !== currentChatId && !isFirstLoad.current) {
+              // Fetch the actual message content for the notification
               try {
-                new Notification(`${msg.senderName}`, {
-                  body: msg.contentType === 'text' ? msg.content : `Отправил ${msg.contentType}`,
-                  icon: 'https://picsum.photos/seed/nuxus/192/192'
-                });
-              } catch (e) {}
-            }
+                const msgSnap = await getDocs(query(
+                  collection(db, 'chats', chatId, 'messages'),
+                  orderBy('sentAt', 'desc'),
+                  limit(1)
+                ));
 
-            // In-app visual toast
-            toast({
-              title: msg.senderName,
-              description: msg.contentType === 'text' ? msg.content : `Отправил ${msg.contentType}`,
-            });
+                if (!msgSnap.empty) {
+                  const msg = msgSnap.docs[0].data() as Message;
+                  
+                  // Don't notify about our own messages
+                  if (msg.senderId === user.uid) return;
+
+                  // Play sound
+                  if (audioRef.current) {
+                    audioRef.current.currentTime = 0;
+                    audioRef.current.play().catch(() => {});
+                  }
+
+                  // System Notification
+                  if (Notification.permission === 'granted') {
+                    new Notification(msg.senderName || 'Новое сообщение', {
+                      body: msg.contentType === 'text' ? msg.content : `Отправил ${msg.contentType}`,
+                      icon: '/icon.png'
+                    });
+                  }
+
+                  // In-app Toast
+                  toast({
+                    title: msg.senderName,
+                    description: msg.contentType === 'text' ? msg.content : `Прислал ${msg.contentType}`,
+                  });
+                }
+              } catch (e) {
+                console.error("Notification fetch error:", e);
+              }
+            }
           }
         }
       });
-    }, (error) => {
-      // Indexing error or permission error handled silently here to avoid UI crash
-      console.warn("Notification listener hint:", error.message);
+      
+      if (isFirstLoad.current) isFirstLoad.current = false;
     });
 
     return () => unsubscribe();
-  }, [db, user, toast]);
+  }, [db, user, chatsQuery, currentChatId, toast]);
 
   return null;
 }
