@@ -14,6 +14,7 @@ import { collection, query, where, limit, doc } from 'firebase/firestore';
 import { CallOverlay } from './modals/call-overlay';
 import { NotificationListener } from './notification-listener';
 import { SettingsModal } from './modals/settings-modal';
+import { GlobalSearchModal } from './modals/global-search-modal';
 import { UserAvatar } from './user-avatar';
 import type { Call, User as UserType } from '@/lib/types';
 import { Users, Phone, MessageCircle, Settings, Search } from 'lucide-react';
@@ -21,7 +22,8 @@ import { Users, Phone, MessageCircle, Settings, Search } from 'lucide-react';
 export default function ChatMain() {
   const { 
     currentChatId, activeCallId, setActiveCallId, 
-    activeView, setActiveView, isSettingsOpen, setIsSettingsOpen 
+    activeView, setActiveView, isSettingsOpen, setIsSettingsOpen,
+    isSearchOpen, setIsSearchOpen
   } = useAppState();
   const { user } = useUser();
   const db = useFirestore();
@@ -104,7 +106,10 @@ export default function ChatMain() {
             />
           </div>
           
-          <button className="h-[56px] w-[56px] rounded-full bg-white/5 flex items-center justify-center shrink-0 border border-white/5 shadow-[inset_0_1px_1px_rgba(255,255,255,0.1),0_10px_20px_rgba(0,0,0,0.2)] hover:bg-white/10 transition-all active:scale-90">
+          <button 
+            onClick={() => setIsSearchOpen(true)}
+            className="h-[56px] w-[56px] rounded-full bg-white/5 flex items-center justify-center shrink-0 border border-white/5 shadow-[inset_0_1px_1px_rgba(255,255,255,0.1),0_10px_20px_rgba(0,0,0,0.2)] hover:bg-white/10 transition-all active:scale-90"
+          >
             <Search className="w-6 h-6 text-white" />
           </button>
         </div>
@@ -112,6 +117,7 @@ export default function ChatMain() {
 
       <CallOverlay />
       <SettingsModal open={isSettingsOpen} onOpenChange={setIsSettingsOpen} />
+      <GlobalSearchModal open={isSearchOpen} onOpenChange={setIsSearchOpen} />
     </div>
   );
 }

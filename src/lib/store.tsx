@@ -21,6 +21,8 @@ interface AppState {
   setIs2FAVerified: (v: boolean) => void;
   isSettingsOpen: boolean;
   setIsSettingsOpen: (v: boolean) => void;
+  isSearchOpen: boolean;
+  setIsSearchOpen: (v: boolean) => void;
   settingsTab: string;
   setSettingsTab: (tab: string) => void;
 }
@@ -35,6 +37,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [localDrafts, setLocalDrafts] = useState<Record<string, string>>({});
   const [is2FAVerified, setIs2FAVerified] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [settingsTab, setSettingsTab] = useState('profile');
 
   return (
@@ -53,6 +56,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setIs2FAVerified,
       isSettingsOpen,
       setIsSettingsOpen,
+      isSearchOpen,
+      setIsSearchOpen,
       settingsTab,
       setSettingsTab
     }}>
