@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
   Send, Info, ChevronLeft, Loader2, Bookmark, X, Video, Circle, Wand2, Phone, Search as SearchIcon,
-  Zap, Calendar as CalendarIcon
+  Zap, Calendar as CalendarIcon, Paperclip, Image as ImageIcon, Trash2
 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { MessageItem } from './message-item';
@@ -74,8 +74,8 @@ export default function ChatArea() {
   const [replyTo, setReplyTo] = useState<Message | null>(null);
   const [editingMsg, setEditingMsg] = useState<Message | null>(null);
   
-  // Локальное состояние ввода для максимальной скорости (без задержек от глобального стора)
   const [messageInput, setMessageInput] = useState('');
+  const [pendingMedia, setPendingMedia] = useState<{ url: string, type: 'image' | 'video' }[]>([]);
   
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchingLocal, setIsSearchingLocal] = useState(false);
@@ -85,6 +85,7 @@ export default function ChatArea() {
   const [isOneTime, setIsOneTime] = useState(false);
 
   const videoRef = useRef<HTMLVideoElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -158,29 +159,22 @@ export default function ChatArea() {
     updateDoc(typingRef, { [`typing.${firebaseUser.uid}`]: isTyping }).catch(() => {});
   }, [db, currentChatId, firebaseUser]);
 
-  // Эффект для дебаунса сохранения черновика в глобальный стор
   useEffect(() => {
     if (!currentChatId) return;
-
     if (draftTimeoutRef.current) clearTimeout(draftTimeoutRef.current);
-    
     draftTimeoutRef.current = setTimeout(() => {
       setLocalDrafts((prev: Record<string, string>) => ({
         ...prev,
         [currentChatId]: messageInput
       }));
-    }, 500); // Сохраняем черновик только если пользователь не пишет полсекунды
-
+    }, 500);
     return () => {
       if (draftTimeoutRef.current) clearTimeout(draftTimeoutRef.current);
     };
   }, [messageInput, currentChatId, setLocalDrafts]);
 
   const onInputChange = (val: string) => {
-    // Мгновенное обновление локального состояния для отсутствия лагов
     setMessageInput(val);
-
-    // Логика дебаунса для статуса "печатает..."
     if (val.length > 0) {
       updateTypingStatus(true);
       if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
@@ -193,10 +187,10 @@ export default function ChatArea() {
     }
   };
 
-  // Синхронизация локального инпута при смене чата
   useEffect(() => {
     if (currentChatId) {
       setMessageInput(localDrafts[currentChatId] || '');
+      setPendingMedia([]);
       isTypingRef.current = false;
     }
     return () => {
@@ -217,13 +211,12 @@ export default function ChatArea() {
 
   useEffect(() => { dataLoadedRef.current = false; }, [currentChatId]);
 
-  const handleSendMessage = useCallback((content_msg: string = messageInput, type_msg: Message['contentType'] = 'text') => {
+  const handleSendMessage = useCallback(async (content_msg: string = messageInput, type_msg: Message['contentType'] = 'text') => {
     const trimmedContent = content_msg.trim();
-    if (!trimmedContent || !currentChatId || !firebaseUser || !db) return;
-    setIsSending(true);
+    if ((!trimmedContent && pendingMedia.length === 0) || !currentChatId || !firebaseUser || !db) return;
     
+    setIsSending(true);
     updateTypingStatus(false);
-    if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
 
     if (editingMsg) {
       updateDocumentNonBlocking(doc(db, 'chats', currentChatId, 'messages', editingMsg.id), {
@@ -235,37 +228,80 @@ export default function ChatArea() {
       setIsSending(false);
       return;
     }
-    const msgData: Partial<Message> = { 
-      chatId: currentChatId, 
-      senderId: firebaseUser.uid, 
-      senderName: userProfile?.name || 'User', 
-      content: trimmedContent, 
-      contentType: type_msg, 
-      sentAt: new Date().toISOString(), 
-      isRead: false,
-      scheduledAt: scheduledDate ? scheduledDate.toISOString() : null,
-      expiresInSeconds: expiryTime,
-      isOneTimeView: isOneTime
-    };
-    if (replyTo) {
-      msgData.replyToId = replyTo.id;
-      msgData.replyToContent = replyTo.contentType === 'text' ? replyTo.content : `[${replyTo.contentType}]`;
-      setReplyTo(null);
+
+    // Если есть медиа, отправляем их по очереди
+    if (pendingMedia.length > 0) {
+      for (const media of pendingMedia) {
+        const mediaMsg: Partial<Message> = {
+          chatId: currentChatId,
+          senderId: firebaseUser.uid,
+          senderName: userProfile?.name || 'User',
+          content: media.url,
+          contentType: media.type,
+          sentAt: new Date().toISOString(),
+          isRead: false,
+          isOneTimeView: isOneTime,
+          expiresInSeconds: expiryTime
+        };
+        addDocumentNonBlocking(collection(db, 'chats', currentChatId, 'messages'), mediaMsg);
+      }
+      setPendingMedia([]);
     }
-    addDocumentNonBlocking(collection(db, 'chats', currentChatId, 'messages'), msgData);
+
+    // Отправляем текст, если он есть
+    if (trimmedContent) {
+      const msgData: Partial<Message> = { 
+        chatId: currentChatId, 
+        senderId: firebaseUser.uid, 
+        senderName: userProfile?.name || 'User', 
+        content: trimmedContent, 
+        contentType: type_msg, 
+        sentAt: new Date().toISOString(), 
+        isRead: false,
+        scheduledAt: scheduledDate ? scheduledDate.toISOString() : null,
+        expiresInSeconds: expiryTime,
+        isOneTimeView: isOneTime
+      };
+      if (replyTo) {
+        msgData.replyToId = replyTo.id;
+        msgData.replyToContent = replyTo.contentType === 'text' ? replyTo.content : `[${replyTo.contentType}]`;
+        setReplyTo(null);
+      }
+      addDocumentNonBlocking(collection(db, 'chats', currentChatId, 'messages'), msgData);
+    }
+
     updateDocumentNonBlocking(doc(db, 'chats', currentChatId), { lastMessageAt: new Date().toISOString() });
     setScheduledDate(undefined);
     setExpiryTime(null);
     setIsOneTime(false);
-    
-    if (type_msg === 'text') {
-      setMessageInput('');
-      setLocalDrafts((prev: any) => ({ ...prev, [currentChatId]: '' }));
-    }
+    setMessageInput('');
+    setLocalDrafts((prev: any) => ({ ...prev, [currentChatId]: '' }));
     
     setIsSending(false);
     setTimeout(() => scrollToBottom('smooth'), 100);
-  }, [messageInput, currentChatId, firebaseUser, db, userProfile, replyTo, editingMsg, scrollToBottom, scheduledDate, expiryTime, isOneTime, updateTypingStatus, setLocalDrafts]);
+  }, [messageInput, pendingMedia, currentChatId, firebaseUser, db, userProfile, replyTo, editingMsg, scrollToBottom, scheduledDate, expiryTime, isOneTime, updateTypingStatus, setLocalDrafts]);
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+
+    files.forEach(file => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setPendingMedia(prev => [...prev, {
+          url: reader.result as string,
+          type: file.type.startsWith('video') ? 'video' : 'image'
+        }]);
+      };
+      reader.readAsDataURL(file);
+    });
+    // Сброс инпута для возможности выбора тех же файлов повторно
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const removePendingMedia = (index: number) => {
+    setPendingMedia(prev => prev.filter((_, i) => i !== index));
+  };
 
   const handleAiDraft = async () => {
     if (!messages || !amIPremium) return;
@@ -371,6 +407,25 @@ export default function ChatArea() {
 
       <footer className="p-3 bg-card border-t border-white/5 shrink-0">
         <div className="max-w-4xl mx-auto space-y-2">
+          {pendingMedia.length > 0 && (
+            <div className="flex gap-2 p-2 bg-muted/40 rounded-2xl overflow-x-auto scrollbar-hide">
+              {pendingMedia.map((media, idx) => (
+                <div key={idx} className="relative h-16 w-16 shrink-0 rounded-lg overflow-hidden border border-white/10">
+                  {media.type === 'video' ? (
+                    <video src={media.url} className="h-full w-full object-cover" />
+                  ) : (
+                    <img src={media.url} className="h-full w-full object-cover" />
+                  )}
+                  <button 
+                    onClick={() => removePendingMedia(idx)}
+                    className="absolute top-0.5 right-0.5 bg-black/60 rounded-full p-0.5 hover:bg-destructive"
+                  >
+                    <X className="w-3 h-3 text-white" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
           {replyTo && (
             <div className="p-2 bg-muted/50 rounded-xl border-l-4 border-primary flex items-center justify-between">
               <div className="flex flex-col min-w-0 pl-2">
@@ -381,6 +436,22 @@ export default function ChatArea() {
             </div>
           )}
           <div className="flex gap-2 items-end">
+            <input 
+              type="file" 
+              multiple 
+              accept="image/*,video/*" 
+              className="hidden" 
+              ref={fileInputRef} 
+              onChange={handleFileSelect} 
+            />
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="h-11 w-11 rounded-xl shrink-0 bg-muted"
+              onClick={() => fileInputRef.current?.click()}
+            >
+              <Paperclip className="w-5 h-5 text-muted-foreground" />
+            </Button>
             <Popover>
               <PopoverTrigger asChild>
                 <Button variant="ghost" size="icon" className="h-11 w-11 rounded-xl shrink-0 bg-muted"><Zap className="w-5 h-5 text-primary" /></Button>
@@ -415,7 +486,13 @@ export default function ChatArea() {
               />
               {amIPremium && !editingMsg && (<button onClick={handleAiDraft} disabled={isDrafting} className="absolute right-3 top-1/2 -translate-y-1/2 text-primary hover:scale-110">{isDrafting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wand2 className="w-4 h-4" />}</button>)}
             </div>
-            {!messageInput.trim() ? (<Button size="icon" className="h-11 w-11 rounded-xl shrink-0 bg-primary" onClick={startRecording}><Circle className="w-5 h-5" /></Button>) : (<Button size="icon" className="h-11 w-11 rounded-xl shrink-0 bg-primary" onClick={() => handleSendMessage()} disabled={isSending}>{isSending ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}</Button>)}
+            {(!messageInput.trim() && pendingMedia.length === 0) ? (
+              <Button size="icon" className="h-11 w-11 rounded-xl shrink-0 bg-primary" onClick={startRecording}><Circle className="w-5 h-5" /></Button>
+            ) : (
+              <Button size="icon" className="h-11 w-11 rounded-xl shrink-0 bg-primary" onClick={() => handleSendMessage()} disabled={isSending}>
+                {isSending ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
+              </Button>
+            )}
           </div>
         </div>
       </footer>
