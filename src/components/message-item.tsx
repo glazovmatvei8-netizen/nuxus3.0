@@ -267,6 +267,11 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, amIPremium = 
     return (
       <div className="flex flex-col text-left">
         {message.forwardFrom && (<div className="flex items-center gap-1.5 mb-1 opacity-50 border-l-2 border-white/10 pl-2"><Forward className="w-2.5 h-2.5" /><span className="text-[8px] font-bold uppercase">Переслано от {message.forwardFrom}</span></div>)}
+        {message.replyToId && (
+          <div className="mb-1.5 p-1.5 px-2 bg-black/5 dark:bg-white/5 border-l-2 border-primary rounded-r-md opacity-80 text-[10px] truncate max-w-[200px] italic">
+            {message.replyToContent}
+          </div>
+        )}
         <div className="whitespace-pre-wrap text-sm break-words max-w-[300px]">{message.contentType === 'text' ? parseMarkdown(message.content) : message.content}{message.editedAt && <span className="text-[8px] ml-1 opacity-40 uppercase">(ред.)</span>}</div>
       </div>
     );

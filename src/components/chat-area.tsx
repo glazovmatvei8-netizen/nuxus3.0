@@ -82,7 +82,7 @@ function ChatHeaderSubInfo({ chat, participants, userId, t }: { chat: Chat, part
       const p = participants.find(part => part.id === uid);
       if (!p?.lastSeen) return false;
       try {
-        return Math.abs(differenceInSeconds(new Date(), parseISO(p.lastSeen))) < 20; // Ускорена проверка на фантомов
+        return Math.abs(differenceInSeconds(new Date(), parseISO(p.lastSeen))) < 20; 
       } catch (e) { return false; }
     });
   }, [participants, typingUsers]);
@@ -301,7 +301,7 @@ export default function ChatArea() {
     }
   }, []);
 
-  // Save drafts with debounce
+  // Save drafts with debounce - CRITICAL: fixed dependency array to avoid sreset loops
   useEffect(() => {
     if (!currentChatId) return;
     if (draftTimeoutRef.current) clearTimeout(draftTimeoutRef.current);
@@ -359,15 +359,17 @@ export default function ChatArea() {
     }
   };
 
-  // Load draft and reset mention on chat change
+  // Load draft and reset mention only on chat change
   useEffect(() => {
     if (currentChatId) {
       setMessageInput(localDrafts[currentChatId] || '');
       setPendingMedia([]);
       isTypingRef.current = false;
       setMentionQuery(null);
+      setReplyTo(null);
+      setEditingMsg(null);
     }
-  }, [currentChatId, localDrafts]); 
+  }, [currentChatId]); // removed localDrafts from deps to prevent reset loops while typing
 
   useEffect(() => {
     if (messages?.length) {
@@ -462,6 +464,19 @@ export default function ChatArea() {
     setIsSending(false);
     setTimeout(() => scrollToBottom('smooth'), 100);
   }, [messageInput, pendingMedia, currentChatId, firebaseUser, db, userProfile, replyTo, editingMsg, scrollToBottom, scheduledDate, expiryTime, isOneTime, updateTypingStatus, setLocalDrafts, isAdmin]);
+
+  const handleReply = useCallback((msg: Message) => {
+    setReplyTo(msg);
+    setEditingMsg(null);
+    if (inputRef.current) inputRef.current.focus();
+  }, []);
+
+  const handleEdit = useCallback((msg: Message) => {
+    setEditingMsg(msg);
+    setMessageInput(msg.content);
+    setReplyTo(null);
+    if (inputRef.current) inputRef.current.focus();
+  }, []);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
@@ -619,8 +634,8 @@ export default function ChatArea() {
             messages={messages} 
             userId={firebaseUser?.uid} 
             chatId={currentChatId} 
-            onReply={setReplyTo} 
-            onEdit={(msg: Message) => { setEditingMsg(msg); setMessageInput(msg.content); setReplyTo(null); }} 
+            onReply={handleReply} 
+            onEdit={handleEdit} 
             amIPremium={amIPremium} 
             isAdmin={isAdmin}
             isGroup={chat?.type === 'group' || chat?.type === 'channel'}
