@@ -17,7 +17,7 @@ import { CreateChatModal } from './modals/create-chat-modal';
 import { AdminPanelModal } from './modals/admin-panel-modal';
 import type { User, Message, Chat } from '@/lib/types';
 import { useFirestore, useUser, useCollection, useDoc, useMemoFirebase } from '@/firebase';
-import { collection, query, where, doc, limit } from 'firebase/firestore';
+import { collection, query, where, doc, limit, collectionGroup } from 'firebase/firestore';
 import { formatDisplayName, cn, isGlobalAdmin } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
@@ -143,6 +143,28 @@ export default function ChatSidebar() {
   }, [db, user]);
   const { data: chats } = useCollection<Chat>(chatsQuery);
 
+  // Dynamic Unread Counting for Tabs
+  const unreadMessagesQuery = useMemoFirebase(() => {
+    if (!db || !user) return null;
+    // Note: collectionGroup requires a Firestore index.
+    return query(collectionGroup(db, 'messages'), where('isRead', '==', false));
+  }, [db, user]);
+  const { data: allUnreadMessages } = useCollection<Message>(unreadMessagesQuery);
+
+  const stats = useMemo(() => {
+    if (!allUnreadMessages || !chats || !user) return { private: 0, channels: 0 };
+    
+    const unreadFromOthers = allUnreadMessages.filter(m => m.senderId !== user.uid);
+    
+    const privateChatIds = chats.filter(c => c.type === 'private' || c.type === 'saved').map(c => c.id);
+    const channelChatIds = chats.filter(c => c.type === 'channel').map(c => c.id);
+
+    return {
+      private: unreadFromOthers.filter(m => privateChatIds.includes(m.chatId)).length,
+      channels: unreadFromOthers.filter(m => channelChatIds.includes(m.chatId)).length
+    };
+  }, [allUnreadMessages, chats, user]);
+
   const pinnedIds = useMemo(() => profile?.pinnedChatIds || [], [profile]);
 
   const handleChatClick = (chat: Chat) => {
@@ -177,7 +199,7 @@ export default function ChatSidebar() {
   const filteredChats = useMemo(() => {
     let result = sortedChats;
     if (activeTab === 'channels') result = result.filter(c => c.type === 'channel');
-    if (activeTab === 'private') result = result.filter(c => c.type === 'private');
+    if (activeTab === 'private') result = result.filter(c => c.type === 'private' || c.type === 'saved');
     if (searchQuery.trim()) {
       result = result.filter(chat => {
         const isSaved = chat.type === 'saved';
@@ -212,7 +234,7 @@ export default function ChatSidebar() {
 
           <div className="flex items-center gap-2">
             <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full bg-white/10 hover:bg-white/20" onClick={() => setIsCreateModalOpen(true)}>
-              <CirclePlus className="w-5 h-5 text-white" />
+              <Plus className="w-5 h-5 text-white" />
             </Button>
             <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full bg-white/10 hover:bg-white/20">
               <SquarePen className="w-5 h-5 text-white" />
@@ -224,8 +246,8 @@ export default function ChatSidebar() {
         <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide py-1">
           {[
             { id: 'all', label: 'Все' },
-            { id: 'private', label: 'Личные', badge: '2', color: 'blue' },
-            { id: 'channels', label: 'Каналы', badge: '466', color: 'grey' },
+            { id: 'private', label: 'Личные', badge: stats.private > 0 ? stats.private.toString() : null, color: 'blue' },
+            { id: 'channels', label: 'Каналы', badge: stats.channels > 0 ? stats.channels.toString() : null, color: 'grey' },
             { id: 'bots', label: 'Боты' }
           ].map((tab) => (
             <button 
