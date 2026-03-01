@@ -8,7 +8,7 @@ import { UserAvatar } from '@/components/user-avatar';
 import { Phone, Video, PhoneIncoming, PhoneOutgoing, PhoneMissed, Clock } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useFirestore, useUser, useCollection, useMemoFirebase, useDoc } from '@/firebase';
-import { collection, query, where, orderBy, limit, doc } from 'firebase/firestore';
+import { collection, query, where, orderBy, limit, doc, or } from 'firebase/firestore';
 import { formatDisplayName, cn } from '@/lib/utils';
 import type { Call, User } from '@/lib/types';
 import { format } from 'date-fns';
@@ -19,9 +19,10 @@ export default function CallsView() {
 
   const callsQuery = useMemoFirebase(() => {
     if (!db || !user) return null;
+    // Query both incoming and outgoing calls
     return query(
       collection(db, 'calls'),
-      where('callerId', '==', user.uid),
+      or(where('callerId', '==', user.uid), where('receiverId', '==', user.uid)),
       orderBy('createdAt', 'desc'),
       limit(50)
     );

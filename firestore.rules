@@ -59,7 +59,7 @@ service cloud.firestore {
       
       allow update: if isSignedIn() && (
         (request.auth.uid == userId) || 
-        (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['referralCount', 'premiumUntil', 'isPremium']))
+        (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['referralCount', 'premiumUntil', 'isPremium', 'contactIds', 'settings', 'avatarUrl', 'name', 'username', 'bio']))
       );
       
       match /receivedGifts/{giftId} {
@@ -76,9 +76,9 @@ service cloud.firestore {
     match /calls/{callId} {
       allow create: if isSignedIn();
       allow read, list, update, delete: if isSignedIn() && (
+        isAdmin() || 
         request.auth.uid == resource.data.callerId || 
-        request.auth.uid == resource.data.receiverId || 
-        isAdmin()
+        request.auth.uid == resource.data.receiverId
       );
     }
 
@@ -92,11 +92,16 @@ service cloud.firestore {
         allow update: if isChatMember(chatId) && (
           request.auth.uid == resource.data.senderId || 
           isChatAdmin(chatId) ||
-          (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isRead']))
+          (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isRead', 'pollData']))
         );
           
         allow delete: if isAdmin() || isChatAdmin(chatId) || (isSignedIn() && request.auth.uid == resource.data.senderId);
       }
+    }
+
+    // Поддержка collectionGroup для сообщений (для счетчиков)
+    match /{path=**}/messages/{messageId} {
+      allow read, list: if isSignedIn();
     }
 
     match /{document=**} {

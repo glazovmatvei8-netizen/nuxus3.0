@@ -110,7 +110,7 @@ const ChatListItem = memo(({ chat, isActive, otherId, cachedDisplayName, manualA
             {unreadCount > 0 && (
               <Badge className={cn(
                 "rounded-full h-5 min-w-5 flex items-center justify-center text-[11px] font-bold px-1.5 border-none",
-                unreadCount > 10 ? "bg-[#3a3a3c]" : "bg-[#007AFF]"
+                "bg-[#007AFF] text-white"
               )}>
                 {unreadCount > 1000 ? '1K' : unreadCount}
               </Badge>
@@ -143,22 +143,17 @@ export default function ChatSidebar() {
   }, [db, user]);
   const { data: chats } = useCollection<Chat>(chatsQuery);
 
-  // Dynamic Unread Counting for Tabs
   const unreadMessagesQuery = useMemoFirebase(() => {
     if (!db || !user) return null;
-    // Note: collectionGroup requires a Firestore index.
     return query(collectionGroup(db, 'messages'), where('isRead', '==', false));
   }, [db, user]);
   const { data: allUnreadMessages } = useCollection<Message>(unreadMessagesQuery);
 
   const stats = useMemo(() => {
     if (!allUnreadMessages || !chats || !user) return { private: 0, channels: 0 };
-    
     const unreadFromOthers = allUnreadMessages.filter(m => m.senderId !== user.uid);
-    
     const privateChatIds = chats.filter(c => c.type === 'private' || c.type === 'saved').map(c => c.id);
     const channelChatIds = chats.filter(c => c.type === 'channel').map(c => c.id);
-
     return {
       private: unreadFromOthers.filter(m => privateChatIds.includes(m.chatId)).length,
       channels: unreadFromOthers.filter(m => channelChatIds.includes(m.chatId)).length
@@ -213,10 +208,9 @@ export default function ChatSidebar() {
 
   return (
     <div className="flex flex-col h-full bg-[#0a0a0c] overflow-hidden">
-      {/* Header Styled as Screenshot */}
       <div className="px-4 pt-4 pb-2 shrink-0">
         <div className="flex items-center justify-between mb-4">
-          <Button variant="ghost" className="h-8 px-3 rounded-full bg-white/10 hover:bg-white/20 text-white font-bold text-[13px]">
+          <Button variant="ghost" className="h-8 px-3 rounded-full bg-white/10 hover:bg-white/20 text-white font-bold text-[13px] border border-white/5">
             Изм.
           </Button>
           
@@ -226,7 +220,7 @@ export default function ChatSidebar() {
               <div className="w-6 h-6 rounded-full border border-background bg-primary/20 overflow-hidden" />
               <div className="w-6 h-6 rounded-full border border-background bg-blue-500/20 overflow-hidden" />
             </div>
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1.5" onClick={() => isGlobalAdmin(profile) && setIsAdminPanelOpen(true)}>
               <Lock className="w-3.5 h-3.5 text-white" />
               <h1 className="text-[17px] font-black text-white tracking-tight">Чаты 🐱</h1>
             </div>
@@ -236,13 +230,12 @@ export default function ChatSidebar() {
             <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full bg-white/10 hover:bg-white/20" onClick={() => setIsCreateModalOpen(true)}>
               <Plus className="w-5 h-5 text-white" />
             </Button>
-            <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full bg-white/10 hover:bg-white/20">
+            <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl bg-white/10 hover:bg-white/20">
               <SquarePen className="w-5 h-5 text-white" />
             </Button>
           </div>
         </div>
 
-        {/* Tabs Styled as Screenshot */}
         <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide py-1">
           {[
             { id: 'all', label: 'Все' },
@@ -297,7 +290,7 @@ export default function ChatSidebar() {
       </ScrollArea>
 
       <CreateChatModal open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen} />
-      <AdminPanelModal open={isAdminPanelOpen} onOpenChange={isAdminPanelOpen} />
+      <AdminPanelModal open={isAdminPanelOpen} onOpenChange={setIsAdminPanelOpen} />
     </div>
   );
 }

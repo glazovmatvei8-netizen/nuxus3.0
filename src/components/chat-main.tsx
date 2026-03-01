@@ -73,7 +73,7 @@ export default function ChatMain() {
 
       {/* Bottom Navigation Styled as Screenshot */}
       {!currentChatId && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 w-[92%] max-w-[400px] h-[68px] bg-[#1c1c1e]/90 backdrop-blur-3xl border border-white/10 rounded-[2.5rem] flex items-center justify-between px-6 z-50 shadow-2xl">
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 w-[92%] max-w-[420px] h-[72px] bg-[#1c1c1e]/85 backdrop-blur-[40px] border border-white/10 rounded-[2.5rem] flex items-center justify-between px-6 z-50 shadow-2xl shadow-black/50">
           <div className="flex flex-1 justify-between mr-4">
             <NavButton 
               icon={Users} 
@@ -96,10 +96,12 @@ export default function ChatMain() {
               label="Настройки" 
               active={activeView === 'profile'} 
               onClick={() => setActiveView('profile')} 
+              isProfile
+              userId={user?.uid}
             />
           </div>
           
-          <button className="h-[52px] w-[52px] rounded-full bg-white/5 flex items-center justify-center shrink-0 border border-white/5 shadow-inner">
+          <button className="h-[54px] w-[52px] rounded-full bg-white/5 flex items-center justify-center shrink-0 border border-white/5 shadow-[inset_0_1px_1px_rgba(255,255,255,0.1)] hover:bg-white/10 transition-all">
             <Search className="w-6 h-6 text-white" />
           </button>
         </div>
@@ -115,7 +117,6 @@ function ChatsNavButton({ active, onClick }: { active: boolean, onClick: () => v
   const { user } = useUser();
   const db = useFirestore();
 
-  // Dynamic Unread Counter for Bottom Nav
   const unreadMessagesQuery = useMemoFirebase(() => {
     if (!db || !user) return null;
     return query(collectionGroup(db, 'messages'), where('isRead', '==', false));
@@ -138,24 +139,28 @@ function ChatsNavButton({ active, onClick }: { active: boolean, onClick: () => v
   );
 }
 
-function NavButton({ icon: Icon, label, active, badge, onClick }: { icon: any, label: string, active?: boolean, badge?: string, onClick: () => void }) {
+function NavButton({ icon: Icon, label, active, badge, onClick, isProfile, userId }: { icon: any, label: string, active?: boolean, badge?: string, onClick: () => void, isProfile?: boolean, userId?: string }) {
   return (
     <button 
       onClick={onClick}
       className={cn(
-        "flex flex-col items-center gap-0.5 transition-all relative",
+        "flex flex-col items-center gap-0.5 transition-all relative outline-none",
         active ? "text-[#007AFF]" : "text-muted-foreground/60"
       )}
     >
       <div className="relative">
-        <Icon className={cn("w-6 h-6", active && "fill-current")} />
+        {isProfile ? (
+          <UserAvatar userId={userId} className={cn("h-6 w-6 border transition-all", active ? "border-[#007AFF] scale-110" : "border-transparent opacity-60")} />
+        ) : (
+          <Icon className={cn("w-6 h-6", active && "fill-current")} />
+        )}
         {badge && (
           <div className="absolute -top-1 -right-2 bg-[#FF3B30] text-white text-[9px] font-black rounded-full h-4 min-w-4 flex items-center justify-center px-1 border-2 border-[#1c1c1e]">
             {badge}
           </div>
         )}
       </div>
-      <span className="text-[10px] font-bold">{label}</span>
+      <span className="text-[10px] font-bold mt-0.5">{label}</span>
     </button>
   );
 }
