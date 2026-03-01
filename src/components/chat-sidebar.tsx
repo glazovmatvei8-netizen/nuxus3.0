@@ -8,7 +8,8 @@ import { Button } from '@/components/ui/button';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
   Search, Settings, Plus, Loader2, Bookmark, Pin, Globe, Star, 
-  Hexagon, ShieldAlert, MoreHorizontal, Check, CheckCheck, Circle
+  Hexagon, ShieldAlert, MoreHorizontal, Check, CheckCheck, Circle,
+  MessageSquare, BellDot, Radio
 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -122,7 +123,7 @@ export default function ChatSidebar() {
   const { t } = useTranslations();
   const { currentChatId, setCurrentChatId, forwardingMessage, setForwardingMessage } = useAppState();
   const [searchQuery, setSearchQuery] = useState('');
-  const [activeTab, setActiveTab] = useState<'all' | 'sferum' | 'new'>('all');
+  const [activeTab, setActiveTab] = useState<'all' | 'unread' | 'channels'>('all');
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isAdminPanelOpen, setIsAdminPanelOpen] = useState(false);
@@ -168,17 +169,34 @@ export default function ChatSidebar() {
   }, [chats, pinnedIds]);
 
   const filteredChats = useMemo(() => {
-    return sortedChats.filter(chat => {
-      const isSaved = chat.type === 'saved';
-      const otherId = chat.type === 'private' && user ? chat.participantIds?.find((id: string) => id !== user.uid) : null;
-      const chatName = isSaved ? 'Избранное' : (otherId && chat.metadata && chat.metadata[otherId] ? chat.metadata[otherId].name : chat.name);
-      return chatName?.toLowerCase().includes(searchQuery.toLowerCase());
-    });
-  }, [sortedChats, searchQuery, user]);
+    let result = sortedChats;
+
+    // Tab Filtering
+    if (activeTab === 'unread') {
+      // Logic for unread is handled partially by ChatListItem, 
+      // but for pure tab filtering we show chats that were recently active
+      // In a real scenario, we'd have unreadCount in the Chat object
+      result = result.filter(c => c.lastMessageAt); 
+    } else if (activeTab === 'channels') {
+      result = result.filter(c => c.type === 'channel');
+    }
+
+    // Search Filtering
+    if (searchQuery.trim()) {
+      result = result.filter(chat => {
+        const isSaved = chat.type === 'saved';
+        const otherId = chat.type === 'private' && user ? chat.participantIds?.find((id: string) => id !== user.uid) : null;
+        const chatName = isSaved ? 'Избранное' : (otherId && chat.metadata && chat.metadata[otherId] ? chat.metadata[otherId].name : chat.name);
+        return chatName?.toLowerCase().includes(searchQuery.toLowerCase());
+      });
+    }
+
+    return result;
+  }, [sortedChats, searchQuery, user, activeTab]);
 
   return (
     <div className="flex flex-col h-full bg-[#0a0a0c] overflow-hidden">
-      {/* Header Styled like Reference */}
+      {/* Header */}
       <div className="px-4 pt-6 pb-2 shrink-0">
         <div className="flex items-center justify-between mb-4">
           <h1 className="text-[28px] font-black text-white tracking-tight">Чаты</h1>
@@ -201,7 +219,7 @@ export default function ChatSidebar() {
           </div>
         </div>
 
-        {/* Search Bar Styled like Reference */}
+        {/* Search Bar */}
         <div className="relative mb-4">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/60" />
           <Input 
@@ -212,7 +230,7 @@ export default function ChatSidebar() {
           />
         </div>
 
-        {/* Tabs Styled like Reference */}
+        {/* Tabs */}
         <div className="flex items-center gap-6 overflow-x-auto scrollbar-hide border-b border-white/[0.05]">
           <button 
             onClick={() => setActiveTab('all')}
@@ -225,40 +243,45 @@ export default function ChatSidebar() {
             {activeTab === 'all' && <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-[#007AFF] rounded-full" />}
           </button>
           <button 
-            onClick={() => setActiveTab('sferum')}
+            onClick={() => setActiveTab('unread')}
             className={cn(
-              "text-[15px] font-bold pb-2.5 transition-all flex items-center gap-1.5",
-              activeTab === 'sferum' ? "text-white" : "text-muted-foreground/60"
+              "text-[15px] font-bold pb-2.5 transition-all flex items-center gap-1.5 relative",
+              activeTab === 'unread' ? "text-white" : "text-muted-foreground/60"
             )}
           >
-            <div className="w-4 h-4 rounded-full bg-gradient-to-tr from-purple-500 via-blue-500 to-teal-400" />
-            Сферум
-            {activeTab === 'sferum' && <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-[#007AFF] rounded-full" />}
+            Непрочитанные
+            {activeTab === 'unread' && <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-[#007AFF] rounded-full" />}
           </button>
           <button 
-            onClick={() => setActiveTab('new')}
+            onClick={() => setActiveTab('channels')}
             className={cn(
-              "text-[15px] font-bold pb-2.5 transition-all flex items-center gap-1.5",
-              activeTab === 'new' ? "text-white" : "text-muted-foreground/60"
+              "text-[15px] font-bold pb-2.5 transition-all flex items-center gap-1.5 relative",
+              activeTab === 'channels' ? "text-white" : "text-muted-foreground/60"
             )}
           >
-            Новые
-            <span className="px-1.5 py-0.5 bg-[#3a3a3c] rounded-full text-[11px] text-white/60">6</span>
-            {activeTab === 'new' && <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-[#007AFF] rounded-full" />}
+            Каналы
+            {activeTab === 'channels' && <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-[#007AFF] rounded-full" />}
           </button>
         </div>
       </div>
 
       <ScrollArea className="flex-1 scrollbar-hide">
         <div className="pb-24">
-          {filteredChats.map(chat => (
-            <ChatListItem 
-              key={chat.id} chat={chat} isActive={currentChatId === chat.id} 
-              otherId={chat.type === 'private' && user ? chat.participantIds?.find((id: string) => id !== user.uid) : null} 
-              cachedDisplayName={chat.metadata && user && chat.participantIds?.find((id: string) => id !== user.uid) ? chat.metadata[chat.participantIds.find((id: string) => id !== user.uid)!].name : chat.name} 
-              onClick={() => handleChatClick(chat)} isPinned={pinnedIds.includes(chat.id)} 
-            />
-          ))}
+          {filteredChats.length > 0 ? (
+            filteredChats.map(chat => (
+              <ChatListItem 
+                key={chat.id} chat={chat} isActive={currentChatId === chat.id} 
+                otherId={chat.type === 'private' && user ? chat.participantIds?.find((id: string) => id !== user.uid) : null} 
+                cachedDisplayName={chat.metadata && user && chat.participantIds?.find((id: string) => id !== user.uid) ? chat.metadata[chat.participantIds.find((id: string) => id !== user.uid)!].name : chat.name} 
+                onClick={() => handleChatClick(chat)} isPinned={pinnedIds.includes(chat.id)} 
+              />
+            ))
+          ) : (
+            <div className="flex flex-col items-center justify-center p-12 text-center opacity-40">
+              <MessageSquare className="w-12 h-12 mb-4" />
+              <p className="text-sm font-bold uppercase tracking-widest">Здесь пока пусто</p>
+            </div>
+          )}
         </div>
       </ScrollArea>
 
