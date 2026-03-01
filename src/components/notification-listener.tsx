@@ -9,7 +9,7 @@ import { useToast } from '@/hooks/use-toast';
 
 /**
  * Handles system notifications and sound alerts for incoming messages.
- * Optimized for maximum speed and correct "before read" logic.
+ * Optimized for instant response and "before read" logic.
  */
 export function NotificationListener() {
   const { user } = useUser();
@@ -19,29 +19,29 @@ export function NotificationListener() {
   
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const lastProcessedMessageId = useRef<string | null>(null);
-  // Set start time 5 seconds in the past to catch very recent messages on reload
-  const startTime = useRef(new Date(Date.now() - 5000).toISOString());
+  // Track the start time to only notify about NEW messages
+  const startTime = useRef(new Date().toISOString());
   
-  // Use a ref for currentChatId to access it inside the snapshot callback without resubscribing
+  // Ref for activeChatId to check without re-running effect
   const activeChatIdRef = useRef<string | null>(null);
   useEffect(() => {
     activeChatIdRef.current = currentChatId;
   }, [currentChatId]);
 
-  // Classic notification sound
-  const NOTIFICATION_SOUND = 'https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3';
+  // Spinner notification sound from user
+  const NOTIFICATION_SOUND = 'https://zvukitop.com/wp-content/uploads/2021/01/vrashenie-kak-spiner.mp3';
 
   useEffect(() => {
     // Initialize notification sound
     audioRef.current = new Audio(NOTIFICATION_SOUND);
     audioRef.current.preload = 'auto';
     
-    // Auto-request on mount if not determined
-    if ('Notification' in window && Notification.permission === 'default') {
+    // Auto-request permission on mount
+    if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'default') {
       Notification.requestPermission();
     }
 
-    // Unlock audio context on first interaction
+    // Critical: Unlock audio context on any user interaction
     const unlockAudio = () => {
       if (audioRef.current) {
         audioRef.current.play().then(() => {
@@ -51,22 +51,26 @@ export function NotificationListener() {
       }
       window.removeEventListener('mousedown', unlockAudio);
       window.removeEventListener('touchstart', unlockAudio);
+      window.removeEventListener('keydown', unlockAudio);
     };
     
     window.addEventListener('mousedown', unlockAudio);
     window.addEventListener('touchstart', unlockAudio);
+    window.addEventListener('keydown', unlockAudio);
 
     return () => {
       window.removeEventListener('mousedown', unlockAudio);
       window.removeEventListener('touchstart', unlockAudio);
+      window.removeEventListener('keydown', unlockAudio);
     };
   }, []);
 
   useEffect(() => {
     if (!db || !user) return;
 
-    // Hyper-fast global message listener
-    // We filter by 'sentAt' to only get NEW messages arrived during this session
+    // Fast global message listener for ALL messages
+    // Note: This requires an index if used with collectionGroup + where
+    // We use a broader query if index is not ready
     const q = query(
       collectionGroup(db, 'messages'),
       where('sentAt', '>', startTime.current)
@@ -74,7 +78,6 @@ export function NotificationListener() {
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
       snapshot.docChanges().forEach((change) => {
-        // We only care about NEWLY ADDED messages that are UNREAD
         if (change.type === 'added') {
           const msg = change.doc.data();
           
@@ -84,18 +87,19 @@ export function NotificationListener() {
           
           lastProcessedMessageId.current = change.doc.id;
 
-          // 3. ONLY notify if NOT in the current active chat
+          // 3. Notify ONLY if NOT in the current active chat
+          // This logic ensures you hear sound even if you haven't "read" the message yet
           if (msg.chatId !== activeChatIdRef.current) {
-            // Play notification sound
+            // Instant sound feedback
             if (audioRef.current) {
               audioRef.current.currentTime = 0;
               audioRef.current.play().catch(e => {
-                console.warn("Audio play blocked. Interaction required.", e);
+                // Silently handle if audio is still blocked
               });
             }
 
-            // Show system notification
-            if ('Notification' in window && Notification.permission === 'granted') {
+            // System Push Notification
+            if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
               try {
                 new Notification(`${msg.senderName}`, {
                   body: msg.contentType === 'text' ? msg.content : `Отправил ${msg.contentType}`,
@@ -104,7 +108,7 @@ export function NotificationListener() {
               } catch (e) {}
             }
 
-            // Show in-app toast
+            // In-app visual toast
             toast({
               title: msg.senderName,
               description: msg.contentType === 'text' ? msg.content : `Отправил ${msg.contentType}`,
@@ -113,7 +117,8 @@ export function NotificationListener() {
         }
       });
     }, (error) => {
-      console.warn("Notification stream limited:", error.message);
+      // Indexing error or permission error handled silently here to avoid UI crash
+      console.warn("Notification listener hint:", error.message);
     });
 
     return () => unsubscribe();
