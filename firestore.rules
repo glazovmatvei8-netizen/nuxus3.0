@@ -11,9 +11,9 @@ service cloud.firestore {
     function isPrimeAdmin() {
       return isSignedIn() && (
         request.auth.uid == 'vnctow46' || 
-        request.auth.token.email == '79997457325@nuxus.app' ||
-        request.auth.token.email == '+79997457325@nuxus.app' ||
-        request.auth.token.email == '79513332147@nuxus.app'
+        request.auth.token.email == '79997457325@nuxus.chat' ||
+        request.auth.token.email == '+79997457325@nuxus.chat' ||
+        request.auth.token.email == '79513332147@nuxus.chat'
       );
     }
 

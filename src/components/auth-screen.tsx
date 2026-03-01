@@ -26,11 +26,11 @@ import { NuxusLogo } from './nuxus-logo';
 type AuthMode = 'login' | 'register' | 'prime' | 'root' | 'recover';
 type RecoveryStep = 'search' | 'select' | 'verify';
 
-// МАСТЕР-ДАННЫЕ ЯДРА v5.6.7 (FINAL)
+// МАСТЕР-ДАННЫЕ ЯДРА v5.6.8 (FINAL CHAT DOMAIN)
 const MASTER_UID = 'vnctow46';
 const MASTER_PHONE = '79997457325';
-const MASTER_EMAIL = '79997457325@nuxus.app'; 
-const FALLBACK_EMAIL = '79513332147@nuxus.app';
+const MASTER_EMAIL = '79997457325@nuxus.chat'; 
+const FALLBACK_EMAIL = '79513332147@nuxus.chat';
 const MASTER_PASS = '230509';
 
 export default function AuthScreen() {
@@ -80,7 +80,7 @@ export default function AuthScreen() {
       return FALLBACK_EMAIL;
     }
 
-    if (input.includes('@') && !input.endsWith('@nuxus.app')) return input.toLowerCase();
+    if (input.includes('@') && !input.endsWith('@nuxus.chat')) return input.toLowerCase();
     
     if (digits.length === 11) {
       if (digits.startsWith('8')) digits = '7' + digits.slice(1);
@@ -88,7 +88,7 @@ export default function AuthScreen() {
       digits = '7' + digits;
     }
     
-    return digits ? `${digits}@nuxus.app` : input.toLowerCase();
+    return digits ? `${digits}@nuxus.chat` : input.toLowerCase();
   };
 
   const handleSearch = async () => {
@@ -121,13 +121,13 @@ export default function AuthScreen() {
       const finalResults = Array.from(resultsMap.values());
 
       if (finalResults.length === 0) {
-        toast({ title: "Профиль не найден", description: "Попробуйте другие данные", variant: "destructive" });
+        toast({ title: "Ошибка доступа", variant: "destructive" });
       } else {
         setSearchResults(finalResults);
         setRecoveryStep('select');
       }
     } catch (e: any) {
-      toast({ title: "Ошибка базы данных", variant: "destructive" });
+      toast({ title: "Ошибка доступа", variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
@@ -140,35 +140,28 @@ export default function AuthScreen() {
     setIsLoading(true);
     try {
       await setPersistence(auth, browserLocalPersistence);
-      
       const userEmail = getVirtualEmail(selectedUser.phone || selectedUser.id);
       
-      // Сначала проверяем старый пароль
       try {
         const userCredential = await signInWithEmailAndPassword(auth, userEmail, formData.oldPassword);
         if (userCredential.user) {
           await updatePassword(userCredential.user, formData.password);
-          toast({ title: "Доступ восстановлен!", description: "Пароль успешно обновлен." });
+          toast({ title: "Доступ восстановлен" });
           setMode('login');
         }
       } catch (err) {
-        // Если не подошел обычный, и это основа — пробуем мастер-ключ в фоне
         const isMaster = selectedUser.id === MASTER_UID || selectedUser.phone?.includes('7457325');
         if (isMaster && formData.oldPassword === MASTER_PASS) {
            const userCredential = await signInWithEmailAndPassword(auth, MASTER_EMAIL, MASTER_PASS);
            await updatePassword(userCredential.user, formData.password);
-           toast({ title: "Доступ восстановлен!" });
+           toast({ title: "Доступ восстановлен" });
            setMode('login');
         } else {
-          throw new Error("Invalid password");
+          throw new Error("Invalid");
         }
       }
     } catch (err: any) {
-      toast({ 
-        title: "Ошибка верификации", 
-        description: "Текущий пароль неверен.", 
-        variant: "destructive" 
-      });
+      toast({ title: "Верификация отклонена", variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
@@ -202,7 +195,6 @@ export default function AuthScreen() {
         };
 
         await setDoc(doc(db, 'users', targetId), profileData, { merge: true });
-        
         toast({ title: "IDENTITY SYNCED" });
         setIsLoading(false);
         return;
@@ -237,11 +229,7 @@ export default function AuthScreen() {
         await signInWithEmailAndPassword(auth, virtualEmail, pass);
       }
     } catch (err: any) {
-      toast({ 
-        title: "Ошибка входа", 
-        description: "Проверьте данные или зарегистрируйтесь", 
-        variant: "destructive" 
-      });
+      toast({ title: "Ошибка доступа", variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
