@@ -254,7 +254,7 @@ export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onO
     <>
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md bg-card border-border p-0 overflow-hidden h-[90vh] flex flex-col rounded-[2.5rem] shadow-2xl">
-        <DialogHeader className="p-6 text-center flex flex-col items-center shrink-0 border-b-0 space-y-0">
+        <DialogHeader className="p-6 text-center flex flex-col items-center shrink-0 border-b-0 space-y-0 bg-transparent">
           <div className="relative group">
             <UserAvatar 
               userId={isPrivate ? otherId : null} 
@@ -552,9 +552,7 @@ function MemberRow({
         )}
         {canBeKicked && (
           <Button 
-            variant="ghost" 
-            size="icon" 
-            className="h-8 w-8 text-muted-foreground hover:text-destructive"
+            variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive"
             onClick={() => onKick(userId)}
             disabled={isKicking}
             title="Исключить из чата"

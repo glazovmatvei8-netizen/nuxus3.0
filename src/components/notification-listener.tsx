@@ -2,13 +2,14 @@
 "use client"
 
 import { useEffect, useRef } from 'react';
-import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collectionGroup, query, where, orderBy, limit, onSnapshot } from 'firebase/firestore';
+import { useUser, useFirestore } from '@/firebase';
+import { collectionGroup, query, where, onSnapshot, limit } from 'firebase/firestore';
 import { useAppState } from '@/lib/store';
 import { useToast } from '@/hooks/use-toast';
 
 /**
  * Handles system notifications and sound alerts for incoming messages.
+ * Optimized to avoid complex index requirements.
  */
 export function NotificationListener() {
   const { user } = useUser();
@@ -17,34 +18,34 @@ export function NotificationListener() {
   const { toast } = useToast();
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const lastProcessedMessageId = useRef<string | null>(null);
+  const startTime = useRef(new Date().toISOString());
 
   useEffect(() => {
     // Initialize notification sound (Premium Nuxus Alert)
     audioRef.current = new Audio('https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3');
     
-    // Request notification permission on mount
+    // Request notification permission
     const requestPermission = async () => {
-      if ('Notification' in window && Notification.permission !== 'granted') {
-        const permission = await Notification.requestPermission();
-        if (permission === 'granted') {
-          toast({ title: "Уведомления включены", description: "Теперь вы не пропустите важные сообщения." });
+      if ('Notification' in window) {
+        if (Notification.permission === 'default') {
+          await Notification.requestPermission();
+        } else if (Notification.permission === 'denied') {
+          console.warn("Notifications are blocked by user");
         }
       }
     };
     requestPermission();
-  }, [toast]);
+  }, []);
 
   useEffect(() => {
     if (!db || !user) return;
 
-    // Listen for new messages globally using collectionGroup
-    // Note: In production, you'd want to listen only to messages in chats where you are a participant.
-    // For MVP, we listen to recent messages.
+    // Simplified query to avoid "Missing Index" errors
+    // We listen for messages newer than when the app started
     const q = query(
       collectionGroup(db, 'messages'),
-      where('sentAt', '>', new Date().toISOString()),
-      orderBy('sentAt', 'desc'),
-      limit(1)
+      where('sentAt', '>', startTime.current),
+      limit(5)
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -67,12 +68,12 @@ export function NotificationListener() {
             // Show Browser Notification
             if ('Notification' in window && Notification.permission === 'granted') {
               new Notification(`Nuxus: ${msg.senderName}`, {
-                body: msg.contentType === 'text' ? msg.content : `[${msg.contentType}]`,
+                body: msg.contentType === 'text' ? msg.content : `Отправил ${msg.contentType}`,
                 icon: 'https://picsum.photos/seed/nuxus/192/192'
               });
             }
 
-            // Show Toast as fallback or addition
+            // Show Toast
             toast({
               title: msg.senderName,
               description: msg.contentType === 'text' ? msg.content : `Отправил ${msg.contentType}`,
@@ -80,6 +81,13 @@ export function NotificationListener() {
           }
         }
       });
+    }, (error) => {
+      // Gracefully handle index errors or permission issues
+      if (error.code === 'failed-precondition') {
+        console.warn("Notification index is still building or missing. Background notifications may be limited.");
+      } else {
+        console.error("Notification listener error:", error);
+      }
     });
 
     return () => unsubscribe();

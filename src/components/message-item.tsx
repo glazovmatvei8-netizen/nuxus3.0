@@ -134,7 +134,7 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, amIPremium = 
     if (message.contentType === 'poll' && message.pollData) {
       const totalVotes = message.pollData.options.reduce((acc: number, opt: PollOption) => acc + opt.votes.length, 0);
       return (
-        <div className="flex flex-col gap-4 mt-1 min-w-[240px] p-1">
+        <div className="flex flex-col gap-4 mt-1 min-w-[240px] p-1" onClick={(e) => e.stopPropagation()}>
           <div className="flex flex-col gap-1">
             <span className="text-[10px] font-black uppercase text-accent tracking-[0.2em] flex items-center gap-1.5"><BarChart3 className="w-3 h-3" /> Опрос</span>
             <h4 className="text-sm font-bold text-white leading-tight">{message.pollData.question}</h4>
@@ -167,7 +167,7 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, amIPremium = 
 
     if (message.contentType === 'video_note') {
       return (
-        <div className="relative p-1">
+        <div className="relative p-1" onClick={(e) => e.stopPropagation()}>
           <div 
             onClick={(e) => { e.stopPropagation(); setGalleryOpen(true); }}
             className="w-48 h-48 rounded-full overflow-hidden border-4 border-primary/20 shadow-2xl cursor-pointer bg-black group relative"
@@ -192,7 +192,7 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, amIPremium = 
     if (message.contentType === 'album' || message.contentType === 'image' || message.contentType === 'video') {
       const isOneTime = message.isOneTimeView;
       return (
-        <div className="flex flex-col gap-1">
+        <div className="flex flex-col gap-1" onClick={(e) => e.stopPropagation()}>
           {isOneTime && <div className="flex items-center gap-1.5 mb-1 px-1"><EyeOff className="w-3 h-3 text-accent" /><span className="text-[8px] font-bold uppercase text-accent tracking-widest">Один просмотр</span></div>}
           <div className={cn("grid gap-1 mt-1 overflow-hidden rounded-2xl", albumMedia.length === 1 ? "grid-cols-1" : "grid-cols-2")}>
             {albumMedia.map((media: any, idx: number) => (
