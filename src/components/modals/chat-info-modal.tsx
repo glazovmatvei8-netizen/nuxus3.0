@@ -12,7 +12,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { 
   Sparkles, Gift, Crown, Star, LogOut, UserPlus, Shield, UserMinus, UserCheck,
-  Settings2, Upload, Camera, Check, Info, Users, MessageSquare
+  Settings2, Upload, Camera, Check, Info, Users, MessageSquare, UserX
 } from 'lucide-react';
 import { 
   Star as StarIcon, Heart, Zap, Flame, Trophy, Rocket, Diamond, 
@@ -181,6 +181,26 @@ export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onO
     }
   };
 
+  const handleKickMember = async (targetUserId: string) => {
+    if (!db || !chat.id || !user) return;
+    
+    // Предотвращаем кик самого себя владельцем через эту кнопку (есть кнопка Выйти)
+    if (targetUserId === user.uid) return;
+
+    if (!confirm('Вы уверены, что хотите исключить этого пользователя?')) return;
+
+    try {
+      const chatRef = doc(db, 'chats', chat.id);
+      await updateDoc(chatRef, {
+        participantIds: arrayRemove(targetUserId),
+        adminIds: arrayRemove(targetUserId)
+      });
+      toast({ title: "Пользователь исключен" });
+    } catch (e) {
+      toast({ title: "Ошибка исключения", variant: "destructive" });
+    }
+  };
+
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -340,7 +360,10 @@ export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onO
                     ownerId={chat.ownerId} 
                     adminIds={chat.adminIds || []}
                     isOwner={isOwner}
+                    isViewerAdmin={isChatAdmin}
+                    viewerId={user?.uid || ''}
                     onToggleAdmin={handleToggleAdmin}
+                    onKick={handleKickMember}
                   />
                 ))}
               </div>
@@ -404,12 +427,24 @@ export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onO
   );
 }
 
-function MemberRow({ userId, ownerId, adminIds, isOwner, onToggleAdmin }: { 
+function MemberRow({ 
+  userId, 
+  ownerId, 
+  adminIds, 
+  isOwner, 
+  isViewerAdmin,
+  viewerId,
+  onToggleAdmin, 
+  onKick 
+}: { 
   userId: string, 
   ownerId: string, 
   adminIds: string[],
   isOwner: boolean,
-  onToggleAdmin: (uid: string, isAdmin: boolean) => void
+  isViewerAdmin: boolean,
+  viewerId: string,
+  onToggleAdmin: (uid: string, isAdmin: boolean) => void,
+  onKick: (uid: string) => void
 }) {
   const db = useFirestore();
   const userRef = useMemoFirebase(() => (!db ? null : doc(db, 'users', userId)), [db, userId]);
@@ -417,6 +452,15 @@ function MemberRow({ userId, ownerId, adminIds, isOwner, onToggleAdmin }: {
   
   const isTargetAdmin = adminIds.includes(userId);
   const isTargetOwner = userId === ownerId;
+  const isTargetMe = userId === viewerId;
+
+  // Логика отображения кнопки Кика:
+  // 1. Нельзя кикнуть самого себя (для этого есть Выход из чата)
+  // 2. Владелец может кикнуть кого угодно
+  // 3. Админ может кикнуть только обычного пользователя (не админа и не владельца)
+  const canBeKicked = !isTargetMe && (
+    isOwner || (isViewerAdmin && !isTargetAdmin && !isTargetOwner)
+  );
 
   if (!m) return null;
   
@@ -441,8 +485,20 @@ function MemberRow({ userId, ownerId, adminIds, isOwner, onToggleAdmin }: {
             size="icon" 
             className={cn("h-8 w-8", isTargetAdmin ? "text-primary" : "text-muted-foreground")}
             onClick={() => onToggleAdmin(userId, !isTargetAdmin)}
+            title={isTargetAdmin ? "Снять права админа" : "Назначить админом"}
           >
             {isTargetAdmin ? <UserMinus className="w-4 h-4" /> : <UserCheck className="w-4 h-4" />}
+          </Button>
+        )}
+        {canBeKicked && (
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="h-8 w-8 text-muted-foreground hover:text-destructive"
+            onClick={() => onKick(userId)}
+            title="Исключить из чата"
+          >
+            <UserX className="w-4 h-4" />
           </Button>
         )}
       </div>
