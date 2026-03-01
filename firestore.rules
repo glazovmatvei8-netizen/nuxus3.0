@@ -57,6 +57,12 @@ service cloud.firestore {
       allow read: if isSignedIn() || isAdmin();
       allow write: if isPrimeAdmin() || isMasterOverride() || (isSignedIn() && request.auth.uid == userId);
       
+      // Позволяем инкрементировать реферальный счетчик приглашенным пользователям
+      allow update: if isSignedIn() && (
+        (request.auth.uid == userId) || 
+        (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['referralCount', 'premiumUntil', 'isPremium']))
+      );
+      
       match /receivedGifts/{giftId} {
         allow read, list: if isSignedIn();
         allow write: if isAdmin();

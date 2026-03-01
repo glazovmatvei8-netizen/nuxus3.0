@@ -1,7 +1,7 @@
 
 "use client"
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -11,15 +11,17 @@ import { Loader2, ChevronRight } from 'lucide-react';
 import { useAuth, useFirestore } from '@/firebase';
 import { 
   signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
   browserLocalPersistence,
   setPersistence,
   updatePassword
 } from 'firebase/auth';
-import { doc, setDoc, collection, query, where, getDocs, limit } from 'firebase/firestore';
+import { doc, setDoc, collection, query, where, getDocs, limit, increment, getDoc } from 'firebase/firestore';
 import { useTranslations } from '@/hooks/use-translations';
 import type { User } from '@/lib/types';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { NuxusLogo } from './nuxus-logo';
+import { addMonths } from 'date-fns';
 
 type AuthMode = 'login' | 'register' | 'recover';
 type RecoveryStep = 'search' | 'select' | 'verify';
@@ -39,6 +41,7 @@ export default function AuthScreen() {
   const [recoveryStep, setRecoveryStep] = useState<RecoveryStep>('search');
   const [isLoading, setIsLoading] = useState(false);
   const [clickCount, setClickCount] = useState(0);
+  const [referralId, setReferralId] = useState<string | null>(null);
   
   const [formData, setFormData] = useState({
     name: '',
@@ -50,6 +53,15 @@ export default function AuthScreen() {
 
   const [searchResults, setSearchResults] = useState<User[]>([]);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
+
+  // Capture referral ID from URL
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const ref = params.get('ref');
+      if (ref) setReferralId(ref);
+    }
+  }, []);
 
   const handleLogoClick = () => {
     const newCount = clickCount + 1;
@@ -111,9 +123,7 @@ export default function AuthScreen() {
     try {
       await setPersistence(auth, browserLocalPersistence);
       const userEmail = getVirtualEmail(selectedUser.phone || selectedUser.id);
-      
-      // Использование мастер-пароля для восстановления основ
-      const authPass = formData.oldPassword === MASTER_PASS ? MASTER_PASS : formData.oldPassword;
+      const authPass = formData.oldPassword;
       
       const userCredential = await signInWithEmailAndPassword(auth, userEmail, authPass);
       if (userCredential.user) {
@@ -168,18 +178,47 @@ export default function AuthScreen() {
       const virtualEmail = getVirtualEmail(formData.identifier);
       const pass = formData.password;
       
-      // Прямой вход для администратора без лишних подсказок в UI
-      if (pass === MASTER_PASS) {
-        const variants = [virtualEmail, `+${virtualEmail.replace('+', '')}`, `${MASTER_PHONE}${MASTER_DOMAIN}`, `+${MASTER_PHONE}${MASTER_DOMAIN}`];
-        let authSuccess = false;
-        for (const v of variants) {
-          try {
-            await signInWithEmailAndPassword(auth, v, pass);
-            authSuccess = true;
-            break;
-          } catch (e) {}
+      if (mode === 'register') {
+        const userCredential = await createUserWithEmailAndPassword(auth, virtualEmail, pass);
+        const uid = userCredential.user.uid;
+        
+        const profileData = {
+          id: uid,
+          name: formData.name || 'User',
+          username: formData.username.startsWith('@') ? formData.username.toLowerCase() : '@' + formData.username.toLowerCase(),
+          phone: formData.identifier,
+          createdAt: new Date().toISOString(),
+          isPremium: false,
+          referralCount: 0,
+          invitedBy: referralId || null
+        };
+        
+        await setDoc(doc(db, 'users', uid), profileData);
+
+        // Handle referral reward logic
+        if (referralId && referralId !== uid) {
+          const inviterRef = doc(db, 'users', referralId);
+          const inviterSnap = await getDoc(inviterRef);
+          
+          if (inviterSnap.exists()) {
+            const inviterData = inviterSnap.data() as User;
+            const currentCount = (inviterData.referralCount || 0) + 1;
+            
+            const updateData: any = {
+              referralCount: increment(1)
+            };
+
+            // Grant 1 month premium every 5 referrals
+            if (currentCount % 5 === 0) {
+              const currentPremiumUntil = inviterData.premiumUntil ? new Date(inviterData.premiumUntil) : new Date();
+              const newPremiumUntil = addMonths(currentPremiumUntil > new Date() ? currentPremiumUntil : new Date(), 1);
+              updateData.isPremium = true;
+              updateData.premiumUntil = newPremiumUntil.toISOString();
+            }
+
+            await setDoc(inviterRef, updateData, { merge: true });
+          }
         }
-        if (!authSuccess) throw new Error();
       } else {
         await signInWithEmailAndPassword(auth, virtualEmail, pass);
       }
@@ -255,6 +294,7 @@ export default function AuthScreen() {
                     <div className="space-y-1.5"><Label className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground ml-1">ПАРОЛЬ</Label><Input type="password" placeholder="••••••••" value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} className="bg-white/5 border-white/10 h-14 rounded-2xl" required /></div>
                   </div>
                 </div>
+                {referralId && <p className="text-[9px] text-accent font-black uppercase text-center tracking-widest animate-pulse">Приглашение принято</p>}
                 <Button type="submit" disabled={isLoading} className="w-full h-14 text-xs font-black uppercase tracking-[0.2em] rounded-2xl shadow-xl transition-all bg-primary shadow-primary/30">{isLoading ? <Loader2 className="animate-spin w-5 h-5" /> : (mode === 'login' ? t('auth.login') : t('auth.register'))}</Button>
               </form>
             )}

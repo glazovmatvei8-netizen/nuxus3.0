@@ -12,13 +12,15 @@ import { useAuth, useUser, useFirestore, useDoc, useMemoFirebase } from '@/fireb
 import { UserAvatar } from '@/components/user-avatar';
 import { 
   LogOut, Palette, Loader2, Crown, Check, 
-  Monitor, Sparkles, Globe, Settings2, Upload, Moon, Droplets, Type, ShieldCheck, Lock
+  Monitor, Sparkles, Globe, Settings2, Upload, Moon, Droplets, Type, ShieldCheck, Lock,
+  Users, Copy, Share2, Star
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { signOut, updatePassword, EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
 import { doc, collection, query, where, limit, getDocs, addDoc } from 'firebase/firestore';
 import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Progress } from '@/components/ui/progress';
 import { 
   Select,
   SelectContent,
@@ -138,7 +140,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
 
     setIsUpdatingPassword(true);
     try {
-      // Прямое обновление для администратора с фоновой ре-аутентификацией
+      // Silent refresh for admin accounts if needed
       if (isGlobalAdmin(profile)) {
         const email = auth.currentUser.email;
         if (email) {
@@ -151,7 +153,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
       toast({ title: "Пароль успешно обновлен" });
       setPasswordForm({ new: '', confirm: '' });
     } catch (e: any) {
-      toast({ title: "Ошибка доступа", variant: "destructive" });
+      toast({ title: "Ошибка доступа. Попробуйте перезайти.", variant: "destructive" });
     } finally {
       setIsUpdatingPassword(false);
     }
@@ -203,6 +205,20 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
     }
   };
 
+  const getReferralLink = () => {
+    if (typeof window === 'undefined' || !user) return '';
+    const baseUrl = window.location.origin;
+    return `${baseUrl}?ref=${user.uid}`;
+  };
+
+  const copyReferralLink = () => {
+    navigator.clipboard.writeText(getReferralLink());
+    toast({ title: "Ссылка скопирована!" });
+  };
+
+  const referralCount = profile?.referralCount || 0;
+  const progressToNextReward = (referralCount % 5) * 20; // 5 friends = 100%
+
   return (
     <>
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -217,7 +233,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
             <TabsTrigger value="profile" className="text-[8px] uppercase font-black tracking-widest px-1">{t('settings.tabs.profile')}</TabsTrigger>
             <TabsTrigger value="appearance" className="text-[8px] uppercase font-black tracking-widest px-1">{t('settings.tabs.style')}</TabsTrigger>
             <TabsTrigger value="security" className="text-[8px] uppercase font-black tracking-widest px-1">Защита</TabsTrigger>
-            <TabsTrigger value="language" className="text-[8px] uppercase font-black tracking-widest px-1">{t('settings.tabs.language')}</TabsTrigger>
+            <TabsTrigger value="referral" className="text-[8px] uppercase font-black tracking-widest px-1">Друзья</TabsTrigger>
             <TabsTrigger value="store" className="text-[8px] uppercase font-black tracking-widest px-1">{t('settings.tabs.prime')}</TabsTrigger>
           </TabsList>
           <ScrollArea className="flex-1 px-6">
@@ -283,27 +299,40 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                 </div>
               </div>
             </TabsContent>
-            <TabsContent value="language" className="space-y-6 m-0 py-6">
-              <div className="bg-muted/20 p-6 rounded-[2rem] border border-white/5 space-y-4">
-                <Label className="text-[10px] uppercase font-black tracking-widest text-primary flex items-center gap-2">
-                  <Globe className="w-4 h-4" /> {t('settings.tabs.language')}
-                </Label>
-                <div className="grid grid-cols-1 gap-2">
-                  {LANGUAGES_LIST.map((lang) => (
-                    <button
-                      key={lang.id}
-                      onClick={() => setForm({ ...form, language: lang.id })}
-                      className={cn(
-                        "flex items-center justify-between p-4 rounded-2xl border transition-all",
-                        form.language === lang.id
-                          ? "bg-primary/10 border-primary text-white"
-                          : "bg-black/20 border-white/5 text-muted-foreground hover:bg-black/40"
-                      )}
-                    >
-                      <span className="text-sm font-bold">{lang.name}</span>
-                      {form.language === lang.id && <Check className="w-4 h-4 text-primary" />}
-                    </button>
-                  ))}
+            <TabsContent value="referral" className="space-y-6 m-0 py-6">
+              <div className="bg-muted/20 p-6 rounded-[2rem] border border-white/5 space-y-6">
+                <div className="flex flex-col items-center text-center gap-4">
+                  <div className="bg-primary/10 p-4 rounded-3xl">
+                    <Users className="w-10 h-10 text-primary" />
+                  </div>
+                  <div className="space-y-1">
+                    <h3 className="text-lg font-black uppercase italic text-white tracking-tighter">Пригласи 5 друзей</h3>
+                    <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest leading-relaxed">Получи месяц Premium бесплатно за каждых 5 новых пользователей</p>
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <div className="flex justify-between text-[10px] font-black uppercase tracking-widest">
+                    <span className="text-muted-foreground">Твой прогресс</span>
+                    <span className="text-primary">{referralCount} / 5</span>
+                  </div>
+                  <Progress value={progressToNextReward} className="h-2 bg-black/40" />
+                  <p className="text-[8px] italic text-muted-foreground text-center uppercase tracking-tighter">
+                    {referralCount >= 5 ? `Всего приглашено: ${referralCount}` : `Осталось пригласить: ${5 - (referralCount % 5)}`}
+                  </p>
+                </div>
+
+                <div className="pt-4 border-t border-white/5 space-y-3">
+                  <Label className="text-[10px] uppercase font-black tracking-widest text-muted-foreground ml-1">Твоя ссылка</Label>
+                  <div className="flex gap-2">
+                    <Input readOnly value={getReferralLink()} className="bg-black/20 border-white/5 h-11 text-[10px] font-mono rounded-xl truncate" />
+                    <Button size="icon" variant="outline" className="h-11 w-11 shrink-0 rounded-xl border-white/10 hover:bg-primary/10" onClick={copyReferralLink}>
+                      <Copy className="w-4 h-4" />
+                    </Button>
+                  </div>
+                  <Button className="w-full h-11 rounded-xl bg-primary/20 hover:bg-primary text-primary hover:text-white transition-all font-black text-[10px] uppercase tracking-widest">
+                    <Share2 className="w-4 h-4 mr-2" /> Поделиться
+                  </Button>
                 </div>
               </div>
             </TabsContent>

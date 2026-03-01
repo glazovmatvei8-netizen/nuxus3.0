@@ -17,7 +17,9 @@
         "isPremium": { "type": "boolean" },
         "premiumUntil": { "type": "string", "format": "date-time" },
         "isBanned": { "type": "boolean" },
-        "isAdmin": { "type": "boolean", "description": "Whether the user has global administrative privileges." }
+        "isAdmin": { "type": "boolean", "description": "Whether the user has global administrative privileges." },
+        "referralCount": { "type": "number", "default": 0 },
+        "invitedBy": { "type": "string", "description": "UID of the user who invited this person." }
       },
       "required": ["id", "name", "username", "phone", "createdAt"]
     },

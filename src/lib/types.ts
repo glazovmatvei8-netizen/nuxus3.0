@@ -122,4 +122,6 @@ export interface User {
   isAdmin?: boolean;
   premiumUntil?: string | null;
   isArchived?: string[]; // array of chatIds
+  referralCount?: number;
+  invitedBy?: string;
 }
