@@ -15,7 +15,7 @@ import {
   Monitor, Sparkles, Globe, Settings2, Upload, Moon, Droplets, Type, ShieldCheck, Lock
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { signOut, updatePassword, signInWithEmailAndPassword } from 'firebase/auth';
+import { signOut, updatePassword, EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
 import { doc, collection, query, where, limit, getDocs, addDoc } from 'firebase/firestore';
 import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -141,11 +141,12 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
       try {
         await updatePassword(auth.currentUser, passwordForm.new);
       } catch (e: any) {
-        // If session is stale and it's an admin, attempt silent re-auth
+        // Если требуется свежий вход и это админ - делаем фоновый Re-auth
         if (e.code === 'auth/requires-recent-login' && isGlobalAdmin(profile)) {
           const email = auth.currentUser.email;
           if (email) {
-            await signInWithEmailAndPassword(auth, email, MASTER_PASS);
+            const credential = EmailAuthProvider.credential(email, MASTER_PASS);
+            await reauthenticateWithCredential(auth.currentUser, credential);
             await updatePassword(auth.currentUser, passwordForm.new);
           } else {
             throw e;

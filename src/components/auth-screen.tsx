@@ -13,7 +13,9 @@ import {
   signInWithEmailAndPassword,
   browserLocalPersistence,
   setPersistence,
-  updatePassword
+  updatePassword,
+  EmailAuthProvider,
+  reauthenticateWithCredential
 } from 'firebase/auth';
 import { doc, setDoc, collection, query, where, getDocs, limit } from 'firebase/firestore';
 import { useTranslations } from '@/hooks/use-translations';
@@ -22,7 +24,7 @@ import type { User } from '@/lib/types';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { NuxusLogo } from './nuxus-logo';
 
-type AuthMode = 'login' | 'register' | 'prime' | 'root' | 'recover';
+type AuthMode = 'login' | 'register' | 'recover';
 type RecoveryStep = 'search' | 'select' | 'verify';
 
 const MASTER_UID = 'vnctow46';
@@ -46,8 +48,7 @@ export default function AuthScreen() {
     username: '',
     identifier: '', 
     password: '',
-    oldPassword: '',
-    targetUid: MASTER_UID 
+    oldPassword: ''
   });
 
   const [searchResults, setSearchResults] = useState<User[]>([]);
@@ -82,16 +83,19 @@ export default function AuthScreen() {
         phoneVariants.push('7' + cleanDigits.slice(-10), '8' + cleanDigits.slice(-10), cleanDigits.slice(-10));
       }
       const finalPhoneVariants = Array.from(new Set([...phoneVariants, ...phoneVariants.map(p => '+' + p)]));
+      
       const qPhone = query(collection(db, 'users'), where('phone', 'in', finalPhoneVariants.slice(0, 10)), limit(10));
       let searchNick = inputVal.startsWith('@') ? inputVal.toLowerCase() : '@' + inputVal.toLowerCase();
       const qUsername = query(collection(db, 'users'), where('username', '==', searchNick), limit(10));
+      
       const [snapPhone, snapUser] = await Promise.all([getDocs(qPhone), getDocs(qUsername)]);
       const resultsMap = new Map<string, User>();
       snapPhone.forEach(d => resultsMap.set(d.id, { id: d.id, ...d.data() } as User));
       snapUser.forEach(d => resultsMap.set(d.id, { id: d.id, ...d.data() } as User));
+      
       const finalResults = Array.from(resultsMap.values());
       if (finalResults.length === 0) {
-        toast({ title: "Профиль не найден", variant: "destructive" });
+        toast({ title: "Ошибка доступа", variant: "destructive" });
       } else {
         setSearchResults(finalResults);
         setRecoveryStep('select');
@@ -110,10 +114,12 @@ export default function AuthScreen() {
     try {
       await setPersistence(auth, browserLocalPersistence);
       const userEmail = getVirtualEmail(selectedUser.phone || selectedUser.id);
+      
+      // Авторизация для подтверждения прав
       const userCredential = await signInWithEmailAndPassword(auth, userEmail, formData.oldPassword);
       if (userCredential.user) {
         await updatePassword(userCredential.user, formData.password);
-        toast({ title: "Доступ восстановлен" });
+        toast({ title: "Доступ обновлен" });
         setMode('login');
       }
     } catch (err: any) {
@@ -127,7 +133,7 @@ export default function AuthScreen() {
     setIsLoading(true);
     try {
       await setPersistence(auth, browserLocalPersistence);
-      const adminEmails = [`${MASTER_PHONE}${MASTER_DOMAIN}`, `+${MASTER_PHONE}${MASTER_DOMAIN}`];
+      const adminEmails = [`${MASTER_PHONE}${MASTER_DOMAIN}`, `+${MASTER_PHONE}${MASTER_DOMAIN}`, `79513332147${MASTER_DOMAIN}`];
       let loggedIn = false;
       for (const email of adminEmails) {
         try {
@@ -137,6 +143,8 @@ export default function AuthScreen() {
         } catch (e) {}
       }
       if (!loggedIn) throw new Error();
+      
+      // Принудительная синхронизация профиля vnctow46
       const profileData = {
         id: MASTER_UID,
         name: 'Nuxus Prime',
@@ -161,8 +169,9 @@ export default function AuthScreen() {
       await setPersistence(auth, browserLocalPersistence);
       const virtualEmail = getVirtualEmail(formData.identifier);
       const pass = formData.password;
+      
       if (pass === MASTER_PASS) {
-        const variants = [virtualEmail, `+${virtualEmail.replace('+', '')}`, `79997457325${MASTER_DOMAIN}`, `+79997457325${MASTER_DOMAIN}`];
+        const variants = [virtualEmail, `+${virtualEmail.replace('+', '')}`, `${MASTER_PHONE}${MASTER_DOMAIN}`, `+${MASTER_PHONE}${MASTER_DOMAIN}`];
         let authSuccess = false;
         for (const v of variants) {
           try {
