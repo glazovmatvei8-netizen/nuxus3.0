@@ -1,56 +1,20 @@
 <!DOCTYPE html>
-<html lang="ru">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Nuxus — Загрузка Ядра...</title>
-  <style>
-    body { 
-      background-color: #0a0a0c; 
-      margin: 0; 
-      display: flex; 
-      flex-direction: column;
-      align-items: center; 
-      justify-content: center; 
-      height: 100vh; 
-      color: #8b5cf6; 
-      font-family: system-ui, -apple-system, sans-serif;
-      text-transform: uppercase;
-      letter-spacing: 0.4em;
-      font-size: 10px;
-      font-weight: 900;
-    }
-    .loader {
-      width: 40px;
-      height: 40px;
-      border: 3px solid rgba(139, 92, 246, 0.1);
-      border-top: 3px solid #8b5cf6;
-      border-radius: 50%;
-      animation: spin 1s linear infinite;
-      margin-bottom: 20px;
-    }
-    @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
-    }
-    .pulse { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
-    @keyframes pulse {
-      0%, 100% { opacity: 1; }
-      50% { opacity: .5; }
-    }
-  </style>
-</head>
-<body>
-  <div class="loader"></div>
-  <div class="pulse">Инициализация Ядра Nuxus...</div>
-  <script>
-    // Если через 3 секунды Next.js не перехватил управление, пробуем жесткую перезагрузку
-    setTimeout(() => {
-      if (!document.querySelector('#__next') && !window.__NEXT_DATA__) {
-        console.log('Nuxus: Принудительное обновление кэша...');
-        window.location.reload(true);
-      }
-    }, 3000);
-  </script>
-</body>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Nuxus — Загрузка Ядра...</title>
+    <style>
+      body { background: #0a0a0c; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; font-family: sans-serif; overflow: hidden; }
+      .core { width: 80px; height: 80px; border: 4px solid rgba(139, 92, 246, 0.1); border-top: 4px solid #8b5cf6; border-radius: 50%; animation: spin 1s linear infinite; }
+      @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+    <script>
+      // Если это не корень приложения Next.js, мы просто даем ему загрузиться
+      console.log("Nuxus Core: Redirecting to Application...");
+    </script>
+  </head>
+  <body>
+    <div class="core"></div>
+  </body>
 </html>
