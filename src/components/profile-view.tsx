@@ -2,25 +2,26 @@
 "use client"
 
 import React from 'react';
-import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
-import { doc } from 'firebase/firestore';
+import { useUser, useFirestore, useDoc, useMemoFirebase, useCollection } from '@/firebase';
+import { doc, query, collection, where, limit, getDocs, addDoc } from 'firebase/firestore';
 import { UserAvatar } from '@/components/user-avatar';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { 
-  QrCode, Pencil, Link, Bell, Lock, Smartphone, 
-  MessageSquare, Bookmark, Folder, Battery, HardDrive, 
-  ChevronRight, Star
+  QrCode, Pencil, Link, Bell, Lock, 
+  MessageSquare, Bookmark, Battery, HardDrive, 
+  ChevronRight
 } from 'lucide-react';
 import { useAppState } from '@/lib/store';
 import { useToast } from '@/hooks/use-toast';
 import { formatDisplayName, cn } from '@/lib/utils';
-import type { User } from '@/lib/types';
+import type { User, Chat } from '@/lib/types';
 
 export default function ProfileView() {
   const { user } = useUser();
   const db = useFirestore();
   const { toast } = useToast();
+  const { setIsSettingsOpen, setSettingsTab, setCurrentChatId, setActiveView } = useAppState();
   
   const userProfileRef = useMemoFirebase(() => (!db || !user) ? null : doc(db, 'users', user.uid), [db, user]);
   const { data: profile } = useDoc<User>(userProfileRef);
@@ -29,6 +30,37 @@ export default function ProfileView() {
     const url = typeof window !== 'undefined' ? `${window.location.origin}?ref=${user?.uid}` : '';
     navigator.clipboard.writeText(url);
     toast({ title: "Ссылка скопирована" });
+  };
+
+  const openSavedMessages = async () => {
+    if (!db || !user) return;
+    try {
+      const q = query(
+        collection(db, 'chats'),
+        where('type', '==', 'saved'),
+        where('participantIds', 'array-contains', user.uid),
+        limit(1)
+      );
+      const snap = await getDocs(q);
+      if (!snap.empty) {
+        setCurrentChatId(snap.docs[0].id);
+      } else {
+        const newChat = await addDoc(collection(db, 'chats'), {
+          type: 'saved',
+          participantIds: [user.uid],
+          ownerId: user.uid,
+          createdAt: new Date().toISOString(),
+          name: 'Избранное'
+        });
+        setCurrentChatId(newChat.id);
+      }
+      setActiveView('chats');
+    } catch (e) {}
+  };
+
+  const openSettings = (tab: string) => {
+    setSettingsTab(tab);
+    setIsSettingsOpen(true);
   };
 
   return (
@@ -46,7 +78,12 @@ export default function ProfileView() {
           </span>
         </div>
 
-        <Button variant="ghost" size="icon" className="text-white hover:bg-white/5 rounded-xl">
+        <Button 
+          variant="ghost" 
+          size="icon" 
+          className="text-white hover:bg-white/5 rounded-xl"
+          onClick={() => openSettings('profile')}
+        >
           <Pencil className="w-6 h-6" />
         </Button>
       </div>
@@ -67,18 +104,46 @@ export default function ProfileView() {
 
           {/* Main Settings Block */}
           <div className="bg-[#1c1c1e] rounded-2xl overflow-hidden divide-y divide-white/[0.05]">
-            <SettingsItem icon={Bell} label="Уведомления и звук" color="text-white" />
-            <SettingsItem icon={Lock} label="Безопасность" color="text-white" />
-            <SettingsItem icon={Smartphone} label="Устройства" color="text-white" />
-            <SettingsItem icon={MessageSquare} label="Сообщения" color="text-white" />
-            <SettingsItem icon={Bookmark} label="Избранное" color="text-white" />
-            <SettingsItem icon={Folder} label="Папки" color="text-white" />
+            <SettingsItem 
+              icon={Bell} 
+              label="Уведомления и звук" 
+              color="text-white" 
+              onClick={() => openSettings('appearance')}
+            />
+            <SettingsItem 
+              icon={Lock} 
+              label="Безопасность" 
+              color="text-white" 
+              onClick={() => openSettings('security')}
+            />
+            <SettingsItem 
+              icon={MessageSquare} 
+              label="Сообщения" 
+              color="text-white" 
+              onClick={() => openSettings('appearance')}
+            />
+            <SettingsItem 
+              icon={Bookmark} 
+              label="Избранное" 
+              color="text-white" 
+              onClick={openSavedMessages}
+            />
           </div>
 
           {/* System Settings Block */}
           <div className="bg-[#1c1c1e] rounded-2xl overflow-hidden divide-y divide-white/[0.05]">
-            <SettingsItem icon={Battery} label="Экономия батареи и сети" color="text-white" />
-            <SettingsItem icon={HardDrive} label="Память" color="text-white" />
+            <SettingsItem 
+              icon={Battery} 
+              label="Экономия батареи и сети" 
+              color="text-white" 
+              onClick={() => openSettings('appearance')}
+            />
+            <SettingsItem 
+              icon={HardDrive} 
+              label="Память" 
+              color="text-white" 
+              onClick={() => openSettings('appearance')}
+            />
           </div>
 
           {/* Support/Info */}
@@ -93,9 +158,12 @@ export default function ProfileView() {
   );
 }
 
-function SettingsItem({ icon: Icon, label, color }: { icon: any, label: string, color: string }) {
+function SettingsItem({ icon: Icon, label, color, onClick }: { icon: any, label: string, color: string, onClick?: () => void }) {
   return (
-    <div className="flex items-center justify-between p-4 cursor-pointer hover:bg-white/[0.02] active:bg-white/[0.05] transition-colors group">
+    <div 
+      onClick={onClick}
+      className="flex items-center justify-between p-4 cursor-pointer hover:bg-white/[0.02] active:bg-white/[0.05] transition-colors group"
+    >
       <div className="flex items-center gap-4">
         <Icon className={cn("w-6 h-6", color, "opacity-70 group-hover:opacity-100 transition-opacity")} />
         <span className="text-white text-[16px] font-medium">{label}</span>

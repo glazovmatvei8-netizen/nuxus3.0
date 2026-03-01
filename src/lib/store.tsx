@@ -19,6 +19,10 @@ interface AppState {
   setLocalDrafts: React.Dispatch<React.SetStateAction<Record<string, string>>>;
   is2FAVerified: boolean;
   setIs2FAVerified: (v: boolean) => void;
+  isSettingsOpen: boolean;
+  setIsSettingsOpen: (v: boolean) => void;
+  settingsTab: string;
+  setSettingsTab: (tab: string) => void;
 }
 
 const AppContext = createContext<AppState | undefined>(undefined);
@@ -30,6 +34,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [activeCallId, setActiveCallId] = useState<string | null>(null);
   const [localDrafts, setLocalDrafts] = useState<Record<string, string>>({});
   const [is2FAVerified, setIs2FAVerified] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [settingsTab, setSettingsTab] = useState('profile');
 
   return (
     <AppContext.Provider value={{
@@ -44,7 +50,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       localDrafts,
       setLocalDrafts,
       is2FAVerified,
-      setIs2FAVerified
+      setIs2FAVerified,
+      isSettingsOpen,
+      setIsSettingsOpen,
+      settingsTab,
+      setSettingsTab
     }}>
       {children}
     </AppContext.Provider>

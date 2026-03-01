@@ -19,10 +19,12 @@ import type { Call, User as UserType, Message, Chat } from '@/lib/types';
 import { Users, Phone, MessageCircle, UserCircle } from 'lucide-react';
 
 export default function ChatMain() {
-  const { currentChatId, activeCallId, setActiveCallId, activeView, setActiveView } = useAppState();
+  const { 
+    currentChatId, activeCallId, setActiveCallId, 
+    activeView, setActiveView, isSettingsOpen, setIsSettingsOpen 
+  } = useAppState();
   const { user } = useUser();
   const db = useFirestore();
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   const userProfileRef = useMemoFirebase(() => (!db || !user) ? null : doc(db, 'users', user.uid), [db, user]);
   const { data: profile } = useDoc<UserType>(userProfileRef);
@@ -39,13 +41,6 @@ export default function ChatMain() {
   }, [db, user]);
 
   const { data: incomingCalls } = useCollection<Call>(incomingCallsQuery);
-
-  // Глобальный подсчет непрочитанных сообщений
-  const chatsQuery = useMemoFirebase(() => {
-    if (!db || !user) return null;
-    return query(collection(db, 'chats'), where('participantIds', 'array-contains', user.uid));
-  }, [db, user]);
-  const { data: userChats } = useCollection<Chat>(chatsQuery);
 
   useEffect(() => {
     if (incomingCalls?.length && !activeCallId) {
@@ -129,14 +124,17 @@ function ChatsNavButton({ active, onClick }: { active: boolean, onClick: () => v
   const { user } = useUser();
   const db = useFirestore();
 
-  // Получаем все чаты пользователя
+  // Получаем все чаты пользователя для подсчета непрочитанных
   const chatsQuery = useMemoFirebase(() => {
     if (!db || !user) return null;
     return query(collection(db, 'chats'), where('participantIds', 'array-contains', user.uid));
   }, [db, user]);
+  
   const { data: chats } = useCollection<Chat>(chatsQuery);
 
-  const unreadCount = 0; // Для полноценной цифры нужен collectionGroup индекс
+  // Для полноценного подсчета без collectionGroup мы используем заглушку, 
+  // но в реальном приложении здесь был бы агрегатор из Cloud Functions или Snapshot
+  const unreadCount = 0; 
 
   return (
     <NavButton 

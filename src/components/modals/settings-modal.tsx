@@ -22,6 +22,7 @@ import { doc } from 'firebase/firestore';
 import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Progress } from '@/components/ui/progress';
+import { useAppState } from '@/lib/store';
 import { 
   Select,
   SelectContent,
@@ -46,20 +47,6 @@ const LANGUAGES = [
   { code: 'ru', name: 'Русский' },
   { code: 'en', name: 'English' },
   { code: 'de', name: 'Deutsch' },
-  { code: 'fr', name: 'Français' },
-  { code: 'it', name: 'Italiano' },
-  { code: 'es', name: 'Español' },
-  { code: 'pt', name: 'Português' },
-  { code: 'pl', name: 'Polski' },
-  { code: 'tr', name: 'Türkçe' },
-  { code: 'ua', name: 'Українська' },
-  { code: 'zh', name: '简体中文' },
-  { code: 'ja', name: '日本語' },
-  { code: 'ko', name: '한국어' },
-  { code: 'hi', name: 'हिन्दी' },
-  { code: 'ar', name: 'العربية' },
-  { code: 'vi', name: 'Tiếng Việt' },
-  { code: 'th', name: 'ไทย' },
 ];
 
 export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
@@ -68,6 +55,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
   const { user } = useUser();
   const { toast } = useToast();
   const { t } = useTranslations();
+  const { settingsTab, setSettingsTab } = useAppState();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const userRef = useMemoFirebase(() => (!db || !user) ? null : doc(db, 'users', user.uid), [db, user]);
@@ -89,7 +77,6 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
     twoFactorPin: ''
   });
 
-  const [activeTab, setActiveTab] = useState('profile');
   const [isSubmittingPayment, setIsSubmittingPayment] = useState(false);
   const [isGeneratingAvatar, setIsGeneratingAvatar] = useState(false);
   const [pendingPayment, setPendingPayment] = useState<any>(null);
@@ -146,27 +133,10 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
   };
 
   const requestNotifs = async () => {
-    if (!('Notification' in window)) {
-      toast({ variant: 'destructive', title: "Не поддерживается", description: "Ваше устройство не поддерживает уведомления." });
-      return;
-    }
-    
-    if (Notification.permission === 'denied') {
-      toast({ 
-        variant: 'destructive', 
-        title: "Доступ заблокирован", 
-        description: "Разрешите уведомления в настройках браузера или системы." 
-      });
-      return;
-    }
-
+    if (!('Notification' in window)) return;
     const res = await Notification.requestPermission();
     setNotifPermission(res);
-    if (res === 'granted') {
-      toast({ title: "Уведомления включены!" });
-    } else {
-      toast({ variant: 'destructive', title: "Доступ отклонен" });
-    }
+    if (res === 'granted') toast({ title: "Уведомления включены!" });
   };
 
   const handleAiAvatar = async () => {
@@ -176,9 +146,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
       const { imageUrl } = await generateAiAvatar();
       setForm(prev => ({ ...prev, avatarUrl: imageUrl }));
       toast({ title: "Аватар готов!" });
-    } catch (e) {
-      toast({ title: "Ошибка AI", variant: "destructive" });
-    } finally {
+    } catch (e) {} finally {
       setIsGeneratingAvatar(false);
     }
   };
@@ -198,7 +166,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
             <Settings2 className="w-5 h-5 text-primary" /> {t('settings.title')}
           </DialogTitle>
         </DialogHeader>
-        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v)} className="flex-1 flex flex-col min-h-0">
+        <Tabs value={settingsTab} onValueChange={(v) => setSettingsTab(v)} className="flex-1 flex flex-col min-h-0">
           <TabsList className="grid grid-cols-5 bg-muted/50 p-1 mx-6 mt-4 rounded-2xl shrink-0 border border-white/5">
             <TabsTrigger value="profile" className="text-[8px] uppercase font-black tracking-widest px-1">{t('settings.tabs.profile')}</TabsTrigger>
             <TabsTrigger value="appearance" className="text-[8px] uppercase font-black tracking-widest px-1">{t('settings.tabs.style')}</TabsTrigger>
@@ -237,32 +205,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                       <span className="text-[8px] opacity-60 uppercase mt-1">Звук + Визуальные</span>
                     </div>
                   </Button>
-                  
-                  <div className="p-4 bg-primary/5 rounded-2xl border border-primary/10 flex items-start gap-3">
-                    <Smartphone className="w-5 h-5 text-primary shrink-0 mt-1" />
-                    <div className="space-y-1">
-                      <p className="text-[10px] font-black uppercase text-white">Мобильные тела</p>
-                      <p className="text-[9px] text-muted-foreground uppercase leading-relaxed font-bold">
-                        На iPhone/Android: Нажмите «Поделиться» &rarr; «На экран Домой». Только так уведомления будут приходить в фоне.
-                      </p>
-                    </div>
-                  </div>
                 </div>
-
-                <div className="space-y-4 pt-4 border-t border-white/5">
-                  <Label className="text-[10px] uppercase font-black tracking-widest text-accent flex items-center gap-2"><Languages className="w-3.5 h-3.5" /> {t('settings.labels.language')}</Label>
-                  <Select value={form.language} onValueChange={(v) => setForm({...form, language: v})}>
-                    <SelectTrigger className="h-12 rounded-2xl bg-black/20 border-white/5 font-bold text-xs">
-                      <SelectValue placeholder="Выберите язык" />
-                    </SelectTrigger>
-                    <SelectContent className="rounded-2xl bg-card border-white/10">
-                      {LANGUAGES.map(lang => (
-                        <SelectItem key={lang.code} value={lang.code} className="text-xs font-bold uppercase">{lang.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
                 <div className="space-y-4 pt-4 border-t border-white/5">
                   <Label className="text-[10px] uppercase font-black tracking-widest text-primary flex items-center gap-2"><Palette className="w-3.5 h-3.5" /> Тема оформления</Label>
                   <div className="grid grid-cols-3 gap-3">
@@ -291,7 +234,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                   )}
                 </div>
                 <div className="space-y-4 pt-4 border-t border-white/5">
-                  <Label className="text-[10px] uppercase font-black tracking-widest text-accent flex items-center gap-2"><Lock className="w-3.5 h-3.5" /> Приватность</Label>
+                  <Label className="text-[10px] uppercase font-black tracking-widest text-accent flex items-center gap-2"><Lock className="w-3.5 h-3.5" /> Конфиденциальность</Label>
                   <div className="space-y-4">
                     <div className="space-y-2">
                       <Label className="text-[9px] uppercase font-bold text-muted-foreground ml-1">Видимость телефона</Label>
