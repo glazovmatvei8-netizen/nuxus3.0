@@ -73,8 +73,10 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, amIPremium = 
   }, [countdown, chatId, message.id, db]);
 
   const toggleAudio = (e: React.MouseEvent | React.PointerEvent) => {
+    // MEMENTO: One-click interaction fix
     e.stopPropagation();
     e.preventDefault();
+    
     if (!audioRef.current) {
       audioRef.current = new Audio(message.content);
       audioRef.current.addEventListener('timeupdate', () => {
@@ -85,8 +87,11 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, amIPremium = 
         setAudioProgress(0);
       });
     }
-    if (isPlaying) audioRef.current.pause();
-    else audioRef.current.play().catch(() => {});
+    if (isPlaying) {
+      audioRef.current.pause();
+    } else {
+      audioRef.current.play().catch(() => {});
+    }
     setIsPlaying(!isPlaying);
   };
 
@@ -136,7 +141,7 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, amIPremium = 
     if (message.contentType === 'poll' && message.pollData) {
       const totalVotes = message.pollData.options.reduce((acc: number, opt: PollOption) => acc + opt.votes.length, 0);
       return (
-        <div className="flex flex-col gap-4 mt-1 min-w-[240px] p-1" onClick={e => e.stopPropagation()} onPointerDown={e => e.stopPropagation()}>
+        <div className="flex flex-col gap-4 mt-1 min-w-[240px] p-1" onPointerDown={e => e.stopPropagation()} onClick={e => e.stopPropagation()}>
           <div className="flex flex-col gap-1">
             <span className="text-[10px] font-black uppercase text-accent tracking-[0.2em] flex items-center gap-1.5"><BarChart3 className="w-3 h-3" /> Опрос</span>
             <h4 className="text-sm font-bold text-white leading-tight">{message.pollData.question}</h4>
@@ -191,7 +196,7 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, amIPremium = 
     if (message.contentType === 'album' || message.contentType === 'image' || message.contentType === 'video') {
       const isOneTime = message.isOneTimeView;
       return (
-        <div className="flex flex-col gap-1" onClick={e => e.stopPropagation()} onPointerDown={e => e.stopPropagation()}>
+        <div className="flex flex-col gap-1" onPointerDown={e => e.stopPropagation()} onClick={e => e.stopPropagation()}>
           {isOneTime && <div className="flex items-center gap-1.5 mb-1 px-1"><EyeOff className="w-3 h-3 text-accent" /><span className="text-[8px] font-bold uppercase text-accent tracking-widest">Один просмотр</span></div>}
           <div className={cn("grid gap-1 mt-1 overflow-hidden rounded-2xl", albumMedia.length === 1 ? "grid-cols-1" : "grid-cols-2")}>
             {albumMedia.map((media: any, idx: number) => (
@@ -208,14 +213,21 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, amIPremium = 
     }
     if (message.contentType === 'audio') {
       return (
-        <div className="flex flex-col gap-2 mt-1 min-w-[200px]" onClick={e => e.stopPropagation()} onPointerDown={e => e.stopPropagation()}>
+        <div className="flex flex-col gap-2 mt-1 min-w-[200px]" onPointerDown={e => e.stopPropagation()} onClick={e => e.stopPropagation()}>
           <div className="flex items-center gap-3 p-3 bg-muted/20 rounded-2xl border border-white/5">
             <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full bg-primary/20 text-primary hover:bg-primary hover:text-white transition-all shrink-0" onClick={toggleAudio}>
               {isPlaying ? <Pause className="w-5 h-5 fill-current" /> : <Play className="w-5 h-5 fill-current ml-0.5" />}
             </Button>
             <div className="flex-1 space-y-1.5">
               <div className="h-1 w-full bg-white/10 rounded-full overflow-hidden"><div className="h-full bg-primary transition-all duration-300" style={{ width: `${audioProgress}%` }} /></div>
-              <div className="flex justify-between items-center"><span className="text-[10px] font-bold uppercase text-primary tracking-widest">Голосовое</span>{amIPremium && (<Button variant="ghost" size="icon" className="h-6 w-6" onClick={async (e) => { e.stopPropagation(); e.preventDefault(); setIsTranscribing(true); try { const { text } = await transcribeVoice({ audioDataUri: message.content }); setTranscription(text); } catch(e){} finally { setIsTranscribing(false); } }} disabled={isTranscribing}>{isTranscribing ? <Loader2 className="w-3 h-3 animate-spin" /> : <Languages className="w-3 h-3" />}</Button>)}</div>
+              <div className="flex justify-between items-center">
+                <span className="text-[10px] font-bold uppercase text-primary tracking-widest">Голосовое</span>
+                {amIPremium && (
+                  <Button variant="ghost" size="icon" className="h-6 w-6" onClick={async (e) => { e.stopPropagation(); e.preventDefault(); setIsTranscribing(true); try { const { text } = await transcribeVoice({ audioDataUri: message.content }); setTranscription(text); } catch(e){} finally { setIsTranscribing(false); } }} disabled={isTranscribing}>
+                    {isTranscribing ? <Loader2 className="w-3 h-3 animate-spin" /> : <Languages className="w-3 h-3" />}
+                  </Button>
+                )}
+              </div>
             </div>
           </div>
           {transcription && <p className="text-[10px] italic opacity-80 p-2 bg-primary/5 rounded-lg text-left break-words border border-primary/10">{transcription}</p>}

@@ -9,7 +9,7 @@ import { useToast } from '@/hooks/use-toast';
 
 /**
  * Handles system notifications and sound alerts for incoming messages.
- * Optimized to be proactive with permission requests and audio unlocking.
+ * Updated with custom spinner sound and improved audio unlocking.
  */
 export function NotificationListener() {
   const { user } = useUser();
@@ -20,9 +20,13 @@ export function NotificationListener() {
   const lastProcessedMessageId = useRef<string | null>(null);
   const startTime = useRef(new Date().toISOString());
 
+  // Custom sound URL provided by user
+  const NOTIFICATION_SOUND = 'https://zvukitop.com/wp-content/uploads/2021/01/vrashenie-kak-spiner.mp3';
+
   useEffect(() => {
     // Initialize notification sound
-    audioRef.current = new Audio('https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3');
+    audioRef.current = new Audio(NOTIFICATION_SOUND);
+    audioRef.current.preload = 'auto';
     
     // Auto-request on mount if not determined
     if ('Notification' in window && Notification.permission === 'default') {
@@ -33,35 +37,40 @@ export function NotificationListener() {
     // We unlock audio on the very first interaction with the app
     const unlockAudio = () => {
       if (audioRef.current) {
+        // Play and immediately pause to "unlock" the audio context
         audioRef.current.play().then(() => {
           audioRef.current?.pause();
           audioRef.current!.currentTime = 0;
         }).catch(() => {});
       }
+      // Remove listeners after first successful interaction
       window.removeEventListener('mousedown', unlockAudio);
       window.removeEventListener('touchstart', unlockAudio);
       window.removeEventListener('keydown', unlockAudio);
+      window.removeEventListener('scroll', unlockAudio);
     };
     
     window.addEventListener('mousedown', unlockAudio);
     window.addEventListener('touchstart', unlockAudio);
     window.addEventListener('keydown', unlockAudio);
+    window.addEventListener('scroll', unlockAudio);
 
     return () => {
       window.removeEventListener('mousedown', unlockAudio);
       window.removeEventListener('touchstart', unlockAudio);
       window.removeEventListener('keydown', unlockAudio);
+      window.removeEventListener('scroll', unlockAudio);
     };
   }, []);
 
   useEffect(() => {
     if (!db || !user) return;
 
-    // We listen to all messages globally to catch notifications for other chats
+    // Listen to all messages globally
     const q = query(
       collectionGroup(db, 'messages'),
       where('sentAt', '>', startTime.current),
-      limit(20)
+      limit(10)
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -73,18 +82,20 @@ export function NotificationListener() {
           if (msg.senderId === user.uid || lastProcessedMessageId.current === change.doc.id) return;
           lastProcessedMessageId.current = change.doc.id;
 
-          // Sound should play if notification is allowed and app is visible but chat is NOT current
+          // Notification logic: fire if not in the current active chat
           if (msg.chatId !== currentChatId) {
-            // Play notification sound
+            // Play custom notification sound
             if (audioRef.current) {
               audioRef.current.currentTime = 0;
-              audioRef.current.play().catch(e => console.warn("Audio play blocked by browser policies. Interaction required."));
+              audioRef.current.play().catch(e => {
+                console.warn("Audio play blocked. User interaction required.", e);
+              });
             }
 
             // Show system notification
             if ('Notification' in window && Notification.permission === 'granted') {
               try {
-                new Notification(`Nuxus: ${msg.senderName}`, {
+                new Notification(`${msg.senderName}`, {
                   body: msg.contentType === 'text' ? msg.content : `Отправил ${msg.contentType}`,
                   icon: 'https://picsum.photos/seed/nuxus/192/192'
                 });
@@ -100,8 +111,7 @@ export function NotificationListener() {
         }
       });
     }, (error) => {
-      // Index errors handled gracefully
-      console.warn("Notification stream limited (index required?):", error.message);
+      console.warn("Notification stream limited:", error.message);
     });
 
     return () => unsubscribe();
