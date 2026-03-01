@@ -12,7 +12,7 @@ import { useAuth, useUser, useFirestore, useDoc, useMemoFirebase } from '@/fireb
 import { UserAvatar } from '@/components/user-avatar';
 import { 
   LogOut, Palette, Loader2, Crown, Check, 
-  Monitor, Sparkles, Globe, Settings2, Upload, Moon, Droplets, Type, ShieldCheck, Lock, ShieldEllipsis
+  Monitor, Sparkles, Globe, Settings2, Upload, Moon, Droplets, Type, ShieldCheck, Lock
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { signOut, updatePassword, EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
