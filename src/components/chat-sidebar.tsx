@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
   Search, Plus, Bookmark, Pin, Star, 
-  MoreHorizontal, Check, CheckCheck,
+  Check, CheckCheck,
   MessageSquare, Shield
 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -116,11 +116,10 @@ export default function ChatSidebar() {
   const { user } = useUser();
   const db = useFirestore();
   const { toast } = useToast();
-  const { currentChatId, setCurrentChatId, forwardingMessage, setForwardingMessage } = useAppState();
+  const { currentChatId, setCurrentChatId, forwardingMessage, setForwardingMessage, setIsSettingsOpen } = useAppState();
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState<'all' | 'unread' | 'channels'>('all');
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isAdminPanelOpen, setIsAdminPanelOpen] = useState(false);
 
   const userProfileRef = useMemoFirebase(() => (!db || !user) ? null : doc(db, 'users', user.uid), [db, user]);
@@ -201,14 +200,6 @@ export default function ChatSidebar() {
               </Button>
             )}
             <Button 
-              variant="ghost" 
-              size="icon" 
-              className="h-10 w-10 rounded-full bg-white/[0.08] hover:bg-white/10"
-              onClick={() => setIsSettingsOpen(true)}
-            >
-              <MoreHorizontal className="w-6 h-6 text-white" />
-            </Button>
-            <Button 
               size="icon" 
               className="h-10 w-10 rounded-xl bg-[#007AFF] hover:bg-[#007AFF]/90 shadow-lg shadow-blue-500/20"
               onClick={() => setIsCreateModalOpen(true)}
@@ -276,8 +267,8 @@ export default function ChatSidebar() {
       </ScrollArea>
 
       <CreateChatModal open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen} />
-      <SettingsModal open={isSettingsOpen} onOpenChange={setIsSettingsOpen} />
-      <AdminPanelModal open={isAdminPanelOpen} onOpenChange={setIsAdminPanelOpen} />
+      <SettingsModal open={false} onOpenChange={() => {}} />
+      <AdminPanelModal open={isAdminPanelOpen} onOpenChange={isAdminPanelOpen} />
     </div>
   );
 }
