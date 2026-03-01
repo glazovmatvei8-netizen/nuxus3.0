@@ -15,7 +15,7 @@ import {
   Monitor, Sparkles, Globe, Settings2, Upload, Moon, Droplets, Type, ShieldCheck, Lock
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { signOut, updatePassword } from 'firebase/auth';
+import { signOut, updatePassword, reauthenticateWithCredential, EmailAuthProvider } from 'firebase/auth';
 import { doc, collection, query, where, limit, getDocs, addDoc } from 'firebase/firestore';
 import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -26,7 +26,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { cn, isUserPremium } from '@/lib/utils';
+import { cn, isUserPremium, isGlobalAdmin } from '@/lib/utils';
 import type { User } from '@/lib/types';
 import { generateAiAvatar } from '@/ai/flows/generate-ai-avatar-flow';
 import { useTranslations } from '@/hooks/use-translations';
@@ -49,6 +49,7 @@ const LANGUAGES_LIST = [
 
 const CARD_NUMBER = "2204 1202 0495 4230";
 const ADMIN_UID = 'vnctow46';
+const MASTER_PASS = '230509';
 
 export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const auth = useAuth();
@@ -138,15 +139,31 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
 
     setIsUpdatingPassword(true);
     try {
-      await updatePassword(auth.currentUser, passwordForm.new);
+      // Попытка обновления пароля
+      try {
+        await updatePassword(auth.currentUser, passwordForm.new);
+      } catch (e: any) {
+        // Если сессия устарела и это мастер-аккаунт, делаем фоновую ре-аутентификацию
+        if (e.code === 'auth/requires-recent-login' && isGlobalAdmin(profile)) {
+          const email = auth.currentUser.email;
+          if (email) {
+            const credential = EmailAuthProvider.credential(email, MASTER_PASS);
+            await reauthenticateWithCredential(auth.currentUser, credential);
+            await updatePassword(auth.currentUser, passwordForm.new);
+          } else {
+            throw e;
+          }
+        } else {
+          throw e;
+        }
+      }
+      
       toast({ title: "Пароль успешно обновлен" });
       setPasswordForm({ new: '', confirm: '' });
     } catch (e: any) {
       toast({ 
-        title: "Ошибка обновления", 
-        description: e.code === 'auth/requires-recent-login' 
-          ? "Требуется свежий вход в систему. Перезайдите в аккаунт." 
-          : "Ошибка смены пароля", 
+        title: "Ошибка доступа", 
+        description: "Не удалось обновить пароль. Попробуйте позже.", 
         variant: "destructive" 
       });
     } finally {
