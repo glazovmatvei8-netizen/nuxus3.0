@@ -38,13 +38,13 @@ const CoreMetrics = memo(() => {
   }, []);
 
   return (
-    <div className="p-6 bg-muted/20 rounded-[2rem] border border-white/5 space-y-6">
+    <div className="p-5 bg-muted/20 rounded-[2rem] border border-white/5 space-y-4">
       <div className="flex items-center gap-2">
         <Activity className="w-4 h-4 text-primary" />
         <span className="text-[10px] font-black uppercase tracking-widest text-white">Нагрузка ядра</span>
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="space-y-3">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="space-y-2">
           <div className="flex justify-between text-[9px] font-bold uppercase opacity-60 text-white">
             <div className="flex items-center gap-1"><Cpu className="w-3 h-3" /> CPU</div>
             <span>{cpu}%</span>
@@ -53,7 +53,7 @@ const CoreMetrics = memo(() => {
             <div className="h-full bg-primary transition-all duration-1000" style={{ width: `${cpu}%` }} />
           </div>
         </div>
-        <div className="space-y-3">
+        <div className="space-y-2">
           <div className="flex justify-between text-[9px] font-bold uppercase opacity-60 text-white">
             <div className="flex items-center gap-1"><Server className="w-3 h-3" /> RAM</div>
             <span>{ram}%</span>
@@ -209,9 +209,9 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl bg-card border-primary/20 p-0 overflow-hidden h-[85vh] flex flex-col rounded-[2.5rem] shadow-2xl border">
+      <DialogContent className="max-w-4xl bg-card border-primary/20 p-0 overflow-hidden h-[90vh] flex flex-col rounded-[2.5rem] shadow-2xl border">
         <DialogHeader className="sr-only">
-          <DialogTitle>Админ-панель Nuxus v5.7.1</DialogTitle>
+          <DialogTitle>Админ-панель Nuxus v5.7.2</DialogTitle>
           <DialogDescription>Управление ядром системы</DialogDescription>
         </DialogHeader>
 
@@ -222,13 +222,13 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
                 <ShieldAlert className="w-5 h-5 text-white" />
               </div>
               <div className="flex flex-col leading-none">
-                <span>Nuxus v5.7.1</span>
+                <span>Nuxus v5.7.2</span>
                 <span className="text-[9px] font-bold tracking-[0.4em] text-primary-foreground opacity-70 mt-1 uppercase">Консоль управления</span>
               </div>
             </div>
             <div className="flex items-center gap-1.5 px-3 py-1 bg-green-500/10 border border-green-500/20 rounded-full">
               <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" />
-              <span className="text-[8px] text-green-500 font-black">СИСТЕМА ONLINE</span>
+              <span className="text-[8px] text-green-500 font-black uppercase">Core Online</span>
             </div>
           </div>
         </div>
@@ -240,21 +240,21 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
             <TabsTrigger value="system" className="font-bold uppercase text-[9px] tracking-widest"><Terminal className="w-3.5 h-3.5 mr-1.5" /> Система</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="stats" className="flex-1 min-h-0 m-0 overflow-hidden outline-none">
+          <TabsContent value="stats" className="flex-1 min-h-0 m-0 outline-none overflow-hidden">
             <ScrollArea className="h-full">
-              <div className="p-6 space-y-6 pb-20">
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              <div className="p-6 space-y-5 pb-20">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                   {[
                     { label: 'Юзеры', val: stats.total, color: 'primary', icon: Users },
                     { label: 'Prime', val: stats.premium, color: 'accent', icon: Star },
                     { label: 'Админы', val: stats.admins, color: 'blue-500', icon: ShieldCheck },
                     { label: 'Бан', val: stats.banned, color: 'destructive', icon: Shield },
                   ].map((s, idx) => (
-                    <div key={idx} className={cn("p-5 rounded-[2rem] border", s.color === 'primary' ? 'bg-primary/5 border-primary/10' : s.color === 'accent' ? 'bg-accent/5 border-accent/10' : s.color === 'blue-500' ? 'bg-blue-500/5 border-blue-500/10' : 'bg-destructive/5 border-destructive/10')}>
-                      <span className={cn("text-[10px] font-bold uppercase tracking-widest block mb-2", s.color === 'primary' ? 'text-primary' : s.color === 'accent' ? 'text-accent' : s.color === 'blue-500' ? 'text-blue-500' : 'text-destructive')}>{s.label}</span>
-                      <div className="text-2xl font-black italic text-white flex items-center justify-between">
+                    <div key={idx} className={cn("p-4 rounded-[1.8rem] border transition-all", s.color === 'primary' ? 'bg-primary/5 border-primary/10' : s.color === 'accent' ? 'bg-accent/5 border-accent/10' : s.color === 'blue-500' ? 'bg-blue-500/5 border-blue-500/10' : 'bg-destructive/5 border-destructive/10')}>
+                      <span className={cn("text-[9px] font-bold uppercase tracking-widest block mb-1", s.color === 'primary' ? 'text-primary' : s.color === 'accent' ? 'text-accent' : s.color === 'blue-500' ? 'text-blue-500' : 'text-destructive')}>{s.label}</span>
+                      <div className="text-xl font-black italic text-white flex items-center justify-between">
                         {s.val}
-                        <s.icon className={cn("w-5 h-5 opacity-20", s.color === 'primary' ? 'text-primary' : s.color === 'accent' ? 'text-accent' : s.color === 'blue-500' ? 'text-blue-500' : 'text-destructive')} />
+                        <s.icon className={cn("w-4 h-4 opacity-30", s.color === 'primary' ? 'text-primary' : s.color === 'accent' ? 'text-accent' : s.color === 'blue-500' ? 'text-blue-500' : 'text-destructive')} />
                       </div>
                     </div>
                   ))}
@@ -263,24 +263,24 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
                 <CoreMetrics />
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                   <div className="p-6 bg-muted/20 rounded-[2.5rem] border border-white/5 space-y-4">
-                    <div className="flex items-center gap-2 mb-2">
+                   <div className="p-5 bg-muted/20 rounded-[2rem] border border-white/5 space-y-3">
+                    <div className="flex items-center gap-2">
                       <Database className="w-4 h-4 text-primary" />
                       <span className="text-[10px] font-black uppercase tracking-widest text-white">Статус БД</span>
                     </div>
-                    <div className="space-y-3">
-                      <div className="flex justify-between text-[11px] font-bold text-muted-foreground"><span>Доступность</span><span className="text-green-500">Полная</span></div>
-                      <div className="flex justify-between text-[11px] font-bold text-muted-foreground"><span>Шифрование</span><span className="text-white">AES-256</span></div>
+                    <div className="space-y-2">
+                      <div className="flex justify-between text-[10px] font-bold text-muted-foreground uppercase"><span>Доступность</span><span className="text-green-500">Полная</span></div>
+                      <div className="flex justify-between text-[10px] font-bold text-muted-foreground uppercase"><span>Шифрование</span><span className="text-white">AES-256</span></div>
                     </div>
                   </div>
-                  <div className="p-6 bg-muted/20 rounded-[2.5rem] border border-white/5 space-y-4">
-                    <div className="flex items-center gap-2 mb-2">
+                  <div className="p-5 bg-muted/20 rounded-[2rem] border border-white/5 space-y-3">
+                    <div className="flex items-center gap-2">
                       <Globe className="w-4 h-4 text-accent" />
                       <span className="text-[10px] font-black uppercase tracking-widest text-white">Сеть</span>
                     </div>
-                    <div className="space-y-3">
-                      <div className="flex justify-between text-[11px] font-bold text-muted-foreground"><span>Пинг</span><span className="text-white">~12ms</span></div>
-                      <div className="flex justify-between text-[11px] font-bold text-muted-foreground"><span>Трафик</span><span className="text-green-500">Оптимально</span></div>
+                    <div className="space-y-2">
+                      <div className="flex justify-between text-[10px] font-bold text-muted-foreground uppercase"><span>Пинг</span><span className="text-white">~12ms</span></div>
+                      <div className="flex justify-between text-[10px] font-bold text-muted-foreground uppercase"><span>Трафик</span><span className="text-green-500">Оптимально</span></div>
                     </div>
                   </div>
                 </div>
@@ -289,7 +289,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
           </TabsContent>
 
           <TabsContent value="users" className="flex-1 min-h-0 overflow-hidden flex flex-col p-0 m-0 outline-none">
-            <div className="px-6 py-4 border-b border-white/5 bg-muted/10">
+            <div className="px-6 py-4 border-b border-white/5 bg-muted/10 shrink-0">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input 
@@ -342,7 +342,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
             </ScrollArea>
           </TabsContent>
 
-          <TabsContent value="system" className="flex-1 min-h-0 m-0 overflow-hidden outline-none">
+          <TabsContent value="system" className="flex-1 min-h-0 m-0 outline-none overflow-hidden">
             <ScrollArea className="h-full">
               <div className="p-6 space-y-6 pb-24">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -371,16 +371,16 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
                         {isCleaning ? <Loader2 className="w-3 h-3 animate-spin mr-2" /> : <Bomb className="w-3 h-3 mr-2" />}
                         Cleanup Duplicates
                       </Button>
-                      <p className="text-[8px] text-muted-foreground text-center italic uppercase">Удалит аккаунты без чатов и дубликаты Prime</p>
+                      <p className="text-[8px] text-muted-foreground text-center italic uppercase">Удалит аккаунты без чатов и твинки</p>
                     </div>
                   </div>
-                  <div className="p-6 bg-primary/10 rounded-[2rem] border border-primary/20 space-y-4">
+                  <div className="p-6 bg-primary/10 rounded-[2rem] border border-primary/20 space-y-4 md:col-span-2">
                     <div className="flex items-center gap-2 mb-2">
                       <Globe className="w-4 h-4 text-primary" />
                       <span className="text-[10px] font-black uppercase tracking-widest text-white">Рассылка</span>
                     </div>
                     <textarea 
-                      placeholder="Текст уведомления..." 
+                      placeholder="Текст уведомления для всех пользователей..." 
                       value={alertText}
                       onChange={e => setAlertText(e.target.value)}
                       className="w-full bg-card border border-white/10 h-24 rounded-xl text-xs p-3 focus:outline-none focus:border-primary/50 resize-none"
@@ -390,7 +390,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
                       onClick={() => { setAlertText(''); toast({ title: "Разослано" }); }}
                       disabled={!alertText.trim()}
                     >
-                      <Send className="w-4 h-4 mr-2" /> Трансляция
+                      <Send className="w-4 h-4 mr-2" /> Трансляция сообщения
                     </Button>
                   </div>
                 </div>
