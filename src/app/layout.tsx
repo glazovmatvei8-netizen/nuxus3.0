@@ -16,12 +16,14 @@ const font = Plus_Jakarta_Sans({
 export const metadata: Metadata = {
   title: 'Nuxus — Премиальная связь',
   description: 'Современный и безопасный мессенджер нового поколения.',
-  keywords: ['чат', 'мессенджер', 'безопасность', 'AI', 'видеосообщения', 'Nuxus'],
-  authors: [{ name: 'Nuxus Team' }],
+  applicationName: 'NuxusChat',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
     title: 'Nuxus',
+  },
+  formatDetection: {
+    telephone: false,
   },
   openGraph: {
     type: 'website',
@@ -36,12 +38,6 @@ export const metadata: Metadata = {
       height: 630,
       alt: 'Nuxus Preview',
     }],
-  },
-  twitter: {
-    card: 'summary_large_image',
-    title: 'Nuxus',
-    description: 'Премиальный опыт общения.',
-    images: ['https://picsum.photos/seed/nuxus/1200/630'],
   },
 };
 
@@ -61,6 +57,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ru" className={`dark ${font.variable}`} suppressHydrationWarning>
+      <head>
+        <link rel="icon" href="https://picsum.photos/seed/nuxus/32/32" />
+        <link rel="apple-touch-icon" href="https://picsum.photos/seed/nuxus/180/180" />
+      </head>
       <body className="font-sans antialiased bg-background text-foreground overflow-hidden h-[100dvh]">
         <FirebaseClientProvider>
           <AppProvider>
