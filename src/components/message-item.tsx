@@ -171,6 +171,8 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, amIPremium = 
     let formatted = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
     formatted = formatted.replace(/\*(.*?)\*/g, '<em>$1</em>');
     formatted = formatted.replace(/`(.*?)`/g, '<code class="bg-black/20 px-1 rounded">$1</code>');
+    // Highlight @all
+    formatted = formatted.replace(/@all/g, '<span class="text-accent font-black animate-pulse">@all</span>');
     return <span dangerouslySetInnerHTML={{ __html: formatted }} />;
   };
 
@@ -289,7 +291,11 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, amIPremium = 
           <div className="flex items-center gap-1.5 mb-0.5">{countdown !== null && (<div className="flex items-center gap-1 px-1.5 py-0.5 bg-red-500/10 rounded-full text-[8px] font-black text-red-500 animate-pulse"><Timer className="w-2.5 h-2.5" /> {countdown}</div>)}</div>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <div className={cn("p-3 rounded-2xl cursor-pointer shadow-md border transition-all hover:opacity-95 relative", isMe ? "message-bubble-me border-none ml-auto" : "bg-card border-white/5 text-foreground mr-auto")}>
+              <div className={cn(
+                "p-3 rounded-2xl cursor-pointer shadow-md border transition-all hover:opacity-95 relative", 
+                isMe ? "message-bubble-me border-none ml-auto" : "bg-card border-white/5 text-foreground mr-auto",
+                message.isMentionAll && !isMe && "border-accent shadow-lg shadow-accent/10"
+              )}>
                 {renderContent()}
                 <div className={cn("flex items-center justify-end gap-1 mt-1 opacity-60")}>
                   <span className="text-[9px]">{formattedTime}</span>

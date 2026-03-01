@@ -170,15 +170,11 @@ export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onO
 
   const handleToggleAdmin = async (targetUserId: string, isAdmin: boolean) => {
     if (!db || !chat.id || !isOwner) return;
-    try {
-      const chatRef = doc(db, 'chats', chat.id);
-      await updateDoc(chatRef, {
-        adminIds: isAdmin ? arrayUnion(targetUserId) : arrayRemove(targetUserId)
-      });
-      toast({ title: isAdmin ? "Назначен админом" : "Снят с админки" });
-    } catch (e) {
-      toast({ title: "Ошибка", variant: "destructive" });
-    }
+    const chatRef = doc(db, 'chats', chat.id);
+    updateDocumentNonBlocking(chatRef, {
+      adminIds: isAdmin ? arrayUnion(targetUserId) : arrayRemove(targetUserId)
+    });
+    toast({ title: isAdmin ? "Назначен админом" : "Снят с админки" });
   };
 
   const handleKickMember = async (targetUserId: string) => {
@@ -189,16 +185,12 @@ export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onO
 
     if (!confirm('Вы уверены, что хотите исключить этого пользователя?')) return;
 
-    try {
-      const chatRef = doc(db, 'chats', chat.id);
-      await updateDoc(chatRef, {
-        participantIds: arrayRemove(targetUserId),
-        adminIds: arrayRemove(targetUserId)
-      });
-      toast({ title: "Пользователь исключен" });
-    } catch (e) {
-      toast({ title: "Ошибка исключения", variant: "destructive" });
-    }
+    const chatRef = doc(db, 'chats', chat.id);
+    updateDocumentNonBlocking(chatRef, {
+      participantIds: arrayRemove(targetUserId),
+      adminIds: arrayRemove(targetUserId)
+    });
+    toast({ title: "Пользователь исключен" });
   };
 
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -454,10 +446,6 @@ function MemberRow({
   const isTargetOwner = userId === ownerId;
   const isTargetMe = userId === viewerId;
 
-  // Логика отображения кнопки Кика:
-  // 1. Нельзя кикнуть самого себя (для этого есть Выход из чата)
-  // 2. Владелец может кикнуть кого угодно
-  // 3. Админ может кикнуть только обычного пользователя (не админа и не владельца)
   const canBeKicked = !isTargetMe && (
     isOwner || (isViewerAdmin && !isTargetAdmin && !isTargetOwner)
   );

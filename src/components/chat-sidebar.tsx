@@ -336,6 +336,14 @@ function ChatListItem({ chat, isActive, otherId, cachedDisplayName, manualAvatar
   const { data: unreadData } = useCollection<Message>(unreadQuery);
   const unreadCount = (unreadData || []).filter(m => m.senderId !== user?.uid).length;
 
+  // Real-time typing users in group
+  const typingUsers = useMemo(() => {
+    if (!chat?.typing || !user) return [];
+    return Object.entries(chat.typing)
+      .filter(([uid, isTyping]) => isTyping && uid !== user.uid)
+      .map(([uid]) => uid);
+  }, [chat?.typing, user]);
+
   useEffect(() => {
     if (isGlobalResult) {
       setStatus(chat.type === 'group' ? 'Public Group' : 'Public Channel');
@@ -350,8 +358,7 @@ function ChatListItem({ chat, isActive, otherId, cachedDisplayName, manualAvatar
   }, [otherId, otherProfile, chat.type, isGlobalResult, t]);
 
   const isOtherDeleted = otherProfile?.isBanned || otherProfile?.name?.includes('Deleted');
-  const isTyping = chat?.typing && otherId && chat.typing[otherId] && !isOtherDeleted;
-  const isOtherPremium = isUserPremium(otherProfile);
+  const isTyping = typingUsers.length > 0;
   
   const finalDisplayName = formatDisplayName(otherProfile?.name || cachedDisplayName || chat.name || 'User');
 
@@ -378,7 +385,7 @@ function ChatListItem({ chat, isActive, otherId, cachedDisplayName, manualAvatar
         <div className="flex items-center justify-between gap-2">
           <span className="font-bold text-sm truncate flex items-center gap-1">
             {finalDisplayName}
-            {isOtherPremium && <Star className="w-3 h-3 text-accent fill-accent shrink-0" />}
+            {(otherProfile?.isPremium || chat.isPremium) && <Star className="w-3 h-3 text-accent fill-accent shrink-0" />}
             {isPinned && <Pin className="w-3 h-3 rotate-45 shrink-0 opacity-60" />}
           </span>
           <div className="flex items-center gap-1">
@@ -395,7 +402,12 @@ function ChatListItem({ chat, isActive, otherId, cachedDisplayName, manualAvatar
             isActive ? 'text-white/80' : (isTyping || status === 'online' || status === 'в сети' ? 'text-accent' : 'text-muted-foreground/60')
           )}>
             {isTyping ? (
-              <span className="flex items-center gap-0.5">{t('chat.typing')}<span className="animate-typing-dot">.</span><span className="animate-typing-dot [animation-delay:0.2s]">.</span><span className="animate-typing-dot [animation-delay:0.4s]">.</span></span>
+              <span className="flex items-center gap-0.5">
+                {chat.type === 'private' ? t('chat.typing') : "Кто-то печатает"}
+                <span className="animate-typing-dot">.</span>
+                <span className="animate-typing-dot [animation-delay:0.2s]">.</span>
+                <span className="animate-typing-dot [animation-delay:0.4s]">.</span>
+              </span>
             ) : status}
           </div>
           {isGlobalResult ? (

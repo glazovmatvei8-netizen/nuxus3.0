@@ -93,7 +93,6 @@ export default function ChatArea() {
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const draftTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -109,6 +108,10 @@ export default function ChatArea() {
 
   const chatRef = useMemoFirebase(() => (!db || !currentChatId) ? null : doc(db, 'chats', currentChatId), [db, currentChatId]);
   const { data: chat } = useDoc<Chat>(chatRef);
+
+  const isAdmin = useMemo(() => {
+    return chat?.ownerId === firebaseUser?.uid || chat?.adminIds?.includes(firebaseUser?.uid || '') || isGlobalAdmin(userProfile);
+  }, [chat, firebaseUser, userProfile]);
 
   const otherId = useMemo(() => {
     if (chat?.type === 'private' && firebaseUser) return chat.participantIds?.find((id: string) => id !== firebaseUser.uid);
@@ -142,6 +145,20 @@ export default function ChatArea() {
       if ("Notification" in window && Notification.permission === 'default') Notification.requestPermission();
     }
   }, []);
+
+  // Notification for @all
+  useEffect(() => {
+    if (!messages || !firebaseUser || !audioRef.current) return;
+    const lastMsg = messages[messages.length - 1];
+    if (lastMsg && lastMsg.senderId !== firebaseUser.uid && lastMsg.isMentionAll && !lastMsg.isRead) {
+      audioRef.current.play().catch(() => {});
+      toast({
+        title: "Внимание: Объявление!",
+        description: `${lastMsg.senderName}: ${lastMsg.content}`,
+        variant: "default",
+      });
+    }
+  }, [messages, firebaseUser, toast]);
 
   useEffect(() => {
     if (!messages || !firebaseUser || !currentChatId || !db) return;
@@ -202,8 +219,9 @@ export default function ChatArea() {
     }
     return () => {
       if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+      updateTypingStatus(false); // Clean up typing status on switch or unmount
     };
-  }, [currentChatId, localDrafts]);
+  }, [currentChatId, localDrafts, updateTypingStatus]);
 
   useEffect(() => {
     if (messages?.length) {
@@ -261,6 +279,8 @@ export default function ChatArea() {
 
     // Отправляем текст, если он есть (отдельно от медиа, как в TG)
     if (trimmedContent && pendingMedia.length === 0) {
+      const isMentionAll = isAdmin && trimmedContent.includes('@all');
+      
       const msgData: Partial<Message> = { 
         chatId: currentChatId, 
         senderId: firebaseUser.uid, 
@@ -271,7 +291,8 @@ export default function ChatArea() {
         isRead: false, 
         scheduledAt: scheduledDate ? scheduledDate.toISOString() : null,
         expiresInSeconds: expiryTime,
-        isOneTimeView: isOneTime
+        isOneTimeView: isOneTime,
+        isMentionAll: isMentionAll
       };
       if (replyTo) {
         msgData.replyToId = replyTo.id;
@@ -290,7 +311,7 @@ export default function ChatArea() {
     
     setIsSending(false);
     setTimeout(() => scrollToBottom('smooth'), 100);
-  }, [messageInput, pendingMedia, currentChatId, firebaseUser, db, userProfile, replyTo, editingMsg, scrollToBottom, scheduledDate, expiryTime, isOneTime, updateTypingStatus, setLocalDrafts]);
+  }, [messageInput, pendingMedia, currentChatId, firebaseUser, db, userProfile, replyTo, editingMsg, scrollToBottom, scheduledDate, expiryTime, isOneTime, updateTypingStatus, setLocalDrafts, isAdmin]);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
@@ -443,7 +464,7 @@ export default function ChatArea() {
             onReply={setReplyTo} 
             onEdit={(msg: Message) => { setEditingMsg(msg); setMessageInput(msg.content); setReplyTo(null); }} 
             amIPremium={amIPremium} 
-            isAdmin={chat?.ownerId === firebaseUser?.uid || isGlobalAdmin(userProfile)}
+            isAdmin={isAdmin}
             isGroup={chat?.type === 'group' || chat?.type === 'channel'}
           />
         )}
