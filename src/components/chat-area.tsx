@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useRef, useEffect, useMemo, useCallback, memo } from 'react';
@@ -170,23 +171,36 @@ export default function ChatArea() {
     const id = targetChatId || currentChatId;
     if (!db || !id || !firebaseUser) return;
     
-    if (isTypingRef.current === isTyping && isTyping) return;
+    if (isTypingRef.current === isTyping) return;
     
     isTypingRef.current = isTyping;
     const typingRef = doc(db, 'chats', id);
     updateDoc(typingRef, { [`typing.${firebaseUser.uid}`]: isTyping }).catch(() => {});
   }, [db, currentChatId, firebaseUser]);
 
+  // Typing status management: cleanup and timeouts
   useEffect(() => {
     const handleUnload = () => updateTypingStatus(false);
     window.addEventListener('beforeunload', handleUnload);
-    updateTypingStatus(false);
     
     return () => {
       window.removeEventListener('beforeunload', handleUnload);
       updateTypingStatus(false);
     };
-  }, [updateTypingStatus, currentChatId]);
+  }, [updateTypingStatus]);
+
+  // Auto-clear typing status if no activity for 5 seconds
+  useEffect(() => {
+    if (messageInput.length > 0) {
+      updateTypingStatus(true);
+      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+      typingTimeoutRef.current = setTimeout(() => {
+        updateTypingStatus(false);
+      }, 5000);
+    } else {
+      updateTypingStatus(false);
+    }
+  }, [messageInput, updateTypingStatus]);
 
   // Personal Mention Notification
   useEffect(() => {
@@ -222,6 +236,7 @@ export default function ChatArea() {
     }
   }, []);
 
+  // Save drafts with debounce
   useEffect(() => {
     if (!currentChatId) return;
     if (draftTimeoutRef.current) clearTimeout(draftTimeoutRef.current);
@@ -246,6 +261,7 @@ export default function ChatArea() {
     
     if (lastAtSymbol !== -1) {
       const query = textBeforeCursor.slice(lastAtSymbol + 1);
+      // Ensure no spaces between @ and query
       if (!query.includes(' ')) {
         setMentionQuery(query);
         setMentionIndex(0);
@@ -254,17 +270,6 @@ export default function ChatArea() {
       }
     } else {
       setMentionQuery(null);
-    }
-
-    if (val.length > 0) {
-      updateTypingStatus(true);
-      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
-      typingTimeoutRef.current = setTimeout(() => {
-        updateTypingStatus(false);
-      }, 4000);
-    } else {
-      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
-      updateTypingStatus(false);
     }
   };
 
@@ -289,6 +294,7 @@ export default function ChatArea() {
     }
   };
 
+  // Load draft and reset mention on chat change
   useEffect(() => {
     if (currentChatId) {
       setMessageInput(localDrafts[currentChatId] || '');
@@ -296,7 +302,7 @@ export default function ChatArea() {
       isTypingRef.current = false;
       setMentionQuery(null);
     }
-  }, [currentChatId, localDrafts]);
+  }, [currentChatId]); // Removed localDrafts from deps to prevent resets during typing
 
   useEffect(() => {
     if (messages?.length) {

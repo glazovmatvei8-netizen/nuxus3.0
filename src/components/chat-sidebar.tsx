@@ -325,13 +325,13 @@ function TypingIndicator({ uids, isPrivate, t }: { uids: string[], isPrivate: bo
   const userRef = useMemoFirebase(() => (!db || !firstUid) ? null : doc(db, 'users', firstUid), [db, firstUid]);
   const { data: profile } = useDoc<User>(userRef);
 
-  // Проверка: если пользователь не проявлял активности более 60 секунд, 
+  // Проверка: если пользователь не проявлял активности более 30 секунд, 
   // мы считаем статус печатания "фантомным" и скрываем его.
   const isActuallyOnline = useMemo(() => {
     if (!profile?.lastSeen) return false;
     try {
       const diff = Math.abs(differenceInSeconds(new Date(), parseISO(profile.lastSeen)));
-      return diff < 60; // Допуск 60 секунд (heartbeat идет каждые 30с)
+      return diff < 30; // Уменьшен допуск до 30 секунд для исключения фантомов
     } catch (e) {
       return false;
     }
@@ -376,7 +376,7 @@ function ChatListItem({ chat, isActive, otherId, cachedDisplayName, manualAvatar
   const { data: unreadData } = useCollection<Message>(unreadQuery);
   const unreadCount = (unreadData || []).filter(m => m.senderId !== user?.uid).length;
 
-  // Real-time typing users 
+  // Real-time typing users with online check
   const typingUsers = useMemo(() => {
     if (!chat?.typing || !user) return [];
     return Object.entries(chat.typing)
