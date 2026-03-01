@@ -254,7 +254,7 @@ export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onO
     <>
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md bg-card border-border p-0 overflow-hidden h-[90vh] flex flex-col rounded-[2.5rem] shadow-2xl">
-        <DialogHeader className="p-6 text-center flex flex-col items-center shrink-0 border-b-0">
+        <DialogHeader className="p-6 text-center flex flex-col items-center shrink-0 border-b-0 space-y-0">
           <div className="relative group">
             <UserAvatar 
               userId={isPrivate ? otherId : null} 
@@ -297,7 +297,7 @@ export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onO
                 </div>
               )}
               {!isMutualContact && isContact && (
-                <p className="text-[8px] text-muted-foreground uppercase font-bold italic">
+                <p className="text-[8px] text-muted-foreground uppercase font-bold italic mt-1">
                   Номер станет виден, когда {chatName} добавит вас в ответ
                 </p>
               )}

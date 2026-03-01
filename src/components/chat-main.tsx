@@ -9,6 +9,7 @@ import { cn } from '@/lib/utils';
 import { useFirestore, useUser, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, query, where, limit } from 'firebase/firestore';
 import { CallOverlay } from './modals/call-overlay';
+import { NotificationListener } from './notification-listener';
 import type { Call } from '@/lib/types';
 
 /**
@@ -40,6 +41,8 @@ export default function ChatMain() {
 
   return (
     <div className="fixed inset-0 flex w-full bg-background overflow-hidden h-[100dvh]">
+      <NotificationListener />
+      
       {/* Sidebar: hidden on mobile when a chat is selected */}
       <div className={cn(
         "w-full md:w-[350px] lg:w-[400px] h-full flex-shrink-0 border-r border-white/5 transition-all duration-300 z-30 bg-card",

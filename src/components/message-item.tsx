@@ -15,19 +15,17 @@ import {
 import { format } from 'date-fns';
 import { 
   CornerUpLeft, Trash2, Check, CheckCheck, Languages, Loader2, 
-  Crown, Diamond, Rocket, Flame, Heart, Zap, Trophy, Gem,
-  Pin, Forward, Gift, PlayCircle, Edit2, Copy, Timer, EyeOff, Clock, Search, X,
-  ChevronLeft, ChevronRight, Pause, Play, Star, BarChart3
+  CornerUpRight, Forward, Edit2, Copy, Timer, EyeOff, Clock, Search, X,
+  ChevronLeft, ChevronRight, Pause, Play, Star, BarChart3, PlayCircle
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { doc, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
+import { doc } from 'firebase/firestore';
 import { deleteDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { transcribeVoice } from '@/ai/flows/voice-to-text-flow';
 import type { Message, PollOption } from '@/lib/types';
 import { Button } from './ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Progress } from './ui/progress';
 
 export const MessageItem = memo(({ message, isMe, chatId, onReply, amIPremium = false, isAdmin = false, isGroup = false, onEdit }: any) => {
   const db = useFirestore();
@@ -91,7 +89,8 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, amIPremium = 
     setIsPlaying(!isPlaying);
   };
 
-  const handlePollVote = async (optionId: string) => {
+  const handlePollVote = (e: React.MouseEvent, optionId: string) => {
+    e.stopPropagation();
     if (!db || !user || !message.pollData) return;
     
     const pollRef = doc(db, 'chats', chatId, 'messages', message.id);
@@ -147,7 +146,7 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, amIPremium = 
               const percentage = totalVotes > 0 ? (voteCount / totalVotes) * 100 : 0;
               const hasVoted = user && opt.votes.includes(user.uid);
               return (
-                <div key={opt.id} onClick={() => handlePollVote(opt.id)} className="space-y-1.5 cursor-pointer group">
+                <div key={opt.id} onClick={(e) => handlePollVote(e, opt.id)} className="space-y-1.5 cursor-pointer group">
                   <div className="flex justify-between items-center px-1">
                     <span className={cn("text-xs transition-colors", hasVoted ? "text-primary font-bold" : "text-white/80 group-hover:text-white")}>{opt.text}</span>
                     <span className="text-[10px] font-mono text-muted-foreground">{voteCount}</span>
@@ -170,7 +169,7 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, amIPremium = 
       return (
         <div className="relative p-1">
           <div 
-            onClick={() => setGalleryOpen(true)}
+            onClick={(e) => { e.stopPropagation(); setGalleryOpen(true); }}
             className="w-48 h-48 rounded-full overflow-hidden border-4 border-primary/20 shadow-2xl cursor-pointer bg-black group relative"
           >
             <video 
@@ -197,7 +196,7 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, amIPremium = 
           {isOneTime && <div className="flex items-center gap-1.5 mb-1 px-1"><EyeOff className="w-3 h-3 text-accent" /><span className="text-[8px] font-bold uppercase text-accent tracking-widest">Один просмотр</span></div>}
           <div className={cn("grid gap-1 mt-1 overflow-hidden rounded-2xl", albumMedia.length === 1 ? "grid-cols-1" : "grid-cols-2")}>
             {albumMedia.map((media: any, idx: number) => (
-              <div key={idx} onClick={() => { if(!message.isExpired) { setGalleryIndex(idx); setGalleryOpen(true); } }} className={cn("relative cursor-pointer group bg-black border border-white/5 overflow-hidden", albumMedia.length === 1 ? "w-64 h-64" : "h-32")}>
+              <div key={idx} onClick={(e) => { e.stopPropagation(); if(!message.isExpired) { setGalleryIndex(idx); setGalleryOpen(true); } }} className={cn("relative cursor-pointer group bg-black border border-white/5 overflow-hidden", albumMedia.length === 1 ? "w-64 h-64" : "h-32")}>
                 {media.type === 'video' ? <video src={media.url} className={cn("w-full h-full object-cover", isOneTime && "blur-2xl opacity-40")} muted playsInline /> : <img src={media.url} className={cn("w-full h-full object-cover", isOneTime && "blur-2xl opacity-40")} />}
                 <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center">
                   {media.type === 'video' ? <PlayCircle className="w-8 h-8 text-white/50" /> : <Search className="w-6 h-6 text-white/0 group-hover:text-white/50 transition-all" />}
@@ -210,7 +209,7 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, amIPremium = 
     }
     if (message.contentType === 'audio') {
       return (
-        <div className="flex flex-col gap-2 mt-1 min-w-[200px]">
+        <div className="flex flex-col gap-2 mt-1 min-w-[200px]" onClick={(e) => e.stopPropagation()}>
           <div className="flex items-center gap-3 p-3 bg-muted/20 rounded-2xl border border-white/5">
             <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full bg-primary/20 text-primary hover:bg-primary hover:text-white transition-all shrink-0" onClick={toggleAudio}>
               {isPlaying ? <Pause className="w-5 h-5 fill-current" /> : <Play className="w-5 h-5 fill-current ml-0.5" />}
@@ -245,12 +244,23 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, amIPremium = 
         <div className={cn("flex flex-col min-w-0 max-w-full relative", isMe ? "items-end ml-auto" : "items-start mr-auto")}>
           {!isMe && isGroup && <span className="text-[9px] font-black text-primary uppercase tracking-widest mb-1 ml-1 truncate max-w-[150px]">{message.senderName}</span>}
           <div className="flex items-center gap-1.5 mb-0.5">{countdown !== null && <div className="flex items-center gap-1 px-1.5 py-0.5 bg-red-500/10 rounded-full text-[8px] font-black text-red-500 animate-pulse"><Timer className="w-2.5 h-2.5" /> {countdown}</div>}</div>
+          
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <div className={cn("p-3 rounded-2xl cursor-pointer shadow-md border transition-all hover:opacity-95 will-change-transform", isMe ? "message-bubble-me border-none ml-auto" : "bg-card border-white/5 text-foreground mr-auto", message.isMentionAll && !isMe && "border-accent shadow-lg shadow-accent/10", message.contentType === 'video_note' && "p-1 rounded-full overflow-hidden")}>
+              <div 
+                className={cn(
+                  "p-3 rounded-2xl cursor-pointer shadow-md border transition-all hover:opacity-95 will-change-transform", 
+                  isMe ? "message-bubble-me border-none ml-auto" : "bg-card border-white/5 text-foreground mr-auto", 
+                  message.isMentionAll && !isMe && "border-accent shadow-lg shadow-accent/10", 
+                  message.contentType === 'video_note' && "p-1 rounded-full overflow-hidden"
+                )}
+              >
                 {renderContent()}
                 {message.contentType !== 'video_note' && (
-                  <div className="flex items-center justify-end gap-1 mt-1 opacity-60"><span className="text-[9px]">{formattedTime}</span>{isMe && (message.isRead ? <CheckCheck className="w-3 h-3 text-accent" /> : <Check className="w-3 h-3" />)}</div>
+                  <div className="flex items-center justify-end gap-1 mt-1 opacity-60">
+                    <span className="text-[9px]">{formattedTime}</span>
+                    {isMe && (message.isRead ? <CheckCheck className="w-3 h-3 text-accent" /> : <Check className="w-3 h-3" />)}
+                  </div>
                 )}
               </div>
             </DropdownMenuTrigger>
