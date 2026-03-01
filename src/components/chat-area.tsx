@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useRef, useEffect, useMemo, useCallback, memo } from 'react';
@@ -8,7 +7,8 @@ import { Input } from '@/components/ui/input';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
   Send, Info, ChevronLeft, Loader2, Bookmark, X, Video, Circle, Wand2, Phone, Search as SearchIcon,
-  Zap, Calendar as CalendarIcon, Paperclip, Image as ImageIcon, Trash2, Mic, StopCircle, AtSign
+  Zap, Calendar as CalendarIcon, Paperclip, Image as ImageIcon, Trash2, Mic, StopCircle, AtSign,
+  Star
 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { MessageItem } from './message-item';
@@ -170,7 +170,6 @@ export default function ChatArea() {
     const id = targetChatId || currentChatId;
     if (!db || !id || !firebaseUser) return;
     
-    // Предотвращаем лишние запросы, но всегда позволяем сбросить статус (isTyping === false)
     if (isTypingRef.current === isTyping && isTyping) return;
     
     isTypingRef.current = isTyping;
@@ -181,7 +180,6 @@ export default function ChatArea() {
   useEffect(() => {
     const handleUnload = () => updateTypingStatus(false);
     window.addEventListener('beforeunload', handleUnload);
-    // Сбрасываем статус при входе в чат (на всякий случай)
     updateTypingStatus(false);
     
     return () => {
@@ -263,7 +261,7 @@ export default function ChatArea() {
       if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
       typingTimeoutRef.current = setTimeout(() => {
         updateTypingStatus(false);
-      }, 4000); // Увеличиваем до 4с для стабильности
+      }, 4000);
     } else {
       if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
       updateTypingStatus(false);
