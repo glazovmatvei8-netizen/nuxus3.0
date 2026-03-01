@@ -73,8 +73,8 @@ export default function ChatMain() {
 
       {/* Bottom Navigation Styled as Screenshot */}
       {!currentChatId && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 w-[92%] max-w-[420px] h-[72px] bg-[#1c1c1e]/85 backdrop-blur-[40px] border border-white/10 rounded-[2.5rem] flex items-center justify-between px-6 z-50 shadow-2xl shadow-black/50">
-          <div className="flex flex-1 justify-between mr-4">
+        <div className="fixed bottom-10 left-1/2 -translate-x-1/2 w-[94%] max-w-[440px] h-[76px] bg-[#1c1c1e]/80 backdrop-blur-[50px] border border-white/10 rounded-[2.8rem] flex items-center justify-between px-7 z-50 shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
+          <div className="flex flex-1 justify-between mr-6">
             <NavButton 
               icon={Users} 
               label="Контакты" 
@@ -101,7 +101,7 @@ export default function ChatMain() {
             />
           </div>
           
-          <button className="h-[54px] w-[52px] rounded-full bg-white/5 flex items-center justify-center shrink-0 border border-white/5 shadow-[inset_0_1px_1px_rgba(255,255,255,0.1)] hover:bg-white/10 transition-all">
+          <button className="h-[56px] w-[56px] rounded-full bg-white/5 flex items-center justify-center shrink-0 border border-white/5 shadow-[inset_0_1px_1px_rgba(255,255,255,0.1),0_10px_20px_rgba(0,0,0,0.2)] hover:bg-white/10 transition-all active:scale-90">
             <Search className="w-6 h-6 text-white" />
           </button>
         </div>
@@ -119,6 +119,7 @@ function ChatsNavButton({ active, onClick }: { active: boolean, onClick: () => v
 
   const unreadMessagesQuery = useMemoFirebase(() => {
     if (!db || !user) return null;
+    // Query messages that are not read
     return query(collectionGroup(db, 'messages'), where('isRead', '==', false));
   }, [db, user]);
   const { data: unreadData } = useCollection<Message>(unreadMessagesQuery);

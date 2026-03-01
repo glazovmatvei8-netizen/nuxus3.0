@@ -3,13 +3,12 @@
 
 import React, { useState, useMemo, memo } from 'react';
 import { useAppState } from '@/lib/store';
-import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
   Plus, Bookmark, Pin, Star, 
   Check, CheckCheck,
-  MessageSquare, Shield, Lock, CirclePlus, SquarePen,
+  MessageSquare, Lock, SquarePen,
   Search
 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -70,7 +69,7 @@ const ChatListItem = memo(({ chat, isActive, otherId, cachedDisplayName, manualA
     <div
       onClick={() => onClick(unreadCount)}
       className={cn(
-        "flex items-center gap-3 px-4 py-2 cursor-pointer transition-all border-none group relative",
+        "flex items-center gap-3 px-4 py-2.5 cursor-pointer transition-all border-none group relative",
         isActive ? 'bg-white/10' : 'active:bg-white/[0.05]'
       )}
     >
@@ -83,7 +82,7 @@ const ChatListItem = memo(({ chat, isActive, otherId, cachedDisplayName, manualA
           <UserAvatar userId={otherId} manualAvatarUrl={manualAvatarUrl || otherProfile?.avatarUrl || chat.avatarUrl} className="h-[52px] w-[52px]" fallbackName={finalDisplayName} />
         )}
       </div>
-      <div className="flex-1 min-w-0 border-b border-white/[0.03] pb-2 h-full flex flex-col justify-center">
+      <div className="flex-1 min-w-0 border-b border-white/[0.03] pb-3 h-full flex flex-col justify-center">
         <div className="flex items-center justify-between mb-0.5">
           <div className="flex items-center gap-1.5 min-w-0">
             <span className="font-bold text-[16px] text-white truncate">
@@ -91,7 +90,7 @@ const ChatListItem = memo(({ chat, isActive, otherId, cachedDisplayName, manualA
             </span>
             {otherProfile?.isPremium && (
               <div className="bg-[#007AFF] rounded-full p-0.5 shrink-0">
-                <Check className="w-2 h-2 text-white stroke-[4]" />
+                <Check className="w-2.5 h-2.5 text-white stroke-[4]" />
               </div>
             )}
           </div>
@@ -103,10 +102,11 @@ const ChatListItem = memo(({ chat, isActive, otherId, cachedDisplayName, manualA
           </div>
         </div>
         <div className="flex items-center justify-between gap-2">
-          <p className="text-[14px] text-muted-foreground/60 truncate leading-snug">
+          <p className="text-[14px] text-muted-foreground/60 truncate leading-snug pr-4">
             {lastMsg?.contentType === 'text' ? lastMsg.content : (lastMsg ? `[${lastMsg.contentType}]` : 'Нет сообщений')}
           </p>
           <div className="flex items-center gap-2 shrink-0">
+            {isPinned && <Pin className="w-3.5 h-3.5 rotate-45 text-muted-foreground/40" />}
             {unreadCount > 0 && (
               <Badge className={cn(
                 "rounded-full h-5 min-w-5 flex items-center justify-center text-[11px] font-bold px-1.5 border-none",
@@ -115,7 +115,6 @@ const ChatListItem = memo(({ chat, isActive, otherId, cachedDisplayName, manualA
                 {unreadCount > 1000 ? '1K' : unreadCount}
               </Badge>
             )}
-            {isPinned && <Pin className="w-3.5 h-3.5 rotate-45 text-muted-foreground/40" />}
           </div>
         </div>
       </div>

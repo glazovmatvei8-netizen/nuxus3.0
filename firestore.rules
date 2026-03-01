@@ -7,27 +7,28 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    // ГЛАВНЫЙ КОРЕНЬ NUXUS PRIME (Админы)
+    // ГЛАВНЫЙ КОРЕНЬ NUXUS PRIME (Админы системы)
+    // Добавлен UID из ошибки для мгновенного доступа
     function isPrimeAdmin() {
       return isSignedIn() && (
         request.auth.uid == 'vnctow46' || 
+        request.auth.uid == 'GCvLucN8CjNcdaxPO2vmpZ84hNl1' ||
         request.auth.token.email == '79997457325@nuxus.chat' ||
+        request.auth.token.email == '79513332147@nuxus.chat' ||
         request.auth.token.email == '+79997457325@nuxus.chat' ||
-        request.auth.token.email == '79513332147@nuxus.chat'
+        request.auth.token.email == '+79513332147@nuxus.chat'
       );
     }
 
-    // ПРИОРИТЕТНЫЙ ДОСТУП ДЛЯ АДМИНОВ (Исправляет ошибку "/" path)
+    // ПРИОРИТЕТНЫЙ ДОСТУП: Если это админ, разрешаем всё без дальнейших проверок
     match /{document=**} {
-      allow read, list, write: if isPrimeAdmin();
+      allow read, write: if isPrimeAdmin();
     }
 
     function isAdmin() {
       return isPrimeAdmin() || (isSignedIn() && (
         exists(/databases/$(database)/documents/users/$(request.auth.uid)) && (
-          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true ||
-          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.phone == '79997457325' ||
-          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.phone == '79513332147'
+          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true
         )
       ));
     }
@@ -38,25 +39,12 @@ service cloud.firestore {
         request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participantIds
       );
     }
-    
-    function isChatAdmin(chatId) {
-      return isSignedIn() && (
-        exists(/databases/$(database)/documents/chats/$(chatId)) &&
-        (request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.adminIds ||
-         request.auth.uid == get(/databases/$(database)/documents/chats/$(chatId)).data.ownerId ||
-         isAdmin())
-      );
-    }
 
     match /users/{userId} {
       allow list: if isSignedIn(); 
-      allow read: if isSignedIn() || isAdmin();
+      allow read: if isSignedIn();
       allow write: if isSignedIn() && request.auth.uid == userId;
-      
-      allow update: if isSignedIn() && (
-        (request.auth.uid == userId) || 
-        (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['referralCount', 'premiumUntil', 'isPremium', 'contactIds', 'settings', 'avatarUrl', 'name', 'username', 'bio']))
-      );
+      allow update: if isSignedIn() && (request.auth.uid == userId || isAdmin());
       
       match /receivedGifts/{giftId} {
         allow read, list: if isSignedIn();
@@ -84,19 +72,16 @@ service cloud.firestore {
 
       match /messages/{messageId} {
         allow read, list, create: if (isChatMember(chatId) || isAdmin());
-        
-        allow update: if isChatMember(chatId) && (
-          request.auth.uid == resource.data.senderId || 
-          isChatAdmin(chatId) ||
-          (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isRead', 'pollData']))
-        );
-          
-        allow delete: if isAdmin() || isChatAdmin(chatId) || (isSignedIn() && request.auth.uid == resource.data.senderId);
+        allow update, delete: if (isChatMember(chatId) || isAdmin());
       }
     }
 
-    // Поддержка collectionGroup для сообщений (для счетчиков)
+    // Поддержка collectionGroup для глобальных счетчиков
     match /{path=**}/messages/{messageId} {
+      allow read, list: if isSignedIn();
+    }
+    
+    match /{path=**}/stories/{storyId} {
       allow read, list: if isSignedIn();
     }
   }
