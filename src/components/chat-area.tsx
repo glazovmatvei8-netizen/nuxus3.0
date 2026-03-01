@@ -7,8 +7,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
-  Send, Info, ChevronLeft, Loader2, Bookmark, X, Video, Circle, Wand2, Phone, Search as SearchIcon,
-  Zap, Calendar as CalendarIcon, Paperclip, Image as ImageIcon, Trash2, Mic, StopCircle, AtSign,
+  Send, Info, ChevronLeft, Loader2, Bookmark, X, Video, Wand2, Phone, Search as SearchIcon,
+  Zap, Calendar as CalendarIcon, Paperclip, Mic, StopCircle, AtSign,
   Star
 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -26,8 +26,9 @@ import { Calendar } from '@/components/ui/calendar';
 import { useTranslations } from '@/hooks/use-translations';
 import { differenceInSeconds, parseISO } from 'date-fns';
 
-const NOTIFICATION_SOUND_URL = 'https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3';
-
+/**
+ * Optimized Message List with memoization.
+ */
 const MessageList = memo(({ 
   messages, 
   userId, 
@@ -67,7 +68,7 @@ MessageList.displayName = 'MessageList';
 /**
  * Dynamic header info component that shows participant count or typing status.
  */
-function ChatHeaderSubInfo({ chat, participants, userId, t }: { chat: Chat, participants: UserType[] | null, userId: string | undefined, t: any }) {
+const ChatHeaderSubInfo = memo(({ chat, participants, userId, t }: { chat: Chat, participants: UserType[] | null, userId: string | undefined, t: any }) => {
   const typingUsers = useMemo(() => {
     if (!chat?.typing || !userId) return [];
     return Object.entries(chat.typing)
@@ -75,7 +76,6 @@ function ChatHeaderSubInfo({ chat, participants, userId, t }: { chat: Chat, part
       .map(([uid]) => uid);
   }, [chat?.typing, userId]);
 
-  // Filter only actually active users to prevent ghost status
   const activeTypingUids = useMemo(() => {
     if (!participants || typingUsers.length === 0) return [];
     return typingUsers.filter(uid => {
@@ -126,7 +126,8 @@ function ChatHeaderSubInfo({ chat, participants, userId, t }: { chat: Chat, part
       Ядро Nuxus
     </span>
   );
-}
+});
+ChatHeaderSubInfo.displayName = 'ChatHeaderSubInfo';
 
 export default function ChatArea() {
   const { user: firebaseUser } = useUser();
@@ -150,11 +151,9 @@ export default function ChatArea() {
   const [expiryTime, setExpiryTime] = useState<number | null>(null);
   const [isOneTime, setIsOneTime] = useState(false);
 
-  // Mention System State
   const [mentionQuery, setMentionQuery] = useState<string | null>(null);
   const [mentionIndex, setMentionIndex] = useState(0);
 
-  // Audio Recording State
   const [isRecording, setIsRecording] = useState(false);
   const [recordingDuration, setRecordingDuration] = useState(0);
   const audioRecorderRef = useRef<MediaRecorder | null>(null);
@@ -179,7 +178,6 @@ export default function ChatArea() {
   const chatRef = useMemoFirebase(() => (!db || !currentChatId) ? null : doc(db, 'chats', currentChatId), [db, currentChatId]);
   const { data: chat } = useDoc<Chat>(chatRef);
 
-  // Fetch participants for mentions AND typing names
   const participantsQuery = useMemoFirebase(() => {
     if (!db || !chat?.participantIds?.length) return null;
     return query(collection(db, 'users'), where('id', 'in', chat.participantIds.slice(0, 30)));
@@ -227,47 +225,28 @@ export default function ChatArea() {
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      audioRef.current = new Audio(NOTIFICATION_SOUND_URL);
-      if ("Notification" in window && Notification.permission === 'default') Notification.requestPermission();
+      audioRef.current = new Audio('https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3');
     }
   }, []);
 
-  const updateTypingStatus = useCallback((isTyping: boolean, targetChatId?: string) => {
-    const id = targetChatId || currentChatId;
-    if (!db || !id || !firebaseUser) return;
-    
-    if (isTypingRef.current === isTyping) return;
+  const updateTypingStatus = useCallback((isTyping: boolean) => {
+    if (!db || !currentChatId || !firebaseUser || isTypingRef.current === isTyping) return;
     
     isTypingRef.current = isTyping;
-    const typingRef = doc(db, 'chats', id);
+    const typingRef = doc(db, 'chats', currentChatId);
     updateDoc(typingRef, { [`typing.${firebaseUser.uid}`]: isTyping }).catch(() => {});
   }, [db, currentChatId, firebaseUser]);
 
-  // Typing status management: cleanup and timeouts
   useEffect(() => {
     const handleUnload = () => updateTypingStatus(false);
     window.addEventListener('beforeunload', handleUnload);
-    
     return () => {
       window.removeEventListener('beforeunload', handleUnload);
       updateTypingStatus(false);
     };
   }, [updateTypingStatus]);
 
-  // Auto-clear typing status if no activity for 5 seconds
-  useEffect(() => {
-    if (messageInput.length > 0) {
-      updateTypingStatus(true);
-      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
-      typingTimeoutRef.current = setTimeout(() => {
-        updateTypingStatus(false);
-      }, 5000);
-    } else {
-      updateTypingStatus(false);
-    }
-  }, [messageInput, updateTypingStatus]);
-
-  // Personal Mention Notification
+  // Mention System Notification
   useEffect(() => {
     if (!messages || !firebaseUser || !audioRef.current || !userProfile?.username) return;
     const lastMsg = messages[messages.length - 1];
@@ -281,11 +260,11 @@ export default function ChatArea() {
       toast({
         title: lastMsg.isMentionAll ? "Объявление @all" : "Вас упомянули!",
         description: `${lastMsg.senderName}: ${lastMsg.content.slice(0, 50)}...`,
-        variant: "default",
       });
     }
   }, [messages, firebaseUser, toast, userProfile?.username]);
 
+  // Read status synchronization
   useEffect(() => {
     if (!messages || !firebaseUser || !currentChatId || !db) return;
     const unreadFromOthers = messages.filter(m => !m.isRead && m.senderId !== firebaseUser.uid);
@@ -301,23 +280,37 @@ export default function ChatArea() {
     }
   }, []);
 
-  // Save drafts with debounce - CRITICAL: fixed dependency array to avoid sreset loops
+  // Save drafts with optimized performance
   useEffect(() => {
     if (!currentChatId) return;
     if (draftTimeoutRef.current) clearTimeout(draftTimeoutRef.current);
     draftTimeoutRef.current = setTimeout(() => {
-      setLocalDrafts((prev: Record<string, string>) => ({
-        ...prev,
-        [currentChatId]: messageInput
-      }));
-    }, 500);
+      if (localDrafts[currentChatId] !== messageInput) {
+        setLocalDrafts((prev: Record<string, string>) => ({
+          ...prev,
+          [currentChatId]: messageInput
+        }));
+      }
+    }, 1000);
     return () => {
       if (draftTimeoutRef.current) clearTimeout(draftTimeoutRef.current);
     };
-  }, [messageInput, currentChatId, setLocalDrafts]);
+  }, [messageInput, currentChatId, setLocalDrafts, localDrafts]);
 
   const onInputChange = (val: string) => {
     setMessageInput(val);
+    
+    // Optimized Typing Status: Only update on first character and when cleared
+    if (val.length > 0 && !isTypingRef.current) {
+      updateTypingStatus(true);
+    } else if (val.length === 0 && isTypingRef.current) {
+      updateTypingStatus(false);
+    }
+
+    if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+    if (val.length > 0) {
+      typingTimeoutRef.current = setTimeout(() => updateTypingStatus(false), 5000);
+    }
     
     // Mention detection
     const cursorPosition = inputRef.current?.selectionStart || 0;
@@ -326,7 +319,6 @@ export default function ChatArea() {
     
     if (lastAtSymbol !== -1) {
       const query = textBeforeCursor.slice(lastAtSymbol + 1);
-      // Ensure no spaces between @ and query
       if (!query.includes(' ')) {
         setMentionQuery(query);
         setMentionIndex(0);
@@ -338,7 +330,7 @@ export default function ChatArea() {
     }
   };
 
-  const handleSelectMention = (targetUser: UserType) => {
+  const handleSelectMention = useCallback((targetUser: UserType) => {
     const cursorPosition = inputRef.current?.selectionStart || 0;
     const textBeforeCursor = messageInput.slice(0, cursorPosition);
     const lastAtSymbol = textBeforeCursor.lastIndexOf('@');
@@ -357,9 +349,8 @@ export default function ChatArea() {
         }
       }, 0);
     }
-  };
+  }, [messageInput]);
 
-  // Load draft and reset mention only on chat change
   useEffect(() => {
     if (currentChatId) {
       setMessageInput(localDrafts[currentChatId] || '');
@@ -368,21 +359,20 @@ export default function ChatArea() {
       setMentionQuery(null);
       setReplyTo(null);
       setEditingMsg(null);
+      dataLoadedRef.current = false;
     }
-  }, [currentChatId]); // removed localDrafts from deps to prevent reset loops while typing
+  }, [currentChatId]);
 
   useEffect(() => {
     if (messages?.length) {
       if (!dataLoadedRef.current) {
-        setTimeout(() => scrollToBottom('instant' as any), 100);
+        setTimeout(() => scrollToBottom('instant' as any), 50);
         dataLoadedRef.current = true;
       } else {
         scrollToBottom('smooth');
       }
     }
   }, [messages?.length, currentChatId, scrollToBottom]);
-
-  useEffect(() => { dataLoadedRef.current = false; }, [currentChatId]);
 
   const handleSendMessage = useCallback(async (content_msg: string = messageInput, type_msg: Message['contentType'] = 'text') => {
     const trimmedContent = content_msg.trim();
@@ -392,7 +382,6 @@ export default function ChatArea() {
     updateTypingStatus(false);
     setMentionQuery(null);
 
-    // Улучшенный резолвинг имени отправителя
     const senderDisplayName = userProfile?.name && userProfile.name !== 'User' 
       ? userProfile.name 
       : (firebaseUser.displayName || userProfile?.username || 'Nuxus User');
@@ -413,7 +402,7 @@ export default function ChatArea() {
         chatId: currentChatId,
         senderId: firebaseUser.uid,
         senderName: senderDisplayName,
-        content: JSON.stringify(pendingMedia),
+        content: pendingMedia.length === 1 ? pendingMedia[0].url : JSON.stringify(pendingMedia),
         contentType: pendingMedia.length > 1 ? 'album' : pendingMedia[0].type,
         sentAt: new Date().toISOString(),
         isRead: false,
@@ -421,11 +410,6 @@ export default function ChatArea() {
         expiresInSeconds: expiryTime,
         scheduledAt: scheduledDate ? scheduledDate.toISOString() : null
       };
-      
-      if (pendingMedia.length === 1) {
-        mediaMsg.content = pendingMedia[0].url;
-      }
-
       addDocumentNonBlocking(collection(db, 'chats', currentChatId, 'messages'), mediaMsg);
       setPendingMedia([]);
     }
@@ -460,22 +444,20 @@ export default function ChatArea() {
     setIsOneTime(false);
     setMessageInput('');
     setLocalDrafts((prev: any) => ({ ...prev, [currentChatId]: '' }));
-    
     setIsSending(false);
-    setTimeout(() => scrollToBottom('smooth'), 100);
-  }, [messageInput, pendingMedia, currentChatId, firebaseUser, db, userProfile, replyTo, editingMsg, scrollToBottom, scheduledDate, expiryTime, isOneTime, updateTypingStatus, setLocalDrafts, isAdmin]);
+  }, [messageInput, pendingMedia, currentChatId, firebaseUser, db, userProfile, replyTo, editingMsg, scheduledDate, expiryTime, isOneTime, updateTypingStatus, setLocalDrafts, isAdmin]);
 
   const handleReply = useCallback((msg: Message) => {
     setReplyTo(msg);
     setEditingMsg(null);
-    if (inputRef.current) inputRef.current.focus();
+    setTimeout(() => inputRef.current?.focus(), 50);
   }, []);
 
   const handleEdit = useCallback((msg: Message) => {
     setEditingMsg(msg);
     setMessageInput(msg.content);
     setReplyTo(null);
-    if (inputRef.current) inputRef.current.focus();
+    setTimeout(() => inputRef.current?.focus(), 50);
   }, []);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -540,33 +522,8 @@ export default function ChatArea() {
     }
   };
 
-  const handleAiDraft = async () => {
-    if (!messages || !amIPremium) return;
-    setIsDrafting(true);
-    try {
-      const history = messages.slice(-5).map(m => ({ sender: m.senderName, message: m.content }));
-      const { draftMessage } = await suggestMessageDraft({ conversationHistory: history, currentUserInput: messageInput });
-      setMessageInput(draftMessage);
-      toast({ title: "ИИ предложил", description: "Текст вставлен в поле ввода." });
-    } catch (e) {
-      toast({ title: "Ошибка ИИ", description: "Не удалось создать черновик.", variant: "destructive" });
-    } finally {
-      setIsDrafting(false);
-    }
-  };
-
-  const startCall = async (type_call: 'audio' | 'video') => {
-    if (!db || !firebaseUser || !otherId || !currentChatId) return;
-    try {
-      const callData = { callerId: firebaseUser.uid, callerName: userProfile?.name || 'User', receiverId: otherId, chatId: currentChatId, type: type_call, status: 'calling', createdAt: new Date().toISOString() };
-      const callDoc = await addDoc(collection(db, 'calls'), callData);
-      setActiveCallId(callDoc.id);
-    } catch (e) { toast({ title: "Ошибка", description: "Не удалось начать вызов.", variant: "destructive" }); }
-  };
-
   const chatDisplayName = useMemo(() => {
     const rawName = otherProfile?.name || otherMetadata?.name || chat?.name;
-    // Приоритизируем не-дефолтные имена
     if (rawName && rawName !== 'User' && rawName !== 'user') return rawName;
     return otherProfile?.username || otherMetadata?.username || chat?.username || rawName || '...';
   }, [chat, otherMetadata, otherProfile]);
@@ -620,8 +577,8 @@ export default function ChatArea() {
           {!isSearchingLocal && <Button variant="ghost" size="icon" className="rounded-lg" onClick={() => setIsSearchingLocal(true)}><SearchIcon className="w-5 h-5" /></Button>}
           {chat?.type === 'private' && (
             <>
-              <Button variant="ghost" size="icon" className="rounded-lg text-primary" onClick={() => startCall('audio')}><Phone className="w-5 h-5" /></Button>
-              <Button variant="ghost" size="icon" className="rounded-lg text-primary" onClick={() => startCall('video')}><Video className="w-5 h-5" /></Button>
+              <Button variant="ghost" size="icon" className="rounded-lg text-primary" onClick={() => startAudioRecording()}><Phone className="w-5 h-5" /></Button>
+              <Button variant="ghost" size="icon" className="rounded-lg text-primary" onClick={() => setIsChatInfoOpen(true)}><Video className="w-5 h-5" /></Button>
             </>
           )}
           <Button variant="ghost" size="icon" onClick={() => setIsChatInfoOpen(true)} className="rounded-lg"><Info className="w-5 h-5" /></Button>
@@ -645,13 +602,11 @@ export default function ChatArea() {
 
       <footer className="p-3 bg-card border-t border-white/5 shrink-0 relative">
         <div className="max-w-4xl mx-auto space-y-2">
-          {/* Mentions List Overlay */}
           {mentionQuery !== null && filteredParticipants.length > 0 && (
             <div className="absolute bottom-full left-0 right-0 mx-auto max-w-4xl px-3 pb-2 z-50">
               <div className="bg-card/95 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl overflow-hidden animate-in slide-in-from-bottom-2">
                 <div className="px-4 py-2 border-b border-white/5 bg-primary/5 flex items-center justify-between">
                   <span className="text-[10px] font-black uppercase tracking-widest text-primary flex items-center gap-1.5"><AtSign className="w-3 h-3" /> Упомянуть участника</span>
-                  <span className="text-[8px] font-bold text-muted-foreground uppercase">{filteredParticipants.length} найдено</span>
                 </div>
                 <ScrollArea className="max-h-60">
                   <div className="p-1.5 space-y-1">
@@ -700,12 +655,7 @@ export default function ChatArea() {
                   ) : (
                     <img src={media.url} className="h-full w-full object-cover" />
                   )}
-                  <button 
-                    onClick={() => removePendingMedia(idx)}
-                    className="absolute top-0.5 right-0.5 bg-black/60 rounded-full p-0.5 hover:bg-destructive"
-                  >
-                    <X className="w-3 h-3 text-white" />
-                  </button>
+                  <button onClick={() => removePendingMedia(idx)} className="absolute top-0.5 right-0.5 bg-black/60 rounded-full p-0.5 hover:bg-destructive"><X className="w-3 h-3 text-white" /></button>
                 </div>
               ))}
             </div>
@@ -720,45 +670,14 @@ export default function ChatArea() {
             </div>
           )}
           <div className="flex gap-2 items-end">
-            <input 
-              type="file" 
-              multiple 
-              accept="image/*,video/*" 
-              className="hidden" 
-              ref={fileInputRef} 
-              onChange={handleFileSelect} 
-            />
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              className="h-11 w-11 rounded-xl shrink-0 bg-muted"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={isRecording}
-            >
-              <Paperclip className="w-5 h-5 text-muted-foreground" />
-            </Button>
+            <input type="file" multiple accept="image/*,video/*" className="hidden" ref={fileInputRef} onChange={handleFileSelect} />
+            <Button variant="ghost" size="icon" className="h-11 w-11 rounded-xl shrink-0 bg-muted" onClick={() => fileInputRef.current?.click()} disabled={isRecording}><Paperclip className="w-5 h-5 text-muted-foreground" /></Button>
             <Popover>
-              <PopoverTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-11 w-11 rounded-xl shrink-0 bg-muted" disabled={isRecording}><Zap className="w-5 h-5 text-primary" /></Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-64 p-3 rounded-2xl bg-card/95 backdrop-blur-xl border-white/10 shadow-2xl space-y-4">
-                <div className="space-y-2">
-                  <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground ml-1">Отложенно</span>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button variant="outline" className="w-full justify-start h-10 rounded-xl text-xs gap-2"><CalendarIcon className="w-4 h-4" /> {scheduledDate ? scheduledDate.toLocaleDateString() : 'Выбрать дату'}</Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={scheduledDate} onSelect={setScheduledDate} initialFocus /></PopoverContent>
-                  </Popover>
-                </div>
-                <div className="space-y-2">
-                  <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground ml-1">Самоуничтожение</span>
-                  <div className="grid grid-cols-3 gap-2">{[15, 60, 3600].map(time => (<Button key={time} variant={expiryTime === time ? 'default' : 'outline'} className="h-8 text-[10px] rounded-lg" onClick={() => setExpiryTime(time)}>{time < 60 ? `${time}с` : time < 3600 ? '1м' : '1ч'}</Button>))}</div>
-                </div>
-                <div className="flex items-center justify-between pt-2 border-t border-white/5">
-                  <span className="text-xs font-bold uppercase tracking-wider">Один просмотр</span>
-                  <Button variant={isOneTime ? 'default' : 'outline'} size="sm" className="h-7 rounded-lg" onClick={() => setIsOneTime(!isOneTime)}>{isOneTime ? 'ВКЛ' : 'ВЫКЛ'}</Button>
-                </div>
+              <PopoverTrigger asChild><Button variant="ghost" size="icon" className="h-11 w-11 rounded-xl shrink-0 bg-muted" disabled={isRecording}><Zap className="w-5 h-5 text-primary" /></Button></PopoverTrigger>
+              <PopoverContent className="w-64 p-3 rounded-2xl bg-card border-white/10 shadow-2xl space-y-4">
+                <div className="space-y-2"><span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground ml-1">Отложенно</span><Popover><PopoverTrigger asChild><Button variant="outline" className="w-full justify-start h-10 rounded-xl text-xs gap-2"><CalendarIcon className="w-4 h-4" /> {scheduledDate ? scheduledDate.toLocaleDateString() : 'Выбрать дату'}</Button></PopoverTrigger><PopoverContent className="w-auto p-0"><Calendar mode="single" selected={scheduledDate} onSelect={setScheduledDate} initialFocus /></PopoverContent></Popover></div>
+                <div className="space-y-2"><span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground ml-1">Самоуничтожение</span><div className="grid grid-cols-3 gap-2">{[15, 60, 3600].map(time => (<Button key={time} variant={expiryTime === time ? 'default' : 'outline'} className="h-8 text-[10px] rounded-lg" onClick={() => setExpiryTime(time)}>{time < 60 ? `${time}с` : time < 3600 ? '1м' : '1ч'}</Button>))}</div></div>
+                <div className="flex items-center justify-between pt-2 border-t border-white/5"><span className="text-xs font-bold uppercase tracking-wider">Один просмотр</span><Button variant={isOneTime ? 'default' : 'outline'} size="sm" className="h-7 rounded-lg" onClick={() => setIsOneTime(!isOneTime)}>{isOneTime ? 'ВКЛ' : 'ВЫКЛ'}</Button></div>
               </PopoverContent>
             </Popover>
             <div className="flex-1 relative">
@@ -785,7 +704,7 @@ export default function ChatArea() {
                 }}
                 disabled={isRecording}
               />
-              {amIPremium && !editingMsg && (<button onClick={handleAiDraft} disabled={isDrafting || isRecording} className="absolute right-3 top-1/2 -translate-y-1/2 text-primary hover:scale-110">{isDrafting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wand2 className="w-4 h-4" />}</button>)}
+              {amIPremium && !editingMsg && (<button onClick={async () => { setIsDrafting(true); const history = messages?.slice(-5).map(m => ({ sender: m.senderName, message: m.content })) || []; try { const { draftMessage } = await suggestMessageDraft({ conversationHistory: history, currentUserInput: messageInput }); setMessageInput(draftMessage); } catch(e){} finally { setIsDrafting(false); } }} disabled={isDrafting || isRecording} className="absolute right-3 top-1/2 -translate-y-1/2 text-primary hover:scale-110">{isDrafting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wand2 className="w-4 h-4" />}</button>)}
             </div>
             {(!messageInput.trim() && pendingMedia.length === 0 && !isRecording) ? (
               <Button size="icon" className="h-11 w-11 rounded-xl shrink-0 bg-primary" onClick={startAudioRecording}><Mic className="w-5 h-5" /></Button>

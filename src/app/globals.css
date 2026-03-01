@@ -55,6 +55,7 @@
 
 .animate-float {
   animation: float 6s ease-in-out infinite;
+  will-change: transform;
 }
 
 @keyframes pulse-glow {
@@ -64,6 +65,7 @@
 
 .animate-pulse-glow {
   animation: pulse-glow 4s ease-in-out infinite;
+  will-change: transform, opacity;
 }
 
 @keyframes typing-dot {
@@ -74,6 +76,7 @@
 
 .animate-typing-dot {
   animation: typing-dot 1.4s infinite both;
+  will-change: transform, opacity;
 }
 
 .message-bubble-me {
@@ -84,4 +87,9 @@
 
 .nuxus-core-glow {
   background: radial-gradient(circle, hsl(var(--primary) / 0.3) 0%, transparent 70%);
+}
+
+/* Optimization for smooth transitions */
+.transition-all {
+  transition-duration: 200ms;
 }

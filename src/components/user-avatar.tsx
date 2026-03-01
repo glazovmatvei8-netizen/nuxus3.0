@@ -1,7 +1,7 @@
 
 "use client"
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, memo, useMemo } from 'react';
 import { useDoc, useMemoFirebase, useFirestore } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -19,10 +19,9 @@ interface UserAvatarProps {
 }
 
 /**
- * Умный компонент аватарки с поддержкой Premium-значка.
- * Улучшена логика генерации инициалов (fallback).
+ * Smart Avatar component with memoization for maximum performance.
  */
-export function UserAvatar({ userId, className, fallbackName, fallbackClassName, manualAvatarUrl }: UserAvatarProps) {
+export const UserAvatar = memo(({ userId, className, fallbackName, fallbackClassName, manualAvatarUrl }: UserAvatarProps) => {
   const db = useFirestore();
   const [imgError, setImgError] = useState(false);
   
@@ -33,33 +32,35 @@ export function UserAvatar({ userId, className, fallbackName, fallbackClassName,
 
   const { data: profile, isLoading } = useDoc<User>(userRef);
 
-  const displayAvatar = profile?.avatarUrl || manualAvatarUrl;
-  const rawDisplayName = profile?.name || fallbackName || '??';
-  const displayName = formatDisplayName(rawDisplayName);
+  const displayAvatar = useMemo(() => profile?.avatarUrl || manualAvatarUrl, [profile?.avatarUrl, manualAvatarUrl]);
+  const displayName = useMemo(() => formatDisplayName(profile?.name || fallbackName || '??'), [profile?.name, fallbackName]);
   
-  // Если имя стандартное, пытаемся использовать никнейм для инициалов
-  const initialsSource = (rawDisplayName.toLowerCase() === 'user' || rawDisplayName === '??') && profile?.username
-    ? profile.username.replace('@', '')
-    : displayName;
+  const initialsSource = useMemo(() => {
+    const rawName = profile?.name || fallbackName || '??';
+    return (rawName.toLowerCase() === 'user' || rawName === '??') && profile?.username
+      ? profile.username.replace('@', '')
+      : displayName;
+  }, [profile?.name, fallbackName, profile?.username, displayName]);
 
-  const premium = isUserPremium(profile);
+  const premium = useMemo(() => isUserPremium(profile), [profile]);
 
   useEffect(() => {
     setImgError(false);
   }, [displayAvatar, userId]);
 
   return (
-    <div className="relative inline-block shrink-0">
+    <div className="relative inline-block shrink-0 will-change-transform">
       <Avatar className={cn("shrink-0 relative overflow-hidden", className)}>
         {!isLoading && displayAvatar && !imgError ? (
           <Image 
-            key={displayAvatar || 'placeholder'}
+            key={displayAvatar}
             src={displayAvatar} 
             alt={displayName} 
             fill
-            sizes="(max-width: 768px) 100vw, 128px"
+            sizes="128px"
             className="object-cover animate-in fade-in duration-300"
             onError={() => setImgError(true)}
+            priority={false}
           />
         ) : (
           <AvatarFallback className={cn("bg-primary/20 text-primary font-bold uppercase h-full w-full flex items-center justify-center", fallbackClassName)}>
@@ -78,4 +79,5 @@ export function UserAvatar({ userId, className, fallbackName, fallbackClassName,
       )}
     </div>
   );
-}
+});
+UserAvatar.displayName = 'UserAvatar';
