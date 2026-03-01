@@ -146,6 +146,30 @@ export default function ChatArea() {
     }
   }, []);
 
+  const updateTypingStatus = useCallback((isTyping: boolean, targetChatId?: string) => {
+    const id = targetChatId || currentChatId;
+    if (!db || !id || !firebaseUser || (isTypingRef.current === isTyping && !targetChatId)) return;
+    
+    isTypingRef.current = isTyping;
+    const typingRef = doc(db, 'chats', id);
+    updateDoc(typingRef, { [`typing.${firebaseUser.uid}`]: isTyping }).catch(() => {});
+  }, [db, currentChatId, firebaseUser]);
+
+  // Глобальная очистка статуса при закрытии страницы
+  useEffect(() => {
+    const handleUnload = () => updateTypingStatus(false);
+    window.addEventListener('beforeunload', handleUnload);
+    return () => window.removeEventListener('beforeunload', handleUnload);
+  }, [updateTypingStatus]);
+
+  // Очистка статуса при смене чата
+  useEffect(() => {
+    const prevId = currentChatId;
+    return () => {
+      if (prevId) updateTypingStatus(false, prevId);
+    };
+  }, [currentChatId, updateTypingStatus]);
+
   // Notification for @all
   useEffect(() => {
     if (!messages || !firebaseUser || !audioRef.current) return;
@@ -174,14 +198,6 @@ export default function ChatArea() {
       if (viewport) viewport.scrollTo({ top: viewport.scrollHeight, behavior });
     }
   }, []);
-
-  const updateTypingStatus = useCallback((isTyping: boolean) => {
-    if (!db || !currentChatId || !firebaseUser || isTypingRef.current === isTyping) return;
-    
-    isTypingRef.current = isTyping;
-    const typingRef = doc(db, 'chats', currentChatId);
-    updateDoc(typingRef, { [`typing.${firebaseUser.uid}`]: isTyping }).catch(() => {});
-  }, [db, currentChatId, firebaseUser]);
 
   useEffect(() => {
     if (!currentChatId) return;
@@ -217,11 +233,7 @@ export default function ChatArea() {
       setPendingMedia([]);
       isTypingRef.current = false;
     }
-    return () => {
-      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
-      updateTypingStatus(false); // Clean up typing status on switch or unmount
-    };
-  }, [currentChatId, localDrafts, updateTypingStatus]);
+  }, [currentChatId, localDrafts]);
 
   useEffect(() => {
     if (messages?.length) {

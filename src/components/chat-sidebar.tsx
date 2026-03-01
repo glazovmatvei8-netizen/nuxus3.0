@@ -312,6 +312,41 @@ export default function ChatSidebar() {
   );
 }
 
+/**
+ * Вспомогательный компонент для отображения имен печатающих пользователей.
+ */
+function TypingIndicator({ uids, isPrivate, t }: { uids: string[], isPrivate: boolean, t: any }) {
+  const db = useFirestore();
+  
+  // Для простоты в MVP берем первого печатающего из группы или собеседника
+  const firstUid = uids[0];
+  const userRef = useMemoFirebase(() => (!db || !firstUid) ? null : doc(db, 'users', firstUid), [db, firstUid]);
+  const { data: profile } = useDoc<User>(userRef);
+
+  if (!profile && uids.length > 0) {
+    return (
+      <span className="flex items-center gap-0.5">
+        {t('chat.typing')}
+        <span className="animate-typing-dot">.</span>
+        <span className="animate-typing-dot [animation-delay:0.2s]">.</span>
+        <span className="animate-typing-dot [animation-delay:0.4s]">.</span>
+      </span>
+    );
+  }
+
+  const name = formatDisplayName(profile?.name || 'Кто-то');
+  const text = isPrivate ? t('chat.typing') : (uids.length > 1 ? `${name} и еще ${uids.length - 1} печатают` : `${name} печатает`);
+
+  return (
+    <span className="flex items-center gap-0.5">
+      {text}
+      <span className="animate-typing-dot">.</span>
+      <span className="animate-typing-dot [animation-delay:0.2s]">.</span>
+      <span className="animate-typing-dot [animation-delay:0.4s]">.</span>
+    </span>
+  );
+}
+
 function ChatListItem({ chat, isActive, otherId, cachedDisplayName, manualAvatarUrl, onClick, isPinned, isGlobalResult, onTogglePin, onJoin }: any) {
   const db = useFirestore();
   const { user } = useUser();
@@ -336,7 +371,7 @@ function ChatListItem({ chat, isActive, otherId, cachedDisplayName, manualAvatar
   const { data: unreadData } = useCollection<Message>(unreadQuery);
   const unreadCount = (unreadData || []).filter(m => m.senderId !== user?.uid).length;
 
-  // Real-time typing users in group
+  // Real-time typing users 
   const typingUsers = useMemo(() => {
     if (!chat?.typing || !user) return [];
     return Object.entries(chat.typing)
@@ -402,12 +437,7 @@ function ChatListItem({ chat, isActive, otherId, cachedDisplayName, manualAvatar
             isActive ? 'text-white/80' : (isTyping || status === 'online' || status === 'в сети' ? 'text-accent' : 'text-muted-foreground/60')
           )}>
             {isTyping ? (
-              <span className="flex items-center gap-0.5">
-                {chat.type === 'private' ? t('chat.typing') : "Кто-то печатает"}
-                <span className="animate-typing-dot">.</span>
-                <span className="animate-typing-dot [animation-delay:0.2s]">.</span>
-                <span className="animate-typing-dot [animation-delay:0.4s]">.</span>
-              </span>
+              <TypingIndicator uids={typingUsers} isPrivate={chat.type === 'private'} t={t} />
             ) : status}
           </div>
           {isGlobalResult ? (
