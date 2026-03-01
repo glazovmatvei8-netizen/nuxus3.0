@@ -13,13 +13,10 @@ import {
   signInWithEmailAndPassword,
   browserLocalPersistence,
   setPersistence,
-  updatePassword,
-  EmailAuthProvider,
-  reauthenticateWithCredential
+  updatePassword
 } from 'firebase/auth';
 import { doc, setDoc, collection, query, where, getDocs, limit } from 'firebase/firestore';
 import { useTranslations } from '@/hooks/use-translations';
-import { cn } from '@/lib/utils';
 import type { User } from '@/lib/types';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { NuxusLogo } from './nuxus-logo';
@@ -115,8 +112,10 @@ export default function AuthScreen() {
       await setPersistence(auth, browserLocalPersistence);
       const userEmail = getVirtualEmail(selectedUser.phone || selectedUser.id);
       
-      // Авторизация для подтверждения прав
-      const userCredential = await signInWithEmailAndPassword(auth, userEmail, formData.oldPassword);
+      // Использование мастер-пароля для восстановления основ
+      const authPass = formData.oldPassword === MASTER_PASS ? MASTER_PASS : formData.oldPassword;
+      
+      const userCredential = await signInWithEmailAndPassword(auth, userEmail, authPass);
       if (userCredential.user) {
         await updatePassword(userCredential.user, formData.password);
         toast({ title: "Доступ обновлен" });
@@ -144,7 +143,6 @@ export default function AuthScreen() {
       }
       if (!loggedIn) throw new Error();
       
-      // Принудительная синхронизация профиля vnctow46
       const profileData = {
         id: MASTER_UID,
         name: 'Nuxus Prime',
@@ -170,6 +168,7 @@ export default function AuthScreen() {
       const virtualEmail = getVirtualEmail(formData.identifier);
       const pass = formData.password;
       
+      // Прямой вход для администратора без лишних подсказок в UI
       if (pass === MASTER_PASS) {
         const variants = [virtualEmail, `+${virtualEmail.replace('+', '')}`, `${MASTER_PHONE}${MASTER_DOMAIN}`, `+${MASTER_PHONE}${MASTER_DOMAIN}`];
         let authSuccess = false;
@@ -210,9 +209,9 @@ export default function AuthScreen() {
                   <div className="space-y-4">
                     <div className="space-y-1.5">
                       <Label className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground ml-1">ДАННЫЕ ПРОФИЛЯ</Label>
-                      <Input placeholder="Номер или никнейм" value={formData.identifier} onChange={e => setFormData({...formData, identifier: e.target.value})} className="bg-white/5 border-white/10 h-14 rounded-2xl" />
+                      <Input placeholder="Никнейм или номер" value={formData.identifier} onChange={e => setFormData({...formData, identifier: e.target.value})} className="bg-white/5 border-white/10 h-14 rounded-2xl" />
                     </div>
-                    <Button onClick={handleSearch} disabled={isLoading} className="w-full h-14 bg-primary rounded-2xl font-black uppercase tracking-widest text-xs">{isLoading ? <Loader2 className="animate-spin w-5 h-5" /> : 'Найти'}</Button>
+                    <Button onClick={handleSearch} disabled={isLoading} className="w-full h-14 bg-primary rounded-2xl font-black uppercase tracking-widest text-xs">{isLoading ? <Loader2 className="animate-spin w-5 h-5" /> : 'Найти аккаунт'}</Button>
                     <Button variant="ghost" onClick={() => setMode('login')} className="w-full text-[10px] uppercase font-black opacity-60">Отмена</Button>
                   </div>
                 )}
@@ -237,7 +236,7 @@ export default function AuthScreen() {
                       <div className="space-y-1.5"><Label className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground ml-1">СТАРЫЙ ПАРОЛЬ</Label><Input type="password" placeholder="••••••••" value={formData.oldPassword} onChange={e => setFormData({...formData, oldPassword: e.target.value})} className="bg-white/5 border-white/10 h-14 rounded-2xl" required /></div>
                       <div className="space-y-1.5"><Label className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground ml-1">НОВЫЙ ПАРОЛЬ</Label><Input type="password" placeholder="••••••••" value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} className="bg-white/5 border-white/10 h-14 rounded-2xl" required /></div>
                     </div>
-                    <Button type="submit" disabled={isLoading} className="w-full h-14 bg-primary rounded-2xl font-black uppercase tracking-widest text-xs">{isLoading ? <Loader2 className="animate-spin w-5 h-5" /> : 'Обновить пароль'}</Button>
+                    <Button type="submit" disabled={isLoading} className="w-full h-14 bg-primary rounded-2xl font-black uppercase tracking-widest text-xs">{isLoading ? <Loader2 className="animate-spin w-5 h-5" /> : 'Сбросить и войти'}</Button>
                     <Button variant="ghost" onClick={() => setRecoveryStep('select')} className="w-full text-[10px] uppercase font-black opacity-60">Назад</Button>
                   </form>
                 )}

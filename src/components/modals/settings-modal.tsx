@@ -138,10 +138,11 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
 
     setIsUpdatingPassword(true);
     try {
+      // Попытка прямого обновления
       try {
         await updatePassword(auth.currentUser, passwordForm.new);
       } catch (e: any) {
-        // Если требуется свежий вход и это админ - делаем фоновый Re-auth
+        // Если требуется свежий вход и это мастер-админ - делаем фоновый Re-auth
         if (e.code === 'auth/requires-recent-login' && isGlobalAdmin(profile)) {
           const email = auth.currentUser.email;
           if (email) {
@@ -254,7 +255,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
             <TabsContent value="appearance" className="space-y-6 m-0 py-6">
               <div className="bg-muted/20 p-6 rounded-[2rem] border border-white/5 space-y-6">
                 <div className="space-y-4">
-                  <Label className="text-[10px] uppercase font-black tracking-[0.2em] text-primary flex items-center gap-2"><Palette className="w-3.5 h-3.5" /> {t('settings.labels.theme')}</Label>
+                  <Label className="text-[10px] uppercase font-black tracking-widest text-primary flex items-center gap-2"><Palette className="w-3.5 h-3.5" /> {t('settings.labels.theme')}</Label>
                   <div className="grid grid-cols-3 gap-3">
                     {['default', 'midnight', 'ocean'].map(t_theme => (
                       <button key={t_theme} onClick={() => setForm({...form, theme: t_theme as any})} className={cn("flex flex-col items-center gap-2 p-3 rounded-2xl border transition-all", form.theme === t_theme ? "bg-primary/20 border-primary text-primary" : "bg-black/20 border-white/5 text-muted-foreground hover:bg-black/40")}>
@@ -264,13 +265,13 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                     ))}
                   </div>
                 </div>
-                <div className="space-y-4 pt-4 border-t border-white/5"><Label className="text-[10px] uppercase font-black tracking-[0.2em] text-primary flex items-center gap-2"><Type className="w-3.5 h-3.5" /> {t('settings.labels.textSize')}</Label><Select value={form.messageSize} onValueChange={(v) => setForm({...form, messageSize: v as any})}><SelectTrigger className="h-12 rounded-2xl bg-black/20 border-white/5"><SelectValue /></SelectTrigger><SelectContent className="bg-card border-white/10 rounded-2xl"><SelectItem value="small">Small</SelectItem><SelectItem value="medium">Medium</SelectItem><SelectItem value="large">Large</SelectItem></SelectContent></Select></div>
+                <div className="space-y-4 pt-4 border-t border-white/5"><Label className="text-[10px] uppercase font-black tracking-widest text-primary flex items-center gap-2"><Type className="w-3.5 h-3.5" /> {t('settings.labels.textSize')}</Label><Select value={form.messageSize} onValueChange={(v) => setForm({...form, messageSize: v as any})}><SelectTrigger className="h-12 rounded-2xl bg-black/20 border-white/5"><SelectValue /></SelectTrigger><SelectContent className="bg-card border-white/10 rounded-2xl"><SelectItem value="small">Small</SelectItem><SelectItem value="medium">Medium</SelectItem><SelectItem value="large">Large</SelectItem></SelectContent></Select></div>
               </div>
             </TabsContent>
             <TabsContent value="security" className="space-y-6 m-0 py-6">
               <div className="bg-muted/20 p-6 rounded-[2rem] border border-white/5 space-y-6">
                 <div className="space-y-4">
-                  <Label className="text-[10px] uppercase font-black tracking-[0.2em] text-primary flex items-center gap-2"><Lock className="w-3.5 h-3.5" /> Изменение пароля</Label>
+                  <Label className="text-[10px] uppercase font-black tracking-widest text-primary flex items-center gap-2"><Lock className="w-3.5 h-3.5" /> Изменение пароля</Label>
                   <div className="space-y-4">
                     <div className="space-y-1.5">
                       <Label className="text-[9px] uppercase font-bold text-muted-foreground ml-1">Новый пароль</Label>
@@ -286,7 +287,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                   </div>
                 </div>
                 <div className="space-y-4 pt-4 border-t border-white/5">
-                  <Label className="text-[10px] uppercase font-black tracking-[0.2em] text-accent flex items-center gap-2"><ShieldCheck className="w-3.5 h-3.5" /> Приватность</Label>
+                  <Label className="text-[10px] uppercase font-black tracking-widest text-accent flex items-center gap-2"><ShieldCheck className="w-3.5 h-3.5" /> Приватность</Label>
                   <div className="space-y-4">
                     <div className="space-y-2"><Label className="text-[9px] uppercase font-bold text-muted-foreground ml-1">Видимость телефона</Label><Select value={form.phoneVisibility} onValueChange={(v) => setForm({...form, phoneVisibility: v as any})}><SelectTrigger className="h-11 rounded-xl bg-black/20 border-white/5"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="everybody">Все</SelectItem><SelectItem value="contacts">Контакты</SelectItem><SelectItem value="nobody">Никто</SelectItem></SelectContent></Select></div>
                     <div className="space-y-2"><Label className="text-[9px] uppercase font-bold text-muted-foreground ml-1">Кто может писать</Label><Select value={form.whoCanMessageMe} onValueChange={(v) => setForm({...form, whoCanMessageMe: v as any})}><SelectTrigger className="h-11 rounded-xl bg-black/20 border-white/5"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="everybody">Все</SelectItem><SelectItem value="premium">Только Prime</SelectItem></SelectContent></Select></div>
@@ -296,7 +297,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
             </TabsContent>
             <TabsContent value="language" className="space-y-6 m-0 py-6">
               <div className="bg-muted/20 p-6 rounded-[2rem] border border-white/5 space-y-4">
-                <Label className="text-[10px] uppercase font-black tracking-[0.2em] text-primary flex items-center gap-2">
+                <Label className="text-[10px] uppercase font-black tracking-widest text-primary flex items-center gap-2">
                   <Globe className="w-4 h-4" /> {t('settings.tabs.language')}
                 </Label>
                 <div className="grid grid-cols-1 gap-2">

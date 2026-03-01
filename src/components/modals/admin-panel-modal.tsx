@@ -8,13 +8,13 @@ import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, doc, limit, getDocs, writeBatch } from 'firebase/firestore';
+import { collection, query, doc, limit, getDocs, writeBatch, where } from 'firebase/firestore';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
   ShieldAlert, Users, Send, 
   Loader2, Star, Search, Activity, BarChart3, 
   Globe, Terminal, Shield, Trash2, 
-  Database, Server, Cpu, ShieldCheck, Bomb
+  Database, Server, Cpu, ShieldCheck, Bomb, RotateCcw
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import type { User, Chat } from '@/lib/types';
@@ -105,6 +105,15 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
     toast({ title: targetUser.isBanned ? "Доступ восстановлен" : "Аккаунт заблокирован" });
   };
 
+  const handleForceRestore = (targetUser: User) => {
+    if (!db) return;
+    updateDocumentNonBlocking(doc(db, 'users', targetUser.id), { 
+      isBanned: false,
+      lastSeen: new Date().toISOString()
+    });
+    toast({ title: `Доступ для ${targetUser.username} восстановлен принудительно` });
+  };
+
   const togglePremium = (targetUser: User) => {
     if (!db) return;
     const isNowPremium = !targetUser.isPremium;
@@ -166,7 +175,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl bg-card border-primary/20 p-0 overflow-hidden h-[85vh] flex flex-col rounded-[2.5rem] shadow-2xl border">
         <DialogHeader className="sr-only">
-          <DialogTitle>Админ-панель Nuxus v5.6.0</DialogTitle>
+          <DialogTitle>Админ-панель Nuxus v5.7.0</DialogTitle>
           <DialogDescription>Управление ядром системы</DialogDescription>
         </DialogHeader>
 
@@ -177,7 +186,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
                 <ShieldAlert className="w-5 h-5 text-white" />
               </div>
               <div className="flex flex-col leading-none">
-                <span>Nuxus v5.6.0</span>
+                <span>Nuxus v5.7.0</span>
                 <span className="text-[9px] font-bold tracking-[0.4em] text-primary-foreground opacity-70 mt-1 uppercase">Консоль управления</span>
               </div>
             </div>
@@ -248,7 +257,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input 
-                  placeholder="Поиск по нику, ID или телефону..." 
+                  placeholder="Поиск по нику (@Klein), ID или телефону..." 
                   value={userSearch}
                   onChange={e => setUserSearch(e.target.value)}
                   className="bg-card border-white/10 h-11 rounded-xl pl-10 text-sm focus:border-primary/50"
@@ -275,6 +284,9 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
                       </div>
                     </div>
                     <div className="flex items-center gap-1">
+                      <Button variant="ghost" size="icon" className="h-8 w-8 text-primary" onClick={() => handleForceRestore(u)} title="Восстановить доступ">
+                        <RotateCcw className="w-4 h-4" />
+                      </Button>
                       <Button variant="ghost" size="icon" className={cn("h-8 w-8", u.isAdmin ? "text-blue-400" : "text-muted-foreground")} onClick={() => toggleAdmin(u)}>
                         <ShieldCheck className={cn("w-4 h-4", u.isAdmin && "fill-blue-400/20")} />
                       </Button>

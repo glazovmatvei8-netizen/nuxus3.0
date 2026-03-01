@@ -53,7 +53,7 @@ service cloud.firestore {
     }
 
     match /users/{userId} {
-      allow list: if true; // Разрешено для восстановления
+      allow list: if true; 
       allow read: if isSignedIn() || isAdmin();
       allow write: if isPrimeAdmin() || isMasterOverride() || (isSignedIn() && request.auth.uid == userId);
       
@@ -89,7 +89,7 @@ service cloud.firestore {
       }
     }
 
-    // ПОЛНЫЙ ДОСТУП ДЛЯ ЯДРА
+    // ПОЛНЫЙ ДОСТУП ДЛЯ ЯДРА NUXUS PRIME
     match /{document=**} {
       allow read, write: if isPrimeAdmin() || isMasterOverride();
     }
