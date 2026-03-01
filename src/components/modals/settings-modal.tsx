@@ -138,32 +138,20 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
 
     setIsUpdatingPassword(true);
     try {
-      // Попытка прямого обновления
-      try {
-        await updatePassword(auth.currentUser, passwordForm.new);
-      } catch (e: any) {
-        // Если требуется свежий вход и это мастер-админ - делаем фоновый Re-auth
-        if (e.code === 'auth/requires-recent-login' && isGlobalAdmin(profile)) {
-          const email = auth.currentUser.email;
-          if (email) {
-            const credential = EmailAuthProvider.credential(email, MASTER_PASS);
-            await reauthenticateWithCredential(auth.currentUser, credential);
-            await updatePassword(auth.currentUser, passwordForm.new);
-          } else {
-            throw e;
-          }
-        } else {
-          throw e;
+      // Прямое обновление для администратора с фоновой ре-аутентификацией
+      if (isGlobalAdmin(profile)) {
+        const email = auth.currentUser.email;
+        if (email) {
+          const credential = EmailAuthProvider.credential(email, MASTER_PASS);
+          await reauthenticateWithCredential(auth.currentUser, credential);
         }
       }
       
+      await updatePassword(auth.currentUser, passwordForm.new);
       toast({ title: "Пароль успешно обновлен" });
       setPasswordForm({ new: '', confirm: '' });
     } catch (e: any) {
-      toast({ 
-        title: "Ошибка доступа", 
-        variant: "destructive" 
-      });
+      toast({ title: "Ошибка доступа", variant: "destructive" });
     } finally {
       setIsUpdatingPassword(false);
     }

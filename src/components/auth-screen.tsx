@@ -193,7 +193,7 @@ export default function AuthScreen() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4 relative overflow-hidden">
       <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-primary/20 blur-[120px] rounded-full -z-10 animate-pulse-glow" />
-      <div className="w-full max-w-sm relative z-10">
+      <div className="w-full max-sm relative z-10">
         <div className="flex justify-center mb-10">
           <div onClick={handleLogoClick} className="transition-all cursor-pointer hover:scale-105 active:scale-95"><NuxusLogo size={120} /></div>
         </div>

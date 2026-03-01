@@ -8,13 +8,14 @@ import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, doc, limit, getDocs, writeBatch, where } from 'firebase/firestore';
+import { collection, query, doc, limit, getDocs, writeBatch, where, setDoc } from 'firebase/firestore';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
   ShieldAlert, Users, Send, 
   Loader2, Star, Search, Activity, BarChart3, 
   Globe, Terminal, Shield, Trash2, 
-  Database, Server, Cpu, ShieldCheck, Bomb, RotateCcw
+  Database, Server, Cpu, ShieldCheck, Bomb, RotateCcw,
+  UserPlus
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import type { User, Chat } from '@/lib/types';
@@ -72,8 +73,16 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
   const { toast } = useToast();
   
   const [isCleaning, setIsCleaning] = useState(false);
+  const [isRestoring, setIsRestoring] = useState(false);
   const [alertText, setAlertText] = useState('');
   const [userSearch, setUserSearch] = useState('');
+  
+  const [manualUser, setManualUser] = useState({
+    name: '',
+    username: '',
+    phone: '',
+    uid: ''
+  });
 
   const usersQuery = useMemoFirebase(() => (!db ? null : query(collection(db, 'users'), limit(500))), [db]);
   const { data: users, isLoading: isUsersLoading } = useCollection<User>(usersQuery);
@@ -112,6 +121,33 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
       lastSeen: new Date().toISOString()
     });
     toast({ title: `Доступ для ${targetUser.username} восстановлен принудительно` });
+  };
+
+  const handleManualCreate = async () => {
+    if (!db || !manualUser.username || !manualUser.name) {
+      toast({ title: "Ошибка", description: "Заполните имя и никнейм", variant: "destructive" });
+      return;
+    }
+    setIsRestoring(true);
+    try {
+      const uid = manualUser.uid || `user_${Date.now()}`;
+      const data = {
+        id: uid,
+        name: manualUser.name,
+        username: manualUser.username.startsWith('@') ? manualUser.username.toLowerCase() : '@' + manualUser.username.toLowerCase(),
+        phone: manualUser.phone || '',
+        createdAt: new Date().toISOString(),
+        isPremium: false,
+        isAdmin: false
+      };
+      await setDoc(doc(db, 'users', uid), data);
+      toast({ title: "Профиль воссоздан", description: `Ник: ${data.username}` });
+      setManualUser({ name: '', username: '', phone: '', uid: '' });
+    } catch (e: any) {
+      toast({ title: "Ошибка", description: e.message, variant: "destructive" });
+    } finally {
+      setIsRestoring(false);
+    }
   };
 
   const togglePremium = (targetUser: User) => {
@@ -175,7 +211,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl bg-card border-primary/20 p-0 overflow-hidden h-[85vh] flex flex-col rounded-[2.5rem] shadow-2xl border">
         <DialogHeader className="sr-only">
-          <DialogTitle>Админ-панель Nuxus v5.7.0</DialogTitle>
+          <DialogTitle>Админ-панель Nuxus v5.7.1</DialogTitle>
           <DialogDescription>Управление ядром системы</DialogDescription>
         </DialogHeader>
 
@@ -186,7 +222,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
                 <ShieldAlert className="w-5 h-5 text-white" />
               </div>
               <div className="flex flex-col leading-none">
-                <span>Nuxus v5.7.0</span>
+                <span>Nuxus v5.7.1</span>
                 <span className="text-[9px] font-bold tracking-[0.4em] text-primary-foreground opacity-70 mt-1 uppercase">Консоль управления</span>
               </div>
             </div>
@@ -310,6 +346,21 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
             <ScrollArea className="h-full">
               <div className="p-6 space-y-6 pb-24">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="p-6 bg-muted/20 rounded-[2rem] border border-white/5 space-y-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <RotateCcw className="w-4 h-4 text-primary" />
+                      <span className="text-[10px] font-black uppercase tracking-widest text-white">Emergency Restore</span>
+                    </div>
+                    <div className="space-y-2">
+                      <Input placeholder="Имя пользователя" value={manualUser.name} onChange={e => setManualUser({...manualUser, name: e.target.value})} className="h-9 text-xs bg-black/20" />
+                      <Input placeholder="Никнейм (@Klein)" value={manualUser.username} onChange={e => setManualUser({...manualUser, username: e.target.value})} className="h-9 text-xs bg-black/20" />
+                      <Input placeholder="Телефон (опционально)" value={manualUser.phone} onChange={e => setManualUser({...manualUser, phone: e.target.value})} className="h-9 text-xs bg-black/20" />
+                      <Button variant="default" className="w-full h-9 rounded-xl text-[9px] uppercase font-bold tracking-widest bg-primary/20 text-primary hover:bg-primary hover:text-white" onClick={handleManualCreate} disabled={isRestoring}>
+                        {isRestoring ? <Loader2 className="w-3 h-3 animate-spin mr-2" /> : <UserPlus className="w-3 h-3 mr-2" />}
+                        Recreate Profile
+                      </Button>
+                    </div>
+                  </div>
                   <div className="p-6 bg-muted/20 rounded-[2rem] border border-white/5 space-y-4">
                     <div className="flex items-center gap-2 mb-2">
                       <Terminal className="w-4 h-4 text-primary" />
