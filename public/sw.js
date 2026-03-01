@@ -1,52 +1,50 @@
 
 /**
- * Nuxus Service Worker v24.0.0
- * Обеспечивает работу уведомлений и оффлайн-режима для Android/iOS.
+ * Nuxus Core Service Worker v5.0
+ * Обеспечивает работу Android APK и фоновые уведомления.
  */
 
-const CACHE_NAME = 'nuxus-v24';
-const ASSETS = [
+const CACHE_NAME = 'nuxus-cache-v1';
+const ASSETS_TO_CACHE = [
   '/',
   '/manifest.json',
-  'https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3'
+  'https://picsum.photos/seed/nuxus/192/192',
+  'https://picsum.photos/seed/nuxus/512/512'
 ];
 
 self.addEventListener('install', (event) => {
+  self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(ASSETS);
+      return cache.addAll(ASSETS_TO_CACHE);
     })
   );
+});
+
+self.addEventListener('activate', (event) => {
+  event.waitUntil(clients.claim());
 });
 
 self.addEventListener('fetch', (event) => {
+  // Для Android APK важно, чтобы SW обрабатывал запросы
   event.respondWith(
     caches.match(event.request).then((response) => {
       return response || fetch(event.request);
+    }).catch(() => {
+      return fetch(event.request);
     })
   );
 });
 
-// Слушатель пуш-уведомлений
-self.addEventListener('push', (event) => {
-  const data = event.data ? event.data.json() : {};
-  const title = data.title || 'NuxusChat';
-  const options = {
-    body: data.body || 'Новое сообщение',
-    icon: '/icons/icon-192x192.png',
-    badge: '/icons/icon-192x192.png',
-    vibrate: [100, 50, 100],
-    data: {
-      url: data.url || '/'
-    }
-  };
-
-  event.waitUntil(self.registration.showNotification(title, options));
-});
-
+// Обработка клика по уведомлению в фоне
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
   event.waitUntil(
-    clients.openWindow(event.notification.data.url)
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+      if (clientList.length > 0) {
+        return clientList[0].focus();
+      }
+      return clients.openWindow('/');
+    })
   );
 });

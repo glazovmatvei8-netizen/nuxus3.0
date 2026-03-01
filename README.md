@@ -10,7 +10,7 @@
    ```powershell
    # Перейдите на рабочий стол
    cd $env:USERPROFILE\Desktop
-   # Создайте приложение (без иконки в параметрах, чтобы избежать ошибок конвертации)
+   # Создайте приложение (БЕЗ иконки в параметрах, чтобы избежать ошибок конвертации)
    npx nativefier --name "NuxusChat" "https://9000-firebase-studio-1772042875348.cluster-kizalrzg35hz6u4i7pguwgt6ss.cloudworkstations.dev" --internal-urls ".*" --single-instance --tray
    ```
 
@@ -21,9 +21,11 @@
    ```bash
    npx @bubblewrap/cli init --manifest="https://9000-firebase-studio-1772042875348.cluster-kizalrzg35hz6u4i7pguwgt6ss.cloudworkstations.dev/manifest.json"
    ```
-3. **Настройка JDK (Важно)**:
-   - Если Bubblewrap спрашивает путь к JDK 17, обычно это: `C:\Program Files\Java\jdk-17`
-   - Если вы не уверены, выберите **"Yes"**, чтобы Bubblewrap установил JDK автоматически.
+3. **Настройка JDK (ВАЖНО)**:
+   - Если Bubblewrap спрашивает путь к JDK 17, вводите его **БЕЗ КАВЫЧЕК**.
+   - **Правильно**: `C:\Program Files\Java\jdk-17.0.18`
+   - **Неправильно**: `"C:\Program Files\Java\jdk-17.0.18"` (кавычки вызывают ошибку lstat).
+   - Если вы не уверены, просто выберите **"Yes"**, чтобы Bubblewrap установил JDK автоматически.
 4. После инициализации выполните:
    ```bash
    npx @bubblewrap/cli build

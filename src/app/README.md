@@ -6,13 +6,6 @@
 ## 💻 Установка на ПК (Windows App)
 1. Откройте мессенджер в **Google Chrome** или **Microsoft Edge**.
 2. В правой части адресной строки нажмите на иконку **«Установить NuxusChat»** (монитор со стрелкой).
-3. **Хакерский способ (PowerShell)**:
-   ```powershell
-   # Перейдите на рабочий стол
-   cd $env:USERPROFILE\Desktop
-   # Создайте приложение
-   npx nativefier --name "NuxusChat" "https://9000-firebase-studio-1772042875348.cluster-kizalrzg35hz6u4i7pguwgt6ss.cloudworkstations.dev" --internal-urls ".*" --single-instance --tray
-   ```
 
 ## 📱 Установка на Android (Native APK)
 Для создания настоящего **.apk** используйте Google Bubblewrap.
@@ -20,7 +13,10 @@
 ### Как найти путь к JDK 17:
 Когда Bubblewrap спрашивает **Path to your existing JDK 17**, обычно это один из этих путей:
 - `C:\Program Files\Java\jdk-17`
-- `C:\Program Files\Java\jdk-17.0.x` (зависит от версии)
+- `C:\Program Files\Java\jdk-17.0.x`
+
+**ВАЖНО: Вводите путь БЕЗ КАВЫЧЕК!** 
+Пример: `C:\Program Files\Java\jdk-17.0.18`
 
 **Если вы не уверены**: 
 1. Нажмите `Win + R`, введите `cmd`, затем `where java`.
