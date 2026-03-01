@@ -58,9 +58,14 @@ export default function RootLayout({
   return (
     <html lang="ru" className={`dark ${font.variable}`} suppressHydrationWarning>
       <head>
+        {/* Критические теги для iPhone */}
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        <meta name="apple-mobile-web-app-title" content="Nuxus" />
         <link rel="apple-touch-icon" href="https://picsum.photos/seed/nuxus/180/180" />
+        <link rel="apple-touch-icon" sizes="152x152" href="https://picsum.photos/seed/nuxus/152/152" />
+        <link rel="apple-touch-icon" sizes="167x167" href="https://picsum.photos/seed/nuxus/167/167" />
+        <link rel="apple-touch-icon" sizes="180x180" href="https://picsum.photos/seed/nuxus/180/180" />
         <link rel="icon" href="https://picsum.photos/seed/nuxus/32/32" />
       </head>
       <body className="font-sans antialiased bg-background text-foreground overflow-hidden h-[100dvh]">

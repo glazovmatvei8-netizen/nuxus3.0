@@ -1,11 +1,10 @@
 
-/**
- * Nuxus Core Service Worker v25.2.0
- */
+// Nuxus Service Worker v25.3.0
 const CACHE_NAME = 'nuxus-cache-v1';
 const ASSETS = [
   '/',
-  '/manifest.json'
+  '/manifest.json',
+  'https://picsum.photos/seed/nuxus/180/180'
 ];
 
 self.addEventListener('install', (event) => {
