@@ -299,10 +299,13 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, amIPremium = 
       </div>
     </div>
     <Dialog open={galleryOpen} onOpenChange={v => { if(!v) { if(!isMe && message.isOneTimeView) updateDocumentNonBlocking(doc(db, 'chats', chatId, 'messages', message.id), { isExpired: true }); setGalleryOpen(false); } }}>
-      <DialogContent className="max-w-4xl h-[90vh] bg-black/95 border-none p-0 overflow-hidden flex flex-col items-center justify-center">
+      <DialogContent className="max-w-4xl h-[90vh] bg-black/95 border-none p-0 overflow-hidden flex flex-col items-center justify-center [&>button]:hidden">
         <DialogHeader className="sr-only"><DialogTitle>Галерея Nuxus</DialogTitle></DialogHeader>
         <div className="absolute top-4 left-4 right-4 flex items-center justify-between z-50">
           <div className="text-white/60 text-[10px] font-bold uppercase tracking-widest">{galleryIndex + 1} / {albumMedia.length}</div>
+          <Button variant="ghost" size="icon" className="bg-white/10 hover:bg-white/20 rounded-full text-white h-10 w-10" onClick={() => setGalleryOpen(false)}>
+            <X className="w-6 h-6" />
+          </Button>
         </div>
         <div className="relative w-full h-full flex items-center justify-center p-4">
           {albumMedia[galleryIndex]?.type === 'video' ? <video key={albumMedia[galleryIndex].url} src={albumMedia[galleryIndex].url} className="max-w-full max-h-full object-contain" autoPlay controls /> : <img key={albumMedia[galleryIndex]?.url} src={albumMedia[galleryIndex]?.url} className="max-w-full max-h-full object-contain" />}

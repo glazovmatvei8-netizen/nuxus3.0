@@ -32,11 +32,16 @@
   * {
     @apply border-border;
   }
+  html, body {
+    @apply bg-[#0a0a0c] text-foreground antialiased;
+    background-color: #0a0a0c !important;
+  }
   body {
-    @apply bg-background text-foreground font-sans antialiased;
     font-family: var(--font-jakarta), ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
     overscroll-behavior-y: none;
     -webkit-tap-highlight-color: transparent;
+    overflow: hidden;
+    height: 100dvh;
   }
 }
 

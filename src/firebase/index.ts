@@ -5,11 +5,10 @@ import { firebaseConfig } from '@/firebase/config';
 import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
-import { initializeAppCheck, ReCaptchaEnterpriseProvider } from 'firebase/app-check';
 
 /**
- * Инициализация Firebase v22.0.0.
- * Максимальная защита от "белого экрана" в Windows-приложениях.
+ * Инициализация Firebase v23.0.0.
+ * Максимальная отказоустойчивость. App Check удален для предотвращения "белого экрана" на ПК.
  */
 export function initializeFirebase() {
   let firebaseApp: FirebaseApp;
@@ -18,23 +17,9 @@ export function initializeFirebase() {
     try {
       firebaseApp = initializeApp(firebaseConfig);
     } catch (e) {
-      console.error('Firebase initialization critical failure:', e);
+      console.warn('Firebase core warm-up...');
       firebaseApp = getApp();
     }
-
-    // Защита от сбоя инициализации в Electron/Nativefier
-    if (typeof window !== 'undefined') {
-      try {
-        initializeAppCheck(firebaseApp, {
-          provider: new ReCaptchaEnterpriseProvider(firebaseConfig.apiKey),
-          isTokenAutoRefreshEnabled: true,
-        });
-      } catch (err) {
-        // Если App Check не поддерживается средой ПК, просто работаем дальше
-        console.warn('Nuxus Shield (App Check) disabled for compatibility:', err);
-      }
-    }
-
     return getSdks(firebaseApp);
   }
 

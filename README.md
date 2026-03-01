@@ -1,5 +1,5 @@
 
-# NuxusChat — Премиальный опыт общения (v22.1.0)
+# NuxusChat — Премиальный опыт общения (v23.0.0)
 
 Добро пожаловать в NuxusChat! Приложение полностью переведено на новую архитектуру Ядра с поддержкой AI, видеосообщений и уникальной системой ROOT-доступа.
 
@@ -18,7 +18,7 @@
 ```powershell
 npx nativefier --name "NuxusChat" "https://9000-firebase-studio-1772042875348.cluster-kizalrzg35hz6u4i7pguwgt6ss.cloudworkstations.dev" --internal-urls ".*" --single-instance --tray --inject "window.addEventListener('load', () => { document.body.style.userSelect = 'none'; })"
 ```
-*Примечание: Если возникнет ошибка иконок, Windows создаст приложение со стандартной иконкой, которую можно сменить вручную в свойствах ярлыка.*
+*Примечание: Иконка подтянется автоматически из системы. Не используйте флаг --icon с URL на Windows.*
 
 ---
 

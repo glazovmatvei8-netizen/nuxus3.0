@@ -85,7 +85,7 @@ export function StoryViewerModal({ stories, open, onOpenChange }: StoryViewerPro
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl bg-black border-none p-0 overflow-hidden h-screen sm:h-[85vh] sm:rounded-[3rem] flex flex-col">
+      <DialogContent className="max-w-2xl bg-black border-none p-0 overflow-hidden h-screen sm:h-[85vh] sm:rounded-[3rem] flex flex-col [&>button]:hidden">
         <DialogHeader className="sr-only"><DialogTitle>Просмотр истории</DialogTitle></DialogHeader>
         
         {/* Progress Bars */}
@@ -122,6 +122,9 @@ export function StoryViewerModal({ stories, open, onOpenChange }: StoryViewerPro
                 <Trash2 className="w-5 h-5" />
               </Button>
             )}
+            <Button variant="ghost" size="icon" className="bg-white/10 hover:bg-white/20 rounded-full text-white" onClick={() => onOpenChange(false)}>
+              <X className="w-5 h-5" />
+            </Button>
           </div>
         </div>
 

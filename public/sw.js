@@ -1,7 +1,8 @@
 
-// Nuxus Service Worker v22.0.0
-// Позволяет приложению работать в фоне и принимать Push-уведомления
-
+/**
+ * Nuxus Service Worker v23.0.0
+ * Поддержка фоновых уведомлений.
+ */
 self.addEventListener('install', (event) => {
   self.skipWaiting();
 });
@@ -15,9 +16,9 @@ self.addEventListener('push', (event) => {
   const title = data.title || 'NuxusChat';
   const options = {
     body: data.body || 'Новое сообщение',
-    icon: 'https://picsum.photos/seed/nuxus/192/192',
-    badge: 'https://picsum.photos/seed/nuxus/192/192',
-    data: data.url || '/'
+    icon: '/favicon.ico',
+    badge: '/favicon.ico',
+    data: data.url
   };
 
   event.waitUntil(self.registration.showNotification(title, options));
@@ -26,6 +27,6 @@ self.addEventListener('push', (event) => {
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
   event.waitUntil(
-    clients.openWindow(event.notification.data)
+    clients.openWindow(event.notification.data || '/')
   );
 });
