@@ -7,16 +7,20 @@ import { getAuth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 import { initializeAppCheck, ReCaptchaEnterpriseProvider } from 'firebase/app-check';
 
-// Инициализация Firebase с максимально надежной обработкой App Check
+/**
+ * Инициализация Firebase с максимально надежной обработкой ошибок.
+ * Предотвращает "белый экран" при сбоях в App Check или нестандартных окружениях (Electron).
+ */
 export function initializeFirebase() {
+  let firebaseApp: FirebaseApp;
+
   if (!getApps().length) {
-    let firebaseApp;
     try {
       firebaseApp = initializeApp(firebaseConfig);
     } catch (e) {
       console.error('Firebase initialization critical failure:', e);
-      // Если инициализация упала совсем, пробуем еще раз (редкий случай)
-      firebaseApp = initializeApp(firebaseConfig);
+      // fallback
+      firebaseApp = getApp();
     }
 
     // App Check инициализируется только в браузере и не блокирует работу если упадет
@@ -29,8 +33,8 @@ export function initializeFirebase() {
           isTokenAutoRefreshEnabled: true,
         });
       } catch (err) {
-        // Логируем, но не падаем, чтобы Auth работал
-        console.warn('App Check failed to start. App will work without enhanced protection:', err);
+        // Логируем, но не падаем, чтобы приложение не превратилось в белый экран
+        console.warn('Nuxus Shield (App Check) warning: App will work in limited mode:', err);
       }
     }
 

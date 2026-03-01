@@ -32,7 +32,7 @@ export default function Home() {
 
   // Handle ?join=@username link logic
   useEffect(() => {
-    if (!user || !db || isJoining || !is2FAVerified && profile?.twoFactorEnabled) return;
+    if (!user || !db || isJoining || (!is2FAVerified && profile?.twoFactorEnabled)) return;
 
     const params = new URLSearchParams(window.location.search);
     const joinParam = params.get('join');
@@ -74,13 +74,14 @@ export default function Home() {
     }
   };
 
-  if (isUserLoading || isJoining) {
+  // Safe Loading UI to prevent white screen
+  if (isUserLoading) {
     return (
-      <div className="h-screen w-full flex items-center justify-center bg-background">
+      <div className="h-screen w-full flex items-center justify-center bg-[#0a0a0c]">
         <div className="flex flex-col items-center gap-4">
           <Loader2 className="w-10 h-10 text-primary animate-spin" />
           <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary/60 animate-pulse">
-            {isJoining ? "Вход в сообщество..." : "Загрузка Ядра..."}
+            Инициализация Ядра Nuxus...
           </p>
         </div>
       </div>
@@ -91,10 +92,15 @@ export default function Home() {
     return <AuthScreen />;
   }
 
-  if (isProfileLoading) {
+  if (isProfileLoading || isJoining) {
     return (
-      <div className="h-screen w-full flex items-center justify-center bg-background">
-        <Loader2 className="w-8 h-8 text-primary animate-spin" />
+      <div className="h-screen w-full flex items-center justify-center bg-[#0a0a0c]">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="w-10 h-10 text-primary animate-spin" />
+          <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary/60 animate-pulse">
+            Загрузка профиля...
+          </p>
+        </div>
       </div>
     );
   }
