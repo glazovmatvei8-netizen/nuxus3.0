@@ -40,38 +40,55 @@ export function CallOverlay() {
   const otherUserRef = useMemoFirebase(() => (!db || !otherId) ? null : doc(db, 'users', otherId), [db, otherId]);
   const { data: otherUser } = useDoc<UserType>(otherUserRef);
 
-  useEffect(() => {
-    if (isActive || (isOutgoing && call?.type === 'video')) {
-      const getMedia = async () => {
-        try {
-          const stream = await navigator.mediaDevices.getUserMedia({ 
-            video: call?.type === 'video', 
-            audio: true 
-          });
-          setHasCameraPermission(true);
-          streamRef.current = stream;
-          if (videoRef.current) {
-            videoRef.current.srcObject = stream;
-          }
-        } catch (error) {
-          console.error('Error accessing media:', error);
-          setHasCameraPermission(false);
-          toast({
-            variant: 'destructive',
-            title: 'Доступ запрещен',
-            description: 'Пожалуйста, разрешите доступ к камере и микрофону.',
-          });
-        }
-      };
-      getMedia();
+  // Функция для запроса медиа-ресурсов (вызывается при клике или старте звонка)
+  const requestMedia = async () => {
+    if (!navigator.mediaDevices) {
+      toast({ variant: 'destructive', title: 'Ошибка безопасности', description: 'Ваш браузер блокирует доступ к камере.' });
+      return;
     }
 
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        video: call?.type === 'video' ? { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } } : false, 
+        audio: true 
+      });
+      setHasCameraPermission(true);
+      streamRef.current = stream;
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+      }
+    } catch (error) {
+      console.error('Error accessing media:', error);
+      setHasCameraPermission(false);
+      toast({
+        variant: 'destructive',
+        title: 'Доступ запрещен',
+        description: 'Пожалуйста, разрешите доступ к камере и микрофону в настройках браузера.',
+      });
+    }
+  };
+
+  // Автоматический запрос для звонящего (он уже нажал кнопку вызова - жест был)
+  useEffect(() => {
+    if (isOutgoing && call?.status === 'calling') {
+      requestMedia();
+    }
+  }, [isOutgoing, call?.status]);
+
+  // Подключение потока при активации звонка (после нажатия "Принять")
+  useEffect(() => {
+    if (isActive && !streamRef.current) {
+      requestMedia();
+    }
+  }, [isActive]);
+
+  useEffect(() => {
     return () => {
       if (streamRef.current) {
         streamRef.current.getTracks().forEach(track => track.stop());
       }
     };
-  }, [isActive, isOutgoing, call?.type, toast]);
+  }, []);
 
   useEffect(() => {
     if (call?.status === 'ended' || call?.status === 'rejected' || call?.status === 'missed') {
@@ -84,6 +101,8 @@ export function CallOverlay() {
 
   const handleAccept = () => {
     if (!callRef) return;
+    // Сначала запрашиваем разрешение (пользователь нажал кнопку - жест есть)
+    requestMedia();
     updateDocumentNonBlocking(callRef, { 
       status: 'active',
       startedAt: new Date().toISOString()

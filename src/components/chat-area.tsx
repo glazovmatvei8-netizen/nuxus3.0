@@ -244,15 +244,6 @@ export default function ChatArea() {
   }, [currentChatId, updateTypingStatus]);
 
   useEffect(() => {
-    const handleUnload = () => updateTypingStatus(false);
-    window.addEventListener('beforeunload', handleUnload);
-    return () => {
-      window.removeEventListener('beforeunload', handleUnload);
-      updateTypingStatus(false);
-    };
-  }, [updateTypingStatus]);
-
-  useEffect(() => {
     if (!messages || !firebaseUser || !currentChatId || !db) return;
     const unreadFromOthers = messages.filter(m => !m.isRead && m.senderId !== firebaseUser.uid);
     if (unreadFromOthers.length > 0) {
@@ -474,22 +465,36 @@ export default function ChatArea() {
     setPendingMedia(prev => prev.filter((_, i) => i !== index));
   };
 
-  // Improved Recording Logic (Unified)
+  // Improved Recording Logic with User Gesture requirement
   const startRecording = async () => {
+    if (!navigator.mediaDevices) {
+      toast({ variant: 'destructive', title: 'Ошибка безопасности', description: 'Ваш браузер блокирует доступ к камере (незащищенное соединение).' });
+      return;
+    }
+
     try {
-      const constraints = {
+      // Использование идеальных параметров вместо жестких для совместимости
+      const constraints: MediaStreamConstraints = {
         audio: true,
-        video: recordingMode === 'video' ? { facingMode: 'user', width: 480, height: 480 } : false
+        video: recordingMode === 'video' ? { 
+          facingMode: 'user', 
+          width: { ideal: 480 }, 
+          height: { ideal: 480 },
+          aspectRatio: { ideal: 1 }
+        } : false
       };
+      
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
       
       if (recordingMode === 'video' && videoPreviewRef.current) {
         videoPreviewRef.current.srcObject = stream;
       }
 
-      const recorder = new MediaRecorder(stream, {
-        mimeType: recordingMode === 'video' ? 'video/webm;codecs=vp8,opus' : 'audio/webm'
-      });
+      const mimeType = recordingMode === 'video' 
+        ? (MediaRecorder.isTypeSupported('video/webm;codecs=vp8,opus') ? 'video/webm;codecs=vp8,opus' : 'video/webm')
+        : (MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/mp4');
+
+      const recorder = new MediaRecorder(stream, { mimeType });
       
       recorderRef.current = recorder;
       chunksRef.current = [];
@@ -515,8 +520,13 @@ export default function ChatArea() {
       recordingIntervalRef.current = setInterval(() => {
         setRecordingDuration(prev => prev + 1);
       }, 1000);
-    } catch (err) {
-      toast({ variant: 'destructive', title: 'Ошибка доступа', description: 'Разрешите доступ к камере и микрофону.' });
+    } catch (err: any) {
+      console.error('Media error:', err);
+      toast({ 
+        variant: 'destructive', 
+        title: 'Доступ запрещен', 
+        description: 'Пожалуйста, разрешите доступ к камере и микрофону в настройках браузера.' 
+      });
     }
   };
 
