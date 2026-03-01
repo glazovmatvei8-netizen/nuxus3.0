@@ -9,7 +9,7 @@ import { useToast } from '@/hooks/use-toast';
 
 /**
  * Handles system notifications and sound alerts for incoming messages.
- * Optimized to be proactive with permission requests.
+ * Optimized to be proactive with permission requests and audio unlocking.
  */
 export function NotificationListener() {
   const { user } = useUser();
@@ -24,37 +24,40 @@ export function NotificationListener() {
     // Initialize notification sound
     audioRef.current = new Audio('https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3');
     
-    const requestPermission = async () => {
-      if ('Notification' in window && Notification.permission === 'default') {
-        // We request permission proactively when the app loads
-        await Notification.requestPermission();
-      }
-    };
-    requestPermission();
+    // Auto-request on mount if not determined
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
 
-    // Workaround for some browsers that block audio without user gesture
-    const enableAudio = () => {
+    // CRITICAL: Workaround for browsers that block audio without user gesture
+    const unlockAudio = () => {
       if (audioRef.current) {
         audioRef.current.play().then(() => {
           audioRef.current?.pause();
           audioRef.current!.currentTime = 0;
         }).catch(() => {});
       }
-      window.removeEventListener('click', enableAudio);
+      window.removeEventListener('click', unlockAudio);
+      window.removeEventListener('touchstart', unlockAudio);
     };
-    window.addEventListener('click', enableAudio);
+    
+    window.addEventListener('click', unlockAudio);
+    window.addEventListener('touchstart', unlockAudio);
 
-    return () => window.removeEventListener('click', enableAudio);
+    return () => {
+      window.removeEventListener('click', unlockAudio);
+      window.removeEventListener('touchstart', unlockAudio);
+    };
   }, []);
 
   useEffect(() => {
     if (!db || !user) return;
 
-    // Simplified query to avoid index errors
+    // We listen to all messages globally to catch notifications for other chats
     const q = query(
       collectionGroup(db, 'messages'),
       where('sentAt', '>', startTime.current),
-      limit(10)
+      limit(20)
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -62,23 +65,29 @@ export function NotificationListener() {
         if (change.type === 'added') {
           const msg = change.doc.data();
           
+          // Skip our own messages or already processed ones
           if (msg.senderId === user.uid || lastProcessedMessageId.current === change.doc.id) return;
           lastProcessedMessageId.current = change.doc.id;
 
-          // Sound should play if notification is allowed and app is visible but chat is wrong
+          // Sound should play if notification is allowed and app is visible but chat is NOT current
           if (msg.chatId !== currentChatId) {
+            // Play notification sound
             if (audioRef.current) {
               audioRef.current.currentTime = 0;
-              audioRef.current.play().catch(() => {});
+              audioRef.current.play().catch(e => console.warn("Audio play blocked:", e));
             }
 
+            // Show system notification
             if ('Notification' in window && Notification.permission === 'granted') {
-              new Notification(`Nuxus: ${msg.senderName}`, {
-                body: msg.contentType === 'text' ? msg.content : `Отправил ${msg.contentType}`,
-                icon: 'https://picsum.photos/seed/nuxus/192/192'
-              });
+              try {
+                new Notification(`Nuxus: ${msg.senderName}`, {
+                  body: msg.contentType === 'text' ? msg.content : `Отправил ${msg.contentType}`,
+                  icon: 'https://picsum.photos/seed/nuxus/192/192'
+                });
+              } catch (e) {}
             }
 
+            // Show in-app toast
             toast({
               title: msg.senderName,
               description: msg.contentType === 'text' ? msg.content : `Отправил ${msg.contentType}`,
@@ -87,7 +96,9 @@ export function NotificationListener() {
         }
       });
     }, (error) => {
-      console.warn("Notification stream limited:", error.message);
+      // If index is missing, we log it but don't crash. 
+      // User will see warning in console with a link to create index.
+      console.warn("Notification stream limited (index required?):", error.message);
     });
 
     return () => unsubscribe();

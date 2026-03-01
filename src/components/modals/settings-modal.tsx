@@ -14,11 +14,11 @@ import { UserAvatar } from '@/components/user-avatar';
 import { 
   LogOut, Palette, Loader2, Crown, Check, 
   Monitor, Sparkles, Globe, Settings2, Upload, Moon, Droplets, Type, ShieldCheck, Lock,
-  Users, Copy, Share2, Star, UserCheck, Bell, BellOff
+  Users, Copy, Share2, Star, UserCheck, Bell, BellOff, Info
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { signOut, updatePassword, EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
-import { doc, collection, query, where, limit, getDocs, addDoc } from 'firebase/firestore';
+import { signOut } from 'firebase/auth';
+import { doc, collection, query, where, limit } from 'firebase/firestore';
 import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Progress } from '@/components/ui/progress';
@@ -29,7 +29,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { cn, isUserPremium, isGlobalAdmin, formatDisplayName } from '@/lib/utils';
+import { cn, isUserPremium, formatDisplayName } from '@/lib/utils';
 import type { User } from '@/lib/types';
 import { generateAiAvatar } from '@/ai/flows/generate-ai-avatar-flow';
 import { useTranslations } from '@/hooks/use-translations';
@@ -41,7 +41,6 @@ const PREMIUM_PLANS = [
 ];
 
 const CARD_NUMBER = "2204 1202 0495 4230";
-const MASTER_PASS = "230509";
 
 export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const auth = useAuth();
@@ -53,12 +52,6 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
 
   const userRef = useMemoFirebase(() => (!db || !user) ? null : doc(db, 'users', user.uid), [db, user]);
   const { data: profile } = useDoc<User>(userRef);
-
-  const invitedFriendsQuery = useMemoFirebase(() => {
-    if (!db || !user) return null;
-    return query(collection(db, 'users'), where('invitedBy', '==', user.uid), limit(50));
-  }, [db, user]);
-  const { data: invitedFriends, isLoading: isInvitedLoading } = useCollection<User>(invitedFriendsQuery);
 
   const [form, setForm] = useState({
     name: '',
@@ -76,11 +69,9 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
     twoFactorPin: ''
   });
 
-  const [passwordForm, setPasswordForm] = useState({ new: '', confirm: '' });
   const [activeTab, setActiveTab] = useState('profile');
   const [isSubmittingPayment, setIsSubmittingPayment] = useState(false);
   const [isGeneratingAvatar, setIsGeneratingAvatar] = useState(false);
-  const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
   const [pendingPayment, setPendingPayment] = useState<any>(null);
   const [notifPermission, setNotifPermission] = useState<string>('default');
 
@@ -101,7 +92,9 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         twoFactorEnabled: !!profile.twoFactorEnabled,
         twoFactorPin: profile.twoFactorPin || ''
       });
-      if ('Notification' in window) setNotifPermission(Notification.permission);
+      if ('Notification' in window) {
+        setNotifPermission(Notification.permission);
+      }
     }
   }, [profile, open]);
 
@@ -134,9 +127,23 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
 
   const requestNotifs = async () => {
     if (!('Notification' in window)) return;
+    
+    if (Notification.permission === 'denied') {
+      toast({ 
+        variant: 'destructive', 
+        title: "Доступ заблокирован", 
+        description: "Пожалуйста, разрешите уведомления в настройках вашего браузера (иконка замочка в адресе)." 
+      });
+      return;
+    }
+
     const res = await Notification.requestPermission();
     setNotifPermission(res);
-    if (res === 'granted') toast({ title: "Уведомления включены!" });
+    if (res === 'granted') {
+      toast({ title: "Уведомления успешно включены!" });
+    } else {
+      toast({ variant: 'destructive', title: "Доступ отклонен" });
+    }
   };
 
   const handleAiAvatar = async () => {
@@ -200,10 +207,21 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
               <div className="bg-muted/20 p-6 rounded-[2rem] border border-white/5 space-y-6">
                 <div className="space-y-4">
                   <Label className="text-[10px] uppercase font-black tracking-widest text-primary flex items-center gap-2"><Monitor className="w-3.5 h-3.5" /> Уведомления</Label>
-                  <Button variant="outline" className="w-full h-12 rounded-2xl gap-3 border-white/5 bg-black/20" onClick={requestNotifs}>
-                    {notifPermission === 'granted' ? <Bell className="w-5 h-5 text-green-500" /> : <BellOff className="w-5 h-5 text-destructive" />}
-                    <span className="text-[10px] font-bold uppercase">{notifPermission === 'granted' ? 'Активны' : 'Включить пуши'}</span>
+                  <Button variant="outline" className={cn("w-full h-14 rounded-2xl gap-3 border-white/5 shadow-inner transition-all", notifPermission === 'granted' ? 'bg-green-500/10 text-green-500 border-green-500/20' : 'bg-black/20')} onClick={requestNotifs}>
+                    {notifPermission === 'granted' ? <Bell className="w-5 h-5" /> : <BellOff className="w-5 h-5 text-muted-foreground" />}
+                    <div className="flex flex-col items-start leading-none">
+                      <span className="text-[10px] font-black uppercase tracking-widest">{notifPermission === 'granted' ? 'Уведомления Активны' : 'Включить Пуши'}</span>
+                      <span className="text-[8px] opacity-60 uppercase mt-1">{notifPermission === 'denied' ? 'Требуется сброс в браузере' : 'Звук + Визуальные'}</span>
+                    </div>
                   </Button>
+                  {notifPermission === 'denied' && (
+                    <div className="flex items-start gap-2 p-3 bg-destructive/10 rounded-xl border border-destructive/20 mt-2">
+                      <Info className="w-4 h-4 text-destructive shrink-0 mt-0.5" />
+                      <p className="text-[9px] text-destructive-foreground uppercase font-bold leading-tight">
+                        Доступ заблокирован браузером. Нажмите на иконку замочка в строке адреса и разрешите уведомления вручную.
+                      </p>
+                    </div>
+                  )}
                 </div>
                 <div className="space-y-4 pt-4 border-t border-white/5">
                   <Label className="text-[10px] uppercase font-black tracking-widest text-accent flex items-center gap-2"><Palette className="w-3.5 h-3.5" /> Тема оформления</Label>
