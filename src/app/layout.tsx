@@ -58,8 +58,10 @@ export default function RootLayout({
   return (
     <html lang="ru" className={`dark ${font.variable}`} suppressHydrationWarning>
       <head>
-        <link rel="icon" href="https://picsum.photos/seed/nuxus/32/32" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <link rel="apple-touch-icon" href="https://picsum.photos/seed/nuxus/180/180" />
+        <link rel="icon" href="https://picsum.photos/seed/nuxus/32/32" />
       </head>
       <body className="font-sans antialiased bg-background text-foreground overflow-hidden h-[100dvh]">
         <FirebaseClientProvider>
@@ -73,9 +75,9 @@ export default function RootLayout({
             if ('serviceWorker' in navigator) {
               window.addEventListener('load', function() {
                 navigator.serviceWorker.register('/sw.js').then(function(registration) {
-                  console.log('Nuxus ServiceWorker registered on public domain');
-                }, function(err) {
-                  console.log('Nuxus ServiceWorker registration failed: ', err);
+                  console.log('Nuxus Core: ServiceWorker Active');
+                }).catch(function(err) {
+                  console.log('Nuxus Core: SW Registration Failed', err);
                 });
               });
             }

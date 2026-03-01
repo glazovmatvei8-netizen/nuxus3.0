@@ -1,3 +1,4 @@
+
 import { MetadataRoute } from 'next'
 
 export default function manifest(): MetadataRoute.Manifest {
@@ -7,6 +8,7 @@ export default function manifest(): MetadataRoute.Manifest {
     description: 'Современный мессенджер с поддержкой AI и видеосообщений.',
     start_url: '/',
     display: 'standalone',
+    display_override: ['standalone', 'window-controls-overlay'],
     background_color: '#0a0a0c',
     theme_color: '#0a0a0c',
     lang: 'ru',
