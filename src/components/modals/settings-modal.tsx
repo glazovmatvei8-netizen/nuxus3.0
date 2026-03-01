@@ -15,7 +15,7 @@ import {
   Monitor, Sparkles, Globe, Settings2, Upload, Moon, Droplets, Type, ShieldCheck, Lock
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { signOut, updatePassword, EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
+import { signOut, updatePassword } from 'firebase/auth';
 import { doc, collection, query, where, limit, getDocs, addDoc } from 'firebase/firestore';
 import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -76,7 +76,6 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
   });
 
   const [passwordForm, setPasswordForm] = useState({
-    current: '',
     new: '',
     confirm: ''
   });
@@ -131,7 +130,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
   };
 
   const handleChangePassword = async () => {
-    if (!auth.currentUser || !passwordForm.current || !passwordForm.new) return;
+    if (!auth.currentUser || !passwordForm.new) return;
     if (passwordForm.new !== passwordForm.confirm) {
       toast({ title: "Пароли не совпадают", variant: "destructive" });
       return;
@@ -139,13 +138,17 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
 
     setIsUpdatingPassword(true);
     try {
-      const credential = EmailAuthProvider.credential(auth.currentUser.email!, passwordForm.current);
-      await reauthenticateWithCredential(auth.currentUser, credential);
       await updatePassword(auth.currentUser, passwordForm.new);
       toast({ title: "Пароль успешно обновлен" });
-      setPasswordForm({ current: '', new: '', confirm: '' });
+      setPasswordForm({ new: '', confirm: '' });
     } catch (e: any) {
-      toast({ title: "Ошибка обновления", description: "Неверный текущий пароль", variant: "destructive" });
+      toast({ 
+        title: "Ошибка обновления", 
+        description: e.code === 'auth/requires-recent-login' 
+          ? "Требуется свежий вход в систему. Перезайдите в аккаунт." 
+          : "Ошибка смены пароля", 
+        variant: "destructive" 
+      });
     } finally {
       setIsUpdatingPassword(false);
     }
@@ -256,16 +259,12 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                   <Label className="text-[10px] uppercase font-black tracking-[0.2em] text-primary flex items-center gap-2"><Lock className="w-3.5 h-3.5" /> Изменение пароля</Label>
                   <div className="space-y-4">
                     <div className="space-y-1.5">
-                      <Label className="text-[9px] uppercase font-bold text-muted-foreground ml-1">Текущий пароль</Label>
-                      <Input type="password" value={passwordForm.current} onChange={e => setPasswordForm({...passwordForm, current: e.target.value})} className="bg-black/20 border-white/5 h-11 rounded-xl" />
-                    </div>
-                    <div className="space-y-1.5">
                       <Label className="text-[9px] uppercase font-bold text-muted-foreground ml-1">Новый пароль</Label>
-                      <Input type="password" value={passwordForm.new} onChange={e => setPasswordForm({...passwordForm, new: e.target.value})} className="bg-black/20 border-white/5 h-11 rounded-xl" />
+                      <Input type="password" placeholder="••••••••" value={passwordForm.new} onChange={e => setPasswordForm({...passwordForm, new: e.target.value})} className="bg-black/20 border-white/5 h-11 rounded-xl" />
                     </div>
                     <div className="space-y-1.5">
                       <Label className="text-[9px] uppercase font-bold text-muted-foreground ml-1">Повторите новый пароль</Label>
-                      <Input type="password" value={passwordForm.confirm} onChange={e => setPasswordForm({...passwordForm, confirm: e.target.value})} className="bg-black/20 border-white/5 h-11 rounded-xl" />
+                      <Input type="password" placeholder="••••••••" value={passwordForm.confirm} onChange={e => setPasswordForm({...passwordForm, confirm: e.target.value})} className="bg-black/20 border-white/5 h-11 rounded-xl" />
                     </div>
                     <Button onClick={handleChangePassword} disabled={isUpdatingPassword} className="w-full h-11 rounded-xl bg-primary/20 hover:bg-primary text-primary hover:text-white transition-all font-bold text-[10px] uppercase">
                       {isUpdatingPassword ? <Loader2 className="animate-spin w-4 h-4" /> : "Обновить пароль"}
@@ -328,7 +327,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
           <div className="text-[10px] uppercase font-bold text-muted-foreground mb-1">Номер карты</div>
           <div className="text-lg font-mono font-black text-white tracking-widest">{CARD_NUMBER}</div>
         </div>
-        <Button className="w-full h-14 rounded-2xl font-black uppercase tracking-[0.2em] bg-primary shadow-xl shadow-primary/30" onClick={handleConfirmPayment} disabled={isSubmittingPayment}>{isSubmittingPayment ? <Loader2 className="animate-spin w-6 h-6" /> : "Я оплатил"}</Button>
+        <Button className="w-full h-14 rounded-2xl font-black uppercase tracking-[0.2em] bg-primary shadow-xl shadow-primary/30" onClick={handleConfirmPayment} disabled={isSubmittingPayment}>{isSubmittingPassword ? <Loader2 className="animate-spin w-6 h-6" /> : "Я оплатил"}</Button>
       </DialogContent>
     </Dialog>
     </>
