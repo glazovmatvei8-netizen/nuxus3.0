@@ -1,5 +1,5 @@
 
-export type MessageType = 'text' | 'image' | 'audio' | 'video' | 'service' | 'gift' | 'payment_request' | 'album' | 'poll';
+export type MessageType = 'text' | 'image' | 'audio' | 'video' | 'video_note' | 'service' | 'gift' | 'payment_request' | 'album' | 'poll';
 
 export interface PollOption {
   id: string;

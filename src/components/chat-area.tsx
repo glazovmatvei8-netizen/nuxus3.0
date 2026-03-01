@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useRef, useEffect, useMemo, useCallback, memo } from 'react';
@@ -8,7 +9,7 @@ import { UserAvatar } from '@/components/user-avatar';
 import { 
   Send, Info, ChevronLeft, Loader2, Bookmark, X, Video, Wand2, Phone, Search as SearchIcon,
   Zap, Calendar as CalendarIcon, Paperclip, Mic, StopCircle, AtSign,
-  Star, BarChart3
+  Star, BarChart3, Video as VideoIcon, Camera
 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { MessageItem } from './message-item';
@@ -76,7 +77,6 @@ const ChatHeaderSubInfo = memo(({ chat, participants, userId, t }: { chat: Chat,
       const p = participants.find(part => part.id === uid);
       if (!p?.lastSeen) return false;
       try {
-        // Precise check: status is ignored if user was not active in last 20 seconds
         return Math.abs(differenceInSeconds(new Date(), parseISO(p.lastSeen))) < 20; 
       } catch (e) { return false; }
     });
@@ -149,11 +149,14 @@ export default function ChatArea() {
   const [mentionQuery, setMentionQuery] = useState<string | null>(null);
   const [mentionIndex, setMentionIndex] = useState(0);
 
+  // Recording State
+  const [recordingMode, setRecordingMode] = useState<'audio' | 'video'>('audio');
   const [isRecording, setIsRecording] = useState(false);
   const [recordingDuration, setRecordingDuration] = useState(0);
-  const audioRecorderRef = useRef<MediaRecorder | null>(null);
-  const audioChunksRef = useRef<Blob[]>([]);
+  const recorderRef = useRef<MediaRecorder | null>(null);
+  const chunksRef = useRef<Blob[]>([]);
   const recordingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const videoPreviewRef = useRef<HTMLVideoElement>(null);
 
   const inputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -233,7 +236,6 @@ export default function ChatArea() {
     updateDoc(typingRef, { [`typing.${firebaseUser.uid}`]: isTyping }).catch(() => {});
   }, [db, currentChatId, firebaseUser]);
 
-  // Force typing cleanup on unmount or chat change
   useEffect(() => {
     const cid = currentChatId;
     return () => {
@@ -267,13 +269,11 @@ export default function ChatArea() {
     }
   }, []);
 
-  // Optimized Draft Save
   useEffect(() => {
     if (!currentChatId) return;
     if (draftTimeoutRef.current) clearTimeout(draftTimeoutRef.current);
     
     draftTimeoutRef.current = setTimeout(() => {
-      // Don't save if mention list is open to avoid focus issues
       if (mentionQuery !== null) return;
       
       if (localDrafts[currentChatId] !== messageInput) {
@@ -365,7 +365,7 @@ export default function ChatArea() {
   }, [messages?.length, currentChatId, scrollToBottom]);
 
   const handleSendMessage = useCallback(async (content_msg: string = messageInput, type_msg: Message['contentType'] = 'text') => {
-    const trimmedContent = content_msg.trim();
+    const trimmedContent = typeof content_msg === 'string' ? content_msg.trim() : content_msg;
     if ((!trimmedContent && pendingMedia.length === 0) || !currentChatId || !firebaseUser || !db) return;
     
     const captureContent = trimmedContent;
@@ -415,7 +415,7 @@ export default function ChatArea() {
     }
 
     if (captureContent && captureMedia.length === 0) {
-      const isMentionAll = (isAdmin || isUserPremium(userProfile)) && captureContent.includes('@all');
+      const isMentionAll = (isAdmin || isUserPremium(userProfile)) && typeof captureContent === 'string' && captureContent.includes('@all');
       
       const msgData: Partial<Message> = { 
         chatId: currentChatId, 
@@ -474,23 +474,37 @@ export default function ChatArea() {
     setPendingMedia(prev => prev.filter((_, i) => i !== index));
   };
 
-  const startAudioRecording = async () => {
+  // Improved Recording Logic (Unified)
+  const startRecording = async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const recorder = new MediaRecorder(stream);
-      audioRecorderRef.current = recorder;
-      audioChunksRef.current = [];
+      const constraints = {
+        audio: true,
+        video: recordingMode === 'video' ? { facingMode: 'user', width: 480, height: 480 } : false
+      };
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
+      
+      if (recordingMode === 'video' && videoPreviewRef.current) {
+        videoPreviewRef.current.srcObject = stream;
+      }
+
+      const recorder = new MediaRecorder(stream, {
+        mimeType: recordingMode === 'video' ? 'video/webm;codecs=vp8,opus' : 'audio/webm'
+      });
+      
+      recorderRef.current = recorder;
+      chunksRef.current = [];
 
       recorder.ondataavailable = (e) => {
-        if (e.data.size > 0) audioChunksRef.current.push(e.data);
+        if (e.data.size > 0) chunksRef.current.push(e.data);
       };
 
       recorder.onstop = async () => {
-        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        const type = recordingMode === 'video' ? 'video/webm' : 'audio/webm';
+        const blob = new Blob(chunksRef.current, { type });
         const reader = new FileReader();
-        reader.readAsDataURL(audioBlob);
+        reader.readAsDataURL(blob);
         reader.onloadend = () => {
-          handleSendMessage(reader.result as string, 'audio');
+          handleSendMessage(reader.result as string, recordingMode === 'video' ? 'video_note' : 'audio');
         };
         stream.getTracks().forEach(track => track.stop());
       };
@@ -502,16 +516,22 @@ export default function ChatArea() {
         setRecordingDuration(prev => prev + 1);
       }, 1000);
     } catch (err) {
-      toast({ variant: 'destructive', title: 'Ошибка микрофона', description: 'Разрешите доступ к микрофону.' });
+      toast({ variant: 'destructive', title: 'Ошибка доступа', description: 'Разрешите доступ к камере и микрофону.' });
     }
   };
 
-  const stopAudioRecording = (send: boolean = true) => {
-    if (audioRecorderRef.current && isRecording) {
-      if (!send) audioChunksRef.current = [];
-      audioRecorderRef.current.stop();
+  const stopRecording = (send: boolean = true) => {
+    if (recorderRef.current && isRecording) {
+      if (!send) chunksRef.current = [];
+      recorderRef.current.stop();
       setIsRecording(false);
       if (recordingIntervalRef.current) clearInterval(recordingIntervalRef.current);
+    }
+  };
+
+  const toggleRecordingMode = () => {
+    if (!isRecording) {
+      setRecordingMode(prev => prev === 'audio' ? 'video' : 'audio');
     }
   };
 
@@ -570,7 +590,7 @@ export default function ChatArea() {
           {!isSearchingLocal && <Button variant="ghost" size="icon" className="rounded-lg" onClick={() => setIsSearchingLocal(true)}><SearchIcon className="w-5 h-5" /></Button>}
           {chat?.type === 'private' && (
             <>
-              <Button variant="ghost" size="icon" className="rounded-lg text-primary" onClick={() => startAudioRecording()}><Phone className="w-5 h-5" /></Button>
+              <Button variant="ghost" size="icon" className="rounded-lg text-primary" onClick={() => startRecording()}><Phone className="w-5 h-5" /></Button>
               <Button variant="ghost" size="icon" className="rounded-lg text-primary" onClick={() => setIsChatInfoOpen(true)}><Video className="w-5 h-5" /></Button>
             </>
           )}
@@ -595,6 +615,14 @@ export default function ChatArea() {
 
       <footer className="p-3 bg-card border-t border-white/5 shrink-0 relative">
         <div className="max-w-4xl mx-auto space-y-2">
+          {/* Video Preview Bubble during recording */}
+          {isRecording && recordingMode === 'video' && (
+            <div className="absolute bottom-[120%] right-4 w-40 h-40 rounded-full border-4 border-primary shadow-2xl overflow-hidden bg-black z-50 animate-in zoom-in slide-in-from-bottom-4">
+              <video ref={videoPreviewRef} autoPlay muted playsInline className="w-full h-full object-cover" />
+              <div className="absolute inset-0 bg-primary/10 animate-pulse pointer-events-none" />
+            </div>
+          )}
+
           {mentionQuery !== null && filteredParticipants.length > 0 && (
             <div className="absolute bottom-full left-0 right-0 mx-auto max-w-4xl px-3 pb-2 z-50">
               <div className="bg-card/95 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl overflow-hidden animate-in slide-in-from-bottom-2">
@@ -631,14 +659,17 @@ export default function ChatArea() {
             <div className="flex items-center justify-between p-3 bg-red-500/10 rounded-2xl border border-red-500/20 animate-in slide-in-from-bottom-2">
               <div className="flex items-center gap-3">
                 <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse" />
-                <span className="text-xs font-black text-red-500 uppercase tracking-widest">Запись: {Math.floor(recordingDuration / 60)}:{(recordingDuration % 60).toString().padStart(2, '0')}</span>
+                <span className="text-xs font-black text-red-500 uppercase tracking-widest">
+                  Запись {recordingMode === 'video' ? 'кружка' : 'ГС'}: {Math.floor(recordingDuration / 60)}:{(recordingDuration % 60).toString().padStart(2, '0')}
+                </span>
               </div>
               <div className="flex items-center gap-2">
-                <Button variant="ghost" size="sm" className="h-8 text-[10px] uppercase font-bold text-muted-foreground" onClick={() => stopAudioRecording(false)}>Отмена</Button>
-                <Button size="icon" className="h-9 w-9 rounded-xl bg-red-500 hover:bg-red-600" onClick={() => stopAudioRecording(true)}><StopCircle className="w-5 h-5" /></Button>
+                <Button variant="ghost" size="sm" className="h-8 text-[10px] uppercase font-bold text-muted-foreground" onClick={() => stopRecording(false)}>Отмена</Button>
+                <Button size="icon" className="h-9 w-9 rounded-xl bg-red-500 hover:bg-red-600 shadow-lg shadow-red-500/20" onClick={() => stopRecording(true)}><StopCircle className="w-5 h-5" /></Button>
               </div>
             </div>
           )}
+          
           {pendingMedia.length > 0 && (
             <div className="flex gap-2 p-2 bg-muted/40 rounded-2xl overflow-x-auto scrollbar-hide">
               {pendingMedia.map((media, idx) => (
@@ -707,8 +738,27 @@ export default function ChatArea() {
               />
               {amIPremium && !editingMsg && (<button onClick={async () => { setIsDrafting(true); const history = messages?.slice(-5).map(m => ({ sender: m.senderName, message: m.content })) || []; try { const { draftMessage } = await suggestMessageDraft({ conversationHistory: history, currentUserInput: messageInput }); setMessageInput(draftMessage); } catch(e){} finally { setIsDrafting(false); } }} disabled={isDrafting || isRecording} className="absolute right-3 top-1/2 -translate-y-1/2 text-primary hover:scale-110">{isDrafting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wand2 className="w-4 h-4" />}</button>)}
             </div>
+            
             {(!messageInput.trim() && pendingMedia.length === 0 && !isRecording) ? (
-              <Button size="icon" className="h-11 w-11 rounded-xl shrink-0 bg-primary" onClick={startAudioRecording}><Mic className="w-5 h-5" /></Button>
+              <div className="flex items-center gap-1.5">
+                <Button 
+                  size="icon" 
+                  className={cn("h-11 w-11 rounded-xl shrink-0 transition-all", recordingMode === 'audio' ? "bg-primary" : "bg-accent text-accent-foreground")} 
+                  onClick={startRecording}
+                  onContextMenu={(e) => { e.preventDefault(); toggleRecordingMode(); }}
+                >
+                  {recordingMode === 'audio' ? <Mic className="w-5 h-5" /> : <VideoIcon className="w-5 h-5" />}
+                </Button>
+                <Button 
+                  size="icon" 
+                  variant="ghost" 
+                  className="h-8 w-8 rounded-lg text-muted-foreground hover:text-white"
+                  onClick={toggleRecordingMode}
+                  title="Переключить режим записи"
+                >
+                  {recordingMode === 'audio' ? <VideoIcon className="w-3.5 h-3.5" /> : <Mic className="w-3.5 h-3.5" />}
+                </Button>
+              </div>
             ) : (
               !isRecording && (
                 <Button size="icon" className="h-11 w-11 rounded-xl shrink-0 bg-primary" onClick={() => handleSendMessage()}>

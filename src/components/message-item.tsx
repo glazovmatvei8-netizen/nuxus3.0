@@ -43,6 +43,7 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, amIPremium = 
   const [isPlaying, setIsPlaying] = useState(false);
   const [audioProgress, setAudioProgress] = useState(0);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const videoNoteRef = useRef<HTMLVideoElement>(null);
 
   const formattedTime = useMemo(() => message.sentAt ? format(new Date(message.sentAt), 'HH:mm') : '', [message.sentAt]);
 
@@ -50,8 +51,8 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, amIPremium = 
     if (message.contentType === 'album') {
       try { return JSON.parse(message.content); } catch (e) { return []; }
     }
-    if (message.contentType === 'image' || message.contentType === 'video') {
-      return [{ url: message.content, type: message.contentType }];
+    if (message.contentType === 'image' || message.contentType === 'video' || message.contentType === 'video_note') {
+      return [{ url: message.content, type: message.contentType === 'video_note' ? 'video' : message.contentType }];
     }
     return [];
   }, [message.contentType, message.content]);
@@ -165,6 +166,30 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, amIPremium = 
       );
     }
 
+    if (message.contentType === 'video_note') {
+      return (
+        <div className="relative p-1">
+          <div 
+            onClick={() => setGalleryOpen(true)}
+            className="w-48 h-48 rounded-full overflow-hidden border-4 border-primary/20 shadow-2xl cursor-pointer bg-black group relative"
+          >
+            <video 
+              ref={videoNoteRef}
+              src={message.content} 
+              className="w-full h-full object-cover" 
+              autoPlay 
+              loop 
+              muted 
+              playsInline 
+            />
+            <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+              <PlayCircle className="w-12 h-12 text-white/80" />
+            </div>
+          </div>
+        </div>
+      );
+    }
+
     if (message.contentType === 'album' || message.contentType === 'image' || message.contentType === 'video') {
       const isOneTime = message.isOneTimeView;
       return (
@@ -222,11 +247,16 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, amIPremium = 
           <div className="flex items-center gap-1.5 mb-0.5">{countdown !== null && <div className="flex items-center gap-1 px-1.5 py-0.5 bg-red-500/10 rounded-full text-[8px] font-black text-red-500 animate-pulse"><Timer className="w-2.5 h-2.5" /> {countdown}</div>}</div>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <div className={cn("p-3 rounded-2xl cursor-pointer shadow-md border transition-all hover:opacity-95 will-change-transform", isMe ? "message-bubble-me border-none ml-auto" : "bg-card border-white/5 text-foreground mr-auto", message.isMentionAll && !isMe && "border-accent shadow-lg shadow-accent/10")}>
+              <div className={cn("p-3 rounded-2xl cursor-pointer shadow-md border transition-all hover:opacity-95 will-change-transform", isMe ? "message-bubble-me border-none ml-auto" : "bg-card border-white/5 text-foreground mr-auto", message.isMentionAll && !isMe && "border-accent shadow-lg shadow-accent/10", message.contentType === 'video_note' && "p-1 rounded-full overflow-hidden")}>
                 {renderContent()}
-                <div className="flex items-center justify-end gap-1 mt-1 opacity-60"><span className="text-[9px]">{formattedTime}</span>{isMe && (message.isRead ? <CheckCheck className="w-3 h-3 text-accent" /> : <Check className="w-3 h-3" />)}</div>
+                {message.contentType !== 'video_note' && (
+                  <div className="flex items-center justify-end gap-1 mt-1 opacity-60"><span className="text-[9px]">{formattedTime}</span>{isMe && (message.isRead ? <CheckCheck className="w-3 h-3 text-accent" /> : <Check className="w-3 h-3" />)}</div>
+                )}
               </div>
             </DropdownMenuTrigger>
+            {message.contentType === 'video_note' && (
+               <div className="flex items-center justify-end gap-1 mt-1 opacity-60"><span className="text-[9px]">{formattedTime}</span>{isMe && (message.isRead ? <CheckCheck className="w-3 h-3 text-accent" /> : <Check className="w-3 h-3" />)}</div>
+            )}
             <DropdownMenuContent align={isMe ? 'end' : 'start'} className="w-48 bg-card border-white/10">
               <DropdownMenuItem onClick={() => onReply(message)} className="gap-2"><CornerUpLeft className="w-4 h-4" /> Ответить</DropdownMenuItem>
               {isMe && message.contentType === 'text' && <DropdownMenuItem onClick={() => onEdit(message)} className="gap-2"><Edit2 className="w-4 h-4" /> Изменить</DropdownMenuItem>}
