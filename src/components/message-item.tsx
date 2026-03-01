@@ -22,7 +22,7 @@ import {
   Fish, Bitcoin, Coins, Gamepad2, Music, Smile, ThumbsUp, Bell, Mail, 
   Key, Lock, Shield, Sword, Anchor, Compass, Map, Flag, Briefcase, GraduationCap,
   Pin, Forward, Gift, PlayCircle, Edit2, Copy, Timer, EyeOff, Clock, Search, X,
-  ChevronLeft, ChevronRight, Pause, Play
+  ChevronLeft, ChevronRight, Pause, Play, AtSign
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { doc } from 'firebase/firestore';
@@ -57,11 +57,9 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, amIPremium = 
   const [transcription, setTranscription] = useState<string | null>(null);
   const [countdown, setCountdown] = useState<number | null>(null);
   
-  // Gallery State
   const [galleryOpen, setGalleryOpen] = useState(false);
   const [galleryIndex, setGalleryIndex] = useState(0);
 
-  // Audio State
   const [isPlaying, setIsPlaying] = useState(false);
   const [audioProgress, setAudioProgress] = useState(0);
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -171,8 +169,15 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, amIPremium = 
     let formatted = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
     formatted = formatted.replace(/\*(.*?)\*/g, '<em>$1</em>');
     formatted = formatted.replace(/`(.*?)`/g, '<code class="bg-black/20 px-1 rounded">$1</code>');
-    // Highlight @all
-    formatted = formatted.replace(/@all/g, '<span class="text-accent font-black animate-pulse">@all</span>');
+    
+    // Highlight @all and personal mentions
+    formatted = formatted.replace(/(@[a-zA-Z0-9_]+)/g, (match) => {
+      if (match === '@all') {
+        return `<span class="text-accent font-black ${!isMe ? 'animate-pulse' : ''}">@all</span>`;
+      }
+      return `<span class="text-primary font-bold hover:underline cursor-pointer">${match}</span>`;
+    });
+
     return <span dangerouslySetInnerHTML={{ __html: formatted }} />;
   };
 

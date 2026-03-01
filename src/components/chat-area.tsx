@@ -8,14 +8,14 @@ import { Input } from '@/components/ui/input';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
   Send, Info, ChevronLeft, Loader2, Bookmark, X, Video, Circle, Wand2, Phone, Search as SearchIcon,
-  Zap, Calendar as CalendarIcon, Paperclip, Image as ImageIcon, Trash2, Mic, StopCircle
+  Zap, Calendar as CalendarIcon, Paperclip, Image as ImageIcon, Trash2, Mic, StopCircle, AtSign
 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { MessageItem } from './message-item';
 import { useToast } from '@/hooks/use-toast';
 import { ChatInfoModal } from './modals/chat-info-modal';
 import { useFirestore, useUser, useCollection, useDoc, useMemoFirebase } from '@/firebase';
-import { collection, query, orderBy, doc, addDoc, updateDoc } from 'firebase/firestore';
+import { collection, query, orderBy, doc, addDoc, updateDoc, where, limit } from 'firebase/firestore';
 import { addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { formatDisplayName, isUserPremium, isGlobalAdmin } from '@/lib/utils';
 import type { Message, User as UserType, Chat } from '@/lib/types';
@@ -84,6 +84,10 @@ export default function ChatArea() {
   const [expiryTime, setExpiryTime] = useState<number | null>(null);
   const [isOneTime, setIsOneTime] = useState(false);
 
+  // Mention System State
+  const [mentionQuery, setMentionQuery] = useState<string | null>(null);
+  const [mentionIndex, setMentionIndex] = useState(0);
+
   // Audio Recording State
   const [isRecording, setIsRecording] = useState(false);
   const [recordingDuration, setRecordingDuration] = useState(0);
@@ -91,6 +95,7 @@ export default function ChatArea() {
   const audioChunksRef = useRef<Blob[]>([]);
   const recordingIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
+  const inputRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -108,6 +113,23 @@ export default function ChatArea() {
 
   const chatRef = useMemoFirebase(() => (!db || !currentChatId) ? null : doc(db, 'chats', currentChatId), [db, currentChatId]);
   const { data: chat } = useDoc<Chat>(chatRef);
+
+  // Fetch participants for mentions
+  const participantsQuery = useMemoFirebase(() => {
+    if (!db || !chat?.participantIds?.length) return null;
+    // Limit to 50 for performance
+    return query(collection(db, 'users'), where('id', 'in', chat.participantIds.slice(0, 30)));
+  }, [db, chat?.participantIds]);
+  const { data: participants } = useCollection<UserType>(participantsQuery);
+
+  const filteredParticipants = useMemo(() => {
+    if (mentionQuery === null || !participants) return [];
+    const q = mentionQuery.toLowerCase();
+    return participants.filter(p => 
+      p.id !== firebaseUser?.uid && 
+      (p.username?.toLowerCase().includes(q) || p.name?.toLowerCase().includes(q))
+    );
+  }, [mentionQuery, participants, firebaseUser]);
 
   const isAdmin = useMemo(() => {
     return chat?.ownerId === firebaseUser?.uid || chat?.adminIds?.includes(firebaseUser?.uid || '') || isGlobalAdmin(userProfile);
@@ -155,14 +177,12 @@ export default function ChatArea() {
     updateDoc(typingRef, { [`typing.${firebaseUser.uid}`]: isTyping }).catch(() => {});
   }, [db, currentChatId, firebaseUser]);
 
-  // Глобальная очистка статуса при закрытии страницы
   useEffect(() => {
     const handleUnload = () => updateTypingStatus(false);
     window.addEventListener('beforeunload', handleUnload);
     return () => window.removeEventListener('beforeunload', handleUnload);
   }, [updateTypingStatus]);
 
-  // Очистка статуса при смене чата
   useEffect(() => {
     const prevId = currentChatId;
     return () => {
@@ -170,19 +190,24 @@ export default function ChatArea() {
     };
   }, [currentChatId, updateTypingStatus]);
 
-  // Notification for @all
+  // Personal Mention Notification
   useEffect(() => {
-    if (!messages || !firebaseUser || !audioRef.current) return;
+    if (!messages || !firebaseUser || !audioRef.current || !userProfile?.username) return;
     const lastMsg = messages[messages.length - 1];
-    if (lastMsg && lastMsg.senderId !== firebaseUser.uid && lastMsg.isMentionAll && !lastMsg.isRead) {
+    if (!lastMsg || lastMsg.senderId === firebaseUser.uid || lastMsg.isRead) return;
+
+    const myMention = userProfile.username;
+    const hasMention = lastMsg.content.includes(myMention) || lastMsg.isMentionAll;
+
+    if (hasMention) {
       audioRef.current.play().catch(() => {});
       toast({
-        title: "Внимание: Объявление!",
-        description: `${lastMsg.senderName}: ${lastMsg.content}`,
+        title: lastMsg.isMentionAll ? "Объявление @all" : "Вас упомянули!",
+        description: `${lastMsg.senderName}: ${lastMsg.content.slice(0, 50)}...`,
         variant: "default",
       });
     }
-  }, [messages, firebaseUser, toast]);
+  }, [messages, firebaseUser, toast, userProfile?.username]);
 
   useEffect(() => {
     if (!messages || !firebaseUser || !currentChatId || !db) return;
@@ -215,6 +240,24 @@ export default function ChatArea() {
 
   const onInputChange = (val: string) => {
     setMessageInput(val);
+    
+    // Mention detection
+    const cursorPosition = inputRef.current?.selectionStart || 0;
+    const textBeforeCursor = val.slice(0, cursorPosition);
+    const lastAtSymbol = textBeforeCursor.lastIndexOf('@');
+    
+    if (lastAtSymbol !== -1) {
+      const query = textBeforeCursor.slice(lastAtSymbol + 1);
+      if (!query.includes(' ')) {
+        setMentionQuery(query);
+        setMentionIndex(0);
+      } else {
+        setMentionQuery(null);
+      }
+    } else {
+      setMentionQuery(null);
+    }
+
     if (val.length > 0) {
       updateTypingStatus(true);
       if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
@@ -227,11 +270,33 @@ export default function ChatArea() {
     }
   };
 
+  const handleSelectMention = (targetUser: UserType) => {
+    const cursorPosition = inputRef.current?.selectionStart || 0;
+    const textBeforeCursor = messageInput.slice(0, cursorPosition);
+    const lastAtSymbol = textBeforeCursor.lastIndexOf('@');
+    
+    if (lastAtSymbol !== -1) {
+      const beforeAt = messageInput.slice(0, lastAtSymbol);
+      const afterCursor = messageInput.slice(cursorPosition);
+      const newText = `${beforeAt}${targetUser.username} ${afterCursor}`;
+      setMessageInput(newText);
+      setMentionQuery(null);
+      setTimeout(() => {
+        if (inputRef.current) {
+          const newPos = lastAtSymbol + targetUser.username.length + 1;
+          inputRef.current.setSelectionRange(newPos, newPos);
+          inputRef.current.focus();
+        }
+      }, 0);
+    }
+  };
+
   useEffect(() => {
     if (currentChatId) {
       setMessageInput(localDrafts[currentChatId] || '');
       setPendingMedia([]);
       isTypingRef.current = false;
+      setMentionQuery(null);
     }
   }, [currentChatId, localDrafts]);
 
@@ -254,6 +319,7 @@ export default function ChatArea() {
     
     setIsSending(true);
     updateTypingStatus(false);
+    setMentionQuery(null);
 
     if (editingMsg) {
       updateDocumentNonBlocking(doc(db, 'chats', currentChatId, 'messages', editingMsg.id), {
@@ -266,7 +332,6 @@ export default function ChatArea() {
       return;
     }
 
-    // Обработка медиа (Альбом или Одиночный файл)
     if (pendingMedia.length > 0) {
       const mediaMsg: Partial<Message> = {
         chatId: currentChatId,
@@ -289,9 +354,8 @@ export default function ChatArea() {
       setPendingMedia([]);
     }
 
-    // Отправляем текст, если он есть (отдельно от медиа, как в TG)
     if (trimmedContent && pendingMedia.length === 0) {
-      const isMentionAll = isAdmin && trimmedContent.includes('@all');
+      const isMentionAll = (isAdmin || isUserPremium(userProfile)) && trimmedContent.includes('@all');
       
       const msgData: Partial<Message> = { 
         chatId: currentChatId, 
@@ -482,8 +546,42 @@ export default function ChatArea() {
         )}
       </ScrollArea>
 
-      <footer className="p-3 bg-card border-t border-white/5 shrink-0">
+      <footer className="p-3 bg-card border-t border-white/5 shrink-0 relative">
         <div className="max-w-4xl mx-auto space-y-2">
+          {/* Mentions List Overlay */}
+          {mentionQuery !== null && filteredParticipants.length > 0 && (
+            <div className="absolute bottom-full left-0 right-0 mx-auto max-w-4xl px-3 pb-2 z-50">
+              <div className="bg-card/95 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl overflow-hidden animate-in slide-in-from-bottom-2">
+                <div className="px-4 py-2 border-b border-white/5 bg-primary/5 flex items-center justify-between">
+                  <span className="text-[10px] font-black uppercase tracking-widest text-primary flex items-center gap-1.5"><AtSign className="w-3 h-3" /> Упомянуть участника</span>
+                  <span className="text-[8px] font-bold text-muted-foreground uppercase">{filteredParticipants.length} найдено</span>
+                </div>
+                <ScrollArea className="max-h-60">
+                  <div className="p-1.5 space-y-1">
+                    {filteredParticipants.map((p, idx) => (
+                      <div 
+                        key={p.id} 
+                        onClick={() => handleSelectMention(p)}
+                        className={cn(
+                          "flex items-center gap-3 p-2.5 rounded-xl cursor-pointer transition-all border border-transparent hover:bg-primary/10",
+                          mentionIndex === idx && "bg-primary/20 border-primary/20"
+                        )}
+                      >
+                        <UserAvatar userId={p.id} className="h-8 w-8" manualAvatarUrl={p.avatarUrl} fallbackName={p.name} />
+                        <div className="flex flex-col min-w-0 text-left">
+                          <span className="font-bold text-sm truncate flex items-center gap-1.5">
+                            {p.name} {isUserPremium(p) && <AtSign className="w-3 h-3 text-accent" />}
+                          </span>
+                          <span className="text-[10px] text-muted-foreground font-mono truncate">{p.username}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </ScrollArea>
+              </div>
+            </div>
+          )}
+
           {isRecording && (
             <div className="flex items-center justify-between p-3 bg-red-500/10 rounded-2xl border border-red-500/20 animate-in slide-in-from-bottom-2">
               <div className="flex items-center gap-3">
@@ -568,11 +666,26 @@ export default function ChatArea() {
             </Popover>
             <div className="flex-1 relative">
               <Input 
+                ref={inputRef}
                 placeholder={t('chat.placeholder')} 
                 className="bg-muted border-none rounded-xl h-11 text-sm px-4 focus-visible:ring-1 focus-visible:ring-primary/20" 
                 value={messageInput} 
                 onChange={e => onInputChange(e.target.value)} 
-                onKeyDown={e => e.key === 'Enter' && !e.shiftKey && handleSendMessage()} 
+                onKeyDown={e => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    if (mentionQuery !== null && filteredParticipants.length > 0) {
+                      e.preventDefault();
+                      handleSelectMention(filteredParticipants[mentionIndex]);
+                    } else {
+                      handleSendMessage();
+                    }
+                  }
+                  if (mentionQuery !== null) {
+                    if (e.key === 'ArrowDown') { e.preventDefault(); setMentionIndex(prev => (prev + 1) % filteredParticipants.length); }
+                    if (e.key === 'ArrowUp') { e.preventDefault(); setMentionIndex(prev => (prev - 1 + filteredParticipants.length) % filteredParticipants.length); }
+                    if (e.key === 'Escape') { setMentionQuery(null); }
+                  }
+                }}
                 disabled={isRecording}
               />
               {amIPremium && !editingMsg && (<button onClick={handleAiDraft} disabled={isDrafting || isRecording} className="absolute right-3 top-1/2 -translate-y-1/2 text-primary hover:scale-110">{isDrafting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wand2 className="w-4 h-4" />}</button>)}
