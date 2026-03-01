@@ -1,7 +1,7 @@
 
 "use client"
 
-import React, { useState, useEffect, memo } from 'react';
+import React, { useState, useEffect, memo, useMemo } from 'react';
 import { useUser, useFirestore } from '@/firebase';
 import { useAppState } from '@/lib/store';
 import { UserAvatar } from '@/components/user-avatar';
@@ -21,7 +21,8 @@ import {
   Plane, Sun, Moon, Cloud, Snowflake, Trees, Flower2, Dog, Cat, Bird, 
   Fish, Bitcoin, Coins, Gamepad2, Music, Smile, ThumbsUp, Bell, Mail, 
   Key, Lock, Shield, Sword, Anchor, Compass, Map, Flag, Briefcase, GraduationCap,
-  Pin, Forward, Gift, PlayCircle, Edit2, Copy, Timer, EyeOff, Clock, Search, X
+  Pin, Forward, Gift, PlayCircle, Edit2, Copy, Timer, EyeOff, Clock, Search, X,
+  ChevronLeft, ChevronRight
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { doc } from 'firebase/firestore';
@@ -51,12 +52,26 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, amIPremium = 
   const db = useFirestore();
   const { setForwardingMessage } = useAppState();
   const { toast } = useToast();
+  
   const [isTranscribing, setIsTranscribing] = useState(false);
   const [transcription, setTranscription] = useState<string | null>(null);
   const [countdown, setCountdown] = useState<number | null>(null);
-  const [showOneTimeView, setShowOneTimeView] = useState(false);
+  
+  // Gallery State
+  const [galleryOpen, setGalleryOpen] = useState(false);
+  const [galleryIndex, setGalleryIndex] = useState(0);
 
   const formattedTime = message.sentAt ? format(new Date(message.sentAt), 'HH:mm') : '';
+
+  const albumMedia = useMemo(() => {
+    if (message.contentType === 'album') {
+      try { return JSON.parse(message.content); } catch (e) { return []; }
+    }
+    if (message.contentType === 'image' || message.contentType === 'video') {
+      return [{ url: message.content, type: message.contentType }];
+    }
+    return [];
+  }, [message]);
 
   useEffect(() => {
     if (message.expiresInSeconds && !message.isExpired && !countdown) {
@@ -102,16 +117,27 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, amIPremium = 
     }
   };
 
-  const handleOpenOneTime = () => {
+  const openGallery = (index: number) => {
     if (message.isExpired) return;
-    setShowOneTimeView(true);
+    setGalleryIndex(index);
+    setGalleryOpen(true);
   };
 
-  const handleCloseOneTime = () => {
-    setShowOneTimeView(false);
+  const closeGallery = () => {
+    setGalleryOpen(false);
     if (!isMe && message.isOneTimeView) {
       updateDocumentNonBlocking(doc(db, 'chats', chatId, 'messages', message.id), { isExpired: true });
     }
+  };
+
+  const nextGallery = (e?: any) => {
+    e?.stopPropagation();
+    setGalleryIndex((prev) => (prev + 1) % albumMedia.length);
+  };
+
+  const prevGallery = (e?: any) => {
+    e?.stopPropagation();
+    setGalleryIndex((prev) => (prev - 1 + albumMedia.length) % albumMedia.length);
   };
 
   const parseMarkdown = (text: string) => {
@@ -146,18 +172,45 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, amIPremium = 
         </div>
       );
     }
-    if (message.contentType === 'video' || message.contentType === 'image') {
+
+    // Рендеринг Альбомов и Медиа
+    if (message.contentType === 'album' || message.contentType === 'image' || message.contentType === 'video') {
       const isOneTime = message.isOneTimeView;
       return (
         <div className="flex flex-col gap-1">
           {isOneTime && <div className="flex items-center gap-1.5 mb-1 px-1"><EyeOff className="w-3 h-3 text-accent" /><span className="text-[8px] font-bold uppercase text-accent tracking-widest">Один просмотр</span></div>}
-          <div onClick={isOneTime ? handleOpenOneTime : undefined} className={cn("relative w-48 h-48 rounded-2xl overflow-hidden border-2 border-primary/30 bg-black mt-1 group", isOneTime && "cursor-pointer")}>
-            {message.contentType === 'video' ? (<video src={message.content} className={cn("w-full h-full object-cover", isOneTime && "blur-2xl opacity-40")} autoPlay loop muted playsInline />) : (<img src={message.content} className={cn("w-full h-full object-cover", isOneTime && "blur-2xl opacity-40")} />)}
-            {isOneTime ? (<div className="absolute inset-0 flex items-center justify-center"><Search className="w-10 h-10 text-white/70" /></div>) : (<PlayCircle className="absolute inset-0 m-auto w-10 h-10 text-white/50 pointer-events-none" />)}
+          
+          <div className={cn(
+            "grid gap-1 mt-1 overflow-hidden rounded-2xl",
+            albumMedia.length === 1 ? "grid-cols-1" : 
+            albumMedia.length === 2 ? "grid-cols-2" : 
+            "grid-cols-2"
+          )}>
+            {albumMedia.map((media: any, idx: number) => (
+              <div 
+                key={idx} 
+                onClick={() => openGallery(idx)}
+                className={cn(
+                  "relative cursor-pointer group bg-black border border-white/5 overflow-hidden",
+                  albumMedia.length === 1 ? "w-64 h-64" : 
+                  albumMedia.length === 3 && idx === 0 ? "col-span-2 h-48" : "h-32"
+                )}
+              >
+                {media.type === 'video' ? (
+                  <video src={media.url} className={cn("w-full h-full object-cover", isOneTime && "blur-2xl opacity-40")} muted playsInline />
+                ) : (
+                  <img src={media.url} className={cn("w-full h-full object-cover", isOneTime && "blur-2xl opacity-40")} />
+                )}
+                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center">
+                  {media.type === 'video' ? <PlayCircle className="w-8 h-8 text-white/50" /> : <Search className="w-6 h-6 text-white/0 group-hover:text-white/50 transition-all" />}
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       );
     }
+
     if (message.contentType === 'audio') {
       return (
         <div className="flex flex-col gap-1 mt-1">
@@ -218,13 +271,64 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, amIPremium = 
         </div>
       </div>
     </div>
-    <Dialog open={showOneTimeView} onOpenChange={handleCloseOneTime}>
-      <DialogContent className="max-w-3xl bg-black/95 border-none p-0 overflow-hidden flex items-center justify-center">
-        <DialogHeader className="sr-only"><DialogTitle>Один просмотр</DialogTitle></DialogHeader>
-        <div className="relative w-full aspect-square md:aspect-video flex items-center justify-center">
-           {message.contentType === 'video' ? (<video src={message.content} className="w-full h-full object-contain" autoPlay controls />) : (<img src={message.content} className="w-full h-full object-contain" />)}
-            <Button variant="ghost" size="icon" className="absolute top-4 right-4 bg-white/10 hover:bg-white/20 rounded-full" onClick={handleCloseOneTime}><X className="w-6 h-6" /></Button>
+
+    {/* Полноэкранная Галерея (Альбом / Медиа) */}
+    <Dialog open={galleryOpen} onOpenChange={closeGallery}>
+      <DialogContent className="max-w-4xl h-[90vh] bg-black/95 border-none p-0 overflow-hidden flex flex-col items-center justify-center">
+        <DialogHeader className="sr-only"><DialogTitle>Галерея Nuxus</DialogTitle></DialogHeader>
+        
+        {/* Header Controls */}
+        <div className="absolute top-4 left-4 right-4 flex items-center justify-between z-50">
+          <div className="text-white/60 text-[10px] font-bold uppercase tracking-widest">
+            {galleryIndex + 1} / {albumMedia.length}
+          </div>
+          <Button variant="ghost" size="icon" className="bg-white/10 hover:bg-white/20 rounded-full" onClick={closeGallery}>
+            <X className="w-6 h-6 text-white" />
+          </Button>
         </div>
+
+        {/* Media Viewport */}
+        <div className="relative w-full h-full flex items-center justify-center p-4">
+          {albumMedia[galleryIndex]?.type === 'video' ? (
+            <video 
+              key={albumMedia[galleryIndex].url}
+              src={albumMedia[galleryIndex].url} 
+              className="max-w-full max-h-full object-contain" 
+              autoPlay 
+              controls 
+            />
+          ) : (
+            <img 
+              key={albumMedia[galleryIndex]?.url}
+              src={albumMedia[galleryIndex]?.url} 
+              className="max-w-full max-h-full object-contain" 
+            />
+          )}
+
+          {/* Navigation Controls */}
+          {albumMedia.length > 1 && (
+            <>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="absolute left-4 bg-white/5 hover:bg-white/10 rounded-full h-12 w-12"
+                onClick={prevGallery}
+              >
+                <ChevronLeft className="w-8 h-8 text-white" />
+              </Button>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="absolute right-4 bg-white/5 hover:bg-white/10 rounded-full h-12 w-12"
+                onClick={nextGallery}
+              >
+                <ChevronRight className="w-8 h-8 text-white" />
+              </Button>
+            </>
+          )}
+        </div>
+        
+        {/* Caption Area (If needed in future) */}
       </DialogContent>
     </Dialog>
     </>

@@ -1,5 +1,5 @@
 
-export type MessageType = 'text' | 'image' | 'audio' | 'video' | 'service' | 'gift' | 'payment_request';
+export type MessageType = 'text' | 'image' | 'audio' | 'video' | 'service' | 'gift' | 'payment_request' | 'album';
 
 export interface Message {
   id: string;

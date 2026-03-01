@@ -229,27 +229,32 @@ export default function ChatArea() {
       return;
     }
 
-    // Если есть медиа, отправляем их по очереди
+    // Обработка медиа (Альбом или Одиночный файл)
     if (pendingMedia.length > 0) {
-      for (const media of pendingMedia) {
-        const mediaMsg: Partial<Message> = {
-          chatId: currentChatId,
-          senderId: firebaseUser.uid,
-          senderName: userProfile?.name || 'User',
-          content: media.url,
-          contentType: media.type,
-          sentAt: new Date().toISOString(),
-          isRead: false,
-          isOneTimeView: isOneTime,
-          expiresInSeconds: expiryTime
-        };
-        addDocumentNonBlocking(collection(db, 'chats', currentChatId, 'messages'), mediaMsg);
+      const mediaMsg: Partial<Message> = {
+        chatId: currentChatId,
+        senderId: firebaseUser.uid,
+        senderName: userProfile?.name || 'User',
+        content: JSON.stringify(pendingMedia),
+        contentType: pendingMedia.length > 1 ? 'album' : pendingMedia[0].type,
+        sentAt: new Date().toISOString(),
+        isRead: false,
+        isOneTimeView: isOneTime,
+        expiresInSeconds: expiryTime,
+        scheduledAt: scheduledDate ? scheduledDate.toISOString() : null
+      };
+      
+      // Если это одиночное медиа, перезаписываем content на URL для обратной совместимости
+      if (pendingMedia.length === 1) {
+        mediaMsg.content = pendingMedia[0].url;
       }
+
+      addDocumentNonBlocking(collection(db, 'chats', currentChatId, 'messages'), mediaMsg);
       setPendingMedia([]);
     }
 
-    // Отправляем текст, если он есть
-    if (trimmedContent) {
+    // Отправляем текст, если он есть (отдельно от медиа, как в TG)
+    if (trimmedContent && pendingMedia.length === 0) {
       const msgData: Partial<Message> = { 
         chatId: currentChatId, 
         senderId: firebaseUser.uid, 
@@ -285,7 +290,7 @@ export default function ChatArea() {
     const files = Array.from(e.target.files || []);
     if (files.length === 0) return;
 
-    files.forEach(file => {
+    files.slice(0, 10).forEach(file => {
       const reader = new FileReader();
       reader.onloadend = () => {
         setPendingMedia(prev => [...prev, {
@@ -295,7 +300,6 @@ export default function ChatArea() {
       };
       reader.readAsDataURL(file);
     });
-    // Сброс инпута для возможности выбора тех же файлов повторно
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
