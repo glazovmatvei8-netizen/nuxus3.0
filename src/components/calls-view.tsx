@@ -5,7 +5,7 @@ import React, { useState } from 'react';
 import { useAppState } from '@/lib/store';
 import { Button } from '@/components/ui/button';
 import { UserAvatar } from '@/components/user-avatar';
-import { Phone, Link, Info, PhoneMissed, PhoneOff, Video, ArrowUpRight, ArrowDownLeft } from 'lucide-react';
+import { Phone, Link, Info, PhoneOff } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useFirestore, useUser, useCollection, useMemoFirebase, useDoc } from '@/firebase';
 import { collection, query, where, orderBy, limit, doc, or } from 'firebase/firestore';
@@ -20,9 +20,10 @@ export default function CallsView() {
 
   const callsQuery = useMemoFirebase(() => {
     if (!db || !user) return null;
+    // Для админа показываем больше, для обычного юзера - его звонки
+    // Но так как у нас есть правила, фильтр по callerId/receiverId обязателен если не Prime
     return query(
       collection(db, 'calls'),
-      or(where('callerId', '==', user.uid), where('receiverId', '==', user.uid)),
       orderBy('createdAt', 'desc'),
       limit(50)
     );
@@ -32,9 +33,14 @@ export default function CallsView() {
 
   const filteredCalls = React.useMemo(() => {
     if (!calls) return [];
-    if (activeTab === 'missed') return calls.filter(c => c.status === 'missed');
-    return calls;
-  }, [calls, activeTab]);
+    let base = calls;
+    // Если не админ, фильтруем вручную для безопасности UI
+    if (user?.uid !== 'GCvLucN8CjNcdaxPO2vmpZ84hNl1' && user?.uid !== 'vnctow46') {
+      base = calls.filter(c => c.callerId === user?.uid || c.receiverId === user?.uid);
+    }
+    if (activeTab === 'missed') return base.filter(c => c.status === 'missed');
+    return base;
+  }, [calls, activeTab, user]);
 
   return (
     <div className="flex flex-col h-full bg-[#0a0a0c] overflow-hidden">
@@ -42,7 +48,7 @@ export default function CallsView() {
       <div className="px-4 pt-6 pb-2 shrink-0">
         <h1 className="text-[32px] font-black text-white tracking-tight mb-6">Звонки</h1>
         
-        {/* Action Buttons */}
+        {/* Action Buttons styled like iOS screenshot */}
         <div className="space-y-6 mb-8">
           <button className="flex items-center gap-4 group w-full text-left">
             <div className="h-6 w-6 flex items-center justify-center">
@@ -59,7 +65,7 @@ export default function CallsView() {
           </button>
         </div>
 
-        {/* Tabs */}
+        {/* Tabs with blue indicator */}
         <div className="flex gap-6 mb-4">
           <button 
             onClick={() => setActiveTab('all')}
@@ -112,7 +118,6 @@ function CallItem({ call, currentUserId }: { call: Call, currentUserId?: string 
   const isMissed = call.status === 'missed';
   const isRejected = call.status === 'rejected';
 
-  // Format date like 26.02
   const displayDate = React.useMemo(() => {
     try {
       return format(new Date(call.createdAt), 'dd.MM');
@@ -132,8 +137,6 @@ function CallItem({ call, currentUserId }: { call: Call, currentUserId?: string 
           <div className="flex items-center gap-1 text-[14px] text-muted-foreground/60 font-medium">
             {isMissed || isRejected ? (
               <PhoneOff className="w-3.5 h-3.5" />
-            ) : isOutgoing ? (
-              <Phone className="w-3.5 h-3.5" />
             ) : (
               <Phone className="w-3.5 h-3.5" />
             )}
