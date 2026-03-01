@@ -11,6 +11,7 @@ export default function manifest(): MetadataRoute.Manifest {
     background_color: '#0a0a0c',
     theme_color: '#8b5cf6',
     lang: 'ru',
+    orientation: 'portrait',
     icons: [
       {
         src: 'https://picsum.photos/seed/nuxus-prime-core-v5/192/192',

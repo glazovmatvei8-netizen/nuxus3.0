@@ -1,32 +1,34 @@
 
-/**
- * Nuxus Service Worker v23.0.0
- * Поддержка фоновых уведомлений.
- */
+const CACHE_NAME = 'nuxus-v24';
+const ASSETS = [
+  '/',
+  '/favicon.ico',
+];
+
 self.addEventListener('install', (event) => {
+  event.waitUntil(
+    caches.open(CACHE_NAME).then((cache) => {
+      return cache.addAll(ASSETS);
+    })
+  );
   self.skipWaiting();
 });
 
 self.addEventListener('activate', (event) => {
-  event.waitUntil(clients.claim());
-});
-
-self.addEventListener('push', (event) => {
-  const data = event.data ? event.data.json() : {};
-  const title = data.title || 'NuxusChat';
-  const options = {
-    body: data.body || 'Новое сообщение',
-    icon: '/favicon.ico',
-    badge: '/favicon.ico',
-    data: data.url
-  };
-
-  event.waitUntil(self.registration.showNotification(title, options));
-});
-
-self.addEventListener('notificationclick', (event) => {
-  event.notification.close();
   event.waitUntil(
-    clients.openWindow(event.notification.data || '/')
+    caches.keys().then((keys) => {
+      return Promise.all(
+        keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key))
+      );
+    })
+  );
+});
+
+self.addEventListener('fetch', (event) => {
+  // Базовая стратегия: сначала сеть, если нет — кеш
+  event.respondWith(
+    fetch(event.request).catch(() => {
+      return caches.match(event.request);
+    })
   );
 });
