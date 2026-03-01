@@ -9,8 +9,7 @@ import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { 
   QrCode, Pencil, Link, Bell, Lock, 
-  MessageSquare, Bookmark, Battery, HardDrive, 
-  ChevronRight
+  MessageSquare, Bookmark, ChevronRight
 } from 'lucide-react';
 import { useAppState } from '@/lib/store';
 import { useToast } from '@/hooks/use-toast';
@@ -130,26 +129,10 @@ export default function ProfileView() {
             />
           </div>
 
-          {/* System Settings Block */}
-          <div className="bg-[#1c1c1e] rounded-2xl overflow-hidden divide-y divide-white/[0.05]">
-            <SettingsItem 
-              icon={Battery} 
-              label="Экономия батареи и сети" 
-              color="text-white" 
-              onClick={() => openSettings('appearance')}
-            />
-            <SettingsItem 
-              icon={HardDrive} 
-              label="Память" 
-              color="text-white" 
-              onClick={() => openSettings('appearance')}
-            />
-          </div>
-
           {/* Support/Info */}
           <div className="pt-2">
             <p className="text-[11px] text-muted-foreground/40 uppercase font-black text-center tracking-[0.2em]">
-              Nuxus Core v27.2.0
+              Nuxus Core v37.0.0
             </p>
           </div>
         </div>

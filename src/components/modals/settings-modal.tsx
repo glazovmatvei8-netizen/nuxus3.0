@@ -13,7 +13,7 @@ import { useAuth, useUser, useFirestore, useDoc, useMemoFirebase } from '@/fireb
 import { UserAvatar } from '@/components/user-avatar';
 import { 
   LogOut, Palette, Loader2, Crown, Check, 
-  Monitor, Sparkles, Globe, Settings2, Upload, Moon, Droplets, ShieldCheck, Lock,
+  Monitor, Sparkles, Settings2, Moon, Droplets, ShieldCheck, Lock,
   Users, Share2, Star, Bell, BellOff, Info, Languages, Smartphone, Camera,
   Eye, UserCheck, MessageCircle
 } from 'lucide-react';
@@ -145,6 +145,20 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
     toast({ title: "Ссылка скопирована!" });
   };
 
+  const requestNotificationPermission = async () => {
+    if (!('Notification' in window)) {
+      toast({ title: "Ошибка", description: "Ваш браузер не поддерживает уведомления", variant: "destructive" });
+      return;
+    }
+    const permission = await Notification.requestPermission();
+    setNotifPermission(permission);
+    if (permission === 'granted') {
+      toast({ title: "Успех", description: "Уведомления успешно включены" });
+    } else {
+      toast({ title: "Доступ запрещен", description: "Вы отклонили запрос на уведомления", variant: "destructive" });
+    }
+  };
+
   return (
     <>
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -210,6 +224,32 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                       </button>
                     ))}
                   </div>
+                </div>
+
+                <div className="space-y-4 pt-6 border-t border-white/5">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-[10px] uppercase font-black tracking-widest text-primary flex items-center gap-2">
+                      <Bell className="w-3.5 h-3.5" /> Системные уведомления
+                    </Label>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className={cn(
+                        "h-9 rounded-xl text-[9px] font-black uppercase tracking-widest px-4 transition-all",
+                        notifPermission === 'granted' ? "border-green-500/20 bg-green-500/10 text-green-500" : "border-primary/20 bg-primary/5 text-primary"
+                      )}
+                      onClick={requestNotificationPermission}
+                    >
+                      {notifPermission === 'granted' ? (
+                        <><Check className="w-3 h-3 mr-1.5" /> Включено</>
+                      ) : (
+                        'Включить'
+                      )}
+                    </Button>
+                  </div>
+                  <p className="text-[8px] text-muted-foreground uppercase font-bold tracking-wider leading-relaxed">
+                    Включите уведомления, чтобы мгновенно узнавать о новых сообщениях, даже когда приложение свернуто.
+                  </p>
                 </div>
               </div>
             </TabsContent>
