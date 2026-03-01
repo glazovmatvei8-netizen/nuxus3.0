@@ -10,13 +10,13 @@ import ProfileView from './profile-view';
 import { useAppState } from '@/lib/store';
 import { cn } from '@/lib/utils';
 import { useFirestore, useUser, useCollection, useMemoFirebase, useDoc } from '@/firebase';
-import { collection, query, where, limit, doc, collectionGroup } from 'firebase/firestore';
+import { collection, query, where, limit, doc } from 'firebase/firestore';
 import { CallOverlay } from './modals/call-overlay';
 import { NotificationListener } from './notification-listener';
 import { SettingsModal } from './modals/settings-modal';
 import { UserAvatar } from './user-avatar';
-import type { Call, User as UserType, Message, Chat } from '@/lib/types';
-import { Users, Phone, MessageCircle, UserCircle } from 'lucide-react';
+import type { Call, User as UserType, Chat, Message } from '@/lib/types';
+import { Users, Phone, MessageCircle, Settings, Search } from 'lucide-react';
 
 export default function ChatMain() {
   const { 
@@ -53,7 +53,6 @@ export default function ChatMain() {
       <NotificationListener />
       
       <div className="flex-1 flex overflow-hidden w-full relative">
-        {/* Sidebar content switcher */}
         <div className={cn(
           "w-full md:w-[350px] lg:w-[400px] h-full flex-shrink-0 border-r border-white/5 transition-all duration-300 z-30 bg-card",
           currentChatId ? "hidden md:block" : "block"
@@ -64,7 +63,6 @@ export default function ChatMain() {
           {activeView === 'profile' && <ProfileView />}
         </div>
         
-        {/* Chat Area */}
         <div className={cn(
           "flex-1 h-full flex flex-col min-w-0 transition-all duration-300 bg-background relative z-20",
           (!currentChatId || activeView === 'profile') ? "hidden md:flex" : "flex"
@@ -73,42 +71,36 @@ export default function ChatMain() {
         </div>
       </div>
 
-      {/* Bottom Navigation */}
+      {/* Bottom Navigation Styled as Screenshot */}
       {!currentChatId && (
-        <div className="h-[84px] bg-[#161618]/90 backdrop-blur-2xl border-t border-white/[0.05] flex items-start justify-around px-2 pt-2 z-50">
-          <NavButton 
-            icon={Users} 
-            label="Контакты" 
-            active={activeView === 'contacts'} 
-            onClick={() => setActiveView('contacts')} 
-          />
-          <NavButton 
-            icon={Phone} 
-            label="Звонки" 
-            active={activeView === 'calls'} 
-            onClick={() => setActiveView('calls')} 
-          />
-          <ChatsNavButton 
-            active={activeView === 'chats'} 
-            onClick={() => setActiveView('chats')} 
-          />
-          <button 
-            onClick={() => setActiveView('profile')}
-            className={cn(
-              "flex flex-col items-center gap-1 w-20 pt-1 transition-all",
-              activeView === 'profile' ? "text-[#007AFF]" : "text-muted-foreground/60"
-            )}
-          >
-            <div className={cn(
-              "h-7 w-7 rounded-full border-2 overflow-hidden transition-all",
-              activeView === 'profile' ? "border-[#007AFF] scale-110" : "border-transparent"
-            )}>
-              <UserAvatar 
-                userId={user?.uid} 
-                className="h-full w-full"
-              />
-            </div>
-            <span className="text-[10px] font-bold">Профиль</span>
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 w-[92%] max-w-[400px] h-[68px] bg-[#1c1c1e]/90 backdrop-blur-3xl border border-white/10 rounded-[2.5rem] flex items-center justify-between px-6 z-50 shadow-2xl">
+          <div className="flex flex-1 justify-between mr-4">
+            <NavButton 
+              icon={Users} 
+              label="Контакты" 
+              active={activeView === 'contacts'} 
+              onClick={() => setActiveView('contacts')} 
+            />
+            <NavButton 
+              icon={Phone} 
+              label="Звонки" 
+              active={activeView === 'calls'} 
+              onClick={() => setActiveView('calls')} 
+            />
+            <ChatsNavButton 
+              active={activeView === 'chats'} 
+              onClick={() => setActiveView('chats')} 
+            />
+            <NavButton 
+              icon={Settings} 
+              label="Настройки" 
+              active={activeView === 'profile'} 
+              onClick={() => setActiveView('profile')} 
+            />
+          </div>
+          
+          <button className="h-[52px] w-[52px] rounded-full bg-white/5 flex items-center justify-center shrink-0 border border-white/5 shadow-inner">
+            <Search className="w-6 h-6 text-white" />
           </button>
         </div>
       )}
@@ -119,22 +111,13 @@ export default function ChatMain() {
   );
 }
 
-// Специализированная кнопка для чатов с динамическим баджем
 function ChatsNavButton({ active, onClick }: { active: boolean, onClick: () => void }) {
   const { user } = useUser();
   const db = useFirestore();
 
-  // Получаем все чаты пользователя для подсчета непрочитанных
-  const chatsQuery = useMemoFirebase(() => {
-    if (!db || !user) return null;
-    return query(collection(db, 'chats'), where('participantIds', 'array-contains', user.uid));
-  }, [db, user]);
-  
-  const { data: chats } = useCollection<Chat>(chatsQuery);
-
   // Для полноценного подсчета без collectionGroup мы используем заглушку, 
-  // но в реальном приложении здесь был бы агрегатор из Cloud Functions или Snapshot
-  const unreadCount = 0; 
+  // но в реальном приложении здесь был бы агрегатор
+  const unreadCount = 1; 
 
   return (
     <NavButton 
@@ -152,14 +135,14 @@ function NavButton({ icon: Icon, label, active, badge, onClick }: { icon: any, l
     <button 
       onClick={onClick}
       className={cn(
-        "flex flex-col items-center gap-1 w-20 pt-1 transition-all",
+        "flex flex-col items-center gap-0.5 transition-all relative",
         active ? "text-[#007AFF]" : "text-muted-foreground/60"
       )}
     >
       <div className="relative">
-        <Icon className={cn("w-7 h-7", active && "fill-current")} />
-        {badge && badge !== "0" && (
-          <div className="absolute -top-1 -right-2 bg-[#FF3B30] text-white text-[10px] font-black rounded-full h-4 min-w-4 flex items-center justify-center px-1 border-2 border-[#161618] animate-in zoom-in duration-300">
+        <Icon className={cn("w-6 h-6", active && "fill-current")} />
+        {badge && (
+          <div className="absolute -top-1 -right-2 bg-[#FF3B30] text-white text-[9px] font-black rounded-full h-4 min-w-4 flex items-center justify-center px-1 border-2 border-[#1c1c1e]">
             {badge}
           </div>
         )}
