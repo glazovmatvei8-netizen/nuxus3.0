@@ -9,12 +9,13 @@ import { UserAvatar } from '@/components/user-avatar';
 import { 
   Send, Info, ChevronLeft, Loader2, Bookmark, X, Video, Wand2, Phone, Search as SearchIcon,
   Zap, Calendar as CalendarIcon, Paperclip, Mic, StopCircle, AtSign,
-  Star
+  Star, BarChart3
 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { MessageItem } from './message-item';
 import { useToast } from '@/hooks/use-toast';
 import { ChatInfoModal } from './modals/chat-info-modal';
+import { CreatePollModal } from './modals/create-poll-modal';
 import { useFirestore, useUser, useCollection, useDoc, useMemoFirebase } from '@/firebase';
 import { collection, query, orderBy, doc, updateDoc, where } from 'firebase/firestore';
 import { addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
@@ -136,6 +137,7 @@ export default function ChatArea() {
   const { currentChatId, setCurrentChatId, setLocalDrafts, localDrafts } = useAppState();
   
   const [isChatInfoOpen, setIsChatInfoOpen] = useState(false);
+  const [isPollModalOpen, setIsPollModalOpen] = useState(false);
   const [isDrafting, setIsDrafting] = useState(false);
   const [replyTo, setReplyTo] = useState<Message | null>(null);
   const [editingMsg, setEditingMsg] = useState<Message | null>(null);
@@ -250,9 +252,15 @@ export default function ChatArea() {
     if (!messages || !firebaseUser || !currentChatId || !db) return;
     const unreadFromOthers = messages.filter(m => !m.isRead && m.senderId !== firebaseUser.uid);
     if (unreadFromOthers.length > 0) {
-      unreadFromOthers.forEach(msg => updateDocumentNonBlocking(doc(db, 'chats', currentChatId, 'messages', msg.id), { isRead: true }));
+      unreadFromOthers.forEach(msg => {
+        updateDocumentNonBlocking(doc(db, 'chats', currentChatId, 'messages', msg.id), { isRead: true });
+        // Handle mention notification dismissal
+        if (msg.isMentionAll || (msg.content && msg.content.includes(`@${userProfile?.username?.replace('@','')}`))) {
+           // Toast could be used here to signal important mentions
+        }
+      });
     }
-  }, [messages, firebaseUser, currentChatId, db]);
+  }, [messages, firebaseUser, currentChatId, db, userProfile]);
 
   const scrollToBottom = useCallback((behavior: ScrollBehavior = 'auto') => {
     if (scrollRef.current) {
@@ -263,9 +271,7 @@ export default function ChatArea() {
 
   // Save drafts with optimized performance
   useEffect(() => {
-    if (!currentChatId) return;
-    // Don't save draft if we are mentioning, to avoid clearing mention state
-    if (mentionQuery !== null) return;
+    if (!currentChatId || mentionQuery !== null) return;
 
     if (draftTimeoutRef.current) clearTimeout(draftTimeoutRef.current);
     draftTimeoutRef.current = setTimeout(() => {
@@ -344,7 +350,7 @@ export default function ChatArea() {
       setEditingMsg(null);
       dataLoadedRef.current = false;
     }
-  }, [currentChatId, localDrafts]);
+  }, [currentChatId]);
 
   useEffect(() => {
     if (messages?.length) {
@@ -361,7 +367,6 @@ export default function ChatArea() {
     const trimmedContent = content_msg.trim();
     if ((!trimmedContent && pendingMedia.length === 0) || !currentChatId || !firebaseUser || !db) return;
     
-    // OPTIMIZATION: Immediate state clearing for "speed of light" feel
     const captureContent = trimmedContent;
     const captureMedia = [...pendingMedia];
     const captureReply = replyTo;
@@ -663,7 +668,15 @@ export default function ChatArea() {
             <Popover>
               <PopoverTrigger asChild><Button variant="ghost" size="icon" className="h-11 w-11 rounded-xl shrink-0 bg-muted" disabled={isRecording}><Zap className="w-5 h-5 text-primary" /></Button></PopoverTrigger>
               <PopoverContent className="w-64 p-3 rounded-2xl bg-card border-white/10 shadow-2xl space-y-4">
-                <div className="space-y-2"><span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground ml-1">Отложенно</span><Popover><PopoverTrigger asChild><Button variant="outline" className="w-full justify-start h-10 rounded-xl text-xs gap-2"><CalendarIcon className="w-4 h-4" /> {scheduledDate ? scheduledDate.toLocaleDateString() : 'Выбрать дату'}</Button></PopoverTrigger><PopoverContent className="w-auto p-0"><Calendar mode="single" selected={scheduledDate} onSelect={setScheduledDate} initialFocus /></PopoverContent></Popover></div>
+                <div className="grid grid-cols-2 gap-2">
+                  <Button variant="outline" size="sm" className="h-10 rounded-xl gap-2 text-[10px] font-bold uppercase" onClick={() => setIsPollModalOpen(true)}>
+                    <BarChart3 className="w-4 h-4 text-accent" /> Опрос
+                  </Button>
+                  <Button variant="outline" size="sm" className="h-10 rounded-xl gap-2 text-[10px] font-bold uppercase" onClick={() => fileInputRef.current?.click()}>
+                    <Paperclip className="w-4 h-4 text-primary" /> Файл
+                  </Button>
+                </div>
+                <div className="space-y-2 pt-2 border-t border-white/5"><span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground ml-1">Отложенно</span><Popover><PopoverTrigger asChild><Button variant="outline" className="w-full justify-start h-10 rounded-xl text-xs gap-2"><CalendarIcon className="w-4 h-4" /> {scheduledDate ? scheduledDate.toLocaleDateString() : 'Выбрать дату'}</Button></PopoverTrigger><PopoverContent className="w-auto p-0"><Calendar mode="single" selected={scheduledDate} onSelect={setScheduledDate} initialFocus /></PopoverContent></Popover></div>
                 <div className="space-y-2"><span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground ml-1">Самоуничтожение</span><div className="grid grid-cols-3 gap-2">{[15, 60, 3600].map(time => (<Button key={time} variant={expiryTime === time ? 'default' : 'outline'} className="h-8 text-[10px] rounded-lg" onClick={() => setExpiryTime(time)}>{time < 60 ? `${time}с` : time < 3600 ? '1м' : '1ч'}</Button>))}</div></div>
                 <div className="flex items-center justify-between pt-2 border-t border-white/5"><span className="text-xs font-bold uppercase tracking-wider">Один просмотр</span><Button variant={isOneTime ? 'default' : 'outline'} size="sm" className="h-7 rounded-lg" onClick={() => setIsOneTime(!isOneTime)}>{isOneTime ? 'ВКЛ' : 'ВЫКЛ'}</Button></div>
               </PopoverContent>
@@ -707,6 +720,7 @@ export default function ChatArea() {
         </div>
       </footer>
       {chat && <ChatInfoModal open={isChatInfoOpen} onOpenChange={setIsChatInfoOpen} chat={chat as any} />}
+      <CreatePollModal open={isPollModalOpen} onOpenChange={setIsPollModalOpen} chatId={currentChatId} />
     </div>
   );
 }

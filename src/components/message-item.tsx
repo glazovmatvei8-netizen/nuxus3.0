@@ -2,7 +2,7 @@
 "use client"
 
 import React, { useState, useEffect, memo, useMemo, useRef } from 'react';
-import { useFirestore } from '@/firebase';
+import { useFirestore, useUser } from '@/firebase';
 import { useAppState } from '@/lib/store';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
@@ -17,19 +17,21 @@ import {
   CornerUpLeft, Trash2, Check, CheckCheck, Languages, Loader2, 
   Crown, Diamond, Rocket, Flame, Heart, Zap, Trophy, Gem,
   Pin, Forward, Gift, PlayCircle, Edit2, Copy, Timer, EyeOff, Clock, Search, X,
-  ChevronLeft, ChevronRight, Pause, Play, Star
+  ChevronLeft, ChevronRight, Pause, Play, Star, BarChart3
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { doc } from 'firebase/firestore';
+import { doc, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
 import { deleteDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { transcribeVoice } from '@/ai/flows/voice-to-text-flow';
-import type { Message } from '@/lib/types';
+import type { Message, PollOption } from '@/lib/types';
 import { Button } from './ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Progress } from './ui/progress';
 
 export const MessageItem = memo(({ message, isMe, chatId, onReply, amIPremium = false, isAdmin = false, isGroup = false, onEdit }: any) => {
   const db = useFirestore();
+  const { user } = useUser();
   const { setForwardingMessage } = useAppState();
   const { toast } = useToast();
   
@@ -88,6 +90,27 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, amIPremium = 
     setIsPlaying(!isPlaying);
   };
 
+  const handlePollVote = async (optionId: string) => {
+    if (!db || !user || !message.pollData) return;
+    
+    const pollRef = doc(db, 'chats', chatId, 'messages', message.id);
+    const updatedOptions = message.pollData.options.map((opt: PollOption) => {
+      const hasVoted = opt.votes.includes(user.uid);
+      const isTarget = opt.id === optionId;
+      
+      let newVotes = [...opt.votes];
+      if (isTarget) {
+        if (hasVoted) newVotes = newVotes.filter(id => id !== user.uid);
+        else newVotes.push(user.uid);
+      } else if (!message.pollData.isMultiple) {
+        newVotes = newVotes.filter(id => id !== user.uid);
+      }
+      return { ...opt, votes: newVotes };
+    });
+
+    updateDocumentNonBlocking(pollRef, { 'pollData.options': updatedOptions });
+  };
+
   const parseMarkdown = (text: string) => {
     if (!text) return text;
     let formatted = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
@@ -107,6 +130,41 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, amIPremium = 
     if (message.isExpired) {
       return <div className="flex items-center gap-2 py-1 px-2 opacity-50 italic text-[10px]"><EyeOff className="w-4 h-4" /> Сообщение просмотрено</div>;
     }
+    
+    if (message.contentType === 'poll' && message.pollData) {
+      const totalVotes = message.pollData.options.reduce((acc: number, opt: PollOption) => acc + opt.votes.length, 0);
+      return (
+        <div className="flex flex-col gap-4 mt-1 min-w-[240px] p-1">
+          <div className="flex flex-col gap-1">
+            <span className="text-[10px] font-black uppercase text-accent tracking-[0.2em] flex items-center gap-1.5"><BarChart3 className="w-3 h-3" /> Опрос</span>
+            <h4 className="text-sm font-bold text-white leading-tight">{message.pollData.question}</h4>
+            <span className="text-[8px] text-muted-foreground uppercase font-bold tracking-widest">{message.pollData.isAnonymous ? 'Анонимный' : 'Публичный'} • {totalVotes} голосов</span>
+          </div>
+          <div className="space-y-3">
+            {message.pollData.options.map((opt: PollOption) => {
+              const voteCount = opt.votes.length;
+              const percentage = totalVotes > 0 ? (voteCount / totalVotes) * 100 : 0;
+              const hasVoted = user && opt.votes.includes(user.uid);
+              return (
+                <div key={opt.id} onClick={() => handlePollVote(opt.id)} className="space-y-1.5 cursor-pointer group">
+                  <div className="flex justify-between items-center px-1">
+                    <span className={cn("text-xs transition-colors", hasVoted ? "text-primary font-bold" : "text-white/80 group-hover:text-white")}>{opt.text}</span>
+                    <span className="text-[10px] font-mono text-muted-foreground">{voteCount}</span>
+                  </div>
+                  <div className="relative h-2 w-full bg-white/5 rounded-full overflow-hidden">
+                    <div 
+                      className={cn("h-full transition-all duration-500 rounded-full", hasVoted ? "bg-primary shadow-[0_0_10px_rgba(var(--primary),0.5)]" : "bg-muted-foreground/30")}
+                      style={{ width: `${percentage}%` }}
+                    />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      );
+    }
+
     if (message.contentType === 'album' || message.contentType === 'image' || message.contentType === 'video') {
       const isOneTime = message.isOneTimeView;
       return (

@@ -5,15 +5,15 @@ import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
+import { useFirestore, useCollection, useMemoFirebase, useUser, useDoc } from '@/firebase';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Search, UserPlus, Loader2, Contact, ShieldAlert } from 'lucide-react';
+import { Search, UserPlus, Loader2, Contact, ShieldAlert, Lock } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
 import { collection, query, doc, arrayUnion, limit } from 'firebase/firestore';
 import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import type { User } from '@/lib/types';
-import { formatDisplayName } from '@/lib/utils';
+import { formatDisplayName, isUserPremium } from '@/lib/utils';
 
 interface AddMemberModalProps {
   open: boolean;
@@ -24,9 +24,13 @@ interface AddMemberModalProps {
 
 export function AddMemberModal({ open, onOpenChange, chatId, currentParticipantIds }: AddMemberModalProps) {
   const db = useFirestore();
+  const { user } = useUser();
   const [search, setSearch] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
+
+  const currentUserRef = useMemoFirebase(() => (!db || !user) ? null : doc(db, 'users', user.uid), [db, user]);
+  const { data: currentUserProfile } = useDoc<User>(currentUserRef);
 
   const usersQuery = useMemoFirebase(() => {
     if (!db || search.length < 2) return null;
@@ -44,14 +48,34 @@ export function AddMemberModal({ open, onOpenChange, chatId, currentParticipantI
   });
 
   const handleAddUser = async (targetUser: User) => {
-    if (!db || !chatId) return;
+    if (!db || !chatId || !user) return;
     
     // Проверка конфиденциальности
     const privacy = targetUser.settings?.privacy?.allowGroupsFrom || 'everybody';
-    if (privacy === 'nobody' || privacy === 'contacts') {
+    
+    let canAdd = true;
+    let errorMsg = "";
+
+    if (privacy === 'nobody') {
+      canAdd = false;
+      errorMsg = "Пользователь запретил добавлять себя в группы.";
+    } else if (privacy === 'contacts') {
+      const isContact = targetUser.contactIds?.includes(user.uid);
+      if (!isContact) {
+        canAdd = false;
+        errorMsg = "Пользователь разрешил добавлять себя только Контактам.";
+      }
+    } else if (privacy === 'premium') {
+      if (!isUserPremium(currentUserProfile)) {
+        canAdd = false;
+        errorMsg = "Пользователь разрешил инвайты только от Premium участников.";
+      }
+    }
+
+    if (!canAdd) {
        toast({ 
          title: "Ограничение", 
-         description: "Пользователь запретил добавлять себя в группы. Отправьте ему ссылку.", 
+         description: `${errorMsg} Отправьте ему ссылку на чат.`, 
          variant: "destructive" 
        });
        return;
@@ -121,14 +145,19 @@ export function AddMemberModal({ open, onOpenChange, chatId, currentParticipantI
                       <AvatarFallback className="bg-primary/20 text-primary font-bold uppercase">{u.name?.slice(0, 2)}</AvatarFallback>
                     </Avatar>
                     <div className="flex-1 min-w-0 text-left">
-                      <span className="font-semibold text-sm group-hover:text-primary transition-colors block truncate">
-                        {formatDisplayName(u.name)}
-                      </span>
+                      <div className="flex items-center gap-1">
+                        <span className="font-semibold text-sm group-hover:text-primary transition-colors block truncate">
+                          {formatDisplayName(u.name)}
+                        </span>
+                        {isUserPremium(u) && <Star className="w-3 h-3 text-accent fill-accent" />}
+                      </div>
                       <span className="text-[10px] text-muted-foreground block truncate">{u.username}</span>
                     </div>
                   </div>
-                  {u.settings?.privacy?.allowGroupsFrom === 'nobody' && (
-                    <ShieldAlert className="w-4 h-4 text-destructive" />
+                  {u.settings?.privacy?.allowGroupsFrom !== 'everybody' && (
+                    <div className="flex items-center gap-1 text-[9px] text-muted-foreground/60 font-bold uppercase">
+                      <Lock className="w-3 h-3" /> {u.settings?.privacy?.allowGroupsFrom}
+                    </div>
                   )}
                 </div>
               ))

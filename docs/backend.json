@@ -17,9 +17,10 @@
         "isPremium": { "type": "boolean" },
         "premiumUntil": { "type": "string", "format": "date-time" },
         "isBanned": { "type": "boolean" },
-        "isAdmin": { "type": "boolean", "description": "Whether the user has global administrative privileges." },
+        "isAdmin": { "type": "boolean" },
         "referralCount": { "type": "number", "default": 0 },
-        "invitedBy": { "type": "string", "description": "UID of the user who invited this person." }
+        "invitedBy": { "type": "string" },
+        "contactIds": { "type": "array", "items": { "type": "string" } }
       },
       "required": ["id", "name", "username", "phone", "createdAt"]
     },
@@ -41,14 +42,15 @@
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Message",
       "type": "object",
-      "description": "Represents a single message.",
+      "description": "Represents a single message, including polls.",
       "properties": {
         "id": { "type": "string" },
         "chatId": { "type": "string" },
         "senderId": { "type": "string" },
         "content": { "type": "string" },
         "contentType": { "type": "string" },
-        "sentAt": { "type": "string", "format": "date-time" }
+        "sentAt": { "type": "string", "format": "date-time" },
+        "pollData": { "type": "object" }
       },
       "required": ["id", "chatId", "senderId", "content", "contentType", "sentAt"]
     }
@@ -69,10 +71,6 @@
       {
         "path": "/chats/{chatId}/messages/{messageId}",
         "definition": { "entityName": "Message", "schema": { "$ref": "#/backend/entities/Message" }, "description": "Stores chat messages." }
-      },
-      {
-        "path": "/calls/{callId}",
-        "definition": { "entityName": "Call", "schema": { "$ref": "#/backend/entities/Call" }, "description": "Stores call signaling data." }
       }
     ]
   }

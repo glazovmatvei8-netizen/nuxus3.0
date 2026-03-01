@@ -12,16 +12,12 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { 
   Sparkles, Gift, Crown, Star, LogOut, UserPlus, Shield, UserMinus, UserCheck,
-  Settings2, Upload, Camera, Check, Info, Users, MessageSquare, UserX, Loader2
+  Settings2, Upload, Camera, Check, Info, Users, MessageSquare, UserX, Loader2,
+  Phone, UserPlus2
 } from 'lucide-react';
 import { 
   Star as StarIcon, Heart, Zap, Flame, Trophy, Rocket, Diamond, 
-  Cookie, PartyPopper, Ghost, Gem, Coffee, Pizza, Beer, Wine, 
-  Camera as CameraIcon, Laptop, Watch, Smartphone, Car, Plane, Sun, Moon, 
-  Cloud, Snowflake, Trees, Flower2, Dog, Cat, Bird, Fish, 
-  Bitcoin, Coins, Gamepad2, Music, Smile, ThumbsUp, Bell, 
-  Mail, Key, Lock, Shield as ShieldIcon, Sword, Anchor, Compass, Map, 
-  Flag, Briefcase, GraduationCap 
+  Gem
 } from 'lucide-react';
 import { useFirestore, useCollection, useMemoFirebase, useUser, useDoc } from '@/firebase';
 import { collection, query, orderBy, limit, getDocs, doc, updateDoc, arrayRemove, arrayUnion } from 'firebase/firestore';
@@ -91,6 +87,9 @@ export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onO
   const otherUserProfileRef = useMemoFirebase(() => (!db || !otherId) ? null : doc(db, 'users', otherId), [db, otherId]);
   const { data: otherUserProfile } = useDoc<User>(otherUserProfileRef);
 
+  const isContact = currentUserProfile?.contactIds?.includes(otherId || '');
+  const isMutualContact = isContact && otherUserProfile?.contactIds?.includes(user?.uid || '');
+
   const receivedGiftsQuery = useMemoFirebase(() => {
     if (!db || !otherId) return null;
     return query(collection(db, 'users', otherId, 'receivedGifts'), orderBy('receivedAt', 'desc'));
@@ -132,6 +131,17 @@ export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onO
     setGiftMessage('');
     setShowGiftSelection(false);
     toast({ title: "Подарок отправлен!" });
+  };
+
+  const handleToggleContact = async () => {
+    if (!db || !user || !otherId || !userProfileRef) return;
+    try {
+      const isCurrentlyContact = currentUserProfile?.contactIds?.includes(otherId);
+      await updateDoc(userProfileRef, {
+        contactIds: isCurrentlyContact ? arrayRemove(otherId) : arrayUnion(otherId)
+      });
+      toast({ title: isCurrentlyContact ? "Удалено из контактов" : "Добавлено в контакты" });
+    } catch (e) {}
   };
 
   const handleLeaveChat = async () => {
@@ -243,11 +253,11 @@ export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onO
           <div className="relative group">
             <UserAvatar 
               userId={isPrivate ? otherId : null} 
-              manualAvatarUrl={isChatAdmin ? editForm.avatarUrl : chat.avatarUrl} 
-              className="h-20 w-20 mb-3 border-2 border-primary/20" 
+              manualAvatarUrl={isChatAdmin && !isPrivate ? editForm.avatarUrl : (isPrivate ? otherUserProfile?.avatarUrl : chat.avatarUrl)} 
+              className="h-20 w-20 mb-3 border-2 border-primary/20 shadow-2xl" 
               fallbackName={chatName} 
             />
-            {isChatAdmin && (
+            {isChatAdmin && !isPrivate && (
               <div 
                 onClick={() => fileInputRef.current?.click()}
                 className="absolute inset-0 h-20 w-20 rounded-full bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 cursor-pointer transition-all mb-3"
@@ -260,7 +270,32 @@ export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onO
           <DialogTitle className="text-xl flex items-center justify-center gap-2">
             {chatName} {isUserPremium(otherUserProfile) && <Star className="w-4 h-4 text-accent fill-accent" />}
           </DialogTitle>
-          <DialogDescription className="text-xs">{chatUsername}</DialogDescription>
+          <DialogDescription className="text-xs font-mono opacity-60">{chatUsername}</DialogDescription>
+          
+          {isPrivate && otherUserProfile && (
+            <div className="mt-4 w-full flex flex-col gap-2">
+              <Button 
+                variant={isContact ? "secondary" : "default"} 
+                className="w-full h-10 rounded-xl gap-2 font-bold text-[10px] uppercase tracking-widest"
+                onClick={handleToggleContact}
+              >
+                {isContact ? <UserCheck className="w-4 h-4" /> : <UserPlus2 className="w-4 h-4" />}
+                {isContact ? "В контактах" : "В контакты"}
+              </Button>
+              {isMutualContact && (
+                <div className="bg-primary/10 border border-primary/20 rounded-xl p-3 flex items-center justify-between">
+                  <div className="flex flex-col items-start">
+                    <span className="text-[8px] font-black uppercase text-primary tracking-widest">Номер телефона</span>
+                    <span className="text-sm font-black text-white">{otherUserProfile.phone}</span>
+                  </div>
+                  <Phone className="w-4 h-4 text-primary" />
+                </div>
+              )}
+              {!isMutualContact && isContact && (
+                <p className="text-[8px] text-muted-foreground uppercase font-bold italic">Номер станет виден, когда Klein добавит вас в ответ</p>
+              )}
+            </div>
+          )}
         </DialogHeader>
 
         <Tabs defaultValue="info" className="flex-1 overflow-hidden flex flex-col min-h-0">
@@ -275,10 +310,10 @@ export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onO
           <TabsContent value="info" className="flex-1 min-h-0 m-0 overflow-hidden">
             <ScrollArea className="h-full">
               <div className="p-6 space-y-6">
-                {chat.description && (
+                {(chat.description || (isPrivate && otherUserProfile?.bio)) && (
                   <div className="space-y-2">
                     <h3 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Описание</h3>
-                    <p className="text-sm bg-muted/20 p-3 rounded-xl border border-white/5">{chat.description}</p>
+                    <p className="text-sm bg-muted/20 p-3 rounded-xl border border-white/5">{chat.description || otherUserProfile?.bio}</p>
                   </div>
                 )}
 

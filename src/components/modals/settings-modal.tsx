@@ -39,16 +39,6 @@ const PREMIUM_PLANS = [
   { id: '1y', name: '1 Year', price: 1500, unit: 'years', amount: 1 },
 ];
 
-const LANGUAGES_LIST = [
-  { id: 'ru', name: 'Русский' },
-  { id: 'en', name: 'English' },
-  { id: 'de', name: 'Deutsch' },
-  { id: 'ua', name: 'Українська' },
-  { id: 'tr', name: 'Türkçe' },
-  { id: 'pl', name: 'Polski' },
-  { id: 'es', name: 'Español' },
-];
-
 const CARD_NUMBER = "2204 1202 0495 4230";
 const MASTER_PASS = "230509";
 
@@ -301,6 +291,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                   <div className="space-y-4">
                     <div className="space-y-2"><Label className="text-[9px] uppercase font-bold text-muted-foreground ml-1">Видимость телефона</Label><Select value={form.phoneVisibility} onValueChange={(v) => setForm({...form, phoneVisibility: v as any})}><SelectTrigger className="h-11 rounded-xl bg-black/20 border-white/5"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="everybody">Все</SelectItem><SelectItem value="contacts">Контакты</SelectItem><SelectItem value="nobody">Никто</SelectItem></SelectContent></Select></div>
                     <div className="space-y-2"><Label className="text-[9px] uppercase font-bold text-muted-foreground ml-1">Кто может писать</Label><Select value={form.whoCanMessageMe} onValueChange={(v) => setForm({...form, whoCanMessageMe: v as any})}><SelectTrigger className="h-11 rounded-xl bg-black/20 border-white/5"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="everybody">Все</SelectItem><SelectItem value="premium">Только Prime</SelectItem></SelectContent></Select></div>
+                    <div className="space-y-2"><Label className="text-[9px] uppercase font-bold text-muted-foreground ml-1">Приглашения в группы</Label><Select value={form.allowGroupsFrom} onValueChange={(v) => setForm({...form, allowGroupsFrom: v as any})}><SelectTrigger className="h-11 rounded-xl bg-black/20 border-white/5"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="everybody">Все</SelectItem><SelectItem value="contacts">Только контакты</SelectItem><SelectItem value="premium">Только Premium</SelectItem><SelectItem value="nobody">Никто</SelectItem></SelectContent></Select></div>
                   </div>
                 </div>
               </div>

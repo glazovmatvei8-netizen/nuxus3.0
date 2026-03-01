@@ -1,5 +1,11 @@
 
-export type MessageType = 'text' | 'image' | 'audio' | 'video' | 'service' | 'gift' | 'payment_request' | 'album';
+export type MessageType = 'text' | 'image' | 'audio' | 'video' | 'service' | 'gift' | 'payment_request' | 'album' | 'poll';
+
+export interface PollOption {
+  id: string;
+  text: string;
+  votes: string[]; // Array of UIDs
+}
 
 export interface Message {
   id: string;
@@ -25,6 +31,14 @@ export interface Message {
   expiresInSeconds?: number | null;
   isOneTimeView?: boolean;
   isExpired?: boolean;
+  isMentionAll?: boolean;
+  pollData?: {
+    question: string;
+    options: PollOption[];
+    isAnonymous: boolean;
+    isMultiple: boolean;
+    closedAt?: string;
+  };
   paymentData?: {
     type: 'premium';
     itemName: string;
@@ -91,7 +105,7 @@ export interface Chat {
 export interface UserPrivacy {
   phoneVisibility: 'everybody' | 'contacts' | 'nobody';
   lastSeenVisibility: 'everybody' | 'nobody';
-  allowGroupsFrom: 'everybody' | 'contacts' | 'nobody';
+  allowGroupsFrom: 'everybody' | 'contacts' | 'premium' | 'nobody';
   whoCanMessageMe: 'everybody' | 'premium';
 }
 
@@ -117,6 +131,7 @@ export interface User {
   settings?: UserSettings;
   blockedUserIds?: string[];
   pinnedChatIds?: string[];
+  contactIds?: string[]; // Array of UIDs
   isBanned?: boolean;
   isPremium?: boolean;
   isAdmin?: boolean;
