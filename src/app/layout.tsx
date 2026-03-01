@@ -28,7 +28,7 @@ export const metadata: Metadata = {
   openGraph: {
     type: 'website',
     locale: 'ru_RU',
-    url: 'https://nuxus.app',
+    url: 'https://studio-5946432351-bbd5e.web.app/',
     title: 'Nuxus — Технологичное ядро общения',
     description: 'Общайтесь красиво и безопасно.',
     siteName: 'Nuxus',
@@ -73,7 +73,7 @@ export default function RootLayout({
             if ('serviceWorker' in navigator) {
               window.addEventListener('load', function() {
                 navigator.serviceWorker.register('/sw.js').then(function(registration) {
-                  console.log('Nuxus ServiceWorker registered');
+                  console.log('Nuxus ServiceWorker registered on public domain');
                 }, function(err) {
                   console.log('Nuxus ServiceWorker registration failed: ', err);
                 });
