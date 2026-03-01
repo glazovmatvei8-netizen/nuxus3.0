@@ -92,10 +92,11 @@ export default function ChatMain() {
               label="Чаты" 
               active={activeView === 'chats'} 
               onClick={() => setActiveView('chats')} 
+              badge="4"
             />
             <NavButton 
               icon={Settings} 
-              label="Настройки" 
+              label="Профиль" 
               active={activeView === 'profile'} 
               onClick={() => setActiveView('profile')} 
               isProfile
