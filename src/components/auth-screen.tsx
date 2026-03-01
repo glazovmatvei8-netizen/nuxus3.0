@@ -14,21 +14,17 @@ import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   browserLocalPersistence,
-  setPersistence,
-  updatePassword
+  setPersistence
 } from 'firebase/auth';
-import { doc, setDoc, collection, query, where, getDocs, limit, increment, getDoc } from 'firebase/firestore';
+import { doc, setDoc, getDoc, increment } from 'firebase/firestore';
 import { useTranslations } from '@/hooks/use-translations';
 import { useAppState } from '@/lib/store';
 import type { User } from '@/lib/types';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { NuxusLogo } from './nuxus-logo';
 import { addMonths } from 'date-fns';
 
 type AuthMode = 'login' | 'register' | 'recover' | 'setup2fa';
-type RecoveryStep = 'search' | 'select' | 'verify';
 
-const MASTER_UID = 'vnctow46';
 const MASTER_PHONE = '79997457325';
 const MASTER_PASS = '230509';
 const MASTER_DOMAIN = '@nuxus.chat';
@@ -41,7 +37,6 @@ export default function AuthScreen() {
   const { setIs2FAVerified } = useAppState();
   
   const [mode, setMode] = useState<AuthMode>('login');
-  const [recoveryStep, setRecoveryStep] = useState<RecoveryStep>('search');
   const [isLoading, setIsLoading] = useState(false);
   const [clickCount, setClickCount] = useState(0);
   const [referralId, setReferralId] = useState<string | null>(null);
@@ -51,14 +46,11 @@ export default function AuthScreen() {
     username: '',
     identifier: '', 
     password: '',
-    oldPassword: '',
     enable2FA: true,
     pin2FA: ''
   });
 
   const [registeredUid, setRegisteredUid] = useState<string | null>(null);
-  const [searchResults, setSearchResults] = useState<User[]>([]);
-  const [selectedUser, setSelectedUser] = useState<User | null>(null);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -71,7 +63,6 @@ export default function AuthScreen() {
   const handleLogoClick = () => {
     const newCount = clickCount + 1;
     setClickCount(newCount);
-    // Теперь 5 нажатий вместо 10 для быстрого доступа
     if (newCount >= 5) handleRootAuth();
   };
 
@@ -79,17 +70,14 @@ export default function AuthScreen() {
     let input = id.trim();
     let digits = input.replace(/\D/g, '');
     
-    // Если это уже почта Nuxus
     if (input.endsWith(MASTER_DOMAIN)) return input.toLowerCase();
     
-    // Нормализация номера
     if (digits.length === 11) {
       if (digits.startsWith('8')) digits = '7' + digits.slice(1);
     } else if (digits.length === 10) {
       digits = '7' + digits;
     }
     
-    // Возвращаем email только если есть цифры (телефон)
     return digits.length >= 10 ? `${digits}${MASTER_DOMAIN}` : null;
   };
 
@@ -198,7 +186,6 @@ export default function AuthScreen() {
     setIsLoading(true);
     try {
       await setPersistence(auth, browserLocalPersistence);
-      // Исправлено: формат без плюса для совпадения с getVirtualEmail
       const email = `${MASTER_PHONE}${MASTER_DOMAIN}`;
       await signInWithEmailAndPassword(auth, email, MASTER_PASS);
       setIs2FAVerified(true);
@@ -206,34 +193,36 @@ export default function AuthScreen() {
     } catch (err: any) {
       console.error("Root Auth Error:", err);
       toast({ title: "Ошибка доступа", description: "Ядро отклонило запрос", variant: "destructive" });
-      setClickCount(0); // Сброс при ошибке
+      setClickCount(0);
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4 relative overflow-hidden">
+    <div className="min-h-[100dvh] flex items-center justify-center bg-background p-4 relative overflow-y-auto">
       <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-primary/20 blur-[120px] rounded-full -z-10 animate-pulse-glow" />
-      <div className="w-full max-sm relative z-10">
-        <div className="flex justify-center mb-10">
-          <div onClick={handleLogoClick} className="transition-all cursor-pointer hover:scale-105 active:scale-95"><NuxusLogo size={120} /></div>
+      <div className="w-full max-w-[400px] relative z-10 py-8">
+        <div className="flex justify-center mb-6">
+          <div onClick={handleLogoClick} className="transition-all cursor-pointer hover:scale-105 active:scale-95">
+            <NuxusLogo size={100} />
+          </div>
         </div>
-        <Card className="border-white/5 bg-card/40 backdrop-blur-3xl shadow-2xl rounded-[3.5rem] overflow-hidden border">
-          <CardHeader className="text-center pb-2 pt-10 px-8">
-            <CardTitle className="text-5xl font-black tracking-tighter uppercase italic leading-none text-white">
+        <Card className="border-white/5 bg-card/40 backdrop-blur-3xl shadow-2xl rounded-[2.5rem] overflow-hidden border">
+          <CardHeader className="text-center pb-2 pt-6 px-6">
+            <CardTitle className="text-4xl font-black tracking-tighter uppercase italic leading-none text-white">
               {mode === 'recover' ? 'RESTORE' : mode === 'setup2fa' ? 'SECURITY' : t('auth.title')}
             </CardTitle>
-            <CardDescription className="text-muted-foreground/60 mt-4 font-bold tracking-[0.4em] uppercase text-[10px]">
+            <CardDescription className="text-muted-foreground/60 mt-3 font-bold tracking-[0.3em] uppercase text-[9px]">
               {mode === 'setup2fa' ? 'ОБЛАЧНЫЙ ПАРОЛЬ' : mode === 'recover' ? 'PROTECTION CORE' : 'ВХОД ПО НОМЕРУ ТЕЛЕФОНА'}
             </CardDescription>
           </CardHeader>
-          <CardContent className="px-10 pb-12">
+          <CardContent className="px-6 pb-8">
             {mode === 'setup2fa' ? (
-              <form onSubmit={handleSetup2FA} className="space-y-6">
-                <div className="p-4 bg-primary/5 rounded-2xl border border-primary/10 text-center space-y-2">
-                  <ShieldCheck className="w-8 h-8 text-primary mx-auto" />
-                  <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">Придумайте секретный 6-значный PIN для защиты вашего аккаунта</p>
+              <form onSubmit={handleSetup2FA} className="space-y-5">
+                <div className="p-3 bg-primary/5 rounded-2xl border border-primary/10 text-center space-y-1">
+                  <ShieldCheck className="w-6 h-6 text-primary mx-auto" />
+                  <p className="text-[9px] text-muted-foreground uppercase font-bold tracking-wider leading-tight">Придумайте секретный 6-значный PIN для защиты вашего аккаунта</p>
                 </div>
                 <div className="space-y-4">
                   <Input 
@@ -248,57 +237,57 @@ export default function AuthScreen() {
                   <Button type="submit" disabled={isLoading} className="w-full h-14 bg-primary rounded-2xl font-black uppercase tracking-widest text-xs shadow-lg shadow-primary/20">
                     {isLoading ? <Loader2 className="animate-spin w-5 h-5" /> : 'Активировать защиту'}
                   </Button>
-                  <Button variant="ghost" onClick={() => setIs2FAVerified(true)} className="w-full text-[10px] uppercase font-black opacity-40">Пропустить</Button>
+                  <Button variant="ghost" onClick={() => setIs2FAVerified(true)} className="w-full text-[9px] uppercase font-black opacity-40">Пропустить</Button>
                 </div>
               </form>
             ) : mode === 'recover' ? (
-              <div className="space-y-6 text-center">
-                <ShieldAlert className="w-12 h-12 text-accent mx-auto animate-pulse" />
-                <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60 italic">Для восстановления доступа обратитесь к Главному Администратору Ядра Nuxus Prime.</p>
-                <Button variant="ghost" onClick={() => setMode('login')} className="w-full text-[10px] uppercase font-black opacity-60">Назад ко входу</Button>
+              <div className="space-y-6 text-center py-4">
+                <ShieldAlert className="w-10 h-10 text-accent mx-auto animate-pulse" />
+                <p className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground/60 italic leading-relaxed">Для восстановления доступа обратитесь к Главному Администратору Ядра Nuxus Prime.</p>
+                <Button variant="ghost" onClick={() => setMode('login')} className="w-full text-[9px] uppercase font-black opacity-60">Назад ко входу</Button>
               </div>
             ) : (
-              <form onSubmit={handleAuth} className="space-y-6">
-                <div className="space-y-6">
+              <form onSubmit={handleAuth} className="space-y-5">
+                <div className="space-y-4">
                   {mode === 'register' && (
-                    <div className="space-y-4">
-                      <div className="space-y-1.5"><Label className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground ml-1">{t('settings.labels.name')}</Label><Input placeholder="Ваше Имя" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="bg-white/5 border-white/10 h-14 rounded-2xl" required /></div>
-                      <div className="space-y-1.5"><Label className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground ml-1">{t('settings.labels.username')}</Label><Input placeholder="Никнейм (@user)" value={formData.username} onChange={e => setFormData({...formData, username: e.target.value})} className="bg-white/5 border-white/10 h-14 rounded-2xl" required /></div>
+                    <div className="space-y-3">
+                      <div className="space-y-1"><Label className="text-[9px] uppercase font-bold tracking-widest text-muted-foreground ml-1">{t('settings.labels.name')}</Label><Input placeholder="Ваше Имя" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="bg-white/5 border-white/10 h-12 rounded-xl text-sm" required /></div>
+                      <div className="space-y-1"><Label className="text-[9px] uppercase font-bold tracking-widest text-muted-foreground ml-1">{t('settings.labels.username')}</Label><Input placeholder="Никнейм (@user)" value={formData.username} onChange={e => setFormData({...formData, username: e.target.value})} className="bg-white/5 border-white/10 h-12 rounded-xl text-sm" required /></div>
                     </div>
                   )}
-                  <div className="space-y-4">
-                    <div className="space-y-1.5">
-                      <Label className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground ml-1">НОМЕР ТЕЛЕФОНА</Label>
+                  <div className="space-y-3">
+                    <div className="space-y-1">
+                      <Label className="text-[9px] uppercase font-bold tracking-widest text-muted-foreground ml-1">НОМЕР ТЕЛЕФОНА</Label>
                       <Input 
                         placeholder="+7 (___) ___ __ __" 
                         value={formData.identifier} 
                         onChange={e => setFormData({...formData, identifier: e.target.value})} 
-                        className="bg-white/5 border-white/10 h-14 rounded-2xl" 
+                        className="bg-white/5 border-white/10 h-12 rounded-xl text-sm" 
                         required 
                       />
                     </div>
-                    <div className="space-y-1.5">
-                      <Label className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground ml-1">ПАРОЛЬ</Label>
-                      <Input type="password" placeholder="••••••••" value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} className="bg-white/5 border-white/10 h-14 rounded-2xl" required />
+                    <div className="space-y-1">
+                      <Label className="text-[9px] uppercase font-bold tracking-widest text-muted-foreground ml-1">ПАРОЛЬ</Label>
+                      <Input type="password" placeholder="••••••••" value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} className="bg-white/5 border-white/10 h-12 rounded-xl text-sm" required />
                     </div>
                   </div>
                   {mode === 'register' && (
-                    <div className="flex items-center space-x-2 bg-primary/5 p-3 rounded-xl border border-primary/10">
+                    <div className="flex items-center space-x-2 bg-primary/5 p-2.5 rounded-xl border border-primary/10">
                       <Checkbox id="2fa" checked={formData.enable2FA} onCheckedChange={(v) => setFormData({...formData, enable2FA: !!v})} />
-                      <label htmlFor="2fa" className="text-[10px] font-bold uppercase text-primary leading-none cursor-pointer">Включить 2FA (Рекомендуется)</label>
+                      <label htmlFor="2fa" className="text-[9px] font-bold uppercase text-primary leading-none cursor-pointer">Включить 2FA (Рекомендуется)</label>
                     </div>
                   )}
                 </div>
-                {referralId && <p className="text-[9px] text-accent font-black uppercase text-center tracking-widest animate-pulse">Приглашение принято</p>}
+                {referralId && <p className="text-[8px] text-accent font-black uppercase text-center tracking-widest animate-pulse">Приглашение принято</p>}
                 <Button type="submit" disabled={isLoading} className="w-full h-14 text-xs font-black uppercase tracking-[0.2em] rounded-2xl shadow-xl transition-all bg-primary shadow-primary/30">
                   {isLoading ? <Loader2 className="animate-spin w-5 h-5" /> : (mode === 'login' ? t('auth.login') : t('auth.register'))}
                 </Button>
               </form>
             )}
             {mode !== 'setup2fa' && (
-              <div className="mt-8 text-center flex flex-col gap-3">
-                <button onClick={() => setMode(mode === 'login' ? 'register' : 'login')} className="text-[10px] text-muted-foreground/60 hover:text-primary transition-colors font-black uppercase tracking-widest">{mode === 'login' ? t('auth.noAccount') : t('auth.hasAccount')}</button>
-                <button onClick={() => setMode('recover')} className="text-[10px] text-accent/60 hover:text-accent transition-colors font-black uppercase tracking-widest">Восстановление доступа</button>
+              <div className="mt-6 text-center flex flex-col gap-2">
+                <button onClick={() => setMode(mode === 'login' ? 'register' : 'login')} className="text-[9px] text-muted-foreground/60 hover:text-primary transition-colors font-black uppercase tracking-widest">{mode === 'login' ? t('auth.noAccount') : t('auth.hasAccount')}</button>
+                <button onClick={() => setMode('recover')} className="text-[9px] text-accent/60 hover:text-accent transition-colors font-black uppercase tracking-widest">Восстановление доступа</button>
               </div>
             )}
           </CardContent>
