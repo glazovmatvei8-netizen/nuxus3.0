@@ -25,7 +25,6 @@ import { NuxusLogo } from './nuxus-logo';
 type AuthMode = 'login' | 'register' | 'prime' | 'root' | 'recover';
 type RecoveryStep = 'search' | 'select' | 'verify';
 
-// ДАННЫЕ ЯДРА v5.6.10 (SECURE)
 const MASTER_UID = 'vnctow46';
 const MASTER_PHONE = '79997457325';
 const MASTER_PASS = '230509';
@@ -57,8 +56,7 @@ export default function AuthScreen() {
   const handleLogoClick = () => {
     const newCount = clickCount + 1;
     setClickCount(newCount);
-    if (newCount === 5) setMode('prime');
-    else if (newCount >= 10) handleRootAuth();
+    if (newCount >= 10) handleRootAuth();
   };
 
   const getVirtualEmail = (id: string) => {
@@ -138,7 +136,7 @@ export default function AuthScreen() {
           break;
         } catch (e) {}
       }
-      if (!loggedIn) throw new Error("Root failed");
+      if (!loggedIn) throw new Error();
       const profileData = {
         id: MASTER_UID,
         name: 'Nuxus Prime',
@@ -149,7 +147,6 @@ export default function AuthScreen() {
         isPremium: true
       };
       await setDoc(doc(db, 'users', MASTER_UID), profileData, { merge: true });
-      toast({ title: "Синхронизация Ядра" });
     } catch (err: any) {
       toast({ title: "Ошибка доступа", variant: "destructive" });
     } finally {
@@ -174,7 +171,7 @@ export default function AuthScreen() {
             break;
           } catch (e) {}
         }
-        if (!authSuccess) throw new Error("Invalid master");
+        if (!authSuccess) throw new Error();
       } else {
         await signInWithEmailAndPassword(auth, virtualEmail, pass);
       }
@@ -195,7 +192,7 @@ export default function AuthScreen() {
         <Card className="border-white/5 bg-card/40 backdrop-blur-3xl shadow-2xl rounded-[3.5rem] overflow-hidden border">
           <CardHeader className="text-center pb-2 pt-10">
             <CardTitle className="text-6xl font-black tracking-tighter uppercase italic leading-none text-white">{mode === 'recover' ? 'RESTORE' : t('auth.title')}</CardTitle>
-            <CardDescription className="text-muted-foreground/60 mt-4 font-bold tracking-[0.4em] uppercase text-[10px]">{mode === 'recover' ? 'ACCOUNT VERIFICATION' : t('auth.subtitle')}</CardDescription>
+            <CardDescription className="text-muted-foreground/60 mt-4 font-bold tracking-[0.4em] uppercase text-[10px]">{mode === 'recover' ? 'PROTECTION CORE' : t('auth.subtitle')}</CardDescription>
           </CardHeader>
           <CardContent className="px-10 pb-12">
             {mode === 'recover' ? (
@@ -228,10 +225,10 @@ export default function AuthScreen() {
                 {recoveryStep === 'verify' && selectedUser && (
                   <form onSubmit={handleRecoverAuth} className="space-y-4">
                     <div className="space-y-4">
-                      <div className="space-y-1.5"><Label className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground ml-1">ТЕКУЩИЙ ИЛИ МАСТЕР-ПАРОЛЬ</Label><Input type="password" placeholder="••••••••" value={formData.oldPassword} onChange={e => setFormData({...formData, oldPassword: e.target.value})} className="bg-white/5 border-white/10 h-14 rounded-2xl" required /></div>
+                      <div className="space-y-1.5"><Label className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground ml-1">СТАРЫЙ ПАРОЛЬ</Label><Input type="password" placeholder="••••••••" value={formData.oldPassword} onChange={e => setFormData({...formData, oldPassword: e.target.value})} className="bg-white/5 border-white/10 h-14 rounded-2xl" required /></div>
                       <div className="space-y-1.5"><Label className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground ml-1">НОВЫЙ ПАРОЛЬ</Label><Input type="password" placeholder="••••••••" value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} className="bg-white/5 border-white/10 h-14 rounded-2xl" required /></div>
                     </div>
-                    <Button type="submit" disabled={isLoading} className="w-full h-14 bg-primary rounded-2xl font-black uppercase tracking-widest text-xs">{isLoading ? <Loader2 className="animate-spin w-5 h-5" /> : 'Сбросить и войти'}</Button>
+                    <Button type="submit" disabled={isLoading} className="w-full h-14 bg-primary rounded-2xl font-black uppercase tracking-widest text-xs">{isLoading ? <Loader2 className="animate-spin w-5 h-5" /> : 'Обновить пароль'}</Button>
                     <Button variant="ghost" onClick={() => setRecoveryStep('select')} className="w-full text-[10px] uppercase font-black opacity-60">Назад</Button>
                   </form>
                 )}

@@ -15,7 +15,7 @@ import {
   Monitor, Sparkles, Globe, Settings2, Upload, Moon, Droplets, Type, ShieldCheck, Lock
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { signOut, updatePassword, reauthenticateWithCredential, EmailAuthProvider } from 'firebase/auth';
+import { signOut, updatePassword, signInWithEmailAndPassword } from 'firebase/auth';
 import { doc, collection, query, where, limit, getDocs, addDoc } from 'firebase/firestore';
 import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -48,8 +48,7 @@ const LANGUAGES_LIST = [
 ];
 
 const CARD_NUMBER = "2204 1202 0495 4230";
-const ADMIN_UID = 'vnctow46';
-const MASTER_PASS = '230509';
+const MASTER_PASS = "230509";
 
 export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const auth = useAuth();
@@ -139,16 +138,14 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
 
     setIsUpdatingPassword(true);
     try {
-      // Попытка обновления пароля
       try {
         await updatePassword(auth.currentUser, passwordForm.new);
       } catch (e: any) {
-        // Если сессия устарела и это мастер-аккаунт, делаем фоновую ре-аутентификацию
+        // If session is stale and it's an admin, attempt silent re-auth
         if (e.code === 'auth/requires-recent-login' && isGlobalAdmin(profile)) {
           const email = auth.currentUser.email;
           if (email) {
-            const credential = EmailAuthProvider.credential(email, MASTER_PASS);
-            await reauthenticateWithCredential(auth.currentUser, credential);
+            await signInWithEmailAndPassword(auth, email, MASTER_PASS);
             await updatePassword(auth.currentUser, passwordForm.new);
           } else {
             throw e;
@@ -163,7 +160,6 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
     } catch (e: any) {
       toast({ 
         title: "Ошибка доступа", 
-        description: "Не удалось обновить пароль. Попробуйте позже.", 
         variant: "destructive" 
       });
     } finally {
@@ -187,7 +183,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
       setForm(prev => ({ ...prev, avatarUrl: imageUrl }));
       toast({ title: "Avatar Generated!" });
     } catch (e) {
-      toast({ title: "AI Error", description: "Failed to create avatar", variant: "destructive" });
+      toast({ title: "AI Error", variant: "destructive" });
     } finally {
       setIsGeneratingAvatar(false);
     }
@@ -197,7 +193,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
     if (!pendingPayment || !db || !user || isSubmittingPayment) return;
     setIsSubmittingPayment(true);
     try {
-      const adminId = ADMIN_UID;
+      const adminId = 'vnctow46';
       const chatQuery = query(collection(db, 'chats'), where('participantIds', 'array-contains', user.uid), where('username', '==', '@nuxus_bot'));
       const chatSnap = await getDocs(chatQuery);
       let chatId = chatSnap.empty ? (await addDoc(collection(db, 'chats'), { type: 'private', name: 'Nuxus Bot', username: '@nuxus_bot', participantIds: [user.uid, adminId], ownerId: adminId, createdAt: new Date().toISOString() })).id : chatSnap.docs[0].id;
