@@ -16,7 +16,7 @@ import { MessageItem } from './message-item';
 import { useToast } from '@/hooks/use-toast';
 import { ChatInfoModal } from './modals/chat-info-modal';
 import { useFirestore, useUser, useCollection, useDoc, useMemoFirebase } from '@/firebase';
-import { collection, query, orderBy, doc, addDoc, updateDoc, where, limit } from 'firebase/firestore';
+import { collection, query, orderBy, doc, updateDoc, where } from 'firebase/firestore';
 import { addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { formatDisplayName, isUserPremium, isGlobalAdmin, cn } from '@/lib/utils';
 import type { Message, User as UserType, Chat } from '@/lib/types';
@@ -133,10 +133,9 @@ export default function ChatArea() {
   const { user: firebaseUser } = useUser();
   const db = useFirestore();
   const { t } = useTranslations();
-  const { currentChatId, setCurrentChatId, setActiveCallId, setLocalDrafts, localDrafts } = useAppState();
+  const { currentChatId, setCurrentChatId, setLocalDrafts, localDrafts } = useAppState();
   
   const [isChatInfoOpen, setIsChatInfoOpen] = useState(false);
-  const [isSending, setIsSending] = useState(false);
   const [isDrafting, setIsDrafting] = useState(false);
   const [replyTo, setReplyTo] = useState<Message | null>(null);
   const [editingMsg, setEditingMsg] = useState<Message | null>(null);
@@ -246,24 +245,6 @@ export default function ChatArea() {
     };
   }, [updateTypingStatus]);
 
-  // Mention System Notification
-  useEffect(() => {
-    if (!messages || !firebaseUser || !audioRef.current || !userProfile?.username) return;
-    const lastMsg = messages[messages.length - 1];
-    if (!lastMsg || lastMsg.senderId === firebaseUser.uid || lastMsg.isRead) return;
-
-    const myMention = userProfile.username;
-    const hasMention = lastMsg.content.includes(myMention) || lastMsg.isMentionAll;
-
-    if (hasMention) {
-      audioRef.current.play().catch(() => {});
-      toast({
-        title: lastMsg.isMentionAll ? "Объявление @all" : "Вас упомянули!",
-        description: `${lastMsg.senderName}: ${lastMsg.content.slice(0, 50)}...`,
-      });
-    }
-  }, [messages, firebaseUser, toast, userProfile?.username]);
-
   // Read status synchronization
   useEffect(() => {
     if (!messages || !firebaseUser || !currentChatId || !db) return;
@@ -283,6 +264,9 @@ export default function ChatArea() {
   // Save drafts with optimized performance
   useEffect(() => {
     if (!currentChatId) return;
+    // Don't save draft if we are mentioning, to avoid clearing mention state
+    if (mentionQuery !== null) return;
+
     if (draftTimeoutRef.current) clearTimeout(draftTimeoutRef.current);
     draftTimeoutRef.current = setTimeout(() => {
       if (localDrafts[currentChatId] !== messageInput) {
@@ -295,12 +279,11 @@ export default function ChatArea() {
     return () => {
       if (draftTimeoutRef.current) clearTimeout(draftTimeoutRef.current);
     };
-  }, [messageInput, currentChatId, setLocalDrafts, localDrafts]);
+  }, [messageInput, currentChatId, setLocalDrafts, localDrafts, mentionQuery]);
 
   const onInputChange = (val: string) => {
     setMessageInput(val);
     
-    // Optimized Typing Status: Only update on first character and when cleared
     if (val.length > 0 && !isTypingRef.current) {
       updateTypingStatus(true);
     } else if (val.length === 0 && isTypingRef.current) {
@@ -318,9 +301,9 @@ export default function ChatArea() {
     const lastAtSymbol = textBeforeCursor.lastIndexOf('@');
     
     if (lastAtSymbol !== -1) {
-      const query = textBeforeCursor.slice(lastAtSymbol + 1);
-      if (!query.includes(' ')) {
-        setMentionQuery(query);
+      const queryStr = textBeforeCursor.slice(lastAtSymbol + 1);
+      if (!queryStr.includes(' ')) {
+        setMentionQuery(queryStr);
         setMentionIndex(0);
       } else {
         setMentionQuery(null);
@@ -361,7 +344,7 @@ export default function ChatArea() {
       setEditingMsg(null);
       dataLoadedRef.current = false;
     }
-  }, [currentChatId]);
+  }, [currentChatId, localDrafts]);
 
   useEffect(() => {
     if (messages?.length) {
@@ -378,73 +361,78 @@ export default function ChatArea() {
     const trimmedContent = content_msg.trim();
     if ((!trimmedContent && pendingMedia.length === 0) || !currentChatId || !firebaseUser || !db) return;
     
-    setIsSending(true);
-    updateTypingStatus(false);
+    // OPTIMIZATION: Immediate state clearing for "speed of light" feel
+    const captureContent = trimmedContent;
+    const captureMedia = [...pendingMedia];
+    const captureReply = replyTo;
+    const captureEdit = editingMsg;
+    const captureScheduled = scheduledDate;
+    const captureExpiry = expiryTime;
+    const captureOneTime = isOneTime;
+
+    setMessageInput('');
+    setPendingMedia([]);
+    setReplyTo(null);
+    setEditingMsg(null);
     setMentionQuery(null);
+    setScheduledDate(undefined);
+    setExpiryTime(null);
+    setIsOneTime(false);
+    setLocalDrafts((prev: any) => ({ ...prev, [currentChatId]: '' }));
+    updateTypingStatus(false);
 
     const senderDisplayName = userProfile?.name && userProfile.name !== 'User' 
       ? userProfile.name 
       : (firebaseUser.displayName || userProfile?.username || 'Nuxus User');
 
-    if (editingMsg) {
-      updateDocumentNonBlocking(doc(db, 'chats', currentChatId, 'messages', editingMsg.id), {
-        content: trimmedContent,
+    if (captureEdit) {
+      updateDocumentNonBlocking(doc(db, 'chats', currentChatId, 'messages', captureEdit.id), {
+        content: captureContent,
         editedAt: new Date().toISOString()
       });
-      setEditingMsg(null);
-      setMessageInput('');
-      setIsSending(false);
       return;
     }
 
-    if (pendingMedia.length > 0) {
+    if (captureMedia.length > 0) {
       const mediaMsg: Partial<Message> = {
         chatId: currentChatId,
         senderId: firebaseUser.uid,
         senderName: senderDisplayName,
-        content: pendingMedia.length === 1 ? pendingMedia[0].url : JSON.stringify(pendingMedia),
-        contentType: pendingMedia.length > 1 ? 'album' : pendingMedia[0].type,
+        content: captureMedia.length === 1 ? captureMedia[0].url : JSON.stringify(captureMedia),
+        contentType: captureMedia.length > 1 ? 'album' : captureMedia[0].type,
         sentAt: new Date().toISOString(),
         isRead: false,
-        isOneTimeView: isOneTime,
-        expiresInSeconds: expiryTime,
-        scheduledAt: scheduledDate ? scheduledDate.toISOString() : null
+        isOneTimeView: captureOneTime,
+        expiresInSeconds: captureExpiry,
+        scheduledAt: captureScheduled ? captureScheduled.toISOString() : null
       };
       addDocumentNonBlocking(collection(db, 'chats', currentChatId, 'messages'), mediaMsg);
-      setPendingMedia([]);
     }
 
-    if (trimmedContent && pendingMedia.length === 0) {
-      const isMentionAll = (isAdmin || isUserPremium(userProfile)) && trimmedContent.includes('@all');
+    if (captureContent && captureMedia.length === 0) {
+      const isMentionAll = (isAdmin || isUserPremium(userProfile)) && captureContent.includes('@all');
       
       const msgData: Partial<Message> = { 
         chatId: currentChatId, 
         senderId: firebaseUser.uid, 
         senderName: senderDisplayName, 
-        content: trimmedContent, 
+        content: captureContent, 
         contentType: type_msg, 
         sentAt: new Date().toISOString(), 
         isRead: false, 
-        scheduledAt: scheduledDate ? scheduledDate.toISOString() : null,
-        expiresInSeconds: expiryTime,
-        isOneTimeView: isOneTime,
+        scheduledAt: captureScheduled ? captureScheduled.toISOString() : null,
+        expiresInSeconds: captureExpiry,
+        isOneTimeView: captureOneTime,
         isMentionAll: isMentionAll
       };
-      if (replyTo) {
-        msgData.replyToId = replyTo.id;
-        msgData.replyToContent = replyTo.contentType === 'text' ? replyTo.content : `[${replyTo.contentType}]`;
-        setReplyTo(null);
+      if (captureReply) {
+        msgData.replyToId = captureReply.id;
+        msgData.replyToContent = captureReply.contentType === 'text' ? captureReply.content : `[${captureReply.contentType}]`;
       }
       addDocumentNonBlocking(collection(db, 'chats', currentChatId, 'messages'), msgData);
     }
 
     updateDocumentNonBlocking(doc(db, 'chats', currentChatId), { lastMessageAt: new Date().toISOString() });
-    setScheduledDate(undefined);
-    setExpiryTime(null);
-    setIsOneTime(false);
-    setMessageInput('');
-    setLocalDrafts((prev: any) => ({ ...prev, [currentChatId]: '' }));
-    setIsSending(false);
   }, [messageInput, pendingMedia, currentChatId, firebaseUser, db, userProfile, replyTo, editingMsg, scheduledDate, expiryTime, isOneTime, updateTypingStatus, setLocalDrafts, isAdmin]);
 
   const handleReply = useCallback((msg: Message) => {
@@ -710,8 +698,8 @@ export default function ChatArea() {
               <Button size="icon" className="h-11 w-11 rounded-xl shrink-0 bg-primary" onClick={startAudioRecording}><Mic className="w-5 h-5" /></Button>
             ) : (
               !isRecording && (
-                <Button size="icon" className="h-11 w-11 rounded-xl shrink-0 bg-primary" onClick={() => handleSendMessage()} disabled={isSending}>
-                  {isSending ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
+                <Button size="icon" className="h-11 w-11 rounded-xl shrink-0 bg-primary" onClick={() => handleSendMessage()}>
+                  <Send className="w-5 h-5" />
                 </Button>
               )
             )}
