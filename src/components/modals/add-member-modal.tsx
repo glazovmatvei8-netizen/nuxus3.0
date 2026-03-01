@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useFirestore, useCollection, useMemoFirebase, useUser, useDoc } from '@/firebase';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Search, UserPlus, Loader2, Contact, ShieldAlert, Lock } from 'lucide-react';
+import { Search, UserPlus, Loader2, Contact, ShieldAlert, Lock, Star } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
 import { collection, query, doc, arrayUnion, limit } from 'firebase/firestore';
