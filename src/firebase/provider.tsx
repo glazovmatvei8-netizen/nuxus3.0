@@ -90,7 +90,8 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
     };
 
     updateStatus();
-    const interval = setInterval(updateStatus, 30000); 
+    // Heartbeat every 10 seconds for ultra-precise presence
+    const interval = setInterval(updateStatus, 10000); 
     return () => clearInterval(interval);
   }, [userAuthState.user, firestore]);
 

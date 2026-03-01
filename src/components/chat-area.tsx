@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useRef, useEffect, useMemo, useCallback, memo } from 'react';
@@ -27,9 +26,6 @@ import { Calendar } from '@/components/ui/calendar';
 import { useTranslations } from '@/hooks/use-translations';
 import { differenceInSeconds, parseISO } from 'date-fns';
 
-/**
- * Optimized Message List with memoization.
- */
 const MessageList = memo(({ 
   messages, 
   userId, 
@@ -66,9 +62,6 @@ const MessageList = memo(({
 });
 MessageList.displayName = 'MessageList';
 
-/**
- * Dynamic header info component that shows participant count or typing status.
- */
 const ChatHeaderSubInfo = memo(({ chat, participants, userId, t }: { chat: Chat, participants: UserType[] | null, userId: string | undefined, t: any }) => {
   const typingUsers = useMemo(() => {
     if (!chat?.typing || !userId) return [];
@@ -83,6 +76,7 @@ const ChatHeaderSubInfo = memo(({ chat, participants, userId, t }: { chat: Chat,
       const p = participants.find(part => part.id === uid);
       if (!p?.lastSeen) return false;
       try {
+        // Precise check: status is ignored if user was not active in last 20 seconds
         return Math.abs(differenceInSeconds(new Date(), parseISO(p.lastSeen))) < 20; 
       } catch (e) { return false; }
     });
@@ -91,21 +85,21 @@ const ChatHeaderSubInfo = memo(({ chat, participants, userId, t }: { chat: Chat,
   if (activeTypingUids.length > 0 && participants) {
     const firstUid = activeTypingUids[0];
     const firstUser = participants.find(p => p.id === firstUid);
-    const name = formatDisplayName(firstUser?.name || 'Кто-то');
+    const name = formatDisplayName(firstUser?.name || firstUser?.username || 'Кто-то');
     
     let text = "";
     if (activeTypingUids.length === 1) {
       text = `${name} ${t('chat.typing')}`;
     } else if (activeTypingUids.length === 2) {
       const secondUser = participants.find(p => p.id === activeTypingUids[1]);
-      const name2 = formatDisplayName(secondUser?.name || 'Кто-то');
+      const name2 = formatDisplayName(secondUser?.name || secondUser?.username || 'Кто-то');
       text = `${name}, ${name2} печатают`;
     } else {
       text = `${name} и еще ${activeTypingUids.length - 1} печатают`;
     }
 
     return (
-      <span className="text-[10px] text-accent tracking-wider truncate flex items-center gap-0.5">
+      <span className="text-[10px] text-accent tracking-wider truncate flex items-center gap-0.5 font-bold uppercase">
         {text}
         <span className="animate-typing-dot">.</span>
         <span className="animate-typing-dot [animation-delay:0.2s]">.</span>
@@ -116,14 +110,14 @@ const ChatHeaderSubInfo = memo(({ chat, participants, userId, t }: { chat: Chat,
 
   if (chat.type === 'group' || chat.type === 'channel') {
     return (
-      <span className="text-[10px] text-muted-foreground/60 tracking-widest truncate uppercase">
+      <span className="text-[10px] text-muted-foreground/60 tracking-widest truncate uppercase font-bold">
         {chat.participantIds?.length || 0} участников
       </span>
     );
   }
 
   return (
-    <span className="text-[10px] text-muted-foreground/60 tracking-widest truncate uppercase">
+    <span className="text-[10px] text-muted-foreground/60 tracking-widest truncate uppercase font-bold">
       Ядро Nuxus
     </span>
   );
@@ -230,13 +224,22 @@ export default function ChatArea() {
     }
   }, []);
 
-  const updateTypingStatus = useCallback((isTyping: boolean) => {
-    if (!db || !currentChatId || !firebaseUser || isTypingRef.current === isTyping) return;
+  const updateTypingStatus = useCallback((isTyping: boolean, targetChatId?: string) => {
+    const cid = targetChatId || currentChatId;
+    if (!db || !cid || !firebaseUser || (isTypingRef.current === isTyping && !targetChatId)) return;
     
-    isTypingRef.current = isTyping;
-    const typingRef = doc(db, 'chats', currentChatId);
+    if (!targetChatId) isTypingRef.current = isTyping;
+    const typingRef = doc(db, 'chats', cid);
     updateDoc(typingRef, { [`typing.${firebaseUser.uid}`]: isTyping }).catch(() => {});
   }, [db, currentChatId, firebaseUser]);
+
+  // Force typing cleanup on unmount or chat change
+  useEffect(() => {
+    const cid = currentChatId;
+    return () => {
+      if (cid) updateTypingStatus(false, cid);
+    };
+  }, [currentChatId, updateTypingStatus]);
 
   useEffect(() => {
     const handleUnload = () => updateTypingStatus(false);
@@ -247,20 +250,15 @@ export default function ChatArea() {
     };
   }, [updateTypingStatus]);
 
-  // Read status synchronization
   useEffect(() => {
     if (!messages || !firebaseUser || !currentChatId || !db) return;
     const unreadFromOthers = messages.filter(m => !m.isRead && m.senderId !== firebaseUser.uid);
     if (unreadFromOthers.length > 0) {
       unreadFromOthers.forEach(msg => {
         updateDocumentNonBlocking(doc(db, 'chats', currentChatId, 'messages', msg.id), { isRead: true });
-        // Handle mention notification dismissal
-        if (msg.isMentionAll || (msg.content && msg.content.includes(`@${userProfile?.username?.replace('@','')}`))) {
-           // Toast could be used here to signal important mentions
-        }
       });
     }
-  }, [messages, firebaseUser, currentChatId, db, userProfile]);
+  }, [messages, firebaseUser, currentChatId, db]);
 
   const scrollToBottom = useCallback((behavior: ScrollBehavior = 'auto') => {
     if (scrollRef.current) {
@@ -269,12 +267,15 @@ export default function ChatArea() {
     }
   }, []);
 
-  // Save drafts with optimized performance
+  // Optimized Draft Save
   useEffect(() => {
-    if (!currentChatId || mentionQuery !== null) return;
-
+    if (!currentChatId) return;
     if (draftTimeoutRef.current) clearTimeout(draftTimeoutRef.current);
+    
     draftTimeoutRef.current = setTimeout(() => {
+      // Don't save if mention list is open to avoid focus issues
+      if (mentionQuery !== null) return;
+      
       if (localDrafts[currentChatId] !== messageInput) {
         setLocalDrafts((prev: Record<string, string>) => ({
           ...prev,
@@ -282,6 +283,7 @@ export default function ChatArea() {
         }));
       }
     }, 1000);
+    
     return () => {
       if (draftTimeoutRef.current) clearTimeout(draftTimeoutRef.current);
     };
@@ -301,7 +303,6 @@ export default function ChatArea() {
       typingTimeoutRef.current = setTimeout(() => updateTypingStatus(false), 5000);
     }
     
-    // Mention detection
     const cursorPosition = inputRef.current?.selectionStart || 0;
     const textBeforeCursor = val.slice(0, cursorPosition);
     const lastAtSymbol = textBeforeCursor.lastIndexOf('@');
@@ -350,7 +351,7 @@ export default function ChatArea() {
       setEditingMsg(null);
       dataLoadedRef.current = false;
     }
-  }, [currentChatId]);
+  }, [currentChatId, localDrafts]);
 
   useEffect(() => {
     if (messages?.length) {
@@ -383,12 +384,11 @@ export default function ChatArea() {
     setScheduledDate(undefined);
     setExpiryTime(null);
     setIsOneTime(false);
-    setLocalDrafts((prev: any) => ({ ...prev, [currentChatId]: '' }));
     updateTypingStatus(false);
 
     const senderDisplayName = userProfile?.name && userProfile.name !== 'User' 
       ? userProfile.name 
-      : (firebaseUser.displayName || userProfile?.username || 'Nuxus User');
+      : (userProfile?.username || firebaseUser.displayName || 'Nuxus User');
 
     if (captureEdit) {
       updateDocumentNonBlocking(doc(db, 'chats', currentChatId, 'messages', captureEdit.id), {
@@ -438,19 +438,19 @@ export default function ChatArea() {
     }
 
     updateDocumentNonBlocking(doc(db, 'chats', currentChatId), { lastMessageAt: new Date().toISOString() });
-  }, [messageInput, pendingMedia, currentChatId, firebaseUser, db, userProfile, replyTo, editingMsg, scheduledDate, expiryTime, isOneTime, updateTypingStatus, setLocalDrafts, isAdmin]);
+  }, [messageInput, pendingMedia, currentChatId, firebaseUser, db, userProfile, replyTo, editingMsg, scheduledDate, expiryTime, isOneTime, updateTypingStatus, isAdmin]);
 
   const handleReply = useCallback((msg: Message) => {
     setReplyTo(msg);
     setEditingMsg(null);
-    setTimeout(() => inputRef.current?.focus(), 50);
+    setTimeout(() => inputRef.current?.focus(), 100);
   }, []);
 
   const handleEdit = useCallback((msg: Message) => {
     setEditingMsg(msg);
     setMessageInput(msg.content);
     setReplyTo(null);
-    setTimeout(() => inputRef.current?.focus(), 50);
+    setTimeout(() => inputRef.current?.focus(), 100);
   }, []);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
