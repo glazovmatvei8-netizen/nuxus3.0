@@ -1,3 +1,4 @@
+
 "use client"
 
 import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
@@ -28,24 +29,31 @@ export default function Home() {
 
   const { data: profile, isLoading: isProfileLoading } = useDoc<UserType>(userProfileRef);
 
-  // Handle ?join=@username link logic
+  // Handle ?join=@username link logic with robust search
   useEffect(() => {
     if (!user || !db || isJoining) return;
 
     const params = new URLSearchParams(window.location.search);
-    const joinUsername = params.get('join');
+    const joinParam = params.get('join');
 
-    if (joinUsername) {
+    if (joinParam) {
       const handleJoin = async () => {
         setIsJoining(true);
         try {
-          const formattedUsername = joinUsername.startsWith('@') ? joinUsername.toLowerCase() : '@' + joinUsername.toLowerCase();
-          const q = query(collection(db, 'chats'), where('username', '==', formattedUsername), limit(1));
+          // Normalize username for search (must be lowercase)
+          const searchUsername = joinParam.startsWith('@') ? joinParam.toLowerCase() : '@' + joinParam.toLowerCase();
+          
+          const q = query(
+            collection(db, 'chats'), 
+            where('username', '==', searchUsername), 
+            limit(1)
+          );
+          
           const snap = await getDocs(q);
 
           if (!snap.empty) {
             const chatDoc = snap.docs[0];
-            const chatData = chatDoc.data() as Chat;
+            const chatData = { id: chatDoc.id, ...chatDoc.data() } as Chat;
             
             if (!chatData.participantIds.includes(user.uid)) {
               await updateDoc(doc(db, 'chats', chatDoc.id), {
@@ -58,24 +66,42 @@ export default function Home() {
             // Clear URL params without reloading
             window.history.replaceState({}, document.title, window.location.pathname);
           } else {
-            toast({ title: "Ошибка", description: "Группа не найдена", variant: "destructive" });
+            // Try exact match case just in case some old data exists
+            const qExact = query(collection(db, 'chats'), where('username', '==', joinParam.startsWith('@') ? joinParam : '@' + joinParam), limit(1));
+            const snapExact = await getDocs(qExact);
+            
+            if (!snapExact.empty) {
+              const chatDoc = snapExact.docs[0];
+              const chatData = { id: chatDoc.id, ...chatDoc.data() } as Chat;
+              if (!chatData.participantIds.includes(user.uid)) {
+                await updateDoc(doc(db, 'chats', chatDoc.id), { participantIds: arrayUnion(user.uid) });
+              }
+              setCurrentChatId(chatDoc.id);
+              window.history.replaceState({}, document.title, window.location.pathname);
+            } else {
+              toast({ title: "Ошибка", description: "Группа не найдена или ник указан неверно", variant: "destructive" });
+              window.history.replaceState({}, document.title, window.location.pathname);
+            }
           }
         } catch (e) {
           console.error("Join error:", e);
+          toast({ title: "Ошибка системы", description: "Не удалось обработать ссылку", variant: "destructive" });
         } finally {
           setIsJoining(false);
         }
       };
       handleJoin();
     }
-  }, [user, db, setCurrentChatId, toast]);
+  }, [user, db, setCurrentChatId, toast, isJoining]);
 
   if (isUserLoading || isJoining) {
     return (
       <div className="h-screen w-full flex items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-4">
           <Loader2 className="w-10 h-10 text-primary animate-spin" />
-          {isJoining && <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary/60">Вход в сообщество...</p>}
+          <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary/60 animate-pulse">
+            {isJoining ? "Вход в сообщество..." : "Загрузка Ядра..."}
+          </p>
         </div>
       </div>
     );

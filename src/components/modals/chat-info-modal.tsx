@@ -253,8 +253,8 @@ export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onO
   return (
     <>
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md bg-card border-border p-0 overflow-hidden h-[90vh] flex flex-col rounded-[2.5rem]">
-        <DialogHeader className="p-6 text-center flex flex-col items-center shrink-0">
+      <DialogContent className="max-w-md bg-card border-border p-0 overflow-hidden h-[90vh] flex flex-col rounded-[2.5rem] shadow-2xl">
+        <DialogHeader className="p-6 text-center flex flex-col items-center shrink-0 border-b-0">
           <div className="relative group">
             <UserAvatar 
               userId={isPrivate ? otherId : null} 
@@ -278,7 +278,7 @@ export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onO
           <DialogDescription className="text-xs font-mono opacity-60">{chatUsername}</DialogDescription>
           
           {isPrivate && otherUserProfile && (
-            <div className="mt-4 w-full flex flex-col gap-2">
+            <div className="mt-4 w-full flex flex-col gap-2 px-6">
               <Button 
                 variant={isContact ? "secondary" : "default"} 
                 className="w-full h-10 rounded-xl gap-2 font-bold text-[10px] uppercase tracking-widest"
@@ -306,7 +306,7 @@ export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onO
         </DialogHeader>
 
         <Tabs defaultValue="info" className="flex-1 overflow-hidden flex flex-col min-h-0">
-          <TabsList className={cn("grid w-full h-12 bg-muted/20 border-b border-border/10 p-1 shrink-0", isChatAdmin && !isPrivate ? "grid-cols-3" : "grid-cols-2")}>
+          <TabsList className={cn("grid w-full h-12 bg-muted/5 border-b border-border/10 p-1 shrink-0", isChatAdmin && !isPrivate ? "grid-cols-3" : "grid-cols-2")}>
             <TabsTrigger value="info" className="text-[10px] font-bold uppercase tracking-widest data-[state=active]:bg-primary/10"><Info className="w-3.5 h-3.5 mr-1.5" /> Инфо</TabsTrigger>
             <TabsTrigger value="members" className="text-[10px] font-bold uppercase tracking-widest data-[state=active]:bg-primary/10"><Users className="w-3.5 h-3.5 mr-1.5" /> Участники</TabsTrigger>
             {isChatAdmin && !isPrivate && (

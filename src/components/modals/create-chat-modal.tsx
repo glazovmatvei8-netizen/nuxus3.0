@@ -130,7 +130,9 @@ export function CreateChatModal({ open, onOpenChange }: CreateChatModalProps) {
 
     setIsLoading(true);
     try {
-      const formattedUsername = username.startsWith('@') ? username : '@' + username;
+      // FORCE LOWERCASE FOR USERNAMES
+      const formattedUsername = username.startsWith('@') ? username.toLowerCase() : '@' + username.toLowerCase();
+      
       const newChatData = {
         type: type,
         name: name,
