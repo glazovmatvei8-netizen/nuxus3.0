@@ -6,6 +6,7 @@ import ChatSidebar from './chat-sidebar';
 import ChatArea from './chat-area';
 import ContactsView from './contacts-view';
 import CallsView from './calls-view';
+import ProfileView from './profile-view';
 import { useAppState } from '@/lib/store';
 import { cn } from '@/lib/utils';
 import { useFirestore, useUser, useCollection, useMemoFirebase, useDoc } from '@/firebase';
@@ -46,27 +47,6 @@ export default function ChatMain() {
   }, [db, user]);
   const { data: userChats } = useCollection<Chat>(chatsQuery);
 
-  const [totalUnread, setTotalUnread] = useState(0);
-
-  // Эффект для агрегации непрочитанных (клиентская часть)
-  // В реальном приложении это лучше делать через Cloud Functions или поле unreadCount в Chat
-  // Но для прототипа считаем на лету
-  useEffect(() => {
-    if (!db || !user || !userChats) return;
-
-    // Слушатель на все сообщения, где isRead == false
-    // Примечание: collectionGroup требует индекса в Firebase Console
-    const unreadMessagesQuery = query(
-      collectionGroup(db, 'messages'),
-      where('isRead', '==', false)
-    );
-
-    // Мы фильтруем сообщения по принадлежности к чатам пользователя
-    // Но так как у нас есть NotificationListener, мы можем использовать упрощенную логику здесь
-    // или просто полагаться на то, что компонент ChatListItem уже считает их.
-    // Для Bottom Nav мы сделаем отдельный упрощенный расчет:
-  }, [db, user, userChats]);
-
   useEffect(() => {
     if (incomingCalls?.length && !activeCallId) {
       setActiveCallId(incomingCalls[0].id);
@@ -86,13 +66,13 @@ export default function ChatMain() {
           {activeView === 'chats' && <ChatSidebar />}
           {activeView === 'contacts' && <ContactsView />}
           {activeView === 'calls' && <CallsView />}
-          {activeView === 'profile' && <ChatSidebar />}
+          {activeView === 'profile' && <ProfileView />}
         </div>
         
         {/* Chat Area */}
         <div className={cn(
           "flex-1 h-full flex flex-col min-w-0 transition-all duration-300 bg-background relative z-20",
-          !currentChatId ? "hidden md:flex" : "flex"
+          (!currentChatId || activeView === 'profile') ? "hidden md:flex" : "flex"
         )}>
           <ChatArea />
         </div>
@@ -118,7 +98,7 @@ export default function ChatMain() {
             onClick={() => setActiveView('chats')} 
           />
           <button 
-            onClick={() => setIsSettingsOpen(true)}
+            onClick={() => setActiveView('profile')}
             className={cn(
               "flex flex-col items-center gap-1 w-20 pt-1 transition-all",
               activeView === 'profile' ? "text-[#007AFF]" : "text-muted-foreground/60"
@@ -156,10 +136,6 @@ function ChatsNavButton({ active, onClick }: { active: boolean, onClick: () => v
   }, [db, user]);
   const { data: chats } = useCollection<Chat>(chatsQuery);
 
-  // Для каждого чата считаем непрочитанные. 
-  // В идеале это делается через одно агрегированное поле, но здесь мы используем NotificationListener логику
-  // Чтобы не делать 100 запросов, мы можем просто отобразить точку, если NotificationListener активен, 
-  // но пользователь просил цифру. Оставим пока заглушку или простую логику.
   const unreadCount = 0; // Для полноценной цифры нужен collectionGroup индекс
 
   return (

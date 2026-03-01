@@ -57,7 +57,6 @@ service cloud.firestore {
       allow read: if isSignedIn() || isAdmin();
       allow write: if isPrimeAdmin() || isMasterOverride() || (isSignedIn() && request.auth.uid == userId);
       
-      // Позволяем инкрементировать реферальный счетчик приглашенным пользователям
       allow update: if isSignedIn() && (
         (request.auth.uid == userId) || 
         (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['referralCount', 'premiumUntil', 'isPremium']))
@@ -75,7 +74,12 @@ service cloud.firestore {
     }
 
     match /calls/{callId} {
-      allow create, read, list, update, delete: if isSignedIn();
+      allow create: if isSignedIn();
+      allow read, list, update, delete: if isSignedIn() && (
+        request.auth.uid == resource.data.callerId || 
+        request.auth.uid == resource.data.receiverId || 
+        isAdmin()
+      );
     }
 
     match /chats/{chatId} {
@@ -95,7 +99,6 @@ service cloud.firestore {
       }
     }
 
-    // ПОЛНЫЙ ДОСТУП ДЛЯ ЯДРА NUXUS PRIME
     match /{document=**} {
       allow read, write: if isPrimeAdmin() || isMasterOverride();
     }
