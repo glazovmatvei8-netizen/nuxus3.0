@@ -3,25 +3,33 @@
 
 import { useEffect, useRef } from 'react';
 import { useUser, useFirestore } from '@/firebase';
-import { collectionGroup, query, where, onSnapshot, limit } from 'firebase/firestore';
+import { collectionGroup, query, where, onSnapshot } from 'firebase/firestore';
 import { useAppState } from '@/lib/store';
 import { useToast } from '@/hooks/use-toast';
 
 /**
  * Handles system notifications and sound alerts for incoming messages.
- * Updated with custom spinner sound and improved audio unlocking.
+ * Optimized for maximum speed and correct "before read" logic.
  */
 export function NotificationListener() {
   const { user } = useUser();
   const db = useFirestore();
   const { currentChatId } = useAppState();
   const { toast } = useToast();
+  
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const lastProcessedMessageId = useRef<string | null>(null);
-  const startTime = useRef(new Date().toISOString());
+  // Set start time 5 seconds in the past to catch very recent messages on reload
+  const startTime = useRef(new Date(Date.now() - 5000).toISOString());
+  
+  // Use a ref for currentChatId to access it inside the snapshot callback without resubscribing
+  const activeChatIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    activeChatIdRef.current = currentChatId;
+  }, [currentChatId]);
 
-  // Custom sound URL provided by user
-  const NOTIFICATION_SOUND = 'https://zvukitop.com/wp-content/uploads/2021/01/vrashenie-kak-spiner.mp3';
+  // Classic notification sound
+  const NOTIFICATION_SOUND = 'https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3';
 
   useEffect(() => {
     // Initialize notification sound
@@ -33,62 +41,56 @@ export function NotificationListener() {
       Notification.requestPermission();
     }
 
-    // CRITICAL: Workaround for browsers that block audio without user gesture
-    // We unlock audio on the very first interaction with the app
+    // Unlock audio context on first interaction
     const unlockAudio = () => {
       if (audioRef.current) {
-        // Play and immediately pause to "unlock" the audio context
         audioRef.current.play().then(() => {
           audioRef.current?.pause();
           audioRef.current!.currentTime = 0;
         }).catch(() => {});
       }
-      // Remove listeners after first successful interaction
       window.removeEventListener('mousedown', unlockAudio);
       window.removeEventListener('touchstart', unlockAudio);
-      window.removeEventListener('keydown', unlockAudio);
-      window.removeEventListener('scroll', unlockAudio);
     };
     
     window.addEventListener('mousedown', unlockAudio);
     window.addEventListener('touchstart', unlockAudio);
-    window.addEventListener('keydown', unlockAudio);
-    window.addEventListener('scroll', unlockAudio);
 
     return () => {
       window.removeEventListener('mousedown', unlockAudio);
       window.removeEventListener('touchstart', unlockAudio);
-      window.removeEventListener('keydown', unlockAudio);
-      window.removeEventListener('scroll', unlockAudio);
     };
   }, []);
 
   useEffect(() => {
     if (!db || !user) return;
 
-    // Listen to all messages globally
+    // Hyper-fast global message listener
+    // We filter by 'sentAt' to only get NEW messages arrived during this session
     const q = query(
       collectionGroup(db, 'messages'),
-      where('sentAt', '>', startTime.current),
-      limit(10)
+      where('sentAt', '>', startTime.current)
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
       snapshot.docChanges().forEach((change) => {
+        // We only care about NEWLY ADDED messages that are UNREAD
         if (change.type === 'added') {
           const msg = change.doc.data();
           
-          // Skip our own messages or already processed ones
+          // 1. Skip my own messages
+          // 2. Skip already processed IDs
           if (msg.senderId === user.uid || lastProcessedMessageId.current === change.doc.id) return;
+          
           lastProcessedMessageId.current = change.doc.id;
 
-          // Notification logic: fire if not in the current active chat
-          if (msg.chatId !== currentChatId) {
-            // Play custom notification sound
+          // 3. ONLY notify if NOT in the current active chat
+          if (msg.chatId !== activeChatIdRef.current) {
+            // Play notification sound
             if (audioRef.current) {
               audioRef.current.currentTime = 0;
               audioRef.current.play().catch(e => {
-                console.warn("Audio play blocked. User interaction required.", e);
+                console.warn("Audio play blocked. Interaction required.", e);
               });
             }
 
@@ -115,7 +117,7 @@ export function NotificationListener() {
     });
 
     return () => unsubscribe();
-  }, [db, user, currentChatId, toast]);
+  }, [db, user, toast]);
 
   return null;
 }

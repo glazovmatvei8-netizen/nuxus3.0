@@ -73,7 +73,6 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, amIPremium = 
   }, [countdown, chatId, message.id, db]);
 
   const toggleAudio = (e: React.MouseEvent | React.PointerEvent) => {
-    // MEMENTO: One-click interaction fix
     e.stopPropagation();
     e.preventDefault();
     
@@ -153,7 +152,7 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, amIPremium = 
               const percentage = totalVotes > 0 ? (voteCount / totalVotes) * 100 : 0;
               const hasVoted = user && opt.votes.includes(user.uid);
               return (
-                <div key={opt.id} onClick={(e) => handlePollVote(e, opt.id)} className="space-y-1.5 cursor-pointer group">
+                <div key={opt.id} onPointerDown={(e) => handlePollVote(e, opt.id)} className="space-y-1.5 cursor-pointer group">
                   <div className="flex justify-between items-center px-1">
                     <span className={cn("text-xs transition-colors", hasVoted ? "text-primary font-bold" : "text-white/80 group-hover:text-white")}>{opt.text}</span>
                     <span className="text-[10px] font-mono text-muted-foreground">{voteCount}</span>
@@ -174,7 +173,7 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, amIPremium = 
 
     if (message.contentType === 'video_note') {
       return (
-        <div className="relative p-1" onClick={(e) => { e.stopPropagation(); e.preventDefault(); setGalleryOpen(true); }} onPointerDown={e => e.stopPropagation()}>
+        <div className="relative p-1" onPointerDown={(e) => { e.stopPropagation(); e.preventDefault(); setGalleryOpen(true); }} onClick={e => e.stopPropagation()}>
           <div className="w-48 h-48 rounded-full overflow-hidden border-4 border-primary/20 shadow-2xl cursor-pointer bg-black group relative">
             <video 
               ref={videoNoteRef}
@@ -200,7 +199,11 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, amIPremium = 
           {isOneTime && <div className="flex items-center gap-1.5 mb-1 px-1"><EyeOff className="w-3 h-3 text-accent" /><span className="text-[8px] font-bold uppercase text-accent tracking-widest">Один просмотр</span></div>}
           <div className={cn("grid gap-1 mt-1 overflow-hidden rounded-2xl", albumMedia.length === 1 ? "grid-cols-1" : "grid-cols-2")}>
             {albumMedia.map((media: any, idx: number) => (
-              <div key={idx} onClick={(e) => { e.stopPropagation(); e.preventDefault(); if(!message.isExpired) { setGalleryIndex(idx); setGalleryOpen(true); } }} className={cn("relative cursor-pointer group bg-black border border-white/5 overflow-hidden", albumMedia.length === 1 ? "w-64 h-64" : "h-32")}>
+              <div 
+                key={idx} 
+                onPointerDown={(e) => { e.stopPropagation(); e.preventDefault(); if(!message.isExpired) { setGalleryIndex(idx); setGalleryOpen(true); } }} 
+                className={cn("relative cursor-pointer group bg-black border border-white/5 overflow-hidden", albumMedia.length === 1 ? "w-64 h-64" : "h-32")}
+              >
                 {media.type === 'video' ? <video src={media.url} className={cn("w-full h-full object-cover", isOneTime && "blur-2xl opacity-40")} muted playsInline /> : <img src={media.url} className={cn("w-full h-full object-cover", isOneTime && "blur-2xl opacity-40")} />}
                 <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center">
                   {media.type === 'video' ? <PlayCircle className="w-8 h-8 text-white/50" /> : <Search className="w-6 h-6 text-white/0 group-hover:text-white/50 transition-all" />}
@@ -215,7 +218,12 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, amIPremium = 
       return (
         <div className="flex flex-col gap-2 mt-1 min-w-[200px]" onPointerDown={e => e.stopPropagation()} onClick={e => e.stopPropagation()}>
           <div className="flex items-center gap-3 p-3 bg-muted/20 rounded-2xl border border-white/5">
-            <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full bg-primary/20 text-primary hover:bg-primary hover:text-white transition-all shrink-0" onClick={toggleAudio}>
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="h-10 w-10 rounded-full bg-primary/20 text-primary hover:bg-primary hover:text-white transition-all shrink-0" 
+              onPointerDown={toggleAudio}
+            >
               {isPlaying ? <Pause className="w-5 h-5 fill-current" /> : <Play className="w-5 h-5 fill-current ml-0.5" />}
             </Button>
             <div className="flex-1 space-y-1.5">
@@ -223,7 +231,7 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, amIPremium = 
               <div className="flex justify-between items-center">
                 <span className="text-[10px] font-bold uppercase text-primary tracking-widest">Голосовое</span>
                 {amIPremium && (
-                  <Button variant="ghost" size="icon" className="h-6 w-6" onClick={async (e) => { e.stopPropagation(); e.preventDefault(); setIsTranscribing(true); try { const { text } = await transcribeVoice({ audioDataUri: message.content }); setTranscription(text); } catch(e){} finally { setIsTranscribing(false); } }} disabled={isTranscribing}>
+                  <Button variant="ghost" size="icon" className="h-6 w-6" onPointerDown={async (e) => { e.stopPropagation(); e.preventDefault(); setIsTranscribing(true); try { const { text } = await transcribeVoice({ audioDataUri: message.content }); setTranscription(text); } catch(e){} finally { setIsTranscribing(false); } }} disabled={isTranscribing}>
                     {isTranscribing ? <Loader2 className="w-3 h-3 animate-spin" /> : <Languages className="w-3 h-3" />}
                   </Button>
                 )}
