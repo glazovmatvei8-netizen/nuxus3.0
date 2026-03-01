@@ -8,19 +8,27 @@
 2. В правой части адресной строки нажмите на иконку **«Установить NuxusChat»** (монитор со стрелкой).
 3. **Хакерский способ (PowerShell)**:
    ```powershell
+   # Перейдите на рабочий стол
    cd $env:USERPROFILE\Desktop
+   # Создайте приложение (без иконки в параметрах, чтобы избежать ошибок конвертации)
    npx nativefier --name "NuxusChat" "https://9000-firebase-studio-1772042875348.cluster-kizalrzg35hz6u4i7pguwgt6ss.cloudworkstations.dev" --internal-urls ".*" --single-instance --tray
    ```
 
 ## 📱 Установка на Android (Native APK)
 Чтобы создать настоящий установочный файл **.apk**, используйте Google Bubblewrap:
 1. Установите Node.js на ПК.
-2. В терминале выполните:
+2. В терминале (не в System32!) выполните:
    ```bash
    npx @bubblewrap/cli init --manifest="https://9000-firebase-studio-1772042875348.cluster-kizalrzg35hz6u4i7pguwgt6ss.cloudworkstations.dev/manifest.json"
+   ```
+3. **Настройка JDK (Важно)**:
+   - Если Bubblewrap спрашивает путь к JDK 17, обычно это: `C:\Program Files\Java\jdk-17`
+   - Если вы не уверены, выберите **"Yes"**, чтобы Bubblewrap установил JDK автоматически.
+4. После инициализации выполните:
+   ```bash
    npx @bubblewrap/cli build
    ```
-3. Полученный файл `app-release-signed.apk` можно скинуть на телефон и установить.
+5. Полученный файл `app-release-signed.apk` можно скинуть на телефон и установить.
 
 ## 🍎 Установка на iPhone (iOS)
 1. Откройте сайт в **Safari**.
