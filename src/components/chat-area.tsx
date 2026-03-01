@@ -66,15 +66,17 @@ export default function ChatArea() {
   const { user: firebaseUser } = useUser();
   const db = useFirestore();
   const { t } = useTranslations();
-  const { currentChatId, setCurrentChatId, setActiveCallId } = useAppState();
+  const { currentChatId, setCurrentChatId, setActiveCallId, setLocalDrafts, localDrafts } = useAppState();
   
   const [isChatInfoOpen, setIsChatInfoOpen] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [isDrafting, setIsDrafting] = useState(false);
   const [replyTo, setReplyTo] = useState<Message | null>(null);
   const [editingMsg, setEditingMsg] = useState<Message | null>(null);
+  
+  // Локальное состояние ввода для максимальной скорости (без задержек от глобального стора)
   const [messageInput, setMessageInput] = useState('');
-  const [localDrafts, setLocalDrafts] = useState<Record<string, string>>({});
+  
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchingLocal, setIsSearchingLocal] = useState(false);
   
@@ -86,6 +88,7 @@ export default function ChatArea() {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const draftTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isTypingRef = useRef<boolean>(false);
 
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -147,7 +150,6 @@ export default function ChatArea() {
     }
   }, []);
 
-  // Оптимизированная логика статуса печатания
   const updateTypingStatus = useCallback((isTyping: boolean) => {
     if (!db || !currentChatId || !firebaseUser || isTypingRef.current === isTyping) return;
     
@@ -156,11 +158,29 @@ export default function ChatArea() {
     updateDoc(typingRef, { [`typing.${firebaseUser.uid}`]: isTyping }).catch(() => {});
   }, [db, currentChatId, firebaseUser]);
 
-  const onInputChange = (val: string) => {
-    setMessageInput(val);
-    if (currentChatId) setLocalDrafts(prev => ({ ...prev, [currentChatId]: val }));
+  // Эффект для дебаунса сохранения черновика в глобальный стор
+  useEffect(() => {
+    if (!currentChatId) return;
 
-    // Логика дебаунса для печатания
+    if (draftTimeoutRef.current) clearTimeout(draftTimeoutRef.current);
+    
+    draftTimeoutRef.current = setTimeout(() => {
+      setLocalDrafts((prev: Record<string, string>) => ({
+        ...prev,
+        [currentChatId]: messageInput
+      }));
+    }, 500); // Сохраняем черновик только если пользователь не пишет полсекунды
+
+    return () => {
+      if (draftTimeoutRef.current) clearTimeout(draftTimeoutRef.current);
+    };
+  }, [messageInput, currentChatId, setLocalDrafts]);
+
+  const onInputChange = (val: string) => {
+    // Мгновенное обновление локального состояния для отсутствия лагов
+    setMessageInput(val);
+
+    // Логика дебаунса для статуса "печатает..."
     if (val.length > 0) {
       updateTypingStatus(true);
       if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
@@ -173,6 +193,7 @@ export default function ChatArea() {
     }
   };
 
+  // Синхронизация локального инпута при смене чата
   useEffect(() => {
     if (currentChatId) {
       setMessageInput(localDrafts[currentChatId] || '');
@@ -201,7 +222,6 @@ export default function ChatArea() {
     if (!trimmedContent || !currentChatId || !firebaseUser || !db) return;
     setIsSending(true);
     
-    // Сразу сбрасываем статус печатания
     updateTypingStatus(false);
     if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
 
@@ -237,13 +257,15 @@ export default function ChatArea() {
     setScheduledDate(undefined);
     setExpiryTime(null);
     setIsOneTime(false);
+    
     if (type_msg === 'text') {
       setMessageInput('');
-      if (currentChatId) setLocalDrafts(prev => ({ ...prev, [currentChatId]: '' }));
+      setLocalDrafts((prev: any) => ({ ...prev, [currentChatId]: '' }));
     }
+    
     setIsSending(false);
     setTimeout(() => scrollToBottom('smooth'), 100);
-  }, [messageInput, currentChatId, firebaseUser, db, userProfile, replyTo, editingMsg, scrollToBottom, scheduledDate, expiryTime, isOneTime, updateTypingStatus]);
+  }, [messageInput, currentChatId, firebaseUser, db, userProfile, replyTo, editingMsg, scrollToBottom, scheduledDate, expiryTime, isOneTime, updateTypingStatus, setLocalDrafts]);
 
   const handleAiDraft = async () => {
     if (!messages || !amIPremium) return;

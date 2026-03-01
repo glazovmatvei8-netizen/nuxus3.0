@@ -2,7 +2,7 @@
 "use client"
 
 import React, { createContext, useContext, useState } from 'react';
-import type { Message, Call } from './types';
+import type { Message } from './types';
 
 interface AppState {
   currentChatId: string | null;
@@ -11,6 +11,8 @@ interface AppState {
   setForwardingMessage: (msg: Message | null) => void;
   activeCallId: string | null;
   setActiveCallId: (id: string | null) => void;
+  localDrafts: Record<string, string>;
+  setLocalDrafts: React.Dispatch<React.SetStateAction<Record<string, string>>>;
 }
 
 const AppContext = createContext<AppState | undefined>(undefined);
@@ -19,6 +21,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [currentChatId, setCurrentChatId] = useState<string | null>(null);
   const [forwardingMessage, setForwardingMessage] = useState<Message | null>(null);
   const [activeCallId, setActiveCallId] = useState<string | null>(null);
+  const [localDrafts, setLocalDrafts] = useState<Record<string, string>>({});
 
   return (
     <AppContext.Provider value={{
@@ -27,7 +30,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       forwardingMessage,
       setForwardingMessage,
       activeCallId,
-      setActiveCallId
+      setActiveCallId,
+      localDrafts,
+      setLocalDrafts
     }}>
       {children}
     </AppContext.Provider>
