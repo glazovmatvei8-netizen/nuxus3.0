@@ -9,8 +9,8 @@ import { useToast } from '@/hooks/use-toast';
 import type { Chat, Message } from '@/lib/types';
 
 /**
- * Handles system notifications and sound alerts for incoming messages.
- * Enhanced for PC/Standalone stability to prevent white screen issues.
+ * Гипер-звуковое Ядро Уведомлений Nuxus v22.0.0.
+ * Оптимизировано для мгновенного отклика и работы на смартфонах.
  */
 export function NotificationListener() {
   const { user } = useUser();
@@ -22,11 +22,10 @@ export function NotificationListener() {
   const lastProcessedTimestamps = useRef<Record<string, string>>({});
   const isFirstLoad = useRef(true);
 
-  // Default Nuxus clean pop sound
+  // Классический премиальный звук Nuxus
   const NOTIFICATION_SOUND = 'https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3';
 
   useEffect(() => {
-    // Безопасная инициализация аудио для окружений ПК
     try {
       audioRef.current = new Audio(NOTIFICATION_SOUND);
       audioRef.current.preload = 'auto';
@@ -34,26 +33,29 @@ export function NotificationListener() {
       console.warn("Audio initialization failed:", e);
     }
     
-    if (typeof window !== 'undefined' && 'Notification' in window) {
-      if (Notification.permission === 'default') {
-        Notification.requestPermission().catch(() => {});
-      }
-    }
-
-    const unlockAudio = () => {
+    const initNotifications = async () => {
+      // Инициализация аудио-контекста при первом тапе (нужно для мобилок)
       if (audioRef.current) {
         audioRef.current.play().then(() => {
           audioRef.current?.pause();
           audioRef.current!.currentTime = 0;
         }).catch(() => {});
       }
-      window.removeEventListener('pointerdown', unlockAudio);
+
+      if (typeof window !== 'undefined' && 'Notification' in window) {
+        if (Notification.permission === 'default') {
+          try {
+            await Notification.requestPermission();
+          } catch (e) {}
+        }
+      }
+      window.removeEventListener('pointerdown', initNotifications);
     };
-    window.addEventListener('pointerdown', unlockAudio);
-    return () => window.removeEventListener('pointerdown', unlockAudio);
+
+    window.addEventListener('pointerdown', initNotifications);
+    return () => window.removeEventListener('pointerdown', initNotifications);
   }, []);
 
-  // Listen to CHATS where user is participant to detect new activity
   const chatsQuery = useMemoFirebase(() => {
     if (!db || !user) return null;
     return query(collection(db, 'chats'), where('participantIds', 'array-contains', user.uid));
@@ -62,7 +64,6 @@ export function NotificationListener() {
   useEffect(() => {
     if (!db || !user || !chatsQuery) return;
 
-    // Обертка для безопасности PC приложения
     let unsubscribe: () => void;
     
     try {
@@ -82,11 +83,19 @@ export function NotificationListener() {
             const lastTime = lastProcessedTimestamps.current[chatId];
             const newTime = chatData.lastMessageAt;
 
+            // Если пришло новое сообщение и этот чат сейчас НЕ открыт
             if (newTime && newTime !== lastTime) {
               lastProcessedTimestamps.current[chatId] = newTime;
 
               if (chatId !== currentChatId && !isFirstLoad.current) {
+                // МГНОВЕННЫЙ ЗВУК (не ждем загрузки сообщения)
+                if (audioRef.current) {
+                  audioRef.current.currentTime = 0;
+                  audioRef.current.play().catch(() => {});
+                }
+
                 try {
+                  // Подгружаем детали сообщения для пуша и тоста
                   const msgSnap = await getDocs(query(
                     collection(db, 'chats', chatId, 'messages'),
                     orderBy('sentAt', 'desc'),
@@ -97,22 +106,18 @@ export function NotificationListener() {
                     const msg = msgSnap.docs[0].data() as Message;
                     if (msg.senderId === user.uid) return;
 
-                    // Play sound with PC safety
-                    if (audioRef.current) {
-                      audioRef.current.currentTime = 0;
-                      audioRef.current.play().catch(() => {});
-                    }
-
-                    // System Notification
+                    // Системный пуш (для PWA / Standalone)
                     if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
                       try {
                         new Notification(msg.senderName || 'Nuxus', {
-                          body: msg.contentType === 'text' ? msg.content : `Отправил ${msg.contentType}`,
-                          icon: 'https://picsum.photos/seed/nuxus/192/192'
+                          body: msg.contentType === 'text' ? msg.content : `[${msg.contentType}]`,
+                          icon: 'https://picsum.photos/seed/nuxus/192/192',
+                          tag: chatId
                         });
                       } catch (e) {}
                     }
 
+                    // Внутреннее уведомление
                     toast({
                       title: msg.senderName,
                       description: msg.contentType === 'text' ? msg.content : `Прислал ${msg.contentType}`,
@@ -126,12 +131,10 @@ export function NotificationListener() {
         
         if (isFirstLoad.current) isFirstLoad.current = false;
       }, (error) => {
-        console.warn("Notification stream error:", error);
+        // Ошибка может возникнуть если индекс еще строится, просто игнорируем
+        console.warn("Notification stream wait:", error.message);
       });
-    } catch (e) {
-      console.warn("Could not start notification listener:", e);
-      return;
-    }
+    } catch (e) {}
 
     return () => unsubscribe && unsubscribe();
   }, [db, user, chatsQuery, currentChatId, toast]);

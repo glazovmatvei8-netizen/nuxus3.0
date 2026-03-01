@@ -8,8 +8,8 @@ import { getFirestore } from 'firebase/firestore';
 import { initializeAppCheck, ReCaptchaEnterpriseProvider } from 'firebase/app-check';
 
 /**
- * Инициализация Firebase с максимально надежной обработкой ошибок.
- * Предотвращает "белый экран" при сбоях в App Check или нестандартных окружениях (Electron).
+ * Инициализация Firebase v22.0.0.
+ * Максимальная защита от "белого экрана" в Windows-приложениях.
  */
 export function initializeFirebase() {
   let firebaseApp: FirebaseApp;
@@ -19,22 +19,19 @@ export function initializeFirebase() {
       firebaseApp = initializeApp(firebaseConfig);
     } catch (e) {
       console.error('Firebase initialization critical failure:', e);
-      // fallback
       firebaseApp = getApp();
     }
 
-    // App Check инициализируется только в браузере и не блокирует работу если упадет
+    // Защита от сбоя инициализации в Electron/Nativefier
     if (typeof window !== 'undefined') {
       try {
-        // Мы используем тот же API ключ для инициализации провайдера ReCaptcha
-        // Если вы видите ошибки 403 в консоли, проверьте настройки ReCaptcha в Google Cloud
         initializeAppCheck(firebaseApp, {
           provider: new ReCaptchaEnterpriseProvider(firebaseConfig.apiKey),
           isTokenAutoRefreshEnabled: true,
         });
       } catch (err) {
-        // Логируем, но не падаем, чтобы приложение не превратилось в белый экран
-        console.warn('Nuxus Shield (App Check) warning: App will work in limited mode:', err);
+        // Если App Check не поддерживается средой ПК, просто работаем дальше
+        console.warn('Nuxus Shield (App Check) disabled for compatibility:', err);
       }
     }
 

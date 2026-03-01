@@ -14,7 +14,7 @@ import { UserAvatar } from '@/components/user-avatar';
 import { 
   LogOut, Palette, Loader2, Crown, Check, 
   Monitor, Sparkles, Globe, Settings2, Upload, Moon, Droplets, ShieldCheck, Lock,
-  Users, Share2, Star, Bell, BellOff, Info, Languages
+  Users, Share2, Star, Bell, BellOff, Info, Languages, Smartphone
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { signOut } from 'firebase/auth';
@@ -112,7 +112,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         twoFactorEnabled: !!profile.twoFactorEnabled,
         twoFactorPin: profile.twoFactorPin || ''
       });
-      if ('Notification' in window) {
+      if (typeof window !== 'undefined' && 'Notification' in window) {
         setNotifPermission(Notification.permission);
       }
     }
@@ -146,13 +146,16 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
   };
 
   const requestNotifs = async () => {
-    if (!('Notification' in window)) return;
+    if (!('Notification' in window)) {
+      toast({ variant: 'destructive', title: "Не поддерживается", description: "Ваше устройство не поддерживает уведомления." });
+      return;
+    }
     
     if (Notification.permission === 'denied') {
       toast({ 
         variant: 'destructive', 
         title: "Доступ заблокирован", 
-        description: "Нажмите на иконку замочка в адресной строке и разрешите уведомления." 
+        description: "Разрешите уведомления в настройках браузера или системы." 
       });
       return;
     }
@@ -160,7 +163,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
     const res = await Notification.requestPermission();
     setNotifPermission(res);
     if (res === 'granted') {
-      toast({ title: "Уведомления успешно включены!" });
+      toast({ title: "Уведомления включены!" });
     } else {
       toast({ variant: 'destructive', title: "Доступ отклонен" });
     }
@@ -226,22 +229,24 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
             <TabsContent value="appearance" className="space-y-6 m-0 py-6">
               <div className="bg-muted/20 p-6 rounded-[2rem] border border-white/5 space-y-6">
                 <div className="space-y-4">
-                  <Label className="text-[10px] uppercase font-black tracking-widest text-primary flex items-center gap-2"><Bell className="w-3.5 h-3.5" /> Системные уведомления</Label>
+                  <Label className="text-[10px] uppercase font-black tracking-widest text-primary flex items-center gap-2"><Bell className="w-3.5 h-3.5" /> Уведомления</Label>
                   <Button variant="outline" className={cn("w-full h-14 rounded-2xl gap-3 border-white/5 shadow-inner transition-all", notifPermission === 'granted' ? 'bg-green-500/10 text-green-500 border-green-500/20' : 'bg-black/20')} onClick={requestNotifs}>
                     {notifPermission === 'granted' ? <Bell className="w-5 h-5" /> : <BellOff className="w-5 h-5 text-muted-foreground" />}
-                    <div className="flex flex-col items-start leading-none">
-                      <span className="text-[10px] font-black uppercase tracking-widest">{notifPermission === 'granted' ? 'Уведомления Активны' : 'Включить Пуши'}</span>
-                      <span className="text-[8px] opacity-60 uppercase mt-1">{notifPermission === 'denied' ? 'Доступ Заблокирован' : 'Звук + Визуальные'}</span>
+                    <div className="flex flex-col items-start leading-none text-left">
+                      <span className="text-[10px] font-black uppercase tracking-widest">{notifPermission === 'granted' ? 'Активны' : 'Включить Пуши'}</span>
+                      <span className="text-[8px] opacity-60 uppercase mt-1">Звук + Визуальные</span>
                     </div>
                   </Button>
-                  {notifPermission === 'denied' && (
-                    <div className="flex items-start gap-2 p-3 bg-destructive/10 rounded-xl border border-destructive/20 mt-2">
-                      <Info className="w-4 h-4 text-destructive shrink-0 mt-0.5" />
-                      <p className="text-[9px] text-destructive-foreground uppercase font-bold leading-tight">
-                        Нажмите на иконку «замочка» в адресной строке вашего браузера и переключите уведомления на «Разрешить».
+                  
+                  <div className="p-4 bg-primary/5 rounded-2xl border border-primary/10 flex items-start gap-3">
+                    <Smartphone className="w-5 h-5 text-primary shrink-0 mt-1" />
+                    <div className="space-y-1">
+                      <p className="text-[10px] font-black uppercase text-white">Мобильные тела</p>
+                      <p className="text-[9px] text-muted-foreground uppercase leading-relaxed font-bold">
+                        На iPhone/Android: Нажмите «Поделиться» &rarr; «На экран Домой». Только так уведомления будут приходить в фоне.
                       </p>
                     </div>
-                  )}
+                  </div>
                 </div>
 
                 <div className="space-y-4 pt-4 border-t border-white/5">

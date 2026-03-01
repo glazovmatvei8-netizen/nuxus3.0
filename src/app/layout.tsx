@@ -5,6 +5,7 @@ import { AppProvider } from '@/lib/store';
 import { Toaster } from '@/components/ui/toaster';
 import { FirebaseClientProvider } from '@/firebase/client-provider';
 import { Plus_Jakarta_Sans } from 'next/font/google';
+import Script from 'next/script';
 
 const font = Plus_Jakarta_Sans({
   subsets: ['latin', 'cyrillic'],
@@ -67,6 +68,19 @@ export default function RootLayout({
             <Toaster />
           </AppProvider>
         </FirebaseClientProvider>
+        <Script id="register-sw" strategy="afterInteractive">
+          {`
+            if ('serviceWorker' in navigator) {
+              window.addEventListener('load', function() {
+                navigator.serviceWorker.register('/sw.js').then(function(registration) {
+                  console.log('Nuxus ServiceWorker registered');
+                }, function(err) {
+                  console.log('Nuxus ServiceWorker registration failed: ', err);
+                });
+              });
+            }
+          `}
+        </Script>
       </body>
     </html>
   );
