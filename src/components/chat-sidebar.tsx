@@ -221,20 +221,17 @@ export default function ChatSidebar() {
   return (
     <div className="flex flex-col h-full bg-[#0a0a0c] overflow-hidden">
       <div className="px-4 pt-4 pb-2 shrink-0">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-3">
-            <div 
-              className="p-0.5 rounded-full border-2 border-white/10 transition-all"
-            >
-              <UserAvatar userId={user?.uid} className="h-9 w-9" />
-            </div>
-            <div className="flex items-center gap-1.5" onClick={() => isGlobalAdmin(profile) && setIsAdminPanelOpen(true)}>
-              <Lock className="w-3.5 h-3.5 text-white" />
-              <h1 className="text-[17px] font-black text-white tracking-tight">Чаты 🐱</h1>
-            </div>
+        {/* Header centered */}
+        <div className="relative flex items-center justify-center mb-4 min-h-[36px]">
+          <div 
+            className="flex items-center gap-1.5 cursor-pointer hover:opacity-80 transition-opacity" 
+            onClick={() => isGlobalAdmin(profile) && setIsAdminPanelOpen(true)}
+          >
+            <Lock className="w-3.5 h-3.5 text-white" />
+            <h1 className="text-[17px] font-black text-white tracking-tight">Чаты 🐱</h1>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="absolute right-0 flex items-center gap-2">
             <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full bg-white/10 hover:bg-white/20" onClick={() => setIsCreateModalOpen(true)}>
               <Plus className="w-5 h-5 text-white" />
             </Button>
