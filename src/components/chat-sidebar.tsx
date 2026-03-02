@@ -1,7 +1,7 @@
 
 "use client"
 
-import React, { useState, useMemo, memo } from 'react';
+import React, { useState, useMemo, memo, useEffect } from 'react';
 import { useAppState } from '@/lib/store';
 import { Button } from '@/components/ui/button';
 import { UserAvatar } from '@/components/user-avatar';
@@ -9,7 +9,8 @@ import {
   Plus, Bookmark, Pin, Star, 
   Check, CheckCheck,
   MessageSquare, Lock, SquarePen,
-  Search, Trash2, Circle, Sparkles
+  Search, Trash2, Circle, Sparkles,
+  Wifi, WifiOff
 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { CreateChatModal } from './modals/create-chat-modal';
@@ -130,10 +131,23 @@ export default function ChatSidebar() {
   const [activeTab, setActiveTab] = useState<'all' | 'private' | 'channels' | 'bots'>('all');
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isAdminPanelOpen, setIsAdminPanelOpen] = useState(false);
+  const [isOnline, setIsOnline] = useState(true);
   
   const [isEditMode, setIsEditMode] = useState(false);
   const [selectedChatIds, setSelectedChatIds] = useState<string[]>([]);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    setIsOnline(navigator.onLine);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
 
   const userProfileRef = useMemoFirebase(() => (!db || !user) ? null : doc(db, 'users', user.uid), [db, user]);
   const { data: profile } = useDoc<User>(userProfileRef);
@@ -227,7 +241,13 @@ export default function ChatSidebar() {
             className="flex items-center gap-1.5 cursor-pointer hover:opacity-80 transition-opacity" 
             onClick={() => isGlobalAdmin(profile) && setIsAdminPanelOpen(true)}
           >
-            <Lock className="w-3.5 h-3.5 text-white" />
+            <div className="relative">
+              <Lock className="w-3.5 h-3.5 text-white" />
+              <div className={cn(
+                "absolute -top-1 -right-1 w-1.5 h-1.5 rounded-full border border-black",
+                isOnline ? "bg-green-500" : "bg-red-500 animate-pulse"
+              )} />
+            </div>
             <h1 className="text-[17px] font-black text-white tracking-tight">Чаты 🐱</h1>
           </div>
 
@@ -268,6 +288,13 @@ export default function ChatSidebar() {
           ))}
         </div>
       </div>
+
+      {!isOnline && (
+        <div className="mx-4 mb-2 p-2 bg-red-500/10 border border-red-500/20 rounded-xl flex items-center justify-center gap-2 animate-pulse">
+          <WifiOff className="w-3 h-3 text-red-500" />
+          <span className="text-[10px] font-black text-red-500 uppercase tracking-widest">Режим оффлайн: Данные из кэша</span>
+        </div>
+      )}
 
       <ScrollArea className="flex-1 scrollbar-hide">
         <div className="pb-32">

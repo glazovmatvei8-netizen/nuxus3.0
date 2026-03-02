@@ -4,11 +4,11 @@
 import { firebaseConfig } from '@/firebase/config';
 import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
-import { getFirestore } from 'firebase/firestore';
+import { getFirestore, enableMultiTabIndexedDbPersistence, initializeFirestore, CACHE_SIZE_UNLIMITED } from 'firebase/firestore';
 
 /**
- * Инициализация Firebase v23.0.0.
- * Максимальная отказоустойчивость. App Check удален для предотвращения "белого экрана" на ПК.
+ * Инициализация Firebase v0.53.0 Resilience Core.
+ * Включена система Offline Persistence для работы при глушении интернета.
  */
 export function initializeFirebase() {
   let firebaseApp: FirebaseApp;
@@ -20,17 +20,34 @@ export function initializeFirebase() {
       console.warn('Firebase core warm-up...');
       firebaseApp = getApp();
     }
-    return getSdks(firebaseApp);
+  } else {
+    firebaseApp = getApp();
   }
 
-  return getSdks(getApp());
-}
+  const auth = getAuth(firebaseApp);
+  
+  // Инициализация Firestore с неограниченным кэшем для работы оффлайн
+  const firestore = initializeFirestore(firebaseApp, {
+    cacheSizeBytes: CACHE_SIZE_UNLIMITED
+  });
 
-export function getSdks(firebaseApp: FirebaseApp) {
+  // Включение многовкладочного оффлайн-режима
+  if (typeof window !== 'undefined') {
+    enableMultiTabIndexedDbPersistence(firestore).catch((err) => {
+      if (err.code === 'failed-precondition') {
+        // Вероятно, открыто несколько вкладок
+        console.warn('Persistence failed: Multiple tabs open');
+      } else if (err.code === 'unimplemented') {
+        // Браузер не поддерживает Persistence
+        console.warn('Persistence failed: Browser not supported');
+      }
+    });
+  }
+
   return {
     firebaseApp,
-    auth: getAuth(firebaseApp),
-    firestore: getFirestore(firebaseApp)
+    auth,
+    firestore
   };
 }
 

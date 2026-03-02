@@ -63,7 +63,6 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-title" content="Nuxus" />
         <link rel="apple-touch-icon" href="https://picsum.photos/seed/nuxus/180/180" />
         <link rel="icon" href="https://picsum.photos/seed/nuxus/32/32" />
-        {/* Splash Screens for iOS */}
         <link rel="apple-touch-startup-image" href="https://picsum.photos/seed/nuxus-launch/1170/2532" media="(device-width: 390px) and (device-height: 844px) and (-webkit-device-pixel-ratio: 3)" />
       </head>
       <body className="font-sans antialiased bg-[#0a0a0c] text-foreground overflow-hidden h-[100dvh] selection:bg-primary/30">
@@ -77,10 +76,11 @@ export default function RootLayout({
           {`
             if ('serviceWorker' in navigator) {
               window.addEventListener('load', function() {
-                navigator.serviceWorker.register('/sw.js').then(function(registration) {
-                  console.log('Nuxus Core: ServiceWorker Active');
+                // Прямая регистрация Service Worker для Offline-режима
+                navigator.serviceWorker.register('/sw.js').then(function(reg) {
+                  console.log('Nuxus Resilience Core: SW Active');
                 }).catch(function(err) {
-                  console.log('Nuxus Core: SW Registration Failed', err);
+                  console.log('Nuxus Resilience Core: SW Failed', err);
                 });
               });
             }
