@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useRef, useEffect } from 'react';
@@ -14,7 +15,8 @@ import {
   LogOut, Palette, Loader2, Crown, Check, 
   Monitor, Sparkles, Settings2, Moon, Droplets, ShieldCheck, Lock,
   Users, Share2, Star, Bell, BellOff, Info, Languages, Smartphone, Camera,
-  Eye, UserCheck, MessageCircle, Share, PlusSquare, ShieldCheck as ShieldIcon, Zap
+  Eye, UserCheck, MessageCircle, Share, PlusSquare, ShieldCheck as ShieldIcon, Zap,
+  ExternalLink, MousePointerClick
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { signOut } from 'firebase/auth';
@@ -138,10 +140,20 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
     }
   };
 
-  const copyReferralLink = () => {
-    const url = typeof window !== 'undefined' ? `${window.location.origin}?ref=${user?.uid}` : '';
-    navigator.clipboard.writeText(url);
-    toast({ title: "Ссылка скопирована!" });
+  const shareApp = async () => {
+    const url = typeof window !== 'undefined' ? window.location.origin : 'https://nuxus.chat';
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: 'Nuxus — Технологичное Ядро Общения',
+          text: 'Присоединяйся к Ядру Nuxus — премиальному мессенджеру нового поколения.',
+          url: url,
+        });
+      } catch (e) {}
+    } else {
+      navigator.clipboard.writeText(url);
+      toast({ title: "Ссылка скопирована!" });
+    }
   };
 
   const requestNotificationPermission = async () => {
@@ -153,8 +165,6 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
     setNotifPermission(permission);
     if (permission === 'granted') {
       toast({ title: "Успех", description: "Уведомления успешно включены" });
-    } else {
-      toast({ title: "Доступ запрещен", description: "Вы отклонили запрос на уведомления", variant: "destructive" });
     }
   };
 
@@ -289,7 +299,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
               </div>
             </TabsContent>
 
-            <TabsContent value="referral" className="py-6">
+            <TabsContent value="referral" className="py-6 space-y-6">
               <div className="bg-muted/20 p-6 rounded-[2.5rem] border border-white/5 space-y-6">
                 <div className="text-center space-y-2">
                   <div className="bg-primary/10 w-16 h-16 rounded-3xl flex items-center justify-center mx-auto mb-2"><Users className="w-8 h-8 text-primary" /></div>
@@ -300,7 +310,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                   <div className="flex justify-between text-[10px] font-black uppercase"><span className="text-muted-foreground">Прогресс</span><span className="text-primary">{profile?.referralCount || 0} / 5</span></div>
                   <Progress value={((profile?.referralCount || 0) % 5) * 20} className="h-2" />
                 </div>
-                <Button onClick={copyReferralLink} className="w-full h-12 rounded-2xl bg-primary/20 text-primary hover:bg-primary hover:text-white transition-all font-black uppercase text-[10px] tracking-widest"><Share2 className="w-4 h-4 mr-2" /> Поделиться ссылкой</Button>
+                <Button onClick={shareApp} className="w-full h-12 rounded-2xl bg-primary/20 text-primary hover:bg-primary hover:text-white transition-all font-black uppercase text-[10px] tracking-widest"><Share2 className="w-4 h-4 mr-2" /> Поделиться ссылкой</Button>
               </div>
             </TabsContent>
 
@@ -308,38 +318,41 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
               <div className="space-y-6">
                 <div className="text-center space-y-2 mb-4">
                   <Smartphone className="w-12 h-12 text-primary mx-auto mb-2" />
-                  <h3 className="text-xl font-black uppercase italic text-white tracking-tighter">Nuxus Mobile</h3>
-                  <p className="text-[10px] font-bold text-muted-foreground uppercase">Инструкция по установке</p>
+                  <h3 className="text-xl font-black uppercase italic text-white tracking-tighter">Nuxus Standalone</h3>
+                  <p className="text-[10px] font-bold text-muted-foreground uppercase">Версия для iPhone и Android</p>
+                </div>
+
+                <div className="p-4 bg-muted/10 rounded-2xl border border-white/5">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Zap className="w-4 h-4 text-accent" />
+                    <span className="text-[10px] font-black uppercase text-white">Метод «Быстрые команды» (iOS)</span>
+                  </div>
+                  <div className="space-y-3 text-[11px] text-muted-foreground leading-relaxed">
+                    <p className="flex gap-2 items-start"><span className="bg-white/10 px-1.5 rounded font-black text-white">1</span> Откройте системное приложение <b>«Команды»</b></p>
+                    <p className="flex gap-2 items-start"><span className="bg-white/10 px-1.5 rounded font-black text-white">2</span> Нажмите <b>+</b> &rarr; <b>Добавить действие</b> &rarr; Поиск: <b>Открыть URL</b></p>
+                    <p className="flex gap-2 items-start"><span className="bg-white/10 px-1.5 rounded font-black text-white">3</span> Вставьте адрес сайта Nuxus и нажмите <b>«На экран Домой»</b></p>
+                  </div>
                 </div>
 
                 <div className="space-y-3">
-                  <div className="bg-muted/20 p-4 rounded-2xl border border-white/5 flex items-center gap-4">
-                    <div className="h-10 w-10 rounded-xl bg-white/5 flex items-center justify-center shrink-0">
-                      <Share className="w-5 h-5 text-white" />
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-[8px] font-black text-muted-foreground uppercase mb-0.5">Шаг 1 (iOS)</p>
-                      <p className="text-xs font-bold text-white">Нажмите «Поделиться» в панели Safari</p>
-                    </div>
-                  </div>
-
-                  <div className="bg-muted/20 p-4 rounded-2xl border border-white/5 flex items-center gap-4">
-                    <div className="h-10 w-10 rounded-xl bg-white/5 flex items-center justify-center shrink-0">
-                      <PlusSquare className="w-5 h-5 text-white" />
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-[8px] font-black text-muted-foreground uppercase mb-0.5">Шаг 2 (iOS)</p>
-                      <p className="text-xs font-bold text-white">Выберите «На экран „Домой“»</p>
-                    </div>
-                  </div>
-
-                  <div className="bg-primary/10 p-4 rounded-2xl border border-primary/20 flex items-center gap-4">
+                  <div className="bg-muted/20 p-4 rounded-2xl border border-white/5 flex items-center gap-4 cursor-pointer hover:bg-white/5" onClick={shareApp}>
                     <div className="h-10 w-10 rounded-xl bg-primary/20 flex items-center justify-center shrink-0">
-                      <ShieldIcon className="w-5 h-5 text-primary" />
+                      <Share2 className="w-5 h-5 text-primary" />
                     </div>
                     <div className="flex-1">
-                      <p className="text-[8px] font-black text-primary uppercase mb-0.5">Android</p>
-                      <p className="text-xs font-bold text-white">Нажмите «Три точки» -> «Установить приложение»</p>
+                      <p className="text-[8px] font-black text-primary uppercase mb-0.5">Пригласить всех</p>
+                      <p className="text-xs font-bold text-white">Поделиться этим приложением</p>
+                    </div>
+                    <ExternalLink className="w-4 h-4 opacity-20" />
+                  </div>
+
+                  <div className="bg-muted/20 p-4 rounded-2xl border border-white/5 flex items-center gap-4">
+                    <div className="h-10 w-10 rounded-xl bg-accent/20 flex items-center justify-center shrink-0">
+                      <Smartphone className="w-5 h-5 text-accent" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-[8px] font-black text-accent uppercase mb-0.5">Android</p>
+                      <p className="text-xs font-bold text-white">Нажмите «Три точки» &rarr; «Установить приложение»</p>
                     </div>
                   </div>
                 </div>
