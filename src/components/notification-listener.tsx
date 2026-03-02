@@ -2,15 +2,15 @@
 "use client"
 
 import { useEffect, useRef } from 'react';
-import { useUser, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, query, where, onSnapshot, orderBy, limit, getDocs } from 'firebase/firestore';
+import { useUser, useFirestore, useMemoFirebase, useDoc } from '@/firebase';
+import { collection, query, where, onSnapshot, orderBy, limit, getDocs, doc } from 'firebase/firestore';
 import { useAppState } from '@/lib/store';
 import { useToast } from '@/hooks/use-toast';
-import type { Chat, Message } from '@/lib/types';
+import type { Chat, Message, User } from '@/lib/types';
 
 /**
- * Гипер-звуковое Ядро Уведомлений Nuxus v22.0.0.
- * Оптимизировано для мгновенного отклика и работы на смартфонах.
+ * Гипер-звуковое Ядро Уведомлений Nuxus v50.0.0.
+ * Теперь учитывает настройки уведомлений пользователя.
  */
 export function NotificationListener() {
   const { user } = useUser();
@@ -21,6 +21,9 @@ export function NotificationListener() {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const lastProcessedTimestamps = useRef<Record<string, string>>({});
   const isFirstLoad = useRef(true);
+
+  const userRef = useMemoFirebase(() => (!db || !user) ? null : doc(db, 'users', user.uid), [db, user]);
+  const { data: profile } = useDoc<User>(userRef);
 
   // Классический премиальный звук Nuxus
   const NOTIFICATION_SOUND = 'https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3';
@@ -34,7 +37,6 @@ export function NotificationListener() {
     }
     
     const initNotifications = async () => {
-      // Инициализация аудио-контекста при первом тапе (нужно для мобилок)
       if (audioRef.current) {
         audioRef.current.play().then(() => {
           audioRef.current?.pause();
@@ -62,7 +64,7 @@ export function NotificationListener() {
   }, [db, user]);
 
   useEffect(() => {
-    if (!db || !user || !chatsQuery) return;
+    if (!db || !user || !chatsQuery || !profile) return;
 
     let unsubscribe: () => void;
     
@@ -83,19 +85,29 @@ export function NotificationListener() {
             const lastTime = lastProcessedTimestamps.current[chatId];
             const newTime = chatData.lastMessageAt;
 
-            // Если пришло новое сообщение и этот чат сейчас НЕ открыт
             if (newTime && newTime !== lastTime) {
               lastProcessedTimestamps.current[chatId] = newTime;
 
               if (chatId !== currentChatId && !isFirstLoad.current) {
-                // МГНОВЕННЫЙ ЗВУК (не ждем загрузки сообщения)
+                // Проверка настроек уведомлений
+                const notifSettings = profile.settings?.notifications;
+                let shouldNotify = true;
+
+                if (notifSettings) {
+                  if (chatData.type === 'private' && notifSettings.messages === false) shouldNotify = false;
+                  if (chatData.type === 'group' && notifSettings.groups === false) shouldNotify = false;
+                  if (chatData.type === 'channel' && notifSettings.channels === false) shouldNotify = false;
+                }
+
+                if (!shouldNotify) return;
+
+                // МГНОВЕННЫЙ ЗВУК
                 if (audioRef.current) {
                   audioRef.current.currentTime = 0;
                   audioRef.current.play().catch(() => {});
                 }
 
                 try {
-                  // Подгружаем детали сообщения для пуша и тоста
                   const msgSnap = await getDocs(query(
                     collection(db, 'chats', chatId, 'messages'),
                     orderBy('sentAt', 'desc'),
@@ -106,11 +118,16 @@ export function NotificationListener() {
                     const msg = msgSnap.docs[0].data() as Message;
                     if (msg.senderId === user.uid) return;
 
-                    // Системный пуш (для PWA / Standalone)
+                    const showPreview = profile.settings?.notifications?.previews !== false;
+                    const displayContent = showPreview 
+                      ? (msg.contentType === 'text' ? msg.content : `[${msg.contentType}]`)
+                      : 'Новое сообщение';
+
+                    // Системный пуш
                     if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
                       try {
                         new Notification(msg.senderName || 'Nuxus', {
-                          body: msg.contentType === 'text' ? msg.content : `[${msg.contentType}]`,
+                          body: displayContent,
                           icon: 'https://picsum.photos/seed/nuxus/192/192',
                           tag: chatId
                         });
@@ -120,7 +137,7 @@ export function NotificationListener() {
                     // Внутреннее уведомление
                     toast({
                       title: msg.senderName,
-                      description: msg.contentType === 'text' ? msg.content : `Прислал ${msg.contentType}`,
+                      description: displayContent,
                     });
                   }
                 } catch (e) {}
@@ -131,13 +148,12 @@ export function NotificationListener() {
         
         if (isFirstLoad.current) isFirstLoad.current = false;
       }, (error) => {
-        // Ошибка может возникнуть если индекс еще строится, просто игнорируем
         console.warn("Notification stream wait:", error.message);
       });
     } catch (e) {}
 
     return () => unsubscribe && unsubscribe();
-  }, [db, user, chatsQuery, currentChatId, toast]);
+  }, [db, user, chatsQuery, currentChatId, toast, profile]);
 
   return null;
 }

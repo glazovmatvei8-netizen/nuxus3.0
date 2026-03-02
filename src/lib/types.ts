@@ -110,11 +110,19 @@ export interface UserPrivacy {
   whoCanMessageMe: 'everybody' | 'premium';
 }
 
+export interface UserNotifications {
+  messages: boolean;
+  groups: boolean;
+  channels: boolean;
+  previews: boolean;
+}
+
 export interface UserSettings {
   theme: 'default' | 'ocean' | 'midnight';
   chatBackground: string;
   messageSize: 'small' | 'medium' | 'large';
   privacy: UserPrivacy;
+  notifications?: UserNotifications;
   statusEmoji?: string;
   statusText?: string;
   language?: string;

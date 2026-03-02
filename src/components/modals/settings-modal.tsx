@@ -16,7 +16,7 @@ import {
   Monitor, Sparkles, Settings2, Moon, Droplets, ShieldCheck, Lock,
   Users, Share2, Star, Bell, BellOff, Info, Languages, Smartphone, Camera,
   Eye, UserCheck, MessageCircle, Share, PlusSquare, ShieldCheck as ShieldIcon, Zap,
-  ExternalLink, MousePointerClick
+  ExternalLink, MousePointerClick, Radio, ChevronRight
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { signOut } from 'firebase/auth';
@@ -70,7 +70,11 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
     allowGroupsFrom: 'everybody',
     whoCanMessageMe: 'everybody',
     twoFactorEnabled: false,
-    twoFactorPin: ''
+    twoFactorPin: '',
+    notifMessages: true,
+    notifGroups: true,
+    notifChannels: true,
+    notifPreviews: true
   });
 
   const [isSubmittingPayment, setIsSubmittingPayment] = useState(false);
@@ -93,7 +97,11 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         allowGroupsFrom: profile.settings?.privacy?.allowGroupsFrom || 'everybody',
         whoCanMessageMe: profile.settings?.privacy?.whoCanMessageMe || 'everybody',
         twoFactorEnabled: !!profile.twoFactorEnabled,
-        twoFactorPin: profile.twoFactorPin || ''
+        twoFactorPin: profile.twoFactorPin || '',
+        notifMessages: profile.settings?.notifications?.messages ?? true,
+        notifGroups: profile.settings?.notifications?.groups ?? true,
+        notifChannels: profile.settings?.notifications?.channels ?? true,
+        notifPreviews: profile.settings?.notifications?.previews ?? true
       });
       if (typeof window !== 'undefined' && 'Notification' in window) {
         setNotifPermission(Notification.permission);
@@ -121,6 +129,12 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
           lastSeenVisibility: form.lastSeenVisibility,
           allowGroupsFrom: form.allowGroupsFrom,
           whoCanMessageMe: form.whoCanMessageMe,
+        },
+        notifications: {
+          messages: form.notifMessages,
+          groups: form.notifGroups,
+          channels: form.notifChannels,
+          previews: form.notifPreviews
         }
       }
     });
@@ -182,9 +196,9 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
           <TabsList className="grid grid-cols-5 bg-muted/50 p-1 mx-6 mt-4 rounded-2xl shrink-0 border border-white/5">
             <TabsTrigger value="profile" className="text-[8px] uppercase font-black tracking-widest px-1">Профиль</TabsTrigger>
             <TabsTrigger value="security" className="text-[8px] uppercase font-black tracking-widest px-1">Защита</TabsTrigger>
+            <TabsTrigger value="appearance" className="text-[8px] uppercase font-black tracking-widest px-1">Увед.</TabsTrigger>
             <TabsTrigger value="referral" className="text-[8px] uppercase font-black tracking-widest px-1">Друзья</TabsTrigger>
-            <TabsTrigger value="app" className="text-[8px] uppercase font-black tracking-widest px-1">Приложение</TabsTrigger>
-            <TabsTrigger value="store" className="text-[8px] uppercase font-black tracking-widest px-1">Prime</TabsTrigger>
+            <TabsTrigger value="app" className="text-[8px] uppercase font-black tracking-widest px-1">Core</TabsTrigger>
           </TabsList>
 
           <ScrollArea className="flex-1 px-6">
@@ -299,6 +313,61 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
               </div>
             </TabsContent>
 
+            <TabsContent value="appearance" className="space-y-6 m-0 py-6">
+              <div className="space-y-6">
+                <div className="space-y-3">
+                  <Label className="text-[10px] uppercase font-black tracking-[0.2em] text-muted-foreground ml-4">УВЕДОМЛЕНИЯ О СООБЩЕНИЯХ</Label>
+                  <div className="bg-[#1c1c1e] rounded-2xl overflow-hidden divide-y divide-white/[0.05]">
+                    <div className="flex items-center justify-between p-4 active:bg-white/[0.02] transition-colors">
+                      <div className="flex items-center gap-3">
+                        <div className="h-8 w-8 rounded-lg bg-blue-500 flex items-center justify-center shadow-lg">
+                          <MessageCircle className="w-5 h-5 text-white" />
+                        </div>
+                        <span className="text-[16px] font-medium text-white">Личные чаты</span>
+                      </div>
+                      <Switch checked={form.notifMessages} onCheckedChange={v => setForm({...form, notifMessages: v})} />
+                    </div>
+                    <div className="flex items-center justify-between p-4 active:bg-white/[0.02] transition-colors">
+                      <div className="flex items-center gap-3">
+                        <div className="h-8 w-8 rounded-lg bg-green-500 flex items-center justify-center shadow-lg">
+                          <Users className="w-5 h-5 text-white" />
+                        </div>
+                        <span className="text-[16px] font-medium text-white">Группы</span>
+                      </div>
+                      <Switch checked={form.notifGroups} onCheckedChange={v => setForm({...form, notifGroups: v})} />
+                    </div>
+                    <div className="flex items-center justify-between p-4 active:bg-white/[0.02] transition-colors">
+                      <div className="flex items-center gap-3">
+                        <div className="h-8 w-8 rounded-lg bg-red-500 flex items-center justify-center shadow-lg">
+                          <Radio className="w-5 h-5 text-white" />
+                        </div>
+                        <span className="text-[16px] font-medium text-white">Каналы</span>
+                      </div>
+                      <Switch checked={form.notifChannels} onCheckedChange={v => setForm({...form, notifChannels: v})} />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <Label className="text-[10px] uppercase font-black tracking-[0.2em] text-muted-foreground ml-4">НАСТРОЙКИ ИНТЕРФЕЙСА</Label>
+                  <div className="bg-[#1c1c1e] rounded-2xl overflow-hidden divide-y divide-white/[0.05]">
+                    <div className="flex items-center justify-between p-4 active:bg-white/[0.02] transition-colors">
+                      <div className="flex items-center gap-3">
+                        <div className="h-8 w-8 rounded-lg bg-gray-500 flex items-center justify-center shadow-lg">
+                          <Eye className="w-5 h-5 text-white" />
+                        </div>
+                        <span className="text-[16px] font-medium text-white">Показывать текст</span>
+                      </div>
+                      <Switch checked={form.notifPreviews} onCheckedChange={v => setForm({...form, notifPreviews: v})} />
+                    </div>
+                  </div>
+                  <p className="px-4 text-[11px] text-muted-foreground leading-relaxed">
+                    Если включено, текст сообщения будет виден в уведомлениях на экране блокировки.
+                  </p>
+                </div>
+              </div>
+            </TabsContent>
+
             <TabsContent value="referral" className="py-6 space-y-6">
               <div className="bg-muted/20 p-6 rounded-[2.5rem] border border-white/5 space-y-6">
                 <div className="text-center space-y-2">
@@ -334,33 +403,10 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                   </div>
                 </div>
 
-                <div className="space-y-3">
-                  <div className="bg-muted/20 p-4 rounded-2xl border border-white/5 flex items-center gap-4 cursor-pointer hover:bg-white/5" onClick={shareApp}>
-                    <div className="h-10 w-10 rounded-xl bg-primary/20 flex items-center justify-center shrink-0">
-                      <Share2 className="w-5 h-5 text-primary" />
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-[8px] font-black text-primary uppercase mb-0.5">Пригласить всех</p>
-                      <p className="text-xs font-bold text-white">Поделиться этим приложением</p>
-                    </div>
-                    <ExternalLink className="w-4 h-4 opacity-20" />
-                  </div>
-
-                  <div className="bg-muted/20 p-4 rounded-2xl border border-white/5 flex items-center gap-4">
-                    <div className="h-10 w-10 rounded-xl bg-accent/20 flex items-center justify-center shrink-0">
-                      <Smartphone className="w-5 h-5 text-accent" />
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-[8px] font-black text-accent uppercase mb-0.5">Android</p>
-                      <p className="text-xs font-bold text-white">Нажмите «Три точки» &rarr; «Установить приложение»</p>
-                    </div>
-                  </div>
-                </div>
-
                 <div className="p-4 bg-muted/10 rounded-2xl border border-white/5">
                   <div className="flex items-center gap-2 mb-3">
                     <Bell className="w-4 h-4 text-primary" />
-                    <span className="text-[10px] font-black uppercase text-white">Уведомления</span>
+                    <span className="text-[10px] font-black uppercase text-white">Пуш-уведомления</span>
                   </div>
                   <Button 
                     variant="outline" 
@@ -369,21 +415,6 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                   >
                     {notifPermission === 'granted' ? 'Включены' : 'Включить пуш-уведомления'}
                   </Button>
-                </div>
-              </div>
-            </TabsContent>
-
-            <TabsContent value="store" className="py-6">
-              <div className="relative p-6 rounded-[2.5rem] bg-gradient-to-br from-primary/20 to-accent/10 border border-primary/20 overflow-hidden text-center">
-                <Crown className="w-12 h-12 text-primary mx-auto mb-4" />
-                <h3 className="text-xl font-black text-white italic tracking-tighter mb-4 uppercase">NUXUS PRIME</h3>
-                <div className="space-y-2">
-                  {PREMIUM_PLANS.map(plan => (
-                    <button key={plan.id} onClick={() => setPendingPayment(plan)} className="w-full h-14 rounded-2xl bg-black/40 border border-white/5 flex items-center justify-between px-6 hover:border-primary transition-all">
-                      <span className="font-bold text-xs uppercase">{plan.name}</span>
-                      <span className="font-black text-primary italic">{plan.price} ₽</span>
-                    </button>
-                  ))}
                 </div>
               </div>
             </TabsContent>
