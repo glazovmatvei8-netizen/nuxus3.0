@@ -267,7 +267,6 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                 <p className="text-[10px] font-bold text-muted-foreground uppercase">Ghost Resilience Edition</p>
               </div>
 
-              {/* НОВЫЙ БЛОК: DNS OVER HTTPS */}
               <div className="p-5 bg-primary/10 rounded-[2.5rem] border border-primary/20 space-y-4">
                 <div className="flex items-center gap-2 mb-3">
                   <Globe className="w-4 h-4 text-primary" />
@@ -279,7 +278,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                     <Button variant="outline" className="w-full h-10 rounded-xl text-[9px] font-bold uppercase border-white/10 gap-2" onClick={() => window.open('https://1.1.1.1/dns-query', '_blank')}>
                       <ExternalLink className="w-3.5 h-3.5" /> Скачать DNS профиль (1.1.1.1)
                     </Button>
-                    <p className="text-[8px] italic opacity-60 text-center">Установите профиль в Настройки -> Основные -> VPN и управление устройством</p>
+                    <p className="text-[8px] italic opacity-60 text-center">Установите профиль в Настройки &rarr; Основные &rarr; VPN и управление устройством</p>
                   </div>
                 </div>
               </div>
