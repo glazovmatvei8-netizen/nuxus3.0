@@ -14,11 +14,9 @@ import {
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { CreateChatModal } from './modals/create-chat-modal';
 import { AdminPanelModal } from './modals/admin-panel-modal';
-import { CreateStoryModal } from './modals/create-story-modal';
-import { StoryViewerModal } from './modals/story-viewer-modal';
-import type { User, Message, Chat, Story } from '@/lib/types';
+import type { User, Message, Chat } from '@/lib/types';
 import { useFirestore, useUser, useCollection, useDoc, useMemoFirebase } from '@/firebase';
-import { collection, query, where, doc, limit, orderBy, writeBatch, collectionGroup } from 'firebase/firestore';
+import { collection, query, where, doc, limit, orderBy, writeBatch } from 'firebase/firestore';
 import { formatDisplayName, cn, isGlobalAdmin } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
@@ -132,8 +130,6 @@ export default function ChatSidebar() {
   const [activeTab, setActiveTab] = useState<'all' | 'private' | 'channels' | 'bots'>('all');
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isAdminPanelOpen, setIsAdminPanelOpen] = useState(false);
-  const [isCreateStoryOpen, setIsCreateStoryOpen] = useState(false);
-  const [selectedUserStories, setSelectedUserStories] = useState<Story[] | null>(null);
   
   const [isEditMode, setIsEditMode] = useState(false);
   const [selectedChatIds, setSelectedChatIds] = useState<string[]>([]);
@@ -147,18 +143,6 @@ export default function ChatSidebar() {
     return query(collection(db, 'chats'), where('participantIds', 'array-contains', user.uid));
   }, [db, user]);
   const { data: chats } = useCollection<Chat>(chatsQuery);
-
-  const storiesQuery = useMemoFirebase(() => {
-    if (!db) return null;
-    const now = new Date().toISOString();
-    return query(
-      collectionGroup(db, 'stories'),
-      where('expiresAt', '>', now),
-      orderBy('expiresAt', 'asc'),
-      limit(50)
-    );
-  }, [db]);
-  const { data: allStories } = useCollection<Story>(storiesQuery);
 
   const pinnedIds = profile?.pinnedChatIds || [];
 
@@ -234,44 +218,13 @@ export default function ChatSidebar() {
     }
   };
 
-  // Группировка историй: свои + контакты с активным чатом
-  const groupedStories = useMemo(() => {
-    if (!allStories || !chats || !user) return {};
-    const chatPartnerIds = new Set(chats.flatMap(c => c.participantIds));
-    return allStories.reduce((acc, story) => {
-      if (story.userId === user.uid || chatPartnerIds.has(story.userId)) {
-        if (!acc[story.userId]) acc[story.userId] = [];
-        acc[story.userId].push(story);
-      }
-      return acc;
-    }, {} as Record<string, Story[]>);
-  }, [allStories, chats, user]);
-
-  const hasUnseenStories = useMemo(() => {
-    if (!user) return false;
-    return Object.values(groupedStories).some(stories => 
-      stories.some(s => !s.views?.includes(user.uid))
-    );
-  }, [groupedStories, user]);
-
   return (
     <div className="flex flex-col h-full bg-[#0a0a0c] overflow-hidden">
       <div className="px-4 pt-4 pb-2 shrink-0">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-3">
             <div 
-              onClick={() => {
-                const userStories = groupedStories[user?.uid || ''];
-                if (userStories) setSelectedUserStories(userStories);
-                else if (Object.keys(groupedStories).length > 0) {
-                  const firstUid = Object.keys(groupedStories)[0];
-                  setSelectedUserStories(groupedStories[firstUid]);
-                }
-              }}
-              className={cn(
-                "p-0.5 rounded-full border-2 transition-all cursor-pointer hover:scale-105 active:scale-95",
-                hasUnseenStories ? "border-primary" : "border-white/10"
-              )}
+              className="p-0.5 rounded-full border-2 border-white/10 transition-all"
             >
               <UserAvatar userId={user?.uid} className="h-9 w-9" />
             </div>
@@ -282,7 +235,7 @@ export default function ChatSidebar() {
           </div>
 
           <div className="flex items-center gap-2">
-            <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full bg-white/10 hover:bg-white/20" onClick={() => setIsCreateStoryOpen(true)}>
+            <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full bg-white/10 hover:bg-white/20" onClick={() => setIsCreateModalOpen(true)}>
               <Plus className="w-5 h-5 text-white" />
             </Button>
             <Button 
@@ -361,14 +314,6 @@ export default function ChatSidebar() {
 
       <CreateChatModal open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen} />
       <AdminPanelModal open={isAdminPanelOpen} onOpenChange={setIsAdminPanelOpen} />
-      <CreateStoryModal open={isCreateStoryOpen} onOpenChange={setIsCreateStoryOpen} />
-      {selectedUserStories && (
-        <StoryViewerModal 
-          stories={selectedUserStories} 
-          open={!!selectedUserStories} 
-          onOpenChange={(v) => !v && setSelectedUserStories(null)} 
-        />
-      )}
     </div>
   );
 }

@@ -103,20 +103,6 @@ export interface Chat {
   }>;
 }
 
-export interface Story {
-  id: string;
-  userId: string;
-  userName: string;
-  userAvatar: string | null;
-  content: string;
-  contentType: 'image' | 'video';
-  caption?: string;
-  createdAt: string;
-  expiresAt: string;
-  views?: string[];
-  likes?: string[];
-}
-
 export interface UserPrivacy {
   phoneVisibility: 'everybody' | 'contacts' | 'nobody';
   lastSeenVisibility: 'everybody' | 'nobody';

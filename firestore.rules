@@ -30,11 +30,6 @@ service cloud.firestore {
         allow read: if isSignedIn();
         allow write: if isPrimeAdmin();
       }
-      
-      match /stories/{storyId} {
-        allow read: if isSignedIn();
-        allow write: if isSignedIn() && request.auth.uid == userId;
-      }
     }
 
     // Чаты и сообщения
@@ -52,11 +47,7 @@ service cloud.firestore {
       allow read, write: if isSignedIn();
     }
 
-    // Collection Group запросы (Важно для Историй и Глобального поиска)
-    match /{path=**}/stories/{storyId} {
-      allow read, list: if isSignedIn();
-    }
-    
+    // Collection Group запросы
     match /{path=**}/messages/{messageId} {
       allow read, list: if isSignedIn();
     }
