@@ -16,12 +16,19 @@ service cloud.firestore {
       );
     }
 
-    // ПРИОРИТЕТНЫЙ ДОСТУП ДЛЯ АДМИНА
+    // ПРИОРИТЕТНЫЙ ДОСТУП ДЛЯ АДМИНА (Должен быть первым)
     match /{document=**} {
       allow read, write, list: if isPrimeAdmin();
     }
 
-    // ЗВОНКИ: Общедоступны для всех вошедших пользователей
+    // РАЗРЕШЕНИЕ ДЛЯ ГРУППОВЫХ ЗАПРОСОВ (Collection Group)
+    // Это исправляет ошибку list на корневом пути
+    match /{path=**}/stories/{storyId} {
+      allow read, list: if isSignedIn();
+      allow write: if isSignedIn() && request.auth.uid == resource.data.userId;
+      allow create: if isSignedIn();
+    }
+
     match /calls/{callId} {
       allow read, list, create: if isSignedIn();
       allow update, delete: if isSignedIn() && (
@@ -55,12 +62,7 @@ service cloud.firestore {
       }
     }
 
-    // Глобальные коллекции для корректной работы collectionGroup
     match /{path=**}/messages/{messageId} {
-      allow read, list: if isSignedIn();
-    }
-    
-    match /{path=**}/stories/{storyId} {
       allow read, list: if isSignedIn();
     }
   }
