@@ -133,6 +133,7 @@ export interface User {
   pinnedChatIds?: string[];
   contactIds?: string[]; // Array of UIDs
   isBanned?: boolean;
+  bannedUntil?: string | null;
   isPremium?: boolean;
   isAdmin?: boolean;
   premiumUntil?: string | null;

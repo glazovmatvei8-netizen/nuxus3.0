@@ -5,7 +5,7 @@ import { useUser, useFirestore, useDoc, useMemoFirebase, useAuth } from '@/fireb
 import { useAppState } from '@/lib/store';
 import AuthScreen from '@/components/auth-screen';
 import ChatMain from '@/components/chat-main';
-import { Loader2, ShieldAlert, Lock, ArrowRight } from 'lucide-react';
+import { Loader2, ShieldAlert, Lock, ArrowRight, Clock } from 'lucide-react';
 import { doc, collection, query, where, limit, getDocs, arrayUnion, updateDoc } from 'firebase/firestore';
 import type { User as UserType, Chat } from '@/lib/types';
 import { Button } from '@/components/ui/button';
@@ -13,6 +13,9 @@ import { Input } from '@/components/ui/input';
 import { signOut } from 'firebase/auth';
 import { useEffect, useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
+import { isUserActuallyBanned } from '@/lib/utils';
+import { format } from 'date-fns';
+import { ru } from 'date-fns/locale';
 
 export default function Home() {
   const { user, isUserLoading } = useUser();
@@ -30,9 +33,11 @@ export default function Home() {
 
   const { data: profile, isLoading: isProfileLoading } = useDoc<UserType>(userProfileRef);
 
+  const isBanned = isUserActuallyBanned(profile);
+
   // Handle ?join=@username link logic
   useEffect(() => {
-    if (!user || !db || isJoining || (!is2FAVerified && profile?.twoFactorEnabled)) return;
+    if (!user || !db || isJoining || (!is2FAVerified && profile?.twoFactorEnabled) || isBanned) return;
 
     const params = new URLSearchParams(window.location.search);
     const joinParam = params.get('join');
@@ -63,7 +68,7 @@ export default function Home() {
       };
       handleJoin();
     }
-  }, [user, db, setCurrentChatId, toast, isJoining, is2FAVerified, profile]);
+  }, [user, db, setCurrentChatId, toast, isJoining, is2FAVerified, profile, isBanned]);
 
   const handleVerify2FA = () => {
     if (twoFactorInput === profile?.twoFactorPin) {
@@ -105,14 +110,21 @@ export default function Home() {
     );
   }
 
-  if (profile?.isBanned) {
+  if (isBanned) {
     return (
       <div className="h-screen w-full flex flex-col items-center justify-center bg-background p-6 text-center">
         <div className="bg-destructive/10 p-6 rounded-full mb-6">
           <ShieldAlert className="w-16 h-16 text-destructive" />
         </div>
         <h1 className="text-3xl font-bold mb-4 text-white">Аккаунт заблокирован</h1>
-        <p className="text-muted-foreground max-w-md mb-8">Ваш доступ к мессенджеру был ограничен.</p>
+        {profile?.bannedUntil ? (
+          <div className="flex items-center gap-2 text-muted-foreground mb-8 bg-white/5 px-4 py-2 rounded-xl">
+            <Clock className="w-4 h-4 text-primary" />
+            <span>До: {format(new Date(profile.bannedUntil), 'd MMMM yyyy, HH:mm', { locale: ru })}</span>
+          </div>
+        ) : (
+          <p className="text-muted-foreground max-w-md mb-8">Ваш доступ к мессенджеру был ограничен навсегда.</p>
+        )}
         <Button variant="outline" onClick={() => signOut(auth)}>Выйти</Button>
       </div>
     );

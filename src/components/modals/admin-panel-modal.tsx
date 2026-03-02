@@ -15,15 +15,34 @@ import {
   Loader2, Star, Search, Activity, BarChart3, 
   Globe, Terminal, Shield, Trash2, 
   Database, Server, Cpu, ShieldCheck, Bomb, RotateCcw,
-  UserPlus
+  UserPlus, Clock
 } from 'lucide-react';
+import { 
+  DropdownMenu, 
+  DropdownMenuContent, 
+  DropdownMenuItem, 
+  DropdownMenuTrigger,
+  DropdownMenuLabel,
+  DropdownMenuSeparator
+} from '@/components/ui/dropdown-menu';
 import { useToast } from '@/hooks/use-toast';
 import type { User, Chat } from '@/lib/types';
-import { formatDisplayName, cn, isGlobalAdmin } from '@/lib/utils';
+import { formatDisplayName, cn, isGlobalAdmin, isUserActuallyBanned } from '@/lib/utils';
 import { updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
-import { addMonths } from 'date-fns';
+import { addHours, addDays, addMonths, addYears } from 'date-fns';
 
 const PRIME_UID = 'vnctow46';
+
+const BAN_DURATIONS = [
+  { label: '1 час', value: '1h' },
+  { label: '24 часа', value: '24h' },
+  { label: '3 дня', value: '3d' },
+  { label: '7 дней', value: '7d' },
+  { label: '1 месяц', value: '1m' },
+  { label: '6 месяцев', value: '6m' },
+  { label: '1 год', value: '1y' },
+  { label: 'Навсегда', value: 'forever' },
+];
 
 const CoreMetrics = memo(() => {
   const [cpu, setCpu] = useState(12);
@@ -103,21 +122,50 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
     return {
       total: users.length,
       premium: users.filter(u => u.isPremium).length,
-      banned: users.filter(u => u.isBanned).length,
+      banned: users.filter(u => isUserActuallyBanned(u)).length,
       admins: users.filter(u => isGlobalAdmin(u)).length,
     };
   }, [users]);
 
-  const toggleBan = (targetUser: User) => {
+  const handleBan = (targetUser: User, duration: string) => {
     if (!db) return;
-    updateDocumentNonBlocking(doc(db, 'users', targetUser.id), { isBanned: !targetUser.isBanned });
-    toast({ title: targetUser.isBanned ? "Доступ восстановлен" : "Аккаунт заблокирован" });
+    
+    let bannedUntil: string | null = null;
+    const now = new Date();
+
+    switch (duration) {
+      case '1h': bannedUntil = addHours(now, 1).toISOString(); break;
+      case '24h': bannedUntil = addDays(now, 1).toISOString(); break;
+      case '3d': bannedUntil = addDays(now, 3).toISOString(); break;
+      case '7d': bannedUntil = addDays(now, 7).toISOString(); break;
+      case '1m': bannedUntil = addMonths(now, 1).toISOString(); break;
+      case '6m': bannedUntil = addMonths(now, 6).toISOString(); break;
+      case '1y': bannedUntil = addYears(now, 1).toISOString(); break;
+      case 'forever': bannedUntil = null; break;
+    }
+
+    updateDocumentNonBlocking(doc(db, 'users', targetUser.id), { 
+      isBanned: true,
+      bannedUntil: bannedUntil
+    });
+    
+    toast({ title: "Пользователь заблокирован", description: `Срок: ${duration === 'forever' ? 'Навсегда' : duration}` });
+  };
+
+  const handleUnban = (targetUser: User) => {
+    if (!db) return;
+    updateDocumentNonBlocking(doc(db, 'users', targetUser.id), { 
+      isBanned: false,
+      bannedUntil: null
+    });
+    toast({ title: "Блокировка снята" });
   };
 
   const handleForceRestore = (targetUser: User) => {
     if (!db) return;
     updateDocumentNonBlocking(doc(db, 'users', targetUser.id), { 
       isBanned: false,
+      bannedUntil: null,
       lastSeen: new Date().toISOString()
     });
     toast({ title: `Доступ для ${targetUser.username} восстановлен принудительно` });
@@ -307,37 +355,58 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
                     <Loader2 className="animate-spin text-primary w-6 h-6" />
                     <span className="text-[9px] font-bold uppercase tracking-widest">Загрузка...</span>
                   </div>
-                ) : filteredUsers.map(u => (
-                  <div key={u.id} className="flex items-center justify-between p-3 bg-muted/20 rounded-2xl border border-white/5 hover:bg-muted/30 transition-all">
-                    <div className="flex items-center gap-3 min-w-0">
-                      <UserAvatar userId={u.id} className="h-10 w-10 shrink-0" manualAvatarUrl={u.avatarUrl} fallbackName={u.name} />
-                      <div className="flex flex-col text-left min-w-0">
-                        <span className="font-bold text-xs flex items-center gap-1.5 text-white truncate">
-                          {formatDisplayName(u.name)} 
-                          {u.isPremium && <Star className="w-3 h-3 text-accent fill-accent shrink-0" />}
-                        </span>
-                        <span className="text-[9px] text-muted-foreground/60 tracking-wider truncate">{u.username || '@user'}</span>
+                ) : filteredUsers.map(u => {
+                  const isBanned = isUserActuallyBanned(u);
+                  return (
+                    <div key={u.id} className="flex items-center justify-between p-3 bg-muted/20 rounded-2xl border border-white/5 hover:bg-muted/30 transition-all">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <UserAvatar userId={u.id} className="h-10 w-10 shrink-0" manualAvatarUrl={u.avatarUrl} fallbackName={u.name} />
+                        <div className="flex flex-col text-left min-w-0">
+                          <span className="font-bold text-xs flex items-center gap-1.5 text-white truncate">
+                            {formatDisplayName(u.name)} 
+                            {u.isPremium && <Star className="w-3 h-3 text-accent fill-accent shrink-0" />}
+                          </span>
+                          <span className="text-[9px] text-muted-foreground/60 tracking-wider truncate">{u.username || '@user'}</span>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-primary" onClick={() => handleForceRestore(u)} title="Восстановить доступ">
+                          <RotateCcw className="w-4 h-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" className={cn("h-8 w-8", u.isAdmin ? "text-blue-400" : "text-muted-foreground")} onClick={() => toggleAdmin(u)}>
+                          <ShieldCheck className={cn("w-4 h-4", u.isAdmin && "fill-blue-400/20")} />
+                        </Button>
+                        <Button variant="ghost" size="icon" className={cn("h-8 w-8", u.isPremium ? "text-accent" : "text-muted-foreground")} onClick={() => togglePremium(u)}>
+                          <Star className={cn("w-4 h-4", u.isPremium && "fill-accent")} />
+                        </Button>
+                        
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground">
+                              <Shield className={cn("w-4 h-4", isBanned && "fill-destructive text-destructive")} />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-48 bg-card border-white/10">
+                            <DropdownMenuLabel className="text-[10px] uppercase font-black tracking-widest opacity-60">Заблокировать</DropdownMenuLabel>
+                            {BAN_DURATIONS.map((dur) => (
+                              <DropdownMenuItem key={dur.value} onClick={() => handleBan(u, dur.value)} className="text-[11px] font-bold uppercase tracking-wide">
+                                <Clock className="w-3 h-3 mr-2 opacity-40" /> {dur.label}
+                              </DropdownMenuItem>
+                            ))}
+                            <DropdownMenuSeparator className="bg-white/5" />
+                            <DropdownMenuItem onClick={() => handleUnban(u)} className="text-primary text-[11px] font-bold uppercase tracking-wide">
+                              <RotateCcw className="w-3 h-3 mr-2" /> Снять бан
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" onClick={() => deleteDocumentNonBlocking(doc(db, 'users', u.id))}>
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
                       </div>
                     </div>
-                    <div className="flex items-center gap-1">
-                      <Button variant="ghost" size="icon" className="h-8 w-8 text-primary" onClick={() => handleForceRestore(u)} title="Восстановить доступ">
-                        <RotateCcw className="w-4 h-4" />
-                      </Button>
-                      <Button variant="ghost" size="icon" className={cn("h-8 w-8", u.isAdmin ? "text-blue-400" : "text-muted-foreground")} onClick={() => toggleAdmin(u)}>
-                        <ShieldCheck className={cn("w-4 h-4", u.isAdmin && "fill-blue-400/20")} />
-                      </Button>
-                      <Button variant="ghost" size="icon" className={cn("h-8 w-8", u.isPremium ? "text-accent" : "text-muted-foreground")} onClick={() => togglePremium(u)}>
-                        <Star className={cn("w-4 h-4", u.isPremium && "fill-accent")} />
-                      </Button>
-                      <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground" onClick={() => toggleBan(u)}>
-                        <Shield className={cn("w-4 h-4", u.isBanned && "fill-destructive text-destructive")} />
-                      </Button>
-                      <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" onClick={() => deleteDocumentNonBlocking(doc(db, 'users', u.id))}>
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </ScrollArea>
           </TabsContent>

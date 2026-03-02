@@ -73,6 +73,26 @@ export function isUserPremium(user: User | null | undefined): boolean {
 }
 
 /**
+ * Проверяет, заблокирован ли пользователь в данный момент.
+ */
+export function isUserActuallyBanned(user: User | null | undefined): boolean {
+  if (!user || !user.isBanned) return false;
+  
+  // Если есть срок бана, проверяем не истек ли он
+  if (user.bannedUntil) {
+    try {
+      const expiry = new Date(user.bannedUntil);
+      return expiry > new Date();
+    } catch (e) {
+      return true; // В случае ошибки даты считаем забаненным
+    }
+  }
+  
+  // Если bannedUntil нет, значит бан вечный
+  return true;
+}
+
+/**
  * Форматирует статус последней активности пользователя.
  */
 export function formatLastSeen(
