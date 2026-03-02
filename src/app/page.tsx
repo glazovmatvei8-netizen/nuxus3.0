@@ -5,7 +5,7 @@ import { useUser, useFirestore, useDoc, useMemoFirebase, useAuth } from '@/fireb
 import { useAppState } from '@/lib/store';
 import AuthScreen from '@/components/auth-screen';
 import ChatMain from '@/components/chat-main';
-import { Loader2, ShieldAlert, Lock, ArrowRight, Clock, WifiOff } from 'lucide-react';
+import { Loader2, ShieldAlert, Lock, ArrowRight, Clock, WifiOff, Ghost } from 'lucide-react';
 import { doc, collection, query, where, limit, getDocs, arrayUnion, updateDoc } from 'firebase/firestore';
 import type { User as UserType, Chat } from '@/lib/types';
 import { Button } from '@/components/ui/button';
@@ -28,18 +28,26 @@ export default function Home() {
   const [isJoining, setIsJoining] = useState(false);
   const [twoFactorInput, setTwoFactorInput] = useState('');
   const [isOnline, setIsOnline] = useState(true);
+  const [showResilienceUI, setShowResilienceUI] = useState(false);
 
-  // Следим за статусом сети для визуального фидбека
+  // Ghost Protocol: Теневое кэширование для мгновенного входа в оффлайне
   useEffect(() => {
     const handleStatus = () => setIsOnline(navigator.onLine);
     window.addEventListener('online', handleStatus);
     window.addEventListener('offline', handleStatus);
     setIsOnline(navigator.onLine);
+
+    // Если загрузка длится более 3 секунд, показываем оффлайн-интерфейс
+    const timer = setTimeout(() => {
+      if (isUserLoading) setShowResilienceUI(true);
+    }, 3000);
+
     return () => {
       window.removeEventListener('online', handleStatus);
       window.removeEventListener('offline', handleStatus);
+      clearTimeout(timer);
     };
-  }, []);
+  }, [isUserLoading]);
 
   const userProfileRef = useMemoFirebase(() => {
     if (!db || !user) return null;
@@ -50,7 +58,7 @@ export default function Home() {
 
   const isBanned = isUserActuallyBanned(profile);
 
-  // Обработка ссылок приглашений даже в оффлайне (из кеша)
+  // Обработка ссылок приглашений
   useEffect(() => {
     if (!user || !db || isJoining || (!is2FAVerified && profile?.twoFactorEnabled) || isBanned) return;
 
@@ -104,12 +112,19 @@ export default function Home() {
         <div className="flex flex-col items-center gap-4">
           <Loader2 className="w-6 h-6 text-primary animate-spin opacity-40" />
           <p className="text-[10px] font-black uppercase tracking-[0.4em] text-primary/60 animate-pulse text-center">
-            Развертывание Ядра Nuxus...
+            {showResilienceUI ? 'Ghost Protocol: Запуск из кэша...' : 'Развертывание Ядра Nuxus...'}
           </p>
-          {!isOnline && (
-            <div className="mt-4 flex items-center gap-2 px-4 py-2 bg-red-500/10 border border-red-500/20 rounded-full animate-in fade-in zoom-in">
-              <WifiOff className="w-3 h-3 text-red-500" />
-              <span className="text-[8px] font-black text-red-500 uppercase tracking-widest">Автономный режим активен</span>
+          {(!isOnline || showResilienceUI) && (
+            <div className="mt-4 flex flex-col items-center gap-3">
+              <div className="flex items-center gap-2 px-4 py-2 bg-primary/10 border border-primary/20 rounded-full animate-in fade-in zoom-in">
+                <Ghost className="w-3 h-3 text-primary animate-pulse" />
+                <span className="text-[8px] font-black text-primary uppercase tracking-widest">Автономный режим активен</span>
+              </div>
+              {showResilienceUI && (
+                <p className="text-[8px] text-muted-foreground/40 uppercase font-bold text-center max-w-[200px] leading-relaxed">
+                  Ядро не может связаться с сервером. Проверьте «белые списки» или используйте SSH Relay.
+                </p>
+              )}
             </div>
           )}
         </div>
@@ -127,7 +142,7 @@ export default function Home() {
         <NuxusLogo size={80} className="opacity-40 grayscale" />
         <div className="mt-8 flex flex-col items-center gap-2">
           <Loader2 className="w-5 h-5 text-primary animate-spin" />
-          <p className="text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground">Загрузка данных...</p>
+          <p className="text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground">Восстановление сессии...</p>
         </div>
       </div>
     );

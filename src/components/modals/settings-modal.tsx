@@ -16,7 +16,7 @@ import {
   Monitor, Sparkles, Settings2, Moon, Droplets, ShieldCheck, Lock,
   Users, Share2, Star, Bell, BellOff, Info, Languages, Smartphone, Camera,
   Eye, UserCheck, MessageCircle, Share, PlusSquare, ShieldCheck as ShieldIcon, Zap,
-  ExternalLink, MousePointerClick, Radio, ChevronRight, Terminal, Copy, Code2
+  ExternalLink, MousePointerClick, Radio, ChevronRight, Terminal, Copy, Code2, Globe, Wifi, WifiOff
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { signOut } from 'firebase/auth';
@@ -37,25 +37,15 @@ import type { User } from '@/lib/types';
 import { generateAiAvatar } from '@/ai/flows/generate-ai-avatar-flow';
 import { useTranslations } from '@/hooks/use-translations';
 
-const SSH_SCRIPT = `# Nuxus Ghost Tunnel v0.54.4
-# Копируйте этот код в действие "Run script over SSH" в Shortcuts
-
+const SSH_SCRIPT = `# Nuxus Ghost Tunnel v0.54.5
 TARGET="studio-5946432351-bbd5e.web.app"
 PORT=443
-
-echo "--- NUXUS RELAY START ---"
 echo "Checking Core connectivity..."
-
 if nc -zv $TARGET $PORT 2>&1 | grep -q 'succeeded'; then
-  echo "STATUS: Core is reachable through Tunnel."
-  echo "ACTION: Launching Ghost Protocol..."
-  # Команда открытия URL на устройстве (если поддерживается клиентом)
-  # Или просто подтверждение линка для кэша
   curl -Is https://$TARGET/ | head -n 1
 else
-  echo "STATUS: Core Blocked. Check SSH Proxy settings."
-fi
-echo "--- RELAY COMPLETE ---"`;
+  echo "Core Blocked. Check SSH Proxy."
+fi`;
 
 export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const auth = useAuth();
@@ -273,8 +263,25 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
             <TabsContent value="app" className="py-6 space-y-6">
               <div className="text-center space-y-2 mb-4">
                 <Smartphone className="w-12 h-12 text-primary mx-auto mb-2" />
-                <h3 className="text-xl font-black uppercase italic text-white tracking-tighter">Nuxus Core v0.54.4</h3>
-                <p className="text-[10px] font-bold text-muted-foreground uppercase">Версия для iPhone и Android</p>
+                <h3 className="text-xl font-black uppercase italic text-white tracking-tighter">Nuxus Core v0.54.5</h3>
+                <p className="text-[10px] font-bold text-muted-foreground uppercase">Ghost Resilience Edition</p>
+              </div>
+
+              {/* НОВЫЙ БЛОК: DNS OVER HTTPS */}
+              <div className="p-5 bg-primary/10 rounded-[2.5rem] border border-primary/20 space-y-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <Globe className="w-4 h-4 text-primary" />
+                  <span className="text-[10px] font-black uppercase text-white tracking-widest">Обход белых списков</span>
+                </div>
+                <div className="space-y-3 text-[11px] text-muted-foreground leading-relaxed">
+                  <p>Если SSH недоступен, используйте системный DNS-профиль. Это позволит iPhone видеть Ядро даже при блокировках.</p>
+                  <div className="space-y-2">
+                    <Button variant="outline" className="w-full h-10 rounded-xl text-[9px] font-bold uppercase border-white/10 gap-2" onClick={() => window.open('https://1.1.1.1/dns-query', '_blank')}>
+                      <ExternalLink className="w-3.5 h-3.5" /> Скачать DNS профиль (1.1.1.1)
+                    </Button>
+                    <p className="text-[8px] italic opacity-60 text-center">Установите профиль в Настройки -> Основные -> VPN и управление устройством</p>
+                  </div>
+                </div>
               </div>
 
               <div className="p-5 bg-muted/10 rounded-[2.5rem] border border-white/5 space-y-4">
@@ -283,15 +290,11 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                   <span className="text-[10px] font-black uppercase text-white tracking-widest">Ghost Relay (SSH)</span>
                 </div>
                 <div className="space-y-3 text-[11px] text-muted-foreground leading-relaxed">
-                  <p>Используйте этот скрипт в приложении <b>Команды</b> в разделе <b>"Скрипты" → "Выполнить скрипт через SSH"</b> для обхода «белых списков».</p>
                   <div className="bg-black/40 p-3 rounded-xl border border-white/10 font-mono text-[9px] overflow-x-auto whitespace-pre relative group">
                     {SSH_SCRIPT}
                     <Button variant="ghost" size="icon" className="absolute top-2 right-2 h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity bg-white/5" onClick={copySsh}>
                       <Copy className="w-4 h-4" />
                     </Button>
-                  </div>
-                  <div className="flex items-center gap-2 text-[10px] font-bold text-primary">
-                    <Code2 className="w-3 h-3" /> Вставьте скрипт и укажите данные вашего сервера.
                   </div>
                 </div>
               </div>

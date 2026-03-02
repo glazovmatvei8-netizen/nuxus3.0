@@ -1,3 +1,4 @@
+
 'use client';
 
 import { firebaseConfig } from '@/firebase/config';
@@ -8,12 +9,13 @@ import {
   initializeFirestore, 
   persistentLocalCache,
   persistentMultipleTabManager,
-  Firestore
+  Firestore,
+  CACHE_SIZE_UNLIMITED
 } from 'firebase/firestore';
 
 /**
- * Инициализация Firebase v0.54.2 Ghost Protocol.
- * Гарантирует создание Firestore только один раз с настройками оффлайн-кэша.
+ * Инициализация Firebase v0.54.5 Ghost Protocol.
+ * Максимальное кэширование для работы в условиях "белых списков".
  */
 let cachedFirestore: Firestore | null = null;
 
@@ -30,15 +32,15 @@ export function initializeFirebase() {
 
   if (!cachedFirestore) {
     try {
-      // Инициализируем Firestore с оффлайн-кэшем только если он еще не создан
+      // Инициализируем Firestore с НЕОГРАНИЧЕННЫМ оффлайн-кэшем
       cachedFirestore = initializeFirestore(firebaseApp, {
         localCache: persistentLocalCache({
-          tabManager: persistentMultipleTabManager()
+          tabManager: persistentMultipleTabManager(),
+          cacheSizeBytes: CACHE_SIZE_UNLIMITED
         })
       });
-      console.log('Nuxus Core: Firestore Persistence Initialized');
+      console.log('Nuxus Core: Ghost Persistence Active (Unlimited)');
     } catch (e) {
-      // Если по какой-то причине инициализация не удалась (например, уже создан), берем текущий
       cachedFirestore = getFirestore(firebaseApp);
     }
   }
