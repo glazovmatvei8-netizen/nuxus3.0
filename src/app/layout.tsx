@@ -76,11 +76,10 @@ export default function RootLayout({
           {`
             if ('serviceWorker' in navigator) {
               window.addEventListener('load', function() {
-                // Прямая регистрация Service Worker для Offline-режима
                 navigator.serviceWorker.register('/sw.js').then(function(reg) {
-                  console.log('Nuxus Resilience Core: SW Active');
+                  console.log('Nuxus Ghost Protocol: Active');
                 }).catch(function(err) {
-                  console.log('Nuxus Resilience Core: SW Failed', err);
+                  console.log('Nuxus Ghost Protocol: Failed', err);
                 });
               });
             }

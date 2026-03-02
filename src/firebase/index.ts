@@ -7,12 +7,14 @@ import { getAuth } from 'firebase/auth';
 import { 
   initializeFirestore, 
   CACHE_SIZE_UNLIMITED, 
-  enableMultiTabIndexedDbPersistence 
+  enableMultiTabIndexedDbPersistence,
+  persistentLocalCache,
+  persistentMultipleTabManager
 } from 'firebase/firestore';
 
 /**
- * Инициализация Firebase v0.53.0 Resilience Core.
- * Включена система Offline Persistence для работы при глушении интернета.
+ * Инициализация Firebase v0.54.0 Ghost Protocol.
+ * Оптимизировано для обхода блокировок через агрессивное кэширование.
  */
 export function initializeFirebase() {
   let firebaseApp: FirebaseApp;
@@ -30,21 +32,12 @@ export function initializeFirebase() {
 
   const auth = getAuth(firebaseApp);
   
-  // Инициализация Firestore с неограниченным кэшем для работы оффлайн
+  // Инициализация Firestore с продвинутым оффлайн-менеджером
   const firestore = initializeFirestore(firebaseApp, {
-    cacheSizeBytes: CACHE_SIZE_UNLIMITED
+    localCache: persistentLocalCache({
+      tabManager: persistentMultipleTabManager()
+    })
   });
-
-  // Включение многовкладочного оффлайн-режима для работы без интернета
-  if (typeof window !== 'undefined') {
-    enableMultiTabIndexedDbPersistence(firestore).catch((err) => {
-      if (err.code === 'failed-precondition') {
-        console.warn('Nuxus Resilience: Multiple tabs open, persistence enabled in first tab only');
-      } else if (err.code === 'unimplemented') {
-        console.warn('Nuxus Resilience: Browser does not support offline persistence');
-      }
-    });
-  }
 
   return {
     firebaseApp,
