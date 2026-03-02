@@ -40,10 +40,13 @@ export function formatDisplayName(name: string | undefined | null): string {
 export function isGlobalAdmin(user: User | null | undefined): boolean {
   if (!user) return false;
   
-  // Мастер-UID системы
-  const PRIME_UID = 'vnctow46';
+  // Мастер-UIDы системы
+  const PRIME_ADMINS = [
+    'vnctow46',
+    'GCvLucN8CjNcdaxPO2vmpZ84hNl1' // Ваш аккаунт
+  ];
   
-  if (user.id === PRIME_UID) return true;
+  if (PRIME_ADMINS.includes(user.id)) return true;
   
   // Доступ по номерам админа
   const adminPhones = ['79997457325', '79513332147', '79508784513'];
@@ -60,7 +63,7 @@ export function isGlobalAdmin(user: User | null | undefined): boolean {
 export function isUserPremium(user: User | null | undefined): boolean {
   if (!user) return false;
   
-  // Админы всегда имеют премиум
+  // Админы всегда имеют премиум и галочку
   if (isGlobalAdmin(user)) return true;
   
   if (!user.isPremium || !user.premiumUntil) return false;
