@@ -1,21 +1,23 @@
 
-const CACHE_NAME = 'nuxus-ghost-v0.54.5';
-const OFFLINE_URL = '/';
+/**
+ * Nuxus Ghost Core v0.54.6
+ * Абсолютная автономность для обхода "белых списков".
+ */
 
+const CACHE_NAME = 'nuxus-cache-v0.54.6';
 const ASSETS_TO_CACHE = [
   '/',
   '/manifest.webmanifest',
-  'https://picsum.photos/seed/nuxus/180/180',
-  'https://picsum.photos/seed/nuxus/32/32'
+  'https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3'
 ];
 
 self.addEventListener('install', (event) => {
+  self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
       return cache.addAll(ASSETS_TO_CACHE);
     })
   );
-  self.skipWaiting();
 });
 
 self.addEventListener('activate', (event) => {
@@ -30,33 +32,41 @@ self.addEventListener('activate', (event) => {
       );
     })
   );
-  self.clients.claim();
+  return self.clients.claim();
 });
 
 self.addEventListener('fetch', (event) => {
-  if (event.request.mode === 'navigate') {
-    event.respondWith(
-      fetch(event.request).catch(() => {
-        return caches.match(OFFLINE_URL);
-      })
-    );
+  // Пропускаем запросы к Firebase и другим API для корректной работы онлайна
+  if (event.request.url.includes('firestore.googleapis.com') || 
+      event.request.url.includes('identitytoolkit.googleapis.com')) {
     return;
   }
 
   event.respondWith(
     caches.match(event.request).then((response) => {
-      return response || fetch(event.request).then((fetchResponse) => {
-        if (event.request.url.startsWith('http') && fetchResponse.status === 200) {
-          const cacheCopy = fetchResponse.clone();
-          caches.open(CACHE_NAME).then((cache) => {
-            cache.put(event.request, cacheCopy);
-          });
+      // Если есть в кэше — отдаем сразу (Ghost Strategy)
+      if (response) {
+        return response;
+      }
+
+      // Иначе идем в сеть и кэшируем результат для следующего раза
+      return fetch(event.request).then((networkResponse) => {
+        if (!networkResponse || networkResponse.status !== 200 || networkResponse.type !== 'basic') {
+          return networkResponse;
         }
-        return fetchResponse;
+
+        const responseToCache = networkResponse.clone();
+        caches.open(CACHE_NAME).then((cache) => {
+          cache.put(event.request, responseToCache);
+        });
+
+        return networkResponse;
+      }).catch(() => {
+        // Если сеть заблокирована (белые списки), отдаем главную страницу для запуска PWA
+        if (event.request.mode === 'navigate') {
+          return caches.match('/');
+        }
       });
-    }).catch(() => {
-      // Return empty response or specific fallback for blocked assets
-      return new Response('', { status: 408, statusText: 'Ghost Timeout' });
     })
   );
 });

@@ -37,7 +37,7 @@ import type { User } from '@/lib/types';
 import { generateAiAvatar } from '@/ai/flows/generate-ai-avatar-flow';
 import { useTranslations } from '@/hooks/use-translations';
 
-const SSH_SCRIPT = `# Nuxus Ghost Tunnel v0.54.5
+const SSH_SCRIPT = `# Nuxus Ghost Tunnel v0.54.6
 TARGET="studio-5946432351-bbd5e.web.app"
 PORT=443
 echo "Checking Core connectivity..."
@@ -263,7 +263,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
             <TabsContent value="app" className="py-6 space-y-6">
               <div className="text-center space-y-2 mb-4">
                 <Smartphone className="w-12 h-12 text-primary mx-auto mb-2" />
-                <h3 className="text-xl font-black uppercase italic text-white tracking-tighter">Nuxus Core v0.54.5</h3>
+                <h3 className="text-xl font-black uppercase italic text-white tracking-tighter">Nuxus Core v0.54.6</h3>
                 <p className="text-[10px] font-bold text-muted-foreground uppercase">Ghost Resilience Edition</p>
               </div>
 

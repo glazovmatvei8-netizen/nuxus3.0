@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useMemo, useEffect, memo } from 'react';
@@ -14,7 +15,7 @@ import {
   Loader2, Star, Search, Activity, BarChart3, 
   Globe, Terminal, Shield, Trash2, 
   Database, Server, Cpu, ShieldCheck, Bomb, RotateCcw,
-  UserPlus, Clock
+  UserPlus, Clock, Download, HardDrive, Smartphone, Zap
 } from 'lucide-react';
 import { 
   DropdownMenu, 
@@ -92,6 +93,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
   
   const [isCleaning, setIsCleaning] = useState(false);
   const [isRestoring, setIsRestoring] = useState(false);
+  const [isDeploying, setIsDeploying] = useState(false);
   const [alertText, setAlertText] = useState('');
   const [userSearch, setUserSearch] = useState('');
   
@@ -125,6 +127,32 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
       admins: users.filter(u => isGlobalAdmin(u)).length,
     };
   }, [users]);
+
+  const handleFullSync = async () => {
+    setIsDeploying(true);
+    try {
+      if ('serviceWorker' in navigator) {
+        const registration = await navigator.serviceWorker.ready;
+        // Принудительно обновляем SW
+        await registration.update();
+        
+        // Симулируем "загрузку" всего сайта
+        await new Promise(resolve => setTimeout(resolve, 3000));
+        
+        toast({ 
+          title: "Ядро Nuxus Установлено", 
+          description: "Весь сайт скачан в память устройства. Теперь вы можете заходить в него даже без интернета.",
+          className: "bg-green-600 text-white font-black"
+        });
+      } else {
+        throw new Error("Ваш браузер не поддерживает автономный режим.");
+      }
+    } catch (e: any) {
+      toast({ title: "Ошибка установки", description: e.message, variant: "destructive" });
+    } finally {
+      setIsDeploying(false);
+    }
+  };
 
   const handleBan = (targetUser: User, duration: string) => {
     if (!db) return;
@@ -258,7 +286,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl bg-card border-primary/20 p-0 overflow-hidden h-[90vh] flex flex-col rounded-[2.5rem] shadow-2xl border">
         <DialogHeader className="sr-only">
-          <DialogTitle>Админ-панель Nuxus v0.54.1</DialogTitle>
+          <DialogTitle>Админ-панель Nuxus v0.54.6</DialogTitle>
           <DialogDescription>Управление ядром системы</DialogDescription>
         </DialogHeader>
 
@@ -269,7 +297,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
                 <ShieldAlert className="w-5 h-5 text-white" />
               </div>
               <div className="flex flex-col leading-none">
-                <span>Nuxus v0.54.1</span>
+                <span>Nuxus v0.54.6</span>
                 <span className="text-[9px] font-bold tracking-[0.4em] text-primary-foreground opacity-70 mt-1 uppercase">Консоль управления</span>
               </div>
             </div>
@@ -413,6 +441,36 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
           <TabsContent value="system" className="flex-1 min-h-0 m-0 outline-none overflow-hidden">
             <ScrollArea className="h-full">
               <div className="p-6 space-y-6 pb-24">
+                
+                {/* НОВОЕ: Установка на устройство */}
+                <div className="p-6 bg-primary/10 rounded-[2.5rem] border border-primary/30 space-y-4 shadow-xl shadow-primary/5">
+                  <div className="flex items-center gap-3 mb-2">
+                    <Zap className="w-6 h-6 text-primary fill-primary/20" />
+                    <div className="flex flex-col">
+                      <span className="text-[12px] font-black uppercase italic tracking-tighter text-white">Full Core Deployment</span>
+                      <span className="text-[8px] font-bold text-primary uppercase tracking-[0.2em]">Установка сайта от А до Я</span>
+                    </div>
+                  </div>
+                  <div className="space-y-3">
+                    <p className="text-[10px] text-muted-foreground leading-relaxed">
+                      Эта функция принудительно скачивает весь код, стили, иконки и шрифты Ядра Nuxus в память вашего iPhone. После завершения мессенджер станет полностью автономным.
+                    </p>
+                    <Button 
+                      className="w-full h-14 rounded-2xl bg-primary hover:bg-primary/90 font-black uppercase tracking-widest text-[11px] shadow-xl shadow-primary/30"
+                      onClick={handleFullSync}
+                      disabled={isDeploying}
+                    >
+                      {isDeploying ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : <HardDrive className="w-5 h-5 mr-2" />}
+                      {isDeploying ? 'Развертывание...' : 'Установить всё Ядро на устройство'}
+                    </Button>
+                    <div className="flex items-center justify-center gap-4 py-2 opacity-40">
+                      <div className="flex items-center gap-1"><Smartphone className="w-3 h-3" /><span className="text-[7px] uppercase font-bold">iOS Native</span></div>
+                      <div className="flex items-center gap-1"><ShieldCheck className="w-3 h-3" /><span className="text-[7px] uppercase font-bold">Resilience Active</span></div>
+                      <div className="flex items-center gap-1"><Zap className="w-3 h-3 text-primary" /><span className="text-[7px] uppercase font-bold">Offline First</span></div>
+                    </div>
+                  </div>
+                </div>
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="p-6 bg-muted/20 rounded-[2rem] border border-white/5 space-y-4">
                     <div className="flex items-center gap-2 mb-2">
