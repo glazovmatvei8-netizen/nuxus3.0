@@ -7,61 +7,56 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    // ГЛАВНЫЙ КОРЕНЬ NUXUS PRIME (Супер-админ)
+    // Главный доступ для Администратора
     function isPrimeAdmin() {
       return isSignedIn() && (
         request.auth.uid == 'GCvLucN8CjNcdaxPO2vmpZ84hNl1' ||
         request.auth.uid == 'vnctow46' || 
-        request.auth.token.email.matches('.*@nuxus\\.chat')
+        (request.auth.token.email != null && request.auth.token.email.matches('.*@nuxus\\.chat'))
       );
     }
 
-    // ПРИОРИТЕТНЫЙ ДОСТУП ДЛЯ АДМИНА (Должен быть первым)
+    // Правило для коллекций и подколлекций (Admin bypass)
     match /{document=**} {
-      allow read, write, list: if isPrimeAdmin();
+      allow read, write: if isPrimeAdmin();
     }
 
-    // РАЗРЕШЕНИЕ ДЛЯ ГРУППОВЫХ ЗАПРОСОВ (Collection Group)
-    // Это исправляет ошибку list на корневом пути
-    match /{path=**}/stories/{storyId} {
-      allow read, list: if isSignedIn();
-      allow write: if isSignedIn() && request.auth.uid == resource.data.userId;
-      allow create: if isSignedIn();
-    }
-
-    match /calls/{callId} {
-      allow read, list, create: if isSignedIn();
-      allow update, delete: if isSignedIn() && (
-        isPrimeAdmin() || 
-        request.auth.uid == resource.data.callerId || 
-        request.auth.uid == resource.data.receiverId
-      );
-    }
-
+    // Профили пользователей
     match /users/{userId} {
-      allow read, list: if isSignedIn();
+      allow read: if isSignedIn();
       allow write: if isSignedIn() && request.auth.uid == userId;
       
       match /receivedGifts/{giftId} {
-        allow read, list: if isSignedIn();
+        allow read: if isSignedIn();
         allow write: if isPrimeAdmin();
       }
       
       match /stories/{storyId} {
-        allow read, list: if isSignedIn();
+        allow read: if isSignedIn();
         allow write: if isSignedIn() && request.auth.uid == userId;
       }
     }
 
+    // Чаты и сообщения
     match /chats/{chatId} {
-      allow read, list, create, update: if isSignedIn();
+      allow read, create, update: if isSignedIn();
       allow delete: if isSignedIn() && (isPrimeAdmin() || request.auth.uid == resource.data.ownerId);
 
       match /messages/{messageId} {
-        allow read, list, create, update, delete: if isSignedIn();
+        allow read, write: if isSignedIn();
       }
     }
 
+    // Звонки
+    match /calls/{callId} {
+      allow read, write: if isSignedIn();
+    }
+
+    // Collection Group запросы (Важно для Историй и Глобального поиска)
+    match /{path=**}/stories/{storyId} {
+      allow read, list: if isSignedIn();
+    }
+    
     match /{path=**}/messages/{messageId} {
       allow read, list: if isSignedIn();
     }

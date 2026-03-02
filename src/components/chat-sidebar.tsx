@@ -234,12 +234,11 @@ export default function ChatSidebar() {
     }
   };
 
-  // Group stories by user for viewing
+  // Группировка историй: свои + контакты с активным чатом
   const groupedStories = useMemo(() => {
     if (!allStories || !chats || !user) return {};
     const chatPartnerIds = new Set(chats.flatMap(c => c.participantIds));
     return allStories.reduce((acc, story) => {
-      // Show if it's mine or if we have a chat with them
       if (story.userId === user.uid || chatPartnerIds.has(story.userId)) {
         if (!acc[story.userId]) acc[story.userId] = [];
         acc[story.userId].push(story);
@@ -265,7 +264,6 @@ export default function ChatSidebar() {
                 const userStories = groupedStories[user?.uid || ''];
                 if (userStories) setSelectedUserStories(userStories);
                 else if (Object.keys(groupedStories).length > 0) {
-                  // If no personal stories, open the first available one from contacts
                   const firstUid = Object.keys(groupedStories)[0];
                   setSelectedUserStories(groupedStories[firstUid]);
                 }

@@ -39,7 +39,6 @@ export function CreateChatModal({ open, onOpenChange }: CreateChatModalProps) {
   }, [db, user]);
   const { data: currentUserProfile } = useDoc<User>(userProfileRef);
 
-  // Search logic
   const usersQuery = useMemoFirebase(() => {
     if (!db || search.length < 2) return null;
     return query(collection(db, 'users'), limit(50));
@@ -58,12 +57,11 @@ export function CreateChatModal({ open, onOpenChange }: CreateChatModalProps) {
   const startPrivateChat = async (otherUser: User) => {
     if (!db || !user || !currentUserProfile) return;
 
-    // Проверка приватности
     const otherCanBeMessagedBy = otherUser.settings?.privacy?.whoCanMessageMe || 'everybody';
     if (otherCanBeMessagedBy === 'premium' && !isUserPremium(currentUserProfile)) {
       toast({ 
         title: "Доступ ограничен", 
-        description: "Этот пользователь разрешил писать себе только Premium участникам. Получите подписку в Настройках!", 
+        description: "Этот пользователь разрешил писать себе только Premium участникам.", 
         variant: "destructive" 
       });
       return;
@@ -94,6 +92,7 @@ export function CreateChatModal({ open, onOpenChange }: CreateChatModalProps) {
         adminIds: [user.uid, otherUser.id], 
         ownerId: user.uid,
         createdAt: new Date().toISOString(),
+        isPublic: false,
         metadata: {
           [user.uid]: {
             name: currentUserProfile.name,
@@ -130,7 +129,6 @@ export function CreateChatModal({ open, onOpenChange }: CreateChatModalProps) {
 
     setIsLoading(true);
     try {
-      // FORCE LOWERCASE FOR USERNAMES
       const formattedUsername = username.startsWith('@') ? username.toLowerCase() : '@' + username.toLowerCase();
       
       const newChatData = {
@@ -142,6 +140,7 @@ export function CreateChatModal({ open, onOpenChange }: CreateChatModalProps) {
         adminIds: [user.uid],
         ownerId: user.uid,
         createdAt: new Date().toISOString(),
+        isPublic: true // По умолчанию публичные
       };
 
       const docRef = await addDoc(collection(db, 'chats'), newChatData);
