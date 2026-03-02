@@ -6,15 +6,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useAppState } from '@/lib/store';
-import { useFirestore, useUser, useCollection, useMemoFirebase, useDoc } from '@/firebase';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Search, Users, Radio, MessageSquarePlus, ArrowRight, Loader2, Contact, Lock, Star } from 'lucide-react';
-import { ScrollArea } from '@/components/ui/scroll-area';
+import { useFirestore, useUser } from '@/firebase';
+import { Users, Radio, MessageSquarePlus, ArrowRight, Loader2, Search } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import type { ChatType, User } from '@/lib/types';
-import { collection, query, addDoc, getDocs, where, limit, doc } from 'firebase/firestore';
+import type { ChatType } from '@/lib/types';
+import { collection, addDoc, doc, updateDoc } from 'firebase/firestore';
 import { addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
-import { isUserPremium } from '@/lib/utils';
 
 interface CreateChatModalProps {
   open: boolean;
@@ -24,102 +21,13 @@ interface CreateChatModalProps {
 export function CreateChatModal({ open, onOpenChange }: CreateChatModalProps) {
   const { user } = useUser();
   const db = useFirestore();
-  const { setCurrentChatId } = useAppState();
-  const [search, setSearch] = useState('');
+  const { setCurrentChatId, setIsSearchOpen } = useAppState();
   const [step, setStep] = useState<'select' | 'details'>('select');
   const [type, setType] = useState<ChatType>('private');
   const [name, setName] = useState('');
   const [username, setUsername] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
-
-  const userProfileRef = useMemoFirebase(() => {
-    if (!db || !user) return null;
-    return doc(db, 'users', user.uid);
-  }, [db, user]);
-  const { data: currentUserProfile } = useDoc<User>(userProfileRef);
-
-  const usersQuery = useMemoFirebase(() => {
-    if (!db || search.length < 2) return null;
-    return query(collection(db, 'users'), limit(50));
-  }, [db, search]);
-
-  const { data: allUsers } = useCollection<User>(usersQuery);
-
-  const filteredUsers = (allUsers || []).filter(u => {
-    if (u.id === user?.uid) return false;
-    const searchLower = search.toLowerCase();
-    return u.name?.toLowerCase().includes(searchLower) || 
-           u.username?.toLowerCase().includes(searchLower) || 
-           u.phone?.includes(search);
-  });
-
-  const startPrivateChat = async (otherUser: User) => {
-    if (!db || !user || !currentUserProfile) return;
-
-    const otherCanBeMessagedBy = otherUser.settings?.privacy?.whoCanMessageMe || 'everybody';
-    if (otherCanBeMessagedBy === 'premium' && !isUserPremium(currentUserProfile)) {
-      toast({ 
-        title: "Доступ ограничен", 
-        description: "Этот пользователь разрешил писать себе только Premium участникам.", 
-        variant: "destructive" 
-      });
-      return;
-    }
-
-    setIsLoading(true);
-    try {
-      const q = query(
-        collection(db, 'chats'),
-        where('type', '==', 'private'),
-        where('participantIds', 'array-contains', user.uid)
-      );
-      const snapshot = await getDocs(q);
-      const existing = snapshot.docs.find(d => {
-        const pIds = d.data().participantIds;
-        return pIds.includes(otherUser.id) && pIds.length === 2;
-      });
-
-      if (existing) {
-        setCurrentChatId(existing.id);
-        onOpenChange(false);
-        return;
-      }
-
-      const newChatData = {
-        type: 'private' as const,
-        participantIds: [user.uid, otherUser.id],
-        adminIds: [user.uid, otherUser.id], 
-        ownerId: user.uid,
-        createdAt: new Date().toISOString(),
-        isPublic: false,
-        metadata: {
-          [user.uid]: {
-            name: currentUserProfile.name,
-            username: currentUserProfile.username,
-            avatarUrl: currentUserProfile.avatarUrl || null,
-            isPremium: isUserPremium(currentUserProfile)
-          },
-          [otherUser.id]: {
-            name: otherUser.name,
-            username: otherUser.username,
-            avatarUrl: otherUser.avatarUrl || null,
-            isPremium: isUserPremium(otherUser)
-          }
-        },
-        name: otherUser.name,
-        username: otherUser.username,
-      };
-
-      const docRef = await addDoc(collection(db, 'chats'), newChatData);
-      setCurrentChatId(docRef.id);
-      onOpenChange(false);
-    } catch (error: any) {
-      toast({ title: "Ошибка", description: error.message, variant: "destructive" });
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   const createGroupOrChannel = async () => {
     if (!name || !username || !db || !user) {
@@ -140,7 +48,7 @@ export function CreateChatModal({ open, onOpenChange }: CreateChatModalProps) {
         adminIds: [user.uid],
         ownerId: user.uid,
         createdAt: new Date().toISOString(),
-        isPublic: true // По умолчанию публичные
+        isPublic: true
       };
 
       const docRef = await addDoc(collection(db, 'chats'), newChatData);
@@ -166,104 +74,58 @@ export function CreateChatModal({ open, onOpenChange }: CreateChatModalProps) {
   };
 
   return (
-    <Dialog open={open} onOpenChange={(val) => { onOpenChange(val); setStep('select'); setSearch(''); }}>
+    <Dialog open={open} onOpenChange={(val) => { onOpenChange(val); setStep('select'); }}>
       <DialogContent className="max-w-md p-0 overflow-hidden bg-card/95 backdrop-blur-xl border-border/40">
         <DialogHeader className="p-6 pb-2">
           <DialogTitle className="text-xl font-bold flex items-center gap-2">
             {step === 'select' ? <MessageSquarePlus className="w-5 h-5 text-primary" /> : <ArrowRight className="w-5 h-5 text-primary" />}
-            {step === 'select' ? 'Новая связь' : `Создание ${type === 'group' ? 'группы' : 'канала'}`}
+            {step === 'select' ? 'Новое сообщество' : `Создание ${type === 'group' ? 'группы' : 'канала'}`}
           </DialogTitle>
           <DialogDescription>
-            {step === 'select' ? 'Найдите пользователя для общения' : 'Укажите детали вашего сообщества'}
+            {step === 'select' ? 'Выберите тип сообщества или найдите друга' : 'Укажите детали вашего сообщества'}
           </DialogDescription>
         </DialogHeader>
 
         {step === 'select' ? (
-          <div className="flex flex-col">
-            <div className="px-6 py-4 space-y-4">
-              <div className="flex gap-2">
-                <Button 
-                  variant="outline" 
-                  className="flex-1 rounded-xl h-14 flex flex-col items-center justify-center gap-1 border-primary/20 hover:bg-primary/10 transition-colors"
-                  onClick={() => { setType('group'); setStep('details'); }}
-                >
-                  <Users className="w-5 h-5 text-primary" />
-                  <span className="text-[10px] font-bold">ГРУППА</span>
-                </Button>
-                <Button 
-                  variant="outline" 
-                  className="flex-1 rounded-xl h-14 flex flex-col items-center justify-center gap-1 border-accent/20 hover:bg-accent/10 transition-colors"
-                  onClick={() => { setType('channel'); setStep('details'); }}
-                >
-                  <Radio className="w-5 h-5 text-accent" />
-                  <span className="text-[10px] font-bold">КАНАЛ</span>
-                </Button>
-              </div>
-
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <Input 
-                  placeholder="Поиск..." 
-                  className="pl-9 h-11 bg-muted/30 border-muted-foreground/10 rounded-xl"
-                  value={search}
-                  onChange={e => setSearch(e.target.value)}
-                />
-              </div>
+          <div className="flex flex-col p-6 pt-2 space-y-4">
+            <div className="grid grid-cols-2 gap-3">
+              <Button 
+                variant="outline" 
+                className="rounded-2xl h-24 flex flex-col items-center justify-center gap-2 border-primary/20 hover:bg-primary/10 transition-all group"
+                onClick={() => { setType('group'); setStep('details'); }}
+              >
+                <div className="bg-primary/10 p-3 rounded-xl group-hover:bg-primary/20 transition-colors">
+                  <Users className="w-6 h-6 text-primary" />
+                </div>
+                <span className="text-[10px] font-black tracking-widest uppercase">Группа</span>
+              </Button>
+              <Button 
+                variant="outline" 
+                className="rounded-2xl h-24 flex flex-col items-center justify-center gap-2 border-accent/20 hover:bg-accent/10 transition-all group"
+                onClick={() => { setType('channel'); setStep('details'); }}
+              >
+                <div className="bg-accent/10 p-3 rounded-xl group-hover:bg-accent/20 transition-colors">
+                  <Radio className="w-6 h-6 text-accent" />
+                </div>
+                <span className="text-[10px] font-black tracking-widest uppercase">Канал</span>
+              </Button>
             </div>
 
-            <ScrollArea className="h-[300px] border-t border-border/40">
-              <div className="p-2 space-y-1">
-                {search.length < 2 ? (
-                  <div className="p-8 text-center space-y-3">
-                    <div className="bg-muted/30 w-12 h-12 rounded-full flex items-center justify-center mx-auto">
-                      <Contact className="w-6 h-6 text-muted-foreground" />
-                    </div>
-                    <p className="text-xs text-muted-foreground italic">
-                      Введите ник или телефон для поиска
-                    </p>
-                  </div>
-                ) : filteredUsers.length > 0 ? (
-                  filteredUsers.map(u => (
-                    <div
-                      key={u.id}
-                      onClick={() => startPrivateChat(u)}
-                      className="flex items-center gap-3 p-3 rounded-xl hover:bg-primary/10 cursor-pointer group transition-all"
-                    >
-                      <Avatar className="h-10 w-10 border-2 border-transparent group-hover:border-primary/20">
-                        <AvatarImage src={u.avatarUrl || ''} />
-                        <AvatarFallback className="bg-primary/20 text-primary font-bold uppercase">{u.name?.slice(0, 2)}</AvatarFallback>
-                      </Avatar>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between">
-                          <span className="font-semibold text-sm group-hover:text-primary transition-colors truncate flex items-center gap-1">
-                            {u.name}
-                            {isUserPremium(u) && <Star className="w-3 h-3 text-accent fill-accent" />}
-                          </span>
-                          <span className="text-[10px] text-muted-foreground shrink-0">{u.phone}</span>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-[10px] text-muted-foreground block truncate">{u.username}</span>
-                          {u.settings?.privacy?.whoCanMessageMe === 'premium' && (
-                            <div className="flex items-center gap-1 text-[9px] text-accent font-bold">
-                              <Lock className="w-2.5 h-2.5" /> Только Premium
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <div className="p-8 text-center text-muted-foreground text-sm italic">
-                    Никто не найден
-                  </div>
-                )}
-              </div>
-            </ScrollArea>
+            <div className="pt-2">
+              <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-3 text-center">ИЛИ</div>
+              <Button 
+                variant="secondary" 
+                className="w-full h-12 rounded-2xl gap-3 font-black uppercase text-[10px] tracking-[0.2em] shadow-xl shadow-black/20"
+                onClick={() => { onOpenChange(false); setIsSearchOpen(true); }}
+              >
+                <Search className="w-4 h-4 text-primary" /> Найти пользователя
+              </Button>
+            </div>
           </div>
         ) : (
           <div className="p-6 space-y-6">
             <div className="flex justify-center mb-4">
-              <div className="w-24 h-24 rounded-full bg-primary/10 border-2 border-dashed border-primary/40 flex items-center justify-center cursor-pointer hover:bg-primary/20 transition-all">
+              <div className="w-24 h-24 rounded-[2.5rem] bg-primary/10 border-2 border-dashed border-primary/40 flex items-center justify-center cursor-pointer hover:bg-primary/20 transition-all">
                 {type === 'group' ? <Users className="w-8 h-8 text-primary" /> : <Radio className="w-8 h-8 text-accent" />}
               </div>
             </div>
@@ -272,19 +134,19 @@ export function CreateChatModal({ open, onOpenChange }: CreateChatModalProps) {
                 placeholder={type === 'group' ? 'Название группы' : 'Название канала'} 
                 value={name}
                 onChange={e => setName(e.target.value)}
-                className="h-12 bg-muted/30 border-muted-foreground/10 rounded-xl text-lg font-semibold"
+                className="h-12 bg-muted/30 border-white/5 rounded-2xl text-lg font-semibold"
               />
               <Input 
                 placeholder={`@${type === 'group' ? 'group' : 'channel'}_id`} 
                 value={username}
                 onChange={e => setUsername(e.target.value)}
-                className="h-12 bg-muted/30 border-muted-foreground/10 rounded-xl"
+                className="h-12 bg-muted/30 border-white/5 rounded-2xl font-mono"
               />
             </div>
             <div className="flex gap-3 pt-4">
-              <Button variant="ghost" className="flex-1 rounded-xl" onClick={() => setStep('select')}>Назад</Button>
+              <Button variant="ghost" className="flex-1 rounded-2xl h-12 font-bold" onClick={() => setStep('select')}>Назад</Button>
               <Button 
-                className="flex-1 rounded-xl h-11 shadow-lg shadow-primary/20 font-bold" 
+                className="flex-1 rounded-2xl h-12 shadow-lg shadow-primary/20 font-black uppercase tracking-widest bg-primary" 
                 onClick={createGroupOrChannel}
                 disabled={isLoading}
               >

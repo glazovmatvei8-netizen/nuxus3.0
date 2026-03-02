@@ -9,7 +9,7 @@ import { UserAvatar } from '@/components/user-avatar';
 import { 
   Send, Info, ChevronLeft, Loader2, Bookmark, X, Video, Wand2, Phone, Search as SearchIcon,
   Zap, Calendar as CalendarIcon, Paperclip, Mic, StopCircle, AtSign,
-  Star, BarChart3, Video as VideoIcon, Camera
+  Star, BarChart3, Video as VideoIcon, Camera, Lock
 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { MessageItem } from './message-item';
@@ -17,7 +17,7 @@ import { useToast } from '@/hooks/use-toast';
 import { ChatInfoModal } from './modals/chat-info-modal';
 import { CreatePollModal } from './modals/create-poll-modal';
 import { useFirestore, useUser, useCollection, useDoc, useMemoFirebase } from '@/firebase';
-import { collection, query, orderBy, doc, updateDoc, where, addDoc } from 'firebase/firestore';
+import { collection, query, orderBy, doc, updateDoc, where, addDoc, getDocs, deleteDoc } from 'firebase/firestore';
 import { addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { formatDisplayName, isUserPremium, isGlobalAdmin, cn } from '@/lib/utils';
 import type { Message, User as UserType, Chat } from '@/lib/types';
@@ -215,11 +215,27 @@ export default function ChatArea() {
   
   const { data: rawMessages } = useCollection<Message>(messagesQuery);
 
+  const isRestricted = useMemo(() => {
+    if (chat?.type !== 'private' || !otherProfile) return false;
+    const canMessageMe = otherProfile.settings?.privacy?.whoCanMessageMe || 'everybody';
+    return canMessageMe === 'premium' && !amIPremium;
+  }, [chat?.type, otherProfile, amIPremium]);
+
   const messages = useMemo(() => {
     if (!rawMessages) return null;
     if (!searchQuery.trim()) return rawMessages;
     return rawMessages.filter(m => m.contentType === 'text' && m.content.toLowerCase().includes(searchQuery.toLowerCase()));
   }, [rawMessages, searchQuery]);
+
+  // Auto-cleanup logic for empty restricted chats
+  useEffect(() => {
+    const currentId = currentChatId;
+    return () => {
+      if (currentId && isRestricted && rawMessages?.length === 0 && db) {
+        deleteDoc(doc(db, 'chats', currentId)).catch(() => {});
+      }
+    };
+  }, [currentChatId, isRestricted, rawMessages, db]);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -356,6 +372,7 @@ export default function ChatArea() {
   }, [messages?.length, currentChatId, scrollToBottom]);
 
   const handleSendMessage = useCallback(async (content_msg: string = messageInput, type_msg: Message['contentType'] = 'text') => {
+    if (isRestricted) return;
     const trimmedContent = typeof content_msg === 'string' ? content_msg.trim() : content_msg;
     if ((!trimmedContent && pendingMedia.length === 0) || !currentChatId || !firebaseUser || !db) return;
     
@@ -429,7 +446,7 @@ export default function ChatArea() {
     }
 
     updateDocumentNonBlocking(doc(db, 'chats', currentChatId), { lastMessageAt: new Date().toISOString() });
-  }, [messageInput, pendingMedia, currentChatId, firebaseUser, db, userProfile, replyTo, editingMsg, scheduledDate, expiryTime, isOneTime, updateTypingStatus, isAdmin]);
+  }, [messageInput, pendingMedia, currentChatId, firebaseUser, db, userProfile, replyTo, editingMsg, scheduledDate, expiryTime, isOneTime, updateTypingStatus, isAdmin, isRestricted]);
 
   const handleReply = useCallback((msg: Message) => {
     setReplyTo(msg);
@@ -483,22 +500,17 @@ export default function ChatArea() {
     }
   };
 
-  // Improved Recording Logic with User Gesture requirement
+  // Improved Recording Logic
   const startRecording = async () => {
     if (!navigator.mediaDevices) {
-      toast({ variant: 'destructive', title: 'Ошибка безопасности', description: 'Ваш браузер блокирует доступ к камере (незащищенное соединение).' });
+      toast({ variant: 'destructive', title: 'Ошибка безопасности', description: 'Ваш браузер блокирует доступ к камере.' });
       return;
     }
 
     try {
       const constraints: MediaStreamConstraints = {
         audio: true,
-        video: recordingMode === 'video' ? { 
-          facingMode: 'user', 
-          width: { ideal: 480 }, 
-          height: { ideal: 480 },
-          aspectRatio: { ideal: 1 }
-        } : false
+        video: recordingMode === 'video' ? { facingMode: 'user', width: { ideal: 480 }, height: { ideal: 480 }, aspectRatio: { ideal: 1 } } : false
       };
       
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
@@ -538,12 +550,7 @@ export default function ChatArea() {
         setRecordingDuration(prev => prev + 1);
       }, 1000);
     } catch (err: any) {
-      console.error('Media error:', err);
-      toast({ 
-        variant: 'destructive', 
-        title: 'Доступ запрещен', 
-        description: 'Пожалуйста, разрешите доступ к камере и микрофону в настройках браузера.' 
-      });
+      toast({ variant: 'destructive', title: 'Доступ запрещен', description: 'Разрешите доступ к камере и микрофону.' });
     }
   };
 
@@ -642,158 +649,147 @@ export default function ChatArea() {
 
       <footer className="p-3 bg-card border-t border-white/5 shrink-0 relative">
         <div className="max-w-4xl mx-auto space-y-2">
-          {/* Video Preview Bubble during recording */}
-          {isRecording && recordingMode === 'video' && (
-            <div className="absolute bottom-[120%] right-4 w-40 h-40 rounded-full border-4 border-primary shadow-2xl overflow-hidden bg-black z-50 animate-in zoom-in slide-in-from-bottom-4">
-              <video ref={videoPreviewRef} autoPlay muted playsInline className="w-full h-full object-cover" />
-              <div className="absolute inset-0 bg-primary/10 animate-pulse pointer-events-none" />
+          {isRestricted ? (
+            <div className="flex items-center justify-center p-4 bg-primary/5 rounded-2xl border border-primary/10 animate-in fade-in slide-in-from-bottom-2">
+              <Lock className="w-4 h-4 text-primary mr-2" />
+              <span className="text-[10px] font-black uppercase tracking-widest text-primary/80">
+                Этому пользователю могут писать только Premium
+              </span>
             </div>
-          )}
-
-          {mentionQuery !== null && filteredParticipants.length > 0 && (
-            <div className="absolute bottom-full left-0 right-0 mx-auto max-w-4xl px-3 pb-2 z-50">
-              <div className="bg-card/95 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl overflow-hidden animate-in slide-in-from-bottom-2">
-                <div className="px-4 py-2 border-b border-white/5 bg-primary/5 flex items-center justify-between">
-                  <span className="text-[10px] font-black uppercase tracking-widest text-primary flex items-center gap-1.5"><AtSign className="w-3 h-3" /> Упомянуть участника</span>
+          ) : (
+            <>
+              {/* Video Preview Bubble */}
+              {isRecording && recordingMode === 'video' && (
+                <div className="absolute bottom-[120%] right-4 w-40 h-40 rounded-full border-4 border-primary shadow-2xl overflow-hidden bg-black z-50 animate-in zoom-in slide-in-from-bottom-4">
+                  <video ref={videoPreviewRef} autoPlay muted playsInline className="w-full h-full object-cover" />
+                  <div className="absolute inset-0 bg-primary/10 animate-pulse pointer-events-none" />
                 </div>
-                <ScrollArea className="max-h-60">
-                  <div className="p-1.5 space-y-1">
-                    {filteredParticipants.map((p, idx) => (
-                      <div 
-                        key={p.id} 
-                        onClick={() => handleSelectMention(p)}
-                        className={cn(
-                          "flex items-center gap-3 p-2.5 rounded-xl cursor-pointer transition-all border border-transparent hover:bg-primary/10",
-                          mentionIndex === idx && "bg-primary/20 border-primary/20"
-                        )}
-                      >
-                        <UserAvatar userId={p.id} className="h-8 w-8" manualAvatarUrl={p.avatarUrl} fallbackName={p.name} />
-                        <div className="flex flex-col min-w-0 text-left">
-                          <span className="font-bold text-sm truncate flex items-center gap-1.5">
-                            {p.name} {isUserPremium(p) && <Star className="w-3 h-3 text-accent fill-accent" />}
-                          </span>
-                          <span className="text-[10px] text-muted-foreground font-mono truncate">{p.username}</span>
-                        </div>
+              )}
+
+              {mentionQuery !== null && filteredParticipants.length > 0 && (
+                <div className="absolute bottom-full left-0 right-0 mx-auto max-w-4xl px-3 pb-2 z-50">
+                  <div className="bg-card/95 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl overflow-hidden animate-in slide-in-from-bottom-2">
+                    <div className="px-4 py-2 border-b border-white/5 bg-primary/5 flex items-center justify-between">
+                      <span className="text-[10px] font-black uppercase tracking-widest text-primary flex items-center gap-1.5"><AtSign className="w-3 h-3" /> Упомянуть участника</span>
+                    </div>
+                    <ScrollArea className="max-h-60">
+                      <div className="p-1.5 space-y-1">
+                        {filteredParticipants.map((p, idx) => (
+                          <div key={p.id} onClick={() => handleSelectMention(p)} className={cn("flex items-center gap-3 p-2.5 rounded-xl cursor-pointer transition-all border border-transparent hover:bg-primary/10", mentionIndex === idx && "bg-primary/20 border-primary/20")}>
+                            <UserAvatar userId={p.id} className="h-8 w-8" manualAvatarUrl={p.avatarUrl} fallbackName={p.name} />
+                            <div className="flex flex-col min-w-0 text-left">
+                              <span className="font-bold text-sm truncate flex items-center gap-1.5">{p.name} {isUserPremium(p) && <Star className="w-3 h-3 text-accent fill-accent" />}</span>
+                              <span className="text-[10px] text-muted-foreground font-mono truncate">{p.username}</span>
+                            </div>
+                          </div>
+                        ))}
                       </div>
-                    ))}
+                    </ScrollArea>
                   </div>
-                </ScrollArea>
-              </div>
-            </div>
-          )}
+                </div>
+              )}
 
-          {isRecording && (
-            <div className="flex items-center justify-between p-3 bg-red-500/10 rounded-2xl border border-red-500/20 animate-in slide-in-from-bottom-2">
-              <div className="flex items-center gap-3">
-                <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse" />
-                <span className="text-xs font-black text-red-500 uppercase tracking-widest">
-                  Запись {recordingMode === 'video' ? 'кружка' : 'ГС'}: {Math.floor(recordingDuration / 60)}:{(recordingDuration % 60).toString().padStart(2, '0')}
-                </span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Button variant="ghost" size="sm" className="h-8 text-[10px] uppercase font-bold text-muted-foreground" onClick={() => stopRecording(false)}>Отмена</Button>
-                <Button size="icon" className="h-9 w-9 rounded-xl bg-red-500 hover:bg-red-600 shadow-lg shadow-red-500/20" onClick={() => stopRecording(true)}><StopCircle className="w-5 h-5" /></Button>
-              </div>
-            </div>
-          )}
-          
-          {pendingMedia.length > 0 && (
-            <div className="flex gap-2 p-2 bg-muted/40 rounded-2xl overflow-x-auto scrollbar-hide">
-              {pendingMedia.map((media, idx) => (
-                <div key={idx} className="relative h-16 w-16 shrink-0 rounded-lg overflow-hidden border border-white/10">
-                  {media.type === 'video' ? (
-                    <video src={media.url} className="h-full w-full object-cover" />
-                  ) : (
-                    <img src={media.url} className="h-full w-full object-cover" />
-                  )}
-                  <button onClick={() => removePendingMedia(idx)} className="absolute top-0.5 right-0.5 bg-black/60 rounded-full p-0.5 hover:bg-destructive"><X className="w-3 h-3 text-white" /></button>
+              {isRecording && (
+                <div className="flex items-center justify-between p-3 bg-red-500/10 rounded-2xl border border-red-500/20 animate-in slide-in-from-bottom-2">
+                  <div className="flex items-center gap-3">
+                    <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse" />
+                    <span className="text-xs font-black text-red-500 uppercase tracking-widest">
+                      Запись {recordingMode === 'video' ? 'кружка' : 'ГС'}: {Math.floor(recordingDuration / 60)}:{(recordingDuration % 60).toString().padStart(2, '0')}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button variant="ghost" size="sm" className="h-8 text-[10px] uppercase font-bold text-muted-foreground" onClick={() => stopRecording(false)}>Отмена</Button>
+                    <Button size="icon" className="h-9 w-9 rounded-xl bg-red-500 hover:bg-red-600 shadow-lg shadow-red-500/20" onClick={() => stopRecording(true)}><StopCircle className="w-5 h-5" /></Button>
+                  </div>
                 </div>
-              ))}
-            </div>
-          )}
-          {replyTo && (
-            <div className="p-2 bg-muted/50 rounded-xl border-l-4 border-primary flex items-center justify-between">
-              <div className="flex flex-col min-w-0 pl-2">
-                <span className="text-[9px] font-bold text-primary uppercase tracking-widest">{t('chat.reply')}: {replyTo.senderName}</span>
-                <span className="text-xs truncate text-muted-foreground italic">{replyTo.content}</span>
-              </div>
-              <Button variant="ghost" size="icon" className="h-7 w-7 rounded-lg" onClick={() => setReplyTo(null)}><X className="w-4 h-4" /></Button>
-            </div>
-          )}
-          <div className="flex gap-2 items-end">
-            <input type="file" multiple accept="image/*,video/*" className="hidden" ref={fileInputRef} onChange={handleFileSelect} />
-            <Button variant="ghost" size="icon" className="h-11 w-11 rounded-xl shrink-0 bg-muted" onClick={() => fileInputRef.current?.click()} disabled={isRecording}><Paperclip className="w-5 h-5 text-muted-foreground" /></Button>
-            <Popover>
-              <PopoverTrigger asChild><Button variant="ghost" size="icon" className="h-11 w-11 rounded-xl shrink-0 bg-muted" disabled={isRecording}><Zap className="w-5 h-5 text-primary" /></Button></PopoverTrigger>
-              <PopoverContent className="w-64 p-3 rounded-2xl bg-card border-white/10 shadow-2xl space-y-4">
-                <div className="grid grid-cols-2 gap-2">
-                  <Button variant="outline" size="sm" className="h-10 rounded-xl gap-2 text-[10px] font-bold uppercase" onClick={() => setIsPollModalOpen(true)}>
-                    <BarChart3 className="w-4 h-4 text-accent" /> Опрос
-                  </Button>
-                  <Button variant="outline" size="sm" className="h-10 rounded-xl gap-2 text-[10px] font-bold uppercase" onClick={() => fileInputRef.current?.click()}>
-                    <Paperclip className="w-4 h-4 text-primary" /> Файл
-                  </Button>
+              )}
+              
+              {pendingMedia.length > 0 && (
+                <div className="flex gap-2 p-2 bg-muted/40 rounded-2xl overflow-x-auto scrollbar-hide">
+                  {pendingMedia.map((media, idx) => (
+                    <div key={idx} className="relative h-16 w-16 shrink-0 rounded-lg overflow-hidden border border-white/10">
+                      {media.type === 'video' ? <video src={media.url} className="h-full w-full object-cover" /> : <img src={media.url} className="h-full w-full object-cover" />}
+                      <button onClick={() => removePendingMedia(idx)} className="absolute top-0.5 right-0.5 bg-black/60 rounded-full p-0.5 hover:bg-destructive"><X className="w-3 h-3 text-white" /></button>
+                    </div>
+                  ))}
                 </div>
-                <div className="space-y-2 pt-2 border-t border-white/5"><span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground ml-1">Отложенно</span><Popover><PopoverTrigger asChild><Button variant="outline" className="w-full justify-start h-10 rounded-xl text-xs gap-2"><CalendarIcon className="w-4 h-4" /> {scheduledDate ? scheduledDate.toLocaleDateString() : 'Выбрать дату'}</Button></PopoverTrigger><PopoverContent className="w-auto p-0"><Calendar mode="single" selected={scheduledDate} onSelect={setScheduledDate} initialFocus /></PopoverContent></Popover></div>
-                <div className="space-y-2"><span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground ml-1">Самоуничтожение</span><div className="grid grid-cols-3 gap-2">{[15, 60, 3600].map(time => (<Button key={time} variant={expiryTime === time ? 'default' : 'outline'} className="h-8 text-[10px] rounded-lg" onClick={() => setExpiryTime(time)}>{time < 60 ? `${time}с` : time < 3600 ? '1м' : '1ч'}</Button>))}</div></div>
-                <div className="flex items-center justify-between pt-2 border-t border-white/5"><span className="text-xs font-bold uppercase tracking-wider">Один просмотр</span><Button variant={isOneTime ? 'default' : 'outline'} size="sm" className="h-7 rounded-lg" onClick={() => setIsOneTime(!isOneTime)}>{isOneTime ? 'ВКЛ' : 'ВЫКЛ'}</Button></div>
-              </PopoverContent>
-            </Popover>
-            <div className="flex-1 relative">
-              <Input 
-                ref={inputRef}
-                placeholder={t('chat.placeholder')} 
-                className="bg-muted border-none rounded-xl h-11 text-sm px-4 focus-visible:ring-1 focus-visible:ring-primary/20" 
-                value={messageInput} 
-                onChange={e => onInputChange(e.target.value)} 
-                onKeyDown={e => {
-                  if (e.key === 'Enter' && !e.shiftKey) {
-                    if (mentionQuery !== null && filteredParticipants.length > 0) {
-                      e.preventDefault();
-                      handleSelectMention(filteredParticipants[mentionIndex]);
-                    } else {
-                      handleSendMessage();
-                    }
-                  }
-                  if (mentionQuery !== null) {
-                    if (e.key === 'ArrowDown') { e.preventDefault(); setMentionIndex(prev => (prev + 1) % filteredParticipants.length); }
-                    if (e.key === 'ArrowUp') { e.preventDefault(); setMentionIndex(prev => (prev - 1 + filteredParticipants.length) % filteredParticipants.length); }
-                    if (e.key === 'Escape') { setMentionQuery(null); }
-                  }
-                }}
-                disabled={isRecording}
-              />
-              {amIPremium && !editingMsg && (<button onClick={async () => { setIsDrafting(true); const history = messages?.slice(-5).map(m => ({ sender: m.senderName, message: m.content })) || []; try { const { draftMessage } = await suggestMessageDraft({ conversationHistory: history, currentUserInput: messageInput }); setMessageInput(draftMessage); } catch(e){} finally { setIsDrafting(false); } }} disabled={isDrafting || isRecording} className="absolute right-3 top-1/2 -translate-y-1/2 text-primary hover:scale-110">{isDrafting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wand2 className="w-4 h-4" />}</button>)}
-            </div>
-            
-            {(!messageInput.trim() && pendingMedia.length === 0 && !isRecording) ? (
-              <div className="flex items-center gap-1.5">
-                <Button 
-                  size="icon" 
-                  className={cn("h-11 w-11 rounded-xl shrink-0 transition-all", recordingMode === 'audio' ? "bg-primary" : "bg-accent text-accent-foreground")} 
-                  onClick={startRecording}
-                  onContextMenu={(e) => { e.preventDefault(); toggleRecordingMode(); }}
-                >
-                  {recordingMode === 'audio' ? <Mic className="w-5 h-5" /> : <VideoIcon className="w-5 h-5" />}
-                </Button>
-                <Button 
-                  size="icon" 
-                  variant="ghost" 
-                  className="h-8 w-8 rounded-lg text-muted-foreground hover:text-white"
-                  onClick={toggleRecordingMode}
-                  title="Переключить режим записи"
-                >
-                  {recordingMode === 'audio' ? <VideoIcon className="w-3.5 h-3.5" /> : <Mic className="w-3.5 h-3.5" />}
-                </Button>
+              )}
+              
+              {replyTo && (
+                <div className="p-2 bg-muted/50 rounded-xl border-l-4 border-primary flex items-center justify-between">
+                  <div className="flex flex-col min-w-0 pl-2">
+                    <span className="text-[9px] font-bold text-primary uppercase tracking-widest">{t('chat.reply')}: {replyTo.senderName}</span>
+                    <span className="text-xs truncate text-muted-foreground italic">{replyTo.content}</span>
+                  </div>
+                  <Button variant="ghost" size="icon" className="h-7 w-7 rounded-lg" onClick={() => setReplyTo(null)}><X className="w-4 h-4" /></Button>
+                </div>
+              )}
+
+              <div className="flex gap-2 items-end">
+                <input type="file" multiple accept="image/*,video/*" className="hidden" ref={fileInputRef} onChange={handleFileSelect} />
+                <Button variant="ghost" size="icon" className="h-11 w-11 rounded-xl shrink-0 bg-muted" onClick={() => fileInputRef.current?.click()} disabled={isRecording}><Paperclip className="w-5 h-5 text-muted-foreground" /></Button>
+                <Popover>
+                  <PopoverTrigger asChild><Button variant="ghost" size="icon" className="h-11 w-11 rounded-xl shrink-0 bg-muted" disabled={isRecording}><Zap className="w-5 h-5 text-primary" /></Button></PopoverTrigger>
+                  <PopoverContent className="w-64 p-3 rounded-2xl bg-card border-white/10 shadow-2xl space-y-4">
+                    <div className="grid grid-cols-2 gap-2">
+                      <Button variant="outline" size="sm" className="h-10 rounded-xl gap-2 text-[10px] font-bold uppercase" onClick={() => setIsPollModalOpen(true)}>
+                        <BarChart3 className="w-4 h-4 text-accent" /> Опрос
+                      </Button>
+                      <Button variant="outline" size="sm" className="h-10 rounded-xl gap-2 text-[10px] font-bold uppercase" onClick={() => fileInputRef.current?.click()}>
+                        <Paperclip className="w-4 h-4 text-primary" /> Файл
+                      </Button>
+                    </div>
+                    <div className="space-y-2 pt-2 border-t border-white/5"><span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground ml-1">Отложенно</span><Popover><PopoverTrigger asChild><Button variant="outline" className="w-full justify-start h-10 rounded-xl text-xs gap-2"><CalendarIcon className="w-4 h-4" /> {scheduledDate ? scheduledDate.toLocaleDateString() : 'Выбрать дату'}</Button></PopoverTrigger><PopoverContent className="w-auto p-0"><Calendar mode="single" selected={scheduledDate} onSelect={setScheduledDate} initialFocus /></PopoverContent></Popover></div>
+                    <div className="space-y-2"><span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground ml-1">Самоуничтожение</span><div className="grid grid-cols-3 gap-2">{[15, 60, 3600].map(time => (<Button key={time} variant={expiryTime === time ? 'default' : 'outline'} className="h-8 text-[10px] rounded-lg" onClick={() => setExpiryTime(time)}>{time < 60 ? `${time}с` : time < 3600 ? '1м' : '1ч'}</Button>))}</div></div>
+                    <div className="flex items-center justify-between pt-2 border-t border-white/5"><span className="text-xs font-bold uppercase tracking-wider">Один просмотр</span><Button variant={isOneTime ? 'default' : 'outline'} size="sm" className="h-7 rounded-lg" onClick={() => setIsOneTime(!isOneTime)}>{isOneTime ? 'ВКЛ' : 'ВЫКЛ'}</Button></div>
+                  </PopoverContent>
+                </Popover>
+                <div className="flex-1 relative">
+                  <Input 
+                    ref={inputRef}
+                    placeholder={t('chat.placeholder')} 
+                    className="bg-muted border-none rounded-xl h-11 text-sm px-4 focus-visible:ring-1 focus-visible:ring-primary/20" 
+                    value={messageInput} 
+                    onChange={e => onInputChange(e.target.value)} 
+                    onKeyDown={e => {
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                        if (mentionQuery !== null && filteredParticipants.length > 0) {
+                          e.preventDefault();
+                          handleSelectMention(filteredParticipants[mentionIndex]);
+                        } else {
+                          handleSendMessage();
+                        }
+                      }
+                      if (mentionQuery !== null) {
+                        if (e.key === 'ArrowDown') { e.preventDefault(); setMentionIndex(prev => (prev + 1) % filteredParticipants.length); }
+                        if (e.key === 'ArrowUp') { e.preventDefault(); setMentionIndex(prev => (prev - 1 + filteredParticipants.length) % filteredParticipants.length); }
+                        if (e.key === 'Escape') { setMentionQuery(null); }
+                      }
+                    }}
+                    disabled={isRecording}
+                  />
+                  {amIPremium && !editingMsg && (<button onClick={async () => { setIsDrafting(true); const history = messages?.slice(-5).map(m => ({ sender: m.senderName, message: m.content })) || []; try { const { draftMessage } = await suggestMessageDraft({ conversationHistory: history, currentUserInput: messageInput }); setMessageInput(draftMessage); } catch(e){} finally { setIsDrafting(false); } }} disabled={isDrafting || isRecording} className="absolute right-3 top-1/2 -translate-y-1/2 text-primary hover:scale-110">{isDrafting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wand2 className="w-4 h-4" />}</button>)}
+                </div>
+                
+                {(!messageInput.trim() && pendingMedia.length === 0 && !isRecording) ? (
+                  <div className="flex items-center gap-1.5">
+                    <Button size="icon" className={cn("h-11 w-11 rounded-xl shrink-0 transition-all", recordingMode === 'audio' ? "bg-primary" : "bg-accent text-accent-foreground")} onClick={startRecording} onContextMenu={(e) => { e.preventDefault(); toggleRecordingMode(); }}>
+                      {recordingMode === 'audio' ? <Mic className="w-5 h-5" /> : <VideoIcon className="w-5 h-5" />}
+                    </Button>
+                    <Button size="icon" variant="ghost" className="h-8 w-8 rounded-lg text-muted-foreground hover:text-white" onClick={toggleRecordingMode} title="Переключить режим записи">
+                      {recordingMode === 'audio' ? <VideoIcon className="w-3.5 h-3.5" /> : <Mic className="w-3.5 h-3.5" />}
+                    </Button>
+                  </div>
+                ) : (
+                  !isRecording && (
+                    <Button size="icon" className="h-11 w-11 rounded-xl shrink-0 bg-primary" onClick={() => handleSendMessage()}>
+                      <Send className="w-5 h-5" />
+                    </Button>
+                  )
+                )}
               </div>
-            ) : (
-              !isRecording && (
-                <Button size="icon" className="h-11 w-11 rounded-xl shrink-0 bg-primary" onClick={() => handleSendMessage()}>
-                  <Send className="w-5 h-5" />
-                </Button>
-              )
-            )}
-          </div>
+            </>
+          )}
         </div>
       </footer>
       {chat && <ChatInfoModal open={isChatInfoOpen} onOpenChange={setIsChatInfoOpen} chat={chat as any} />}
