@@ -1,39 +1,56 @@
 
-const CACHE_NAME = 'nuxus-ghost-v54';
-const ASSETS_TO_CACHE = [
-  '/',
-  '/index.html',
+/**
+ * Nuxus Ghost Protocol Service Worker v1.0
+ * Обеспечивает работу мессенджера в условиях полной блокировки внешних ресурсов.
+ */
+
+const CACHE_NAME = 'nuxus-ghost-v1';
+const OFFLINE_URL = '/';
+
+// Ресурсы для предварительного кэширования
+const PRECACHE_ASSETS = [
+  OFFLINE_URL,
   '/manifest.json',
-  'https://picsum.photos/seed/nuxus/180/180',
-  'https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3'
+  'https://picsum.photos/seed/nuxus/180/180'
 ];
 
-// Установка: сохраняем всё в память
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(ASSETS_TO_CACHE);
+      return cache.addAll(PRECACHE_ASSETS);
     })
   );
   self.skipWaiting();
 });
 
-// Активация: чистим старые версии
 self.addEventListener('activate', (event) => {
   event.waitUntil(
-    caches.keys().then((keys) => {
-      return Promise.all(
-        keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key))
-      );
-    })
+    Promise.all([
+      self.clients.claim(),
+      // Удаление старых кэшей
+      caches.keys().then((cacheNames) => {
+        return Promise.all(
+          cacheNames.map((cacheName) => {
+            if (cacheName !== CACHE_NAME) {
+              return caches.delete(cacheName);
+            }
+          })
+        );
+      })
+    ])
   );
 });
 
-// Перехват запросов: Стратегия "Сначала Кэш, потом Сеть"
-// Это и есть обход "белых списков" - мы не идем в сеть, если файл есть в памяти
 self.addEventListener('fetch', (event) => {
-  // Пропускаем запросы к API Firebase (они сами умеют в оффлайн)
-  if (event.request.url.includes('firestore.googleapis.com') || event.request.url.includes('firebasestorage')) {
+  // Стратегия: Сначала сеть, если сбой — кэш. 
+  // Но для файлов стилей и скриптов — Кэш, потом сеть (для скорости в "белых списках")
+  
+  if (event.request.mode === 'navigate') {
+    event.respondWith(
+      fetch(event.request).catch(() => {
+        return caches.match(OFFLINE_URL);
+      })
+    );
     return;
   }
 
@@ -42,11 +59,21 @@ self.addEventListener('fetch', (event) => {
       if (cachedResponse) {
         return cachedResponse;
       }
-      return fetch(event.request).catch(() => {
-        // Если сети нет и в кэше нет (например, новая страница), отдаем главную
-        if (event.request.mode === 'navigate') {
-          return caches.match('/');
+
+      return fetch(event.request).then((response) => {
+        // Кэшируем новые запросы на лету
+        if (!response || response.status !== 200 || response.type !== 'basic') {
+          return response;
         }
+
+        const responseToCache = response.clone();
+        caches.open(CACHE_NAME).then((cache) => {
+          cache.put(event.request, responseToCache);
+        });
+
+        return response;
+      }).catch(() => {
+        // Оффлайн без кэша — просто возвращаем пустоту или дефолтную иконку
       });
     })
   );

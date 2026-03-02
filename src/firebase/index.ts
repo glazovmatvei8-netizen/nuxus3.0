@@ -1,43 +1,44 @@
-
 'use client';
 
 import { firebaseConfig } from '@/firebase/config';
 import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
 import { 
+  getFirestore,
   initializeFirestore, 
-  CACHE_SIZE_UNLIMITED, 
-  enableMultiTabIndexedDbPersistence,
   persistentLocalCache,
   persistentMultipleTabManager
 } from 'firebase/firestore';
 
 /**
- * Инициализация Firebase v0.54.0 Ghost Protocol.
- * Оптимизировано для обхода блокировок через агрессивное кэширование.
+ * Инициализация Firebase v0.54.1 Ghost Protocol.
+ * Исправлена ошибка "initializeFirestore() has already been called".
  */
 export function initializeFirebase() {
   let firebaseApp: FirebaseApp;
+  let firestore;
 
   if (!getApps().length) {
     try {
       firebaseApp = initializeApp(firebaseConfig);
+      // Инициализируем Firestore с оффлайн-кэшем только при создании нового приложения
+      firestore = initializeFirestore(firebaseApp, {
+        localCache: persistentLocalCache({
+          tabManager: persistentMultipleTabManager()
+        })
+      });
     } catch (e) {
-      console.warn('Firebase core warm-up...');
+      console.warn('Firebase core warm-up retry...');
       firebaseApp = getApp();
+      firestore = getFirestore(firebaseApp);
     }
   } else {
     firebaseApp = getApp();
+    // Если приложение уже создано, просто берем существующий Firestore
+    firestore = getFirestore(firebaseApp);
   }
 
   const auth = getAuth(firebaseApp);
-  
-  // Инициализация Firestore с продвинутым оффлайн-менеджером
-  const firestore = initializeFirestore(firebaseApp, {
-    localCache: persistentLocalCache({
-      tabManager: persistentMultipleTabManager()
-    })
-  });
 
   return {
     firebaseApp,

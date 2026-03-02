@@ -1,4 +1,3 @@
-
 "use client"
 
 import React from 'react';
@@ -98,7 +97,7 @@ export default function ProfileView() {
             <div className="h-10 w-10 rounded-full bg-[#5856d6]/20 flex items-center justify-center">
               <Link className="w-5 h-5 text-[#5856d6]" />
             </div>
-            <span className="text-[#5856d6] font-semibold text-[16px]">Пригласить друзей</span>
+            <span className="text-[#5856d6] font-semibold text-[16px]">Приглашить друзей</span>
           </div>
 
           {/* Main Settings Block */}
@@ -132,7 +131,7 @@ export default function ProfileView() {
           {/* Support/Info */}
           <div className="pt-2">
             <p className="text-[11px] text-muted-foreground/40 uppercase font-black text-center tracking-[0.2em]">
-              Nuxus Core v0.52.0
+              Nuxus Core v0.54.1
             </p>
           </div>
         </div>
