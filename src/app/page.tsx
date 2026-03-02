@@ -5,6 +5,7 @@ import { useUser, useFirestore, useDoc, useMemoFirebase, useAuth } from '@/fireb
 import { useAppState } from '@/lib/store';
 import AuthScreen from '@/components/auth-screen';
 import ChatMain from '@/components/chat-main';
+import { IosInstaller } from '@/components/ios-installer';
 import { Loader2, ShieldAlert, Lock, ArrowRight, Clock } from 'lucide-react';
 import { doc, collection, query, where, limit, getDocs, arrayUnion, updateDoc } from 'firebase/firestore';
 import type { User as UserType, Chat } from '@/lib/types';
@@ -23,8 +24,20 @@ export default function Home() {
   const auth = useAuth();
   const { setCurrentChatId, is2FAVerified, setIs2FAVerified } = useAppState();
   const { toast } = useToast();
+  
   const [isJoining, setIsJoining] = useState(false);
   const [twoFactorInput, setTwoFactorInput] = useState('');
+  const [showInstaller, setShowInstaller] = useState(false);
+
+  // Standalone mode detection for iOS
+  useEffect(() => {
+    const isIos = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || (navigator as any).standalone;
+    
+    if (isIos && !isStandalone) {
+      setShowInstaller(true);
+    }
+  }, []);
 
   const userProfileRef = useMemoFirebase(() => {
     if (!db || !user) return null;
@@ -79,7 +92,10 @@ export default function Home() {
     }
   };
 
-  // Safe Loading UI to prevent white screen
+  if (showInstaller) {
+    return <IosInstaller onDismiss={() => setShowInstaller(false)} />;
+  }
+
   if (isUserLoading) {
     return (
       <div className="h-screen w-full flex items-center justify-center bg-[#0a0a0c]">
@@ -130,7 +146,6 @@ export default function Home() {
     );
   }
 
-  // 2FA Verification Overlay
   if (profile?.twoFactorEnabled && !is2FAVerified) {
     return (
       <div className="h-screen w-full flex items-center justify-center bg-background relative overflow-hidden">
@@ -143,7 +158,7 @@ export default function Home() {
             <div className="space-y-2">
               <h2 className="text-3xl font-black uppercase italic text-white tracking-tighter">Защита Nuxus</h2>
               <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60 leading-relaxed">
-                Введите ваш секретный PIN-код для облачного подтверждения личности
+                Введите ваш секретный PIN-код для подтверждения личности
               </p>
             </div>
             <div className="space-y-4">

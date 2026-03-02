@@ -62,12 +62,11 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <meta name="apple-mobile-web-app-title" content="Nuxus" />
         <link rel="apple-touch-icon" href="https://picsum.photos/seed/nuxus/180/180" />
-        <link rel="apple-touch-icon" sizes="152x152" href="https://picsum.photos/seed/nuxus/152/152" />
-        <link rel="apple-touch-icon" sizes="167x167" href="https://picsum.photos/seed/nuxus/167/167" />
-        <link rel="apple-touch-icon" sizes="180x180" href="https://picsum.photos/seed/nuxus/180/180" />
         <link rel="icon" href="https://picsum.photos/seed/nuxus/32/32" />
+        {/* Splash Screens for iOS */}
+        <link rel="apple-touch-startup-image" href="https://picsum.photos/seed/nuxus-launch/1170/2532" media="(device-width: 390px) and (device-height: 844px) and (-webkit-device-pixel-ratio: 3)" />
       </head>
-      <body className="font-sans antialiased bg-background text-foreground overflow-hidden h-[100dvh]">
+      <body className="font-sans antialiased bg-[#0a0a0c] text-foreground overflow-hidden h-[100dvh] selection:bg-primary/30">
         <FirebaseClientProvider>
           <AppProvider>
             {children}
