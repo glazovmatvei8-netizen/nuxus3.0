@@ -1,3 +1,4 @@
+
 "use client"
 
 import React from 'react';
@@ -131,7 +132,7 @@ export default function ProfileView() {
           {/* Support/Info */}
           <div className="pt-2">
             <p className="text-[11px] text-muted-foreground/40 uppercase font-black text-center tracking-[0.2em]">
-              Nuxus Core v0.54.1
+              Nuxus Core v0.54.3
             </p>
           </div>
         </div>
