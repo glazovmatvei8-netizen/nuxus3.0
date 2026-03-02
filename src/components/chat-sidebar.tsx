@@ -9,21 +9,23 @@ import {
   Plus, Bookmark, Pin, Star, 
   Check, CheckCheck,
   MessageSquare, Lock, SquarePen,
-  Search
+  Search, Trash2, Circle
 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { CreateChatModal } from './modals/create-chat-modal';
 import { AdminPanelModal } from './modals/admin-panel-modal';
 import type { User, Message, Chat } from '@/lib/types';
 import { useFirestore, useUser, useCollection, useDoc, useMemoFirebase } from '@/firebase';
-import { collection, query, where, doc, limit, orderBy } from 'firebase/firestore';
+import { collection, query, where, doc, limit, orderBy, writeBatch } from 'firebase/firestore';
 import { formatDisplayName, cn, isGlobalAdmin } from '@/lib/utils';
-import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
-import { differenceInSeconds, format } from 'date-fns';
+import { format } from 'date-fns';
 
-const ChatListItem = memo(({ chat, isActive, otherId, cachedDisplayName, manualAvatarUrl, onClick, isPinned, user }: any) => {
+const ChatListItem = memo(({ 
+  chat, isActive, otherId, cachedDisplayName, manualAvatarUrl, 
+  onClick, isPinned, user, isEditMode, isSelected, onToggleSelect 
+}: any) => {
   const db = useFirestore();
   
   const userProfileRef = useMemoFirebase(() => {
@@ -59,12 +61,24 @@ const ChatListItem = memo(({ chat, isActive, otherId, cachedDisplayName, manualA
 
   return (
     <div
-      onClick={onClick}
+      onClick={isEditMode ? () => onToggleSelect(chat.id) : onClick}
       className={cn(
         "flex items-center gap-3 px-4 py-2.5 cursor-pointer transition-all border-none group relative",
-        isActive ? 'bg-white/10' : 'active:bg-white/[0.05]'
+        isActive && !isEditMode ? 'bg-white/10' : 'active:bg-white/[0.05]'
       )}
     >
+      {/* Edit Mode Checkbox */}
+      {isEditMode && (
+        <div className="shrink-0 mr-1 animate-in slide-in-from-left-2 duration-200">
+          <div className={cn(
+            "w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all",
+            isSelected ? "bg-[#007AFF] border-[#007AFF]" : "border-white/20"
+          )}>
+            {isSelected && <Check className="w-4 h-4 text-white stroke-[3]" />}
+          </div>
+        </div>
+      )}
+
       <div className="relative shrink-0">
         {chat.type === 'saved' ? (
           <div className="h-[52px] w-[52px] rounded-full bg-[#007AFF] flex items-center justify-center shadow-lg">
@@ -112,10 +126,16 @@ export default function ChatSidebar() {
   const db = useFirestore();
   const { toast } = useToast();
   const { currentChatId, setCurrentChatId, forwardingMessage, setForwardingMessage } = useAppState();
+  
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState<'all' | 'private' | 'channels' | 'bots'>('all');
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isAdminPanelOpen, setIsAdminPanelOpen] = useState(false);
+  
+  // Edit mode state
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [selectedChatIds, setSelectedChatIds] = useState<string[]>([]);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const userProfileRef = useMemoFirebase(() => (!db || !user) ? null : doc(db, 'users', user.uid), [db, user]);
   const { data: profile } = useDoc<User>(userProfileRef);
@@ -172,20 +192,50 @@ export default function ChatSidebar() {
     return result;
   }, [sortedChats, searchQuery, user, activeTab]);
 
+  const toggleChatSelection = (chatId: string) => {
+    setSelectedChatIds(prev => 
+      prev.includes(chatId) ? prev.filter(id => id !== chatId) : [...prev, chatId]
+    );
+  };
+
+  const handleDeleteSelected = async () => {
+    if (!db || selectedChatIds.length === 0) return;
+    if (!confirm(`Удалить выбранные чаты (${selectedChatIds.length})?`)) return;
+
+    setIsDeleting(true);
+    try {
+      const batch = writeBatch(db);
+      selectedChatIds.forEach(id => {
+        batch.delete(doc(db, 'chats', id));
+      });
+      await batch.commit();
+      
+      toast({ title: "Чаты удалены" });
+      setSelectedChatIds([]);
+      setIsEditMode(false);
+    } catch (e: any) {
+      toast({ title: "Ошибка", description: e.message, variant: "destructive" });
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   return (
     <div className="flex flex-col h-full bg-[#0a0a0c] overflow-hidden">
       <div className="px-4 pt-4 pb-2 shrink-0">
         <div className="flex items-center justify-between mb-4">
-          <Button variant="ghost" className="h-8 px-3 rounded-full bg-white/10 hover:bg-white/20 text-white font-bold text-[13px] border border-white/5">
-            Изм.
+          <Button 
+            variant="ghost" 
+            onClick={() => {
+              setIsEditMode(!isEditMode);
+              setSelectedChatIds([]);
+            }}
+            className="h-8 px-3 rounded-full bg-white/10 hover:bg-white/20 text-white font-bold text-[13px] border border-white/5"
+          >
+            {isEditMode ? 'Готово' : 'Изм.'}
           </Button>
           
           <div className="flex items-center gap-2">
-            <div className="flex -space-x-2 mr-1">
-              <div className="w-6 h-6 rounded-full border border-background bg-accent/20 overflow-hidden" />
-              <div className="w-6 h-6 rounded-full border border-background bg-primary/20 overflow-hidden" />
-              <div className="w-6 h-6 rounded-full border border-background bg-blue-500/20 overflow-hidden" />
-            </div>
             <div className="flex items-center gap-1.5" onClick={() => isGlobalAdmin(profile) && setIsAdminPanelOpen(true)}>
               <Lock className="w-3.5 h-3.5 text-white" />
               <h1 className="text-[17px] font-black text-white tracking-tight">Чаты 🐱</h1>
@@ -232,6 +282,9 @@ export default function ChatSidebar() {
                 chat={chat} 
                 isActive={currentChatId === chat.id} 
                 user={user}
+                isEditMode={isEditMode}
+                isSelected={selectedChatIds.includes(chat.id)}
+                onToggleSelect={toggleChatSelection}
                 otherId={chat.type === 'private' && user ? chat.participantIds?.find((id: string) => id !== user.uid) : null} 
                 cachedDisplayName={chat.metadata && user && chat.participantIds?.find((id: string) => id !== user.uid) ? chat.metadata[chat.participantIds.find((id: string) => id !== user.uid)!].name : chat.name} 
                 onClick={() => handleChatClick(chat)} 
@@ -246,6 +299,20 @@ export default function ChatSidebar() {
           )}
         </div>
       </ScrollArea>
+
+      {/* Bulk Delete Bar */}
+      {isEditMode && selectedChatIds.length > 0 && (
+        <div className="fixed bottom-32 left-1/2 -translate-x-1/2 w-[90%] max-w-[350px] z-50 animate-in slide-in-from-bottom-4 duration-300">
+          <Button 
+            onClick={handleDeleteSelected}
+            disabled={isDeleting}
+            className="w-full h-12 bg-destructive hover:bg-destructive/90 text-white font-bold rounded-2xl shadow-2xl flex items-center justify-center gap-2"
+          >
+            {isDeleting ? <Trash2 className="w-5 h-5 animate-pulse" /> : <Trash2 className="w-5 h-5" />}
+            Удалить выбранные ({selectedChatIds.length})
+          </Button>
+        </div>
+      )}
 
       <CreateChatModal open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen} />
       <AdminPanelModal open={isAdminPanelOpen} onOpenChange={setIsAdminPanelOpen} />
