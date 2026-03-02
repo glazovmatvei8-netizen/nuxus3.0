@@ -4,7 +4,11 @@
 import { firebaseConfig } from '@/firebase/config';
 import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
-import { getFirestore, enableMultiTabIndexedDbPersistence, initializeFirestore, CACHE_SIZE_UNLIMITED } from 'firebase/firestore';
+import { 
+  initializeFirestore, 
+  CACHE_SIZE_UNLIMITED, 
+  enableMultiTabIndexedDbPersistence 
+} from 'firebase/firestore';
 
 /**
  * Инициализация Firebase v0.53.0 Resilience Core.
@@ -31,15 +35,13 @@ export function initializeFirebase() {
     cacheSizeBytes: CACHE_SIZE_UNLIMITED
   });
 
-  // Включение многовкладочного оффлайн-режима
+  // Включение многовкладочного оффлайн-режима для работы без интернета
   if (typeof window !== 'undefined') {
     enableMultiTabIndexedDbPersistence(firestore).catch((err) => {
       if (err.code === 'failed-precondition') {
-        // Вероятно, открыто несколько вкладок
-        console.warn('Persistence failed: Multiple tabs open');
+        console.warn('Nuxus Resilience: Multiple tabs open, persistence enabled in first tab only');
       } else if (err.code === 'unimplemented') {
-        // Браузер не поддерживает Persistence
-        console.warn('Persistence failed: Browser not supported');
+        console.warn('Nuxus Resilience: Browser does not support offline persistence');
       }
     });
   }

@@ -1,10 +1,11 @@
+
 "use client"
 
 import { useUser, useFirestore, useDoc, useMemoFirebase, useAuth } from '@/firebase';
 import { useAppState } from '@/lib/store';
 import AuthScreen from '@/components/auth-screen';
 import ChatMain from '@/components/chat-main';
-import { Loader2, ShieldAlert, Lock, ArrowRight, Clock } from 'lucide-react';
+import { Loader2, ShieldAlert, Lock, ArrowRight, Clock, WifiOff } from 'lucide-react';
 import { doc, collection, query, where, limit, getDocs, arrayUnion, updateDoc } from 'firebase/firestore';
 import type { User as UserType, Chat } from '@/lib/types';
 import { Button } from '@/components/ui/button';
@@ -15,6 +16,7 @@ import { useToast } from '@/hooks/use-toast';
 import { isUserActuallyBanned } from '@/lib/utils';
 import { format } from 'date-fns';
 import { ru } from 'date-fns/locale';
+import { NuxusLogo } from '@/components/nuxus-logo';
 
 export default function Home() {
   const { user, isUserLoading } = useUser();
@@ -25,6 +27,19 @@ export default function Home() {
   
   const [isJoining, setIsJoining] = useState(false);
   const [twoFactorInput, setTwoFactorInput] = useState('');
+  const [isOnline, setIsOnline] = useState(true);
+
+  // Следим за статусом сети для визуального фидбека
+  useEffect(() => {
+    const handleStatus = () => setIsOnline(navigator.onLine);
+    window.addEventListener('online', handleStatus);
+    window.addEventListener('offline', handleStatus);
+    setIsOnline(navigator.onLine);
+    return () => {
+      window.removeEventListener('online', handleStatus);
+      window.removeEventListener('offline', handleStatus);
+    };
+  }, []);
 
   const userProfileRef = useMemoFirebase(() => {
     if (!db || !user) return null;
@@ -35,7 +50,7 @@ export default function Home() {
 
   const isBanned = isUserActuallyBanned(profile);
 
-  // Handle ?join=@username link logic
+  // Обработка ссылок приглашений даже в оффлайне (из кеша)
   useEffect(() => {
     if (!user || !db || isJoining || (!is2FAVerified && profile?.twoFactorEnabled) || isBanned) return;
 
@@ -81,12 +96,22 @@ export default function Home() {
 
   if (isUserLoading) {
     return (
-      <div className="h-screen w-full flex items-center justify-center bg-[#0a0a0c]">
+      <div className="h-[100dvh] w-full flex flex-col items-center justify-center bg-[#0a0a0c] p-10">
+        <div className="relative mb-8">
+          <NuxusLogo size={100} />
+          <div className="absolute inset-0 bg-primary/20 blur-2xl animate-pulse rounded-full" />
+        </div>
         <div className="flex flex-col items-center gap-4">
-          <Loader2 className="w-10 h-10 text-primary animate-spin" />
-          <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary/60 animate-pulse">
-            Инициализация Ядра Nuxus...
+          <Loader2 className="w-6 h-6 text-primary animate-spin opacity-40" />
+          <p className="text-[10px] font-black uppercase tracking-[0.4em] text-primary/60 animate-pulse text-center">
+            Развертывание Ядра Nuxus...
           </p>
+          {!isOnline && (
+            <div className="mt-4 flex items-center gap-2 px-4 py-2 bg-red-500/10 border border-red-500/20 rounded-full animate-in fade-in zoom-in">
+              <WifiOff className="w-3 h-3 text-red-500" />
+              <span className="text-[8px] font-black text-red-500 uppercase tracking-widest">Автономный режим активен</span>
+            </div>
+          )}
         </div>
       </div>
     );
@@ -98,12 +123,11 @@ export default function Home() {
 
   if (isProfileLoading || isJoining) {
     return (
-      <div className="h-screen w-full flex items-center justify-center bg-[#0a0a0c]">
-        <div className="flex flex-col items-center gap-4">
-          <Loader2 className="w-10 h-10 text-primary animate-spin" />
-          <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary/60 animate-pulse">
-            Загрузка профиля...
-          </p>
+      <div className="h-[100dvh] w-full flex flex-col items-center justify-center bg-[#0a0a0c]">
+        <NuxusLogo size={80} className="opacity-40 grayscale" />
+        <div className="mt-8 flex flex-col items-center gap-2">
+          <Loader2 className="w-5 h-5 text-primary animate-spin" />
+          <p className="text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground">Загрузка данных...</p>
         </div>
       </div>
     );
