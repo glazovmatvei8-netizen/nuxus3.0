@@ -37,17 +37,17 @@ export default function Home() {
     window.addEventListener('offline', handleStatus);
     setIsOnline(navigator.onLine);
 
-    // Если загрузка длится более 3 секунд, показываем оффлайн-интерфейс
+    // Если загрузка длится более 2.5 секунд (признак блокировки), показываем оффлайн-интерфейс
     const timer = setTimeout(() => {
-      if (isUserLoading) setShowResilienceUI(true);
-    }, 3000);
+      if (isUserLoading || !isOnline) setShowResilienceUI(true);
+    }, 2500);
 
     return () => {
       window.removeEventListener('online', handleStatus);
       window.removeEventListener('offline', handleStatus);
       clearTimeout(timer);
     };
-  }, [isUserLoading]);
+  }, [isUserLoading, isOnline]);
 
   const userProfileRef = useMemoFirebase(() => {
     if (!db || !user) return null;
@@ -102,7 +102,7 @@ export default function Home() {
     }
   };
 
-  if (isUserLoading) {
+  if (isUserLoading && !showResilienceUI) {
     return (
       <div className="h-[100dvh] w-full flex flex-col items-center justify-center bg-[#0a0a0c] p-10">
         <div className="relative mb-8">
@@ -112,31 +112,27 @@ export default function Home() {
         <div className="flex flex-col items-center gap-4">
           <Loader2 className="w-6 h-6 text-primary animate-spin opacity-40" />
           <p className="text-[10px] font-black uppercase tracking-[0.4em] text-primary/60 animate-pulse text-center">
-            {showResilienceUI ? 'Ghost Protocol: Запуск из кэша...' : 'Развертывание Ядра Nuxus...'}
+            Развертывание Ядра Nuxus...
           </p>
-          {(!isOnline || showResilienceUI) && (
-            <div className="mt-4 flex flex-col items-center gap-3">
-              <div className="flex items-center gap-2 px-4 py-2 bg-primary/10 border border-primary/20 rounded-full animate-in fade-in zoom-in">
-                <Ghost className="w-3 h-3 text-primary animate-pulse" />
-                <span className="text-[8px] font-black text-primary uppercase tracking-widest">Автономный режим активен</span>
-              </div>
-              {showResilienceUI && (
-                <p className="text-[8px] text-muted-foreground/40 uppercase font-bold text-center max-w-[200px] leading-relaxed">
-                  Ядро не может связаться с сервером. Проверьте «белые списки» или используйте SSH Relay.
-                </p>
-              )}
-            </div>
-          )}
         </div>
       </div>
     );
+  }
+
+  // Если мы в оффлайне или сеть заблокирована, но пользователь уже залогинен (данные в кэше)
+  if (showResilienceUI && user && profile) {
+    return <ChatMain />;
+  }
+
+  if (showResilienceUI && !user) {
+    return <AuthScreen />;
   }
 
   if (!user) {
     return <AuthScreen />;
   }
 
-  if (isProfileLoading || isJoining) {
+  if ((isProfileLoading || isJoining) && !showResilienceUI) {
     return (
       <div className="h-[100dvh] w-full flex flex-col items-center justify-center bg-[#0a0a0c]">
         <NuxusLogo size={80} className="opacity-40 grayscale" />
