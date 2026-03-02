@@ -2,7 +2,7 @@
 "use client"
 
 import React from 'react';
-import { useUser, useFirestore, useDoc, useMemoFirebase, useCollection } from '@/firebase';
+import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { doc, query, collection, where, limit, getDocs, addDoc } from 'firebase/firestore';
 import { UserAvatar } from '@/components/user-avatar';
 import { Button } from '@/components/ui/button';
@@ -14,7 +14,7 @@ import {
 import { useAppState } from '@/lib/store';
 import { useToast } from '@/hooks/use-toast';
 import { formatDisplayName, cn } from '@/lib/utils';
-import type { User, Chat } from '@/lib/types';
+import type { User } from '@/lib/types';
 
 export default function ProfileView() {
   const { user } = useUser();
@@ -132,7 +132,7 @@ export default function ProfileView() {
           {/* Support/Info */}
           <div className="pt-2">
             <p className="text-[11px] text-muted-foreground/40 uppercase font-black text-center tracking-[0.2em]">
-              Nuxus Core v0.54.3
+              Nuxus Core v0.54.4
             </p>
           </div>
         </div>
