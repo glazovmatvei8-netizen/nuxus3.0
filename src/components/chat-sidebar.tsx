@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useMemo, memo, useEffect } from 'react';
@@ -10,7 +9,7 @@ import {
   Check, CheckCheck,
   MessageSquare, Lock, SquarePen,
   Search, Trash2, Circle, Sparkles,
-  Wifi, WifiOff
+  Wifi, WifiOff, Ghost
 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { CreateChatModal } from './modals/create-chat-modal';
@@ -242,13 +241,19 @@ export default function ChatSidebar() {
             onClick={() => isGlobalAdmin(profile) && setIsAdminPanelOpen(true)}
           >
             <div className="relative">
-              <Lock className="w-3.5 h-3.5 text-white" />
+              {isOnline ? (
+                <Lock className="w-3.5 h-3.5 text-white" />
+              ) : (
+                <Ghost className="w-3.5 h-3.5 text-primary animate-pulse" />
+              )}
               <div className={cn(
                 "absolute -top-1 -right-1 w-1.5 h-1.5 rounded-full border border-black",
                 isOnline ? "bg-green-500" : "bg-red-500 animate-pulse"
               )} />
             </div>
-            <h1 className="text-[17px] font-black text-white tracking-tight">Чаты 🐱</h1>
+            <h1 className="text-[17px] font-black text-white tracking-tight">
+              {isOnline ? 'Чаты 🐱' : 'Nuxus Ghost'}
+            </h1>
           </div>
 
           <div className="absolute right-0 flex items-center gap-2">
@@ -292,7 +297,7 @@ export default function ChatSidebar() {
       {!isOnline && (
         <div className="mx-4 mb-2 p-2 bg-red-500/10 border border-red-500/20 rounded-xl flex items-center justify-center gap-2 animate-pulse">
           <WifiOff className="w-3 h-3 text-red-500" />
-          <span className="text-[10px] font-black text-red-500 uppercase tracking-widest">Режим оффлайн: Данные из кэша</span>
+          <span className="text-[10px] font-black text-red-500 uppercase tracking-widest">Ghost Protocol: Offline-First</span>
         </div>
       )}
 

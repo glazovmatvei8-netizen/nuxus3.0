@@ -7,43 +7,46 @@ import {
   getFirestore,
   initializeFirestore, 
   persistentLocalCache,
-  persistentMultipleTabManager
+  persistentMultipleTabManager,
+  Firestore
 } from 'firebase/firestore';
 
 /**
- * Инициализация Firebase v0.54.1 Ghost Protocol.
- * Исправлена ошибка "initializeFirestore() has already been called".
+ * Инициализация Firebase v0.54.2 Ghost Protocol.
+ * Гарантирует создание Firestore только один раз с настройками оффлайн-кэша.
  */
+let cachedFirestore: Firestore | null = null;
+
 export function initializeFirebase() {
   let firebaseApp: FirebaseApp;
-  let firestore;
 
   if (!getApps().length) {
-    try {
-      firebaseApp = initializeApp(firebaseConfig);
-      // Инициализируем Firestore с оффлайн-кэшем только при создании нового приложения
-      firestore = initializeFirestore(firebaseApp, {
-        localCache: persistentLocalCache({
-          tabManager: persistentMultipleTabManager()
-        })
-      });
-    } catch (e) {
-      console.warn('Firebase core warm-up retry...');
-      firebaseApp = getApp();
-      firestore = getFirestore(firebaseApp);
-    }
+    firebaseApp = initializeApp(firebaseConfig);
   } else {
     firebaseApp = getApp();
-    // Если приложение уже создано, просто берем существующий Firestore
-    firestore = getFirestore(firebaseApp);
   }
 
   const auth = getAuth(firebaseApp);
 
+  if (!cachedFirestore) {
+    try {
+      // Инициализируем Firestore с оффлайн-кэшем только если он еще не создан
+      cachedFirestore = initializeFirestore(firebaseApp, {
+        localCache: persistentLocalCache({
+          tabManager: persistentMultipleTabManager()
+        })
+      });
+      console.log('Nuxus Core: Firestore Persistence Initialized');
+    } catch (e) {
+      // Если по какой-то причине инициализация не удалась (например, уже создан), берем текущий
+      cachedFirestore = getFirestore(firebaseApp);
+    }
+  }
+
   return {
     firebaseApp,
     auth,
-    firestore
+    firestore: cachedFirestore
   };
 }
 

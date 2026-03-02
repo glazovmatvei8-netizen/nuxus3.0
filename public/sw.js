@@ -1,56 +1,37 @@
-
-/**
- * Nuxus Ghost Protocol Service Worker v1.0
- * Обеспечивает работу мессенджера в условиях полной блокировки внешних ресурсов.
- */
-
-const CACHE_NAME = 'nuxus-ghost-v1';
-const OFFLINE_URL = '/';
-
-// Ресурсы для предварительного кэширования
-const PRECACHE_ASSETS = [
-  OFFLINE_URL,
-  '/manifest.json',
-  'https://picsum.photos/seed/nuxus/180/180'
+const CACHE_NAME = 'nuxus-ghost-v2';
+const ASSETS_TO_CACHE = [
+  '/',
+  '/manifest.webmanifest',
+  '/favicon.ico',
+  'https://picsum.photos/seed/nuxus/180/180',
 ];
 
+// Установка: Кэшируем всё необходимое для запуска
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(PRECACHE_ASSETS);
+      return cache.addAll(ASSETS_TO_CACHE);
     })
   );
   self.skipWaiting();
 });
 
+// Активация: Очищаем старые версии
 self.addEventListener('activate', (event) => {
   event.waitUntil(
-    Promise.all([
-      self.clients.claim(),
-      // Удаление старых кэшей
-      caches.keys().then((cacheNames) => {
-        return Promise.all(
-          cacheNames.map((cacheName) => {
-            if (cacheName !== CACHE_NAME) {
-              return caches.delete(cacheName);
-            }
-          })
-        );
-      })
-    ])
+    caches.keys().then((keys) => {
+      return Promise.all(
+        keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key))
+      );
+    })
   );
+  self.clients.claim();
 });
 
+// Перехват запросов: Сначала КЭШ, потом СЕТЬ (Стратегия для обхода блокировок)
 self.addEventListener('fetch', (event) => {
-  // Стратегия: Сначала сеть, если сбой — кэш. 
-  // Но для файлов стилей и скриптов — Кэш, потом сеть (для скорости в "белых списках")
-  
-  if (event.request.mode === 'navigate') {
-    event.respondWith(
-      fetch(event.request).catch(() => {
-        return caches.match(OFFLINE_URL);
-      })
-    );
+  // Игнорируем запросы к Firestore (они обрабатываются самим SDK)
+  if (event.request.url.includes('firestore.googleapis.com')) {
     return;
   }
 
@@ -61,19 +42,22 @@ self.addEventListener('fetch', (event) => {
       }
 
       return fetch(event.request).then((response) => {
-        // Кэшируем новые запросы на лету
-        if (!response || response.status !== 200 || response.type !== 'basic') {
-          return response;
+        // Кэшируем новые статические файлы на лету
+        if (
+          event.request.url.startsWith(self.location.origin) &&
+          (event.request.url.includes('/_next/static/') || event.request.url.includes('/fonts/'))
+        ) {
+          const responseClone = response.clone();
+          caches.open(CACHE_NAME).then((cache) => {
+            cache.put(event.request, responseClone);
+          });
         }
-
-        const responseToCache = response.clone();
-        caches.open(CACHE_NAME).then((cache) => {
-          cache.put(event.request, responseToCache);
-        });
-
         return response;
       }).catch(() => {
-        // Оффлайн без кэша — просто возвращаем пустоту или дефолтную иконку
+        // Если сети нет и файла нет в кэше, для навигации возвращаем корень (оффлайн-приложение)
+        if (event.request.mode === 'navigate') {
+          return caches.match('/');
+        }
       });
     })
   );

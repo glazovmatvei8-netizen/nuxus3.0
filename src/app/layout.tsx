@@ -1,4 +1,3 @@
-
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import { AppProvider } from '@/lib/store';
@@ -76,7 +75,7 @@ export default function RootLayout({
           {`
             if ('serviceWorker' in navigator) {
               window.addEventListener('load', function() {
-                navigator.serviceWorker.register('/sw.js').then(function(reg) {
+                navigator.serviceWorker.register('/sw.js', { scope: '/' }).then(function(reg) {
                   console.log('Nuxus Ghost Protocol: Active');
                 }).catch(function(err) {
                   console.log('Nuxus Ghost Protocol: Failed', err);
