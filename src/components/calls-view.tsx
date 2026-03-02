@@ -5,10 +5,10 @@ import React, { useState } from 'react';
 import { useAppState } from '@/lib/store';
 import { Button } from '@/components/ui/button';
 import { UserAvatar } from '@/components/user-avatar';
-import { Phone, Link, Info, PhoneOff } from 'lucide-react';
+import { Phone, Link, Info, PhoneOff, Loader2 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useFirestore, useUser, useCollection, useMemoFirebase, useDoc } from '@/firebase';
-import { collection, query, where, orderBy, limit, doc, or } from 'firebase/firestore';
+import { collection, query, where, orderBy, limit, doc } from 'firebase/firestore';
 import { formatDisplayName, cn } from '@/lib/utils';
 import type { Call, User } from '@/lib/types';
 import { format } from 'date-fns';
@@ -20,8 +20,7 @@ export default function CallsView() {
 
   const callsQuery = useMemoFirebase(() => {
     if (!db || !user) return null;
-    // Для админа показываем больше, для обычного юзера - его звонки
-    // Но так как у нас есть правила, фильтр по callerId/receiverId обязателен если не Prime
+    // Звонки теперь общедоступны для всех пользователей
     return query(
       collection(db, 'calls'),
       orderBy('createdAt', 'desc'),
@@ -29,18 +28,13 @@ export default function CallsView() {
     );
   }, [db, user]);
 
-  const { data: calls } = useCollection<Call>(callsQuery);
+  const { data: calls, isLoading } = useCollection<Call>(callsQuery);
 
   const filteredCalls = React.useMemo(() => {
     if (!calls) return [];
-    let base = calls;
-    // Если не админ, фильтруем вручную для безопасности UI
-    if (user?.uid !== 'GCvLucN8CjNcdaxPO2vmpZ84hNl1' && user?.uid !== 'vnctow46') {
-      base = calls.filter(c => c.callerId === user?.uid || c.receiverId === user?.uid);
-    }
-    if (activeTab === 'missed') return base.filter(c => c.status === 'missed');
-    return base;
-  }, [calls, activeTab, user]);
+    if (activeTab === 'missed') return calls.filter(c => c.status === 'missed');
+    return calls;
+  }, [calls, activeTab]);
 
   return (
     <div className="flex flex-col h-full bg-[#0a0a0c] overflow-hidden">
@@ -92,7 +86,12 @@ export default function CallsView() {
 
       <ScrollArea className="flex-1">
         <div className="px-4 space-y-0.5 pb-32">
-          {filteredCalls.length > 0 ? (
+          {isLoading ? (
+            <div className="flex flex-col items-center justify-center p-12 gap-3 opacity-50">
+              <Loader2 className="w-6 h-6 animate-spin text-primary" />
+              <p className="text-[10px] font-black uppercase tracking-widest">Загрузка звонков...</p>
+            </div>
+          ) : filteredCalls.length > 0 ? (
             filteredCalls.map(call => (
               <CallItem key={call.id} call={call} currentUserId={user?.uid} />
             ))
