@@ -1,11 +1,9 @@
-
 "use client"
 
 import { useUser, useFirestore, useDoc, useMemoFirebase, useAuth } from '@/firebase';
 import { useAppState } from '@/lib/store';
 import AuthScreen from '@/components/auth-screen';
 import ChatMain from '@/components/chat-main';
-import { IosInstaller } from '@/components/ios-installer';
 import { Loader2, ShieldAlert, Lock, ArrowRight, Clock } from 'lucide-react';
 import { doc, collection, query, where, limit, getDocs, arrayUnion, updateDoc } from 'firebase/firestore';
 import type { User as UserType, Chat } from '@/lib/types';
@@ -27,17 +25,6 @@ export default function Home() {
   
   const [isJoining, setIsJoining] = useState(false);
   const [twoFactorInput, setTwoFactorInput] = useState('');
-  const [showInstaller, setShowInstaller] = useState(false);
-
-  // Standalone mode detection for iOS
-  useEffect(() => {
-    const isIos = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
-    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || (navigator as any).standalone;
-    
-    if (isIos && !isStandalone) {
-      setShowInstaller(true);
-    }
-  }, []);
 
   const userProfileRef = useMemoFirebase(() => {
     if (!db || !user) return null;
@@ -91,10 +78,6 @@ export default function Home() {
       toast({ title: "Ошибка кода", description: "Неверный PIN-код", variant: "destructive" });
     }
   };
-
-  if (showInstaller) {
-    return <IosInstaller onDismiss={() => setShowInstaller(false)} />;
-  }
 
   if (isUserLoading) {
     return (

@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useRef, useEffect } from 'react';
@@ -15,7 +14,7 @@ import {
   LogOut, Palette, Loader2, Crown, Check, 
   Monitor, Sparkles, Settings2, Moon, Droplets, ShieldCheck, Lock,
   Users, Share2, Star, Bell, BellOff, Info, Languages, Smartphone, Camera,
-  Eye, UserCheck, MessageCircle
+  Eye, UserCheck, MessageCircle, Share, PlusSquare, ShieldCheck as ShieldIcon, Zap
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { signOut } from 'firebase/auth';
@@ -172,9 +171,9 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         <Tabs value={settingsTab} onValueChange={(v) => setSettingsTab(v)} className="flex-1 flex flex-col min-h-0">
           <TabsList className="grid grid-cols-5 bg-muted/50 p-1 mx-6 mt-4 rounded-2xl shrink-0 border border-white/5">
             <TabsTrigger value="profile" className="text-[8px] uppercase font-black tracking-widest px-1">Профиль</TabsTrigger>
-            <TabsTrigger value="appearance" className="text-[8px] uppercase font-black tracking-widest px-1">Стиль</TabsTrigger>
             <TabsTrigger value="security" className="text-[8px] uppercase font-black tracking-widest px-1">Защита</TabsTrigger>
             <TabsTrigger value="referral" className="text-[8px] uppercase font-black tracking-widest px-1">Друзья</TabsTrigger>
+            <TabsTrigger value="app" className="text-[8px] uppercase font-black tracking-widest px-1">Приложение</TabsTrigger>
             <TabsTrigger value="store" className="text-[8px] uppercase font-black tracking-widest px-1">Prime</TabsTrigger>
           </TabsList>
 
@@ -208,48 +207,6 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                     <Label className="text-[10px] uppercase font-black tracking-[0.2em] text-muted-foreground ml-1">О себе</Label>
                     <Textarea value={form.bio} onChange={e => setForm({...form, bio: e.target.value})} className="bg-muted/30 border-white/5 rounded-2xl min-h-[100px] text-sm resize-none" placeholder="Расскажите о себе..." />
                   </div>
-                </div>
-              </div>
-            </TabsContent>
-
-            <TabsContent value="appearance" className="space-y-6 m-0 py-6">
-              <div className="bg-muted/20 p-6 rounded-[2.5rem] border border-white/5 space-y-6">
-                <div className="space-y-4">
-                  <Label className="text-[10px] uppercase font-black tracking-widest text-primary flex items-center gap-2"><Palette className="w-3.5 h-3.5" /> Тема оформления</Label>
-                  <div className="grid grid-cols-3 gap-3">
-                    {['default', 'midnight', 'ocean'].map(t_theme => (
-                      <button key={t_theme} onClick={() => setForm({...form, theme: t_theme as any})} className={cn("flex flex-col items-center gap-2 p-4 rounded-2xl border transition-all", form.theme === t_theme ? "bg-primary/20 border-primary text-primary" : "bg-black/20 border-white/5 text-muted-foreground")}>
-                        {t_theme === 'default' ? <Monitor className="w-5 h-5" /> : t_theme === 'midnight' ? <Moon className="w-5 h-5" /> : <Droplets className="w-5 h-5" />}
-                        <span className="text-[9px] font-black uppercase">{t_theme}</span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="space-y-4 pt-6 border-t border-white/5">
-                  <div className="flex items-center justify-between">
-                    <Label className="text-[10px] uppercase font-black tracking-widest text-primary flex items-center gap-2">
-                      <Bell className="w-3.5 h-3.5" /> Системные уведомления
-                    </Label>
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      className={cn(
-                        "h-9 rounded-xl text-[9px] font-black uppercase tracking-widest px-4 transition-all",
-                        notifPermission === 'granted' ? "border-green-500/20 bg-green-500/10 text-green-500" : "border-primary/20 bg-primary/5 text-primary"
-                      )}
-                      onClick={requestNotificationPermission}
-                    >
-                      {notifPermission === 'granted' ? (
-                        <><Check className="w-3 h-3 mr-1.5" /> Включено</>
-                      ) : (
-                        'Включить'
-                      )}
-                    </Button>
-                  </div>
-                  <p className="text-[8px] text-muted-foreground uppercase font-bold tracking-wider leading-relaxed">
-                    Включите уведомления, чтобы мгновенно узнавать о новых сообщениях, даже когда приложение свернуто.
-                  </p>
                 </div>
               </div>
             </TabsContent>
@@ -344,6 +301,62 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                   <Progress value={((profile?.referralCount || 0) % 5) * 20} className="h-2" />
                 </div>
                 <Button onClick={copyReferralLink} className="w-full h-12 rounded-2xl bg-primary/20 text-primary hover:bg-primary hover:text-white transition-all font-black uppercase text-[10px] tracking-widest"><Share2 className="w-4 h-4 mr-2" /> Поделиться ссылкой</Button>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="app" className="py-6">
+              <div className="space-y-6">
+                <div className="text-center space-y-2 mb-4">
+                  <Smartphone className="w-12 h-12 text-primary mx-auto mb-2" />
+                  <h3 className="text-xl font-black uppercase italic text-white tracking-tighter">Nuxus Mobile</h3>
+                  <p className="text-[10px] font-bold text-muted-foreground uppercase">Инструкция по установке</p>
+                </div>
+
+                <div className="space-y-3">
+                  <div className="bg-muted/20 p-4 rounded-2xl border border-white/5 flex items-center gap-4">
+                    <div className="h-10 w-10 rounded-xl bg-white/5 flex items-center justify-center shrink-0">
+                      <Share className="w-5 h-5 text-white" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-[8px] font-black text-muted-foreground uppercase mb-0.5">Шаг 1 (iOS)</p>
+                      <p className="text-xs font-bold text-white">Нажмите «Поделиться» в панели Safari</p>
+                    </div>
+                  </div>
+
+                  <div className="bg-muted/20 p-4 rounded-2xl border border-white/5 flex items-center gap-4">
+                    <div className="h-10 w-10 rounded-xl bg-white/5 flex items-center justify-center shrink-0">
+                      <PlusSquare className="w-5 h-5 text-white" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-[8px] font-black text-muted-foreground uppercase mb-0.5">Шаг 2 (iOS)</p>
+                      <p className="text-xs font-bold text-white">Выберите «На экран „Домой“»</p>
+                    </div>
+                  </div>
+
+                  <div className="bg-primary/10 p-4 rounded-2xl border border-primary/20 flex items-center gap-4">
+                    <div className="h-10 w-10 rounded-xl bg-primary/20 flex items-center justify-center shrink-0">
+                      <ShieldIcon className="w-5 h-5 text-primary" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-[8px] font-black text-primary uppercase mb-0.5">Android</p>
+                      <p className="text-xs font-bold text-white">Нажмите «Три точки» -> «Установить приложение»</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="p-4 bg-muted/10 rounded-2xl border border-white/5">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Bell className="w-4 h-4 text-primary" />
+                    <span className="text-[10px] font-black uppercase text-white">Уведомления</span>
+                  </div>
+                  <Button 
+                    variant="outline" 
+                    className="w-full h-10 rounded-xl text-[9px] font-black uppercase tracking-widest border-primary/20 bg-primary/5 text-primary"
+                    onClick={requestNotificationPermission}
+                  >
+                    {notifPermission === 'granted' ? 'Включены' : 'Включить пуш-уведомления'}
+                  </Button>
+                </div>
               </div>
             </TabsContent>
 
