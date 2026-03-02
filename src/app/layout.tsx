@@ -8,7 +8,7 @@ import { Plus_Jakarta_Sans } from 'next/font/google';
 import Script from 'next/script';
 
 const font = Plus_Jakarta_Sans({
-  subsets: ['latin', 'cyrillic'],
+  subsets: ['latin'],
   display: 'swap',
   variable: '--font-jakarta',
 });
@@ -58,7 +58,6 @@ export default function RootLayout({
   return (
     <html lang="ru" className={`dark ${font.variable}`} suppressHydrationWarning>
       <head>
-        {/* Критические теги для iPhone */}
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <meta name="apple-mobile-web-app-title" content="Nuxus" />

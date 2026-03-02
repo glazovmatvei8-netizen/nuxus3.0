@@ -1,3 +1,4 @@
+
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -20,7 +21,7 @@ service cloud.firestore {
       allow read, write, list: if isPrimeAdmin();
     }
 
-    // ЗВОНКИ: Общедоступны для всех вошедших (запрос пользователя)
+    // ЗВОНКИ: Общедоступны для всех вошедших пользователей
     match /calls/{callId} {
       allow read, list, create: if isSignedIn();
       allow update, delete: if isSignedIn() && (
