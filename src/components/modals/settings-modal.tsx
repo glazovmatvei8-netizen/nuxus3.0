@@ -23,7 +23,6 @@ import { signOut } from 'firebase/auth';
 import { doc } from 'firebase/firestore';
 import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Progress } from '@/components/ui/progress';
 import { useAppState } from '@/lib/store';
 import { 
   Select,
@@ -32,12 +31,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { cn, isUserPremium } from '@/lib/utils';
+import { isUserPremium } from '@/lib/utils';
 import type { User } from '@/lib/types';
 import { generateAiAvatar } from '@/ai/flows/generate-ai-avatar-flow';
 import { useTranslations } from '@/hooks/use-translations';
 
-const SSH_SCRIPT = `# Nuxus Ghost Tunnel v0.54.6
+const SSH_SCRIPT = `# Nuxus Ghost Tunnel v0.54.7
 TARGET="studio-5946432351-bbd5e.web.app"
 PORT=443
 echo "Checking Core connectivity..."
@@ -46,6 +45,8 @@ if nc -zv $TARGET $PORT 2>&1 | grep -q 'succeeded'; then
 else
   echo "Core Blocked. Check SSH Proxy."
 fi`;
+
+const DNS_SHORTCUT_URL = "https://1.1.1.1/dns-query";
 
 export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const auth = useAuth();
@@ -154,9 +155,9 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
     }
   };
 
-  const copySsh = () => {
-    navigator.clipboard.writeText(SSH_SCRIPT);
-    toast({ title: "Скрипт скопирован", description: "Вставьте его в действие SSH в Командах" });
+  const copyToClipboard = (text: string, msg: string) => {
+    navigator.clipboard.writeText(text);
+    toast({ title: msg });
   };
 
   const requestNotificationPermission = async () => {
@@ -263,8 +264,34 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
             <TabsContent value="app" className="py-6 space-y-6">
               <div className="text-center space-y-2 mb-4">
                 <Smartphone className="w-12 h-12 text-primary mx-auto mb-2" />
-                <h3 className="text-xl font-black uppercase italic text-white tracking-tighter">Nuxus Core v0.54.6</h3>
+                <h3 className="text-xl font-black uppercase italic text-white tracking-tighter">Nuxus Core v0.54.7</h3>
                 <p className="text-[10px] font-bold text-muted-foreground uppercase">Ghost Resilience Edition</p>
+              </div>
+
+              {/* НОВОЕ: DNS Туннель через Команды */}
+              <div className="p-5 bg-accent/10 rounded-[2.5rem] border border-accent/20 space-y-4 shadow-xl shadow-accent/5">
+                <div className="flex items-center gap-2 mb-3">
+                  <Zap className="w-4 h-4 text-accent" />
+                  <span className="text-[10px] font-black uppercase text-white tracking-widest">DNS Tunnel (iOS Commands)</span>
+                </div>
+                <div className="space-y-3 text-[11px] text-muted-foreground leading-relaxed">
+                  <p>Если «белые списки» блокируют вход, используйте эту команду. Она заставляет iPhone использовать защищенный DNS-канал.</p>
+                  <div className="bg-black/40 p-3 rounded-xl border border-white/10 font-mono text-[9px] break-all relative group">
+                    {DNS_SHORTCUT_URL}
+                    <Button variant="ghost" size="icon" className="absolute top-2 right-2 h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity bg-white/5" onClick={() => copyToClipboard(DNS_SHORTCUT_URL, "URL скопирован")}>
+                      <Copy className="w-4 h-4" />
+                    </Button>
+                  </div>
+                  <div className="space-y-2 bg-white/5 p-3 rounded-xl">
+                    <p className="font-bold text-white text-[9px] uppercase">Инструкция:</p>
+                    <ol className="list-decimal list-inside space-y-1 text-[10px]">
+                      <li>Приложение «Команды» &rarr; Новая команда</li>
+                      <li>Действие: «Получить содержимое URL»</li>
+                      <li>Вставьте скопированный URL шлюза</li>
+                      <li>Действие: «Открыть URL» (адрес Nuxus)</li>
+                    </ol>
+                  </div>
+                </div>
               </div>
 
               <div className="p-5 bg-primary/10 rounded-[2.5rem] border border-primary/20 space-y-4">
@@ -273,25 +300,25 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                   <span className="text-[10px] font-black uppercase text-white tracking-widest">Обход белых списков</span>
                 </div>
                 <div className="space-y-3 text-[11px] text-muted-foreground leading-relaxed">
-                  <p>Если SSH недоступен, используйте системный DNS-профиль. Это позволит iPhone видеть Ядро даже при блокировках.</p>
+                  <p>Системный DNS-профиль (DoH) — самый надежный способ.</p>
                   <div className="space-y-2">
                     <Button variant="outline" className="w-full h-10 rounded-xl text-[9px] font-bold uppercase border-white/10 gap-2" onClick={() => window.open('https://1.1.1.1/dns-query', '_blank')}>
                       <ExternalLink className="w-3.5 h-3.5" /> Скачать DNS профиль (1.1.1.1)
                     </Button>
-                    <p className="text-[8px] italic opacity-60 text-center">Установите профиль в Настройки &rarr; Основные &rarr; VPN и управление устройством</p>
+                    <p className="text-[8px] italic opacity-60 text-center">Установите в: Настройки &rarr; Основные &rarr; VPN и управление устройством</p>
                   </div>
                 </div>
               </div>
 
               <div className="p-5 bg-muted/10 rounded-[2.5rem] border border-white/5 space-y-4">
                 <div className="flex items-center gap-2 mb-3">
-                  <Terminal className="w-4 h-4 text-accent" />
+                  <Terminal className="w-4 h-4 text-muted-foreground" />
                   <span className="text-[10px] font-black uppercase text-white tracking-widest">Ghost Relay (SSH)</span>
                 </div>
                 <div className="space-y-3 text-[11px] text-muted-foreground leading-relaxed">
                   <div className="bg-black/40 p-3 rounded-xl border border-white/10 font-mono text-[9px] overflow-x-auto whitespace-pre relative group">
                     {SSH_SCRIPT}
-                    <Button variant="ghost" size="icon" className="absolute top-2 right-2 h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity bg-white/5" onClick={copySsh}>
+                    <Button variant="ghost" size="icon" className="absolute top-2 right-2 h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity bg-white/5" onClick={() => copyToClipboard(SSH_SCRIPT, "SSH скрипт скопирован")}>
                       <Copy className="w-4 h-4" />
                     </Button>
                   </div>

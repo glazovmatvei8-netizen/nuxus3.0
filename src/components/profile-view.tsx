@@ -132,7 +132,7 @@ export default function ProfileView() {
           {/* Support/Info */}
           <div className="pt-2">
             <p className="text-[11px] text-muted-foreground/40 uppercase font-black text-center tracking-[0.2em]">
-              Nuxus Core v0.54.4
+              Nuxus Core v0.54.7
             </p>
           </div>
         </div>

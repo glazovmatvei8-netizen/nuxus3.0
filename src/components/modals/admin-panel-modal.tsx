@@ -133,12 +133,8 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
     try {
       if ('serviceWorker' in navigator) {
         const registration = await navigator.serviceWorker.ready;
-        // Принудительно обновляем SW
         await registration.update();
-        
-        // Симулируем "загрузку" всего сайта
         await new Promise(resolve => setTimeout(resolve, 3000));
-        
         toast({ 
           title: "Ядро Nuxus Установлено", 
           description: "Весь сайт скачан в память устройства. Теперь вы можете заходить в него даже без интернета.",
@@ -156,10 +152,8 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
 
   const handleBan = (targetUser: User, duration: string) => {
     if (!db) return;
-    
     let bannedUntil: string | null = null;
     const now = new Date();
-
     switch (duration) {
       case '1h': bannedUntil = addHours(now, 1).toISOString(); break;
       case '24h': bannedUntil = addDays(now, 1).toISOString(); break;
@@ -170,31 +164,22 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
       case '1y': bannedUntil = addYears(now, 1).toISOString(); break;
       case 'forever': bannedUntil = null; break;
     }
-
     updateDocumentNonBlocking(doc(db, 'users', targetUser.id), { 
       isBanned: true,
       bannedUntil: bannedUntil
     });
-    
     toast({ title: "Пользователь заблокирован", description: `Срок: ${duration === 'forever' ? 'Навсегда' : duration}` });
   };
 
   const handleUnban = (targetUser: User) => {
     if (!db) return;
-    updateDocumentNonBlocking(doc(db, 'users', targetUser.id), { 
-      isBanned: false,
-      bannedUntil: null
-    });
+    updateDocumentNonBlocking(doc(db, 'users', targetUser.id), { isBanned: false, bannedUntil: null });
     toast({ title: "Блокировка снята" });
   };
 
   const handleForceRestore = (targetUser: User) => {
     if (!db) return;
-    updateDocumentNonBlocking(doc(db, 'users', targetUser.id), { 
-      isBanned: false,
-      bannedUntil: null,
-      lastSeen: new Date().toISOString()
-    });
+    updateDocumentNonBlocking(doc(db, 'users', targetUser.id), { isBanned: false, bannedUntil: null, lastSeen: new Date().toISOString() });
     toast({ title: `Доступ для ${targetUser.username} восстановлен принудительно` });
   };
 
@@ -229,10 +214,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
     if (!db) return;
     const isNowPremium = !targetUser.isPremium;
     const expiry = isNowPremium ? addMonths(new Date(), 1).toISOString() : null;
-    updateDocumentNonBlocking(doc(db, 'users', targetUser.id), { 
-      isPremium: isNowPremium,
-      premiumUntil: expiry
-    });
+    updateDocumentNonBlocking(doc(db, 'users', targetUser.id), { isPremium: isNowPremium, premiumUntil: expiry });
     toast({ title: isNowPremium ? "Premium выдан" : "Premium отозван" });
   };
 
@@ -257,22 +239,17 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
         const data = chatDoc.data() as Chat;
         data.participantIds?.forEach(id => activeUserIds.add(id));
       });
-
       let deletedCount = 0;
       const batch = writeBatch(db);
-
       for (const u of users) {
         if (u.id === PRIME_UID) continue;
-
         const isDuplicatePhone = u.phone === '+79513332147' || u.phone === '+79508784513';
         const hasNoChats = !activeUserIds.has(u.id);
-
         if (isDuplicatePhone || hasNoChats) {
           batch.delete(doc(db, 'users', u.id));
           deletedCount++;
         }
       }
-
       await batch.commit();
       toast({ title: "Очистка завершена", description: `Удалено ${deletedCount} неактивных аккаунтов.` });
     } catch (e: any) {
@@ -286,7 +263,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl bg-card border-primary/20 p-0 overflow-hidden h-[90vh] flex flex-col rounded-[2.5rem] shadow-2xl border">
         <DialogHeader className="sr-only">
-          <DialogTitle>Админ-панель Nuxus v0.54.6</DialogTitle>
+          <DialogTitle>Админ-панель Nuxus v0.54.7</DialogTitle>
           <DialogDescription>Управление ядром системы</DialogDescription>
         </DialogHeader>
 
@@ -297,7 +274,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
                 <ShieldAlert className="w-5 h-5 text-white" />
               </div>
               <div className="flex flex-col leading-none">
-                <span>Nuxus v0.54.6</span>
+                <span>Nuxus v0.54.7</span>
                 <span className="text-[9px] font-bold tracking-[0.4em] text-primary-foreground opacity-70 mt-1 uppercase">Консоль управления</span>
               </div>
             </div>
@@ -442,7 +419,6 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
             <ScrollArea className="h-full">
               <div className="p-6 space-y-6 pb-24">
                 
-                {/* НОВОЕ: Установка на устройство */}
                 <div className="p-6 bg-primary/10 rounded-[2.5rem] border border-primary/30 space-y-4 shadow-xl shadow-primary/5">
                   <div className="flex items-center gap-3 mb-2">
                     <Zap className="w-6 h-6 text-primary fill-primary/20" />
@@ -453,7 +429,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
                   </div>
                   <div className="space-y-3">
                     <p className="text-[10px] text-muted-foreground leading-relaxed">
-                      Эта функция принудительно скачивает весь код, стили, иконки и шрифты Ядра Nuxus в память вашего iPhone. После завершения мессенджер станет полностью автономным.
+                      Эта функция принудительно скачивает весь код, стили, иконки и шрифты Ядра Nuxus в память вашего устройства. После завершения мессенджер станет полностью автономным.
                     </p>
                     <Button 
                       className="w-full h-14 rounded-2xl bg-primary hover:bg-primary/90 font-black uppercase tracking-widest text-[11px] shadow-xl shadow-primary/30"
