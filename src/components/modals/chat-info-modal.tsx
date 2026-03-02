@@ -10,10 +10,11 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Switch } from '@/components/ui/switch';
 import { 
   Sparkles, Gift, Crown, Star, LogOut, UserPlus, Shield, UserMinus, UserCheck,
   Settings2, Upload, Camera, Check, Info, Users, UserX, Loader2,
-  Phone, UserPlus2, Link, Copy, Share2
+  Phone, UserPlus2, Link, Copy, Share2, Globe, Lock
 } from 'lucide-react';
 import { 
   Star as StarIcon, Heart, Zap, Flame, Trophy, Rocket, Diamond, 
@@ -66,7 +67,8 @@ export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onO
     name: chat.name || '',
     username: chat.username || '',
     description: chat.description || '',
-    avatarUrl: chat.avatarUrl || ''
+    avatarUrl: chat.avatarUrl || '',
+    isPublic: chat.isPublic ?? true
   });
 
   useEffect(() => {
@@ -75,7 +77,8 @@ export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onO
         name: chat.name || '',
         username: chat.username || '',
         description: chat.description || '',
-        avatarUrl: chat.avatarUrl || ''
+        avatarUrl: chat.avatarUrl || '',
+        isPublic: chat.isPublic ?? true
       });
     }
   }, [open, chat]);
@@ -236,7 +239,8 @@ export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onO
         name: editForm.name,
         username: updatedUsername,
         description: editForm.description,
-        avatarUrl: editForm.avatarUrl || null
+        avatarUrl: editForm.avatarUrl || null,
+        isPublic: editForm.isPublic
       });
       
       toast({ title: "Настройки сохранены" });
@@ -296,11 +300,6 @@ export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onO
                   <Phone className="w-4 h-4 text-primary" />
                 </div>
               )}
-              {!isMutualContact && isContact && (
-                <p className="text-[8px] text-muted-foreground uppercase font-bold italic mt-1">
-                  Номер станет виден, когда {chatName} добавит вас в ответ
-                </p>
-              )}
             </div>
           )}
         </DialogHeader>
@@ -327,52 +326,6 @@ export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onO
                       <Button size="icon" variant="outline" className="h-10 w-10 shrink-0 rounded-xl border-white/10 hover:bg-primary/10" onClick={() => { navigator.clipboard.writeText(inviteLink); toast({ title: "Ссылка скопирована!" }); }}>
                         <Copy className="w-4 h-4" />
                       </Button>
-                    </div>
-                    <Button variant="ghost" className="w-full h-9 rounded-xl text-[9px] font-bold uppercase tracking-widest gap-2" onClick={async () => { if(navigator.share) try { await navigator.share({ title: chat.name, url: inviteLink }); } catch(e){} }}>
-                      <Share2 className="w-3 h-3" /> Поделиться ссылкой
-                    </Button>
-                  </div>
-                )}
-
-                {(chat.description || (isPrivate && otherUserProfile?.bio)) && (
-                  <div className="space-y-2">
-                    <h3 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Описание</h3>
-                    <p className="text-sm bg-muted/20 p-3 rounded-xl border border-white/5">{chat.description || otherUserProfile?.bio}</p>
-                  </div>
-                )}
-
-                {isPrivate && otherId && (
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <h3 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-2"><Gift className="w-3 h-3" /> Подарки</h3>
-                      {isGlobalAdminUser && <Button variant="ghost" size="sm" className="h-7 text-xs text-primary font-bold" onClick={() => setShowGiftSelection(!showGiftSelection)}>Подарить</Button>}
-                    </div>
-                    
-                    {showGiftSelection && isGlobalAdminUser && (
-                      <div className="space-y-3 p-3 bg-muted/50 rounded-2xl border border-border">
-                        <Input placeholder="Сообщение..." value={giftMessage} onChange={e => setGiftMessage(e.target.value)} className="h-9 text-xs" />
-                        <div className="grid grid-cols-4 gap-2 max-h-60 overflow-y-auto pr-1">
-                          {AVAILABLE_GIFTS.map(g => (
-                            <button key={g.id} onClick={() => handleSendGift(g)} className="flex flex-col items-center gap-1 p-2 rounded-xl hover:bg-muted transition-colors group">
-                              <g.icon className={cn("w-6 h-6", g.color)} />
-                              <span className="text-[8px] font-bold uppercase truncate w-full text-center">{g.name}</span>
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    <div className="grid grid-cols-4 gap-2 p-3 bg-muted/20 rounded-2xl min-h-[60px]">
-                      {receivedGifts?.filter(g => !g.isSold).map(g => {
-                        const giftInfo = AVAILABLE_GIFTS.find(ag => ag.id === g.giftType);
-                        const Icon = giftInfo?.icon || Gift;
-                        return (
-                          <div key={g.id} className="relative p-2 rounded-xl bg-muted/30 border border-white/5 flex flex-col items-center gap-1">
-                            <Icon className={cn("w-6 h-6", giftInfo?.color)} />
-                            <span className="text-[7px] font-bold text-center truncate w-full">{giftInfo?.name}</span>
-                          </div>
-                        );
-                      })}
                     </div>
                   </div>
                 )}
@@ -435,40 +388,33 @@ export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onO
             <TabsContent value="manage" className="flex-1 min-h-0 m-0 overflow-hidden">
               <ScrollArea className="h-full">
                 <div className="p-6 space-y-6 pb-24">
-                  <div className="space-y-4">
-                    <div className="space-y-1.5">
-                      <Label className="text-[10px] uppercase font-black tracking-widest text-muted-foreground ml-1">Название {chat.type === 'group' ? 'группы' : 'канала'}</Label>
-                      <Input 
-                        value={editForm.name} 
-                        onChange={e => setEditForm({...editForm, name: e.target.value})} 
-                        className="bg-muted/30 border-white/5 h-12 rounded-2xl" 
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label className="text-[10px] uppercase font-black tracking-widest text-muted-foreground ml-1">Никнейм сообщества</Label>
-                      <Input 
-                        value={editForm.username} 
-                        onChange={e => setEditForm({...editForm, username: e.target.value})} 
-                        className="bg-muted/30 border-white/5 h-12 rounded-2xl" 
-                        placeholder="@channel_id"
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label className="text-[10px] uppercase font-black tracking-widest text-muted-foreground ml-1">Описание</Label>
-                      <Textarea 
-                        value={editForm.description} 
-                        onChange={e => setEditForm({...editForm, description: e.target.value})} 
-                        className="bg-muted/30 border-white/5 rounded-2xl min-h-[100px]" 
-                        placeholder="О чем ваше сообщество?"
-                      />
+                  <div className="bg-muted/20 p-5 rounded-[2rem] border border-white/5 space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex flex-col">
+                        <span className="text-xs font-bold text-white flex items-center gap-2">
+                          {editForm.isPublic ? <Globe className="w-3 h-3 text-primary" /> : <Lock className="w-3 h-3 text-accent" />}
+                          Публичное сообщество
+                        </span>
+                        <span className="text-[9px] text-muted-foreground uppercase leading-tight">
+                          {editForm.isPublic ? 'Можно найти через поиск' : 'Скрыто из поиска (только по ссылке)'}
+                        </span>
+                      </div>
+                      <Switch checked={editForm.isPublic} onCheckedChange={v => setEditForm({...editForm, isPublic: v})} />
                     </div>
                   </div>
 
-                  <Button 
-                    className="w-full h-12 rounded-2xl font-bold bg-primary shadow-lg shadow-primary/20" 
-                    onClick={handleSaveSettings}
-                    disabled={isSaving}
-                  >
+                  <div className="space-y-4">
+                    <div className="space-y-1.5">
+                      <Label className="text-[10px] uppercase font-black tracking-widest text-muted-foreground ml-1">Название</Label>
+                      <Input value={editForm.name} onChange={e => setEditForm({...editForm, name: e.target.value})} className="bg-muted/30 border-white/5 h-12 rounded-2xl" />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-[10px] uppercase font-black tracking-widest text-muted-foreground ml-1">Никнейм ID</Label>
+                      <Input value={editForm.username} onChange={e => setEditForm({...editForm, username: e.target.value})} className="bg-muted/30 border-white/5 h-12 rounded-2xl" placeholder="@id" />
+                    </div>
+                  </div>
+
+                  <Button className="w-full h-12 rounded-2xl font-bold bg-primary shadow-lg shadow-primary/20" onClick={handleSaveSettings} disabled={isSaving}>
                     {isSaving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
                     Сохранить изменения
                   </Button>
@@ -479,37 +425,12 @@ export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onO
         </Tabs>
       </DialogContent>
     </Dialog>
-    <AddMemberModal 
-      open={isAddMemberOpen} 
-      onOpenChange={setIsAddMemberOpen} 
-      chatId={chat.id} 
-      currentParticipantIds={chat.participantIds || []} 
-    />
+    <AddMemberModal open={isAddMemberOpen} onOpenChange={setIsAddMemberOpen} chatId={chat.id} currentParticipantIds={chat.participantIds || []} />
     </>
   );
 }
 
-function MemberRow({ 
-  userId, 
-  ownerId, 
-  adminIds, 
-  isOwner, 
-  isViewerAdmin,
-  viewerId,
-  onToggleAdmin, 
-  onKick,
-  isKicking
-}: { 
-  userId: string, 
-  ownerId: string, 
-  adminIds: string[],
-  isOwner: boolean,
-  isViewerAdmin: boolean,
-  viewerId: string,
-  onToggleAdmin: (uid: string, isAdmin: boolean) => void,
-  onKick: (uid: string) => void,
-  isKicking?: boolean
-}) {
+function MemberRow({ userId, ownerId, adminIds, isOwner, isViewerAdmin, viewerId, onToggleAdmin, onKick, isKicking }: any) {
   const db = useFirestore();
   const userRef = useMemoFirebase(() => (!db ? null : doc(db, 'users', userId)), [db, userId]);
   const { data: m } = useDoc<User>(userRef);
@@ -518,9 +439,7 @@ function MemberRow({
   const isTargetOwner = userId === ownerId;
   const isTargetMe = userId === viewerId;
 
-  const canBeKicked = !isTargetMe && (
-    isOwner || (isViewerAdmin && !isTargetAdmin && !isTargetOwner)
-  );
+  const canBeKicked = !isTargetMe && (isOwner || (isViewerAdmin && !isTargetAdmin && !isTargetOwner));
 
   if (!m) return null;
   
@@ -537,26 +456,14 @@ function MemberRow({
           <span className="text-[10px] text-muted-foreground">{m.username}</span>
         </div>
       </div>
-      
       <div className="flex items-center gap-1">
         {isOwner && !isTargetOwner && (
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            className={cn("h-8 w-8", isTargetAdmin ? "text-primary" : "text-muted-foreground")}
-            onClick={() => onToggleAdmin(userId, !isTargetAdmin)}
-            title={isTargetAdmin ? "Снять права админа" : "Назначить админом"}
-          >
+          <Button variant="ghost" size="icon" className={cn("h-8 w-8", isTargetAdmin ? "text-primary" : "text-muted-foreground")} onClick={() => onToggleAdmin(userId, !isTargetAdmin)}>
             {isTargetAdmin ? <UserMinus className="w-4 h-4" /> : <UserCheck className="w-4 h-4" />}
           </Button>
         )}
         {canBeKicked && (
-          <Button 
-            variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive"
-            onClick={() => onKick(userId)}
-            disabled={isKicking}
-            title="Исключить из чата"
-          >
+          <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" onClick={() => onKick(userId)} disabled={isKicking}>
             {isKicking ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserX className="w-4 h-4" />}
           </Button>
         )}

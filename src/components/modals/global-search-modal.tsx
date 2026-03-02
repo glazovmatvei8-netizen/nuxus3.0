@@ -34,12 +34,12 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
 
     setIsLoading(true);
     try {
-      // Normalize search string: force lowercase and handle @
       const searchVal = val.startsWith('@') ? val.toLowerCase() : '@' + val.toLowerCase();
       
       const q = query(
         collection(db!, 'chats'),
         where('username', '==', searchVal),
+        where('isPublic', '==', true), // Only find public chats
         limit(5)
       );
       
@@ -125,7 +125,6 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
                         <span className="text-[11px] font-bold text-primary tracking-widest uppercase truncate">{chat.username}</span>
                       </div>
                     </div>
-                    
                     <Button variant="ghost" size="icon" className="h-12 w-12 rounded-full bg-primary/10 text-primary group-hover:bg-primary group-hover:text-white transition-all">
                       {isMember ? <Check className="w-6 h-6" /> : <ArrowRight className="w-6 h-6" />}
                     </Button>

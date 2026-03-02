@@ -7,9 +7,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { doc, collection, addDoc } from 'firebase/firestore';
-import { Camera, Upload, X, Send, Loader2, Sparkles, Image as ImageIcon } from 'lucide-react';
+import { X, Send, Loader2, Sparkles, Image as ImageIcon } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { cn } from '@/lib/utils';
 import type { User } from '@/lib/types';
 
 export function CreateStoryModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
@@ -54,7 +53,8 @@ export function CreateStoryModal({ open, onOpenChange }: { open: boolean, onOpen
         caption: caption.trim(),
         createdAt: now.toISOString(),
         expiresAt: expiresAt.toISOString(),
-        views: []
+        views: [],
+        likes: []
       });
 
       toast({ title: "История опубликована!" });
@@ -74,10 +74,10 @@ export function CreateStoryModal({ open, onOpenChange }: { open: boolean, onOpen
         <DialogHeader className="p-6 pb-2">
           <DialogTitle className="text-xl font-bold flex items-center gap-2">
             <Sparkles className="w-5 h-5 text-primary" />
-            Новая история
+            Загрузить момент
           </DialogTitle>
           <DialogDescription>
-            Поделитесь моментом с друзьями на 24 часа
+            Поделитесь фото или видео на 24 часа
           </DialogDescription>
         </DialogHeader>
 
@@ -90,7 +90,9 @@ export function CreateStoryModal({ open, onOpenChange }: { open: boolean, onOpen
               <div className="bg-primary/10 p-4 rounded-full group-hover:scale-110 transition-transform">
                 <ImageIcon className="w-10 h-10 text-primary" />
               </div>
-              <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Выбрать фото или видео</span>
+              <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground text-center px-4">
+                Нажмите для выбора из галереи
+              </span>
               <input type="file" ref={fileInputRef} className="hidden" accept="image/*,video/*" onChange={handleFileChange} />
             </div>
           ) : (

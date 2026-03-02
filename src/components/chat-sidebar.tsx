@@ -9,14 +9,16 @@ import {
   Plus, Bookmark, Pin, Star, 
   Check, CheckCheck,
   MessageSquare, Lock, SquarePen,
-  Search, Trash2, Circle
+  Search, Trash2, Circle, Sparkles
 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { CreateChatModal } from './modals/create-chat-modal';
 import { AdminPanelModal } from './modals/admin-panel-modal';
-import type { User, Message, Chat } from '@/lib/types';
+import { CreateStoryModal } from './modals/create-story-modal';
+import { StoryViewerModal } from './modals/story-viewer-modal';
+import type { User, Message, Chat, Story } from '@/lib/types';
 import { useFirestore, useUser, useCollection, useDoc, useMemoFirebase } from '@/firebase';
-import { collection, query, where, doc, limit, orderBy, writeBatch } from 'firebase/firestore';
+import { collection, query, where, doc, limit, orderBy, writeBatch, collectionGroup } from 'firebase/firestore';
 import { formatDisplayName, cn, isGlobalAdmin } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
@@ -67,7 +69,6 @@ const ChatListItem = memo(({
         isActive && !isEditMode ? 'bg-white/10' : 'active:bg-white/[0.05]'
       )}
     >
-      {/* Edit Mode Checkbox */}
       {isEditMode && (
         <div className="shrink-0 mr-1 animate-in slide-in-from-left-2 duration-200">
           <div className={cn(
@@ -131,8 +132,9 @@ export default function ChatSidebar() {
   const [activeTab, setActiveTab] = useState<'all' | 'private' | 'channels' | 'bots'>('all');
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isAdminPanelOpen, setIsAdminPanelOpen] = useState(false);
+  const [isCreateStoryOpen, setIsCreateStoryOpen] = useState(false);
+  const [selectedUserStories, setSelectedUserStories] = useState<Story[] | null>(null);
   
-  // Edit mode state
   const [isEditMode, setIsEditMode] = useState(false);
   const [selectedChatIds, setSelectedChatIds] = useState<string[]>([]);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -146,7 +148,19 @@ export default function ChatSidebar() {
   }, [db, user]);
   const { data: chats } = useCollection<Chat>(chatsQuery);
 
-  const pinnedIds = useMemo(() => profile?.pinnedChatIds || [], [profile]);
+  const storiesQuery = useMemoFirebase(() => {
+    if (!db) return null;
+    const now = new Date().toISOString();
+    return query(
+      collectionGroup(db, 'stories'),
+      where('expiresAt', '>', now),
+      orderBy('expiresAt', 'asc'),
+      limit(50)
+    );
+  }, [db]);
+  const { data: allStories } = useCollection<Story>(storiesQuery);
+
+  const pinnedIds = profile?.pinnedChatIds || [];
 
   const handleChatClick = (chat: Chat) => {
     if (forwardingMessage) {
@@ -220,22 +234,49 @@ export default function ChatSidebar() {
     }
   };
 
+  // Group stories by user for viewing
+  const groupedStories = useMemo(() => {
+    if (!allStories || !chats || !user) return {};
+    const chatPartnerIds = new Set(chats.flatMap(c => c.participantIds));
+    return allStories.reduce((acc, story) => {
+      // Show if it's mine or if we have a chat with them
+      if (story.userId === user.uid || chatPartnerIds.has(story.userId)) {
+        if (!acc[story.userId]) acc[story.userId] = [];
+        acc[story.userId].push(story);
+      }
+      return acc;
+    }, {} as Record<string, Story[]>);
+  }, [allStories, chats, user]);
+
+  const hasUnseenStories = useMemo(() => {
+    if (!user) return false;
+    return Object.values(groupedStories).some(stories => 
+      stories.some(s => !s.views?.includes(user.uid))
+    );
+  }, [groupedStories, user]);
+
   return (
     <div className="flex flex-col h-full bg-[#0a0a0c] overflow-hidden">
       <div className="px-4 pt-4 pb-2 shrink-0">
         <div className="flex items-center justify-between mb-4">
-          <Button 
-            variant="ghost" 
-            onClick={() => {
-              setIsEditMode(!isEditMode);
-              setSelectedChatIds([]);
-            }}
-            className="h-8 px-3 rounded-full bg-white/10 hover:bg-white/20 text-white font-bold text-[13px] border border-white/5"
-          >
-            {isEditMode ? 'Готово' : 'Изм.'}
-          </Button>
-          
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
+            <div 
+              onClick={() => {
+                const userStories = groupedStories[user?.uid || ''];
+                if (userStories) setSelectedUserStories(userStories);
+                else if (Object.keys(groupedStories).length > 0) {
+                  // If no personal stories, open the first available one from contacts
+                  const firstUid = Object.keys(groupedStories)[0];
+                  setSelectedUserStories(groupedStories[firstUid]);
+                }
+              }}
+              className={cn(
+                "p-0.5 rounded-full border-2 transition-all cursor-pointer hover:scale-105 active:scale-95",
+                hasUnseenStories ? "border-primary" : "border-white/10"
+              )}
+            >
+              <UserAvatar userId={user?.uid} className="h-9 w-9" />
+            </div>
             <div className="flex items-center gap-1.5" onClick={() => isGlobalAdmin(profile) && setIsAdminPanelOpen(true)}>
               <Lock className="w-3.5 h-3.5 text-white" />
               <h1 className="text-[17px] font-black text-white tracking-tight">Чаты 🐱</h1>
@@ -243,11 +284,18 @@ export default function ChatSidebar() {
           </div>
 
           <div className="flex items-center gap-2">
-            <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full bg-white/10 hover:bg-white/20" onClick={() => setIsCreateModalOpen(true)}>
+            <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full bg-white/10 hover:bg-white/20" onClick={() => setIsCreateStoryOpen(true)}>
               <Plus className="w-5 h-5 text-white" />
             </Button>
-            <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl bg-white/10 hover:bg-white/20">
-              <SquarePen className="w-5 h-5 text-white" />
+            <Button 
+              variant="ghost" 
+              onClick={() => {
+                setIsEditMode(!isEditMode);
+                setSelectedChatIds([]);
+              }}
+              className="h-8 px-3 rounded-full bg-white/10 hover:bg-white/20 text-white font-bold text-[13px] border border-white/5"
+            >
+              {isEditMode ? 'Готово' : 'Изм.'}
             </Button>
           </div>
         </div>
@@ -300,7 +348,6 @@ export default function ChatSidebar() {
         </div>
       </ScrollArea>
 
-      {/* Bulk Delete Bar */}
       {isEditMode && selectedChatIds.length > 0 && (
         <div className="fixed bottom-32 left-1/2 -translate-x-1/2 w-[90%] max-w-[350px] z-50 animate-in slide-in-from-bottom-4 duration-300">
           <Button 
@@ -316,6 +363,14 @@ export default function ChatSidebar() {
 
       <CreateChatModal open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen} />
       <AdminPanelModal open={isAdminPanelOpen} onOpenChange={setIsAdminPanelOpen} />
+      <CreateStoryModal open={isCreateStoryOpen} onOpenChange={setIsCreateStoryOpen} />
+      {selectedUserStories && (
+        <StoryViewerModal 
+          stories={selectedUserStories} 
+          open={!!selectedUserStories} 
+          onOpenChange={(v) => !v && setSelectedUserStories(null)} 
+        />
+      )}
     </div>
   );
 }

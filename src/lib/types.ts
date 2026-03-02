@@ -94,12 +94,27 @@ export interface Chat {
   ownerId: string;
   pinnedMessageId?: string | null;
   typing?: Record<string, boolean>;
+  isPublic?: boolean;
   metadata?: Record<string, {
     name: string;
     username: string;
     avatarUrl: string | null;
     isPremium?: boolean;
   }>;
+}
+
+export interface Story {
+  id: string;
+  userId: string;
+  userName: string;
+  userAvatar: string | null;
+  content: string;
+  contentType: 'image' | 'video';
+  caption?: string;
+  createdAt: string;
+  expiresAt: string;
+  views?: string[];
+  likes?: string[];
 }
 
 export interface UserPrivacy {
