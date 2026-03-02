@@ -3,8 +3,8 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
-import { doc } from 'firebase/firestore';
-import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { doc, deleteDoc } from 'firebase/firestore';
+import { updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { useAppState } from '@/lib/store';
 import { Button } from '@/components/ui/button';
 import { UserAvatar } from '@/components/user-avatar';
@@ -40,7 +40,6 @@ export function CallOverlay() {
   const otherUserRef = useMemoFirebase(() => (!db || !otherId) ? null : doc(db, 'users', otherId), [db, otherId]);
   const { data: otherUser } = useDoc<UserType>(otherUserRef);
 
-  // Функция для запроса медиа-ресурсов (вызывается при клике или старте звонка)
   const requestMedia = async () => {
     if (!navigator.mediaDevices) {
       toast({ variant: 'destructive', title: 'Ошибка безопасности', description: 'Ваш браузер блокирует доступ к камере.' });
@@ -48,10 +47,11 @@ export function CallOverlay() {
     }
 
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ 
+      const constraints = { 
         video: call?.type === 'video' ? { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } } : false, 
         audio: true 
-      });
+      };
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
       setHasCameraPermission(true);
       streamRef.current = stream;
       if (videoRef.current) {
@@ -68,14 +68,12 @@ export function CallOverlay() {
     }
   };
 
-  // Автоматический запрос для звонящего (он уже нажал кнопку вызова - жест был)
   useEffect(() => {
     if (isOutgoing && call?.status === 'calling') {
       requestMedia();
     }
   }, [isOutgoing, call?.status]);
 
-  // Подключение потока при активации звонка (после нажатия "Принять")
   useEffect(() => {
     if (isActive && !streamRef.current) {
       requestMedia();
@@ -101,7 +99,6 @@ export function CallOverlay() {
 
   const handleAccept = () => {
     if (!callRef) return;
-    // Сначала запрашиваем разрешение (пользователь нажал кнопку - жест есть)
     requestMedia();
     updateDocumentNonBlocking(callRef, { 
       status: 'active',

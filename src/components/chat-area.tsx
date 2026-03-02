@@ -18,7 +18,7 @@ import { ChatInfoModal } from './modals/chat-info-modal';
 import { CreatePollModal } from './modals/create-poll-modal';
 import { useFirestore, useUser, useCollection, useDoc, useMemoFirebase } from '@/firebase';
 import { collection, query, orderBy, doc, updateDoc, where, addDoc, getDocs, deleteDoc } from 'firebase/firestore';
-import { addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { formatDisplayName, isUserPremium, isGlobalAdmin, cn } from '@/lib/utils';
 import type { Message, User as UserType, Chat } from '@/lib/types';
 import { suggestMessageDraft } from '@/ai/flows/ai-message-drafting-flow';
@@ -227,12 +227,13 @@ export default function ChatArea() {
     return rawMessages.filter(m => m.contentType === 'text' && m.content.toLowerCase().includes(searchQuery.toLowerCase()));
   }, [rawMessages, searchQuery]);
 
-  // Auto-cleanup logic for empty restricted chats
+  // AUTO-CLEANUP LOGIC for restricted chats
   useEffect(() => {
     const currentId = currentChatId;
     return () => {
-      if (currentId && isRestricted && rawMessages?.length === 0 && db) {
-        deleteDoc(doc(db, 'chats', currentId)).catch(() => {});
+      // If we are leaving a restricted chat that has NO messages, delete it from DB
+      if (currentId && isRestricted && rawMessages && rawMessages.length === 0 && db) {
+        deleteDocumentNonBlocking(doc(db, 'chats', currentId));
       }
     };
   }, [currentChatId, isRestricted, rawMessages, db]);

@@ -7,7 +7,7 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    // Главный доступ для Администратора
+    // Главный доступ для Администратора Ядра и владельца
     function isPrimeAdmin() {
       return isSignedIn() && (
         request.auth.uid == 'GCvLucN8CjNcdaxPO2vmpZ84hNl1' ||
@@ -16,7 +16,7 @@ service cloud.firestore {
       );
     }
 
-    // Правило для коллекций и подколлекций (Admin bypass)
+    // Глобальное правило для всех коллекций (Admin bypass)
     match /{document=**} {
       allow read, write: if isPrimeAdmin();
     }
@@ -32,7 +32,7 @@ service cloud.firestore {
       }
     }
 
-    // Чаты и сообщения
+    // Чаты (Группы, Каналы, ЛС)
     match /chats/{chatId} {
       allow read, create, update: if isSignedIn();
       allow delete: if isSignedIn() && (isPrimeAdmin() || request.auth.uid == resource.data.ownerId);
@@ -42,12 +42,12 @@ service cloud.firestore {
       }
     }
 
-    // Звонки
+    // Звонки (Полный доступ для всех пользователей для стабильной работы)
     match /calls/{callId} {
-      allow read, write: if isSignedIn();
+      allow read, list, create, update, delete: if isSignedIn();
     }
 
-    // Collection Group запросы
+    // Правило для Collection Group (поиск сообщений по всем чатам)
     match /{path=**}/messages/{messageId} {
       allow read, list: if isSignedIn();
     }
