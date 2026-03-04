@@ -1,9 +1,9 @@
-
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import { AppProvider } from '@/lib/store';
 import { Toaster } from '@/components/ui/toaster';
 import { FirebaseClientProvider } from '@/firebase/client-provider';
+import { ThemeApplier } from '@/components/theme-applier';
 import { Plus_Jakarta_Sans } from 'next/font/google';
 import Script from 'next/script';
 
@@ -68,6 +68,7 @@ export default function RootLayout({
       <body className="font-sans antialiased bg-[#0a0a0c] text-foreground overflow-hidden h-[100dvh] selection:bg-primary/30">
         <FirebaseClientProvider>
           <AppProvider>
+            <ThemeApplier />
             {children}
             <Toaster />
           </AppProvider>

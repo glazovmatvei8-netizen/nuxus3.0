@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useRef, useEffect, useMemo, useCallback, memo } from 'react';
@@ -226,17 +225,6 @@ export default function ChatArea() {
     if (!searchQuery.trim()) return rawMessages;
     return rawMessages.filter(m => m.contentType === 'text' && m.content.toLowerCase().includes(searchQuery.toLowerCase()));
   }, [rawMessages, searchQuery]);
-
-  // AUTO-CLEANUP LOGIC for restricted chats
-  useEffect(() => {
-    const currentId = currentChatId;
-    return () => {
-      // If we are leaving a restricted chat that has NO messages, delete it from DB
-      if (currentId && isRestricted && rawMessages && rawMessages.length === 0 && db) {
-        deleteDocumentNonBlocking(doc(db, 'chats', currentId));
-      }
-    };
-  }, [currentChatId, isRestricted, rawMessages, db]);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -593,7 +581,7 @@ export default function ChatArea() {
 
   return (
     <div className="flex-1 flex flex-col h-full bg-background relative overflow-hidden z-20">
-      <header className="h-16 flex items-center justify-between px-4 border-b border-white/5 bg-card shrink-0">
+      <header className="h-16 flex items-center justify-between px-4 border-b border-white/5 bg-card/80 backdrop-blur-xl shrink-0 z-30">
         <div className="flex items-center gap-3 min-w-0 flex-1">
           <Button variant="ghost" size="icon" className="md:hidden rounded-lg hover:bg-white/5" onClick={() => setCurrentChatId(null)}>
             <ChevronLeft className="w-6 h-6" />
@@ -633,22 +621,30 @@ export default function ChatArea() {
         </div>
       </header>
 
-      <ScrollArea ref={scrollRef} className="flex-1 w-full relative z-10 scrollbar-hide">
-        {messages && (
-          <MessageList 
-            messages={messages} 
-            userId={firebaseUser?.uid} 
-            chatId={currentChatId} 
-            onReply={handleReply} 
-            onEdit={handleEdit} 
-            amIPremium={amIPremium} 
-            isAdmin={isAdmin}
-            isGroup={chat?.type === 'group' || chat?.type === 'channel'}
-          />
+      <div className="flex-1 relative overflow-hidden">
+        {userProfile?.settings?.chatBackground && (
+          <div className="absolute inset-0 z-0">
+            <img src={userProfile.settings.chatBackground} className="w-full h-full object-cover" alt="Chat background" />
+            <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px]" />
+          </div>
         )}
-      </ScrollArea>
+        <ScrollArea ref={scrollRef} className="h-full w-full relative z-10 scrollbar-hide">
+          {messages && (
+            <MessageList 
+              messages={messages} 
+              userId={firebaseUser?.uid} 
+              chatId={currentChatId} 
+              onReply={handleReply} 
+              onEdit={handleEdit} 
+              amIPremium={amIPremium} 
+              isAdmin={isAdmin}
+              isGroup={chat?.type === 'group' || chat?.type === 'channel'}
+            />
+          )}
+        </ScrollArea>
+      </div>
 
-      <footer className="p-3 bg-card border-t border-white/5 shrink-0 relative">
+      <footer className="p-3 bg-card/80 backdrop-blur-2xl border-t border-white/5 shrink-0 relative z-30">
         <div className="max-w-4xl mx-auto space-y-2">
           {isRestricted ? (
             <div className="flex items-center justify-center p-4 bg-primary/5 rounded-2xl border border-primary/10 animate-in fade-in slide-in-from-bottom-2">
