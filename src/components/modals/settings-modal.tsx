@@ -1,7 +1,8 @@
+
 "use client"
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -16,7 +17,7 @@ import {
   Users, Share2, Star, Bell, BellOff, Info, Languages, Smartphone, Camera,
   Eye, UserCheck, MessageCircle, Share, PlusSquare, ShieldCheck as ShieldIcon, Zap,
   ExternalLink, MousePointerClick, Radio, ChevronRight, Terminal, Copy, Code2, Globe, Wifi, WifiOff, Smile,
-  Image as ImageIcon, Paintbrush
+  Image as ImageIcon, Paintbrush, Crop, Maximize, Move
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { signOut } from 'firebase/auth';
@@ -24,7 +25,7 @@ import { doc } from 'firebase/firestore';
 import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAppState } from '@/lib/store';
-import { isUserPremium } from '@/lib/utils';
+import { isUserPremium, cn } from '@/lib/utils';
 import type { User } from '@/lib/types';
 import { useTranslations } from '@/hooks/use-translations';
 
@@ -58,6 +59,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
     statusText: '',
     theme: 'default',
     chatBackground: '',
+    chatBackgroundFit: 'cover' as 'cover' | 'contain',
     language: 'ru',
     twoFactorEnabled: false,
     twoFactorPin: '',
@@ -66,6 +68,9 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
     notifChannels: true,
     notifPreviews: true
   });
+
+  const [bgPreview, setBgPreview] = useState<string | null>(null);
+  const [isBgPlacementOpen, setIsBgPlacementOpen] = useState(false);
 
   useEffect(() => {
     if (profile && open) {
@@ -78,6 +83,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         statusText: profile.statusText || '',
         theme: profile.settings?.theme || 'default',
         chatBackground: profile.settings?.chatBackground || '',
+        chatBackgroundFit: profile.settings?.chatBackgroundFit || 'cover',
         language: profile.settings?.language || 'ru',
         twoFactorEnabled: !!profile.twoFactorEnabled,
         twoFactorPin: profile.twoFactorPin || '',
@@ -104,6 +110,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         ...profile?.settings,
         theme: form.theme,
         chatBackground: form.chatBackground,
+        chatBackgroundFit: form.chatBackgroundFit,
         language: form.language,
         notifications: {
           messages: form.notifMessages,
@@ -121,12 +128,25 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
     const file = e.target.files?.[0];
     if (file) {
       const reader = new FileReader();
-      reader.onloadend = () => setForm({ ...form, chatBackground: reader.result as string });
+      reader.onloadend = () => {
+        setBgPreview(reader.result as string);
+        setIsBgPlacementOpen(true);
+      };
       reader.readAsDataURL(file);
     }
   };
 
+  const finalizeBackground = (fit: 'cover' | 'contain') => {
+    if (bgPreview) {
+      setForm({ ...form, chatBackground: bgPreview, chatBackgroundFit: fit });
+      setBgPreview(null);
+      setIsBgPlacementOpen(false);
+      toast({ title: "Фон подготовлен", description: "Нажмите 'Сохранить' для применения" });
+    }
+  };
+
   return (
+    <>
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md bg-card border-border p-0 overflow-hidden h-[90vh] flex flex-col rounded-[2.5rem] shadow-2xl">
         <DialogHeader className="p-6 border-b border-white/5 shrink-0 bg-transparent">
@@ -146,13 +166,24 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
 
           <ScrollArea className="flex-1 px-6">
             <TabsContent value="profile" className="space-y-6 m-0 py-6">
-              <div className="flex flex-col items-center gap-8">
-                <div className="relative group cursor-pointer" onClick={() => fileInputRef.current?.click()}>
-                  <UserAvatar userId={user?.uid} manualAvatarUrl={form.avatarUrl} className="h-32 w-32 border-4 border-primary/20 shadow-2xl" fallbackName={form.name} />
-                  <div className="absolute inset-0 bg-black/60 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all backdrop-blur-sm">
-                    <Camera className="w-8 h-8 text-white" />
+              <div className="flex flex-col items-center gap-6">
+                <div className="flex flex-col items-center gap-4 w-full">
+                  <div className="relative group cursor-pointer" onClick={() => fileInputRef.current?.click()}>
+                    <UserAvatar userId={user?.uid} manualAvatarUrl={form.avatarUrl} className="h-32 w-32 border-4 border-primary/20 shadow-2xl" fallbackName={form.name} />
+                    <div className="absolute inset-0 bg-black/60 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all backdrop-blur-sm">
+                      <Camera className="w-8 h-8 text-white" />
+                    </div>
+                    <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={(e) => { const f = e.target.files?.[0]; if(f) { const r = new FileReader(); r.onloadend = () => setForm({...form, avatarUrl: r.result as string}); r.readAsDataURL(f); } }} />
                   </div>
-                  <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={(e) => { const f = e.target.files?.[0]; if(f) { const r = new FileReader(); r.onloadend = () => setForm({...form, avatarUrl: r.result as string}); r.readAsDataURL(f); } }} />
+                  
+                  {/* Кнопка Оформление под фото */}
+                  <Button 
+                    variant="outline" 
+                    onClick={() => setSettingsTab('appearance')}
+                    className="h-10 px-6 rounded-full bg-primary/10 border-primary/20 text-primary font-black uppercase italic tracking-widest text-[10px] hover:bg-primary hover:text-white transition-all shadow-lg shadow-primary/10"
+                  >
+                    <Paintbrush className="w-3.5 h-3.5 mr-2" /> Оформление
+                  </Button>
                 </div>
                 
                 <div className="space-y-5 w-full">
@@ -192,15 +223,16 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                   {THEMES.map((theme) => (
                     <button
                       key={theme.id}
-                      onClick={() => setForm({ ...form, theme: theme.id })}
-                      className={`flex items-center justify-between p-4 rounded-2xl border transition-all ${
+                      onClick={() => setForm({ ...form, theme: theme.id as any })}
+                      className={cn(
+                        "flex items-center justify-between p-4 rounded-2xl border transition-all",
                         form.theme === theme.id 
                           ? 'bg-primary/10 border-primary shadow-lg' 
                           : 'bg-muted/20 border-white/5 hover:bg-muted/30'
-                      }`}
+                      )}
                     >
                       <div className="flex items-center gap-3">
-                        <div className={`w-8 h-8 rounded-full ${theme.color} border border-white/20`} />
+                        <div className={cn("w-8 h-8 rounded-full border border-white/20", theme.color)} />
                         <span className="text-sm font-bold text-white">{theme.name}</span>
                       </div>
                       {form.theme === theme.id && <Check className="w-5 h-5 text-primary" />}
@@ -216,9 +248,14 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                 <div className="bg-muted/20 p-6 rounded-[2.5rem] border border-white/5 flex flex-col items-center gap-4">
                   {form.chatBackground ? (
                     <div className="relative w-full aspect-video rounded-2xl overflow-hidden border border-white/10 group">
-                      <img src={form.chatBackground} className="w-full h-full object-cover" alt="Background preview" />
-                      <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all backdrop-blur-sm">
-                        <Button variant="destructive" size="sm" onClick={() => setForm({ ...form, chatBackground: '' })}>Удалить</Button>
+                      <img 
+                        src={form.chatBackground} 
+                        className={cn("w-full h-full", form.chatBackgroundFit === 'cover' ? 'object-cover' : 'object-contain')} 
+                        alt="Background preview" 
+                      />
+                      <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all backdrop-blur-sm gap-2">
+                        <Button variant="outline" size="sm" className="h-8 rounded-xl text-[9px] uppercase font-bold" onClick={() => setIsBgPlacementOpen(true)}>Настроить</Button>
+                        <Button variant="destructive" size="sm" className="h-8 rounded-xl text-[9px] uppercase font-bold" onClick={() => setForm({ ...form, chatBackground: '' })}>Удалить</Button>
                       </div>
                     </div>
                   ) : (
@@ -283,5 +320,75 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         </Tabs>
       </DialogContent>
     </Dialog>
+
+    {/* Диалог выбора размещения фона */}
+    <Dialog open={isBgPlacementOpen} onOpenChange={setIsBgPlacementOpen}>
+      <DialogContent className="max-w-sm bg-card border-border rounded-[2.5rem] p-6 shadow-2xl">
+        <DialogHeader>
+          <DialogTitle className="text-xl font-black uppercase italic text-white flex items-center gap-2">
+            <Move className="w-5 h-5 text-primary" /> Установка фона
+          </DialogTitle>
+          <DialogDescription className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground/60">
+            Как разместить изображение в чатах?
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="py-6 space-y-4">
+          <div className="aspect-video w-full rounded-2xl overflow-hidden bg-black border border-white/5 relative">
+            <img 
+              src={bgPreview || form.chatBackground} 
+              className={cn("w-full h-full transition-all duration-500", bgPreview ? "opacity-100" : "opacity-50")} 
+              style={{ objectFit: 'contain' }}
+              alt="Preview"
+            />
+            <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/40 backdrop-blur-[2px]">
+               <div className="w-24 h-1 bg-primary/40 rounded-full mb-1" />
+               <div className="w-32 h-1 bg-primary/20 rounded-full" />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 gap-3">
+            <Button 
+              variant="outline" 
+              className="h-14 rounded-2xl border-primary/20 hover:bg-primary/10 flex justify-between px-6 group"
+              onClick={() => finalizeBackground('cover')}
+            >
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-primary/10 rounded-xl group-hover:bg-primary/20 transition-colors">
+                  <Move className="w-4 h-4 text-primary" />
+                </div>
+                <div className="flex flex-col items-start leading-none">
+                  <span className="text-[11px] font-black uppercase italic">Заполнить всё</span>
+                  <span className="text-[8px] font-bold text-muted-foreground uppercase mt-1">Растянуть на весь экран</span>
+                </div>
+              </div>
+              <ChevronRight className="w-4 h-4 text-primary/40" />
+            </Button>
+
+            <Button 
+              variant="outline" 
+              className="h-14 rounded-2xl border-accent/20 hover:bg-accent/10 flex justify-between px-6 group"
+              onClick={() => finalizeBackground('contain')}
+            >
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-accent/10 rounded-xl group-hover:bg-accent/20 transition-colors">
+                  <Maximize className="w-4 h-4 text-accent" />
+                </div>
+                <div className="flex flex-col items-start leading-none">
+                  <span className="text-[11px] font-black uppercase italic">Вписать полностью</span>
+                  <span className="text-[8px] font-bold text-muted-foreground uppercase mt-1">Без потери качества и обрезки</span>
+                </div>
+              </div>
+              <ChevronRight className="w-4 h-4 text-accent/40" />
+            </Button>
+          </div>
+        </div>
+
+        <DialogFooter>
+          <Button variant="ghost" className="w-full text-[10px] font-black uppercase opacity-40" onClick={() => setIsBgPlacementOpen(false)}>Отмена</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+    </>
   );
 }

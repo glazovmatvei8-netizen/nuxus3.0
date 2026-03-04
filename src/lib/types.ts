@@ -121,6 +121,7 @@ export interface UserNotifications {
 export interface UserSettings {
   theme: 'default' | 'ocean' | 'midnight';
   chatBackground: string;
+  chatBackgroundFit?: 'cover' | 'contain';
   messageSize: 'small' | 'medium' | 'large';
   privacy: UserPrivacy;
   notifications?: UserNotifications;

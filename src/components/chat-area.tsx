@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useRef, useEffect, useMemo, useCallback, memo } from 'react';
@@ -624,7 +625,11 @@ export default function ChatArea() {
       <div className="flex-1 relative overflow-hidden">
         {userProfile?.settings?.chatBackground && (
           <div className="absolute inset-0 z-0">
-            <img src={userProfile.settings.chatBackground} className="w-full h-full object-cover" alt="Chat background" />
+            <img 
+              src={userProfile.settings.chatBackground} 
+              className={cn("w-full h-full", userProfile.settings.chatBackgroundFit === 'contain' ? 'object-contain' : 'object-cover')} 
+              alt="Chat background" 
+            />
             <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px]" />
           </div>
         )}
