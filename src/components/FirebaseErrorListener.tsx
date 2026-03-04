@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -15,12 +16,13 @@ export function FirebaseErrorListener() {
 
   useEffect(() => {
     const handleError = (error: FirestorePermissionError) => {
-      // DEV TOOL LOCK: Only the owner sees the crash screen
-      // GCvLucN8CjNcdaxPO2vmpZ84hNl1 is the requester's ID
-      if (user?.uid === 'GCvLucN8CjNcdaxPO2vmpZ84hNl1' || user?.uid === 'vnctow46') {
+      // DEV TOOL LOCK: Only the owner (YOU) sees the crash screen
+      // GCvLucN8CjNcdaxPO2vmpZ84hNl1 is YOUR specific ID
+      if (user?.uid === 'GCvLucN8CjNcdaxPO2vmpZ84hNl1') {
         setError(error);
       } else {
-        console.warn("Nuxus Core: Permission denied. Error hidden from non-admin user.");
+        // Silent fail for regular users to prevent bad UX
+        console.warn("Nuxus Core: Permission denied. Error suppressed for non-admin user.");
       }
     };
 
