@@ -25,12 +25,6 @@ export default function ProfileView() {
   const userProfileRef = useMemoFirebase(() => (!db || !user) ? null : doc(db, 'users', user.uid), [db, user]);
   const { data: profile } = useDoc<User>(userProfileRef);
 
-  const handleInvite = () => {
-    const url = typeof window !== 'undefined' ? `${window.location.origin}?ref=${user?.uid}` : '';
-    navigator.clipboard.writeText(url);
-    toast({ title: "Ссылка скопирована" });
-  };
-
   const openSavedMessages = async () => {
     if (!db || !user) return;
     try {
@@ -107,17 +101,6 @@ export default function ProfileView() {
             </div>
           )}
 
-          {/* Invite Block */}
-          <div 
-            onClick={handleInvite}
-            className="bg-[#1c1c1e] p-4 rounded-2xl flex items-center gap-4 cursor-pointer active:scale-[0.98] transition-all border border-white/5"
-          >
-            <div className="h-10 w-10 rounded-full bg-[#5856d6]/20 flex items-center justify-center shadow-lg">
-              <Link className="w-5 h-5 text-[#5856d6]" />
-            </div>
-            <span className="text-[#5856d6] font-bold text-[16px]">Приглашить друзей</span>
-          </div>
-
           {/* Main Settings Block */}
           <div className="bg-[#1c1c1e] rounded-[2rem] overflow-hidden divide-y divide-white/[0.05] border border-white/5">
             <SettingsItem 
@@ -148,7 +131,7 @@ export default function ProfileView() {
 
           <div className="pt-2">
             <p className="text-[11px] text-muted-foreground/40 uppercase font-black text-center tracking-[0.2em] animate-pulse">
-              Nuxus Core v0.55.0
+              Nuxus Core v0.56.6
             </p>
           </div>
         </div>
