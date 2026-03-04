@@ -14,7 +14,7 @@ import { Switch } from '@/components/ui/switch';
 import { 
   Sparkles, Gift, Crown, Star, LogOut, UserPlus, Shield, UserMinus, UserCheck,
   Settings2, Upload, Camera, Check, Info, Users, UserX, Loader2,
-  Phone, UserPlus2, Link, Copy, Share2, Globe, Lock
+  Phone, UserPlus2, Link, Copy, Share2, Globe, Lock, Smile
 } from 'lucide-react';
 import { 
   Star as StarIcon, Heart, Zap, Flame, Trophy, Rocket, Diamond, 
@@ -283,6 +283,19 @@ export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onO
           
           {isPrivate && otherUserProfile && (
             <div className="mt-4 w-full flex flex-col gap-2 px-6">
+              {/* Статус Emoji + Text (Только здесь) */}
+              {(otherUserProfile.statusEmoji || otherUserProfile.statusText) && (
+                <div className="bg-primary/5 border border-primary/10 p-3 rounded-2xl flex items-center gap-3 mb-2 animate-in fade-in slide-in-from-top-2">
+                  <div className="h-10 w-10 rounded-full bg-primary/20 flex items-center justify-center text-xl shrink-0">
+                    {otherUserProfile.statusEmoji || <Smile className="w-5 h-5 text-primary" />}
+                  </div>
+                  <div className="flex flex-col items-start min-w-0">
+                    <span className="text-[8px] font-black uppercase text-primary tracking-widest mb-0.5">Текущий статус</span>
+                    <span className="text-xs text-white truncate font-bold">{otherUserProfile.statusText || 'Без описания'}</span>
+                  </div>
+                </div>
+              )}
+
               <Button 
                 variant={isContact ? "secondary" : "default"} 
                 className="w-full h-10 rounded-xl gap-2 font-bold text-[10px] uppercase tracking-widest"
@@ -319,7 +332,7 @@ export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onO
                 {!isPrivate && inviteLink && (
                   <div className="p-4 bg-primary/5 rounded-[1.5rem] border border-primary/10 space-y-3">
                     <div className="flex items-center gap-2 text-[9px] font-black uppercase tracking-[0.2em] text-primary">
-                      <Link className="w-3 h-3" /> Ссылка на приглашение
+                      <Link className="w-3.5 h-3.5" /> Ссылка на приглашение
                     </div>
                     <div className="flex gap-2">
                       <Input readOnly value={inviteLink} className="bg-black/20 border-white/5 h-10 text-[10px] font-mono rounded-xl truncate" />

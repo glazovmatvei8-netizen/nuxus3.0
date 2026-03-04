@@ -20,7 +20,7 @@ interface UserAvatarProps {
 
 /**
  * Smart Avatar component with memoization for maximum performance.
- * Now handles both Premium and Status Emoji badges.
+ * Displays user photo and Premium badge. Status emoji removed per user request.
  */
 export const UserAvatar = memo(({ userId, className, fallbackName, fallbackClassName, manualAvatarUrl }: UserAvatarProps) => {
   const db = useFirestore();
@@ -77,15 +77,6 @@ export const UserAvatar = memo(({ userId, className, fallbackName, fallbackClass
             <div className="bg-gradient-to-tr from-purple-500 to-accent p-[1.5px] rounded-full shadow-lg border border-white/20">
               <Star className="w-2.5 h-2.5 text-white fill-white" />
             </div>
-          </div>
-        </div>
-      )}
-
-      {/* Status Emoji (Bottom Left) - Minimalist Circular Design */}
-      {profile?.statusEmoji && (
-        <div className="absolute bottom-0 left-0 z-10 -translate-x-[10%] translate-y-[10%]">
-          <div className="bg-[#1c1c1e] w-[18px] h-[18px] rounded-full flex items-center justify-center border border-white/10 shadow-xl">
-            <span className="text-[10px] leading-none select-none">{profile.statusEmoji}</span>
           </div>
         </div>
       )}
