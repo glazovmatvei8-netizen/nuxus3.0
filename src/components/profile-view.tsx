@@ -71,14 +71,7 @@ export default function ProfileView() {
         </Button>
         
         <div className="flex items-center gap-2">
-          <div className="relative">
-            <UserAvatar userId={user?.uid} className="h-8 w-8" />
-            {profile?.statusEmoji && (
-              <div className="absolute -bottom-1 -left-1 bg-[#1c1c1e] rounded-full p-0.5 border border-white/5 shadow-lg z-20">
-                <span className="text-[8px]">{profile.statusEmoji}</span>
-              </div>
-            )}
-          </div>
+          <UserAvatar userId={user?.uid} className="h-8 w-8" />
           <span className="font-bold text-white text-[17px] flex items-center gap-1.5">
             {formatDisplayName(profile?.name)}
             {isUserPremium(profile) && <Star className="w-3.5 h-3.5 text-accent fill-accent" />}

@@ -85,14 +85,7 @@ const ChatListItem = memo(({
             <Bookmark className="w-6 h-6 text-white fill-white" />
           </div>
         ) : (
-          <>
-            <UserAvatar userId={otherId} manualAvatarUrl={manualAvatarUrl || otherProfile?.avatarUrl || chat.avatarUrl} className="h-[52px] w-[52px]" fallbackName={finalDisplayName} />
-            {otherProfile?.statusEmoji && (
-              <div className="absolute -bottom-1 -left-1 bg-[#1c1c1e] rounded-full p-0.5 border border-white/5 shadow-lg z-20">
-                <span className="text-[10px]">{otherProfile.statusEmoji}</span>
-              </div>
-            )}
-          </>
+          <UserAvatar userId={otherId} manualAvatarUrl={manualAvatarUrl || otherProfile?.avatarUrl || chat.avatarUrl} className="h-[52px] w-[52px]" fallbackName={finalDisplayName} />
         )}
       </div>
       <div className="flex-1 min-w-0 border-b border-white/[0.03] pb-3 h-full flex flex-col justify-center">

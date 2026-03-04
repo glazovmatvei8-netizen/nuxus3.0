@@ -20,6 +20,7 @@ interface UserAvatarProps {
 
 /**
  * Smart Avatar component with memoization for maximum performance.
+ * Now handles both Premium and Status Emoji badges.
  */
 export const UserAvatar = memo(({ userId, className, fallbackName, fallbackClassName, manualAvatarUrl }: UserAvatarProps) => {
   const db = useFirestore();
@@ -68,12 +69,23 @@ export const UserAvatar = memo(({ userId, className, fallbackName, fallbackClass
           </AvatarFallback>
         )}
       </Avatar>
+
+      {/* Premium Badge (Bottom Right) */}
       {premium && (
-        <div className="absolute bottom-0 right-0 z-10 translate-x-[5%] translate-y-[5%]">
-          <div className="bg-background rounded-full p-[1.5px] shadow-sm">
+        <div className="absolute bottom-0 right-0 z-10 translate-x-[15%] translate-y-[15%]">
+          <div className="bg-[#0a0a0c] rounded-full p-[1.5px] shadow-sm">
             <div className="bg-gradient-to-tr from-purple-500 to-accent p-[1.5px] rounded-full shadow-lg border border-white/20">
               <Star className="w-2.5 h-2.5 text-white fill-white" />
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Status Emoji (Bottom Left) - Minimalist Circular Design */}
+      {profile?.statusEmoji && (
+        <div className="absolute bottom-0 left-0 z-10 -translate-x-[10%] translate-y-[10%]">
+          <div className="bg-[#1c1c1e] w-[18px] h-[18px] rounded-full flex items-center justify-center border border-white/10 shadow-xl">
+            <span className="text-[10px] leading-none select-none">{profile.statusEmoji}</span>
           </div>
         </div>
       )}
