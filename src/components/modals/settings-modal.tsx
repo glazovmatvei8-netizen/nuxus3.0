@@ -141,7 +141,18 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
       setForm({ ...form, chatBackground: bgPreview, chatBackgroundFit: fit });
       setBgPreview(null);
       setIsBgPlacementOpen(false);
-      toast({ title: "Фон подготовлен", description: "Нажмите 'Сохранить' для применения" });
+      
+      // Мгновенное сохранение в Firestore, чтобы фон не пропал после перезагрузки
+      if (userRef) {
+        updateDocumentNonBlocking(userRef, {
+          settings: {
+            ...profile?.settings,
+            chatBackground: bgPreview,
+            chatBackgroundFit: fit
+          }
+        });
+      }
+      toast({ title: "Фон установлен и синхронизирован" });
     }
   };
 
@@ -323,7 +334,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
 
     {/* Диалог выбора размещения фона */}
     <Dialog open={isBgPlacementOpen} onOpenChange={setIsBgPlacementOpen}>
-      <DialogContent className="max-w-sm bg-card border-border rounded-[2.5rem] p-6 shadow-2xl">
+      <DialogContent className="max-sm bg-card border-border rounded-[2.5rem] p-6 shadow-2xl">
         <DialogHeader>
           <DialogTitle className="text-xl font-black uppercase italic text-white flex items-center gap-2">
             <Move className="w-5 h-5 text-primary" /> Установка фона
@@ -385,7 +396,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         </div>
 
         <DialogFooter>
-          <Button variant="ghost" className="w-full text-[10px] font-black uppercase opacity-40" onClick={() => setIsBgPlacementOpen(false)}>Отмена</Button>
+          <Button variant="ghost" className="w-full text-[10px] font-black uppercase opacity-40" onClick={() => { setBgPreview(null); setIsBgPlacementOpen(false); }}>Отмена</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

@@ -634,10 +634,7 @@ export default function ChatArea() {
               backgroundRepeat: 'no-repeat',
               backgroundAttachment: 'fixed'
             }}
-          >
-            {/* Intelligent Reading Layer - Blur and Dimming */}
-            <div className="absolute inset-0 bg-black/40 backdrop-blur-[0.5px]" />
-          </div>
+          />
         )}
         
         <ScrollArea ref={scrollRef} className="h-full w-full relative z-10 scrollbar-hide bg-transparent">
