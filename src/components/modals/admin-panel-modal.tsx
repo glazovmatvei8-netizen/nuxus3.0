@@ -7,15 +7,15 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, doc, limit, getDocs, writeBatch, where, setDoc } from 'firebase/firestore';
+import { useFirestore, useCollection, useMemoFirebase, useUser } from '@/firebase';
+import { collection, query, doc, limit, getDocs, writeBatch, where, setDoc, addDoc } from 'firebase/firestore';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
   ShieldAlert, Users, Send, 
   Loader2, Star, Search, Activity, BarChart3, 
   Globe, Terminal, Shield, Trash2, 
   Database, Server, Cpu, ShieldCheck, Bomb, RotateCcw,
-  UserPlus, Clock, Download, HardDrive, Smartphone, Zap
+  UserPlus, Clock, Download, HardDrive, Smartphone, Zap, Megaphone
 } from 'lucide-react';
 import { 
   DropdownMenu, 
@@ -26,9 +26,9 @@ import {
   DropdownMenuSeparator
 } from '@/components/ui/dropdown-menu';
 import { useToast } from '@/hooks/use-toast';
-import type { User, Chat } from '@/lib/types';
+import type { User, Chat, Message } from '@/lib/types';
 import { formatDisplayName, cn, isGlobalAdmin, isUserActuallyBanned } from '@/lib/utils';
-import { updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { updateDocumentNonBlocking, deleteDocumentNonBlocking, addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { addHours, addDays, addMonths, addYears } from 'date-fns';
 
 const PRIME_UID = 'vnctow46';
@@ -89,11 +89,13 @@ CoreMetrics.displayName = 'CoreMetrics';
 
 export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const db = useFirestore();
+  const { user: adminUser } = useUser();
   const { toast } = useToast();
   
   const [isCleaning, setIsCleaning] = useState(false);
   const [isRestoring, setIsRestoring] = useState(false);
   const [isDeploying, setIsDeploying] = useState(false);
+  const [isBroadcasting, setIsBroadcasting] = useState(false);
   const [alertText, setAlertText] = useState('');
   const [userSearch, setUserSearch] = useState('');
   
@@ -147,6 +149,40 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
       toast({ title: "Ошибка установки", description: e.message, variant: "destructive" });
     } finally {
       setIsDeploying(false);
+    }
+  };
+
+  const handleBroadcast = async () => {
+    if (!db || !alertText.trim() || !adminUser) return;
+    setIsBroadcasting(true);
+    try {
+      // Находим все чаты пользователя admin
+      const chatsSnap = await getDocs(collection(db, 'chats'));
+      const batch = writeBatch(db);
+      
+      chatsSnap.forEach(chatDoc => {
+        const msgRef = doc(collection(db, 'chats', chatDoc.id, 'messages'));
+        batch.set(msgRef, {
+          chatId: chatDoc.id,
+          senderId: 'system_broadcast',
+          senderName: 'NUXUS CORE',
+          content: alertText.trim(),
+          contentType: 'service',
+          sentAt: new Date().toISOString(),
+          isRead: false
+        });
+        
+        const chatRef = doc(db, 'chats', chatDoc.id);
+        batch.update(chatRef, { lastMessageAt: new Date().toISOString() });
+      });
+
+      await batch.commit();
+      setAlertText('');
+      toast({ title: "Трансляция завершена", description: `Сообщение отправлено во все активные узлы.` });
+    } catch (e: any) {
+      toast({ title: "Ошибка трансляции", description: e.message, variant: "destructive" });
+    } finally {
+      setIsBroadcasting(false);
     }
   };
 
@@ -263,7 +299,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl bg-card border-primary/20 p-0 overflow-hidden h-[90vh] flex flex-col rounded-[2.5rem] shadow-2xl border">
         <DialogHeader className="sr-only">
-          <DialogTitle>Админ-панель Nuxus v0.54.7</DialogTitle>
+          <DialogTitle>Админ-панель Nuxus v0.55.0</DialogTitle>
           <DialogDescription>Управление ядром системы</DialogDescription>
         </DialogHeader>
 
@@ -274,13 +310,13 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
                 <ShieldAlert className="w-5 h-5 text-white" />
               </div>
               <div className="flex flex-col leading-none">
-                <span>Nuxus v0.54.7</span>
-                <span className="text-[9px] font-bold tracking-[0.4em] text-primary-foreground opacity-70 mt-1 uppercase">Консоль управления</span>
+                <span>Nuxus v0.55.0</span>
+                <span className="text-[9px] font-bold tracking-[0.4em] text-primary-foreground opacity-70 mt-1 uppercase">Quantum Console</span>
               </div>
             </div>
             <div className="flex items-center gap-1.5 px-3 py-1 bg-green-500/10 border border-green-500/20 rounded-full">
               <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" />
-              <span className="text-[8px] text-green-500 font-black uppercase">Core Online</span>
+              <span className="text-[8px] text-green-500 font-black uppercase">Core Active</span>
             </div>
           </div>
         </div>
@@ -314,27 +350,25 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
                 
                 <CoreMetrics />
                 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                   <div className="p-5 bg-muted/20 rounded-[2rem] border border-white/5 space-y-3">
-                    <div className="flex items-center gap-2">
-                      <Database className="w-4 h-4 text-primary" />
-                      <span className="text-[10px] font-black uppercase tracking-widest text-white">Статус БД</span>
-                    </div>
-                    <div className="space-y-2">
-                      <div className="flex justify-between text-[10px] font-bold text-muted-foreground uppercase"><span>Доступность</span><span className="text-green-500">Полная</span></div>
-                      <div className="flex justify-between text-[10px] font-bold text-muted-foreground uppercase"><span>Шифрование</span><span className="text-white">AES-256</span></div>
-                    </div>
+                <div className="p-6 bg-primary/10 rounded-[2rem] border border-primary/20 space-y-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Megaphone className="w-4 h-4 text-primary" />
+                    <span className="text-[10px] font-black uppercase tracking-widest text-white">Quantum Broadcast</span>
                   </div>
-                  <div className="p-5 bg-muted/20 rounded-[2rem] border border-white/5 space-y-3">
-                    <div className="flex items-center gap-2">
-                      <Globe className="w-4 h-4 text-accent" />
-                      <span className="text-[10px] font-black uppercase tracking-widest text-white">Сеть</span>
-                    </div>
-                    <div className="space-y-2">
-                      <div className="flex justify-between text-[10px] font-bold text-muted-foreground uppercase"><span>Пинг</span><span className="text-white">~12ms</span></div>
-                      <div className="flex justify-between text-[10px] font-bold text-muted-foreground uppercase"><span>Трафик</span><span className="text-green-500">Оптимально</span></div>
-                    </div>
-                  </div>
+                  <textarea 
+                    placeholder="Текст уведомления для всех чатов Ядра..." 
+                    value={alertText}
+                    onChange={e => setAlertText(e.target.value)}
+                    className="w-full bg-card border border-white/10 h-24 rounded-xl text-xs p-3 focus:outline-none focus:border-primary/50 resize-none text-white"
+                  />
+                  <Button 
+                    className="w-full h-12 rounded-2xl bg-primary hover:bg-primary/90 font-black uppercase tracking-widest text-[10px] shadow-lg shadow-primary/20" 
+                    onClick={handleBroadcast}
+                    disabled={!alertText.trim() || isBroadcasting}
+                  >
+                    {isBroadcasting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Megaphone className="w-4 h-4 mr-2" />}
+                    Запустить трансляцию (Все чаты)
+                  </Button>
                 </div>
               </div>
             </ScrollArea>
@@ -439,11 +473,6 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
                       {isDeploying ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : <HardDrive className="w-5 h-5 mr-2" />}
                       {isDeploying ? 'Развертывание...' : 'Установить всё Ядро на устройство'}
                     </Button>
-                    <div className="flex items-center justify-center gap-4 py-2 opacity-40">
-                      <div className="flex items-center gap-1"><Smartphone className="w-3 h-3" /><span className="text-[7px] uppercase font-bold">iOS Native</span></div>
-                      <div className="flex items-center gap-1"><ShieldCheck className="w-3 h-3" /><span className="text-[7px] uppercase font-bold">Resilience Active</span></div>
-                      <div className="flex items-center gap-1"><Zap className="w-3 h-3 text-primary" /><span className="text-[7px] uppercase font-bold">Offline First</span></div>
-                    </div>
                   </div>
                 </div>
 
@@ -473,27 +502,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
                         {isCleaning ? <Loader2 className="w-3 h-3 animate-spin mr-2" /> : <Bomb className="w-3 h-3 mr-2" />}
                         Cleanup Duplicates
                       </Button>
-                      <p className="text-[8px] text-muted-foreground text-center italic uppercase">Удалит аккаунты без чатов и твинки</p>
                     </div>
-                  </div>
-                  <div className="p-6 bg-primary/10 rounded-[2rem] border border-primary/20 space-y-4 md:col-span-2">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Globe className="w-4 h-4 text-primary" />
-                      <span className="text-[10px] font-black uppercase tracking-widest text-white">Рассылка</span>
-                    </div>
-                    <textarea 
-                      placeholder="Текст уведомления для всех пользователей..." 
-                      value={alertText}
-                      onChange={e => setAlertText(e.target.value)}
-                      className="w-full bg-card border border-white/10 h-24 rounded-xl text-xs p-3 focus:outline-none focus:border-primary/50 resize-none"
-                    />
-                    <Button 
-                      className="w-full h-11 rounded-xl bg-primary hover:bg-primary/90 font-black uppercase tracking-widest text-[10px]" 
-                      onClick={() => { setAlertText(''); toast({ title: "Разослано" }); }}
-                      disabled={!alertText.trim()}
-                    >
-                      <Send className="w-4 h-4 mr-2" /> Трансляция сообщения
-                    </Button>
                   </div>
                 </div>
               </div>

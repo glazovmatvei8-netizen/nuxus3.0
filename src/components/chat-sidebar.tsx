@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useMemo, memo, useEffect } from 'react';
@@ -84,7 +85,14 @@ const ChatListItem = memo(({
             <Bookmark className="w-6 h-6 text-white fill-white" />
           </div>
         ) : (
-          <UserAvatar userId={otherId} manualAvatarUrl={manualAvatarUrl || otherProfile?.avatarUrl || chat.avatarUrl} className="h-[52px] w-[52px]" fallbackName={finalDisplayName} />
+          <>
+            <UserAvatar userId={otherId} manualAvatarUrl={manualAvatarUrl || otherProfile?.avatarUrl || chat.avatarUrl} className="h-[52px] w-[52px]" fallbackName={finalDisplayName} />
+            {otherProfile?.statusEmoji && (
+              <div className="absolute -bottom-1 -right-1 bg-[#1c1c1e] rounded-full p-0.5 border border-white/5 shadow-lg">
+                <span className="text-[10px]">{otherProfile.statusEmoji}</span>
+              </div>
+            )}
+          </>
         )}
       </div>
       <div className="flex-1 min-w-0 border-b border-white/[0.03] pb-3 h-full flex flex-col justify-center">
@@ -94,7 +102,7 @@ const ChatListItem = memo(({
               {finalDisplayName}
             </span>
             {otherProfile?.isPremium && (
-              <div className="bg-[#007AFF] rounded-full p-0.5 shrink-0">
+              <div className="bg-[#007AFF] rounded-full p-0.5 shrink-0 shadow-[0_0_8px_rgba(0,122,255,0.5)]">
                 <Check className="w-2.5 h-2.5 text-white stroke-[4]" />
               </div>
             )}
@@ -108,7 +116,11 @@ const ChatListItem = memo(({
         </div>
         <div className="flex items-center justify-between gap-2">
           <p className="text-[14px] text-muted-foreground/60 truncate leading-snug pr-4">
-            {lastMsg?.contentType === 'text' ? lastMsg.content : (lastMsg ? `[${lastMsg.contentType}]` : 'Нет сообщений')}
+            {otherProfile?.statusText && !lastMsg ? (
+              <span className="italic opacity-60 text-primary">{otherProfile.statusText}</span>
+            ) : (
+              lastMsg?.contentType === 'text' ? lastMsg.content : (lastMsg ? `[${lastMsg.contentType}]` : 'Нет сообщений')
+            )}
           </p>
           <div className="flex items-center gap-2 shrink-0">
             {isPinned && <Pin className="w-3.5 h-3.5 rotate-45 text-muted-foreground/40" />}
@@ -285,7 +297,7 @@ export default function ChatSidebar() {
               onClick={() => setActiveTab(tab.id as any)}
               className={cn(
                 "flex items-center gap-1.5 px-4 py-1.5 rounded-full text-[14px] font-bold transition-all whitespace-nowrap",
-                activeTab === tab.id ? "bg-white/20 text-white" : "text-muted-foreground/60 hover:text-white"
+                activeTab === tab.id ? "bg-white/20 text-white shadow-lg shadow-white/5" : "text-muted-foreground/60 hover:text-white"
               )}
             >
               {tab.label}
@@ -297,7 +309,7 @@ export default function ChatSidebar() {
       {!isOnline && (
         <div className="mx-4 mb-2 p-2 bg-red-500/10 border border-red-500/20 rounded-xl flex items-center justify-center gap-2 animate-pulse">
           <WifiOff className="w-3 h-3 text-red-500" />
-          <span className="text-[10px] font-black text-red-500 uppercase tracking-widest">Ghost Protocol: Offline-First</span>
+          <span className="text-[10px] font-black text-red-500 uppercase tracking-widest">Ghost Protocol Active</span>
         </div>
       )}
 

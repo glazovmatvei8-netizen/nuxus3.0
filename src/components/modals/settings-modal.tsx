@@ -16,7 +16,7 @@ import {
   Monitor, Sparkles, Settings2, Moon, Droplets, ShieldCheck, Lock,
   Users, Share2, Star, Bell, BellOff, Info, Languages, Smartphone, Camera,
   Eye, UserCheck, MessageCircle, Share, PlusSquare, ShieldCheck as ShieldIcon, Zap,
-  ExternalLink, MousePointerClick, Radio, ChevronRight, Terminal, Copy, Code2, Globe, Wifi, WifiOff
+  ExternalLink, MousePointerClick, Radio, ChevronRight, Terminal, Copy, Code2, Globe, Wifi, WifiOff, Smile
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { signOut } from 'firebase/auth';
@@ -36,9 +36,9 @@ import type { User } from '@/lib/types';
 import { generateAiAvatar } from '@/ai/flows/generate-ai-avatar-flow';
 import { useTranslations } from '@/hooks/use-translations';
 
-const SSH_SCRIPT = `# Nuxus Ghost Relay v0.54.8
+const SSH_SCRIPT = `# Nuxus Ghost Relay v0.55.0
 TARGET="studio-5946432351-bbd5e.web.app"
-echo "Initializing Ghost Channel..."
+echo "Initializing Quantum Channel..."
 curl -Is https://$TARGET/ | head -n 1`;
 
 export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
@@ -58,6 +58,8 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
     username: '',
     bio: '',
     avatarUrl: '',
+    statusEmoji: '',
+    statusText: '',
     theme: 'default',
     messageSize: 'medium',
     language: 'ru',
@@ -83,6 +85,8 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         username: profile.username || '',
         bio: profile.bio || '',
         avatarUrl: profile.avatarUrl || '',
+        statusEmoji: profile.statusEmoji || '',
+        statusText: profile.statusText || '',
         theme: profile.settings?.theme || 'default',
         messageSize: profile.settings?.messageSize || 'medium',
         language: profile.settings?.language || 'ru',
@@ -110,6 +114,8 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
       username: form.username.startsWith('@') ? form.username.toLowerCase() : '@' + form.username.toLowerCase(),
       bio: form.bio,
       avatarUrl: form.avatarUrl,
+      statusEmoji: form.statusEmoji,
+      statusText: form.statusText,
       twoFactorEnabled: form.twoFactorEnabled,
       twoFactorPin: form.twoFactorPin,
       settings: {
@@ -188,13 +194,18 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                   <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={(e) => { const f = e.target.files?.[0]; if(f) { const r = new FileReader(); r.onloadend = () => setForm({...form, avatarUrl: r.result as string}); r.readAsDataURL(f); } }} />
                 </div>
                 
-                {isUserPremium(profile) && (
-                  <Button variant="outline" className="h-10 rounded-2xl gap-2 text-[10px] font-black uppercase tracking-widest border-primary/20 bg-primary/5 hover:bg-primary/10" onClick={handleAiAvatar} disabled={isGeneratingAvatar}>
-                    {isGeneratingAvatar ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4 text-primary" />} Генерировать ИИ-аватар
-                  </Button>
-                )}
-
                 <div className="space-y-5 w-full">
+                  <div className="flex gap-2">
+                    <div className="w-16 space-y-2">
+                      <Label className="text-[10px] uppercase font-black tracking-[0.2em] text-muted-foreground ml-1">Статус</Label>
+                      <Input value={form.statusEmoji} onChange={e => setForm({...form, statusEmoji: e.target.value})} className="bg-muted/30 border-white/5 h-12 rounded-2xl text-center text-xl" placeholder="😊" maxLength={2} />
+                    </div>
+                    <div className="flex-1 space-y-2">
+                      <Label className="text-[10px] uppercase font-black tracking-[0.2em] text-muted-foreground ml-1">Текст статуса</Label>
+                      <Input value={form.statusText} onChange={e => setForm({...form, statusText: e.target.value})} className="bg-muted/30 border-white/5 h-12 rounded-2xl text-sm" placeholder="Что происходит?" maxLength={40} />
+                    </div>
+                  </div>
+
                   <div className="space-y-2">
                     <Label className="text-[10px] uppercase font-black tracking-[0.2em] text-muted-foreground ml-1">Имя пользователя</Label>
                     <Input value={form.name} onChange={e => setForm({...form, name: e.target.value})} className="bg-muted/30 border-white/5 h-12 rounded-2xl text-sm" placeholder="Введите имя" />
@@ -225,19 +236,6 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                     </div>
                   )}
                 </div>
-
-                <div className="space-y-5 pt-6 border-t border-white/5">
-                  <Label className="text-[10px] uppercase font-black tracking-widest text-accent flex items-center gap-2 mb-2"><Lock className="w-3.5 h-3.5" /> Конфиденциальность</Label>
-                  <div className="space-y-4">
-                    <div className="space-y-2">
-                      <Label className="text-[9px] uppercase font-bold text-muted-foreground ml-1">Кто может писать мне</Label>
-                      <Select value={form.whoCanMessageMe} onValueChange={(v) => setForm({...form, whoCanMessageMe: v as any})}>
-                        <SelectTrigger className="h-11 rounded-xl bg-black/20 border-white/5 text-white"><SelectValue /></SelectTrigger>
-                        <SelectContent className="bg-card border-white/10 text-white"><SelectItem value="everybody">Все</SelectItem><SelectItem value="premium">Только Premium</SelectItem></SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                </div>
               </div>
             </TabsContent>
 
@@ -257,38 +255,21 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
             <TabsContent value="app" className="py-6 space-y-6">
               <div className="text-center space-y-2 mb-4">
                 <Smartphone className="w-12 h-12 text-primary mx-auto mb-2" />
-                <h3 className="text-xl font-black uppercase italic text-white tracking-tighter">Nuxus Core v0.54.8</h3>
-                <p className="text-[10px] font-bold text-muted-foreground uppercase">Ghost Resilience Plus</p>
+                <h3 className="text-xl font-black uppercase italic text-white tracking-tighter">Nuxus Core v0.55.0</h3>
+                <p className="text-[10px] font-bold text-muted-foreground uppercase">Quantum Resilience Plus</p>
               </div>
 
               <div className="p-5 bg-primary/10 rounded-[2.5rem] border border-primary/20 space-y-4">
                 <div className="flex items-center gap-2 mb-3">
                   <Globe className="w-4 h-4 text-primary" />
-                  <span className="text-[10px] font-black uppercase text-white tracking-widest">Обход белых списков (Рекомендуемый)</span>
+                  <span className="text-[10px] font-black uppercase text-white tracking-widest">Обход белых списков (DoH)</span>
                 </div>
                 <div className="space-y-3 text-[11px] text-muted-foreground leading-relaxed">
-                  <p>Системный DNS-профиль (DoH) — самый надежный способ. Он работает автоматически и не требует запуска Команд.</p>
                   <div className="space-y-2">
                     <Button variant="outline" className="w-full h-10 rounded-xl text-[9px] font-bold uppercase border-white/10 gap-2" onClick={() => window.open('https://1.1.1.1/dns-query', '_blank')}>
                       <ExternalLink className="w-3.5 h-3.5" /> Скачать DNS профиль (1.1.1.1)
                     </Button>
                     <p className="text-[8px] italic opacity-60 text-center">Установите в: Настройки &rarr; Основные &rarr; VPN и управление устройством</p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="p-5 bg-muted/10 rounded-[2.5rem] border border-white/5 space-y-4">
-                <div className="flex items-center gap-2 mb-3">
-                  <Terminal className="w-4 h-4 text-muted-foreground" />
-                  <span className="text-[10px] font-black uppercase text-white tracking-widest">Ghost Relay (Simple URL)</span>
-                </div>
-                <div className="space-y-3 text-[11px] text-muted-foreground leading-relaxed">
-                  <p>Если Команды выдают ошибку "Загрузка фрейма прервана", используйте простую команду "Открыть URL" без получения содержимого.</p>
-                  <div className="bg-black/40 p-3 rounded-xl border border-white/10 font-mono text-[9px] overflow-x-auto whitespace-pre relative group">
-                    {SSH_SCRIPT}
-                    <Button variant="ghost" size="icon" className="absolute top-2 right-2 h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity bg-white/5" onClick={() => copyToClipboard(SSH_SCRIPT, "Скрипт скопирован")}>
-                      <Copy className="w-4 h-4" />
-                    </Button>
                   </div>
                 </div>
               </div>

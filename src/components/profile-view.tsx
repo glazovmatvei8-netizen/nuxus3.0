@@ -9,11 +9,11 @@ import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { 
   QrCode, Pencil, Link, Bell, Lock, 
-  MessageSquare, Bookmark, ChevronRight
+  MessageSquare, Bookmark, ChevronRight, Star, Smile
 } from 'lucide-react';
 import { useAppState } from '@/lib/store';
 import { useToast } from '@/hooks/use-toast';
-import { formatDisplayName, cn } from '@/lib/utils';
+import { formatDisplayName, cn, isUserPremium } from '@/lib/utils';
 import type { User } from '@/lib/types';
 
 export default function ProfileView() {
@@ -71,9 +71,17 @@ export default function ProfileView() {
         </Button>
         
         <div className="flex items-center gap-2">
-          <UserAvatar userId={user?.uid} className="h-8 w-8" />
-          <span className="font-bold text-white text-[17px]">
+          <div className="relative">
+            <UserAvatar userId={user?.uid} className="h-8 w-8" />
+            {profile?.statusEmoji && (
+              <div className="absolute -bottom-1 -right-1 bg-[#1c1c1e] rounded-full p-0.5 border border-white/5">
+                <span className="text-[8px]">{profile.statusEmoji}</span>
+              </div>
+            )}
+          </div>
+          <span className="font-bold text-white text-[17px] flex items-center gap-1.5">
             {formatDisplayName(profile?.name)}
+            {isUserPremium(profile) && <Star className="w-3.5 h-3.5 text-accent fill-accent" />}
           </span>
         </div>
 
@@ -90,19 +98,35 @@ export default function ProfileView() {
       <ScrollArea className="flex-1">
         <div className="px-4 space-y-4 pb-24">
           
+          {/* Status Block */}
+          {profile?.statusText && (
+            <div 
+              onClick={() => openSettings('profile')}
+              className="bg-primary/5 border border-primary/10 p-4 rounded-2xl flex items-center gap-3 cursor-pointer hover:bg-primary/10 transition-all"
+            >
+              <div className="h-10 w-10 rounded-full bg-primary/20 flex items-center justify-center text-xl shrink-0">
+                {profile.statusEmoji || <Smile className="w-5 h-5 text-primary" />}
+              </div>
+              <div className="flex flex-col min-w-0">
+                <span className="text-[10px] font-black uppercase text-primary tracking-widest mb-0.5">Текущий статус</span>
+                <span className="text-sm text-white truncate font-medium">{profile.statusText}</span>
+              </div>
+            </div>
+          )}
+
           {/* Invite Block */}
           <div 
             onClick={handleInvite}
-            className="bg-[#1c1c1e] p-4 rounded-2xl flex items-center gap-4 cursor-pointer active:scale-[0.98] transition-all"
+            className="bg-[#1c1c1e] p-4 rounded-2xl flex items-center gap-4 cursor-pointer active:scale-[0.98] transition-all border border-white/5"
           >
-            <div className="h-10 w-10 rounded-full bg-[#5856d6]/20 flex items-center justify-center">
+            <div className="h-10 w-10 rounded-full bg-[#5856d6]/20 flex items-center justify-center shadow-lg">
               <Link className="w-5 h-5 text-[#5856d6]" />
             </div>
-            <span className="text-[#5856d6] font-semibold text-[16px]">Приглашить друзей</span>
+            <span className="text-[#5856d6] font-bold text-[16px]">Приглашить друзей</span>
           </div>
 
           {/* Main Settings Block */}
-          <div className="bg-[#1c1c1e] rounded-2xl overflow-hidden divide-y divide-white/[0.05]">
+          <div className="bg-[#1c1c1e] rounded-[2rem] overflow-hidden divide-y divide-white/[0.05] border border-white/5">
             <SettingsItem 
               icon={Bell} 
               label="Уведомления и звук" 
@@ -129,10 +153,9 @@ export default function ProfileView() {
             />
           </div>
 
-          {/* Support/Info */}
           <div className="pt-2">
-            <p className="text-[11px] text-muted-foreground/40 uppercase font-black text-center tracking-[0.2em]">
-              Nuxus Core v0.54.7
+            <p className="text-[11px] text-muted-foreground/40 uppercase font-black text-center tracking-[0.2em] animate-pulse">
+              Nuxus Core v0.55.0
             </p>
           </div>
         </div>

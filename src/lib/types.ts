@@ -1,5 +1,5 @@
 
-export type MessageType = 'text' | 'image' | 'audio' | 'video' | 'video_note' | 'service' | 'gift' | 'payment_request' | 'album' | 'poll';
+export type MessageType = 'text' | 'image' | 'audio' | 'video' | 'video_note' | 'service' | 'gift' | 'payment_request' | 'album' | 'poll' | 'broadcast';
 
 export interface PollOption {
   id: string;
@@ -100,6 +100,7 @@ export interface Chat {
     username: string;
     avatarUrl: string | null;
     isPremium?: boolean;
+    statusEmoji?: string;
   }>;
 }
 
@@ -151,4 +152,6 @@ export interface User {
   invitedBy?: string;
   twoFactorEnabled?: boolean;
   twoFactorPin?: string;
+  statusEmoji?: string;
+  statusText?: string;
 }
