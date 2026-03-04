@@ -3,37 +3,37 @@
 import { useState, useEffect } from 'react';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
+import { useUser } from '@/firebase';
 
 /**
  * An invisible component that listens for globally emitted 'permission-error' events.
- * It throws any received error to be caught by Next.js's global-error.tsx.
+ * Only triggers the error boundary for the specific Owner/Developer UID.
  */
 export function FirebaseErrorListener() {
-  // Use the specific error type for the state for type safety.
+  const { user } = useUser();
   const [error, setError] = useState<FirestorePermissionError | null>(null);
 
   useEffect(() => {
-    // The callback now expects a strongly-typed error, matching the event payload.
     const handleError = (error: FirestorePermissionError) => {
-      // Set error in state to trigger a re-render.
-      setError(error);
+      // DEV TOOL LOCK: Only the owner sees the crash screen
+      // GCvLucN8CjNcdaxPO2vmpZ84hNl1 is the requester's ID
+      if (user?.uid === 'GCvLucN8CjNcdaxPO2vmpZ84hNl1' || user?.uid === 'vnctow46') {
+        setError(error);
+      } else {
+        console.warn("Nuxus Core: Permission denied. Error hidden from non-admin user.");
+      }
     };
 
-    // The typed emitter will enforce that the callback for 'permission-error'
-    // matches the expected payload type (FirestorePermissionError).
     errorEmitter.on('permission-error', handleError);
 
-    // Unsubscribe on unmount to prevent memory leaks.
     return () => {
       errorEmitter.off('permission-error', handleError);
     };
-  }, []);
+  }, [user]);
 
-  // On re-render, if an error exists in state, throw it.
   if (error) {
     throw error;
   }
 
-  // This component renders nothing.
   return null;
 }

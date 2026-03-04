@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useRef, useEffect, useMemo, useCallback, memo } from 'react';
@@ -623,14 +622,19 @@ export default function ChatArea() {
       </header>
 
       <div className="flex-1 relative overflow-hidden">
+        {/* Telegram-style fixed background layer */}
         {userProfile?.settings?.chatBackground && (
-          <div className="absolute inset-0 z-0">
+          <div className="absolute inset-0 z-0 pointer-events-none">
             <img 
               src={userProfile.settings.chatBackground} 
-              className={cn("w-full h-full", userProfile.settings.chatBackgroundFit === 'contain' ? 'object-contain' : 'object-cover')} 
+              className={cn(
+                "fixed inset-0 w-full h-full", 
+                userProfile.settings.chatBackgroundFit === 'contain' ? 'object-contain' : 'object-cover'
+              )} 
               alt="Chat background" 
             />
-            <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px]" />
+            {/* Intelligent Overlay for readability */}
+            <div className="fixed inset-0 bg-black/45 backdrop-blur-[1px]" />
           </div>
         )}
         <ScrollArea ref={scrollRef} className="h-full w-full relative z-10 scrollbar-hide">
