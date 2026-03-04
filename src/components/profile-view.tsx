@@ -74,7 +74,7 @@ export default function ProfileView() {
           <div className="relative">
             <UserAvatar userId={user?.uid} className="h-8 w-8" />
             {profile?.statusEmoji && (
-              <div className="absolute -bottom-1 -right-1 bg-[#1c1c1e] rounded-full p-0.5 border border-white/5">
+              <div className="absolute -bottom-1 -left-1 bg-[#1c1c1e] rounded-full p-0.5 border border-white/5 shadow-lg z-20">
                 <span className="text-[8px]">{profile.statusEmoji}</span>
               </div>
             )}
