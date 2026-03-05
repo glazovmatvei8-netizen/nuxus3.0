@@ -80,6 +80,13 @@ export interface ReceivedGift {
 
 export type ChatType = 'private' | 'group' | 'channel' | 'saved';
 
+export interface ChatFolder {
+  id: string;
+  name: string;
+  chatIds: string[];
+  icon?: string;
+}
+
 export interface Chat {
   id: string;
   type: ChatType;
@@ -129,6 +136,7 @@ export interface UserSettings {
   statusEmoji?: string;
   statusText?: string;
   language?: string;
+  customFolders?: ChatFolder[];
 }
 
 export interface User {
@@ -152,6 +160,7 @@ export interface User {
   archivedChatIds?: string[]; 
   referralCount?: number;
   invitedBy?: string;
+  invitedUserIds?: string[];
   twoFactorEnabled?: boolean;
   twoFactorPin?: string;
   statusEmoji?: string;

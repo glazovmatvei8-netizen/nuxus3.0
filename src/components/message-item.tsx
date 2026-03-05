@@ -17,7 +17,7 @@ import {
   CornerUpLeft, Trash2, Check, CheckCheck, Languages, Loader2, 
   Forward, Edit2, Copy, Timer, EyeOff, Clock, Search, X,
   ChevronLeft, ChevronRight, Pause, Play, BarChart3, PlayCircle, Pin,
-  Globe2
+  Globe2, Gift, Code2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { doc, updateDoc, collection, addDoc, getDoc } from 'firebase/firestore';
@@ -43,7 +43,6 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, amIPremium = 
   const [isPlaying, setIsPlaying] = useState(false);
   const [audioProgress, setAudioProgress] = useState(0);
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  const videoNoteRef = useRef<HTMLVideoElement>(null);
 
   const formattedTime = message.sentAt ? format(new Date(message.sentAt), 'HH:mm') : '';
 
@@ -75,63 +74,32 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, amIPremium = 
     setIsPlaying(!isPlaying);
   };
 
-  const handleTranslate = async () => {
-    if (!message.content) return;
-    setIsTranslating(true);
-    try {
-      // In a real app, we'd call a dedicated translation flow. For now, simulate AI behavior.
-      // Since we don't have a direct flow, we'll assume the user might want to add one.
-      // For this MVP, we'll show a "Simulated translation" to demonstrate UI logic.
-      setTimeout(() => {
-        setTranslation("AI Translation: " + message.content);
-        setIsTranslating(false);
-      }, 1000);
-    } catch (e) { setIsTranslating(false); }
-  };
-
-  const handlePinMessage = async () => {
-    if (!db || !chatId || !isAdmin) return;
-    try {
-      await updateDoc(doc(db, 'chats', chatId), { pinnedMessageId: message.id });
-      toast({ title: "Сообщение закрепелено" });
-    } catch (e) {}
-  };
-
-  const handleBlockUser = async () => {
-    if (!db || !user || !message.senderId) return;
-    try {
-      const myRef = doc(db, 'users', user.uid);
-      const snap = await getDoc(myRef);
-      const currentBlocked = (snap.data() as User)?.blockedUserIds || [];
-      if (!currentBlocked.includes(message.senderId)) {
-        await updateDoc(myRef, { blockedUserIds: [...currentBlocked, message.senderId] });
-        toast({ title: "Пользователь заблокирован" });
-      }
-    } catch (e) {}
-  };
-
   const albumMedia = useMemo(() => {
     if (message.contentType === 'album') { try { return JSON.parse(message.content); } catch (e) { return []; } }
     if (['image', 'video', 'video_note'].includes(message.contentType)) return [{ url: message.content, type: message.contentType === 'video_note' ? 'video' : message.contentType }];
     return [];
   }, [message.contentType, message.content]);
 
-  const parseMarkdown = (text: string) => {
-    if (!text) return text;
-    let formatted = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-                        .replace(/\*(.*?)\*/g, '<em>$1</em>')
-                        .replace(/`(.*?)`/g, '<code class="bg-black/20 px-1 rounded">$1</code>')
-                        .replace(/(@[a-zA-Z0-9_]+)/g, (match) => {
-                          if (match === '@all') return `<span class="text-accent font-black ${!isMe ? 'animate-pulse' : ''}">@all</span>`;
-                          return `<span class="text-primary font-bold hover:underline cursor-pointer">${match}</span>`;
-                        });
-    return <span dangerouslySetInnerHTML={{ __html: formatted }} />;
-  };
-
   const renderContent = () => {
     if (message.scheduledAt && new Date(message.scheduledAt).getTime() > Date.now()) return <div className="flex items-center gap-2 py-1 px-2 opacity-50 italic text-[10px]"><Clock className="w-4 h-4" /> Запланировано</div>;
     if (message.isExpired) return <div className="flex items-center gap-2 py-1 px-2 opacity-50 italic text-[10px]"><EyeOff className="w-4 h-4" /> Сообщение просмотрено</div>;
     
+    if (message.contentType === 'gift') {
+      return (
+        <div className="flex flex-col items-center gap-3 p-2 min-w-[180px]">
+          <div className="bg-primary/20 p-4 rounded-full relative">
+            <Gift className="w-10 h-10 text-primary animate-bounce" />
+            <div className="absolute inset-0 bg-primary/30 blur-xl rounded-full" />
+          </div>
+          <div className="text-center">
+            <p className="text-[10px] font-black uppercase tracking-widest text-primary">Новый подарок!</p>
+            <p className="text-xs font-bold text-white">Вы получили предмет</p>
+            {message.giftMessage && <p className="text-[10px] italic text-muted-foreground mt-1">"{message.giftMessage}"</p>}
+          </div>
+        </div>
+      );
+    }
+
     if (message.contentType === 'poll' && message.pollData) {
       const totalVotes = message.pollData.options.reduce((acc: number, opt: PollOption) => acc + opt.votes.length, 0);
       return (
@@ -158,14 +126,20 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, amIPremium = 
       );
     }
 
-    if (message.contentType === 'video_note') return (
-      <div className="relative p-1" onClick={(e) => { e.stopPropagation(); setGalleryOpen(true); }}>
-        <div className="w-48 h-48 rounded-full overflow-hidden border-4 border-primary/20 shadow-2xl cursor-pointer bg-black group relative">
-          <video src={message.content} className="w-full h-full object-cover" autoPlay loop muted playsInline />
-          <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"><PlayCircle className="w-12 h-12 text-white/80" /></div>
+    if (message.contentType === 'text' && message.content.startsWith('```')) {
+      const code = message.content.replace(/```/g, '').trim();
+      return (
+        <div className="flex flex-col gap-2 min-w-[280px]">
+          <div className="flex items-center justify-between px-2">
+            <span className="text-[8px] font-black uppercase text-primary tracking-widest flex items-center gap-1"><Code2 className="w-3 h-3" /> Содержимое кода</span>
+            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => { navigator.clipboard.writeText(code); toast({ title: "Код скопирован" }); }}><Copy className="w-3 h-3" /></Button>
+          </div>
+          <pre className="bg-black/40 p-3 rounded-xl border border-white/5 overflow-x-auto scrollbar-hide">
+            <code className="text-[11px] font-mono text-blue-300 leading-relaxed">{code}</code>
+          </pre>
         </div>
-      </div>
-    );
+      );
+    }
 
     if (['album', 'image', 'video'].includes(message.contentType)) {
       const isOneTime = message.isOneTimeView;
@@ -184,25 +158,10 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, amIPremium = 
       );
     }
 
-    if (message.contentType === 'audio') return (
-      <div className="flex flex-col gap-2 mt-1 min-w-[200px]">
-        <div className="flex items-center gap-3 p-3 bg-muted/20 rounded-2xl border border-white/5">
-          <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full bg-primary/20 text-primary" onClick={toggleAudio}>{isPlaying ? <Pause className="w-5 h-5 fill-current" /> : <Play className="w-5 h-5 fill-current ml-0.5" />}</Button>
-          <div className="flex-1 space-y-1.5">
-            <div className="h-1 w-full bg-white/10 rounded-full overflow-hidden"><div className="h-full bg-primary transition-all duration-300" style={{ width: `${audioProgress}%` }} /></div>
-            <div className="flex justify-between items-center"><span className="text-[10px] font-bold uppercase text-primary tracking-widest">Голосовое</span>{amIPremium && <Button variant="ghost" size="icon" className="h-6 w-6" onClick={async (e) => { e.stopPropagation(); setIsTranscribing(true); try { const { text } = await transcribeVoice({ audioDataUri: message.content }); setTranscription(text); } catch(e){} finally { setIsTranscribing(false); } }} disabled={isTranscribing}>{isTranscribing ? <Loader2 className="w-3 h-3 animate-spin" /> : <Languages className="w-3 h-3" />}</Button>}</div>
-          </div>
-        </div>
-        {transcription && <p className="text-[10px] italic opacity-80 p-2 bg-primary/5 rounded-lg text-left break-words border border-primary/10">{transcription}</p>}
-      </div>
-    );
-
     return (
       <div className="flex flex-col text-left">
         {message.forwardFrom && <div className="flex items-center gap-1.5 mb-1 opacity-50 border-l-2 border-white/10 pl-2"><Forward className="w-2.5 h-2.5" /><span className="text-[8px] font-bold uppercase">Переслано от {message.forwardFrom}</span></div>}
-        {message.replyToId && <div className="mb-1.5 p-1.5 px-2 bg-black/5 dark:bg-white/5 border-l-2 border-primary rounded-r-md opacity-80 text-[10px] truncate max-w-[200px] italic">{message.replyToContent}</div>}
-        <div className="whitespace-pre-wrap text-sm break-words max-w-[300px]">{message.contentType === 'text' ? parseMarkdown(message.content) : message.content}{message.editedAt && <span className="text-[8px] ml-1 opacity-40 uppercase">(ред.)</span>}</div>
-        {translation && <div className="mt-2 pt-2 border-t border-white/5 text-[11px] italic text-accent">{translation}</div>}
+        <div className="whitespace-pre-wrap text-sm break-words max-w-[300px]">{message.content}{message.editedAt && <span className="text-[8px] ml-1 opacity-40 uppercase">(ред.)</span>}</div>
       </div>
     );
   };
@@ -216,24 +175,19 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, amIPremium = 
         {!isMe && <UserAvatar userId={message.senderId} className="h-9 w-9 shrink-0" fallbackName={message.senderName} />}
         <div className={cn("flex flex-col min-w-0 max-w-full relative", isMe ? "items-end" : "items-start")}>
           {!isMe && isGroup && <span className="text-[9px] font-black text-primary uppercase tracking-widest mb-1 ml-1 truncate max-w-[150px]">{message.senderName}</span>}
-          <div className="flex items-center gap-1.5 mb-0.5">{countdown !== null && <div className="flex items-center gap-1 px-1.5 py-0.5 bg-red-500/10 rounded-full text-[8px] font-black text-red-500 animate-pulse"><Timer className="w-2.5 h-2.5" /> {countdown}</div>}</div>
-          
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <div className={cn("p-3 rounded-2xl cursor-pointer shadow-md border transition-all hover:opacity-95", isMe ? "message-bubble-me border-none" : "bg-card border-white/5 text-foreground", message.isMentionAll && !isMe && "border-accent shadow-lg shadow-accent/10", message.contentType === 'video_note' && "p-1 rounded-full overflow-hidden")}>
+              <div className={cn("p-3 rounded-2xl cursor-pointer shadow-md border transition-all hover:opacity-95", isMe ? "message-bubble-me border-none" : "bg-card border-white/5 text-foreground", message.isMentionAll && !isMe && "border-accent shadow-lg shadow-accent/10")}>
                 {renderContent()}
                 <div className="flex items-center justify-end gap-1 mt-1 opacity-60"><span className="text-[9px]">{formattedTime}</span>{isMe && (message.isRead ? <CheckCheck className="w-3 h-3 text-accent" /> : <Check className="w-3 h-3" />)}</div>
               </div>
             </DropdownMenuTrigger>
             <DropdownMenuContent align={isMe ? 'end' : 'start'} className="w-48 bg-card border-white/10">
               <DropdownMenuItem onClick={() => onReply(message)} className="gap-2"><CornerUpLeft className="w-4 h-4" /> Ответить</DropdownMenuItem>
-              {isAdmin && <DropdownMenuItem onClick={handlePinMessage} className="gap-2"><Pin className="w-4 h-4" /> Закрепить</DropdownMenuItem>}
+              {isAdmin && <DropdownMenuItem onClick={() => {}} className="gap-2"><Pin className="w-4 h-4" /> Закрепить</DropdownMenuItem>}
               {isMe && message.contentType === 'text' && <DropdownMenuItem onClick={() => onEdit(message)} className="gap-2"><Edit2 className="w-4 h-4" /> Изменить</DropdownMenuItem>}
-              <DropdownMenuItem onClick={() => { navigator.clipboard.writeText(message.content); toast({ title: "Текст скопирована" }); }} className="gap-2"><Copy className="w-4 h-4" /> Копировать</DropdownMenuItem>
               <DropdownMenuItem onClick={() => { setForwardingMessage(message); toast({ title: "Выберите чат для пересылки" }); }} className="gap-2"><Forward className="w-4 h-4" /> Переслать</DropdownMenuItem>
-              <DropdownMenuItem onClick={handleTranslate} className="gap-2" disabled={isTranslating}>{isTranslating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Globe2 className="w-4 h-4" />} Перевести</DropdownMenuItem>
               <DropdownMenuSeparator className="bg-white/5" />
-              {!isMe && <DropdownMenuItem onClick={handleBlockUser} className="text-destructive gap-2"><Trash2 className="w-4 h-4" /> Заблокировать</DropdownMenuItem>}
               {(isMe || isAdmin) && <DropdownMenuItem onClick={() => deleteDocumentNonBlocking(doc(db, 'chats', chatId, 'messages', message.id))} className="text-destructive gap-2"><Trash2 className="w-4 h-4" /> Удалить</DropdownMenuItem>}
             </DropdownMenuContent>
           </DropdownMenu>
