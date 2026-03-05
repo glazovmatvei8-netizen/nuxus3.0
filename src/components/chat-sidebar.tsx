@@ -7,17 +7,17 @@ import { Button } from '@/components/ui/button';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
   Plus, Bookmark, Pin, Star, 
-  Check, CheckCheck,
+  Check, CheckCheck, Archive,
   MessageSquare, Lock, SquarePen,
   Search, Trash2, Circle, Sparkles,
-  Wifi, WifiOff, Ghost
+  Wifi, WifiOff, Ghost, Filter, FolderArchive
 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { CreateChatModal } from './modals/create-chat-modal';
 import { AdminPanelModal } from './modals/admin-panel-modal';
 import type { User, Message, Chat } from '@/lib/types';
 import { useFirestore, useUser, useCollection, useDoc, useMemoFirebase } from '@/firebase';
-import { collection, query, where, doc, limit, orderBy, writeBatch } from 'firebase/firestore';
+import { collection, query, where, doc, limit, orderBy, writeBatch, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
 import { formatDisplayName, cn, isGlobalAdmin } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
@@ -25,7 +25,7 @@ import { format } from 'date-fns';
 
 const ChatListItem = memo(({ 
   chat, isActive, otherId, cachedDisplayName, manualAvatarUrl, 
-  onClick, isPinned, user, isEditMode, isSelected, onToggleSelect 
+  onClick, isPinned, user, isEditMode, isSelected, onToggleSelect, onArchive 
 }: any) => {
   const db = useFirestore();
   
@@ -63,6 +63,7 @@ const ChatListItem = memo(({
   return (
     <div
       onClick={isEditMode ? () => onToggleSelect(chat.id) : onClick}
+      onContextMenu={(e) => { e.preventDefault(); onArchive(chat.id); }}
       className={cn(
         "flex items-center gap-3 px-4 py-2.5 cursor-pointer transition-all border-none group relative",
         isActive && !isEditMode ? 'bg-white/10' : 'active:bg-white/[0.05]'
@@ -109,11 +110,7 @@ const ChatListItem = memo(({
         </div>
         <div className="flex items-center justify-between gap-2">
           <p className="text-[14px] text-muted-foreground/60 truncate leading-snug pr-4">
-            {otherProfile?.statusText && !lastMsg ? (
-              <span className="italic opacity-60 text-primary">{otherProfile.statusText}</span>
-            ) : (
-              lastMsg?.contentType === 'text' ? lastMsg.content : (lastMsg ? `[${lastMsg.contentType}]` : 'Нет сообщений')
-            )}
+            {lastMsg?.contentType === 'text' ? lastMsg.content : (lastMsg ? `[${lastMsg.contentType}]` : (otherProfile?.statusText || 'Нет сообщений'))}
           </p>
           <div className="flex items-center gap-2 shrink-0">
             {isPinned && <Pin className="w-3.5 h-3.5 rotate-45 text-muted-foreground/40" />}
@@ -132,7 +129,7 @@ export default function ChatSidebar() {
   const { currentChatId, setCurrentChatId, forwardingMessage, setForwardingMessage } = useAppState();
   
   const [searchQuery, setSearchQuery] = useState('');
-  const [activeTab, setActiveTab] = useState<'all' | 'private' | 'channels' | 'bots'>('all');
+  const [activeTab, setActiveTab] = useState<'all' | 'private' | 'channels' | 'archive'>('all');
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isAdminPanelOpen, setIsAdminPanelOpen] = useState(false);
   const [isOnline, setIsOnline] = useState(true);
@@ -163,6 +160,7 @@ export default function ChatSidebar() {
   const { data: chats } = useCollection<Chat>(chatsQuery);
 
   const pinnedIds = profile?.pinnedChatIds || [];
+  const archivedIds = profile?.archivedChatIds || [];
 
   const handleChatClick = (chat: Chat) => {
     if (forwardingMessage) {
@@ -180,6 +178,17 @@ export default function ChatSidebar() {
     setCurrentChatId(chat.id);
   };
 
+  const handleToggleArchive = async (chatId: string) => {
+    if (!db || !user || !userProfileRef) return;
+    const isArchived = archivedIds.includes(chatId);
+    try {
+      await updateDoc(userProfileRef, {
+        archivedChatIds: isArchived ? arrayRemove(chatId) : arrayUnion(chatId)
+      });
+      toast({ title: isArchived ? "Чат извлечен из архива" : "Чат помещен в архив" });
+    } catch (e) {}
+  };
+
   const sortedChats = useMemo(() => {
     if (!chats) return [];
     return [...chats].sort((a, b) => {
@@ -195,8 +204,16 @@ export default function ChatSidebar() {
 
   const filteredChats = useMemo(() => {
     let result = sortedChats;
-    if (activeTab === 'channels') result = result.filter(c => c.type === 'channel');
-    if (activeTab === 'private') result = result.filter(c => c.type === 'private' || c.type === 'saved');
+    
+    // Filter by archive status first
+    if (activeTab === 'archive') {
+      result = result.filter(c => archivedIds.includes(c.id));
+    } else {
+      result = result.filter(c => !archivedIds.includes(c.id));
+      if (activeTab === 'channels') result = result.filter(c => c.type === 'channel');
+      if (activeTab === 'private') result = result.filter(c => c.type === 'private' || c.type === 'saved');
+    }
+
     if (searchQuery.trim()) {
       result = result.filter(chat => {
         const isSaved = chat.type === 'saved';
@@ -206,7 +223,7 @@ export default function ChatSidebar() {
       });
     }
     return result;
-  }, [sortedChats, searchQuery, user, activeTab]);
+  }, [sortedChats, searchQuery, user, activeTab, archivedIds]);
 
   const toggleChatSelection = (chatId: string) => {
     setSelectedChatIds(prev => 
@@ -257,13 +274,13 @@ export default function ChatSidebar() {
               )} />
             </div>
             <h1 className="text-[17px] font-black text-white tracking-tight">
-              {isOnline ? 'Чаты 🐱' : 'Nuxus Ghost'}
+              {isOnline ? 'Nuxus Core' : 'Ghost Protocol'}
             </h1>
           </div>
 
           <div className="absolute right-0 flex items-center gap-2">
             <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full bg-white/10 hover:bg-white/20" onClick={() => setIsCreateModalOpen(true)}>
-              <Plus className="w-5 h-5 text-white" />
+              <SquarePen className="w-5 h-5 text-white" />
             </Button>
             <Button 
               variant="ghost" 
@@ -283,28 +300,22 @@ export default function ChatSidebar() {
             { id: 'all', label: 'Все' },
             { id: 'private', label: 'Личные' },
             { id: 'channels', label: 'Каналы' },
-            { id: 'bots', label: 'Боты' }
+            { id: 'archive', label: 'Архив', icon: Archive }
           ].map((tab) => (
             <button 
               key={tab.id}
               onClick={() => setActiveTab(tab.id as any)}
               className={cn(
                 "flex items-center gap-1.5 px-4 py-1.5 rounded-full text-[14px] font-bold transition-all whitespace-nowrap",
-                activeTab === tab.id ? "bg-white/20 text-white shadow-lg shadow-white/5" : "text-muted-foreground/60 hover:text-white"
+                activeTab === tab.id ? "bg-[#007AFF] text-white shadow-lg shadow-[#007AFF]/20" : "text-muted-foreground/60 hover:text-white bg-white/5"
               )}
             >
+              {tab.icon && <tab.icon className="w-3.5 h-3.5" />}
               {tab.label}
             </button>
           ))}
         </div>
       </div>
-
-      {!isOnline && (
-        <div className="mx-4 mb-2 p-2 bg-red-500/10 border border-red-500/20 rounded-xl flex items-center justify-center gap-2 animate-pulse">
-          <WifiOff className="w-3 h-3 text-red-500" />
-          <span className="text-[10px] font-black text-red-500 uppercase tracking-widest">Ghost Protocol Active</span>
-        </div>
-      )}
 
       <ScrollArea className="flex-1 scrollbar-hide">
         <div className="pb-32">
@@ -318,6 +329,7 @@ export default function ChatSidebar() {
                 isEditMode={isEditMode}
                 isSelected={selectedChatIds.includes(chat.id)}
                 onToggleSelect={toggleChatSelection}
+                onArchive={handleToggleArchive}
                 otherId={chat.type === 'private' && user ? chat.participantIds?.find((id: string) => id !== user.uid) : null} 
                 cachedDisplayName={chat.metadata && user && chat.participantIds?.find((id: string) => id !== user.uid) ? chat.metadata[chat.participantIds.find((id: string) => id !== user.uid)!].name : chat.name} 
                 onClick={() => handleChatClick(chat)} 
@@ -326,8 +338,8 @@ export default function ChatSidebar() {
             ))
           ) : (
             <div className="flex flex-col items-center justify-center p-12 text-center opacity-40">
-              <MessageSquare className="w-12 h-12 mb-4" />
-              <p className="text-sm font-bold uppercase tracking-widest">Здесь пока пусто</p>
+              {activeTab === 'archive' ? <FolderArchive className="w-12 h-12 mb-4" /> : <MessageSquare className="w-12 h-12 mb-4" />}
+              <p className="text-sm font-bold uppercase tracking-widest">{activeTab === 'archive' ? 'Архив пуст' : 'Здесь пока пусто'}</p>
             </div>
           )}
         </div>
@@ -335,14 +347,23 @@ export default function ChatSidebar() {
 
       {isEditMode && selectedChatIds.length > 0 && (
         <div className="fixed bottom-32 left-1/2 -translate-x-1/2 w-[90%] max-w-[350px] z-50 animate-in slide-in-from-bottom-4 duration-300">
-          <Button 
-            onClick={handleDeleteSelected}
-            disabled={isDeleting}
-            className="w-full h-12 bg-destructive hover:bg-destructive/90 text-white font-bold rounded-2xl shadow-2xl flex items-center justify-center gap-2"
-          >
-            {isDeleting ? <Trash2 className="w-5 h-5 animate-pulse" /> : <Trash2 className="w-5 h-5" />}
-            Удалить выбранные ({selectedChatIds.length})
-          </Button>
+          <div className="flex gap-2">
+            <Button 
+              onClick={() => { selectedChatIds.forEach(id => handleToggleArchive(id)); setIsEditMode(false); }}
+              className="flex-1 h-12 bg-[#007AFF] hover:bg-[#007AFF]/90 text-white font-bold rounded-2xl shadow-2xl flex items-center justify-center gap-2"
+            >
+              <Archive className="w-5 h-5" />
+              В архив
+            </Button>
+            <Button 
+              onClick={handleDeleteSelected}
+              disabled={isDeleting}
+              className="flex-1 h-12 bg-destructive hover:bg-destructive/90 text-white font-bold rounded-2xl shadow-2xl flex items-center justify-center gap-2"
+            >
+              <Trash2 className="w-5 h-5" />
+              Удалить
+            </Button>
+          </div>
         </div>
       )}
 

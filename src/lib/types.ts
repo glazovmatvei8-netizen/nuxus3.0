@@ -95,6 +95,7 @@ export interface Chat {
   pinnedMessageId?: string | null;
   typing?: Record<string, boolean>;
   isPublic?: boolean;
+  isArchived?: boolean;
   metadata?: Record<string, {
     name: string;
     username: string;
@@ -119,7 +120,7 @@ export interface UserNotifications {
 }
 
 export interface UserSettings {
-  theme: 'default' | 'ocean' | 'midnight';
+  theme: 'default' | 'ocean' | 'midnight' | 'rainbow' | 'gold' | 'emerald';
   chatBackground: string;
   chatBackgroundFit?: 'cover' | 'contain';
   messageSize: 'small' | 'medium' | 'large';
@@ -148,7 +149,7 @@ export interface User {
   isPremium?: boolean;
   isAdmin?: boolean;
   premiumUntil?: string | null;
-  isArchived?: string[]; // array of chatIds
+  archivedChatIds?: string[]; 
   referralCount?: number;
   invitedBy?: string;
   twoFactorEnabled?: boolean;

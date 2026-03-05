@@ -17,15 +17,15 @@ import {
   Users, Share2, Star, Bell, BellOff, Info, Languages, Smartphone, Camera,
   Eye, UserCheck, MessageCircle, Share, PlusSquare, ShieldCheck as ShieldIcon, Zap,
   ExternalLink, MousePointerClick, Radio, ChevronRight, Terminal, Copy, Code2, Globe, Wifi, WifiOff, Smile,
-  Image as ImageIcon, Paintbrush, Crop, Maximize, Move
+  Image as ImageIcon, Paintbrush, Crop, Maximize, Move, ShieldAlert, UserX
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { signOut } from 'firebase/auth';
-import { doc } from 'firebase/firestore';
+import { doc, updateDoc, arrayRemove } from 'firebase/firestore';
 import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAppState } from '@/lib/store';
-import { isUserPremium, cn } from '@/lib/utils';
+import { isUserPremium, cn, formatDisplayName } from '@/lib/utils';
 import type { User } from '@/lib/types';
 import { useTranslations } from '@/hooks/use-translations';
 
@@ -66,7 +66,10 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
     notifMessages: true,
     notifGroups: true,
     notifChannels: true,
-    notifPreviews: true
+    notifPreviews: true,
+    phoneVisibility: 'everybody',
+    lastSeenVisibility: 'everybody',
+    allowGroupsFrom: 'everybody'
   });
 
   const [bgPreview, setBgPreview] = useState<string | null>(null);
@@ -90,7 +93,10 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         notifMessages: profile.settings?.notifications?.messages ?? true,
         notifGroups: profile.settings?.notifications?.groups ?? true,
         notifChannels: profile.settings?.notifications?.channels ?? true,
-        notifPreviews: profile.settings?.notifications?.previews ?? true
+        notifPreviews: profile.settings?.notifications?.previews ?? true,
+        phoneVisibility: profile.settings?.privacy?.phoneVisibility || 'everybody',
+        lastSeenVisibility: profile.settings?.privacy?.lastSeenVisibility || 'everybody',
+        allowGroupsFrom: profile.settings?.privacy?.allowGroupsFrom || 'everybody'
       });
     }
   }, [profile, open]);
@@ -117,11 +123,27 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
           groups: form.notifGroups,
           channels: form.notifChannels,
           previews: form.notifPreviews
+        },
+        privacy: {
+          phoneVisibility: form.phoneVisibility,
+          lastSeenVisibility: form.lastSeenVisibility,
+          allowGroupsFrom: form.allowGroupsFrom,
+          whoCanMessageMe: profile?.settings?.privacy?.whoCanMessageMe || 'everybody'
         }
       }
     });
     onOpenChange(false);
     toast({ title: "Настройки сохранены" });
+  };
+
+  const handleUnblock = async (blockedId: string) => {
+    if (!db || !user) return;
+    try {
+      await updateDoc(doc(db, 'users', user.uid), {
+        blockedUserIds: arrayRemove(blockedId)
+      });
+      toast({ title: "Пользователь разблокирован" });
+    } catch (e) {}
   };
 
   const handleBackgroundUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -141,16 +163,11 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
       setForm({ ...form, chatBackground: bgPreview, chatBackgroundFit: fit });
       setBgPreview(null);
       setIsBgPlacementOpen(false);
-      
-      // Instant save to cloud
       updateDocumentNonBlocking(userRef, {
-        settings: {
-          ...profile?.settings,
-          chatBackground: bgPreview,
-          chatBackgroundFit: fit
-        }
+        'settings.chatBackground': bgPreview,
+        'settings.chatBackgroundFit': fit
       });
-      toast({ title: "Фон установлен и синхронизирован" });
+      toast({ title: "Фон установлен" });
     }
   };
 
@@ -169,7 +186,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
             <TabsTrigger value="profile" className="text-[8px] uppercase font-black tracking-widest px-1">Профиль</TabsTrigger>
             <TabsTrigger value="appearance" className="text-[8px] uppercase font-black tracking-widest px-1">Стиль</TabsTrigger>
             <TabsTrigger value="security" className="text-[8px] uppercase font-black tracking-widest px-1">Защита</TabsTrigger>
-            <TabsTrigger value="referral" className="text-[8px] uppercase font-black tracking-widest px-1">Друзья</TabsTrigger>
+            <TabsTrigger value="blacklist" className="text-[8px] uppercase font-black tracking-widest px-1">Бан</TabsTrigger>
             <TabsTrigger value="app" className="text-[8px] uppercase font-black tracking-widest px-1">Core</TabsTrigger>
           </TabsList>
 
@@ -184,14 +201,6 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                     </div>
                     <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={(e) => { const f = e.target.files?.[0]; if(f) { const r = new FileReader(); r.onloadend = () => setForm({...form, avatarUrl: r.result as string}); r.readAsDataURL(f); } }} />
                   </div>
-                  
-                  <Button 
-                    variant="outline" 
-                    onClick={() => setSettingsTab('appearance')}
-                    className="h-10 px-6 rounded-full bg-primary/10 border-primary/20 text-primary font-black uppercase italic tracking-widest text-[10px] hover:bg-primary hover:text-white transition-all shadow-lg shadow-primary/10"
-                  >
-                    <Paintbrush className="w-3.5 h-3.5 mr-2" /> Оформление
-                  </Button>
                 </div>
                 
                 <div className="space-y-5 w-full">
@@ -283,8 +292,53 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
             <TabsContent value="security" className="space-y-6 m-0 py-6">
               <div className="bg-muted/20 p-6 rounded-[2.5rem] border border-white/5 space-y-6">
                 <div className="space-y-4">
+                  <h3 className="text-[10px] font-black uppercase tracking-widest text-primary flex items-center gap-2 mb-2"><Lock className="w-3.5 h-3.5" /> Конфиденциальность</h3>
+                  
+                  <div className="space-y-4">
+                    <div className="flex flex-col gap-1.5">
+                      <Label className="text-[9px] font-bold uppercase text-muted-foreground ml-1">Кто видит мой номер</Label>
+                      <select 
+                        value={form.phoneVisibility} 
+                        onChange={e => setForm({...form, phoneVisibility: e.target.value})}
+                        className="bg-black/20 border border-white/5 rounded-xl h-10 px-3 text-xs outline-none focus:border-primary/50"
+                      >
+                        <option value="everybody">Все</option>
+                        <option value="contacts">Мои контакты</option>
+                        <option value="nobody">Никто</option>
+                      </select>
+                    </div>
+
+                    <div className="flex flex-col gap-1.5">
+                      <Label className="text-[9px] font-bold uppercase text-muted-foreground ml-1">Кто видит время входа</Label>
+                      <select 
+                        value={form.lastSeenVisibility} 
+                        onChange={e => setForm({...form, lastSeenVisibility: e.target.value})}
+                        className="bg-black/20 border border-white/5 rounded-xl h-10 px-3 text-xs outline-none focus:border-primary/50"
+                      >
+                        <option value="everybody">Все</option>
+                        <option value="nobody">Никто</option>
+                      </select>
+                    </div>
+
+                    <div className="flex flex-col gap-1.5">
+                      <Label className="text-[9px] font-bold uppercase text-muted-foreground ml-1">Кто может добавлять в группы</Label>
+                      <select 
+                        value={form.allowGroupsFrom} 
+                        onChange={e => setForm({...form, allowGroupsFrom: e.target.value})}
+                        className="bg-black/20 border border-white/5 rounded-xl h-10 px-3 text-xs outline-none focus:border-primary/50"
+                      >
+                        <option value="everybody">Все</option>
+                        <option value="contacts">Мои контакты</option>
+                        <option value="premium">Только Premium</option>
+                        <option value="nobody">Никто</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="pt-6 border-t border-white/5 space-y-4">
                   <div className="flex items-center justify-between">
-                    <Label className="text-[10px] uppercase font-black tracking-widest text-primary flex items-center gap-2"><ShieldCheck className="w-3.5 h-3.5" /> Двухфакторная 2FA</Label>
+                    <Label className="text-[10px] uppercase font-black tracking-widest text-primary flex items-center gap-2"><ShieldCheck className="w-3.5 h-3.5" /> Облачный пароль 2FA</Label>
                     <Switch checked={form.twoFactorEnabled} onCheckedChange={v => setForm({...form, twoFactorEnabled: v})} />
                   </div>
                   {form.twoFactorEnabled && (
@@ -297,33 +351,49 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
               </div>
             </TabsContent>
 
+            <TabsContent value="blacklist" className="space-y-6 m-0 py-6">
+              <div className="bg-muted/20 p-6 rounded-[2.5rem] border border-white/5">
+                <div className="flex items-center gap-2 mb-4">
+                  <UserX className="w-4 h-4 text-destructive" />
+                  <span className="text-[10px] font-black uppercase text-white tracking-widest">Черный список</span>
+                </div>
+                <div className="space-y-2">
+                  {profile?.blockedUserIds && profile.blockedUserIds.length > 0 ? (
+                    profile.blockedUserIds.map(uid => (
+                      <BlockedUserRow key={uid} userId={uid} onUnblock={handleUnblock} />
+                    ))
+                  ) : (
+                    <div className="py-8 text-center opacity-40">
+                      <ShieldCheck className="w-8 h-8 mx-auto mb-2" />
+                      <p className="text-[10px] font-bold uppercase">Список пуст</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </TabsContent>
+
             <TabsContent value="app" className="py-6 space-y-6">
               <div className="text-center space-y-2 mb-4">
                 <Smartphone className="w-12 h-12 text-primary mx-auto mb-2" />
-                <h3 className="text-xl font-black uppercase italic text-white tracking-tighter">Nuxus Core v0.57.0</h3>
-                <p className="text-[10px] font-bold text-muted-foreground uppercase">Organization Update</p>
+                <h3 className="text-xl font-black uppercase italic text-white tracking-tighter">Nuxus Titanium v0.60.0</h3>
+                <p className="text-[10px] font-bold text-muted-foreground uppercase">Stability Update</p>
               </div>
 
               <div className="p-5 bg-primary/10 rounded-[2.5rem] border border-primary/20 space-y-4">
                 <div className="flex items-center gap-2 mb-3">
                   <Globe className="w-4 h-4 text-primary" />
-                  <span className="text-[10px] font-black uppercase text-white tracking-widest">Обход белых списков (DoH)</span>
+                  <span className="text-[10px] font-black uppercase text-white tracking-widest">О Ядре Nuxus</span>
                 </div>
-                <div className="space-y-3 text-[11px] text-muted-foreground leading-relaxed">
-                  <div className="space-y-2">
-                    <Button variant="outline" className="w-full h-10 rounded-xl text-[9px] font-bold uppercase border-white/10 gap-2" onClick={() => window.open('https://1.1.1.1/dns-query', '_blank')}>
-                      <ExternalLink className="w-3.5 h-3.5" /> Скачать DNS профиль (1.1.1.1)
-                    </Button>
-                    <p className="text-[8px] italic opacity-60 text-center">Установите профиль в Настройки &rarr; Основные &rarr; VPN и управление устройством</p>
-                  </div>
-                </div>
+                <p className="text-[11px] text-muted-foreground leading-relaxed">
+                  Профессиональное средство связи с поддержкой AI и квантовым шифрованием. Оптимизировано для работы в любых сетях.
+                </p>
               </div>
             </TabsContent>
           </ScrollArea>
 
           <div className="p-6 border-t border-white/5 bg-muted/20 shrink-0 flex gap-3">
             <Button variant="ghost" className="h-14 w-14 rounded-2xl bg-destructive/10 text-destructive hover:bg-destructive hover:text-white transition-all shrink-0" onClick={() => signOut(auth)}><LogOut className="w-6 h-6" /></Button>
-            <Button className="flex-1 h-14 rounded-2xl font-black uppercase tracking-[0.2em] italic bg-primary shadow-xl shadow-primary/20 text-xs text-white" onClick={handleSave}><Check className="w-5 h-5 mr-2" /> Сохранить</Button>
+            <Button className="flex-1 h-14 rounded-2xl font-black uppercase tracking-[0.2em] italic bg-primary shadow-xl shadow-primary/20 text-xs text-white" onClick={handleSave}><Check className="w-5 h-5 mr-2" /> Сохранить изменения</Button>
           </div>
         </Tabs>
       </DialogContent>
@@ -342,60 +412,44 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
 
         <div className="py-6 space-y-4">
           <div className="aspect-video w-full rounded-2xl overflow-hidden bg-black border border-white/5 relative">
-            <img 
-              src={bgPreview || form.chatBackground} 
-              className={cn("w-full h-full transition-all duration-500", bgPreview ? "opacity-100" : "opacity-50")} 
-              style={{ objectFit: 'contain' }}
-              alt="Preview"
-            />
-            <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/40 backdrop-blur-[2px]">
-               <div className="w-24 h-1 bg-primary/40 rounded-full mb-1" />
-               <div className="w-32 h-1 bg-primary/20 rounded-full" />
-            </div>
+            <img src={bgPreview || form.chatBackground} className="w-full h-full object-contain" alt="Preview" />
           </div>
 
           <div className="grid grid-cols-1 gap-3">
-            <Button 
-              variant="outline" 
-              className="h-14 rounded-2xl border-primary/20 hover:bg-primary/10 flex justify-between px-6 group"
-              onClick={() => finalizeBackground('cover')}
-            >
+            <Button variant="outline" className="h-14 rounded-2xl border-primary/20 hover:bg-primary/10 flex justify-between px-6" onClick={() => finalizeBackground('cover')}>
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-primary/10 rounded-xl group-hover:bg-primary/20 transition-colors">
-                  <Move className="w-4 h-4 text-primary" />
-                </div>
-                <div className="flex flex-col items-start leading-none">
-                  <span className="text-[11px] font-black uppercase italic">Заполнить всё</span>
-                  <span className="text-[8px] font-bold text-muted-foreground uppercase mt-1">Растянуть на весь экран</span>
-                </div>
+                <Move className="w-4 h-4 text-primary" />
+                <span className="text-[11px] font-black uppercase italic">Заполнить всё</span>
               </div>
               <ChevronRight className="w-4 h-4 text-primary/40" />
             </Button>
-
-            <Button 
-              variant="outline" 
-              className="h-14 rounded-2xl border-accent/20 hover:bg-accent/10 flex justify-between px-6 group"
-              onClick={() => finalizeBackground('contain')}
-            >
+            <Button variant="outline" className="h-14 rounded-2xl border-accent/20 hover:bg-accent/10 flex justify-between px-6" onClick={() => finalizeBackground('contain')}>
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-accent/10 rounded-xl group-hover:bg-accent/20 transition-colors">
-                  <Maximize className="w-4 h-4 text-accent" />
-                </div>
-                <div className="flex flex-col items-start leading-none">
-                  <span className="text-[11px] font-black uppercase italic">Вписать полностью</span>
-                  <span className="text-[8px] font-bold text-muted-foreground uppercase mt-1">Без потери качества и обрезки</span>
-                </div>
+                <Maximize className="w-4 h-4 text-accent" />
+                <span className="text-[11px] font-black uppercase italic">Вписать полностью</span>
               </div>
               <ChevronRight className="w-4 h-4 text-accent/40" />
             </Button>
           </div>
         </div>
-
-        <DialogFooter>
-          <Button variant="ghost" className="w-full text-[10px] font-black uppercase opacity-40" onClick={() => { setBgPreview(null); setIsBgPlacementOpen(false); }}>Отмена</Button>
-        </DialogFooter>
       </DialogContent>
     </Dialog>
     </>
+  );
+}
+
+function BlockedUserRow({ userId, onUnblock }: { userId: string, onUnblock: (uid: string) => void }) {
+  const db = useFirestore();
+  const ref = useMemoFirebase(() => (!db ? null : doc(db, 'users', userId)), [db, userId]);
+  const { data: u } = useDoc<User>(ref);
+  if (!u) return null;
+  return (
+    <div className="flex items-center justify-between p-3 bg-black/20 rounded-xl">
+      <div className="flex items-center gap-3">
+        <UserAvatar userId={userId} className="h-8 w-8" manualAvatarUrl={u.avatarUrl} fallbackName={u.name} />
+        <span className="text-xs font-bold text-white">{formatDisplayName(u.name)}</span>
+      </div>
+      <Button variant="ghost" size="sm" className="h-7 text-[10px] uppercase font-black text-primary" onClick={() => onUnblock(userId)}>Разблокировать</Button>
+    </div>
   );
 }

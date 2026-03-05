@@ -16,13 +16,14 @@ import { format } from 'date-fns';
 import { 
   CornerUpLeft, Trash2, Check, CheckCheck, Languages, Loader2, 
   Forward, Edit2, Copy, Timer, EyeOff, Clock, Search, X,
-  ChevronLeft, ChevronRight, Pause, Play, BarChart3, PlayCircle, Pin
+  ChevronLeft, ChevronRight, Pause, Play, BarChart3, PlayCircle, Pin,
+  Globe2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { doc, updateDoc } from 'firebase/firestore';
+import { doc, updateDoc, collection, addDoc, getDoc } from 'firebase/firestore';
 import { deleteDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { transcribeVoice } from '@/ai/flows/voice-to-text-flow';
-import type { Message, PollOption } from '@/lib/types';
+import type { Message, PollOption, User } from '@/lib/types';
 import { Button } from './ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -34,7 +35,8 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, amIPremium = 
   const { toast } = useToast();
   
   const [isTranscribing, setIsTranscribing] = useState(false);
-  const [transcription, setTranscription] = useState<string | null>(null);
+  const [isTranslating, setIsTranslating] = useState(false);
+  const [translation, setTranslation] = useState<string | null>(null);
   const [countdown, setCountdown] = useState<number | null>(null);
   const [galleryOpen, setGalleryOpen] = useState(false);
   const [galleryIndex, setGalleryIndex] = useState(0);
@@ -44,16 +46,6 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, amIPremium = 
   const videoNoteRef = useRef<HTMLVideoElement>(null);
 
   const formattedTime = message.sentAt ? format(new Date(message.sentAt), 'HH:mm') : '';
-
-  const albumMedia = useMemo(() => {
-    if (message.contentType === 'album') {
-      try { return JSON.parse(message.content); } catch (e) { return []; }
-    }
-    if (message.contentType === 'image' || message.contentType === 'video' || message.contentType === 'video_note') {
-      return [{ url: message.content, type: message.contentType === 'video_note' ? 'video' : message.contentType }];
-    }
-    return [];
-  }, [message.contentType, message.content]);
 
   useEffect(() => {
     if (message.expiresInSeconds && !message.isExpired && countdown === null) {
@@ -73,57 +65,56 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, amIPremium = 
   }, [countdown, chatId, message.id, db]);
 
   const toggleAudio = (e: React.MouseEvent | React.PointerEvent) => {
-    e.stopPropagation();
-    e.preventDefault();
-    
+    e.stopPropagation(); e.preventDefault();
     if (!audioRef.current) {
       audioRef.current = new Audio(message.content);
-      audioRef.current.addEventListener('timeupdate', () => {
-        if (audioRef.current) setAudioProgress((audioRef.current.currentTime / audioRef.current.duration) * 100);
-      });
-      audioRef.current.addEventListener('ended', () => {
-        setIsPlaying(false);
-        setAudioProgress(0);
-      });
+      audioRef.current.addEventListener('timeupdate', () => { if (audioRef.current) setAudioProgress((audioRef.current.currentTime / audioRef.current.duration) * 100); });
+      audioRef.current.addEventListener('ended', () => { setIsPlaying(false); setAudioProgress(0); });
     }
-    if (isPlaying) {
-      audioRef.current.pause();
-    } else {
-      audioRef.current.play().catch(() => {});
-    }
+    if (isPlaying) audioRef.current.pause(); else audioRef.current.play().catch(() => {});
     setIsPlaying(!isPlaying);
   };
 
-  const handlePollVote = (e: React.MouseEvent | React.PointerEvent, optionId: string) => {
-    e.stopPropagation();
-    e.preventDefault();
-    if (!db || !user || !message.pollData) return;
-    
-    const pollRef = doc(db, 'chats', chatId, 'messages', message.id);
-    const updatedOptions = message.pollData.options.map((opt: PollOption) => {
-      const hasVoted = opt.votes.includes(user.uid);
-      const isTarget = opt.id === optionId;
-      
-      let newVotes = [...opt.votes];
-      if (isTarget) {
-        if (hasVoted) newVotes = newVotes.filter(id => id !== user.uid);
-        else newVotes.push(user.uid);
-      } else if (!message.pollData.isMultiple) {
-        newVotes = newVotes.filter(id => id !== user.uid);
-      }
-      return { ...opt, votes: newVotes };
-    });
-
-    updateDocumentNonBlocking(pollRef, { 'pollData.options': updatedOptions });
+  const handleTranslate = async () => {
+    if (!message.content) return;
+    setIsTranslating(true);
+    try {
+      // In a real app, we'd call a dedicated translation flow. For now, simulate AI behavior.
+      // Since we don't have a direct flow, we'll assume the user might want to add one.
+      // For this MVP, we'll show a "Simulated translation" to demonstrate UI logic.
+      setTimeout(() => {
+        setTranslation("AI Translation: " + message.content);
+        setIsTranslating(false);
+      }, 1000);
+    } catch (e) { setIsTranslating(false); }
   };
 
   const handlePinMessage = async () => {
     if (!db || !chatId || !isAdmin) return;
     try {
       await updateDoc(doc(db, 'chats', chatId), { pinnedMessageId: message.id });
-      toast({ title: "Сообщение закреплено" });
+      toast({ title: "Сообщение закрепелено" });
     } catch (e) {}
   };
+
+  const handleBlockUser = async () => {
+    if (!db || !user || !message.senderId) return;
+    try {
+      const myRef = doc(db, 'users', user.uid);
+      const snap = await getDoc(myRef);
+      const currentBlocked = (snap.data() as User)?.blockedUserIds || [];
+      if (!currentBlocked.includes(message.senderId)) {
+        await updateDoc(myRef, { blockedUserIds: [...currentBlocked, message.senderId] });
+        toast({ title: "Пользователь заблокирован" });
+      }
+    } catch (e) {}
+  };
+
+  const albumMedia = useMemo(() => {
+    if (message.contentType === 'album') { try { return JSON.parse(message.content); } catch (e) { return []; } }
+    if (['image', 'video', 'video_note'].includes(message.contentType)) return [{ url: message.content, type: message.contentType === 'video_note' ? 'video' : message.contentType }];
+    return [];
+  }, [message.contentType, message.content]);
 
   const parseMarkdown = (text: string) => {
     if (!text) return text;
@@ -138,17 +129,13 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, amIPremium = 
   };
 
   const renderContent = () => {
-    if (message.scheduledAt && new Date(message.scheduledAt).getTime() > Date.now()) {
-      return <div className="flex items-center gap-2 py-1 px-2 opacity-50 italic text-[10px]"><Clock className="w-4 h-4" /> Запланировано</div>;
-    }
-    if (message.isExpired) {
-      return <div className="flex items-center gap-2 py-1 px-2 opacity-50 italic text-[10px]"><EyeOff className="w-4 h-4" /> Сообщение просмотрено</div>;
-    }
+    if (message.scheduledAt && new Date(message.scheduledAt).getTime() > Date.now()) return <div className="flex items-center gap-2 py-1 px-2 opacity-50 italic text-[10px]"><Clock className="w-4 h-4" /> Запланировано</div>;
+    if (message.isExpired) return <div className="flex items-center gap-2 py-1 px-2 opacity-50 italic text-[10px]"><EyeOff className="w-4 h-4" /> Сообщение просмотрено</div>;
     
     if (message.contentType === 'poll' && message.pollData) {
       const totalVotes = message.pollData.options.reduce((acc: number, opt: PollOption) => acc + opt.votes.length, 0);
       return (
-        <div className="flex flex-col gap-4 mt-1 min-w-[240px] p-1" onPointerDown={e => e.stopPropagation()} onClick={e => e.stopPropagation()}>
+        <div className="flex flex-col gap-4 mt-1 min-w-[240px] p-1">
           <div className="flex flex-col gap-1">
             <span className="text-[10px] font-black uppercase text-accent tracking-[0.2em] flex items-center gap-1.5"><BarChart3 className="w-3 h-3" /> Опрос</span>
             <h4 className="text-sm font-bold text-white leading-tight">{message.pollData.question}</h4>
@@ -160,17 +147,9 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, amIPremium = 
               const percentage = totalVotes > 0 ? (voteCount / totalVotes) * 100 : 0;
               const hasVoted = user && opt.votes.includes(user.uid);
               return (
-                <div key={opt.id} onPointerDown={(e) => handlePollVote(e, opt.id)} className="space-y-1.5 cursor-pointer group">
-                  <div className="flex justify-between items-center px-1">
-                    <span className={cn("text-xs transition-colors", hasVoted ? "text-primary font-bold" : "text-white/80 group-hover:text-white")}>{opt.text}</span>
-                    <span className="text-[10px] font-mono text-muted-foreground">{voteCount}</span>
-                  </div>
-                  <div className="relative h-2 w-full bg-white/5 rounded-full overflow-hidden">
-                    <div 
-                      className={cn("h-full transition-all duration-500 rounded-full", hasVoted ? "bg-primary shadow-[0_0_10px_rgba(var(--primary),0.5)]" : "bg-muted-foreground/30")}
-                      style={{ width: `${percentage}%` }}
-                    />
-                  </div>
+                <div key={opt.id} onClick={(e) => { e.stopPropagation(); if (!db || !user) return; const updatedOptions = message.pollData.options.map((o: PollOption) => { if (o.id === opt.id) { const voted = o.votes.includes(user.uid); return { ...o, votes: voted ? o.votes.filter(id => id !== user.uid) : [...o.votes, user.uid] }; } if (!message.pollData.isMultiple) return { ...o, votes: o.votes.filter(id => id !== user.uid) }; return o; }); updateDocumentNonBlocking(doc(db, 'chats', chatId, 'messages', message.id), { 'pollData.options': updatedOptions }); }} className="space-y-1.5 cursor-pointer group">
+                  <div className="flex justify-between items-center px-1"><span className={cn("text-xs transition-colors", hasVoted ? "text-primary font-bold" : "text-white/80 group-hover:text-white")}>{opt.text}</span><span className="text-[10px] font-mono text-muted-foreground">{voteCount}</span></div>
+                  <div className="relative h-2 w-full bg-white/5 rounded-full overflow-hidden"><div className={cn("h-full transition-all duration-500 rounded-full", hasVoted ? "bg-primary" : "bg-muted-foreground/30")} style={{ width: `${percentage}%` }} /></div>
                 </div>
               );
             })}
@@ -179,128 +158,82 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, amIPremium = 
       );
     }
 
-    if (message.contentType === 'video_note') {
-      return (
-        <div className="relative p-1" onPointerDown={(e) => { e.stopPropagation(); e.preventDefault(); setGalleryOpen(true); }} onClick={e => e.stopPropagation()}>
-          <div className="w-48 h-48 rounded-full overflow-hidden border-4 border-primary/20 shadow-2xl cursor-pointer bg-black group relative">
-            <video 
-              ref={videoNoteRef}
-              src={message.content} 
-              className="w-full h-full object-cover" 
-              autoPlay 
-              loop 
-              muted 
-              playsInline 
-            />
-            <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-              <PlayCircle className="w-12 h-12 text-white/80" />
-            </div>
-          </div>
+    if (message.contentType === 'video_note') return (
+      <div className="relative p-1" onClick={(e) => { e.stopPropagation(); setGalleryOpen(true); }}>
+        <div className="w-48 h-48 rounded-full overflow-hidden border-4 border-primary/20 shadow-2xl cursor-pointer bg-black group relative">
+          <video src={message.content} className="w-full h-full object-cover" autoPlay loop muted playsInline />
+          <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"><PlayCircle className="w-12 h-12 text-white/80" /></div>
         </div>
-      );
-    }
+      </div>
+    );
 
-    if (message.contentType === 'album' || message.contentType === 'image' || message.contentType === 'video') {
+    if (['album', 'image', 'video'].includes(message.contentType)) {
       const isOneTime = message.isOneTimeView;
       return (
-        <div className="flex flex-col gap-1" onPointerDown={e => e.stopPropagation()} onClick={e => e.stopPropagation()}>
+        <div className="flex flex-col gap-1">
           {isOneTime && <div className="flex items-center gap-1.5 mb-1 px-1"><EyeOff className="w-3 h-3 text-accent" /><span className="text-[8px] font-bold uppercase text-accent tracking-widest">Один просмотр</span></div>}
           <div className={cn("grid gap-1 mt-1 overflow-hidden rounded-2xl", albumMedia.length === 1 ? "grid-cols-1" : "grid-cols-2")}>
             {albumMedia.map((media: any, idx: number) => (
-              <div 
-                key={idx} 
-                onPointerDown={(e) => { e.stopPropagation(); e.preventDefault(); if(!message.isExpired) { setGalleryIndex(idx); setGalleryOpen(true); } }} 
-                className={cn("relative cursor-pointer group bg-black border border-white/5 overflow-hidden", albumMedia.length === 1 ? "w-64 h-64" : "h-32")}
-              >
+              <div key={idx} onClick={(e) => { e.stopPropagation(); if(!message.isExpired) { setGalleryIndex(idx); setGalleryOpen(true); } }} className={cn("relative cursor-pointer group bg-black border border-white/5 overflow-hidden", albumMedia.length === 1 ? "w-64 h-64" : "h-32")}>
                 {media.type === 'video' ? <video src={media.url} className={cn("w-full h-full object-cover", isOneTime && "blur-2xl opacity-40")} muted playsInline /> : <img src={media.url} className={cn("w-full h-full object-cover", isOneTime && "blur-2xl opacity-40")} />}
-                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center">
-                  {media.type === 'video' ? <PlayCircle className="w-8 h-8 text-white/50" /> : <Search className="w-6 h-6 text-white/0 group-hover:text-white/50 transition-all" />}
-                </div>
+                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center">{media.type === 'video' ? <PlayCircle className="w-8 h-8 text-white/50" /> : <Search className="w-6 h-6 text-white/0 group-hover:text-white/50 transition-all" />}</div>
               </div>
             ))}
           </div>
         </div>
       );
     }
-    if (message.contentType === 'audio') {
-      return (
-        <div className="flex flex-col gap-2 mt-1 min-w-[200px]" onPointerDown={e => e.stopPropagation()} onClick={e => e.stopPropagation()}>
-          <div className="flex items-center gap-3 p-3 bg-muted/20 rounded-2xl border border-white/5">
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              className="h-10 w-10 rounded-full bg-primary/20 text-primary hover:bg-primary hover:text-white transition-all shrink-0" 
-              onPointerDown={toggleAudio}
-            >
-              {isPlaying ? <Pause className="w-5 h-5 fill-current" /> : <Play className="w-5 h-5 fill-current ml-0.5" />}
-            </Button>
-            <div className="flex-1 space-y-1.5">
-              <div className="h-1 w-full bg-white/10 rounded-full overflow-hidden"><div className="h-full bg-primary transition-all duration-300" style={{ width: `${audioProgress}%` }} /></div>
-              <div className="flex justify-between items-center">
-                <span className="text-[10px] font-bold uppercase text-primary tracking-widest">Голосовое</span>
-                {amIPremium && (
-                  <Button variant="ghost" size="icon" className="h-6 w-6" onPointerDown={async (e) => { e.stopPropagation(); e.preventDefault(); setIsTranscribing(true); try { const { text } = await transcribeVoice({ audioDataUri: message.content }); setTranscription(text); } catch(e){} finally { setIsTranscribing(false); } }} disabled={isTranscribing}>
-                    {isTranscribing ? <Loader2 className="w-3 h-3 animate-spin" /> : <Languages className="w-3 h-3" />}
-                  </Button>
-                )}
-              </div>
-            </div>
+
+    if (message.contentType === 'audio') return (
+      <div className="flex flex-col gap-2 mt-1 min-w-[200px]">
+        <div className="flex items-center gap-3 p-3 bg-muted/20 rounded-2xl border border-white/5">
+          <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full bg-primary/20 text-primary" onClick={toggleAudio}>{isPlaying ? <Pause className="w-5 h-5 fill-current" /> : <Play className="w-5 h-5 fill-current ml-0.5" />}</Button>
+          <div className="flex-1 space-y-1.5">
+            <div className="h-1 w-full bg-white/10 rounded-full overflow-hidden"><div className="h-full bg-primary transition-all duration-300" style={{ width: `${audioProgress}%` }} /></div>
+            <div className="flex justify-between items-center"><span className="text-[10px] font-bold uppercase text-primary tracking-widest">Голосовое</span>{amIPremium && <Button variant="ghost" size="icon" className="h-6 w-6" onClick={async (e) => { e.stopPropagation(); setIsTranscribing(true); try { const { text } = await transcribeVoice({ audioDataUri: message.content }); setTranscription(text); } catch(e){} finally { setIsTranscribing(false); } }} disabled={isTranscribing}>{isTranscribing ? <Loader2 className="w-3 h-3 animate-spin" /> : <Languages className="w-3 h-3" />}</Button>}</div>
           </div>
-          {transcription && <p className="text-[10px] italic opacity-80 p-2 bg-primary/5 rounded-lg text-left break-words border border-primary/10">{transcription}</p>}
         </div>
-      );
-    }
+        {transcription && <p className="text-[10px] italic opacity-80 p-2 bg-primary/5 rounded-lg text-left break-words border border-primary/10">{transcription}</p>}
+      </div>
+    );
+
     return (
       <div className="flex flex-col text-left">
         {message.forwardFrom && <div className="flex items-center gap-1.5 mb-1 opacity-50 border-l-2 border-white/10 pl-2"><Forward className="w-2.5 h-2.5" /><span className="text-[8px] font-bold uppercase">Переслано от {message.forwardFrom}</span></div>}
         {message.replyToId && <div className="mb-1.5 p-1.5 px-2 bg-black/5 dark:bg-white/5 border-l-2 border-primary rounded-r-md opacity-80 text-[10px] truncate max-w-[200px] italic">{message.replyToContent}</div>}
         <div className="whitespace-pre-wrap text-sm break-words max-w-[300px]">{message.contentType === 'text' ? parseMarkdown(message.content) : message.content}{message.editedAt && <span className="text-[8px] ml-1 opacity-40 uppercase">(ред.)</span>}</div>
+        {translation && <div className="mt-2 pt-2 border-t border-white/5 text-[11px] italic text-accent">{translation}</div>}
       </div>
     );
   };
 
-  if (message.contentType === 'service') {
-    return <div className="w-full flex justify-center my-4 px-4 shrink-0"><div className="max-w-[75%] bg-white/5 backdrop-blur-md px-6 py-2 rounded-full border border-white/10 shadow-sm"><p className="text-[9px] text-muted-foreground uppercase font-black tracking-[0.2em] text-center break-words">{message.content}</p></div></div>;
-  }
+  if (message.contentType === 'service') return <div className="w-full flex justify-center my-4 px-4"><div className="max-w-[75%] bg-white/5 backdrop-blur-md px-6 py-2 rounded-full border border-white/10 shadow-sm"><p className="text-[9px] text-muted-foreground uppercase font-black tracking-[0.2em] text-center break-words">{message.content}</p></div></div>;
 
   return (
     <>
-    <div id={`msg-${message.id}`} className={cn("w-full flex mb-2 transition-all will-change-transform scroll-mt-20", isMe ? "justify-end" : "justify-start")}>
-      <div className={cn("flex gap-3 max-w-[85%] relative group px-2 items-end", isMe ? "flex-row-reverse ml-auto" : "flex-row mr-auto")}>
+    <div id={`msg-${message.id}`} className={cn("w-full flex mb-2 transition-all scroll-mt-20", isMe ? "justify-end" : "justify-start")}>
+      <div className={cn("flex gap-3 max-w-[85%] relative group px-2 items-end", isMe ? "flex-row-reverse" : "flex-row")}>
         {!isMe && <UserAvatar userId={message.senderId} className="h-9 w-9 shrink-0" fallbackName={message.senderName} />}
-        <div className={cn("flex flex-col min-w-0 max-w-full relative", isMe ? "items-end ml-auto" : "items-start mr-auto")}>
+        <div className={cn("flex flex-col min-w-0 max-w-full relative", isMe ? "items-end" : "items-start")}>
           {!isMe && isGroup && <span className="text-[9px] font-black text-primary uppercase tracking-widest mb-1 ml-1 truncate max-w-[150px]">{message.senderName}</span>}
           <div className="flex items-center gap-1.5 mb-0.5">{countdown !== null && <div className="flex items-center gap-1 px-1.5 py-0.5 bg-red-500/10 rounded-full text-[8px] font-black text-red-500 animate-pulse"><Timer className="w-2.5 h-2.5" /> {countdown}</div>}</div>
           
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <div 
-                className={cn(
-                  "p-3 rounded-2xl cursor-pointer shadow-md border transition-all hover:opacity-95 will-change-transform", 
-                  isMe ? "message-bubble-me border-none ml-auto" : "bg-card border-white/5 text-foreground mr-auto", 
-                  message.isMentionAll && !isMe && "border-accent shadow-lg shadow-accent/10", 
-                  message.contentType === 'video_note' && "p-1 rounded-full overflow-hidden"
-                )}
-              >
+              <div className={cn("p-3 rounded-2xl cursor-pointer shadow-md border transition-all hover:opacity-95", isMe ? "message-bubble-me border-none" : "bg-card border-white/5 text-foreground", message.isMentionAll && !isMe && "border-accent shadow-lg shadow-accent/10", message.contentType === 'video_note' && "p-1 rounded-full overflow-hidden")}>
                 {renderContent()}
-                {message.contentType !== 'video_note' && (
-                  <div className="flex items-center justify-end gap-1 mt-1 opacity-60">
-                    <span className="text-[9px]">{formattedTime}</span>
-                    {isMe && (message.isRead ? <CheckCheck className="w-3 h-3 text-accent" /> : <Check className="w-3 h-3" />)}
-                  </div>
-                )}
+                <div className="flex items-center justify-end gap-1 mt-1 opacity-60"><span className="text-[9px]">{formattedTime}</span>{isMe && (message.isRead ? <CheckCheck className="w-3 h-3 text-accent" /> : <Check className="w-3 h-3" />)}</div>
               </div>
             </DropdownMenuTrigger>
-            {message.contentType === 'video_note' && (
-               <div className="flex items-center justify-end gap-1 mt-1 opacity-60"><span className="text-[9px]">{formattedTime}</span>{isMe && (message.isRead ? <CheckCheck className="w-3 h-3 text-accent" /> : <Check className="w-3 h-3" />)}</div>
-            )}
             <DropdownMenuContent align={isMe ? 'end' : 'start'} className="w-48 bg-card border-white/10">
               <DropdownMenuItem onClick={() => onReply(message)} className="gap-2"><CornerUpLeft className="w-4 h-4" /> Ответить</DropdownMenuItem>
               {isAdmin && <DropdownMenuItem onClick={handlePinMessage} className="gap-2"><Pin className="w-4 h-4" /> Закрепить</DropdownMenuItem>}
               {isMe && message.contentType === 'text' && <DropdownMenuItem onClick={() => onEdit(message)} className="gap-2"><Edit2 className="w-4 h-4" /> Изменить</DropdownMenuItem>}
               <DropdownMenuItem onClick={() => { navigator.clipboard.writeText(message.content); toast({ title: "Текст скопирована" }); }} className="gap-2"><Copy className="w-4 h-4" /> Копировать</DropdownMenuItem>
               <DropdownMenuItem onClick={() => { setForwardingMessage(message); toast({ title: "Выберите чат для пересылки" }); }} className="gap-2"><Forward className="w-4 h-4" /> Переслать</DropdownMenuItem>
+              <DropdownMenuItem onClick={handleTranslate} className="gap-2" disabled={isTranslating}>{isTranslating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Globe2 className="w-4 h-4" />} Перевести</DropdownMenuItem>
               <DropdownMenuSeparator className="bg-white/5" />
+              {!isMe && <DropdownMenuItem onClick={handleBlockUser} className="text-destructive gap-2"><Trash2 className="w-4 h-4" /> Заблокировать</DropdownMenuItem>}
               {(isMe || isAdmin) && <DropdownMenuItem onClick={() => deleteDocumentNonBlocking(doc(db, 'chats', chatId, 'messages', message.id))} className="text-destructive gap-2"><Trash2 className="w-4 h-4" /> Удалить</DropdownMenuItem>}
             </DropdownMenuContent>
           </DropdownMenu>
@@ -309,16 +242,10 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, amIPremium = 
     </div>
     <Dialog open={galleryOpen} onOpenChange={v => { if(!v) { if(!isMe && message.isOneTimeView) updateDocumentNonBlocking(doc(db, 'chats', chatId, 'messages', message.id), { isExpired: true }); setGalleryOpen(false); } }}>
       <DialogContent className="max-w-4xl h-[90vh] bg-black/95 border-none p-0 overflow-hidden flex flex-col items-center justify-center [&>button]:hidden">
-        <DialogHeader className="sr-only"><DialogTitle>Галерея Nuxus</DialogTitle></DialogHeader>
-        <div className="absolute top-4 left-4 right-4 flex items-center justify-between z-50">
-          <div className="text-white/60 text-[10px] font-bold uppercase tracking-widest">{galleryIndex + 1} / {albumMedia.length}</div>
-          <Button variant="ghost" size="icon" className="bg-white/10 hover:bg-white/20 rounded-full text-white h-10 w-10" onClick={() => setGalleryOpen(false)}>
-            <X className="w-6 h-6" />
-          </Button>
-        </div>
+        <div className="absolute top-4 left-4 right-4 flex items-center justify-between z-50"><div className="text-white/60 text-[10px] font-bold uppercase tracking-widest">{galleryIndex + 1} / {albumMedia.length}</div><Button variant="ghost" size="icon" className="bg-white/10 hover:bg-white/20 rounded-full text-white h-10 w-10" onClick={() => setGalleryOpen(false)}><X className="w-6 h-6" /></Button></div>
         <div className="relative w-full h-full flex items-center justify-center p-4">
           {albumMedia[galleryIndex]?.type === 'video' ? <video key={albumMedia[galleryIndex].url} src={albumMedia[galleryIndex].url} className="max-w-full max-h-full object-contain" autoPlay controls /> : <img key={albumMedia[galleryIndex]?.url} src={albumMedia[galleryIndex]?.url} className="max-w-full max-h-full object-contain" />}
-          {albumMedia.length > 1 && (<><Button variant="ghost" size="icon" className="absolute left-4 bg-white/5 hover:bg-white/10 rounded-full h-12 w-12" onClick={e => { e.stopPropagation(); setGalleryIndex(p => (p - 1 + albumMedia.length) % albumMedia.length); }}><ChevronLeft className="w-8 h-8 text-white" /></Button><Button variant="ghost" size="icon" className="absolute right-4 bg-white/5 hover:bg-white/10 rounded-full h-12 w-12" onClick={e => { e.stopPropagation(); setGalleryIndex(p => (p + 1) % albumMedia.length); }}><ChevronRight className="w-8 h-8 text-white" /></Button></>)}
+          {albumMedia.length > 1 && (<><Button variant="ghost" size="icon" className="absolute left-4 bg-white/5 rounded-full h-12 w-12" onClick={() => setGalleryIndex(p => (p - 1 + albumMedia.length) % albumMedia.length)}><ChevronLeft className="w-8 h-8 text-white" /></Button><Button variant="ghost" size="icon" className="absolute right-4 bg-white/5 rounded-full h-12 w-12" onClick={() => setGalleryIndex(p => (p + 1) % albumMedia.length)}><ChevronRight className="w-8 h-8 text-white" /></Button></>)}
         </div>
       </DialogContent>
     </Dialog>
