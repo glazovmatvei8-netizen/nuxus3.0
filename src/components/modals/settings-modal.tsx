@@ -137,21 +137,19 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
   };
 
   const finalizeBackground = (fit: 'cover' | 'contain') => {
-    if (bgPreview) {
+    if (bgPreview && userRef) {
       setForm({ ...form, chatBackground: bgPreview, chatBackgroundFit: fit });
       setBgPreview(null);
       setIsBgPlacementOpen(false);
       
-      // Мгновенное сохранение в Firestore, чтобы фон не пропал после перезагрузки
-      if (userRef) {
-        updateDocumentNonBlocking(userRef, {
-          settings: {
-            ...profile?.settings,
-            chatBackground: bgPreview,
-            chatBackgroundFit: fit
-          }
-        });
-      }
+      // Instant save to cloud
+      updateDocumentNonBlocking(userRef, {
+        settings: {
+          ...profile?.settings,
+          chatBackground: bgPreview,
+          chatBackgroundFit: fit
+        }
+      });
       toast({ title: "Фон установлен и синхронизирован" });
     }
   };
@@ -187,7 +185,6 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                     <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={(e) => { const f = e.target.files?.[0]; if(f) { const r = new FileReader(); r.onloadend = () => setForm({...form, avatarUrl: r.result as string}); r.readAsDataURL(f); } }} />
                   </div>
                   
-                  {/* Кнопка Оформление под фото */}
                   <Button 
                     variant="outline" 
                     onClick={() => setSettingsTab('appearance')}
@@ -266,7 +263,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                       />
                       <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all backdrop-blur-sm gap-2">
                         <Button variant="outline" size="sm" className="h-8 rounded-xl text-[9px] uppercase font-bold" onClick={() => setIsBgPlacementOpen(true)}>Настроить</Button>
-                        <Button variant="destructive" size="sm" className="h-8 rounded-xl text-[9px] uppercase font-bold" onClick={() => setForm({ ...form, chatBackground: '' })}>Удалить</Button>
+                        <Button variant="destructive" size="sm" className="h-8 rounded-xl text-[9px] uppercase font-bold" onClick={() => { setForm({ ...form, chatBackground: '' }); if (userRef) updateDocumentNonBlocking(userRef, { 'settings.chatBackground': '' }); }}>Удалить</Button>
                       </div>
                     </div>
                   ) : (
@@ -303,8 +300,8 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
             <TabsContent value="app" className="py-6 space-y-6">
               <div className="text-center space-y-2 mb-4">
                 <Smartphone className="w-12 h-12 text-primary mx-auto mb-2" />
-                <h3 className="text-xl font-black uppercase italic text-white tracking-tighter">Nuxus Core v0.56.0</h3>
-                <p className="text-[10px] font-bold text-muted-foreground uppercase">Quantum Resilience Plus</p>
+                <h3 className="text-xl font-black uppercase italic text-white tracking-tighter">Nuxus Core v0.57.0</h3>
+                <p className="text-[10px] font-bold text-muted-foreground uppercase">Organization Update</p>
               </div>
 
               <div className="p-5 bg-primary/10 rounded-[2.5rem] border border-primary/20 space-y-4">
@@ -332,7 +329,6 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
       </DialogContent>
     </Dialog>
 
-    {/* Диалог выбора размещения фона */}
     <Dialog open={isBgPlacementOpen} onOpenChange={setIsBgPlacementOpen}>
       <DialogContent className="max-sm bg-card border-border rounded-[2.5rem] p-6 shadow-2xl">
         <DialogHeader>

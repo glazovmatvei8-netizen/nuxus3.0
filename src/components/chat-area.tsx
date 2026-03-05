@@ -9,7 +9,7 @@ import { UserAvatar } from '@/components/user-avatar';
 import { 
   Send, Info, ChevronLeft, Loader2, Bookmark, X, Video, Wand2, Phone, Search as SearchIcon,
   Zap, Calendar as CalendarIcon, Paperclip, Mic, StopCircle, AtSign,
-  Star, BarChart3, Video as VideoIcon, Camera, Lock
+  Star, BarChart3, Video as VideoIcon, Camera, Lock, Pin, ChevronDown
 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { MessageItem } from './message-item';
@@ -141,6 +141,7 @@ export default function ChatArea() {
   
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchingLocal, setIsSearchingLocal] = useState(false);
+  const [showScrollBottom, setShowScrollBottom] = useState(false);
   
   const [scheduledDate, setScheduledDate] = useState<Date | undefined>(undefined);
   const [expiryTime, setExpiryTime] = useState<number | null>(null);
@@ -194,6 +195,12 @@ export default function ChatArea() {
   const isAdmin = useMemo(() => {
     return chat?.ownerId === firebaseUser?.uid || chat?.adminIds?.includes(firebaseUser?.uid || '') || isGlobalAdmin(userProfile);
   }, [chat, firebaseUser, userProfile]);
+
+  const pinnedMsgRef = useMemoFirebase(() => {
+    if (!db || !currentChatId || !chat?.pinnedMessageId) return null;
+    return doc(db, 'chats', currentChatId, 'messages', chat.pinnedMessageId);
+  }, [db, currentChatId, chat?.pinnedMessageId]);
+  const { data: pinnedMessage } = useDoc<Message>(pinnedMsgRef);
 
   const otherId = useMemo(() => {
     if (chat?.type === 'private' && firebaseUser) return chat.participantIds?.find((id: string) => id !== firebaseUser.uid);
@@ -265,6 +272,24 @@ export default function ChatArea() {
       if (viewport) viewport.scrollTo({ top: viewport.scrollHeight, behavior });
     }
   }, []);
+
+  const handleScroll = useCallback(() => {
+    if (scrollRef.current) {
+      const viewport = scrollRef.current.querySelector('[data-radix-scroll-area-viewport]');
+      if (viewport) {
+        const isNearBottom = viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight < 300;
+        setShowScrollBottom(!isNearBottom);
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    const viewport = scrollRef.current?.querySelector('[data-radix-scroll-area-viewport]');
+    if (viewport) {
+      viewport.addEventListener('scroll', handleScroll);
+      return () => viewport.removeEventListener('scroll', handleScroll);
+    }
+  }, [handleScroll]);
 
   useEffect(() => {
     if (!currentChatId) return;
@@ -490,7 +515,6 @@ export default function ChatArea() {
     }
   };
 
-  // Improved Recording Logic
   const startRecording = async () => {
     if (!navigator.mediaDevices) {
       toast({ variant: 'destructive', title: 'Ошибка безопасности', description: 'Ваш браузер блокирует доступ к камере.' });
@@ -570,6 +594,23 @@ export default function ChatArea() {
     return chat?.avatarUrl;
   }, [otherId, otherProfile, otherMetadata, chat]);
 
+  const jumpToPinned = () => {
+    if (!chat?.pinnedMessageId) return;
+    const el = document.getElementById(`msg-${chat.pinnedMessageId}`);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      el.classList.add('animate-pulse');
+      setTimeout(() => el.classList.remove('animate-pulse'), 2000);
+    } else {
+      toast({ title: "Сообщение далеко в истории" });
+    }
+  };
+
+  const unpinMessage = () => {
+    if (!db || !currentChatId) return;
+    updateDoc(doc(db, 'chats', currentChatId), { pinnedMessageId: null });
+  };
+
   if (!currentChatId) return (
     <div className="flex-1 flex flex-col items-center justify-center text-center p-8 bg-background relative overflow-hidden">
       <div className="bg-muted p-10 rounded-full mb-6 animate-float relative overflow-hidden">
@@ -622,11 +663,29 @@ export default function ChatArea() {
         </div>
       </header>
 
+      {/* Pinned Message Bar */}
+      {chat?.pinnedMessageId && pinnedMessage && (
+        <div className="bg-card/60 backdrop-blur-md border-b border-white/5 flex items-center px-4 py-2 shrink-0 z-20 animate-in slide-in-from-top-2">
+          <div className="flex-1 flex items-center gap-3 cursor-pointer group min-w-0" onClick={jumpToPinned}>
+            <div className="w-1 h-8 bg-primary rounded-full group-hover:bg-accent transition-colors" />
+            <div className="flex flex-col min-w-0">
+              <span className="text-[10px] font-black uppercase text-primary tracking-widest flex items-center gap-1.5"><Pin className="w-3 h-3 fill-current" /> Закрепленное сообщение</span>
+              <span className="text-xs text-white/80 truncate font-bold">{pinnedMessage.content}</span>
+            </div>
+          </div>
+          {isAdmin && (
+            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-white" onClick={unpinMessage}>
+              <X className="w-4 h-4" />
+            </Button>
+          )}
+        </div>
+      )}
+
       <div className="flex-1 relative overflow-hidden">
-        {/* Telegram-style "Adequate" Background Layer */}
+        {/* Adequate Background Layer (No Dimming) */}
         {userProfile?.settings?.chatBackground && (
           <div 
-            className="absolute inset-0 z-0 pointer-events-none"
+            className="absolute inset-0 z-0 pointer-events-none opacity-100"
             style={{
               backgroundImage: `url(${userProfile.settings.chatBackground})`,
               backgroundSize: userProfile.settings.chatBackgroundFit === 'contain' ? 'contain' : 'cover',
@@ -651,6 +710,17 @@ export default function ChatArea() {
             />
           )}
         </ScrollArea>
+
+        {/* Scroll to Bottom Button */}
+        {showScrollBottom && (
+          <Button 
+            onClick={() => scrollToBottom('smooth')}
+            className="absolute bottom-4 right-4 h-10 w-10 rounded-full bg-card/80 backdrop-blur-xl border border-white/10 shadow-2xl z-30 group animate-in fade-in zoom-in"
+            size="icon"
+          >
+            <ChevronDown className="w-6 h-6 text-primary group-hover:scale-110 transition-transform" />
+          </Button>
+        )}
       </div>
 
       <footer className="p-3 bg-card/80 backdrop-blur-2xl border-t border-white/5 shrink-0 relative z-30">

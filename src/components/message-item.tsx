@@ -16,10 +16,10 @@ import { format } from 'date-fns';
 import { 
   CornerUpLeft, Trash2, Check, CheckCheck, Languages, Loader2, 
   Forward, Edit2, Copy, Timer, EyeOff, Clock, Search, X,
-  ChevronLeft, ChevronRight, Pause, Play, BarChart3, PlayCircle
+  ChevronLeft, ChevronRight, Pause, Play, BarChart3, PlayCircle, Pin
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { doc } from 'firebase/firestore';
+import { doc, updateDoc } from 'firebase/firestore';
 import { deleteDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { transcribeVoice } from '@/ai/flows/voice-to-text-flow';
 import type { Message, PollOption } from '@/lib/types';
@@ -115,6 +115,14 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, amIPremium = 
     });
 
     updateDocumentNonBlocking(pollRef, { 'pollData.options': updatedOptions });
+  };
+
+  const handlePinMessage = async () => {
+    if (!db || !chatId || !isAdmin) return;
+    try {
+      await updateDoc(doc(db, 'chats', chatId), { pinnedMessageId: message.id });
+      toast({ title: "Сообщение закреплено" });
+    } catch (e) {}
   };
 
   const parseMarkdown = (text: string) => {
@@ -257,7 +265,7 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, amIPremium = 
 
   return (
     <>
-    <div id={`msg-${message.id}`} className={cn("w-full flex mb-2 transition-all will-change-transform", isMe ? "justify-end" : "justify-start")}>
+    <div id={`msg-${message.id}`} className={cn("w-full flex mb-2 transition-all will-change-transform scroll-mt-20", isMe ? "justify-end" : "justify-start")}>
       <div className={cn("flex gap-3 max-w-[85%] relative group px-2 items-end", isMe ? "flex-row-reverse ml-auto" : "flex-row mr-auto")}>
         {!isMe && <UserAvatar userId={message.senderId} className="h-9 w-9 shrink-0" fallbackName={message.senderName} />}
         <div className={cn("flex flex-col min-w-0 max-w-full relative", isMe ? "items-end ml-auto" : "items-start mr-auto")}>
@@ -288,6 +296,7 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, amIPremium = 
             )}
             <DropdownMenuContent align={isMe ? 'end' : 'start'} className="w-48 bg-card border-white/10">
               <DropdownMenuItem onClick={() => onReply(message)} className="gap-2"><CornerUpLeft className="w-4 h-4" /> Ответить</DropdownMenuItem>
+              {isAdmin && <DropdownMenuItem onClick={handlePinMessage} className="gap-2"><Pin className="w-4 h-4" /> Закрепить</DropdownMenuItem>}
               {isMe && message.contentType === 'text' && <DropdownMenuItem onClick={() => onEdit(message)} className="gap-2"><Edit2 className="w-4 h-4" /> Изменить</DropdownMenuItem>}
               <DropdownMenuItem onClick={() => { navigator.clipboard.writeText(message.content); toast({ title: "Текст скопирована" }); }} className="gap-2"><Copy className="w-4 h-4" /> Копировать</DropdownMenuItem>
               <DropdownMenuItem onClick={() => { setForwardingMessage(message); toast({ title: "Выберите чат для пересылки" }); }} className="gap-2"><Forward className="w-4 h-4" /> Переслать</DropdownMenuItem>
