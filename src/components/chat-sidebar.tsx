@@ -1,32 +1,23 @@
 
 "use client"
 
-import React, { useState, useMemo, memo, useEffect } from 'react';
+import React, { useState, useMemo, memo } from 'react';
 import { useAppState } from '@/lib/store';
 import { Button } from '@/components/ui/button';
 import { UserAvatar } from '@/components/user-avatar';
-import { 
-  Plus, Bookmark, Pin, Star, 
-  Check, CheckCheck, Archive,
-  MessageSquare, Lock, SquarePen,
-  Search, Trash2, Circle, Sparkles,
-  Wifi, WifiOff, Ghost, Filter, FolderArchive,
-  FolderOpen, Settings2
-} from 'lucide-react';
+import { Plus, Pin, Star, SquarePen, Lock } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { CreateChatModal } from './modals/create-chat-modal';
 import { AdminPanelModal } from './modals/admin-panel-modal';
-import type { User, Message, Chat, ChatFolder } from '@/lib/types';
+import type { User, Message, Chat } from '@/lib/types';
 import { useFirestore, useUser, useCollection, useDoc, useMemoFirebase } from '@/firebase';
-import { collection, query, where, doc, limit, orderBy, writeBatch, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
+import { collection, query, where, doc, limit, orderBy } from 'firebase/firestore';
 import { formatDisplayName, cn, isGlobalAdmin } from '@/lib/utils';
-import { useToast } from '@/hooks/use-toast';
-import { addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { format } from 'date-fns';
 
 const ChatListItem = memo(({ 
   chat, isActive, otherId, cachedDisplayName, manualAvatarUrl, 
-  onClick, isPinned, user, isEditMode, isSelected, onToggleSelect, onArchive 
+  onClick, user
 }: any) => {
   const db = useFirestore();
   const userProfileRef = useMemoFirebase(() => (!db || !otherId) ? null : doc(db, 'users', otherId), [db, otherId]);
@@ -51,10 +42,10 @@ const ChatListItem = memo(({
 
   return (
     <div
-      onClick={isEditMode ? () => onToggleSelect(chat.id) : onClick}
+      onClick={onClick}
       className={cn(
         "flex items-center gap-3 px-4 py-2.5 cursor-pointer transition-all border-none group relative",
-        isActive && !isEditMode ? 'bg-white/10' : 'active:bg-white/[0.05]'
+        isActive ? 'bg-white/10' : 'active:bg-white/[0.05]'
       )}
     >
       <UserAvatar userId={otherId} manualAvatarUrl={manualAvatarUrl || otherProfile?.avatarUrl || chat.avatarUrl} className="h-[52px] w-[52px]" fallbackName={finalDisplayName} />
@@ -75,7 +66,6 @@ ChatListItem.displayName = 'ChatListItem';
 export default function ChatSidebar() {
   const { user } = useUser();
   const db = useFirestore();
-  const { toast } = useToast();
   const { currentChatId, setCurrentChatId } = useAppState();
   
   const [activeTab, setActiveTab] = useState('all');
@@ -91,8 +81,6 @@ export default function ChatSidebar() {
   }, [db, user]);
   const { data: chats } = useCollection<Chat>(chatsQuery);
 
-  const customFolders = profile?.settings?.customFolders || [];
-
   const filteredChats = useMemo(() => {
     if (!chats) return [];
     let result = [...chats].sort((a, b) => {
@@ -101,23 +89,11 @@ export default function ChatSidebar() {
       return bTime - aTime;
     });
 
-    if (activeTab === 'all') return result;
     if (activeTab === 'private') return result.filter(c => c.type === 'private');
     if (activeTab === 'groups') return result.filter(c => c.type === 'group');
-    
-    const folder = customFolders.find(f => f.id === activeTab);
-    if (folder) return result.filter(c => folder.chatIds.includes(c.id));
 
     return result;
-  }, [chats, activeTab, customFolders]);
-
-  const handleCreateFolder = async () => {
-    const name = prompt("Название папки:");
-    if (!name || !db || !user || !userProfileRef) return;
-    const newFolder: ChatFolder = { id: `folder_${Date.now()}`, name, chatIds: [] };
-    await updateDoc(userProfileRef, { 'settings.customFolders': [...customFolders, newFolder] });
-    toast({ title: "Папка создана" });
-  };
+  }, [chats, activeTab]);
 
   return (
     <div className="flex flex-col h-full bg-[#0a0a0c] overflow-hidden">
@@ -138,8 +114,7 @@ export default function ChatSidebar() {
           {[
             { id: 'all', label: 'Все' },
             { id: 'private', label: 'ЛС' },
-            { id: 'groups', label: 'Группы' },
-            ...customFolders.map(f => ({ id: f.id, label: f.name }))
+            { id: 'groups', label: 'Группы' }
           ].map((tab) => (
             <button 
               key={tab.id}
@@ -152,9 +127,6 @@ export default function ChatSidebar() {
               {tab.label}
             </button>
           ))}
-          <Button variant="ghost" size="sm" className="h-8 rounded-full bg-white/5 px-2" onClick={handleCreateFolder}>
-            <Plus className="w-4 h-4" />
-          </Button>
         </div>
       </div>
 

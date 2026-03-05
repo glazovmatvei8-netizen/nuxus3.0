@@ -1,62 +1,25 @@
 
 "use client"
 
-import React, { useState, useMemo, useRef, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { UserAvatar } from '@/components/user-avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Switch } from '@/components/ui/switch';
 import { 
-  Sparkles, Gift, Crown, Star, LogOut, UserPlus, Shield, UserMinus, UserCheck,
-  Settings2, Upload, Camera, Check, Info, Users, UserX, Loader2,
-  Phone, UserPlus2, Link, Copy, Share2, Globe, Lock, Smile,
-  Image as ImageIcon, FileText, Link as LinkIcon
+  Crown, Star, LogOut, Shield, UserMinus, UserCheck, Phone, UserPlus2, Link, Copy, X
 } from 'lucide-react';
-import { 
-  Star as StarIcon, Heart, Zap, Flame, Trophy, Rocket, Diamond, 
-  Gem
-} from 'lucide-react';
-import { useFirestore, useCollection, useMemoFirebase, useUser, useDoc } from '@/firebase';
-import { collection, query, orderBy, limit, getDocs, doc, updateDoc, arrayRemove, arrayUnion, where } from 'firebase/firestore';
-import { chatConversationSummary } from '@/ai/flows/chat-conversation-summary-flow';
+import { useFirestore, useUser, useDoc, useMemoFirebase } from '@/firebase';
+import { doc, updateDoc, arrayRemove, arrayUnion, deleteDoc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
-import { deleteDocumentNonBlocking, addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { useAppState } from '@/lib/store';
-import { cn, formatDisplayName, isUserPremium } from '@/lib/utils';
-import type { User, ReceivedGift, Chat, Message } from '@/lib/types';
-import { AddMemberModal } from './add-member-modal';
-
-const PRIME_UID = 'vnctow46';
-
-export const AVAILABLE_GIFTS = [
-  { id: 'gift_star', name: 'Звезда', icon: StarIcon, color: 'text-yellow-400', value: 100 },
-  { id: 'gift_heart', name: 'Сердце', icon: Heart, color: 'text-red-500', value: 150 },
-  { id: 'gift_zap', name: 'Молния', icon: Zap, color: 'text-yellow-300', value: 250 },
-  { id: 'gift_fire', name: 'Огонь', icon: Flame, color: 'text-orange-600', value: 300 },
-  { id: 'gift_trophy', name: 'Трофей', icon: Trophy, color: 'text-amber-500', value: 500 },
-  { id: 'gift_rocket', name: 'Ракета', icon: Rocket, color: 'text-orange-500', value: 1500, isNFT: true },
-  { id: 'gift_diamond', name: 'Алмаз', icon: Diamond, color: 'text-blue-400', value: 5000, isNFT: true },
-  { id: 'gift_crown', name: 'Корона', icon: Crown, color: 'text-purple-400', value: 10000, isNFT: true },
-  { id: 'gift_gem', name: 'Изумруд', icon: Gem, color: 'text-emerald-400', value: 2500, isNFT: true },
-];
+import { formatDisplayName, isUserPremium } from '@/lib/utils';
+import type { User, Chat } from '@/lib/types';
 
 export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onOpenChange: (o: boolean) => void, chat: Chat }) {
   const db = useFirestore();
   const { user } = useUser();
   const { setCurrentChatId } = useAppState();
-  const [summary, setSummary] = useState<string | null>(null);
-  const [isSummarizing, setIsSummarizing] = useState(false);
-  const [showGiftSelection, setShowGiftSelection] = useState(false);
-  const [giftMessage, setGiftMessage] = useState('');
-  const [isAddMemberOpen, setIsAddMemberOpen] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
-  const [isKicking, setIsKicking] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
   const isOwner = user && chat.ownerId === user.uid;
@@ -64,160 +27,34 @@ export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onO
   const isPrivate = chat.type === 'private';
   const otherId = isPrivate && user ? chat.participantIds?.find((id: string) => id !== user.uid) : null;
 
-  const [editForm, setEditForm] = useState({
-    name: chat.name || '',
-    username: chat.username || '',
-    description: chat.description || '',
-    avatarUrl: chat.avatarUrl || '',
-    isPublic: chat.isPublic ?? true
-  });
-
-  const messagesQuery = useMemoFirebase(() => {
-    if (!db || !chat.id) return null;
-    return query(collection(db, 'chats', chat.id, 'messages'), orderBy('sentAt', 'desc'));
-  }, [db, chat.id]);
-  const { data: allMessages } = useCollection<Message>(messagesQuery);
-
-  const sharedMedia = useMemo(() => {
-    if (!allMessages) return { images: [], files: [], links: [] };
-    const images: Message[] = [];
-    const files: Message[] = [];
-    const links: Message[] = [];
-
-    allMessages.forEach(m => {
-      if (['image', 'video', 'album', 'video_note'].includes(m.contentType)) images.push(m);
-      else if (m.contentType === 'text' && (m.content.includes('http://') || m.content.includes('https://'))) links.push(m);
-      // Logic for generic files could be added here if contentType 'file' is used
-    });
-
-    return { images, files, links };
-  }, [allMessages]);
-
-  useEffect(() => {
-    if (open) {
-      setEditForm({
-        name: chat.name || '',
-        username: chat.username || '',
-        description: chat.description || '',
-        avatarUrl: chat.avatarUrl || '',
-        isPublic: chat.isPublic ?? true
-      });
-    }
-  }, [open, chat]);
-
   const userProfileRef = useMemoFirebase(() => (!db || !user) ? null : doc(db, 'users', user.uid), [db, user]);
   const { data: currentUserProfile } = useDoc<User>(userProfileRef);
-  const isGlobalAdminUser = currentUserProfile?.isAdmin || user?.uid === PRIME_UID;
   
   const otherUserProfileRef = useMemoFirebase(() => (!db || !otherId) ? null : doc(db, 'users', otherId), [db, otherId]);
   const { data: otherUserProfile } = useDoc<User>(otherUserProfileRef);
 
   const isContact = currentUserProfile?.contactIds?.includes(otherId || '');
-  const isMutualContact = isContact && otherUserProfile?.contactIds?.includes(user?.uid || '');
 
   const inviteLink = useMemo(() => {
     if (typeof window === 'undefined' || isPrivate || !chat.username) return '';
     return `${window.location.origin}/?join=${chat.username.replace('@', '')}`;
   }, [chat.username, isPrivate]);
 
-  const handleSendGift = async (gift: typeof AVAILABLE_GIFTS[0]) => {
-    if (!isGlobalAdminUser || !db || !chat.id || !otherId) return;
-    
-    const messageData: any = {
-      chatId: chat.id,
-      senderId: user?.uid || 'admin',
-      senderName: currentUserProfile?.name || 'Admin',
-      content: gift.id,
-      contentType: 'gift' as const,
-      giftValue: gift.value,
-      isNFT: gift.isNFT || false,
-      sentAt: new Date().toISOString(),
-      isRead: false
-    };
-
-    if (giftMessage.trim()) messageData.giftMessage = giftMessage.trim();
-
-    const giftDocData: any = {
-      giftType: gift.id,
-      senderId: user?.uid || 'admin',
-      senderName: currentUserProfile?.name || 'Admin',
-      value: gift.value,
-      isNFT: gift.isNFT || false,
-      receivedAt: new Date().toISOString(),
-      isSold: false
-    };
-
-    if (giftMessage.trim()) giftDocData.message = giftMessage.trim();
-
-    addDocumentNonBlocking(collection(db, 'chats', chat.id, 'messages'), messageData);
-    addDocumentNonBlocking(collection(db, 'users', otherId, 'receivedGifts'), giftDocData);
-    
-    setGiftMessage('');
-    setShowGiftSelection(false);
-    toast({ title: "Подарок отправлен!" });
-  };
-
   const handleToggleContact = async () => {
     if (!db || !user || !otherId || !userProfileRef) return;
-    try {
-      const isCurrentlyContact = currentUserProfile?.contactIds?.includes(otherId);
-      await updateDoc(userProfileRef, {
-        contactIds: isCurrentlyContact ? arrayRemove(otherId) : arrayUnion(otherId)
-      });
-      toast({ title: isCurrentlyContact ? "Удалено из контактов" : "Добавлено в контакты" });
-    } catch (e) {}
-  };
-
-  const handleSummarize = async () => {
-    if (!db || !chat.id) return;
-    setIsSummarizing(true);
-    try {
-      const msgsQuery = query(collection(db, 'chats', chat.id, 'messages'), orderBy('sentAt', 'desc'), limit(30));
-      const snap = await getDocs(msgsQuery);
-      const msgs = snap.docs.map(d => ({
-        senderName: d.data().senderName || 'Unknown',
-        text: d.data().contentType === 'text' ? d.data().content : `[${d.data().contentType}]`
-      })).reverse();
-      const { summary: aiSummary } = await chatConversationSummary({ chatMessages: msgs });
-      setSummary(aiSummary);
-    } catch (e) {
-      toast({ title: "Ошибка AI", variant: "destructive" });
-    } finally {
-      setIsSummarizing(false);
-    }
-  };
-
-  const handleSaveSettings = async () => {
-    if (!db || !chat.id || !isChatAdmin) return;
-    setIsSaving(true);
-    try {
-      const chatRef = doc(db, 'chats', chat.id);
-      const updatedUsername = editForm.username.startsWith('@') ? editForm.username.toLowerCase() : '@' + editForm.username.toLowerCase();
-      
-      await updateDoc(chatRef, {
-        name: editForm.name,
-        username: updatedUsername,
-        description: editForm.description,
-        avatarUrl: editForm.avatarUrl || null,
-        isPublic: editForm.isPublic
-      });
-      
-      toast({ title: "Настройки сохранены" });
-    } catch (e: any) {
-      toast({ title: "Ошибка сохранения", description: e.message, variant: "destructive" });
-    } finally {
-      setIsSaving(false);
-    }
+    const isCurrentlyContact = currentUserProfile?.contactIds?.includes(otherId);
+    await updateDoc(userProfileRef, {
+      contactIds: isCurrentlyContact ? arrayRemove(otherId) : arrayUnion(otherId)
+    });
+    toast({ title: isCurrentlyContact ? "Удалено из контактов" : "Добавлено в контакты" });
   };
 
   const chatName = formatDisplayName(chat.name || otherUserProfile?.name || 'Чат');
-  const chatUsername = otherUserProfile?.username || chat.username;
 
   return (
-    <>
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md bg-card border-border p-0 overflow-hidden h-[90vh] flex flex-col rounded-[2.5rem] shadow-2xl">
-        <DialogHeader className="p-6 text-center flex flex-col items-center shrink-0 border-b-0 space-y-0 bg-transparent">
+      <DialogContent className="max-w-md bg-card border-border p-0 overflow-hidden h-[80vh] flex flex-col rounded-[2.5rem] shadow-2xl">
+        <DialogHeader className="p-6 text-center flex flex-col items-center shrink-0 space-y-0">
           <UserAvatar 
             userId={isPrivate ? otherId : null} 
             manualAvatarUrl={isPrivate ? otherUserProfile?.avatarUrl : chat.avatarUrl} 
@@ -227,137 +64,41 @@ export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onO
           <DialogTitle className="text-xl flex items-center justify-center gap-2">
             {chatName} {isUserPremium(otherUserProfile) && <Star className="w-4 h-4 text-accent fill-accent" />}
           </DialogTitle>
-          <DialogDescription className="text-xs font-mono opacity-60">{chatUsername}</DialogDescription>
+          <DialogDescription className="text-xs font-mono opacity-60">{otherUserProfile?.username || chat.username}</DialogDescription>
           
           {isPrivate && otherUserProfile && (
             <div className="mt-4 w-full flex flex-col gap-2 px-6">
-              <div className="flex gap-2">
-                <Button 
-                  variant={isContact ? "secondary" : "default"} 
-                  className="flex-1 h-10 rounded-xl gap-2 font-bold text-[10px] uppercase tracking-widest"
-                  onClick={handleToggleContact}
-                >
-                  {isContact ? <UserCheck className="w-4 h-4" /> : <UserPlus2 className="w-4 h-4" />}
-                  {isContact ? "В контактах" : "В контакты"}
-                </Button>
-                {isGlobalAdminUser && (
-                  <Button 
-                    variant="outline" 
-                    className="h-10 w-10 rounded-xl p-0 border-primary/20 text-primary"
-                    onClick={() => setShowGiftSelection(true)}
-                  >
-                    <Gift className="w-5 h-5" />
-                  </Button>
-                )}
-              </div>
-              {isMutualContact && (
-                <div className="bg-primary/10 border border-primary/20 rounded-xl p-3 flex items-center justify-between">
-                  <div className="flex flex-col items-start">
-                    <span className="text-[8px] font-black uppercase text-primary tracking-widest">Номер телефона</span>
-                    <span className="text-sm font-black text-white">{otherUserProfile.phone}</span>
-                  </div>
-                  <Phone className="w-4 h-4 text-primary" />
-                </div>
-              )}
+              <Button 
+                variant={isContact ? "secondary" : "default"} 
+                className="w-full h-10 rounded-xl gap-2 font-bold text-[10px] uppercase tracking-widest"
+                onClick={handleToggleContact}
+              >
+                {isContact ? <UserCheck className="w-4 h-4" /> : <UserPlus2 className="w-4 h-4" />}
+                {isContact ? "В контактах" : "В контакты"}
+              </Button>
             </div>
           )}
         </DialogHeader>
 
-        <Tabs defaultValue="info" className="flex-1 overflow-hidden flex flex-col min-h-0">
-          <TabsList className="grid w-full h-12 bg-muted/5 border-b border-border/10 p-1 shrink-0 grid-cols-3">
-            <TabsTrigger value="info" className="text-[10px] font-bold uppercase tracking-widest data-[state=active]:bg-primary/10">Инфо</TabsTrigger>
-            <TabsTrigger value="media" className="text-[10px] font-bold uppercase tracking-widest data-[state=active]:bg-primary/10">Медиа</TabsTrigger>
-            <TabsTrigger value="members" className="text-[10px] font-bold uppercase tracking-widest data-[state=active]:bg-primary/10">Участники</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="info" className="flex-1 min-h-0 m-0 overflow-hidden">
-            <ScrollArea className="h-full">
-              <div className="p-6 space-y-6">
-                {!isPrivate && inviteLink && (
-                  <div className="p-4 bg-primary/5 rounded-[1.5rem] border border-primary/10 space-y-3">
-                    <div className="flex items-center gap-2 text-[9px] font-black uppercase tracking-[0.2em] text-primary">
-                      <Link className="w-3.5 h-3.5" /> Ссылка на приглашение
-                    </div>
-                    <div className="flex gap-2">
-                      <Input readOnly value={inviteLink} className="bg-black/20 border-white/5 h-10 text-[10px] font-mono rounded-xl truncate" />
-                      <Button size="icon" variant="outline" className="h-10 w-10 shrink-0 rounded-xl border-white/10 hover:bg-primary/10" onClick={() => { navigator.clipboard.writeText(inviteLink); toast({ title: "Ссылка скопирована!" }); }}>
-                        <Copy className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </div>
-                )}
-
-                <div className="space-y-2">
-                  <h3 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-2"><Sparkles className="w-3 h-3" /> AI Summary</h3>
-                  <div className="bg-muted/30 p-4 rounded-xl border border-border">
-                    {summary ? <p className="text-sm italic">{summary}</p> : <Button variant="ghost" size="sm" className="w-full text-xs" onClick={handleSummarize} disabled={isSummarizing}>Краткий обзор чата</Button>}
-                  </div>
+        <ScrollArea className="flex-1">
+          <div className="p-6 space-y-6">
+            {!isPrivate && inviteLink && (
+              <div className="p-4 bg-primary/5 rounded-[1.5rem] border border-primary/10 space-y-3">
+                <div className="flex items-center gap-2 text-[9px] font-black uppercase tracking-widest text-primary">
+                  <Link className="w-3.5 h-3.5" /> Ссылка на приглашение
                 </div>
-
-                <div className="pt-4 pb-12 space-y-2">
-                  {!isPrivate && (
-                    <Button variant="outline" className="w-full h-11 rounded-xl gap-2 font-bold" onClick={() => {}}>
-                      <LogOut className="w-4 h-4" /> Покинуть группу
-                    </Button>
-                  )}
-                  <Button variant="ghost" className="w-full text-destructive hover:bg-destructive/10" onClick={() => {
-                    if (confirm('Удалить чат?')) {
-                      deleteDocumentNonBlocking(doc(db, 'chats', chat.id));
-                      setCurrentChatId(null);
-                      onOpenChange(false);
-                    }
-                  }}>Удалить чат</Button>
+                <div className="flex gap-2">
+                  <Input readOnly value={inviteLink} className="bg-black/20 border-white/5 h-10 text-[10px] font-mono rounded-xl truncate" />
+                  <Button size="icon" variant="outline" className="h-10 w-10 shrink-0 rounded-xl border-white/10" onClick={() => { navigator.clipboard.writeText(inviteLink); toast({ title: "Ссылка скопирована!" }); }}>
+                    <Copy className="w-4 h-4" />
+                  </Button>
                 </div>
               </div>
-            </ScrollArea>
-          </TabsContent>
+            )}
 
-          <TabsContent value="media" className="flex-1 min-h-0 m-0 overflow-hidden">
-            <ScrollArea className="h-full">
-              <div className="p-4 space-y-6">
-                <div>
-                  <h4 className="text-[10px] font-black uppercase text-primary mb-3 flex items-center gap-2"><ImageIcon className="w-3.5 h-3.5" /> Фото и Видео ({sharedMedia.images.length})</h4>
-                  <div className="grid grid-cols-3 gap-1">
-                    {sharedMedia.images.map((m, i) => (
-                      <div key={i} className="aspect-square bg-muted rounded-md overflow-hidden border border-white/5 relative group">
-                        {m.contentType === 'image' || m.contentType === 'album' ? (
-                          <img src={m.content} className="w-full h-full object-cover" />
-                        ) : (
-                          <video src={m.content} className="w-full h-full object-cover" />
-                        )}
-                      </div>
-                    ))}
-                    {sharedMedia.images.length === 0 && <p className="col-span-3 py-8 text-center text-[10px] uppercase opacity-40 font-bold">Пусто</p>}
-                  </div>
-                </div>
-
-                <div>
-                  <h4 className="text-[10px] font-black uppercase text-accent mb-3 flex items-center gap-2"><LinkIcon className="w-3.5 h-3.5" /> Ссылки ({sharedMedia.links.length})</h4>
-                  <div className="space-y-2">
-                    {sharedMedia.links.map((m, i) => (
-                      <div key={i} className="p-3 bg-muted/20 rounded-xl border border-white/5 flex items-center gap-3">
-                        <LinkIcon className="w-4 h-4 text-accent shrink-0" />
-                        <span className="text-xs truncate text-white/80">{m.content}</span>
-                      </div>
-                    ))}
-                    {sharedMedia.links.length === 0 && <p className="py-4 text-center text-[10px] uppercase opacity-40 font-bold">Нет ссылок</p>}
-                  </div>
-                </div>
-              </div>
-            </ScrollArea>
-          </TabsContent>
-
-          <TabsContent value="members" className="flex-1 min-h-0 m-0 overflow-hidden flex flex-col">
-            <div className="p-4 border-b border-border/10 flex justify-between items-center bg-muted/5">
-              <span className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest">Участники: {chat.participantIds?.length}</span>
-              {!isPrivate && (
-                <Button variant="ghost" size="sm" className="h-7 text-xs text-primary gap-1 font-bold" onClick={() => setIsAddMemberOpen(true)}>
-                  <UserPlus className="w-3.5 h-3.5" /> Добавить
-                </Button>
-              )}
-            </div>
-            <ScrollArea className="flex-1">
-              <div className="p-4 space-y-2">
+            <div className="space-y-4">
+              <h3 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Участники: {chat.participantIds?.length}</h3>
+              <div className="space-y-2">
                 {chat.participantIds?.map((pid: string) => (
                   <MemberRow 
                     key={pid} 
@@ -367,65 +108,34 @@ export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onO
                     isOwner={isOwner}
                     isViewerAdmin={isChatAdmin}
                     viewerId={user?.uid || ''}
-                    onToggleAdmin={() => {}}
-                    onKick={() => {}}
-                    isKicking={isKicking === pid}
                   />
                 ))}
               </div>
-            </ScrollArea>
-          </TabsContent>
-        </Tabs>
-      </DialogContent>
-    </Dialog>
+            </div>
 
-    <Dialog open={showGiftSelection} onOpenChange={setShowGiftSelection}>
-      <DialogContent className="max-w-md bg-card border-primary/20 p-6 rounded-[2.5rem] shadow-2xl">
-        <DialogHeader>
-          <DialogTitle className="text-xl font-black uppercase italic text-white flex items-center gap-2">
-            <Gift className="w-5 h-5 text-primary" /> Отправить подарок
-          </DialogTitle>
-          <DialogDescription className="text-[10px] uppercase font-bold tracking-widest">
-            Выберите предмет для {chatName}
-          </DialogDescription>
-        </DialogHeader>
-
-        <ScrollArea className="h-[400px] mt-4">
-          <div className="grid grid-cols-3 gap-3 p-1">
-            {AVAILABLE_GIFTS.map((gift) => (
-              <button
-                key={gift.id}
-                onClick={() => handleSendGift(gift)}
-                className="flex flex-col items-center gap-2 p-4 rounded-2xl bg-white/5 border border-white/5 hover:bg-primary/10 hover:border-primary/20 transition-all group"
-              >
-                <gift.icon className={cn("w-8 h-8", gift.color, "group-hover:scale-110 transition-transform")} />
-                <div className="flex flex-col items-center">
-                  <span className="text-[9px] font-black uppercase text-white truncate w-full text-center">{gift.name}</span>
-                  <span className="text-[8px] font-bold text-primary">{gift.value} N</span>
-                </div>
-                {gift.isNFT && <div className="absolute top-1 right-1"><Diamond className="w-2.5 h-2.5 text-accent animate-pulse" /></div>}
-              </button>
-            ))}
+            <div className="pt-4 pb-12 space-y-2">
+              <Button variant="ghost" className="w-full text-destructive hover:bg-destructive/10 rounded-xl" onClick={() => {
+                if (confirm('Удалить чат?')) {
+                  deleteDoc(doc(db, 'chats', chat.id));
+                  setCurrentChatId(null);
+                  onOpenChange(false);
+                }
+              }}>Удалить чат</Button>
+            </div>
           </div>
         </ScrollArea>
       </DialogContent>
     </Dialog>
-
-    <AddMemberModal open={isAddMemberOpen} onOpenChange={setIsAddMemberOpen} chatId={chat.id} currentParticipantIds={chat.participantIds || []} />
-    </>
   );
 }
 
-function MemberRow({ userId, ownerId, adminIds, isOwner, isViewerAdmin, viewerId, onToggleAdmin, onKick, isKicking }: any) {
+function MemberRow({ userId, ownerId, adminIds, isOwner, isViewerAdmin, viewerId }: any) {
   const db = useFirestore();
   const userRef = useMemoFirebase(() => (!db ? null : doc(db, 'users', userId)), [db, userId]);
   const { data: m } = useDoc<User>(userRef);
   
   const isTargetAdmin = adminIds.includes(userId);
   const isTargetOwner = userId === ownerId;
-  const isTargetMe = userId === viewerId;
-
-  const canBeKicked = !isTargetMe && (isOwner || (isViewerAdmin && !isTargetAdmin && !isTargetOwner));
 
   if (!m) return null;
   
@@ -441,18 +151,6 @@ function MemberRow({ userId, ownerId, adminIds, isOwner, isViewerAdmin, viewerId
           </span>
           <span className="text-[10px] text-muted-foreground">{m.username}</span>
         </div>
-      </div>
-      <div className="flex items-center gap-1">
-        {isOwner && !isTargetOwner && (
-          <Button variant="ghost" size="icon" className={cn("h-8 w-8", isTargetAdmin ? "text-primary" : "text-muted-foreground")} onClick={() => onToggleAdmin(userId, !isTargetAdmin)}>
-            {isTargetAdmin ? <UserMinus className="w-4 h-4" /> : <UserCheck className="w-4 h-4" />}
-          </Button>
-        )}
-        {canBeKicked && (
-          <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" onClick={() => onKick(userId)} disabled={isKicking}>
-            {isKicking ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserX className="w-4 h-4" />}
-          </Button>
-        )}
       </div>
     </div>
   );
