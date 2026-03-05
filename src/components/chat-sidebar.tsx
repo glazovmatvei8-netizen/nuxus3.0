@@ -5,14 +5,13 @@ import React, { useState, useMemo, memo } from 'react';
 import { useAppState } from '@/lib/store';
 import { Button } from '@/components/ui/button';
 import { UserAvatar } from '@/components/user-avatar';
-import { Plus, Pin, Star, SquarePen, Lock, FolderOpen, Ghost } from 'lucide-react';
+import { Pin, Star, SquarePen, FolderOpen, Ghost, Search } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { CreateChatModal } from './modals/create-chat-modal';
-import { AdminPanelModal } from './modals/admin-panel-modal';
 import type { User, Message, Chat } from '@/lib/types';
 import { useFirestore, useUser, useCollection, useDoc, useMemoFirebase } from '@/firebase';
 import { collection, query, where, doc, limit, orderBy } from 'firebase/firestore';
-import { formatDisplayName, cn, isGlobalAdmin } from '@/lib/utils';
+import { formatDisplayName, cn } from '@/lib/utils';
 import { format } from 'date-fns';
 
 const ChatListItem = memo(({ 
@@ -66,11 +65,10 @@ ChatListItem.displayName = 'ChatListItem';
 export default function ChatSidebar() {
   const { user } = useUser();
   const db = useFirestore();
-  const { currentChatId, setCurrentChatId } = useAppState();
+  const { currentChatId, setCurrentChatId, setIsSearchOpen } = useAppState();
   
   const [activeTab, setActiveTab] = useState('all');
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [isAdminPanelOpen, setIsAdminPanelOpen] = useState(false);
 
   const userProfileRef = useMemoFirebase(() => (!db || !user) ? null : doc(db, 'users', user.uid), [db, user]);
   const { data: profile } = useDoc<User>(userProfileRef);
@@ -99,23 +97,19 @@ export default function ChatSidebar() {
   return (
     <div className="flex flex-col h-full bg-[#0a0a0c] overflow-hidden">
       <div className="px-4 pt-4 pb-2 shrink-0">
-        <div className="relative flex items-center justify-between mb-4">
-          <div onClick={() => isGlobalAdmin(profile) && setIsAdminPanelOpen(true)} className="flex items-center gap-2 cursor-pointer">
-            <div className="w-8 h-8 rounded-xl bg-primary/20 flex items-center justify-center border border-primary/20 shadow-lg shadow-primary/10">
-              <Lock className="w-4 h-4 text-primary" />
-            </div>
-            <div className="flex flex-col">
-              <h1 className="text-[15px] font-black text-white leading-none">Nuxus Core</h1>
-              <span className="text-[8px] font-bold text-primary/60 uppercase tracking-widest mt-1">Active Sync</span>
-            </div>
-          </div>
+        <div className="relative flex items-center justify-between mb-6">
+          <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full bg-white/5" onClick={() => setIsSearchOpen(true)}>
+            <Search className="w-5 h-5 text-white/60" />
+          </Button>
+
+          <h1 className="text-[20px] font-black text-white italic tracking-tighter absolute left-1/2 -translate-x-1/2">
+            Чаты🐱
+          </h1>
+
           <div className="flex gap-2">
-             <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full bg-white/5">
-                <FolderOpen className="w-4 h-4 text-white/60" />
-             </Button>
-             <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full bg-white/5" onClick={() => setIsCreateModalOpen(true)}>
-                <SquarePen className="w-5 h-5 text-white" />
-             </Button>
+            <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full bg-white/5" onClick={() => setIsCreateModalOpen(true)}>
+              <SquarePen className="w-5 h-5 text-white" />
+            </Button>
           </div>
         </div>
 
@@ -157,14 +151,13 @@ export default function ChatSidebar() {
           ) : (
             <div className="flex flex-col items-center justify-center p-20 opacity-20">
                <Ghost className="w-12 h-12 mb-4" />
-               <p className="text-[10px] font-black uppercase tracking-widest text-center">Нет активных каналов в этой папке</p>
+               <p className="text-[10px] font-black uppercase tracking-widest text-center">Нет активных каналов</p>
             </div>
           )}
         </div>
       </ScrollArea>
 
       <CreateChatModal open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen} />
-      <AdminPanelModal open={isAdminPanelOpen} onOpenChange={setIsAdminPanelOpen} />
     </div>
   );
 }
