@@ -29,12 +29,13 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
   const userRef = useMemoFirebase(() => (!db || !user) ? null : doc(db, 'users', user.uid), [db, user]);
   const { data: myProfile } = useDoc<User>(userRef);
 
-  // Fetch Trends/Popular chats when search is empty
   useEffect(() => {
     if (open && !searchQuery.trim() && db) {
       const fetchTrends = async () => {
         setIsLoading(true);
         try {
+          // Примечание: Требуется составной индекс (isPublic: ASC, createdAt: DESC)
+          // Ссылка для создания индекса находится в консоли браузера при возникновении ошибки
           const q = query(
             collection(db, 'chats'),
             where('isPublic', '==', true),
@@ -45,7 +46,7 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
           const trending = snap.docs.map(d => ({ id: d.id, ...d.data() } as Chat));
           setTrends(trending);
         } catch (e) {
-          console.error("Trends error:", e);
+          console.error("Trends index might be missing:", e);
         } finally {
           setIsLoading(false);
         }
@@ -122,6 +123,10 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md bg-card border-white/10 rounded-[2.5rem] p-0 overflow-hidden shadow-2xl">
+        <DialogHeader className="sr-only">
+          <DialogTitle>Глобальный поиск Nuxus</DialogTitle>
+        </DialogHeader>
+
         <div className="px-6 py-6">
           <div className="relative">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground/40" />

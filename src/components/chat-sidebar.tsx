@@ -97,12 +97,12 @@ export default function ChatSidebar() {
   return (
     <div className="flex flex-col h-full bg-[#0a0a0c] overflow-hidden">
       <div className="px-4 pt-4 pb-2 shrink-0">
-        <div className="relative flex items-center justify-between mb-6">
+        <div className="relative flex items-center justify-between h-12 mb-6">
           <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full bg-white/5" onClick={() => setIsSearchOpen(true)}>
             <Search className="w-5 h-5 text-white/60" />
           </Button>
 
-          <h1 className="text-[20px] font-black text-white italic tracking-tighter absolute left-1/2 -translate-x-1/2">
+          <h1 className="text-[20px] font-black text-white italic tracking-tighter absolute left-1/2 -translate-x-1/2 whitespace-nowrap">
             Чаты🐱
           </h1>
 
