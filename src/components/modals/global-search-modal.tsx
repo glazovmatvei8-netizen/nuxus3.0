@@ -1,19 +1,19 @@
 
 "use client"
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useFirestore, useUser, useDoc, useMemoFirebase } from '@/firebase';
-import { collection, query, where, getDocs, doc, limit, addDoc } from 'firebase/firestore';
+import { collection, query, where, getDocs, doc, limit, addDoc, orderBy } from 'firebase/firestore';
 import { useAppState } from '@/lib/store';
 import { useToast } from '@/hooks/use-toast';
-import { Search, Loader2, Radio, Users, Check, ArrowRight, X, Star } from 'lucide-react';
+import { Search, Loader2, Radio, Users, Check, ArrowRight, X, Star, Zap } from 'lucide-react';
 import { UserAvatar } from '@/components/user-avatar';
 import { isUserPremium } from '@/lib/utils';
-import type { User } from '@/lib/types';
+import type { User, Chat } from '@/lib/types';
 
 export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const { user } = useUser();
@@ -23,10 +23,36 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
   
   const [searchQuery, setSearchQuery] = useState('');
   const [results, setResults] = useState<{ type: 'chat' | 'user', data: any }[]>([]);
+  const [trends, setTrends] = useState<Chat[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
   const userRef = useMemoFirebase(() => (!db || !user) ? null : doc(db, 'users', user.uid), [db, user]);
   const { data: myProfile } = useDoc<User>(userRef);
+
+  // Fetch Trends/Popular chats when search is empty
+  useEffect(() => {
+    if (open && !searchQuery.trim() && db) {
+      const fetchTrends = async () => {
+        setIsLoading(true);
+        try {
+          const q = query(
+            collection(db, 'chats'),
+            where('isPublic', '==', true),
+            orderBy('createdAt', 'desc'),
+            limit(10)
+          );
+          const snap = await getDocs(q);
+          const trending = snap.docs.map(d => ({ id: d.id, ...d.data() } as Chat));
+          setTrends(trending);
+        } catch (e) {
+          console.error("Trends error:", e);
+        } finally {
+          setIsLoading(false);
+        }
+      };
+      fetchTrends();
+    }
+  }, [open, searchQuery, db]);
 
   const handleSearch = async (val: string) => {
     setSearchQuery(val);
@@ -110,25 +136,48 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
           </div>
         </div>
 
-        <ScrollArea className="h-[400px]">
+        <ScrollArea className="h-[450px]">
           <div className="p-4 space-y-3">
-            {results.length > 0 ? (
-              results.map((res, idx) => (
-                <div key={idx} className="flex items-center justify-between p-4 bg-white/5 rounded-[1.8rem] hover:bg-white/10 cursor-pointer" onClick={() => res.type === 'chat' ? (setCurrentChatId(res.data.id), onOpenChange(false)) : openUserChat(res.data)}>
-                  <div className="flex items-center gap-4">
-                    <UserAvatar userId={res.type === 'user' ? res.data.id : null} manualAvatarUrl={res.data.avatarUrl} className="h-12 w-12" fallbackName={res.data.name} />
-                    <div className="flex flex-col">
-                      <span className="font-bold text-white flex items-center gap-2">{res.data.name} {res.type === 'chat' ? <Users className="w-3 h-3" /> : isUserPremium(res.data) && <Star className="w-3 h-3 text-accent fill-accent" />}</span>
-                      <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest">{res.data.username}</span>
+            {searchQuery.trim().length >= 3 ? (
+              results.length > 0 ? (
+                results.map((res, idx) => (
+                  <div key={idx} className="flex items-center justify-between p-4 bg-white/5 rounded-[1.8rem] hover:bg-white/10 cursor-pointer" onClick={() => res.type === 'chat' ? (setCurrentChatId(res.data.id), onOpenChange(false)) : openUserChat(res.data)}>
+                    <div className="flex items-center gap-4">
+                      <UserAvatar userId={res.type === 'user' ? res.data.id : null} manualAvatarUrl={res.data.avatarUrl} className="h-12 w-12" fallbackName={res.data.name} />
+                      <div className="flex flex-col">
+                        <span className="font-bold text-white flex items-center gap-2">{res.data.name} {res.type === 'chat' ? <Users className="w-3 h-3" /> : isUserPremium(res.data) && <Star className="w-3 h-3 text-accent fill-accent" />}</span>
+                        <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest">{res.data.username}</span>
+                      </div>
                     </div>
+                    <ArrowRight className="w-5 h-5 text-primary/40" />
                   </div>
-                  <ArrowRight className="w-5 h-5 text-primary/40" />
-                </div>
-              ))
-            ) : searchQuery.length >= 3 ? (
-              <div className="text-center py-12 opacity-40 uppercase text-[10px] font-black tracking-widest">Ничего не найдено</div>
+                ))
+              ) : (
+                <div className="text-center py-12 opacity-40 uppercase text-[10px] font-black tracking-widest">Ничего не найдено</div>
+              )
             ) : (
-              <div className="text-center py-12 opacity-20 uppercase text-[10px] font-black tracking-widest">Введите @никнейм для поиска</div>
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 px-2 text-primary">
+                  <Zap className="w-4 h-4 fill-current" />
+                  <span className="text-[10px] font-black uppercase tracking-widest">Популярное сейчас</span>
+                </div>
+                {trends.length > 0 ? (
+                  trends.map(chat => (
+                    <div key={chat.id} className="flex items-center justify-between p-4 bg-white/5 rounded-[1.8rem] hover:bg-white/10 cursor-pointer" onClick={() => { setCurrentChatId(chat.id); onOpenChange(false); }}>
+                      <div className="flex items-center gap-4">
+                        <UserAvatar userId={null} manualAvatarUrl={chat.avatarUrl} className="h-12 w-12" fallbackName={chat.name} />
+                        <div className="flex flex-col">
+                          <span className="font-bold text-white flex items-center gap-2">{chat.name} <Users className="w-3 h-3 text-muted-foreground" /></span>
+                          <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest">{chat.username}</span>
+                        </div>
+                      </div>
+                      <div className="px-3 py-1 rounded-full bg-primary/10 text-primary text-[9px] font-black uppercase tracking-widest">Вступить</div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-center py-12 opacity-20 uppercase text-[10px] font-black tracking-widest">Загрузка трендов...</div>
+                )}
+              </div>
             )}
           </div>
         </ScrollArea>

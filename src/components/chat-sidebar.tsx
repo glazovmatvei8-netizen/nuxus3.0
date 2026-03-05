@@ -5,7 +5,7 @@ import React, { useState, useMemo, memo } from 'react';
 import { useAppState } from '@/lib/store';
 import { Button } from '@/components/ui/button';
 import { UserAvatar } from '@/components/user-avatar';
-import { Plus, Pin, Star, SquarePen, Lock } from 'lucide-react';
+import { Plus, Pin, Star, SquarePen, Lock, FolderOpen, Ghost } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { CreateChatModal } from './modals/create-chat-modal';
 import { AdminPanelModal } from './modals/admin-panel-modal';
@@ -91,8 +91,9 @@ export default function ChatSidebar() {
 
     if (activeTab === 'private') return result.filter(c => c.type === 'private');
     if (activeTab === 'groups') return result.filter(c => c.type === 'group');
+    if (activeTab === 'archived') return result.filter(c => c.isArchived);
 
-    return result;
+    return result.filter(c => !c.isArchived);
   }, [chats, activeTab]);
 
   return (
@@ -100,28 +101,38 @@ export default function ChatSidebar() {
       <div className="px-4 pt-4 pb-2 shrink-0">
         <div className="relative flex items-center justify-between mb-4">
           <div onClick={() => isGlobalAdmin(profile) && setIsAdminPanelOpen(true)} className="flex items-center gap-2 cursor-pointer">
-            <div className="w-8 h-8 rounded-xl bg-primary/20 flex items-center justify-center border border-primary/20">
+            <div className="w-8 h-8 rounded-xl bg-primary/20 flex items-center justify-center border border-primary/20 shadow-lg shadow-primary/10">
               <Lock className="w-4 h-4 text-primary" />
             </div>
-            <h1 className="text-[17px] font-black text-white">Nuxus Core</h1>
+            <div className="flex flex-col">
+              <h1 className="text-[15px] font-black text-white leading-none">Nuxus Core</h1>
+              <span className="text-[8px] font-bold text-primary/60 uppercase tracking-widest mt-1">Active Sync</span>
+            </div>
           </div>
-          <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full bg-white/5" onClick={() => setIsCreateModalOpen(true)}>
-            <SquarePen className="w-5 h-5 text-white" />
-          </Button>
+          <div className="flex gap-2">
+             <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full bg-white/5">
+                <FolderOpen className="w-4 h-4 text-white/60" />
+             </Button>
+             <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full bg-white/5" onClick={() => setIsCreateModalOpen(true)}>
+                <SquarePen className="w-5 h-5 text-white" />
+             </Button>
+          </div>
         </div>
 
+        {/* Dynamic Folders Tabs */}
         <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide py-1">
           {[
             { id: 'all', label: 'Все' },
-            { id: 'private', label: 'ЛС' },
-            { id: 'groups', label: 'Группы' }
+            { id: 'private', label: 'Личные' },
+            { id: 'groups', label: 'Группы' },
+            { id: 'archived', label: 'Архив' }
           ].map((tab) => (
             <button 
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
               className={cn(
-                "px-4 py-1.5 rounded-full text-[13px] font-bold transition-all whitespace-nowrap",
-                activeTab === tab.id ? "bg-[#007AFF] text-white shadow-lg shadow-[#007AFF]/20" : "text-muted-foreground/60 hover:text-white bg-white/5"
+                "px-4 py-1.5 rounded-full text-[12px] font-black uppercase tracking-widest transition-all whitespace-nowrap",
+                activeTab === tab.id ? "bg-[#007AFF] text-white shadow-lg shadow-[#007AFF]/20" : "text-muted-foreground/40 hover:text-white bg-white/5"
               )}
             >
               {tab.label}
@@ -132,16 +143,23 @@ export default function ChatSidebar() {
 
       <ScrollArea className="flex-1 scrollbar-hide">
         <div className="pb-32">
-          {filteredChats.map(chat => (
-            <ChatListItem 
-              key={chat.id} 
-              chat={chat} 
-              isActive={currentChatId === chat.id} 
-              user={user}
-              onClick={() => setCurrentChatId(chat.id)}
-              otherId={chat.type === 'private' && user ? chat.participantIds?.find((id: string) => id !== user.uid) : null} 
-            />
-          ))}
+          {filteredChats.length > 0 ? (
+            filteredChats.map(chat => (
+              <ChatListItem 
+                key={chat.id} 
+                chat={chat} 
+                isActive={currentChatId === chat.id} 
+                user={user}
+                onClick={() => setCurrentChatId(chat.id)}
+                otherId={chat.type === 'private' && user ? chat.participantIds?.find((id: string) => id !== user.uid) : null} 
+              />
+            ))
+          ) : (
+            <div className="flex flex-col items-center justify-center p-20 opacity-20">
+               <Ghost className="w-12 h-12 mb-4" />
+               <p className="text-[10px] font-black uppercase tracking-widest text-center">Нет активных каналов в этой папке</p>
+            </div>
+          )}
         </div>
       </ScrollArea>
 

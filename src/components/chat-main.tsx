@@ -73,7 +73,7 @@ export default function ChatMain() {
         </div>
       </div>
 
-      {/* Bottom Navigation Styled as Screenshot - No Badges per user request */}
+      {/* Bottom Navigation Styled as Screenshot - "Чаты🐱" is in the middle */}
       {!currentChatId && (
         <div className="fixed bottom-10 left-1/2 -translate-x-1/2 w-[94%] max-w-[440px] h-[76px] bg-[#1c1c1e]/80 backdrop-blur-[50px] border border-white/10 rounded-[2.8rem] flex items-center justify-between px-7 z-50 shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
           <div className="flex flex-1 justify-between mr-6">
@@ -91,7 +91,7 @@ export default function ChatMain() {
             />
             <NavButton 
               icon={MessageCircle} 
-              label="Чаты" 
+              label="Чаты🐱" 
               active={activeView === 'chats'} 
               onClick={() => setActiveView('chats')} 
             />
@@ -142,7 +142,7 @@ function NavButton({ icon: Icon, label, active, badge, onClick, isProfile, userI
           </div>
         )}
       </div>
-      <span className="text-[10px] font-bold mt-0.5">{label}</span>
+      <span className="text-[10px] font-bold mt-0.5 whitespace-nowrap">{label}</span>
     </button>
   );
 }
