@@ -11,9 +11,8 @@ import {
 } from 'firebase/firestore';
 
 /**
- * Инициализация Firebase v0.62.0 Quantum Resilience.
+ * Инициализация Firebase v0.63.0 Quantum Resilience.
  * Максимальная совместимость со старыми браузерами (Android 5.0 / LG).
- * Полностью отключены современные функции кэширования для старых устройств.
  */
 let cachedFirestore: Firestore | null = null;
 
@@ -29,27 +28,22 @@ export function initializeFirebase() {
   const auth = getAuth(firebaseApp);
 
   if (!cachedFirestore) {
-    // Детекция старых устройств: Android 4/5, старые iOS или отсутствие Proxy (ES6)
-    const isLegacy = typeof navigator !== 'undefined' && (
-      /Android [45]/.test(navigator.userAgent) || 
-      /iPhone OS [8910]/.test(navigator.userAgent) ||
-      (typeof window !== 'undefined' && !window.Proxy)
-    );
+    // Детекция отсутствия Proxy (ES6), что характерно для Android 5.0.2
+    const hasProxy = typeof window !== 'undefined' && !!window.Proxy;
+    const isOldAndroid = typeof navigator !== 'undefined' && /Android [45]/.test(navigator.userAgent);
 
-    if (isLegacy) {
-      console.log('Nuxus Core: Legacy detected. Disabling all Firestore caching for stability.');
-      // Для Android 5 используем ТОЛЬКО базовый Firestore без кэша и полифиллов
+    if (!hasProxy || isOldAndroid) {
+      console.log('Nuxus Core: Legacy Environment detected. Forcing basic Firestore mode.');
+      // Используем простейшую инициализацию без кэша и полифиллов
       cachedFirestore = getFirestore(firebaseApp);
     } else {
       try {
         // Попытка инициализации с кэшем для современных устройств
-        const { persistentLocalCache, persistentMultipleTabManager, CACHE_SIZE_UNLIMITED } = require('firebase/firestore');
         cachedFirestore = initializeFirestore(firebaseApp, {
-          localCache: persistentLocalCache({
-            tabManager: persistentMultipleTabManager(),
-            cacheSizeBytes: CACHE_SIZE_UNLIMITED
-          })
-        });
+          localCache: {
+            kind: 'persistent'
+          }
+        } as any);
       } catch (e) {
         console.warn('Nuxus Core: Cache initialization failed, falling back to basic.');
         cachedFirestore = getFirestore(firebaseApp);

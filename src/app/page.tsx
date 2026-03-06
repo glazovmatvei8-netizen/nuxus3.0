@@ -36,8 +36,8 @@ export default function Home() {
     // Экспонируем функцию запуска для глобального доступа (для старых Android)
     (window as any).nuxusEmergencyLaunch = function() {
       setShowResilienceUI(true);
-      var container = document.getElementById('loading-container');
-      if (container) container.style.display = 'none';
+      var loader = document.getElementById('loading-overlay');
+      if (loader) loader.style.display = 'none';
       var emergencyBtn = document.getElementById('emergency-launch-btn');
       if (emergencyBtn) emergencyBtn.style.display = 'none';
     };
@@ -101,8 +101,8 @@ export default function Home() {
 
   if (!mounted || (isUserLoading && !showResilienceUI)) {
     return (
-      <div className="h-[100dvh] w-full flex flex-col items-center justify-center bg-[#0a0a0c] p-10 relative">
-        <div className="relative mb-8" id="logo-container">
+      <div className="h-[100dvh] w-full flex flex-col items-center justify-center bg-[#0a0a0c] p-10 relative" id="loading-overlay">
+        <div className="relative mb-8">
           <NuxusLogo size={100} />
         </div>
         
@@ -113,7 +113,6 @@ export default function Home() {
           </p>
         </div>
 
-        {/* Аварийная кнопка через чистый HTML/JS для старых устройств */}
         <div 
           id="emergency-launch-btn" 
           style={{ display: 'none', marginTop: '40px', textAlign: 'center' }}
@@ -138,25 +137,22 @@ export default function Home() {
           </button>
         </div>
 
-        {/* ES5 совместимый скрипт для Android 5 */}
         <script dangerouslySetInnerHTML={{ __html: `
           (function() {
-            var waitTime = 3500;
+            var waitTime = 3000;
             setTimeout(function() {
               var btnContainer = document.getElementById('emergency-launch-btn');
               var btn = document.getElementById('legacy-btn-el');
-              if (btnContainer) {
-                btnContainer.style.display = 'block';
-              }
+              if (btnContainer) btnContainer.style.display = 'block';
               if (btn) {
                 btn.onclick = function() {
                   if (window.nuxusEmergencyLaunch) {
                     window.nuxusEmergencyLaunch();
                   } else {
-                    // Если React не загрузился вообще, пробуем хотя бы скрыть загрузку
-                    var loader = document.getElementById('loading-container');
+                    var loader = document.getElementById('loading-overlay');
                     if (loader) loader.style.display = 'none';
-                    alert('Nuxus: Используйте современный браузер (Chrome) для стабильной работы.');
+                    alert('Nuxus Legacy: Попытка прямого входа...');
+                    window.location.reload();
                   }
                 };
               }

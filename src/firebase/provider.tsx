@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { DependencyList, createContext, useContext, ReactNode, useMemo, useState, useEffect } from 'react';
@@ -84,17 +85,17 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
     let interval: NodeJS.Timeout;
 
     const updateStatus = () => {
-      // Don't update if tab is hidden to save battery
       if (document.hidden) return;
 
       const userRef = doc(firestore, 'users', userAuthState.user!.uid);
+      // Используем только точечное обновление для стабильности
       updateDocumentNonBlocking(userRef, {
         lastSeen: new Date().toISOString()
       });
     };
 
     updateStatus();
-    interval = setInterval(updateStatus, 120000); // Updated to 2 mins for power saving
+    interval = setInterval(updateStatus, 120000); 
 
     const handleVisibility = () => {
       if (!document.hidden) updateStatus();
