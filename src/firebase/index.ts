@@ -14,8 +14,8 @@ import {
 } from 'firebase/firestore';
 
 /**
- * Инициализация Firebase v0.54.5 Ghost Protocol.
- * Максимальное кэширование для работы в условиях "белых списков".
+ * Инициализация Firebase v0.61.0 Quantum Resilience.
+ * Максимальная совместимость со старыми браузерами (Android 5.0 / iOS 10).
  */
 let cachedFirestore: Firestore | null = null;
 
@@ -32,15 +32,18 @@ export function initializeFirebase() {
 
   if (!cachedFirestore) {
     try {
-      // Инициализируем Firestore с НЕОГРАНИЧЕННЫМ оффлайн-кэшем
+      // Пытаемся инициализировать продвинутый кэш
+      // На старых Android (5.0) persistentMultipleTabManager может вызывать исключение
       cachedFirestore = initializeFirestore(firebaseApp, {
         localCache: persistentLocalCache({
           tabManager: persistentMultipleTabManager(),
           cacheSizeBytes: CACHE_SIZE_UNLIMITED
         })
       });
-      console.log('Nuxus Core: Ghost Persistence Active (Unlimited)');
+      console.log('Nuxus Core: Advanced Persistence Active');
     } catch (e) {
+      console.warn('Nuxus Core: Legacy device detected, using basic firestore.');
+      // Если продвинутый кэш не поддерживается, используем стандартный Firestore
       cachedFirestore = getFirestore(firebaseApp);
     }
   }

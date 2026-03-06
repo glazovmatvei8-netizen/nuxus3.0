@@ -5,7 +5,7 @@ import { useUser, useFirestore, useDoc, useMemoFirebase, useAuth } from '@/fireb
 import { useAppState } from '@/lib/store';
 import AuthScreen from '@/components/auth-screen';
 import ChatMain from '@/components/chat-main';
-import { Loader2, ShieldAlert, Lock, ArrowRight, Clock, WifiOff, Ghost } from 'lucide-react';
+import { Loader2, ShieldAlert, Lock, ArrowRight, Clock, WifiOff, Ghost, Zap } from 'lucide-react';
 import { doc, collection, query, where, limit, getDocs, arrayUnion, updateDoc } from 'firebase/firestore';
 import type { User as UserType, Chat } from '@/lib/types';
 import { Button } from '@/components/ui/button';
@@ -29,24 +29,38 @@ export default function Home() {
   const [twoFactorInput, setTwoFactorInput] = useState('');
   const [isOnline, setIsOnline] = useState(true);
   const [showResilienceUI, setShowResilienceUI] = useState(false);
+  const [showRescueButton, setShowRescueButton] = useState(false);
   const [mounted, setMounted] = useState(false);
 
-  // Fix hydration mismatch
+  // Fix hydration mismatch and handle legacy device hangs
   useEffect(() => {
     setMounted(true);
-    const handleStatus = () => setIsOnline(navigator.onLine);
-    window.addEventListener('online', handleStatus);
-    window.addEventListener('offline', handleStatus);
-    setIsOnline(navigator.onLine);
+    
+    // Safety check for online status API
+    const checkOnlineStatus = () => {
+      if (typeof navigator !== 'undefined') {
+        setIsOnline(navigator.onLine);
+      }
+    };
+
+    window.addEventListener('online', checkOnlineStatus);
+    window.addEventListener('offline', checkOnlineStatus);
+    checkOnlineStatus();
 
     const timer = setTimeout(() => {
       if (isUserLoading || !isOnline) setShowResilienceUI(true);
     }, 2500);
 
+    // Rescue button for old devices if load takes > 7s
+    const rescueTimer = setTimeout(() => {
+      if (isUserLoading) setShowRescueButton(true);
+    }, 7000);
+
     return () => {
-      window.removeEventListener('online', handleStatus);
-      window.removeEventListener('offline', handleStatus);
+      window.removeEventListener('online', checkOnlineStatus);
+      window.removeEventListener('offline', checkOnlineStatus);
       clearTimeout(timer);
+      clearTimeout(rescueTimer);
     };
   }, [isUserLoading, isOnline]);
 
@@ -102,6 +116,11 @@ export default function Home() {
     }
   };
 
+  const forceStart = () => {
+    setShowResilienceUI(true);
+    toast({ title: "Compatibility Mode", description: "Ядро запущено в режиме совместимости" });
+  };
+
   if (!mounted || (isUserLoading && !showResilienceUI)) {
     return (
       <div className="h-[100dvh] w-full flex flex-col items-center justify-center bg-[#0a0a0c] p-10">
@@ -114,6 +133,16 @@ export default function Home() {
           <p className="text-[10px] font-black uppercase tracking-[0.4em] text-primary/60 animate-pulse text-center">
             Развертывание Ядра Nuxus...
           </p>
+          
+          {showRescueButton && (
+            <Button 
+              variant="outline" 
+              onClick={forceStart}
+              className="mt-8 border-primary/20 bg-primary/5 text-[9px] uppercase font-black tracking-widest h-10 rounded-xl animate-in fade-in slide-in-from-bottom-4"
+            >
+              <Zap className="w-3 h-3 mr-2 text-primary" /> Принудительный запуск
+            </Button>
+          )}
         </div>
       </div>
     );

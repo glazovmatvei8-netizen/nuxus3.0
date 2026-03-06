@@ -1,3 +1,4 @@
+
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import { AppProvider } from '@/lib/store';
@@ -65,7 +66,7 @@ export default function RootLayout({
         <link rel="icon" href="https://picsum.photos/seed/nuxus/32/32" />
         <link rel="apple-touch-startup-image" href="https://picsum.photos/seed/nuxus-launch/1170/2532" media="(device-width: 390px) and (device-height: 844px) and (-webkit-device-pixel-ratio: 3)" />
       </head>
-      <body className="font-sans antialiased bg-[#0a0a0c] text-foreground overflow-hidden h-[100dvh] selection:bg-primary/30">
+      <body className="font-sans antialiased bg-[#0a0a0c] text-foreground overflow-hidden h-[100dvh] selection:bg-primary/30" style={{ fontFamily: 'var(--font-jakarta), ui-sans-serif, system-ui, -apple-system, sans-serif' }}>
         <FirebaseClientProvider>
           <AppProvider>
             <ThemeApplier />
