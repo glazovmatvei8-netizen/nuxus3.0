@@ -103,12 +103,14 @@ export interface Chat {
   typing?: Record<string, boolean>;
   isPublic?: boolean;
   isArchived?: boolean;
+  mutedUntil?: string | null;
   metadata?: Record<string, {
     name: string;
     username: string;
     avatarUrl: string | null;
     isPremium?: boolean;
     statusEmoji?: string;
+    mutedUntil?: string | null;
   }>;
 }
 

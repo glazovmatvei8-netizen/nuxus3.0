@@ -7,10 +7,11 @@ import { collection, query, where, onSnapshot, orderBy, limit, getDocs, doc } fr
 import { useAppState } from '@/lib/store';
 import { useToast } from '@/hooks/use-toast';
 import type { Chat, Message, User } from '@/lib/types';
+import { isAfter, parseISO } from 'date-fns';
 
 /**
  * Гипер-звуковое Ядро Уведомлений Nuxus v50.0.0.
- * Теперь учитывает настройки уведомлений пользователя.
+ * Теперь учитывает настройки уведомлений пользователя и индивидуальный Mute чата.
  */
 export function NotificationListener() {
   const { user } = useUser();
@@ -89,7 +90,20 @@ export function NotificationListener() {
               lastProcessedTimestamps.current[chatId] = newTime;
 
               if (chatId !== currentChatId && !isFirstLoad.current) {
-                // Проверка настроек уведомлений
+                
+                // --- ПРОВЕРКА MUTE ЧАТА ---
+                const userMuteTimestamp = chatData.metadata?.[user.uid]?.mutedUntil;
+                if (userMuteTimestamp) {
+                  try {
+                    if (isAfter(parseISO(userMuteTimestamp), new Date())) {
+                      return; // Чат приглушен, выходим
+                    }
+                  } catch (e) {
+                    console.error("Mute check error:", e);
+                  }
+                }
+
+                // Проверка глобальных настроек уведомлений
                 const notifSettings = profile.settings?.notifications;
                 let shouldNotify = true;
 

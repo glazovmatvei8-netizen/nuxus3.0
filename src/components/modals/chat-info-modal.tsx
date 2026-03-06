@@ -7,14 +7,23 @@ import { Button } from '@/components/ui/button';
 import { UserAvatar } from '@/components/user-avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { 
-  Crown, Star, LogOut, Shield, UserMinus, UserCheck, Phone, UserPlus2, Link, Copy, X
+  Crown, Star, LogOut, Shield, UserMinus, UserCheck, Phone, UserPlus2, Link, Copy, X, Bell, BellOff, Clock
 } from 'lucide-react';
+import { 
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator
+} from "@/components/ui/dropdown-menu";
 import { useFirestore, useUser, useDoc, useMemoFirebase } from '@/firebase';
 import { doc, updateDoc, arrayRemove, arrayUnion, deleteDoc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { useAppState } from '@/lib/store';
 import { formatDisplayName, isUserPremium } from '@/lib/utils';
 import type { User, Chat } from '@/lib/types';
+import { addHours, format, isAfter, parseISO } from 'date-fns';
+import { ru } from 'date-fns/locale';
 
 export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onOpenChange: (o: boolean) => void, chat: Chat }) {
   const db = useFirestore();
@@ -35,6 +44,9 @@ export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onO
 
   const isContact = currentUserProfile?.contactIds?.includes(otherId || '');
 
+  const userMuteTimestamp = chat.metadata?.[user?.uid || '']?.mutedUntil;
+  const isCurrentlyMuted = userMuteTimestamp && isAfter(parseISO(userMuteTimestamp), new Date());
+
   const inviteLink = useMemo(() => {
     if (typeof window === 'undefined' || isPrivate || !chat.username) return '';
     return `${window.location.origin}/?join=${chat.username.replace('@', '')}`;
@@ -47,6 +59,43 @@ export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onO
       contactIds: isCurrentlyContact ? arrayRemove(otherId) : arrayUnion(otherId)
     });
     toast({ title: isCurrentlyContact ? "Удалено из контактов" : "Добавлено в контакты" });
+  };
+
+  const handleMute = async (hours: number | 'forever') => {
+    if (!db || !user || !chat.id) return;
+    
+    let mutedUntil: string | null = null;
+    if (hours === 'forever') {
+      mutedUntil = new Date(9999, 11, 31).toISOString();
+    } else {
+      mutedUntil = addHours(new Date(), hours).toISOString();
+    }
+
+    try {
+      const chatRef = doc(db, 'chats', chat.id);
+      await updateDoc(chatRef, {
+        [`metadata.${user.uid}.mutedUntil`]: mutedUntil
+      });
+      toast({ 
+        title: "Звук выключен", 
+        description: hours === 'forever' ? "Уведомления отключены навсегда" : `На ${hours} ${hours === 1 ? 'час' : 'часов'}` 
+      });
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleUnmute = async () => {
+    if (!db || !user || !chat.id) return;
+    try {
+      const chatRef = doc(db, 'chats', chat.id);
+      await updateDoc(chatRef, {
+        [`metadata.${user.uid}.mutedUntil`]: null
+      });
+      toast({ title: "Звук включен" });
+    } catch (e) {
+      console.error(e);
+    }
   };
 
   const chatName = formatDisplayName(chat.name || otherUserProfile?.name || 'Чат');
@@ -66,8 +115,8 @@ export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onO
           </DialogTitle>
           <DialogDescription className="text-xs font-mono opacity-60">{otherUserProfile?.username || chat.username}</DialogDescription>
           
-          {isPrivate && otherUserProfile && (
-            <div className="mt-4 w-full flex flex-col gap-2 px-6">
+          <div className="mt-4 w-full flex flex-col gap-2 px-6">
+            {isPrivate && otherUserProfile && (
               <Button 
                 variant={isContact ? "secondary" : "default"} 
                 className="w-full h-10 rounded-xl gap-2 font-bold text-[10px] uppercase tracking-widest"
@@ -76,8 +125,50 @@ export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onO
                 {isContact ? <UserCheck className="w-4 h-4" /> : <UserPlus2 className="w-4 h-4" />}
                 {isContact ? "В контактах" : "В контакты"}
               </Button>
-            </div>
-          )}
+            )}
+
+            {/* Mute Section */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" className="w-full h-10 rounded-xl gap-2 font-bold text-[10px] uppercase tracking-widest border-white/5">
+                  {isCurrentlyMuted ? (
+                    <>
+                      <BellOff className="w-4 h-4 text-primary" />
+                      Без звука
+                    </>
+                  ) : (
+                    <>
+                      <Bell className="w-4 h-4" />
+                      Уведомления
+                    </>
+                  )}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="center" className="w-56 bg-card border-white/10 rounded-2xl">
+                {isCurrentlyMuted ? (
+                  <DropdownMenuItem onClick={handleUnmute} className="gap-2 font-bold uppercase text-[10px] tracking-wider py-3">
+                    <Bell className="w-4 h-4 text-green-500" /> Включить звук
+                  </DropdownMenuItem>
+                ) : (
+                  <>
+                    <DropdownMenuItem onClick={() => handleMute(1)} className="gap-2 font-bold uppercase text-[10px] tracking-wider py-3">
+                      <Clock className="w-4 h-4" /> На 1 час
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleMute(8)} className="gap-2 font-bold uppercase text-[10px] tracking-wider py-3">
+                      <Clock className="w-4 h-4" /> На 8 часов
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleMute(24)} className="gap-2 font-bold uppercase text-[10px] tracking-wider py-3">
+                      <Clock className="w-4 h-4" /> На 24 часа
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator className="bg-white/5" />
+                    <DropdownMenuItem onClick={() => handleMute('forever')} className="gap-2 font-bold uppercase text-[10px] tracking-wider py-3 text-destructive">
+                      <BellOff className="w-4 h-4" /> Навсегда
+                    </DropdownMenuItem>
+                  </>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </DialogHeader>
 
         <ScrollArea className="flex-1">
