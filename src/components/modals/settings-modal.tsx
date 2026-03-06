@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useRef, useEffect } from 'react';
@@ -19,7 +18,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { signOut } from 'firebase/auth';
 import { doc } from 'firebase/firestore';
-import { updateDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAppState } from '@/lib/store';
 import { cn } from '@/lib/utils';
@@ -75,7 +74,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
     if (profile && open) {
       setForm({
         name: profile.name || '',
-        username: profile.username || '',
+        username: (profile.username || '').replace('@', ''),
         bio: profile.bio || '',
         avatarUrl: profile.avatarUrl || '',
         theme: profile.settings?.theme || 'default',
@@ -101,27 +100,22 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
   const handleSave = () => {
     if (!userRef) return;
     
-    // Spread existing settings to avoid wiping unsaved fields
-    const updatedSettings = {
-      ...(profile?.settings || {}),
-      theme: form.theme,
-      chatBackground: form.chatBackground,
-      chatBackgroundFit: form.chatBackgroundFit,
-      privacy: form.privacy,
-      notifications: form.notifications
-    };
-
+    // Construct the data using specific dot notation for nested objects to prevent data loss
     const updateData = {
       name: form.name,
-      username: form.username.startsWith('@') ? form.username.toLowerCase() : '@' + form.username.toLowerCase(),
+      username: '@' + form.username.toLowerCase(),
       bio: form.bio,
       avatarUrl: form.avatarUrl,
       twoFactorEnabled: form.twoFactorEnabled,
       twoFactorPin: form.twoFactorPin,
-      settings: updatedSettings
+      'settings.theme': form.theme,
+      'settings.chatBackground': form.chatBackground,
+      'settings.chatBackgroundFit': form.chatBackgroundFit,
+      'settings.privacy': form.privacy,
+      'settings.notifications': form.notifications
     };
 
-    setDocumentNonBlocking(userRef, updateData, { merge: true });
+    updateDocumentNonBlocking(userRef, updateData);
     onOpenChange(false);
     toast({ title: "Ядро обновлено", description: "Настройки синхронизированы" });
   };
@@ -131,7 +125,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
       setForm(prev => ({ ...prev, chatBackground: bgPreview, chatBackgroundFit: fit }));
       setBgPreview(null);
       setIsBgPlacementOpen(false);
-      toast({ title: "Фон выбран", description: "Нажмите 'Сохранить' для активации" });
+      toast({ title: "Фон выбран", description: "Нажмите 'Сохранить' для применения" });
     }
   };
 
@@ -173,7 +167,10 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                   </div>
                   <div className="space-y-2">
                     <Label className="text-[10px] uppercase font-black tracking-widest text-muted-foreground ml-1">Никнейм</Label>
-                    <Input value={form.username} onChange={e => setForm({...form, username: e.target.value})} className="bg-muted/30 border-white/5 h-12 rounded-2xl text-sm font-mono" />
+                    <div className="relative">
+                      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">@</span>
+                      <Input value={form.username} onChange={e => setForm({...form, username: e.target.value})} className="bg-muted/30 border-white/5 h-12 rounded-2xl text-sm font-mono pl-8" />
+                    </div>
                   </div>
                   <div className="space-y-2">
                     <Label className="text-[10px] uppercase font-black tracking-widest text-muted-foreground ml-1">О себе</Label>

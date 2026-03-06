@@ -5,7 +5,7 @@ import { FirebaseApp } from 'firebase/app';
 import { Firestore, doc } from 'firebase/firestore';
 import { Auth, User, onAuthStateChanged } from 'firebase/auth';
 import { FirebaseErrorListener } from '@/components/FirebaseErrorListener'
-import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 interface FirebaseProviderProps {
   children: ReactNode;
@@ -77,21 +77,21 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
     return () => unsubscribe();
   }, [auth]);
 
-  // Heartbeat for lastSeen status and profile existence check
+  // Heartbeat for lastSeen status
   useEffect(() => {
     if (!userAuthState.user || !firestore) return;
 
     const updateStatus = () => {
       const userRef = doc(firestore, 'users', userAuthState.user!.uid);
-      // Use setDocumentNonBlocking with merge: true to ensure doc exists even if update fails
-      setDocumentNonBlocking(userRef, {
+      // Use updateDocumentNonBlocking to avoid overwriting the whole document
+      updateDocumentNonBlocking(userRef, {
         lastSeen: new Date().toISOString()
-      }, { merge: true });
+      });
     };
 
     updateStatus();
-    // Heartbeat every 10 seconds for ultra-precise presence
-    const interval = setInterval(updateStatus, 10000); 
+    // Heartbeat every 60 seconds to reduce contention and battery drain on mobile
+    const interval = setInterval(updateStatus, 60000); 
     return () => clearInterval(interval);
   }, [userAuthState.user, firestore]);
 

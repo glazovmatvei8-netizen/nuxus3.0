@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -8,21 +7,19 @@ import { useUser } from '@/firebase';
 
 /**
  * An invisible component that listens for globally emitted 'permission-error' events.
- * Only triggers the error boundary for the specific Owner/Developer UID.
+ * Safe listener that doesn't crash the UI thread.
  */
 export function FirebaseErrorListener() {
   const { user } = useUser();
-  const [error, setError] = useState<FirestorePermissionError | null>(null);
 
   useEffect(() => {
     const handleError = (error: FirestorePermissionError) => {
-      // DEV TOOL LOCK: Only the owner (YOU) sees the crash screen
-      // GCvLucN8CjNcdaxPO2vmpZ84hNl1 is YOUR specific ID
+      // Log errors for the developer only
       if (user?.uid === 'GCvLucN8CjNcdaxPO2vmpZ84hNl1') {
-        setError(error);
+        console.error("Nuxus Debug: Permission denied.", error.message);
       } else {
         // Silent fail for regular users to prevent bad UX
-        console.warn("Nuxus Core: Permission denied. Error suppressed for non-admin user.");
+        console.warn("Nuxus Core: Access restriction encountered.");
       }
     };
 
@@ -33,9 +30,6 @@ export function FirebaseErrorListener() {
     };
   }, [user]);
 
-  if (error) {
-    throw error;
-  }
-
+  // We no longer throw here to prevent the "Application error: client-side exception" black screen
   return null;
 }
