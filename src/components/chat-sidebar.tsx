@@ -11,10 +11,11 @@ import {
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { CreateChatModal } from './modals/create-chat-modal';
 import { ChatEditorModal } from './modals/chat-editor-modal';
+import { AdminPanelModal } from './modals/admin-panel-modal';
 import type { User, Message, Chat } from '@/lib/types';
 import { useFirestore, useUser, useCollection, useDoc, useMemoFirebase } from '@/firebase';
 import { collection, query, where, doc, limit, orderBy } from 'firebase/firestore';
-import { formatDisplayName, cn } from '@/lib/utils';
+import { formatDisplayName, cn, isGlobalAdmin } from '@/lib/utils';
 import { format } from 'date-fns';
 
 const ChatListItem = memo(({ 
@@ -77,6 +78,10 @@ export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?:
   const [activeTab, setActiveTab] = useState(isArchiveView ? 'archived' : 'all');
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isEditorModalOpen, setIsEditorModalOpen] = useState(false);
+  const [isAdminPanelOpen, setIsAdminPanelOpen] = useState(false);
+
+  const userProfileRef = useMemoFirebase(() => (!db || !user) ? null : doc(db, 'users', user.uid), [db, user]);
+  const { data: currentUserProfile } = useDoc<User>(userProfileRef);
 
   const chatsQuery = useMemoFirebase(() => {
     if (!db || !user) return null;
@@ -104,17 +109,20 @@ export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?:
     <div className="flex flex-col h-full bg-[#0a0a0c] overflow-hidden">
       <div className="px-4 pt-4 pb-2 shrink-0">
         <div className="relative flex items-center justify-between h-12 mb-6 w-full">
-          {/* Left: Search */}
           <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full bg-white/5" onClick={() => setIsSearchOpen(true)}>
             <Search className="w-5 h-5 text-white/60" />
           </Button>
 
-          {/* Center: Title */}
-          <h1 className="text-[20px] font-black text-white italic tracking-tighter absolute left-1/2 -translate-x-1/2 whitespace-nowrap">
+          <h1 
+            onClick={() => isGlobalAdmin(currentUserProfile) && setIsAdminPanelOpen(true)}
+            className={cn(
+              "text-[20px] font-black text-white italic tracking-tighter absolute left-1/2 -translate-x-1/2 whitespace-nowrap",
+              isGlobalAdmin(currentUserProfile) ? "cursor-pointer hover:text-primary transition-colors active:scale-95" : "cursor-default"
+            )}
+          >
             {isArchiveView ? 'Архив' : 'Чаты🐱'}
           </h1>
 
-          {/* Right: Plus (+) and Editor (SquarePen) */}
           <div className="flex items-center gap-1.5">
             <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full bg-white/5" onClick={() => setIsCreateModalOpen(true)}>
               <Plus className="w-5 h-5 text-white" />
@@ -172,6 +180,7 @@ export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?:
 
       <CreateChatModal open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen} />
       <ChatEditorModal open={isEditorModalOpen} onOpenChange={setIsEditorModalOpen} />
+      <AdminPanelModal open={isAdminPanelOpen} onOpenChange={setIsAdminPanelOpen} />
     </div>
   );
 }

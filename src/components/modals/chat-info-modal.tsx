@@ -6,6 +6,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from '@/components/ui/button';
 import { UserAvatar } from '@/components/user-avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Input } from '@/components/ui/input';
 import { 
   Crown, Star, LogOut, Shield, UserMinus, UserCheck, Phone, UserPlus2, Link, Copy, X, Bell, BellOff, Clock
 } from 'lucide-react';
@@ -127,7 +128,6 @@ export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onO
               </Button>
             )}
 
-            {/* Mute Section */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" className="w-full h-10 rounded-xl gap-2 font-bold text-[10px] uppercase tracking-widest border-white/5">
