@@ -77,23 +77,36 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
     return () => unsubscribe();
   }, [auth]);
 
-  // Heartbeat for lastSeen status
+  // Heartbeat for lastSeen status - Throttled for mobile health
   useEffect(() => {
     if (!userAuthState.user || !firestore) return;
 
+    let interval: NodeJS.Timeout;
+
     const updateStatus = () => {
+      // Don't update if tab is hidden to save battery
+      if (document.hidden) return;
+
       const userRef = doc(firestore, 'users', userAuthState.user!.uid);
-      // Use updateDocumentNonBlocking to avoid overwriting the whole document
       updateDocumentNonBlocking(userRef, {
         lastSeen: new Date().toISOString()
       });
     };
 
     updateStatus();
-    // Heartbeat every 60 seconds to reduce contention and battery drain on mobile
-    const interval = setInterval(updateStatus, 60000); 
-    return () => clearInterval(interval);
-  }, [userAuthState.user, firestore]);
+    interval = setInterval(updateStatus, 120000); // Updated to 2 mins for power saving
+
+    const handleVisibility = () => {
+      if (!document.hidden) updateStatus();
+    };
+    
+    document.addEventListener('visibilitychange', handleVisibility);
+
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
+  }, [userAuthState.user?.uid, firestore]);
 
   const contextValue = useMemo((): FirebaseContextState => {
     const servicesAvailable = !!(firebaseApp && firestore && auth);

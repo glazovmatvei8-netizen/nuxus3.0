@@ -1,17 +1,16 @@
-
 "use client"
 
 import { useEffect, useRef } from 'react';
 import { useUser, useFirestore, useMemoFirebase, useDoc } from '@/firebase';
-import { collection, query, where, onSnapshot, orderBy, limit, getDocs, doc } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, doc } from 'firebase/firestore';
 import { useAppState } from '@/lib/store';
 import { useToast } from '@/hooks/use-toast';
-import type { Chat, Message, User } from '@/lib/types';
+import type { Chat, User } from '@/lib/types';
 import { isAfter, parseISO } from 'date-fns';
 
 /**
- * Гипер-звуковое Ядро Уведомлений Nuxus v50.0.0.
- * Теперь учитывает настройки уведомлений пользователя и индивидуальный Mute чата.
+ * Nuxus Notification Core v60.0.0 - Optimized for Mobile.
+ * Reduced CPU overhead to prevent device heating.
  */
 export function NotificationListener() {
   const { user } = useUser();
@@ -26,37 +25,17 @@ export function NotificationListener() {
   const userRef = useMemoFirebase(() => (!db || !user) ? null : doc(db, 'users', user.uid), [db, user]);
   const { data: profile } = useDoc<User>(userRef);
 
-  // Классический премиальный звук Nuxus
-  const NOTIFICATION_SOUND = 'https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3';
-
   useEffect(() => {
-    try {
-      audioRef.current = new Audio(NOTIFICATION_SOUND);
-      audioRef.current.preload = 'auto';
-    } catch (e) {
-      console.warn("Audio initialization failed:", e);
-    }
-    
-    const initNotifications = async () => {
-      if (audioRef.current) {
-        audioRef.current.play().then(() => {
-          audioRef.current?.pause();
-          audioRef.current!.currentTime = 0;
-        }).catch(() => {});
+    // Lazy load audio
+    const setupAudio = () => {
+      if (!audioRef.current) {
+        audioRef.current = new Audio('https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3');
+        audioRef.current.preload = 'auto';
       }
-
-      if (typeof window !== 'undefined' && 'Notification' in window) {
-        if (Notification.permission === 'default') {
-          try {
-            await Notification.requestPermission();
-          } catch (e) {}
-        }
-      }
-      window.removeEventListener('pointerdown', initNotifications);
+      window.removeEventListener('pointerdown', setupAudio);
     };
-
-    window.addEventListener('pointerdown', initNotifications);
-    return () => window.removeEventListener('pointerdown', initNotifications);
+    window.addEventListener('pointerdown', setupAudio);
+    return () => window.removeEventListener('pointerdown', setupAudio);
   }, []);
 
   const chatsQuery = useMemoFirebase(() => {
@@ -67,106 +46,65 @@ export function NotificationListener() {
   useEffect(() => {
     if (!db || !user || !chatsQuery || !profile) return;
 
-    let unsubscribe: () => void;
-    
-    try {
-      unsubscribe = onSnapshot(chatsQuery, (snapshot) => {
-        snapshot.docChanges().forEach(async (change) => {
-          const chatData = change.doc.data() as Chat;
-          const chatId = change.doc.id;
+    const unsubscribe = onSnapshot(chatsQuery, (snapshot) => {
+      snapshot.docChanges().forEach((change) => {
+        const chatData = change.doc.data() as Chat;
+        const chatId = change.doc.id;
 
-          if (change.type === 'added') {
-            if (chatData.lastMessageAt) {
-              lastProcessedTimestamps.current[chatId] = chatData.lastMessageAt;
-            }
-            return;
+        if (change.type === 'added') {
+          if (chatData.lastMessageAt) {
+            lastProcessedTimestamps.current[chatId] = chatData.lastMessageAt;
           }
+          return;
+        }
 
-          if (change.type === 'modified') {
-            const lastTime = lastProcessedTimestamps.current[chatId];
-            const newTime = chatData.lastMessageAt;
+        if (change.type === 'modified') {
+          const lastTime = lastProcessedTimestamps.current[chatId];
+          const newTime = chatData.lastMessageAt;
 
-            if (newTime && newTime !== lastTime) {
-              lastProcessedTimestamps.current[chatId] = newTime;
+          if (newTime && newTime !== lastTime) {
+            lastProcessedTimestamps.current[chatId] = newTime;
 
-              if (chatId !== currentChatId && !isFirstLoad.current) {
-                
-                // --- ПРОВЕРКА MUTE ЧАТА ---
-                const userMuteTimestamp = chatData.metadata?.[user.uid]?.mutedUntil;
-                if (userMuteTimestamp) {
-                  try {
-                    if (isAfter(parseISO(userMuteTimestamp), new Date())) {
-                      return; // Чат приглушен, выходим
-                    }
-                  } catch (e) {
-                    console.error("Mute check error:", e);
-                  }
-                }
-
-                // Проверка глобальных настроек уведомлений
-                const notifSettings = profile.settings?.notifications;
-                let shouldNotify = true;
-
-                if (notifSettings) {
-                  if (chatData.type === 'private' && notifSettings.messages === false) shouldNotify = false;
-                  if (chatData.type === 'group' && notifSettings.groups === false) shouldNotify = false;
-                  if (chatData.type === 'channel' && notifSettings.channels === false) shouldNotify = false;
-                }
-
-                if (!shouldNotify) return;
-
-                // МГНОВЕННЫЙ ЗВУК
-                if (audioRef.current) {
-                  audioRef.current.currentTime = 0;
-                  audioRef.current.play().catch(() => {});
-                }
-
-                try {
-                  const msgSnap = await getDocs(query(
-                    collection(db, 'chats', chatId, 'messages'),
-                    orderBy('sentAt', 'desc'),
-                    limit(1)
-                  ));
-
-                  if (!msgSnap.empty) {
-                    const msg = msgSnap.docs[0].data() as Message;
-                    if (msg.senderId === user.uid) return;
-
-                    const showPreview = profile.settings?.notifications?.previews !== false;
-                    const displayContent = showPreview 
-                      ? (msg.contentType === 'text' ? msg.content : `[${msg.contentType}]`)
-                      : 'Новое сообщение';
-
-                    // Системный пуш
-                    if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
-                      try {
-                        new Notification(msg.senderName || 'Nuxus', {
-                          body: displayContent,
-                          icon: 'https://picsum.photos/seed/nuxus/192/192',
-                          tag: chatId
-                        });
-                      } catch (e) {}
-                    }
-
-                    // Внутреннее уведомление
-                    toast({
-                      title: msg.senderName,
-                      description: displayContent,
-                    });
-                  }
-                } catch (e) {}
+            // Only notify if not active chat and not initial load
+            if (chatId !== currentChatId && !isFirstLoad.current) {
+              
+              // Mute check
+              const userMuteTimestamp = chatData.metadata?.[user.uid]?.mutedUntil;
+              if (userMuteTimestamp && isAfter(parseISO(userMuteTimestamp), new Date())) {
+                return;
               }
+
+              // Global settings check
+              const notifSettings = profile.settings?.notifications;
+              if (notifSettings) {
+                if (chatData.type === 'private' && notifSettings.messages === false) return;
+                if (chatData.type === 'group' && notifSettings.groups === false) return;
+                if (chatData.type === 'channel' && notifSettings.channels === false) return;
+              }
+
+              // Play sound
+              if (audioRef.current) {
+                audioRef.current.currentTime = 0;
+                audioRef.current.play().catch(() => {});
+              }
+
+              // Visual notification
+              const senderName = chatData.type === 'private' ? 'Nuxus' : chatData.name;
+              toast({
+                title: senderName,
+                description: 'Новое сообщение',
+              });
             }
           }
-        });
-        
-        if (isFirstLoad.current) isFirstLoad.current = false;
-      }, (error) => {
-        console.warn("Notification stream wait:", error.message);
+        }
       });
-    } catch (e) {}
+      
+      if (isFirstLoad.current) isFirstLoad.current = false;
+    }, (error) => {
+      console.warn("Notification stream error:", error.message);
+    });
 
-    return () => unsubscribe && unsubscribe();
+    return () => unsubscribe();
   }, [db, user, chatsQuery, currentChatId, toast, profile]);
 
   return null;
