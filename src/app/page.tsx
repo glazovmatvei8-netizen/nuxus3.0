@@ -32,11 +32,10 @@ export default function Home() {
   const [showRescueButton, setShowRescueButton] = useState(false);
   const [mounted, setMounted] = useState(false);
 
-  // Fix hydration mismatch and handle legacy device hangs
+  // Исправление гидратации и зависания старых устройств
   useEffect(() => {
     setMounted(true);
     
-    // Safety check for online status API
     const checkOnlineStatus = () => {
       if (typeof navigator !== 'undefined') {
         setIsOnline(navigator.onLine);
@@ -47,14 +46,14 @@ export default function Home() {
     window.addEventListener('offline', checkOnlineStatus);
     checkOnlineStatus();
 
+    // Быстрый таймер для старых Android (показываем кнопку через 3 секунды)
     const timer = setTimeout(() => {
-      if (isUserLoading || !isOnline) setShowResilienceUI(true);
+      if (isUserLoading || !isOnline) setShowResilienceUI(false);
     }, 2500);
 
-    // Rescue button for old devices if load takes > 7s
     const rescueTimer = setTimeout(() => {
       if (isUserLoading) setShowRescueButton(true);
-    }, 7000);
+    }, 3500);
 
     return () => {
       window.removeEventListener('online', checkOnlineStatus);

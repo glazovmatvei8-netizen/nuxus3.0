@@ -31,20 +31,26 @@ export function initializeFirebase() {
   const auth = getAuth(firebaseApp);
 
   if (!cachedFirestore) {
-    try {
-      // Пытаемся инициализировать продвинутый кэш
-      // На старых Android (5.0) persistentMultipleTabManager может вызывать исключение
-      cachedFirestore = initializeFirestore(firebaseApp, {
-        localCache: persistentLocalCache({
-          tabManager: persistentMultipleTabManager(),
-          cacheSizeBytes: CACHE_SIZE_UNLIMITED
-        })
-      });
-      console.log('Nuxus Core: Advanced Persistence Active');
-    } catch (e) {
-      console.warn('Nuxus Core: Legacy device detected, using basic firestore.');
-      // Если продвинутый кэш не поддерживается, используем стандартный Firestore
+    // Детекция старых устройств для отключения тяжелого кэширования
+    const isLegacy = typeof navigator !== 'undefined' && 
+      (/Android [45]/.test(navigator.userAgent) || /iPhone OS [8910]/.test(navigator.userAgent));
+
+    if (isLegacy) {
+      console.log('Nuxus Core: Legacy Environment detected. Using standard Firestore.');
       cachedFirestore = getFirestore(firebaseApp);
+    } else {
+      try {
+        cachedFirestore = initializeFirestore(firebaseApp, {
+          localCache: persistentLocalCache({
+            tabManager: persistentMultipleTabManager(),
+            cacheSizeBytes: CACHE_SIZE_UNLIMITED
+          })
+        });
+        console.log('Nuxus Core: Advanced Persistence Active');
+      } catch (e) {
+        console.warn('Nuxus Core: Initialization failed, falling back to basic.');
+        cachedFirestore = getFirestore(firebaseApp);
+      }
     }
   }
 
