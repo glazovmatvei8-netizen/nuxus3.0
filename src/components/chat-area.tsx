@@ -19,7 +19,6 @@ import { collection, query, orderBy, doc, updateDoc, where, addDoc } from 'fireb
 import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { formatDisplayName, cn } from '@/lib/utils';
 import type { Message, User as UserType, Chat } from '@/lib/types';
-import { differenceInSeconds, parseISO } from 'date-fns';
 
 const MessageList = memo(({ 
   messages, 
@@ -55,7 +54,7 @@ MessageList.displayName = 'MessageList';
 export default function ChatArea() {
   const { user: firebaseUser } = useUser();
   const db = useFirestore();
-  const { currentChatId, setCurrentChatId, setActiveCallId } = useAppState();
+  const { currentChatId, setCurrentChatId } = useAppState();
   
   const [isChatInfoOpen, setIsChatInfoOpen] = useState(false);
   const [replyTo, setReplyTo] = useState<Message | null>(null);
@@ -205,7 +204,6 @@ export default function ChatArea() {
       toast({ title: "Файл отправлен" });
     };
     reader.readAsDataURL(file);
-    // Reset input
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
@@ -254,6 +252,21 @@ export default function ChatArea() {
 
   return (
     <div className="flex-1 flex flex-col h-full bg-background relative overflow-hidden z-20">
+      {/* Optimized Fixed Background for Mobile Performance */}
+      {userProfile?.settings?.chatBackground && (
+        <div 
+          className="fixed inset-0 z-0 pointer-events-none" 
+          style={{ 
+            backgroundImage: `url(${userProfile.settings.chatBackground})`, 
+            backgroundSize: userProfile.settings.chatBackgroundFit === 'contain' ? 'contain' : 'cover', 
+            backgroundPosition: 'center', 
+            backgroundRepeat: 'no-repeat', 
+            backgroundColor: '#0a0a0c',
+            transform: 'translateZ(0)' // Hardware acceleration
+          }} 
+        />
+      )}
+
       <header className="h-16 flex items-center justify-between px-4 border-b border-white/5 bg-card/80 backdrop-blur-xl shrink-0 z-30">
         <div className="flex items-center gap-3 min-w-0 flex-1">
           <Button variant="ghost" size="icon" className="md:hidden rounded-lg" onClick={() => setCurrentChatId(null)}><ChevronLeft className="w-6 h-6" /></Button>
@@ -285,19 +298,6 @@ export default function ChatArea() {
       )}
 
       <div className="flex-1 relative overflow-hidden">
-        {userProfile?.settings?.chatBackground && (
-          <div 
-            className="absolute inset-0 z-0 pointer-events-none" 
-            style={{ 
-              backgroundImage: `url(${userProfile.settings.chatBackground})`, 
-              backgroundSize: userProfile.settings.chatBackgroundFit === 'contain' ? 'contain' : 'cover', 
-              backgroundPosition: 'center', 
-              backgroundRepeat: 'no-repeat', 
-              backgroundAttachment: 'fixed',
-              backgroundColor: '#0a0a0c'
-            }} 
-          />
-        )}
         <ScrollArea ref={scrollRef} className="h-full w-full relative z-10 scrollbar-hide bg-transparent">
           {messages && <MessageList messages={messages} userId={firebaseUser?.uid} chatId={currentChatId} onReply={setReplyTo} onEdit={setEditingMsg} amIPremium={userProfile?.isPremium} isAdmin={isAdmin} isGroup={chat?.type === 'group'} />}
         </ScrollArea>

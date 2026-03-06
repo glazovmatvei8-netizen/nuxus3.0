@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useRef, useEffect } from 'react';
@@ -18,7 +19,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { signOut } from 'firebase/auth';
 import { doc } from 'firebase/firestore';
-import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAppState } from '@/lib/store';
 import { cn } from '@/lib/utils';
@@ -100,7 +101,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
   const handleSave = () => {
     if (!userRef) return;
     
-    // Construct the data using specific dot notation for nested objects to prevent data loss
+    // Using an explicit structure to prevent nested data loss during partial updates
     const updateData = {
       name: form.name,
       username: '@' + form.username.toLowerCase(),
@@ -108,14 +109,16 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
       avatarUrl: form.avatarUrl,
       twoFactorEnabled: form.twoFactorEnabled,
       twoFactorPin: form.twoFactorPin,
-      'settings.theme': form.theme,
-      'settings.chatBackground': form.chatBackground,
-      'settings.chatBackgroundFit': form.chatBackgroundFit,
-      'settings.privacy': form.privacy,
-      'settings.notifications': form.notifications
+      settings: {
+        theme: form.theme,
+        chatBackground: form.chatBackground,
+        chatBackgroundFit: form.chatBackgroundFit,
+        privacy: form.privacy,
+        notifications: form.notifications
+      }
     };
 
-    updateDocumentNonBlocking(userRef, updateData);
+    setDocumentNonBlocking(userRef, updateData, { merge: true });
     onOpenChange(false);
     toast({ title: "Ядро обновлено", description: "Настройки синхронизированы" });
   };
@@ -212,7 +215,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                 <div className="bg-muted/20 p-6 rounded-[2.5rem] border border-white/5 flex flex-col items-center gap-4">
                   {form.chatBackground ? (
                     <div className="relative w-full aspect-video rounded-2xl overflow-hidden border border-white/10 group">
-                      <img src={form.chatBackground} className={cn("w-full h-full", form.chatBackgroundFit === 'cover' ? 'object-cover' : 'object-contain')} />
+                      <img src={form.chatBackground} className={cn("w-full h-full", form.chatBackgroundFit === 'cover' ? 'object-cover' : 'object-contain')} alt="Preview" />
                       <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all backdrop-blur-sm gap-2">
                         <Button variant="outline" size="sm" className="h-8 rounded-xl text-[9px] uppercase font-bold" onClick={() => setIsBgPlacementOpen(true)}>Настроить</Button>
                         <Button variant="destructive" size="sm" className="h-8 rounded-xl text-[9px] uppercase font-bold" onClick={() => setForm({ ...form, chatBackground: '' })}>Удалить</Button>
@@ -343,12 +346,12 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
     <Dialog open={isBgPlacementOpen} onOpenChange={setIsBgPlacementOpen}>
       <DialogContent className="max-w-sm bg-card border-border rounded-[2.5rem] p-6 shadow-2xl">
         <DialogHeader>
-          <DialogTitle className="sr-only">Настройка фона чата</DialogTitle>
-          <DialogDescription className="sr-only">Выберите способ размещения изображения</DialogDescription>
+          <DialogTitle className="text-white font-black uppercase italic tracking-tighter">Настройка фона</DialogTitle>
+          <DialogDescription className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Выберите способ размещения изображения</DialogDescription>
         </DialogHeader>
         <div className="py-6 space-y-4">
           <div className="aspect-video w-full rounded-2xl overflow-hidden bg-black border border-white/5">
-            <img src={bgPreview || form.chatBackground} className="w-full h-full object-contain" />
+            <img src={bgPreview || form.chatBackground} className="w-full h-full object-contain" alt="Placement Preview" />
           </div>
           <div className="grid grid-cols-1 gap-2">
             <Button variant="outline" className="h-12 rounded-xl flex justify-between px-4" onClick={() => finalizeBackground('cover')}>
