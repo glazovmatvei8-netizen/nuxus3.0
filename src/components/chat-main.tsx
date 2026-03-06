@@ -15,6 +15,7 @@ import { CallOverlay } from './modals/call-overlay';
 import { NotificationListener } from './notification-listener';
 import { SettingsModal } from './modals/settings-modal';
 import { GlobalSearchModal } from './modals/global-search-modal';
+import { UpdateNotifier } from './update-notifier';
 import { UserAvatar } from './user-avatar';
 import type { Call, User as UserType } from '@/lib/types';
 import { Users, Phone, MessageCircle, Settings, Search, Archive } from 'lucide-react';
@@ -53,6 +54,7 @@ export default function ChatMain() {
   return (
     <div className="fixed inset-0 flex flex-col w-full bg-background overflow-hidden h-[100dvh]">
       <NotificationListener />
+      <UpdateNotifier />
       
       <div className="flex-1 flex overflow-hidden w-full relative">
         <div className={cn(
@@ -74,7 +76,7 @@ export default function ChatMain() {
         </div>
       </div>
 
-      {/* Bottom Navigation: "Чаты🐱" exactly in the middle of 5 items */}
+      {/* Bottom Navigation */}
       {!currentChatId && (
         <div className="fixed bottom-10 left-1/2 -translate-x-1/2 w-[94%] max-w-[500px] h-[76px] bg-[#1c1c1e]/80 backdrop-blur-[50px] border border-white/10 rounded-[2.8rem] flex items-center justify-between px-6 z-50 shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
           <div className="flex flex-1 justify-around items-center">

@@ -1,7 +1,7 @@
 
 "use client"
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,18 +9,14 @@ import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { useFirestore, useCollection, useMemoFirebase, useUser } from '@/firebase';
-import { collection, query, doc, limit, getDocs, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, query, doc, limit, getDocs, addDoc } from 'firebase/firestore';
 import { UserAvatar } from '@/components/user-avatar';
-import { ShieldAlert, Users, Star, Search, Trash2, ShieldCheck, Radio, Send, Loader2 } from 'lucide-react';
-import type { User, Chat } from '@/lib/types';
-import { formatDisplayName } from '@/lib/utils';
-import { deleteDocumentNonBlocking, addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { ShieldAlert, Users, Star, Search, Trash2, ShieldCheck, Radio, Send, Loader2, UserX } from 'lucide-react';
+import type { User } from '@/lib/types';
+import { formatDisplayName, isUserPremium } from '@/lib/utils';
+import { deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { useToast } from '@/hooks/use-toast';
 
-/**
- * Административная консоль Nuxus Prime v0.33.0.
- * Включает управление пользователями и Глобальную Рассылку.
- */
 export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const db = useFirestore();
   const { user: currentUser } = useUser();
@@ -31,8 +27,19 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
   const [isBroadcasting, setIsBroadcasting] = useState(false);
   const [activeTab, setActiveTab] = useState('users');
   
-  const usersQuery = useMemoFirebase(() => (!db ? null : query(collection(db, 'users'), limit(100))), [db]);
+  const usersQuery = useMemoFirebase(() => (!db ? null : query(collection(db, 'users'), limit(500))), [db]);
   const { data: users } = useCollection<User>(usersQuery);
+
+  // Статистика
+  const stats = useMemo(() => {
+    if (!users) return { total: 0, banned: 0, premium: 0, admins: 0 };
+    return {
+      total: users.length,
+      banned: users.filter(u => u.isBanned).length,
+      premium: users.filter(u => isUserPremium(u)).length,
+      admins: users.filter(u => u.isAdmin || u.id === 'GCvLucN8CjNcdaxPO2vmpZ84hNl1').length
+    };
+  }, [users]);
 
   const filteredUsers = (users || []).filter(u => 
     u.name?.toLowerCase().includes(userSearch.toLowerCase()) || 
@@ -45,9 +52,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
     
     setIsBroadcasting(true);
     try {
-      // Получаем все чаты (лимитировано для безопасности)
       const chatsSnap = await getDocs(query(collection(db, 'chats'), limit(50)));
-      
       const promises = chatsSnap.docs.map(chatDoc => {
         const msgCol = collection(db, 'chats', chatDoc.id, 'messages');
         return addDoc(msgCol, {
@@ -59,17 +64,11 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
           sentAt: new Date().toISOString(),
         });
       });
-
       await Promise.all(promises);
-      
-      toast({ 
-        title: "Рассылка завершена", 
-        description: `Сообщение отправлено в ${promises.length} узлов Ядра.` 
-      });
+      toast({ title: "Рассылка завершена", description: `Отправлено в ${promises.length} чатов.` });
       setBroadcastMessage('');
-      setActiveTab('users');
     } catch (e: any) {
-      toast({ title: "Ошибка рассылки", description: e.message, variant: "destructive" });
+      toast({ title: "Ошибка", description: e.message, variant: "destructive" });
     } finally {
       setIsBroadcasting(false);
     }
@@ -77,7 +76,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md bg-[#0a0a0c] border-primary/30 p-0 overflow-hidden h-[75vh] flex flex-col rounded-[2.5rem] shadow-[0_0_50px_rgba(139,92,246,0.3)] border">
+      <DialogContent className="max-w-md bg-[#0a0a0c] border-primary/30 p-0 overflow-hidden h-[80vh] flex flex-col rounded-[2.5rem] shadow-[0_0_50px_rgba(139,92,246,0.3)] border">
         <DialogHeader className="p-6 bg-primary/5 border-b border-white/5 shrink-0">
           <DialogTitle className="flex items-center justify-between text-white uppercase italic font-black tracking-tighter">
             <div className="flex items-center gap-3">
@@ -92,108 +91,100 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
           <div className="px-6 pt-4">
             <TabsList className="grid grid-cols-2 w-full bg-white/5 p-1 rounded-2xl">
               <TabsTrigger value="users" className="rounded-xl text-[10px] uppercase font-black tracking-widest gap-2">
-                <Users className="w-3.5 h-3.5" /> Пользователи
+                <Users className="w-3.5 h-3.5" /> Ядро
               </TabsTrigger>
               <TabsTrigger value="broadcast" className="rounded-xl text-[10px] uppercase font-black tracking-widest gap-2">
-                <Radio className="w-3.5 h-3.5" /> Рассылка
+                <Radio className="w-3.5 h-3.5" /> Сигнал
               </TabsTrigger>
             </TabsList>
           </div>
 
           <TabsContent value="users" className="flex-1 flex flex-col min-h-0 m-0">
+            {/* Статистика */}
+            <div className="grid grid-cols-4 gap-2 px-6 pt-4 shrink-0">
+              <div className="bg-white/5 p-2 rounded-xl border border-white/5 text-center">
+                <p className="text-[7px] text-muted-foreground uppercase font-black">Всего</p>
+                <p className="text-sm font-black text-white">{stats.total}</p>
+              </div>
+              <div className="bg-white/5 p-2 rounded-xl border border-white/5 text-center">
+                <p className="text-[7px] text-destructive uppercase font-black">Бан</p>
+                <p className="text-sm font-black text-destructive">{stats.banned}</p>
+              </div>
+              <div className="bg-white/5 p-2 rounded-xl border border-white/5 text-center">
+                <p className="text-[7px] text-accent uppercase font-black">Прем</p>
+                <p className="text-sm font-black text-accent">{stats.premium}</p>
+              </div>
+              <div className="bg-white/5 p-2 rounded-xl border border-white/5 text-center">
+                <p className="text-[7px] text-primary uppercase font-black">Админ</p>
+                <p className="text-sm font-black text-primary">{stats.admins}</p>
+              </div>
+            </div>
+
             <div className="p-4 px-6 shrink-0">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/40" />
                 <Input 
-                  placeholder="Поиск в Ядре..." 
+                  placeholder="Поиск..." 
                   value={userSearch}
                   onChange={e => setUserSearch(e.target.value)}
-                  className="bg-white/5 border-white/10 h-11 rounded-xl text-sm pl-10 focus:ring-primary/30"
+                  className="bg-white/5 border-white/10 h-10 rounded-xl text-sm pl-10"
                 />
               </div>
             </div>
 
             <ScrollArea className="flex-1">
               <div className="px-6 pb-6 space-y-2">
-                {filteredUsers.length > 0 ? (
-                  filteredUsers.map(u => (
-                    <div key={u.id} className="flex items-center justify-between p-3 bg-white/5 rounded-2xl border border-white/5 group hover:border-primary/20 transition-all">
-                      <div className="flex items-center gap-3 min-w-0">
-                        <UserAvatar userId={u.id} className="h-10 w-10 shrink-0" manualAvatarUrl={u.avatarUrl} fallbackName={u.name} />
-                        <div className="flex flex-col text-left min-w-0">
-                          <div className="flex items-center gap-1.5 min-w-0">
-                            <span className="font-bold text-xs text-white truncate">
-                              {formatDisplayName(u.name)}
-                            </span>
-                            {u.isPremium && <Star className="w-2.5 h-2.5 text-accent fill-accent shrink-0" />}
-                            {u.isAdmin && <ShieldCheck className="w-2.5 h-2.5 text-primary shrink-0" />}
-                          </div>
-                          <span className="text-[9px] text-muted-foreground/60 truncate uppercase tracking-tighter">{u.username}</span>
+                {filteredUsers.map(u => (
+                  <div key={u.id} className="flex items-center justify-between p-3 bg-white/5 rounded-2xl border border-white/5 group hover:border-primary/20 transition-all">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <UserAvatar userId={u.id} className="h-9 w-9 shrink-0" manualAvatarUrl={u.avatarUrl} fallbackName={u.name} />
+                      <div className="flex flex-col min-w-0">
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-bold text-xs text-white truncate">{formatDisplayName(u.name)}</span>
+                          {u.isPremium && <Star className="w-2.5 h-2.5 text-accent fill-accent" />}
+                          {u.isAdmin && <ShieldCheck className="w-2.5 h-2.5 text-primary" />}
+                          {u.isBanned && <UserX className="w-2.5 h-2.5 text-destructive" />}
                         </div>
+                        <span className="text-[8px] text-muted-foreground/60 truncate uppercase">{u.username}</span>
                       </div>
-                      <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        className="h-8 w-8 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity" 
-                        onClick={() => {
-                          if (confirm(`Удалить пользователя ${u.name} навсегда?`)) {
-                            deleteDocumentNonBlocking(doc(db, 'users', u.id));
-                          }
-                        }}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
                     </div>
-                  ))
-                ) : (
-                  <div className="text-center py-20 opacity-20 uppercase text-[10px] font-black tracking-widest italic">
-                    Поиск не дал результатов
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="h-8 w-8 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100" 
+                      onClick={() => confirm(`Удалить ${u.name}?`) && deleteDocumentNonBlocking(doc(db, 'users', u.id))}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
                   </div>
-                )}
+                ))}
               </div>
             </ScrollArea>
           </TabsContent>
 
-          <TabsContent value="broadcast" className="flex-1 p-6 flex flex-col gap-6 m-0">
-            <div className="bg-primary/5 border border-primary/20 p-4 rounded-3xl space-y-3">
+          <TabsContent value="broadcast" className="flex-1 p-6 flex flex-col gap-4 m-0">
+            <div className="bg-primary/5 border border-primary/20 p-4 rounded-3xl space-y-2">
               <div className="flex items-center gap-2 text-primary">
                 <Radio className="w-4 h-4 animate-pulse" />
-                <h3 className="text-[10px] font-black uppercase tracking-[0.2em]">Global Prime Signal</h3>
+                <h3 className="text-[10px] font-black uppercase">Global Broadcast</h3>
               </div>
-              <p className="text-[9px] text-muted-foreground leading-relaxed uppercase font-bold tracking-wider">
-                Ваше сообщение будет мгновенно доставлено во все чаты системы как сервисное уведомление от Nuxus Prime.
-              </p>
+              <p className="text-[8px] text-muted-foreground uppercase font-bold">Рассылка во все узлы Ядра.</p>
             </div>
-
-            <div className="space-y-3">
-              <label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/60 ml-1">Текст рассылки</label>
-              <Textarea 
-                placeholder="Введите системное сообщение..." 
-                value={broadcastMessage}
-                onChange={e => setBroadcastMessage(e.target.value)}
-                className="bg-white/5 border-white/10 rounded-2xl min-h-[150px] text-sm resize-none focus:ring-primary/20"
-              />
-            </div>
-
+            <Textarea 
+              placeholder="Текст сообщения..." 
+              value={broadcastMessage}
+              onChange={e => setBroadcastMessage(e.target.value)}
+              className="bg-white/5 border-white/10 rounded-2xl min-h-[150px] text-sm resize-none"
+            />
             <Button 
               onClick={handleGlobalBroadcast}
               disabled={isBroadcasting || !broadcastMessage.trim()}
-              className="w-full h-14 bg-primary hover:bg-primary/90 text-white rounded-2xl font-black uppercase italic tracking-[0.2em] shadow-[0_10px_30px_rgba(139,92,246,0.3)] transition-all active:scale-95 disabled:opacity-50"
+              className="w-full h-14 bg-primary text-white rounded-2xl font-black uppercase italic tracking-widest shadow-xl shadow-primary/20 transition-all active:scale-95"
             >
-              {isBroadcasting ? (
-                <Loader2 className="w-5 h-5 animate-spin" />
-              ) : (
-                <>Инициировать Сигнал <Send className="w-4 h-4 ml-2" /></>
-              )}
+              {isBroadcasting ? <Loader2 className="animate-spin" /> : <>Инициировать Сигнал <Send className="w-4 h-4 ml-2" /></>}
             </Button>
           </TabsContent>
         </Tabs>
-        
-        <div className="p-4 bg-black/40 border-t border-white/5 shrink-0">
-          <p className="text-[8px] text-center text-muted-foreground/30 uppercase font-black tracking-[0.3em]">
-            Nuxus Global Kernel Interface • Quantum Persistence
-          </p>
-        </div>
       </DialogContent>
     </Dialog>
   );
