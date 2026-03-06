@@ -6,11 +6,12 @@ import { useAppState } from '@/lib/store';
 import { Button } from '@/components/ui/button';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
-  Pin, Star, SquarePen, FolderOpen, Ghost, Search, MoreVertical, 
-  Archive, Trash2, ArchiveRestore 
+  Plus, SquarePen, Ghost, Search, MoreVertical, 
+  Archive, Trash2, ArchiveRestore, Star
 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { CreateChatModal } from './modals/create-chat-modal';
+import { ChatEditorModal } from './modals/chat-editor-modal';
 import { 
   DropdownMenu, 
   DropdownMenuContent, 
@@ -117,6 +118,7 @@ export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?:
   
   const [activeTab, setActiveTab] = useState(isArchiveView ? 'archived' : 'all');
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isEditorModalOpen, setIsEditorModalOpen] = useState(false);
 
   const userProfileRef = useMemoFirebase(() => (!db || !user) ? null : doc(db, 'users', user.uid), [db, user]);
   const { data: profile } = useDoc<User>(userProfileRef);
@@ -146,17 +148,23 @@ export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?:
   return (
     <div className="flex flex-col h-full bg-[#0a0a0c] overflow-hidden">
       <div className="px-4 pt-4 pb-2 shrink-0">
-        <div className="relative flex items-center justify-between h-12 mb-6">
+        <div className="relative flex items-center justify-between h-12 mb-6 w-full">
+          {/* Left: Search */}
           <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full bg-white/5" onClick={() => setIsSearchOpen(true)}>
             <Search className="w-5 h-5 text-white/60" />
           </Button>
 
+          {/* Center: Title */}
           <h1 className="text-[20px] font-black text-white italic tracking-tighter absolute left-1/2 -translate-x-1/2 whitespace-nowrap">
             {isArchiveView ? 'Архив' : 'Чаты🐱'}
           </h1>
 
-          <div className="flex gap-2">
+          {/* Right: Plus (+) and Editor (SquarePen) */}
+          <div className="flex items-center gap-1.5">
             <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full bg-white/5" onClick={() => setIsCreateModalOpen(true)}>
+              <Plus className="w-5 h-5 text-white" />
+            </Button>
+            <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full bg-white/5" onClick={() => setIsEditorModalOpen(true)}>
               <SquarePen className="w-5 h-5 text-white" />
             </Button>
           </div>
@@ -209,6 +217,7 @@ export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?:
       </ScrollArea>
 
       <CreateChatModal open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen} />
+      <ChatEditorModal open={isEditorModalOpen} onOpenChange={setIsEditorModalOpen} />
     </div>
   );
 }

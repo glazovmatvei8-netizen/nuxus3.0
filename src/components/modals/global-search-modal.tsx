@@ -34,8 +34,6 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
       const fetchTrends = async () => {
         setIsLoading(true);
         try {
-          // Примечание: Требуется составной индекс (isPublic: ASC, createdAt: DESC)
-          // Ссылка для создания индекса находится в консоли браузера при возникновении ошибки
           const q = query(
             collection(db, 'chats'),
             where('isPublic', '==', true),
