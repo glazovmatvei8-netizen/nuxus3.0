@@ -14,8 +14,8 @@ import {
 } from 'firebase/firestore';
 
 /**
- * Инициализация Firebase v0.61.0 Quantum Resilience.
- * Максимальная совместимость со старыми браузерами (Android 5.0 / iOS 10).
+ * Инициализация Firebase v0.61.1 Quantum Resilience.
+ * Максимальная совместимость со старыми браузерами (Android 5.0 / LG).
  */
 let cachedFirestore: Firestore | null = null;
 
@@ -32,11 +32,15 @@ export function initializeFirebase() {
 
   if (!cachedFirestore) {
     // Детекция старых устройств для отключения тяжелого кэширования
-    const isLegacy = typeof navigator !== 'undefined' && 
-      (/Android [45]/.test(navigator.userAgent) || /iPhone OS [8910]/.test(navigator.userAgent));
+    const isLegacy = typeof navigator !== 'undefined' && (
+      /Android [45]/.test(navigator.userAgent) || 
+      /iPhone OS [8910]/.test(navigator.userAgent) ||
+      !window.Proxy // Критично для Android 5
+    );
 
     if (isLegacy) {
-      console.log('Nuxus Core: Legacy Environment detected. Using standard Firestore.');
+      console.log('Nuxus Core: Legacy Environment detected. Disabling advanced cache.');
+      // Для Android 5 используем максимально простую инициализацию
       cachedFirestore = getFirestore(firebaseApp);
     } else {
       try {
@@ -46,9 +50,8 @@ export function initializeFirebase() {
             cacheSizeBytes: CACHE_SIZE_UNLIMITED
           })
         });
-        console.log('Nuxus Core: Advanced Persistence Active');
       } catch (e) {
-        console.warn('Nuxus Core: Initialization failed, falling back to basic.');
+        console.warn('Nuxus Core: Advanced cache failed, fallback to basic.');
         cachedFirestore = getFirestore(firebaseApp);
       }
     }

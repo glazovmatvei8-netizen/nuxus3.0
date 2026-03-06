@@ -5,7 +5,7 @@ import { useUser, useFirestore, useDoc, useMemoFirebase, useAuth } from '@/fireb
 import { useAppState } from '@/lib/store';
 import AuthScreen from '@/components/auth-screen';
 import ChatMain from '@/components/chat-main';
-import { Loader2, ShieldAlert, Lock, ArrowRight, Clock, WifiOff, Ghost, Zap } from 'lucide-react';
+import { Loader2, ShieldAlert, Lock, ArrowRight, Clock, Zap } from 'lucide-react';
 import { doc, collection, query, where, limit, getDocs, arrayUnion, updateDoc } from 'firebase/firestore';
 import type { User as UserType, Chat } from '@/lib/types';
 import { Button } from '@/components/ui/button';
@@ -29,10 +29,8 @@ export default function Home() {
   const [twoFactorInput, setTwoFactorInput] = useState('');
   const [isOnline, setIsOnline] = useState(true);
   const [showResilienceUI, setShowResilienceUI] = useState(false);
-  const [showRescueButton, setShowRescueButton] = useState(false);
   const [mounted, setMounted] = useState(false);
 
-  // Исправление гидратации и зависания старых устройств
   useEffect(() => {
     setMounted(true);
     
@@ -46,22 +44,15 @@ export default function Home() {
     window.addEventListener('offline', checkOnlineStatus);
     checkOnlineStatus();
 
-    // Быстрый таймер для старых Android (показываем кнопку через 3 секунды)
-    const timer = setTimeout(() => {
-      if (isUserLoading || !isOnline) setShowResilienceUI(false);
-    }, 2500);
-
-    const rescueTimer = setTimeout(() => {
-      if (isUserLoading) setShowRescueButton(true);
-    }, 3500);
+    // Удаляем аварийную кнопку если приложение загрузилось
+    const emergencyBtn = document.getElementById('emergency-launch-btn');
+    if (emergencyBtn) emergencyBtn.style.display = 'none';
 
     return () => {
       window.removeEventListener('online', checkOnlineStatus);
       window.removeEventListener('offline', checkOnlineStatus);
-      clearTimeout(timer);
-      clearTimeout(rescueTimer);
     };
-  }, [isUserLoading, isOnline]);
+  }, []);
 
   const userProfileRef = useMemoFirebase(() => {
     if (!db || !user) return null;
@@ -117,37 +108,61 @@ export default function Home() {
 
   const forceStart = () => {
     setShowResilienceUI(true);
-    toast({ title: "Compatibility Mode", description: "Ядро запущено в режиме совместимости" });
+    if (typeof window !== 'undefined') {
+      const btn = document.getElementById('emergency-launch-btn');
+      if (btn) btn.style.display = 'none';
+    }
   };
 
   if (!mounted || (isUserLoading && !showResilienceUI)) {
     return (
-      <div className="h-[100dvh] w-full flex flex-col items-center justify-center bg-[#0a0a0c] p-10">
+      <div className="h-[100dvh] w-full flex flex-col items-center justify-center bg-[#0a0a0c] p-10 relative">
         <div className="relative mb-8">
           <NuxusLogo size={100} />
           <div className="absolute inset-0 bg-primary/20 blur-2xl animate-pulse rounded-full" />
         </div>
-        <div className="flex flex-col items-center gap-4">
+        <div className="flex flex-col items-center gap-4" id="loading-container">
           <Loader2 className="w-6 h-6 text-primary animate-spin opacity-40" />
           <p className="text-[10px] font-black uppercase tracking-[0.4em] text-primary/60 animate-pulse text-center">
             Развертывание Ядра Nuxus...
           </p>
-          
-          {showRescueButton && (
-            <Button 
-              variant="outline" 
-              onClick={forceStart}
-              className="mt-8 border-primary/20 bg-primary/5 text-[9px] uppercase font-black tracking-widest h-10 rounded-xl animate-in fade-in slide-in-from-bottom-4"
-            >
-              <Zap className="w-3 h-3 mr-2 text-primary" /> Принудительный запуск
-            </Button>
-          )}
         </div>
+
+        {/* Аварийная кнопка через чистый HTML/JS для Android 5 */}
+        <div 
+          id="emergency-launch-btn" 
+          style={{ display: 'none', marginTop: '40px', textAlign: 'center' }}
+        >
+          <button 
+            onClick={forceStart}
+            style={{
+              background: 'rgba(139, 92, 246, 0.1)',
+              border: '1px solid rgba(139, 92, 246, 0.3)',
+              color: '#8B5CF6',
+              padding: '12px 24px',
+              borderRadius: '12px',
+              fontSize: '10px',
+              fontWeight: 'bold',
+              textTransform: 'uppercase',
+              letterSpacing: '2px'
+            }}
+          >
+            Запустить Nuxus (Legacy)
+          </button>
+        </div>
+
+        <script dangerouslySetInnerHTML={{ __html: `
+          setTimeout(function() {
+            var btn = document.getElementById('emergency-launch-btn');
+            if (btn) btn.style.display = 'block';
+            console.log('Nuxus Resilience: Emergency button activated');
+          }, 3500);
+        ` }} />
       </div>
     );
   }
 
-  if (showResilienceUI && user && profile) return <ChatMain />;
+  if (showResilienceUI && user) return <ChatMain />;
   if (showResilienceUI && !user) return <AuthScreen />;
   if (!user) return <AuthScreen />;
 
