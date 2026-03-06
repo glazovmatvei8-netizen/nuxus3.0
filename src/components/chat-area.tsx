@@ -272,7 +272,8 @@ export default function ChatArea() {
               backgroundSize: userProfile.settings.chatBackgroundFit === 'contain' ? 'contain' : 'cover', 
               backgroundPosition: 'center', 
               backgroundRepeat: 'no-repeat', 
-              backgroundAttachment: 'fixed' 
+              backgroundAttachment: 'fixed',
+              backgroundColor: '#0a0a0c'
             }} 
           />
         )}

@@ -17,7 +17,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { signOut } from 'firebase/auth';
 import { doc } from 'firebase/firestore';
-import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { updateDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAppState } from '@/lib/store';
 import { cn } from '@/lib/utils';
@@ -91,13 +91,19 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
 
   const finalizeBackground = (fit: 'cover' | 'contain') => {
     if (bgPreview && userRef) {
-      setForm({ ...form, chatBackground: bgPreview, chatBackgroundFit: fit });
+      const captureBg = bgPreview;
+      setForm(prev => ({ ...prev, chatBackground: captureBg, chatBackgroundFit: fit }));
       setBgPreview(null);
       setIsBgPlacementOpen(false);
-      updateDocumentNonBlocking(userRef, {
-        'settings.chatBackground': bgPreview,
-        'settings.chatBackgroundFit': fit
-      });
+      
+      // Используем setDocumentNonBlocking с merge для гарантированного сохранения структуры настроек
+      setDocumentNonBlocking(userRef, {
+        settings: {
+          chatBackground: captureBg,
+          chatBackgroundFit: fit
+        }
+      }, { merge: true });
+      
       toast({ title: "Фон установлен" });
     }
   };
@@ -182,7 +188,10 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                       <img src={form.chatBackground} className={cn("w-full h-full", form.chatBackgroundFit === 'cover' ? 'object-cover' : 'object-contain')} />
                       <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all backdrop-blur-sm gap-2">
                         <Button variant="outline" size="sm" className="h-8 rounded-xl text-[9px] uppercase font-bold" onClick={() => setIsBgPlacementOpen(true)}>Настроить</Button>
-                        <Button variant="destructive" size="sm" className="h-8 rounded-xl text-[9px] uppercase font-bold" onClick={() => setForm({ ...form, chatBackground: '' })}>Удалить</Button>
+                        <Button variant="destructive" size="sm" className="h-8 rounded-xl text-[9px] uppercase font-bold" onClick={() => {
+                          setForm({ ...form, chatBackground: '' });
+                          if (userRef) updateDocumentNonBlocking(userRef, { 'settings.chatBackground': null });
+                        }}>Удалить</Button>
                       </div>
                     </div>
                   ) : (
