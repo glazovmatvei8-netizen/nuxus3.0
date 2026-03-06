@@ -9,7 +9,7 @@ import { useFirestore, useUser, useCollection, useMemoFirebase } from '@/firebas
 import { collection, query, where, doc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { UserAvatar } from '@/components/user-avatar';
 import { Archive, Trash2, Ghost, ShieldAlert } from 'lucide-react';
-import { formatDisplayName } from '@/lib/utils';
+import { formatDisplayName, cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import type { Chat } from '@/lib/types';
 
@@ -83,8 +83,4 @@ export function ChatEditorModal({ open, onOpenChange }: { open: boolean, onOpenC
       </DialogContent>
     </Dialog>
   );
-}
-
-function cn(...inputs: any[]) {
-  return inputs.filter(Boolean).join(' ');
 }

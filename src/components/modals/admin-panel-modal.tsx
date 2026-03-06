@@ -30,7 +30,6 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
   const usersQuery = useMemoFirebase(() => (!db ? null : query(collection(db, 'users'), limit(500))), [db]);
   const { data: users } = useCollection<User>(usersQuery);
 
-  // Статистика
   const stats = useMemo(() => {
     if (!users) return { total: 0, banned: 0, premium: 0, admins: 0 };
     return {
@@ -100,7 +99,6 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
           </div>
 
           <TabsContent value="users" className="flex-1 flex flex-col min-h-0 m-0">
-            {/* Статистика */}
             <div className="grid grid-cols-4 gap-2 px-6 pt-4 shrink-0">
               <div className="bg-white/5 p-2 rounded-xl border border-white/5 text-center">
                 <p className="text-[7px] text-muted-foreground uppercase font-black">Всего</p>

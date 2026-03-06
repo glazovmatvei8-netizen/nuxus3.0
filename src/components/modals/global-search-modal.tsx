@@ -44,7 +44,7 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
           const trending = snap.docs.map(d => ({ id: d.id, ...d.data() } as Chat));
           setTrends(trending);
         } catch (e) {
-          console.error("Trends index might be missing:", e);
+          console.warn("Nuxus Discovery: Trends index pending or unavailable.");
         } finally {
           setIsLoading(false);
         }
@@ -121,8 +121,8 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md bg-card border-white/10 rounded-[2.5rem] p-0 overflow-hidden shadow-2xl">
-        <DialogHeader className="sr-only">
-          <DialogTitle>Глобальный поиск Nuxus</DialogTitle>
+        <DialogHeader className="p-6 pb-0">
+          <DialogTitle className="sr-only">Глобальный поиск Nuxus</DialogTitle>
         </DialogHeader>
 
         <div className="px-6 py-6">

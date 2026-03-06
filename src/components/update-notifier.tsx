@@ -23,7 +23,6 @@ export function UpdateNotifier() {
 
   useEffect(() => {
     if (config?.version && config.version !== CURRENT_VERSION) {
-      // Маленькая задержка для естественности
       const timer = setTimeout(() => setIsOpen(true), 2000);
       return () => clearTimeout(timer);
     }
@@ -37,13 +36,14 @@ export function UpdateNotifier() {
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogContent className="max-w-[320px] bg-card/90 backdrop-blur-3xl border-primary/20 rounded-[2.5rem] p-8 shadow-2xl shadow-primary/10">
         <DialogHeader className="space-y-4">
+          <DialogTitle className="sr-only">Обновление Ядра Nuxus</DialogTitle>
           <div className="bg-primary/10 w-16 h-16 rounded-3xl flex items-center justify-center mx-auto border border-primary/20">
             <Zap className="w-8 h-8 text-primary animate-pulse" />
           </div>
           <div className="space-y-1 text-center">
-            <DialogTitle className="text-xl font-black uppercase italic tracking-tighter text-white">
+            <h3 className="text-xl font-black uppercase italic tracking-tighter text-white">
               Обновление Ядра
-            </DialogTitle>
+            </h3>
             <DialogDescription className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60 leading-relaxed">
               Вышла версия {config?.version || 'новая'}.<br />Перезапуститься для активации?
             </DialogDescription>

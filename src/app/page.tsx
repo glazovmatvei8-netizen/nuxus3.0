@@ -29,15 +29,16 @@ export default function Home() {
   const [twoFactorInput, setTwoFactorInput] = useState('');
   const [isOnline, setIsOnline] = useState(true);
   const [showResilienceUI, setShowResilienceUI] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
-  // Ghost Protocol: Теневое кэширование для мгновенного входа в оффлайне
+  // Fix hydration mismatch
   useEffect(() => {
+    setMounted(true);
     const handleStatus = () => setIsOnline(navigator.onLine);
     window.addEventListener('online', handleStatus);
     window.addEventListener('offline', handleStatus);
     setIsOnline(navigator.onLine);
 
-    // Если загрузка длится более 2.5 секунд (признак блокировки), показываем оффлайн-интерфейс
     const timer = setTimeout(() => {
       if (isUserLoading || !isOnline) setShowResilienceUI(true);
     }, 2500);
@@ -58,7 +59,6 @@ export default function Home() {
 
   const isBanned = isUserActuallyBanned(profile);
 
-  // Обработка ссылок приглашений
   useEffect(() => {
     if (!user || !db || isJoining || (!is2FAVerified && profile?.twoFactorEnabled) || isBanned) return;
 
@@ -102,7 +102,7 @@ export default function Home() {
     }
   };
 
-  if (isUserLoading && !showResilienceUI) {
+  if (!mounted || (isUserLoading && !showResilienceUI)) {
     return (
       <div className="h-[100dvh] w-full flex flex-col items-center justify-center bg-[#0a0a0c] p-10">
         <div className="relative mb-8">
@@ -119,18 +119,9 @@ export default function Home() {
     );
   }
 
-  // Если мы в оффлайне или сеть заблокирована, но пользователь уже залогинен (данные в кэше)
-  if (showResilienceUI && user && profile) {
-    return <ChatMain />;
-  }
-
-  if (showResilienceUI && !user) {
-    return <AuthScreen />;
-  }
-
-  if (!user) {
-    return <AuthScreen />;
-  }
+  if (showResilienceUI && user && profile) return <ChatMain />;
+  if (showResilienceUI && !user) return <AuthScreen />;
+  if (!user) return <AuthScreen />;
 
   if ((isProfileLoading || isJoining) && !showResilienceUI) {
     return (
@@ -151,7 +142,7 @@ export default function Home() {
           <ShieldAlert className="w-16 h-16 text-destructive" />
         </div>
         <h1 className="text-3xl font-bold mb-4 text-white">Аккаунт заблокирован</h1>
-        {profile?.bannedUntil ? (
+        {profile?.bannedUntil && mounted ? (
           <div className="flex items-center gap-2 text-muted-foreground mb-8 bg-white/5 px-4 py-2 rounded-xl">
             <Clock className="w-4 h-4 text-primary" />
             <span>До: {format(new Date(profile.bannedUntil), 'd MMMM yyyy, HH:mm', { locale: ru })}</span>
