@@ -17,7 +17,7 @@ import { SettingsModal } from './modals/settings-modal';
 import { GlobalSearchModal } from './modals/global-search-modal';
 import { UserAvatar } from './user-avatar';
 import type { Call, User as UserType } from '@/lib/types';
-import { Users, Phone, MessageCircle, Settings, Search } from 'lucide-react';
+import { Users, Phone, MessageCircle, Settings, Search, Archive } from 'lucide-react';
 
 export default function ChatMain() {
   const { 
@@ -63,6 +63,7 @@ export default function ChatMain() {
           {activeView === 'contacts' && <ContactsView />}
           {activeView === 'calls' && <CallsView />}
           {activeView === 'profile' && <ProfileView />}
+          {activeView === 'archive' && <ChatSidebar isArchiveView />}
         </div>
         
         <div className={cn(
@@ -73,10 +74,10 @@ export default function ChatMain() {
         </div>
       </div>
 
-      {/* Bottom Navigation: "Чаты🐱" exactly in the middle */}
+      {/* Bottom Navigation: "Чаты🐱" exactly in the middle of 5 items */}
       {!currentChatId && (
-        <div className="fixed bottom-10 left-1/2 -translate-x-1/2 w-[94%] max-w-[440px] h-[76px] bg-[#1c1c1e]/80 backdrop-blur-[50px] border border-white/10 rounded-[2.8rem] flex items-center justify-between px-7 z-50 shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
-          <div className="flex flex-1 justify-around">
+        <div className="fixed bottom-10 left-1/2 -translate-x-1/2 w-[94%] max-w-[500px] h-[76px] bg-[#1c1c1e]/80 backdrop-blur-[50px] border border-white/10 rounded-[2.8rem] flex items-center justify-between px-6 z-50 shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
+          <div className="flex flex-1 justify-around items-center">
             <NavButton 
               icon={Users} 
               label="Контакты" 
@@ -84,10 +85,22 @@ export default function ChatMain() {
               onClick={() => setActiveView('contacts')} 
             />
             <NavButton 
+              icon={Phone} 
+              label="Звонки" 
+              active={activeView === 'calls'} 
+              onClick={() => setActiveView('calls')} 
+            />
+            <NavButton 
               icon={MessageCircle} 
               label="Чаты🐱" 
               active={activeView === 'chats'} 
               onClick={() => setActiveView('chats')} 
+            />
+            <NavButton 
+              icon={Archive} 
+              label="Архив" 
+              active={activeView === 'archive'} 
+              onClick={() => setActiveView('archive')} 
             />
             <NavButton 
               icon={Settings} 
@@ -101,7 +114,7 @@ export default function ChatMain() {
           
           <button 
             onClick={() => setIsSearchOpen(true)}
-            className="ml-4 h-[56px] w-[56px] rounded-full bg-white/5 flex items-center justify-center shrink-0 border border-white/5 shadow-[inset_0_1px_1px_rgba(255,255,255,0.1),0_10px_20px_rgba(0,0,0,0.2)] hover:bg-white/10 transition-all active:scale-90"
+            className="ml-2 h-[56px] w-[56px] rounded-full bg-white/5 flex items-center justify-center shrink-0 border border-white/5 shadow-[inset_0_1px_1px_rgba(255,255,255,0.1),0_10px_20px_rgba(0,0,0,0.2)] hover:bg-white/10 transition-all active:scale-90"
           >
             <Search className="w-6 h-6 text-white" />
           </button>
@@ -136,7 +149,7 @@ function NavButton({ icon: Icon, label, active, badge, onClick, isProfile, userI
           </div>
         )}
       </div>
-      <span className="text-[10px] font-bold mt-0.5 whitespace-nowrap">{label}</span>
+      <span className="text-[9px] font-bold mt-0.5 whitespace-nowrap">{label}</span>
     </button>
   );
 }

@@ -5,7 +5,7 @@ import React, { useState } from 'react';
 import { useAppState } from '@/lib/store';
 import { Button } from '@/components/ui/button';
 import { UserAvatar } from '@/components/user-avatar';
-import { Phone, Link, Info, PhoneOff, Loader2 } from 'lucide-react';
+import { Phone, Link, Info, PhoneOff, Loader2, ArrowUpRight, ArrowDownLeft } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useFirestore, useUser, useCollection, useMemoFirebase, useDoc } from '@/firebase';
 import { collection, query, where, orderBy, limit, doc } from 'firebase/firestore';
@@ -18,9 +18,9 @@ export default function CallsView() {
   const db = useFirestore();
   const [activeTab, setActiveTab] = useState<'all' | 'missed'>('all');
 
+  // История звонков доступна всем (согласно запросу)
   const callsQuery = useMemoFirebase(() => {
     if (!db || !user) return null;
-    // Звонки теперь общедоступны для всех пользователей
     return query(
       collection(db, 'calls'),
       orderBy('createdAt', 'desc'),
@@ -42,7 +42,7 @@ export default function CallsView() {
       <div className="px-4 pt-6 pb-2 shrink-0">
         <h1 className="text-[32px] font-black text-white tracking-tight mb-6">Звонки</h1>
         
-        {/* Action Buttons styled like iOS screenshot */}
+        {/* Action Buttons */}
         <div className="space-y-6 mb-8">
           <button className="flex items-center gap-4 group w-full text-left">
             <div className="h-6 w-6 flex items-center justify-center">
@@ -55,11 +55,11 @@ export default function CallsView() {
             <div className="h-6 w-6 flex items-center justify-center">
               <Link className="w-6 h-6 text-[#007AFF]" />
             </div>
-            <span className="text-[#007AFF] text-[17px] font-medium group-active:opacity-60 transition-opacity">Создать групповой звонок</span>
+            <span className="text-[#007AFF] text-[17px] font-medium group-active:opacity-60 transition-opacity">Создать ссылку на звонок</span>
           </button>
         </div>
 
-        {/* Tabs with blue indicator */}
+        {/* Tabs */}
         <div className="flex gap-6 mb-4">
           <button 
             onClick={() => setActiveTab('all')}
@@ -75,11 +75,11 @@ export default function CallsView() {
             onClick={() => setActiveTab('missed')}
             className={cn(
               "pb-2 text-[17px] font-bold transition-all relative",
-              activeTab === 'missed' ? "text-white" : "text-muted-foreground/60"
+              activeTab === 'missed' ? "text-[#FF3B30]" : "text-muted-foreground/60"
             )}
           >
             Пропущенные
-            {activeTab === 'missed' && <div className="absolute bottom-0 left-0 right-0 h-[3px] bg-[#007AFF] rounded-t-full" />}
+            {activeTab === 'missed' && <div className="absolute bottom-0 left-0 right-0 h-[3px] bg-[#FF3B30] rounded-t-full" />}
           </button>
         </div>
       </div>
@@ -89,7 +89,7 @@ export default function CallsView() {
           {isLoading ? (
             <div className="flex flex-col items-center justify-center p-12 gap-3 opacity-50">
               <Loader2 className="w-6 h-6 animate-spin text-primary" />
-              <p className="text-[10px] font-black uppercase tracking-widest">Загрузка звонков...</p>
+              <p className="text-[10px] font-black uppercase tracking-widest">Загрузка истории звонков...</p>
             </div>
           ) : filteredCalls.length > 0 ? (
             filteredCalls.map(call => (
@@ -109,6 +109,7 @@ export default function CallsView() {
 
 function CallItem({ call, currentUserId }: { call: Call, currentUserId?: string }) {
   const db = useFirestore();
+  // Для истории показываем второго участника
   const otherId = call.callerId === currentUserId ? call.receiverId : call.callerId;
   const userRef = useMemoFirebase(() => (!db ? null : doc(db, 'users', otherId)), [db, otherId]);
   const { data: otherUser } = useDoc<User>(userRef);
@@ -119,7 +120,7 @@ function CallItem({ call, currentUserId }: { call: Call, currentUserId?: string 
 
   const displayDate = React.useMemo(() => {
     try {
-      return format(new Date(call.createdAt), 'dd.MM');
+      return format(new Date(call.createdAt), 'dd.MM HH:mm');
     } catch (e) {
       return '';
     }
@@ -134,18 +135,24 @@ function CallItem({ call, currentUserId }: { call: Call, currentUserId?: string 
             {formatDisplayName(otherUser?.name)}
           </span>
           <div className="flex items-center gap-1 text-[14px] text-muted-foreground/60 font-medium">
-            {isMissed || isRejected ? (
-              <PhoneOff className="w-3.5 h-3.5" />
+            {isOutgoing ? (
+              <ArrowUpRight className="w-3.5 h-3.5" />
             ) : (
-              <Phone className="w-3.5 h-3.5" />
+              <ArrowDownLeft className="w-3.5 h-3.5" />
             )}
-            <span>{isRejected ? 'Отменённый' : 'Звонок по ссылке'}</span>
+            <span>{isOutgoing ? 'Исходящий' : 'Входящий'}</span>
+            <span className="mx-1">•</span>
+            <span>{displayDate}</span>
           </div>
         </div>
       </div>
       
       <div className="flex items-center gap-3 shrink-0">
-        <span className="text-[15px] text-muted-foreground/60 font-medium">{displayDate}</span>
+        {isMissed || isRejected ? (
+          <PhoneOff className="w-5 h-5 text-muted-foreground/40" />
+        ) : (
+          <Phone className="w-5 h-5 text-muted-foreground/40" />
+        )}
         <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full text-muted-foreground/40 p-0 hover:bg-transparent">
           <Info className="w-6 h-6" />
         </Button>

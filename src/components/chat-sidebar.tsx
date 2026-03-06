@@ -62,12 +62,12 @@ const ChatListItem = memo(({
 });
 ChatListItem.displayName = 'ChatListItem';
 
-export default function ChatSidebar() {
+export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?: boolean }) {
   const { user } = useUser();
   const db = useFirestore();
   const { currentChatId, setCurrentChatId, setIsSearchOpen } = useAppState();
   
-  const [activeTab, setActiveTab] = useState('all');
+  const [activeTab, setActiveTab] = useState(isArchiveView ? 'archived' : 'all');
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
   const userProfileRef = useMemoFirebase(() => (!db || !user) ? null : doc(db, 'users', user.uid), [db, user]);
@@ -87,12 +87,13 @@ export default function ChatSidebar() {
       return bTime - aTime;
     });
 
-    if (activeTab === 'private') return result.filter(c => c.type === 'private');
-    if (activeTab === 'groups') return result.filter(c => c.type === 'group');
-    if (activeTab === 'archived') return result.filter(c => c.isArchived);
+    if (isArchiveView) return result.filter(c => c.isArchived);
+    
+    if (activeTab === 'private') return result.filter(c => c.type === 'private' && !c.isArchived);
+    if (activeTab === 'groups') return result.filter(c => c.type === 'group' && !c.isArchived);
 
     return result.filter(c => !c.isArchived);
-  }, [chats, activeTab]);
+  }, [chats, activeTab, isArchiveView]);
 
   return (
     <div className="flex flex-col h-full bg-[#0a0a0c] overflow-hidden">
@@ -102,8 +103,9 @@ export default function ChatSidebar() {
             <Search className="w-5 h-5 text-white/60" />
           </Button>
 
+          {/* Centered Title */}
           <h1 className="text-[20px] font-black text-white italic tracking-tighter absolute left-1/2 -translate-x-1/2 whitespace-nowrap">
-            Чаты🐱
+            {isArchiveView ? 'Архив' : 'Чаты🐱'}
           </h1>
 
           <div className="flex gap-2">
@@ -113,26 +115,27 @@ export default function ChatSidebar() {
           </div>
         </div>
 
-        {/* Dynamic Folders Tabs */}
-        <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide py-1">
-          {[
-            { id: 'all', label: 'Все' },
-            { id: 'private', label: 'Личные' },
-            { id: 'groups', label: 'Группы' },
-            { id: 'archived', label: 'Архив' }
-          ].map((tab) => (
-            <button 
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={cn(
-                "px-4 py-1.5 rounded-full text-[12px] font-black uppercase tracking-widest transition-all whitespace-nowrap",
-                activeTab === tab.id ? "bg-[#007AFF] text-white shadow-lg shadow-[#007AFF]/20" : "text-muted-foreground/40 hover:text-white bg-white/5"
-              )}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
+        {/* Dynamic Folders Tabs - hidden in Archive view */}
+        {!isArchiveView && (
+          <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide py-1">
+            {[
+              { id: 'all', label: 'Все' },
+              { id: 'private', label: 'Личные' },
+              { id: 'groups', label: 'Группы' }
+            ].map((tab) => (
+              <button 
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={cn(
+                  "px-4 py-1.5 rounded-full text-[12px] font-black uppercase tracking-widest transition-all whitespace-nowrap",
+                  activeTab === tab.id ? "bg-[#007AFF] text-white shadow-lg shadow-[#007AFF]/20" : "text-muted-foreground/40 hover:text-white bg-white/5"
+                )}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       <ScrollArea className="flex-1 scrollbar-hide">
@@ -151,7 +154,9 @@ export default function ChatSidebar() {
           ) : (
             <div className="flex flex-col items-center justify-center p-20 opacity-20">
                <Ghost className="w-12 h-12 mb-4" />
-               <p className="text-[10px] font-black uppercase tracking-widest text-center">Нет активных каналов</p>
+               <p className="text-[10px] font-black uppercase tracking-widest text-center">
+                 {isArchiveView ? 'Архив пуст' : 'Нет активных каналов'}
+               </p>
             </div>
           )}
         </div>
