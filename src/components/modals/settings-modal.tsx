@@ -9,10 +9,12 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Switch } from '@/components/ui/switch';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAuth, useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
-  LogOut, Palette, Check, Settings2, Camera, Lock, ShieldCheck, Image as ImageIcon, Paintbrush, ChevronRight, Move, Maximize
+  LogOut, Palette, Check, Settings2, Camera, Lock, ShieldCheck, Image as ImageIcon, 
+  Paintbrush, ChevronRight, Move, Maximize, Shield, BellRing, UserCircle
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { signOut } from 'firebase/auth';
@@ -52,7 +54,18 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
     chatBackground: '',
     chatBackgroundFit: 'cover' as 'cover' | 'contain',
     twoFactorEnabled: false,
-    twoFactorPin: ''
+    twoFactorPin: '',
+    privacy: {
+      phoneVisibility: 'everybody',
+      lastSeenVisibility: 'everybody',
+      allowGroupsFrom: 'everybody'
+    },
+    notifications: {
+      messages: true,
+      groups: true,
+      channels: true,
+      previews: true
+    }
   });
 
   const [bgPreview, setBgPreview] = useState<string | null>(null);
@@ -69,42 +82,52 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         chatBackground: profile.settings?.chatBackground || '',
         chatBackgroundFit: profile.settings?.chatBackgroundFit || 'cover',
         twoFactorEnabled: !!profile.twoFactorEnabled,
-        twoFactorPin: profile.twoFactorPin || ''
+        twoFactorPin: profile.twoFactorPin || '',
+        privacy: {
+          phoneVisibility: profile.settings?.privacy?.phoneVisibility || 'everybody',
+          lastSeenVisibility: profile.settings?.privacy?.lastSeenVisibility || 'everybody',
+          allowGroupsFrom: profile.settings?.privacy?.allowGroupsFrom || 'everybody'
+        },
+        notifications: {
+          messages: profile.settings?.notifications?.messages !== false,
+          groups: profile.settings?.notifications?.groups !== false,
+          channels: profile.settings?.notifications?.channels !== false,
+          previews: profile.settings?.notifications?.previews !== false
+        }
       });
     }
   }, [profile, open]);
 
   const handleSave = () => {
     if (!userRef) return;
-    updateDocumentNonBlocking(userRef, {
+    
+    const updateData = {
       name: form.name,
       username: form.username.startsWith('@') ? form.username.toLowerCase() : '@' + form.username.toLowerCase(),
       bio: form.bio,
       avatarUrl: form.avatarUrl,
       twoFactorEnabled: form.twoFactorEnabled,
       twoFactorPin: form.twoFactorPin,
-      'settings.theme': form.theme
-    });
+      settings: {
+        theme: form.theme,
+        chatBackground: form.chatBackground,
+        chatBackgroundFit: form.chatBackgroundFit,
+        privacy: form.privacy,
+        notifications: form.notifications
+      }
+    };
+
+    setDocumentNonBlocking(userRef, updateData, { merge: true });
     onOpenChange(false);
-    toast({ title: "Настройки сохранены" });
+    toast({ title: "Ядро обновлено", description: "Настройки синхронизированы" });
   };
 
   const finalizeBackground = (fit: 'cover' | 'contain') => {
-    if (bgPreview && userRef) {
-      const captureBg = bgPreview;
-      setForm(prev => ({ ...prev, chatBackground: captureBg, chatBackgroundFit: fit }));
+    if (bgPreview) {
+      setForm(prev => ({ ...prev, chatBackground: bgPreview, chatBackgroundFit: fit }));
       setBgPreview(null);
       setIsBgPlacementOpen(false);
-      
-      // Используем setDocumentNonBlocking с merge для гарантированного сохранения структуры настроек
-      setDocumentNonBlocking(userRef, {
-        settings: {
-          chatBackground: captureBg,
-          chatBackgroundFit: fit
-        }
-      }, { merge: true });
-      
-      toast({ title: "Фон установлен" });
+      toast({ title: "Фон выбран", description: "Нажмите 'Сохранить' для активации" });
     }
   };
 
@@ -119,10 +142,12 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         </DialogHeader>
         
         <Tabs value={settingsTab} onValueChange={setSettingsTab} className="flex-1 flex flex-col min-h-0">
-          <TabsList className="grid grid-cols-3 bg-muted/50 p-1 mx-6 mt-4 rounded-2xl shrink-0">
-            <TabsTrigger value="profile" className="text-[10px] uppercase font-bold tracking-widest">Профиль</TabsTrigger>
-            <TabsTrigger value="appearance" className="text-[10px] uppercase font-bold tracking-widest">Стиль</TabsTrigger>
-            <TabsTrigger value="security" className="text-[10px] uppercase font-bold tracking-widest">Защита</TabsTrigger>
+          <TabsList className="flex bg-muted/50 p-1 mx-6 mt-4 rounded-2xl shrink-0 overflow-x-auto scrollbar-hide">
+            <TabsTrigger value="profile" className="flex-1 text-[9px] uppercase font-bold tracking-widest whitespace-nowrap">Профиль</TabsTrigger>
+            <TabsTrigger value="appearance" className="flex-1 text-[9px] uppercase font-bold tracking-widest whitespace-nowrap">Стиль</TabsTrigger>
+            <TabsTrigger value="privacy" className="flex-1 text-[9px] uppercase font-bold tracking-widest whitespace-nowrap">Приватность</TabsTrigger>
+            <TabsTrigger value="notifications" className="flex-1 text-[9px] uppercase font-bold tracking-widest whitespace-nowrap">Звук</TabsTrigger>
+            <TabsTrigger value="security" className="flex-1 text-[9px] uppercase font-bold tracking-widest whitespace-nowrap">Защита</TabsTrigger>
           </TabsList>
 
           <ScrollArea className="flex-1 px-6">
@@ -188,10 +213,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                       <img src={form.chatBackground} className={cn("w-full h-full", form.chatBackgroundFit === 'cover' ? 'object-cover' : 'object-contain')} />
                       <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all backdrop-blur-sm gap-2">
                         <Button variant="outline" size="sm" className="h-8 rounded-xl text-[9px] uppercase font-bold" onClick={() => setIsBgPlacementOpen(true)}>Настроить</Button>
-                        <Button variant="destructive" size="sm" className="h-8 rounded-xl text-[9px] uppercase font-bold" onClick={() => {
-                          setForm({ ...form, chatBackground: '' });
-                          if (userRef) updateDocumentNonBlocking(userRef, { 'settings.chatBackground': null });
-                        }}>Удалить</Button>
+                        <Button variant="destructive" size="sm" className="h-8 rounded-xl text-[9px] uppercase font-bold" onClick={() => setForm({ ...form, chatBackground: '' })}>Удалить</Button>
                       </div>
                     </div>
                   ) : (
@@ -201,6 +223,93 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                     </div>
                   )}
                   <input type="file" ref={bgInputRef} className="hidden" accept="image/*" onChange={(e) => { const f = e.target.files?.[0]; if(f) { const r = new FileReader(); r.onloadend = () => { setBgPreview(r.result as string); setIsBgPlacementOpen(true); }; r.readAsDataURL(f); } }} />
+                </div>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="privacy" className="space-y-6 m-0 py-6">
+              <div className="space-y-6 bg-muted/20 p-6 rounded-[2.5rem] border border-white/5">
+                <div className="space-y-3">
+                  <Label className="text-[10px] uppercase font-black tracking-widest text-primary flex items-center gap-2 ml-1">
+                    <Shield className="w-3.5 h-3.5" /> Кто видит мой номер
+                  </Label>
+                  <Select value={form.privacy.phoneVisibility} onValueChange={v => setForm({...form, privacy: {...form.privacy, phoneVisibility: v as any}})}>
+                    <SelectTrigger className="bg-black/20 border-white/5 h-12 rounded-xl">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="bg-card border-white/10 rounded-xl">
+                      <SelectItem value="everybody">Все</SelectItem>
+                      <SelectItem value="contacts">Контакты</SelectItem>
+                      <SelectItem value="nobody">Никто</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-3">
+                  <Label className="text-[10px] uppercase font-black tracking-widest text-primary flex items-center gap-2 ml-1">
+                    <Shield className="w-3.5 h-3.5" /> Последняя активность
+                  </Label>
+                  <Select value={form.privacy.lastSeenVisibility} onValueChange={v => setForm({...form, privacy: {...form.privacy, lastSeenVisibility: v as any}})}>
+                    <SelectTrigger className="bg-black/20 border-white/5 h-12 rounded-xl">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="bg-card border-white/10 rounded-xl">
+                      <SelectItem value="everybody">Все</SelectItem>
+                      <SelectItem value="nobody">Никто</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-3">
+                  <Label className="text-[10px] uppercase font-black tracking-widest text-primary flex items-center gap-2 ml-1">
+                    <Shield className="w-3.5 h-3.5" /> Кто может добавлять в группы
+                  </Label>
+                  <Select value={form.privacy.allowGroupsFrom} onValueChange={v => setForm({...form, privacy: {...form.privacy, allowGroupsFrom: v as any}})}>
+                    <SelectTrigger className="bg-black/20 border-white/5 h-12 rounded-xl">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="bg-card border-white/10 rounded-xl">
+                      <SelectItem value="everybody">Все</SelectItem>
+                      <SelectItem value="contacts">Мои Контакты</SelectItem>
+                      <SelectItem value="premium">Только Premium</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="notifications" className="space-y-6 m-0 py-6">
+              <div className="space-y-6 bg-muted/20 p-6 rounded-[2.5rem] border border-white/5">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label className="text-[11px] font-bold text-white">Личные чаты</Label>
+                    <p className="text-[8px] text-muted-foreground uppercase font-black">Уведомления о сообщениях</p>
+                  </div>
+                  <Switch checked={form.notifications.messages} onCheckedChange={v => setForm({...form, notifications: {...form.notifications, messages: v}})} />
+                </div>
+                
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label className="text-[11px] font-bold text-white">Группы</Label>
+                    <p className="text-[8px] text-muted-foreground uppercase font-black">Уведомления в сообществах</p>
+                  </div>
+                  <Switch checked={form.notifications.groups} onCheckedChange={v => setForm({...form, notifications: {...form.notifications, groups: v}})} />
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label className="text-[11px] font-bold text-white">Каналы</Label>
+                    <p className="text-[8px] text-muted-foreground uppercase font-black">Уведомления о публикациях</p>
+                  </div>
+                  <Switch checked={form.notifications.channels} onCheckedChange={v => setForm({...form, notifications: {...form.notifications, channels: v}})} />
+                </div>
+
+                <div className="flex items-center justify-between pt-4 border-t border-white/5">
+                  <div className="space-y-0.5">
+                    <Label className="text-[11px] font-bold text-white">Текст сообщений</Label>
+                    <p className="text-[8px] text-muted-foreground uppercase font-black">Превью контента в уведомлении</p>
+                  </div>
+                  <Switch checked={form.notifications.previews} onCheckedChange={v => setForm({...form, notifications: {...form.notifications, previews: v}})} />
                 </div>
               </div>
             </TabsContent>
