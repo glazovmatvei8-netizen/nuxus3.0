@@ -5,20 +5,31 @@ import React, { useState, useMemo, memo } from 'react';
 import { useAppState } from '@/lib/store';
 import { Button } from '@/components/ui/button';
 import { UserAvatar } from '@/components/user-avatar';
-import { Pin, Star, SquarePen, FolderOpen, Ghost, Search } from 'lucide-react';
+import { 
+  Pin, Star, SquarePen, FolderOpen, Ghost, Search, MoreVertical, 
+  Archive, Trash2, ArchiveRestore 
+} from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { CreateChatModal } from './modals/create-chat-modal';
+import { 
+  DropdownMenu, 
+  DropdownMenuContent, 
+  DropdownMenuItem, 
+  DropdownMenuTrigger 
+} from "@/components/ui/dropdown-menu";
 import type { User, Message, Chat } from '@/lib/types';
 import { useFirestore, useUser, useCollection, useDoc, useMemoFirebase } from '@/firebase';
-import { collection, query, where, doc, limit, orderBy } from 'firebase/firestore';
+import { collection, query, where, doc, limit, orderBy, updateDoc, deleteDoc } from 'firebase/firestore';
 import { formatDisplayName, cn } from '@/lib/utils';
 import { format } from 'date-fns';
+import { useToast } from '@/hooks/use-toast';
 
 const ChatListItem = memo(({ 
   chat, isActive, otherId, cachedDisplayName, manualAvatarUrl, 
   onClick, user
 }: any) => {
   const db = useFirestore();
+  const { toast } = useToast();
   const userProfileRef = useMemoFirebase(() => (!db || !otherId) ? null : doc(db, 'users', otherId), [db, otherId]);
   const { data: otherProfile } = useDoc<User>(userProfileRef);
 
@@ -39,6 +50,22 @@ const ChatListItem = memo(({
     try { return format(date, 'HH:mm'); } catch (e) { return ''; }
   }, [chat.lastMessageAt, chat.createdAt]);
 
+  const handleArchive = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!db) return;
+    updateDoc(doc(db, 'chats', chat.id), { isArchived: !chat.isArchived });
+    toast({ title: chat.isArchived ? "Вернулся из архива" : "Отправлено в архив" });
+  };
+
+  const handleDelete = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!db) return;
+    if (confirm('Вы уверены, что хотите удалить этот чат?')) {
+      deleteDoc(doc(db, 'chats', chat.id));
+      toast({ title: "Чат удален" });
+    }
+  };
+
   return (
     <div
       onClick={onClick}
@@ -50,12 +77,33 @@ const ChatListItem = memo(({
       <UserAvatar userId={otherId} manualAvatarUrl={manualAvatarUrl || otherProfile?.avatarUrl || chat.avatarUrl} className="h-[52px] w-[52px]" fallbackName={finalDisplayName} />
       <div className="flex-1 min-w-0 border-b border-white/[0.03] pb-3 h-full flex flex-col justify-center">
         <div className="flex items-center justify-between mb-0.5">
-          <span className="font-bold text-[16px] text-white truncate">{finalDisplayName} {otherProfile?.isPremium && <Star className="w-3 h-3 text-accent fill-accent inline ml-1" />}</span>
+          <span className="font-bold text-[16px] text-white truncate">
+            {finalDisplayName} {otherProfile?.isPremium && <Star className="w-3 h-3 text-accent fill-accent inline ml-1" />}
+          </span>
           <span className="text-[13px] text-muted-foreground/60 font-medium">{displayTime}</span>
         </div>
-        <p className="text-[14px] text-muted-foreground/60 truncate pr-4">
-          {lastMsg?.contentType === 'text' ? lastMsg.content : (lastMsg ? `[${lastMsg.contentType}]` : 'Нет сообщений')}
-        </p>
+        <div className="flex items-center justify-between pr-2">
+          <p className="text-[14px] text-muted-foreground/60 truncate flex-1">
+            {lastMsg?.contentType === 'text' ? lastMsg.content : (lastMsg ? `[${lastMsg.contentType}]` : 'Нет сообщений')}
+          </p>
+          
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+              <Button variant="ghost" size="icon" className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity rounded-full">
+                <MoreVertical className="w-4 h-4 text-muted-foreground" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="bg-card border-white/5">
+              <DropdownMenuItem onClick={handleArchive} className="gap-2">
+                {chat.isArchived ? <ArchiveRestore className="w-4 h-4" /> : <Archive className="w-4 h-4" />}
+                {chat.isArchived ? 'Из архива' : 'В архив'}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleDelete} className="text-destructive gap-2">
+                <Trash2 className="w-4 h-4" /> Удалить
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </div>
     </div>
   );
@@ -103,7 +151,6 @@ export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?:
             <Search className="w-5 h-5 text-white/60" />
           </Button>
 
-          {/* Centered Title */}
           <h1 className="text-[20px] font-black text-white italic tracking-tighter absolute left-1/2 -translate-x-1/2 whitespace-nowrap">
             {isArchiveView ? 'Архив' : 'Чаты🐱'}
           </h1>
@@ -115,7 +162,6 @@ export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?:
           </div>
         </div>
 
-        {/* Dynamic Folders Tabs - hidden in Archive view */}
         {!isArchiveView && (
           <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide py-1">
             {[
