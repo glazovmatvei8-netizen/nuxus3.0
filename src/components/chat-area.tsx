@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
   Send, Info, ChevronLeft, Loader2, Bookmark, X, Video, Wand2, Phone, Search as SearchIcon,
-  Zap, Paperclip, Mic, StopCircle, Pin, ChevronDown
+  Zap, Paperclip, Mic, StopCircle, Pin, ChevronDown, ImageIcon
 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { MessageItem } from './message-item';
@@ -73,6 +73,7 @@ export default function ChatArea() {
   const recordingIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   const inputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const dataLoadedRef = useRef(false);
   const { toast } = useToast();
@@ -157,7 +158,11 @@ export default function ChatArea() {
     const captureReply = replyTo;
     const captureEdit = editingMsg;
 
-    setMessageInput(''); setReplyTo(null); setEditingMsg(null);
+    if (type_msg === 'text') {
+      setMessageInput('');
+    }
+    setReplyTo(null); 
+    setEditingMsg(null);
 
     if (captureEdit) {
       updateDocumentNonBlocking(doc(db, 'chats', currentChatId, 'messages', captureEdit.id), { 
@@ -187,6 +192,22 @@ export default function ChatArea() {
     addDoc(collection(db, 'chats', currentChatId, 'messages'), msgData);
     updateDocumentNonBlocking(doc(db, 'chats', currentChatId), { lastMessageAt: new Date().toISOString() });
   }, [messageInput, currentChatId, firebaseUser, db, userProfile, replyTo, editingMsg]);
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !db || !currentChatId || !firebaseUser) return;
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const base64 = reader.result as string;
+      const type = file.type.startsWith('video') ? 'video' : 'image';
+      handleSendMessage(base64, type as any);
+      toast({ title: "Файл отправлен" });
+    };
+    reader.readAsDataURL(file);
+    // Reset input
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
 
   const startRecording = async () => {
     try {
@@ -300,7 +321,23 @@ export default function ChatArea() {
           )}
 
           <div className="flex gap-2 items-end">
-            <Button variant="ghost" size="icon" className="h-11 w-11 rounded-xl shrink-0 bg-muted" disabled={isRecording}><Paperclip className="w-5 h-5 text-muted-foreground" /></Button>
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="h-11 w-11 rounded-xl shrink-0 bg-muted hover:bg-muted/80 transition-colors" 
+              disabled={isRecording}
+              onClick={() => fileInputRef.current?.click()}
+            >
+              <Paperclip className="w-5 h-5 text-muted-foreground" />
+            </Button>
+            <input 
+              type="file" 
+              ref={fileInputRef} 
+              className="hidden" 
+              accept="image/*,video/*" 
+              onChange={handleFileUpload} 
+            />
+            
             <div className="flex-1 relative">
               <Input ref={inputRef} placeholder="Напишите сообщение..." className="bg-muted border-none rounded-xl h-11 text-sm px-4 focus-visible:ring-1 focus-visible:ring-primary/20" value={messageInput} onChange={e => setMessageInput(e.target.value)} onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { handleSendMessage(); } }} disabled={isRecording} />
             </div>

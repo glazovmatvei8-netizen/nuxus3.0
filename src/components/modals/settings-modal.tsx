@@ -2,7 +2,7 @@
 "use client"
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -101,6 +101,16 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
   const handleSave = () => {
     if (!userRef) return;
     
+    // Spread existing settings to avoid wiping unsaved fields
+    const updatedSettings = {
+      ...(profile?.settings || {}),
+      theme: form.theme,
+      chatBackground: form.chatBackground,
+      chatBackgroundFit: form.chatBackgroundFit,
+      privacy: form.privacy,
+      notifications: form.notifications
+    };
+
     const updateData = {
       name: form.name,
       username: form.username.startsWith('@') ? form.username.toLowerCase() : '@' + form.username.toLowerCase(),
@@ -108,13 +118,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
       avatarUrl: form.avatarUrl,
       twoFactorEnabled: form.twoFactorEnabled,
       twoFactorPin: form.twoFactorPin,
-      settings: {
-        theme: form.theme,
-        chatBackground: form.chatBackground,
-        chatBackgroundFit: form.chatBackgroundFit,
-        privacy: form.privacy,
-        notifications: form.notifications
-      }
+      settings: updatedSettings
     };
 
     setDocumentNonBlocking(userRef, updateData, { merge: true });
@@ -139,6 +143,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
           <DialogTitle className="flex items-center gap-2 text-xl font-black italic uppercase tracking-tighter text-white">
             <Settings2 className="w-5 h-5 text-primary" /> Настройки Ядра
           </DialogTitle>
+          <DialogDescription className="sr-only">Персонализация вашего профиля и безопасности</DialogDescription>
         </DialogHeader>
         
         <Tabs value={settingsTab} onValueChange={setSettingsTab} className="flex-1 flex flex-col min-h-0">
@@ -340,6 +345,10 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
 
     <Dialog open={isBgPlacementOpen} onOpenChange={setIsBgPlacementOpen}>
       <DialogContent className="max-w-sm bg-card border-border rounded-[2.5rem] p-6 shadow-2xl">
+        <DialogHeader>
+          <DialogTitle className="sr-only">Настройка фона чата</DialogTitle>
+          <DialogDescription className="sr-only">Выберите способ размещения изображения</DialogDescription>
+        </DialogHeader>
         <div className="py-6 space-y-4">
           <div className="aspect-video w-full rounded-2xl overflow-hidden bg-black border border-white/5">
             <img src={bgPreview || form.chatBackground} className="w-full h-full object-contain" />
