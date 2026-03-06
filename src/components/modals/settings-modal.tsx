@@ -18,8 +18,7 @@ import {
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { signOut } from 'firebase/auth';
-import { doc } from 'firebase/firestore';
-import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { doc, updateDoc } from 'firebase/firestore';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAppState } from '@/lib/store';
 import { cn } from '@/lib/utils';
@@ -70,9 +69,11 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
 
   const [bgPreview, setBgPreview] = useState<string | null>(null);
   const [isBgPlacementOpen, setIsBgPlacementOpen] = useState(false);
+  const isInitialized = useRef(false);
 
+  // Initialize form only ONCE when opening modal to prevent heartbeat reset
   useEffect(() => {
-    if (profile && open) {
+    if (profile && open && !isInitialized.current) {
       setForm({
         name: profile.name || '',
         username: (profile.username || '').replace('@', ''),
@@ -95,32 +96,40 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
           previews: profile.settings?.notifications?.previews !== false
         }
       });
+      isInitialized.current = true;
+    }
+    
+    if (!open) {
+      isInitialized.current = false;
     }
   }, [profile, open]);
 
-  const handleSave = () => {
-    if (!userRef) return;
+  const handleSave = async () => {
+    if (!db || !user) return;
     
-    // Using an explicit structure to prevent nested data loss during partial updates
-    const updateData = {
-      name: form.name,
-      username: '@' + form.username.toLowerCase(),
-      bio: form.bio,
-      avatarUrl: form.avatarUrl,
-      twoFactorEnabled: form.twoFactorEnabled,
-      twoFactorPin: form.twoFactorPin,
-      settings: {
-        theme: form.theme,
-        chatBackground: form.chatBackground,
-        chatBackgroundFit: form.chatBackgroundFit,
-        privacy: form.privacy,
-        notifications: form.notifications
-      }
-    };
+    try {
+      const userDocRef = doc(db, 'users', user.uid);
+      
+      // Perform granular update to avoid overwriting unrelated fields
+      await updateDoc(userDocRef, {
+        name: form.name,
+        username: '@' + form.username.toLowerCase(),
+        bio: form.bio,
+        avatarUrl: form.avatarUrl,
+        twoFactorEnabled: form.twoFactorEnabled,
+        twoFactorPin: form.twoFactorPin,
+        'settings.theme': form.theme,
+        'settings.chatBackground': form.chatBackground,
+        'settings.chatBackgroundFit': form.chatBackgroundFit,
+        'settings.privacy': form.privacy,
+        'settings.notifications': form.notifications
+      });
 
-    setDocumentNonBlocking(userRef, updateData, { merge: true });
-    onOpenChange(false);
-    toast({ title: "Ядро обновлено", description: "Настройки синхронизированы" });
+      onOpenChange(false);
+      toast({ title: "Ядро обновлено", description: "Настройки синхронизированы" });
+    } catch (e: any) {
+      toast({ title: "Ошибка сохранения", description: e.message, variant: "destructive" });
+    }
   };
 
   const finalizeBackground = (fit: 'cover' | 'contain') => {
