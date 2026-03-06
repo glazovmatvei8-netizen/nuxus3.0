@@ -6,31 +6,22 @@ import { useAppState } from '@/lib/store';
 import { Button } from '@/components/ui/button';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
-  Plus, SquarePen, Ghost, Search, MoreVertical, 
-  Archive, Trash2, ArchiveRestore, Star
+  Plus, SquarePen, Ghost, Search, Star
 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { CreateChatModal } from './modals/create-chat-modal';
 import { ChatEditorModal } from './modals/chat-editor-modal';
-import { 
-  DropdownMenu, 
-  DropdownMenuContent, 
-  DropdownMenuItem, 
-  DropdownMenuTrigger 
-} from "@/components/ui/dropdown-menu";
 import type { User, Message, Chat } from '@/lib/types';
 import { useFirestore, useUser, useCollection, useDoc, useMemoFirebase } from '@/firebase';
-import { collection, query, where, doc, limit, orderBy, updateDoc, deleteDoc } from 'firebase/firestore';
+import { collection, query, where, doc, limit, orderBy } from 'firebase/firestore';
 import { formatDisplayName, cn } from '@/lib/utils';
 import { format } from 'date-fns';
-import { useToast } from '@/hooks/use-toast';
 
 const ChatListItem = memo(({ 
   chat, isActive, otherId, cachedDisplayName, manualAvatarUrl, 
-  onClick, user
+  onClick
 }: any) => {
   const db = useFirestore();
-  const { toast } = useToast();
   const userProfileRef = useMemoFirebase(() => (!db || !otherId) ? null : doc(db, 'users', otherId), [db, otherId]);
   const { data: otherProfile } = useDoc<User>(userProfileRef);
 
@@ -50,22 +41,6 @@ const ChatListItem = memo(({
     const date = chat.lastMessageAt ? new Date(chat.lastMessageAt) : new Date(chat.createdAt);
     try { return format(date, 'HH:mm'); } catch (e) { return ''; }
   }, [chat.lastMessageAt, chat.createdAt]);
-
-  const handleArchive = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (!db) return;
-    updateDoc(doc(db, 'chats', chat.id), { isArchived: !chat.isArchived });
-    toast({ title: chat.isArchived ? "Вернулся из архива" : "Отправлено в архив" });
-  };
-
-  const handleDelete = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (!db) return;
-    if (confirm('Вы уверены, что хотите удалить этот чат?')) {
-      deleteDoc(doc(db, 'chats', chat.id));
-      toast({ title: "Чат удален" });
-    }
-  };
 
   return (
     <div
@@ -87,23 +62,6 @@ const ChatListItem = memo(({
           <p className="text-[14px] text-muted-foreground/60 truncate flex-1">
             {lastMsg?.contentType === 'text' ? lastMsg.content : (lastMsg ? `[${lastMsg.contentType}]` : 'Нет сообщений')}
           </p>
-          
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-              <Button variant="ghost" size="icon" className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity rounded-full">
-                <MoreVertical className="w-4 h-4 text-muted-foreground" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="bg-card border-white/5">
-              <DropdownMenuItem onClick={handleArchive} className="gap-2">
-                {chat.isArchived ? <ArchiveRestore className="w-4 h-4" /> : <Archive className="w-4 h-4" />}
-                {chat.isArchived ? 'Из архива' : 'В архив'}
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={handleDelete} className="text-destructive gap-2">
-                <Trash2 className="w-4 h-4" /> Удалить
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
         </div>
       </div>
     </div>
@@ -119,9 +77,6 @@ export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?:
   const [activeTab, setActiveTab] = useState(isArchiveView ? 'archived' : 'all');
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isEditorModalOpen, setIsEditorModalOpen] = useState(false);
-
-  const userProfileRef = useMemoFirebase(() => (!db || !user) ? null : doc(db, 'users', user.uid), [db, user]);
-  const { data: profile } = useDoc<User>(userProfileRef);
 
   const chatsQuery = useMemoFirebase(() => {
     if (!db || !user) return null;
@@ -200,7 +155,6 @@ export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?:
                 key={chat.id} 
                 chat={chat} 
                 isActive={currentChatId === chat.id} 
-                user={user}
                 onClick={() => setCurrentChatId(chat.id)}
                 otherId={chat.type === 'private' && user ? chat.participantIds?.find((id: string) => id !== user.uid) : null} 
               />
