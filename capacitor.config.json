@@ -5,7 +5,7 @@
   "webDir": "out",
   "bundledWebRuntime": false,
   "server": {
-    "url": "https://9000-firebase-studio-1772042875348.cluster-kizalrzg35hz6u4i7pguwgt6ss.cloudworkstations.dev",
+    "url": "https://studio-5946432351-bbd5e.web.app/",
     "allowNavigation": ["*"]
   }
 }
