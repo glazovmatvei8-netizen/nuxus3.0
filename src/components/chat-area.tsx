@@ -92,20 +92,6 @@ export default function ChatArea() {
     return chat?.ownerId === firebaseUser?.uid || chat?.adminIds?.includes(firebaseUser?.uid || '');
   }, [chat, firebaseUser]);
 
-  const pinnedMsgRef = useMemoFirebase(() => {
-    if (!db || !currentChatId || !chat?.pinnedMessageId) return null;
-    return doc(db, 'chats', currentChatId, 'messages', chat.pinnedMessageId);
-  }, [db, currentChatId, chat?.pinnedMessageId]);
-  const { data: pinnedMessage } = useDoc<Message>(pinnedMsgRef);
-
-  const otherId = useMemo(() => {
-    if (chat?.type === 'private' && firebaseUser) return chat.participantIds?.find((id: string) => id !== firebaseUser.uid);
-    return null;
-  }, [chat, firebaseUser]);
-
-  const otherProfileRef = useMemoFirebase(() => (!db || !otherId) ? null : doc(db, 'users', otherId), [db, otherId]);
-  const { data: otherProfile } = useDoc<UserType>(otherProfileRef);
-
   const messagesQuery = useMemoFirebase(() => {
     if (!db || !currentChatId) return null;
     return query(collection(db, 'chats', currentChatId, 'messages'), orderBy('sentAt', 'asc'));
@@ -191,6 +177,47 @@ export default function ChatArea() {
     updateDocumentNonBlocking(doc(db, 'chats', currentChatId), { lastMessageAt: new Date().toISOString() });
   }, [messageInput, currentChatId, firebaseUser, db, userProfile, replyTo, editingMsg]);
 
+  /**
+   * Sends multiple files as a single Album message if they are images.
+   * If mixed or video, sends individually.
+   */
+  const handleSendBatch = async () => {
+    if (!currentChatId || !firebaseUser || !db) return;
+    setIsSendingFiles(true);
+    try {
+      // Group photos into chunks of 10 for albums
+      const photos = selectedFiles.filter(f => f.type === 'image');
+      const others = selectedFiles.filter(f => f.type !== 'image');
+
+      // Send non-photo files individually
+      for (const file of others) {
+        await handleSendMessage(file.url, file.type);
+      }
+
+      // Send photos in batches of 10 as "albums"
+      for (let i = 0; i < photos.length; i += 10) {
+        const batch = photos.slice(i, i + 10);
+        const albumUrls = batch.map(p => p.url);
+        
+        // If it's just 1 photo, send as regular image
+        if (albumUrls.length === 1) {
+          await handleSendMessage(albumUrls[0], 'image');
+        } else {
+          // Send as album
+          await handleSendMessage(JSON.stringify(albumUrls), 'album');
+        }
+      }
+
+      setIsPreviewModalOpen(false);
+      setSelectedFiles([]);
+      toast({ title: "Успешно отправлено" });
+    } catch (e) {
+      toast({ title: "Ошибка при отправке", variant: "destructive" });
+    } finally {
+      setIsSendingFiles(false);
+    }
+  };
+
   const handleAiDraft = async () => {
     if (!currentChatId || isAiLoading) return;
     setIsAiLoading(true);
@@ -215,14 +242,10 @@ export default function ChatArea() {
     const files = Array.from(e.target.files || []);
     if (files.length === 0) return;
     
-    if (files.length > 10) {
-      toast({ title: "Ограничение", description: "Максимум 10 файлов за раз. Выбраны первые 10.", variant: "destructive" });
-    }
-
+    setIsAiLoading(true); // Reuse loader for processing
     const newFiles: { url: string; type: 'image' | 'video' }[] = [];
-    const limitedFiles = files.slice(0, 10);
 
-    for (const file of limitedFiles) {
+    for (const file of files) {
       const reader = new FileReader();
       const type = file.type.startsWith('video') ? 'video' : 'image';
       
@@ -230,7 +253,8 @@ export default function ChatArea() {
         reader.onloadend = async () => {
           let url = reader.result as string;
           if (type === 'image') {
-            url = await compressImage(url);
+            // Aggressive compression for batch sending
+            url = await compressImage(url, 800, 0.5);
           }
           newFiles.push({ url, type: type as any });
           resolve(null);
@@ -239,25 +263,10 @@ export default function ChatArea() {
       });
     }
 
-    setSelectedFiles(newFiles);
+    setSelectedFiles(prev => [...prev, ...newFiles].slice(0, 30)); // Max 30 total in picker
     setIsPreviewModalOpen(true);
+    setIsAiLoading(false);
     if (fileInputRef.current) fileInputRef.current.value = '';
-  };
-
-  const handleSendBatch = async () => {
-    setIsSendingFiles(true);
-    try {
-      for (const file of selectedFiles) {
-        await handleSendMessage(file.url, file.type);
-      }
-      setIsPreviewModalOpen(false);
-      setSelectedFiles([]);
-      toast({ title: "Файлы отправлены" });
-    } catch (e) {
-      toast({ title: "Ошибка при отправке", variant: "destructive" });
-    } finally {
-      setIsSendingFiles(false);
-    }
   };
 
   const startRecording = async () => {
@@ -265,7 +274,7 @@ export default function ChatArea() {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       const recorder = new MediaRecorder(stream);
       recorderRef.current = recorder; chunksRef.current = [];
-      recorder.ondataavailable = (e) => { if (e.data.size > 0) chunksRef.current.push(e.data); };
+      recorder.ondataavailable = (e) => { if (e.size > 0) chunksRef.current.push(e.data); };
       recorder.onstop = async () => {
         const blob = new Blob(chunksRef.current, { type: 'audio/webm' });
         const reader = new FileReader(); reader.readAsDataURL(blob);

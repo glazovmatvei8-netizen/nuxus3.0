@@ -51,7 +51,7 @@ export function ImagePreviewModal({ open, onOpenChange, files, onRemove, onSend,
 
         <DialogFooter className="p-6 border-t border-white/5 bg-white/5 flex gap-3 sm:justify-between items-center">
           <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
-            Выбрано: {files.length} / 10
+            Выбрано: {files.length} / 30
           </span>
           <div className="flex gap-2">
             <Button variant="ghost" onClick={() => onOpenChange(false)} className="rounded-xl font-bold uppercase text-[10px] tracking-widest">Отмена</Button>

@@ -122,7 +122,7 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md bg-card border-white/10 rounded-[2.5rem] p-0 overflow-hidden shadow-2xl">
         <DialogHeader className="p-6 pb-0">
-          <DialogTitle className="sr-only">Глобальный поиск Nuxus</DialogTitle>
+          <DialogTitle className="text-white font-black uppercase italic tracking-tighter">Глобальный поиск</DialogTitle>
         </DialogHeader>
 
         <div className="px-6 py-6">

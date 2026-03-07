@@ -11,7 +11,7 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator
 } from "@/components/ui/dropdown-menu";
-import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogTrigger, DialogTitle } from '@/components/ui/dialog';
 import { format } from 'date-fns';
 import { 
   CornerUpLeft, Trash2, Check, CheckCheck, Edit2, Copy, Pin, FileText, Sparkles, Loader2, X
@@ -100,6 +100,7 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, isAdmi
             </div>
           </DialogTrigger>
           <DialogContent className="max-w-[95vw] max-h-[95vh] p-0 bg-transparent border-none flex items-center justify-center">
+            <DialogTitle className="sr-only">Просмотр медиа</DialogTitle>
             <div className="relative w-full h-full flex items-center justify-center group">
               {message.contentType === 'video' ? (
                 <video src={message.content} controls autoPlay className="max-w-full max-h-[90vh] rounded-xl shadow-2xl" />
@@ -111,6 +112,34 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, isAdmi
             </div>
           </DialogContent>
         </Dialog>
+      );
+    }
+
+    if (message.contentType === 'album') {
+      const urls = JSON.parse(message.content) as string[];
+      const gridCols = urls.length === 2 ? 'grid-cols-2' : urls.length === 3 ? 'grid-cols-2' : 'grid-cols-2 md:grid-cols-3';
+      
+      return (
+        <div className={cn("grid gap-1 max-w-[320px]", gridCols)}>
+          {urls.map((url, idx) => (
+            <Dialog key={idx}>
+              <DialogTrigger asChild>
+                <div className={cn(
+                  "relative aspect-square rounded-lg overflow-hidden border border-white/5 cursor-zoom-in group",
+                  urls.length === 3 && idx === 0 ? "col-span-2 aspect-video" : ""
+                )}>
+                  <Image src={url} alt={`Album img ${idx}`} fill className="object-cover transition-transform group-hover:scale-110" />
+                </div>
+              </DialogTrigger>
+              <DialogContent className="max-w-[95vw] max-h-[95vh] p-0 bg-transparent border-none flex items-center justify-center">
+                <DialogTitle className="sr-only">Просмотр фото</DialogTitle>
+                <div className="relative w-screen h-screen">
+                  <Image src={url} alt="Full screen album" fill className="object-contain" />
+                </div>
+              </DialogContent>
+            </Dialog>
+          ))}
+        </div>
       );
     }
 
