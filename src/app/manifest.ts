@@ -23,6 +23,18 @@ export default function manifest(): MetadataRoute.Manifest {
         purpose: 'maskable'
       },
       {
+        src: 'https://images.unsplash.com/photo-1614850523296-d8c1af93d400?q=80&w=192&h=192&fit=crop&format=png',
+        sizes: '192x192',
+        type: 'image/png',
+        purpose: 'any'
+      },
+      {
+        src: 'https://images.unsplash.com/photo-1614850523296-d8c1af93d400?q=80&w=512&h=512&fit=crop&format=png',
+        sizes: '512x512',
+        type: 'image/png',
+        purpose: 'maskable'
+      },
+      {
         src: 'https://images.unsplash.com/photo-1614850523296-d8c1af93d400?q=80&w=512&h=512&fit=crop&format=png',
         sizes: '512x512',
         type: 'image/png',
