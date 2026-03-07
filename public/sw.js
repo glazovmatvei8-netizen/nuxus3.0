@@ -1,28 +1,25 @@
 
-/**
- * Nuxus Core Service Worker v1.0
- * Обязательный файл для генерации APK.
- */
-
-const CACHE_NAME = 'nuxus-v1';
-const ASSETS = [
+const CACHE_NAME = 'nuxus-cache-v1';
+const urlsToCache = [
   '/',
-  '/manifest.webmanifest'
+  '/manifest.webmanifest',
+  'https://picsum.photos/seed/nuxus-prime-core-v5/192/192',
+  'https://picsum.photos/seed/nuxus-prime-core-v5/512/512'
 ];
 
 self.addEventListener('install', (event) => {
-  self.skipWaiting();
-});
-
-self.addEventListener('activate', (event) => {
-  event.waitUntil(clients.claim());
+  event.waitUntil(
+    caches.open(CACHE_NAME)
+      .then((cache) => cache.addAll(urlsToCache))
+  );
 });
 
 self.addEventListener('fetch', (event) => {
-  // Для мессенджера используем стратегию Network First
   event.respondWith(
-    fetch(event.request).catch(() => {
-      return caches.match(event.request);
-    })
+    caches.match(event.request)
+      .then((response) => {
+        if (response) return response;
+        return fetch(event.request);
+      })
   );
 });
