@@ -60,19 +60,19 @@ export default function ChatMain() {
         {/* Desktop Navigation Rail */}
         <div className="hidden md:flex w-[72px] h-full flex-col items-center py-6 bg-[#0a0a0c] border-r border-white/5 shrink-0 z-40">
           <div className="mb-8 cursor-pointer active:scale-90 transition-transform" onClick={() => setActiveView('chats')}>
-            <div className="w-12 h-12 bg-primary/10 rounded-2xl flex items-center justify-center border border-primary/20">
+            <div className="w-12 h-12 bg-primary/10 rounded-2xl flex items-center justify-center border border-primary/20 shadow-[0_0_20px_rgba(139,92,246,0.1)]">
               <MessageCircle className="w-6 h-6 text-primary" />
             </div>
           </div>
           
           <div className="flex flex-col gap-6 flex-1">
-            <RailButton icon={MessageCircle} active={activeView === 'chats'} onClick={() => setActiveView('chats')} label="Чаты🐱" />
-            <RailButton icon={Users} active={activeView === 'contacts'} onClick={() => setActiveView('contacts')} label="Контакты" />
-            <RailButton icon={Phone} active={activeView === 'calls'} onClick={() => setActiveView('calls')} label="Звонки" />
-            <RailButton icon={Archive} active={activeView === 'archive'} onClick={() => setActiveView('archive')} label="Архив" />
+            <RailButton icon={MessageCircle} active={activeView === 'chats'} onClick={() => { setActiveView('chats'); setCurrentChatId(null); }} label="Чаты🐱" />
+            <RailButton icon={Users} active={activeView === 'contacts'} onClick={() => { setActiveView('contacts'); setCurrentChatId(null); }} label="Контакты" />
+            <RailButton icon={Phone} active={activeView === 'calls'} onClick={() => { setActiveView('calls'); setCurrentChatId(null); }} label="Звонки" />
+            <RailButton icon={Archive} active={activeView === 'archive'} onClick={() => { setActiveView('archive'); setCurrentChatId(null); }} label="Архив" />
           </div>
 
-          <div className="mt-auto flex flex-col gap-6">
+          <div className="mt-auto flex flex-col gap-6 items-center">
             <button 
               onClick={() => setIsSearchOpen(true)}
               className="w-10 h-10 rounded-xl flex items-center justify-center hover:bg-white/5 transition-colors text-muted-foreground hover:text-white"
@@ -80,21 +80,23 @@ export default function ChatMain() {
               <Search className="w-5 h-5" />
             </button>
             <button 
-              onClick={() => setActiveView('profile')}
+              onClick={() => { setActiveView('profile'); setCurrentChatId(null); }}
               className={cn(
-                "relative transition-all duration-200",
-                activeView === 'profile' ? "scale-110" : "opacity-60 hover:opacity-100"
+                "relative transition-all duration-300 group p-1 rounded-2xl",
+                activeView === 'profile' ? "bg-primary/10" : "hover:bg-white/5"
               )}
             >
-              <UserAvatar userId={user?.uid} className={cn("h-10 w-10 border-2", activeView === 'profile' ? "border-primary" : "border-transparent")} />
-              {activeView === 'profile' && <div className="absolute -right-1 top-1/2 -translate-y-1/2 w-1 h-4 bg-primary rounded-full" />}
+              <UserAvatar userId={user?.uid} className={cn("h-10 w-10 border-2 transition-all", activeView === 'profile' ? "border-primary scale-105" : "border-transparent opacity-70 group-hover:opacity-100")} />
+              {activeView === 'profile' && (
+                <div className="absolute -right-3 top-1/2 -translate-y-1/2 w-1 h-6 bg-primary rounded-full shadow-[0_0_10px_rgba(139,92,246,0.5)]" />
+              )}
             </button>
           </div>
         </div>
 
         <div className={cn(
           "w-full md:w-[350px] lg:w-[400px] h-full flex-shrink-0 border-r border-white/5 transition-all duration-300 z-30 bg-card",
-          currentChatId ? "hidden md:block" : "block"
+          (currentChatId && !['profile', 'contacts', 'calls', 'archive'].includes(activeView)) ? "hidden md:block" : "block"
         )}>
           {activeView === 'chats' && <ChatSidebar />}
           {activeView === 'contacts' && <ContactsView />}
@@ -175,10 +177,13 @@ function RailButton({ icon: Icon, active, onClick, label }: { icon: any, active?
       )}
     >
       <div className={cn(
-        "w-10 h-10 rounded-xl flex items-center justify-center transition-all",
+        "w-10 h-10 rounded-xl flex items-center justify-center transition-all relative",
         active ? "bg-primary/10 shadow-lg shadow-primary/5" : "group-hover:bg-white/5"
       )}>
-        <Icon className={cn("w-5 h-5", active && "fill-current")} />
+        <Icon className={cn("w-5 h-5 transition-all", active ? "fill-current scale-110" : "scale-100")} />
+        {active && (
+          <div className="absolute -left-4 top-1/2 -translate-y-1/2 w-1 h-4 bg-primary rounded-full shadow-[0_0_10px_rgba(139,92,246,0.5)]" />
+        )}
       </div>
       <span className="text-[8px] font-black uppercase tracking-widest">{label}</span>
     </button>
@@ -198,7 +203,7 @@ function NavButton({ icon: Icon, label, active, badge, onClick, isProfile, userI
         {isProfile ? (
           <UserAvatar userId={userId} className={cn("h-6 w-6 border transition-all", active ? "border-[#007AFF] scale-110" : "border-transparent opacity-60")} />
         ) : (
-          <Icon className={cn("w-6 h-6", active && "fill-current")} />
+          <Icon className={cn("w-6 h-6 transition-all", active ? "fill-current scale-110" : "scale-100")} />
         )}
         {badge && (
           <div className="absolute -top-1 -right-2 bg-[#FF3B30] text-white text-[9px] font-black rounded-full h-4 min-w-4 flex items-center justify-center px-1 border-2 border-[#1c1c1e]">

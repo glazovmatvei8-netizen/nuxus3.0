@@ -8,7 +8,7 @@ export default function manifest(): MetadataRoute.Manifest {
     description: 'Современный мессенджер с поддержкой AI и видеосообщений.',
     start_url: '/',
     display: 'standalone',
-    display_override: ['standalone', 'window-controls-overlay', 'fullscreen'],
+    display_override: ['window-controls-overlay', 'standalone', 'minimal-ui'],
     background_color: '#0a0a0c',
     theme_color: '#0a0a0c',
     lang: 'ru',
@@ -37,6 +37,15 @@ export default function manifest(): MetadataRoute.Manifest {
         name: "Контакты",
         url: "/",
         description: "Поиск контактов"
+      }
+    ],
+    categories: ["communications", "social"],
+    screenshots: [
+      {
+        src: "https://picsum.photos/seed/nuxus-shot/1170/2532",
+        sizes: "1170x2532",
+        type: "image/png",
+        label: "Nuxus Interface"
       }
     ]
   }
