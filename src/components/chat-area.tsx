@@ -7,17 +7,17 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
-  Send, Info, ChevronLeft, Loader2, Bookmark, X, Video, Wand2, Phone, Search as SearchIcon,
-  Zap, Paperclip, Mic, StopCircle, Pin, ChevronDown, ImageIcon, Edit2, Sparkles
+  Send, Info, ChevronLeft, Loader2, X, Sparkles, Paperclip, Mic, StopCircle, Pin, ChevronDown, Edit2
 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { MessageItem } from './message-item';
 import { useToast } from '@/hooks/use-toast';
 import { ChatInfoModal } from './modals/chat-info-modal';
+import { ImagePreviewModal } from './modals/image-preview-modal';
 import { useFirestore, useUser, useCollection, useDoc, useMemoFirebase } from '@/firebase';
-import { collection, query, orderBy, doc, updateDoc, where, addDoc, limit } from 'firebase/firestore';
+import { collection, query, orderBy, doc, updateDoc, addDoc } from 'firebase/firestore';
 import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
-import { formatDisplayName, cn } from '@/lib/utils';
+import { formatDisplayName, cn, compressImage } from '@/lib/utils';
 import type { Message, User as UserType, Chat } from '@/lib/types';
 import { suggestMessageDraft } from '@/ai/flows/ai-message-drafting-flow';
 
@@ -64,10 +64,12 @@ export default function ChatArea() {
   const [editingMsg, setEditingMsg] = useState<Message | null>(null);
   const [messageInput, setMessageInput] = useState('');
   const [isAiLoading, setIsAiLoading] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
   const [showScrollBottom, setShowScrollBottom] = useState(false);
 
-  // Recording State
+  const [selectedFiles, setSelectedFiles] = useState<{ url: string; type: 'image' | 'video' }[]>([]);
+  const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
+  const [isSendingFiles, setIsSendingFiles] = useState(false);
+
   const [isRecording, setIsRecording] = useState(false);
   const [recordingDuration, setRecordingDuration] = useState(0);
   const recorderRef = useRef<MediaRecorder | null>(null);
@@ -109,13 +111,7 @@ export default function ChatArea() {
     return query(collection(db, 'chats', currentChatId, 'messages'), orderBy('sentAt', 'asc'));
   }, [db, currentChatId]);
   
-  const { data: rawMessages } = useCollection<Message>(messagesQuery);
-
-  const messages = useMemo(() => {
-    if (!rawMessages) return null;
-    if (!searchQuery.trim()) return rawMessages;
-    return rawMessages.filter(m => m.contentType === 'text' && m.content.toLowerCase().includes(searchQuery.toLowerCase()));
-  }, [rawMessages, searchQuery]);
+  const { data: messages } = useCollection<Message>(messagesQuery);
 
   const scrollToBottom = useCallback((behavior: ScrollBehavior = 'auto') => {
     if (scrollRef.current) {
@@ -153,13 +149,6 @@ export default function ChatArea() {
     }
   }, [messages?.length, currentChatId, scrollToBottom]);
 
-  useEffect(() => {
-    if (editingMsg) {
-      setMessageInput(editingMsg.content);
-      inputRef.current?.focus();
-    }
-  }, [editingMsg]);
-
   const handleSendMessage = useCallback(async (content_msg: string = messageInput, type_msg: Message['contentType'] = 'text') => {
     if (!content_msg.trim() || !currentChatId || !firebaseUser || !db) return;
     
@@ -178,7 +167,6 @@ export default function ChatArea() {
         content: captureContent, 
         editedAt: new Date().toISOString() 
       });
-      toast({ title: "Сообщение изменено" });
       return;
     }
 
@@ -199,9 +187,9 @@ export default function ChatArea() {
       msgData.replyToContent = captureReply.contentType === 'text' ? captureReply.content : `[${captureReply.contentType}]`; 
     }
     
-    addDoc(collection(db, 'chats', currentChatId, 'messages'), msgData);
+    await addDoc(collection(db, 'chats', currentChatId, 'messages'), msgData);
     updateDocumentNonBlocking(doc(db, 'chats', currentChatId), { lastMessageAt: new Date().toISOString() });
-  }, [messageInput, currentChatId, firebaseUser, db, userProfile, replyTo, editingMsg, toast]);
+  }, [messageInput, currentChatId, firebaseUser, db, userProfile, replyTo, editingMsg]);
 
   const handleAiDraft = async () => {
     if (!currentChatId || isAiLoading) return;
@@ -211,47 +199,65 @@ export default function ChatArea() {
         sender: m.senderName,
         message: m.contentType === 'text' ? m.content : `[${m.contentType}]`
       }));
-
-      const { draftMessage } = await suggestMessageDraft({
-        conversationHistory: history,
-        currentUserInput: messageInput
-      });
-
+      const { draftMessage } = await suggestMessageDraft({ conversationHistory: history, currentUserInput: messageInput });
       if (draftMessage) {
         setMessageInput(draftMessage);
         toast({ title: "ИИ предложил вариант", icon: <Sparkles className="w-4 h-4 text-primary" /> });
       }
     } catch (e) {
-      console.error(e);
       toast({ title: "ИИ временно недоступен", variant: "destructive" });
     } finally {
       setIsAiLoading(false);
     }
   };
 
-  const handlePinMessage = async (msg: Message) => {
-    if (!db || !currentChatId || !isAdmin) return;
-    try {
-      await updateDoc(doc(db, 'chats', currentChatId), { pinnedMessageId: msg.id });
-      toast({ title: "Сообщение закреплено" });
-    } catch (e: any) {
-      toast({ title: "Ошибка закрепления", variant: "destructive" });
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+    
+    if (files.length > 10) {
+      toast({ title: "Ограничение", description: "Максимум 10 файлов за раз. Выбраны первые 10.", variant: "destructive" });
     }
+
+    const newFiles: { url: string; type: 'image' | 'video' }[] = [];
+    const limitedFiles = files.slice(0, 10);
+
+    for (const file of limitedFiles) {
+      const reader = new FileReader();
+      const type = file.type.startsWith('video') ? 'video' : 'image';
+      
+      await new Promise((resolve) => {
+        reader.onloadend = async () => {
+          let url = reader.result as string;
+          if (type === 'image') {
+            url = await compressImage(url);
+          }
+          newFiles.push({ url, type: type as any });
+          resolve(null);
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+
+    setSelectedFiles(newFiles);
+    setIsPreviewModalOpen(true);
+    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file || !db || !currentChatId || !firebaseUser) return;
-
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      const base64 = reader.result as string;
-      const type = file.type.startsWith('video') ? 'video' : 'image';
-      handleSendMessage(base64, type as any);
-      toast({ title: "Файл отправлен" });
-    };
-    reader.readAsDataURL(file);
-    if (fileInputRef.current) fileInputRef.current.value = '';
+  const handleSendBatch = async () => {
+    setIsSendingFiles(true);
+    try {
+      for (const file of selectedFiles) {
+        await handleSendMessage(file.url, file.type);
+      }
+      setIsPreviewModalOpen(false);
+      setSelectedFiles([]);
+      toast({ title: "Файлы отправлены" });
+    } catch (e) {
+      toast({ title: "Ошибка при отправке", variant: "destructive" });
+    } finally {
+      setIsSendingFiles(false);
+    }
   };
 
   const startRecording = async () => {
@@ -280,15 +286,6 @@ export default function ChatArea() {
       setIsRecording(false);
       if (recordingIntervalRef.current) clearInterval(recordingIntervalRef.current);
     }
-  };
-
-  const jumpToPinned = () => {
-    if (!chat?.pinnedMessageId) return;
-    const el = document.getElementById(`msg-${chat.pinnedMessageId}`);
-    if (el) {
-      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      el.classList.add('animate-pulse'); setTimeout(() => el.classList.remove('animate-pulse'), 2000);
-    } else toast({ title: "Сообщение далеко в истории" });
   };
 
   const chatDisplayName = useMemo(() => {
@@ -332,19 +329,6 @@ export default function ChatArea() {
         </div>
       </header>
 
-      {chat?.pinnedMessageId && pinnedMessage && (
-        <div className="bg-card/60 backdrop-blur-md border-b border-white/5 flex items-center px-4 py-2 shrink-0 z-20 animate-in slide-in-from-top-2">
-          <div className="flex-1 flex items-center gap-3 cursor-pointer group min-w-0" onClick={jumpToPinned}>
-            <div className="w-1 h-8 bg-primary rounded-full group-hover:bg-accent transition-colors" />
-            <div className="flex flex-col min-w-0">
-              <span className="text-[10px] font-black uppercase text-primary tracking-widest flex items-center gap-1.5"><Pin className="w-3 h-3 fill-current" /> Закрепленное сообщение</span>
-              <span className="text-xs text-white/80 truncate font-bold">{pinnedMessage.content}</span>
-            </div>
-          </div>
-          {isAdmin && <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => updateDoc(doc(db, 'chats', currentChatId!), { pinnedMessageId: null })}><X className="w-4 h-4" /></Button>}
-        </div>
-      )}
-
       <div className="flex-1 relative overflow-hidden">
         <ScrollArea ref={scrollRef} className="h-full w-full relative z-10 scrollbar-hide bg-transparent">
           {messages && (
@@ -353,7 +337,7 @@ export default function ChatArea() {
               userId={firebaseUser?.uid} 
               chatId={currentChatId} 
               onReply={setReplyTo} 
-              onPin={handlePinMessage}
+              onPin={(m: Message) => updateDoc(doc(db!, 'chats', currentChatId!), { pinnedMessageId: m.id })}
               onEdit={setEditingMsg} 
               amIPremium={userProfile?.isPremium} 
               isAdmin={isAdmin} 
@@ -391,23 +375,8 @@ export default function ChatArea() {
           )}
 
           <div className="flex gap-2 items-end">
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              className="h-11 w-11 rounded-xl shrink-0 bg-muted hover:bg-muted/80 transition-colors" 
-              disabled={isRecording}
-              onClick={() => fileInputRef.current?.click()}
-            >
-              <Paperclip className="w-5 h-5 text-muted-foreground" />
-            </Button>
-            <input 
-              type="file" 
-              ref={fileInputRef} 
-              className="hidden" 
-              accept="image/*,video/*" 
-              onChange={handleFileUpload} 
-            />
-            
+            <Button variant="ghost" size="icon" className="h-11 w-11 rounded-xl shrink-0 bg-muted hover:bg-muted/80 transition-colors" disabled={isRecording} onClick={() => fileInputRef.current?.click()}><Paperclip className="w-5 h-5 text-muted-foreground" /></Button>
+            <input type="file" ref={fileInputRef} className="hidden" accept="image/*,video/*" multiple onChange={handleFileUpload} />
             <div className="flex-1 relative">
               <Input ref={inputRef} placeholder="Напишите сообщение..." className="bg-muted border-none rounded-xl h-11 text-sm px-4 focus-visible:ring-1 focus-visible:ring-primary/20" value={messageInput} onChange={e => setMessageInput(e.target.value)} onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { handleSendMessage(); } }} disabled={isRecording} />
             </div>
@@ -420,6 +389,14 @@ export default function ChatArea() {
         </div>
       </footer>
       {chat && <ChatInfoModal open={isChatInfoOpen} onOpenChange={setIsChatInfoOpen} chat={chat as any} />}
+      <ImagePreviewModal 
+        open={isPreviewModalOpen} 
+        onOpenChange={setIsPreviewModalOpen} 
+        files={selectedFiles} 
+        onRemove={(i) => setSelectedFiles(prev => prev.filter((_, idx) => idx !== i))}
+        onSend={handleSendBatch}
+        isSending={isSendingFiles}
+      />
     </div>
   );
 }

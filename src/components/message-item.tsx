@@ -1,8 +1,8 @@
 
 "use client"
 
-import React, { useState, useEffect, memo, useRef } from 'react';
-import { useFirestore, useUser } from '@/firebase';
+import React, { useState, memo, useRef } from 'react';
+import { useFirestore } from '@/firebase';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
   DropdownMenu,
@@ -11,9 +11,10 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator
 } from "@/components/ui/dropdown-menu";
+import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
 import { format } from 'date-fns';
 import { 
-  CornerUpLeft, Trash2, Check, CheckCheck, Edit2, Copy, Pin, Clock, X, FileText, Sparkles
+  CornerUpLeft, Trash2, Check, CheckCheck, Edit2, Copy, Pin, FileText, Sparkles, Loader2, X
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { doc, updateDoc, deleteDoc } from 'firebase/firestore';
@@ -21,6 +22,7 @@ import type { Message } from '@/lib/types';
 import { Button } from './ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { transcribeVoice } from '@/ai/flows/voice-to-text-flow';
+import Image from 'next/image';
 
 export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, isAdmin = false, isGroup = false, onEdit, amIPremium = false }: any) => {
   const db = useFirestore();
@@ -49,12 +51,11 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, isAdmi
       return;
     }
     if (isTranscribing) return;
-    
     setIsTranscribing(true);
     try {
       const { text } = await transcribeVoice({ audioDataUri: message.content });
       setTranscription(text);
-      await updateDoc(doc(db, 'chats', chatId, 'messages', message.id), { translation: text });
+      await updateDoc(doc(db!, 'chats', chatId, 'messages', message.id), { translation: text });
       toast({ title: "Голосовое расшифровано" });
     } catch (e) {
       toast({ title: "Ошибка расшифровки", variant: "destructive" });
@@ -71,21 +72,13 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, isAdmi
             <Button variant="ghost" size="sm" className="h-8 gap-2 bg-primary/10 rounded-full px-4 hover:bg-primary/20" onClick={toggleAudio}>
               {isPlaying ? 'Пауза' : 'Голосовое сообщение'}
             </Button>
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              className="h-8 w-8 rounded-full bg-accent/10 hover:bg-accent/20" 
-              onClick={handleTranscribe}
-              disabled={isTranscribing}
-            >
+            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full bg-accent/10 hover:bg-accent/20" onClick={handleTranscribe} disabled={isTranscribing}>
               {isTranscribing ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileText className="w-4 h-4" />}
             </Button>
           </div>
           {transcription && (
             <div className="bg-black/20 p-2 rounded-xl border border-white/5 animate-in fade-in slide-in-from-top-1">
-              <p className="text-[11px] italic text-white/70 leading-relaxed">
-                <Sparkles className="w-3 h-3 inline mr-1 text-primary" /> {transcription}
-              </p>
+              <p className="text-[11px] italic text-white/70 leading-relaxed"><Sparkles className="w-3 h-3 inline mr-1 text-primary" /> {transcription}</p>
             </div>
           )}
         </div>
@@ -94,9 +87,30 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, isAdmi
 
     if (['image', 'video'].includes(message.contentType)) {
       return (
-        <div className="overflow-hidden rounded-2xl border border-white/5 max-w-[240px]">
-          {message.contentType === 'video' ? <video src={message.content} controls className="w-full h-full object-cover" /> : <img src={message.content} className="w-full h-full object-cover" />}
-        </div>
+        <Dialog>
+          <DialogTrigger asChild>
+            <div className="overflow-hidden rounded-2xl border border-white/5 max-w-[240px] cursor-zoom-in group relative">
+              {message.contentType === 'video' ? (
+                <video src={message.content} className="w-full h-full object-cover" />
+              ) : (
+                <div className="relative w-[240px] h-[320px]">
+                  <Image src={message.content} alt="Media content" fill className="object-cover transition-transform group-hover:scale-105" />
+                </div>
+              )}
+            </div>
+          </DialogTrigger>
+          <DialogContent className="max-w-[95vw] max-h-[95vh] p-0 bg-transparent border-none flex items-center justify-center">
+            <div className="relative w-full h-full flex items-center justify-center group">
+              {message.contentType === 'video' ? (
+                <video src={message.content} controls autoPlay className="max-w-full max-h-[90vh] rounded-xl shadow-2xl" />
+              ) : (
+                <div className="relative w-screen h-screen">
+                   <Image src={message.content} alt="Full screen" fill className="object-contain" />
+                </div>
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
       );
     }
 
@@ -128,7 +142,7 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, isAdmi
               {isMe && message.contentType === 'text' && <DropdownMenuItem onClick={() => onEdit(message)} className="gap-2"><Edit2 className="w-4 h-4" /> Изменить</DropdownMenuItem>}
               <DropdownMenuItem onClick={() => { navigator.clipboard.writeText(message.content); toast({ title: "Скопировано" }); }} className="gap-2"><Copy className="w-4 h-4" /> Копировать</DropdownMenuItem>
               <DropdownMenuSeparator className="bg-white/5" />
-              {(isMe || isAdmin) && <DropdownMenuItem onClick={() => deleteDoc(doc(db, 'chats', chatId, 'messages', message.id))} className="text-destructive gap-2"><Trash2 className="w-4 h-4" /> Удалить</DropdownMenuItem>}
+              {(isMe || isAdmin) && <DropdownMenuItem onClick={() => deleteDoc(doc(db!, 'chats', chatId, 'messages', message.id))} className="text-destructive gap-2"><Trash2 className="w-4 h-4" /> Удалить</DropdownMenuItem>}
             </DropdownMenuContent>
           </DropdownMenu>
         </div>

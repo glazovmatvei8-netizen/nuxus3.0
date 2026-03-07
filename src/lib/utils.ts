@@ -9,10 +9,6 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
-/**
- * Форматирует имя пользователя.
- * Если имя стандартное или отсутствует, возвращает 'Nuxus User'
- */
 export function formatDisplayName(name: string | undefined | null): string {
   if (!name) return 'Пользователь';
   const lower = name.toLowerCase();
@@ -34,40 +30,23 @@ export function formatDisplayName(name: string | undefined | null): string {
   return name;
 }
 
-/**
- * Проверяет наличие глобальных административных прав.
- */
 export function isGlobalAdmin(user: User | null | undefined): boolean {
   if (!user) return false;
-  
-  // Мастер-UIDы системы
   const PRIME_ADMINS = [
     'vnctow46',
-    'GCvLucN8CjNcdaxPO2vmpZ84hNl1' // Ваш аккаунт
+    'GCvLucN8CjNcdaxPO2vmpZ84hNl1'
   ];
-  
   if (PRIME_ADMINS.includes(user.id)) return true;
-  
-  // Доступ по номерам админа
   const adminPhones = ['79997457325', '79513332147', '79508784513'];
   const cleanPhone = user.phone?.replace(/\D/g, '');
-  
   if (adminPhones.some(p => cleanPhone?.includes(p))) return true;
-  
   return !!user.isAdmin;
 }
 
-/**
- * Проверяет наличие премиум-статуса у пользователя.
- */
 export function isUserPremium(user: User | null | undefined): boolean {
   if (!user) return false;
-  
-  // Админы всегда имеют премиум и галочку
   if (isGlobalAdmin(user)) return true;
-  
   if (!user.isPremium || !user.premiumUntil) return false;
-  
   try {
     return new Date(user.premiumUntil) > new Date();
   } catch (e) {
@@ -75,29 +54,19 @@ export function isUserPremium(user: User | null | undefined): boolean {
   }
 }
 
-/**
- * Проверяет, заблокирован ли пользователь в данный момент.
- */
 export function isUserActuallyBanned(user: User | null | undefined): boolean {
   if (!user || !user.isBanned) return false;
-  
-  // Если есть срок бана, проверяем не истек ли он
   if (user.bannedUntil) {
     try {
       const expiry = new Date(user.bannedUntil);
       return expiry > new Date();
     } catch (e) {
-      return true; // В случае ошибки даты считаем забаненным
+      return true;
     }
   }
-  
-  // Если bannedUntil нет, значит бан вечный
   return true;
 }
 
-/**
- * Форматирует статус последней активности пользователя.
- */
 export function formatLastSeen(
   lastSeenIso: string | undefined | null, 
   visibility: 'everybody' | 'nobody' = 'everybody',
@@ -105,16 +74,36 @@ export function formatLastSeen(
 ): string {
   if (isDeleted || !lastSeenIso) return 'Был(а) давно';
   if (visibility === 'nobody') return 'был(а) недавно';
-  
   try {
     const lastSeen = parseISO(lastSeenIso);
     const now = new Date();
     const diffSeconds = Math.max(0, differenceInSeconds(now, lastSeen));
-
     if (diffSeconds < 60) return 'в сети';
-    
     return `был(а) ${formatDistanceToNow(lastSeen, { addSuffix: true, locale: ru })}`;
   } catch (e) {
     return 'Был(а) давно';
   }
+}
+
+export async function compressImage(dataUrl: string, maxWidth = 1200, quality = 0.7): Promise<string> {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.src = dataUrl;
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      let width = img.width;
+      let height = img.height;
+
+      if (width > maxWidth) {
+        height = (maxWidth / width) * height;
+        width = maxWidth;
+      }
+
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      ctx?.drawImage(img, 0, 0, width, height);
+      resolve(canvas.toDataURL('image/jpeg', quality));
+    };
+  });
 }
