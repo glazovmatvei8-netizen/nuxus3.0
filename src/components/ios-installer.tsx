@@ -4,7 +4,7 @@
 import React from 'react';
 import { NuxusLogo } from './nuxus-logo';
 import { Button } from '@/components/ui/button';
-import { Share, PlusSquare, Star, ShieldCheck, Zap, DownloadCloud, ChevronRight } from 'lucide-react';
+import { Share, PlusSquare, ShieldCheck, Zap, Info } from 'lucide-react';
 
 /**
  * Native-like iOS App Store Installation Screen
@@ -30,7 +30,7 @@ export function IosInstaller({ onDismiss }: { onDismiss: () => void }) {
             <p className="text-primary text-xs font-bold uppercase tracking-widest mt-1">Quantum Kernel</p>
             <div className="mt-4">
               <Button className="bg-[#007AFF] hover:bg-[#007AFF]/90 text-white rounded-full h-8 px-6 font-black uppercase text-[10px] tracking-widest shadow-lg shadow-[#007AFF]/30">
-                Загрузить
+                Установить
               </Button>
             </div>
           </div>
@@ -54,25 +54,17 @@ export function IosInstaller({ onDismiss }: { onDismiss: () => void }) {
           </div>
         </div>
 
-        {/* Скриншоты или Превью */}
-        <div className="w-full space-y-4 mb-10">
-          <div className="bg-primary/5 rounded-3xl p-6 border border-primary/10">
-            <h2 className="text-white font-black text-sm uppercase italic mb-2">Что нового</h2>
-            <p className="text-[10px] text-muted-foreground leading-relaxed">Версия 0.59.0: Улучшена работа Ядра в условиях блокировок. Добавлены квантовые фильтры для видеозвонков.</p>
-          </div>
-        </div>
-
-        {/* Инструкция установки (имитируем системный процесс) */}
+        {/* Инструкция установки */}
         <div className="w-full space-y-4">
-          <h2 className="text-white font-black text-sm uppercase italic px-2">Инструкция по развертыванию</h2>
+          <h2 className="text-white font-black text-sm uppercase italic px-2">Инструкция</h2>
           
           <div className="bg-white/5 p-4 rounded-3xl flex items-center gap-4 border border-white/5">
             <div className="w-10 h-10 rounded-2xl bg-white/5 flex items-center justify-center">
               <Share className="w-5 h-5 text-[#007AFF]" />
             </div>
             <div className="flex-1">
-              <p className="text-[11px] font-bold text-white">1. Откройте меню управления</p>
-              <p className="text-[9px] text-muted-foreground uppercase">Нажмите на иконку «Поделиться» снизу</p>
+              <p className="text-[11px] font-bold text-white">1. Меню «Поделиться»</p>
+              <p className="text-[9px] text-muted-foreground uppercase">Нажмите на иконку внизу экрана</p>
             </div>
           </div>
 
@@ -81,8 +73,8 @@ export function IosInstaller({ onDismiss }: { onDismiss: () => void }) {
               <PlusSquare className="w-5 h-5 text-white" />
             </div>
             <div className="flex-1">
-              <p className="text-[11px] font-bold text-white">2. Добавьте в Ядро</p>
-              <p className="text-[9px] text-muted-foreground uppercase">Выберите пункт «На экран „Домой“»</p>
+              <p className="text-[11px] font-bold text-white">2. Добавить на экран «Домой»</p>
+              <p className="text-[9px] text-muted-foreground uppercase">Прокрутите список функций вниз</p>
             </div>
           </div>
 
@@ -91,16 +83,20 @@ export function IosInstaller({ onDismiss }: { onDismiss: () => void }) {
               <ShieldCheck className="w-5 h-5 text-primary" />
             </div>
             <div className="flex-1">
-              <p className="text-[11px] font-bold text-white">3. Активируйте Nuxus</p>
-              <p className="text-[9px] text-muted-foreground uppercase">Запустите иконку с рабочего стола</p>
+              <p className="text-[11px] font-bold text-white">3. Готово!</p>
+              <p className="text-[9px] text-muted-foreground uppercase">Запустите Nuxus с рабочего стола</p>
             </div>
           </div>
         </div>
 
-        <div className="mt-12 text-center pb-10">
-           <p className="text-[8px] text-muted-foreground/40 uppercase font-black tracking-widest max-w-[250px] mx-auto">
-             Если вы хотите получить .IPA файл для установки через AltStore/Sideloadly, обратитесь к документации в README.
-           </p>
+        <div className="mt-12 bg-[#1c1c1e] p-6 rounded-[2.5rem] w-full border border-white/5">
+            <div className="flex items-center gap-2 mb-3 text-accent">
+                <Info className="w-4 h-4" />
+                <h3 className="text-[10px] font-black uppercase tracking-widest">Информация для IPA</h3>
+            </div>
+            <p className="text-[9px] text-muted-foreground leading-relaxed uppercase font-bold">
+                Если вам нужен именно .IPA файл для установки через AltStore/Sideloadly, обратитесь к README.md в корне проекта для настройки GitHub Actions.
+            </p>
         </div>
       </div>
     </div>

@@ -1,0 +1,11 @@
+
+{
+  "appId": "chat.nuxus.app",
+  "appName": "Nuxus",
+  "webDir": "out",
+  "bundledWebRuntime": false,
+  "server": {
+    "url": "https://studio-5946432351-bbd5e.web.app",
+    "allowNavigation": ["*"]
+  }
+}
