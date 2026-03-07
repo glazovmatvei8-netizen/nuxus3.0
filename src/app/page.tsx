@@ -15,11 +15,8 @@ import { useEffect, useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { isUserActuallyBanned } from '@/lib/utils';
 import { NuxusLogo } from '@/components/nuxus-logo';
+import { IosInstaller } from '@/components/ios-installer';
 
-/**
- * Современный главный вход Ядра Nuxus.
- * Оптимизирован для мгновенной загрузки на ПК и мобильных устройствах.
- */
 export default function Home() {
   const { user, isUserLoading } = useUser();
   const db = useFirestore();
@@ -30,9 +27,21 @@ export default function Home() {
   const [mounted, setMounted] = useState(false);
   const [isJoining, setIsJoining] = useState(false);
   const [twoFactorInput, setTwoFactorInput] = useState('');
+  const [showIosInstaller, setShowIosInstaller] = useState(false);
 
   useEffect(() => {
     setMounted(true);
+    
+    // Проверка на iOS и не-standalone режим
+    const isIos = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
+    const isStandalone = (window.navigator as any).standalone || window.matchMedia('(display-mode: standalone)').matches;
+    
+    if (isIos && !isStandalone) {
+      const dismissed = localStorage.getItem('ios_installer_dismissed');
+      if (!dismissed) {
+        setShowIosInstaller(true);
+      }
+    }
   }, []);
 
   const userProfileRef = useMemoFirebase(() => {
@@ -44,7 +53,6 @@ export default function Home() {
 
   const isBanned = isUserActuallyBanned(profile);
 
-  // Логика вступления по ссылке (Join)
   useEffect(() => {
     if (!user || !db || isJoining || !mounted) return;
 
@@ -88,9 +96,17 @@ export default function Home() {
     }
   };
 
+  const dismissIosInstaller = () => {
+    setShowIosInstaller(false);
+    localStorage.setItem('ios_installer_dismissed', 'true');
+  };
+
   if (!mounted) return null;
 
-  // 1. Стадия загрузки (Всегда темный фон)
+  if (showIosInstaller) {
+    return <IosInstaller onDismiss={dismissIosInstaller} />;
+  }
+
   if (isUserLoading || (user && isProfileLoading)) {
     return (
       <div className="h-[100dvh] w-full flex flex-col items-center justify-center bg-[#0a0a0c] text-white">
@@ -105,10 +121,8 @@ export default function Home() {
     );
   }
 
-  // 2. Если пользователь не вошел
   if (!user) return <AuthScreen />;
 
-  // 3. Проверка блокировки
   if (isBanned) {
     return (
       <div className="h-screen w-full flex flex-col items-center justify-center bg-[#0a0a0c] p-6 text-center">
@@ -121,7 +135,6 @@ export default function Home() {
     );
   }
 
-  // 4. Проверка 2FA (если включена)
   if (profile?.twoFactorEnabled && !is2FAVerified) {
     return (
       <div className="h-screen w-full flex items-center justify-center bg-[#0a0a0c]">
@@ -150,6 +163,5 @@ export default function Home() {
     );
   }
 
-  // 5. Основное приложение
   return <ChatMain />;
 }
