@@ -1,7 +1,7 @@
 
 import { MetadataRoute } from 'next'
 
-export default function manifest(): MetadataRoute.Manifest {
+export default function manifest(): any {
   return {
     id: 'chat.nuxus.app',
     name: 'Nuxus — Премиальный мессенджер',
@@ -19,6 +19,48 @@ export default function manifest(): MetadataRoute.Manifest {
     categories: ['social', 'communication', 'productivity'],
     iarc_rating_id: 'e836224e-749e-4a6c-94f4-526b47a1990c',
     prefer_related_applications: false,
+    related_applications: [
+      {
+        platform: 'play',
+        url: 'https://play.google.com/store/apps/details?id=chat.nuxus.app',
+        id: 'chat.nuxus.app'
+      },
+      {
+        platform: 'itunes',
+        url: 'https://apps.apple.com/app/nuxus/idchat.nuxus.app'
+      }
+    ],
+    scope_extensions: [
+      { origin: '*.nuxus.chat' },
+      { origin: 'studio-5946432351-bbd5e.web.app' }
+    ],
+    shortcuts: [
+      {
+        name: 'Новый чат',
+        short_name: 'Чат',
+        description: 'Начать новое обсуждение',
+        url: '/?view=chats',
+        icons: [{ src: 'https://images.unsplash.com/photo-1614850523296-d8c1af93d400?q=80&w=192&h=192&fit=crop&fm=png', sizes: '192x192' }]
+      },
+      {
+        name: 'Контакты',
+        short_name: 'Контакты',
+        description: 'Список ваших контактов',
+        url: '/?view=contacts',
+        icons: [{ src: 'https://images.unsplash.com/photo-1614850523296-d8c1af93d400?q=80&w=192&h=192&fit=crop&fm=png', sizes: '192x192' }]
+      }
+    ],
+    file_handlers: [
+      {
+        action: '/',
+        accept: {
+          'image/*': ['.jpg', '.jpeg', '.png', '.webp', '.gif']
+        }
+      }
+    ],
+    launch_handler: {
+      client_mode: 'focus-existing'
+    },
     icons: [
       {
         src: 'https://images.unsplash.com/photo-1614850523296-d8c1af93d400?q=80&w=192&h=192&fit=crop&fm=png',
