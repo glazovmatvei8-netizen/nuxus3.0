@@ -53,7 +53,7 @@ export default function manifest(): any {
         short_name: 'Чат',
         description: 'Начать новое обсуждение',
         url: '/?view=chats',
-        icons: [{ src: 'https://picsum.photos/seed/nuxus-pwa-192/192/192', sizes: '192x192', type: 'image/png' }]
+        icons: [{ src: 'https://images.unsplash.com/photo-1614850523296-d8c1af93d400?q=80&w=192&h=192&fit=crop', sizes: '192x192', type: 'image/png' }]
       }
     ],
     file_handlers: [
@@ -73,25 +73,25 @@ export default function manifest(): any {
     },
     icons: [
       {
-        src: 'https://picsum.photos/seed/nuxus-pwa-192/192/192',
+        src: 'https://images.unsplash.com/photo-1614850523296-d8c1af93d400?q=80&w=192&h=192&fit=crop',
         sizes: '192x192',
         type: 'image/png',
         purpose: 'any'
       },
       {
-        src: 'https://picsum.photos/seed/nuxus-pwa-192/192/192',
+        src: 'https://images.unsplash.com/photo-1614850523296-d8c1af93d400?q=80&w=192&h=192&fit=crop',
         sizes: '192x192',
         type: 'image/png',
         purpose: 'maskable'
       },
       {
-        src: 'https://picsum.photos/seed/nuxus-pwa-512/512/512',
+        src: 'https://images.unsplash.com/photo-1614850523296-d8c1af93d400?q=80&w=512&h=512&fit=crop',
         sizes: '512x512',
         type: 'image/png',
         purpose: 'any'
       },
       {
-        src: 'https://picsum.photos/seed/nuxus-pwa-512/512/512',
+        src: 'https://images.unsplash.com/photo-1614850523296-d8c1af93d400?q=80&w=512&h=512&fit=crop',
         sizes: '512x512',
         type: 'image/png',
         purpose: 'maskable'

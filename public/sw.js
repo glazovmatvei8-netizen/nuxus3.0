@@ -1,8 +1,7 @@
 
-// This is the "Offline page" service worker
 importScripts('https://storage.googleapis.com/workbox-cdn/releases/5.1.2/workbox-sw.js');
 
-const CACHE = "pwabuilder-page";
+const CACHE = "pwabuilder-offline";
 const offlineFallbackPage = "offline.html";
 
 self.addEventListener("message", (event) => {
@@ -27,10 +26,7 @@ self.addEventListener('fetch', (event) => {
     event.respondWith((async () => {
       try {
         const preloadResp = await event.preloadResponse;
-
-        if (preloadResp) {
-          return preloadResp;
-        }
+        if (preloadResp) return preloadResp;
 
         const networkResp = await fetch(event.request);
         return networkResp;

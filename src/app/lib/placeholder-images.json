@@ -10,7 +10,7 @@
     {
       "id": "nuxus-auth-logo",
       "description": "Nuxus Authorization Glassmorphism Orb",
-      "imageUrl": "https://picsum.photos/seed/nuxus-orb-3d/800/800",
+      "imageUrl": "https://images.unsplash.com/photo-1614850523296-d8c1af93d400?q=80&w=800&h=800&fit=crop",
       "imageHint": "glass orb core"
     },
     {
@@ -22,13 +22,13 @@
     {
       "id": "pwa-icon-192",
       "description": "Nuxus PWA Icon 192x192",
-      "imageUrl": "https://picsum.photos/seed/nuxus-pwa-192/192/192",
+      "imageUrl": "https://images.unsplash.com/photo-1614850523296-d8c1af93d400?q=80&w=192&h=192&fit=crop",
       "imageHint": "app icon"
     },
     {
       "id": "pwa-icon-512",
       "description": "Nuxus PWA Icon 512x512",
-      "imageUrl": "https://picsum.photos/seed/nuxus-pwa-512/512/512",
+      "imageUrl": "https://images.unsplash.com/photo-1614850523296-d8c1af93d400?q=80&w=512&h=512&fit=crop",
       "imageHint": "app icon"
     }
   ]
