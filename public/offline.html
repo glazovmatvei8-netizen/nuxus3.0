@@ -10,36 +10,45 @@
             color: white;
             font-family: system-ui, -apple-system, sans-serif;
             display: flex;
-            flex-col: column;
+            flex-direction: column;
             align-items: center;
             justify-content: center;
             height: 100vh;
             margin: 0;
             text-align: center;
         }
-        .container { padding: 20px; }
-        .logo { font-size: 48px; font-weight: 900; font-style: italic; color: #8B5CF6; margin-bottom: 20px; }
-        h1 { font-size: 24px; text-transform: uppercase; letter-spacing: 2px; }
-        p { opacity: 0.6; font-size: 14px; max-width: 300px; margin: 20px auto; }
+        .core {
+            width: 80px;
+            height: 80px;
+            background: radial-gradient(circle, #8b5cf6 0%, transparent 70%);
+            border-radius: 50%;
+            margin-bottom: 20px;
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0% { transform: scale(1); opacity: 0.5; }
+            50% { transform: scale(1.1); opacity: 0.8; }
+            100% { transform: scale(1); opacity: 0.5; }
+        }
+        h1 { font-weight: 900; font-style: italic; letter-spacing: -0.05em; margin: 0; }
+        p { opacity: 0.6; font-size: 0.8rem; text-transform: uppercase; font-weight: bold; letter-spacing: 0.2em; margin-top: 10px; }
         button {
-            background: #8B5CF6;
+            margin-top: 30px;
+            background: #8b5cf6;
             color: white;
             border: none;
             padding: 12px 24px;
             border-radius: 12px;
-            font-weight: bold;
-            cursor: pointer;
+            font-weight: 900;
             text-transform: uppercase;
-            letter-spacing: 1px;
+            cursor: pointer;
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="logo">NUXUS</div>
-        <h1>Ядро вне сети</h1>
-        <p>Соединение с квантовым узлом потеряно. Проверьте подключение к интернету.</p>
-        <button onclick="window.location.reload()">Обновить</button>
-    </div>
+    <div class="core"></div>
+    <h1>ЯДРО ОФЛАЙН</h1>
+    <p>Подключение к Nuxus потеряно</p>
+    <button onclick="window.location.reload()">Повторить попытку</button>
 </body>
 </html>
