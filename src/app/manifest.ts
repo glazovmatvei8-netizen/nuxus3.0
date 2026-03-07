@@ -82,6 +82,9 @@ export default function manifest(): any {
     launch_handler: {
       client_mode: 'focus-existing'
     },
+    note_taking: {
+      new_note_url: '/?view=chats&new=note'
+    },
     widgets: [
       {
         name: 'Nuxus Status',
