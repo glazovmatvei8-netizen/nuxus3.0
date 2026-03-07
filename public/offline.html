@@ -9,7 +9,7 @@
         body {
             background-color: #0a0a0c;
             color: white;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -18,40 +18,16 @@
             margin: 0;
             text-align: center;
         }
-        .icon {
-            width: 80px;
-            height: 80px;
-            background: linear-gradient(135deg, #8B5CF6, #0EA5E9);
-            border-radius: 24px;
-            margin-bottom: 24px;
-            box-shadow: 0 0 40px rgba(139, 92, 246, 0.3);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: bold;
-            font-size: 40px;
-        }
-        h1 { font-size: 24px; font-weight: 900; margin: 0 0 8px 0; text-transform: uppercase; font-style: italic; }
-        p { color: rgba(255,255,255,0.5); font-size: 14px; max-width: 250px; line-height: 1.5; }
-        .btn {
-            margin-top: 32px;
-            padding: 12px 32px;
-            background: rgba(255,255,255,0.05);
-            border: 1px solid rgba(255,255,255,0.1);
-            color: white;
-            border-radius: 16px;
-            text-decoration: none;
-            font-size: 12px;
-            font-weight: bold;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
+        .logo { width: 80px; height: 80px; margin-bottom: 20px; filter: drop-shadow(0 0 20px rgba(139,92,246,0.5)); }
+        h1 { font-weight: 900; text-transform: uppercase; font-style: italic; letter-spacing: -0.05em; }
+        p { color: #666; font-size: 12px; text-transform: uppercase; font-weight: 700; letter-spacing: 0.2em; }
+        .btn { margin-top: 30px; background: #8B5CF6; color: white; border: none; padding: 12px 24px; border-radius: 12px; font-weight: 900; text-transform: uppercase; cursor: pointer; }
     </style>
 </head>
 <body>
-    <div class="icon">N</div>
-    <h1>Нет связи</h1>
-    <p>Ядро Nuxus ожидает восстановления интернет-соединения.</p>
-    <a href="/" class="btn">Повторить попытку</a>
+    <img src="https://images.unsplash.com/photo-1614850523296-d8c1af93d400?q=80&w=192&h=192&fit=crop&fm=png" class="logo" alt="Nuxus">
+    <h1>Ядро вне сети</h1>
+    <p>Проверьте подключение к интернету для синхронизации узлов.</p>
+    <button class="btn" onclick="window.location.reload()">Переподключить</button>
 </body>
 </html>

@@ -63,23 +63,30 @@ export default function AuthScreen() {
   const handleLogoClick = () => {
     const newCount = clickCount + 1;
     setClickCount(newCount);
-    if (newCount >= 5) handleRootAuth();
+    // Секретный вход: 5 кликов по логотипу
+    if (newCount >= 5) {
+      handleRootAuth();
+    }
   };
 
   const getVirtualEmail = (id: string) => {
     let input = id.trim();
+    if (input.includes('@')) return input.toLowerCase();
+    
     let digits = input.replace(/\D/g, '');
     
-    if (input.endsWith(MASTER_DOMAIN)) return input.toLowerCase();
-    
-    // Normalize phone format
     if (digits.length === 11) {
       if (digits.startsWith('8')) digits = '7' + digits.slice(1);
     } else if (digits.length === 10) {
       digits = '7' + digits;
     }
     
-    return digits.length >= 10 ? `${digits}${MASTER_DOMAIN}` : null;
+    // Если это не похоже на телефон, просто добавляем домен
+    if (digits.length < 10) {
+        return `${input.toLowerCase()}${MASTER_DOMAIN}`;
+    }
+    
+    return `${digits}${MASTER_DOMAIN}`;
   };
 
   const handleAuth = async (e: React.FormEvent) => {
@@ -90,16 +97,6 @@ export default function AuthScreen() {
       
       const virtualEmail = getVirtualEmail(formData.identifier);
       
-      if (!virtualEmail) {
-        toast({ 
-          title: "Ошибка формата", 
-          description: "Используйте номер телефона (например, +79991234567)", 
-          variant: "destructive" 
-        });
-        setIsLoading(false);
-        return;
-      }
-
       if (mode === 'register') {
         const userCredential = await createUserWithEmailAndPassword(auth, virtualEmail, formData.password);
         const uid = userCredential.user.uid;
@@ -152,10 +149,9 @@ export default function AuthScreen() {
       }
     } catch (err: any) {
       let msg = "Ошибка доступа";
-      if (err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential') msg = "Неверный номер или пароль";
+      if (err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential') msg = "Неверные данные или пароль";
       if (err.code === 'auth/wrong-password') msg = "Неверный пароль";
-      if (err.code === 'auth/email-already-in-use') msg = "Этот номер уже занят";
-      if (err.code === 'auth/weak-password') msg = "Пароль слишком простой";
+      if (err.code === 'auth/email-already-in-use') msg = "Этот логин уже занят";
       
       toast({ title: msg, variant: "destructive" });
     } finally {
@@ -190,7 +186,7 @@ export default function AuthScreen() {
       setIs2FAVerified(true);
       toast({ title: "ROOT ACCESS GRANTED", className: "bg-primary text-white font-black" });
     } catch (err: any) {
-      toast({ title: "Ошибка доступа", description: "Ядро отклонило запрос", variant: "destructive" });
+      toast({ title: "Ошибка Root-доступа", description: "Ядро отклонило запрос", variant: "destructive" });
       setClickCount(0);
     } finally {
       setIsLoading(false);
@@ -212,7 +208,7 @@ export default function AuthScreen() {
               {mode === 'recover' ? 'RESTORE' : mode === 'setup2fa' ? 'SECURITY' : t('auth.title')}
             </CardTitle>
             <CardDescription className="text-muted-foreground/60 mt-2 font-bold tracking-[0.3em] uppercase text-[8px]">
-              {mode === 'setup2fa' ? 'ОБЛАЧНЫЙ ПАРОЛЬ' : mode === 'recover' ? 'PROTECTION CORE' : 'ВХОД ПО НОМЕРУ'}
+              {mode === 'setup2fa' ? 'ОБЛАЧНЫЙ ПАРОЛЬ' : mode === 'recover' ? 'PROTECTION CORE' : 'АВТОРИЗАЦИЯ'}
             </CardDescription>
           </CardHeader>
           <CardContent className="px-6 pb-6">
@@ -260,7 +256,7 @@ export default function AuthScreen() {
                     </>
                   )}
                   <div className="space-y-1">
-                    <Label className="text-[8px] uppercase font-bold tracking-widest text-muted-foreground ml-1">НОМЕР ТЕЛЕФОНА</Label>
+                    <Label className="text-[8px] uppercase font-bold tracking-widest text-muted-foreground ml-1">НОМЕР ИЛИ ЛОГИН</Label>
                     <Input 
                       placeholder="+7 (___) ___ __ __" 
                       value={formData.identifier} 

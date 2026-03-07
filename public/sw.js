@@ -1,9 +1,9 @@
 
-// Nuxus Kernel Service Worker v1.0
+// Nuxus Kernel Service Worker
 importScripts('https://storage.googleapis.com/workbox-cdn/releases/5.1.2/workbox-sw.js');
 
 const CACHE = "nuxus-offline-v1";
-const offlineFallbackPage = "/offline.html";
+const offlineFallbackPage = "offline.html";
 
 self.addEventListener("message", (event) => {
   if (event.data && event.data.type === "SKIP_WAITING") {
@@ -18,7 +18,7 @@ self.addEventListener('install', (event) => {
   );
 });
 
-if (workbox && workbox.navigationPreload.isSupported()) {
+if (workbox.navigationPreload.isSupported()) {
   workbox.navigationPreload.enable();
 }
 
@@ -28,7 +28,6 @@ self.addEventListener('fetch', (event) => {
       try {
         const preloadResp = await event.preloadResponse;
         if (preloadResp) return preloadResp;
-
         const networkResp = await fetch(event.request);
         return networkResp;
       } catch (error) {
@@ -37,12 +36,5 @@ self.addEventListener('fetch', (event) => {
         return cachedResp;
       }
     })());
-  }
-});
-
-// Periodic Sync Support for PWABuilder
-self.addEventListener('periodicsync', (event) => {
-  if (event.tag === 'sync-messages') {
-    console.log('Nuxus Kernel: Periodic Sync Active');
   }
 });
