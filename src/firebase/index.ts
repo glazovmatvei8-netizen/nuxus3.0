@@ -2,7 +2,7 @@
 
 import { firebaseConfig } from '@/firebase/config';
 import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
-import { getAuth } from 'firebase/auth';
+import { getAuth, Auth } from 'firebase/auth';
 import { 
   getFirestore,
   initializeFirestore, 
@@ -12,40 +12,51 @@ import {
 } from 'firebase/firestore';
 
 /**
- * Инициализация Firebase v0.70.0 Modern Core.
- * Оптимизировано для стабильности в среде Next.js.
+ * Глобальные переменные для хранения инстансов (Singleton).
+ * Это предотвращает ошибку "initializeFirestore() has already been called".
+ */
+let memoizedApp: FirebaseApp | undefined;
+let memoizedFirestore: Firestore | undefined;
+let memoizedAuth: Auth | undefined;
+
+/**
+ * Инициализация Firebase v0.75.0 Modern Core.
+ * Оптимизировано для предотвращения конфликтов при Fast Refresh в Next.js.
  */
 export function initializeFirebase() {
-  let firebaseApp: FirebaseApp;
-
-  if (!getApps().length) {
-    firebaseApp = initializeApp(firebaseConfig);
-  } else {
-    firebaseApp = getApp();
+  // 1. Проверяем наличие существующего приложения
+  if (!memoizedApp) {
+    if (getApps().length > 0) {
+      memoizedApp = getApp();
+    } else {
+      memoizedApp = initializeApp(firebaseConfig);
+    }
   }
 
-  const auth = getAuth(firebaseApp);
-  
-  let firestore: Firestore;
-  
-  try {
-    // Пытаемся инициализировать Firestore с современным многовкладочным кэшем
-    firestore = initializeFirestore(firebaseApp, {
-      localCache: persistentLocalCache({
-        tabManager: persistentMultipleTabManager()
-      })
-    });
-  } catch (err: any) {
-    // Если Firestore уже был инициализирован (например, при Fast Refresh),
-    // или если браузер не поддерживает данные опции, используем существующий инстанс.
-    // Это предотвращает ошибку "initializeFirestore() has already been called".
-    firestore = getFirestore(firebaseApp);
+  // 2. Инициализируем Auth, если еще нет
+  if (!memoizedAuth) {
+    memoizedAuth = getAuth(memoizedApp);
+  }
+
+  // 3. Инициализируем Firestore с защитой от повторного вызова
+  if (!memoizedFirestore) {
+    try {
+      // Пытаемся инициализировать Firestore с современным многовкладочным кэшем
+      memoizedFirestore = initializeFirestore(memoizedApp, {
+        localCache: persistentLocalCache({
+          tabManager: persistentMultipleTabManager()
+        })
+      });
+    } catch (err: any) {
+      // Если Firestore уже был инициализирован ранее, просто получаем его экземпляр
+      memoizedFirestore = getFirestore(memoizedApp);
+    }
   }
 
   return {
-    firebaseApp,
-    auth,
-    firestore
+    firebaseApp: memoizedApp,
+    auth: memoizedAuth,
+    firestore: memoizedFirestore
   };
 }
 

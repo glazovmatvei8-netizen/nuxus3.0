@@ -17,6 +17,10 @@ import { format } from 'date-fns';
 import { ru } from 'date-fns/locale';
 import { NuxusLogo } from '@/components/nuxus-logo';
 
+/**
+ * Главная точка входа Nuxus.
+ * Полностью очищена от Legacy-кода для Android 5.
+ */
 export default function Home() {
   const { user, isUserLoading } = useUser();
   const db = useFirestore();
@@ -41,6 +45,7 @@ export default function Home() {
 
   const isBanned = isUserActuallyBanned(profile);
 
+  // Логика вступления по инвайт-ссылке
   useEffect(() => {
     if (!user || !db || isJoining || (!is2FAVerified && profile?.twoFactorEnabled) || isBanned) return;
 
@@ -97,7 +102,7 @@ export default function Home() {
         <div className="flex flex-col items-center gap-4">
           <Loader2 className="w-6 h-6 text-primary animate-spin opacity-40" />
           <p className="text-[10px] font-black uppercase tracking-[0.4em] text-primary/60 animate-pulse text-center">
-            Инициализация Nuxus...
+            Инициализация Ядра...
           </p>
         </div>
       </div>
@@ -112,7 +117,7 @@ export default function Home() {
         <NuxusLogo size={80} className="opacity-40 grayscale" />
         <div className="mt-8 flex flex-col items-center gap-2">
           <Loader2 className="w-5 h-5 text-primary animate-spin" />
-          <p className="text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground">Восстановление сессии...</p>
+          <p className="text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground">Синхронизация профиля...</p>
         </div>
       </div>
     );
@@ -120,27 +125,27 @@ export default function Home() {
 
   if (isBanned) {
     return (
-      <div className="h-screen w-full flex flex-col items-center justify-center bg-background p-6 text-center">
+      <div className="h-screen w-full flex flex-col items-center justify-center bg-[#0a0a0c] p-6 text-center">
         <div className="bg-destructive/10 p-6 rounded-full mb-6">
           <ShieldAlert className="w-16 h-16 text-destructive" />
         </div>
-        <h1 className="text-3xl font-bold mb-4 text-white">Аккаунт заблокирован</h1>
+        <h1 className="text-3xl font-bold mb-4 text-white uppercase italic">Доступ ограничен</h1>
         {profile?.bannedUntil ? (
           <div className="flex items-center gap-2 text-muted-foreground mb-8 bg-white/5 px-4 py-2 rounded-xl">
             <Clock className="w-4 h-4 text-primary" />
-            <span>До: {format(new Date(profile.bannedUntil), 'd MMMM yyyy, HH:mm', { locale: ru })}</span>
+            <span>Блокировка до: {format(new Date(profile.bannedUntil), 'd MMMM yyyy, HH:mm', { locale: ru })}</span>
           </div>
         ) : (
-          <p className="text-muted-foreground max-w-md mb-8">Ваш доступ к мессенджеру был ограничен навсегда.</p>
+          <p className="text-muted-foreground max-w-md mb-8 uppercase text-[10px] font-bold tracking-widest">Ваше соединение с Ядром разорвано навсегда администрацией.</p>
         )}
-        <Button variant="outline" onClick={() => signOut(auth)}>Выйти</Button>
+        <Button variant="outline" className="rounded-2xl border-white/10" onClick={() => signOut(auth)}>Выйти из аккаунта</Button>
       </div>
     );
   }
 
   if (profile?.twoFactorEnabled && !is2FAVerified) {
     return (
-      <div className="h-screen w-full flex items-center justify-center bg-background relative overflow-hidden">
+      <div className="h-screen w-full flex items-center justify-center bg-[#0a0a0c] relative overflow-hidden">
         <div className="absolute inset-0 nuxus-core-glow opacity-20 animate-pulse-glow" />
         <div className="relative z-10 w-full max-w-md p-8">
           <div className="bg-card/40 backdrop-blur-3xl border border-white/5 rounded-[3rem] p-10 text-center space-y-8">
