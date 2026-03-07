@@ -57,6 +57,41 @@ export default function ChatMain() {
       <UpdateNotifier />
       
       <div className="flex-1 flex overflow-hidden w-full relative">
+        {/* Desktop Navigation Rail */}
+        <div className="hidden md:flex w-[72px] h-full flex-col items-center py-6 bg-[#0a0a0c] border-r border-white/5 shrink-0 z-40">
+          <div className="mb-8 cursor-pointer active:scale-90 transition-transform" onClick={() => setActiveView('chats')}>
+            <div className="w-12 h-12 bg-primary/10 rounded-2xl flex items-center justify-center border border-primary/20">
+              <MessageCircle className="w-6 h-6 text-primary" />
+            </div>
+          </div>
+          
+          <div className="flex flex-col gap-6 flex-1">
+            <RailButton icon={MessageCircle} active={activeView === 'chats'} onClick={() => setActiveView('chats')} label="Чаты🐱" />
+            <RailButton icon={Users} active={activeView === 'contacts'} onClick={() => setActiveView('contacts')} label="Контакты" />
+            <RailButton icon={Phone} active={activeView === 'calls'} onClick={() => setActiveView('calls')} label="Звонки" />
+            <RailButton icon={Archive} active={activeView === 'archive'} onClick={() => setActiveView('archive')} label="Архив" />
+          </div>
+
+          <div className="mt-auto flex flex-col gap-6">
+            <button 
+              onClick={() => setIsSearchOpen(true)}
+              className="w-10 h-10 rounded-xl flex items-center justify-center hover:bg-white/5 transition-colors text-muted-foreground hover:text-white"
+            >
+              <Search className="w-5 h-5" />
+            </button>
+            <button 
+              onClick={() => setActiveView('profile')}
+              className={cn(
+                "relative transition-all duration-200",
+                activeView === 'profile' ? "scale-110" : "opacity-60 hover:opacity-100"
+              )}
+            >
+              <UserAvatar userId={user?.uid} className={cn("h-10 w-10 border-2", activeView === 'profile' ? "border-primary" : "border-transparent")} />
+              {activeView === 'profile' && <div className="absolute -right-1 top-1/2 -translate-y-1/2 w-1 h-4 bg-primary rounded-full" />}
+            </button>
+          </div>
+        </div>
+
         <div className={cn(
           "w-full md:w-[350px] lg:w-[400px] h-full flex-shrink-0 border-r border-white/5 transition-all duration-300 z-30 bg-card",
           currentChatId ? "hidden md:block" : "block"
@@ -76,9 +111,9 @@ export default function ChatMain() {
         </div>
       </div>
 
-      {/* Bottom Navigation */}
+      {/* Bottom Navigation (Mobile Only) */}
       {!currentChatId && (
-        <div className="fixed bottom-10 left-1/2 -translate-x-1/2 w-[94%] max-w-[500px] h-[76px] bg-[#1c1c1e]/80 backdrop-blur-[50px] border border-white/10 rounded-[2.8rem] flex items-center justify-between px-6 z-50 shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
+        <div className="md:hidden fixed bottom-10 left-1/2 -translate-x-1/2 w-[94%] max-w-[500px] h-[76px] bg-[#1c1c1e]/80 backdrop-blur-[50px] border border-white/10 rounded-[2.8rem] flex items-center justify-between px-6 z-50 shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
           <div className="flex flex-1 justify-around items-center">
             <NavButton 
               icon={Users} 
@@ -127,6 +162,26 @@ export default function ChatMain() {
       <SettingsModal open={isSettingsOpen} onOpenChange={setIsSettingsOpen} />
       <GlobalSearchModal open={isSearchOpen} onOpenChange={setIsSearchOpen} />
     </div>
+  );
+}
+
+function RailButton({ icon: Icon, active, onClick, label }: { icon: any, active?: boolean, onClick: () => void, label: string }) {
+  return (
+    <button 
+      onClick={onClick}
+      className={cn(
+        "group flex flex-col items-center gap-1 transition-all outline-none",
+        active ? "text-primary" : "text-muted-foreground hover:text-white"
+      )}
+    >
+      <div className={cn(
+        "w-10 h-10 rounded-xl flex items-center justify-center transition-all",
+        active ? "bg-primary/10 shadow-lg shadow-primary/5" : "group-hover:bg-white/5"
+      )}>
+        <Icon className={cn("w-5 h-5", active && "fill-current")} />
+      </div>
+      <span className="text-[8px] font-black uppercase tracking-widest">{label}</span>
+    </button>
   );
 }
 
