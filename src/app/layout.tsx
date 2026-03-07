@@ -57,16 +57,21 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="ru" className={`dark ${font.variable}`} suppressHydrationWarning>
+    <html lang="ru" className={`dark ${font.variable}`} suppressHydrationWarning style={{ backgroundColor: '#0a0a0c' }}>
       <head>
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <meta name="apple-mobile-web-app-title" content="Nuxus" />
         <link rel="apple-touch-icon" href="https://picsum.photos/seed/nuxus/180/180" />
         <link rel="icon" href="https://picsum.photos/seed/nuxus/32/32" />
-        <link rel="apple-touch-startup-image" href="https://picsum.photos/seed/nuxus-launch/1170/2532" media="(device-width: 390px) and (device-height: 844px) and (-webkit-device-pixel-ratio: 3)" />
       </head>
-      <body className="font-sans antialiased bg-[#0a0a0c] text-foreground overflow-hidden h-[100dvh] selection:bg-primary/30" style={{ fontFamily: 'var(--font-jakarta), ui-sans-serif, system-ui, -apple-system, sans-serif' }}>
+      <body 
+        className="font-sans antialiased bg-[#0a0a0c] text-foreground overflow-hidden h-[100dvh] selection:bg-primary/30" 
+        style={{ 
+          fontFamily: 'var(--font-jakarta), ui-sans-serif, system-ui, -apple-system, sans-serif',
+          backgroundColor: '#0a0a0c' 
+        }}
+      >
         <FirebaseClientProvider>
           <AppProvider>
             <ThemeApplier />

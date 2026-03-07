@@ -33,13 +33,11 @@ export default function Home() {
   useEffect(() => {
     setMounted(true);
     
-    // Экспонируем функцию запуска для глобального доступа (для старых Android)
+    // Экспонируем функцию запуска для глобального доступа (Legacy/Desktop)
     (window as any).nuxusEmergencyLaunch = function() {
       setShowResilienceUI(true);
       var loader = document.getElementById('loading-overlay');
       if (loader) loader.style.display = 'none';
-      var emergencyBtn = document.getElementById('emergency-launch-btn');
-      if (emergencyBtn) emergencyBtn.style.display = 'none';
     };
 
     return () => {
@@ -99,27 +97,29 @@ export default function Home() {
     }
   };
 
-  if (!mounted || (isUserLoading && !showResilienceUI)) {
+  // Мгновенный рендер черного фона для предотвращения белого экрана
+  if (!mounted) {
+    return <div className="h-[100dvh] w-full bg-[#0a0a0c]" />;
+  }
+
+  if (isUserLoading && !showResilienceUI) {
     return (
       <div className="h-[100dvh] w-full flex flex-col items-center justify-center bg-[#0a0a0c] p-10 relative" id="loading-overlay">
         <div className="relative mb-8">
           <NuxusLogo size={100} />
         </div>
         
-        <div className="flex flex-col items-center gap-4" id="loading-container">
+        <div className="flex flex-col items-center gap-4">
           <Loader2 className="w-6 h-6 text-primary animate-spin opacity-40" />
           <p className="text-[10px] font-black uppercase tracking-[0.4em] text-primary/60 animate-pulse text-center">
             Инициализация Nuxus...
           </p>
         </div>
 
-        <div 
-          id="emergency-launch-btn" 
-          style={{ display: 'none', marginTop: '40px', textAlign: 'center' }}
-        >
+        <div id="emergency-launch-btn" style={{ display: 'none', marginTop: '40px' }}>
           <button 
             type="button"
-            id="legacy-btn-el"
+            onClick={() => (window as any).nuxusEmergencyLaunch()}
             style={{
               background: 'rgba(139, 92, 246, 0.1)',
               border: '1px solid rgba(139, 92, 246, 0.3)',
@@ -138,26 +138,10 @@ export default function Home() {
         </div>
 
         <script dangerouslySetInnerHTML={{ __html: `
-          (function() {
-            var waitTime = 3000;
-            setTimeout(function() {
-              var btnContainer = document.getElementById('emergency-launch-btn');
-              var btn = document.getElementById('legacy-btn-el');
-              if (btnContainer) btnContainer.style.display = 'block';
-              if (btn) {
-                btn.onclick = function() {
-                  if (window.nuxusEmergencyLaunch) {
-                    window.nuxusEmergencyLaunch();
-                  } else {
-                    var loader = document.getElementById('loading-overlay');
-                    if (loader) loader.style.display = 'none';
-                    alert('Nuxus Legacy: Попытка прямого входа...');
-                    window.location.reload();
-                  }
-                };
-              }
-            }, waitTime);
-          })();
+          setTimeout(function() {
+            var btn = document.getElementById('emergency-launch-btn');
+            if (btn) btn.style.display = 'block';
+          }, 3500);
         ` }} />
       </div>
     );
@@ -186,7 +170,7 @@ export default function Home() {
           <ShieldAlert className="w-16 h-16 text-destructive" />
         </div>
         <h1 className="text-3xl font-bold mb-4 text-white">Аккаунт заблокирован</h1>
-        {profile?.bannedUntil && mounted ? (
+        {profile?.bannedUntil ? (
           <div className="flex items-center gap-2 text-muted-foreground mb-8 bg-white/5 px-4 py-2 rounded-xl">
             <Clock className="w-4 h-4 text-primary" />
             <span>До: {format(new Date(profile.bannedUntil), 'd MMMM yyyy, HH:mm', { locale: ru })}</span>

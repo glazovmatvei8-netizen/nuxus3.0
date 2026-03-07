@@ -7,12 +7,13 @@ import { getAuth } from 'firebase/auth';
 import { 
   getFirestore,
   initializeFirestore, 
-  Firestore
+  Firestore,
+  terminate
 } from 'firebase/firestore';
 
 /**
- * Инициализация Firebase v0.63.0 Quantum Resilience.
- * Максимальная совместимость со старыми браузерами (Android 5.0 / LG).
+ * Инициализация Firebase v0.65.2 Quantum Resilience.
+ * Максимальная совместимость со старыми браузерами и Electron-оболочками.
  */
 let cachedFirestore: Firestore | null = null;
 
@@ -28,27 +29,36 @@ export function initializeFirebase() {
   const auth = getAuth(firebaseApp);
 
   if (!cachedFirestore) {
-    // Детекция отсутствия Proxy (ES6), что характерно для Android 5.0.2
+    // Детекция отсутствия Proxy (ES6) или среды Electron/PWA
     const hasProxy = typeof window !== 'undefined' && !!window.Proxy;
     const isOldAndroid = typeof navigator !== 'undefined' && /Android [45]/.test(navigator.userAgent);
+    const isDesktopApp = typeof window !== 'undefined' && (window as any).process?.type === 'renderer';
 
-    if (!hasProxy || isOldAndroid) {
-      console.log('Nuxus Core: Legacy Environment detected. Forcing basic Firestore mode.');
-      // Используем простейшую инициализацию без кэша и полифиллов
+    if (!hasProxy || isOldAndroid || isDesktopApp) {
+      console.log('Nuxus Core: Resilience Mode active. Forcing standard Firestore.');
       cachedFirestore = getFirestore(firebaseApp);
     } else {
       try {
-        // Попытка инициализации с кэшем для современных устройств
         cachedFirestore = initializeFirestore(firebaseApp, {
           localCache: {
             kind: 'persistent'
           }
         } as any);
       } catch (e) {
-        console.warn('Nuxus Core: Cache initialization failed, falling back to basic.');
+        console.warn('Nuxus Core: Cache initialization failed, falling back.');
         cachedFirestore = getFirestore(firebaseApp);
       }
     }
+  }
+
+  // Graceful shutdown helper for Desktop
+  if (typeof window !== 'undefined') {
+    window.addEventListener('beforeunload', () => {
+      if (cachedFirestore) {
+        // Не блокируем выход, но пытаемся корректно закрыть соединение
+        try { terminate(cachedFirestore); } catch(e) {}
+      }
+    });
   }
 
   return {
