@@ -49,7 +49,6 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, isAdmi
 
   useEffect(() => {
     if (!api || !isGalleryOpen) return;
-    // Scroll to the clicked image after a short delay to ensure carousel is ready
     const timer = setTimeout(() => {
       api.scrollTo(activeMediaIdx, true);
     }, 50);
@@ -136,6 +135,7 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, isAdmi
             media={mediaList} 
             type={message.contentType} 
             setApi={setApi}
+            api={api}
           />
         </>
       );
@@ -167,6 +167,7 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, isAdmi
             media={urls} 
             type="image" 
             setApi={setApi}
+            api={api}
           />
         </>
       );
@@ -200,7 +201,6 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, isAdmi
                   {isMe && (message.isRead ? <CheckCheck className="w-3.5 h-3.5 text-accent" /> : <Check className="w-3.5 h-3.5" />)}
                 </div>
                 
-                {/* Действия при наведении (десктоп) */}
                 <div className={cn(
                   "absolute top-0 opacity-0 group-hover/bubble:opacity-100 transition-opacity hidden md:flex",
                   isMe ? "-left-10" : "-right-10"
@@ -227,7 +227,19 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, isAdmi
 });
 MessageItem.displayName = 'MessageItem';
 
-function MediaGalleryModal({ isOpen, onOpenChange, media, type, setApi }: { isOpen: boolean, onOpenChange: (o: boolean) => void, media: string[], type: string, setApi: (api: CarouselApi) => void }) {
+function MediaGalleryModal({ isOpen, onOpenChange, media, type, setApi, api }: { isOpen: boolean, onOpenChange: (o: boolean) => void, media: string[], type: string, setApi: (api: CarouselApi) => void, api?: CarouselApi }) {
+  const [current, setCurrent] = useState(0);
+
+  useEffect(() => {
+    if (!api) return;
+    
+    setCurrent(api.selectedScrollSnap() + 1);
+
+    api.on("select", () => {
+      setCurrent(api.selectedScrollSnap() + 1);
+    });
+  }, [api]);
+
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-[100vw] w-full h-[100dvh] p-0 bg-black/98 border-none flex items-center justify-center overflow-hidden z-[1000]">
@@ -241,12 +253,11 @@ function MediaGalleryModal({ isOpen, onOpenChange, media, type, setApi }: { isOp
                   {type === 'video' ? (
                     <video src={url} controls autoPlay className="max-w-full max-h-full rounded-xl shadow-2xl" />
                   ) : (
-                    <div className="relative w-full h-full">
-                      {/* Используем обычный img для максимально быстрого рендеринга больших data-uri без пересчета размеров Next.js */}
+                    <div className="relative w-full h-full flex items-center justify-center">
                       <img 
                         src={url} 
                         alt={`Media ${idx}`} 
-                        className="w-full h-full object-contain"
+                        className="max-w-full max-h-full object-contain"
                       />
                     </div>
                   )}
@@ -262,7 +273,7 @@ function MediaGalleryModal({ isOpen, onOpenChange, media, type, setApi }: { isOp
                 <CarouselNext className="right-8 h-14 w-14 bg-white/10 hover:bg-white/20 border-white/5 text-white" />
               </div>
               <div className="absolute bottom-12 left-1/2 -translate-x-1/2 bg-white/10 backdrop-blur-2xl px-6 py-2.5 rounded-full border border-white/10 text-white font-black text-[10px] uppercase tracking-[0.2em] shadow-2xl">
-                {idx + 1} / {media.length}
+                {current} / {media.length}
               </div>
             </>
           )}
