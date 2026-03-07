@@ -8,14 +8,31 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { 
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+  DropdownMenuLabel,
+  DropdownMenuSub,
+  DropdownMenuSubTrigger,
+  DropdownMenuSubContent
+} from "@/components/ui/dropdown-menu";
 import { useFirestore, useCollection, useMemoFirebase, useUser } from '@/firebase';
 import { collection, query, doc, limit, getDocs, addDoc } from 'firebase/firestore';
 import { UserAvatar } from '@/components/user-avatar';
-import { ShieldAlert, Users, Star, Search, Trash2, ShieldCheck, Radio, Send, Loader2, UserX } from 'lucide-react';
+import { 
+  ShieldAlert, Users, Star, Search, Trash2, ShieldCheck, Radio, Send, 
+  Loader2, UserX, MoreVertical, Ban, CheckCircle2, Crown, Calendar, Shield
+} from 'lucide-react';
 import type { User } from '@/lib/types';
 import { formatDisplayName, isUserPremium } from '@/lib/utils';
-import { deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { useToast } from '@/hooks/use-toast';
+import { addMonths } from 'date-fns';
+
+const ROOT_UID = 'GCvLucN8CjNcdaxPO2vmpZ84hNl1';
 
 export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const db = useFirestore();
@@ -36,7 +53,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
       total: users.length,
       banned: users.filter(u => u.isBanned).length,
       premium: users.filter(u => isUserPremium(u)).length,
-      admins: users.filter(u => u.isAdmin || u.id === 'GCvLucN8CjNcdaxPO2vmpZ84hNl1').length
+      admins: users.filter(u => u.isAdmin || u.id === ROOT_UID).length
     };
   }, [users]);
 
@@ -44,7 +61,53 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
     u.name?.toLowerCase().includes(userSearch.toLowerCase()) || 
     u.username?.toLowerCase().includes(userSearch.toLowerCase()) ||
     u.phone?.includes(userSearch)
-  );
+  ).sort((a, b) => {
+    if (a.id === ROOT_UID) return -1;
+    if (b.id === ROOT_UID) return 1;
+    return 0;
+  });
+
+  const handleAction = async (targetId: string, action: string, value?: any) => {
+    if (!db) return;
+    if (targetId === ROOT_UID) {
+      toast({ title: "Ошибка", description: "Запрещено изменять настройки Владельца Ядра", variant: "destructive" });
+      return;
+    }
+
+    const userRef = doc(db, 'users', targetId);
+    let update: any = {};
+
+    switch(action) {
+      case 'ban':
+        update = { isBanned: true, bannedUntil: null };
+        toast({ title: "Пользователь забанен" });
+        break;
+      case 'unban':
+        update = { isBanned: false, bannedUntil: null };
+        toast({ title: "Доступ восстановлен" });
+        break;
+      case 'set_admin':
+        update = { isAdmin: true };
+        toast({ title: "Права админа выданы" });
+        break;
+      case 'remove_admin':
+        update = { isAdmin: false };
+        toast({ title: "Админ разжалован" });
+        break;
+      case 'remove_premium':
+        update = { isPremium: false, premiumUntil: null };
+        toast({ title: "Premium отозван" });
+        break;
+      case 'give_premium':
+        const now = new Date();
+        const expiry = addMonths(now, value || 1);
+        update = { isPremium: true, premiumUntil: expiry.toISOString() };
+        toast({ title: `Premium выдан на ${value} мес.` });
+        break;
+    }
+
+    updateDocumentNonBlocking(userRef, update);
+  };
 
   const handleGlobalBroadcast = async () => {
     if (!broadcastMessage.trim() || !db || !currentUser) return;
@@ -75,12 +138,12 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md bg-[#0a0a0c] border-primary/30 p-0 overflow-hidden h-[80vh] flex flex-col rounded-[2.5rem] shadow-[0_0_50px_rgba(139,92,246,0.3)] border">
+      <DialogContent className="max-w-md bg-[#0a0a0c] border-primary/30 p-0 overflow-hidden h-[85vh] flex flex-col rounded-[2.5rem] shadow-[0_0_50px_rgba(139,92,246,0.3)] border">
         <DialogHeader className="p-6 bg-primary/5 border-b border-white/5 shrink-0">
           <DialogTitle className="flex items-center justify-between text-white uppercase italic font-black tracking-tighter">
             <div className="flex items-center gap-3">
               <ShieldAlert className="w-5 h-5 text-primary animate-pulse" /> 
-              <span>Nuxus Admin v0.33.0</span>
+              <span>Nuxus Admin v0.65.0</span>
             </div>
             <span className="text-[8px] bg-primary/20 px-2 py-0.5 rounded-full text-primary border border-primary/20">ROOT ACCESS</span>
           </DialogTitle>
@@ -122,7 +185,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/40" />
                 <Input 
-                  placeholder="Поиск..." 
+                  placeholder="Поиск по базе..." 
                   value={userSearch}
                   onChange={e => setUserSearch(e.target.value)}
                   className="bg-white/5 border-white/10 h-10 rounded-xl text-sm pl-10"
@@ -132,30 +195,92 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
 
             <ScrollArea className="flex-1">
               <div className="px-6 pb-6 space-y-2">
-                {filteredUsers.map(u => (
-                  <div key={u.id} className="flex items-center justify-between p-3 bg-white/5 rounded-2xl border border-white/5 group hover:border-primary/20 transition-all">
-                    <div className="flex items-center gap-3 min-w-0">
-                      <UserAvatar userId={u.id} className="h-9 w-9 shrink-0" manualAvatarUrl={u.avatarUrl} fallbackName={u.name} />
-                      <div className="flex flex-col min-w-0">
-                        <div className="flex items-center gap-1.5">
-                          <span className="font-bold text-xs text-white truncate">{formatDisplayName(u.name)}</span>
-                          {u.isPremium && <Star className="w-2.5 h-2.5 text-accent fill-accent" />}
-                          {u.isAdmin && <ShieldCheck className="w-2.5 h-2.5 text-primary" />}
-                          {u.isBanned && <UserX className="w-2.5 h-2.5 text-destructive" />}
+                {filteredUsers.map(u => {
+                  const isRoot = u.id === ROOT_UID;
+                  return (
+                    <div key={u.id} className="flex items-center justify-between p-3 bg-white/5 rounded-2xl border border-white/5 group hover:border-primary/20 transition-all">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <UserAvatar userId={u.id} className="h-9 w-9 shrink-0" manualAvatarUrl={u.avatarUrl} fallbackName={u.name} />
+                        <div className="flex flex-col min-w-0">
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-bold text-xs text-white truncate">{formatDisplayName(u.name)}</span>
+                            {u.isPremium && <Star className="w-2.5 h-2.5 text-accent fill-accent" />}
+                            {u.isAdmin && <ShieldCheck className="w-2.5 h-2.5 text-primary" />}
+                            {u.isBanned && <UserX className="w-2.5 h-2.5 text-destructive" />}
+                            {isRoot && <Shield className="w-2.5 h-2.5 text-blue-400 animate-pulse" />}
+                          </div>
+                          <span className="text-[8px] text-muted-foreground/60 truncate uppercase">{u.username}</span>
                         </div>
-                        <span className="text-[8px] text-muted-foreground/60 truncate uppercase">{u.username}</span>
                       </div>
+
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground">
+                            <MoreVertical className="w-4 h-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-56 bg-card border-white/10 rounded-2xl">
+                          <DropdownMenuLabel className="text-[10px] uppercase font-black text-muted-foreground/60">Управление узлом</DropdownMenuLabel>
+                          
+                          {u.isBanned ? (
+                            <DropdownMenuItem onClick={() => handleAction(u.id, 'unban')} className="gap-2 text-green-500 font-bold" disabled={isRoot}>
+                              <CheckCircle2 className="w-4 h-4" /> Разбанить
+                            </DropdownMenuItem>
+                          ) : (
+                            <DropdownMenuItem onClick={() => handleAction(u.id, 'ban')} className="gap-2 text-destructive font-bold" disabled={isRoot}>
+                              <Ban className="w-4 h-4" /> Забанить
+                            </DropdownMenuItem>
+                          )}
+
+                          <DropdownMenuSeparator className="bg-white/5" />
+
+                          {u.isAdmin ? (
+                            <DropdownMenuItem onClick={() => handleAction(u.id, 'remove_admin')} className="gap-2 font-bold" disabled={isRoot}>
+                              <Shield className="w-4 h-4" /> Снять админку
+                            </DropdownMenuItem>
+                          ) : (
+                            <DropdownMenuItem onClick={() => handleAction(u.id, 'set_admin')} className="gap-2 font-bold text-primary" disabled={isRoot}>
+                              <Crown className="w-4 h-4" /> Назначить админом
+                            </DropdownMenuItem>
+                          )}
+
+                          <DropdownMenuSeparator className="bg-white/5" />
+
+                          <DropdownMenuSub>
+                            <DropdownMenuSubTrigger className="gap-2 font-bold text-accent">
+                              <Star className="w-4 h-4" /> Подарить Premium
+                            </DropdownMenuSubTrigger>
+                            <DropdownMenuSubContent className="bg-card border-white/10">
+                              <DropdownMenuItem onClick={() => handleAction(u.id, 'give_premium', 1)} className="gap-2">
+                                <Calendar className="w-4 h-4" /> 1 месяц
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleAction(u.id, 'give_premium', 6)} className="gap-2">
+                                <Calendar className="w-4 h-4" /> 6 месяцев
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleAction(u.id, 'give_premium', 12)} className="gap-2">
+                                <Star className="w-4 h-4" /> 1 год
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleAction(u.id, 'give_premium', 24)} className="gap-2 text-primary font-black">
+                                <Crown className="w-4 h-4" /> 2 года
+                              </DropdownMenuItem>
+                            </DropdownMenuSubContent>
+                          </DropdownMenuSub>
+
+                          {u.isPremium && (
+                            <DropdownMenuItem onClick={() => handleAction(u.id, 'remove_premium')} className="gap-2 text-muted-foreground" disabled={isRoot}>
+                              <Trash2 className="w-4 h-4" /> Снять Premium
+                            </DropdownMenuItem>
+                          )}
+
+                          <DropdownMenuSeparator className="bg-white/5" />
+                          <DropdownMenuItem onClick={() => confirm(`Удалить ${u.name}?`) && deleteDocumentNonBlocking(doc(db, 'users', u.id))} className="text-destructive gap-2" disabled={isRoot}>
+                            <Trash2 className="w-4 h-4" /> Удалить из базы
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
-                      className="h-8 w-8 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100" 
-                      onClick={() => confirm(`Удалить ${u.name}?`) && deleteDocumentNonBlocking(doc(db, 'users', u.id))}
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </ScrollArea>
           </TabsContent>
