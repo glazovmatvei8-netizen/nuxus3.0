@@ -1,7 +1,7 @@
 
 "use client"
 
-import React, { useState, memo, useRef } from 'react';
+import React, { useState, memo, useRef, useEffect } from 'react';
 import { useFirestore } from '@/firebase';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
@@ -11,10 +11,10 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator
 } from "@/components/ui/dropdown-menu";
-import { Dialog, DialogContent, DialogTrigger, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { format } from 'date-fns';
 import { 
-  CornerUpLeft, Trash2, Check, CheckCheck, Edit2, Copy, Pin, FileText, Sparkles, Loader2, X
+  CornerUpLeft, Trash2, Check, CheckCheck, Edit2, Copy, Pin, FileText, Sparkles, Loader2, X, ChevronLeft, ChevronRight
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { doc, updateDoc, deleteDoc } from 'firebase/firestore';
@@ -23,6 +23,14 @@ import { Button } from './ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { transcribeVoice } from '@/ai/flows/voice-to-text-flow';
 import Image from 'next/image';
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  CarouselPrevious,
+  CarouselNext,
+  type CarouselApi,
+} from "@/components/ui/carousel"
 
 export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, isAdmin = false, isGroup = false, onEdit, amIPremium = false }: any) => {
   const db = useFirestore();
@@ -32,7 +40,17 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, isAdmi
   const [isTranscribing, setIsTranscribing] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
+  // Gallery state
+  const [isGalleryOpen, setIsGalleryOpen] = useState(false);
+  const [activeMediaIdx, setActiveIdx] = useState(0);
+  const [api, setApi] = useState<CarouselApi>();
+
   const formattedTime = message.sentAt ? format(new Date(message.sentAt), 'HH:mm') : '';
+
+  useEffect(() => {
+    if (!api || !isGalleryOpen) return;
+    api.scrollTo(activeMediaIdx, true);
+  }, [api, isGalleryOpen, activeMediaIdx]);
 
   const toggleAudio = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -64,6 +82,11 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, isAdmi
     }
   };
 
+  const openGallery = (idx: number) => {
+    setActiveIdx(idx);
+    setIsGalleryOpen(true);
+  };
+
   const renderContent = () => {
     if (message.contentType === 'audio') {
       return (
@@ -86,32 +109,29 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, isAdmi
     }
 
     if (['image', 'video'].includes(message.contentType)) {
+      const mediaList = [message.content];
       return (
-        <Dialog>
-          <DialogTrigger asChild>
-            <div className="overflow-hidden rounded-2xl border border-white/5 max-w-[240px] cursor-zoom-in group relative">
-              {message.contentType === 'video' ? (
-                <video src={message.content} className="w-full h-full object-cover" />
-              ) : (
-                <div className="relative w-[240px] h-[320px]">
-                  <Image src={message.content} alt="Media content" fill className="object-cover transition-transform group-hover:scale-105" />
-                </div>
-              )}
-            </div>
-          </DialogTrigger>
-          <DialogContent className="max-w-[95vw] max-h-[95vh] p-0 bg-transparent border-none flex items-center justify-center">
-            <DialogTitle className="sr-only">Просмотр медиа</DialogTitle>
-            <div className="relative w-full h-full flex items-center justify-center group">
-              {message.contentType === 'video' ? (
-                <video src={message.content} controls autoPlay className="max-w-full max-h-[90vh] rounded-xl shadow-2xl" />
-              ) : (
-                <div className="relative w-screen h-screen">
-                   <Image src={message.content} alt="Full screen" fill className="object-contain" />
-                </div>
-              )}
-            </div>
-          </DialogContent>
-        </Dialog>
+        <>
+          <div 
+            onClick={() => openGallery(0)}
+            className="overflow-hidden rounded-2xl border border-white/5 max-w-[240px] cursor-zoom-in group relative"
+          >
+            {message.contentType === 'video' ? (
+              <video src={message.content} className="w-full h-full object-cover" />
+            ) : (
+              <div className="relative w-[240px] h-[320px]">
+                <Image src={message.content} alt="Media content" fill className="object-cover transition-transform group-hover:scale-105" />
+              </div>
+            )}
+          </div>
+          <MediaGalleryModal 
+            isOpen={isGalleryOpen} 
+            onOpenChange={setIsGalleryOpen} 
+            media={mediaList} 
+            type={message.contentType} 
+            setApi={setApi}
+          />
+        </>
       );
     }
 
@@ -120,26 +140,29 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, isAdmi
       const gridCols = urls.length === 2 ? 'grid-cols-2' : urls.length === 3 ? 'grid-cols-2' : 'grid-cols-2 md:grid-cols-3';
       
       return (
-        <div className={cn("grid gap-1 max-w-[320px]", gridCols)}>
-          {urls.map((url, idx) => (
-            <Dialog key={idx}>
-              <DialogTrigger asChild>
-                <div className={cn(
+        <>
+          <div className={cn("grid gap-1 max-w-[320px]", gridCols)}>
+            {urls.map((url, idx) => (
+              <div 
+                key={idx}
+                onClick={() => openGallery(idx)}
+                className={cn(
                   "relative aspect-square rounded-lg overflow-hidden border border-white/5 cursor-zoom-in group",
                   urls.length === 3 && idx === 0 ? "col-span-2 aspect-video" : ""
-                )}>
-                  <Image src={url} alt={`Album img ${idx}`} fill className="object-cover transition-transform group-hover:scale-110" />
-                </div>
-              </DialogTrigger>
-              <DialogContent className="max-w-[95vw] max-h-[95vh] p-0 bg-transparent border-none flex items-center justify-center">
-                <DialogTitle className="sr-only">Просмотр фото</DialogTitle>
-                <div className="relative w-screen h-screen">
-                  <Image src={url} alt="Full screen album" fill className="object-contain" />
-                </div>
-              </DialogContent>
-            </Dialog>
-          ))}
-        </div>
+                )}
+              >
+                <Image src={url} alt={`Album img ${idx}`} fill className="object-cover transition-transform group-hover:scale-110" />
+              </div>
+            ))}
+          </div>
+          <MediaGalleryModal 
+            isOpen={isGalleryOpen} 
+            onOpenChange={setIsGalleryOpen} 
+            media={urls} 
+            type="image" 
+            setApi={setApi}
+          />
+        </>
       );
     }
 
@@ -180,3 +203,58 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, isAdmi
   );
 });
 MessageItem.displayName = 'MessageItem';
+
+function MediaGalleryModal({ isOpen, onOpenChange, media, type, setApi }: { isOpen: boolean, onOpenChange: (o: boolean) => void, media: string[], type: string, setApi: (api: CarouselApi) => void }) {
+  return (
+    <Dialog open={isOpen} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-[100vw] w-full h-[100dvh] p-0 bg-black/95 border-none flex items-center justify-center overflow-hidden">
+        <DialogTitle className="sr-only">Просмотр медиафайлов</DialogTitle>
+        
+        <Carousel setApi={setApi} className="w-full h-full">
+          <CarouselContent className="h-full">
+            {media.map((url, idx) => (
+              <CarouselItem key={idx} className="h-full flex items-center justify-center p-4">
+                <div className="relative w-full h-full max-h-[90vh] flex items-center justify-center animate-in fade-in zoom-in duration-300">
+                  {type === 'video' ? (
+                    <video src={url} controls autoPlay className="max-w-full max-h-full rounded-xl shadow-2xl" />
+                  ) : (
+                    <div className="relative w-full h-full">
+                      <Image 
+                        src={url} 
+                        alt={`Media ${idx}`} 
+                        fill 
+                        className="object-contain" 
+                        priority={idx === 0}
+                      />
+                    </div>
+                  )}
+                </div>
+              </CarouselItem>
+            ))}
+          </CarouselContent>
+          
+          {media.length > 1 && (
+            <>
+              <div className="hidden md:block">
+                <CarouselPrevious className="left-8 h-12 w-12 bg-white/10 hover:bg-white/20 border-none text-white" />
+                <CarouselNext className="right-8 h-12 w-12 bg-white/10 hover:bg-white/20 border-none text-white" />
+              </div>
+              <div className="absolute bottom-10 left-1/2 -translate-x-1/2 bg-black/40 backdrop-blur-md px-4 py-2 rounded-full border border-white/10 text-white/60 text-[10px] font-black uppercase tracking-widest">
+                {media.length} фото • Листайте
+              </div>
+            </>
+          )}
+        </Carousel>
+
+        <Button 
+          variant="ghost" 
+          size="icon" 
+          className="absolute top-6 right-6 h-12 w-12 rounded-full bg-white/10 hover:bg-white/20 text-white z-50 backdrop-blur-xl"
+          onClick={() => onOpenChange(false)}
+        >
+          <X className="w-6 h-6" />
+        </Button>
+      </DialogContent>
+    </Dialog>
+  );
+}
