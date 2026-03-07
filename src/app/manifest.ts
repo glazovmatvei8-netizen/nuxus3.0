@@ -64,7 +64,8 @@ export default function manifest(): any {
       {
         action: '/',
         accept: {
-          'image/*': ['.jpg', '.jpeg', '.png', '.webp']
+          'image/*': ['.jpg', '.jpeg', '.png', '.webp'],
+          'application/pdf': ['.pdf']
         }
       }
     ],

@@ -5,51 +5,56 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Nuxus — Офлайн</title>
     <style>
-        body {
-            background-color: #0a0a0c;
-            color: white;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            height: 100vh;
-            margin: 0;
-            text-align: center;
+        body { 
+            background: #0a0a0c; 
+            color: white; 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            justify-content: center; 
+            height: 100vh; 
+            margin: 0; 
+            text-align: center; 
         }
-        .logo {
-            width: 80px;
-            height: 80px;
-            background: linear-gradient(135deg, #8B5CF6 0%, #C084FC 100%);
-            border-radius: 24px;
-            margin-bottom: 24px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            box-shadow: 0 0 30px rgba(139, 92, 246, 0.3);
+        .container { padding: 40px; }
+        .logo { 
+            width: 100px; 
+            height: 100px; 
+            background: linear-gradient(135deg, #8B5CF6 0%, #0ea5e9 100%); 
+            border-radius: 30px; 
+            margin: 0 auto 30px; 
+            box-shadow: 0 0 40px rgba(139, 92, 246, 0.4); 
+            animation: pulse 2s infinite ease-in-out;
         }
-        h1 { font-weight: 900; text-transform: uppercase; letter-spacing: -0.05em; font-style: italic; }
-        p { color: rgba(255, 255, 255, 0.5); font-size: 14px; max-width: 250px; }
-        .btn {
-            margin-top: 32px;
-            background: white;
-            color: black;
-            padding: 12px 24px;
-            border-radius: 16px;
-            text-decoration: none;
-            font-weight: bold;
-            text-transform: uppercase;
-            font-size: 12px;
-            letter-spacing: 0.1em;
+        @keyframes pulse {
+            0% { transform: scale(1); opacity: 0.8; }
+            50% { transform: scale(1.05); opacity: 1; }
+            100% { transform: scale(1); opacity: 0.8; }
+        }
+        h1 { font-style: italic; font-weight: 900; text-transform: uppercase; letter-spacing: -1px; font-size: 24px; margin-bottom: 10px; }
+        p { opacity: 0.5; font-size: 14px; max-width: 250px; line-height: 1.6; }
+        .btn { 
+            margin-top: 30px; 
+            padding: 12px 30px; 
+            background: rgba(255,255,255,0.05); 
+            border: 1px solid rgba(255,255,255,0.1); 
+            border-radius: 15px; 
+            color: white; 
+            font-size: 10px; 
+            font-weight: 900; 
+            text-transform: uppercase; 
+            letter-spacing: 2px;
+            cursor: pointer;
         }
     </style>
 </head>
 <body>
-    <div class="logo">
-        <svg width="40" height="40" viewBox="0 0 24 24" fill="white"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"></path></svg>
+    <div class="container">
+        <div class="logo"></div>
+        <h1>Сигнал потерян</h1>
+        <p>Ядро Nuxus находится вне зоны покрытия. Мы автоматически восстановим соединение, как только появится сеть.</p>
+        <button class="btn" onclick="window.location.reload()">Переподключиться</button>
     </div>
-    <h1>Нет связи</h1>
-    <p>Ядро Nuxus ожидает восстановления интернет-сигнала...</p>
-    <a href="/" class="btn">Попробовать снова</a>
 </body>
 </html>
