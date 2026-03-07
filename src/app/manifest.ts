@@ -17,13 +17,13 @@ export default function manifest(): MetadataRoute.Manifest {
     display_override: ['window-controls-overlay'],
     icons: [
       {
-        src: 'https://picsum.photos/seed/nuxus-prime-core-v5/192/192',
+        src: 'https://images.unsplash.com/photo-1614850523296-d8c1af93d400?q=80&w=192&h=192&auto=format&fit=crop',
         sizes: '192x192',
         type: 'image/png',
         purpose: 'maskable'
       },
       {
-        src: 'https://picsum.photos/seed/nuxus-prime-core-v5/512/512',
+        src: 'https://images.unsplash.com/photo-1614850523296-d8c1af93d400?q=80&w=512&h=512&auto=format&fit=crop',
         sizes: '512x512',
         type: 'image/png',
         purpose: 'any'
