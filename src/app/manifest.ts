@@ -76,6 +76,11 @@ export default function manifest(): MetadataRoute.Manifest {
         name: 'Новое сообщение',
         url: '/',
         icons: [{ src: 'https://images.unsplash.com/photo-1614850523296-d8c1af93d400?q=80&w=96&h=96&fit=crop&format=png', sizes: '96x96' }]
+      },
+      {
+        name: 'Избранное',
+        url: '/profile',
+        icons: [{ src: 'https://images.unsplash.com/photo-1614850523296-d8c1af93d400?q=80&w=96&h=96&fit=crop&format=png', sizes: '96x96' }]
       }
     ]
   }
