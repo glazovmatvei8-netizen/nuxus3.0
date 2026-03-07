@@ -7,7 +7,7 @@
     <title>Nuxus — Офлайн</title>
     <style>
         body {
-            background: #0a0a0c;
+            background-color: #0a0a0c;
             color: white;
             font-family: sans-serif;
             display: flex;
@@ -18,14 +18,23 @@
             margin: 0;
             text-align: center;
         }
-        .logo { width: 80px; height: 80px; background: #8b5cf6; border-radius: 20px; margin-bottom: 20px; }
-        h1 { font-style: italic; font-weight: 900; text-transform: uppercase; letter-spacing: -1px; }
-        p { opacity: 0.6; font-size: 14px; }
+        .icon {
+            font-size: 64px;
+            margin-bottom: 20px;
+            animation: pulse 2s infinite;
+        }
+        h1 { font-weight: 900; text-transform: uppercase; letter-spacing: 2px; }
+        p { opacity: 0.6; font-size: 14px; max-width: 250px; }
+        @keyframes pulse {
+            0% { opacity: 0.5; transform: scale(1); }
+            50% { opacity: 1; transform: scale(1.1); }
+            100% { opacity: 0.5; transform: scale(1); }
+        }
     </style>
 </head>
 <body>
-    <div class="logo"></div>
-    <h1>Нет связи</h1>
-    <p>Ядро Nuxus перешло в автономный режим.<br>Проверьте подключение к интернету.</p>
+    <div class="icon">🛰️</div>
+    <h1>Связь потеряна</h1>
+    <p>Ядро Nuxus перешло в автономный режим. Проверьте подключение к сети.</p>
 </body>
 </html>
