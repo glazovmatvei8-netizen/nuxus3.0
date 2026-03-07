@@ -27,5 +27,17 @@ export default function manifest(): MetadataRoute.Manifest {
         purpose: 'any'
       },
     ],
+    shortcuts: [
+      {
+        name: "Чаты",
+        url: "/",
+        description: "Открыть список чатов"
+      },
+      {
+        name: "Контакты",
+        url: "/",
+        description: "Поиск контактов"
+      }
+    ]
   }
 }
