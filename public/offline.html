@@ -3,37 +3,25 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Nuxus — Офлайн режим</title>
+    <title>Nuxus — Офлайн</title>
     <style>
         body {
             background-color: #0a0a0c;
             color: white;
-            font-family: sans-serif;
+            font-family: system-ui, -apple-system, sans-serif;
             display: flex;
-            flex-direction: column;
+            flex-col: column;
             align-items: center;
             justify-content: center;
             height: 100vh;
             margin: 0;
             text-align: center;
         }
-        .logo {
-            width: 80px;
-            height: 80px;
-            background: linear-gradient(135deg, #8B5CF6, #22D3EE);
-            border-radius: 20px;
-            margin-bottom: 20px;
-            animation: pulse 2s infinite;
-        }
-        @keyframes pulse {
-            0% { transform: scale(1); opacity: 0.8; }
-            50% { transform: scale(1.05); opacity: 1; }
-            100% { transform: scale(1); opacity: 0.8; }
-        }
-        h1 { font-size: 24px; margin-bottom: 10px; font-weight: 900; letter-spacing: -0.05em; }
-        p { color: #666; font-size: 14px; max-width: 250px; }
+        .container { padding: 20px; }
+        .logo { font-size: 48px; font-weight: 900; font-style: italic; color: #8B5CF6; margin-bottom: 20px; }
+        h1 { font-size: 24px; text-transform: uppercase; letter-spacing: 2px; }
+        p { opacity: 0.6; font-size: 14px; max-width: 300px; margin: 20px auto; }
         button {
-            margin-top: 30px;
             background: #8B5CF6;
             color: white;
             border: none;
@@ -41,13 +29,17 @@
             border-radius: 12px;
             font-weight: bold;
             cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 1px;
         }
     </style>
 </head>
 <body>
-    <div class="logo"></div>
-    <h1>ЯДРО В ОФЛАЙНЕ</h1>
-    <p>Подключение к Nuxus Prime потеряно. Проверьте соединение с интернетом.</p>
-    <button onclick="window.location.reload()">Повторить попытку</button>
+    <div class="container">
+        <div class="logo">NUXUS</div>
+        <h1>Ядро вне сети</h1>
+        <p>Соединение с квантовым узлом потеряно. Проверьте подключение к интернету.</p>
+        <button onclick="window.location.reload()">Обновить</button>
+    </div>
 </body>
 </html>

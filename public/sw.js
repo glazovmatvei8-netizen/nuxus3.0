@@ -1,10 +1,7 @@
-// This is the "Offline page" service worker
+// Nuxus Kernel Service Worker
+importScripts('https://storage.googleapis.com/workbox-cdn/releases/6.4.1/workbox-sw.js');
 
-importScripts('https://storage.googleapis.com/workbox-cdn/releases/5.1.2/workbox-sw.js');
-
-const CACHE = "pwabuilder-page";
-
-// Ссылка на страницу, которая будет показана при отсутствии сети
+const CACHE = "nuxus-offline-v1";
 const offlineFallbackPage = "offline.html";
 
 self.addEventListener("message", (event) => {
@@ -13,7 +10,7 @@ self.addEventListener("message", (event) => {
   }
 });
 
-self.addEventListener('install', async (event) => {
+self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE)
       .then((cache) => cache.add(offlineFallbackPage))
@@ -29,28 +26,37 @@ self.addEventListener('fetch', (event) => {
     event.respondWith((async () => {
       try {
         const preloadResp = await event.preloadResponse;
-
-        if (preloadResp) {
-          return preloadResp;
-        }
-
-        const networkResp = await fetch(event.request);
-        return networkResp;
+        if (preloadResp) return preloadResp;
+        return await fetch(event.request);
       } catch (error) {
-
         const cache = await caches.open(CACHE);
-        const cachedResp = await cache.match(offlineFallbackPage);
-        return cachedResp;
+        return await cache.match(offlineFallbackPage);
       }
     })());
   }
 });
 
-// Дополнительная логика для Periodic Sync и Background Sync (для PWABuilder)
-self.addEventListener('periodicsync', (event) => {
-  console.log('Nuxus Kernel: Periodic Sync Active');
+// Push Notifications Support
+self.addEventListener('push', (event) => {
+  const data = event.data ? event.data.json() : { title: 'Nuxus', body: 'Новое уведомление' };
+  const options = {
+    body: data.body,
+    icon: '/icons/icon-192x192.png',
+    badge: '/icons/icon-192x192.png',
+    vibrate: [100, 50, 100],
+    data: { url: data.url || '/' }
+  };
+  event.waitUntil(self.registration.showNotification(data.title, options));
 });
 
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  event.waitUntil(clients.openWindow(event.notification.data.url));
+});
+
+// Background Sync
 self.addEventListener('sync', (event) => {
-  console.log('Nuxus Kernel: Background Sync Active');
+  if (event.tag === 'sync-messages') {
+    console.log('Nuxus Kernel: Syncing messages...');
+  }
 });

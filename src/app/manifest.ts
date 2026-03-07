@@ -61,14 +61,14 @@ export default function manifest(): any {
         short_name: 'Чат',
         description: 'Начать новое обсуждение',
         url: '/?view=chats',
-        icons: [{ src: 'https://images.unsplash.com/photo-1614850523296-d8c1af93d400?q=80&w=192&h=192&fit=crop&fm=png', sizes: '192x192' }]
+        icons: [{ src: 'https://images.unsplash.com/photo-1614850523296-d8c1af93d400?q=80&w=192&h=192&fit=crop&fm=png', sizes: '192x192', type: 'image/png' }]
       },
       {
         name: 'Контакты',
         short_name: 'Контакты',
         description: 'Список ваших контактов',
         url: '/?view=contacts',
-        icons: [{ src: 'https://images.unsplash.com/photo-1614850523296-d8c1af93d400?q=80&w=192&h=192&fit=crop&fm=png', sizes: '192x192' }]
+        icons: [{ src: 'https://images.unsplash.com/photo-1614850523296-d8c1af93d400?q=80&w=192&h=192&fit=crop&fm=png', sizes: '192x192', type: 'image/png' }]
       }
     ],
     file_handlers: [
@@ -98,7 +98,8 @@ export default function manifest(): any {
           {
             src: 'https://images.unsplash.com/photo-1614850523296-d8c1af93d400?q=80&w=600&h=400&fit=crop&fm=png',
             sizes: '600x400',
-            label: 'Nuxus Widget'
+            label: 'Nuxus Widget',
+            type: 'image/png'
           }
         ]
       }
