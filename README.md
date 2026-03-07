@@ -12,8 +12,10 @@
 ## 💻 Сборка Desktop-версии (Nativefier)
 
 **Внимание!** Команда должна запускаться в рабочей папке (например, `D:\Nuxus-app`), а не в системных папках Windows.
-1. Откройте терминал в вашей папке.
-2. Запустите: `npx nativefier "ТВОЯ_ССЫЛКА_VERCEL" --name "Nuxus" --tray --window-controls --internal-urls ".*" --single-instance`
+1. Откройте терминал.
+2. Перейдите на нужный диск: `D:`
+3. Перейдите в папку: `cd Nuxus-app`
+4. Запустите сборку: `npx nativefier "ТВОЯ_ССЫЛКА_VERCEL" --name "Nuxus" --tray --window-controls --internal-urls ".*" --single-instance`
 
 ## 📱 Сборка мобильных приложений (PWABuilder)
 1. Вставьте вашу ссылку от Vercel на **PWABuilder.com**.

@@ -57,9 +57,18 @@ export default function manifest(): any {
         }
       }
     ],
-    note_taking: {
-      new_note_url: '/?view=chats&new=note'
-    },
+    widgets: [
+      {
+        name: 'Nuxus Core',
+        description: 'Быстрый доступ к вашим чатам',
+        tag: 'nuxus-widget',
+        ms_ac_template: 'widget-template.json',
+        data: 'widget-data.json',
+        type: 'application/json',
+        auth: false,
+        update: 3600
+      }
+    ],
     shortcuts: [
       {
         name: 'Новый чат',
