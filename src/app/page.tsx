@@ -17,6 +17,10 @@ import { format } from 'date-fns';
 import { ru } from 'date-fns/locale';
 import { NuxusLogo } from '@/components/nuxus-logo';
 
+/**
+ * Главный экран Ядра Nuxus.
+ * Полностью очищен от Legacy-кода для максимальной производительности.
+ */
 export default function Home() {
   const { user, isUserLoading } = useUser();
   const db = useFirestore();
@@ -95,7 +99,7 @@ export default function Home() {
         <div className="flex flex-col items-center gap-4">
           <Loader2 className="w-6 h-6 text-primary animate-spin opacity-40" />
           <p className="text-[10px] font-black uppercase tracking-[0.4em] text-primary/60 animate-pulse text-center">
-            Инициализация Ядра...
+            Инициализация Ядра Nuxus...
           </p>
         </div>
       </div>

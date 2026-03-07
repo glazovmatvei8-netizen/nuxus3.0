@@ -1,8 +1,8 @@
 'use client';
 
 import { firebaseConfig } from '@/firebase/config';
-import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
-import { getAuth, Auth } from 'firebase/auth';
+import { initializeApp, getApps, getApp } from 'firebase/app';
+import { getAuth } from 'firebase/auth';
 import { 
   getFirestore,
   initializeFirestore, 
@@ -12,8 +12,8 @@ import {
 } from 'firebase/firestore';
 
 /**
- * Инициализация Firebase Modern Core.
- * Защищено от ошибок повторной инициализации в Next.js (Fast Refresh).
+ * Чистая инициализация Firebase для современных браузеров и ПК.
+ * Использует паттерн Singleton для предотвращения ошибок повторной инициализации.
  */
 export function initializeFirebase() {
   const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
@@ -22,15 +22,15 @@ export function initializeFirebase() {
   let firestore: Firestore;
   
   try {
-    // Пытаемся инициализировать с кэшированием. 
-    // Если это второй вызов (HMR), Firebase выдаст ошибку, которую мы перехватим.
+    // Пытаемся инициализировать Firestore с современным кэшированием для нескольких вкладок.
+    // Если он уже инициализирован (например, при Fast Refresh), используем getFirestore().
     firestore = initializeFirestore(app, {
       localCache: persistentLocalCache({
         tabManager: persistentMultipleTabManager()
       })
     });
-  } catch (e) {
-    // Если уже инициализировано, просто получаем текущий экземпляр
+  } catch (e: any) {
+    // В случае любой ошибки (уже инициализировано или не поддерживается) берем существующий инстанс
     firestore = getFirestore(app);
   }
 
