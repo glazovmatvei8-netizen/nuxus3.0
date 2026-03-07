@@ -86,10 +86,10 @@ export default function RootLayout({
           {`
             if ('serviceWorker' in navigator) {
               window.addEventListener('load', function() {
-                navigator.serviceWorker.register('/sw.js', { scope: '/' }).then(function(reg) {
-                  console.log('Nuxus PWA Protocol: Active');
+                navigator.serviceWorker.register('/sw.js').then(function(reg) {
+                  console.log('Nuxus PWA: Active');
                 }).catch(function(err) {
-                  console.log('Nuxus PWA Protocol: Failed', err);
+                  console.log('Nuxus PWA: Failed', err);
                 });
               });
             }

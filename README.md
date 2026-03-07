@@ -1,26 +1,24 @@
 
-# NuxusChat — Quantum Update (v0.68.0)
+# NuxusChat — Инструкция по развертыванию
 
-Мессенджер полностью оптимизирован для работы как отдельное приложение на Android (.apk), Windows (.exe) и iOS.
+## 📱 Как создать APK (Android)
+Если вы находитесь в РФ или у вас нет карты для Publish:
 
-## 🤖 Как создать APK (Android)
-1. Установите Bubblewrap: `npm install -g @bubblewrap/cli`
-2. В пустой папке запустите: `bubblewrap init --manifest=https://studio-5946432351-bbd5e.web.app/manifest.webmanifest`
-3. Ответы на важные вопросы Bubblewrap:
-   - **Domain**: `studio-5946432351-bbd5e.web.app`
-   - **URL path**: `/`
-   - **Display mode**: `standalone`
-   - **Include support for Play Billing**: `N`
-4. Соберите файл: `bubblewrap build`
+1. **Для сборки используйте временную ссылку**: 
+   Вместо основного домена используйте URL из адресной строки вашего предпросмотра (тот, что начинается на `9000-...`).
+   
+2. **Исправление ECONNRESET**: 
+   Если `bubblewrap build` обрывается на 44%, **обязательно включите VPN**. Программа скачивает Android SDK, доступ к которому может быть ограничен.
 
-## 🖥️ Как собрать EXE (Windows)
-Выполните команду в PowerShell:
-`npx nativefier "https://studio-5946432351-bbd5e.web.app/" --name "Nuxus" --internal-urls ".*" --single-instance --tray --window-controls`
+3. **Команды**:
+   - `npm install -g @bubblewrap/cli`
+   - `bubblewrap init --manifest=[ВАШ_URL]/manifest.webmanifest`
+   - `bubblewrap build`
 
-## 🍎 Как установить на iPhone
-1. Откройте Safari.
-2. Перейдите по ссылке `https://studio-5946432351-bbd5e.web.app/`.
-3. Нажмите **"Поделиться"** -> **"На экран «Домой»"**.
+## 💳 Ошибка с картой (Billing)
+Сервис **App Hosting** (Next.js SSR) требует карту. Если вы не можете её привязать:
+- Мессенджер будет работать в режиме предпросмотра внутри Firebase Studio.
+- Вы можете установить его как PWA на телефон прямо из браузера (кнопка "На экран Домой").
 
 ---
-**Nuxus — Технологии, доступные каждому.**
+**Nuxus — Связь без границ.**
