@@ -1,19 +1,20 @@
 
-# NuxusChat — Quantum Update (v0.67.0)
+# NuxusChat — Quantum Update (v0.68.0)
 
 Мессенджер полностью оптимизирован для работы как отдельное приложение на Android (.apk), Windows (.exe) и iOS.
 
 ## 🤖 Как создать APK (Android)
 1. Установите Bubblewrap: `npm install -g @bubblewrap/cli`
 2. В пустой папке запустите: `bubblewrap init --manifest=https://studio-5946432351-bbd5e.web.app/manifest.webmanifest`
-3. На вопросы терминала отвечайте так:
+3. Ответы на важные вопросы Bubblewrap:
    - **Domain**: `studio-5946432351-bbd5e.web.app`
    - **URL path**: `/`
    - **Display mode**: `standalone`
+   - **Include support for Play Billing**: `N`
 4. Соберите файл: `bubblewrap build`
 
 ## 🖥️ Как собрать EXE (Windows)
-Выполните команду:
+Выполните команду в PowerShell:
 `npx nativefier "https://studio-5946432351-bbd5e.web.app/" --name "Nuxus" --internal-urls ".*" --single-instance --tray --window-controls`
 
 ## 🍎 Как установить на iPhone
