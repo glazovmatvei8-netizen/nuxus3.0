@@ -5,7 +5,7 @@ import { useUser, useFirestore, useDoc, useMemoFirebase, useAuth } from '@/fireb
 import { useAppState } from '@/lib/store';
 import AuthScreen from '@/components/auth-screen';
 import ChatMain from '@/components/chat-main';
-import { Loader2, ShieldAlert, Lock, ArrowRight, Clock } from 'lucide-react';
+import { Loader2, ShieldAlert, Lock, ArrowRight } from 'lucide-react';
 import { doc, collection, query, where, limit, getDocs, arrayUnion, updateDoc } from 'firebase/firestore';
 import type { User as UserType, Chat } from '@/lib/types';
 import { Button } from '@/components/ui/button';
@@ -14,13 +14,11 @@ import { signOut } from 'firebase/auth';
 import { useEffect, useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { isUserActuallyBanned } from '@/lib/utils';
-import { format } from 'date-fns';
-import { ru } from 'date-fns/locale';
 import { NuxusLogo } from '@/components/nuxus-logo';
 
 /**
- * Оптимизированный главный вход Ядра.
- * Минимизирует блокировку потока за счет упрощенных условий рендеринга.
+ * Современный главный вход Ядра Nuxus.
+ * Оптимизирован для мгновенной загрузки на ПК и мобильных устройствах.
  */
 export default function Home() {
   const { user, isUserLoading } = useUser();
@@ -92,15 +90,15 @@ export default function Home() {
 
   if (!mounted) return null;
 
-  // 1. Стадия загрузки авторизации
-  if (isUserLoading) {
+  // 1. Стадия загрузки (Всегда темный фон)
+  if (isUserLoading || (user && isProfileLoading)) {
     return (
-      <div className="h-[100dvh] w-full flex flex-col items-center justify-center bg-[#0a0a0c]">
-        <NuxusLogo size={100} />
-        <div className="mt-8 flex flex-col items-center gap-4">
-          <Loader2 className="w-5 h-5 text-primary/40 animate-spin" />
-          <p className="text-[10px] font-black uppercase tracking-[0.4em] text-primary/40 animate-pulse">
-            Загрузка Ядра...
+      <div className="h-[100dvh] w-full flex flex-col items-center justify-center bg-[#0a0a0c] text-white">
+        <NuxusLogo size={120} />
+        <div className="mt-12 flex flex-col items-center gap-4">
+          <Loader2 className="w-6 h-6 text-primary animate-spin" />
+          <p className="text-[10px] font-black uppercase tracking-[0.4em] text-primary/60 animate-pulse">
+            Инициализация Ядра...
           </p>
         </div>
       </div>
@@ -110,20 +108,7 @@ export default function Home() {
   // 2. Если пользователь не вошел
   if (!user) return <AuthScreen />;
 
-  // 3. Стадия загрузки профиля
-  if (isProfileLoading) {
-    return (
-      <div className="h-[100dvh] w-full flex flex-col items-center justify-center bg-[#0a0a0c]">
-        <NuxusLogo size={80} className="opacity-40 grayscale" />
-        <div className="mt-8 flex flex-col items-center gap-2">
-          <Loader2 className="w-4 h-4 text-primary/40 animate-spin" />
-          <p className="text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground">Авторизация...</p>
-        </div>
-      </div>
-    );
-  }
-
-  // 4. Проверка блокировки
+  // 3. Проверка блокировки
   if (isBanned) {
     return (
       <div className="h-screen w-full flex flex-col items-center justify-center bg-[#0a0a0c] p-6 text-center">
@@ -136,7 +121,7 @@ export default function Home() {
     );
   }
 
-  // 5. Проверка 2FA (если включена)
+  // 4. Проверка 2FA (если включена)
   if (profile?.twoFactorEnabled && !is2FAVerified) {
     return (
       <div className="h-screen w-full flex items-center justify-center bg-[#0a0a0c]">
@@ -165,6 +150,6 @@ export default function Home() {
     );
   }
 
-  // 6. Основное приложение
+  // 5. Основное приложение
   return <ChatMain />;
 }

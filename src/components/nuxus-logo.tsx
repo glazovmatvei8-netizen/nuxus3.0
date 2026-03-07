@@ -10,14 +10,14 @@ interface NuxusLogoProps {
 }
 
 /**
- * Оптимизированное Ядро Nuxus.
- * Упрощены SVG-фильтры для снижения нагрузки на процессор (TBT) и ускорения отрисовки (LCP).
+ * Оптимизированное Ядро Nuxus v2.0.
+ * Упрощены SVG-фильтры для мгновенной отрисовки без нагрузки на процессор.
  */
 export function NuxusLogo({ className, size = 120 }: NuxusLogoProps) {
   return (
     <div className={cn("relative flex items-center justify-center", className)} style={{ width: size, height: size }}>
-      {/* Глобальное свечение (Ambient Glow) - Облегченное */}
-      <div className="absolute inset-0 bg-primary/10 blur-[40px] rounded-full animate-pulse" />
+      {/* Глобальное свечение (Ambient Glow) */}
+      <div className="absolute inset-0 bg-primary/20 blur-[30px] rounded-full animate-pulse" />
       
       <svg
         viewBox="0 0 200 200"
@@ -36,42 +36,36 @@ export function NuxusLogo({ className, size = 120 }: NuxusLogoProps) {
             <stop offset="0%" stopColor="#22D3EE" />
             <stop offset="100%" stopColor="#C084FC" />
           </linearGradient>
-
-          {/* Упрощенный фильтр для производительности */}
-          <filter id="lightGlow">
-            <feGaussianBlur stdDeviation="2" result="blur" />
-          </filter>
         </defs>
 
-        {/* Внешнее кольцо */}
+        {/* Внешнее пунктирное кольцо */}
         <circle 
-          cx="100" cy="100" r="94" 
+          cx="100" cy="100" r="90" 
           stroke="currentColor" 
-          strokeWidth="0.5" 
+          strokeWidth="1" 
           strokeDasharray="4 8" 
-          className="text-primary/20 animate-[spin_40s_linear_infinite]" 
+          className="text-primary/30 animate-[spin_60s_linear_infinite]" 
         />
 
         {/* Основное кольцо */}
-        <g className="animate-[spin_25s_linear_infinite_reverse] origin-center">
-          <circle cx="100" cy="100" r="82" stroke="url(#ringGradient)" strokeWidth="3" strokeDasharray="60 120" strokeLinecap="round" opacity="0.6" />
+        <g className="animate-[spin_20s_linear_infinite_reverse] origin-center">
+          <circle cx="100" cy="100" r="80" stroke="url(#ringGradient)" strokeWidth="2" strokeDasharray="80 160" strokeLinecap="round" opacity="0.8" />
         </g>
 
         {/* Геометрия ядра */}
-        <g className="animate-[spin_15s_ease-in-out_infinite] origin-center">
-          <rect x="60" y="60" width="80" height="80" rx="12" stroke="white" strokeWidth="0.5" strokeOpacity="0.2" transform="rotate(45 100 100)" />
+        <g className="animate-[spin_10s_ease-in-out_infinite] origin-center">
+          <rect x="65" y="65" width="70" height="70" rx="15" stroke="white" strokeWidth="1" strokeOpacity="0.3" transform="rotate(45 100 100)" />
         </g>
 
         {/* Центральное Ядро */}
-        <circle cx="100" cy="100" r="48" fill="url(#coreGradient)" className="animate-pulse" />
+        <circle cx="100" cy="100" r="45" fill="url(#coreGradient)" className="animate-pulse" />
         
-        {/* Кросс-линзы (Статичные для скорости) */}
-        <path d="M100 70 V130 M70 100 H130" stroke="white" strokeWidth="1" strokeLinecap="round" strokeOpacity="0.4" />
-        <circle cx="100" cy="100" r="4" fill="white" filter="url(#lightGlow)" />
+        {/* Центр */}
+        <circle cx="100" cy="100" r="5" fill="white" className="animate-pulse shadow-[0_0_10px_white]" />
 
-        {/* Орбитальные частицы (Облегченные) */}
-        <g className="animate-[spin_10s_linear_infinite] origin-center">
-          <circle cx="100" cy="20" r="3" fill="#22D3EE" opacity="0.8" />
+        {/* Орбитальная частица */}
+        <g className="animate-[spin_8s_linear_infinite] origin-center">
+          <circle cx="100" cy="25" r="4" fill="#22D3EE" />
         </g>
       </svg>
     </div>

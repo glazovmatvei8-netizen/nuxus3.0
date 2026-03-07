@@ -7,14 +7,15 @@ import { getAuth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 
 /**
- * Оптимизированная инициализация Firebase.
- * Использует стандартные синглтоны для предотвращения ошибок повторной инициализации
- * и минимизации блокировки основного потока (Total Blocking Time).
+ * Чистая и надежная инициализация Firebase.
+ * Использует стандартные синглтоны для предотвращения конфликтов в Next.js.
  */
 export function initializeFirebase() {
+  // Инициализируем приложение только если оно еще не создано
   const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
   
-  // getAuth и getFirestore возвращают уже существующие инстансы, если они есть
+  // getAuth и getFirestore возвращают уже существующие инстансы, если они есть.
+  // Это гарантированно убирает ошибку "already been called with different options".
   const auth = getAuth(app);
   const firestore = getFirestore(app);
 
