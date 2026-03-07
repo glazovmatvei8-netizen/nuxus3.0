@@ -45,8 +45,20 @@ export default function manifest(): any {
         url: 'url'
       }
     },
-    edge_side_panel: {
-      preferred_width: 480
+    launch_handler: {
+      client_mode: 'focus-existing'
+    },
+    file_handlers: [
+      {
+        action: '/',
+        accept: {
+          'image/*': ['.jpg', '.jpeg', '.png', '.webp'],
+          'application/pdf': ['.pdf']
+        }
+      }
+    ],
+    note_taking: {
+      new_note_url: '/?view=chats&new=note'
     },
     shortcuts: [
       {
@@ -57,21 +69,6 @@ export default function manifest(): any {
         icons: [{ src: 'https://images.unsplash.com/photo-1614850523296-d8c1af93d400?q=80&w=192&h=192&fit=crop&fm=png', sizes: '192x192', type: 'image/png' }]
       }
     ],
-    file_handlers: [
-      {
-        action: '/',
-        accept: {
-          'image/*': ['.jpg', '.jpeg', '.png', '.webp'],
-          'application/pdf': ['.pdf']
-        }
-      }
-    ],
-    launch_handler: {
-      client_mode: 'focus-existing'
-    },
-    note_taking: {
-      new_note_url: '/?view=chats&new=note'
-    },
     icons: [
       {
         src: 'https://images.unsplash.com/photo-1614850523296-d8c1af93d400?q=80&w=192&h=192&fit=crop&fm=png',
@@ -99,6 +96,13 @@ export default function manifest(): any {
         type: 'image/png',
         form_factor: 'narrow',
         label: 'Интерфейс мессенджера'
+      },
+      {
+        src: 'https://images.unsplash.com/photo-1614850523296-d8c1af93d400?q=80&w=1920&h=1080&fit=crop&fm=png',
+        sizes: '1920x1080',
+        type: 'image/png',
+        form_factor: 'wide',
+        label: 'Десктопная версия'
       }
     ]
   }

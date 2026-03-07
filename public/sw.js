@@ -1,8 +1,9 @@
 
+// Nuxus Kernel Service Worker
 importScripts('https://storage.googleapis.com/workbox-cdn/releases/5.1.2/workbox-sw.js');
 
-const CACHE = "nuxus-offline-v1";
-const offlineFallbackPage = "/offline.html";
+const CACHE = "nuxus-offline-cache-v1";
+const offlineFallbackPage = "offline.html";
 
 self.addEventListener("message", (event) => {
   if (event.data && event.data.type === "SKIP_WAITING") {
@@ -12,7 +13,8 @@ self.addEventListener("message", (event) => {
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE).then((cache) => cache.add(offlineFallbackPage))
+    caches.open(CACHE)
+      .then((cache) => cache.add(offlineFallbackPage))
   );
 });
 
@@ -33,4 +35,19 @@ self.addEventListener('fetch', (event) => {
       }
     })());
   }
+});
+
+// Background Sync & Push placeholder
+self.addEventListener('sync', (event) => {
+  console.log('Nuxus Kernel: Background Sync Active');
+});
+
+self.addEventListener('push', (event) => {
+  const data = event.data ? event.data.text() : 'Новое сообщение в Nuxus';
+  event.waitUntil(
+    self.registration.showNotification('Nuxus', {
+      body: data,
+      icon: 'https://images.unsplash.com/photo-1614850523296-d8c1af93d400?q=80&w=192&h=192&fit=crop&fm=png'
+    })
+  );
 });
