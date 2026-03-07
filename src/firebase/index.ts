@@ -12,51 +12,32 @@ import {
 } from 'firebase/firestore';
 
 /**
- * Глобальные переменные для хранения инстансов (Singleton).
- * Это предотвращает ошибку "initializeFirestore() has already been called".
- */
-let memoizedApp: FirebaseApp | undefined;
-let memoizedFirestore: Firestore | undefined;
-let memoizedAuth: Auth | undefined;
-
-/**
- * Инициализация Firebase v0.75.0 Modern Core.
- * Оптимизировано для предотвращения конфликтов при Fast Refresh в Next.js.
+ * Инициализация Firebase Modern Core.
+ * Защищено от ошибок повторной инициализации в Next.js (Fast Refresh).
  */
 export function initializeFirebase() {
-  // 1. Проверяем наличие существующего приложения
-  if (!memoizedApp) {
-    if (getApps().length > 0) {
-      memoizedApp = getApp();
-    } else {
-      memoizedApp = initializeApp(firebaseConfig);
-    }
-  }
-
-  // 2. Инициализируем Auth, если еще нет
-  if (!memoizedAuth) {
-    memoizedAuth = getAuth(memoizedApp);
-  }
-
-  // 3. Инициализируем Firestore с защитой от повторного вызова
-  if (!memoizedFirestore) {
-    try {
-      // Пытаемся инициализировать Firestore с современным многовкладочным кэшем
-      memoizedFirestore = initializeFirestore(memoizedApp, {
-        localCache: persistentLocalCache({
-          tabManager: persistentMultipleTabManager()
-        })
-      });
-    } catch (err: any) {
-      // Если Firestore уже был инициализирован ранее, просто получаем его экземпляр
-      memoizedFirestore = getFirestore(memoizedApp);
-    }
+  const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  
+  let firestore: Firestore;
+  
+  try {
+    // Пытаемся инициализировать с кэшированием. 
+    // Если это второй вызов (HMR), Firebase выдаст ошибку, которую мы перехватим.
+    firestore = initializeFirestore(app, {
+      localCache: persistentLocalCache({
+        tabManager: persistentMultipleTabManager()
+      })
+    });
+  } catch (e) {
+    // Если уже инициализировано, просто получаем текущий экземпляр
+    firestore = getFirestore(app);
   }
 
   return {
-    firebaseApp: memoizedApp,
-    auth: memoizedAuth,
-    firestore: memoizedFirestore
+    firebaseApp: app,
+    auth: auth,
+    firestore: firestore
   };
 }
 

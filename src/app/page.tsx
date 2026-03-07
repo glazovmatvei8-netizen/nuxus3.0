@@ -17,10 +17,6 @@ import { format } from 'date-fns';
 import { ru } from 'date-fns/locale';
 import { NuxusLogo } from '@/components/nuxus-logo';
 
-/**
- * Главная точка входа Nuxus.
- * Полностью очищена от Legacy-кода для Android 5.
- */
 export default function Home() {
   const { user, isUserLoading } = useUser();
   const db = useFirestore();
@@ -45,7 +41,6 @@ export default function Home() {
 
   const isBanned = isUserActuallyBanned(profile);
 
-  // Логика вступления по инвайт-ссылке
   useEffect(() => {
     if (!user || !db || isJoining || (!is2FAVerified && profile?.twoFactorEnabled) || isBanned) return;
 
@@ -89,9 +84,7 @@ export default function Home() {
     }
   };
 
-  if (!mounted) {
-    return <div className="h-[100dvh] w-full bg-[#0a0a0c]" />;
-  }
+  if (!mounted) return <div className="h-[100dvh] w-full bg-[#0a0a0c]" />;
 
   if (isUserLoading) {
     return (

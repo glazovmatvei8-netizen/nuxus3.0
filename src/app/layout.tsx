@@ -57,9 +57,15 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ru" className={`dark ${font.variable}`} suppressHydrationWarning>
+      <head>
+        <style>{`
+          html, body { background-color: #0a0a0c !important; }
+        `}</style>
+      </head>
       <body 
         className="font-sans antialiased bg-[#0a0a0c] text-foreground overflow-hidden h-[100dvh] selection:bg-primary/30" 
         style={{ 
+          backgroundColor: '#0a0a0c',
           fontFamily: 'var(--font-jakarta), ui-sans-serif, system-ui, -apple-system, sans-serif'
         }}
       >
