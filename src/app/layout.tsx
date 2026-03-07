@@ -57,11 +57,15 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="ru" className={`dark ${font.variable}`} suppressHydrationWarning style={{ backgroundColor: '#0a0a0c' }}>
+    <html lang="ru" className={`dark ${font.variable}`} suppressHydrationWarning style={{ backgroundColor: '#0a0a0c', color: '#ffffff' }}>
       <head>
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <meta name="apple-mobile-web-app-title" content="Nuxus" />
+        <style dangerouslySetInnerHTML={{ __html: `
+          html, body { background-color: #0a0a0c !important; color: white !important; margin: 0; padding: 0; }
+          #nuxus-loading-gate { background: #0a0a0c; position: fixed; inset: 0; z-index: 9999; display: flex; align-items: center; justify-content: center; }
+        ` }} />
         <link rel="apple-touch-icon" href="https://picsum.photos/seed/nuxus/180/180" />
         <link rel="icon" href="https://picsum.photos/seed/nuxus/32/32" />
       </head>
@@ -86,7 +90,7 @@ export default function RootLayout({
                 navigator.serviceWorker.register('/sw.js', { scope: '/' }).then(function(reg) {
                   console.log('Nuxus Ghost Protocol: Active');
                 }).catch(function(err) {
-                  console.log('Nuxus Ghost Protocol: Failed', err);
+                  console.log('Nuxus Ghost Protocol: Failed');
                 });
               });
             }

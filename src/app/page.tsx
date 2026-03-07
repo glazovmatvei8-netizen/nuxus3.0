@@ -33,11 +33,11 @@ export default function Home() {
   useEffect(() => {
     setMounted(true);
     
-    // Экспонируем функцию запуска для глобального доступа (Legacy/Desktop)
+    // Глобальная функция аварийного запуска (ES5 совместимость)
     (window as any).nuxusEmergencyLaunch = function() {
       setShowResilienceUI(true);
       var loader = document.getElementById('loading-overlay');
-      if (loader) loader.style.display = 'none';
+      if (loader) loader.style.backgroundColor = '#0a0a0c';
     };
 
     return () => {
@@ -99,12 +99,16 @@ export default function Home() {
 
   // Мгновенный рендер черного фона для предотвращения белого экрана
   if (!mounted) {
-    return <div className="h-[100dvh] w-full bg-[#0a0a0c]" />;
+    return <div style={{ height: '100dvh', width: '100%', backgroundColor: '#0a0a0c' }} />;
   }
 
   if (isUserLoading && !showResilienceUI) {
     return (
-      <div className="h-[100dvh] w-full flex flex-col items-center justify-center bg-[#0a0a0c] p-10 relative" id="loading-overlay">
+      <div 
+        className="h-[100dvh] w-full flex flex-col items-center justify-center p-10 relative" 
+        id="loading-overlay"
+        style={{ backgroundColor: '#0a0a0c' }}
+      >
         <div className="relative mb-8">
           <NuxusLogo size={100} />
         </div>
@@ -153,7 +157,7 @@ export default function Home() {
 
   if ((isProfileLoading || isJoining) && !showResilienceUI) {
     return (
-      <div className="h-[100dvh] w-full flex flex-col items-center justify-center bg-[#0a0a0c]">
+      <div className="h-[100dvh] w-full flex flex-col items-center justify-center bg-[#0a0a0c]" style={{ backgroundColor: '#0a0a0c' }}>
         <NuxusLogo size={80} className="opacity-40 grayscale" />
         <div className="mt-8 flex flex-col items-center gap-2">
           <Loader2 className="w-5 h-5 text-primary animate-spin" />

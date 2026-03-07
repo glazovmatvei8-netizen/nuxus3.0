@@ -12,8 +12,8 @@ import {
 } from 'firebase/firestore';
 
 /**
- * Инициализация Firebase v0.65.2 Quantum Resilience.
- * Максимальная совместимость со старыми браузерами и Electron-оболочками.
+ * Инициализация Firebase v0.66.0 Quantum Resilience.
+ * Максимальная стабильность для десктопных приложений и старых Android.
  */
 let cachedFirestore: Firestore | null = null;
 
@@ -29,13 +29,18 @@ export function initializeFirebase() {
   const auth = getAuth(firebaseApp);
 
   if (!cachedFirestore) {
-    // Детекция отсутствия Proxy (ES6) или среды Electron/PWA
+    // Детекция окружения для безопасной работы Firestore
     const hasProxy = typeof window !== 'undefined' && !!window.Proxy;
     const isOldAndroid = typeof navigator !== 'undefined' && /Android [45]/.test(navigator.userAgent);
-    const isDesktopApp = typeof window !== 'undefined' && (window as any).process?.type === 'renderer';
+    const isDesktop = typeof window !== 'undefined' && (
+      (window as any).process?.type === 'renderer' || 
+      navigator.userAgent.toLowerCase().includes('electron') ||
+      navigator.userAgent.toLowerCase().includes('nativefier')
+    );
 
-    if (!hasProxy || isOldAndroid || isDesktopApp) {
-      console.log('Nuxus Core: Resilience Mode active. Forcing standard Firestore.');
+    if (!hasProxy || isOldAndroid || isDesktop) {
+      // В десктопных приложениях и старых браузерах отключаем сложные методы кэширования
+      console.log('Nuxus Core: Safety Mode active.');
       cachedFirestore = getFirestore(firebaseApp);
     } else {
       try {
@@ -45,20 +50,9 @@ export function initializeFirebase() {
           }
         } as any);
       } catch (e) {
-        console.warn('Nuxus Core: Cache initialization failed, falling back.');
         cachedFirestore = getFirestore(firebaseApp);
       }
     }
-  }
-
-  // Graceful shutdown helper for Desktop
-  if (typeof window !== 'undefined') {
-    window.addEventListener('beforeunload', () => {
-      if (cachedFirestore) {
-        // Не блокируем выход, но пытаемся корректно закрыть соединение
-        try { terminate(cachedFirestore); } catch(e) {}
-      }
-    });
   }
 
   return {
