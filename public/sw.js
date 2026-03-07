@@ -1,23 +1,27 @@
 
+// Nuxus Ghost Protocol - Service Worker v1.0
 const CACHE_NAME = 'nuxus-cache-v1';
-const ASSETS_TO_CACHE = [
-  '/',
-  '/manifest.webmanifest',
-  'https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap'
-];
+const OFFLINE_URL = '/';
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(ASSETS_TO_CACHE);
+      return cache.addAll([OFFLINE_URL]);
     })
   );
+  self.skipWaiting();
+});
+
+self.addEventListener('activate', (event) => {
+  event.waitUntil(self.clients.claim());
 });
 
 self.addEventListener('fetch', (event) => {
-  event.respondWith(
-    caches.match(event.request).then((response) => {
-      return response || fetch(event.request);
-    })
-  );
+  if (event.request.mode === 'navigate') {
+    event.respondWith(
+      fetch(event.request).catch(() => {
+        return caches.match(OFFLINE_URL);
+      })
+    );
+  }
 });
