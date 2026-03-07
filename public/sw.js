@@ -27,11 +27,9 @@ self.addEventListener('fetch', (event) => {
     event.respondWith((async () => {
       try {
         const preloadResp = await event.preloadResponse;
-
         if (preloadResp) {
           return preloadResp;
         }
-
         const networkResp = await fetch(event.request);
         return networkResp;
       } catch (error) {

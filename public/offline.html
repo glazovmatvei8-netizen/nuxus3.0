@@ -4,12 +4,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Nuxus — Офлайн режим</title>
+    <title>Nuxus — Офлайн</title>
     <style>
         body {
             background-color: #0a0a0c;
             color: white;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: sans-serif;
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -18,34 +18,24 @@
             margin: 0;
             text-align: center;
         }
-        .logo {
-            width: 100px;
-            height: 100px;
-            background: linear-gradient(135deg, #8B5CF6 0%, #0EA5E9 100%);
-            border-radius: 30px;
+        .icon {
+            font-size: 64px;
             margin-bottom: 20px;
-            box-shadow: 0 0 30px rgba(139, 92, 246, 0.3);
+            animation: pulse 2s infinite;
         }
         h1 { font-weight: 900; text-transform: uppercase; letter-spacing: 2px; }
         p { opacity: 0.6; font-size: 14px; }
-        button {
-            margin-top: 30px;
-            padding: 12px 30px;
-            background: #8B5CF6;
-            border: none;
-            color: white;
-            border-radius: 15px;
-            font-weight: bold;
-            cursor: pointer;
-            text-transform: uppercase;
-            font-size: 12px;
+        @keyframes pulse {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.1); opacity: 0.7; }
+            100% { transform: scale(1); opacity: 1; }
         }
     </style>
 </head>
 <body>
-    <div class="logo"></div>
+    <div class="icon">🛰️</div>
     <h1>Связь потеряна</h1>
-    <p>Ядро Nuxus перешло в автономный режим.<br>Проверьте подключение к интернету.</p>
-    <button onclick="window.location.reload()">Попробовать снова</button>
+    <p>Ядро Nuxus ожидает восстановления сигнала...</p>
+    <button onclick="window.location.reload()" style="margin-top: 20px; background: #8B5CF6; border: none; color: white; padding: 10px 20px; border-radius: 10px; font-weight: bold; cursor: pointer;">Попробовать снова</button>
 </body>
 </html>
