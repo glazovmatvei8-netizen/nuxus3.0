@@ -119,12 +119,12 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, isAdmi
         <>
           <div 
             onClick={(e) => openGallery(0, e)}
-            className="overflow-hidden rounded-2xl border border-white/5 max-w-[300px] md:max-w-[400px] cursor-pointer group relative"
+            className="overflow-hidden rounded-2xl border border-white/5 w-full min-w-[240px] max-w-[300px] md:max-w-[400px] cursor-pointer group relative"
           >
             {message.contentType === 'video' ? (
               <video src={message.content} className="w-full h-full object-cover aspect-video" />
             ) : (
-              <div className="relative w-full aspect-[3/4] min-w-[200px]">
+              <div className="relative w-full aspect-[3/4]">
                 <Image src={message.content} alt="Media content" fill className="object-cover transition-transform group-hover:scale-105" unoptimized />
               </div>
             )}
@@ -147,13 +147,13 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, isAdmi
       
       return (
         <>
-          <div className={cn("grid gap-1.5 max-w-[320px] md:max-w-[450px]", gridCols)}>
+          <div className={cn("grid gap-1.5 w-full min-w-[260px] max-w-[320px] md:max-w-[450px]", gridCols)}>
             {urls.map((url, idx) => (
               <div 
                 key={idx}
                 onClick={(e) => openGallery(idx, e)}
                 className={cn(
-                  "relative aspect-square rounded-xl overflow-hidden border border-white/5 cursor-pointer group",
+                  "relative aspect-square rounded-xl overflow-hidden border border-white/5 cursor-pointer group bg-muted/10",
                   urls.length === 3 && idx === 0 ? "col-span-2 aspect-video" : ""
                 )}
               >
@@ -192,7 +192,7 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, isAdmi
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <div className={cn(
-                "p-2.5 rounded-2xl shadow-md border transition-all relative group/bubble", 
+                "p-2.5 rounded-2xl shadow-md border transition-all relative group/bubble cursor-pointer", 
                 isMe ? "message-bubble-me border-none" : "bg-card border-white/5 text-white"
               )}>
                 {renderContent()}
@@ -228,16 +228,19 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, isAdmi
 MessageItem.displayName = 'MessageItem';
 
 function MediaGalleryModal({ isOpen, onOpenChange, media, type, setApi, api }: { isOpen: boolean, onOpenChange: (o: boolean) => void, media: string[], type: string, setApi: (api: CarouselApi) => void, api?: CarouselApi }) {
-  const [current, setCurrent] = useState(0);
+  const [current, setCurrent] = useState(1);
 
   useEffect(() => {
     if (!api) return;
     
-    setCurrent(api.selectedScrollSnap() + 1);
-
-    api.on("select", () => {
+    const onSelect = () => {
       setCurrent(api.selectedScrollSnap() + 1);
-    });
+    };
+
+    api.on("select", onSelect);
+    return () => {
+      api.off("select", onSelect);
+    };
   }, [api]);
 
   return (
