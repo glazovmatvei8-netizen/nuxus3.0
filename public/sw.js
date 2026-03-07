@@ -1,11 +1,9 @@
 
-// Nuxus Ghost Protocol Service Worker v1.0
 const CACHE_NAME = 'nuxus-cache-v1';
 const ASSETS_TO_CACHE = [
   '/',
   '/manifest.webmanifest',
-  'https://images.unsplash.com/photo-1614850523296-d8c1af93d400?q=80&w=192&h=192&auto=format&fit=crop',
-  'https://images.unsplash.com/photo-1614850523296-d8c1af93d400?q=80&w=512&h=512&auto=format&fit=crop'
+  'https://images.unsplash.com/photo-1614850523296-d8c1af93d400?q=80&w=192&h=192&fit=crop&format=png'
 ];
 
 self.addEventListener('install', (event) => {
@@ -14,6 +12,18 @@ self.addEventListener('install', (event) => {
       return cache.addAll(ASSETS_TO_CACHE);
     })
   );
+  self.skipWaiting();
+});
+
+self.addEventListener('activate', (event) => {
+  event.waitUntil(
+    caches.keys().then((keys) => {
+      return Promise.all(
+        keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key))
+      );
+    })
+  );
+  self.clients.claim();
 });
 
 self.addEventListener('fetch', (event) => {
