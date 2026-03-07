@@ -1,23 +1,28 @@
 
-// Nuxus Ghost Protocol Service Worker
-const CACHE_NAME = 'nuxus-core-v1';
+/**
+ * Nuxus Core Service Worker v1.0
+ * Обязательный файл для генерации APK.
+ */
+
+const CACHE_NAME = 'nuxus-v1';
 const ASSETS = [
   '/',
-  '/offline',
+  '/manifest.webmanifest'
 ];
 
 self.addEventListener('install', (event) => {
-  event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(ASSETS);
-    })
-  );
+  self.skipWaiting();
+});
+
+self.addEventListener('activate', (event) => {
+  event.waitUntil(clients.claim());
 });
 
 self.addEventListener('fetch', (event) => {
+  // Для мессенджера используем стратегию Network First
   event.respondWith(
-    caches.match(event.request).then((response) => {
-      return response || fetch(event.request);
+    fetch(event.request).catch(() => {
+      return caches.match(event.request);
     })
   );
 });
