@@ -28,7 +28,7 @@ export default function manifest(): any {
     ],
     scope_extensions: [
       { origin: 'studio-5946432351-bbd5e.web.app' },
-      { origin: 'nuxus.chat' }
+      { origin: 'nuxus-mauve.vercel.app' }
     ],
     protocol_handlers: [
       {
@@ -99,13 +99,6 @@ export default function manifest(): any {
         type: 'image/png',
         form_factor: 'narrow',
         label: 'Интерфейс мессенджера'
-      },
-      {
-        src: 'https://images.unsplash.com/photo-1614850523296-d8c1af93d400?q=80&w=1920&h=1080&fit=crop&fm=png',
-        sizes: '1920x1080',
-        type: 'image/png',
-        form_factor: 'wide',
-        label: 'Десктопная версия'
       }
     ]
   }
