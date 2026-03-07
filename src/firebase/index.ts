@@ -1,4 +1,3 @@
-
 'use client';
 
 import { firebaseConfig } from '@/firebase/config';
@@ -7,16 +6,15 @@ import { getAuth } from 'firebase/auth';
 import { 
   getFirestore,
   initializeFirestore, 
-  Firestore,
-  terminate
+  persistentLocalCache, 
+  persistentMultipleTabManager,
+  Firestore
 } from 'firebase/firestore';
 
 /**
- * Инициализация Firebase v0.66.0 Quantum Resilience.
- * Максимальная стабильность для десктопных приложений и старых Android.
+ * Инициализация Firebase v0.70.0 Modern Core.
+ * Оптимизировано для стабильности в среде Next.js.
  */
-let cachedFirestore: Firestore | null = null;
-
 export function initializeFirebase() {
   let firebaseApp: FirebaseApp;
 
@@ -27,38 +25,27 @@ export function initializeFirebase() {
   }
 
   const auth = getAuth(firebaseApp);
-
-  if (!cachedFirestore) {
-    // Детекция окружения для безопасной работы Firestore
-    const hasProxy = typeof window !== 'undefined' && !!window.Proxy;
-    const isOldAndroid = typeof navigator !== 'undefined' && /Android [45]/.test(navigator.userAgent);
-    const isDesktop = typeof window !== 'undefined' && (
-      (window as any).process?.type === 'renderer' || 
-      navigator.userAgent.toLowerCase().includes('electron') ||
-      navigator.userAgent.toLowerCase().includes('nativefier')
-    );
-
-    if (!hasProxy || isOldAndroid || isDesktop) {
-      // В десктопных приложениях и старых браузерах отключаем сложные методы кэширования
-      console.log('Nuxus Core: Safety Mode active.');
-      cachedFirestore = getFirestore(firebaseApp);
-    } else {
-      try {
-        cachedFirestore = initializeFirestore(firebaseApp, {
-          localCache: {
-            kind: 'persistent'
-          }
-        } as any);
-      } catch (e) {
-        cachedFirestore = getFirestore(firebaseApp);
-      }
-    }
+  
+  let firestore: Firestore;
+  
+  try {
+    // Пытаемся инициализировать Firestore с современным многовкладочным кэшем
+    firestore = initializeFirestore(firebaseApp, {
+      localCache: persistentLocalCache({
+        tabManager: persistentMultipleTabManager()
+      })
+    });
+  } catch (err: any) {
+    // Если Firestore уже был инициализирован (например, при Fast Refresh),
+    // или если браузер не поддерживает данные опции, используем существующий инстанс.
+    // Это предотвращает ошибку "initializeFirestore() has already been called".
+    firestore = getFirestore(firebaseApp);
   }
 
   return {
     firebaseApp,
     auth,
-    firestore: cachedFirestore
+    firestore
   };
 }
 

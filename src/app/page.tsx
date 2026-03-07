@@ -1,4 +1,3 @@
-
 "use client"
 
 import { useUser, useFirestore, useDoc, useMemoFirebase, useAuth } from '@/firebase';
@@ -27,22 +26,10 @@ export default function Home() {
   
   const [isJoining, setIsJoining] = useState(false);
   const [twoFactorInput, setTwoFactorInput] = useState('');
-  const [showResilienceUI, setShowResilienceUI] = useState(false);
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     setMounted(true);
-    
-    // Глобальная функция аварийного запуска (ES5 совместимость)
-    (window as any).nuxusEmergencyLaunch = function() {
-      setShowResilienceUI(true);
-      var loader = document.getElementById('loading-overlay');
-      if (loader) loader.style.backgroundColor = '#0a0a0c';
-    };
-
-    return () => {
-      delete (window as any).nuxusEmergencyLaunch;
-    };
   }, []);
 
   const userProfileRef = useMemoFirebase(() => {
@@ -97,67 +84,31 @@ export default function Home() {
     }
   };
 
-  // Мгновенный рендер черного фона для предотвращения белого экрана
   if (!mounted) {
-    return <div style={{ height: '100dvh', width: '100%', backgroundColor: '#0a0a0c' }} />;
+    return <div className="h-[100dvh] w-full bg-[#0a0a0c]" />;
   }
 
-  if (isUserLoading && !showResilienceUI) {
+  if (isUserLoading) {
     return (
-      <div 
-        className="h-[100dvh] w-full flex flex-col items-center justify-center p-10 relative" 
-        id="loading-overlay"
-        style={{ backgroundColor: '#0a0a0c' }}
-      >
+      <div className="h-[100dvh] w-full flex flex-col items-center justify-center p-10 bg-[#0a0a0c]">
         <div className="relative mb-8">
           <NuxusLogo size={100} />
         </div>
-        
         <div className="flex flex-col items-center gap-4">
           <Loader2 className="w-6 h-6 text-primary animate-spin opacity-40" />
           <p className="text-[10px] font-black uppercase tracking-[0.4em] text-primary/60 animate-pulse text-center">
             Инициализация Nuxus...
           </p>
         </div>
-
-        <div id="emergency-launch-btn" style={{ display: 'none', marginTop: '40px' }}>
-          <button 
-            type="button"
-            onClick={() => (window as any).nuxusEmergencyLaunch()}
-            style={{
-              background: 'rgba(139, 92, 246, 0.1)',
-              border: '1px solid rgba(139, 92, 246, 0.3)',
-              color: '#8B5CF6',
-              padding: '16px 32px',
-              borderRadius: '16px',
-              fontSize: '12px',
-              fontWeight: 'bold',
-              textTransform: 'uppercase',
-              letterSpacing: '2px',
-              cursor: 'pointer'
-            }}
-          >
-            Запустить Nuxus (Legacy)
-          </button>
-        </div>
-
-        <script dangerouslySetInnerHTML={{ __html: `
-          setTimeout(function() {
-            var btn = document.getElementById('emergency-launch-btn');
-            if (btn) btn.style.display = 'block';
-          }, 3500);
-        ` }} />
       </div>
     );
   }
 
-  if (showResilienceUI && user) return <ChatMain />;
-  if (showResilienceUI && !user) return <AuthScreen />;
   if (!user) return <AuthScreen />;
 
-  if ((isProfileLoading || isJoining) && !showResilienceUI) {
+  if (isProfileLoading || isJoining) {
     return (
-      <div className="h-[100dvh] w-full flex flex-col items-center justify-center bg-[#0a0a0c]" style={{ backgroundColor: '#0a0a0c' }}>
+      <div className="h-[100dvh] w-full flex flex-col items-center justify-center bg-[#0a0a0c]">
         <NuxusLogo size={80} className="opacity-40 grayscale" />
         <div className="mt-8 flex flex-col items-center gap-2">
           <Loader2 className="w-5 h-5 text-primary animate-spin" />
