@@ -1,3 +1,4 @@
+
 "use client"
 
 import { useUser, useFirestore, useDoc, useMemoFirebase, useAuth } from '@/firebase';
@@ -18,8 +19,8 @@ import { ru } from 'date-fns/locale';
 import { NuxusLogo } from '@/components/nuxus-logo';
 
 /**
- * Главный экран Ядра Nuxus.
- * Полностью очищен от Legacy-кода для максимальной производительности.
+ * Оптимизированный главный вход Ядра.
+ * Минимизирует блокировку потока за счет упрощенных условий рендеринга.
  */
 export default function Home() {
   const { user, isUserLoading } = useUser();
@@ -28,9 +29,9 @@ export default function Home() {
   const { setCurrentChatId, is2FAVerified, setIs2FAVerified } = useAppState();
   const { toast } = useToast();
   
+  const [mounted, setMounted] = useState(false);
   const [isJoining, setIsJoining] = useState(false);
   const [twoFactorInput, setTwoFactorInput] = useState('');
-  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -45,8 +46,9 @@ export default function Home() {
 
   const isBanned = isUserActuallyBanned(profile);
 
+  // Логика вступления по ссылке (Join)
   useEffect(() => {
-    if (!user || !db || isJoining || (!is2FAVerified && profile?.twoFactorEnabled) || isBanned) return;
+    if (!user || !db || isJoining || !mounted) return;
 
     const params = new URLSearchParams(window.location.search);
     const joinParam = params.get('join');
@@ -77,49 +79,51 @@ export default function Home() {
       };
       handleJoin();
     }
-  }, [user, db, setCurrentChatId, toast, isJoining, is2FAVerified, profile, isBanned]);
+  }, [user, db, setCurrentChatId, toast, isJoining, mounted]);
 
   const handleVerify2FA = () => {
     if (twoFactorInput === profile?.twoFactorPin) {
       setIs2FAVerified(true);
-      toast({ title: "Доступ разрешен", description: "Двухфакторная проверка пройдена" });
+      toast({ title: "Доступ разрешен" });
     } else {
-      toast({ title: "Ошибка кода", description: "Неверный PIN-код", variant: "destructive" });
+      toast({ title: "Ошибка PIN", variant: "destructive" });
     }
   };
 
-  if (!mounted) return <div className="h-[100dvh] w-full bg-[#0a0a0c]" />;
+  if (!mounted) return null;
 
+  // 1. Стадия загрузки авторизации
   if (isUserLoading) {
     return (
-      <div className="h-[100dvh] w-full flex flex-col items-center justify-center p-10 bg-[#0a0a0c]">
-        <div className="relative mb-8">
-          <NuxusLogo size={100} />
-        </div>
-        <div className="flex flex-col items-center gap-4">
-          <Loader2 className="w-6 h-6 text-primary animate-spin opacity-40" />
-          <p className="text-[10px] font-black uppercase tracking-[0.4em] text-primary/60 animate-pulse text-center">
-            Инициализация Ядра Nuxus...
+      <div className="h-[100dvh] w-full flex flex-col items-center justify-center bg-[#0a0a0c]">
+        <NuxusLogo size={100} />
+        <div className="mt-8 flex flex-col items-center gap-4">
+          <Loader2 className="w-5 h-5 text-primary/40 animate-spin" />
+          <p className="text-[10px] font-black uppercase tracking-[0.4em] text-primary/40 animate-pulse">
+            Загрузка Ядра...
           </p>
         </div>
       </div>
     );
   }
 
+  // 2. Если пользователь не вошел
   if (!user) return <AuthScreen />;
 
-  if (isProfileLoading || isJoining) {
+  // 3. Стадия загрузки профиля
+  if (isProfileLoading) {
     return (
       <div className="h-[100dvh] w-full flex flex-col items-center justify-center bg-[#0a0a0c]">
         <NuxusLogo size={80} className="opacity-40 grayscale" />
         <div className="mt-8 flex flex-col items-center gap-2">
-          <Loader2 className="w-5 h-5 text-primary animate-spin" />
-          <p className="text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground">Синхронизация профиля...</p>
+          <Loader2 className="w-4 h-4 text-primary/40 animate-spin" />
+          <p className="text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground">Авторизация...</p>
         </div>
       </div>
     );
   }
 
+  // 4. Проверка блокировки
   if (isBanned) {
     return (
       <div className="h-screen w-full flex flex-col items-center justify-center bg-[#0a0a0c] p-6 text-center">
@@ -127,54 +131,40 @@ export default function Home() {
           <ShieldAlert className="w-16 h-16 text-destructive" />
         </div>
         <h1 className="text-3xl font-bold mb-4 text-white uppercase italic">Доступ ограничен</h1>
-        {profile?.bannedUntil ? (
-          <div className="flex items-center gap-2 text-muted-foreground mb-8 bg-white/5 px-4 py-2 rounded-xl">
-            <Clock className="w-4 h-4 text-primary" />
-            <span>Блокировка до: {format(new Date(profile.bannedUntil), 'd MMMM yyyy, HH:mm', { locale: ru })}</span>
-          </div>
-        ) : (
-          <p className="text-muted-foreground max-w-md mb-8 uppercase text-[10px] font-bold tracking-widest">Ваше соединение с Ядром разорвано навсегда администрацией.</p>
-        )}
-        <Button variant="outline" className="rounded-2xl border-white/10" onClick={() => signOut(auth)}>Выйти из аккаунта</Button>
+        <Button variant="outline" className="rounded-2xl border-white/10" onClick={() => signOut(auth)}>Выйти</Button>
       </div>
     );
   }
 
+  // 5. Проверка 2FA (если включена)
   if (profile?.twoFactorEnabled && !is2FAVerified) {
     return (
-      <div className="h-screen w-full flex items-center justify-center bg-[#0a0a0c] relative overflow-hidden">
-        <div className="absolute inset-0 nuxus-core-glow opacity-20 animate-pulse-glow" />
-        <div className="relative z-10 w-full max-w-md p-8">
-          <div className="bg-card/40 backdrop-blur-3xl border border-white/5 rounded-[3rem] p-10 text-center space-y-8">
-            <div className="bg-primary/10 w-20 h-20 rounded-3xl flex items-center justify-center mx-auto shadow-2xl">
-              <Lock className="w-10 h-10 text-primary" />
-            </div>
-            <div className="space-y-2">
-              <h2 className="text-3xl font-black uppercase italic text-white tracking-tighter">Защита Nuxus</h2>
-              <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60 leading-relaxed">
-                Введите ваш секретный PIN-код для подтверждения личности
-              </p>
-            </div>
-            <div className="space-y-4">
-              <Input 
-                type="password" 
-                placeholder="••••••" 
-                maxLength={6} 
-                className="bg-black/20 border-white/5 h-16 text-2xl tracking-[0.5em] text-center rounded-2xl font-black"
-                value={twoFactorInput}
-                onChange={e => setTwoFactorInput(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && handleVerify2FA()}
-              />
-              <Button onClick={handleVerify2FA} className="w-full h-14 rounded-2xl bg-primary font-black uppercase italic tracking-widest shadow-xl shadow-primary/20">
-                Подтвердить <ArrowRight className="w-5 h-5 ml-2" />
-              </Button>
-              <Button variant="ghost" onClick={() => signOut(auth)} className="w-full text-[10px] font-bold uppercase opacity-40">Выйти из аккаунта</Button>
-            </div>
+      <div className="h-screen w-full flex items-center justify-center bg-[#0a0a0c]">
+        <div className="w-full max-w-md p-8 space-y-8 text-center">
+          <div className="bg-primary/10 w-20 h-20 rounded-3xl flex items-center justify-center mx-auto">
+            <Lock className="w-10 h-10 text-primary" />
+          </div>
+          <div className="space-y-4">
+            <h2 className="text-2xl font-black uppercase italic text-white">Введите PIN</h2>
+            <Input 
+              type="password" 
+              placeholder="••••••" 
+              maxLength={6} 
+              className="bg-white/5 border-white/5 h-16 text-2xl tracking-[0.5em] text-center rounded-2xl font-black"
+              value={twoFactorInput}
+              onChange={e => setTwoFactorInput(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && handleVerify2FA()}
+            />
+            <Button onClick={handleVerify2FA} className="w-full h-14 rounded-2xl bg-primary font-black uppercase italic tracking-widest">
+              Войти <ArrowRight className="w-5 h-5 ml-2" />
+            </Button>
+            <Button variant="ghost" onClick={() => signOut(auth)} className="w-full text-[10px] font-bold uppercase opacity-40">Выйти</Button>
           </div>
         </div>
       </div>
     );
   }
 
+  // 6. Основное приложение
   return <ChatMain />;
 }

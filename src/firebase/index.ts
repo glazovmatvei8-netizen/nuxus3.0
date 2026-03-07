@@ -1,38 +1,22 @@
+
 'use client';
 
 import { firebaseConfig } from '@/firebase/config';
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
-import { 
-  getFirestore,
-  initializeFirestore, 
-  persistentLocalCache, 
-  persistentMultipleTabManager,
-  Firestore
-} from 'firebase/firestore';
+import { getFirestore } from 'firebase/firestore';
 
 /**
- * Чистая инициализация Firebase для современных браузеров и ПК.
- * Использует паттерн Singleton для предотвращения ошибок повторной инициализации.
+ * Оптимизированная инициализация Firebase.
+ * Использует стандартные синглтоны для предотвращения ошибок повторной инициализации
+ * и минимизации блокировки основного потока (Total Blocking Time).
  */
 export function initializeFirebase() {
   const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
+  
+  // getAuth и getFirestore возвращают уже существующие инстансы, если они есть
   const auth = getAuth(app);
-  
-  let firestore: Firestore;
-  
-  try {
-    // Пытаемся инициализировать Firestore с современным кэшированием для нескольких вкладок.
-    // Если он уже инициализирован (например, при Fast Refresh), используем getFirestore().
-    firestore = initializeFirestore(app, {
-      localCache: persistentLocalCache({
-        tabManager: persistentMultipleTabManager()
-      })
-    });
-  } catch (e: any) {
-    // В случае любой ошибки (уже инициализировано или не поддерживается) берем существующий инстанс
-    firestore = getFirestore(app);
-  }
+  const firestore = getFirestore(app);
 
   return {
     firebaseApp: app,
