@@ -7,17 +7,22 @@
 
 ### Шаг 1: Загрузка на GitHub
 1. **Распакуйте** ваш ZIP-архив в папку.
-2. Зайдите на [GitHub.com](https://github.com) и создайте новый репозиторий (New Repository).
-3. Используйте [GitHub Desktop](https://desktop.github.com/) или загрузите файлы вручную через кнопку `Add file` -> `Upload files`.
-4. Нажмите **Commit changes** и **Publish**.
+2. Зайдите на [GitHub.com](https://github.com) и создайте новый репозиторий (**New Repository**).
+3. При создании выберите **Public** (Публичный).
+4. Загрузите файлы через **GitHub Desktop** или через кнопку `Add file` -> `Upload files`.
+5. Нажмите **Commit changes** и **Publish**.
+
+**Как сделать уже созданный репозиторий публичным:**
+1. Зайдите в репозиторий.
+2. Нажмите **Settings** (сверху).
+3. В самом низу в разделе **Danger Zone** нажмите **Change visibility** -> **Make public**.
 
 ### Шаг 2: Создание ссылки (Vercel)
 1. Зайдите на [Vercel.com](https://vercel.com) и авторизуйтесь через GitHub.
 2. Нажмите **Add New** -> **Project**.
 3. В списке вы увидите свой репозиторий GitHub. Нажмите **Import**.
-4. В поле "Environment Variables" ничего добавлять не нужно (все настройки уже в коде).
-5. Нажмите **Deploy**.
-6. Через 1 минуту вы получите ссылку вида `nuxus-app.vercel.app`.
+4. Нажмите **Deploy**.
+5. Через 1 минуту вы получите ссылку.
 
 ## 📱 Сборка мобильных приложений (PWABuilder)
 После того как вы получите ссылку от Vercel:

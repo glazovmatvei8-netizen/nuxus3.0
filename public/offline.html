@@ -18,16 +18,35 @@
             margin: 0;
             text-align: center;
         }
-        .logo { width: 80px; height: 80px; margin-bottom: 20px; filter: drop-shadow(0 0 20px rgba(139,92,246,0.5)); }
-        h1 { font-weight: 900; text-transform: uppercase; font-style: italic; letter-spacing: -0.05em; }
-        p { color: #666; font-size: 12px; text-transform: uppercase; font-weight: 700; letter-spacing: 0.2em; }
-        .btn { margin-top: 30px; background: #8B5CF6; color: white; border: none; padding: 12px 24px; border-radius: 12px; font-weight: 900; text-transform: uppercase; cursor: pointer; }
+        .logo {
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(135deg, #8B5CF6 0%, #0EA5E9 100%);
+            border-radius: 25px;
+            margin-bottom: 24px;
+            box-shadow: 0 0 30px rgba(139, 92, 246, 0.3);
+        }
+        h1 { font-size: 24px; font-weight: 900; text-transform: uppercase; font-style: italic; margin: 0; letter-spacing: -0.05em; }
+        p { color: rgba(255, 255, 255, 0.5); font-size: 12px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.2em; margin-top: 8px; }
+        .btn {
+            margin-top: 32px;
+            padding: 12px 24px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px border rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            color: white;
+            text-decoration: none;
+            font-size: 10px;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+        }
     </style>
 </head>
 <body>
-    <img src="https://images.unsplash.com/photo-1614850523296-d8c1af93d400?q=80&w=192&h=192&fit=crop&fm=png" class="logo" alt="Nuxus">
-    <h1>Ядро вне сети</h1>
-    <p>Проверьте подключение к интернету для синхронизации узлов.</p>
-    <button class="btn" onclick="window.location.reload()">Переподключить</button>
+    <div class="logo"></div>
+    <h1>Nuxus Kernel</h1>
+    <p>Соединение с Ядром потеряно</p>
+    <a href="/" class="btn">Повторить попытку</a>
 </body>
 </html>
