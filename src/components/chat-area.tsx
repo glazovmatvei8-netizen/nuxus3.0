@@ -8,17 +8,18 @@ import { Input } from '@/components/ui/input';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
   Send, Info, ChevronLeft, Loader2, Bookmark, X, Video, Wand2, Phone, Search as SearchIcon,
-  Zap, Paperclip, Mic, StopCircle, Pin, ChevronDown, ImageIcon, Edit2
+  Zap, Paperclip, Mic, StopCircle, Pin, ChevronDown, ImageIcon, Edit2, Sparkles
 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { MessageItem } from './message-item';
 import { useToast } from '@/hooks/use-toast';
 import { ChatInfoModal } from './modals/chat-info-modal';
 import { useFirestore, useUser, useCollection, useDoc, useMemoFirebase } from '@/firebase';
-import { collection, query, orderBy, doc, updateDoc, where, addDoc } from 'firebase/firestore';
+import { collection, query, orderBy, doc, updateDoc, where, addDoc, limit } from 'firebase/firestore';
 import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { formatDisplayName, cn } from '@/lib/utils';
 import type { Message, User as UserType, Chat } from '@/lib/types';
+import { suggestMessageDraft } from '@/ai/flows/ai-message-drafting-flow';
 
 const MessageList = memo(({ 
   messages, 
@@ -62,8 +63,8 @@ export default function ChatArea() {
   const [replyTo, setReplyTo] = useState<Message | null>(null);
   const [editingMsg, setEditingMsg] = useState<Message | null>(null);
   const [messageInput, setMessageInput] = useState('');
+  const [isAiLoading, setIsAiLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [isSearchingLocal, setIsSearchingLocal] = useState(false);
   const [showScrollBottom, setShowScrollBottom] = useState(false);
 
   // Recording State
@@ -152,7 +153,6 @@ export default function ChatArea() {
     }
   }, [messages?.length, currentChatId, scrollToBottom]);
 
-  // Handle editing mode - set input text and focus
   useEffect(() => {
     if (editingMsg) {
       setMessageInput(editingMsg.content);
@@ -202,6 +202,32 @@ export default function ChatArea() {
     addDoc(collection(db, 'chats', currentChatId, 'messages'), msgData);
     updateDocumentNonBlocking(doc(db, 'chats', currentChatId), { lastMessageAt: new Date().toISOString() });
   }, [messageInput, currentChatId, firebaseUser, db, userProfile, replyTo, editingMsg, toast]);
+
+  const handleAiDraft = async () => {
+    if (!currentChatId || isAiLoading) return;
+    setIsAiLoading(true);
+    try {
+      const history = (messages || []).slice(-5).map(m => ({
+        sender: m.senderName,
+        message: m.contentType === 'text' ? m.content : `[${m.contentType}]`
+      }));
+
+      const { draftMessage } = await suggestMessageDraft({
+        conversationHistory: history,
+        currentUserInput: messageInput
+      });
+
+      if (draftMessage) {
+        setMessageInput(draftMessage);
+        toast({ title: "ИИ предложил вариант", icon: <Sparkles className="w-4 h-4 text-primary" /> });
+      }
+    } catch (e) {
+      console.error(e);
+      toast({ title: "ИИ временно недоступен", variant: "destructive" });
+    } finally {
+      setIsAiLoading(false);
+    }
+  };
 
   const handlePinMessage = async (msg: Message) => {
     if (!db || !currentChatId || !isAdmin) return;
@@ -273,7 +299,6 @@ export default function ChatArea() {
 
   return (
     <div className="flex-1 flex flex-col h-full bg-background relative overflow-hidden z-20">
-      {/* Optimized Fixed Background for Mobile Performance */}
       {userProfile?.settings?.chatBackground && (
         <div 
           className="fixed inset-0 z-0 pointer-events-none" 
@@ -283,7 +308,7 @@ export default function ChatArea() {
             backgroundPosition: 'center', 
             backgroundRepeat: 'no-repeat', 
             backgroundColor: '#0a0a0c',
-            transform: 'translateZ(0)' // Hardware acceleration
+            transform: 'translateZ(0)'
           }} 
         />
       )}
@@ -300,7 +325,9 @@ export default function ChatArea() {
           </div>
         </div>
         <div className="flex items-center gap-1">
-          <Button variant="ghost" size="icon" onClick={() => setIsSearchingLocal(true)}><SearchIcon className="w-5 h-5" /></Button>
+          <Button variant="ghost" size="icon" onClick={handleAiDraft} disabled={isAiLoading}>
+            {isAiLoading ? <Loader2 className="w-5 h-5 animate-spin text-primary" /> : <Sparkles className="w-5 h-5 text-primary" />}
+          </Button>
           <Button variant="ghost" size="icon" onClick={() => setIsChatInfoOpen(true)}><Info className="w-5 h-5" /></Button>
         </div>
       </header>

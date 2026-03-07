@@ -13,18 +13,21 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { format } from 'date-fns';
 import { 
-  CornerUpLeft, Trash2, Check, CheckCheck, Edit2, Copy, Pin, Clock, X
+  CornerUpLeft, Trash2, Check, CheckCheck, Edit2, Copy, Pin, Clock, X, FileText, Sparkles
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { doc, updateDoc, deleteDoc } from 'firebase/firestore';
 import type { Message } from '@/lib/types';
 import { Button } from './ui/button';
 import { useToast } from '@/hooks/use-toast';
+import { transcribeVoice } from '@/ai/flows/voice-to-text-flow';
 
-export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, isAdmin = false, isGroup = false, onEdit }: any) => {
+export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, isAdmin = false, isGroup = false, onEdit, amIPremium = false }: any) => {
   const db = useFirestore();
   const { toast } = useToast();
   const [isPlaying, setIsPlaying] = useState(false);
+  const [transcription, setTranscription] = useState<string | null>(message.translation || null);
+  const [isTranscribing, setIsTranscribing] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const formattedTime = message.sentAt ? format(new Date(message.sentAt), 'HH:mm') : '';
@@ -39,12 +42,53 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, isAdmi
     setIsPlaying(!isPlaying);
   };
 
+  const handleTranscribe = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!amIPremium) {
+      toast({ title: "Только для Premium", description: "Расшифровка доступна только Premium пользователям.", variant: "destructive" });
+      return;
+    }
+    if (isTranscribing) return;
+    
+    setIsTranscribing(true);
+    try {
+      const { text } = await transcribeVoice({ audioDataUri: message.content });
+      setTranscription(text);
+      await updateDoc(doc(db, 'chats', chatId, 'messages', message.id), { translation: text });
+      toast({ title: "Голосовое расшифровано" });
+    } catch (e) {
+      toast({ title: "Ошибка расшифровки", variant: "destructive" });
+    } finally {
+      setIsTranscribing(false);
+    }
+  };
+
   const renderContent = () => {
     if (message.contentType === 'audio') {
       return (
-        <Button variant="ghost" size="sm" className="h-8 gap-2 bg-primary/10 rounded-full px-4" onClick={toggleAudio}>
-          {isPlaying ? 'Пауза' : 'Голосовое сообщение'}
-        </Button>
+        <div className="flex flex-col gap-2 min-w-[200px]">
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" size="sm" className="h-8 gap-2 bg-primary/10 rounded-full px-4 hover:bg-primary/20" onClick={toggleAudio}>
+              {isPlaying ? 'Пауза' : 'Голосовое сообщение'}
+            </Button>
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="h-8 w-8 rounded-full bg-accent/10 hover:bg-accent/20" 
+              onClick={handleTranscribe}
+              disabled={isTranscribing}
+            >
+              {isTranscribing ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileText className="w-4 h-4" />}
+            </Button>
+          </div>
+          {transcription && (
+            <div className="bg-black/20 p-2 rounded-xl border border-white/5 animate-in fade-in slide-in-from-top-1">
+              <p className="text-[11px] italic text-white/70 leading-relaxed">
+                <Sparkles className="w-3 h-3 inline mr-1 text-primary" /> {transcription}
+              </p>
+            </div>
+          )}
+        </div>
       );
     }
 
