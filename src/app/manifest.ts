@@ -1,3 +1,4 @@
+
 import { MetadataRoute } from 'next'
 
 export default function manifest(): any {
@@ -23,15 +24,10 @@ export default function manifest(): any {
         platform: 'play',
         url: 'https://play.google.com/store/apps/details?id=chat.nuxus.app',
         id: 'chat.nuxus.app'
-      },
-      {
-        platform: 'itunes',
-        url: 'https://apps.apple.com/app/nuxus/idchat.nuxus.app'
       }
     ],
     scope_extensions: [
-      { origin: 'https://studio-5946432351-bbd5e.web.app' },
-      { origin: 'https://nuxus.chat' }
+      { origin: 'https://studio-5946432351-bbd5e.web.app' }
     ],
     protocol_handlers: [
       {
@@ -57,7 +53,7 @@ export default function manifest(): any {
         short_name: 'Чат',
         description: 'Начать новое обсуждение',
         url: '/?view=chats',
-        icons: [{ src: 'https://images.unsplash.com/photo-1614850523296-d8c1af93d400?q=80&w=192&h=192&fit=crop&fm=png', sizes: '192x192', type: 'image/png' }]
+        icons: [{ src: 'https://picsum.photos/seed/nuxus-pwa-192/192/192', sizes: '192x192', type: 'image/png' }]
       }
     ],
     file_handlers: [
@@ -75,45 +71,27 @@ export default function manifest(): any {
     note_taking: {
       new_note_url: '/?view=chats&new=note'
     },
-    widgets: [
-      {
-        name: 'Nuxus Status',
-        description: 'Просмотр статуса и сообщений Nuxus.',
-        tag: 'nuxus_status',
-        ms_ac_template: 'https://studio-5946432351-bbd5e.web.app/widget-template.json',
-        data: 'https://studio-5946432351-bbd5e.web.app/widget-data.json',
-        type: 'application/json',
-        screenshots: [
-          {
-            src: 'https://images.unsplash.com/photo-1614850523296-d8c1af93d400?q=80&w=600&h=400&fit=crop&fm=png',
-            sizes: '600x400',
-            label: 'Nuxus Widget Preview',
-            type: 'image/png'
-          }
-        ]
-      }
-    ],
     icons: [
       {
-        src: 'https://images.unsplash.com/photo-1614850523296-d8c1af93d400?q=80&w=192&h=192&fit=crop&fm=png',
+        src: 'https://picsum.photos/seed/nuxus-pwa-192/192/192',
         sizes: '192x192',
         type: 'image/png',
         purpose: 'any'
       },
       {
-        src: 'https://images.unsplash.com/photo-1614850523296-d8c1af93d400?q=80&w=192&h=192&fit=crop&fm=png',
+        src: 'https://picsum.photos/seed/nuxus-pwa-192/192/192',
         sizes: '192x192',
         type: 'image/png',
         purpose: 'maskable'
       },
       {
-        src: 'https://images.unsplash.com/photo-1614850523296-d8c1af93d400?q=80&w=512&h=512&fit=crop&fm=png',
+        src: 'https://picsum.photos/seed/nuxus-pwa-512/512/512',
         sizes: '512x512',
         type: 'image/png',
         purpose: 'any'
       },
       {
-        src: 'https://images.unsplash.com/photo-1614850523296-d8c1af93d400?q=80&w=512&h=512&fit=crop&fm=png',
+        src: 'https://picsum.photos/seed/nuxus-pwa-512/512/512',
         sizes: '512x512',
         type: 'image/png',
         purpose: 'maskable'
