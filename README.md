@@ -6,9 +6,11 @@
 ## 🤖 Как создать APK (Android)
 1. Установите Bubblewrap: `npm install -g @bubblewrap/cli`
 2. В пустой папке запустите: `bubblewrap init --manifest=https://studio-5946432351-bbd5e.web.app/manifest.webmanifest`
-3. На вопрос **Domain** введите: `studio-5946432351-bbd5e.web.app`
-4. На вопрос **URL path** введите: `/`
-5. Соберите файл: `bubblewrap build`
+3. На вопросы терминала отвечайте так:
+   - **Domain**: `studio-5946432351-bbd5e.web.app`
+   - **URL path**: `/`
+   - **Display mode**: `standalone`
+4. Соберите файл: `bubblewrap build`
 
 ## 🖥️ Как собрать EXE (Windows)
 Выполните команду:
