@@ -27,7 +27,8 @@ export default function manifest(): any {
       }
     ],
     scope_extensions: [
-      { origin: 'https://studio-5946432351-bbd5e.web.app' }
+      { origin: 'studio-5946432351-bbd5e.web.app' },
+      { origin: 'nuxus.chat' }
     ],
     protocol_handlers: [
       {
@@ -83,6 +84,28 @@ export default function manifest(): any {
         sizes: '512x512',
         type: 'image/png',
         purpose: 'any'
+      },
+      {
+        src: 'https://images.unsplash.com/photo-1614850523296-d8c1af93d400?q=80&w=512&h=512&fit=crop&fm=png',
+        sizes: '512x512',
+        type: 'image/png',
+        purpose: 'maskable'
+      }
+    ],
+    screenshots: [
+      {
+        src: 'https://images.unsplash.com/photo-1614850523296-d8c1af93d400?q=80&w=1080&h=1920&fit=crop&fm=png',
+        sizes: '1080x1920',
+        type: 'image/png',
+        form_factor: 'narrow',
+        label: 'Интерфейс мессенджера'
+      },
+      {
+        src: 'https://images.unsplash.com/photo-1614850523296-d8c1af93d400?q=80&w=1920&h=1080&fit=crop&fm=png',
+        sizes: '1920x1080',
+        type: 'image/png',
+        form_factor: 'wide',
+        label: 'Десктопная версия'
       }
     ]
   }
