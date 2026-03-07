@@ -16,57 +16,9 @@ export default function manifest(): MetadataRoute.Manifest {
     dir: 'ltr',
     orientation: 'portrait',
     categories: ['social', 'communication', 'productivity'],
-    iarc_rating_id: 'e836224e-749e-4a6c-94f4-526b47a1990c',
     prefer_related_applications: false,
-    related_applications: [
-      {
-        platform: 'play',
-        url: 'https://play.google.com/store/apps/details?id=chat.nuxus.app',
-        id: 'chat.nuxus.app'
-      }
-    ],
     scope_extensions: [
-      { origin: 'studio-5946432351-bbd5e.web.app' },
       { origin: 'nuxus-mauve.vercel.app' }
-    ],
-    protocol_handlers: [
-      {
-        protocol: 'web+nuxus',
-        url: '/?uri=%s'
-      }
-    ],
-    share_target: {
-      action: '/?share',
-      method: 'GET',
-      params: {
-        title: 'title',
-        text: 'text',
-        url: 'url'
-      }
-    },
-    launch_handler: {
-      client_mode: 'focus-existing'
-    },
-    file_handlers: [
-      {
-        action: '/',
-        accept: {
-          'image/*': ['.jpg', '.jpeg', '.png', '.webp'],
-          'application/pdf': ['.pdf']
-        }
-      }
-    ],
-    widgets: [
-      {
-        name: 'Nuxus Core',
-        description: 'Быстрый доступ к вашим чатам',
-        tag: 'nuxus-widget',
-        ms_ac_template: 'widget-template.json',
-        data: 'widget-data.json',
-        type: 'application/json',
-        auth: false,
-        update: 3600
-      }
     ],
     shortcuts: [
       {

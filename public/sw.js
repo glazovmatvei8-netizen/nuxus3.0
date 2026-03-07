@@ -1,9 +1,10 @@
-const CACHE_NAME = 'nuxus-kernel-v1';
+const CACHE_NAME = 'nuxus-cache-v1';
 const OFFLINE_URL = '/offline.html';
 
 const ASSETS_TO_CACHE = [
   OFFLINE_URL,
-  '/favicon.ico',
+  '/globals.css',
+  'https://images.unsplash.com/photo-1614850523296-d8c1af93d400?q=80&w=192&h=192&fit=crop&fm=png'
 ];
 
 self.addEventListener('install', (event) => {
@@ -45,11 +46,5 @@ self.addEventListener('fetch', (event) => {
         return response || fetch(event.request);
       })
     );
-  }
-});
-
-self.addEventListener('periodicsync', (event) => {
-  if (event.tag === 'nuxus-sync') {
-    console.log('Nuxus Kernel: Background Sync Active');
   }
 });
