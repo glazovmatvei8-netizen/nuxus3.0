@@ -14,7 +14,7 @@ import {
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { format } from 'date-fns';
 import { 
-  CornerUpLeft, Trash2, Check, CheckCheck, Edit2, Copy, Pin, FileText, Sparkles, Loader2, X, ChevronLeft, ChevronRight
+  CornerUpLeft, Trash2, Check, CheckCheck, Edit2, Copy, Pin, FileText, Sparkles, Loader2, X, ChevronLeft, ChevronRight, MoreVertical
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { doc, updateDoc, deleteDoc } from 'firebase/firestore';
@@ -49,7 +49,11 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, isAdmi
 
   useEffect(() => {
     if (!api || !isGalleryOpen) return;
-    api.scrollTo(activeMediaIdx, true);
+    // Scroll to the clicked image after a short delay to ensure carousel is ready
+    const timer = setTimeout(() => {
+      api.scrollTo(activeMediaIdx, true);
+    }, 50);
+    return () => clearTimeout(timer);
   }, [api, isGalleryOpen, activeMediaIdx]);
 
   const toggleAudio = (e: React.MouseEvent) => {
@@ -82,7 +86,9 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, isAdmi
     }
   };
 
-  const openGallery = (idx: number) => {
+  const openGallery = (idx: number, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
     setActiveIdx(idx);
     setIsGalleryOpen(true);
   };
@@ -113,14 +119,14 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, isAdmi
       return (
         <>
           <div 
-            onClick={() => openGallery(0)}
-            className="overflow-hidden rounded-2xl border border-white/5 max-w-[240px] cursor-zoom-in group relative"
+            onClick={(e) => openGallery(0, e)}
+            className="overflow-hidden rounded-2xl border border-white/5 max-w-[300px] md:max-w-[400px] cursor-pointer group relative"
           >
             {message.contentType === 'video' ? (
-              <video src={message.content} className="w-full h-full object-cover" />
+              <video src={message.content} className="w-full h-full object-cover aspect-video" />
             ) : (
-              <div className="relative w-[240px] h-[320px]">
-                <Image src={message.content} alt="Media content" fill className="object-cover transition-transform group-hover:scale-105" />
+              <div className="relative w-full aspect-[3/4] min-w-[200px]">
+                <Image src={message.content} alt="Media content" fill className="object-cover transition-transform group-hover:scale-105" unoptimized />
               </div>
             )}
           </div>
@@ -137,21 +143,21 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, isAdmi
 
     if (message.contentType === 'album') {
       const urls = JSON.parse(message.content) as string[];
-      const gridCols = urls.length === 2 ? 'grid-cols-2' : urls.length === 3 ? 'grid-cols-2' : 'grid-cols-2 md:grid-cols-3';
+      const gridCols = urls.length === 1 ? 'grid-cols-1' : urls.length === 2 ? 'grid-cols-2' : 'grid-cols-2 md:grid-cols-3';
       
       return (
         <>
-          <div className={cn("grid gap-1 max-w-[320px]", gridCols)}>
+          <div className={cn("grid gap-1.5 max-w-[320px] md:max-w-[450px]", gridCols)}>
             {urls.map((url, idx) => (
               <div 
                 key={idx}
-                onClick={() => openGallery(idx)}
+                onClick={(e) => openGallery(idx, e)}
                 className={cn(
-                  "relative aspect-square rounded-lg overflow-hidden border border-white/5 cursor-zoom-in group",
+                  "relative aspect-square rounded-xl overflow-hidden border border-white/5 cursor-pointer group",
                   urls.length === 3 && idx === 0 ? "col-span-2 aspect-video" : ""
                 )}
               >
-                <Image src={url} alt={`Album img ${idx}`} fill className="object-cover transition-transform group-hover:scale-110" />
+                <Image src={url} alt={`Album img ${idx}`} fill className="object-cover transition-transform group-hover:scale-110" unoptimized />
               </div>
             ))}
           </div>
@@ -177,24 +183,41 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, isAdmi
 
   return (
     <div id={`msg-${message.id}`} className={cn("w-full flex mb-2 transition-all scroll-mt-20", isMe ? "justify-end" : "justify-start")}>
-      <div className={cn("flex gap-3 max-w-[85%] relative group px-2 items-end", isMe ? "flex-row-reverse" : "flex-row")}>
+      <div className={cn("flex gap-3 max-w-[90%] relative group px-2 items-end", isMe ? "flex-row-reverse" : "flex-row")}>
         {!isMe && <UserAvatar userId={message.senderId} className="h-9 w-9 shrink-0" fallbackName={message.senderName} />}
         <div className={cn("flex flex-col min-w-0 max-w-full relative", isMe ? "items-end" : "items-start")}>
           {!isMe && isGroup && <span className="text-[9px] font-black text-primary uppercase tracking-widest mb-1 ml-1 truncate max-w-[150px]">{message.senderName}</span>}
+          
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <div className={cn("p-3 rounded-2xl cursor-pointer shadow-md border transition-all hover:opacity-95", isMe ? "message-bubble-me border-none" : "bg-card border-white/5 text-foreground")}>
+              <div className={cn(
+                "p-2.5 rounded-2xl shadow-md border transition-all relative group/bubble", 
+                isMe ? "message-bubble-me border-none" : "bg-card border-white/5 text-white"
+              )}>
                 {renderContent()}
-                <div className="flex items-center justify-end gap-1 mt-1 opacity-60"><span className="text-[9px]">{formattedTime}</span>{isMe && (message.isRead ? <CheckCheck className="w-3 h-3 text-accent" /> : <Check className="w-3 h-3" />)}</div>
+                <div className="flex items-center justify-end gap-1 mt-1.5 opacity-60">
+                  <span className="text-[9px] font-bold">{formattedTime}</span>
+                  {isMe && (message.isRead ? <CheckCheck className="w-3.5 h-3.5 text-accent" /> : <Check className="w-3.5 h-3.5" />)}
+                </div>
+                
+                {/* Действия при наведении (десктоп) */}
+                <div className={cn(
+                  "absolute top-0 opacity-0 group-hover/bubble:opacity-100 transition-opacity hidden md:flex",
+                  isMe ? "-left-10" : "-right-10"
+                )}>
+                   <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full bg-card/50 backdrop-blur-xl border border-white/10">
+                      <MoreVertical className="w-4 h-4" />
+                   </Button>
+                </div>
               </div>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align={isMe ? 'end' : 'start'} className="w-48 bg-card border-white/10">
-              <DropdownMenuItem onClick={() => onReply(message)} className="gap-2"><CornerUpLeft className="w-4 h-4" /> Ответить</DropdownMenuItem>
-              {isAdmin && <DropdownMenuItem onClick={() => onPin(message)} className="gap-2"><Pin className="w-4 h-4" /> Закрепить</DropdownMenuItem>}
-              {isMe && message.contentType === 'text' && <DropdownMenuItem onClick={() => onEdit(message)} className="gap-2"><Edit2 className="w-4 h-4" /> Изменить</DropdownMenuItem>}
-              <DropdownMenuItem onClick={() => { navigator.clipboard.writeText(message.content); toast({ title: "Скопировано" }); }} className="gap-2"><Copy className="w-4 h-4" /> Копировать</DropdownMenuItem>
+            <DropdownMenuContent align={isMe ? 'end' : 'start'} className="w-52 bg-card/95 backdrop-blur-2xl border-white/10 rounded-2xl shadow-2xl">
+              <DropdownMenuItem onClick={() => onReply(message)} className="gap-3 py-3 font-bold text-[11px] uppercase tracking-wider"><CornerUpLeft className="w-4 h-4 text-primary" /> Ответить</DropdownMenuItem>
+              {isAdmin && <DropdownMenuItem onClick={() => onPin(message)} className="gap-3 py-3 font-bold text-[11px] uppercase tracking-wider"><Pin className="w-4 h-4 text-primary" /> Закрепить</DropdownMenuItem>}
+              {isMe && message.contentType === 'text' && <DropdownMenuItem onClick={() => onEdit(message)} className="gap-3 py-3 font-bold text-[11px] uppercase tracking-wider"><Edit2 className="w-4 h-4 text-primary" /> Изменить</DropdownMenuItem>}
+              <DropdownMenuItem onClick={() => { navigator.clipboard.writeText(message.content); toast({ title: "Скопировано" }); }} className="gap-3 py-3 font-bold text-[11px] uppercase tracking-wider"><Copy className="w-4 h-4 text-primary" /> Копировать</DropdownMenuItem>
               <DropdownMenuSeparator className="bg-white/5" />
-              {(isMe || isAdmin) && <DropdownMenuItem onClick={() => deleteDoc(doc(db!, 'chats', chatId, 'messages', message.id))} className="text-destructive gap-2"><Trash2 className="w-4 h-4" /> Удалить</DropdownMenuItem>}
+              {(isMe || isAdmin) && <DropdownMenuItem onClick={() => deleteDoc(doc(db!, 'chats', chatId, 'messages', message.id))} className="text-destructive gap-3 py-3 font-bold text-[11px] uppercase tracking-wider hover:bg-destructive/10"><Trash2 className="w-4 h-4" /> Удалить</DropdownMenuItem>}
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
@@ -207,24 +230,23 @@ MessageItem.displayName = 'MessageItem';
 function MediaGalleryModal({ isOpen, onOpenChange, media, type, setApi }: { isOpen: boolean, onOpenChange: (o: boolean) => void, media: string[], type: string, setApi: (api: CarouselApi) => void }) {
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[100vw] w-full h-[100dvh] p-0 bg-black/95 border-none flex items-center justify-center overflow-hidden">
+      <DialogContent className="max-w-[100vw] w-full h-[100dvh] p-0 bg-black/98 border-none flex items-center justify-center overflow-hidden z-[1000]">
         <DialogTitle className="sr-only">Просмотр медиафайлов</DialogTitle>
         
-        <Carousel setApi={setApi} className="w-full h-full">
+        <Carousel setApi={setApi} className="w-full h-full flex items-center justify-center">
           <CarouselContent className="h-full">
             {media.map((url, idx) => (
-              <CarouselItem key={idx} className="h-full flex items-center justify-center p-4">
-                <div className="relative w-full h-full max-h-[90vh] flex items-center justify-center animate-in fade-in zoom-in duration-300">
+              <CarouselItem key={idx} className="h-full w-full flex items-center justify-center">
+                <div className="relative w-full h-full flex items-center justify-center p-2 md:p-8 animate-in fade-in zoom-in duration-300">
                   {type === 'video' ? (
                     <video src={url} controls autoPlay className="max-w-full max-h-full rounded-xl shadow-2xl" />
                   ) : (
                     <div className="relative w-full h-full">
-                      <Image 
+                      {/* Используем обычный img для максимально быстрого рендеринга больших data-uri без пересчета размеров Next.js */}
+                      <img 
                         src={url} 
                         alt={`Media ${idx}`} 
-                        fill 
-                        className="object-contain" 
-                        priority={idx === 0}
+                        className="w-full h-full object-contain"
                       />
                     </div>
                   )}
@@ -236,11 +258,11 @@ function MediaGalleryModal({ isOpen, onOpenChange, media, type, setApi }: { isOp
           {media.length > 1 && (
             <>
               <div className="hidden md:block">
-                <CarouselPrevious className="left-8 h-12 w-12 bg-white/10 hover:bg-white/20 border-none text-white" />
-                <CarouselNext className="right-8 h-12 w-12 bg-white/10 hover:bg-white/20 border-none text-white" />
+                <CarouselPrevious className="left-8 h-14 w-14 bg-white/10 hover:bg-white/20 border-white/5 text-white" />
+                <CarouselNext className="right-8 h-14 w-14 bg-white/10 hover:bg-white/20 border-white/5 text-white" />
               </div>
-              <div className="absolute bottom-10 left-1/2 -translate-x-1/2 bg-black/40 backdrop-blur-md px-4 py-2 rounded-full border border-white/10 text-white/60 text-[10px] font-black uppercase tracking-widest">
-                {media.length} фото • Листайте
+              <div className="absolute bottom-12 left-1/2 -translate-x-1/2 bg-white/10 backdrop-blur-2xl px-6 py-2.5 rounded-full border border-white/10 text-white font-black text-[10px] uppercase tracking-[0.2em] shadow-2xl">
+                {idx + 1} / {media.length}
               </div>
             </>
           )}
@@ -249,7 +271,7 @@ function MediaGalleryModal({ isOpen, onOpenChange, media, type, setApi }: { isOp
         <Button 
           variant="ghost" 
           size="icon" 
-          className="absolute top-6 right-6 h-12 w-12 rounded-full bg-white/10 hover:bg-white/20 text-white z-50 backdrop-blur-xl"
+          className="absolute top-6 right-6 h-12 w-12 rounded-full bg-white/10 hover:bg-white/20 text-white z-[1100] backdrop-blur-xl border border-white/5"
           onClick={() => onOpenChange(false)}
         >
           <X className="w-6 h-6" />
