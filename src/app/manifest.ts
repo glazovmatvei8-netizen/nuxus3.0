@@ -8,7 +8,6 @@ export default function manifest(): MetadataRoute.Manifest {
     description: 'Современный мессенджер с поддержкой AI и видеосообщений.',
     start_url: '/',
     display: 'standalone',
-    display_override: ['window-controls-overlay', 'standalone', 'minimal-ui'],
     background_color: '#0a0a0c',
     theme_color: '#0a0a0c',
     lang: 'ru',
