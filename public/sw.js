@@ -1,11 +1,9 @@
-
-const CACHE_NAME = 'nuxus-kernel-v60';
+const CACHE_NAME = 'nuxus-kernel-v1';
 const OFFLINE_URL = '/offline.html';
 
 const ASSETS_TO_CACHE = [
-  '/',
   OFFLINE_URL,
-  'https://images.unsplash.com/photo-1614850523296-d8c1af93d400?q=80&w=192&h=192&fit=crop&fm=png'
+  '/favicon.ico',
 ];
 
 self.addEventListener('install', (event) => {
@@ -36,7 +34,9 @@ self.addEventListener('fetch', (event) => {
   if (event.request.mode === 'navigate') {
     event.respondWith(
       fetch(event.request).catch(() => {
-        return caches.match(OFFLINE_URL);
+        return caches.open(CACHE_NAME).then((cache) => {
+          return cache.match(OFFLINE_URL);
+        });
       })
     );
   } else {
@@ -48,25 +48,8 @@ self.addEventListener('fetch', (event) => {
   }
 });
 
-self.addEventListener('sync', (event) => {
+self.addEventListener('periodicsync', (event) => {
   if (event.tag === 'nuxus-sync') {
     console.log('Nuxus Kernel: Background Sync Active');
   }
-});
-
-self.addEventListener('periodicsync', (event) => {
-  if (event.tag === 'nuxus-update') {
-    console.log('Nuxus Kernel: Periodic Sync Update');
-  }
-});
-
-self.addEventListener('push', (event) => {
-  const data = event.data ? event.data.json() : { title: 'Nuxus', body: 'Новое сообщение в Ядре.' };
-  event.waitUntil(
-    self.registration.showNotification(data.title, {
-      body: data.body,
-      icon: '/icon-192.png',
-      badge: '/icon-192.png'
-    })
-  );
 });

@@ -1,10 +1,9 @@
-
 <!DOCTYPE html>
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Nuxus — Офлайн Режим</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Nuxus — Офлайн</title>
     <style>
         body {
             background-color: #0a0a0c;
@@ -18,61 +17,37 @@
             margin: 0;
             text-align: center;
         }
-        .core {
-            width: 120px;
-            height: 120px;
-            background: radial-gradient(circle, #8B5CF6 0%, transparent 70%);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin-bottom: 30px;
-            animation: pulse 2s infinite ease-in-out;
+        .icon {
+            font-size: 80px;
+            margin-bottom: 20px;
+            animation: pulse 2s infinite;
         }
-        @keyframes pulse {
-            0% { transform: scale(1); opacity: 0.5; }
-            50% { transform: scale(1.1); opacity: 0.8; }
-            100% { transform: scale(1); opacity: 0.5; }
-        }
-        h1 {
-            font-size: 24px;
-            font-weight: 900;
-            text-transform: uppercase;
-            letter-spacing: -0.05em;
-            font-style: italic;
-            margin: 0;
-        }
-        p {
-            font-size: 10px;
-            font-weight: 900;
-            text-transform: uppercase;
-            letter-spacing: 0.4em;
-            color: rgba(255,255,255,0.4);
-            margin-top: 10px;
-        }
+        h1 { font-weight: 900; text-transform: uppercase; letter-spacing: -0.05em; margin: 0; italic; }
+        p { opacity: 0.6; font-size: 14px; text-transform: uppercase; font-weight: 700; letter-spacing: 0.2em; margin-top: 10px; }
         .btn {
             margin-top: 40px;
+            padding: 15px 40px;
             background: #8B5CF6;
             color: white;
-            border: none;
-            padding: 15px 30px;
-            border-radius: 16px;
+            border-radius: 20px;
+            text-decoration: none;
             font-weight: 900;
             text-transform: uppercase;
+            font-size: 12px;
             letter-spacing: 0.1em;
-            font-size: 10px;
-            cursor: pointer;
+            box-shadow: 0 10px 20px rgba(139, 92, 246, 0.3);
+        }
+        @keyframes pulse {
+            0% { transform: scale(1); opacity: 0.8; }
+            50% { transform: scale(1.05); opacity: 1; }
+            100% { transform: scale(1); opacity: 0.8; }
         }
     </style>
 </head>
 <body>
-    <div class="core">
-        <svg width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M1 1l22 22M16.72 11.06A10.94 10.94 0 0 1 19 12.55M5 12.55a10.94 10.94 0 0 1 5.17-2.39M10.71 5.05A16 16 0 0 1 22.58 9M1.42 9a15.91 15.91 0 0 1 4.7-2.88M8.53 16.11a6 6 0 0 1 6.95 0M12 20h.01"/>
-        </svg>
-    </div>
-    <h1>Нет связи с Ядром</h1>
-    <p>Проверьте интернет-соединение</p>
-    <button class="btn" onclick="window.location.reload()">Повторить попытку</button>
+    <div class="icon">🛰️</div>
+    <h1>Связь потеряна</h1>
+    <p>Ядро Nuxus перешло в автономный режим</p>
+    <a href="/" class="btn">Обновить сигнал</a>
 </body>
 </html>

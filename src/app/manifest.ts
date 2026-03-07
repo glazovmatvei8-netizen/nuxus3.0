@@ -1,7 +1,6 @@
-
 import { MetadataRoute } from 'next'
 
-export default function manifest(): any {
+export default function manifest(): MetadataRoute.Manifest {
   return {
     id: 'chat.nuxus.app',
     name: 'Nuxus — Премиальный мессенджер',
