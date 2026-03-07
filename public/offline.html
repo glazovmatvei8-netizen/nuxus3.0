@@ -4,12 +4,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Nuxus — Офлайн</title>
+    <title>Nuxus — Офлайн режим</title>
     <style>
         body {
             background-color: #0a0a0c;
             color: white;
-            font-family: sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -18,23 +18,40 @@
             margin: 0;
             text-align: center;
         }
-        .icon {
-            font-size: 64px;
+        .logo {
+            width: 100px;
+            height: 100px;
+            background: linear-gradient(135deg, #8B5CF6 0%, #0EA5E9 100%);
+            border-radius: 30px;
             margin-bottom: 20px;
-            animation: pulse 2s infinite;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 10px 30px rgba(139, 92, 246, 0.3);
         }
-        h1 { font-weight: 900; text-transform: uppercase; letter-spacing: 2px; }
-        p { opacity: 0.6; font-size: 14px; max-width: 250px; }
-        @keyframes pulse {
-            0% { opacity: 0.5; transform: scale(1); }
-            50% { opacity: 1; transform: scale(1.1); }
-            100% { opacity: 0.5; transform: scale(1); }
+        h1 { font-size: 24px; font-weight: 900; text-transform: uppercase; letter-spacing: -0.02em; }
+        p { color: rgba(255,255,255,0.6); font-size: 14px; max-width: 250px; line-height: 1.6; }
+        .retry-btn {
+            margin-top: 30px;
+            background: #8B5CF6;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 15px;
+            font-weight: bold;
+            text-transform: uppercase;
+            font-size: 12px;
+            letter-spacing: 0.1em;
+            cursor: pointer;
         }
     </style>
 </head>
 <body>
-    <div class="icon">🛰️</div>
+    <div class="logo">
+        <svg width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+    </div>
     <h1>Связь потеряна</h1>
     <p>Ядро Nuxus перешло в автономный режим. Проверьте подключение к сети.</p>
+    <button class="retry-btn" onclick="window.location.reload()">Повторить</button>
 </body>
 </html>
