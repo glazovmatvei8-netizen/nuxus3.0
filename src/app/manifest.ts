@@ -83,6 +83,24 @@ export default function manifest(): any {
     launch_handler: {
       client_mode: 'focus-existing'
     },
+    widgets: [
+      {
+        name: 'Nuxus Status',
+        description: 'Быстрый доступ к вашему статусу и непрочитанным сообщениям.',
+        tag: 'nuxus_status',
+        template: 'nuxus-widget-template',
+        ms_ac_template: 'nuxus-adaptive-card-template',
+        data: 'nuxus-widget-data',
+        type: 'application/json',
+        screenshots: [
+          {
+            src: 'https://images.unsplash.com/photo-1614850523296-d8c1af93d400?q=80&w=600&h=400&fit=crop&fm=png',
+            sizes: '600x400',
+            label: 'Nuxus Widget'
+          }
+        ]
+      }
+    ],
     icons: [
       {
         src: 'https://images.unsplash.com/photo-1614850523296-d8c1af93d400?q=80&w=192&h=192&fit=crop&fm=png',
