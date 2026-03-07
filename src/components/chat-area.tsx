@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useRef, useEffect, useMemo, useCallback, memo } from 'react';
@@ -88,6 +87,17 @@ export default function ChatArea() {
   const chatRef = useMemoFirebase(() => (!db || !currentChatId) ? null : doc(db, 'chats', currentChatId), [db, currentChatId]);
   const { data: chat } = useDoc<Chat>(chatRef);
 
+  // Исправление: Определение собеседника для личных чатов
+  const otherId = useMemo(() => {
+    if (chat?.type === 'private' && firebaseUser) {
+      return chat.participantIds.find(id => id !== firebaseUser.uid);
+    }
+    return null;
+  }, [chat, firebaseUser]);
+
+  const otherProfileRef = useMemoFirebase(() => (!db || !otherId) ? null : doc(db, 'users', otherId), [db, otherId]);
+  const { data: otherProfile } = useDoc<UserType>(otherProfileRef);
+
   const isAdmin = useMemo(() => {
     return chat?.ownerId === firebaseUser?.uid || chat?.adminIds?.includes(firebaseUser?.uid || '');
   }, [chat, firebaseUser]);
@@ -135,6 +145,13 @@ export default function ChatArea() {
     }
   }, [messages?.length, currentChatId, scrollToBottom]);
 
+  useEffect(() => {
+    if (editingMsg) {
+      setMessageInput(editingMsg.content);
+      inputRef.current?.focus();
+    }
+  }, [editingMsg]);
+
   const handleSendMessage = useCallback(async (content_msg: string = messageInput, type_msg: Message['contentType'] = 'text') => {
     if (!content_msg.trim() || !currentChatId || !firebaseUser || !db) return;
     
@@ -177,33 +194,24 @@ export default function ChatArea() {
     updateDocumentNonBlocking(doc(db, 'chats', currentChatId), { lastMessageAt: new Date().toISOString() });
   }, [messageInput, currentChatId, firebaseUser, db, userProfile, replyTo, editingMsg]);
 
-  /**
-   * Sends multiple files as a single Album message if they are images.
-   * If mixed or video, sends individually.
-   */
   const handleSendBatch = async () => {
     if (!currentChatId || !firebaseUser || !db) return;
     setIsSendingFiles(true);
     try {
-      // Group photos into chunks of 10 for albums
       const photos = selectedFiles.filter(f => f.type === 'image');
       const others = selectedFiles.filter(f => f.type !== 'image');
 
-      // Send non-photo files individually
       for (const file of others) {
         await handleSendMessage(file.url, file.type);
       }
 
-      // Send photos in batches of 10 as "albums"
       for (let i = 0; i < photos.length; i += 10) {
         const batch = photos.slice(i, i + 10);
         const albumUrls = batch.map(p => p.url);
         
-        // If it's just 1 photo, send as regular image
         if (albumUrls.length === 1) {
           await handleSendMessage(albumUrls[0], 'image');
         } else {
-          // Send as album
           await handleSendMessage(JSON.stringify(albumUrls), 'album');
         }
       }
@@ -242,7 +250,7 @@ export default function ChatArea() {
     const files = Array.from(e.target.files || []);
     if (files.length === 0) return;
     
-    setIsAiLoading(true); // Reuse loader for processing
+    setIsAiLoading(true);
     const newFiles: { url: string; type: 'image' | 'video' }[] = [];
 
     for (const file of files) {
@@ -253,7 +261,6 @@ export default function ChatArea() {
         reader.onloadend = async () => {
           let url = reader.result as string;
           if (type === 'image') {
-            // Aggressive compression for batch sending
             url = await compressImage(url, 800, 0.5);
           }
           newFiles.push({ url, type: type as any });
@@ -263,7 +270,7 @@ export default function ChatArea() {
       });
     }
 
-    setSelectedFiles(prev => [...prev, ...newFiles].slice(0, 30)); // Max 30 total in picker
+    setSelectedFiles(prev => [...prev, ...newFiles].slice(0, 30));
     setIsPreviewModalOpen(true);
     setIsAiLoading(false);
     if (fileInputRef.current) fileInputRef.current.value = '';
