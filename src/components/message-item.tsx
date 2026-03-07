@@ -21,7 +21,7 @@ import type { Message } from '@/lib/types';
 import { Button } from './ui/button';
 import { useToast } from '@/hooks/use-toast';
 
-export const MessageItem = memo(({ message, isMe, chatId, onReply, isAdmin = false, isGroup = false, onEdit }: any) => {
+export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, isAdmin = false, isGroup = false, onEdit }: any) => {
   const db = useFirestore();
   const { toast } = useToast();
   const [isPlaying, setIsPlaying] = useState(false);
@@ -80,7 +80,7 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, isAdmin = fal
             </DropdownMenuTrigger>
             <DropdownMenuContent align={isMe ? 'end' : 'start'} className="w-48 bg-card border-white/10">
               <DropdownMenuItem onClick={() => onReply(message)} className="gap-2"><CornerUpLeft className="w-4 h-4" /> Ответить</DropdownMenuItem>
-              {isAdmin && <DropdownMenuItem onClick={() => {}} className="gap-2"><Pin className="w-4 h-4" /> Закрепить</DropdownMenuItem>}
+              {isAdmin && <DropdownMenuItem onClick={() => onPin(message)} className="gap-2"><Pin className="w-4 h-4" /> Закрепить</DropdownMenuItem>}
               {isMe && message.contentType === 'text' && <DropdownMenuItem onClick={() => onEdit(message)} className="gap-2"><Edit2 className="w-4 h-4" /> Изменить</DropdownMenuItem>}
               <DropdownMenuItem onClick={() => { navigator.clipboard.writeText(message.content); toast({ title: "Скопировано" }); }} className="gap-2"><Copy className="w-4 h-4" /> Копировать</DropdownMenuItem>
               <DropdownMenuSeparator className="bg-white/5" />

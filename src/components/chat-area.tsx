@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
   Send, Info, ChevronLeft, Loader2, Bookmark, X, Video, Wand2, Phone, Search as SearchIcon,
-  Zap, Paperclip, Mic, StopCircle, Pin, ChevronDown, ImageIcon
+  Zap, Paperclip, Mic, StopCircle, Pin, ChevronDown, ImageIcon, Edit2
 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { MessageItem } from './message-item';
@@ -25,6 +25,7 @@ const MessageList = memo(({
   userId, 
   chatId, 
   onReply, 
+  onPin,
   amIPremium, 
   isAdmin, 
   isGroup,
@@ -40,6 +41,7 @@ const MessageList = memo(({
           isMe={msg.senderId === userId} 
           chatId={chatId} 
           onReply={onReply} 
+          onPin={onPin}
           amIPremium={amIPremium}
           isAdmin={isAdmin}
           isGroup={isGroup}
@@ -150,6 +152,14 @@ export default function ChatArea() {
     }
   }, [messages?.length, currentChatId, scrollToBottom]);
 
+  // Handle editing mode - set input text and focus
+  useEffect(() => {
+    if (editingMsg) {
+      setMessageInput(editingMsg.content);
+      inputRef.current?.focus();
+    }
+  }, [editingMsg]);
+
   const handleSendMessage = useCallback(async (content_msg: string = messageInput, type_msg: Message['contentType'] = 'text') => {
     if (!content_msg.trim() || !currentChatId || !firebaseUser || !db) return;
     
@@ -168,6 +178,7 @@ export default function ChatArea() {
         content: captureContent, 
         editedAt: new Date().toISOString() 
       });
+      toast({ title: "Сообщение изменено" });
       return;
     }
 
@@ -190,7 +201,17 @@ export default function ChatArea() {
     
     addDoc(collection(db, 'chats', currentChatId, 'messages'), msgData);
     updateDocumentNonBlocking(doc(db, 'chats', currentChatId), { lastMessageAt: new Date().toISOString() });
-  }, [messageInput, currentChatId, firebaseUser, db, userProfile, replyTo, editingMsg]);
+  }, [messageInput, currentChatId, firebaseUser, db, userProfile, replyTo, editingMsg, toast]);
+
+  const handlePinMessage = async (msg: Message) => {
+    if (!db || !currentChatId || !isAdmin) return;
+    try {
+      await updateDoc(doc(db, 'chats', currentChatId), { pinnedMessageId: msg.id });
+      toast({ title: "Сообщение закреплено" });
+    } catch (e: any) {
+      toast({ title: "Ошибка закрепления", variant: "destructive" });
+    }
+  };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -299,7 +320,19 @@ export default function ChatArea() {
 
       <div className="flex-1 relative overflow-hidden">
         <ScrollArea ref={scrollRef} className="h-full w-full relative z-10 scrollbar-hide bg-transparent">
-          {messages && <MessageList messages={messages} userId={firebaseUser?.uid} chatId={currentChatId} onReply={setReplyTo} onEdit={setEditingMsg} amIPremium={userProfile?.isPremium} isAdmin={isAdmin} isGroup={chat?.type === 'group'} />}
+          {messages && (
+            <MessageList 
+              messages={messages} 
+              userId={firebaseUser?.uid} 
+              chatId={currentChatId} 
+              onReply={setReplyTo} 
+              onPin={handlePinMessage}
+              onEdit={setEditingMsg} 
+              amIPremium={userProfile?.isPremium} 
+              isAdmin={isAdmin} 
+              isGroup={chat?.type === 'group'} 
+            />
+          )}
         </ScrollArea>
         {showScrollBottom && <Button onClick={() => scrollToBottom('smooth')} className="absolute bottom-4 right-4 h-10 w-10 rounded-full bg-card/80 backdrop-blur-xl border border-white/10 shadow-2xl z-30 group animate-in fade-in zoom-in" size="icon"><ChevronDown className="w-6 h-6 text-primary group-hover:scale-110 transition-transform" /></Button>}
       </div>
@@ -313,9 +346,19 @@ export default function ChatArea() {
             </div>
           )}
           
+          {editingMsg && (
+            <div className="p-2 bg-primary/5 rounded-xl border-l-4 border-primary flex items-center justify-between animate-in slide-in-from-bottom-1">
+              <div className="flex flex-col min-w-0 pl-2">
+                <span className="text-[9px] font-bold text-primary uppercase tracking-widest flex items-center gap-1"><Edit2 className="w-3 h-3" /> Редактирование</span>
+                <span className="text-xs truncate text-muted-foreground italic">{editingMsg.content}</span>
+              </div>
+              <Button variant="ghost" size="icon" className="h-7 w-7 rounded-lg" onClick={() => { setEditingMsg(null); setMessageInput(''); }}><X className="w-4 h-4" /></Button>
+            </div>
+          )}
+
           {replyTo && (
-            <div className="p-2 bg-muted/50 rounded-xl border-l-4 border-primary flex items-center justify-between">
-              <div className="flex flex-col min-w-0 pl-2"><span className="text-[9px] font-bold text-primary uppercase tracking-widest">Ответ: {replyTo.senderName}</span><span className="text-xs truncate text-muted-foreground italic">{replyTo.content}</span></div>
+            <div className="p-2 bg-muted/50 rounded-xl border-l-4 border-accent flex items-center justify-between animate-in slide-in-from-bottom-1">
+              <div className="flex flex-col min-w-0 pl-2"><span className="text-[9px] font-bold text-accent uppercase tracking-widest">Ответ: {replyTo.senderName}</span><span className="text-xs truncate text-muted-foreground italic">{replyTo.content}</span></div>
               <Button variant="ghost" size="icon" className="h-7 w-7 rounded-lg" onClick={() => setReplyTo(null)}><X className="w-4 h-4" /></Button>
             </div>
           )}
