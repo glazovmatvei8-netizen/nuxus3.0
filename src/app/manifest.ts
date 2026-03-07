@@ -34,11 +34,6 @@ export default function manifest(): MetadataRoute.Manifest {
         name: "Чаты",
         url: "/",
         description: "Открыть список чатов"
-      },
-      {
-        name: "Контакты",
-        url: "/",
-        description: "Поиск контактов"
       }
     ],
     categories: ["communications", "social"]
