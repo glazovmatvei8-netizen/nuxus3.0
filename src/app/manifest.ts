@@ -14,7 +14,6 @@ export default function manifest(): MetadataRoute.Manifest {
     theme_color: '#0a0a0c',
     lang: 'ru',
     orientation: 'portrait',
-    display_override: ['window-controls-overlay'],
     icons: [
       {
         src: 'https://images.unsplash.com/photo-1614850523296-d8c1af93d400?q=80&w=192&h=192&auto=format&fit=crop',
@@ -29,13 +28,5 @@ export default function manifest(): MetadataRoute.Manifest {
         purpose: 'any'
       },
     ],
-    shortcuts: [
-      {
-        name: "Чаты",
-        url: "/",
-        description: "Открыть список чатов"
-      }
-    ],
-    categories: ["communications", "social"]
   }
 }

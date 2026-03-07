@@ -26,20 +26,6 @@ export const metadata: Metadata = {
   formatDetection: {
     telephone: false,
   },
-  openGraph: {
-    type: 'website',
-    locale: 'ru_RU',
-    url: 'https://studio-5946432351-bbd5e.web.app/',
-    title: 'Nuxus — Технологичное ядро общения',
-    description: 'Общайтесь красиво и безопасно.',
-    siteName: 'Nuxus',
-    images: [{
-      url: 'https://picsum.photos/seed/nuxus/1200/630',
-      width: 1200,
-      height: 630,
-      alt: 'Nuxus Preview',
-    }],
-  },
 };
 
 export const viewport: Viewport = {
@@ -65,6 +51,7 @@ export default function RootLayout({
             margin: 0; 
             padding: 0;
             overflow: hidden;
+            color-scheme: dark;
           }
         `}</style>
       </head>
@@ -86,10 +73,10 @@ export default function RootLayout({
           {`
             if ('serviceWorker' in navigator) {
               window.addEventListener('load', function() {
-                navigator.serviceWorker.register('/sw.js', { scope: '/' }).then(function(reg) {
-                  console.log('Nuxus Ghost Protocol: Active');
+                navigator.serviceWorker.register('/sw.js').then(function(reg) {
+                  console.log('Nuxus PWA: Active');
                 }).catch(function(err) {
-                  console.log('Nuxus Ghost Protocol: Failed');
+                  console.log('Nuxus PWA: Failed', err);
                 });
               });
             }
