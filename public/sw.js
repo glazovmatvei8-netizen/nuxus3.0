@@ -1,62 +1,43 @@
-// Nuxus Kernel Service Worker v1.0
-importScripts('https://storage.googleapis.com/workbox-cdn/releases/6.4.1/workbox-sw.js');
+// This is the "Offline page" service worker
+importScripts('https://storage.googleapis.com/workbox-cdn/releases/5.1.2/workbox-sw.js');
 
-const CACHE_NAME = 'nuxus-cache-v1';
-const OFFLINE_URL = '/offline.html';
+const CACHE = "pwabuilder-offline";
+const offlineFallbackPage = "offline.html";
 
-self.addEventListener('message', (event) => {
-  if (event.data && event.data.type === 'SKIP_WAITING') {
+self.addEventListener("message", (event) => {
+  if (event.data && event.data.type === "SKIP_WAITING") {
     self.skipWaiting();
   }
 });
 
-self.addEventListener('install', (event) => {
+self.addEventListener('install', async (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll([
-        OFFLINE_URL,
-        '/',
-        '/manifest.json'
-      ]);
-    })
+    caches.open(CACHE)
+      .then((cache) => cache.add(offlineFallbackPage))
   );
 });
 
-// Периодическая фоновая синхронизация (для PWABuilder)
-self.addEventListener('periodicsync', (event) => {
-  if (event.tag === 'sync-messages') {
-    console.log('Nuxus Kernel: Periodic sync triggered');
-  }
-});
+if (workbox.navigationPreload.isSupported()) {
+  workbox.navigationPreload.enable();
+}
 
-// Фоновая синхронизация
-self.addEventListener('sync', (event) => {
-  if (event.tag === 'sync-messages') {
-    console.log('Nuxus Kernel: Background sync triggered');
-  }
-});
-
-// Обработка навигации и офлайн-режима
 self.addEventListener('fetch', (event) => {
   if (event.request.mode === 'navigate') {
-    event.respondWith(
-      fetch(event.request).catch(() => {
-        return caches.open(CACHE_NAME).then((cache) => {
-          return cache.match(OFFLINE_URL);
-        });
-      })
-    );
-  }
-});
+    event.respondWith((async () => {
+      try {
+        const preloadResp = await event.preloadResponse;
 
-// Push-уведомления
-self.addEventListener('push', (event) => {
-  const data = event.data ? event.data.json() : { title: 'Nuxus', body: 'Новое уведомление' };
-  const options = {
-    body: data.body,
-    icon: '/favicon.ico',
-    badge: '/favicon.ico',
-    data: data.url
-  };
-  event.waitUntil(self.registration.showNotification(data.title, options));
+        if (preloadResp) {
+          return preloadResp;
+        }
+
+        const networkResp = await fetch(event.request);
+        return networkResp;
+      } catch (error) {
+        const cache = await caches.open(CACHE);
+        const cachedResp = await cache.match(offlineFallbackPage);
+        return cachedResp;
+      }
+    })());
+  }
 });

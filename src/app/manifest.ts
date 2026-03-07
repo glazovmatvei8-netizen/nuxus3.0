@@ -15,7 +15,7 @@ export default function manifest(): any {
     lang: 'ru',
     dir: 'ltr',
     orientation: 'portrait',
-    categories: ['social', 'communication', 'productivity', 'notes'],
+    categories: ['social', 'communication', 'productivity'],
     iarc_rating_id: 'e836224e-749e-4a6c-94f4-526b47a1990c',
     prefer_related_applications: false,
     related_applications: [
@@ -30,17 +30,13 @@ export default function manifest(): any {
       }
     ],
     scope_extensions: [
-      { origin: '*.nuxus.chat' },
-      { origin: 'studio-5946432351-bbd5e.web.app' }
+      { origin: 'https://studio-5946432351-bbd5e.web.app' },
+      { origin: 'https://nuxus.chat' }
     ],
     protocol_handlers: [
       {
         protocol: 'web+nuxus',
         url: '/?uri=%s'
-      },
-      {
-        protocol: 'mailto',
-        url: '/?mailto=%s'
       }
     ],
     share_target: {
@@ -62,20 +58,13 @@ export default function manifest(): any {
         description: 'Начать новое обсуждение',
         url: '/?view=chats',
         icons: [{ src: 'https://images.unsplash.com/photo-1614850523296-d8c1af93d400?q=80&w=192&h=192&fit=crop&fm=png', sizes: '192x192', type: 'image/png' }]
-      },
-      {
-        name: 'Контакты',
-        short_name: 'Контакты',
-        description: 'Список ваших контактов',
-        url: '/?view=contacts',
-        icons: [{ src: 'https://images.unsplash.com/photo-1614850523296-d8c1af93d400?q=80&w=192&h=192&fit=crop&fm=png', sizes: '192x192', type: 'image/png' }]
       }
     ],
     file_handlers: [
       {
         action: '/',
         accept: {
-          'image/*': ['.jpg', '.jpeg', '.png', '.webp', '.gif']
+          'image/*': ['.jpg', '.jpeg', '.png', '.webp']
         }
       }
     ],
@@ -88,17 +77,16 @@ export default function manifest(): any {
     widgets: [
       {
         name: 'Nuxus Status',
-        description: 'Быстрый доступ к вашему статусу и непрочитанным сообщениям.',
+        description: 'Просмотр статуса и сообщений Nuxus.',
         tag: 'nuxus_status',
-        template: 'nuxus-widget-template',
-        ms_ac_template: 'nuxus-adaptive-card-template',
-        data: 'nuxus-widget-data',
+        ms_ac_template: 'https://studio-5946432351-bbd5e.web.app/widget-template.json',
+        data: 'https://studio-5946432351-bbd5e.web.app/widget-data.json',
         type: 'application/json',
         screenshots: [
           {
             src: 'https://images.unsplash.com/photo-1614850523296-d8c1af93d400?q=80&w=600&h=400&fit=crop&fm=png',
             sizes: '600x400',
-            label: 'Nuxus Widget',
+            label: 'Nuxus Widget Preview',
             type: 'image/png'
           }
         ]
