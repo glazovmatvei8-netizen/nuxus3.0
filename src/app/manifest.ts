@@ -10,13 +10,13 @@ export default function manifest(): any {
     start_url: '/',
     scope: '/',
     display: 'standalone',
-    display_override: ['window-controls-overlay', 'standalone', 'minimal-ui'],
+    display_override: ['window-controls-overlay', 'tabbed', 'standalone', 'minimal-ui'],
     background_color: '#0a0a0c',
     theme_color: '#0a0a0c',
     lang: 'ru',
     dir: 'ltr',
     orientation: 'portrait',
-    categories: ['social', 'communication', 'productivity'],
+    categories: ['social', 'communication', 'productivity', 'notes'],
     iarc_rating_id: 'e836224e-749e-4a6c-94f4-526b47a1990c',
     prefer_related_applications: false,
     related_applications: [
@@ -34,6 +34,28 @@ export default function manifest(): any {
       { origin: '*.nuxus.chat' },
       { origin: 'studio-5946432351-bbd5e.web.app' }
     ],
+    protocol_handlers: [
+      {
+        protocol: 'web+nuxus',
+        url: '/?uri=%s'
+      },
+      {
+        protocol: 'mailto',
+        url: '/?mailto=%s'
+      }
+    ],
+    share_target: {
+      action: '/?share',
+      method: 'GET',
+      params: {
+        title: 'title',
+        text: 'text',
+        url: 'url'
+      }
+    },
+    edge_side_panel: {
+      preferred_width: 480
+    },
     shortcuts: [
       {
         name: 'Новый чат',
