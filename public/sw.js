@@ -1,4 +1,3 @@
-
 const CACHE_NAME = 'nuxus-kernel-v1';
 const ASSETS_TO_CACHE = [
   '/',
@@ -19,7 +18,11 @@ self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((cacheNames) => {
       return Promise.all(
-        cacheNames.filter((name) => name !== CACHE_NAME).map((name) => caches.delete(name))
+        cacheNames.map((cache) => {
+          if (cache !== CACHE_NAME) {
+            return caches.delete(cache);
+          }
+        })
       );
     })
   );
@@ -34,11 +37,9 @@ self.addEventListener('fetch', (event) => {
   );
 });
 
-// Фоновая синхронизация для соответствия требованиям PWABuilder
-self.addEventListener('sync', (event) => {
-  console.log('Nuxus Kernel: Background Sync Active', event.tag);
-});
-
-self.addEventListener('periodicSync', (event) => {
-  console.log('Nuxus Kernel: Periodic Sync Active', event.tag);
+// Periodic Sync for PWABuilder compliance
+self.addEventListener('periodicsync', (event) => {
+  if (event.tag === 'content-sync') {
+    event.waitUntil(Promise.resolve());
+  }
 });

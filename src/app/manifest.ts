@@ -1,4 +1,3 @@
-
 import { MetadataRoute } from 'next'
 
 export default function manifest(): any {
@@ -52,7 +51,7 @@ export default function manifest(): any {
         text: 'text',
         url: 'url'
       }
-    ],
+    },
     edge_side_panel: {
       preferred_width: 480
     },
