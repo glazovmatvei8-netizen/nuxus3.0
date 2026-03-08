@@ -14,7 +14,8 @@ import { useAuth, useUser, useFirestore, useDoc, useMemoFirebase } from '@/fireb
 import { UserAvatar } from '@/components/user-avatar';
 import { 
   LogOut, Palette, Check, Settings2, Camera, Lock, Image as ImageIcon, 
-  Paintbrush, Move, Maximize, Shield, UserCircle, Layout, Smile, FileText, ChevronRight
+  Paintbrush, Move, Maximize, Shield, UserCircle, Layout, Smile, FileText, ChevronRight,
+  ShieldCheck, Eye, Users2, MessageSquareLock
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { signOut } from 'firebase/auth';
@@ -42,7 +43,6 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
   const { toast } = useToast();
   const { settingsTab, setSettingsTab } = useAppState();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const bgInputRef = useRef<HTMLInputElement>(null);
 
   const userRef = useMemoFirebase(() => (!db || !user) ? null : doc(db, 'users', user.uid), [db, user]);
   const { data: profile } = useDoc<User>(userRef);
@@ -57,14 +57,13 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
     statusEmoji: '',
     statusText: '',
     theme: 'default',
-    chatBackground: '',
-    chatBackgroundFit: 'cover' as 'cover' | 'contain',
     twoFactorEnabled: false,
     twoFactorPin: '',
     privacy: {
       phoneVisibility: 'everybody',
       lastSeenVisibility: 'everybody',
-      allowGroupsFrom: 'everybody'
+      allowGroupsFrom: 'everybody',
+      whoCanMessageMe: 'everybody'
     },
     notifications: {
       messages: true,
@@ -91,14 +90,13 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         statusEmoji: profile.statusEmoji || '',
         statusText: profile.statusText || '',
         theme: profile.settings?.theme || 'default',
-        chatBackground: profile.settings?.chatBackground || '',
-        chatBackgroundFit: profile.settings?.chatBackgroundFit || 'cover',
         twoFactorEnabled: !!profile.twoFactorEnabled,
         twoFactorPin: profile.twoFactorPin || '',
         privacy: {
           phoneVisibility: profile.settings?.privacy?.phoneVisibility || 'everybody',
           lastSeenVisibility: profile.settings?.privacy?.lastSeenVisibility || 'everybody',
-          allowGroupsFrom: profile.settings?.privacy?.allowGroupsFrom || 'everybody'
+          allowGroupsFrom: profile.settings?.privacy?.allowGroupsFrom || 'everybody',
+          whoCanMessageMe: profile.settings?.privacy?.whoCanMessageMe || 'everybody'
         },
         notifications: {
           messages: profile.settings?.notifications?.messages !== false,
@@ -132,14 +130,12 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         twoFactorEnabled: form.twoFactorEnabled,
         twoFactorPin: form.twoFactorPin,
         'settings.theme': form.theme,
-        'settings.chatBackground': form.chatBackground,
-        'settings.chatBackgroundFit': form.chatBackgroundFit,
         'settings.privacy': form.privacy,
         'settings.notifications': form.notifications,
         'settings.navVisibility': form.navVisibility
       });
       onOpenChange(false);
-      toast({ title: "Ядро обновлено", description: "Настройки синхронизированы" });
+      toast({ title: "Ядро обновлено", description: "Конфигурация синхронизирована успешно" });
     } catch (e: any) {
       toast({ title: "Ошибка сохранения", description: e.message, variant: "destructive" });
     }
@@ -151,18 +147,18 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
       <DialogContent className="max-w-md bg-card border-border p-0 overflow-hidden h-[85vh] flex flex-col rounded-[2.5rem] shadow-2xl">
         <DialogHeader className="p-6 border-b border-white/5 shrink-0">
           <DialogTitle className="flex items-center gap-2 text-xl font-black italic uppercase tracking-tighter text-white">
-            <Settings2 className="w-5 h-5 text-primary" /> Настройки Ядра
+            <Settings2 className="w-5 h-5 text-primary" /> Параметры Узла
           </DialogTitle>
-          <DialogDescription className="sr-only">Персонализация профиля</DialogDescription>
+          <DialogDescription className="sr-only">Персонализация профиля и безопасности</DialogDescription>
         </DialogHeader>
         
         <Tabs value={settingsTab} onValueChange={setSettingsTab} className="flex-1 flex flex-col min-h-0">
           <TabsList className="flex bg-muted/50 p-1 mx-6 mt-4 rounded-2xl shrink-0 overflow-x-auto scrollbar-hide">
             <TabsTrigger value="profile" className="flex-1 text-[9px] uppercase font-bold tracking-widest whitespace-nowrap">Профиль</TabsTrigger>
             <TabsTrigger value="appearance" className="flex-1 text-[9px] uppercase font-bold tracking-widest whitespace-nowrap">Стиль</TabsTrigger>
+            <TabsTrigger value="privacy" className="flex-1 text-[9px] uppercase font-bold tracking-widest whitespace-nowrap">Приватность</TabsTrigger>
+            <TabsTrigger value="security" className="flex-1 text-[9px] uppercase font-bold tracking-widest whitespace-nowrap">Защита</TabsTrigger>
             <TabsTrigger value="interface" className="flex-1 text-[9px] uppercase font-bold tracking-widest whitespace-nowrap">Вид</TabsTrigger>
-            <TabsTrigger value="privacy" className="flex-1 text-[9px] uppercase font-bold tracking-widest whitespace-nowrap">Приват</TabsTrigger>
-            <TabsTrigger value="notifications" className="flex-1 text-[9px] uppercase font-bold tracking-widest whitespace-nowrap">Звук</TabsTrigger>
           </TabsList>
 
           <ScrollArea className="flex-1 px-6">
@@ -179,7 +175,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                 <div className="w-full bg-muted/20 p-4 rounded-2xl border border-white/5 space-y-4">
                   <div className="space-y-2">
                     <Label className="text-[10px] uppercase font-black tracking-widest text-primary flex items-center gap-2">
-                      <Smile className="w-3 h-3" /> Статус (Emoji & Текст)
+                      <Smile className="w-3 h-3" /> Статус
                     </Label>
                     <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
                       <button onClick={() => setForm({...form, statusEmoji: ''})} className={cn("h-10 min-w-[40px] rounded-xl flex items-center justify-center bg-black/20 border border-white/5", !form.statusEmoji && "border-primary bg-primary/10")}><Smile className="w-4 h-4 opacity-40" /></button>
@@ -187,7 +183,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                         <button key={emoji} onClick={() => setForm({...form, statusEmoji: emoji})} className={cn("h-10 min-w-[40px] rounded-xl flex items-center justify-center text-lg bg-black/20 border border-white/5", form.statusEmoji === emoji && "border-primary bg-primary/10")}>{emoji}</button>
                       ))}
                     </div>
-                    <Input placeholder="Текстовое состояние..." value={form.statusText} onChange={e => setForm({...form, statusText: e.target.value})} className="bg-black/20 border-white/5 h-10 rounded-xl text-xs" />
+                    <Input placeholder="Ваше состояние..." value={form.statusText} onChange={e => setForm({...form, statusText: e.target.value})} className="bg-black/20 border-white/5 h-10 rounded-xl text-xs" />
                   </div>
                 </div>
                 
@@ -201,7 +197,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
 
             <TabsContent value="appearance" className="space-y-8 m-0 py-6">
               <div className="space-y-4">
-                <Label className="text-[10px] uppercase font-black text-muted-foreground flex items-center gap-2"><Paintbrush className="w-3 h-3" /> Тема</Label>
+                <Label className="text-[10px] uppercase font-black text-muted-foreground flex items-center gap-2"><Paintbrush className="w-3 h-3" /> Цветовая схема</Label>
                 <div className="grid grid-cols-1 gap-2">
                   {THEMES.map((theme) => (
                     <button key={theme.id} onClick={() => setForm({ ...form, theme: theme.id as any })} className={cn("flex items-center justify-between p-4 rounded-2xl border transition-all", form.theme === theme.id ? 'bg-primary/10 border-primary' : 'bg-muted/20 border-white/5')}>
@@ -213,42 +209,66 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
               </div>
             </TabsContent>
 
-            <TabsContent value="interface" className="space-y-6 m-0 py-6">
-              <div className="bg-muted/20 p-6 rounded-[2.5rem] border border-white/5 space-y-6">
-                <div className="flex items-center gap-2 mb-2"><Layout className="w-4 h-4 text-primary" /><Label className="text-[10px] uppercase font-black text-white">Разделы навигации</Label></div>
-                <div className="space-y-4">
-                  {[
-                    { id: 'contacts', label: 'Контакты' },
-                    { id: 'calls', label: 'Звонки' },
-                    { id: 'archive', label: 'Архив' }
-                  ].map(item => (
-                    <div key={item.id} className="flex items-center justify-between p-3 bg-black/20 rounded-xl">
-                      <span className="text-[11px] font-bold text-white uppercase tracking-wider">{item.label}</span>
-                      <Switch checked={(form.navVisibility as any)[item.id]} onCheckedChange={v => setForm({...form, navVisibility: {...form.navVisibility, [item.id]: v}})} />
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </TabsContent>
-
             <TabsContent value="privacy" className="space-y-6 m-0 py-6">
               <div className="space-y-6 bg-muted/20 p-6 rounded-[2.5rem] border border-white/5">
-                <div className="space-y-3"><Label className="text-[10px] uppercase font-black text-primary">Кто видит мой номер</Label>
+                <div className="space-y-3">
+                  <Label className="text-[10px] uppercase font-black text-primary flex items-center gap-2">
+                    <Eye className="w-3 h-3" /> Видимость номера
+                  </Label>
                   <Select value={form.privacy.phoneVisibility} onValueChange={v => setForm({...form, privacy: {...form.privacy, phoneVisibility: v as any}})}>
                     <SelectTrigger className="bg-black/20 border-white/5 h-12 rounded-xl"><SelectValue /></SelectTrigger>
-                    <SelectContent className="bg-card border-white/10 rounded-xl"><SelectItem value="everybody">Все</SelectItem><SelectItem value="contacts">Контакты</SelectItem><SelectItem value="nobody">Никто</SelectItem></SelectContent>
+                    <SelectContent className="bg-card border-white/10 rounded-xl">
+                      <SelectItem value="everybody">Все пользователи</SelectItem>
+                      <SelectItem value="contacts">Только контакты</SelectItem>
+                      <SelectItem value="nobody">Никто</SelectItem>
+                    </SelectContent>
                   </Select>
                 </div>
-                <div className="space-y-3"><Label className="text-[10px] uppercase font-black text-primary">Последняя активность</Label>
+
+                <div className="space-y-3">
+                  <Label className="text-[10px] uppercase font-black text-primary flex items-center gap-2">
+                    <ShieldCheck className="w-3 h-3" /> Последняя активность
+                  </Label>
                   <Select value={form.privacy.lastSeenVisibility} onValueChange={v => setForm({...form, privacy: {...form.privacy, lastSeenVisibility: v as any}})}>
                     <SelectTrigger className="bg-black/20 border-white/5 h-12 rounded-xl"><SelectValue /></SelectTrigger>
-                    <SelectContent className="bg-card border-white/10 rounded-xl"><SelectItem value="everybody">Все</SelectItem><SelectItem value="nobody">Никто</SelectItem></SelectContent>
+                    <SelectContent className="bg-card border-white/10 rounded-xl">
+                      <SelectItem value="everybody">Показывать всем</SelectItem>
+                      <SelectItem value="nobody">Скрыть от всех</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-3">
+                  <Label className="text-[10px] uppercase font-black text-primary flex items-center gap-2">
+                    <Users2 className="w-3 h-3" /> Кто может добавлять в группы
+                  </Label>
+                  <Select value={form.privacy.allowGroupsFrom} onValueChange={v => setForm({...form, privacy: {...form.privacy, allowGroupsFrom: v as any}})}>
+                    <SelectTrigger className="bg-black/20 border-white/5 h-12 rounded-xl"><SelectValue /></SelectTrigger>
+                    <SelectContent className="bg-card border-white/10 rounded-xl">
+                      <SelectItem value="everybody">Все</SelectItem>
+                      <SelectItem value="contacts">Только контакты</SelectItem>
+                      <SelectItem value="premium">Только Premium</SelectItem>
+                      <SelectItem value="nobody">Никто</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-3">
+                  <Label className="text-[10px] uppercase font-black text-primary flex items-center gap-2">
+                    <MessageSquareLock className="w-3 h-3" /> Кто может писать мне
+                  </Label>
+                  <Select value={form.privacy.whoCanMessageMe} onValueChange={v => setForm({...form, privacy: {...form.privacy, whoCanMessageMe: v as any}})}>
+                    <SelectTrigger className="bg-black/20 border-white/5 h-12 rounded-xl"><SelectValue /></SelectTrigger>
+                    <SelectContent className="bg-card border-white/10 rounded-xl">
+                      <SelectItem value="everybody">Все</SelectItem>
+                      <SelectItem value="premium">Только Premium</SelectItem>
+                    </SelectContent>
                   </Select>
                 </div>
               </div>
 
               <div className="space-y-2 pt-4">
-                <Label className="text-[10px] uppercase font-black text-muted-foreground ml-1">Юридическая информация</Label>
+                <Label className="text-[10px] uppercase font-black text-muted-foreground ml-1">Юридические данные</Label>
                 <div className="bg-muted/20 rounded-2xl border border-white/5 overflow-hidden">
                   <button onClick={() => setLegalModal({ open: true, type: 'terms' })} className="w-full flex items-center justify-between p-4 hover:bg-white/5 transition-all text-left">
                     <span className="text-xs font-bold text-white flex items-center gap-2"><FileText className="w-4 h-4 text-accent" /> Условия использования</span>
@@ -263,17 +283,54 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
               </div>
             </TabsContent>
 
-            <TabsContent value="notifications" className="space-y-6 m-0 py-6">
-              <div className="space-y-6 bg-muted/20 p-6 rounded-[2.5rem] border border-white/5">
-                <div className="flex items-center justify-between"><div><Label className="text-[11px] font-bold text-white">Личные чаты</Label></div><Switch checked={form.notifications.messages} onCheckedChange={v => setForm({...form, notifications: {...form.notifications, messages: v}})} /></div>
-                <div className="flex items-center justify-between"><div><Label className="text-[11px] font-bold text-white">Группы</Label></div><Switch checked={form.notifications.groups} onCheckedChange={v => setForm({...form, notifications: {...form.notifications, groups: v}})} /></div>
+            <TabsContent value="security" className="space-y-6 m-0 py-6">
+              <div className="bg-muted/20 p-6 rounded-[2.5rem] border border-white/5 space-y-6">
+                <div className="flex items-center justify-between">
+                  <div className="flex flex-col gap-1">
+                    <span className="text-[11px] font-black text-white uppercase tracking-wider">Облачный пароль (2FA)</span>
+                    <span className="text-[9px] text-muted-foreground uppercase font-bold">Дополнительная защита при входе</span>
+                  </div>
+                  <Switch checked={form.twoFactorEnabled} onCheckedChange={v => setForm({...form, twoFactorEnabled: v})} />
+                </div>
+
+                {form.twoFactorEnabled && (
+                  <div className="space-y-2 animate-in slide-in-from-top-2 duration-200">
+                    <Label className="text-[10px] uppercase font-black text-primary ml-1">Установить 6-значный PIN</Label>
+                    <Input 
+                      type="password" 
+                      placeholder="••••••" 
+                      maxLength={6} 
+                      value={form.twoFactorPin} 
+                      onChange={e => setForm({...form, twoFactorPin: e.target.value.replace(/\D/g, '')})} 
+                      className="bg-black/40 border-white/10 h-12 rounded-xl text-center text-xl tracking-[0.5em] font-black" 
+                    />
+                  </div>
+                )}
+              </div>
+            </TabsContent>
+
+            <TabsContent value="interface" className="space-y-6 m-0 py-6">
+              <div className="bg-muted/20 p-6 rounded-[2.5rem] border border-white/5 space-y-6">
+                <div className="flex items-center gap-2 mb-2"><Layout className="w-4 h-4 text-primary" /><Label className="text-[10px] uppercase font-black text-white">Нижняя навигация</Label></div>
+                <div className="space-y-4">
+                  {[
+                    { id: 'contacts', label: 'Раздел Контакты' },
+                    { id: 'calls', label: 'Раздел Звонки' },
+                    { id: 'archive', label: 'Раздел Архив' }
+                  ].map(item => (
+                    <div key={item.id} className="flex items-center justify-between p-3 bg-black/20 rounded-xl">
+                      <span className="text-[11px] font-bold text-white uppercase tracking-wider">{item.label}</span>
+                      <Switch checked={(form.navVisibility as any)[item.id]} onCheckedChange={v => setForm({...form, navVisibility: {...form.navVisibility, [item.id]: v}})} />
+                    </div>
+                  ))}
+                </div>
               </div>
             </TabsContent>
           </ScrollArea>
 
           <div className="p-6 border-t border-white/5 bg-muted/20 shrink-0 flex gap-3">
             <Button variant="ghost" className="h-14 w-14 rounded-2xl bg-destructive/10 text-destructive" onClick={() => signOut(auth)}><LogOut className="w-6 h-6" /></Button>
-            <Button className="flex-1 h-14 rounded-2xl font-black uppercase tracking-widest bg-primary" onClick={handleSave}><Check className="w-5 h-5 mr-2" /> Сохранить</Button>
+            <Button className="flex-1 h-14 rounded-2xl font-black uppercase tracking-widest bg-primary shadow-lg shadow-primary/20" onClick={handleSave}><Check className="w-5 h-5 mr-2" /> Применить изменения</Button>
           </div>
         </Tabs>
       </DialogContent>
