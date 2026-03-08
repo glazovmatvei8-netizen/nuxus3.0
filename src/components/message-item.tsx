@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, memo, useRef, useEffect } from 'react';
+import React, { useState, memo, useRef, useEffect, useCallback } from 'react';
 import { useFirestore } from '@/firebase';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
@@ -40,21 +40,10 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, isAdmi
   const [isTranscribing, setIsTranscribing] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  // Gallery state
   const [isGalleryOpen, setIsGalleryOpen] = useState(false);
-  const [activeMediaIdx, setActiveIdx] = useState(0);
-  const [api, setApi] = useState<CarouselApi>();
+  const [initialIndex, setInitialIndex] = useState(0);
 
   const formattedTime = message.sentAt ? format(new Date(message.sentAt), 'HH:mm') : '';
-
-  useEffect(() => {
-    if (!api || !isGalleryOpen) return;
-    // Используем setTimeout, чтобы Carousel успела отрендериться перед scrollTo
-    const timer = setTimeout(() => {
-      api.scrollTo(activeMediaIdx, true);
-    }, 100);
-    return () => clearTimeout(timer);
-  }, [api, isGalleryOpen, activeMediaIdx]);
 
   const toggleAudio = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -89,7 +78,7 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, isAdmi
   const openGallery = (idx: number, e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    setActiveIdx(idx);
+    setInitialIndex(idx);
     setIsGalleryOpen(true);
   };
 
@@ -120,7 +109,6 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, isAdmi
       );
     }
 
-    // Приоритетный рендеринг медиа, даже если тип определен неверно
     if (message.contentType === 'image' || isDataImage || message.contentType === 'video' || isDataVideo) {
       return (
         <div 
@@ -176,7 +164,6 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, isAdmi
       );
     }
 
-    // Если это Base64 данные, но попали сюда как текст - не рендерим как текст
     if (isBase64Media(content)) return null;
 
     return (
@@ -239,39 +226,51 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, isAdmi
         onOpenChange={setIsGalleryOpen} 
         media={message.contentType === 'album' ? JSON.parse(message.content) : [message.content]} 
         type={message.contentType === 'video' || message.content.startsWith('data:video') ? 'video' : 'image'} 
-        setApi={setApi}
-        api={api}
+        initialIndex={initialIndex}
       />
     </div>
   );
 });
 MessageItem.displayName = 'MessageItem';
 
-function MediaGalleryModal({ isOpen, onOpenChange, media, type, setApi, api }: { isOpen: boolean, onOpenChange: (o: boolean) => void, media: string[], type: string, setApi: (api: CarouselApi) => void, api?: CarouselApi }) {
+function MediaGalleryModal({ isOpen, onOpenChange, media, type, initialIndex }: { isOpen: boolean, onOpenChange: (o: boolean) => void, media: string[], type: string, initialIndex: number }) {
+  const [api, setApi] = useState<CarouselApi>();
   const [current, setCurrent] = useState(1);
 
   useEffect(() => {
-    if (!api) return;
+    if (!api || !isOpen) return;
     
     const onSelect = () => {
       setCurrent(api.selectedScrollSnap() + 1);
     };
 
     api.on("select", onSelect);
+    
+    // Jump to initial index when opening
+    const timer = setTimeout(() => {
+      api.scrollTo(initialIndex, true);
+      setCurrent(initialIndex + 1);
+    }, 50);
+
     return () => {
       api.off("select", onSelect);
+      clearTimeout(timer);
     };
-  }, [api]);
+  }, [api, isOpen, initialIndex]);
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[100vw] w-full h-[100dvh] p-0 bg-black/98 border-none flex items-center justify-center overflow-hidden z-[1000]">
+      <DialogContent className="max-w-[100vw] w-full h-[100dvh] p-0 bg-black/98 border-none overflow-hidden z-[1000] rounded-none outline-none">
         <DialogTitle className="sr-only">Галерея Nuxus</DialogTitle>
         
-        <Carousel setApi={setApi} className="w-full h-full flex items-center justify-center">
+        <Carousel 
+          setApi={setApi} 
+          className="w-full h-full"
+          opts={{ watchDrag: true, loop: false, align: 'start' }}
+        >
           <CarouselContent className="h-full">
             {media.map((url, idx) => (
-              <CarouselItem key={idx} className="h-full w-full flex items-center justify-center">
+              <CarouselItem key={idx} className="h-[100dvh] w-full flex items-center justify-center p-0">
                 <div className="relative w-full h-full flex items-center justify-center p-2 md:p-8 animate-in fade-in zoom-in duration-300">
                   {type === 'video' ? (
                     <video src={url} controls autoPlay className="max-w-full max-h-full rounded-xl shadow-2xl" />
@@ -280,7 +279,7 @@ function MediaGalleryModal({ isOpen, onOpenChange, media, type, setApi, api }: {
                       <img 
                         src={url} 
                         alt={`Media ${idx}`} 
-                        className="max-w-full max-h-full object-contain"
+                        className="max-w-full max-h-full object-contain pointer-events-none select-none"
                       />
                     </div>
                   )}
@@ -295,7 +294,7 @@ function MediaGalleryModal({ isOpen, onOpenChange, media, type, setApi, api }: {
                 <CarouselPrevious className="left-8 h-14 w-14 bg-white/10 hover:bg-white/20 border-white/5 text-white" />
                 <CarouselNext className="right-8 h-14 w-14 bg-white/10 hover:bg-white/20 border-white/5 text-white" />
               </div>
-              <div className="absolute bottom-12 left-1/2 -translate-x-1/2 bg-white/10 backdrop-blur-2xl px-6 py-2.5 rounded-full border border-white/10 text-white font-black text-[10px] uppercase tracking-[0.2em] shadow-2xl">
+              <div className="absolute bottom-12 left-1/2 -translate-x-1/2 bg-white/10 backdrop-blur-2xl px-6 py-2.5 rounded-full border border-white/10 text-white font-black text-[10px] uppercase tracking-[0.2em] shadow-2xl z-[1100]">
                 {current} / {media.length}
               </div>
             </>
@@ -305,7 +304,7 @@ function MediaGalleryModal({ isOpen, onOpenChange, media, type, setApi, api }: {
         <Button 
           variant="ghost" 
           size="icon" 
-          className="absolute top-6 right-6 h-12 w-12 rounded-full bg-white/10 hover:bg-white/20 text-white z-[1100] backdrop-blur-xl border border-white/5"
+          className="absolute top-6 right-6 h-12 w-12 rounded-full bg-white/10 hover:bg-white/20 text-white z-[1200] backdrop-blur-xl border border-white/5"
           onClick={() => onOpenChange(false)}
         >
           <X className="w-6 h-6" />

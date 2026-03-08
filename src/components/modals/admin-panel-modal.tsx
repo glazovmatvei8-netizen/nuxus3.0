@@ -137,7 +137,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md bg-[#0a0a0c] border-primary/30 p-0 overflow-hidden max-h-[85vh] h-auto flex flex-col rounded-[2.5rem] shadow-[0_0_50px_rgba(139,92,246,0.3)] border">
+      <DialogContent className="max-w-md bg-[#0a0a0c] border-primary/30 p-0 overflow-hidden max-h-[85vh] flex flex-col rounded-[2.5rem] shadow-[0_0_50px_rgba(139,92,246,0.3)] border">
         <DialogHeader className="p-6 bg-primary/5 border-b border-white/5 shrink-0">
           <DialogTitle className="flex items-center justify-between text-white uppercase italic font-black tracking-tighter">
             <div className="flex items-center gap-3">
