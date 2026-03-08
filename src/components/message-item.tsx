@@ -14,7 +14,7 @@ import {
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { format } from 'date-fns';
 import { 
-  CornerUpLeft, Trash2, Check, CheckCheck, Edit2, Copy, Pin, FileText, Sparkles, Loader2, X, ChevronLeft, ChevronRight, MoreVertical
+  CornerUpLeft, Trash2, Check, CheckCheck, Edit2, Copy, Pin, FileText, Sparkles, Loader2, X, MoreVertical
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { doc, updateDoc, deleteDoc } from 'firebase/firestore';
@@ -22,7 +22,6 @@ import type { Message } from '@/lib/types';
 import { Button } from './ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { transcribeVoice } from '@/ai/flows/voice-to-text-flow';
-import Image from 'next/image';
 import {
   Carousel,
   CarouselContent,
@@ -93,6 +92,11 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, isAdmi
   };
 
   const renderContent = () => {
+    // Robust detection for data URIs that might have been sent with wrong contentType
+    const isImageContent = message.contentType === 'image' || message.content.startsWith('data:image');
+    const isVideoContent = message.contentType === 'video' || message.content.startsWith('data:video');
+    const isAlbumContent = message.contentType === 'album';
+
     if (message.contentType === 'audio') {
       return (
         <div className="flex flex-col gap-2 min-w-[200px]">
@@ -113,27 +117,31 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, isAdmi
       );
     }
 
-    if (['image', 'video'].includes(message.contentType)) {
-      const mediaList = [message.content];
+    if (isImageContent || isVideoContent) {
       return (
         <>
           <div 
             onClick={(e) => openGallery(0, e)}
-            className="overflow-hidden rounded-2xl border border-white/5 w-full min-w-[240px] max-w-[300px] md:max-w-[400px] cursor-pointer group relative"
+            className="overflow-hidden rounded-2xl border border-white/5 w-full min-w-[240px] max-w-[300px] md:max-w-[400px] cursor-pointer group relative bg-muted/10"
           >
-            {message.contentType === 'video' ? (
+            {isVideoContent ? (
               <video src={message.content} className="w-full h-full object-cover aspect-video" />
             ) : (
               <div className="relative w-full aspect-[3/4]">
-                <Image src={message.content} alt="Media content" fill className="object-cover transition-transform group-hover:scale-105" unoptimized />
+                <img 
+                  src={message.content} 
+                  alt="Content" 
+                  className="w-full h-full object-cover transition-transform group-hover:scale-105" 
+                  loading="lazy"
+                />
               </div>
             )}
           </div>
           <MediaGalleryModal 
             isOpen={isGalleryOpen} 
             onOpenChange={setIsGalleryOpen} 
-            media={mediaList} 
-            type={message.contentType} 
+            media={[message.content]} 
+            type={isVideoContent ? 'video' : 'image'} 
             setApi={setApi}
             api={api}
           />
@@ -141,8 +149,14 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, isAdmi
       );
     }
 
-    if (message.contentType === 'album') {
-      const urls = JSON.parse(message.content) as string[];
+    if (isAlbumContent) {
+      let urls: string[] = [];
+      try {
+        urls = JSON.parse(message.content);
+      } catch (e) {
+        return <p className="text-destructive text-xs">Ошибка загрузки альбома</p>;
+      }
+
       const gridCols = urls.length === 1 ? 'grid-cols-1' : urls.length === 2 ? 'grid-cols-2' : 'grid-cols-2 md:grid-cols-3';
       
       return (
@@ -157,7 +171,12 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, isAdmi
                   urls.length === 3 && idx === 0 ? "col-span-2 aspect-video" : ""
                 )}
               >
-                <Image src={url} alt={`Album img ${idx}`} fill className="object-cover transition-transform group-hover:scale-110" unoptimized />
+                <img 
+                  src={url} 
+                  alt={`Img ${idx}`} 
+                  className="w-full h-full object-cover transition-transform group-hover:scale-110" 
+                  loading="lazy"
+                />
               </div>
             ))}
           </div>
@@ -175,7 +194,10 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, isAdmi
 
     return (
       <div className="flex flex-col text-left">
-        <div className="whitespace-pre-wrap text-sm break-words max-w-[300px]">{message.content}{message.editedAt && <span className="text-[8px] ml-1 opacity-40 uppercase">(ред.)</span>}</div>
+        <div className="whitespace-pre-wrap text-sm break-words max-w-[300px]">
+          {message.content}
+          {message.editedAt && <span className="text-[8px] ml-1 opacity-40 uppercase">(ред.)</span>}
+        </div>
       </div>
     );
   };
