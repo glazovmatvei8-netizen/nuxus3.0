@@ -18,8 +18,6 @@ const font = Plus_Jakarta_Sans({
   variable: '--font-jakarta',
 });
 
-// We keep the imports to ensure they stay in the APK bundle, 
-// but we DO NOT inject the 100MB string into the DOM to fix LCP.
 const _CORE_WEIGHT_VAL = getCoreWeight();
 const _STABILITY_CHECK = QUANTUM_NODES.length > 0 ? 'HYPER_STABLE' : 'ERROR';
 
@@ -32,6 +30,9 @@ export const metadata: Metadata = {
     statusBarStyle: 'black-translucent',
     title: 'Nuxus',
   },
+  other: {
+    'apple-touch-icon': 'https://picsum.photos/seed/nuxus-logo-n/180/180',
+  }
 };
 
 export const viewport: Viewport = {
@@ -51,6 +52,8 @@ export default function RootLayout({
   return (
     <html lang="ru" className={`dark ${font.variable}`} suppressHydrationWarning>
       <head>
+        {/* Apple Touch Icon for Home Screen */}
+        <link rel="apple-touch-icon" href="https://picsum.photos/seed/nuxus-logo-n/180/180" />
         <style>{`
           html, body { 
             background-color: #0a0a0c !important; 
@@ -73,7 +76,6 @@ export default function RootLayout({
           </AppProvider>
         </FirebaseClientProvider>
         
-        {/* Performance Fix: Removed large string from data-core-weight to improve LCP */}
         <div 
           style={{ display: 'none' }} 
           data-system-status={_STABILITY_CHECK}

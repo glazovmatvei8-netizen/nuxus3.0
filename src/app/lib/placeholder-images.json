@@ -14,6 +14,12 @@
       "imageHint": "glass orb core"
     },
     {
+      "id": "nuxus-app-icon",
+      "description": "Nuxus New Logo N Stylized",
+      "imageUrl": "https://picsum.photos/seed/nuxus-logo-n/512/512",
+      "imageHint": "tech logo letter N"
+    },
+    {
       "id": "nuxus-bg-abstract",
       "description": "Nuxus Premium Background",
       "imageUrl": "https://images.unsplash.com/photo-1754738797051-4e0c6983473a?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw4fHxkYXJrJTIwYWJzdHJhY3QlMjB0ZWNofGVufDB8fHx8MTc3MjMwOTMyMXww&ixlib=rb-4.1.0&q=80&w=1080",
@@ -22,13 +28,13 @@
     {
       "id": "pwa-icon-192",
       "description": "Nuxus PWA Icon 192x192",
-      "imageUrl": "https://images.unsplash.com/photo-1614850523296-d8c1af93d400?q=80&w=192&h=192&fit=crop",
+      "imageUrl": "https://picsum.photos/seed/nuxus-logo-n/192/192",
       "imageHint": "app icon"
     },
     {
       "id": "pwa-icon-512",
       "description": "Nuxus PWA Icon 512x512",
-      "imageUrl": "https://images.unsplash.com/photo-1614850523296-d8c1af93d400?q=80&w=512&h=512&fit=crop",
+      "imageUrl": "https://picsum.photos/seed/nuxus-logo-n/512/512",
       "imageHint": "app icon"
     }
   ]

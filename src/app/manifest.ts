@@ -1,3 +1,4 @@
+
 import { MetadataRoute } from 'next'
 
 export default function manifest(): MetadataRoute.Manifest {
@@ -5,7 +6,7 @@ export default function manifest(): MetadataRoute.Manifest {
     id: 'chat.nuxus.app',
     name: 'Nuxus — Премиальный мессенджер',
     short_name: 'Nuxus',
-    description: 'Современный мессенджер с поддержкой AI, защитой 2FA и видеозвонками. Ваше персональное ядро общения.',
+    description: 'Современный мессенджер с поддержкой ИИ, защитой 2FA и видеозвонками. Ваше персональное ядро общения.',
     start_url: '/',
     scope: '/',
     display: 'standalone',
@@ -17,8 +18,25 @@ export default function manifest(): MetadataRoute.Manifest {
     orientation: 'portrait',
     categories: ['social', 'communication', 'productivity'],
     prefer_related_applications: false,
-    scope_extensions: [
-      { origin: 'nuxus-mauve.vercel.app' }
+    icons: [
+      {
+        src: 'https://picsum.photos/seed/nuxus-logo-n/192/192',
+        sizes: '192x192',
+        type: 'image/png',
+        purpose: 'any'
+      },
+      {
+        src: 'https://picsum.photos/seed/nuxus-logo-n/512/512',
+        sizes: '512x512',
+        type: 'image/png',
+        purpose: 'any'
+      },
+      {
+        src: 'https://picsum.photos/seed/nuxus-logo-n/512/512',
+        sizes: '512x512',
+        type: 'image/png',
+        purpose: 'maskable'
+      }
     ],
     shortcuts: [
       {
@@ -26,27 +44,7 @@ export default function manifest(): MetadataRoute.Manifest {
         short_name: 'Чат',
         description: 'Начать новое обсуждение',
         url: '/?view=chats',
-        icons: [{ src: 'https://images.unsplash.com/photo-1614850523296-d8c1af93d400?q=80&w=192&h=192&fit=crop&fm=png', sizes: '192x192', type: 'image/png' }]
-      }
-    ],
-    icons: [
-      {
-        src: 'https://images.unsplash.com/photo-1614850523296-d8c1af93d400?q=80&w=192&h=192&fit=crop&fm=png',
-        sizes: '192x192',
-        type: 'image/png',
-        purpose: 'any'
-      },
-      {
-        src: 'https://images.unsplash.com/photo-1614850523296-d8c1af93d400?q=80&w=512&h=512&fit=crop&fm=png',
-        sizes: '512x512',
-        type: 'image/png',
-        purpose: 'any'
-      },
-      {
-        src: 'https://images.unsplash.com/photo-1614850523296-d8c1af93d400?q=80&w=512&h=512&fit=crop&fm=png',
-        sizes: '512x512',
-        type: 'image/png',
-        purpose: 'maskable'
+        icons: [{ src: 'https://picsum.photos/seed/nuxus-logo-n/192/192', sizes: '192x192', type: 'image/png' }]
       }
     ],
     screenshots: [
@@ -56,13 +54,6 @@ export default function manifest(): MetadataRoute.Manifest {
         type: 'image/png',
         form_factor: 'narrow',
         label: 'Интерфейс мессенджера'
-      },
-      {
-        src: 'https://images.unsplash.com/photo-1614850523296-d8c1af93d400?q=80&w=1920&h=1080&fit=crop&fm=png',
-        sizes: '1920x1080',
-        type: 'image/png',
-        form_factor: 'wide',
-        label: 'Десктопная версия'
       }
     ]
   }
