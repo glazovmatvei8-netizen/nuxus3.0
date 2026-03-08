@@ -69,7 +69,20 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ru" className={`dark ${font.variable}`} suppressHydrationWarning>
-      <body className="font-sans antialiased bg-[#0a0a0c] text-foreground overflow-hidden h-[100dvh] selection:bg-primary/30" style={{ backgroundColor: '#0a0a0c' }}>
+      <head>
+        <style>
+          {`
+          html, body { 
+            background-color: #0a0a0c !important; 
+            margin: 0; 
+            padding: 0;
+            overflow: hidden;
+            color-scheme: dark;
+          }
+        `}
+        </style>
+      </head>
+      <body className="font-sans antialiased bg-[#0a0a0c] text-foreground overflow-hidden h-[100dvh] selection:bg-primary/30" style={{ backgroundColor: '#0a0a0c', fontFamily: 'var(--font-jakarta), ui-sans-serif, system-ui, -apple-system, sans-serif' }}>
         <FirebaseClientProvider>
           <AppProvider>
             <ThemeApplier />
