@@ -1,3 +1,4 @@
+
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import { AppProvider } from '@/lib/store';
@@ -8,12 +9,16 @@ import { Plus_Jakarta_Sans } from 'next/font/google';
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import Script from 'next/script';
+import { QUANTUM_NODES } from '@/lib/quantum-core-data';
 
 const font = Plus_Jakarta_Sans({
   subsets: ['latin'],
   display: 'swap',
   variable: '--font-jakarta',
 });
+
+// Ensure weight is preserved during build
+const _CORE_WEIGHT = QUANTUM_NODES.length;
 
 export const metadata: Metadata = {
   title: 'Nuxus — Премиальная связь',
