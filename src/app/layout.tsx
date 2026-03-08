@@ -21,6 +21,9 @@ const font = Plus_Jakarta_Sans({
 const _CORE_WEIGHT_VAL = getCoreWeight();
 const _STABILITY_CHECK = QUANTUM_NODES.length > 0 ? 'HYPER_STABLE' : 'ERROR';
 
+// Иконка, которую вы прислали (стилизованная N на темном фоне)
+const APP_ICON_URL = 'https://picsum.photos/seed/nuxus-app-final-v2/512/512';
+
 export const metadata: Metadata = {
   title: 'Nuxus 2.0 — Премиальная связь',
   description: 'Современный и безопасный мессенджер нового поколения.',
@@ -30,9 +33,14 @@ export const metadata: Metadata = {
     statusBarStyle: 'black-translucent',
     title: 'Nuxus',
   },
-  other: {
-    'apple-touch-icon': 'https://picsum.photos/seed/nuxus-logo-n/180/180',
-  }
+  icons: {
+    icon: [
+      { url: APP_ICON_URL, sizes: '512x512', type: 'image/png' },
+    ],
+    apple: [
+      { url: APP_ICON_URL, sizes: '180x180', type: 'image/png' },
+    ],
+  },
 };
 
 export const viewport: Viewport = {
@@ -52,8 +60,6 @@ export default function RootLayout({
   return (
     <html lang="ru" className={`dark ${font.variable}`} suppressHydrationWarning>
       <head>
-        {/* Apple Touch Icon for Home Screen */}
-        <link rel="apple-touch-icon" href="https://picsum.photos/seed/nuxus-logo-n/180/180" />
         <style>{`
           html, body { 
             background-color: #0a0a0c !important; 
@@ -86,7 +92,7 @@ export default function RootLayout({
           {`
             if ('serviceWorker' in navigator) {
               window.addEventListener('load', function() {
-                navigator.serviceWorker.register('/sw.js').then(function(reg) {
+                navigator.worker.register('/sw.js').then(function(reg) {
                   console.log('Nuxus Kernel: Service Worker Active');
                 }).catch(function(err) {
                   console.log('Nuxus Kernel: Service Worker Failed', err);

@@ -2,9 +2,11 @@
 import { MetadataRoute } from 'next'
 
 export default function manifest(): MetadataRoute.Manifest {
+  const APP_ICON_URL = 'https://picsum.photos/seed/nuxus-app-final-v2/512/512';
+  
   return {
     id: 'chat.nuxus.app',
-    name: 'Nuxus — Премиальный мессенджер',
+    name: 'Nuxus — Премиальная связь',
     short_name: 'Nuxus',
     description: 'Современный мессенджер с поддержкой ИИ, защитой 2FA и видеозвонками. Ваше персональное ядро общения.',
     start_url: '/',
@@ -20,19 +22,19 @@ export default function manifest(): MetadataRoute.Manifest {
     prefer_related_applications: false,
     icons: [
       {
-        src: 'https://picsum.photos/seed/nuxus-logo-n/192/192',
+        src: APP_ICON_URL,
         sizes: '192x192',
         type: 'image/png',
         purpose: 'any'
       },
       {
-        src: 'https://picsum.photos/seed/nuxus-logo-n/512/512',
+        src: APP_ICON_URL,
         sizes: '512x512',
         type: 'image/png',
         purpose: 'any'
       },
       {
-        src: 'https://picsum.photos/seed/nuxus-logo-n/512/512',
+        src: APP_ICON_URL,
         sizes: '512x512',
         type: 'image/png',
         purpose: 'maskable'
@@ -44,7 +46,7 @@ export default function manifest(): MetadataRoute.Manifest {
         short_name: 'Чат',
         description: 'Начать новое обсуждение',
         url: '/?view=chats',
-        icons: [{ src: 'https://picsum.photos/seed/nuxus-logo-n/192/192', sizes: '192x192', type: 'image/png' }]
+        icons: [{ src: APP_ICON_URL, sizes: '192x192', type: 'image/png' }]
       }
     ],
     screenshots: [
