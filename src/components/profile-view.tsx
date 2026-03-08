@@ -8,7 +8,7 @@ import { UserAvatar } from '@/components/user-avatar';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { 
-  QrCode, Pencil, Bell, Lock, Bookmark, ChevronRight, Star
+  QrCode, Pencil, Bell, Lock, Bookmark, ChevronRight, Star, Smile
 } from 'lucide-react';
 import { useAppState } from '@/lib/store';
 import { formatDisplayName, cn, isUserPremium } from '@/lib/utils';
@@ -49,13 +49,34 @@ export default function ProfileView() {
         <Button variant="ghost" size="icon" className="text-white"><QrCode className="w-6 h-6" /></Button>
         <div className="flex items-center gap-2">
           <UserAvatar userId={user?.uid} className="h-8 w-8" />
-          <span className="font-bold text-white text-[17px] flex items-center gap-1.5">{formatDisplayName(profile?.name)} {isUserPremium(profile) && <Star className="w-3.5 h-3.5 text-accent fill-accent" />}</span>
+          <span className="font-bold text-white text-[17px] flex items-center gap-1.5">
+            {formatDisplayName(profile?.name)} 
+            {isUserPremium(profile) && <Star className="w-3.5 h-3.5 text-accent fill-accent" />}
+          </span>
         </div>
-        <Button variant="ghost" size="icon" className="text-white" onClick={() => { setSettingsTab('profile'); setIsSettingsOpen(true); }}><Pencil className="w-6 h-6" /></Button>
+        <Button variant="ghost" size="icon" className="text-white" onClick={() => { setSettingsTab('profile'); setIsSettingsOpen(true); }}>
+          <Pencil className="w-6 h-6" />
+        </Button>
       </div>
 
       <ScrollArea className="flex-1">
         <div className="px-4 space-y-4 pb-24">
+          {/* Status Display */}
+          {(profile?.statusEmoji || profile?.statusText) && (
+            <div 
+              className="bg-white/5 border border-white/5 p-4 rounded-3xl flex items-center gap-3 cursor-pointer active:scale-95 transition-all"
+              onClick={() => { setSettingsTab('profile'); setIsSettingsOpen(true); }}
+            >
+              <div className="text-2xl h-12 w-12 rounded-2xl bg-white/5 flex items-center justify-center shrink-0">
+                {profile.statusEmoji || <Smile className="w-6 h-6 opacity-40" />}
+              </div>
+              <div className="flex flex-col min-w-0">
+                <span className="text-[10px] font-black uppercase tracking-widest text-primary mb-0.5">Текущий статус</span>
+                <p className="text-sm font-medium text-white truncate">{profile.statusText || 'Установить статус...'}</p>
+              </div>
+            </div>
+          )}
+
           <div className="bg-[#1c1c1e] rounded-[2rem] overflow-hidden divide-y divide-white/[0.05] border border-white/5">
             <SettingsItem icon={Bell} label="Уведомления" color="text-white" onClick={() => { setSettingsTab('appearance'); setIsSettingsOpen(true); }} />
             <SettingsItem icon={Lock} label="Безопасность" color="text-white" onClick={() => { setSettingsTab('security'); setIsSettingsOpen(true); }} />
@@ -63,7 +84,7 @@ export default function ProfileView() {
           </div>
 
           <div className="pt-2">
-            <p className="text-[11px] text-muted-foreground/40 uppercase font-black text-center tracking-[0.2em]">Nuxus Core v0.57.0</p>
+            <p className="text-[11px] text-muted-foreground/40 uppercase font-black text-center tracking-[0.2em]">Nuxus Core v0.65.8</p>
           </div>
         </div>
       </ScrollArea>

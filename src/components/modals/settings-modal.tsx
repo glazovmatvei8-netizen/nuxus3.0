@@ -14,7 +14,7 @@ import { useAuth, useUser, useFirestore, useDoc, useMemoFirebase } from '@/fireb
 import { UserAvatar } from '@/components/user-avatar';
 import { 
   LogOut, Palette, Check, Settings2, Camera, Lock, ShieldCheck, Image as ImageIcon, 
-  Paintbrush, ChevronRight, Move, Maximize, Shield, BellRing, UserCircle, Layout
+  Paintbrush, ChevronRight, Move, Maximize, Shield, BellRing, UserCircle, Layout, Smile
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { signOut } from 'firebase/auth';
@@ -31,6 +31,8 @@ const THEMES = [
   { id: 'gold', name: 'Золотой Квант', color: 'bg-[#EAB308]' },
   { id: 'emerald', name: 'Изумруд', color: 'bg-[#22C55E]' },
 ];
+
+const EMOJI_STATUSES = ['💎', '⚡️', '🦾', '🔥', '👑', '🌌', '👾', '✨', '💤', '🎯'];
 
 export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const auth = useAuth();
@@ -49,6 +51,8 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
     username: '',
     bio: '',
     avatarUrl: '',
+    statusEmoji: '',
+    statusText: '',
     theme: 'default',
     chatBackground: '',
     chatBackgroundFit: 'cover' as 'cover' | 'contain',
@@ -83,6 +87,8 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         username: (profile.username || '').replace('@', ''),
         bio: profile.bio || '',
         avatarUrl: profile.avatarUrl || '',
+        statusEmoji: profile.statusEmoji || '',
+        statusText: profile.statusText || '',
         theme: profile.settings?.theme || 'default',
         chatBackground: profile.settings?.chatBackground || '',
         chatBackgroundFit: profile.settings?.chatBackgroundFit || 'cover',
@@ -123,6 +129,8 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         username: '@' + form.username.toLowerCase(),
         bio: form.bio,
         avatarUrl: form.avatarUrl,
+        statusEmoji: form.statusEmoji,
+        statusText: form.statusText,
         twoFactorEnabled: form.twoFactorEnabled,
         twoFactorPin: form.twoFactorPin,
         'settings.theme': form.theme,
@@ -157,7 +165,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
           <DialogTitle className="flex items-center gap-2 text-xl font-black italic uppercase tracking-tighter text-white">
             <Settings2 className="w-5 h-5 text-primary" /> Настройки Ядра
           </DialogTitle>
-          <DialogDescription className="sr-only">Персонализация вашего профиля и безопасности</DialogDescription>
+          <DialogDescription className="sr-only">Персонализация профиля</DialogDescription>
         </DialogHeader>
         
         <Tabs value={settingsTab} onValueChange={setSettingsTab} className="flex-1 flex flex-col min-h-0">
@@ -178,6 +186,37 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                     <Camera className="w-8 h-8 text-white" />
                   </div>
                   <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={(e) => { const f = e.target.files?.[0]; if(f) { const r = new FileReader(); r.onloadend = () => setForm({...form, avatarUrl: r.result as string}); r.readAsDataURL(f); } }} />
+                </div>
+
+                <div className="w-full bg-muted/20 p-4 rounded-2xl border border-white/5 space-y-4">
+                  <div className="space-y-2">
+                    <Label className="text-[10px] uppercase font-black tracking-widest text-primary flex items-center gap-2">
+                      <Smile className="w-3 h-3" /> Ваш статус
+                    </Label>
+                    <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+                      <button 
+                        onClick={() => setForm({...form, statusEmoji: ''})}
+                        className={cn("h-10 min-w-[40px] rounded-xl flex items-center justify-center bg-black/20 border border-white/5 transition-all", !form.statusEmoji && "border-primary bg-primary/10")}
+                      >
+                        <Smile className="w-4 h-4 opacity-40" />
+                      </button>
+                      {EMOJI_STATUSES.map(emoji => (
+                        <button 
+                          key={emoji}
+                          onClick={() => setForm({...form, statusEmoji: emoji})}
+                          className={cn("h-10 min-w-[40px] rounded-xl flex items-center justify-center text-lg bg-black/20 border border-white/5 transition-all", form.statusEmoji === emoji && "border-primary bg-primary/10")}
+                        >
+                          {emoji}
+                        </button>
+                      ))}
+                    </div>
+                    <Input 
+                      placeholder="Что у вас нового?" 
+                      value={form.statusText} 
+                      onChange={e => setForm({...form, statusText: e.target.value})}
+                      className="bg-black/20 border-white/5 h-10 rounded-xl text-xs"
+                    />
+                  </div>
                 </div>
                 
                 <div className="space-y-4 w-full">
@@ -279,7 +318,6 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                     />
                   </div>
                 </div>
-                <p className="text-[8px] text-muted-foreground/60 uppercase font-black text-center italic">Выключайте разделы, которые не используете для чистоты интерфейса</p>
               </div>
             </TabsContent>
 
@@ -315,22 +353,6 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                     </SelectContent>
                   </Select>
                 </div>
-
-                <div className="space-y-3">
-                  <Label className="text-[10px] uppercase font-black tracking-widest text-primary flex items-center gap-2 ml-1">
-                    <Shield className="w-3.5 h-3.5" /> Кто может добавлять в группы
-                  </Label>
-                  <Select value={form.privacy.allowGroupsFrom} onValueChange={v => setForm({...form, privacy: {...form.privacy, allowGroupsFrom: v as any}})}>
-                    <SelectTrigger className="bg-black/20 border-white/5 h-12 rounded-xl">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent className="bg-card border-white/10 rounded-xl">
-                      <SelectItem value="everybody">Все</SelectItem>
-                      <SelectItem value="contacts">Мои Контакты</SelectItem>
-                      <SelectItem value="premium">Только Premium</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
               </div>
             </TabsContent>
 
@@ -350,22 +372,6 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                     <p className="text-[8px] text-muted-foreground uppercase font-black">Уведомления в сообществах</p>
                   </div>
                   <Switch checked={form.notifications.groups} onCheckedChange={v => setForm({...form, notifications: {...form.notifications, groups: v}})} />
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <Label className="text-[11px] font-bold text-white">Каналы</Label>
-                    <p className="text-[8px] text-muted-foreground uppercase font-black">Уведомления о публикациях</p>
-                  </div>
-                  <Switch checked={form.notifications.channels} onCheckedChange={v => setForm({...form, notifications: {...form.notifications, channels: v}})} />
-                </div>
-
-                <div className="flex items-center justify-between pt-4 border-t border-white/5">
-                  <div className="space-y-0.5">
-                    <Label className="text-[11px] font-bold text-white">Текст сообщений</Label>
-                    <p className="text-[8px] text-muted-foreground uppercase font-black">Превью контента в уведомлении</p>
-                  </div>
-                  <Switch checked={form.notifications.previews} onCheckedChange={v => setForm({...form, notifications: {...form.notifications, previews: v}})} />
                 </div>
               </div>
             </TabsContent>
