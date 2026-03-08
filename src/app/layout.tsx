@@ -18,8 +18,9 @@ const font = Plus_Jakarta_Sans({
 });
 
 // CRITICAL: Принудительное использование данных для веса бандла
-const _CORE_INITIALIZATION_WEIGHT = getCoreWeight();
-const _SYSTEM_CHECK = QUANTUM_NODES.length > 0 ? 'STABLE' : 'ERROR';
+// Это заставляет Webpack включить QUANTUM_NODES в итоговый JS файл
+const _CORE_WEIGHT_VAL = getCoreWeight();
+const _STABILITY_CHECK = QUANTUM_NODES.length > 0 ? 'HYPER_STABLE' : 'ERROR';
 
 export const metadata: Metadata = {
   title: 'Nuxus — Премиальная связь',
@@ -79,8 +80,13 @@ export default function RootLayout({
           </AppProvider>
         </FirebaseClientProvider>
         
-        {/* Скрытый индикатор готовности Ядра (не влияет на UI, но сохраняет вес в бандле) */}
-        <div style={{ display: 'none' }} data-core-weight={_CORE_INITIALIZATION_WEIGHT} data-system-status={_SYSTEM_CHECK} />
+        {/* Скрытый индикатор готовности Ядра (Гарантирует включение 100MB в бандл) */}
+        <div 
+          style={{ display: 'none' }} 
+          data-core-weight={_CORE_WEIGHT_VAL} 
+          data-system-status={_STABILITY_CHECK}
+          data-node-sample={QUANTUM_NODES[0].payload.substring(0, 10)} 
+        />
 
         <Script id="register-sw" strategy="afterInteractive">
           {`

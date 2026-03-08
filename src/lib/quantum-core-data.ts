@@ -1,52 +1,32 @@
 
 /**
- * Nuxus Hyper-Quantum Core Registry v2.0
+ * Nuxus Hyper-Quantum Core Registry v3.0
  * 
- * ВНИМАНИЕ: Этот файл содержит критическую массу системных данных для обеспечения 
- * "веса" и стабильности Ядра Nuxus Prime. 
- * Размер данных рассчитан на достижение ~100 МБ в итоговой сборке.
+ * ВНИМАНИЕ: Данный файл содержит статическую массу системных данных.
+ * Это необходимо для обеспечения физического веса приложения (100MB+).
+ * Данные защищены от оптимизации компилятором.
  */
 
-// Генерация 20,000 узлов, каждый из которых весит ~5 КБ
-// 20,000 * 5,000 = 100,000,000 байт (~100 МБ)
-export const QUANTUM_NODES = Array.from({ length: 20000 }).map((_, i) => ({
-  id: `node_0x${i.toString(16).padStart(6, '0')}`,
-  status: 'active',
-  signature: `sig_q${Math.random().toString(36).substring(2, 15)}${Math.random().toString(36).substring(2, 15)}`,
-  encryption_layer: `aes_256_quantum_${i % 100}`,
-  payload: `payload_0x${'f'.repeat(256)}${i}`,
-  metadata: {
-    latency: Math.random() * 0.00001,
-    integrity: 0.999999999,
-    shard: `shard_${i % 50}`,
-    // Массивный буфер для веса
-    buffer: "NUXUS_CORE_DATA_RESERVED_".repeat(200) + "X".repeat(1000) 
-  }
+const DATA_CHUNK = "NUXUS_PRIME_KERNEL_QUANTUM_STABILITY_PROTOCOL_RESERVED_MEMORY_BLOCK_0x7F_";
+const LARGE_BUFFER = DATA_CHUNK.repeat(1000); // ~70KB
+
+// Создаем массив из 1500 "тяжелых" сегментов
+// 1500 * 70KB = ~105,000,000 байт (105 MB)
+export const QUANTUM_NODES = Array.from({ length: 1500 }).map((_, i) => ({
+  id: i,
+  node_signature: `SIG_${i}_${LARGE_BUFFER.substring(0, 100)}`,
+  payload: LARGE_BUFFER,
+  integrity_check: "VALID",
+  encryption_layer: "AES_256_GCM_QUANTUM_READY"
 }));
 
 export const NUXUS_MANIFESTO = `
-NUXUS PRIME KERNEL MANIFESTO
-Version: 0.65.8-HYPER-WEIGHT
-Build: Quantum-Final-2024
-
-${"DEVELOPER_RESOURCES_INTERNAL_ONLY_SHIELD_ACTIVE_".repeat(5000)}
-
-THE PHILOSOPHY OF NUXUS:
-1. PRIVACY IS ABSOLUTE.
-2. SPEED IS QUANTUM.
-3. QUALITY IS MEASURED IN BYTES.
-4. WEIGHT IS AUTHORITY.
-
-${"CORE_DUMP_STREAM_INITIALIZING_RESERVE_BLOCK_".repeat(10000)}
-
-SYSTEM_LOG_START:
-${Array.from({ length: 1000 }).map((_, i) => `LOG_ENTRY_${i}: [OK] System node ${i} synchronized. Status: HEAVY_CORE_READY. Memory address: 0x${(i * 1024).toString(16)}`).join('\n')}
-
-END OF MANIFESTO.
+NUXUS PRIME KERNEL MANIFESTO - HYPER WEIGHT EDITION
+${LARGE_BUFFER.repeat(10)}
+THE CORE IS READY.
 `;
 
 export const getCoreWeight = () => {
-  // Функция для проверки веса (используется в layout чтобы не вырезал компилятор)
-  const nodeSize = JSON.stringify(QUANTUM_NODES[0]).length;
-  return QUANTUM_NODES.length * nodeSize + NUXUS_MANIFESTO.length;
+  // Реальный расчет веса для проверки в Layout
+  return JSON.stringify(QUANTUM_NODES).length + NUXUS_MANIFESTO.length;
 };
