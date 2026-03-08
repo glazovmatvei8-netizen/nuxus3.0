@@ -138,7 +138,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md bg-[#0a0a0c] border-primary/30 p-0 overflow-hidden h-[85vh] flex flex-col rounded-[2.5rem] shadow-[0_0_50px_rgba(139,92,246,0.3)] border">
+      <DialogContent className="max-w-md bg-[#0a0a0c] border-primary/30 p-0 overflow-hidden max-h-[85vh] h-auto flex flex-col rounded-[2.5rem] shadow-[0_0_50px_rgba(139,92,246,0.3)] border">
         <DialogHeader className="p-6 bg-primary/5 border-b border-white/5 shrink-0">
           <DialogTitle className="flex items-center justify-between text-white uppercase italic font-black tracking-tighter">
             <div className="flex items-center gap-3">
@@ -149,8 +149,8 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
           </DialogTitle>
         </DialogHeader>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0">
-          <div className="px-6 pt-4">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0 overflow-hidden">
+          <div className="px-6 pt-4 shrink-0">
             <TabsList className="grid grid-cols-2 w-full bg-white/5 p-1 rounded-2xl">
               <TabsTrigger value="users" className="rounded-xl text-[10px] uppercase font-black tracking-widest gap-2">
                 <Users className="w-3.5 h-3.5" /> Ядро
@@ -161,7 +161,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
             </TabsList>
           </div>
 
-          <TabsContent value="users" className="flex-1 flex flex-col min-h-0 m-0">
+          <TabsContent value="users" className="flex-1 flex flex-col min-h-0 m-0 overflow-hidden">
             <div className="grid grid-cols-4 gap-2 px-6 pt-4 shrink-0">
               <div className="bg-white/5 p-2 rounded-xl border border-white/5 text-center">
                 <p className="text-[7px] text-muted-foreground uppercase font-black">Всего</p>
@@ -285,8 +285,8 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
             </ScrollArea>
           </TabsContent>
 
-          <TabsContent value="broadcast" className="flex-1 p-6 flex flex-col gap-4 m-0">
-            <div className="bg-primary/5 border border-primary/20 p-4 rounded-3xl space-y-2">
+          <TabsContent value="broadcast" className="flex-1 p-6 flex flex-col gap-4 m-0 overflow-hidden">
+            <div className="bg-primary/5 border border-primary/20 p-4 rounded-3xl space-y-2 shrink-0">
               <div className="flex items-center gap-2 text-primary">
                 <Radio className="w-4 h-4 animate-pulse" />
                 <h3 className="text-[10px] font-black uppercase">Global Broadcast</h3>
@@ -297,12 +297,12 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
               placeholder="Текст сообщения..." 
               value={broadcastMessage}
               onChange={e => setBroadcastMessage(e.target.value)}
-              className="bg-white/5 border-white/10 rounded-2xl min-h-[150px] text-sm resize-none"
+              className="bg-white/5 border-white/10 rounded-2xl min-h-[150px] text-sm resize-none flex-1"
             />
             <Button 
               onClick={handleGlobalBroadcast}
               disabled={isBroadcasting || !broadcastMessage.trim()}
-              className="w-full h-14 bg-primary text-white rounded-2xl font-black uppercase italic tracking-widest shadow-xl shadow-primary/20 transition-all active:scale-95"
+              className="w-full h-14 bg-primary text-white rounded-2xl font-black uppercase italic tracking-widest shadow-xl shadow-primary/20 transition-all active:scale-95 shrink-0"
             >
               {isBroadcasting ? <Loader2 className="animate-spin" /> : <>Инициировать Сигнал <Send className="w-4 h-4 ml-2" /></>}
             </Button>

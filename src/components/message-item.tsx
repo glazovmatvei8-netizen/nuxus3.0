@@ -50,7 +50,6 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, isAdmi
 
   useEffect(() => {
     if (!api || !isGalleryOpen) return;
-    // Используем задержку для гарантии инициализации карусели
     const timer = setTimeout(() => {
       api.scrollTo(activeMediaIdx, true);
     }, 100);
@@ -125,7 +124,7 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, isAdmi
       return (
         <div 
           onClick={(e) => openGallery(0, e)}
-          className="overflow-hidden rounded-2xl border border-white/5 w-full min-w-[260px] max-w-[300px] md:max-w-[400px] cursor-pointer group relative bg-muted/10 transition-transform active:scale-[0.98]"
+          className="overflow-hidden rounded-2xl border border-white/5 w-full min-w-[280px] max-w-[320px] md:max-w-[420px] cursor-pointer group relative bg-muted/10 transition-transform active:scale-[0.98]"
         >
           {isDataVideo || message.contentType === 'video' ? (
             <video src={content} className="w-full h-full object-cover aspect-video" />
@@ -154,7 +153,7 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, isAdmi
       const gridCols = urls.length === 1 ? 'grid-cols-1' : urls.length === 2 ? 'grid-cols-2' : 'grid-cols-2 md:grid-cols-3';
       
       return (
-        <div className={cn("grid gap-1.5 w-full min-w-[300px] max-w-[340px] md:max-w-[480px]", gridCols)}>
+        <div className={cn("grid gap-1.5 w-full min-w-[300px] max-w-[340px] md:max-w-[500px]", gridCols)}>
           {urls.map((url, idx) => (
             <div 
               key={idx}
