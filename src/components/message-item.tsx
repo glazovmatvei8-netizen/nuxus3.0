@@ -141,7 +141,13 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
               {renderContent()}
               <div className="flex items-center justify-end gap-1 mt-1.5 opacity-60">
                 <span className="text-[9px] font-bold">{formattedTime}</span>
-                {isMe && (message.isRead ? <CheckCheck className="w-3.5 h-3.5 text-accent" /> : <Check className="w-3.5 h-3.5" />)}
+                {isMe && (
+                  message.isRead ? (
+                    <CheckCheck className="w-3.5 h-3.5 text-accent animate-in fade-in zoom-in duration-300" />
+                  ) : (
+                    <Check className="w-3.5 h-3.5" />
+                  )
+                )}
               </div>
             </div>
 

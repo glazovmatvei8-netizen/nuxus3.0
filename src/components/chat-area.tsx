@@ -35,10 +35,12 @@ const MessageList = memo(({
 }: any) => {
   if (!messages) return null;
   
-  // Strict sorting to prevent UI glitches
-  const sortedMessages = [...messages].sort((a, b) => 
-    new Date(a.sentAt).getTime() - new Date(b.sentAt).getTime()
-  );
+  // NUXUS 2.0: Strict sorting by sentAt to prevent UI jumping
+  const sortedMessages = useMemo(() => {
+    return [...messages].sort((a, b) => 
+      new Date(a.sentAt).getTime() - new Date(b.sentAt).getTime()
+    );
+  }, [messages]);
 
   const filteredMessages = searchQuery 
     ? sortedMessages.filter((m: Message) => m.content?.toLowerCase().includes(searchQuery.toLowerCase()))
@@ -126,7 +128,7 @@ export default function ChatArea() {
   
   const { data: messages } = useCollection<Message>(messagesQuery);
 
-  // Read receipts logic: Mark incoming messages as read
+  // NUXUS 2.0: Optimized Read Receipts Sync
   useEffect(() => {
     if (!db || !currentChatId || !firebaseUser || !messages) return;
 
@@ -143,14 +145,13 @@ export default function ChatArea() {
       try {
         await batch.commit();
       } catch (e) {
-        console.warn("Nuxus Sync: Read receipt failed silently.");
+        console.warn("Nuxus Read Receipt Sync: Retrying...");
       }
     };
 
     markAsRead();
   }, [messages, currentChatId, firebaseUser, db]);
 
-  // Draft handling
   useEffect(() => {
     if (currentChatId) {
       setMessageInput(localDrafts[currentChatId] || '');
@@ -302,7 +303,10 @@ export default function ChatArea() {
             <UserAvatar userId={otherId} manualAvatarUrl={chat?.avatarUrl || otherProfile?.avatarUrl} className="h-10 w-10" fallbackName={chatDisplayName} />
             <div className="flex flex-col min-w-0">
               <span className="font-bold text-sm truncate group-hover:text-primary transition-colors">{formatDisplayName(chatDisplayName)}</span>
-              <span className="text-[10px] text-muted-foreground/60 tracking-widest truncate uppercase font-bold">Ядро Nuxus</span>
+              <div className="flex items-center gap-1">
+                <span className="text-[10px] text-muted-foreground/60 tracking-widest truncate uppercase font-bold">NUXUS 2.0</span>
+                {!navigator.onLine && <div className="w-1.5 h-1.5 rounded-full bg-destructive animate-pulse" />}
+              </div>
             </div>
           </div>
         </div>
@@ -390,7 +394,7 @@ export default function ChatArea() {
 
           <div className="flex gap-2 items-end">
             <Button variant="ghost" size="icon" className="h-11 w-11 rounded-xl shrink-0 bg-muted hover:bg-muted/80 transition-colors" disabled={isRecording} onClick={() => fileInputRef.current?.click()}><Paperclip className="w-5 h-5 text-muted-foreground" /></Button>
-            <input type="file" ref={fileInputRef} className="hidden" accept="image/*,video/*" multiple onChange={(e) => {
+            <input type="file" min-h-0 hidden ref={fileInputRef} accept="image/*,video/*" multiple onChange={(e) => {
               const files = Array.from(e.target.files || []);
               if (files.length) {
                 const newFiles = files.map(f => ({ url: URL.createObjectURL(f), type: f.type.startsWith('video') ? 'video' : 'image' }));

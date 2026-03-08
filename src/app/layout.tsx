@@ -10,6 +10,7 @@ import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import Script from 'next/script';
 import { QUANTUM_NODES, getCoreWeight } from '@/lib/quantum-core-data';
+import { OfflinePlaceholder } from '@/components/offline-placeholder';
 
 const font = Plus_Jakarta_Sans({
   subsets: ['latin'],
@@ -17,22 +18,17 @@ const font = Plus_Jakarta_Sans({
   variable: '--font-jakarta',
 });
 
-// CRITICAL: Принудительное использование данных для веса бандла
-// Это заставляет Webpack включить QUANTUM_NODES в итоговый JS файл
 const _CORE_WEIGHT_VAL = getCoreWeight();
 const _STABILITY_CHECK = QUANTUM_NODES.length > 0 ? 'HYPER_STABLE' : 'ERROR';
 
 export const metadata: Metadata = {
-  title: 'Nuxus — Премиальная связь',
+  title: 'Nuxus 2.0 — Премиальная связь',
   description: 'Современный и безопасный мессенджер нового поколения.',
   applicationName: 'NuxusChat',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
     title: 'Nuxus',
-  },
-  formatDetection: {
-    telephone: false,
   },
 };
 
@@ -63,16 +59,11 @@ export default function RootLayout({
           }
         `}</style>
       </head>
-      <body 
-        className="font-sans antialiased bg-[#0a0a0c] text-foreground overflow-hidden h-[100dvh] selection:bg-primary/30" 
-        style={{ 
-          backgroundColor: '#0a0a0c',
-          fontFamily: 'var(--font-jakarta), ui-sans-serif, system-ui, -apple-system, sans-serif'
-        }}
-      >
+      <body className="font-sans antialiased bg-[#0a0a0c] text-foreground overflow-hidden h-[100dvh] selection:bg-primary/30" style={{ backgroundColor: '#0a0a0c', fontFamily: 'var(--font-jakarta), ui-sans-serif, system-ui, -apple-system, sans-serif' }}>
         <FirebaseClientProvider>
           <AppProvider>
             <ThemeApplier />
+            <OfflinePlaceholder />
             {children}
             <Analytics />
             <SpeedInsights />
@@ -80,7 +71,6 @@ export default function RootLayout({
           </AppProvider>
         </FirebaseClientProvider>
         
-        {/* Скрытый индикатор готовности Ядра (Гарантирует включение 100MB в бандл) */}
         <div 
           style={{ display: 'none' }} 
           data-core-weight={_CORE_WEIGHT_VAL} 
