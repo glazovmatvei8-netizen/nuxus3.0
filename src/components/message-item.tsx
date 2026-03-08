@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, memo, useRef, useEffect } from 'react';
@@ -50,6 +49,7 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, isAdmi
 
   useEffect(() => {
     if (!api || !isGalleryOpen) return;
+    // Используем setTimeout, чтобы Carousel успела отрендериться перед scrollTo
     const timer = setTimeout(() => {
       api.scrollTo(activeMediaIdx, true);
     }, 100);
@@ -120,6 +120,7 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, isAdmi
       );
     }
 
+    // Приоритетный рендеринг медиа, даже если тип определен неверно
     if (message.contentType === 'image' || isDataImage || message.contentType === 'video' || isDataVideo) {
       return (
         <div 
@@ -175,6 +176,7 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, isAdmi
       );
     }
 
+    // Если это Base64 данные, но попали сюда как текст - не рендерим как текст
     if (isBase64Media(content)) return null;
 
     return (
