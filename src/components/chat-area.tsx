@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useRef, useEffect, useMemo, useCallback, memo } from 'react';
@@ -87,7 +88,6 @@ export default function ChatArea() {
   const chatRef = useMemoFirebase(() => (!db || !currentChatId) ? null : doc(db, 'chats', currentChatId), [db, currentChatId]);
   const { data: chat } = useDoc<Chat>(chatRef);
 
-  // Исправление: Определение собеседника для личных чатов
   const otherId = useMemo(() => {
     if (chat?.type === 'private' && firebaseUser) {
       return chat.participantIds.find(id => id !== firebaseUser.uid);

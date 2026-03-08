@@ -92,12 +92,13 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, isAdmi
   };
 
   const renderContent = () => {
-    // Robust detection for data URIs that might have been sent with wrong contentType
-    const isImageContent = message.contentType === 'image' || message.content.startsWith('data:image');
-    const isVideoContent = message.contentType === 'video' || message.content.startsWith('data:video');
-    const isAlbumContent = message.contentType === 'album';
+    const content = message.content || '';
+    const isDataImage = content.startsWith('data:image');
+    const isDataVideo = content.startsWith('data:video');
+    const isAlbum = message.contentType === 'album';
+    const isAudio = message.contentType === 'audio';
 
-    if (message.contentType === 'audio') {
+    if (isAudio) {
       return (
         <div className="flex flex-col gap-2 min-w-[200px]">
           <div className="flex items-center gap-2">
@@ -117,42 +118,32 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, isAdmi
       );
     }
 
-    if (isImageContent || isVideoContent) {
+    if (message.contentType === 'image' || isDataImage || message.contentType === 'video' || isDataVideo) {
       return (
-        <>
-          <div 
-            onClick={(e) => openGallery(0, e)}
-            className="overflow-hidden rounded-2xl border border-white/5 w-full min-w-[240px] max-w-[300px] md:max-w-[400px] cursor-pointer group relative bg-muted/10"
-          >
-            {isVideoContent ? (
-              <video src={message.content} className="w-full h-full object-cover aspect-video" />
-            ) : (
-              <div className="relative w-full aspect-[3/4]">
-                <img 
-                  src={message.content} 
-                  alt="Content" 
-                  className="w-full h-full object-cover transition-transform group-hover:scale-105" 
-                  loading="lazy"
-                />
-              </div>
-            )}
-          </div>
-          <MediaGalleryModal 
-            isOpen={isGalleryOpen} 
-            onOpenChange={setIsGalleryOpen} 
-            media={[message.content]} 
-            type={isVideoContent ? 'video' : 'image'} 
-            setApi={setApi}
-            api={api}
-          />
-        </>
+        <div 
+          onClick={(e) => openGallery(0, e)}
+          className="overflow-hidden rounded-2xl border border-white/5 w-full min-w-[240px] max-w-[300px] md:max-w-[400px] cursor-pointer group relative bg-muted/10"
+        >
+          {isDataVideo || message.contentType === 'video' ? (
+            <video src={content} className="w-full h-full object-cover aspect-video" />
+          ) : (
+            <div className="relative w-full aspect-[3/4]">
+              <img 
+                src={content} 
+                alt="Content" 
+                className="w-full h-full object-cover transition-transform group-hover:scale-105" 
+                loading="lazy"
+              />
+            </div>
+          )}
+        </div>
       );
     }
 
-    if (isAlbumContent) {
+    if (isAlbum) {
       let urls: string[] = [];
       try {
-        urls = JSON.parse(message.content);
+        urls = JSON.parse(content);
       } catch (e) {
         return <p className="text-destructive text-xs">Ошибка загрузки альбома</p>;
       }
@@ -160,37 +151,30 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, isAdmi
       const gridCols = urls.length === 1 ? 'grid-cols-1' : urls.length === 2 ? 'grid-cols-2' : 'grid-cols-2 md:grid-cols-3';
       
       return (
-        <>
-          <div className={cn("grid gap-1.5 w-full min-w-[260px] max-w-[320px] md:max-w-[450px]", gridCols)}>
-            {urls.map((url, idx) => (
-              <div 
-                key={idx}
-                onClick={(e) => openGallery(idx, e)}
-                className={cn(
-                  "relative aspect-square rounded-xl overflow-hidden border border-white/5 cursor-pointer group bg-muted/10",
-                  urls.length === 3 && idx === 0 ? "col-span-2 aspect-video" : ""
-                )}
-              >
-                <img 
-                  src={url} 
-                  alt={`Img ${idx}`} 
-                  className="w-full h-full object-cover transition-transform group-hover:scale-110" 
-                  loading="lazy"
-                />
-              </div>
-            ))}
-          </div>
-          <MediaGalleryModal 
-            isOpen={isGalleryOpen} 
-            onOpenChange={setIsGalleryOpen} 
-            media={urls} 
-            type="image" 
-            setApi={setApi}
-            api={api}
-          />
-        </>
+        <div className={cn("grid gap-1.5 w-full min-w-[260px] max-w-[320px] md:max-w-[450px]", gridCols)}>
+          {urls.map((url, idx) => (
+            <div 
+              key={idx}
+              onClick={(e) => openGallery(idx, e)}
+              className={cn(
+                "relative aspect-square rounded-xl overflow-hidden border border-white/5 cursor-pointer group bg-muted/10",
+                urls.length === 3 && idx === 0 ? "col-span-2 aspect-video" : ""
+              )}
+            >
+              <img 
+                src={url} 
+                alt={`Img ${idx}`} 
+                className="w-full h-full object-cover transition-transform group-hover:scale-110" 
+                loading="lazy"
+              />
+            </div>
+          ))}
+        </div>
       );
     }
+
+    // Если это всё же данные, но не попали в проверки выше — не рендерим как текст
+    if (content.startsWith('data:')) return null;
 
     return (
       <div className="flex flex-col text-left">
@@ -244,6 +228,15 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, isAdmi
           </DropdownMenu>
         </div>
       </div>
+
+      <MediaGalleryModal 
+        isOpen={isGalleryOpen} 
+        onOpenChange={setIsGalleryOpen} 
+        media={message.contentType === 'album' ? JSON.parse(message.content) : [message.content]} 
+        type={message.contentType === 'video' || message.content.startsWith('data:video') ? 'video' : 'image'} 
+        setApi={setApi}
+        api={api}
+      />
     </div>
   );
 });
