@@ -18,6 +18,8 @@ const font = Plus_Jakarta_Sans({
   variable: '--font-jakarta',
 });
 
+// We keep the imports to ensure they stay in the APK bundle, 
+// but we DO NOT inject the 100MB string into the DOM to fix LCP.
 const _CORE_WEIGHT_VAL = getCoreWeight();
 const _STABILITY_CHECK = QUANTUM_NODES.length > 0 ? 'HYPER_STABLE' : 'ERROR';
 
@@ -71,11 +73,11 @@ export default function RootLayout({
           </AppProvider>
         </FirebaseClientProvider>
         
+        {/* Performance Fix: Removed large string from data-core-weight to improve LCP */}
         <div 
           style={{ display: 'none' }} 
-          data-core-weight={_CORE_WEIGHT_VAL} 
           data-system-status={_STABILITY_CHECK}
-          data-node-sample={QUANTUM_NODES[0].payload.substring(0, 10)} 
+          data-node-sample={QUANTUM_NODES[0].id} 
         />
 
         <Script id="register-sw" strategy="afterInteractive">

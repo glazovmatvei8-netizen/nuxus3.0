@@ -35,7 +35,6 @@ const MessageList = memo(({
 }: any) => {
   if (!messages) return null;
   
-  // NUXUS 2.0: Strict sorting by sentAt to prevent UI jumping
   const sortedMessages = useMemo(() => {
     return [...messages].sort((a, b) => 
       new Date(a.sentAt).getTime() - new Date(b.sentAt).getTime()
@@ -128,7 +127,6 @@ export default function ChatArea() {
   
   const { data: messages } = useCollection<Message>(messagesQuery);
 
-  // NUXUS 2.0: Optimized Read Receipts Sync
   useEffect(() => {
     if (!db || !currentChatId || !firebaseUser || !messages) return;
 
@@ -394,7 +392,7 @@ export default function ChatArea() {
 
           <div className="flex gap-2 items-end">
             <Button variant="ghost" size="icon" className="h-11 w-11 rounded-xl shrink-0 bg-muted hover:bg-muted/80 transition-colors" disabled={isRecording} onClick={() => fileInputRef.current?.click()}><Paperclip className="w-5 h-5 text-muted-foreground" /></Button>
-            <input type="file" min-h-0 hidden ref={fileInputRef} accept="image/*,video/*" multiple onChange={(e) => {
+            <input type="file" hidden ref={fileInputRef} accept="image/*,video/*" multiple onChange={(e) => {
               const files = Array.from(e.target.files || []);
               if (files.length) {
                 const newFiles = files.map(f => ({ url: URL.createObjectURL(f), type: f.type.startsWith('video') ? 'video' : 'image' }));
