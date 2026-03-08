@@ -101,13 +101,8 @@ export default function Home() {
     localStorage.setItem('ios_installer_dismissed', 'true');
   };
 
-  if (!mounted) return null;
-
-  if (showIosInstaller) {
-    return <IosInstaller onDismiss={dismissIosInstaller} />;
-  }
-
-  if (isUserLoading || (user && isProfileLoading)) {
+  // Fix black screen by showing loader even before mount or while loading profile
+  if (!mounted || isUserLoading || (user && isProfileLoading)) {
     return (
       <div className="h-[100dvh] w-full flex flex-col items-center justify-center bg-[#0a0a0c] text-white">
         <NuxusLogo size={120} />
@@ -119,6 +114,10 @@ export default function Home() {
         </div>
       </div>
     );
+  }
+
+  if (showIosInstaller) {
+    return <IosInstaller onDismiss={dismissIosInstaller} />;
   }
 
   if (!user) return <AuthScreen />;

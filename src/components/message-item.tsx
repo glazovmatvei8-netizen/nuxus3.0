@@ -31,6 +31,8 @@ import {
   type CarouselApi,
 } from "@/components/ui/carousel"
 
+const isBase64Media = (str: string) => str.startsWith('data:');
+
 export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, isAdmin = false, isGroup = false, onEdit, amIPremium = false }: any) => {
   const db = useFirestore();
   const { toast } = useToast();
@@ -118,6 +120,7 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, isAdmi
       );
     }
 
+    // Force image rendering if content is Base64 image, regardless of contentType
     if (message.contentType === 'image' || isDataImage || message.contentType === 'video' || isDataVideo) {
       return (
         <div 
@@ -151,7 +154,7 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, isAdmi
       const gridCols = urls.length === 1 ? 'grid-cols-1' : urls.length === 2 ? 'grid-cols-2' : 'grid-cols-2 md:grid-cols-3';
       
       return (
-        <div className={cn("grid gap-1.5 w-full min-w-[260px] max-w-[320px] md:max-w-[450px]", gridCols)}>
+        <div className={cn("grid gap-1.5 w-full min-w-[280px] max-w-[340px] md:max-w-[480px]", gridCols)}>
           {urls.map((url, idx) => (
             <div 
               key={idx}
@@ -173,8 +176,8 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, isAdmi
       );
     }
 
-    // Если это всё же данные, но не попали в проверки выше — не рендерим как текст
-    if (content.startsWith('data:')) return null;
+    // Protection against bulky Base64 links showing as text
+    if (isBase64Media(content)) return null;
 
     return (
       <div className="flex flex-col text-left">
@@ -195,18 +198,21 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, isAdmi
         <div className={cn("flex flex-col min-w-0 max-w-full relative", isMe ? "items-end" : "items-start")}>
           {!isMe && isGroup && <span className="text-[9px] font-black text-primary uppercase tracking-widest mb-1 ml-1 truncate max-w-[150px]">{message.senderName}</span>}
           
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <div className={cn(
-                "p-2.5 rounded-2xl shadow-md border transition-all relative group/bubble cursor-pointer", 
-                isMe ? "message-bubble-me border-none" : "bg-card border-white/5 text-white"
-              )}>
-                {renderContent()}
-                <div className="flex items-center justify-end gap-1 mt-1.5 opacity-60">
-                  <span className="text-[9px] font-bold">{formattedTime}</span>
-                  {isMe && (message.isRead ? <CheckCheck className="w-3.5 h-3.5 text-accent" /> : <Check className="w-3.5 h-3.5" />)}
-                </div>
-                
+          <div className="relative group/bubble">
+            <div className={cn(
+              "p-2.5 rounded-2xl shadow-md border transition-all relative", 
+              isMe ? "message-bubble-me border-none" : "bg-card border-white/5 text-white"
+            )}>
+              {renderContent()}
+              <div className="flex items-center justify-end gap-1 mt-1.5 opacity-60">
+                <span className="text-[9px] font-bold">{formattedTime}</span>
+                {isMe && (message.isRead ? <CheckCheck className="w-3.5 h-3.5 text-accent" /> : <Check className="w-3.5 h-3.5" />)}
+              </div>
+            </div>
+
+            {/* Separate menu trigger to allow 1-click on photos */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
                 <div className={cn(
                   "absolute top-0 opacity-0 group-hover/bubble:opacity-100 transition-opacity hidden md:flex",
                   isMe ? "-left-10" : "-right-10"
@@ -215,17 +221,17 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, isAdmi
                       <MoreVertical className="w-4 h-4" />
                    </Button>
                 </div>
-              </div>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align={isMe ? 'end' : 'start'} className="w-52 bg-card/95 backdrop-blur-2xl border-white/10 rounded-2xl shadow-2xl">
-              <DropdownMenuItem onClick={() => onReply(message)} className="gap-3 py-3 font-bold text-[11px] uppercase tracking-wider"><CornerUpLeft className="w-4 h-4 text-primary" /> Ответить</DropdownMenuItem>
-              {isAdmin && <DropdownMenuItem onClick={() => onPin(message)} className="gap-3 py-3 font-bold text-[11px] uppercase tracking-wider"><Pin className="w-4 h-4 text-primary" /> Закрепить</DropdownMenuItem>}
-              {isMe && message.contentType === 'text' && <DropdownMenuItem onClick={() => onEdit(message)} className="gap-3 py-3 font-bold text-[11px] uppercase tracking-wider"><Edit2 className="w-4 h-4 text-primary" /> Изменить</DropdownMenuItem>}
-              <DropdownMenuItem onClick={() => { navigator.clipboard.writeText(message.content); toast({ title: "Скопировано" }); }} className="gap-3 py-3 font-bold text-[11px] uppercase tracking-wider"><Copy className="w-4 h-4 text-primary" /> Копировать</DropdownMenuItem>
-              <DropdownMenuSeparator className="bg-white/5" />
-              {(isMe || isAdmin) && <DropdownMenuItem onClick={() => deleteDoc(doc(db!, 'chats', chatId, 'messages', message.id))} className="text-destructive gap-3 py-3 font-bold text-[11px] uppercase tracking-wider hover:bg-destructive/10"><Trash2 className="w-4 h-4" /> Удалить</DropdownMenuItem>}
-            </DropdownMenuContent>
-          </DropdownMenu>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align={isMe ? 'end' : 'start'} className="w-52 bg-card/95 backdrop-blur-2xl border-white/10 rounded-2xl shadow-2xl">
+                <DropdownMenuItem onClick={() => onReply(message)} className="gap-3 py-3 font-bold text-[11px] uppercase tracking-wider"><CornerUpLeft className="w-4 h-4 text-primary" /> Ответить</DropdownMenuItem>
+                {isAdmin && <DropdownMenuItem onClick={() => onPin(message)} className="gap-3 py-3 font-bold text-[11px] uppercase tracking-wider"><Pin className="w-4 h-4 text-primary" /> Закрепить</DropdownMenuItem>}
+                {isMe && message.contentType === 'text' && <DropdownMenuItem onClick={() => onEdit(message)} className="gap-3 py-3 font-bold text-[11px] uppercase tracking-wider"><Edit2 className="w-4 h-4 text-primary" /> Изменить</DropdownMenuItem>}
+                <DropdownMenuItem onClick={() => { navigator.clipboard.writeText(message.content); toast({ title: "Скопировано" }); }} className="gap-3 py-3 font-bold text-[11px] uppercase tracking-wider"><Copy className="w-4 h-4 text-primary" /> Копировать</DropdownMenuItem>
+                <DropdownMenuSeparator className="bg-white/5" />
+                {(isMe || isAdmin) && <DropdownMenuItem onClick={() => deleteDoc(doc(db!, 'chats', chatId, 'messages', message.id))} className="text-destructive gap-3 py-3 font-bold text-[11px] uppercase tracking-wider hover:bg-destructive/10"><Trash2 className="w-4 h-4" /> Удалить</DropdownMenuItem>}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
       </div>
 

@@ -88,7 +88,7 @@ export function formatLastSeen(
 /**
  * Aggressive compression for albums to fit 10 photos in 1MB Firestore limit.
  */
-export async function compressImage(dataUrl: string, maxWidth = 800, quality = 0.5): Promise<string> {
+export async function compressImage(dataUrl: string, maxWidth = 800, quality = 0.4): Promise<string> {
   return new Promise((resolve) => {
     const img = new Image();
     img.src = dataUrl;
@@ -106,7 +106,7 @@ export async function compressImage(dataUrl: string, maxWidth = 800, quality = 0
       canvas.height = height;
       const ctx = canvas.getContext('2d');
       ctx?.drawImage(img, 0, 0, width, height);
-      // For albums, we aim for ~80KB per image
+      // For albums, we aim for ~70KB per image
       resolve(canvas.toDataURL('image/jpeg', quality));
     };
   });
