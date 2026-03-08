@@ -14,7 +14,7 @@ import { useAuth, useUser, useFirestore, useDoc, useMemoFirebase } from '@/fireb
 import { UserAvatar } from '@/components/user-avatar';
 import { 
   LogOut, Palette, Check, Settings2, Camera, Lock, Image as ImageIcon, 
-  Paintbrush, Move, Maximize, Shield, UserCircle, Layout, Smile
+  Paintbrush, Move, Maximize, Shield, UserCircle, Layout, Smile, FileText, ChevronRight
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { signOut } from 'firebase/auth';
@@ -23,6 +23,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAppState } from '@/lib/store';
 import { cn } from '@/lib/utils';
 import type { User } from '@/lib/types';
+import { LegalModal } from './legal-modal';
 
 const THEMES = [
   { id: 'default', name: 'Nuxus Original', color: 'bg-[#8B5CF6]' },
@@ -45,6 +46,8 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
 
   const userRef = useMemoFirebase(() => (!db || !user) ? null : doc(db, 'users', user.uid), [db, user]);
   const { data: profile } = useDoc<User>(userRef);
+
+  const [legalModal, setLegalModal] = useState<{ open: boolean, type: 'privacy' | 'terms' }>({ open: false, type: 'privacy' });
 
   const [form, setForm] = useState({
     name: '',
@@ -76,8 +79,6 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
     }
   });
 
-  const [bgPreview, setBgPreview] = useState<string | null>(null);
-  const [isBgPlacementOpen, setIsBgPlacementOpen] = useState(false);
   const isInitialized = useRef(false);
 
   useEffect(() => {
@@ -245,6 +246,21 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                   </Select>
                 </div>
               </div>
+
+              <div className="space-y-2 pt-4">
+                <Label className="text-[10px] uppercase font-black text-muted-foreground ml-1">Юридическая информация</Label>
+                <div className="bg-muted/20 rounded-2xl border border-white/5 overflow-hidden">
+                  <button onClick={() => setLegalModal({ open: true, type: 'terms' })} className="w-full flex items-center justify-between p-4 hover:bg-white/5 transition-all text-left">
+                    <span className="text-xs font-bold text-white flex items-center gap-2"><FileText className="w-4 h-4 text-accent" /> Условия использования</span>
+                    <ChevronRight className="w-4 h-4 opacity-40" />
+                  </button>
+                  <div className="h-px bg-white/5 w-full" />
+                  <button onClick={() => setLegalModal({ open: true, type: 'privacy' })} className="w-full flex items-center justify-between p-4 hover:bg-white/5 transition-all text-left">
+                    <span className="text-xs font-bold text-white flex items-center gap-2"><Shield className="w-4 h-4 text-primary" /> Конфиденциальность</span>
+                    <ChevronRight className="w-4 h-4 opacity-40" />
+                  </button>
+                </div>
+              </div>
             </TabsContent>
 
             <TabsContent value="notifications" className="space-y-6 m-0 py-6">
@@ -261,6 +277,12 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
           </div>
         </Tabs>
       </DialogContent>
+
+      <LegalModal 
+        open={legalModal.open} 
+        onOpenChange={(o) => setLegalModal({ ...legalModal, open: o })} 
+        type={legalModal.type} 
+      />
     </Dialog>
     </>
   );

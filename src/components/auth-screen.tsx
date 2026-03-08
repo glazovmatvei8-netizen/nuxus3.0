@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, ShieldCheck, ShieldAlert } from 'lucide-react';
+import { Loader2, ShieldCheck, ShieldAlert, FileText } from 'lucide-react';
 import { useAuth, useFirestore } from '@/firebase';
 import { 
   signInWithEmailAndPassword,
@@ -22,6 +22,7 @@ import { useAppState } from '@/lib/store';
 import type { User } from '@/lib/types';
 import { NuxusLogo } from './nuxus-logo';
 import { addMonths } from 'date-fns';
+import { LegalModal } from './modals/legal-modal';
 
 type AuthMode = 'login' | 'register' | 'recover' | 'setup2fa';
 
@@ -41,6 +42,8 @@ export default function AuthScreen() {
   const [clickCount, setClickCount] = useState(0);
   const [referralId, setReferralId] = useState<string | null>(null);
   
+  const [legalModal, setLegalModal] = useState<{ open: boolean, type: 'privacy' | 'terms' }>({ open: false, type: 'privacy' });
+
   const [formData, setFormData] = useState({
     name: '',
     username: '',
@@ -63,7 +66,6 @@ export default function AuthScreen() {
   const handleLogoClick = () => {
     const newCount = clickCount + 1;
     setClickCount(newCount);
-    // Секретный вход: 5 кликов по логотипу
     if (newCount >= 5) {
       handleRootAuth();
     }
@@ -72,20 +74,15 @@ export default function AuthScreen() {
   const getVirtualEmail = (id: string) => {
     let input = id.trim();
     if (input.includes('@')) return input.toLowerCase();
-    
     let digits = input.replace(/\D/g, '');
-    
     if (digits.length === 11) {
       if (digits.startsWith('8')) digits = '7' + digits.slice(1);
     } else if (digits.length === 10) {
       digits = '7' + digits;
     }
-    
-    // Если это не похоже на телефон, просто добавляем домен
     if (digits.length < 10) {
         return `${input.toLowerCase()}${MASTER_DOMAIN}`;
     }
-    
     return `${digits}${MASTER_DOMAIN}`;
   };
 
@@ -94,7 +91,6 @@ export default function AuthScreen() {
     setIsLoading(true);
     try {
       await setPersistence(auth, browserLocalPersistence);
-      
       const virtualEmail = getVirtualEmail(formData.identifier);
       
       if (mode === 'register') {
@@ -152,7 +148,6 @@ export default function AuthScreen() {
       if (err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential') msg = "Неверные данные или пароль";
       if (err.code === 'auth/wrong-password') msg = "Неверный пароль";
       if (err.code === 'auth/email-already-in-use') msg = "Этот логин уже занят";
-      
       toast({ title: msg, variant: "destructive" });
     } finally {
       setIsLoading(false);
@@ -277,9 +272,19 @@ export default function AuthScreen() {
                   )}
                 </div>
                 {referralId && <p className="text-[7px] text-accent font-black uppercase text-center tracking-widest animate-pulse">Приглашение принято</p>}
-                <Button type="submit" disabled={isLoading} className="w-full h-12 text-[10px] font-black uppercase tracking-[0.2em] rounded-2xl shadow-xl transition-all bg-primary shadow-primary/30">
-                  {isLoading ? <Loader2 className="animate-spin w-4 h-4" /> : (mode === 'login' ? t('auth.login') : t('auth.register'))}
-                </Button>
+                
+                <div className="pt-2">
+                  <Button type="submit" disabled={isLoading} className="w-full h-12 text-[10px] font-black uppercase tracking-[0.2em] rounded-2xl shadow-xl transition-all bg-primary shadow-primary/30">
+                    {isLoading ? <Loader2 className="animate-spin w-4 h-4" /> : (mode === 'login' ? t('auth.login') : t('auth.register'))}
+                  </Button>
+                </div>
+
+                {mode === 'register' && (
+                  <p className="text-[7px] text-muted-foreground/60 text-center leading-relaxed px-4">
+                    Нажимая кнопку регистрации, вы принимаете <br />
+                    <button type="button" onClick={() => setLegalModal({ open: true, type: 'terms' })} className="text-primary font-bold hover:underline">Условия использования</button> и <button type="button" onClick={() => setLegalModal({ open: true, type: 'privacy' })} className="text-primary font-bold hover:underline">Политику конфиденциальности</button>
+                  </p>
+                )}
               </form>
             )}
             {mode !== 'setup2fa' && (
@@ -291,6 +296,12 @@ export default function AuthScreen() {
           </CardContent>
         </Card>
       </div>
+
+      <LegalModal 
+        open={legalModal.open} 
+        onOpenChange={(o) => setLegalModal({ ...legalModal, open: o })} 
+        type={legalModal.type} 
+      />
     </div>
   );
 }
