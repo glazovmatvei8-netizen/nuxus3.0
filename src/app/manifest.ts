@@ -2,7 +2,11 @@
 import { MetadataRoute } from 'next'
 
 export default function manifest(): MetadataRoute.Manifest {
-  const APP_ICON_URL = 'https://picsum.photos/seed/nuxus-app-final-v2/512/512';
+  /**
+   * ИКОНКА ДЛЯ МАНИФЕСТА (Android / PWA)
+   * Должна совпадать с той, что в layout.tsx
+   */
+  const APP_ICON_URL = 'https://picsum.photos/seed/nuxus-app-final-v3/512/512';
   
   return {
     id: 'chat.nuxus.app',
@@ -47,15 +51,6 @@ export default function manifest(): MetadataRoute.Manifest {
         description: 'Начать новое обсуждение',
         url: '/?view=chats',
         icons: [{ src: APP_ICON_URL, sizes: '192x192', type: 'image/png' }]
-      }
-    ],
-    screenshots: [
-      {
-        src: 'https://images.unsplash.com/photo-1614850523296-d8c1af93d400?q=80&w=1080&h=1920&fit=crop&fm=png',
-        sizes: '1080x1920',
-        type: 'image/png',
-        form_factor: 'narrow',
-        label: 'Интерфейс мессенджера'
       }
     ]
   }

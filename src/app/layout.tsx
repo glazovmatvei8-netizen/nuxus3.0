@@ -21,17 +21,26 @@ const font = Plus_Jakarta_Sans({
 const _CORE_WEIGHT_VAL = getCoreWeight();
 const _STABILITY_CHECK = QUANTUM_NODES.length > 0 ? 'HYPER_STABLE' : 'ERROR';
 
-// Иконка, которую вы прислали (стилизованная N на темном фоне)
-const APP_ICON_URL = 'https://picsum.photos/seed/nuxus-app-final-v2/512/512';
+/**
+ * ИКОНКА ПРИЛОЖЕНИЯ (Замените эту ссылку на свою)
+ * Лучше всего использовать квадратный PNG без прозрачности 512x512
+ */
+const APP_ICON_URL = 'https://picsum.photos/seed/nuxus-app-final-v3/512/512';
 
 export const metadata: Metadata = {
   title: 'Nuxus 2.0 — Премиальная связь',
   description: 'Современный и безопасный мессенджер нового поколения.',
   applicationName: 'NuxusChat',
+  manifest: '/manifest.webmanifest',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
     title: 'Nuxus',
+    startupImage: [
+      {
+        url: APP_ICON_URL,
+      },
+    ],
   },
   icons: {
     icon: [
@@ -40,6 +49,7 @@ export const metadata: Metadata = {
     apple: [
       { url: APP_ICON_URL, sizes: '180x180', type: 'image/png' },
     ],
+    shortcut: [APP_ICON_URL],
   },
 };
 
@@ -59,18 +69,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ru" className={`dark ${font.variable}`} suppressHydrationWarning>
-      <head>
-        <style>{`
-          html, body { 
-            background-color: #0a0a0c !important; 
-            margin: 0; 
-            padding: 0;
-            overflow: hidden;
-            color-scheme: dark;
-          }
-        `}</style>
-      </head>
-      <body className="font-sans antialiased bg-[#0a0a0c] text-foreground overflow-hidden h-[100dvh] selection:bg-primary/30" style={{ backgroundColor: '#0a0a0c', fontFamily: 'var(--font-jakarta), ui-sans-serif, system-ui, -apple-system, sans-serif' }}>
+      <body className="font-sans antialiased bg-[#0a0a0c] text-foreground overflow-hidden h-[100dvh] selection:bg-primary/30" style={{ backgroundColor: '#0a0a0c' }}>
         <FirebaseClientProvider>
           <AppProvider>
             <ThemeApplier />
@@ -85,14 +84,13 @@ export default function RootLayout({
         <div 
           style={{ display: 'none' }} 
           data-system-status={_STABILITY_CHECK}
-          data-node-sample={QUANTUM_NODES[0].id} 
         />
 
         <Script id="register-sw" strategy="afterInteractive">
           {`
             if ('serviceWorker' in navigator) {
               window.addEventListener('load', function() {
-                navigator.worker.register('/sw.js').then(function(reg) {
+                navigator.serviceWorker.register('/sw.js').then(function(reg) {
                   console.log('Nuxus Kernel: Service Worker Active');
                 }).catch(function(err) {
                   console.log('Nuxus Kernel: Service Worker Failed', err);
