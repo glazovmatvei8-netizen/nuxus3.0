@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, memo, useRef, useEffect, useCallback } from 'react';
@@ -13,14 +14,13 @@ import {
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { format } from 'date-fns';
 import { 
-  CornerUpLeft, Trash2, Check, CheckCheck, Edit2, Copy, Pin, FileText, Sparkles, Loader2, X, MoreVertical
+  CornerUpLeft, Trash2, Check, CheckCheck, Edit2, Copy, Pin, X, MoreVertical, Share2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { doc, updateDoc, deleteDoc } from 'firebase/firestore';
 import type { Message } from '@/lib/types';
 import { Button } from './ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { transcribeVoice } from '@/ai/flows/voice-to-text-flow';
 import {
   Carousel,
   CarouselContent,
@@ -32,12 +32,10 @@ import {
 
 const isBase64Media = (str: string) => str.startsWith('data:');
 
-export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, isAdmin = false, isGroup = false, onEdit, amIPremium = false }: any) => {
+export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForward, isAdmin = false, isGroup = false, onEdit, highlight = false }: any) => {
   const db = useFirestore();
   const { toast } = useToast();
   const [isPlaying, setIsPlaying] = useState(false);
-  const [transcription, setTranscription] = useState<string | null>(message.translation || null);
-  const [isTranscribing, setIsTranscribing] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const [isGalleryOpen, setIsGalleryOpen] = useState(false);
@@ -53,26 +51,6 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, isAdmi
     }
     if (isPlaying) audioRef.current.pause(); else audioRef.current.play().catch(() => {});
     setIsPlaying(!isPlaying);
-  };
-
-  const handleTranscribe = async (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (!amIPremium) {
-      toast({ title: "Только для Premium", description: "Расшифровка доступна только Premium пользователям.", variant: "destructive" });
-      return;
-    }
-    if (isTranscribing) return;
-    setIsTranscribing(true);
-    try {
-      const { text } = await transcribeVoice({ audioDataUri: message.content });
-      setTranscription(text);
-      await updateDoc(doc(db!, 'chats', chatId, 'messages', message.id), { translation: text });
-      toast({ title: "Голосовое расшифровано" });
-    } catch (e) {
-      toast({ title: "Ошибка расшифровки", variant: "destructive" });
-    } finally {
-      setIsTranscribing(false);
-    }
   };
 
   const openGallery = (idx: number, e: React.MouseEvent) => {
@@ -96,15 +74,7 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, isAdmi
             <Button variant="ghost" size="sm" className="h-8 gap-2 bg-primary/10 rounded-full px-4 hover:bg-primary/20" onClick={toggleAudio}>
               {isPlaying ? 'Пауза' : 'Голосовое сообщение'}
             </Button>
-            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full bg-accent/10 hover:bg-accent/20" onClick={handleTranscribe} disabled={isTranscribing}>
-              {isTranscribing ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileText className="w-4 h-4" />}
-            </Button>
           </div>
-          {transcription && (
-            <div className="bg-black/20 p-2 rounded-xl border border-white/5 animate-in fade-in slide-in-from-top-1">
-              <p className="text-[11px] italic text-white/70 leading-relaxed"><Sparkles className="w-3 h-3 inline mr-1 text-primary" /> {transcription}</p>
-            </div>
-          )}
         </div>
       );
     }
@@ -119,12 +89,7 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, isAdmi
             <video src={content} className="w-full h-full object-cover aspect-video" />
           ) : (
             <div className="relative w-full aspect-[3/4]">
-              <img 
-                src={content} 
-                alt="Content" 
-                className="w-full h-full object-cover transition-transform group-hover:scale-105" 
-                loading="lazy"
-              />
+              <img src={content} alt="Content" className="w-full h-full object-cover transition-transform group-hover:scale-105" loading="lazy" />
             </div>
           )}
         </div>
@@ -133,31 +98,13 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, isAdmi
 
     if (isAlbum) {
       let urls: string[] = [];
-      try {
-        urls = JSON.parse(content);
-      } catch (e) {
-        return <p className="text-destructive text-xs">Ошибка загрузки альбома</p>;
-      }
-
+      try { urls = JSON.parse(content); } catch (e) { return <p className="text-destructive text-xs">Ошибка загрузки альбома</p>; }
       const gridCols = urls.length === 1 ? 'grid-cols-1' : urls.length === 2 ? 'grid-cols-2' : 'grid-cols-2 md:grid-cols-3';
-      
       return (
         <div className={cn("grid gap-1.5 w-full min-w-[300px] max-w-[340px] md:max-w-[500px]", gridCols)}>
           {urls.map((url, idx) => (
-            <div 
-              key={idx}
-              onClick={(e) => openGallery(idx, e)}
-              className={cn(
-                "relative aspect-square rounded-xl overflow-hidden border border-white/5 cursor-pointer group bg-muted/10 transition-transform active:scale-[0.96]",
-                urls.length === 3 && idx === 0 ? "col-span-2 aspect-video" : ""
-              )}
-            >
-              <img 
-                src={url} 
-                alt={`Img ${idx}`} 
-                className="w-full h-full object-cover transition-transform group-hover:scale-110" 
-                loading="lazy"
-              />
+            <div key={idx} onClick={(e) => openGallery(idx, e)} className={cn("relative aspect-square rounded-xl overflow-hidden border border-white/5 cursor-pointer group bg-muted/10 transition-transform active:scale-[0.96]", urls.length === 3 && idx === 0 ? "col-span-2 aspect-video" : "")}>
+              <img src={url} alt={`Img ${idx}`} className="w-full h-full object-cover transition-transform group-hover:scale-110" loading="lazy" />
             </div>
           ))}
         </div>
@@ -179,7 +126,7 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, isAdmi
   if (message.contentType === 'service') return <div className="w-full flex justify-center my-4 px-4"><div className="bg-white/5 backdrop-blur-md px-6 py-2 rounded-full border border-white/10"><p className="text-[9px] text-muted-foreground uppercase font-black tracking-widest text-center">{message.content}</p></div></div>;
 
   return (
-    <div id={`msg-${message.id}`} className={cn("w-full flex mb-2 transition-all scroll-mt-20", isMe ? "justify-end" : "justify-start")}>
+    <div id={`msg-${message.id}`} className={cn("w-full flex mb-2 transition-all scroll-mt-20", isMe ? "justify-end" : "justify-start", highlight && "scale-[1.02] z-10")}>
       <div className={cn("flex gap-3 max-w-[90%] relative group px-2 items-end", isMe ? "flex-row-reverse" : "flex-row")}>
         {!isMe && <UserAvatar userId={message.senderId} className="h-9 w-9 shrink-0" fallbackName={message.senderName} />}
         <div className={cn("flex flex-col min-w-0 max-w-full relative", isMe ? "items-end" : "items-start")}>
@@ -188,7 +135,8 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, isAdmi
           <div className="relative group/bubble">
             <div className={cn(
               "p-2.5 rounded-2xl shadow-md border transition-all relative", 
-              isMe ? "message-bubble-me border-none" : "bg-card border-white/5 text-white"
+              isMe ? "message-bubble-me border-none" : "bg-card border-white/5 text-white",
+              highlight && "border-primary/50 shadow-primary/20 ring-1 ring-primary/30"
             )}>
               {renderContent()}
               <div className="flex items-center justify-end gap-1 mt-1.5 opacity-60">
@@ -199,10 +147,7 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, isAdmi
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <div className={cn(
-                  "absolute top-0 opacity-0 group-hover/bubble:opacity-100 transition-opacity hidden md:flex",
-                  isMe ? "-left-10" : "-right-10"
-                )}>
+                <div className={cn("absolute top-0 opacity-0 group-hover/bubble:opacity-100 transition-opacity hidden md:flex", isMe ? "-left-10" : "-right-10")}>
                    <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full bg-card/50 backdrop-blur-xl border border-white/10">
                       <MoreVertical className="w-4 h-4" />
                    </Button>
@@ -210,6 +155,7 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, isAdmi
               </DropdownMenuTrigger>
               <DropdownMenuContent align={isMe ? 'end' : 'start'} className="w-52 bg-card/95 backdrop-blur-2xl border-white/10 rounded-2xl shadow-2xl">
                 <DropdownMenuItem onClick={() => onReply(message)} className="gap-3 py-3 font-bold text-[11px] uppercase tracking-wider"><CornerUpLeft className="w-4 h-4 text-primary" /> Ответить</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => onForward(message)} className="gap-3 py-3 font-bold text-[11px] uppercase tracking-wider"><Share2 className="w-4 h-4 text-primary" /> Переслать</DropdownMenuItem>
                 {isAdmin && <DropdownMenuItem onClick={() => onPin(message)} className="gap-3 py-3 font-bold text-[11px] uppercase tracking-wider"><Pin className="w-4 h-4 text-primary" /> Закрепить</DropdownMenuItem>}
                 {isMe && message.contentType === 'text' && <DropdownMenuItem onClick={() => onEdit(message)} className="gap-3 py-3 font-bold text-[11px] uppercase tracking-wider"><Edit2 className="w-4 h-4 text-primary" /> Изменить</DropdownMenuItem>}
                 <DropdownMenuItem onClick={() => { navigator.clipboard.writeText(message.content); toast({ title: "Скопировано" }); }} className="gap-3 py-3 font-bold text-[11px] uppercase tracking-wider"><Copy className="w-4 h-4 text-primary" /> Копировать</DropdownMenuItem>
@@ -221,13 +167,7 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, isAdmi
         </div>
       </div>
 
-      <MediaGalleryModal 
-        isOpen={isGalleryOpen} 
-        onOpenChange={setIsGalleryOpen} 
-        media={message.contentType === 'album' ? JSON.parse(message.content) : [message.content]} 
-        type={message.contentType === 'video' || message.content.startsWith('data:video') ? 'video' : 'image'} 
-        initialIndex={initialIndex}
-      />
+      <MediaGalleryModal isOpen={isGalleryOpen} onOpenChange={setIsGalleryOpen} media={message.contentType === 'album' ? JSON.parse(message.content) : [message.content]} type={message.contentType === 'video' || message.content.startsWith('data:video') ? 'video' : 'image'} initialIndex={initialIndex} />
     </div>
   );
 });
@@ -239,35 +179,17 @@ function MediaGalleryModal({ isOpen, onOpenChange, media, type, initialIndex }: 
 
   useEffect(() => {
     if (!api || !isOpen) return;
-    
-    const onSelect = () => {
-      setCurrent(api.selectedScrollSnap() + 1);
-    };
-
+    const onSelect = () => { setCurrent(api.selectedScrollSnap() + 1); };
     api.on("select", onSelect);
-    
-    // Jump to initial index when opening
-    const timer = setTimeout(() => {
-      api.scrollTo(initialIndex, true);
-      setCurrent(initialIndex + 1);
-    }, 50);
-
-    return () => {
-      api.off("select", onSelect);
-      clearTimeout(timer);
-    };
+    const timer = setTimeout(() => { api.scrollTo(initialIndex, true); setCurrent(initialIndex + 1); }, 50);
+    return () => { api.off("select", onSelect); clearTimeout(timer); };
   }, [api, isOpen, initialIndex]);
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-[100vw] w-full h-[100dvh] p-0 bg-black/98 border-none overflow-hidden z-[1000] rounded-none outline-none">
         <DialogTitle className="sr-only">Галерея Nuxus</DialogTitle>
-        
-        <Carousel 
-          setApi={setApi} 
-          className="w-full h-full"
-          opts={{ watchDrag: true, loop: false, align: 'start' }}
-        >
+        <Carousel setApi={setApi} className="w-full h-full" opts={{ watchDrag: true, loop: false, align: 'start' }}>
           <CarouselContent className="h-full">
             {media.map((url, idx) => (
               <CarouselItem key={idx} className="h-[100dvh] w-full flex items-center justify-center p-0">
@@ -276,18 +198,13 @@ function MediaGalleryModal({ isOpen, onOpenChange, media, type, initialIndex }: 
                     <video src={url} controls autoPlay className="max-w-full max-h-full rounded-xl shadow-2xl" />
                   ) : (
                     <div className="relative w-full h-full flex items-center justify-center">
-                      <img 
-                        src={url} 
-                        alt={`Media ${idx}`} 
-                        className="max-w-full max-h-full object-contain pointer-events-none select-none"
-                      />
+                      <img src={url} alt={`Media ${idx}`} className="max-w-full max-h-full object-contain pointer-events-none select-none" />
                     </div>
                   )}
                 </div>
               </CarouselItem>
             ))}
           </CarouselContent>
-          
           {media.length > 1 && (
             <>
               <div className="hidden md:block">
@@ -300,15 +217,7 @@ function MediaGalleryModal({ isOpen, onOpenChange, media, type, initialIndex }: 
             </>
           )}
         </Carousel>
-
-        <Button 
-          variant="ghost" 
-          size="icon" 
-          className="absolute top-6 right-6 h-12 w-12 rounded-full bg-white/10 hover:bg-white/20 text-white z-[1200] backdrop-blur-xl border border-white/5"
-          onClick={() => onOpenChange(false)}
-        >
-          <X className="w-6 h-6" />
-        </Button>
+        <Button variant="ghost" size="icon" className="absolute top-6 right-6 h-12 w-12 rounded-full bg-white/10 hover:bg-white/20 text-white z-[1200] backdrop-blur-xl border border-white/5" onClick={() => onOpenChange(false)}><X className="w-6 h-6" /></Button>
       </DialogContent>
     </Dialog>
   );

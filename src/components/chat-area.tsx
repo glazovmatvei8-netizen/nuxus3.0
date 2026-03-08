@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
-  Send, Info, ChevronLeft, Loader2, X, Sparkles, Paperclip, Mic, StopCircle, ChevronDown, Edit2, Zap
+  Send, Info, ChevronLeft, X, Paperclip, Mic, StopCircle, ChevronDown, Edit2, Pin, Search, PinOff
 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { MessageItem } from './message-item';
@@ -15,12 +15,10 @@ import { useToast } from '@/hooks/use-toast';
 import { ChatInfoModal } from './modals/chat-info-modal';
 import { ImagePreviewModal } from './modals/image-preview-modal';
 import { useFirestore, useUser, useCollection, useDoc, useMemoFirebase } from '@/firebase';
-import { collection, query, orderBy, doc, addDoc, limit } from 'firebase/firestore';
+import { collection, query, orderBy, doc, addDoc, limit, updateDoc } from 'firebase/firestore';
 import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
-import { formatDisplayName, cn, compressImage } from '@/lib/utils';
+import { formatDisplayName, cn } from '@/lib/utils';
 import type { Message, User as UserType, Chat } from '@/lib/types';
-import { suggestMessageDraft } from '@/ai/flows/ai-message-drafting-flow';
-import { chatConversationSummary } from '@/ai/flows/chat-conversation-summary-flow';
 
 const MessageList = memo(({ 
   messages, 
@@ -31,12 +29,19 @@ const MessageList = memo(({
   amIPremium, 
   isAdmin, 
   isGroup,
-  onEdit
+  onEdit,
+  onForward,
+  searchQuery
 }: any) => {
   if (!messages) return null;
+  
+  const filteredMessages = searchQuery 
+    ? messages.filter((m: Message) => m.content?.toLowerCase().includes(searchQuery.toLowerCase()))
+    : messages;
+
   return (
     <div className="flex flex-col gap-3 max-w-4xl mx-auto px-4 md:px-6 py-8 min-h-full">
-      {messages.map((msg: Message) => (
+      {filteredMessages.map((msg: Message) => (
         <MessageItem 
           key={msg.id} 
           message={msg} 
@@ -48,6 +53,8 @@ const MessageList = memo(({
           isAdmin={isAdmin}
           isGroup={isGroup}
           onEdit={onEdit}
+          onForward={onForward}
+          highlight={searchQuery && msg.content?.toLowerCase().includes(searchQuery.toLowerCase())}
         />
       ))}
     </div>
@@ -58,15 +65,15 @@ MessageList.displayName = 'MessageList';
 export default function ChatArea() {
   const { user: firebaseUser } = useUser();
   const db = useFirestore();
-  const { currentChatId, setCurrentChatId } = useAppState();
+  const { currentChatId, setCurrentChatId, setForwardingMessage, localDrafts, setLocalDrafts } = useAppState();
   
   const [isChatInfoOpen, setIsChatInfoOpen] = useState(false);
   const [replyTo, setReplyTo] = useState<Message | null>(null);
   const [editingMsg, setEditingMsg] = useState<Message | null>(null);
   const [messageInput, setMessageInput] = useState('');
-  const [isAiLoading, setIsAiLoading] = useState(false);
-  const [isSummarizing, setIsSummarizing] = useState(false);
   const [showScrollBottom, setShowScrollBottom] = useState(false);
+  const [isSearchMode, setIsSearchMode] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
   const [selectedFiles, setSelectedFiles] = useState<{ url: string; type: 'image' | 'video' }[]>([]);
   const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
@@ -90,6 +97,9 @@ export default function ChatArea() {
   const chatRef = useMemoFirebase(() => (!db || !currentChatId) ? null : doc(db, 'chats', currentChatId), [db, currentChatId]);
   const { data: chat } = useDoc<Chat>(chatRef);
 
+  const pinnedMsgRef = useMemoFirebase(() => (!db || !currentChatId || !chat?.pinnedMessageId) ? null : doc(db, 'chats', currentChatId, 'messages', chat.pinnedMessageId), [db, currentChatId, chat?.pinnedMessageId]);
+  const { data: pinnedMessage } = useDoc<Message>(pinnedMsgRef);
+
   const otherId = useMemo(() => {
     if (chat?.type === 'private' && firebaseUser) {
       return chat.participantIds.find(id => id !== firebaseUser.uid);
@@ -110,6 +120,20 @@ export default function ChatArea() {
   }, [db, currentChatId]);
   
   const { data: messages } = useCollection<Message>(messagesQuery);
+
+  // Draft handling
+  useEffect(() => {
+    if (currentChatId) {
+      setMessageInput(localDrafts[currentChatId] || '');
+    }
+  }, [currentChatId]);
+
+  const handleInputChange = (val: string) => {
+    setMessageInput(val);
+    if (currentChatId) {
+      setLocalDrafts(prev => ({ ...prev, [currentChatId]: val }));
+    }
+  };
 
   const scrollToBottom = useCallback((behavior: ScrollBehavior = 'auto') => {
     if (scrollRef.current) {
@@ -154,7 +178,10 @@ export default function ChatArea() {
     const captureReply = replyTo;
     const captureEdit = editingMsg;
 
-    if (type_msg === 'text') setMessageInput('');
+    if (type_msg === 'text') {
+      setMessageInput('');
+      setLocalDrafts(prev => ({ ...prev, [currentChatId]: '' }));
+    }
     setReplyTo(null); 
     setEditingMsg(null);
 
@@ -187,51 +214,6 @@ export default function ChatArea() {
     updateDocumentNonBlocking(doc(db, 'chats', currentChatId), { lastMessageAt: new Date().toISOString() });
   }, [messageInput, currentChatId, firebaseUser, db, userProfile, replyTo, editingMsg]);
 
-  const handleAiSummary = async () => {
-    if (!messages || messages.length < 5 || isSummarizing) {
-      toast({ title: "Слишком мало данных", description: "Нужно хотя бы 5 сообщений для анализа." });
-      return;
-    }
-    setIsSummarizing(true);
-    try {
-      const chatLogs = messages.slice(-20).map(m => ({
-        senderName: m.senderName,
-        text: m.contentType === 'text' ? m.content : `[${m.contentType}]`
-      }));
-      const { summary } = await chatConversationSummary({ chatMessages: chatLogs });
-      toast({ 
-        title: "ИИ-Пересказ", 
-        description: summary, 
-        duration: 10000,
-        icon: <Zap className="w-4 h-4 text-primary" />
-      });
-    } catch (e) {
-      toast({ title: "Ошибка ИИ", variant: "destructive" });
-    } finally {
-      setIsSummarizing(false);
-    }
-  };
-
-  const handleAiDraft = async () => {
-    if (!currentChatId || isAiLoading) return;
-    setIsAiLoading(true);
-    try {
-      const history = (messages || []).slice(-5).map(m => ({
-        sender: m.senderName,
-        message: m.contentType === 'text' ? m.content : `[${m.contentType}]`
-      }));
-      const { draftMessage } = await suggestMessageDraft({ conversationHistory: history, currentUserInput: messageInput });
-      if (draftMessage) {
-        setMessageInput(draftMessage);
-        toast({ title: "ИИ предложил вариант", icon: <Sparkles className="w-4 h-4 text-primary" /> });
-      }
-    } catch (e) {
-      toast({ title: "ИИ временно недоступен", variant: "destructive" });
-    } finally {
-      setIsAiLoading(false);
-    }
-  };
-
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -260,6 +242,18 @@ export default function ChatArea() {
     }
   };
 
+  const handlePin = async (msg: Message) => {
+    if (!db || !currentChatId) return;
+    await updateDoc(doc(db, 'chats', currentChatId), { pinnedMessageId: msg.id });
+    toast({ title: "Закреплено" });
+  };
+
+  const handleUnpin = async () => {
+    if (!db || !currentChatId) return;
+    await updateDoc(doc(db, 'chats', currentChatId), { pinnedMessageId: null });
+    toast({ title: "Откреплено" });
+  };
+
   const chatDisplayName = useMemo(() => {
     const rawName = otherProfile?.name || chat?.name;
     if (rawName && rawName !== 'User') return rawName;
@@ -269,17 +263,7 @@ export default function ChatArea() {
   return (
     <div className="flex-1 flex flex-col h-full bg-background relative overflow-hidden z-20">
       {userProfile?.settings?.chatBackground && (
-        <div 
-          className="fixed inset-0 z-0 pointer-events-none" 
-          style={{ 
-            backgroundImage: `url(${userProfile.settings.chatBackground})`, 
-            backgroundSize: userProfile.settings.chatBackgroundFit === 'contain' ? 'contain' : 'cover', 
-            backgroundPosition: 'center', 
-            backgroundRepeat: 'no-repeat', 
-            backgroundColor: '#0a0a0c',
-            transform: 'translateZ(0)'
-          }} 
-        />
+        <div className="fixed inset-0 z-0 pointer-events-none" style={{ backgroundImage: `url(${userProfile.settings.chatBackground})`, backgroundSize: userProfile.settings.chatBackgroundFit === 'contain' ? 'contain' : 'cover', backgroundPosition: 'center', backgroundRepeat: 'no-repeat', backgroundColor: '#0a0a0c', transform: 'translateZ(0)' }} />
       )}
 
       <header className="h-16 flex items-center justify-between px-4 border-b border-white/5 bg-card/80 backdrop-blur-xl shrink-0 z-30">
@@ -294,12 +278,39 @@ export default function ChatArea() {
           </div>
         </div>
         <div className="flex items-center gap-1">
-          <Button variant="ghost" size="icon" onClick={handleAiSummary} disabled={isSummarizing} title="Пересказать чат">
-            {isSummarizing ? <Loader2 className="w-5 h-5 animate-spin text-primary" /> : <Sparkles className="w-5 h-5 text-primary" />}
-          </Button>
+          <Button variant="ghost" size="icon" onClick={() => setIsSearchMode(!isSearchMode)} className={cn(isSearchMode && "text-primary")}><Search className="w-5 h-5" /></Button>
           <Button variant="ghost" size="icon" onClick={() => setIsChatInfoOpen(true)}><Info className="w-5 h-5" /></Button>
         </div>
       </header>
+
+      {isSearchMode && (
+        <div className="p-2 bg-card/90 backdrop-blur-xl border-b border-white/5 flex gap-2 animate-in slide-in-from-top duration-200 z-30">
+          <Input 
+            placeholder="Поиск по переписке..." 
+            value={searchQuery} 
+            onChange={e => setSearchQuery(e.target.value)} 
+            className="bg-white/5 border-none h-10 text-sm"
+            autoFocus
+          />
+          <Button variant="ghost" size="icon" onClick={() => { setIsSearchMode(false); setSearchQuery(''); }}><X className="w-4 h-4" /></Button>
+        </div>
+      )}
+
+      {pinnedMessage && (
+        <div className="px-4 py-2 bg-primary/5 backdrop-blur-xl border-b border-primary/10 flex items-center justify-between group/pin z-20 cursor-pointer hover:bg-primary/10 transition-all" onClick={() => {
+          const el = document.getElementById(`msg-${pinnedMessage.id}`);
+          el?.scrollIntoView({ behavior: 'smooth' });
+        }}>
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-1 h-8 bg-primary rounded-full" />
+            <div className="flex flex-col min-w-0">
+              <span className="text-[10px] font-black uppercase text-primary tracking-widest flex items-center gap-1"><Pin className="w-3 h-3 fill-current" /> Закреп</span>
+              <span className="text-xs truncate text-white/80 italic">{pinnedMessage.content}</span>
+            </div>
+          </div>
+          {isAdmin && <Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover/pin:opacity-100 transition-opacity" onClick={(e) => { e.stopPropagation(); handleUnpin(); }}><PinOff className="w-4 h-4" /></Button>}
+        </div>
+      )}
 
       <div className="flex-1 relative overflow-hidden">
         <ScrollArea ref={scrollRef} className="h-full w-full relative z-10 scrollbar-hide bg-transparent">
@@ -310,9 +321,12 @@ export default function ChatArea() {
               chatId={currentChatId} 
               onReply={setReplyTo} 
               onEdit={setEditingMsg} 
+              onPin={handlePin}
+              onForward={(m: any) => { setForwardingMessage(m); }}
               amIPremium={userProfile?.isPremium} 
               isAdmin={isAdmin} 
               isGroup={chat?.type === 'group'} 
+              searchQuery={searchQuery}
             />
           )}
         </ScrollArea>
@@ -356,10 +370,7 @@ export default function ChatArea() {
               }
             }} />
             <div className="flex-1 relative">
-              <Input ref={inputRef} placeholder="Напишите сообщение..." className="bg-muted border-none rounded-xl h-11 text-sm px-4 focus-visible:ring-1 focus-visible:ring-primary/20" value={messageInput} onChange={e => setMessageInput(e.target.value)} onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { handleSendMessage(); } }} disabled={isRecording} />
-              <button onClick={handleAiDraft} className="absolute right-3 top-1/2 -translate-y-1/2 opacity-40 hover:opacity-100 transition-opacity">
-                {isAiLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4 text-primary" />}
-              </button>
+              <Input ref={inputRef} placeholder="Напишите сообщение..." className="bg-muted border-none rounded-xl h-11 text-sm px-4 focus-visible:ring-1 focus-visible:ring-primary/20" value={messageInput} onChange={e => handleInputChange(e.target.value)} onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { handleSendMessage(); } }} disabled={isRecording} />
             </div>
             {!messageInput.trim() && !isRecording ? (
               <Button size="icon" className="h-11 w-11 rounded-xl shrink-0 bg-primary" onClick={startRecording}><Mic className="w-5 h-5" /></Button>
@@ -370,14 +381,7 @@ export default function ChatArea() {
         </div>
       </footer>
       {chat && <ChatInfoModal open={isChatInfoOpen} onOpenChange={setIsChatInfoOpen} chat={chat as any} />}
-      <ImagePreviewModal 
-        open={isPreviewModalOpen} 
-        onOpenChange={setIsPreviewModalOpen} 
-        files={selectedFiles} 
-        onRemove={(i) => setSelectedFiles(prev => prev.filter((_, idx) => idx !== i))}
-        onSend={() => { setIsSendingFiles(true); setTimeout(() => { setIsPreviewModalOpen(false); setIsSendingFiles(false); toast({ title: "Файлы отправлены" }); }, 1000); }}
-        isSending={isSendingFiles}
-      />
+      <ImagePreviewModal open={isPreviewModalOpen} onOpenChange={setIsPreviewModalOpen} files={selectedFiles} onRemove={(i) => setSelectedFiles(prev => prev.filter((_, idx) => idx !== i))} onSend={() => { setIsSendingFiles(true); setTimeout(() => { setIsPreviewModalOpen(false); setIsSendingFiles(false); toast({ title: "Файлы отправлены" }); }, 1000); }} isSending={isSendingFiles} />
     </div>
   );
 }

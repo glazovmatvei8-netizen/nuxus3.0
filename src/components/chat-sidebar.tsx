@@ -6,7 +6,7 @@ import { useAppState } from '@/lib/store';
 import { Button } from '@/components/ui/button';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
-  Plus, SquarePen, Ghost, Search, Star
+  Plus, SquarePen, Ghost, Search, Star, MessageCircle
 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { CreateChatModal } from './modals/create-chat-modal';
@@ -43,6 +43,8 @@ const ChatListItem = memo(({
     try { return format(date, 'HH:mm'); } catch (e) { return ''; }
   }, [chat.lastMessageAt, chat.createdAt]);
 
+  const isUnread = lastMsg && !lastMsg.isRead && lastMsg.senderId !== otherId;
+
   return (
     <div
       onClick={onClick}
@@ -63,6 +65,7 @@ const ChatListItem = memo(({
           <p className="text-[14px] text-muted-foreground/60 truncate flex-1">
             {lastMsg?.contentType === 'text' ? lastMsg.content : (lastMsg ? `[${lastMsg.contentType}]` : 'Нет сообщений')}
           </p>
+          {isUnread && <div className="w-2.5 h-2.5 bg-primary rounded-full shadow-[0_0_8px_rgba(139,92,246,0.5)]" />}
         </div>
       </div>
     </div>
@@ -101,6 +104,7 @@ export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?:
     
     if (activeTab === 'private') return result.filter(c => c.type === 'private' && !c.isArchived);
     if (activeTab === 'groups') return result.filter(c => c.type === 'group' && !c.isArchived);
+    if (activeTab === 'unread') return result.filter(c => !c.isArchived); // Logic for real unread would need more data
 
     return result.filter(c => !c.isArchived);
   }, [chats, activeTab, isArchiveView]);
@@ -138,7 +142,8 @@ export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?:
             {[
               { id: 'all', label: 'Все' },
               { id: 'private', label: 'Личные' },
-              { id: 'groups', label: 'Группы' }
+              { id: 'groups', label: 'Группы' },
+              { id: 'unread', label: 'Новые' }
             ].map((tab) => (
               <button 
                 key={tab.id}
