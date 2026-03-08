@@ -24,13 +24,15 @@ export default function ChatMain() {
   const { 
     currentChatId, activeCallId, setActiveCallId, 
     activeView, setActiveView, isSettingsOpen, setIsSettingsOpen,
-    isSearchOpen, setIsSearchOpen
+    isSearchOpen, setIsSearchOpen, setCurrentChatId
   } = useAppState();
   const { user } = useUser();
   const db = useFirestore();
 
   const userProfileRef = useMemoFirebase(() => (!db || !user) ? null : doc(db, 'users', user.uid), [db, user]);
   const { data: profile } = useDoc<UserType>(userProfileRef);
+
+  const navVis = profile?.settings?.navVisibility;
 
   // Listen for incoming calls
   const incomingCallsQuery = useMemoFirebase(() => {
@@ -67,9 +69,9 @@ export default function ChatMain() {
           
           <div className="flex flex-col gap-6 flex-1">
             <RailButton icon={MessageCircle} active={activeView === 'chats'} onClick={() => { setActiveView('chats'); setCurrentChatId(null); }} label="Чаты🐱" />
-            <RailButton icon={Users} active={activeView === 'contacts'} onClick={() => { setActiveView('contacts'); setCurrentChatId(null); }} label="Контакты" />
-            <RailButton icon={Phone} active={activeView === 'calls'} onClick={() => { setActiveView('calls'); setCurrentChatId(null); }} label="Звонки" />
-            <RailButton icon={Archive} active={activeView === 'archive'} onClick={() => { setActiveView('archive'); setCurrentChatId(null); }} label="Архив" />
+            {navVis?.contacts !== false && <RailButton icon={Users} active={activeView === 'contacts'} onClick={() => { setActiveView('contacts'); setCurrentChatId(null); }} label="Контакты" />}
+            {navVis?.calls !== false && <RailButton icon={Phone} active={activeView === 'calls'} onClick={() => { setActiveView('calls'); setCurrentChatId(null); }} label="Звонки" />}
+            {navVis?.archive !== false && <RailButton icon={Archive} active={activeView === 'archive'} onClick={() => { setActiveView('archive'); setCurrentChatId(null); }} label="Архив" />}
           </div>
 
           <div className="mt-auto flex flex-col gap-6 items-center">
@@ -117,30 +119,15 @@ export default function ChatMain() {
       {!currentChatId && (
         <div className="md:hidden fixed bottom-10 left-1/2 -translate-x-1/2 w-[94%] max-w-[500px] h-[76px] bg-[#1c1c1e]/80 backdrop-blur-[50px] border border-white/10 rounded-[2.8rem] flex items-center justify-between px-6 z-50 shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
           <div className="flex flex-1 justify-around items-center">
-            <NavButton 
-              icon={Users} 
-              label="Контакты" 
-              active={activeView === 'contacts'} 
-              onClick={() => setActiveView('contacts')} 
-            />
-            <NavButton 
-              icon={Phone} 
-              label="Звонки" 
-              active={activeView === 'calls'} 
-              onClick={() => setActiveView('calls')} 
-            />
+            {navVis?.contacts !== false && <NavButton icon={Users} label="Контакты" active={activeView === 'contacts'} onClick={() => setActiveView('contacts')} />}
+            {navVis?.calls !== false && <NavButton icon={Phone} label="Звонки" active={activeView === 'calls'} onClick={() => setActiveView('calls')} />}
             <NavButton 
               icon={MessageCircle} 
               label="Чаты🐱" 
               active={activeView === 'chats'} 
               onClick={() => setActiveView('chats')} 
             />
-            <NavButton 
-              icon={Archive} 
-              label="Архив" 
-              active={activeView === 'archive'} 
-              onClick={() => setActiveView('archive')} 
-            />
+            {navVis?.archive !== false && <NavButton icon={Archive} label="Архив" active={activeView === 'archive'} onClick={() => setActiveView('archive')} />}
             <NavButton 
               icon={Settings} 
               label="Профиль" 

@@ -135,6 +135,11 @@ export interface UserSettings {
   messageSize: 'small' | 'medium' | 'large';
   privacy: UserPrivacy;
   notifications?: UserNotifications;
+  navVisibility?: {
+    contacts: boolean;
+    calls: boolean;
+    archive: boolean;
+  };
   statusEmoji?: string;
   statusText?: string;
   language?: string;

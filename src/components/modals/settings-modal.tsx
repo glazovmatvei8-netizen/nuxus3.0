@@ -14,7 +14,7 @@ import { useAuth, useUser, useFirestore, useDoc, useMemoFirebase } from '@/fireb
 import { UserAvatar } from '@/components/user-avatar';
 import { 
   LogOut, Palette, Check, Settings2, Camera, Lock, ShieldCheck, Image as ImageIcon, 
-  Paintbrush, ChevronRight, Move, Maximize, Shield, BellRing, UserCircle
+  Paintbrush, ChevronRight, Move, Maximize, Shield, BellRing, UserCircle, Layout
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { signOut } from 'firebase/auth';
@@ -64,6 +64,11 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
       groups: true,
       channels: true,
       previews: true
+    },
+    navVisibility: {
+      contacts: true,
+      calls: true,
+      archive: true
     }
   });
 
@@ -71,7 +76,6 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
   const [isBgPlacementOpen, setIsBgPlacementOpen] = useState(false);
   const isInitialized = useRef(false);
 
-  // Initialize form only ONCE when opening modal to prevent heartbeat reset
   useEffect(() => {
     if (profile && open && !isInitialized.current) {
       setForm({
@@ -94,6 +98,11 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
           groups: profile.settings?.notifications?.groups !== false,
           channels: profile.settings?.notifications?.channels !== false,
           previews: profile.settings?.notifications?.previews !== false
+        },
+        navVisibility: {
+          contacts: profile.settings?.navVisibility?.contacts !== false,
+          calls: profile.settings?.navVisibility?.calls !== false,
+          archive: profile.settings?.navVisibility?.archive !== false
         }
       });
       isInitialized.current = true;
@@ -109,8 +118,6 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
     
     try {
       const userDocRef = doc(db, 'users', user.uid);
-      
-      // Perform granular update to avoid overwriting unrelated fields
       await updateDoc(userDocRef, {
         name: form.name,
         username: '@' + form.username.toLowerCase(),
@@ -122,7 +129,8 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         'settings.chatBackground': form.chatBackground,
         'settings.chatBackgroundFit': form.chatBackgroundFit,
         'settings.privacy': form.privacy,
-        'settings.notifications': form.notifications
+        'settings.notifications': form.notifications,
+        'settings.navVisibility': form.navVisibility
       });
 
       onOpenChange(false);
@@ -156,9 +164,9 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
           <TabsList className="flex bg-muted/50 p-1 mx-6 mt-4 rounded-2xl shrink-0 overflow-x-auto scrollbar-hide">
             <TabsTrigger value="profile" className="flex-1 text-[9px] uppercase font-bold tracking-widest whitespace-nowrap">Профиль</TabsTrigger>
             <TabsTrigger value="appearance" className="flex-1 text-[9px] uppercase font-bold tracking-widest whitespace-nowrap">Стиль</TabsTrigger>
-            <TabsTrigger value="privacy" className="flex-1 text-[9px] uppercase font-bold tracking-widest whitespace-nowrap">Приватность</TabsTrigger>
+            <TabsTrigger value="interface" className="flex-1 text-[9px] uppercase font-bold tracking-widest whitespace-nowrap">Вид</TabsTrigger>
+            <TabsTrigger value="privacy" className="flex-1 text-[9px] uppercase font-bold tracking-widest whitespace-nowrap">Приват</TabsTrigger>
             <TabsTrigger value="notifications" className="flex-1 text-[9px] uppercase font-bold tracking-widest whitespace-nowrap">Звук</TabsTrigger>
-            <TabsTrigger value="security" className="flex-1 text-[9px] uppercase font-bold tracking-widest whitespace-nowrap">Защита</TabsTrigger>
           </TabsList>
 
           <ScrollArea className="flex-1 px-6">
@@ -238,6 +246,40 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                   )}
                   <input type="file" ref={bgInputRef} className="hidden" accept="image/*" onChange={(e) => { const f = e.target.files?.[0]; if(f) { const r = new FileReader(); r.onloadend = () => { setBgPreview(r.result as string); setIsBgPlacementOpen(true); }; r.readAsDataURL(f); } }} />
                 </div>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="interface" className="space-y-6 m-0 py-6">
+              <div className="bg-muted/20 p-6 rounded-[2.5rem] border border-white/5 space-y-6">
+                <div className="flex items-center gap-2 mb-2">
+                  <Layout className="w-4 h-4 text-primary" />
+                  <Label className="text-[10px] uppercase font-black tracking-widest text-white">Разделы навигации</Label>
+                </div>
+                
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between p-3 bg-black/20 rounded-xl">
+                    <span className="text-[11px] font-bold text-white uppercase tracking-wider">Контакты</span>
+                    <Switch 
+                      checked={form.navVisibility.contacts} 
+                      onCheckedChange={v => setForm({...form, navVisibility: {...form.navVisibility, contacts: v}})} 
+                    />
+                  </div>
+                  <div className="flex items-center justify-between p-3 bg-black/20 rounded-xl">
+                    <span className="text-[11px] font-bold text-white uppercase tracking-wider">Звонки</span>
+                    <Switch 
+                      checked={form.navVisibility.calls} 
+                      onCheckedChange={v => setForm({...form, navVisibility: {...form.navVisibility, calls: v}})} 
+                    />
+                  </div>
+                  <div className="flex items-center justify-between p-3 bg-black/20 rounded-xl">
+                    <span className="text-[11px] font-bold text-white uppercase tracking-wider">Архив</span>
+                    <Switch 
+                      checked={form.navVisibility.archive} 
+                      onCheckedChange={v => setForm({...form, navVisibility: {...form.navVisibility, archive: v}})} 
+                    />
+                  </div>
+                </div>
+                <p className="text-[8px] text-muted-foreground/60 uppercase font-black text-center italic">Выключайте разделы, которые не используете для чистоты интерфейса</p>
               </div>
             </TabsContent>
 
@@ -325,21 +367,6 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                   </div>
                   <Switch checked={form.notifications.previews} onCheckedChange={v => setForm({...form, notifications: {...form.notifications, previews: v}})} />
                 </div>
-              </div>
-            </TabsContent>
-
-            <TabsContent value="security" className="space-y-6 m-0 py-6">
-              <div className="bg-muted/20 p-6 rounded-[2.5rem] border border-white/5 space-y-6">
-                <div className="flex items-center justify-between">
-                  <Label className="text-[10px] uppercase font-black tracking-widest text-primary flex items-center gap-2"><ShieldCheck className="w-3.5 h-3.5" /> Облачный пароль 2FA</Label>
-                  <Switch checked={form.twoFactorEnabled} onCheckedChange={v => setForm({...form, twoFactorEnabled: v})} />
-                </div>
-                {form.twoFactorEnabled && (
-                  <div className="space-y-2">
-                    <Label className="text-[9px] uppercase font-bold text-muted-foreground ml-1">Секретный PIN (6 цифр)</Label>
-                    <Input type="password" maxLength={6} placeholder="Введите PIN" value={form.twoFactorPin} onChange={e => setForm({...form, twoFactorPin: e.target.value.replace(/\D/g, '')})} className="bg-black/20 border-white/5 h-12 rounded-xl text-center text-lg tracking-widest font-black" />
-                  </div>
-                )}
               </div>
             </TabsContent>
           </ScrollArea>
