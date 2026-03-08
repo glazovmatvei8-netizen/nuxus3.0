@@ -15,7 +15,7 @@ import { useToast } from '@/hooks/use-toast';
 import { ChatInfoModal } from './modals/chat-info-modal';
 import { ImagePreviewModal } from './modals/image-preview-modal';
 import { useFirestore, useUser, useCollection, useDoc, useMemoFirebase } from '@/firebase';
-import { collection, query, orderBy, doc, addDoc, limit, updateDoc } from 'firebase/firestore';
+import { collection, query, orderBy, doc, addDoc, limit, updateDoc, writeBatch, getDocs, where } from 'firebase/firestore';
 import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { formatDisplayName, cn } from '@/lib/utils';
 import type { Message, User as UserType, Chat } from '@/lib/types';
@@ -35,9 +35,14 @@ const MessageList = memo(({
 }: any) => {
   if (!messages) return null;
   
+  // Strict sorting to prevent UI glitches
+  const sortedMessages = [...messages].sort((a, b) => 
+    new Date(a.sentAt).getTime() - new Date(b.sentAt).getTime()
+  );
+
   const filteredMessages = searchQuery 
-    ? messages.filter((m: Message) => m.content?.toLowerCase().includes(searchQuery.toLowerCase()))
-    : messages;
+    ? sortedMessages.filter((m: Message) => m.content?.toLowerCase().includes(searchQuery.toLowerCase()))
+    : sortedMessages;
 
   return (
     <div className="flex flex-col gap-3 max-w-4xl mx-auto px-4 md:px-6 py-8 min-h-full">
@@ -120,6 +125,30 @@ export default function ChatArea() {
   }, [db, currentChatId]);
   
   const { data: messages } = useCollection<Message>(messagesQuery);
+
+  // Read receipts logic: Mark incoming messages as read
+  useEffect(() => {
+    if (!db || !currentChatId || !firebaseUser || !messages) return;
+
+    const markAsRead = async () => {
+      const unreadMessages = messages.filter(m => !m.isRead && m.senderId !== firebaseUser.uid);
+      if (unreadMessages.length === 0) return;
+
+      const batch = writeBatch(db);
+      unreadMessages.forEach(msg => {
+        const mRef = doc(db, 'chats', currentChatId, 'messages', msg.id);
+        batch.update(mRef, { isRead: true });
+      });
+      
+      try {
+        await batch.commit();
+      } catch (e) {
+        console.warn("Nuxus Sync: Read receipt failed silently.");
+      }
+    };
+
+    markAsRead();
+  }, [messages, currentChatId, firebaseUser, db]);
 
   // Draft handling
   useEffect(() => {
