@@ -65,27 +65,7 @@ export interface Call {
   endedAt?: string;
 }
 
-export interface ReceivedGift {
-  id: string;
-  giftType: string;
-  senderName: string;
-  senderId: string;
-  receivedAt: string;
-  message?: string;
-  value?: number;
-  isNFT?: boolean;
-  serialNumber?: number;
-  isSold?: boolean;
-}
-
 export type ChatType = 'private' | 'group' | 'channel' | 'saved';
-
-export interface ChatFolder {
-  id: string;
-  name: string;
-  chatIds: string[];
-  icon?: string;
-}
 
 export interface Chat {
   id: string;
@@ -143,7 +123,6 @@ export interface UserSettings {
   statusEmoji?: string;
   statusText?: string;
   language?: string;
-  customFolders?: ChatFolder[];
 }
 
 export interface User {
@@ -158,18 +137,16 @@ export interface User {
   settings?: UserSettings;
   blockedUserIds?: string[];
   pinnedChatIds?: string[];
-  contactIds?: string[]; // Array of UIDs
+  contactIds?: string[]; 
   isBanned?: boolean;
   bannedUntil?: string | null;
   isPremium?: boolean;
   isAdmin?: boolean;
   premiumUntil?: string | null;
-  archivedChatIds?: string[]; 
-  referralCount?: number;
-  invitedBy?: string;
-  invitedUserIds?: string[];
   twoFactorEnabled?: boolean;
   twoFactorPin?: string;
   statusEmoji?: string;
   statusText?: string;
+  referralCount?: number;
+  invitedBy?: string;
 }

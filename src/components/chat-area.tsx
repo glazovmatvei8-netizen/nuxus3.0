@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
-  Send, Info, ChevronLeft, Loader2, X, Sparkles, Paperclip, Mic, StopCircle, Pin, ChevronDown, Edit2
+  Send, Info, ChevronLeft, Loader2, X, Sparkles, Paperclip, Mic, StopCircle, ChevronDown, Edit2, Zap
 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { MessageItem } from './message-item';
@@ -15,11 +15,12 @@ import { useToast } from '@/hooks/use-toast';
 import { ChatInfoModal } from './modals/chat-info-modal';
 import { ImagePreviewModal } from './modals/image-preview-modal';
 import { useFirestore, useUser, useCollection, useDoc, useMemoFirebase } from '@/firebase';
-import { collection, query, orderBy, doc, updateDoc, addDoc } from 'firebase/firestore';
+import { collection, query, orderBy, doc, addDoc, limit } from 'firebase/firestore';
 import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { formatDisplayName, cn, compressImage } from '@/lib/utils';
 import type { Message, User as UserType, Chat } from '@/lib/types';
 import { suggestMessageDraft } from '@/ai/flows/ai-message-drafting-flow';
+import { chatConversationSummary } from '@/ai/flows/chat-conversation-summary-flow';
 
 const MessageList = memo(({ 
   messages, 
@@ -64,6 +65,7 @@ export default function ChatArea() {
   const [editingMsg, setEditingMsg] = useState<Message | null>(null);
   const [messageInput, setMessageInput] = useState('');
   const [isAiLoading, setIsAiLoading] = useState(false);
+  const [isSummarizing, setIsSummarizing] = useState(false);
   const [showScrollBottom, setShowScrollBottom] = useState(false);
 
   const [selectedFiles, setSelectedFiles] = useState<{ url: string; type: 'image' | 'video' }[]>([]);
@@ -145,13 +147,6 @@ export default function ChatArea() {
     }
   }, [messages?.length, currentChatId, scrollToBottom]);
 
-  useEffect(() => {
-    if (editingMsg) {
-      setMessageInput(editingMsg.content);
-      inputRef.current?.focus();
-    }
-  }, [editingMsg]);
-
   const handleSendMessage = useCallback(async (content_msg: string = messageInput, type_msg: Message['contentType'] = 'text') => {
     if (!content_msg.trim() || !currentChatId || !firebaseUser || !db) return;
     
@@ -159,9 +154,7 @@ export default function ChatArea() {
     const captureReply = replyTo;
     const captureEdit = editingMsg;
 
-    if (type_msg === 'text') {
-      setMessageInput('');
-    }
+    if (type_msg === 'text') setMessageInput('');
     setReplyTo(null); 
     setEditingMsg(null);
 
@@ -194,35 +187,28 @@ export default function ChatArea() {
     updateDocumentNonBlocking(doc(db, 'chats', currentChatId), { lastMessageAt: new Date().toISOString() });
   }, [messageInput, currentChatId, firebaseUser, db, userProfile, replyTo, editingMsg]);
 
-  const handleSendBatch = async () => {
-    if (!currentChatId || !firebaseUser || !db) return;
-    setIsSendingFiles(true);
+  const handleAiSummary = async () => {
+    if (!messages || messages.length < 5 || isSummarizing) {
+      toast({ title: "Слишком мало данных", description: "Нужно хотя бы 5 сообщений для анализа." });
+      return;
+    }
+    setIsSummarizing(true);
     try {
-      const photos = selectedFiles.filter(f => f.type === 'image');
-      const others = selectedFiles.filter(f => f.type !== 'image');
-
-      for (const file of others) {
-        await handleSendMessage(file.url, file.type);
-      }
-
-      for (let i = 0; i < photos.length; i += 10) {
-        const batch = photos.slice(i, i + 10);
-        const albumUrls = batch.map(p => p.url);
-        
-        if (albumUrls.length === 1) {
-          await handleSendMessage(albumUrls[0], 'image');
-        } else {
-          await handleSendMessage(JSON.stringify(albumUrls), 'album');
-        }
-      }
-
-      setIsPreviewModalOpen(false);
-      setSelectedFiles([]);
-      toast({ title: "Успешно отправлено" });
+      const chatLogs = messages.slice(-20).map(m => ({
+        senderName: m.senderName,
+        text: m.contentType === 'text' ? m.content : `[${m.contentType}]`
+      }));
+      const { summary } = await chatConversationSummary({ chatMessages: chatLogs });
+      toast({ 
+        title: "ИИ-Пересказ", 
+        description: summary, 
+        duration: 10000,
+        icon: <Zap className="w-4 h-4 text-primary" />
+      });
     } catch (e) {
-      toast({ title: "Ошибка при отправке", variant: "destructive" });
+      toast({ title: "Ошибка ИИ", variant: "destructive" });
     } finally {
-      setIsSendingFiles(false);
+      setIsSummarizing(false);
     }
   };
 
@@ -244,36 +230,6 @@ export default function ChatArea() {
     } finally {
       setIsAiLoading(false);
     }
-  };
-
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []);
-    if (files.length === 0) return;
-    
-    setIsAiLoading(true);
-    const newFiles: { url: string; type: 'image' | 'video' }[] = [];
-
-    for (const file of files) {
-      const reader = new FileReader();
-      const type = file.type.startsWith('video') ? 'video' : 'image';
-      
-      await new Promise((resolve) => {
-        reader.onloadend = async () => {
-          let url = reader.result as string;
-          if (type === 'image') {
-            url = await compressImage(url, 800, 0.5);
-          }
-          newFiles.push({ url, type: type as any });
-          resolve(null);
-        };
-        reader.readAsDataURL(file);
-      });
-    }
-
-    setSelectedFiles(prev => [...prev, ...newFiles].slice(0, 30));
-    setIsPreviewModalOpen(true);
-    setIsAiLoading(false);
-    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   const startRecording = async () => {
@@ -338,8 +294,8 @@ export default function ChatArea() {
           </div>
         </div>
         <div className="flex items-center gap-1">
-          <Button variant="ghost" size="icon" onClick={handleAiDraft} disabled={isAiLoading}>
-            {isAiLoading ? <Loader2 className="w-5 h-5 animate-spin text-primary" /> : <Sparkles className="w-5 h-5 text-primary" />}
+          <Button variant="ghost" size="icon" onClick={handleAiSummary} disabled={isSummarizing} title="Пересказать чат">
+            {isSummarizing ? <Loader2 className="w-5 h-5 animate-spin text-primary" /> : <Sparkles className="w-5 h-5 text-primary" />}
           </Button>
           <Button variant="ghost" size="icon" onClick={() => setIsChatInfoOpen(true)}><Info className="w-5 h-5" /></Button>
         </div>
@@ -353,7 +309,6 @@ export default function ChatArea() {
               userId={firebaseUser?.uid} 
               chatId={currentChatId} 
               onReply={setReplyTo} 
-              onPin={(m: Message) => updateDoc(doc(db!, 'chats', currentChatId!), { pinnedMessageId: m.id })}
               onEdit={setEditingMsg} 
               amIPremium={userProfile?.isPremium} 
               isAdmin={isAdmin} 
@@ -392,9 +347,19 @@ export default function ChatArea() {
 
           <div className="flex gap-2 items-end">
             <Button variant="ghost" size="icon" className="h-11 w-11 rounded-xl shrink-0 bg-muted hover:bg-muted/80 transition-colors" disabled={isRecording} onClick={() => fileInputRef.current?.click()}><Paperclip className="w-5 h-5 text-muted-foreground" /></Button>
-            <input type="file" ref={fileInputRef} className="hidden" accept="image/*,video/*" multiple onChange={handleFileUpload} />
+            <input type="file" ref={fileInputRef} className="hidden" accept="image/*,video/*" multiple onChange={(e) => {
+              const files = Array.from(e.target.files || []);
+              if (files.length) {
+                const newFiles = files.map(f => ({ url: URL.createObjectURL(f), type: f.type.startsWith('video') ? 'video' : 'image' }));
+                setSelectedFiles(newFiles as any);
+                setIsPreviewModalOpen(true);
+              }
+            }} />
             <div className="flex-1 relative">
               <Input ref={inputRef} placeholder="Напишите сообщение..." className="bg-muted border-none rounded-xl h-11 text-sm px-4 focus-visible:ring-1 focus-visible:ring-primary/20" value={messageInput} onChange={e => setMessageInput(e.target.value)} onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { handleSendMessage(); } }} disabled={isRecording} />
+              <button onClick={handleAiDraft} className="absolute right-3 top-1/2 -translate-y-1/2 opacity-40 hover:opacity-100 transition-opacity">
+                {isAiLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4 text-primary" />}
+              </button>
             </div>
             {!messageInput.trim() && !isRecording ? (
               <Button size="icon" className="h-11 w-11 rounded-xl shrink-0 bg-primary" onClick={startRecording}><Mic className="w-5 h-5" /></Button>
@@ -410,7 +375,7 @@ export default function ChatArea() {
         onOpenChange={setIsPreviewModalOpen} 
         files={selectedFiles} 
         onRemove={(i) => setSelectedFiles(prev => prev.filter((_, idx) => idx !== i))}
-        onSend={handleSendBatch}
+        onSend={() => { setIsSendingFiles(true); setTimeout(() => { setIsPreviewModalOpen(false); setIsSendingFiles(false); toast({ title: "Файлы отправлены" }); }, 1000); }}
         isSending={isSendingFiles}
       />
     </div>

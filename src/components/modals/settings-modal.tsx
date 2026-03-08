@@ -13,8 +13,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useAuth, useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
-  LogOut, Palette, Check, Settings2, Camera, Lock, ShieldCheck, Image as ImageIcon, 
-  Paintbrush, ChevronRight, Move, Maximize, Shield, BellRing, UserCircle, Layout, Smile
+  LogOut, Palette, Check, Settings2, Camera, Lock, Image as ImageIcon, 
+  Paintbrush, Move, Maximize, Shield, UserCircle, Layout, Smile
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { signOut } from 'firebase/auth';
@@ -114,14 +114,11 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
       isInitialized.current = true;
     }
     
-    if (!open) {
-      isInitialized.current = false;
-    }
+    if (!open) isInitialized.current = false;
   }, [profile, open]);
 
   const handleSave = async () => {
     if (!db || !user) return;
-    
     try {
       const userDocRef = doc(db, 'users', user.uid);
       await updateDoc(userDocRef, {
@@ -140,20 +137,10 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         'settings.notifications': form.notifications,
         'settings.navVisibility': form.navVisibility
       });
-
       onOpenChange(false);
       toast({ title: "Ядро обновлено", description: "Настройки синхронизированы" });
     } catch (e: any) {
       toast({ title: "Ошибка сохранения", description: e.message, variant: "destructive" });
-    }
-  };
-
-  const finalizeBackground = (fit: 'cover' | 'contain') => {
-    if (bgPreview) {
-      setForm(prev => ({ ...prev, chatBackground: bgPreview, chatBackgroundFit: fit }));
-      setBgPreview(null);
-      setIsBgPlacementOpen(false);
-      toast({ title: "Фон выбран", description: "Нажмите 'Сохранить' для применения" });
     }
   };
 
@@ -191,166 +178,70 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                 <div className="w-full bg-muted/20 p-4 rounded-2xl border border-white/5 space-y-4">
                   <div className="space-y-2">
                     <Label className="text-[10px] uppercase font-black tracking-widest text-primary flex items-center gap-2">
-                      <Smile className="w-3 h-3" /> Ваш статус
+                      <Smile className="w-3 h-3" /> Статус (Emoji & Текст)
                     </Label>
                     <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
-                      <button 
-                        onClick={() => setForm({...form, statusEmoji: ''})}
-                        className={cn("h-10 min-w-[40px] rounded-xl flex items-center justify-center bg-black/20 border border-white/5 transition-all", !form.statusEmoji && "border-primary bg-primary/10")}
-                      >
-                        <Smile className="w-4 h-4 opacity-40" />
-                      </button>
+                      <button onClick={() => setForm({...form, statusEmoji: ''})} className={cn("h-10 min-w-[40px] rounded-xl flex items-center justify-center bg-black/20 border border-white/5", !form.statusEmoji && "border-primary bg-primary/10")}><Smile className="w-4 h-4 opacity-40" /></button>
                       {EMOJI_STATUSES.map(emoji => (
-                        <button 
-                          key={emoji}
-                          onClick={() => setForm({...form, statusEmoji: emoji})}
-                          className={cn("h-10 min-w-[40px] rounded-xl flex items-center justify-center text-lg bg-black/20 border border-white/5 transition-all", form.statusEmoji === emoji && "border-primary bg-primary/10")}
-                        >
-                          {emoji}
-                        </button>
+                        <button key={emoji} onClick={() => setForm({...form, statusEmoji: emoji})} className={cn("h-10 min-w-[40px] rounded-xl flex items-center justify-center text-lg bg-black/20 border border-white/5", form.statusEmoji === emoji && "border-primary bg-primary/10")}>{emoji}</button>
                       ))}
                     </div>
-                    <Input 
-                      placeholder="Что у вас нового?" 
-                      value={form.statusText} 
-                      onChange={e => setForm({...form, statusText: e.target.value})}
-                      className="bg-black/20 border-white/5 h-10 rounded-xl text-xs"
-                    />
+                    <Input placeholder="Текстовое состояние..." value={form.statusText} onChange={e => setForm({...form, statusText: e.target.value})} className="bg-black/20 border-white/5 h-10 rounded-xl text-xs" />
                   </div>
                 </div>
                 
                 <div className="space-y-4 w-full">
-                  <div className="space-y-2">
-                    <Label className="text-[10px] uppercase font-black tracking-widest text-muted-foreground ml-1">Имя</Label>
-                    <Input value={form.name} onChange={e => setForm({...form, name: e.target.value})} className="bg-muted/30 border-white/5 h-12 rounded-2xl text-sm" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-[10px] uppercase font-black tracking-widest text-muted-foreground ml-1">Никнейм</Label>
-                    <div className="relative">
-                      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">@</span>
-                      <Input value={form.username} onChange={e => setForm({...form, username: e.target.value})} className="bg-muted/30 border-white/5 h-12 rounded-2xl text-sm font-mono pl-8" />
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-[10px] uppercase font-black tracking-widest text-muted-foreground ml-1">О себе</Label>
-                    <Textarea value={form.bio} onChange={e => setForm({...form, bio: e.target.value})} className="bg-muted/30 border-white/5 rounded-2xl min-h-[100px] text-sm" />
-                  </div>
+                  <div className="space-y-2"><Label className="text-[10px] uppercase font-black ml-1">Имя</Label><Input value={form.name} onChange={e => setForm({...form, name: e.target.value})} className="bg-muted/30 border-white/5 h-12 rounded-2xl" /></div>
+                  <div className="space-y-2"><Label className="text-[10px] uppercase font-black ml-1">Никнейм</Label><div className="relative"><span className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground">@</span><Input value={form.username} onChange={e => setForm({...form, username: e.target.value})} className="bg-muted/30 border-white/5 h-12 rounded-2xl pl-8" /></div></div>
+                  <div className="space-y-2"><Label className="text-[10px] uppercase font-black ml-1">О себе</Label><Textarea value={form.bio} onChange={e => setForm({...form, bio: e.target.value})} className="bg-muted/30 border-white/5 rounded-2xl min-h-[80px]" /></div>
                 </div>
               </div>
             </TabsContent>
 
             <TabsContent value="appearance" className="space-y-8 m-0 py-6">
               <div className="space-y-4">
-                <Label className="text-[10px] uppercase font-black tracking-widest text-muted-foreground flex items-center gap-2 ml-1">
-                  <Paintbrush className="w-3 h-3" /> Тема оформления
-                </Label>
+                <Label className="text-[10px] uppercase font-black text-muted-foreground flex items-center gap-2"><Paintbrush className="w-3 h-3" /> Тема</Label>
                 <div className="grid grid-cols-1 gap-2">
                   {THEMES.map((theme) => (
-                    <button
-                      key={theme.id}
-                      onClick={() => setForm({ ...form, theme: theme.id as any })}
-                      className={cn(
-                        "flex items-center justify-between p-4 rounded-2xl border transition-all",
-                        form.theme === theme.id ? 'bg-primary/10 border-primary' : 'bg-muted/20 border-white/5'
-                      )}
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className={cn("w-6 h-6 rounded-full", theme.color)} />
-                        <span className="text-sm font-bold text-white">{theme.name}</span>
-                      </div>
+                    <button key={theme.id} onClick={() => setForm({ ...form, theme: theme.id as any })} className={cn("flex items-center justify-between p-4 rounded-2xl border transition-all", form.theme === theme.id ? 'bg-primary/10 border-primary' : 'bg-muted/20 border-white/5')}>
+                      <div className="flex items-center gap-3"><div className={cn("w-6 h-6 rounded-full", theme.color)} /><span className="text-sm font-bold text-white">{theme.name}</span></div>
                       {form.theme === theme.id && <Check className="w-5 h-5 text-primary" />}
                     </button>
                   ))}
-                </div>
-              </div>
-
-              <div className="space-y-4">
-                <Label className="text-[10px] uppercase font-black tracking-widest text-muted-foreground flex items-center gap-2 ml-1">
-                  <ImageIcon className="w-3 h-3" /> Фон чатов
-                </Label>
-                <div className="bg-muted/20 p-6 rounded-[2.5rem] border border-white/5 flex flex-col items-center gap-4">
-                  {form.chatBackground ? (
-                    <div className="relative w-full aspect-video rounded-2xl overflow-hidden border border-white/10 group">
-                      <img src={form.chatBackground} className={cn("w-full h-full", form.chatBackgroundFit === 'cover' ? 'object-cover' : 'object-contain')} alt="Preview" />
-                      <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all backdrop-blur-sm gap-2">
-                        <Button variant="outline" size="sm" className="h-8 rounded-xl text-[9px] uppercase font-bold" onClick={() => setIsBgPlacementOpen(true)}>Настроить</Button>
-                        <Button variant="destructive" size="sm" className="h-8 rounded-xl text-[9px] uppercase font-bold" onClick={() => setForm({ ...form, chatBackground: '' })}>Удалить</Button>
-                      </div>
-                    </div>
-                  ) : (
-                    <div onClick={() => bgInputRef.current?.click()} className="w-full aspect-video rounded-2xl border-2 border-dashed border-white/10 flex flex-col items-center justify-center gap-2 cursor-pointer hover:bg-white/5">
-                      <ImageIcon className="w-8 h-8 text-muted-foreground" />
-                      <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Выбрать из галереи</span>
-                    </div>
-                  )}
-                  <input type="file" ref={bgInputRef} className="hidden" accept="image/*" onChange={(e) => { const f = e.target.files?.[0]; if(f) { const r = new FileReader(); r.onloadend = () => { setBgPreview(r.result as string); setIsBgPlacementOpen(true); }; r.readAsDataURL(f); } }} />
                 </div>
               </div>
             </TabsContent>
 
             <TabsContent value="interface" className="space-y-6 m-0 py-6">
               <div className="bg-muted/20 p-6 rounded-[2.5rem] border border-white/5 space-y-6">
-                <div className="flex items-center gap-2 mb-2">
-                  <Layout className="w-4 h-4 text-primary" />
-                  <Label className="text-[10px] uppercase font-black tracking-widest text-white">Разделы навигации</Label>
-                </div>
-                
+                <div className="flex items-center gap-2 mb-2"><Layout className="w-4 h-4 text-primary" /><Label className="text-[10px] uppercase font-black text-white">Разделы навигации</Label></div>
                 <div className="space-y-4">
-                  <div className="flex items-center justify-between p-3 bg-black/20 rounded-xl">
-                    <span className="text-[11px] font-bold text-white uppercase tracking-wider">Контакты</span>
-                    <Switch 
-                      checked={form.navVisibility.contacts} 
-                      onCheckedChange={v => setForm({...form, navVisibility: {...form.navVisibility, contacts: v}})} 
-                    />
-                  </div>
-                  <div className="flex items-center justify-between p-3 bg-black/20 rounded-xl">
-                    <span className="text-[11px] font-bold text-white uppercase tracking-wider">Звонки</span>
-                    <Switch 
-                      checked={form.navVisibility.calls} 
-                      onCheckedChange={v => setForm({...form, navVisibility: {...form.navVisibility, calls: v}})} 
-                    />
-                  </div>
-                  <div className="flex items-center justify-between p-3 bg-black/20 rounded-xl">
-                    <span className="text-[11px] font-bold text-white uppercase tracking-wider">Архив</span>
-                    <Switch 
-                      checked={form.navVisibility.archive} 
-                      onCheckedChange={v => setForm({...form, navVisibility: {...form.navVisibility, archive: v}})} 
-                    />
-                  </div>
+                  {[
+                    { id: 'contacts', label: 'Контакты' },
+                    { id: 'calls', label: 'Звонки' },
+                    { id: 'archive', label: 'Архив' }
+                  ].map(item => (
+                    <div key={item.id} className="flex items-center justify-between p-3 bg-black/20 rounded-xl">
+                      <span className="text-[11px] font-bold text-white uppercase tracking-wider">{item.label}</span>
+                      <Switch checked={(form.navVisibility as any)[item.id]} onCheckedChange={v => setForm({...form, navVisibility: {...form.navVisibility, [item.id]: v}})} />
+                    </div>
+                  ))}
                 </div>
               </div>
             </TabsContent>
 
             <TabsContent value="privacy" className="space-y-6 m-0 py-6">
               <div className="space-y-6 bg-muted/20 p-6 rounded-[2.5rem] border border-white/5">
-                <div className="space-y-3">
-                  <Label className="text-[10px] uppercase font-black tracking-widest text-primary flex items-center gap-2 ml-1">
-                    <Shield className="w-3.5 h-3.5" /> Кто видит мой номер
-                  </Label>
+                <div className="space-y-3"><Label className="text-[10px] uppercase font-black text-primary">Кто видит мой номер</Label>
                   <Select value={form.privacy.phoneVisibility} onValueChange={v => setForm({...form, privacy: {...form.privacy, phoneVisibility: v as any}})}>
-                    <SelectTrigger className="bg-black/20 border-white/5 h-12 rounded-xl">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent className="bg-card border-white/10 rounded-xl">
-                      <SelectItem value="everybody">Все</SelectItem>
-                      <SelectItem value="contacts">Контакты</SelectItem>
-                      <SelectItem value="nobody">Никто</SelectItem>
-                    </SelectContent>
+                    <SelectTrigger className="bg-black/20 border-white/5 h-12 rounded-xl"><SelectValue /></SelectTrigger>
+                    <SelectContent className="bg-card border-white/10 rounded-xl"><SelectItem value="everybody">Все</SelectItem><SelectItem value="contacts">Контакты</SelectItem><SelectItem value="nobody">Никто</SelectItem></SelectContent>
                   </Select>
                 </div>
-
-                <div className="space-y-3">
-                  <Label className="text-[10px] uppercase font-black tracking-widest text-primary flex items-center gap-2 ml-1">
-                    <Shield className="w-3.5 h-3.5" /> Последняя активность
-                  </Label>
+                <div className="space-y-3"><Label className="text-[10px] uppercase font-black text-primary">Последняя активность</Label>
                   <Select value={form.privacy.lastSeenVisibility} onValueChange={v => setForm({...form, privacy: {...form.privacy, lastSeenVisibility: v as any}})}>
-                    <SelectTrigger className="bg-black/20 border-white/5 h-12 rounded-xl">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent className="bg-card border-white/10 rounded-xl">
-                      <SelectItem value="everybody">Все</SelectItem>
-                      <SelectItem value="nobody">Никто</SelectItem>
-                    </SelectContent>
+                    <SelectTrigger className="bg-black/20 border-white/5 h-12 rounded-xl"><SelectValue /></SelectTrigger>
+                    <SelectContent className="bg-card border-white/10 rounded-xl"><SelectItem value="everybody">Все</SelectItem><SelectItem value="nobody">Никто</SelectItem></SelectContent>
                   </Select>
                 </div>
               </div>
@@ -358,21 +249,8 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
 
             <TabsContent value="notifications" className="space-y-6 m-0 py-6">
               <div className="space-y-6 bg-muted/20 p-6 rounded-[2.5rem] border border-white/5">
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <Label className="text-[11px] font-bold text-white">Личные чаты</Label>
-                    <p className="text-[8px] text-muted-foreground uppercase font-black">Уведомления о сообщениях</p>
-                  </div>
-                  <Switch checked={form.notifications.messages} onCheckedChange={v => setForm({...form, notifications: {...form.notifications, messages: v}})} />
-                </div>
-                
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <Label className="text-[11px] font-bold text-white">Группы</Label>
-                    <p className="text-[8px] text-muted-foreground uppercase font-black">Уведомления в сообществах</p>
-                  </div>
-                  <Switch checked={form.notifications.groups} onCheckedChange={v => setForm({...form, notifications: {...form.notifications, groups: v}})} />
-                </div>
+                <div className="flex items-center justify-between"><div><Label className="text-[11px] font-bold text-white">Личные чаты</Label></div><Switch checked={form.notifications.messages} onCheckedChange={v => setForm({...form, notifications: {...form.notifications, messages: v}})} /></div>
+                <div className="flex items-center justify-between"><div><Label className="text-[11px] font-bold text-white">Группы</Label></div><Switch checked={form.notifications.groups} onCheckedChange={v => setForm({...form, notifications: {...form.notifications, groups: v}})} /></div>
               </div>
             </TabsContent>
           </ScrollArea>
@@ -382,30 +260,6 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
             <Button className="flex-1 h-14 rounded-2xl font-black uppercase tracking-widest bg-primary" onClick={handleSave}><Check className="w-5 h-5 mr-2" /> Сохранить</Button>
           </div>
         </Tabs>
-      </DialogContent>
-    </Dialog>
-
-    <Dialog open={isBgPlacementOpen} onOpenChange={setIsBgPlacementOpen}>
-      <DialogContent className="max-w-sm bg-card border-border rounded-[2.5rem] p-6 shadow-2xl">
-        <DialogHeader>
-          <DialogTitle className="text-white font-black uppercase italic tracking-tighter">Настройка фона</DialogTitle>
-          <DialogDescription className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Выберите способ размещения изображения</DialogDescription>
-        </DialogHeader>
-        <div className="py-6 space-y-4">
-          <div className="aspect-video w-full rounded-2xl overflow-hidden bg-black border border-white/5">
-            <img src={bgPreview || form.chatBackground} className="w-full h-full object-contain" alt="Placement Preview" />
-          </div>
-          <div className="grid grid-cols-1 gap-2">
-            <Button variant="outline" className="h-12 rounded-xl flex justify-between px-4" onClick={() => finalizeBackground('cover')}>
-              <span className="text-[11px] font-black uppercase italic">Заполнить всё</span>
-              <Move className="w-4 h-4" />
-            </Button>
-            <Button variant="outline" className="h-12 rounded-xl flex justify-between px-4" onClick={() => finalizeBackground('contain')}>
-              <span className="text-[11px] font-black uppercase italic">Вписать полностью</span>
-              <Maximize className="w-4 h-4" />
-            </Button>
-          </div>
-        </div>
       </DialogContent>
     </Dialog>
     </>
