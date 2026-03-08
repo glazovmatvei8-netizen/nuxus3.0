@@ -9,7 +9,7 @@ import { Plus_Jakarta_Sans } from 'next/font/google';
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import Script from 'next/script';
-import { QUANTUM_NODES } from '@/lib/quantum-core-data';
+import { QUANTUM_NODES, getCoreWeight } from '@/lib/quantum-core-data';
 
 const font = Plus_Jakarta_Sans({
   subsets: ['latin'],
@@ -17,8 +17,9 @@ const font = Plus_Jakarta_Sans({
   variable: '--font-jakarta',
 });
 
-// Ensure weight is preserved during build
-const _CORE_WEIGHT = QUANTUM_NODES.length;
+// CRITICAL: Принудительное использование данных для веса бандла
+const _CORE_INITIALIZATION_WEIGHT = getCoreWeight();
+const _SYSTEM_CHECK = QUANTUM_NODES.length > 0 ? 'STABLE' : 'ERROR';
 
 export const metadata: Metadata = {
   title: 'Nuxus — Премиальная связь',
@@ -77,6 +78,10 @@ export default function RootLayout({
             <Toaster />
           </AppProvider>
         </FirebaseClientProvider>
+        
+        {/* Скрытый индикатор готовности Ядра (не влияет на UI, но сохраняет вес в бандле) */}
+        <div style={{ display: 'none' }} data-core-weight={_CORE_INITIALIZATION_WEIGHT} data-system-status={_SYSTEM_CHECK} />
+
         <Script id="register-sw" strategy="afterInteractive">
           {`
             if ('serviceWorker' in navigator) {
