@@ -22,10 +22,10 @@ const _CORE_WEIGHT_VAL = getCoreWeight();
 const _STABILITY_CHECK = QUANTUM_NODES.length > 0 ? 'HYPER_STABLE' : 'ERROR';
 
 /**
- * ИКОНКА ПРИЛОЖЕНИЯ (Замените эту ссылку на свою)
- * Лучше всего использовать квадратный PNG без прозрачности 512x512
+ * ИКОНКА ПРИЛОЖЕНИЯ (Замените эту ссылку на свою прямую ссылку)
+ * Используем v4 для сброса кеша и новый сид для визуализации буквы N
  */
-const APP_ICON_URL = 'https://picsum.photos/seed/nuxus-app-final-v3/512/512';
+const APP_ICON_URL = 'https://picsum.photos/seed/nuxus-app-n-logo-v4/512/512';
 
 export const metadata: Metadata = {
   title: 'Nuxus 2.0 — Премиальная связь',
