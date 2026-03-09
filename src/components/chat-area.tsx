@@ -15,9 +15,9 @@ import { useToast } from '@/hooks/use-toast';
 import { ChatInfoModal } from './modals/chat-info-modal';
 import { ImagePreviewModal } from './modals/image-preview-modal';
 import { useFirestore, useUser, useCollection, useDoc, useMemoFirebase } from '@/firebase';
-import { collection, query, orderBy, doc, addDoc, limit, updateDoc, writeBatch, getDocs, where } from 'firebase/firestore';
+import { collection, query, orderBy, doc, addDoc, limit, updateDoc, writeBatch } from 'firebase/firestore';
 import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
-import { formatDisplayName, cn } from '@/lib/utils';
+import { formatDisplayName, cn, formatLastSeen } from '@/lib/utils';
 import type { Message, User as UserType, Chat } from '@/lib/types';
 
 const MessageList = memo(({ 
@@ -298,11 +298,13 @@ export default function ChatArea() {
         <div className="flex items-center gap-3 min-w-0 flex-1">
           <Button variant="ghost" size="icon" className="md:hidden rounded-lg" onClick={() => setCurrentChatId(null)}><ChevronLeft className="w-6 h-6" /></Button>
           <div className="flex items-center gap-3 cursor-pointer min-w-0 group" onClick={() => setIsChatInfoOpen(true)}>
-            <UserAvatar userId={otherId} manualAvatarUrl={chat?.avatarUrl || otherProfile?.avatarUrl} className="h-10 w-10" fallbackName={chatDisplayName} />
+            <UserAvatar userId={otherId} manualAvatarUrl={chat?.avatarUrl || otherProfile?.avatarUrl} className="h-10 w-10" fallbackName={chatDisplayName} showOnlineStatus />
             <div className="flex flex-col min-w-0">
               <span className="font-bold text-sm truncate group-hover:text-primary transition-colors">{formatDisplayName(chatDisplayName)}</span>
               <div className="flex items-center gap-1">
-                <span className="text-[10px] text-muted-foreground/60 tracking-widest truncate uppercase font-bold">NUXUS 2.0</span>
+                <span className="text-[10px] text-muted-foreground/60 tracking-widest truncate uppercase font-bold">
+                  {isPrivate ? formatLastSeen(otherProfile?.lastSeen, otherProfile?.settings?.privacy?.lastSeenVisibility) : 'NUXUS 2.0'}
+                </span>
                 {!navigator.onLine && <div className="w-1.5 h-1.5 rounded-full bg-destructive animate-pulse" />}
               </div>
             </div>

@@ -9,6 +9,7 @@ import { cn, formatDisplayName, isUserPremium } from '@/lib/utils';
 import Image from 'next/image';
 import { Star } from 'lucide-react';
 import type { User } from '@/lib/types';
+import { differenceInMinutes, parseISO } from 'date-fns';
 
 interface UserAvatarProps {
   userId: string | null | undefined;
@@ -16,13 +17,14 @@ interface UserAvatarProps {
   fallbackName?: string;
   fallbackClassName?: string;
   manualAvatarUrl?: string | null;
+  showOnlineStatus?: boolean;
 }
 
 /**
  * Smart Avatar component with memoization for maximum performance.
- * Displays user photo and Premium badge. Status emoji removed per user request.
+ * Displays user photo, Premium badge and Online indicator.
  */
-export const UserAvatar = memo(({ userId, className, fallbackName, fallbackClassName, manualAvatarUrl }: UserAvatarProps) => {
+export const UserAvatar = memo(({ userId, className, fallbackName, fallbackClassName, manualAvatarUrl, showOnlineStatus = false }: UserAvatarProps) => {
   const db = useFirestore();
   const [imgError, setImgError] = useState(false);
   
@@ -44,6 +46,16 @@ export const UserAvatar = memo(({ userId, className, fallbackName, fallbackClass
   }, [profile?.name, fallbackName, profile?.username, displayName]);
 
   const premium = useMemo(() => isUserPremium(profile), [profile]);
+
+  const isOnline = useMemo(() => {
+    if (!profile?.lastSeen) return false;
+    try {
+      const lastSeen = parseISO(profile.lastSeen);
+      return differenceInMinutes(new Date(), lastSeen) < 2;
+    } catch (e) {
+      return false;
+    }
+  }, [profile?.lastSeen]);
 
   useEffect(() => {
     setImgError(false);
@@ -69,6 +81,13 @@ export const UserAvatar = memo(({ userId, className, fallbackName, fallbackClass
           </AvatarFallback>
         )}
       </Avatar>
+
+      {/* Online Status Dot */}
+      {showOnlineStatus && isOnline && (
+        <div className="absolute top-0 right-0 z-20 translate-x-[10%] translate-y-[10%]">
+          <div className="h-3 w-3 bg-[#22C55E] rounded-full border-2 border-[#0a0a0c] shadow-[0_0_10px_rgba(34,197,94,0.5)]" />
+        </div>
+      )}
 
       {/* Premium Badge (Bottom Right) */}
       {premium && (

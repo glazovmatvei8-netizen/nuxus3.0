@@ -6,7 +6,7 @@ import { useAppState } from '@/lib/store';
 import { Button } from '@/components/ui/button';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
-  Plus, SquarePen, Ghost, Search, Star, MessageCircle
+  Plus, SquarePen, Ghost, Search, Star, Pin, PinOff
 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { CreateChatModal } from './modals/create-chat-modal';
@@ -14,13 +14,18 @@ import { ChatEditorModal } from './modals/chat-editor-modal';
 import { AdminPanelModal } from './modals/admin-panel-modal';
 import type { User, Message, Chat } from '@/lib/types';
 import { useFirestore, useUser, useCollection, useDoc, useMemoFirebase } from '@/firebase';
-import { collection, query, where, doc, limit, orderBy } from 'firebase/firestore';
+import { collection, query, where, doc, limit, orderBy, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
 import { formatDisplayName, cn, isGlobalAdmin } from '@/lib/utils';
 import { format } from 'date-fns';
+import { 
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuTrigger,
+} from "@/components/ui/context-menu";
 
 const ChatListItem = memo(({ 
-  chat, isActive, otherId, cachedDisplayName, manualAvatarUrl, 
-  onClick
+  chat, isActive, otherId, isPinned, onPinToggle, onClick
 }: any) => {
   const db = useFirestore();
   const userProfileRef = useMemoFirebase(() => (!db || !otherId) ? null : doc(db, 'users', otherId), [db, otherId]);
@@ -35,8 +40,8 @@ const ChatListItem = memo(({
 
   const finalDisplayName = useMemo(() => {
     if (chat.type === 'saved') return 'Избранное';
-    return formatDisplayName(otherProfile?.name || cachedDisplayName || chat.name || 'User');
-  }, [chat.type, otherProfile?.name, cachedDisplayName, chat.name]);
+    return formatDisplayName(otherProfile?.name || chat.name || 'User');
+  }, [chat.type, otherProfile?.name, chat.name]);
 
   const displayTime = useMemo(() => {
     const date = chat.lastMessageAt ? new Date(chat.lastMessageAt) : new Date(chat.createdAt);
@@ -46,29 +51,39 @@ const ChatListItem = memo(({
   const isUnread = lastMsg && !lastMsg.isRead && lastMsg.senderId !== otherId;
 
   return (
-    <div
-      onClick={onClick}
-      className={cn(
-        "flex items-center gap-3 px-4 py-2.5 cursor-pointer transition-all border-none group relative",
-        isActive ? 'bg-white/10' : 'active:bg-white/[0.05]'
-      )}
-    >
-      <UserAvatar userId={otherId} manualAvatarUrl={manualAvatarUrl || otherProfile?.avatarUrl || chat.avatarUrl} className="h-[52px] w-[52px]" fallbackName={finalDisplayName} />
-      <div className="flex-1 min-w-0 border-b border-white/[0.03] pb-3 h-full flex flex-col justify-center">
-        <div className="flex items-center justify-between mb-0.5">
-          <span className="font-bold text-[16px] text-white truncate">
-            {finalDisplayName} {otherProfile?.isPremium && <Star className="w-3 h-3 text-accent fill-accent inline ml-1" />}
-          </span>
-          <span className="text-[13px] text-muted-foreground/60 font-medium">{displayTime}</span>
+    <ContextMenu>
+      <ContextMenuTrigger>
+        <div
+          onClick={onClick}
+          className={cn(
+            "flex items-center gap-3 px-4 py-2.5 cursor-pointer transition-all border-none group relative",
+            isActive ? 'bg-white/10' : 'active:bg-white/[0.05]'
+          )}
+        >
+          <UserAvatar userId={otherId} manualAvatarUrl={otherProfile?.avatarUrl || chat.avatarUrl} className="h-[52px] w-[52px]" fallbackName={finalDisplayName} showOnlineStatus />
+          <div className="flex-1 min-w-0 border-b border-white/[0.03] pb-3 h-full flex flex-col justify-center">
+            <div className="flex items-center justify-between mb-0.5">
+              <span className="font-bold text-[16px] text-white truncate flex items-center gap-1">
+                {isPinned && <Pin className="w-3 h-3 text-primary fill-primary rotate-45" />}
+                {finalDisplayName} {otherProfile?.isPremium && <Star className="w-3 h-3 text-accent fill-accent inline ml-1" />}
+              </span>
+              <span className="text-[13px] text-muted-foreground/60 font-medium">{displayTime}</span>
+            </div>
+            <div className="flex items-center justify-between pr-2">
+              <p className="text-[14px] text-muted-foreground/60 truncate flex-1">
+                {lastMsg?.contentType === 'text' ? lastMsg.content : (lastMsg ? `[${lastMsg.contentType}]` : 'Нет сообщений')}
+              </p>
+              {isUnread && <div className="w-2.5 h-2.5 bg-primary rounded-full shadow-[0_0_8px_rgba(139,92,246,0.5)]" />}
+            </div>
+          </div>
         </div>
-        <div className="flex items-center justify-between pr-2">
-          <p className="text-[14px] text-muted-foreground/60 truncate flex-1">
-            {lastMsg?.contentType === 'text' ? lastMsg.content : (lastMsg ? `[${lastMsg.contentType}]` : 'Нет сообщений')}
-          </p>
-          {isUnread && <div className="w-2.5 h-2.5 bg-primary rounded-full shadow-[0_0_8px_rgba(139,92,246,0.5)]" />}
-        </div>
-      </div>
-    </div>
+      </ContextMenuTrigger>
+      <ContextMenuContent className="w-48 bg-card border-white/10 rounded-xl">
+        <ContextMenuItem onClick={() => onPinToggle(chat.id)} className="gap-2 font-bold uppercase text-[10px] tracking-widest">
+          {isPinned ? <><PinOff className="w-4 h-4" /> Открепить</> : <><Pin className="w-4 h-4" /> Закрепить</>}
+        </ContextMenuItem>
+      </ContextMenuContent>
+    </ContextMenu>
   );
 });
 ChatListItem.displayName = 'ChatListItem';
@@ -92,22 +107,38 @@ export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?:
   }, [db, user]);
   const { data: chats } = useCollection<Chat>(chatsQuery);
 
+  const handlePinToggle = async (chatId: string) => {
+    if (!db || !user || !userProfileRef) return;
+    const isPinned = currentUserProfile?.pinnedChatIds?.includes(chatId);
+    await updateDoc(userProfileRef, {
+      pinnedChatIds: isPinned ? arrayRemove(chatId) : arrayUnion(chatId)
+    });
+  };
+
   const filteredChats = useMemo(() => {
     if (!chats) return [];
+    
+    // Сначала сортируем по дате последнего сообщения
     let result = [...chats].sort((a, b) => {
       const aTime = a.lastMessageAt ? new Date(a.lastMessageAt).getTime() : new Date(a.createdAt).getTime();
       const bTime = b.lastMessageAt ? new Date(b.lastMessageAt).getTime() : new Date(b.createdAt).getTime();
       return bTime - aTime;
     });
 
+    // Затем поднимаем закрепленные наверх
+    result.sort((a, b) => {
+      const aPinned = currentUserProfile?.pinnedChatIds?.includes(a.id) ? 1 : 0;
+      const bPinned = currentUserProfile?.pinnedChatIds?.includes(b.id) ? 1 : 0;
+      return bPinned - aPinned;
+    });
+
     if (isArchiveView) return result.filter(c => c.isArchived);
     
     if (activeTab === 'private') return result.filter(c => c.type === 'private' && !c.isArchived);
     if (activeTab === 'groups') return result.filter(c => c.type === 'group' && !c.isArchived);
-    if (activeTab === 'unread') return result.filter(c => !c.isArchived); // Logic for real unread would need more data
 
     return result.filter(c => !c.isArchived);
-  }, [chats, activeTab, isArchiveView]);
+  }, [chats, activeTab, isArchiveView, currentUserProfile?.pinnedChatIds]);
 
   return (
     <div className="flex flex-col h-full bg-[#0a0a0c] overflow-hidden">
@@ -124,7 +155,7 @@ export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?:
               isGlobalAdmin(currentUserProfile) ? "cursor-pointer hover:text-primary transition-colors active:scale-95" : "cursor-default"
             )}
           >
-            {isArchiveView ? 'Архив' : 'Чаты🐱'}
+            {isArchiveView ? 'Архив' : 'NUXUS'}
           </h1>
 
           <div className="flex items-center gap-1.5">
@@ -142,8 +173,7 @@ export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?:
             {[
               { id: 'all', label: 'Все' },
               { id: 'private', label: 'Личные' },
-              { id: 'groups', label: 'Группы' },
-              { id: 'unread', label: 'Новые' }
+              { id: 'groups', label: 'Группы' }
             ].map((tab) => (
               <button 
                 key={tab.id}
@@ -168,6 +198,8 @@ export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?:
                 key={chat.id} 
                 chat={chat} 
                 isActive={currentChatId === chat.id} 
+                isPinned={currentUserProfile?.pinnedChatIds?.includes(chat.id)}
+                onPinToggle={handlePinToggle}
                 onClick={() => setCurrentChatId(chat.id)}
                 otherId={chat.type === 'private' && user ? chat.participantIds?.find((id: string) => id !== user.uid) : null} 
               />
