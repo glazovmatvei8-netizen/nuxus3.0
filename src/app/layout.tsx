@@ -23,8 +23,8 @@ const _CORE_WEIGHT_VAL = getCoreWeight();
 const _STABILITY_CHECK = QUANTUM_NODES.length > 0 ? 'HYPER_STABLE' : 'ERROR';
 
 /**
- * ИКОНКА ПРИЛОЖЕНИЯ (Default v10)
- * Прямая ссылка пользователя для принудительного обновления на iOS и Edge
+ * ГЛОБАЛЬНАЯ ИКОНКА NUXUS (v10)
+ * Используется для браузеров, PWA и десктопных сборок (Nativefier)
  */
 const APP_ICON_URL = 'https://i.ibb.co/sd2MqGz2/Icon.png';
 const VERSION_PARAM = '?v=10';
@@ -69,7 +69,7 @@ export default function RootLayout({
   return (
     <html lang="ru" className={`dark ${font.variable}`} suppressHydrationWarning>
       <head>
-        {/* Прямая вставка для Safari iOS и Edge PC (Bypass Cache v10) */}
+        {/* Прямые теги для Nativefier и старых браузеров (Bypass Cache v10) */}
         <link rel="icon" type="image/png" href={FINAL_ICON_URL} />
         <link rel="shortcut icon" type="image/png" href={FINAL_ICON_URL} />
         <link rel="apple-touch-icon" href={FINAL_ICON_URL} />
