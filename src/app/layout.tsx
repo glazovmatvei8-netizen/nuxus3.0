@@ -5,6 +5,7 @@ import { AppProvider } from '@/lib/store';
 import { Toaster } from '@/components/ui/toaster';
 import { FirebaseClientProvider } from '@/firebase/client-provider';
 import { ThemeApplier } from '@/components/theme-applier';
+import { AppIconApplier } from '@/components/app-icon-applier';
 import { Plus_Jakarta_Sans } from 'next/font/google';
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/next";
@@ -22,7 +23,7 @@ const _CORE_WEIGHT_VAL = getCoreWeight();
 const _STABILITY_CHECK = QUANTUM_NODES.length > 0 ? 'HYPER_STABLE' : 'ERROR';
 
 /**
- * ИКОНКА ПРИЛОЖЕНИЯ (v10)
+ * ИКОНКА ПРИЛОЖЕНИЯ (Default v10)
  * Прямая ссылка пользователя для принудительного обновления на iOS и Edge
  */
 const APP_ICON_URL = 'https://i.ibb.co/sd2MqGz2/Icon.png';
@@ -92,6 +93,7 @@ export default function RootLayout({
         <FirebaseClientProvider>
           <AppProvider>
             <ThemeApplier />
+            <AppIconApplier />
             <OfflinePlaceholder />
             {children}
             <Analytics />

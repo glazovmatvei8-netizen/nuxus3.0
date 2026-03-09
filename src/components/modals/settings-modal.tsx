@@ -15,7 +15,7 @@ import { UserAvatar } from '@/components/user-avatar';
 import { 
   LogOut, Palette, Check, Settings2, Camera, Lock, Image as ImageIcon, 
   Paintbrush, Move, Maximize, Shield, UserCircle, Layout, Smile, FileText, ChevronRight,
-  ShieldCheck, Eye, Users2, MessageSquareLock, Upload, Trash2
+  ShieldCheck, Eye, Users2, MessageSquareLock, Upload, Trash2, Smartphone
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { signOut } from 'firebase/auth';
@@ -44,6 +44,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
   const { settingsTab, setSettingsTab } = useAppState();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const bgInputRef = useRef<HTMLInputElement>(null);
+  const iconInputRef = useRef<HTMLInputElement>(null);
 
   const userRef = useMemoFirebase(() => (!db || !user) ? null : doc(db, 'users', user.uid), [db, user]);
   const { data: profile } = useDoc<User>(userRef);
@@ -60,6 +61,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
     theme: 'default',
     chatBackground: '',
     chatBackgroundFit: 'cover' as 'cover' | 'contain',
+    customAppIconUrl: '',
     twoFactorEnabled: false,
     twoFactorPin: '',
     privacy: {
@@ -95,6 +97,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         theme: profile.settings?.theme || 'default',
         chatBackground: profile.settings?.chatBackground || '',
         chatBackgroundFit: profile.settings?.chatBackgroundFit || 'cover',
+        customAppIconUrl: profile.settings?.customAppIconUrl || '',
         twoFactorEnabled: !!profile.twoFactorEnabled,
         twoFactorPin: profile.twoFactorPin || '',
         privacy: {
@@ -137,6 +140,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         'settings.theme': form.theme,
         'settings.chatBackground': form.chatBackground,
         'settings.chatBackgroundFit': form.chatBackgroundFit,
+        'settings.customAppIconUrl': form.customAppIconUrl,
         'settings.privacy': form.privacy,
         'settings.notifications': form.notifications,
         'settings.navVisibility': form.navVisibility
@@ -154,6 +158,17 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
       const reader = new FileReader();
       reader.onloadend = () => {
         setForm(prev => ({ ...prev, chatBackground: reader.result as string }));
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleIconUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setForm(prev => ({ ...prev, customAppIconUrl: reader.result as string }));
       };
       reader.readAsDataURL(file);
     }
@@ -223,6 +238,29 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                       {form.theme === theme.id && <Check className="w-5 h-5 text-primary" />}
                     </button>
                   ))}
+                </div>
+              </div>
+
+              {/* НОВАЯ ФУНКЦИЯ: Кастомная иконка приложения */}
+              <div className="space-y-4 border-t border-white/5 pt-6">
+                <Label className="text-[10px] uppercase font-black text-muted-foreground flex items-center gap-2"><Smartphone className="w-3 h-3" /> Иконка приложения</Label>
+                <p className="text-[9px] text-muted-foreground uppercase leading-relaxed font-bold">Измените иконку Nuxus на рабочем столе вашего телефона.</p>
+                
+                <div className="flex items-center gap-4 bg-muted/20 p-4 rounded-2xl border border-white/5">
+                  <div className="relative h-16 w-16 rounded-2xl overflow-hidden border border-white/10 shrink-0 bg-black/40">
+                    <img src={form.customAppIconUrl || 'https://i.ibb.co/sd2MqGz2/Icon.png'} alt="App Icon" className="w-full h-full object-cover" />
+                  </div>
+                  <div className="flex-1 flex flex-col gap-2">
+                    <Button variant="outline" size="sm" onClick={() => iconInputRef.current?.click()} className="h-9 rounded-xl text-[9px] uppercase font-black tracking-widest border-white/10 bg-white/5">
+                      <Upload className="w-3 h-3 mr-2" /> Выбрать фото
+                    </Button>
+                    {form.customAppIconUrl && (
+                      <Button variant="ghost" size="sm" onClick={() => setForm({...form, customAppIconUrl: ''})} className="h-8 rounded-xl text-[9px] uppercase font-black text-destructive">
+                        Сбросить
+                      </Button>
+                    )}
+                  </div>
+                  <input type="file" ref={iconInputRef} className="hidden" accept="image/*" onChange={handleIconUpload} />
                 </div>
               </div>
 

@@ -112,6 +112,7 @@ export interface UserSettings {
   theme: 'default' | 'ocean' | 'midnight' | 'rainbow' | 'gold' | 'emerald';
   chatBackground: string;
   chatBackgroundFit?: 'cover' | 'contain';
+  customAppIconUrl?: string;
   messageSize: 'small' | 'medium' | 'large';
   privacy: UserPrivacy;
   notifications?: UserNotifications;
