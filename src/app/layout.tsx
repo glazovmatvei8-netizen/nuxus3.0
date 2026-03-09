@@ -42,10 +42,11 @@ export const metadata: Metadata = {
   },
   icons: {
     icon: [
-      { url: FINAL_ICON_URL, sizes: '32x32', type: 'image/png' },
+      { url: APP_ICON_URL, sizes: '32x32', type: 'image/png' },
+      { url: APP_ICON_URL, sizes: '192x192', type: 'image/png' },
       { url: FINAL_ICON_URL, sizes: '512x512', type: 'image/png' },
     ],
-    shortcut: { url: FINAL_ICON_URL, type: 'image/png' },
+    shortcut: { url: APP_ICON_URL, type: 'image/png' },
     apple: [
       { url: FINAL_ICON_URL, sizes: '180x180', type: 'image/png' },
     ],
@@ -69,9 +70,10 @@ export default function RootLayout({
   return (
     <html lang="ru" className={`dark ${font.variable}`} suppressHydrationWarning>
       <head>
-        {/* Прямые теги для Nativefier и старых браузеров (Bypass Cache v10) */}
-        <link rel="icon" type="image/png" href={FINAL_ICON_URL} />
-        <link rel="shortcut icon" type="image/png" href={FINAL_ICON_URL} />
+        {/* Прямые теги для Nativefier и Windows (Title Bar Icon Fix) */}
+        <link rel="icon" type="image/png" sizes="32x32" href={APP_ICON_URL} />
+        <link rel="icon" type="image/png" sizes="192x192" href={APP_ICON_URL} />
+        <link rel="shortcut icon" type="image/png" href={APP_ICON_URL} />
         <link rel="apple-touch-icon" href={FINAL_ICON_URL} />
         <link rel="apple-touch-icon" sizes="152x152" href={FINAL_ICON_URL} />
         <link rel="apple-touch-icon" sizes="180x180" href={FINAL_ICON_URL} />
