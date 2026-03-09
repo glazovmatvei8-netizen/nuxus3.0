@@ -15,7 +15,7 @@ import { UserAvatar } from '@/components/user-avatar';
 import { 
   LogOut, Palette, Check, Settings2, Camera, Lock, Image as ImageIcon, 
   Paintbrush, Move, Maximize, Shield, UserCircle, Layout, Smile, FileText, ChevronRight,
-  ShieldCheck, Eye, Users2, MessageSquareLock
+  ShieldCheck, Eye, Users2, MessageSquareLock, Upload, Trash2
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { signOut } from 'firebase/auth';
@@ -43,6 +43,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
   const { toast } = useToast();
   const { settingsTab, setSettingsTab } = useAppState();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const bgInputRef = useRef<HTMLInputElement>(null);
 
   const userRef = useMemoFirebase(() => (!db || !user) ? null : doc(db, 'users', user.uid), [db, user]);
   const { data: profile } = useDoc<User>(userRef);
@@ -57,6 +58,8 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
     statusEmoji: '',
     statusText: '',
     theme: 'default',
+    chatBackground: '',
+    chatBackgroundFit: 'cover' as 'cover' | 'contain',
     twoFactorEnabled: false,
     twoFactorPin: '',
     privacy: {
@@ -90,6 +93,8 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         statusEmoji: profile.statusEmoji || '',
         statusText: profile.statusText || '',
         theme: profile.settings?.theme || 'default',
+        chatBackground: profile.settings?.chatBackground || '',
+        chatBackgroundFit: profile.settings?.chatBackgroundFit || 'cover',
         twoFactorEnabled: !!profile.twoFactorEnabled,
         twoFactorPin: profile.twoFactorPin || '',
         privacy: {
@@ -130,6 +135,8 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         twoFactorEnabled: form.twoFactorEnabled,
         twoFactorPin: form.twoFactorPin,
         'settings.theme': form.theme,
+        'settings.chatBackground': form.chatBackground,
+        'settings.chatBackgroundFit': form.chatBackgroundFit,
         'settings.privacy': form.privacy,
         'settings.notifications': form.notifications,
         'settings.navVisibility': form.navVisibility
@@ -138,6 +145,17 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
       toast({ title: "Ядро обновлено", description: "Конфигурация синхронизирована успешно" });
     } catch (e: any) {
       toast({ title: "Ошибка сохранения", description: e.message, variant: "destructive" });
+    }
+  };
+
+  const handleBgUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setForm(prev => ({ ...prev, chatBackground: reader.result as string }));
+      };
+      reader.readAsDataURL(file);
     }
   };
 
@@ -205,6 +223,48 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                       {form.theme === theme.id && <Check className="w-5 h-5 text-primary" />}
                     </button>
                   ))}
+                </div>
+              </div>
+
+              <div className="space-y-4 border-t border-white/5 pt-6">
+                <Label className="text-[10px] uppercase font-black text-muted-foreground flex items-center gap-2"><ImageIcon className="w-3 h-3" /> Фон чата</Label>
+                
+                <div className="space-y-4">
+                  {form.chatBackground ? (
+                    <div className="relative aspect-video rounded-2xl overflow-hidden border border-white/10 group">
+                      <img src={form.chatBackground} alt="Background Preview" className={cn("w-full h-full", form.chatBackgroundFit === 'contain' ? 'object-contain' : 'object-cover')} />
+                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2 backdrop-blur-sm">
+                        <Button variant="destructive" size="sm" onClick={() => setForm(prev => ({ ...prev, chatBackground: '' }))} className="h-8 text-[10px] uppercase font-black tracking-widest"><Trash2 className="w-3 h-3 mr-1" /> Удалить</Button>
+                        <Button variant="secondary" size="sm" onClick={() => bgInputRef.current?.click()} className="h-8 text-[10px] uppercase font-black tracking-widest"><Upload className="w-3 h-3 mr-1" /> Заменить</Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <button 
+                      onClick={() => bgInputRef.current?.click()}
+                      className="w-full aspect-video rounded-2xl border-2 border-dashed border-white/10 flex flex-col items-center justify-center gap-2 hover:bg-white/5 transition-all text-muted-foreground"
+                    >
+                      <Upload className="w-6 h-6" />
+                      <span className="text-[10px] font-black uppercase tracking-[0.2em]">Выбрать изображение</span>
+                    </button>
+                  )}
+                  <input type="file" ref={bgInputRef} className="hidden" accept="image/*" onChange={handleBgUpload} />
+
+                  {form.chatBackground && (
+                    <div className="grid grid-cols-2 gap-2">
+                      <button 
+                        onClick={() => setForm(prev => ({ ...prev, chatBackgroundFit: 'cover' }))}
+                        className={cn("p-3 rounded-xl border text-[10px] font-black uppercase tracking-widest transition-all", form.chatBackgroundFit === 'cover' ? "bg-primary/10 border-primary text-primary" : "bg-white/5 border-white/5 text-muted-foreground")}
+                      >
+                        Заполнение
+                      </button>
+                      <button 
+                        onClick={() => setForm(prev => ({ ...prev, chatBackgroundFit: 'contain' }))}
+                        className={cn("p-3 rounded-xl border text-[10px] font-black uppercase tracking-widest transition-all", form.chatBackgroundFit === 'contain' ? "bg-primary/10 border-primary text-primary" : "bg-white/5 border-white/5 text-muted-foreground")}
+                      >
+                        Вписать
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
             </TabsContent>

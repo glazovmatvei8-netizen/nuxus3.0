@@ -305,7 +305,17 @@ export default function ChatArea() {
   return (
     <div className="flex-1 flex flex-col h-full bg-background relative overflow-hidden z-20">
       {userProfile?.settings?.chatBackground && (
-        <div className="fixed inset-0 z-0 pointer-events-none" style={{ backgroundImage: `url(${userProfile.settings.chatBackground})`, backgroundSize: userProfile.settings.chatBackgroundFit === 'contain' ? 'contain' : 'cover', backgroundPosition: 'center', backgroundRepeat: 'no-repeat', backgroundColor: '#0a0a0c', transform: 'translateZ(0)' }} />
+        <div 
+          className="fixed inset-0 z-0 pointer-events-none" 
+          style={{ 
+            backgroundImage: `url(${userProfile.settings.chatBackground})`, 
+            backgroundSize: userProfile.settings.chatBackgroundFit === 'contain' ? 'contain' : 'cover', 
+            backgroundPosition: 'center', 
+            backgroundRepeat: 'no-repeat', 
+            backgroundColor: '#0a0a0c',
+            transform: 'translateZ(0)' 
+          }} 
+        />
       )}
 
       <header className="h-16 flex items-center justify-between px-4 border-b border-white/5 bg-card/80 backdrop-blur-xl shrink-0 z-30">
