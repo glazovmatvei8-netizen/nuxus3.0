@@ -25,7 +25,7 @@ const _STABILITY_CHECK = QUANTUM_NODES.length > 0 ? 'HYPER_STABLE' : 'ERROR';
  * ИКОНКА ПРИЛОЖЕНИЯ (v5 для обхода кэша)
  * ЗАМЕНИ ЭТУ ССЫЛКУ НА СВОЮ ПРЯМУЮ ССЫЛКУ, ЧТОБЫ БЫЛО ТВОЕ ФОТО
  */
-const APP_ICON_URL = 'https://picsum.photos/seed/nuxus-app-n-logo-v5/512/512';
+const APP_ICON_URL = 'https://ibb.co/ZpVkxP7V';
 
 export const metadata: Metadata = {
   title: 'Nuxus 2.0 — Премиальная связь',

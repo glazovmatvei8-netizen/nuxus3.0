@@ -5,7 +5,7 @@ export default function manifest(): MetadataRoute.Manifest {
   /**
    * ИКОНКА ДЛЯ МАНИФЕСТА (v5)
    */
-  const APP_ICON_URL = 'https://picsum.photos/seed/nuxus-app-n-logo-v5/512/512';
+  const APP_ICON_URL = 'https://ibb.co/ZpVkxP7V';
   
   return {
     id: 'chat.nuxus.app',
