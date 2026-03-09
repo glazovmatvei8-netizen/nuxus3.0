@@ -80,6 +80,7 @@ export default function ChatArea() {
   const [showScrollBottom, setShowScrollBottom] = useState(false);
   const [isSearchMode, setIsSearchMode] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [isOnline, setIsOnline] = useState(true);
 
   const [selectedFiles, setSelectedFiles] = useState<{ url: string; type: 'image' | 'video' }[]>([]);
   const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
@@ -102,6 +103,8 @@ export default function ChatArea() {
 
   const chatRef = useMemoFirebase(() => (!db || !currentChatId) ? null : doc(db, 'chats', currentChatId), [db, currentChatId]);
   const { data: chat } = useDoc<Chat>(chatRef);
+
+  const isPrivate = chat?.type === 'private';
 
   const pinnedMsgRef = useMemoFirebase(() => (!db || !currentChatId || !chat?.pinnedMessageId) ? null : doc(db, 'chats', currentChatId, 'messages', chat.pinnedMessageId), [db, currentChatId, chat?.pinnedMessageId]);
   const { data: pinnedMessage } = useDoc<Message>(pinnedMsgRef);
@@ -126,6 +129,17 @@ export default function ChatArea() {
   }, [db, currentChatId]);
   
   const { data: messages } = useCollection<Message>(messagesQuery);
+
+  useEffect(() => {
+    setIsOnline(navigator.onLine);
+    const handleStatus = () => setIsOnline(navigator.onLine);
+    window.addEventListener('online', handleStatus);
+    window.addEventListener('offline', handleStatus);
+    return () => {
+      window.removeEventListener('online', handleStatus);
+      window.removeEventListener('offline', handleStatus);
+    };
+  }, []);
 
   useEffect(() => {
     if (!db || !currentChatId || !firebaseUser || !messages) return;
@@ -154,7 +168,7 @@ export default function ChatArea() {
     if (currentChatId) {
       setMessageInput(localDrafts[currentChatId] || '');
     }
-  }, [currentChatId]);
+  }, [currentChatId, localDrafts]);
 
   const handleInputChange = (val: string) => {
     setMessageInput(val);
@@ -240,7 +254,7 @@ export default function ChatArea() {
     
     await addDoc(collection(db, 'chats', currentChatId, 'messages'), msgData);
     updateDocumentNonBlocking(doc(db, 'chats', currentChatId), { lastMessageAt: new Date().toISOString() });
-  }, [messageInput, currentChatId, firebaseUser, db, userProfile, replyTo, editingMsg]);
+  }, [messageInput, currentChatId, firebaseUser, db, userProfile, replyTo, editingMsg, setLocalDrafts]);
 
   const startRecording = async () => {
     try {
@@ -305,7 +319,7 @@ export default function ChatArea() {
                 <span className="text-[10px] text-muted-foreground/60 tracking-widest truncate uppercase font-bold">
                   {isPrivate ? formatLastSeen(otherProfile?.lastSeen, otherProfile?.settings?.privacy?.lastSeenVisibility) : 'NUXUS 2.0'}
                 </span>
-                {!navigator.onLine && <div className="w-1.5 h-1.5 rounded-full bg-destructive animate-pulse" />}
+                {!isOnline && <div className="w-1.5 h-1.5 rounded-full bg-destructive animate-pulse" />}
               </div>
             </div>
           </div>
