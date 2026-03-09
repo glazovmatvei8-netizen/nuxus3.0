@@ -15,8 +15,8 @@
     },
     {
       "id": "nuxus-app-icon",
-      "description": "Nuxus Final Logo N Premium v5",
-      "imageUrl": "https://ibb.co/ZpVkxP7V",
+      "description": "Nuxus Final Logo N Premium v6",
+      "imageUrl": "https://i.ibb.co/sd2MqGz2/Icon.png",
       "imageHint": "tech logo letter N"
     },
     {
@@ -27,14 +27,14 @@
     },
     {
       "id": "pwa-icon-192",
-      "description": "Nuxus PWA Icon 192x192 v5",
-      "imageUrl": "https://ibb.co/ZpVkxP7V",
+      "description": "Nuxus PWA Icon 192x192 v6",
+      "imageUrl": "https://i.ibb.co/sd2MqGz2/Icon.png",
       "imageHint": "app icon"
     },
     {
       "id": "pwa-icon-512",
-      "description": "Nuxus PWA Icon 512x512 v5",
-      "imageUrl": "https://ibb.co/ZpVkxP7V",
+      "description": "Nuxus PWA Icon 512x512 v6",
+      "imageUrl": "https://i.ibb.co/sd2MqGz2/Icon.png",
       "imageHint": "app icon"
     }
   ]

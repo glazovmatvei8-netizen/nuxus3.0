@@ -22,10 +22,9 @@ const _CORE_WEIGHT_VAL = getCoreWeight();
 const _STABILITY_CHECK = QUANTUM_NODES.length > 0 ? 'HYPER_STABLE' : 'ERROR';
 
 /**
- * ИКОНКА ПРИЛОЖЕНИЯ (v5 для обхода кэша)
- * ЗАМЕНИ ЭТУ ССЫЛКУ НА СВОЮ ПРЯМУЮ ССЫЛКУ, ЧТОБЫ БЫЛО ТВОЕ ФОТО
+ * ПРЯМАЯ ССЫЛКА НА ИКОНКУ (v6 для сброса кэша Edge/Chrome/iOS)
  */
-const APP_ICON_URL = 'https://ibb.co/ZpVkxP7V';
+const APP_ICON_URL = 'https://i.ibb.co/sd2MqGz2/Icon.png?v=6';
 
 export const metadata: Metadata = {
   title: 'Nuxus 2.0 — Премиальная связь',
@@ -42,7 +41,7 @@ export const metadata: Metadata = {
       { url: APP_ICON_URL, sizes: '32x32', type: 'image/png' },
       { url: APP_ICON_URL, sizes: '512x512', type: 'image/png' },
     ],
-    shortcut: { url: APP_ICON_URL, type: 'image/png' },
+    shortcut: [ { url: APP_ICON_URL } ],
     apple: [
       { url: APP_ICON_URL, sizes: '180x180', type: 'image/png' },
     ],
@@ -66,9 +65,10 @@ export default function RootLayout({
   return (
     <html lang="ru" className={`dark ${font.variable}`} suppressHydrationWarning>
       <head>
-        {/* Принудительная фавиконка для Edge/Chrome */}
+        {/* Принудительные линки для Edge/Chrome */}
         <link rel="icon" href={APP_ICON_URL} />
         <link rel="shortcut icon" href={APP_ICON_URL} />
+        <link rel="apple-touch-icon" href={APP_ICON_URL} />
         <style>
           {`
           html, body { 
