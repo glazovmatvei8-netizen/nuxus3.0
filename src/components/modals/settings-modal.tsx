@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useRef, useEffect } from 'react';
@@ -15,7 +14,7 @@ import { UserAvatar } from '@/components/user-avatar';
 import { 
   LogOut, Palette, Check, Settings2, Camera, Lock, Image as ImageIcon, 
   Paintbrush, Move, Maximize, Shield, UserCircle, Layout, Smile, FileText, ChevronRight,
-  ShieldCheck, Eye, Users2, MessageSquareLock, Upload, Trash2, Smartphone
+  ShieldCheck, Eye, Users2, MessageSquareLock, Upload, Trash2, Smartphone, Info
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { signOut } from 'firebase/auth';
@@ -241,11 +240,8 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                 </div>
               </div>
 
-              {/* НОВАЯ ФУНКЦИЯ: Кастомная иконка приложения */}
               <div className="space-y-4 border-t border-white/5 pt-6">
                 <Label className="text-[10px] uppercase font-black text-muted-foreground flex items-center gap-2"><Smartphone className="w-3 h-3" /> Иконка приложения</Label>
-                <p className="text-[9px] text-muted-foreground uppercase leading-relaxed font-bold">Измените иконку Nuxus на рабочем столе вашего телефона.</p>
-                
                 <div className="flex items-center gap-4 bg-muted/20 p-4 rounded-2xl border border-white/5">
                   <div className="relative h-16 w-16 rounded-2xl overflow-hidden border border-white/10 shrink-0 bg-black/40">
                     <img src={form.customAppIconUrl || 'https://i.ibb.co/sd2MqGz2/Icon.png'} alt="App Icon" className="w-full h-full object-cover" />
@@ -261,6 +257,19 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                     )}
                   </div>
                   <input type="file" ref={iconInputRef} className="hidden" accept="image/*" onChange={handleIconUpload} />
+                </div>
+
+                {/* Инструкция для iOS */}
+                <div className="bg-primary/5 p-4 rounded-2xl border border-primary/10 space-y-2">
+                  <div className="flex items-center gap-2 text-primary">
+                    <Info className="w-3.5 h-3.5" />
+                    <span className="text-[10px] font-black uppercase">Как применить на iPhone?</span>
+                  </div>
+                  <p className="text-[9px] text-muted-foreground uppercase font-bold leading-relaxed">
+                    iOS не умеет менять иконку у уже созданного ярлыка. Чтобы увидеть новую иконку на рабочем столе:
+                    <br />1. Удалите старый ярлык мессенджера.
+                    <br />2. Нажмите «Поделиться» → «На экран Домой» заново.
+                  </p>
                 </div>
               </div>
 

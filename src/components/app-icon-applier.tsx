@@ -8,7 +8,7 @@ import type { User } from '@/lib/types';
 
 /**
  * Динамически применяет иконку приложения на основе настроек пользователя.
- * Это позволяет изменять иконку на рабочем столе (iOS/Android PWA) и в Edge.
+ * Оптимизировано для iOS Safari и Android Chrome.
  */
 export function AppIconApplier() {
   const { user } = useUser();
@@ -23,47 +23,37 @@ export function AppIconApplier() {
     const customIcon = profile?.settings?.customAppIconUrl;
     const finalIcon = customIcon || DEFAULT_ICON;
 
-    // Обновляем все теги иконок в <head>
+    const updateTag = (selector: string, attr: string, value: string, createIfMissing = true) => {
+      let element = document.querySelector(selector) as HTMLLinkElement;
+      if (!element && createIfMissing) {
+        element = document.createElement('link');
+        const parts = selector.split('[');
+        const rel = parts[1]?.split('=')[1]?.replace(/['"\]]/g, '');
+        if (rel) element.rel = rel;
+        document.head.appendChild(element);
+      }
+      if (element) {
+        element.setAttribute(attr, value);
+      }
+    };
+
     const updateIcons = () => {
-      // Стандартный favicon
-      let fav = document.querySelector('link[rel="icon"]') as HTMLLinkElement;
-      if (!fav) {
-        fav = document.createElement('link');
-        fav.rel = 'icon';
-        document.head.appendChild(fav);
-      }
-      fav.href = finalIcon;
+      // 1. Стандартные фавиконки
+      updateTag('link[rel="icon"]', 'href', finalIcon);
+      updateTag('link[rel="shortcut icon"]', 'href', finalIcon);
 
-      // Apple Touch Icon (для iOS "На экран Домой")
-      let apple = document.querySelector('link[rel="apple-touch-icon"]') as HTMLLinkElement;
-      if (!apple) {
-        apple = document.createElement('link');
-        apple.rel = 'apple-touch-icon';
-        document.head.appendChild(apple);
-      }
-      apple.href = finalIcon;
-
-      // Специальные размеры для iOS
-      const sizes = ['152x152', '180x180', '167x167'];
+      // 2. Apple Touch Icons (iOS "На экран Домой")
+      updateTag('link[rel="apple-touch-icon"]', 'href', finalIcon);
+      
+      const sizes = ['57x57', '72x72', '76x76', '114x114', '120x120', '144x144', '152x152', '180x180'];
       sizes.forEach(size => {
-        let s = document.querySelector(`link[rel="apple-touch-icon"][sizes="${size}"]`) as HTMLLinkElement;
-        if (!s) {
-          s = document.createElement('link');
-          s.rel = 'apple-touch-icon';
-          s.setAttribute('sizes', size);
-          document.head.appendChild(s);
-        }
-        s.href = finalIcon;
+        updateTag(`link[rel="apple-touch-icon"][sizes="${size}"]`, 'href', finalIcon);
       });
 
-      // Shortcut icon для Edge/Chrome на ПК
-      let shortcut = document.querySelector('link[rel="shortcut icon"]') as HTMLLinkElement;
-      if (!shortcut) {
-        shortcut = document.createElement('link');
-        shortcut.rel = 'shortcut icon';
-        document.head.appendChild(shortcut);
-      }
-      shortcut.href = finalIcon;
+      // 3. Android / Chrome (через манифест - эмуляция)
+      // К сожалению, манифест нельзя менять динамически на лету так же легко, 
+      // но мы можем обновить ссылку на сам файл манифеста или добавить мета-теги
+      updateTag('meta[name="msapplication-TileImage"]', 'content', finalIcon);
     };
 
     updateIcons();
