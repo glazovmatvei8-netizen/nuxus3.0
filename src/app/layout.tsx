@@ -22,10 +22,10 @@ const _CORE_WEIGHT_VAL = getCoreWeight();
 const _STABILITY_CHECK = QUANTUM_NODES.length > 0 ? 'HYPER_STABLE' : 'ERROR';
 
 /**
- * ИКОНКА ПРИЛОЖЕНИЯ (Замените эту ссылку на свою прямую ссылку)
- * Используем v4 для сброса кеша и новый сид для визуализации буквы N
+ * ИКОНКА ПРИЛОЖЕНИЯ (v5 для обхода кэша)
+ * ЗАМЕНИ ЭТУ ССЫЛКУ НА СВОЮ ПРЯМУЮ ССЫЛКУ, ЧТОБЫ БЫЛО ТВОЕ ФОТО
  */
-const APP_ICON_URL = 'https://picsum.photos/seed/nuxus-app-n-logo-v4/512/512';
+const APP_ICON_URL = 'https://picsum.photos/seed/nuxus-app-n-logo-v5/512/512';
 
 export const metadata: Metadata = {
   title: 'Nuxus 2.0 — Премиальная связь',
@@ -36,20 +36,16 @@ export const metadata: Metadata = {
     capable: true,
     statusBarStyle: 'black-translucent',
     title: 'Nuxus',
-    startupImage: [
-      {
-        url: APP_ICON_URL,
-      },
-    ],
   },
   icons: {
     icon: [
+      { url: APP_ICON_URL, sizes: '32x32', type: 'image/png' },
       { url: APP_ICON_URL, sizes: '512x512', type: 'image/png' },
     ],
+    shortcut: { url: APP_ICON_URL, type: 'image/png' },
     apple: [
       { url: APP_ICON_URL, sizes: '180x180', type: 'image/png' },
     ],
-    shortcut: [APP_ICON_URL],
   },
 };
 
@@ -70,6 +66,9 @@ export default function RootLayout({
   return (
     <html lang="ru" className={`dark ${font.variable}`} suppressHydrationWarning>
       <head>
+        {/* Принудительная фавиконка для Edge/Chrome */}
+        <link rel="icon" href={APP_ICON_URL} />
+        <link rel="shortcut icon" href={APP_ICON_URL} />
         <style>
           {`
           html, body { 

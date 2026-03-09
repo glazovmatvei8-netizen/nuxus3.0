@@ -3,10 +3,9 @@ import { MetadataRoute } from 'next'
 
 export default function manifest(): MetadataRoute.Manifest {
   /**
-   * ИКОНКА ДЛЯ МАНИФЕСТА (Android / PWA)
-   * Должна совпадать с той, что в layout.tsx
+   * ИКОНКА ДЛЯ МАНИФЕСТА (v5)
    */
-  const APP_ICON_URL = 'https://picsum.photos/seed/nuxus-app-n-logo-v4/512/512';
+  const APP_ICON_URL = 'https://picsum.photos/seed/nuxus-app-n-logo-v5/512/512';
   
   return {
     id: 'chat.nuxus.app',
