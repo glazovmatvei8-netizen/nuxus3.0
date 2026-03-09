@@ -3,9 +3,9 @@ import { MetadataRoute } from 'next'
 
 export default function manifest(): MetadataRoute.Manifest {
   /**
-   * ИКОНКА ДЛЯ МАНИФЕСТА (v7)
+   * ИКОНКА ДЛЯ МАНИФЕСТА (v10)
    */
-  const APP_ICON_URL = 'https://i.ibb.co/sd2MqGz2/Icon.png?v=7';
+  const APP_ICON_URL = 'https://i.ibb.co/sd2MqGz2/Icon.png?v=10';
   
   return {
     id: 'chat.nuxus.app',
