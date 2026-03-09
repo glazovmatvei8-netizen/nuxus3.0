@@ -22,9 +22,10 @@ const _CORE_WEIGHT_VAL = getCoreWeight();
 const _STABILITY_CHECK = QUANTUM_NODES.length > 0 ? 'HYPER_STABLE' : 'ERROR';
 
 /**
- * ПРЯМАЯ ССЫЛКА НА ИКОНКУ (v6 для сброса кэша Edge/Chrome/iOS)
+ * ИКОНКА ПРИЛОЖЕНИЯ (v7)
+ * Использование прямой ссылки пользователя для Edge и iOS
  */
-const APP_ICON_URL = 'https://i.ibb.co/sd2MqGz2/Icon.png?v=6';
+const APP_ICON_URL = 'https://i.ibb.co/sd2MqGz2/Icon.png';
 
 export const metadata: Metadata = {
   title: 'Nuxus 2.0 — Премиальная связь',
@@ -38,12 +39,12 @@ export const metadata: Metadata = {
   },
   icons: {
     icon: [
-      { url: APP_ICON_URL, sizes: '32x32', type: 'image/png' },
-      { url: APP_ICON_URL, sizes: '512x512', type: 'image/png' },
+      { url: `${APP_ICON_URL}?v=7`, sizes: '32x32', type: 'image/png' },
+      { url: `${APP_ICON_URL}?v=7`, sizes: '512x512', type: 'image/png' },
     ],
-    shortcut: [ { url: APP_ICON_URL } ],
+    shortcut: { url: `${APP_ICON_URL}?v=7`, type: 'image/png' },
     apple: [
-      { url: APP_ICON_URL, sizes: '180x180', type: 'image/png' },
+      { url: `${APP_ICON_URL}?v=7`, sizes: '180x180', type: 'image/png' },
     ],
   },
 };
@@ -65,10 +66,10 @@ export default function RootLayout({
   return (
     <html lang="ru" className={`dark ${font.variable}`} suppressHydrationWarning>
       <head>
-        {/* Принудительные линки для Edge/Chrome */}
-        <link rel="icon" href={APP_ICON_URL} />
-        <link rel="shortcut icon" href={APP_ICON_URL} />
-        <link rel="apple-touch-icon" href={APP_ICON_URL} />
+        {/* Принудительная вставка ссылок для борьбы с кэшем Edge/Safari */}
+        <link rel="icon" type="image/png" href={`${APP_ICON_URL}?v=7`} />
+        <link rel="shortcut icon" type="image/png" href={`${APP_ICON_URL}?v=7`} />
+        <link rel="apple-touch-icon" href={`${APP_ICON_URL}?v=7`} />
         <style>
           {`
           html, body { 
