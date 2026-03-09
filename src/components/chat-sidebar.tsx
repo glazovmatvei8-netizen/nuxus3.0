@@ -155,7 +155,7 @@ export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?:
               isGlobalAdmin(currentUserProfile) ? "cursor-pointer hover:text-primary transition-colors active:scale-95" : "cursor-default"
             )}
           >
-            {isArchiveView ? 'Архив' : 'NUXUS'}
+            {isArchiveView ? 'Архив' : 'Чаты🐱'}
           </h1>
 
           <div className="flex items-center gap-1.5">
