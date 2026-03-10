@@ -5,7 +5,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
-import { Smile, Sticker, Ghost, Star, Plus } from 'lucide-react';
+import { Smile, Sticker, Ghost, Star, Plus, Loader2 } from 'lucide-react';
 import { useUser, useFirestore, useDoc, useMemoFirebase, useCollection } from '@/firebase';
 import { doc, collection, query, where } from 'firebase/firestore';
 import type { User, StickerPack } from '@/lib/types';
@@ -35,11 +35,10 @@ export function EmojiPicker({ onEmojiSelect, onStickerSelect, className }: Emoji
 
   const packsQuery = useMemoFirebase(() => {
     if (!db || !profile?.installedStickerPackIds?.length) return null;
-    // Limit to 10 for Firestore 'in' query safety
     return query(collection(db, 'stickerPacks'), where('id', 'in', profile.installedStickerPackIds.slice(0, 10)));
   }, [db, profile?.installedStickerPackIds]);
 
-  const { data: stickerPacks } = useCollection<StickerPack>(packsQuery);
+  const { data: stickerPacks, isLoading: isPacksLoading } = useCollection<StickerPack>(packsQuery);
 
   useEffect(() => {
     const saved = localStorage.getItem('nuxus_recent_emojis');
@@ -117,22 +116,26 @@ export function EmojiPicker({ onEmojiSelect, onStickerSelect, className }: Emoji
             >
               <Star className={cn("w-4 h-4", activePackId === 'custom' ? "text-white" : "text-muted-foreground")} />
             </button>
-            {stickerPacks?.map(pack => (
-              <button 
-                key={pack.id} 
-                onClick={() => setActivePackId(pack.id)}
-                className={cn("h-10 min-w-[40px] rounded-xl overflow-hidden border transition-all relative group", activePackId === pack.id ? "border-primary scale-105 shadow-lg shadow-primary/20" : "border-white/10 opacity-60")}
-              >
-                {pack.iconUrl ? (
-                  <img src={pack.iconUrl} className="w-full h-full object-cover" alt={pack.name} />
-                ) : (
-                  <div className="w-full h-full bg-primary/20 flex items-center justify-center text-[10px] font-bold text-primary">{pack.name[0]}</div>
-                )}
-                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                   <span className="text-[6px] font-black uppercase text-white truncate px-1">{pack.name}</span>
-                </div>
-              </button>
-            ))}
+            {isPacksLoading ? (
+              <div className="h-10 w-10 flex items-center justify-center"><Loader2 className="w-4 h-4 animate-spin text-primary" /></div>
+            ) : (
+              stickerPacks?.map(pack => (
+                <button 
+                  key={pack.id} 
+                  onClick={() => setActivePackId(pack.id)}
+                  className={cn("h-10 min-w-[40px] rounded-xl overflow-hidden border transition-all relative group", activePackId === pack.id ? "border-primary scale-105 shadow-lg shadow-primary/20" : "border-white/10 opacity-60")}
+                >
+                  {pack.iconUrl ? (
+                    <img src={pack.iconUrl} className="w-full h-full object-cover" alt={pack.name} />
+                  ) : (
+                    <div className="w-full h-full bg-primary/20 flex items-center justify-center text-[10px] font-bold text-primary">{pack.name[0]}</div>
+                  )}
+                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                     <span className="text-[6px] font-black uppercase text-white truncate px-1">{pack.name}</span>
+                  </div>
+                </button>
+              ))
+            )}
           </div>
 
           <div className="px-4 py-2 bg-white/5 border-b border-white/5">
@@ -157,8 +160,8 @@ export function EmojiPicker({ onEmojiSelect, onStickerSelect, className }: Emoji
                 <div className="flex flex-col items-center justify-center py-20 opacity-30 text-center space-y-4">
                   <Ghost className="w-12 h-12" />
                   <div className="space-y-1">
-                    <p className="text-[10px] font-black uppercase tracking-widest text-white">Нет стикеров</p>
-                    <p className="text-[8px] font-bold uppercase tracking-wider text-muted-foreground">Напишите @stickers,<br />чтобы создать свои!</p>
+                    <p className="text-[10px] font-black uppercase tracking-widest text-white">Пусто</p>
+                    <p className="text-[8px] font-bold uppercase tracking-wider text-muted-foreground">Напишите @stickers,<br />чтобы наполнить пак!</p>
                   </div>
                 </div>
               )}

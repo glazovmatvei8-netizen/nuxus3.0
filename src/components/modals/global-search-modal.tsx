@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useFirestore, useUser, useDoc, useMemoFirebase } from '@/firebase';
-import { collection, query, where, getDocs, doc, limit, addDoc, orderBy, updateDoc, arrayUnion } from 'firebase/firestore';
+import { collection, query, where, getDocs, doc, limit, addDoc, orderBy, updateDoc, arrayUnion, setDoc } from 'firebase/firestore';
 import { useAppState } from '@/lib/store';
 import { useToast } from '@/hooks/use-toast';
 import { Search, Loader2, Radio, Users, Check, ArrowRight, X, Star, Zap, Bot, Sticker } from 'lucide-react';
@@ -30,58 +30,45 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
   const userRef = useMemoFirebase(() => (!db || !user) ? null : doc(db, 'users', user.uid), [db, user]);
   const { data: myProfile } = useDoc<User>(userRef);
 
-  // Инициализация системного пака "Лиса" (Расширенный набор)
+  const foxStickers = [
+    'https://stickerswiki.ams3.cdn.digitaloceanspaces.com/LittleFoxKumi/14214.160.webp',
+    'https://stickerswiki.ams3.cdn.digitaloceanspaces.com/LittleFoxKumi/14215.160.webp',
+    'https://stickerswiki.ams3.cdn.digitaloceanspaces.com/LittleFoxKumi/14216.160.webp',
+    'https://stickerswiki.ams3.cdn.digitaloceanspaces.com/LittleFoxKumi/14217.160.webp',
+    'https://stickerswiki.ams3.cdn.digitaloceanspaces.com/LittleFoxKumi/14218.160.webp',
+    'https://stickerswiki.ams3.cdn.digitaloceanspaces.com/LittleFoxKumi/14219.160.webp',
+    'https://stickerswiki.ams3.cdn.digitaloceanspaces.com/LittleFoxKumi/14220.160.webp',
+    'https://stickerswiki.ams3.cdn.digitaloceanspaces.com/LittleFoxKumi/14221.160.webp',
+    'https://stickerswiki.ams3.cdn.digitaloceanspaces.com/LittleFoxKumi/14222.160.webp',
+    'https://stickerswiki.ams3.cdn.digitaloceanspaces.com/LittleFoxKumi/14223.160.webp',
+    'https://stickerswiki.ams3.cdn.digitaloceanspaces.com/LittleFoxKumi/14224.160.webp',
+    'https://stickerswiki.ams3.cdn.digitaloceanspaces.com/LittleFoxKumi/14225.160.webp',
+    'https://stickerswiki.ams3.cdn.digitaloceanspaces.com/LittleFoxKumi/14226.160.webp',
+    'https://stickerswiki.ams3.cdn.digitaloceanspaces.com/LittleFoxKumi/14227.160.webp',
+    'https://stickerswiki.ams3.cdn.digitaloceanspaces.com/LittleFoxKumi/14228.160.webp',
+    'https://stickerswiki.ams3.cdn.digitaloceanspaces.com/LittleFoxKumi/14229.160.webp',
+    'https://stickerswiki.ams3.cdn.digitaloceanspaces.com/LittleFoxKumi/14230.160.webp',
+    'https://stickerswiki.ams3.cdn.digitaloceanspaces.com/LittleFoxKumi/14231.160.webp',
+    'https://stickerswiki.ams3.cdn.digitaloceanspaces.com/LittleFoxKumi/14232.160.webp',
+    'https://stickerswiki.ams3.cdn.digitaloceanspaces.com/LittleFoxKumi/14233.160.webp',
+    'https://stickerswiki.ams3.cdn.digitaloceanspaces.com/LittleFoxKumi/14234.160.webp',
+    'https://stickerswiki.ams3.cdn.digitaloceanspaces.com/LittleFoxKumi/14235.160.webp',
+    'https://stickerswiki.ams3.cdn.digitaloceanspaces.com/LittleFoxKumi/14236.160.webp'
+  ];
+
   useEffect(() => {
     if (open && db) {
       const initSystemPacks = async () => {
         const foxPackId = 'system_fox_pack';
-        const snap = await getDocs(query(collection(db, 'stickerPacks'), where('id', '==', foxPackId)));
-        
-        const foxStickers = [
-          'https://stickerswiki.ams3.cdn.digitaloceanspaces.com/LittleFoxKumi/14214.160.webp',
-          'https://stickerswiki.ams3.cdn.digitaloceanspaces.com/LittleFoxKumi/14215.160.webp',
-          'https://stickerswiki.ams3.cdn.digitaloceanspaces.com/LittleFoxKumi/14216.160.webp',
-          'https://stickerswiki.ams3.cdn.digitaloceanspaces.com/LittleFoxKumi/14217.160.webp',
-          'https://stickerswiki.ams3.cdn.digitaloceanspaces.com/LittleFoxKumi/14218.160.webp',
-          'https://stickerswiki.ams3.cdn.digitaloceanspaces.com/LittleFoxKumi/14219.160.webp',
-          'https://stickerswiki.ams3.cdn.digitaloceanspaces.com/LittleFoxKumi/14220.160.webp',
-          'https://stickerswiki.ams3.cdn.digitaloceanspaces.com/LittleFoxKumi/14221.160.webp',
-          'https://stickerswiki.ams3.cdn.digitaloceanspaces.com/LittleFoxKumi/14222.160.webp',
-          'https://stickerswiki.ams3.cdn.digitaloceanspaces.com/LittleFoxKumi/14223.160.webp',
-          'https://stickerswiki.ams3.cdn.digitaloceanspaces.com/LittleFoxKumi/14224.160.webp',
-          'https://stickerswiki.ams3.cdn.digitaloceanspaces.com/LittleFoxKumi/14225.160.webp',
-          // Новые стикеры из запроса
-          'https://stickerswiki.ams3.cdn.digitaloceanspaces.com/LittleFoxKumi/14226.160.webp',
-          'https://stickerswiki.ams3.cdn.digitaloceanspaces.com/LittleFoxKumi/14227.160.webp',
-          'https://stickerswiki.ams3.cdn.digitaloceanspaces.com/LittleFoxKumi/14228.160.webp',
-          'https://stickerswiki.ams3.cdn.digitaloceanspaces.com/LittleFoxKumi/14229.160.webp',
-          'https://stickerswiki.ams3.cdn.digitaloceanspaces.com/LittleFoxKumi/14230.160.webp',
-          'https://stickerswiki.ams3.cdn.digitaloceanspaces.com/LittleFoxKumi/14231.160.webp',
-          'https://stickerswiki.ams3.cdn.digitaloceanspaces.com/LittleFoxKumi/14232.160.webp',
-          'https://stickerswiki.ams3.cdn.digitaloceanspaces.com/LittleFoxKumi/14233.160.webp',
-          'https://stickerswiki.ams3.cdn.digitaloceanspaces.com/LittleFoxKumi/14234.160.webp',
-          'https://stickerswiki.ams3.cdn.digitaloceanspaces.com/LittleFoxKumi/14235.160.webp',
-          'https://stickerswiki.ams3.cdn.digitaloceanspaces.com/LittleFoxKumi/14236.160.webp'
-        ];
-
-        if (snap.empty) {
-          await addDoc(collection(db, 'stickerPacks'), {
-            id: foxPackId,
-            ownerId: 'system',
-            name: 'Лиса 🦊',
-            iconUrl: 'https://stickerswiki.ams3.cdn.digitaloceanspaces.com/LittleFoxKumi/14214.160.webp',
-            stickerUrls: foxStickers,
-            createdAt: new Date().toISOString()
-          });
-        } else {
-          // Обновляем существующий пак новыми ссылками если их стало больше
-          const existingPack = snap.docs[0];
-          if (existingPack.data().stickerUrls.length < foxStickers.length) {
-            await updateDoc(doc(db, 'stickerPacks', existingPack.id), {
-              stickerUrls: foxStickers
-            });
-          }
-        }
+        const packRef = doc(db, 'stickerPacks', foxPackId);
+        await setDoc(packRef, {
+          id: foxPackId,
+          ownerId: 'system',
+          name: 'Лиса 🦊',
+          iconUrl: foxStickers[0],
+          stickerUrls: foxStickers,
+          createdAt: new Date().toISOString()
+        }, { merge: true });
       };
       initSystemPacks();
     }
@@ -92,12 +79,10 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
       const fetchDiscoveryData = async () => {
         setIsLoading(true);
         try {
-          // Загружаем трендовые чаты
           const chatQ = query(collection(db, 'chats'), where('isPublic', '==', true), limit(10));
           const chatSnap = await getDocs(chatQ);
           setTrends(chatSnap.docs.map(d => ({ id: d.id, ...d.data() } as Chat)));
 
-          // Загружаем рекомендованные стикерпаки
           const packQ = query(collection(db, 'stickerPacks'), limit(5));
           const packSnap = await getDocs(packQ);
           setFeaturedPacks(packSnap.docs.map(d => ({ id: d.id, ...d.data() } as StickerPack)));
@@ -123,7 +108,6 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
       const searchVal = val.startsWith('@') ? val.toLowerCase() : '@' + val.toLowerCase();
       const foundResults: any[] = [];
 
-      // Робот стикеров
       if ('@stickers'.includes(searchVal)) {
         foundResults.push({ type: 'bot', data: { id: 'bot_stickers', name: 'Sticker Pack Bot', username: '@stickers', avatarUrl: 'https://i.ibb.co/sd2MqGz2/Icon.png' } });
       }
@@ -210,7 +194,6 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
               </div>
             ) : (
               <>
-                {/* Витрина Стикеров */}
                 <div className="space-y-4">
                   <div className="flex items-center gap-2 px-2 text-accent">
                     <Sticker className="w-4 h-4 fill-current" />
@@ -235,7 +218,6 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
                   </div>
                 </div>
 
-                {/* Популярные чаты */}
                 <div className="space-y-4">
                   <div className="flex items-center gap-2 px-2 text-primary">
                     <Zap className="w-4 h-4 fill-current" />
