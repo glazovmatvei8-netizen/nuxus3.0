@@ -170,13 +170,17 @@ export default function ChatArea() {
       
       try {
         await batch.commit();
+        // Also clear manual unread flag
+        if (chat?.isManualUnread) {
+          updateDoc(doc(db, 'chats', currentChatId), { isManualUnread: false });
+        }
       } catch (e) {
         console.warn("Nuxus Read Receipt Sync: Retrying...");
       }
     };
 
     markAsRead();
-  }, [messages, currentChatId, firebaseUser, db]);
+  }, [messages, currentChatId, firebaseUser, db, chat?.isManualUnread]);
 
   useEffect(() => {
     if (currentChatId) {
@@ -373,7 +377,7 @@ export default function ChatArea() {
     }
     
     await addDoc(collection(db, 'chats', currentChatId, 'messages'), msgData);
-    updateDocumentNonBlocking(doc(db, 'chats', currentChatId), { lastMessageAt: new Date().toISOString() });
+    updateDocumentNonBlocking(doc(db, 'chats', currentChatId), { lastMessageAt: new Date().toISOString(), isManualUnread: false });
 
   }, [messageInput, currentChatId, firebaseUser, db, userProfile, replyTo, editingMsg, setLocalDrafts, chat?.username]);
 
@@ -459,8 +463,6 @@ export default function ChatArea() {
     const newMode = facingMode === 'user' ? 'environment' : 'user';
     setFacingMode(newMode);
     if (isRecordingVideo) {
-      // Logic to switch camera while recording is complex, so we restart stream for now
-      // or just allow switching before start. For MVP, we switch mode for next session.
       toast({ title: "Камера переключена для следующей записи" });
     }
   };
@@ -554,7 +556,6 @@ export default function ChatArea() {
       {/* Video Note Professional Overlay */}
       {isRecordingVideo && (
         <div className="fixed inset-0 z-[1000] bg-black/95 flex flex-col items-center justify-center animate-in fade-in duration-300">
-          {/* Circular Progress Path */}
           <div className="relative w-full max-w-[320px] aspect-square mb-12">
             <svg className="absolute inset-0 w-full h-full -rotate-90 transform" viewBox="0 0 100 100">
               <circle
@@ -580,7 +581,6 @@ export default function ChatArea() {
             </div>
           </div>
 
-          {/* Controls Bar */}
           <div className="w-full max-w-sm px-8 flex flex-col items-center gap-8">
             <div className="flex items-center gap-6">
               <button 
@@ -775,7 +775,7 @@ export default function ChatArea() {
                     {isAiLoading ? <Loader2 className="w-6 h-6" /> : <Sparkles className="w-6 h-6" />}
                   </button>
                   <button className="text-white/40 hover:text-white transition-colors" onClick={() => startRecording('video')}>
-                    <Instagram className="w-7 h-7" />
+                    <Camera className="w-7 h-7" />
                   </button>
                   <button className="text-white/40 hover:text-white transition-colors" onClick={() => startRecording('audio')}>
                     <Mic className="w-7 h-7" />

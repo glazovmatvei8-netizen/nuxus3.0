@@ -1,12 +1,12 @@
 
 "use client"
 
-import React, { useState, useMemo, memo } from 'react';
+import React, { useState, useMemo, memo, useRef, useEffect } from 'react';
 import { useAppState } from '@/lib/store';
 import { Button } from '@/components/ui/button';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
-  Plus, SquarePen, Ghost, Search, Star, Pin, PinOff
+  Plus, SquarePen, Ghost, Search, Star, Pin, PinOff, MessageSquare, VolumeX, Trash2, Volume2
 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { CreateChatModal } from './modals/create-chat-modal';
@@ -17,7 +17,7 @@ import { CreateStoryModal } from './modals/create-story-modal';
 import { StoryViewerModal } from './modals/story-viewer-modal';
 import type { User, Message, Chat } from '@/lib/types';
 import { useFirestore, useUser, useCollection, useDoc, useMemoFirebase } from '@/firebase';
-import { collection, query, where, doc, limit, orderBy, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
+import { collection, query, where, doc, limit, orderBy, updateDoc, arrayUnion, arrayRemove, deleteDoc } from 'firebase/firestore';
 import { formatDisplayName, cn, isGlobalAdmin } from '@/lib/utils';
 import { format } from 'date-fns';
 import { toast } from '@/hooks/use-toast';
@@ -29,9 +29,15 @@ import {
 } from "@/components/ui/context-menu";
 
 const ChatListItem = memo(({ 
-  chat, isActive, otherId, isPinned, onPinToggle, onClick
+  chat, isActive, otherId, isPinned, onPinToggle, onClick, onMute, onMarkUnread, onDelete
 }: any) => {
   const db = useFirestore();
+  const [offsetX, setOffsetX] = useState(0);
+  const touchStartX = useRef(0);
+  const touchStartY = useRef(0);
+  const isHorizontalSwipe = useRef(false);
+  const [isMuted, setIsMuted] = useState(!!chat.mutedUntil);
+
   const userProfileRef = useMemoFirebase(() => (!db || !otherId) ? null : doc(db, 'users', otherId), [db, otherId]);
   const { data: otherProfile } = useDoc<User>(userProfileRef);
 
@@ -52,42 +58,122 @@ const ChatListItem = memo(({
     try { return format(date, 'HH:mm'); } catch (e) { return ''; }
   }, [chat.lastMessageAt, chat.createdAt]);
 
-  const isUnread = lastMsg && !lastMsg.isRead && lastMsg.senderId !== otherId;
+  const isUnread = (lastMsg && !lastMsg.isRead && lastMsg.senderId !== otherId) || chat.isManualUnread;
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX;
+    touchStartY.current = e.touches[0].clientY;
+    isHorizontalSwipe.current = false;
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    const deltaX = e.touches[0].clientX - touchStartX.current;
+    const deltaY = e.touches[0].clientY - touchStartY.current;
+
+    if (!isHorizontalSwipe.current && Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 10) {
+      isHorizontalSwipe.current = true;
+    }
+
+    if (isHorizontalSwipe.current) {
+      setOffsetX(deltaX);
+    }
+  };
+
+  const handleTouchEnd = () => {
+    if (offsetX > 80) {
+      setOffsetX(160); // Snap to Left actions
+    } else if (offsetX < -80) {
+      setOffsetX(-160); // Snap to Right actions
+    } else {
+      setOffsetX(0);
+    }
+    isHorizontalSwipe.current = false;
+  };
+
+  const resetSwipe = () => setOffsetX(0);
 
   return (
-    <ContextMenu>
-      <ContextMenuTrigger>
-        <div
-          onClick={onClick}
-          className={cn(
-            "flex items-center gap-3 px-4 py-2.5 cursor-pointer transition-all border-none group relative select-none touch-pan-y",
-            isActive ? 'bg-white/10' : 'active:bg-white/[0.05]'
-          )}
+    <div className="relative overflow-hidden touch-pan-y select-none bg-[#0a0a0c]">
+      {/* Background Actions - LEFT (revealed on Swipe Right) */}
+      <div className="absolute inset-y-0 left-0 flex h-full z-0">
+        <button 
+          onClick={(e) => { e.stopPropagation(); onMarkUnread(chat.id); resetSwipe(); }}
+          className="w-20 bg-[#007AFF] flex flex-col items-center justify-center text-white gap-1 active:brightness-90 transition-all"
         >
-          <UserAvatar userId={otherId} manualAvatarUrl={otherProfile?.avatarUrl || chat.avatarUrl} className="h-[52px] w-[52px]" fallbackName={finalDisplayName} showOnlineStatus />
-          <div className="flex-1 min-w-0 border-b border-white/[0.03] pb-3 h-full flex flex-col justify-center">
-            <div className="flex items-center justify-between mb-0.5">
-              <span className="font-bold text-[16px] text-white truncate flex items-center gap-1">
-                {isPinned && <Pin className="w-3 h-3 text-primary fill-primary rotate-45" />}
-                {finalDisplayName} {otherProfile?.isPremium && <Star className="w-3 h-3 text-accent fill-accent inline ml-1" />}
-              </span>
-              <span className="text-[13px] text-muted-foreground/60 font-medium">{displayTime}</span>
+          <MessageSquare className="w-5 h-5 fill-current" />
+          <span className="text-[10px] font-bold leading-tight px-1">Не прочитан</span>
+        </button>
+        <button 
+          onClick={(e) => { e.stopPropagation(); onPinToggle(chat.id); resetSwipe(); }}
+          className="w-20 bg-[#34C759] flex flex-col items-center justify-center text-white gap-1 active:brightness-90 transition-all"
+        >
+          <Pin className="w-5 h-5 fill-current" />
+          <span className="text-[10px] font-bold leading-tight px-1">{isPinned ? 'Открепить' : 'Закрепить'}</span>
+        </button>
+      </div>
+
+      {/* Background Actions - RIGHT (revealed on Swipe Left) */}
+      <div className="absolute inset-y-0 right-0 flex h-full z-0">
+        <button 
+          onClick={(e) => { e.stopPropagation(); onMute(chat.id); resetSwipe(); }}
+          className="w-20 bg-[#FF9500] flex flex-col items-center justify-center text-white gap-1 active:brightness-90 transition-all"
+        >
+          {isMuted ? <Volume2 className="w-5 h-5" /> : <VolumeX className="w-5 h-5 fill-current" />}
+          <span className="text-[10px] font-bold leading-tight px-1">{isMuted ? 'Звук' : 'Без звука'}</span>
+        </button>
+        <button 
+          onClick={(e) => { e.stopPropagation(); onDelete(chat.id); resetSwipe(); }}
+          className="w-20 bg-[#FF3B30] flex flex-col items-center justify-center text-white gap-1 active:brightness-90 transition-all"
+        >
+          <Trash2 className="w-5 h-5 fill-current" />
+          <span className="text-[10px] font-bold leading-tight px-1">Удалить</span>
+        </button>
+      </div>
+
+      {/* Foreground Content */}
+      <div 
+        className={cn(
+          "relative z-10 transition-transform duration-200 ease-out bg-[#0a0a0c]",
+          offsetX === 0 && "transition-none"
+        )}
+        style={{ transform: `translateX(${offsetX}px)` }}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+        onClick={onClick}
+      >
+        <ContextMenu>
+          <ContextMenuTrigger>
+            <div className={cn(
+              "flex items-center gap-3 px-4 py-2.5 cursor-pointer transition-all border-none group relative",
+              isActive ? 'bg-white/10' : 'active:bg-white/[0.05]'
+            )}>
+              <UserAvatar userId={otherId} manualAvatarUrl={otherProfile?.avatarUrl || chat.avatarUrl} className="h-[52px] w-[52px]" fallbackName={finalDisplayName} showOnlineStatus />
+              <div className="flex-1 min-w-0 border-b border-white/[0.03] pb-3 h-full flex flex-col justify-center">
+                <div className="flex items-center justify-between mb-0.5">
+                  <span className="font-bold text-[16px] text-white truncate flex items-center gap-1">
+                    {isPinned && <Pin className="w-3 h-3 text-primary fill-primary rotate-45" />}
+                    {finalDisplayName} {otherProfile?.isPremium && <Star className="w-3 h-3 text-accent fill-accent inline ml-1" />}
+                  </span>
+                  <span className="text-[13px] text-muted-foreground/60 font-medium">{displayTime}</span>
+                </div>
+                <div className="flex items-center justify-between pr-2">
+                  <p className="text-[14px] text-muted-foreground/60 truncate flex-1">
+                    {lastMsg?.contentType === 'text' ? lastMsg.content : (lastMsg ? `[${lastMsg.contentType}]` : 'Нет сообщений')}
+                  </p>
+                  {isUnread && <div className="w-2.5 h-2.5 bg-[#007AFF] rounded-full shadow-[0_0_8px_rgba(0,122,255,0.5)]" />}
+                </div>
+              </div>
             </div>
-            <div className="flex items-center justify-between pr-2">
-              <p className="text-[14px] text-muted-foreground/60 truncate flex-1">
-                {lastMsg?.contentType === 'text' ? lastMsg.content : (lastMsg ? `[${lastMsg.contentType}]` : 'Нет сообщений')}
-              </p>
-              {isUnread && <div className="w-2.5 h-2.5 bg-primary rounded-full shadow-[0_0_8px_rgba(139,92,246,0.5)]" />}
-            </div>
-          </div>
-        </div>
-      </ContextMenuTrigger>
-      <ContextMenuContent className="w-56 bg-card/95 backdrop-blur-xl border-white/10 rounded-2xl shadow-2xl">
-        <ContextMenuItem onClick={() => onPinToggle(chat.id)} className="gap-3 py-3 font-bold uppercase text-[11px] tracking-widest rounded-xl">
-          {isPinned ? <><PinOff className="w-4 h-4 text-primary" /> Открепить</> : <><Pin className="w-4 h-4 text-primary" /> Закрепить</>}
-        </ContextMenuItem>
-      </ContextMenuContent>
-    </ContextMenu>
+          </ContextMenuTrigger>
+          <ContextMenuContent className="w-56 bg-card/95 backdrop-blur-xl border-white/10 rounded-2xl shadow-2xl">
+            <ContextMenuItem onClick={() => onPinToggle(chat.id)} className="gap-3 py-3 font-bold uppercase text-[11px] tracking-widest rounded-xl">
+              {isPinned ? <><PinOff className="w-4 h-4 text-primary" /> Открепить</> : <><Pin className="w-4 h-4 text-primary" /> Закрепить</>}
+            </ContextMenuItem>
+          </ContextMenuContent>
+        </ContextMenu>
+      </div>
+    </div>
   );
 });
 ChatListItem.displayName = 'ChatListItem';
@@ -117,7 +203,32 @@ export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?:
     await updateDoc(userProfileRef, {
       pinnedChatIds: isPinned ? arrayRemove(chatId) : arrayUnion(chatId)
     });
+    if (window.navigator && window.navigator.vibrate) window.navigator.vibrate(50);
     toast({ title: isPinned ? "Откреплено" : "Закреплено" });
+  };
+
+  const handleMarkUnread = async (chatId: string) => {
+    if (!db) return;
+    const cSnap = chats?.find(c => c.id === chatId);
+    await updateDoc(doc(db, 'chats', chatId), { isManualUnread: !cSnap?.isManualUnread });
+    if (window.navigator && window.navigator.vibrate) window.navigator.vibrate(50);
+  };
+
+  const handleMute = async (chatId: string) => {
+    if (!db || !user) return;
+    const cSnap = chats?.find(c => c.id === chatId);
+    const isCurrentlyMuted = !!cSnap?.mutedUntil;
+    await updateDoc(doc(db, 'chats', chatId), { mutedUntil: isCurrentlyMuted ? null : new Date(9999, 11, 31).toISOString() });
+    if (window.navigator && window.navigator.vibrate) window.navigator.vibrate(50);
+    toast({ title: isCurrentlyMuted ? "Звук включен" : "Без звука" });
+  };
+
+  const handleDelete = async (chatId: string) => {
+    if (!db) return;
+    if (confirm('Удалить этот чат навсегда?')) {
+      await deleteDoc(doc(db, 'chats', chatId));
+      toast({ title: "Чат удален" });
+    }
   };
 
   const filteredChats = useMemo(() => {
@@ -203,6 +314,9 @@ export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?:
               isActive={currentChatId === chat.id} 
               isPinned={currentUserProfile?.pinnedChatIds?.includes(chat.id)}
               onPinToggle={handlePinToggle}
+              onMarkUnread={handleMarkUnread}
+              onMute={handleMute}
+              onDelete={handleDelete}
               onClick={() => setCurrentChatId(chat.id)}
               otherId={chat.type === 'private' && user ? chat.participantIds?.find((id: string) => id !== user.uid) : null} 
             />
