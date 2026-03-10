@@ -30,30 +30,18 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
   const userRef = useMemoFirebase(() => (!db || !user) ? null : doc(db, 'users', user.uid), [db, user]);
   const { data: myProfile } = useDoc<User>(userRef);
 
+  // Fox stickers from a stable source
   const foxStickers = [
-    'https://stickerswiki.ams3.cdn.digitaloceanspaces.com/LittleFoxKumi/14214.160.webp',
-    'https://stickerswiki.ams3.cdn.digitaloceanspaces.com/LittleFoxKumi/14215.160.webp',
-    'https://stickerswiki.ams3.cdn.digitaloceanspaces.com/LittleFoxKumi/14216.160.webp',
-    'https://stickerswiki.ams3.cdn.digitaloceanspaces.com/LittleFoxKumi/14217.160.webp',
-    'https://stickerswiki.ams3.cdn.digitaloceanspaces.com/LittleFoxKumi/14218.160.webp',
-    'https://stickerswiki.ams3.cdn.digitaloceanspaces.com/LittleFoxKumi/14219.160.webp',
-    'https://stickerswiki.ams3.cdn.digitaloceanspaces.com/LittleFoxKumi/14220.160.webp',
-    'https://stickerswiki.ams3.cdn.digitaloceanspaces.com/LittleFoxKumi/14221.160.webp',
-    'https://stickerswiki.ams3.cdn.digitaloceanspaces.com/LittleFoxKumi/14222.160.webp',
-    'https://stickerswiki.ams3.cdn.digitaloceanspaces.com/LittleFoxKumi/14223.160.webp',
-    'https://stickerswiki.ams3.cdn.digitaloceanspaces.com/LittleFoxKumi/14224.160.webp',
-    'https://stickerswiki.ams3.cdn.digitaloceanspaces.com/LittleFoxKumi/14225.160.webp',
-    'https://stickerswiki.ams3.cdn.digitaloceanspaces.com/LittleFoxKumi/14226.160.webp',
-    'https://stickerswiki.ams3.cdn.digitaloceanspaces.com/LittleFoxKumi/14227.160.webp',
-    'https://stickerswiki.ams3.cdn.digitaloceanspaces.com/LittleFoxKumi/14228.160.webp',
-    'https://stickerswiki.ams3.cdn.digitaloceanspaces.com/LittleFoxKumi/14229.160.webp',
-    'https://stickerswiki.ams3.cdn.digitaloceanspaces.com/LittleFoxKumi/14230.160.webp',
-    'https://stickerswiki.ams3.cdn.digitaloceanspaces.com/LittleFoxKumi/14231.160.webp',
-    'https://stickerswiki.ams3.cdn.digitaloceanspaces.com/LittleFoxKumi/14232.160.webp',
-    'https://stickerswiki.ams3.cdn.digitaloceanspaces.com/LittleFoxKumi/14233.160.webp',
-    'https://stickerswiki.ams3.cdn.digitaloceanspaces.com/LittleFoxKumi/14234.160.webp',
-    'https://stickerswiki.ams3.cdn.digitaloceanspaces.com/LittleFoxKumi/14235.160.webp',
-    'https://stickerswiki.ams3.cdn.digitaloceanspaces.com/LittleFoxKumi/14236.160.webp'
+    'https://cdn.pixabay.com/photo/2017/01/14/12/59/fox-1979432_640.png',
+    'https://cdn.pixabay.com/photo/2016/03/31/15/33/fox-1293373_640.png',
+    'https://cdn.pixabay.com/photo/2016/03/31/15/33/fox-1293371_640.png',
+    'https://cdn.pixabay.com/photo/2016/03/31/15/33/fox-1293370_640.png',
+    'https://cdn.pixabay.com/photo/2016/03/31/15/33/fox-1293369_640.png',
+    'https://cdn.pixabay.com/photo/2016/03/31/15/33/fox-1293368_640.png',
+    'https://cdn.pixabay.com/photo/2016/03/31/15/33/fox-1293367_640.png',
+    'https://cdn.pixabay.com/photo/2016/03/31/15/33/fox-1293366_640.png',
+    'https://cdn.pixabay.com/photo/2016/03/31/15/33/fox-1293365_640.png',
+    'https://cdn.pixabay.com/photo/2016/03/31/15/33/fox-1293364_640.png'
   ];
 
   useEffect(() => {

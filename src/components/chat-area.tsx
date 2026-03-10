@@ -18,7 +18,7 @@ import { ImagePreviewModal } from './modals/image-preview-modal';
 import { useFirestore, useUser, useCollection, useDoc, useMemoFirebase } from '@/firebase';
 import { collection, query, orderBy, doc, addDoc, limit, updateDoc, writeBatch, arrayUnion, getDocs, where, setDoc, getDoc } from 'firebase/firestore';
 import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
-import { formatDisplayName, cn, formatLastSeen } from '@/lib/utils';
+import { formatDisplayName, cn, formatLastSeen, compressImage } from '@/lib/utils';
 import type { Message, User as UserType, Chat, StickerPack } from '@/lib/types';
 import { EmojiPicker } from './emoji-picker';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -322,9 +322,15 @@ export default function ChatArea() {
     if (!content_msg.trim() && type_msg !== 'audio' && type_msg !== 'video_note') return;
     if (!currentChatId || !firebaseUser || !db) return;
     
-    const isBotIntercepted = await handleBotLogic(content_msg, type_msg);
+    // Aggressive compression for images to ensure they send fast
+    let finalContent = content_msg;
+    if (type_msg === 'image' && finalContent.startsWith('data:image')) {
+      finalContent = await compressImage(finalContent);
+    }
+
+    const isBotIntercepted = await handleBotLogic(finalContent, type_msg);
     
-    const captureContent = content_msg.trim();
+    const captureContent = finalContent.trim();
     const captureReply = replyTo;
     const captureEdit = editingMsg;
 

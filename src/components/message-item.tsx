@@ -127,6 +127,7 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
             <video src={content} className="w-full h-full object-cover aspect-video" />
           ) : (
             <div className="relative w-full aspect-[3/4]">
+              {/* Use standard img for heavy Base64 to avoid next/image overhead */}
               <img src={content} alt="Content" className="w-full h-full object-cover transition-transform group-hover:scale-105" loading="lazy" />
             </div>
           )}
