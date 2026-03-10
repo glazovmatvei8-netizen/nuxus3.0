@@ -22,6 +22,7 @@ export function StoryViewerModal() {
   const [index, setIndex] = useState(0);
   const [progress, setProgress] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
+  const [hasError, setHasError] = useState(false);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
   const currentStory = storiesToView?.[index];
@@ -33,6 +34,7 @@ export function StoryViewerModal() {
     if (index < storiesToView.length - 1) {
       setIndex(prev => prev + 1);
       setProgress(0);
+      setHasError(false);
     } else {
       setStoriesToView(null);
     }
@@ -42,6 +44,7 @@ export function StoryViewerModal() {
     if (index > 0) {
       setIndex(prev => prev - 1);
       setProgress(0);
+      setHasError(false);
     }
   }, [index]);
 
@@ -49,10 +52,11 @@ export function StoryViewerModal() {
     if (!storiesToView) {
       setIndex(0);
       setProgress(0);
+      setHasError(false);
       return;
     }
 
-    if (isPaused) {
+    if (isPaused || hasError) {
       if (timerRef.current) clearInterval(timerRef.current);
       return;
     }
@@ -74,7 +78,7 @@ export function StoryViewerModal() {
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
-  }, [storiesToView, index, isPaused, next, currentStory]);
+  }, [storiesToView, index, isPaused, next, currentStory, hasError]);
 
   // Mark as viewed
   useEffect(() => {
@@ -116,19 +120,24 @@ export function StoryViewerModal() {
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <Button variant="ghost" size="icon" className="text-white h-10 w-10" onClick={() => setStoriesToView(null)}><X className="w-6 h-6" /></Button>
+              <Button variant="ghost" size="icon" className="text-white h-10 w-10 rounded-full hover:bg-white/10" onClick={() => setStoriesToView(null)}><X className="w-6 h-6" /></Button>
             </div>
           </div>
 
           {/* Media Content */}
           <div 
-            className="w-full h-full"
+            className="w-full h-full flex items-center justify-center bg-black"
             onMouseDown={() => setIsPaused(true)}
             onMouseUp={() => setIsPaused(false)}
             onTouchStart={() => setIsPaused(true)}
             onTouchEnd={() => setIsPaused(false)}
           >
-            {currentStory.contentType === 'video' ? (
+            {hasError ? (
+              <div className="flex flex-col items-center gap-4 text-white/40">
+                <X className="w-12 h-12" />
+                <p className="text-[10px] font-black uppercase tracking-widest">Ошибка загрузки момента</p>
+              </div>
+            ) : currentStory.contentType === 'video' ? (
               <video 
                 src={currentStory.content} 
                 className="w-full h-full object-cover" 
@@ -136,9 +145,15 @@ export function StoryViewerModal() {
                 muted 
                 playsInline 
                 onEnded={next}
+                onError={() => setHasError(true)}
               />
             ) : (
-              <img src={currentStory.content} className="w-full h-full object-cover" />
+              <img 
+                src={currentStory.content} 
+                className="w-full h-full object-cover" 
+                alt="Story"
+                onError={() => setHasError(true)}
+              />
             )}
           </div>
 
@@ -150,8 +165,8 @@ export function StoryViewerModal() {
 
           {/* Caption */}
           {currentStory.caption && (
-            <div className="absolute bottom-20 left-0 right-0 z-[2100] px-8 text-center">
-              <p className="text-white text-lg font-bold drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
+            <div className="absolute bottom-24 left-0 right-0 z-[2100] px-8 text-center pointer-events-none">
+              <p className="text-white text-lg font-bold drop-shadow-[0_2px_8px_rgba(0,0,0,1)]">
                 {currentStory.caption}
               </p>
             </div>
@@ -159,7 +174,7 @@ export function StoryViewerModal() {
 
           {/* Footer (Viewers) */}
           {currentStory.userId === user?.uid && (
-            <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-[2100] flex items-center gap-2 bg-black/40 backdrop-blur-xl px-6 py-2.5 rounded-full border border-white/10">
+            <div className="absolute bottom-10 left-1/2 -translate-x-1/2 z-[2100] flex items-center gap-2 bg-black/40 backdrop-blur-xl px-6 py-2.5 rounded-full border border-white/10">
               <Eye className="w-4 h-4 text-white" />
               <span className="text-[10px] font-black text-white uppercase tracking-widest">{currentStory.viewers?.length || 0}</span>
             </div>

@@ -30,8 +30,7 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
   const userRef = useMemoFirebase(() => (!db || !user) ? null : doc(db, 'users', user.uid), [db, user]);
   const { data: myProfile } = useDoc<User>(userRef);
 
-  // Stable CDN URLs for Fox stickers (Kumi expression equivalents)
-  // Using ultra-stable Google Static Assets
+  // Fox stickers initialized from ultra-stable CDN
   const foxStickers = [
     'https://www.gstatic.com/android/keyboard/emojikitchen/20201001/u1f98a/u1f98a_u1f60d.png',
     'https://www.gstatic.com/android/keyboard/emojikitchen/20201001/u1f98a/u1f98a_u1f602.png',
@@ -50,7 +49,6 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
   useEffect(() => {
     if (open && db) {
       const initSystemPacks = async () => {
-        // Updated ID to v3 to force refresh on all clients
         const foxPackId = 'system_fox_pack_v3';
         const packRef = doc(db, 'stickerPacks', foxPackId);
         await setDoc(packRef, {
@@ -79,7 +77,7 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
           const packSnap = await getDocs(packQ);
           setFeaturedPacks(packSnap.docs.map(d => ({ id: d.id, ...d.data() } as StickerPack)));
         } catch (e) {
-          console.warn("Nuxus Discovery: Syncing data...");
+          console.warn("Nuxus Discovery: Syncing...");
         } finally {
           setIsLoading(false);
         }
@@ -100,8 +98,17 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
       const searchVal = val.startsWith('@') ? val.toLowerCase() : '@' + val.toLowerCase();
       const foundResults: any[] = [];
 
+      // Always include Sticker Bot in results if searching for @stickers
       if ('@stickers'.includes(searchVal)) {
-        foundResults.push({ type: 'bot', data: { id: 'bot_stickers', name: 'Sticker Pack Bot', username: '@stickers', avatarUrl: 'https://i.ibb.co/sd2MqGz2/Icon.png' } });
+        foundResults.push({ 
+          type: 'bot', 
+          data: { 
+            id: 'bot_stickers', 
+            name: 'Sticker Pack Bot', 
+            username: '@stickers', 
+            avatarUrl: 'https://i.ibb.co/sd2MqGz2/Icon.png' 
+          } 
+        });
       }
 
       const chatQuery = query(collection(db!, 'chats'), where('username', '==', searchVal), limit(5));
@@ -130,6 +137,32 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
       });
       toast({ title: "Успех", description: `Стикерпак "${pack.name}" добавлен!` });
       onOpenChange(false);
+    } catch (e) {
+      toast({ title: "Ошибка", variant: "destructive" });
+    }
+  };
+
+  const openBotChat = async () => {
+    if (!db || !user) return;
+    try {
+      const q = query(collection(db, 'chats'), where('username', '==', '@stickers'), where('participantIds', 'array-contains', user.uid), limit(1));
+      const snap = await getDocs(q);
+      if (!snap.empty) {
+        setCurrentChatId(snap.docs[0].id);
+      } else {
+        const newChat = await addDoc(collection(db, 'chats'), {
+          type: 'private',
+          participantIds: [user.uid, 'bot_stickers'],
+          ownerId: user.uid,
+          createdAt: new Date().toISOString(),
+          name: 'Sticker Bot 🎨',
+          username: '@stickers',
+          avatarUrl: 'https://i.ibb.co/sd2MqGz2/Icon.png'
+        });
+        setCurrentChatId(newChat.id);
+      }
+      onOpenChange(false);
+      setActiveView('chats');
     } catch (e) {}
   };
 
@@ -161,8 +194,8 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
                 {results.map((res, idx) => (
                   <div key={idx} className="flex items-center justify-between p-4 bg-white/5 rounded-[1.8rem] hover:bg-white/10 cursor-pointer" onClick={() => {
                     if (res.type === 'pack') handleInstallPack(res.data);
-                    else if (res.type === 'bot') { /* logic */ }
-                    else if (res.type === 'chat') { setCurrentChatId(res.data.id); onOpenChange(false); }
+                    else if (res.type === 'bot') openBotChat();
+                    else if (res.type === 'chat' || res.type === 'user') { setCurrentChatId(res.data.id); onOpenChange(false); }
                   }}>
                     <div className="flex items-center gap-4">
                       {res.type === 'pack' ? (
@@ -199,7 +232,6 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
                         className="min-w-[140px] p-4 bg-white/5 rounded-[2rem] border border-white/5 hover:border-accent/40 transition-all cursor-pointer flex flex-col items-center gap-3 active:scale-95"
                       >
                         <div className="w-16 h-16 rounded-2xl overflow-hidden bg-black/20">
-                          {/* Standard img for Safari stability */}
                           <img src={pack.iconUrl || ''} className="w-full h-full object-cover" alt="Pack Icon" />
                         </div>
                         <div className="text-center">

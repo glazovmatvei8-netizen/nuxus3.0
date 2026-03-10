@@ -50,6 +50,11 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
     const msgRef = doc(db, 'chats', chatId, 'messages', message.id);
     const hasReacted = message.reactions?.[emoji]?.includes(user.uid);
     
+    // Haptic feedback for reactions
+    if (window.navigator && window.navigator.vibrate) {
+      window.navigator.vibrate(50);
+    }
+
     if (hasReacted) {
       await updateDoc(msgRef, { [`reactions.${emoji}`]: arrayRemove(user.uid) });
     } else {
@@ -184,9 +189,9 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
           
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <div className="relative group/bubble cursor-pointer active:scale-[0.98] transition-transform">
+              <div className="relative group/bubble cursor-pointer active:scale-[0.98] transition-transform outline-none">
                 <div className={cn(
-                  "p-2.5 rounded-2xl shadow-md border transition-all relative", 
+                  "p-2.5 rounded-2xl shadow-md border transition-all relative select-none touch-none", 
                   isMe ? "message-bubble-me border-none" : "bg-card border-white/5 text-white",
                   highlight && "border-primary/50 shadow-primary/20 ring-1 ring-primary/30",
                   (message.contentType === 'video_note' || message.contentType === 'sticker') && "bg-transparent border-none shadow-none p-0"
@@ -231,7 +236,7 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
                   )}
                 </div>
                 
-                {/* Desktop-only More button (visible on hover) */}
+                {/* Desktop-only More button */}
                 <div className={cn("absolute top-0 opacity-0 group-hover/bubble:opacity-100 transition-opacity hidden md:flex", isMe ? "-left-10" : "-right-10")}>
                    <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full bg-card/50 backdrop-blur-xl border border-white/10">
                       <MoreVertical className="w-4 h-4" />
@@ -240,7 +245,7 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
               </div>
             </DropdownMenuTrigger>
             
-            <DropdownMenuContent align={isMe ? 'end' : 'start'} className="w-64 bg-card/95 backdrop-blur-2xl border-white/10 rounded-2xl shadow-2xl p-1">
+            <DropdownMenuContent align={isMe ? 'end' : 'start'} className="w-64 bg-card/95 backdrop-blur-2xl border-white/10 rounded-2xl shadow-2xl p-1 z-[500]">
               <div className="flex gap-1 px-2 py-3 overflow-x-auto scrollbar-hide border-b border-white/5 mb-1 justify-between">
                 {QUICK_REACTIONS.map(emoji => (
                   <button

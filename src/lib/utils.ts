@@ -87,6 +87,7 @@ export function formatLastSeen(
 
 /**
  * Super Aggressive compression for ultra-fast transfers and iOS stability.
+ * Reduced to 600px width and 0.3 quality for maximum Safari compatibility.
  */
 export async function compressImage(dataUrl: string, maxWidth = 600, quality = 0.3): Promise<string> {
   return new Promise((resolve) => {
@@ -110,8 +111,9 @@ export async function compressImage(dataUrl: string, maxWidth = 600, quality = 0
         ctx.imageSmoothingQuality = 'high';
         ctx.drawImage(img, 0, 0, width, height);
       }
-      // Target size < 50KB for Base64 stability on Safari
+      // Explicitly return as jpeg to ensure small size
       resolve(canvas.toDataURL('image/jpeg', quality));
     };
+    img.onerror = () => resolve(dataUrl); // Fallback to original on error
   });
 }
