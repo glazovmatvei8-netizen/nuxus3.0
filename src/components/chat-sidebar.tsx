@@ -60,7 +60,7 @@ const ChatListItem = memo(({
         <div
           onClick={onClick}
           className={cn(
-            "flex items-center gap-3 px-4 py-2.5 cursor-pointer transition-all border-none group relative select-none touch-none",
+            "flex items-center gap-3 px-4 py-2.5 cursor-pointer transition-all border-none group relative select-none touch-pan-y",
             isActive ? 'bg-white/10' : 'active:bg-white/[0.05]'
           )}
         >
@@ -195,7 +195,7 @@ export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?:
       </div>
 
       <ScrollArea className="flex-1 scrollbar-hide">
-        <div className="pb-32">
+        <div className="pb-32 overflow-y-auto">
           {filteredChats.length > 0 ? (
             filteredChats.map(chat => (
               <ChatListItem 

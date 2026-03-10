@@ -71,9 +71,9 @@ export default function RootLayout({
     <html lang="ru" className={`dark ${font.variable}`} suppressHydrationWarning>
       <head>
         {/* Прямые теги для Nativefier и Windows (Title Bar Icon Fix) */}
-        <link rel="icon" type="image/png" sizes="32x32" href={APP_ICON_URL} />
-        <link rel="icon" type="image/png" sizes="192x192" href={APP_ICON_URL} />
-        <link rel="shortcut icon" type="image/png" href={APP_ICON_URL} />
+        <link rel="icon" type="image/png" sizes="32x32" href={FINAL_ICON_URL} />
+        <link rel="icon" type="image/png" sizes="192x192" href={FINAL_ICON_URL} />
+        <link rel="shortcut icon" type="image/png" href={FINAL_ICON_URL} />
         <link rel="apple-touch-icon" href={FINAL_ICON_URL} />
         <link rel="apple-touch-icon" sizes="152x152" href={FINAL_ICON_URL} />
         <link rel="apple-touch-icon" sizes="180x180" href={FINAL_ICON_URL} />
