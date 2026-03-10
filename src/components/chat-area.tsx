@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
   Send, Info, ChevronLeft, X, Paperclip, Mic, StopCircle, ChevronDown, Edit2, Pin, Search, PinOff,
-  Smile, Instagram, Camera, Video, Sticker, Copy, Share2, Sparkles, Loader2
+  Smile, Instagram, Camera, Video, Sticker, Copy, Share2, Sparkles, Loader2, RefreshCw, Zap, Trash2, Pause, Play
 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { MessageItem } from './message-item';
@@ -92,9 +92,13 @@ export default function ChatArea() {
   const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
   const [isSendingFiles, setIsSendingFiles] = useState(false);
 
+  // Recording State
   const [isRecording, setIsRecording] = useState(false);
   const [isRecordingVideo, setIsRecordingVideo] = useState(false);
-  const [recordingDuration, setRecordingDuration] = useState(0);
+  const [isPaused, setIsPaused] = useState(false);
+  const [facingMode, setFacingMode] = useState<'user' | 'environment'>('user');
+  const [flashOn, setFlashOn] = useState(false);
+  const [recordingTime, setRecordingTime] = useState(0); // in ms
   const recorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const recordingIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -324,7 +328,6 @@ export default function ChatArea() {
     if (!content_msg.trim() && type_msg !== 'audio' && type_msg !== 'video_note') return;
     if (!currentChatId || !firebaseUser || !db) return;
     
-    // Aggressive compression for images to ensure they send fast
     let finalContent = content_msg;
     if (type_msg === 'image' && finalContent.startsWith('data:image')) {
       finalContent = await compressImage(finalContent);
@@ -379,7 +382,7 @@ export default function ChatArea() {
       const isVideo = type === 'video';
       const constraints = {
         audio: true,
-        video: isVideo ? { facingMode: 'user', width: 480, height: 480 } : false
+        video: isVideo ? { facingMode: facingMode, width: { ideal: 720 }, height: { ideal: 720 } } : false
       };
       
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
@@ -414,10 +417,15 @@ export default function ChatArea() {
         stream.getTracks().forEach(track => track.stop());
       };
 
-      recorder.start(200);
+      recorder.start(100);
       if (isVideo) setIsRecordingVideo(true); else setIsRecording(true);
-      setRecordingDuration(0);
-      recordingIntervalRef.current = setInterval(() => setRecordingDuration(prev => prev + 1), 1000);
+      setRecordingTime(0);
+      const startTime = Date.now();
+      recordingIntervalRef.current = setInterval(() => {
+        if (!isPaused) {
+          setRecordingTime(Date.now() - startTime);
+        }
+      }, 10);
     } catch (err: any) { 
       console.error("Recording error:", err);
       toast({ variant: 'destructive', title: 'Ошибка записи', description: 'Разрешите доступ к микрофону и камере.' }); 
@@ -430,8 +438,39 @@ export default function ChatArea() {
       recorderRef.current.stop(); 
       setIsRecording(false);
       setIsRecordingVideo(false);
+      setIsPaused(false);
       if (recordingIntervalRef.current) clearInterval(recordingIntervalRef.current);
     }
+  };
+
+  const togglePause = () => {
+    if (recorderRef.current) {
+      if (recorderRef.current.state === 'recording') {
+        recorderRef.current.pause();
+        setIsPaused(true);
+      } else if (recorderRef.current.state === 'paused') {
+        recorderRef.current.resume();
+        setIsPaused(false);
+      }
+    }
+  };
+
+  const switchCamera = async () => {
+    const newMode = facingMode === 'user' ? 'environment' : 'user';
+    setFacingMode(newMode);
+    if (isRecordingVideo) {
+      // Logic to switch camera while recording is complex, so we restart stream for now
+      // or just allow switching before start. For MVP, we switch mode for next session.
+      toast({ title: "Камера переключена для следующей записи" });
+    }
+  };
+
+  const formatRecordingTime = (ms: number) => {
+    const totalSeconds = Math.floor(ms / 1000);
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+    const milliseconds = Math.floor((ms % 1000) / 10);
+    return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')},${milliseconds.toString().padStart(2, '0')}`;
   };
 
   const handleAiDraft = async () => {
@@ -512,6 +551,79 @@ export default function ChatArea() {
         />
       )}
 
+      {/* Video Note Professional Overlay */}
+      {isRecordingVideo && (
+        <div className="fixed inset-0 z-[1000] bg-black/95 flex flex-col items-center justify-center animate-in fade-in duration-300">
+          {/* Circular Progress Path */}
+          <div className="relative w-full max-w-[320px] aspect-square mb-12">
+            <svg className="absolute inset-0 w-full h-full -rotate-90 transform" viewBox="0 0 100 100">
+              <circle
+                cx="50" cy="50" r="48"
+                fill="none"
+                stroke="white"
+                strokeWidth="1.5"
+                strokeDasharray="301.59"
+                strokeDashoffset={301.59 - (301.59 * (recordingTime / 60000))}
+                strokeLinecap="round"
+                className="transition-all duration-100 ease-linear opacity-80"
+              />
+            </svg>
+            
+            <div className="w-full h-full rounded-full overflow-hidden border-2 border-white/10 shadow-[0_0_50px_rgba(0,0,0,0.5)] bg-black">
+              <video 
+                ref={videoPreviewRef} 
+                autoPlay 
+                muted 
+                playsInline 
+                className={cn("w-full h-full object-cover", facingMode === 'user' && "scale-x-[-1]")} 
+              />
+            </div>
+          </div>
+
+          {/* Controls Bar */}
+          <div className="w-full max-w-sm px-8 flex flex-col items-center gap-8">
+            <div className="flex items-center gap-6">
+              <button 
+                onClick={switchCamera}
+                className="w-14 h-14 rounded-full bg-white/10 backdrop-blur-xl flex items-center justify-center text-white active:scale-90 transition-transform"
+              >
+                <RefreshCw className="w-6 h-6" />
+              </button>
+              <button 
+                onClick={() => setFlashOn(!flashOn)}
+                className={cn("w-14 h-14 rounded-full backdrop-blur-xl flex items-center justify-center text-white active:scale-90 transition-transform", flashOn ? "bg-primary" : "bg-white/10")}
+              >
+                <Zap className={cn("w-6 h-6", flashOn && "fill-current")} />
+              </button>
+              <div className="bg-black/60 backdrop-blur-xl px-4 py-2 rounded-full border border-white/10 flex items-center gap-2">
+                <div className="w-2.5 h-2.5 bg-red-500 rounded-full animate-pulse" />
+                <span className="text-white font-mono font-bold tracking-wider">{formatRecordingTime(recordingTime)}</span>
+              </div>
+            </div>
+
+            <div className="w-full flex items-center justify-between mt-12">
+              <button onClick={() => stopRecording(false)} className="w-12 h-12 rounded-full flex items-center justify-center text-red-500 active:scale-90 transition-transform">
+                <Trash2 className="w-7 h-7" />
+              </button>
+              
+              <button 
+                onClick={togglePause}
+                className="w-16 h-16 rounded-full border-4 border-[#007AFF] flex items-center justify-center text-[#007AFF] active:scale-95 transition-transform"
+              >
+                {isPaused ? <Play className="w-8 h-8 fill-current ml-1" /> : <Pause className="w-8 h-8 fill-current" />}
+              </button>
+
+              <button 
+                onClick={() => stopRecording(true)}
+                className="w-14 h-14 rounded-full bg-[#007AFF] flex items-center justify-center text-white shadow-xl shadow-[#007AFF]/20 active:scale-90 transition-transform"
+              >
+                <Send className="w-7 h-7 fill-current" />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <header className="h-16 flex items-center justify-between px-4 border-b border-white/5 bg-card/80 backdrop-blur-xl shrink-0 z-30">
         <div className="flex items-center gap-3 min-w-0 flex-1">
           <Button variant="ghost" size="icon" className="md:hidden rounded-lg" onClick={() => setCurrentChatId(null)}><ChevronLeft className="w-6 h-6" /></Button>
@@ -586,19 +698,14 @@ export default function ChatArea() {
 
       <footer className="p-3 pb-6 bg-[#0a0a0c]/90 backdrop-blur-2xl border-t border-white/5 shrink-0 relative z-30">
         <div className="max-w-4xl mx-auto space-y-2">
-          {(isRecording || isRecordingVideo) && (
+          {isRecording && (
             <div className="flex items-center justify-between p-3 bg-red-500/10 rounded-2xl border border-red-500/20 animate-in slide-in-from-bottom-2 mb-2">
               <div className="flex items-center gap-3">
                 <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse" />
                 <span className="text-xs font-black text-red-500 uppercase tracking-widest">
-                  Запись {isRecordingVideo ? 'видео' : 'ГС'}: {Math.floor(recordingDuration / 60)}:{(recordingDuration % 60).toString().padStart(2, '0')}
+                  Запись ГС: {formatRecordingTime(recordingTime).split(',')[0]}
                 </span>
               </div>
-              {isRecordingVideo && (
-                <div className="w-20 h-20 rounded-full overflow-hidden border-2 border-red-500 shadow-xl">
-                  <video ref={videoPreviewRef} autoPlay muted playsInline className="w-full h-full object-cover scale-x-[-1]" />
-                </div>
-              )}
               <div className="flex items-center gap-2">
                 <Button variant="ghost" size="sm" className="h-8 text-[10px] uppercase font-bold text-muted-foreground" onClick={() => stopRecording(false)}>Отмена</Button>
                 <Button size="icon" className="h-9 w-9 rounded-xl bg-red-500 hover:bg-red-600 shadow-lg shadow-red-500/20" onClick={() => stopRecording(true)}>
