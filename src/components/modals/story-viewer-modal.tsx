@@ -52,6 +52,13 @@ export function StoryViewerModal() {
     }
   }, [index]);
 
+  // Separate effect to handle "next" transition to avoid updating AppProvider during render
+  useEffect(() => {
+    if (progress >= 100) {
+      next();
+    }
+  }, [progress, next]);
+
   useEffect(() => {
     if (!storiesToView) {
       setIndex(0);
@@ -71,10 +78,7 @@ export function StoryViewerModal() {
 
     timerRef.current = setInterval(() => {
       setProgress(p => {
-        if (p >= 100) {
-          next();
-          return 0;
-        }
+        if (p >= 100) return 100;
         return p + step;
       });
     }, interval);
@@ -82,7 +86,7 @@ export function StoryViewerModal() {
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
-  }, [storiesToView, index, isPaused, next, currentStory, hasError, showReactions]);
+  }, [storiesToView, index, isPaused, currentStory, hasError, showReactions]);
 
   // Mark as viewed
   useEffect(() => {
@@ -223,12 +227,13 @@ export function StoryViewerModal() {
               </div>
             )}
 
-            {/* Reactions Display */}
+            {/* Reactions Display - Fixed to be more prominent */}
             {currentStory.reactions && Object.entries(currentStory.reactions).some(([_, uids]) => uids.length > 0) && (
-              <div className="flex -space-x-2">
+              <div className="flex gap-1.5">
                 {Object.entries(currentStory.reactions).map(([emoji, uids]) => uids.length > 0 && (
-                  <div key={emoji} className="h-8 w-8 bg-black/40 backdrop-blur-md rounded-full border border-white/10 flex items-center justify-center text-sm shadow-xl">
-                    {emoji}
+                  <div key={emoji} className="flex items-center gap-1 bg-black/40 backdrop-blur-md rounded-full border border-white/10 px-2 py-1 shadow-xl">
+                    <span className="text-sm">{emoji}</span>
+                    <span className="text-[10px] font-black text-white">{uids.length}</span>
                   </div>
                 ))}
               </div>

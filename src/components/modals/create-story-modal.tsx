@@ -69,7 +69,7 @@ export function CreateStoryModal({ open, onOpenChange }: { open: boolean, onOpen
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md bg-[#0a0a0c] border-white/10 rounded-[2.5rem] p-0 overflow-hidden shadow-2xl h-[85vh] flex flex-col">
-        <DialogHeader className="p-6 border-b border-white/5 shrink-0">
+        <DialogHeader className="p-6 border-b border-white/5 shrink-0 bg-[#0a0a0c]">
           <DialogTitle className="text-xl font-black uppercase italic text-white flex items-center gap-2">
             <Zap className="w-5 h-5 text-primary" /> Новый Момент
           </DialogTitle>
@@ -78,9 +78,9 @@ export function CreateStoryModal({ open, onOpenChange }: { open: boolean, onOpen
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex-1 relative flex flex-col p-4 items-center justify-center bg-white/[0.02] min-h-0 overflow-hidden">
+        <div className="flex-1 relative flex flex-col p-4 items-center justify-center bg-white/[0.02] min-h-0 overflow-hidden overflow-y-auto">
           {preview ? (
-            <div className="relative w-full h-full rounded-3xl overflow-hidden shadow-2xl border border-white/10 group">
+            <div className="relative w-full aspect-[3/4] max-h-[50vh] rounded-3xl overflow-hidden shadow-2xl border border-white/10 group">
               {type === 'video' ? (
                 <video src={preview} className="w-full h-full object-cover" autoPlay muted loop />
               ) : (
@@ -89,7 +89,7 @@ export function CreateStoryModal({ open, onOpenChange }: { open: boolean, onOpen
               <Button 
                 variant="destructive" 
                 size="icon" 
-                className="absolute top-4 right-4 rounded-full bg-black/60 backdrop-blur-md opacity-0 group-hover:opacity-100 transition-opacity"
+                className="absolute top-4 right-4 rounded-full bg-black/60 backdrop-blur-md"
                 onClick={() => setPreview(null)}
               >
                 <X className="w-4 h-4" />
@@ -98,7 +98,7 @@ export function CreateStoryModal({ open, onOpenChange }: { open: boolean, onOpen
           ) : (
             <button 
               onClick={() => fileInputRef.current?.click()}
-              className="w-full h-full rounded-3xl border-2 border-dashed border-white/10 flex flex-col items-center justify-center gap-4 hover:bg-white/5 transition-all group"
+              className="w-full h-64 rounded-3xl border-2 border-dashed border-white/10 flex flex-col items-center justify-center gap-4 hover:bg-white/5 transition-all group"
             >
               <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center group-hover:scale-110 transition-transform">
                 <Camera className="w-8 h-8 text-primary" />
@@ -112,7 +112,7 @@ export function CreateStoryModal({ open, onOpenChange }: { open: boolean, onOpen
           <input type="file" ref={fileInputRef} hidden accept="image/*,video/*" onChange={handleFile} />
         </div>
 
-        <div className="p-6 space-y-4 bg-[#0a0a0c] border-t border-white/5 shrink-0">
+        <div className="p-6 pb-10 space-y-4 bg-[#0a0a0c] border-t border-white/5 shrink-0">
           <Input 
             placeholder="Добавить подпись..." 
             value={caption} 

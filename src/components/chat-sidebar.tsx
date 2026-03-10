@@ -143,7 +143,7 @@ export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?:
   }, [chats, activeTab, isArchiveView, currentUserProfile?.pinnedChatIds]);
 
   return (
-    <div className="flex flex-col h-full bg-[#0a0a0c] overflow-hidden">
+    <div className="flex flex-col h-full bg-[#0a0a0c] overflow-hidden overflow-y-auto scrollbar-hide">
       <div className="px-4 pt-4 pb-2 shrink-0">
         <div className="relative flex items-center justify-between h-12 mb-6 w-full">
           <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full bg-white/5" onClick={() => setIsSearchOpen(true)}>
@@ -194,30 +194,28 @@ export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?:
         )}
       </div>
 
-      <ScrollArea className="flex-1 scrollbar-hide">
-        <div className="pb-32">
-          {filteredChats.length > 0 ? (
-            filteredChats.map(chat => (
-              <ChatListItem 
-                key={chat.id} 
-                chat={chat} 
-                isActive={currentChatId === chat.id} 
-                isPinned={currentUserProfile?.pinnedChatIds?.includes(chat.id)}
-                onPinToggle={handlePinToggle}
-                onClick={() => setCurrentChatId(chat.id)}
-                otherId={chat.type === 'private' && user ? chat.participantIds?.find((id: string) => id !== user.uid) : null} 
-              />
-            ))
-          ) : (
-            <div className="flex flex-col items-center justify-center p-20 opacity-20">
-               <Ghost className="w-12 h-12 mb-4" />
-               <p className="text-[10px] font-black uppercase tracking-widest text-center">
-                 {isArchiveView ? 'Архив пуст' : 'Нет активных каналов'}
-               </p>
-            </div>
-          )}
-        </div>
-      </ScrollArea>
+      <div className="flex-1 pb-32">
+        {filteredChats.length > 0 ? (
+          filteredChats.map(chat => (
+            <ChatListItem 
+              key={chat.id} 
+              chat={chat} 
+              isActive={currentChatId === chat.id} 
+              isPinned={currentUserProfile?.pinnedChatIds?.includes(chat.id)}
+              onPinToggle={handlePinToggle}
+              onClick={() => setCurrentChatId(chat.id)}
+              otherId={chat.type === 'private' && user ? chat.participantIds?.find((id: string) => id !== user.uid) : null} 
+            />
+          ))
+        ) : (
+          <div className="flex flex-col items-center justify-center p-20 opacity-20">
+             <Ghost className="w-12 h-12 mb-4" />
+             <p className="text-[10px] font-black uppercase tracking-widest text-center">
+               {isArchiveView ? 'Архив пуст' : 'Нет активных каналов'}
+             </p>
+          </div>
+        )}
+      </div>
 
       <CreateChatModal open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen} />
       <ChatEditorModal open={isEditorModalOpen} onOpenChange={setIsEditorModalOpen} />
