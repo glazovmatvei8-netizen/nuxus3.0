@@ -14,7 +14,7 @@ import {
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { format } from 'date-fns';
 import { 
-  CornerUpLeft, Trash2, Check, CheckCheck, Edit2, Copy, Pin, X, MoreVertical, Share2
+  CornerUpLeft, Trash2, Check, CheckCheck, Edit2, Copy, Pin, X, MoreVertical, Share2, Play
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { doc, updateDoc, deleteDoc } from 'firebase/firestore';
@@ -37,6 +37,7 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
   const { toast } = useToast();
   const [isPlaying, setIsPlaying] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
 
   const [isGalleryOpen, setIsGalleryOpen] = useState(false);
   const [initialIndex, setInitialIndex] = useState(0);
@@ -66,14 +67,42 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
     const isDataVideo = content.startsWith('data:video');
     const isAlbum = message.contentType === 'album';
     const isAudio = message.contentType === 'audio';
+    const isVideoNote = message.contentType === 'video_note';
+
+    if (isVideoNote) {
+      return (
+        <div className="relative w-48 h-48 rounded-full overflow-hidden border-2 border-primary/20 bg-black cursor-pointer group" onClick={() => {
+          if (videoRef.current) {
+            if (videoRef.current.paused) videoRef.current.play(); else videoRef.current.pause();
+          }
+        }}>
+          <video 
+            ref={videoRef} 
+            src={content} 
+            loop 
+            playsInline 
+            className="w-full h-full object-cover scale-x-[-1]" 
+          />
+          <div className="absolute inset-0 bg-black/20 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+            <Play className="w-8 h-8 text-white fill-white" />
+          </div>
+        </div>
+      );
+    }
 
     if (isAudio) {
       return (
         <div className="flex flex-col gap-2 min-w-[200px]">
-          <div className="flex items-center gap-2">
-            <Button variant="ghost" size="sm" className="h-8 gap-2 bg-primary/10 rounded-full px-4 hover:bg-primary/20" onClick={toggleAudio}>
-              {isPlaying ? 'Пауза' : 'Голосовое сообщение'}
+          <div className="flex items-center gap-3 p-1">
+            <Button variant="ghost" size="icon" className="h-10 w-10 shrink-0 bg-primary text-white rounded-full" onClick={toggleAudio}>
+              {isPlaying ? <X className="w-5 h-5" /> : <Play className="w-5 h-5 fill-current" />}
             </Button>
+            <div className="flex-1 flex flex-col justify-center">
+              <div className="h-1 bg-white/10 w-full rounded-full overflow-hidden">
+                <div className={cn("h-full bg-white transition-all", isPlaying ? "animate-pulse w-full" : "w-0")} />
+              </div>
+              <span className="text-[10px] font-bold mt-1 uppercase opacity-60">Голосовое сообщение</span>
+            </div>
           </div>
         </div>
       );
@@ -136,10 +165,11 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
             <div className={cn(
               "p-2.5 rounded-2xl shadow-md border transition-all relative", 
               isMe ? "message-bubble-me border-none" : "bg-card border-white/5 text-white",
-              highlight && "border-primary/50 shadow-primary/20 ring-1 ring-primary/30"
+              highlight && "border-primary/50 shadow-primary/20 ring-1 ring-primary/30",
+              message.contentType === 'video_note' && "bg-transparent border-none shadow-none p-0"
             )}>
               {renderContent()}
-              <div className="flex items-center justify-end gap-1 mt-1.5 opacity-60">
+              <div className={cn("flex items-center justify-end gap-1 mt-1.5 opacity-60", message.contentType === 'video_note' && "absolute bottom-2 right-4 bg-black/40 px-2 py-0.5 rounded-full backdrop-blur-md")}>
                 <span className="text-[9px] font-bold">{formattedTime}</span>
                 {isMe && (
                   message.isRead ? (

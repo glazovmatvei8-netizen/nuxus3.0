@@ -7,7 +7,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
-  Send, Info, ChevronLeft, X, Paperclip, Mic, StopCircle, ChevronDown, Edit2, Pin, Search, PinOff
+  Send, Info, ChevronLeft, X, Paperclip, Mic, StopCircle, ChevronDown, Edit2, Pin, Search, PinOff,
+  Smile, Instagram, Camera, Video
 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { MessageItem } from './message-item';
@@ -19,6 +20,7 @@ import { collection, query, orderBy, doc, addDoc, limit, updateDoc, writeBatch }
 import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { formatDisplayName, cn, formatLastSeen } from '@/lib/utils';
 import type { Message, User as UserType, Chat } from '@/lib/types';
+import { EmojiPicker } from './emoji-picker';
 
 const MessageList = memo(({ 
   messages, 
@@ -81,16 +83,19 @@ export default function ChatArea() {
   const [isSearchMode, setIsSearchMode] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [isOnline, setIsOnline] = useState(true);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
 
   const [selectedFiles, setSelectedFiles] = useState<{ url: string; type: 'image' | 'video' }[]>([]);
   const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
   const [isSendingFiles, setIsSendingFiles] = useState(false);
 
   const [isRecording, setIsRecording] = useState(false);
+  const [isRecordingVideo, setIsRecordingVideo] = useState(false);
   const [recordingDuration, setRecordingDuration] = useState(0);
   const recorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const recordingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const videoPreviewRef = useRef<HTMLVideoElement>(null);
 
   const inputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -226,6 +231,7 @@ export default function ChatArea() {
     }
     setReplyTo(null); 
     setEditingMsg(null);
+    setShowEmojiPicker(false);
 
     if (captureEdit) {
       updateDocumentNonBlocking(doc(db, 'chats', currentChatId, 'messages', captureEdit.id), { 
@@ -256,30 +262,63 @@ export default function ChatArea() {
     updateDocumentNonBlocking(doc(db, 'chats', currentChatId), { lastMessageAt: new Date().toISOString() });
   }, [messageInput, currentChatId, firebaseUser, db, userProfile, replyTo, editingMsg, setLocalDrafts]);
 
-  const startRecording = async () => {
+  const startRecording = async (type: 'audio' | 'video' = 'audio') => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const recorder = new MediaRecorder(stream);
-      recorderRef.current = recorder; chunksRef.current = [];
-      recorder.ondataavailable = (e) => { if (e.size > 0) chunksRef.current.push(e.data); };
+      const isVideo = type === 'video';
+      const constraints = {
+        audio: true,
+        video: isVideo ? { facingMode: 'user', width: 480, height: 480 } : false
+      };
+      
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
+      
+      // Находим лучший поддерживаемый формат
+      const mimeType = isVideo 
+        ? (MediaRecorder.isTypeSupported('video/webm;codecs=vp9') ? 'video/webm;codecs=vp9' : 'video/webm')
+        : (MediaRecorder.isTypeSupported('audio/mp4') ? 'audio/mp4' : 'audio/webm');
+
+      const recorder = new MediaRecorder(stream, { mimeType });
+      recorderRef.current = recorder; 
+      chunksRef.current = [];
+      
+      if (isVideo && videoPreviewRef.current) {
+        videoPreviewRef.current.srcObject = stream;
+      }
+
+      recorder.ondataavailable = (e) => { 
+        if (e.size > 0) chunksRef.current.push(e.data); 
+      };
+
       recorder.onstop = async () => {
-        const blob = new Blob(chunksRef.current, { type: 'audio/webm' });
-        const reader = new FileReader(); reader.readAsDataURL(blob);
-        reader.onloadend = () => handleSendMessage(reader.result as string, 'audio');
+        if (chunksRef.current.length === 0) return;
+        
+        const blob = new Blob(chunksRef.current, { type: mimeType });
+        const reader = new FileReader(); 
+        reader.readAsDataURL(blob);
+        reader.onloadend = () => {
+          if (reader.result) {
+            handleSendMessage(reader.result as string, isVideo ? 'video_note' : 'audio');
+          }
+        };
         stream.getTracks().forEach(track => track.stop());
       };
-      recorder.start(); setIsRecording(true); setRecordingDuration(0);
+
+      recorder.start(200); // Сохраняем куски каждые 200мс для надежности
+      if (isVideo) setIsRecordingVideo(true); else setIsRecording(true);
+      setRecordingDuration(0);
       recordingIntervalRef.current = setInterval(() => setRecordingDuration(prev => prev + 1), 1000);
     } catch (err: any) { 
-      toast({ variant: 'destructive', title: 'Доступ запрещен', description: 'Разрешите доступ к микрофону.' }); 
+      console.error("Recording error:", err);
+      toast({ variant: 'destructive', title: 'Ошибка записи', description: 'Разрешите доступ к микрофону и камере.' }); 
     }
   };
 
   const stopRecording = (send: boolean = true) => {
-    if (recorderRef.current && isRecording) {
+    if (recorderRef.current && (isRecording || isRecordingVideo)) {
       if (!send) chunksRef.current = []; 
       recorderRef.current.stop(); 
       setIsRecording(false);
+      setIsRecordingVideo(false);
       if (recordingIntervalRef.current) clearInterval(recordingIntervalRef.current);
     }
   };
@@ -390,12 +429,27 @@ export default function ChatArea() {
         {showScrollBottom && <Button onClick={() => scrollToBottom('smooth')} className="absolute bottom-4 right-4 h-10 w-10 rounded-full bg-card/80 backdrop-blur-xl border border-white/10 shadow-2xl z-30 group animate-in fade-in zoom-in" size="icon"><ChevronDown className="w-6 h-6 text-primary group-hover:scale-110 transition-transform" /></Button>}
       </div>
 
-      <footer className="p-3 bg-card/80 backdrop-blur-2xl border-t border-white/5 shrink-0 relative z-30">
+      <footer className="p-3 pb-6 bg-[#0a0a0c]/90 backdrop-blur-2xl border-t border-white/5 shrink-0 relative z-30">
         <div className="max-w-4xl mx-auto space-y-2">
-          {isRecording && (
-            <div className="flex items-center justify-between p-3 bg-red-500/10 rounded-2xl border border-red-500/20 animate-in slide-in-from-bottom-2">
-              <div className="flex items-center gap-3"><div className="w-3 h-3 bg-red-500 rounded-full animate-pulse" /><span className="text-xs font-black text-red-500 uppercase tracking-widest">Запись ГС: {Math.floor(recordingDuration / 60)}:{(recordingDuration % 60).toString().padStart(2, '0')}</span></div>
-              <div className="flex items-center gap-2"><Button variant="ghost" size="sm" className="h-8 text-[10px] uppercase font-bold text-muted-foreground" onClick={() => stopRecording(false)}>Отмена</Button><Button size="icon" className="h-9 w-9 rounded-xl bg-red-500 hover:bg-red-600 shadow-lg shadow-red-500/20" onClick={() => stopRecording(true)}><StopCircle className="w-5 h-5" /></Button></div>
+          {(isRecording || isRecordingVideo) && (
+            <div className="flex items-center justify-between p-3 bg-red-500/10 rounded-2xl border border-red-500/20 animate-in slide-in-from-bottom-2 mb-2">
+              <div className="flex items-center gap-3">
+                <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse" />
+                <span className="text-xs font-black text-red-500 uppercase tracking-widest">
+                  Запись {isRecordingVideo ? 'видео' : 'ГС'}: {Math.floor(recordingDuration / 60)}:{(recordingDuration % 60).toString().padStart(2, '0')}
+                </span>
+              </div>
+              {isRecordingVideo && (
+                <div className="w-20 h-20 rounded-full overflow-hidden border-2 border-red-500 shadow-xl">
+                  <video ref={videoPreviewRef} autoPlay muted playsInline className="w-full h-full object-cover scale-x-[-1]" />
+                </div>
+              )}
+              <div className="flex items-center gap-2">
+                <Button variant="ghost" size="sm" className="h-8 text-[10px] uppercase font-bold text-muted-foreground" onClick={() => stopRecording(false)}>Отмена</Button>
+                <Button size="icon" className="h-9 w-9 rounded-xl bg-red-500 hover:bg-red-600 shadow-lg shadow-red-500/20" onClick={() => stopRecording(true)}>
+                  <StopCircle className="w-5 h-5" />
+                </Button>
+              </div>
             </div>
           )}
           
@@ -416,8 +470,10 @@ export default function ChatArea() {
             </div>
           )}
 
-          <div className="flex gap-2 items-end">
-            <Button variant="ghost" size="icon" className="h-11 w-11 rounded-xl shrink-0 bg-muted hover:bg-muted/80 transition-colors" disabled={isRecording} onClick={() => fileInputRef.current?.click()}><Paperclip className="w-5 h-5 text-muted-foreground" /></Button>
+          <div className="flex gap-3 items-center">
+            <Button variant="ghost" size="icon" className="h-10 w-10 shrink-0 text-white/40 hover:text-white transition-colors" onClick={() => fileInputRef.current?.click()}>
+              <Paperclip className="w-6 h-6" />
+            </Button>
             <input type="file" hidden ref={fileInputRef} accept="image/*,video/*" multiple onChange={(e) => {
               const files = Array.from(e.target.files || []);
               if (files.length) {
@@ -426,14 +482,46 @@ export default function ChatArea() {
                 setIsPreviewModalOpen(true);
               }
             }} />
-            <div className="flex-1 relative">
-              <Input ref={inputRef} placeholder="Напишите сообщение..." className="bg-muted border-none rounded-xl h-11 text-sm px-4 focus-visible:ring-1 focus-visible:ring-primary/20" value={messageInput} onChange={e => handleInputChange(e.target.value)} onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { handleSendMessage(); } }} disabled={isRecording} />
+            
+            <div className="flex-1 flex items-center bg-white/[0.03] rounded-[1.5rem] border border-white/[0.05] h-11 px-4 relative">
+              <Input 
+                ref={inputRef} 
+                placeholder="Сообщение" 
+                className="bg-transparent border-none rounded-none h-full text-[16px] p-0 focus-visible:ring-0 placeholder:text-white/20" 
+                value={messageInput} 
+                onChange={e => handleInputChange(e.target.value)} 
+                onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { handleSendMessage(); } }} 
+                disabled={isRecording || isRecordingVideo} 
+              />
+              <button onClick={() => setShowEmojiPicker(!showEmojiPicker)} className={cn("shrink-0 text-white/20 hover:text-white transition-colors ml-2", showEmojiPicker && "text-primary")}>
+                <Smile className="w-6 h-6" />
+              </button>
+              
+              {showEmojiPicker && (
+                <div className="absolute bottom-full right-0 mb-4 w-[300px] h-[400px] z-50">
+                  <EmojiPicker onSelect={(e) => setMessageInput(prev => prev + e)} />
+                </div>
+              )}
             </div>
-            {!messageInput.trim() && !isRecording ? (
-              <Button size="icon" className="h-11 w-11 rounded-xl shrink-0 bg-primary" onClick={startRecording}><Mic className="w-5 h-5" /></Button>
-            ) : (
-              !isRecording && <Button size="icon" className="h-11 w-11 rounded-xl shrink-0 bg-primary" onClick={() => handleSendMessage()}><Send className="w-5 h-5" /></Button>
-            )}
+
+            <div className="flex items-center gap-2">
+              {!messageInput.trim() && !isRecording && !isRecordingVideo ? (
+                <>
+                  <button className="text-white/40 hover:text-white transition-colors" onClick={() => startRecording('video')}>
+                    <Instagram className="w-7 h-7" />
+                  </button>
+                  <button className="text-white/40 hover:text-white transition-colors" onClick={() => startRecording('audio')}>
+                    <Mic className="w-7 h-7" />
+                  </button>
+                </>
+              ) : (
+                !(isRecording || isRecordingVideo) && (
+                  <Button size="icon" className="h-10 w-10 rounded-full bg-primary" onClick={() => handleSendMessage()}>
+                    <Send className="w-5 h-5" />
+                  </Button>
+                )
+              )}
+            </div>
           </div>
         </div>
       </footer>
