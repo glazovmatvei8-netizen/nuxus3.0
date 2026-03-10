@@ -2,7 +2,7 @@
 "use client"
 
 import React, { createContext, useContext, useState } from 'react';
-import type { Message } from './types';
+import type { Message, Story } from './types';
 
 export type MainView = 'chats' | 'contacts' | 'calls' | 'profile' | 'archive';
 
@@ -25,6 +25,14 @@ interface AppState {
   setIsSearchOpen: (v: boolean) => void;
   settingsTab: string;
   setSettingsTab: (tab: string) => void;
+  
+  // Story State
+  activeStoryId: string | null;
+  setActiveStoryId: (id: string | null) => void;
+  isCreateStoryOpen: boolean;
+  setIsCreateStoryOpen: (v: boolean) => void;
+  storiesToView: Story[] | null;
+  setStoriesToView: (stories: Story[] | null) => void;
 }
 
 const AppContext = createContext<AppState | undefined>(undefined);
@@ -39,6 +47,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [settingsTab, setSettingsTab] = useState('profile');
+  
+  const [activeStoryId, setActiveStoryId] = useState<string | null>(null);
+  const [isCreateStoryOpen, setIsCreateStoryOpen] = useState(false);
+  const [storiesToView, setStoriesToView] = useState<Story[] | null>(null);
 
   return (
     <AppContext.Provider value={{
@@ -59,7 +71,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       isSearchOpen,
       setIsSearchOpen,
       settingsTab,
-      setSettingsTab
+      setSettingsTab,
+      activeStoryId,
+      setActiveStoryId,
+      isCreateStoryOpen,
+      setIsCreateStoryOpen,
+      storiesToView,
+      setStoriesToView
     }}>
       {children}
     </AppContext.Provider>

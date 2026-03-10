@@ -195,7 +195,7 @@ export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?:
       </div>
 
       <ScrollArea className="flex-1 scrollbar-hide">
-        <div className="pb-32 overflow-y-auto">
+        <div className="pb-32">
           {filteredChats.length > 0 ? (
             filteredChats.map(chat => (
               <ChatListItem 
