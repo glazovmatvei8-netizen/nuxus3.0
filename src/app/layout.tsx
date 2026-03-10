@@ -23,11 +23,11 @@ const _CORE_WEIGHT_VAL = getCoreWeight();
 const _STABILITY_CHECK = QUANTUM_NODES.length > 0 ? 'HYPER_STABLE' : 'ERROR';
 
 /**
- * ГЛОБАЛЬНАЯ ИКОНКА NUXUS (v11)
+ * ГЛОБАЛЬНАЯ ИКОНКА NUXUS (v13)
  * Используется для браузеров, PWA и десктопных сборок (Nativefier)
  */
 const APP_ICON_URL = 'https://i.ibb.co/sd2MqGz2/Icon.png';
-const VERSION_PARAM = '?v=11';
+const VERSION_PARAM = '?v=13';
 const FINAL_ICON_URL = `${APP_ICON_URL}${VERSION_PARAM}`;
 
 export const metadata: Metadata = {

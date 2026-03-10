@@ -3,10 +3,10 @@ import { MetadataRoute } from 'next'
 
 export default function manifest(): MetadataRoute.Manifest {
   /**
-   * ИКОНКА ДЛЯ МАНИФЕСТА (v11)
+   * ИКОНКА ДЛЯ МАНИФЕСТА (v13)
    * Nativefier использует эти данные для создания иконки приложения.
    */
-  const APP_ICON_URL = 'https://i.ibb.co/sd2MqGz2/Icon.png?v=11';
+  const APP_ICON_URL = 'https://i.ibb.co/sd2MqGz2/Icon.png?v=13';
   
   return {
     id: 'chat.nuxus.app',

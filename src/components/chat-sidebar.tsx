@@ -29,7 +29,7 @@ import {
 } from "@/components/ui/context-menu";
 
 const ChatListItem = memo(({ 
-  chat, isActive, otherId, isPinned, onPinToggle, onClick, onMute, onMarkUnread, onDelete
+  chat, isActive, otherId, isPinned, onPinToggle, onClick, onMute, onMarkUnread, onDelete, currentUserId
 }: any) => {
   const db = useFirestore();
   const [offsetX, setOffsetX] = useState(0);
@@ -59,27 +59,32 @@ const ChatListItem = memo(({
     try { return format(date, 'HH:mm'); } catch (e) { return ''; }
   }, [chat.lastMessageAt, chat.createdAt]);
 
-  const isUnread = (lastMsg && !lastMsg.isRead && lastMsg.senderId !== otherId) || chat.isManualUnread;
+  // FIXED: Only show unread dot if last message is NOT from current user
+  const isUnread = (lastMsg && !lastMsg.isRead && lastMsg.senderId !== currentUserId) || chat.isManualUnread;
 
   const handleTouchStart = (e: React.TouchEvent) => {
     touchStartX.current = e.touches[0].clientX;
     touchStartY.current = e.touches[0].clientY;
     isHorizontalSwipe.current = false;
-    setIsDragging(true);
+    setOffsetX(offsetX); // Preserve current state if already swiped
   };
 
   const handleTouchMove = (e: React.TouchEvent) => {
     const deltaX = e.touches[0].clientX - touchStartX.current;
     const deltaY = e.touches[0].clientY - touchStartY.current;
 
+    // Detect if move is horizontal to prevent interference with vertical scroll
     if (!isHorizontalSwipe.current && Math.abs(deltaX) > 10) {
       if (Math.abs(deltaX) > Math.abs(deltaY)) {
         isHorizontalSwipe.current = true;
+        setIsDragging(true);
       }
     }
 
     if (isHorizontalSwipe.current) {
-      if (e.cancelable) e.preventDefault();
+      // Small vibration on start of meaningful swipe
+      if (!isDragging && window.navigator.vibrate) window.navigator.vibrate(10);
+      
       const newOffset = Math.max(-180, Math.min(180, deltaX));
       setOffsetX(newOffset);
     }
@@ -88,12 +93,16 @@ const ChatListItem = memo(({
   const handleTouchEnd = () => {
     setIsDragging(false);
     if (!isHorizontalSwipe.current) {
-      setOffsetX(0);
+      // If it wasn't a horizontal swipe, stay where we are or reset
+      if (Math.abs(offsetX) < 40) setOffsetX(0);
       return;
     }
+    
+    // Snap logic
     if (offsetX > 60) setOffsetX(160);
     else if (offsetX < -60) setOffsetX(-160);
     else setOffsetX(0);
+    
     isHorizontalSwipe.current = false;
   };
 
@@ -103,7 +112,8 @@ const ChatListItem = memo(({
   };
 
   return (
-    <div className="relative overflow-hidden touch-pan-y select-none bg-[#0a0a0c]">
+    <div className="relative overflow-hidden touch-pan-y select-none bg-[#0a0a0c] border-b border-white/[0.02]">
+      {/* Background Actions */}
       <div className="absolute inset-y-0 left-0 flex h-full z-0">
         <button onClick={(e) => { e.stopPropagation(); onMarkUnread(chat.id); resetSwipe(); }} className="w-20 bg-[#007AFF] flex flex-col items-center justify-center text-white gap-1 active:brightness-90 transition-all">
           <MessageSquare className="w-5 h-5 fill-current" />
@@ -126,22 +136,26 @@ const ChatListItem = memo(({
         </button>
       </div>
 
+      {/* Main Content Layer */}
       <div 
-        className={cn("relative z-10 bg-[#0a0a0c]", !isDragging && "transition-transform duration-300 ease-out")}
+        className={cn(
+          "relative z-10 bg-[#0a0a0c] will-change-transform", 
+          !isDragging && "transition-transform duration-300 ease-out"
+        )}
         style={{ transform: `translateX(${offsetX}px)` }}
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
-        onClick={offsetX === 0 ? onClick : resetSwipe}
+        onClick={Math.abs(offsetX) > 10 ? resetSwipe : onClick}
       >
         <ContextMenu>
-          <ContextMenuTrigger disabled={offsetX !== 0}>
+          <ContextMenuTrigger disabled={Math.abs(offsetX) > 10}>
             <div className={cn(
-              "flex items-center gap-3 px-4 py-2.5 cursor-pointer transition-all border-none group relative",
-              isActive && offsetX === 0 ? 'bg-white/10' : 'active:bg-white/[0.05]'
+              "flex items-center gap-3 px-4 py-2.5 cursor-pointer transition-colors border-none group relative",
+              isActive && Math.abs(offsetX) < 5 ? 'bg-white/10' : 'active:bg-white/[0.05]'
             )}>
               <UserAvatar userId={otherId} manualAvatarUrl={otherProfile?.avatarUrl || chat.avatarUrl} className="h-[52px] w-[52px]" fallbackName={finalDisplayName} showOnlineStatus />
-              <div className="flex-1 min-w-0 border-b border-white/[0.03] pb-3 h-full flex flex-col justify-center">
+              <div className="flex-1 min-w-0 pb-3 h-full flex flex-col justify-center">
                 <div className="flex items-center justify-between mb-0.5">
                   <span className="font-bold text-[16px] text-white truncate flex items-center gap-1">
                     {isPinned && <Pin className="w-3 h-3 text-primary fill-primary rotate-45" />}
@@ -153,7 +167,7 @@ const ChatListItem = memo(({
                   <p className="text-[14px] text-muted-foreground/60 truncate flex-1">
                     {lastMsg?.contentType === 'text' ? lastMsg.content : (lastMsg ? `[${lastMsg.contentType}]` : 'Нет сообщений')}
                   </p>
-                  {isUnread && <div className="w-2.5 h-2.5 bg-[#007AFF] rounded-full shadow-[0_0_8px_rgba(0,122,255,0.5)]" />}
+                  {isUnread && <div className="w-2.5 h-2.5 bg-[#007AFF] rounded-full shadow-[0_0_8px_rgba(0,122,255,0.5)] shrink-0 ml-2" />}
                 </div>
               </div>
             </div>
@@ -242,9 +256,8 @@ export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?:
   }, [chats, activeTab, isArchiveView, currentUserProfile?.pinnedChatIds]);
 
   return (
-    <div className="flex flex-col h-full bg-[#0a0a0c] overflow-hidden overflow-y-auto scrollbar-hide">
+    <div className="flex flex-col h-full bg-[#0a0a0c] overflow-hidden">
       <div className="px-4 pt-4 pb-2 shrink-0">
-        {/* Improved Header Grid to prevent overlapping */}
         <div className="grid grid-cols-3 items-center h-12 mb-6 w-full">
           <div className="flex justify-start">
             <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full bg-white/5" onClick={() => setIsSearchOpen(true)}>
@@ -298,31 +311,34 @@ export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?:
         )}
       </div>
 
-      <div className="flex-1 pb-32">
-        {filteredChats.length > 0 ? (
-          filteredChats.map(chat => (
-            <ChatListItem 
-              key={chat.id} 
-              chat={chat} 
-              isActive={currentChatId === chat.id} 
-              isPinned={currentUserProfile?.pinnedChatIds?.includes(chat.id)}
-              onPinToggle={handlePinToggle}
-              onMarkUnread={handleMarkUnread}
-              onMute={handleMute}
-              onDelete={handleDelete}
-              onClick={() => setCurrentChatId(chat.id)}
-              otherId={chat.type === 'private' && user ? chat.participantIds?.find((id: string) => id !== user.uid) : null} 
-            />
-          ))
-        ) : (
-          <div className="flex flex-col items-center justify-center p-20 opacity-20">
-             <Ghost className="w-12 h-12 mb-4" />
-             <p className="text-[10px] font-black uppercase tracking-widest text-center">
-               {isArchiveView ? 'Архив пуст' : 'Нет активных каналов'}
-             </p>
-          </div>
-        )}
-      </div>
+      <ScrollArea className="flex-1 scrollbar-hide">
+        <div className="pb-32">
+          {filteredChats.length > 0 ? (
+            filteredChats.map(chat => (
+              <ChatListItem 
+                key={chat.id} 
+                chat={chat} 
+                isActive={currentChatId === chat.id} 
+                isPinned={currentUserProfile?.pinnedChatIds?.includes(chat.id)}
+                onPinToggle={handlePinToggle}
+                onMarkUnread={handleMarkUnread}
+                onMute={handleMute}
+                onDelete={handleDelete}
+                onClick={() => setCurrentChatId(chat.id)}
+                currentUserId={user?.uid}
+                otherId={chat.type === 'private' && user ? chat.participantIds?.find((id: string) => id !== user.uid) : null} 
+              />
+            ))
+          ) : (
+            <div className="flex flex-col items-center justify-center p-20 opacity-20">
+               <Ghost className="w-12 h-12 mb-4" />
+               <p className="text-[10px] font-black uppercase tracking-widest text-center">
+                 {isArchiveView ? 'Архив пуст' : 'Нет активных каналов'}
+               </p>
+            </div>
+          )}
+        </div>
+      </ScrollArea>
 
       <CreateChatModal open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen} />
       <ChatEditorModal open={isEditorModalOpen} onOpenChange={setIsEditorModalOpen} />
