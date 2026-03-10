@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
   Send, Info, ChevronLeft, X, Paperclip, Mic, StopCircle, ChevronDown, Edit2, Pin, Search, PinOff,
-  Smile, Instagram, Camera, Video, Sticker, Copy, Share2
+  Smile, Instagram, Camera, Video, Sticker, Copy, Share2, Sparkles, Loader2
 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { MessageItem } from './message-item';
@@ -22,6 +22,7 @@ import { formatDisplayName, cn, formatLastSeen, compressImage } from '@/lib/util
 import type { Message, User as UserType, Chat, StickerPack } from '@/lib/types';
 import { EmojiPicker } from './emoji-picker';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { suggestMessageDraft } from '@/ai/flows/ai-message-drafting-flow';
 
 const MessageList = memo(({ 
   messages, 
@@ -85,6 +86,7 @@ export default function ChatArea() {
   const [searchQuery, setSearchQuery] = useState('');
   const [isOnline, setIsOnline] = useState(true);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [isAiLoading, setIsAiLoading] = useState(false);
 
   const [selectedFiles, setSelectedFiles] = useState<{ url: string; type: 'image' | 'video' }[]>([]);
   const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
@@ -432,6 +434,29 @@ export default function ChatArea() {
     }
   };
 
+  const handleAiDraft = async () => {
+    if (!messages || messages.length === 0 || isAiLoading) return;
+    setIsAiLoading(true);
+    try {
+      const history = messages.slice(-5).map(m => ({
+        sender: m.senderName,
+        message: m.contentType === 'text' ? m.content : `[${m.contentType}]`
+      }));
+      const result = await suggestMessageDraft({
+        conversationHistory: history,
+        currentUserInput: messageInput
+      });
+      if (result.draftMessage) {
+        handleInputChange(result.draftMessage);
+        toast({ title: "ИИ предложил вариант", className: "bg-primary text-white" });
+      }
+    } catch (e) {
+      toast({ title: "Ошибка ИИ", variant: "destructive" });
+    } finally {
+      setIsAiLoading(false);
+    }
+  };
+
   const handlePin = async (msg: Message) => {
     if (!db || !currentChatId) return;
     await updateDoc(doc(db, 'chats', currentChatId), { pinnedMessageId: msg.id });
@@ -635,6 +660,13 @@ export default function ChatArea() {
             <div className="flex items-center gap-2">
               {!messageInput.trim() && !isRecording && !isRecordingVideo ? (
                 <>
+                  <button 
+                    className={cn("text-white/40 hover:text-primary transition-colors", isAiLoading && "animate-spin text-primary")} 
+                    onClick={handleAiDraft}
+                    disabled={isAiLoading}
+                  >
+                    {isAiLoading ? <Loader2 className="w-6 h-6" /> : <Sparkles className="w-6 h-6" />}
+                  </button>
                   <button className="text-white/40 hover:text-white transition-colors" onClick={() => startRecording('video')}>
                     <Instagram className="w-7 h-7" />
                   </button>

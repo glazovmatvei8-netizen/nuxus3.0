@@ -29,6 +29,7 @@ export interface Message {
   editedAt?: string;
   isRead?: boolean;
   forwardFrom?: string;
+  reactions?: Record<string, string[]>; // emoji -> [uids]
   pollData?: {
     question: string;
     options: PollOption[];

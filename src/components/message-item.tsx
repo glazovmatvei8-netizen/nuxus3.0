@@ -2,7 +2,7 @@
 "use client"
 
 import React, { useState, memo, useRef, useEffect, useCallback } from 'react';
-import { useFirestore } from '@/firebase';
+import { useFirestore, useUser } from '@/firebase';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
   DropdownMenu,
@@ -14,10 +14,10 @@ import {
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { format } from 'date-fns';
 import { 
-  CornerUpLeft, Trash2, Check, CheckCheck, Edit2, Copy, Pin, X, MoreVertical, Share2, Play
+  CornerUpLeft, Trash2, Check, CheckCheck, Edit2, Copy, Pin, X, MoreVertical, Share2, Play, Smile
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { doc, updateDoc, deleteDoc } from 'firebase/firestore';
+import { doc, updateDoc, deleteDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
 import type { Message } from '@/lib/types';
 import { Button } from './ui/button';
 import { useToast } from '@/hooks/use-toast';
@@ -30,9 +30,10 @@ import {
   type CarouselApi,
 } from "@/components/ui/carousel"
 
-const isBase64Media = (str: string) => str.startsWith('data:');
+const QUICK_REACTIONS = ['👍', '❤️', '🔥', '😂', '😮', '😢', '🙏'];
 
 export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForward, isAdmin = false, isGroup = false, onEdit, highlight = false }: any) => {
+  const { user } = useUser();
   const db = useFirestore();
   const { toast } = useToast();
   const [isPlaying, setIsPlaying] = useState(false);
@@ -43,6 +44,18 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
   const [initialIndex, setInitialIndex] = useState(0);
 
   const formattedTime = message.sentAt ? format(new Date(message.sentAt), 'HH:mm') : '';
+
+  const handleReaction = async (emoji: string) => {
+    if (!db || !user || !chatId) return;
+    const msgRef = doc(db, 'chats', chatId, 'messages', message.id);
+    const hasReacted = message.reactions?.[emoji]?.includes(user.uid);
+    
+    if (hasReacted) {
+      await updateDoc(msgRef, { [`reactions.${emoji}`]: arrayRemove(user.uid) });
+    } else {
+      await updateDoc(msgRef, { [`reactions.${emoji}`]: arrayUnion(user.uid) });
+    }
+  };
 
   const toggleAudio = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -73,7 +86,7 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
     if (isSticker) {
       return (
         <div className="w-40 h-40 select-none animate-in fade-in zoom-in duration-300">
-          <img src={content} alt="Sticker" className="w-full h-full object-contain" />
+          <img src={content} alt="Sticker" className="w-full h-full object-contain" decoding="async" />
         </div>
       );
     }
@@ -127,8 +140,7 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
             <video src={content} className="w-full h-full object-cover aspect-video" />
           ) : (
             <div className="relative w-full aspect-[3/4]">
-              {/* Use standard img for heavy Base64 to avoid next/image overhead */}
-              <img src={content} alt="Content" className="w-full h-full object-cover transition-transform group-hover:scale-105" loading="lazy" />
+              <img src={content} alt="Content" className="w-full h-full object-cover transition-transform group-hover:scale-105" loading="lazy" decoding="async" />
             </div>
           )}
         </div>
@@ -143,14 +155,12 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
         <div className={cn("grid gap-1.5 w-full min-w-[300px] max-w-[340px] md:max-w-[500px]", gridCols)}>
           {urls.map((url, idx) => (
             <div key={idx} onClick={(e) => openGallery(idx, e)} className={cn("relative aspect-square rounded-xl overflow-hidden border border-white/5 cursor-pointer group bg-muted/10 transition-transform active:scale-[0.96]", urls.length === 3 && idx === 0 ? "col-span-2 aspect-video" : "")}>
-              <img src={url} alt={`Img ${idx}`} className="w-full h-full object-cover transition-transform group-hover:scale-110" loading="lazy" />
+              <img src={url} alt={`Img ${idx}`} className="w-full h-full object-cover transition-transform group-hover:scale-110" loading="lazy" decoding="async" />
             </div>
           ))}
         </div>
       );
     }
-
-    if (isBase64Media(content)) return null;
 
     return (
       <div className="flex flex-col text-left">
@@ -179,6 +189,7 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
               (message.contentType === 'video_note' || message.contentType === 'sticker') && "bg-transparent border-none shadow-none p-0"
             )}>
               {renderContent()}
+              
               <div className={cn(
                 "flex items-center justify-end gap-1 mt-1.5 opacity-60", 
                 message.contentType === 'video_note' && "absolute bottom-2 right-4 bg-black/40 px-2 py-0.5 rounded-full backdrop-blur-md",
@@ -193,6 +204,28 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
                   )
                 )}
               </div>
+
+              {/* Reactions Display */}
+              {message.reactions && Object.entries(message.reactions).some(([_, uids]: any) => uids.length > 0) && (
+                <div className={cn(
+                  "flex flex-wrap gap-1 mt-2",
+                  isMe ? "justify-end" : "justify-start"
+                )}>
+                  {Object.entries(message.reactions).map(([emoji, uids]: any) => uids.length > 0 && (
+                    <button
+                      key={emoji}
+                      onClick={() => handleReaction(emoji)}
+                      className={cn(
+                        "flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold border transition-all active:scale-90",
+                        uids.includes(user?.uid) ? "bg-primary/20 border-primary/40 text-white" : "bg-white/5 border-white/10 text-muted-foreground"
+                      )}
+                    >
+                      <span>{emoji}</span>
+                      <span>{uids.length}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
 
             <DropdownMenu>
@@ -203,7 +236,18 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
                    </Button>
                 </div>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align={isMe ? 'end' : 'start'} className="w-52 bg-card/95 backdrop-blur-2xl border-white/10 rounded-2xl shadow-2xl">
+              <DropdownMenuContent align={isMe ? 'end' : 'start'} className="w-56 bg-card/95 backdrop-blur-2xl border-white/10 rounded-2xl shadow-2xl">
+                <div className="flex gap-1 px-2 py-2 overflow-x-auto scrollbar-hide border-b border-white/5 mb-1">
+                  {QUICK_REACTIONS.map(emoji => (
+                    <button
+                      key={emoji}
+                      onClick={() => handleReaction(emoji)}
+                      className="text-xl hover:scale-125 active:scale-90 transition-transform p-1"
+                    >
+                      {emoji}
+                    </button>
+                  ))}
+                </div>
                 <DropdownMenuItem onClick={() => onReply(message)} className="gap-3 py-3 font-bold text-[11px] uppercase tracking-wider"><CornerUpLeft className="w-4 h-4 text-primary" /> Ответить</DropdownMenuItem>
                 <DropdownMenuItem onClick={() => onForward(message)} className="gap-3 py-3 font-bold text-[11px] uppercase tracking-wider"><Share2 className="w-4 h-4 text-primary" /> Переслать</DropdownMenuItem>
                 {isAdmin && <DropdownMenuItem onClick={() => onPin(message)} className="gap-3 py-3 font-bold text-[11px] uppercase tracking-wider"><Pin className="w-4 h-4 text-primary" /> Закрепить</DropdownMenuItem>}
@@ -248,7 +292,7 @@ function MediaGalleryModal({ isOpen, onOpenChange, media, type, initialIndex }: 
                     <video src={url} controls autoPlay className="max-w-full max-h-full rounded-xl shadow-2xl" />
                   ) : (
                     <div className="relative w-full h-full flex items-center justify-center">
-                      <img src={url} alt={`Media ${idx}`} className="max-w-full max-h-full object-contain pointer-events-none select-none" />
+                      <img src={url} alt={`Media ${idx}`} className="max-w-full max-h-full object-contain pointer-events-none select-none" decoding="async" />
                     </div>
                   )}
                 </div>
