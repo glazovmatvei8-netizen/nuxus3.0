@@ -1,6 +1,15 @@
 
 export type MessageType = 'text' | 'image' | 'audio' | 'video' | 'video_note' | 'service' | 'gift' | 'payment_request' | 'album' | 'poll' | 'broadcast' | 'sticker';
 
+export interface StickerPack {
+  id: string;
+  ownerId: string;
+  name: string;
+  iconUrl: string | null;
+  stickerUrls: string[];
+  createdAt: string;
+}
+
 export interface PollOption {
   id: string;
   text: string;
@@ -19,36 +28,13 @@ export interface Message {
   replyToContent?: string;
   editedAt?: string;
   isRead?: boolean;
-  giftMessage?: string;
-  giftValue?: number;
-  giftType?: string;
-  isNFT?: boolean;
-  serialNumber?: number;
   forwardFrom?: string;
-  translation?: string;
-  scheduledAt?: string | null;
-  expiresAt?: string | null;
-  expiresInSeconds?: number | null;
-  isOneTimeView?: boolean;
-  isExpired?: boolean;
-  isMentionAll?: boolean;
   pollData?: {
     question: string;
     options: PollOption[];
     isAnonymous: boolean;
     isMultiple: boolean;
     closedAt?: string;
-  };
-  paymentData?: {
-    type: 'premium';
-    itemName: string;
-    targetUserId: string;
-    targetUserName: string;
-    targetUserUsername: string;
-    amount?: number;
-    unit?: 'months' | 'years';
-    price: number;
-    status: 'pending' | 'confirmed' | 'rejected';
   };
 }
 
@@ -151,4 +137,5 @@ export interface User {
   statusText?: string;
   referralCount?: number;
   invitedBy?: string;
+  installedStickerPackIds?: string[];
 }

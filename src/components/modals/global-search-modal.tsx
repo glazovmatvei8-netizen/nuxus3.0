@@ -10,7 +10,7 @@ import { useFirestore, useUser, useDoc, useMemoFirebase } from '@/firebase';
 import { collection, query, where, getDocs, doc, limit, addDoc, orderBy } from 'firebase/firestore';
 import { useAppState } from '@/lib/store';
 import { useToast } from '@/hooks/use-toast';
-import { Search, Loader2, Radio, Users, Check, ArrowRight, X, Star, Zap } from 'lucide-react';
+import { Search, Loader2, Radio, Users, Check, ArrowRight, X, Star, Zap, Bot } from 'lucide-react';
 import { UserAvatar } from '@/components/user-avatar';
 import { isUserPremium } from '@/lib/utils';
 import type { User, Chat } from '@/lib/types';
@@ -22,7 +22,7 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
   const { toast } = useToast();
   
   const [searchQuery, setSearchQuery] = useState('');
-  const [results, setResults] = useState<{ type: 'chat' | 'user', data: any }[]>([]);
+  const [results, setResults] = useState<{ type: 'chat' | 'user' | 'bot', data: any }[]>([]);
   const [trends, setTrends] = useState<Chat[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -64,6 +64,21 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
     try {
       const searchVal = val.startsWith('@') ? val.toLowerCase() : '@' + val.toLowerCase();
       
+      const foundResults: any[] = [];
+
+      // Virtual Bots
+      if ('@stickers'.includes(searchVal)) {
+        foundResults.push({
+          type: 'bot',
+          data: {
+            id: 'bot_stickers',
+            name: 'Sticker Pack Bot',
+            username: '@stickers',
+            avatarUrl: 'https://i.ibb.co/sd2MqGz2/Icon.png'
+          }
+        });
+      }
+
       const chatQuery = query(collection(db!, 'chats'), where('username', '==', searchVal), limit(5));
       const userQuery = query(collection(db!, 'users'), where('username', '==', searchVal), limit(5));
 
@@ -74,11 +89,59 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
         .map(d => ({ type: 'user' as const, data: { id: d.id, ...d.data() } }))
         .filter(u => u.data.id !== user?.uid);
 
-      setResults([...foundChats, ...foundUsers]);
+      setResults([...foundResults, ...foundChats, ...foundUsers]);
     } catch (e) {
       console.error("Search error:", e);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const openBotChat = async (botData: any) => {
+    if (!user || !db || !myProfile) return;
+    try {
+      const q = query(
+        collection(db, 'chats'), 
+        where('type', '==', 'private'), 
+        where('username', '==', botData.username),
+        where('participantIds', 'array-contains', user.uid)
+      );
+      const snapshot = await getDocs(q);
+      if (!snapshot.empty) {
+        setCurrentChatId(snapshot.docs[0].id);
+        onOpenChange(false);
+        setActiveView('chats');
+        return;
+      }
+
+      const newChatData = {
+        type: 'private' as const,
+        participantIds: [user.uid, botData.id],
+        adminIds: [user.uid],
+        ownerId: user.uid,
+        createdAt: new Date().toISOString(),
+        name: botData.name,
+        username: botData.username,
+        avatarUrl: botData.avatarUrl
+      };
+
+      const docRef = await addDoc(collection(db, 'chats'), newChatData);
+      
+      // Welcome message from bot
+      await addDoc(collection(db, 'chats', docRef.id, 'messages'), {
+        chatId: docRef.id,
+        senderId: botData.id,
+        senderName: botData.name,
+        content: `Привет! Я бот для создания стикерпаков. 🎨\n\nКоманды:\n/newpack - Создать новый пак\n/add - Добавить стикер в текущий пак\n/share - Ссылка на пак\n\nПросто отправьте мне фото, чтобы превратить его в стикер!`,
+        contentType: 'text',
+        sentAt: new Date().toISOString()
+      });
+
+      setCurrentChatId(docRef.id);
+      onOpenChange(false);
+      setActiveView('chats');
+    } catch (e: any) {
+      toast({ title: "Ошибка", description: e.message, variant: "destructive" });
     }
   };
 
@@ -144,11 +207,18 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
             {searchQuery.trim().length >= 3 ? (
               results.length > 0 ? (
                 results.map((res, idx) => (
-                  <div key={idx} className="flex items-center justify-between p-4 bg-white/5 rounded-[1.8rem] hover:bg-white/10 cursor-pointer" onClick={() => res.type === 'chat' ? (setCurrentChatId(res.data.id), onOpenChange(false)) : openUserChat(res.data)}>
+                  <div key={idx} className="flex items-center justify-between p-4 bg-white/5 rounded-[1.8rem] hover:bg-white/10 cursor-pointer" onClick={() => {
+                    if (res.type === 'bot') openBotChat(res.data);
+                    else if (res.type === 'chat') { setCurrentChatId(res.data.id); onOpenChange(false); }
+                    else openUserChat(res.data);
+                  }}>
                     <div className="flex items-center gap-4">
                       <UserAvatar userId={res.type === 'user' ? res.data.id : null} manualAvatarUrl={res.data.avatarUrl} className="h-12 w-12" fallbackName={res.data.name} />
                       <div className="flex flex-col">
-                        <span className="font-bold text-white flex items-center gap-2">{res.data.name} {res.type === 'chat' ? <Users className="w-3 h-3" /> : isUserPremium(res.data) && <Star className="w-3 h-3 text-accent fill-accent" />}</span>
+                        <span className="font-bold text-white flex items-center gap-2">
+                          {res.data.name} 
+                          {res.type === 'chat' ? <Users className="w-3 h-3" /> : res.type === 'bot' ? <Bot className="w-3 h-3 text-primary" /> : isUserPremium(res.data) && <Star className="w-3 h-3 text-accent fill-accent" />}
+                        </span>
                         <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest">{res.data.username}</span>
                       </div>
                     </div>

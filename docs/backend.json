@@ -15,14 +15,24 @@
         "lastSeen": { "type": "string", "format": "date-time" },
         "createdAt": { "type": "string", "format": "date-time" },
         "isPremium": { "type": "boolean" },
-        "premiumUntil": { "type": "string", "format": "date-time" },
-        "isBanned": { "type": "boolean" },
-        "isAdmin": { "type": "boolean" },
-        "referralCount": { "type": "number", "default": 0 },
-        "invitedBy": { "type": "string" },
-        "contactIds": { "type": "array", "items": { "type": "string" } }
+        "installedStickerPackIds": { "type": "array", "items": { "type": "string" } }
       },
       "required": ["id", "name", "username", "phone", "createdAt"]
+    },
+    "StickerPack": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "StickerPack",
+      "type": "object",
+      "description": "A collection of stickers created by a user.",
+      "properties": {
+        "id": { "type": "string" },
+        "ownerId": { "type": "string" },
+        "name": { "type": "string" },
+        "iconUrl": { "type": "string" },
+        "stickerUrls": { "type": "array", "items": { "type": "string" } },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "ownerId", "name", "stickerUrls", "createdAt"]
     },
     "Chat": {
       "$schema": "http://json-schema.org/draft-07/schema#",
@@ -49,8 +59,7 @@
         "senderId": { "type": "string" },
         "content": { "type": "string" },
         "contentType": { "type": "string" },
-        "sentAt": { "type": "string", "format": "date-time" },
-        "pollData": { "type": "object" }
+        "sentAt": { "type": "string", "format": "date-time" }
       },
       "required": ["id", "chatId", "senderId", "content", "contentType", "sentAt"]
     }
@@ -63,6 +72,10 @@
       {
         "path": "/users/{userId}",
         "definition": { "entityName": "UserProfile", "schema": { "$ref": "#/backend/entities/UserProfile" }, "description": "Stores user profiles." }
+      },
+      {
+        "path": "/stickerPacks/{packId}",
+        "definition": { "entityName": "StickerPack", "schema": { "$ref": "#/backend/entities/StickerPack" }, "description": "Stores sticker pack metadata." }
       },
       {
         "path": "/chats/{chatId}",

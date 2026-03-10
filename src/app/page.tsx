@@ -6,8 +6,8 @@ import { useAppState } from '@/lib/store';
 import AuthScreen from '@/components/auth-screen';
 import ChatMain from '@/components/chat-main';
 import { Loader2, ShieldAlert, Lock, ArrowRight } from 'lucide-react';
-import { doc, collection, query, where, limit, getDocs, arrayUnion, updateDoc } from 'firebase/firestore';
-import type { User as UserType, Chat } from '@/lib/types';
+import { doc, collection, query, where, limit, getDocs, arrayUnion, updateDoc, getDoc } from 'firebase/firestore';
+import type { User as UserType, Chat, StickerPack } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { signOut } from 'firebase/auth';
@@ -16,6 +16,14 @@ import { useToast } from '@/hooks/use-toast';
 import { isUserActuallyBanned } from '@/lib/utils';
 import { NuxusLogo } from '@/components/nuxus-logo';
 import { IosInstaller } from '@/components/ios-installer';
+import { 
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter
+} from '@/components/ui/dialog';
 
 export default function Home() {
   const { user, isUserLoading } = useUser();
@@ -28,6 +36,8 @@ export default function Home() {
   const [isJoining, setIsJoining] = useState(false);
   const [twoFactorInput, setTwoFactorInput] = useState('');
   const [showIosInstaller, setShowIosInstaller] = useState(false);
+  
+  const [stickerPackToInstall, setStickerPackToInstall] = useState<StickerPack | null>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -57,6 +67,19 @@ export default function Home() {
 
     const params = new URLSearchParams(window.location.search);
     const joinParam = params.get('join');
+    const stickerParam = params.get('stickers');
+
+    if (stickerParam) {
+      const fetchPack = async () => {
+        const packRef = doc(db, 'stickerPacks', stickerParam);
+        const packSnap = await getDoc(packRef);
+        if (packSnap.exists()) {
+          setStickerPackToInstall({ id: packSnap.id, ...packSnap.data() } as StickerPack);
+        }
+        window.history.replaceState({}, document.title, window.location.pathname);
+      };
+      fetchPack();
+    }
 
     if (joinParam) {
       const handleJoin = async () => {
@@ -85,6 +108,15 @@ export default function Home() {
       handleJoin();
     }
   }, [user, db, setCurrentChatId, toast, isJoining, mounted]);
+
+  const handleInstallPack = async () => {
+    if (!db || !user || !stickerPackToInstall) return;
+    await updateDoc(doc(db, 'users', user.uid), {
+      installedStickerPackIds: arrayUnion(stickerPackToInstall.id)
+    });
+    toast({ title: "Успех", description: `Стикерпак "${stickerPackToInstall.name}" добавлен!` });
+    setStickerPackToInstall(null);
+  };
 
   const handleVerify2FA = () => {
     if (twoFactorInput === profile?.twoFactorPin) {
@@ -162,5 +194,37 @@ export default function Home() {
     );
   }
 
-  return <ChatMain />;
+  return (
+    <>
+      <ChatMain />
+      
+      <Dialog open={!!stickerPackToInstall} onOpenChange={() => setStickerPackToInstall(null)}>
+        <DialogContent className="max-w-xs bg-card border-white/10 rounded-[2.5rem] p-6 text-center">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-black uppercase italic text-white">Новый Стикерпак</DialogTitle>
+            <DialogDescription className="text-xs uppercase font-bold tracking-widest text-muted-foreground/60">
+              Вы хотите добавить этот набор?
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="py-6 flex flex-col items-center gap-4">
+            <div className="w-24 h-24 rounded-3xl bg-white/5 border border-white/10 flex items-center justify-center overflow-hidden">
+              {stickerPackToInstall?.iconUrl ? (
+                <img src={stickerPackToInstall.iconUrl} className="w-full h-full object-cover" />
+              ) : (
+                <NuxusLogo size={60} />
+              )}
+            </div>
+            <h3 className="text-lg font-bold text-white">{stickerPackToInstall?.name}</h3>
+            <p className="text-[10px] text-muted-foreground uppercase font-black">{stickerPackToInstall?.stickerUrls.length} стикеров</p>
+          </div>
+
+          <DialogFooter className="flex-col gap-2">
+            <Button onClick={handleInstallPack} className="w-full h-12 rounded-2xl bg-primary font-black uppercase tracking-widest">Установить</Button>
+            <Button variant="ghost" onClick={() => setStickerPackToInstall(null)} className="w-full h-10 rounded-xl text-[10px] font-bold uppercase opacity-40">Отмена</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
 }

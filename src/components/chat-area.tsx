@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
   Send, Info, ChevronLeft, X, Paperclip, Mic, StopCircle, ChevronDown, Edit2, Pin, Search, PinOff,
-  Smile, Instagram, Camera, Video, Sticker
+  Smile, Instagram, Camera, Video, Sticker, Copy, Share2
 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { MessageItem } from './message-item';
@@ -16,10 +16,10 @@ import { useToast } from '@/hooks/use-toast';
 import { ChatInfoModal } from './modals/chat-info-modal';
 import { ImagePreviewModal } from './modals/image-preview-modal';
 import { useFirestore, useUser, useCollection, useDoc, useMemoFirebase } from '@/firebase';
-import { collection, query, orderBy, doc, addDoc, limit, updateDoc, writeBatch, arrayUnion } from 'firebase/firestore';
+import { collection, query, orderBy, doc, addDoc, limit, updateDoc, writeBatch, arrayUnion, getDocs, where, setDoc } from 'firebase/firestore';
 import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { formatDisplayName, cn, formatLastSeen } from '@/lib/utils';
-import type { Message, User as UserType, Chat } from '@/lib/types';
+import type { Message, User as UserType, Chat, StickerPack } from '@/lib/types';
 import { EmojiPicker } from './emoji-picker';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 
@@ -136,6 +136,8 @@ export default function ChatArea() {
   
   const { data: messages } = useCollection<Message>(messagesQuery);
 
+  const currentPackIdRef = useRef<string | null>(null);
+
   useEffect(() => {
     setIsOnline(navigator.onLine);
     const handleStatus = () => setIsOnline(navigator.onLine);
@@ -219,9 +221,82 @@ export default function ChatArea() {
     }
   }, [messages?.length, currentChatId, scrollToBottom]);
 
+  const handleBotLogic = async (content: string, type: Message['contentType']) => {
+    if (chat?.username !== '@stickers' || !firebaseUser || !db) return false;
+
+    const lower = content.toLowerCase();
+    const botReply = (text: string) => {
+      addDoc(collection(db, 'chats', currentChatId!, 'messages'), {
+        chatId: currentChatId,
+        senderId: 'bot_stickers',
+        senderName: 'Sticker Bot 🎨',
+        content: text,
+        contentType: 'text',
+        sentAt: new Date().toISOString()
+      });
+    };
+
+    if (lower === '/newpack') {
+      currentPackIdRef.current = 'pending_name';
+      botReply("Отлично! Как назовем новый стикерпак?");
+      return true;
+    }
+
+    if (currentPackIdRef.current === 'pending_name') {
+      const packName = content.trim();
+      const packId = `pack_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
+      await setDoc(doc(db, 'stickerPacks', packId), {
+        id: packId,
+        ownerId: firebaseUser.uid,
+        name: packName,
+        iconUrl: null,
+        stickerUrls: [],
+        createdAt: new Date().toISOString()
+      });
+      await updateDoc(doc(db, 'users', firebaseUser.uid), {
+        installedStickerPackIds: arrayUnion(packId)
+      });
+      currentPackIdRef.current = packId;
+      botReply(`Пак "${packName}" создан! Отправьте мне фото, чтобы добавить стикер в этот набор.`);
+      return true;
+    }
+
+    if (type === 'image' || content.startsWith('data:image')) {
+      if (currentPackIdRef.current && currentPackIdRef.current !== 'pending_name') {
+        const packRef = doc(db, 'stickerPacks', currentPackIdRef.current);
+        await updateDoc(packRef, {
+          stickerUrls: arrayUnion(content),
+          iconUrl: content // Set first sticker as icon
+        });
+        botReply("Стикер добавлен в пак! Можете прислать еще.");
+      } else {
+        // Legacy simple sticker
+        updateDocumentNonBlocking(doc(db, 'users', firebaseUser.uid), {
+          'settings.stickers': arrayUnion(content)
+        });
+        botReply("Стикер добавлен в вашу личную панель.");
+      }
+      return true;
+    }
+
+    if (lower === '/share') {
+      if (!currentPackIdRef.current || currentPackIdRef.current === 'pending_name') {
+        botReply("Сначала создайте или выберите пак.");
+      } else {
+        const link = `${window.location.origin}/?stickers=${currentPackIdRef.current}`;
+        botReply(`Вот ваша ссылка на стикерпак: ${link}`);
+      }
+      return true;
+    }
+
+    return false;
+  };
+
   const handleSendMessage = useCallback(async (content_msg: string = messageInput, type_msg: Message['contentType'] = 'text') => {
     if (!content_msg.trim() && type_msg !== 'audio' && type_msg !== 'video_note') return;
     if (!currentChatId || !firebaseUser || !db) return;
+    
+    const isBotIntercepted = await handleBotLogic(content_msg, type_msg);
     
     const captureContent = content_msg.trim();
     const captureReply = replyTo;
@@ -263,23 +338,6 @@ export default function ChatArea() {
     await addDoc(collection(db, 'chats', currentChatId, 'messages'), msgData);
     updateDocumentNonBlocking(doc(db, 'chats', currentChatId), { lastMessageAt: new Date().toISOString() });
 
-    // Бот @stickers
-    if (chat?.username === '@stickers' && (type_msg === 'image' || captureContent.startsWith('data:image'))) {
-      const stickersBotReply = {
-        chatId: currentChatId,
-        senderId: 'stickers_bot',
-        senderName: 'Sticker Bot 🎨',
-        content: 'Стикер успешно создан! Он добавлен в вашу коллекцию в панели эмодзи.',
-        contentType: 'service' as const,
-        sentAt: new Date().toISOString()
-      };
-      addDoc(collection(db, 'chats', currentChatId, 'messages'), stickersBotReply);
-      
-      // Добавляем в настройки пользователя
-      updateDocumentNonBlocking(doc(db, 'users', firebaseUser.uid), {
-        'settings.stickers': arrayUnion(captureContent)
-      });
-    }
   }, [messageInput, currentChatId, firebaseUser, db, userProfile, replyTo, editingMsg, setLocalDrafts, chat?.username]);
 
   const startRecording = async (type: 'audio' | 'video' = 'audio') => {
@@ -385,7 +443,7 @@ export default function ChatArea() {
               <span className="font-bold text-sm truncate group-hover:text-primary transition-colors">{formatDisplayName(chatDisplayName)}</span>
               <div className="flex items-center gap-1">
                 <span className="text-[10px] text-muted-foreground/60 tracking-widest truncate uppercase font-bold">
-                  {chat?.username === '@stickers' ? 'STICKER ENGINE' : (isPrivate ? formatLastSeen(otherProfile?.lastSeen, otherProfile?.settings?.privacy?.lastSeenVisibility) : 'NUXUS 2.0')}
+                  {chat?.username === '@stickers' ? 'STICKER PACK ENGINE' : (isPrivate ? formatLastSeen(otherProfile?.lastSeen, otherProfile?.settings?.privacy?.lastSeenVisibility) : 'NUXUS 2.0')}
                 </span>
                 {!isOnline && <div className="w-1.5 h-1.5 rounded-full bg-destructive animate-pulse" />}
               </div>
