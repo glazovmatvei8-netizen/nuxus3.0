@@ -1,2 +1,115 @@
 
-export function StoriesBar() { return null; }
+"use client"
+
+import React, { useMemo } from 'react';
+import { useAppState } from '@/lib/store';
+import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase';
+import { collection, query, where, orderBy, doc } from 'firebase/firestore';
+import { UserAvatar } from './user-avatar';
+import { Plus, Loader2 } from 'lucide-react';
+import type { Story, User } from '@/lib/types';
+import { cn, formatDisplayName } from '@/lib/utils';
+
+export function StoriesBar() {
+  const { user } = useUser();
+  const db = useFirestore();
+  const { setIsCreateStoryOpen, setStoriesToView } = useAppState();
+
+  const userRef = useMemoFirebase(() => (!db || !user) ? null : doc(db, 'users', user.uid), [db, user]);
+  const { data: profile } = useDoc<User>(userRef);
+
+  const storiesQuery = useMemoFirebase(() => {
+    if (!db) return null;
+    const now = new Date().toISOString();
+    return query(
+      collection(db, 'stories'),
+      where('expiresAt', '>', now),
+      orderBy('expiresAt', 'asc')
+    );
+  }, [db]);
+
+  const { data: allStories, isLoading } = useCollection<Story>(storiesQuery);
+
+  const groupedStories = useMemo(() => {
+    if (!allStories) return {};
+    const groups: Record<string, Story[]> = {};
+    allStories.forEach(s => {
+      if (!groups[s.userId]) groups[s.userId] = [];
+      groups[s.userId].push(s);
+    });
+    return groups;
+  }, [allStories]);
+
+  const myStories = user ? groupedStories[user.uid] || [] : [];
+  const otherUserIds = Object.keys(groupedStories).filter(uid => uid !== user?.uid);
+
+  return (
+    <div className="flex gap-4 p-4 overflow-x-auto scrollbar-hide bg-[#0a0a0c] border-b border-white/5 shrink-0">
+      {/* My Story Button */}
+      <div className="flex flex-col items-center gap-1.5 shrink-0 group cursor-pointer" onClick={() => myStories.length > 0 ? setStoriesToView(myStories) : setIsCreateStoryOpen(true)}>
+        <div className={cn(
+          "relative h-[64px] w-[64px] rounded-full p-[3px] transition-all",
+          myStories.length > 0 ? "bg-gradient-to-tr from-primary to-accent" : "bg-white/10"
+        )}>
+          <div className="bg-[#0a0a0c] rounded-full p-[2px] h-full w-full">
+            <UserAvatar 
+              userId={user?.uid} 
+              className="h-full w-full border-none" 
+              manualAvatarUrl={profile?.avatarUrl}
+            />
+          </div>
+          {myStories.length === 0 && (
+            <div className="absolute bottom-0 right-0 h-5 w-5 bg-primary rounded-full border-2 border-[#0a0a0c] flex items-center justify-center">
+              <Plus className="w-3 h-3 text-white" />
+            </div>
+          )}
+        </div>
+        <span className="text-[10px] font-black uppercase text-muted-foreground/60 tracking-widest">Момент</span>
+      </div>
+
+      {isLoading ? (
+        <div className="h-[64px] flex items-center px-4"><Loader2 className="w-5 h-5 animate-spin text-primary/40" /></div>
+      ) : (
+        otherUserIds.map(uid => (
+          <StoryCircle 
+            key={uid} 
+            userId={uid} 
+            stories={groupedStories[uid]} 
+            onView={() => setStoriesToView(groupedStories[uid])} 
+          />
+        ))
+      )}
+    </div>
+  );
+}
+
+function StoryCircle({ userId, stories, onView }: { userId: string, stories: Story[], onView: () => void }) {
+  const db = useFirestore();
+  const userRef = useMemoFirebase(() => (!db ? null : doc(db, 'users', userId)), [db, userId]);
+  const { data: profile } = useDoc<User>(userRef);
+
+  const hasUnseen = useMemo(() => {
+    // Basic logic for unseen
+    return true; 
+  }, []);
+
+  return (
+    <div className="flex flex-col items-center gap-1.5 shrink-0 cursor-pointer active:scale-95 transition-transform" onClick={onView}>
+      <div className={cn(
+        "h-[64px] w-[64px] rounded-full p-[3px] bg-gradient-to-tr transition-all",
+        hasUnseen ? "from-primary to-accent" : "from-white/10 to-white/10"
+      )}>
+        <div className="bg-[#0a0a0c] rounded-full p-[2px] h-full w-full">
+          <UserAvatar 
+            userId={userId} 
+            className="h-full w-full border-none" 
+            manualAvatarUrl={profile?.avatarUrl}
+          />
+        </div>
+      </div>
+      <span className="text-[10px] font-bold text-white/80 truncate w-[64px] text-center">
+        {formatDisplayName(profile?.name || profile?.username)}
+      </span>
+    </div>
+  );
+}

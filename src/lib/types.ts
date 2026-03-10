@@ -39,6 +39,17 @@ export interface Message {
   };
 }
 
+export interface Story {
+  id: string;
+  userId: string;
+  content: string;
+  contentType: 'image' | 'video';
+  caption?: string;
+  createdAt: string;
+  expiresAt: string;
+  viewers: string[];
+}
+
 export interface Call {
   id: string;
   callerId: string;

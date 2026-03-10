@@ -12,11 +12,15 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { CreateChatModal } from './modals/create-chat-modal';
 import { ChatEditorModal } from './modals/chat-editor-modal';
 import { AdminPanelModal } from './modals/admin-panel-modal';
+import { StoriesBar } from './stories-bar';
+import { CreateStoryModal } from './modals/create-story-modal';
+import { StoryViewerModal } from './modals/story-viewer-modal';
 import type { User, Message, Chat } from '@/lib/types';
 import { useFirestore, useUser, useCollection, useDoc, useMemoFirebase } from '@/firebase';
 import { collection, query, where, doc, limit, orderBy, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
 import { formatDisplayName, cn, isGlobalAdmin } from '@/lib/utils';
 import { format } from 'date-fns';
+import { toast } from '@/hooks/use-toast';
 import { 
   ContextMenu,
   ContextMenuContent,
@@ -91,7 +95,7 @@ ChatListItem.displayName = 'ChatListItem';
 export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?: boolean }) {
   const { user } = useUser();
   const db = useFirestore();
-  const { currentChatId, setCurrentChatId, setIsSearchOpen } = useAppState();
+  const { currentChatId, setCurrentChatId, setIsSearchOpen, isCreateStoryOpen, setIsCreateStoryOpen } = useAppState();
   
   const [activeTab, setActiveTab] = useState(isArchiveView ? 'archived' : 'all');
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -119,14 +123,12 @@ export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?:
   const filteredChats = useMemo(() => {
     if (!chats) return [];
     
-    // Сначала сортируем по дате последнего сообщения
     let result = [...chats].sort((a, b) => {
       const aTime = a.lastMessageAt ? new Date(a.lastMessageAt).getTime() : new Date(a.createdAt).getTime();
       const bTime = b.lastMessageAt ? new Date(b.lastMessageAt).getTime() : new Date(b.createdAt).getTime();
       return bTime - aTime;
     });
 
-    // Затем поднимаем закрепленные наверх
     result.sort((a, b) => {
       const aPinned = currentUserProfile?.pinnedChatIds?.includes(a.id) ? 1 : 0;
       const bPinned = currentUserProfile?.pinnedChatIds?.includes(b.id) ? 1 : 0;
@@ -134,7 +136,6 @@ export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?:
     });
 
     if (isArchiveView) return result.filter(c => c.isArchived);
-    
     if (activeTab === 'private') return result.filter(c => c.type === 'private' && !c.isArchived);
     if (activeTab === 'groups') return result.filter(c => c.type === 'group' && !c.isArchived);
 
@@ -169,8 +170,10 @@ export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?:
           </div>
         </div>
 
+        {!isArchiveView && <StoriesBar />}
+
         {!isArchiveView && (
-          <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide py-1">
+          <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide py-3">
             {[
               { id: 'all', label: 'Все' },
               { id: 'private', label: 'Личные' },
@@ -219,6 +222,8 @@ export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?:
       <CreateChatModal open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen} />
       <ChatEditorModal open={isEditorModalOpen} onOpenChange={setIsEditorModalOpen} />
       <AdminPanelModal open={isAdminPanelOpen} onOpenChange={setIsAdminPanelOpen} />
+      <CreateStoryModal open={isCreateStoryOpen} onOpenChange={setIsCreateStoryOpen} />
+      <StoryViewerModal />
     </div>
   );
 }
