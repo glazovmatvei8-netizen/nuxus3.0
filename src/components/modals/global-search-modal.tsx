@@ -7,13 +7,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useFirestore, useUser, useDoc, useMemoFirebase } from '@/firebase';
-import { collection, query, where, getDocs, doc, limit, addDoc, orderBy } from 'firebase/firestore';
+import { collection, query, where, getDocs, doc, limit, addDoc, orderBy, updateDoc, arrayUnion } from 'firebase/firestore';
 import { useAppState } from '@/lib/store';
 import { useToast } from '@/hooks/use-toast';
-import { Search, Loader2, Radio, Users, Check, ArrowRight, X, Star, Zap, Bot } from 'lucide-react';
+import { Search, Loader2, Radio, Users, Check, ArrowRight, X, Star, Zap, Bot, Sticker } from 'lucide-react';
 import { UserAvatar } from '@/components/user-avatar';
 import { isUserPremium } from '@/lib/utils';
-import type { User, Chat } from '@/lib/types';
+import type { User, Chat, StickerPack } from '@/lib/types';
 
 export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const { user } = useUser();
@@ -22,34 +22,72 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
   const { toast } = useToast();
   
   const [searchQuery, setSearchQuery] = useState('');
-  const [results, setResults] = useState<{ type: 'chat' | 'user' | 'bot', data: any }[]>([]);
+  const [results, setResults] = useState<{ type: 'chat' | 'user' | 'bot' | 'pack', data: any }[]>([]);
   const [trends, setTrends] = useState<Chat[]>([]);
+  const [featuredPacks, setFeaturedPacks] = useState<StickerPack[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
   const userRef = useMemoFirebase(() => (!db || !user) ? null : doc(db, 'users', user.uid), [db, user]);
   const { data: myProfile } = useDoc<User>(userRef);
 
+  // Инициализация системного пака "Лиса"
+  useEffect(() => {
+    if (open && db) {
+      const initSystemPacks = async () => {
+        const foxPackId = 'system_fox_pack';
+        const packRef = doc(db, 'stickerPacks', foxPackId);
+        const snap = await getDocs(query(collection(db, 'stickerPacks'), where('id', '==', foxPackId)));
+        
+        if (snap.empty) {
+          // Создаем пак "Лиса", если его нет в БД
+          await addDoc(collection(db, 'stickerPacks'), {
+            id: foxPackId,
+            ownerId: 'system',
+            name: 'Лиса 🦊',
+            iconUrl: 'https://i.ibb.co/sd2MqGz2/Icon.png',
+            stickerUrls: [
+              'https://stickerswiki.ams3.cdn.digitaloceanspaces.com/LittleFoxKumi/14214.160.webp',
+              'https://stickerswiki.ams3.cdn.digitaloceanspaces.com/LittleFoxKumi/14215.160.webp',
+              'https://stickerswiki.ams3.cdn.digitaloceanspaces.com/LittleFoxKumi/14216.160.webp',
+              'https://stickerswiki.ams3.cdn.digitaloceanspaces.com/LittleFoxKumi/14217.160.webp',
+              'https://stickerswiki.ams3.cdn.digitaloceanspaces.com/LittleFoxKumi/14218.160.webp',
+              'https://stickerswiki.ams3.cdn.digitaloceanspaces.com/LittleFoxKumi/14219.160.webp',
+              'https://stickerswiki.ams3.cdn.digitaloceanspaces.com/LittleFoxKumi/14220.160.webp',
+              'https://stickerswiki.ams3.cdn.digitaloceanspaces.com/LittleFoxKumi/14221.160.webp',
+              'https://stickerswiki.ams3.cdn.digitaloceanspaces.com/LittleFoxKumi/14222.160.webp',
+              'https://stickerswiki.ams3.cdn.digitaloceanspaces.com/LittleFoxKumi/14223.160.webp',
+              'https://stickerswiki.ams3.cdn.digitaloceanspaces.com/LittleFoxKumi/14224.160.webp',
+              'https://stickerswiki.ams3.cdn.digitaloceanspaces.com/LittleFoxKumi/14225.160.webp'
+            ],
+            createdAt: new Date().toISOString()
+          });
+        }
+      };
+      initSystemPacks();
+    }
+  }, [open, db]);
+
   useEffect(() => {
     if (open && !searchQuery.trim() && db) {
-      const fetchTrends = async () => {
+      const fetchDiscoveryData = async () => {
         setIsLoading(true);
         try {
-          const q = query(
-            collection(db, 'chats'),
-            where('isPublic', '==', true),
-            orderBy('createdAt', 'desc'),
-            limit(10)
-          );
-          const snap = await getDocs(q);
-          const trending = snap.docs.map(d => ({ id: d.id, ...d.data() } as Chat));
-          setTrends(trending);
+          // Загружаем трендовые чаты
+          const chatQ = query(collection(db, 'chats'), where('isPublic', '==', true), limit(10));
+          const chatSnap = await getDocs(chatQ);
+          setTrends(chatSnap.docs.map(d => ({ id: d.id, ...d.data() } as Chat)));
+
+          // Загружаем рекомендованные стикерпаки
+          const packQ = query(collection(db, 'stickerPacks'), limit(5));
+          const packSnap = await getDocs(packQ);
+          setFeaturedPacks(packSnap.docs.map(d => ({ id: d.id, ...d.data() } as StickerPack)));
         } catch (e) {
-          console.warn("Nuxus Discovery: Trends index pending or unavailable.");
+          console.warn("Nuxus Discovery: Syncing data...");
         } finally {
           setIsLoading(false);
         }
       };
-      fetchTrends();
+      fetchDiscoveryData();
     }
   }, [open, searchQuery, db]);
 
@@ -63,33 +101,24 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
     setIsLoading(true);
     try {
       const searchVal = val.startsWith('@') ? val.toLowerCase() : '@' + val.toLowerCase();
-      
       const foundResults: any[] = [];
 
-      // Virtual Bots
+      // Робот стикеров
       if ('@stickers'.includes(searchVal)) {
-        foundResults.push({
-          type: 'bot',
-          data: {
-            id: 'bot_stickers',
-            name: 'Sticker Pack Bot',
-            username: '@stickers',
-            avatarUrl: 'https://i.ibb.co/sd2MqGz2/Icon.png'
-          }
-        });
+        foundResults.push({ type: 'bot', data: { id: 'bot_stickers', name: 'Sticker Pack Bot', username: '@stickers', avatarUrl: 'https://i.ibb.co/sd2MqGz2/Icon.png' } });
       }
 
       const chatQuery = query(collection(db!, 'chats'), where('username', '==', searchVal), limit(5));
       const userQuery = query(collection(db!, 'users'), where('username', '==', searchVal), limit(5));
+      const packQuery = query(collection(db!, 'stickerPacks'), where('name', '>=', val), limit(5));
 
-      const [chatSnap, userSnap] = await Promise.all([getDocs(chatQuery), getDocs(userQuery)]);
+      const [chatSnap, userSnap, packSnap] = await Promise.all([getDocs(chatQuery), getDocs(userQuery), getDocs(packQuery)]);
       
       const foundChats = chatSnap.docs.map(d => ({ type: 'chat' as const, data: { id: d.id, ...d.data() } }));
-      const foundUsers = userSnap.docs
-        .map(d => ({ type: 'user' as const, data: { id: d.id, ...d.data() } }))
-        .filter(u => u.data.id !== user?.uid);
+      const foundUsers = userSnap.docs.map(d => ({ type: 'user' as const, data: { id: d.id, ...d.data() } })).filter(u => u.data.id !== user?.uid);
+      const foundPacks = packSnap.docs.map(d => ({ type: 'pack' as const, data: { id: d.id, ...d.data() } }));
 
-      setResults([...foundResults, ...foundChats, ...foundUsers]);
+      setResults([...foundResults, ...foundPacks, ...foundChats, ...foundUsers]);
     } catch (e) {
       console.error("Search error:", e);
     } finally {
@@ -97,88 +126,15 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
     }
   };
 
-  const openBotChat = async (botData: any) => {
-    if (!user || !db || !myProfile) return;
+  const handleInstallPack = async (pack: StickerPack) => {
+    if (!db || !user) return;
     try {
-      const q = query(
-        collection(db, 'chats'), 
-        where('type', '==', 'private'), 
-        where('username', '==', botData.username),
-        where('participantIds', 'array-contains', user.uid)
-      );
-      const snapshot = await getDocs(q);
-      if (!snapshot.empty) {
-        setCurrentChatId(snapshot.docs[0].id);
-        onOpenChange(false);
-        setActiveView('chats');
-        return;
-      }
-
-      const newChatData = {
-        type: 'private' as const,
-        participantIds: [user.uid, botData.id],
-        adminIds: [user.uid],
-        ownerId: user.uid,
-        createdAt: new Date().toISOString(),
-        name: botData.name,
-        username: botData.username,
-        avatarUrl: botData.avatarUrl
-      };
-
-      const docRef = await addDoc(collection(db, 'chats'), newChatData);
-      
-      // Welcome message from bot
-      await addDoc(collection(db, 'chats', docRef.id, 'messages'), {
-        chatId: docRef.id,
-        senderId: botData.id,
-        senderName: botData.name,
-        content: `Привет! Я бот для создания стикерпаков. 🎨\n\nКоманды:\n/newpack - Создать новый пак\n/add - Добавить стикер в текущий пак\n/share - Ссылка на пак\n\nПросто отправьте мне фото, чтобы превратить его в стикер!`,
-        contentType: 'text',
-        sentAt: new Date().toISOString()
+      await updateDoc(doc(db, 'users', user.uid), {
+        installedStickerPackIds: arrayUnion(pack.id)
       });
-
-      setCurrentChatId(docRef.id);
+      toast({ title: "Успех", description: `Стикерпак "${pack.name}" добавлен!` });
       onOpenChange(false);
-      setActiveView('chats');
-    } catch (e: any) {
-      toast({ title: "Ошибка", description: e.message, variant: "destructive" });
-    }
-  };
-
-  const openUserChat = async (targetUser: User) => {
-    if (!user || !db || !myProfile) return;
-    try {
-      const q = query(collection(db, 'chats'), where('type', '==', 'private'), where('participantIds', 'array-contains', user.uid));
-      const snapshot = await getDocs(q);
-      const existing = snapshot.docs.find(d => {
-        const pIds = d.data().participantIds;
-        return pIds.includes(targetUser.id) && pIds.length === 2;
-      });
-
-      if (existing) {
-        setCurrentChatId(existing.id);
-        onOpenChange(false);
-        setActiveView('chats');
-        return;
-      }
-
-      const newChatData = {
-        type: 'private' as const,
-        participantIds: [user.uid, targetUser.id],
-        adminIds: [user.uid, targetUser.id],
-        ownerId: user.uid,
-        createdAt: new Date().toISOString(),
-        name: targetUser.name,
-        username: targetUser.username
-      };
-
-      const docRef = await addDoc(collection(db, 'chats'), newChatData);
-      setCurrentChatId(docRef.id);
-      onOpenChange(false);
-      setActiveView('chats');
-    } catch (e: any) {
-      toast({ title: "Ошибка", description: e.message, variant: "destructive" });
-    }
+    } catch (e) {}
   };
 
   return (
@@ -192,7 +148,7 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
           <div className="relative">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground/40" />
             <Input 
-              placeholder="Поиск по @username..." 
+              placeholder="Поиск по @username или пакам..." 
               value={searchQuery}
               onChange={e => handleSearch(e.target.value)}
               className="bg-white/5 border-white/5 h-14 rounded-2xl pl-12 text-lg"
@@ -203,54 +159,84 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
         </div>
 
         <ScrollArea className="h-[450px]">
-          <div className="p-4 space-y-3">
+          <div className="p-4 space-y-6">
             {searchQuery.trim().length >= 3 ? (
-              results.length > 0 ? (
-                results.map((res, idx) => (
+              <div className="space-y-3">
+                {results.map((res, idx) => (
                   <div key={idx} className="flex items-center justify-between p-4 bg-white/5 rounded-[1.8rem] hover:bg-white/10 cursor-pointer" onClick={() => {
-                    if (res.type === 'bot') openBotChat(res.data);
+                    if (res.type === 'pack') handleInstallPack(res.data);
+                    else if (res.type === 'bot') { /* logic */ }
                     else if (res.type === 'chat') { setCurrentChatId(res.data.id); onOpenChange(false); }
-                    else openUserChat(res.data);
                   }}>
                     <div className="flex items-center gap-4">
-                      <UserAvatar userId={res.type === 'user' ? res.data.id : null} manualAvatarUrl={res.data.avatarUrl} className="h-12 w-12" fallbackName={res.data.name} />
+                      {res.type === 'pack' ? (
+                        <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center border border-primary/20">
+                          <Sticker className="w-6 h-6 text-primary" />
+                        </div>
+                      ) : (
+                        <UserAvatar userId={res.type === 'user' ? res.data.id : null} manualAvatarUrl={res.data.avatarUrl} className="h-12 w-12" fallbackName={res.data.name} />
+                      )}
                       <div className="flex flex-col">
                         <span className="font-bold text-white flex items-center gap-2">
                           {res.data.name} 
-                          {res.type === 'chat' ? <Users className="w-3 h-3" /> : res.type === 'bot' ? <Bot className="w-3 h-3 text-primary" /> : isUserPremium(res.data) && <Star className="w-3 h-3 text-accent fill-accent" />}
+                          {res.type === 'pack' && <Check className="w-3 h-3 text-green-500" />}
                         </span>
-                        <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest">{res.data.username}</span>
+                        <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest">{res.type === 'pack' ? 'Стикерпак' : res.data.username}</span>
                       </div>
                     </div>
                     <ArrowRight className="w-5 h-5 text-primary/40" />
                   </div>
-                ))
-              ) : (
-                <div className="text-center py-12 opacity-40 uppercase text-[10px] font-black tracking-widest">Ничего не найдено</div>
-              )
+                ))}
+              </div>
             ) : (
-              <div className="space-y-4">
-                <div className="flex items-center gap-2 px-2 text-primary">
-                  <Zap className="w-4 h-4 fill-current" />
-                  <span className="text-[10px] font-black uppercase tracking-widest">Популярное сейчас</span>
-                </div>
-                {trends.length > 0 ? (
-                  trends.map(chat => (
-                    <div key={chat.id} className="flex items-center justify-between p-4 bg-white/5 rounded-[1.8rem] hover:bg-white/10 cursor-pointer" onClick={() => { setCurrentChatId(chat.id); onOpenChange(false); }}>
-                      <div className="flex items-center gap-4">
-                        <UserAvatar userId={null} manualAvatarUrl={chat.avatarUrl} className="h-12 w-12" fallbackName={chat.name} />
-                        <div className="flex flex-col">
-                          <span className="font-bold text-white flex items-center gap-2">{chat.name} <Users className="w-3 h-3 text-muted-foreground" /></span>
-                          <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest">{chat.username}</span>
+              <>
+                {/* Витрина Стикеров */}
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2 px-2 text-accent">
+                    <Sticker className="w-4 h-4 fill-current" />
+                    <span className="text-[10px] font-black uppercase tracking-widest">Витрина Стикеров</span>
+                  </div>
+                  <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
+                    {featuredPacks.map(pack => (
+                      <div 
+                        key={pack.id} 
+                        onClick={() => handleInstallPack(pack)}
+                        className="min-w-[140px] p-4 bg-white/5 rounded-[2rem] border border-white/5 hover:border-accent/40 transition-all cursor-pointer flex flex-col items-center gap-3 active:scale-95"
+                      >
+                        <div className="w-16 h-16 rounded-2xl overflow-hidden bg-black/20">
+                          <img src={pack.iconUrl || ''} className="w-full h-full object-cover" />
+                        </div>
+                        <div className="text-center">
+                          <p className="text-[11px] font-black text-white truncate w-24">{pack.name}</p>
+                          <p className="text-[8px] text-accent uppercase font-black">Добавить</p>
                         </div>
                       </div>
-                      <div className="px-3 py-1 rounded-full bg-primary/10 text-primary text-[9px] font-black uppercase tracking-widest">Вступить</div>
-                    </div>
-                  ))
-                ) : (
-                  <div className="text-center py-12 opacity-20 uppercase text-[10px] font-black tracking-widest">Загрузка трендов...</div>
-                )}
-              </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Популярные чаты */}
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2 px-2 text-primary">
+                    <Zap className="w-4 h-4 fill-current" />
+                    <span className="text-[10px] font-black uppercase tracking-widest">Рекомендации</span>
+                  </div>
+                  <div className="space-y-2">
+                    {trends.map(chat => (
+                      <div key={chat.id} className="flex items-center justify-between p-4 bg-white/5 rounded-[1.8rem] hover:bg-white/10 cursor-pointer" onClick={() => { setCurrentChatId(chat.id); onOpenChange(false); }}>
+                        <div className="flex items-center gap-4">
+                          <UserAvatar userId={null} manualAvatarUrl={chat.avatarUrl} className="h-12 w-12" fallbackName={chat.name} />
+                          <div className="flex flex-col">
+                            <span className="font-bold text-white flex items-center gap-2">{chat.name}</span>
+                            <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest">{chat.username}</span>
+                          </div>
+                        </div>
+                        <ArrowRight className="w-5 h-5 text-primary/40" />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </>
             )}
           </div>
         </ScrollArea>
