@@ -2,10 +2,10 @@
 "use client"
 
 import React, { useState, useRef } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Camera, Send, X, Loader2, Image as ImageIcon, Zap } from 'lucide-react';
+import { Camera, Send, X, Loader2, Zap } from 'lucide-react';
 import { useUser, useFirestore } from '@/firebase';
 import { collection, addDoc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
@@ -51,7 +51,8 @@ export function CreateStoryModal({ open, onOpenChange }: { open: boolean, onOpen
         caption: caption.trim(),
         createdAt: new Date().toISOString(),
         expiresAt: addHours(new Date(), 24).toISOString(),
-        viewers: []
+        viewers: [],
+        reactions: {}
       });
 
       toast({ title: "Момент опубликован!", className: "bg-primary text-white" });
@@ -67,7 +68,7 @@ export function CreateStoryModal({ open, onOpenChange }: { open: boolean, onOpen
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md bg-[#0a0a0c] border-white/10 rounded-[2.5rem] p-0 overflow-hidden shadow-2xl h-[80vh] flex flex-col">
+      <DialogContent className="max-w-md bg-[#0a0a0c] border-white/10 rounded-[2.5rem] p-0 overflow-hidden shadow-2xl h-[85vh] flex flex-col">
         <DialogHeader className="p-6 border-b border-white/5 shrink-0">
           <DialogTitle className="text-xl font-black uppercase italic text-white flex items-center gap-2">
             <Zap className="w-5 h-5 text-primary" /> Новый Момент
@@ -77,13 +78,13 @@ export function CreateStoryModal({ open, onOpenChange }: { open: boolean, onOpen
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex-1 relative flex flex-col p-6 items-center justify-center bg-white/[0.02]">
+        <div className="flex-1 relative flex flex-col p-4 items-center justify-center bg-white/[0.02] min-h-0 overflow-hidden">
           {preview ? (
             <div className="relative w-full h-full rounded-3xl overflow-hidden shadow-2xl border border-white/10 group">
               {type === 'video' ? (
                 <video src={preview} className="w-full h-full object-cover" autoPlay muted loop />
               ) : (
-                <img src={preview} className="w-full h-full object-cover" />
+                <img src={preview} className="w-full h-full object-cover" alt="Preview" />
               )}
               <Button 
                 variant="destructive" 
@@ -111,7 +112,7 @@ export function CreateStoryModal({ open, onOpenChange }: { open: boolean, onOpen
           <input type="file" ref={fileInputRef} hidden accept="image/*,video/*" onChange={handleFile} />
         </div>
 
-        <div className="p-6 space-y-4">
+        <div className="p-6 space-y-4 bg-[#0a0a0c] border-t border-white/5 shrink-0">
           <Input 
             placeholder="Добавить подпись..." 
             value={caption} 

@@ -48,6 +48,7 @@ export interface Story {
   createdAt: string;
   expiresAt: string;
   viewers: string[];
+  reactions?: Record<string, string[]>; // emoji -> [uids]
 }
 
 export interface Call {

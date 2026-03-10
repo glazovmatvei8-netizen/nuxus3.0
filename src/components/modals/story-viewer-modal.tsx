@@ -5,14 +5,17 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { UserAvatar } from '@/components/user-avatar';
-import { X, ChevronLeft, ChevronRight, Eye, MoreHorizontal, Loader2 } from 'lucide-react';
+import { X, Eye, Heart, Smile, Loader2 } from 'lucide-react';
 import { useAppState } from '@/lib/store';
 import { useFirestore, useUser, useDoc, useMemoFirebase } from '@/firebase';
-import { doc, updateDoc, arrayUnion } from 'firebase/firestore';
+import { doc, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
 import type { Story, User } from '@/lib/types';
 import { cn, formatDisplayName } from '@/lib/utils';
 import { formatDistanceToNow } from 'date-fns';
 import { ru } from 'date-fns/locale';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+
+const STORY_REACTIONS = ['❤️', '🔥', '😂', '😮', '😢', '💯', '👏'];
 
 export function StoryViewerModal() {
   const { user } = useUser();
@@ -23,6 +26,7 @@ export function StoryViewerModal() {
   const [progress, setProgress] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
   const [hasError, setHasError] = useState(false);
+  const [showReactions, setShowReactions] = useState(false);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
   const currentStory = storiesToView?.[index];
@@ -56,7 +60,7 @@ export function StoryViewerModal() {
       return;
     }
 
-    if (isPaused || hasError) {
+    if (isPaused || hasError || showReactions) {
       if (timerRef.current) clearInterval(timerRef.current);
       return;
     }
@@ -78,7 +82,7 @@ export function StoryViewerModal() {
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
-  }, [storiesToView, index, isPaused, next, currentStory, hasError]);
+  }, [storiesToView, index, isPaused, next, currentStory, hasError, showReactions]);
 
   // Mark as viewed
   useEffect(() => {
@@ -88,6 +92,23 @@ export function StoryViewerModal() {
     });
   }, [db, user, currentStory]);
 
+  const handleReaction = async (emoji: string) => {
+    if (!db || !user || !currentStory) return;
+    const storyRef = doc(db, 'stories', currentStory.id);
+    const hasReacted = currentStory.reactions?.[emoji]?.includes(user.uid);
+    
+    if (window.navigator && window.navigator.vibrate) {
+      window.navigator.vibrate(50);
+    }
+
+    if (hasReacted) {
+      await updateDoc(storyRef, { [`reactions.${emoji}`]: arrayRemove(user.uid) });
+    } else {
+      await updateDoc(storyRef, { [`reactions.${emoji}`]: arrayUnion(user.uid) });
+    }
+    setShowReactions(false);
+  };
+
   if (!storiesToView || !currentStory) return null;
 
   return (
@@ -95,7 +116,7 @@ export function StoryViewerModal() {
       <DialogContent className="max-w-[100vw] w-full h-[100dvh] p-0 bg-black border-none overflow-hidden z-[2000] rounded-none outline-none">
         <DialogTitle className="sr-only">Просмотр Момента</DialogTitle>
         
-        <div className="relative w-full h-full flex items-center justify-center">
+        <div className="relative w-full h-full flex flex-col items-center justify-center">
           {/* Progress Bars */}
           <div className="absolute top-4 left-4 right-4 z-[2100] flex gap-1.5 px-2">
             {storiesToView.map((_, i) => (
@@ -165,20 +186,54 @@ export function StoryViewerModal() {
 
           {/* Caption */}
           {currentStory.caption && (
-            <div className="absolute bottom-24 left-0 right-0 z-[2100] px-8 text-center pointer-events-none">
+            <div className="absolute bottom-32 left-0 right-0 z-[2100] px-8 text-center pointer-events-none">
               <p className="text-white text-lg font-bold drop-shadow-[0_2px_8px_rgba(0,0,0,1)]">
                 {currentStory.caption}
               </p>
             </div>
           )}
 
-          {/* Footer (Viewers) */}
-          {currentStory.userId === user?.uid && (
-            <div className="absolute bottom-10 left-1/2 -translate-x-1/2 z-[2100] flex items-center gap-2 bg-black/40 backdrop-blur-xl px-6 py-2.5 rounded-full border border-white/10">
-              <Eye className="w-4 h-4 text-white" />
-              <span className="text-[10px] font-black text-white uppercase tracking-widest">{currentStory.viewers?.length || 0}</span>
-            </div>
-          )}
+          {/* Reactions and Viewers Footer */}
+          <div className="absolute bottom-10 left-0 right-0 z-[2100] flex items-center justify-between px-8">
+            {currentStory.userId === user?.uid ? (
+              <div className="flex items-center gap-2 bg-black/40 backdrop-blur-xl px-6 py-2.5 rounded-full border border-white/10">
+                <Eye className="w-4 h-4 text-white" />
+                <span className="text-[10px] font-black text-white uppercase tracking-widest">{currentStory.viewers?.length || 0}</span>
+              </div>
+            ) : (
+              <div className="flex gap-2">
+                <Popover open={showReactions} onOpenChange={setShowReactions}>
+                  <PopoverTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-12 w-12 rounded-full bg-white/10 backdrop-blur-xl text-white hover:bg-white/20">
+                      <Smile className="w-6 h-6" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent side="top" align="start" className="w-auto p-2 bg-black/80 backdrop-blur-3xl border-white/10 rounded-full flex gap-1 mb-4">
+                    {STORY_REACTIONS.map(emoji => (
+                      <button
+                        key={emoji}
+                        onClick={() => handleReaction(emoji)}
+                        className="text-2xl p-2 hover:scale-125 active:scale-90 transition-transform"
+                      >
+                        {emoji}
+                      </button>
+                    ))}
+                  </PopoverContent>
+                </Popover>
+              </div>
+            )}
+
+            {/* Reactions Display */}
+            {currentStory.reactions && Object.entries(currentStory.reactions).some(([_, uids]) => uids.length > 0) && (
+              <div className="flex -space-x-2">
+                {Object.entries(currentStory.reactions).map(([emoji, uids]) => uids.length > 0 && (
+                  <div key={emoji} className="h-8 w-8 bg-black/40 backdrop-blur-md rounded-full border border-white/10 flex items-center justify-center text-sm shadow-xl">
+                    {emoji}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       </DialogContent>
     </Dialog>
