@@ -6,7 +6,6 @@ import { useDoc, useMemoFirebase, useFirestore } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { cn, formatDisplayName, isUserPremium } from '@/lib/utils';
-import Image from 'next/image';
 import { Star } from 'lucide-react';
 import type { User } from '@/lib/types';
 import { differenceInMinutes, parseISO } from 'date-fns';
@@ -21,8 +20,8 @@ interface UserAvatarProps {
 }
 
 /**
- * Smart Avatar component with memoization for maximum performance.
- * Displays user photo, Premium badge and Online indicator.
+ * Smart Avatar component optimized for iOS Safari.
+ * Uses standard img tag for Base64 compatibility.
  */
 export const UserAvatar = memo(({ userId, className, fallbackName, fallbackClassName, manualAvatarUrl, showOnlineStatus = false }: UserAvatarProps) => {
   const db = useFirestore();
@@ -65,15 +64,14 @@ export const UserAvatar = memo(({ userId, className, fallbackName, fallbackClass
     <div className="relative inline-block shrink-0 will-change-transform">
       <Avatar className={cn("shrink-0 relative overflow-hidden", className)}>
         {!isLoading && displayAvatar && !imgError ? (
-          <Image 
-            key={displayAvatar}
+          /* Standard img is more reliable for heavy Base64 on iOS */
+          <img 
             src={displayAvatar} 
             alt={displayName} 
-            fill
-            sizes="128px"
-            className="object-cover animate-in fade-in duration-300"
+            className="absolute inset-0 w-full h-full object-cover animate-in fade-in duration-300"
             onError={() => setImgError(true)}
-            priority={false}
+            decoding="async"
+            loading="lazy"
           />
         ) : (
           <AvatarFallback className={cn("bg-primary/20 text-primary font-bold uppercase h-full w-full flex items-center justify-center", fallbackClassName)}>

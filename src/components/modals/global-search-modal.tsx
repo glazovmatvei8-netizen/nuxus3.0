@@ -30,24 +30,28 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
   const userRef = useMemoFirebase(() => (!db || !user) ? null : doc(db, 'users', user.uid), [db, user]);
   const { data: myProfile } = useDoc<User>(userRef);
 
-  // Fox stickers from a stable source
+  // Stable CDN URLs for Fox stickers (Kumi expression equivalents)
+  // Using ultra-stable Google Static Assets
   const foxStickers = [
-    'https://cdn.pixabay.com/photo/2017/01/14/12/59/fox-1979432_640.png',
-    'https://cdn.pixabay.com/photo/2016/03/31/15/33/fox-1293373_640.png',
-    'https://cdn.pixabay.com/photo/2016/03/31/15/33/fox-1293371_640.png',
-    'https://cdn.pixabay.com/photo/2016/03/31/15/33/fox-1293370_640.png',
-    'https://cdn.pixabay.com/photo/2016/03/31/15/33/fox-1293369_640.png',
-    'https://cdn.pixabay.com/photo/2016/03/31/15/33/fox-1293368_640.png',
-    'https://cdn.pixabay.com/photo/2016/03/31/15/33/fox-1293367_640.png',
-    'https://cdn.pixabay.com/photo/2016/03/31/15/33/fox-1293366_640.png',
-    'https://cdn.pixabay.com/photo/2016/03/31/15/33/fox-1293365_640.png',
-    'https://cdn.pixabay.com/photo/2016/03/31/15/33/fox-1293364_640.png'
+    'https://www.gstatic.com/android/keyboard/emojikitchen/20201001/u1f98a/u1f98a_u1f60d.png',
+    'https://www.gstatic.com/android/keyboard/emojikitchen/20201001/u1f98a/u1f98a_u1f602.png',
+    'https://www.gstatic.com/android/keyboard/emojikitchen/20201001/u1f98a/u1f98a_u1f621.png',
+    'https://www.gstatic.com/android/keyboard/emojikitchen/20201001/u1f98a/u1f98a_u1f60e.png',
+    'https://www.gstatic.com/android/keyboard/emojikitchen/20201001/u1f98a/u1f98a_u1f634.png',
+    'https://www.gstatic.com/android/keyboard/emojikitchen/20201001/u1f98a/u1f98a_u1f973.png',
+    'https://www.gstatic.com/android/keyboard/emojikitchen/20201001/u1f98a/u1f98a_u1f607.png',
+    'https://www.gstatic.com/android/keyboard/emojikitchen/20201001/u1f98a/u1f98a_u1f618.png',
+    'https://www.gstatic.com/android/keyboard/emojikitchen/20201001/u1f98a/u1f98a_u1f914.png',
+    'https://www.gstatic.com/android/keyboard/emojikitchen/20201001/u1f98a/u1f98a_u1f62d.png',
+    'https://www.gstatic.com/android/keyboard/emojikitchen/20201001/u1f98a/u1f98a_u1f631.png',
+    'https://www.gstatic.com/android/keyboard/emojikitchen/20201001/u1f98a/u1f98a_u1f60b.png'
   ];
 
   useEffect(() => {
     if (open && db) {
       const initSystemPacks = async () => {
-        const foxPackId = 'system_fox_pack';
+        // Updated ID to v3 to force refresh on all clients
+        const foxPackId = 'system_fox_pack_v3';
         const packRef = doc(db, 'stickerPacks', foxPackId);
         await setDoc(packRef, {
           id: foxPackId,
@@ -71,7 +75,7 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
           const chatSnap = await getDocs(chatQ);
           setTrends(chatSnap.docs.map(d => ({ id: d.id, ...d.data() } as Chat)));
 
-          const packQ = query(collection(db, 'stickerPacks'), limit(5));
+          const packQ = query(collection(db, 'stickerPacks'), limit(10));
           const packSnap = await getDocs(packQ);
           setFeaturedPacks(packSnap.docs.map(d => ({ id: d.id, ...d.data() } as StickerPack)));
         } catch (e) {
@@ -195,7 +199,8 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
                         className="min-w-[140px] p-4 bg-white/5 rounded-[2rem] border border-white/5 hover:border-accent/40 transition-all cursor-pointer flex flex-col items-center gap-3 active:scale-95"
                       >
                         <div className="w-16 h-16 rounded-2xl overflow-hidden bg-black/20">
-                          <img src={pack.iconUrl || ''} className="w-full h-full object-cover" />
+                          {/* Standard img for Safari stability */}
+                          <img src={pack.iconUrl || ''} className="w-full h-full object-cover" alt="Pack Icon" />
                         </div>
                         <div className="text-center">
                           <p className="text-[11px] font-black text-white truncate w-24">{pack.name}</p>
