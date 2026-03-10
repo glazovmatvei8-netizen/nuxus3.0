@@ -33,6 +33,7 @@ const ChatListItem = memo(({
 }: any) => {
   const db = useFirestore();
   const [offsetX, setOffsetX] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
   const touchStartX = useRef(0);
   const touchStartY = useRef(0);
   const isHorizontalSwipe = useRef(false);
@@ -64,33 +65,54 @@ const ChatListItem = memo(({
     touchStartX.current = e.touches[0].clientX;
     touchStartY.current = e.touches[0].clientY;
     isHorizontalSwipe.current = false;
+    setIsDragging(true);
   };
 
   const handleTouchMove = (e: React.TouchEvent) => {
     const deltaX = e.touches[0].clientX - touchStartX.current;
     const deltaY = e.touches[0].clientY - touchStartY.current;
 
-    if (!isHorizontalSwipe.current && Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 10) {
-      isHorizontalSwipe.current = true;
+    // Определяем намерение свайпа (горизонтальный или вертикальный)
+    if (!isHorizontalSwipe.current && Math.abs(deltaX) > 10) {
+      if (Math.abs(deltaX) > Math.abs(deltaY)) {
+        isHorizontalSwipe.current = true;
+      }
     }
 
     if (isHorizontalSwipe.current) {
-      setOffsetX(deltaX);
+      // Предотвращаем скролл страницы при горизонтальном свайпе
+      if (e.cancelable) e.preventDefault();
+      
+      // Ограничиваем максимальный свайп
+      const newOffset = Math.max(-180, Math.min(180, deltaX));
+      setOffsetX(newOffset);
     }
   };
 
   const handleTouchEnd = () => {
-    if (offsetX > 80) {
+    setIsDragging(false);
+    
+    if (!isHorizontalSwipe.current) {
+      setOffsetX(0);
+      return;
+    }
+
+    // Пороги для фиксации кнопок
+    if (offsetX > 60) {
       setOffsetX(160); // Snap to Left actions
-    } else if (offsetX < -80) {
+    } else if (offsetX < -60) {
       setOffsetX(-160); // Snap to Right actions
     } else {
-      setOffsetX(0);
+      setOffsetX(0); // Snap back to center
     }
+    
     isHorizontalSwipe.current = false;
   };
 
-  const resetSwipe = () => setOffsetX(0);
+  const resetSwipe = () => {
+    setOffsetX(0);
+    setIsDragging(false);
+  };
 
   return (
     <div className="relative overflow-hidden touch-pan-y select-none bg-[#0a0a0c]">
@@ -133,20 +155,20 @@ const ChatListItem = memo(({
       {/* Foreground Content */}
       <div 
         className={cn(
-          "relative z-10 transition-transform duration-200 ease-out bg-[#0a0a0c]",
-          offsetX === 0 && "transition-none"
+          "relative z-10 bg-[#0a0a0c]",
+          !isDragging && "transition-transform duration-300 ease-out"
         )}
         style={{ transform: `translateX(${offsetX}px)` }}
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
-        onClick={onClick}
+        onClick={offsetX === 0 ? onClick : resetSwipe}
       >
         <ContextMenu>
-          <ContextMenuTrigger>
+          <ContextMenuTrigger disabled={offsetX !== 0}>
             <div className={cn(
               "flex items-center gap-3 px-4 py-2.5 cursor-pointer transition-all border-none group relative",
-              isActive ? 'bg-white/10' : 'active:bg-white/[0.05]'
+              isActive && offsetX === 0 ? 'bg-white/10' : 'active:bg-white/[0.05]'
             )}>
               <UserAvatar userId={otherId} manualAvatarUrl={otherProfile?.avatarUrl || chat.avatarUrl} className="h-[52px] w-[52px]" fallbackName={finalDisplayName} showOnlineStatus />
               <div className="flex-1 min-w-0 border-b border-white/[0.03] pb-3 h-full flex flex-col justify-center">
