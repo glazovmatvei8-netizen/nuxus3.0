@@ -56,7 +56,7 @@ const ChatListItem = memo(({
         <div
           onClick={onClick}
           className={cn(
-            "flex items-center gap-3 px-4 py-2.5 cursor-pointer transition-all border-none group relative",
+            "flex items-center gap-3 px-4 py-2.5 cursor-pointer transition-all border-none group relative select-none touch-none",
             isActive ? 'bg-white/10' : 'active:bg-white/[0.05]'
           )}
         >
@@ -78,9 +78,9 @@ const ChatListItem = memo(({
           </div>
         </div>
       </ContextMenuTrigger>
-      <ContextMenuContent className="w-48 bg-card border-white/10 rounded-xl">
-        <ContextMenuItem onClick={() => onPinToggle(chat.id)} className="gap-2 font-bold uppercase text-[10px] tracking-widest">
-          {isPinned ? <><PinOff className="w-4 h-4" /> Открепить</> : <><Pin className="w-4 h-4" /> Закрепить</>}
+      <ContextMenuContent className="w-56 bg-card/95 backdrop-blur-xl border-white/10 rounded-2xl shadow-2xl">
+        <ContextMenuItem onClick={() => onPinToggle(chat.id)} className="gap-3 py-3 font-bold uppercase text-[11px] tracking-widest rounded-xl">
+          {isPinned ? <><PinOff className="w-4 h-4 text-primary" /> Открепить</> : <><Pin className="w-4 h-4 text-primary" /> Закрепить</>}
         </ContextMenuItem>
       </ContextMenuContent>
     </ContextMenu>
@@ -113,6 +113,7 @@ export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?:
     await updateDoc(userProfileRef, {
       pinnedChatIds: isPinned ? arrayRemove(chatId) : arrayUnion(chatId)
     });
+    toast({ title: isPinned ? "Откреплено" : "Закреплено" });
   };
 
   const filteredChats = useMemo(() => {
