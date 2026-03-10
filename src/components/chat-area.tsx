@@ -418,6 +418,27 @@ export default function ChatArea() {
     return otherProfile?.username || chat?.username || '...';
   }, [chat, otherProfile]);
 
+  const handleFilesSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length) {
+      const processFiles = async () => {
+        const newFiles = await Promise.all(files.map(async (f) => {
+          return new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve({ 
+              url: reader.result as string, 
+              type: f.type.startsWith('video') ? 'video' : 'image' 
+            });
+            reader.readAsDataURL(f);
+          });
+        }));
+        setSelectedFiles(newFiles as any);
+        setIsPreviewModalOpen(true);
+      };
+      processFiles();
+    }
+  };
+
   return (
     <div className="flex-1 flex flex-col h-full bg-background relative overflow-hidden z-20">
       {userProfile?.settings?.chatBackground && (
@@ -551,14 +572,7 @@ export default function ChatArea() {
             <Button variant="ghost" size="icon" className="h-10 w-10 shrink-0 text-white/40 hover:text-white transition-colors" onClick={() => fileInputRef.current?.click()}>
               <Paperclip className="w-6 h-6" />
             </Button>
-            <input type="file" hidden ref={fileInputRef} accept="image/*,video/*" multiple onChange={(e) => {
-              const files = Array.from(e.target.files || []);
-              if (files.length) {
-                const newFiles = files.map(f => ({ url: URL.createObjectURL(f), type: f.type.startsWith('video') ? 'video' : 'image' }));
-                setSelectedFiles(newFiles as any);
-                setIsPreviewModalOpen(true);
-              }
-            }} />
+            <input type="file" hidden ref={fileInputRef} accept="image/*,video/*" multiple onChange={handleFilesSelected} />
             
             <div className="flex-1 flex items-center bg-white/[0.03] rounded-[1.5rem] border border-white/[0.05] h-11 px-4 relative">
               <Input 
@@ -608,7 +622,22 @@ export default function ChatArea() {
         </div>
       </footer>
       {chat && <ChatInfoModal open={isChatInfoOpen} onOpenChange={setIsChatInfoOpen} chat={chat as any} />}
-      <ImagePreviewModal open={isPreviewModalOpen} onOpenChange={setIsPreviewModalOpen} files={selectedFiles} onRemove={(i) => setSelectedFiles(prev => prev.filter((_, idx) => idx !== i))} onSend={() => { setIsSendingFiles(true); setSelectedFiles([]); setIsPreviewModalOpen(false); setIsSendingFiles(false); }} isSending={isSendingFiles} />
+      <ImagePreviewModal 
+        open={isPreviewModalOpen} 
+        onOpenChange={setIsPreviewModalOpen} 
+        files={selectedFiles} 
+        onRemove={(i) => setSelectedFiles(prev => prev.filter((_, idx) => idx !== i))} 
+        onSend={async () => { 
+          setIsSendingFiles(true); 
+          for (const file of selectedFiles) {
+            await handleSendMessage(file.url, file.type);
+          }
+          setSelectedFiles([]); 
+          setIsPreviewModalOpen(false); 
+          setIsSendingFiles(false); 
+        }} 
+        isSending={isSendingFiles} 
+      />
     </div>
   );
 }
