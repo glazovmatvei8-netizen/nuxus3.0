@@ -68,6 +68,15 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
     const isAlbum = message.contentType === 'album';
     const isAudio = message.contentType === 'audio';
     const isVideoNote = message.contentType === 'video_note';
+    const isSticker = message.contentType === 'sticker';
+
+    if (isSticker) {
+      return (
+        <div className="w-40 h-40 select-none animate-in fade-in zoom-in duration-300">
+          <img src={content} alt="Sticker" className="w-full h-full object-contain" />
+        </div>
+      );
+    }
 
     if (isVideoNote) {
       return (
@@ -157,7 +166,7 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
   return (
     <div id={`msg-${message.id}`} className={cn("w-full flex mb-2 transition-all scroll-mt-20", isMe ? "justify-end" : "justify-start", highlight && "scale-[1.02] z-10")}>
       <div className={cn("flex gap-3 max-w-[90%] relative group px-2 items-end", isMe ? "flex-row-reverse" : "flex-row")}>
-        {!isMe && <UserAvatar userId={message.senderId} className="h-9 w-9 shrink-0" fallbackName={message.senderName} />}
+        {!isMe && <UserAvatar userId={message.senderId} className="h-9 w-9 shrink-0" manualAvatarUrl={message.senderId === 'stickers_bot' ? 'https://i.ibb.co/sd2MqGz2/Icon.png' : null} fallbackName={message.senderName} />}
         <div className={cn("flex flex-col min-w-0 max-w-full relative", isMe ? "items-end" : "items-start")}>
           {!isMe && isGroup && <span className="text-[9px] font-black text-primary uppercase tracking-widest mb-1 ml-1 truncate max-w-[150px]">{message.senderName}</span>}
           
@@ -166,10 +175,14 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
               "p-2.5 rounded-2xl shadow-md border transition-all relative", 
               isMe ? "message-bubble-me border-none" : "bg-card border-white/5 text-white",
               highlight && "border-primary/50 shadow-primary/20 ring-1 ring-primary/30",
-              message.contentType === 'video_note' && "bg-transparent border-none shadow-none p-0"
+              (message.contentType === 'video_note' || message.contentType === 'sticker') && "bg-transparent border-none shadow-none p-0"
             )}>
               {renderContent()}
-              <div className={cn("flex items-center justify-end gap-1 mt-1.5 opacity-60", message.contentType === 'video_note' && "absolute bottom-2 right-4 bg-black/40 px-2 py-0.5 rounded-full backdrop-blur-md")}>
+              <div className={cn(
+                "flex items-center justify-end gap-1 mt-1.5 opacity-60", 
+                message.contentType === 'video_note' && "absolute bottom-2 right-4 bg-black/40 px-2 py-0.5 rounded-full backdrop-blur-md",
+                message.contentType === 'sticker' && "absolute -bottom-5 right-0 opacity-40"
+              )}>
                 <span className="text-[9px] font-bold">{formattedTime}</span>
                 {isMe && (
                   message.isRead ? (

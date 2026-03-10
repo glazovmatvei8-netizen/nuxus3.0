@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
   Send, Info, ChevronLeft, X, Paperclip, Mic, StopCircle, ChevronDown, Edit2, Pin, Search, PinOff,
-  Smile, Instagram, Camera, Video
+  Smile, Instagram, Camera, Video, Sticker
 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { MessageItem } from './message-item';
@@ -16,11 +16,12 @@ import { useToast } from '@/hooks/use-toast';
 import { ChatInfoModal } from './modals/chat-info-modal';
 import { ImagePreviewModal } from './modals/image-preview-modal';
 import { useFirestore, useUser, useCollection, useDoc, useMemoFirebase } from '@/firebase';
-import { collection, query, orderBy, doc, addDoc, limit, updateDoc, writeBatch } from 'firebase/firestore';
+import { collection, query, orderBy, doc, addDoc, limit, updateDoc, writeBatch, arrayUnion } from 'firebase/firestore';
 import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { formatDisplayName, cn, formatLastSeen } from '@/lib/utils';
 import type { Message, User as UserType, Chat } from '@/lib/types';
 import { EmojiPicker } from './emoji-picker';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 
 const MessageList = memo(({ 
   messages, 
@@ -219,7 +220,8 @@ export default function ChatArea() {
   }, [messages?.length, currentChatId, scrollToBottom]);
 
   const handleSendMessage = useCallback(async (content_msg: string = messageInput, type_msg: Message['contentType'] = 'text') => {
-    if (!content_msg.trim() || !currentChatId || !firebaseUser || !db) return;
+    if (!content_msg.trim() && type_msg !== 'audio' && type_msg !== 'video_note') return;
+    if (!currentChatId || !firebaseUser || !db) return;
     
     const captureContent = content_msg.trim();
     const captureReply = replyTo;
@@ -260,7 +262,25 @@ export default function ChatArea() {
     
     await addDoc(collection(db, 'chats', currentChatId, 'messages'), msgData);
     updateDocumentNonBlocking(doc(db, 'chats', currentChatId), { lastMessageAt: new Date().toISOString() });
-  }, [messageInput, currentChatId, firebaseUser, db, userProfile, replyTo, editingMsg, setLocalDrafts]);
+
+    // Бот @stickers
+    if (chat?.username === '@stickers' && (type_msg === 'image' || captureContent.startsWith('data:image'))) {
+      const stickersBotReply = {
+        chatId: currentChatId,
+        senderId: 'stickers_bot',
+        senderName: 'Sticker Bot 🎨',
+        content: 'Стикер успешно создан! Он добавлен в вашу коллекцию в панели эмодзи.',
+        contentType: 'service' as const,
+        sentAt: new Date().toISOString()
+      };
+      addDoc(collection(db, 'chats', currentChatId, 'messages'), stickersBotReply);
+      
+      // Добавляем в настройки пользователя
+      updateDocumentNonBlocking(doc(db, 'users', firebaseUser.uid), {
+        'settings.stickers': arrayUnion(captureContent)
+      });
+    }
+  }, [messageInput, currentChatId, firebaseUser, db, userProfile, replyTo, editingMsg, setLocalDrafts, chat?.username]);
 
   const startRecording = async (type: 'audio' | 'video' = 'audio') => {
     try {
@@ -272,7 +292,6 @@ export default function ChatArea() {
       
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
       
-      // Находим лучший поддерживаемый формат
       const mimeType = isVideo 
         ? (MediaRecorder.isTypeSupported('video/webm;codecs=vp9') ? 'video/webm;codecs=vp9' : 'video/webm')
         : (MediaRecorder.isTypeSupported('audio/mp4') ? 'audio/mp4' : 'audio/webm');
@@ -303,7 +322,7 @@ export default function ChatArea() {
         stream.getTracks().forEach(track => track.stop());
       };
 
-      recorder.start(200); // Сохраняем куски каждые 200мс для надежности
+      recorder.start(200);
       if (isVideo) setIsRecordingVideo(true); else setIsRecording(true);
       setRecordingDuration(0);
       recordingIntervalRef.current = setInterval(() => setRecordingDuration(prev => prev + 1), 1000);
@@ -366,7 +385,7 @@ export default function ChatArea() {
               <span className="font-bold text-sm truncate group-hover:text-primary transition-colors">{formatDisplayName(chatDisplayName)}</span>
               <div className="flex items-center gap-1">
                 <span className="text-[10px] text-muted-foreground/60 tracking-widest truncate uppercase font-bold">
-                  {isPrivate ? formatLastSeen(otherProfile?.lastSeen, otherProfile?.settings?.privacy?.lastSeenVisibility) : 'NUXUS 2.0'}
+                  {chat?.username === '@stickers' ? 'STICKER ENGINE' : (isPrivate ? formatLastSeen(otherProfile?.lastSeen, otherProfile?.settings?.privacy?.lastSeenVisibility) : 'NUXUS 2.0')}
                 </span>
                 {!isOnline && <div className="w-1.5 h-1.5 rounded-full bg-destructive animate-pulse" />}
               </div>
@@ -409,7 +428,7 @@ export default function ChatArea() {
       )}
 
       <div className="flex-1 relative overflow-hidden">
-        <ScrollArea ref={scrollRef} className="h-full w-full relative z-10 scrollbar-hide bg-transparent">
+        <ScrollArea ref={scrollRef} className="h-full w-full relative z-10 scrollbar-hide bg-transparent" onClick={() => setShowEmojiPicker(false)}>
           {messages && (
             <MessageList 
               messages={messages} 
@@ -493,15 +512,20 @@ export default function ChatArea() {
                 onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { handleSendMessage(); } }} 
                 disabled={isRecording || isRecordingVideo} 
               />
-              <button onClick={() => setShowEmojiPicker(!showEmojiPicker)} className={cn("shrink-0 text-white/20 hover:text-white transition-colors ml-2", showEmojiPicker && "text-primary")}>
-                <Smile className="w-6 h-6" />
-              </button>
               
-              {showEmojiPicker && (
-                <div className="absolute bottom-full right-0 mb-4 w-[300px] h-[400px] z-50">
-                  <EmojiPicker onSelect={(e) => setMessageInput(prev => prev + e)} />
-                </div>
-              )}
+              <Popover open={showEmojiPicker} onOpenChange={setShowEmojiPicker}>
+                <PopoverTrigger asChild>
+                  <button className={cn("shrink-0 text-white/20 hover:text-white transition-colors ml-2", showEmojiPicker && "text-primary")}>
+                    <Smile className="w-6 h-6" />
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent side="top" align="end" className="w-[320px] h-[450px] p-0 border-none bg-transparent shadow-none mb-4">
+                  <EmojiPicker 
+                    onEmojiSelect={(e) => setMessageInput(prev => prev + e)} 
+                    onStickerSelect={(url) => { handleSendMessage(url, 'sticker'); setShowEmojiPicker(false); }}
+                  />
+                </PopoverContent>
+              </Popover>
             </div>
 
             <div className="flex items-center gap-2">
@@ -516,7 +540,7 @@ export default function ChatArea() {
                 </>
               ) : (
                 !(isRecording || isRecordingVideo) && (
-                  <Button size="icon" className="h-10 w-10 rounded-full bg-primary" onClick={() => handleSendMessage()}>
+                  <Button size="icon" className="h-10 w-10 rounded-full bg-primary shadow-lg shadow-primary/20" onClick={() => handleSendMessage()}>
                     <Send className="w-5 h-5" />
                   </Button>
                 )
@@ -526,7 +550,7 @@ export default function ChatArea() {
         </div>
       </footer>
       {chat && <ChatInfoModal open={isChatInfoOpen} onOpenChange={setIsChatInfoOpen} chat={chat as any} />}
-      <ImagePreviewModal open={isPreviewModalOpen} onOpenChange={setIsPreviewModalOpen} files={selectedFiles} onRemove={(i) => setSelectedFiles(prev => prev.filter((_, idx) => idx !== i))} onSend={() => { setIsSendingFiles(true); setTimeout(() => { setIsPreviewModalOpen(false); setIsSendingFiles(false); toast({ title: "Файлы отправлены" }); }, 1000); }} isSending={isSendingFiles} />
+      <ImagePreviewModal open={isPreviewModalOpen} onOpenChange={setIsPreviewModalOpen} files={selectedFiles} onRemove={(i) => setSelectedFiles(prev => prev.filter((_, idx) => idx !== i))} onSend={() => { setIsSendingFiles(true); setSelectedFiles([]); setIsPreviewModalOpen(false); setIsSendingFiles(false); }} isSending={isSendingFiles} />
     </div>
   );
 }

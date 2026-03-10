@@ -32,7 +32,6 @@ export default function Home() {
   useEffect(() => {
     setMounted(true);
     
-    // Проверка на iOS и не-standalone режим
     const isIos = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
     const isStandalone = (window.navigator as any).standalone || window.matchMedia('(display-mode: standalone)').matches;
     
@@ -101,8 +100,9 @@ export default function Home() {
     localStorage.setItem('ios_installer_dismissed', 'true');
   };
 
-  // Fix black screen by showing loader even before mount or while loading profile
-  if (!mounted || isUserLoading || (user && isProfileLoading)) {
+  if (!mounted) return null;
+
+  if (isUserLoading || (user && isProfileLoading)) {
     return (
       <div className="h-[100dvh] w-full flex flex-col items-center justify-center bg-[#0a0a0c] text-white">
         <NuxusLogo size={120} />

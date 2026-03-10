@@ -1,5 +1,5 @@
 
-export type MessageType = 'text' | 'image' | 'audio' | 'video' | 'video_note' | 'service' | 'gift' | 'payment_request' | 'album' | 'poll' | 'broadcast';
+export type MessageType = 'text' | 'image' | 'audio' | 'video' | 'video_note' | 'service' | 'gift' | 'payment_request' | 'album' | 'poll' | 'broadcast' | 'sticker';
 
 export interface PollOption {
   id: string;
@@ -124,6 +124,7 @@ export interface UserSettings {
   statusEmoji?: string;
   statusText?: string;
   language?: string;
+  stickers?: string[];
 }
 
 export interface User {
