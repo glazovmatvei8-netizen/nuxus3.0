@@ -48,10 +48,10 @@ export function StoriesBar() {
       {/* My Story Button */}
       <div className="flex flex-col items-center gap-1.5 shrink-0 group cursor-pointer" onClick={() => myStories.length > 0 ? setStoriesToView(myStories) : setIsCreateStoryOpen(true)}>
         <div className={cn(
-          "relative h-[64px] w-[64px] rounded-full p-[3px] transition-all",
+          "relative h-[64px] w-[64px] rounded-full p-[2px] transition-all",
           myStories.length > 0 ? "bg-gradient-to-tr from-primary to-accent" : "bg-white/10"
         )}>
-          <div className="bg-[#0a0a0c] rounded-full p-[2px] h-full w-full">
+          <div className="rounded-full h-full w-full overflow-hidden">
             <UserAvatar 
               userId={user?.uid} 
               className="h-full w-full border-none" 
@@ -64,7 +64,9 @@ export function StoriesBar() {
             </div>
           )}
         </div>
-        <span className="text-[10px] font-black uppercase text-muted-foreground/60 tracking-widest">Момент</span>
+        <span className="text-[10px] font-black uppercase text-muted-foreground/60 tracking-widest truncate w-[64px] text-center">
+          {profile?.username ? profile.username.replace('@', '') : 'Я'}
+        </span>
       </div>
 
       {isLoading ? (
@@ -88,18 +90,16 @@ function StoryCircle({ userId, stories, onView }: { userId: string, stories: Sto
   const userRef = useMemoFirebase(() => (!db ? null : doc(db, 'users', userId)), [db, userId]);
   const { data: profile } = useDoc<User>(userRef);
 
-  const hasUnseen = useMemo(() => {
-    // Basic logic for unseen
-    return true; 
-  }, []);
+  // Filter out my own view status logic if needed, but for now show highlighted if stories exist
+  const hasStories = stories && stories.length > 0;
 
   return (
     <div className="flex flex-col items-center gap-1.5 shrink-0 cursor-pointer active:scale-95 transition-transform" onClick={onView}>
       <div className={cn(
-        "h-[64px] w-[64px] rounded-full p-[3px] bg-gradient-to-tr transition-all",
-        hasUnseen ? "from-primary to-accent" : "from-white/10 to-white/10"
+        "h-[64px] w-[64px] rounded-full p-[2px] bg-gradient-to-tr transition-all",
+        hasStories ? "from-primary to-accent" : "from-white/10 to-white/10"
       )}>
-        <div className="bg-[#0a0a0c] rounded-full p-[2px] h-full w-full">
+        <div className="rounded-full h-full w-full overflow-hidden">
           <UserAvatar 
             userId={userId} 
             className="h-full w-full border-none" 

@@ -72,7 +72,6 @@ const ChatListItem = memo(({
     const deltaX = e.touches[0].clientX - touchStartX.current;
     const deltaY = e.touches[0].clientY - touchStartY.current;
 
-    // Определяем намерение свайпа (горизонтальный или вертикальный)
     if (!isHorizontalSwipe.current && Math.abs(deltaX) > 10) {
       if (Math.abs(deltaX) > Math.abs(deltaY)) {
         isHorizontalSwipe.current = true;
@@ -80,10 +79,7 @@ const ChatListItem = memo(({
     }
 
     if (isHorizontalSwipe.current) {
-      // Предотвращаем скролл страницы при горизонтальном свайпе
       if (e.cancelable) e.preventDefault();
-      
-      // Ограничиваем максимальный свайп
       const newOffset = Math.max(-180, Math.min(180, deltaX));
       setOffsetX(newOffset);
     }
@@ -91,21 +87,13 @@ const ChatListItem = memo(({
 
   const handleTouchEnd = () => {
     setIsDragging(false);
-    
     if (!isHorizontalSwipe.current) {
       setOffsetX(0);
       return;
     }
-
-    // Пороги для фиксации кнопок
-    if (offsetX > 60) {
-      setOffsetX(160); // Snap to Left actions
-    } else if (offsetX < -60) {
-      setOffsetX(-160); // Snap to Right actions
-    } else {
-      setOffsetX(0); // Snap back to center
-    }
-    
+    if (offsetX > 60) setOffsetX(160);
+    else if (offsetX < -60) setOffsetX(-160);
+    else setOffsetX(0);
     isHorizontalSwipe.current = false;
   };
 
@@ -116,48 +104,30 @@ const ChatListItem = memo(({
 
   return (
     <div className="relative overflow-hidden touch-pan-y select-none bg-[#0a0a0c]">
-      {/* Background Actions - LEFT (revealed on Swipe Right) */}
       <div className="absolute inset-y-0 left-0 flex h-full z-0">
-        <button 
-          onClick={(e) => { e.stopPropagation(); onMarkUnread(chat.id); resetSwipe(); }}
-          className="w-20 bg-[#007AFF] flex flex-col items-center justify-center text-white gap-1 active:brightness-90 transition-all"
-        >
+        <button onClick={(e) => { e.stopPropagation(); onMarkUnread(chat.id); resetSwipe(); }} className="w-20 bg-[#007AFF] flex flex-col items-center justify-center text-white gap-1 active:brightness-90 transition-all">
           <MessageSquare className="w-5 h-5 fill-current" />
-          <span className="text-[10px] font-bold leading-tight px-1">Не прочитан</span>
+          <span className="text-[10px] font-bold leading-tight px-1 text-center">Не прочитан</span>
         </button>
-        <button 
-          onClick={(e) => { e.stopPropagation(); onPinToggle(chat.id); resetSwipe(); }}
-          className="w-20 bg-[#34C759] flex flex-col items-center justify-center text-white gap-1 active:brightness-90 transition-all"
-        >
+        <button onClick={(e) => { e.stopPropagation(); onPinToggle(chat.id); resetSwipe(); }} className="w-20 bg-[#34C759] flex flex-col items-center justify-center text-white gap-1 active:brightness-90 transition-all">
           <Pin className="w-5 h-5 fill-current" />
-          <span className="text-[10px] font-bold leading-tight px-1">{isPinned ? 'Открепить' : 'Закрепить'}</span>
+          <span className="text-[10px] font-bold leading-tight px-1 text-center">{isPinned ? 'Открепить' : 'Закрепить'}</span>
         </button>
       </div>
 
-      {/* Background Actions - RIGHT (revealed on Swipe Left) */}
       <div className="absolute inset-y-0 right-0 flex h-full z-0">
-        <button 
-          onClick={(e) => { e.stopPropagation(); onMute(chat.id); resetSwipe(); }}
-          className="w-20 bg-[#FF9500] flex flex-col items-center justify-center text-white gap-1 active:brightness-90 transition-all"
-        >
+        <button onClick={(e) => { e.stopPropagation(); onMute(chat.id); resetSwipe(); }} className="w-20 bg-[#FF9500] flex flex-col items-center justify-center text-white gap-1 active:brightness-90 transition-all">
           {isMuted ? <Volume2 className="w-5 h-5" /> : <VolumeX className="w-5 h-5 fill-current" />}
-          <span className="text-[10px] font-bold leading-tight px-1">{isMuted ? 'Звук' : 'Без звука'}</span>
+          <span className="text-[10px] font-bold leading-tight px-1 text-center">{isMuted ? 'Звук' : 'Без звука'}</span>
         </button>
-        <button 
-          onClick={(e) => { e.stopPropagation(); onDelete(chat.id); resetSwipe(); }}
-          className="w-20 bg-[#FF3B30] flex flex-col items-center justify-center text-white gap-1 active:brightness-90 transition-all"
-        >
+        <button onClick={(e) => { e.stopPropagation(); onDelete(chat.id); resetSwipe(); }} className="w-20 bg-[#FF3B30] flex flex-col items-center justify-center text-white gap-1 active:brightness-90 transition-all">
           <Trash2 className="w-5 h-5 fill-current" />
-          <span className="text-[10px] font-bold leading-tight px-1">Удалить</span>
+          <span className="text-[10px] font-bold leading-tight px-1 text-center">Удалить</span>
         </button>
       </div>
 
-      {/* Foreground Content */}
       <div 
-        className={cn(
-          "relative z-10 bg-[#0a0a0c]",
-          !isDragging && "transition-transform duration-300 ease-out"
-        )}
+        className={cn("relative z-10 bg-[#0a0a0c]", !isDragging && "transition-transform duration-300 ease-out")}
         style={{ transform: `translateX(${offsetX}px)` }}
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
@@ -255,45 +225,46 @@ export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?:
 
   const filteredChats = useMemo(() => {
     if (!chats) return [];
-    
     let result = [...chats].sort((a, b) => {
       const aTime = a.lastMessageAt ? new Date(a.lastMessageAt).getTime() : new Date(a.createdAt).getTime();
       const bTime = b.lastMessageAt ? new Date(b.lastMessageAt).getTime() : new Date(b.createdAt).getTime();
       return bTime - aTime;
     });
-
     result.sort((a, b) => {
       const aPinned = currentUserProfile?.pinnedChatIds?.includes(a.id) ? 1 : 0;
       const bPinned = currentUserProfile?.pinnedChatIds?.includes(b.id) ? 1 : 0;
       return bPinned - aPinned;
     });
-
     if (isArchiveView) return result.filter(c => c.isArchived);
     if (activeTab === 'private') return result.filter(c => c.type === 'private' && !c.isArchived);
     if (activeTab === 'groups') return result.filter(c => c.type === 'group' && !c.isArchived);
-
     return result.filter(c => !c.isArchived);
   }, [chats, activeTab, isArchiveView, currentUserProfile?.pinnedChatIds]);
 
   return (
     <div className="flex flex-col h-full bg-[#0a0a0c] overflow-hidden overflow-y-auto scrollbar-hide">
       <div className="px-4 pt-4 pb-2 shrink-0">
-        <div className="relative flex items-center justify-between h-12 mb-6 w-full">
-          <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full bg-white/5" onClick={() => setIsSearchOpen(true)}>
-            <Search className="w-5 h-5 text-white/60" />
-          </Button>
+        {/* Improved Header Grid to prevent overlapping */}
+        <div className="grid grid-cols-3 items-center h-12 mb-6 w-full">
+          <div className="flex justify-start">
+            <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full bg-white/5" onClick={() => setIsSearchOpen(true)}>
+              <Search className="w-5 h-5 text-white/60" />
+            </Button>
+          </div>
 
-          <h1 
-            onClick={() => isGlobalAdmin(currentUserProfile) && setIsAdminPanelOpen(true)}
-            className={cn(
-              "text-[20px] font-black text-white italic tracking-tighter absolute left-1/2 -translate-x-1/2 whitespace-nowrap",
-              isGlobalAdmin(currentUserProfile) ? "cursor-pointer hover:text-primary transition-colors active:scale-95" : "cursor-default"
-            )}
-          >
-            {isArchiveView ? 'Архив' : 'Чаты🐱'}
-          </h1>
+          <div className="flex justify-center">
+            <h1 
+              onClick={() => isGlobalAdmin(currentUserProfile) && setIsAdminPanelOpen(true)}
+              className={cn(
+                "text-[20px] font-black text-white italic tracking-tighter whitespace-nowrap",
+                isGlobalAdmin(currentUserProfile) ? "cursor-pointer hover:text-primary transition-colors active:scale-95" : "cursor-default"
+              )}
+            >
+              {isArchiveView ? 'Архив' : 'Чаты🐱'}
+            </h1>
+          </div>
 
-          <div className="flex items-center gap-1.5">
+          <div className="flex justify-end gap-1.5">
             <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full bg-white/5" onClick={() => setIsCreateModalOpen(true)}>
               <Plus className="w-5 h-5 text-white" />
             </Button>
