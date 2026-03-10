@@ -35,7 +35,8 @@ export function EmojiPicker({ onEmojiSelect, onStickerSelect, className }: Emoji
 
   const packsQuery = useMemoFirebase(() => {
     if (!db || !profile?.installedStickerPackIds?.length) return null;
-    return query(collection(db, 'stickerPacks'), where('id', 'in', profile.installedStickerPackIds));
+    // Limit to 10 for Firestore 'in' query safety
+    return query(collection(db, 'stickerPacks'), where('id', 'in', profile.installedStickerPackIds.slice(0, 10)));
   }, [db, profile?.installedStickerPackIds]);
 
   const { data: stickerPacks } = useCollection<StickerPack>(packsQuery);
@@ -57,6 +58,11 @@ export function EmojiPicker({ onEmojiSelect, onStickerSelect, className }: Emoji
     const pack = stickerPacks?.find(p => p.id === activePackId);
     return pack?.stickerUrls || [];
   }, [activePackId, profile?.settings?.stickers, stickerPacks]);
+
+  const activePackName = useMemo(() => {
+    if (activePackId === 'custom') return 'Мои стикеры';
+    return stickerPacks?.find(p => p.id === activePackId)?.name || 'Стикерпак';
+  }, [activePackId, stickerPacks]);
 
   return (
     <div className={cn("bg-[#1c1c1e]/90 backdrop-blur-2xl border border-white/10 rounded-[2rem] overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.5)] flex flex-col h-full", className)}>
@@ -104,10 +110,10 @@ export function EmojiPicker({ onEmojiSelect, onStickerSelect, className }: Emoji
 
         <TabsContent value="stickers" className="flex-1 min-h-0 m-0 outline-none flex flex-col">
           {/* Packs Selector */}
-          <div className="flex gap-2 p-2 bg-white/5 border-b border-white/5 overflow-x-auto scrollbar-hide shrink-0">
+          <div className="flex gap-2 p-2 bg-white/10 border-b border-white/5 overflow-x-auto scrollbar-hide shrink-0 items-center">
             <button 
               onClick={() => setActivePackId('custom')}
-              className={cn("h-8 min-w-[32px] rounded-lg flex items-center justify-center border border-white/10 transition-all", activePackId === 'custom' ? "bg-primary border-primary" : "bg-black/20")}
+              className={cn("h-10 min-w-[40px] rounded-xl flex items-center justify-center border transition-all", activePackId === 'custom' ? "bg-primary border-primary shadow-lg shadow-primary/20" : "bg-black/40 border-white/10 opacity-60")}
             >
               <Star className={cn("w-4 h-4", activePackId === 'custom' ? "text-white" : "text-muted-foreground")} />
             </button>
@@ -115,11 +121,22 @@ export function EmojiPicker({ onEmojiSelect, onStickerSelect, className }: Emoji
               <button 
                 key={pack.id} 
                 onClick={() => setActivePackId(pack.id)}
-                className={cn("h-8 min-w-[32px] rounded-lg overflow-hidden border border-white/10 transition-all", activePackId === pack.id ? "border-primary scale-110" : "opacity-60")}
+                className={cn("h-10 min-w-[40px] rounded-xl overflow-hidden border transition-all relative group", activePackId === pack.id ? "border-primary scale-105 shadow-lg shadow-primary/20" : "border-white/10 opacity-60")}
               >
-                {pack.iconUrl ? <img src={pack.iconUrl} className="w-full h-full object-cover" /> : <div className="w-full h-full bg-primary/20 flex items-center justify-center text-[10px] font-bold text-primary">{pack.name[0]}</div>}
+                {pack.iconUrl ? (
+                  <img src={pack.iconUrl} className="w-full h-full object-cover" alt={pack.name} />
+                ) : (
+                  <div className="w-full h-full bg-primary/20 flex items-center justify-center text-[10px] font-bold text-primary">{pack.name[0]}</div>
+                )}
+                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                   <span className="text-[6px] font-black uppercase text-white truncate px-1">{pack.name}</span>
+                </div>
               </button>
             ))}
+          </div>
+
+          <div className="px-4 py-2 bg-white/5 border-b border-white/5">
+             <span className="text-[9px] font-black uppercase tracking-widest text-primary/60">{activePackName}</span>
           </div>
 
           <ScrollArea className="flex-1">

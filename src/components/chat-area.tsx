@@ -16,7 +16,7 @@ import { useToast } from '@/hooks/use-toast';
 import { ChatInfoModal } from './modals/chat-info-modal';
 import { ImagePreviewModal } from './modals/image-preview-modal';
 import { useFirestore, useUser, useCollection, useDoc, useMemoFirebase } from '@/firebase';
-import { collection, query, orderBy, doc, addDoc, limit, updateDoc, writeBatch, arrayUnion, getDocs, where, setDoc } from 'firebase/firestore';
+import { collection, query, orderBy, doc, addDoc, limit, updateDoc, writeBatch, arrayUnion, getDocs, where, setDoc, getDoc } from 'firebase/firestore';
 import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { formatDisplayName, cn, formatLastSeen } from '@/lib/utils';
 import type { Message, User as UserType, Chat, StickerPack } from '@/lib/types';
@@ -257,7 +257,32 @@ export default function ChatArea() {
         installedStickerPackIds: arrayUnion(packId)
       });
       currentPackIdRef.current = packId;
-      botReply(`Пак "${packName}" создан! Отправьте мне фото, чтобы добавить стикер в этот набор.`);
+      botReply(`Пак "${packName}" создан и активирован! Отправьте мне фото, чтобы добавить стикер в этот набор.`);
+      return true;
+    }
+
+    if (lower.startsWith('/edit_')) {
+      const targetId = content.replace('/edit_', '');
+      currentPackIdRef.current = targetId;
+      botReply(`Редактирование пака переключено. Присылайте фото для добавления стикеров.`);
+      return true;
+    }
+
+    if (lower === '/packs' || lower === '/list') {
+      const ids = userProfile?.installedStickerPackIds || [];
+      if (ids.length === 0) {
+        botReply("У вас пока нет созданных паков. Напишите /newpack для создания.");
+      } else {
+        let msg = "Ваши паки:\n\n";
+        for (const id of ids) {
+          const pSnap = await getDoc(doc(db, 'stickerPacks', id));
+          if (pSnap.exists()) {
+            const data = pSnap.data() as StickerPack;
+            msg += `• ${data.name} (ID: ${id})\n/edit_${id}\n\n`;
+          }
+        }
+        botReply(msg);
+      }
       return true;
     }
 
@@ -266,25 +291,26 @@ export default function ChatArea() {
         const packRef = doc(db, 'stickerPacks', currentPackIdRef.current);
         await updateDoc(packRef, {
           stickerUrls: arrayUnion(content),
-          iconUrl: content // Set first sticker as icon
+          iconUrl: content 
         });
-        botReply("Стикер добавлен в пак! Можете прислать еще.");
+        botReply("Стикер добавлен в активный пак! Он появится в вашей панели выбора (иконка улыбки -> Стикеры).");
       } else {
-        // Legacy simple sticker
-        updateDocumentNonBlocking(doc(db, 'users', firebaseUser.uid), {
-          'settings.stickers': arrayUnion(content)
-        });
-        botReply("Стикер добавлен в вашу личную панель.");
+        botReply("Сначала создайте новый пак (/newpack) или выберите существующий (/packs).");
       }
       return true;
     }
 
     if (lower === '/share') {
       if (!currentPackIdRef.current || currentPackIdRef.current === 'pending_name') {
-        botReply("Сначала создайте или выберите пак.");
+        const ids = userProfile?.installedStickerPackIds || [];
+        if (ids.length === 0) {
+          botReply("У вас нет паков, чтобы ими делиться.");
+        } else {
+          botReply("Выберите пак из списка /packs, чтобы получить на него ссылку.");
+        }
       } else {
         const link = `${window.location.origin}/?stickers=${currentPackIdRef.current}`;
-        botReply(`Вот ваша ссылка на стикерпак: ${link}`);
+        botReply(`Вот ваша ссылка на текущий активный пак:\n\n${link}`);
       }
       return true;
     }
