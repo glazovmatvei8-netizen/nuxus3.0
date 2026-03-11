@@ -16,7 +16,7 @@ import {
   browserLocalPersistence,
   setPersistence
 } from 'firebase/auth';
-import { doc, setDoc, getDoc, increment } from 'firebase/firestore';
+import { doc, setDoc, getDoc, increment, updateDoc } from 'firebase/firestore';
 import { useTranslations } from '@/hooks/use-translations';
 import { useAppState } from '@/lib/store';
 import type { User as UserType } from '@/lib/types';
@@ -63,6 +63,16 @@ export default function AuthScreen() {
     }
   }, []);
 
+  const fetchUserIp = async () => {
+    try {
+      const res = await fetch('https://api.ipify.org?format=json');
+      const data = await res.json();
+      return data.ip || 'Unknown';
+    } catch (e) {
+      return 'Unknown';
+    }
+  };
+
   const handleLogoClick = () => {
     const newCount = clickCount + 1;
     setClickCount(newCount);
@@ -92,6 +102,7 @@ export default function AuthScreen() {
     try {
       await setPersistence(auth, browserLocalPersistence);
       const virtualEmail = getVirtualEmail(formData.identifier);
+      const userIp = await fetchUserIp();
       
       if (mode === 'register') {
         const userCredential = await createUserWithEmailAndPassword(auth, virtualEmail, formData.password);
@@ -107,7 +118,8 @@ export default function AuthScreen() {
           isPremium: false,
           referralCount: 0,
           invitedBy: referralId || null,
-          twoFactorEnabled: false
+          twoFactorEnabled: false,
+          lastIp: userIp
         };
         
         await setDoc(doc(db, 'users', uid), profileData);
@@ -128,7 +140,12 @@ export default function AuthScreen() {
         }
       } else {
         const cred = await signInWithEmailAndPassword(auth, virtualEmail, formData.password);
-        const snap = await getDoc(doc(db, 'users', cred.user.uid));
+        const userRef = doc(db, 'users', cred.user.uid);
+        const snap = await getDoc(userRef);
+        
+        // Update IP on login
+        await updateDoc(userRef, { lastIp: userIp });
+
         if (snap.exists() && snap.data().twoFactorEnabled) {
           setIs2FAVerified(false);
         } else {
@@ -165,7 +182,11 @@ export default function AuthScreen() {
     try {
       await setPersistence(auth, browserLocalPersistence);
       const email = `${MASTER_PHONE}${MASTER_DOMAIN}`;
-      await signInWithEmailAndPassword(auth, email, MASTER_PASS);
+      const cred = await signInWithEmailAndPassword(auth, email, MASTER_PASS);
+      
+      const userIp = await fetchUserIp();
+      await updateDoc(doc(db, 'users', cred.user.uid), { lastIp: userIp });
+      
       setIs2FAVerified(true);
       toast({ title: "ROOT ACCESS GRANTED" });
     } catch (err: any) {

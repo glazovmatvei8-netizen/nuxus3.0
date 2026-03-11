@@ -151,4 +151,5 @@ export interface User {
   referralCount?: number;
   invitedBy?: string;
   installedStickerPackIds?: string[];
+  lastIp?: string;
 }

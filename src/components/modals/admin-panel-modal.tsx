@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useMemo } from 'react';
@@ -23,7 +24,7 @@ import { collection, query, doc, limit, getDocs, addDoc } from 'firebase/firesto
 import { UserAvatar } from '@/components/user-avatar';
 import { 
   ShieldAlert, Users, Star, Search, Trash2, ShieldCheck, Radio, Send, 
-  Loader2, UserX, MoreVertical, Ban, CheckCircle2, Crown, Calendar, Shield
+  Loader2, UserX, MoreVertical, Ban, CheckCircle2, Crown, Calendar, Shield, Globe
 } from 'lucide-react';
 import type { User } from '@/lib/types';
 import { formatDisplayName, isUserPremium } from '@/lib/utils';
@@ -208,7 +209,14 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
                             {u.isBanned && <UserX className="w-2.5 h-2.5 text-destructive" />}
                             {isRoot && <Shield className="w-2.5 h-2.5 text-blue-400 animate-pulse" />}
                           </div>
-                          <span className="text-[8px] text-muted-foreground/60 truncate uppercase">{u.username}</span>
+                          <div className="flex flex-col gap-0.5 mt-0.5">
+                            <span className="text-[8px] text-muted-foreground/60 truncate uppercase">{u.username}</span>
+                            {u.lastIp && (
+                              <div className="flex items-center gap-1 text-[7px] font-black text-primary/60 uppercase">
+                                <Globe className="w-2 h-2" /> IP: {u.lastIp}
+                              </div>
+                            )}
+                          </div>
                         </div>
                       </div>
 
