@@ -45,7 +45,7 @@ export function StoriesBar() {
 
   return (
     <div className="flex gap-4 p-4 overflow-x-auto scrollbar-hide bg-[#0a0a0c] border-b border-white/5 shrink-0">
-      {/* My Story Button */}
+      {/* Кнопка "Моя история" */}
       <div className="flex flex-col items-center gap-1.5 shrink-0 group cursor-pointer" onClick={() => myStories.length > 0 ? setStoriesToView(myStories) : setIsCreateStoryOpen(true)}>
         <div className={cn(
           "relative h-[64px] w-[64px] rounded-full p-[2px] transition-all",

@@ -80,14 +80,14 @@ const ChatListItem = memo(({
     const deltaY = currentY - touchStartY.current;
 
     if (!directionDecided.current) {
-      // Если движение больше по вертикали, блокируем свайп
+      // Блокируем свайп, если движение явно вертикальное (прокрутка списка)
       if (Math.abs(deltaY) > Math.abs(deltaX) && Math.abs(deltaY) > 5) {
         isVerticalScroll.current = true;
         directionDecided.current = true;
         setOffsetX(0);
         return;
       }
-      // Активируем свайп только при значимом движении вбок
+      // Активируем свайп только при значимом движении в сторону
       if (Math.abs(deltaX) > 10) {
         isHorizontalSwipe.current = true;
         setIsDragging(true);
@@ -96,10 +96,9 @@ const ChatListItem = memo(({
     }
 
     if (isHorizontalSwipe.current) {
-      // Кнопки по 80px каждая, итого 160px в каждую сторону
+      // Максимальный оффсет 160px в обе стороны (2 кнопки по 80px)
       const newOffset = Math.max(-160, Math.min(160, deltaX));
       setOffsetX(newOffset);
-      // Предотвращаем скролл страницы при свайпе вбок
       if (e.cancelable) e.preventDefault();
     }
   };
@@ -111,7 +110,7 @@ const ChatListItem = memo(({
       return;
     }
     
-    // Фиксация кнопок или возврат
+    // Фиксация панелей или возврат в центр
     if (offsetX > 60) setOffsetX(160);
     else if (offsetX < -60) setOffsetX(-160);
     else setOffsetX(0);
@@ -126,37 +125,37 @@ const ChatListItem = memo(({
 
   return (
     <div className="relative overflow-hidden touch-pan-y select-none bg-[#0a0a0c] border-b border-white/[0.02]">
-      {/* Background Actions (Left - swipe right to see) */}
+      {/* Панель СЛЕВА (Свайп вправо) */}
       <div className={cn(
         "absolute inset-y-0 left-0 flex h-full z-0 transition-opacity duration-200",
-        offsetX > 5 ? "opacity-100" : "opacity-0 pointer-events-none"
+        offsetX > 10 ? "opacity-100" : "opacity-0 pointer-events-none"
       )}>
         <button onClick={(e) => { e.stopPropagation(); onMarkUnread(chat.id); resetSwipe(); }} className="w-20 bg-[#007AFF] flex flex-col items-center justify-center text-white gap-1 active:brightness-90 transition-all">
-          <MessageSquare className="w-5 h-5 fill-current" />
-          <span className="text-[10px] font-bold leading-tight px-1 text-center">Не прочитан</span>
+          <MessageCircle className="w-5 h-5 fill-current" />
+          <span className="text-[10px] font-black uppercase leading-tight px-1 text-center">Не прочит.</span>
         </button>
         <button onClick={(e) => { e.stopPropagation(); onPinToggle(chat.id); resetSwipe(); }} className="w-20 bg-[#34C759] flex flex-col items-center justify-center text-white gap-1 active:brightness-90 transition-all">
           <Pin className="w-5 h-5 fill-current" />
-          <span className="text-[10px] font-bold leading-tight px-1 text-center">{isPinned ? 'Открепить' : 'Закрепить'}</span>
+          <span className="text-[10px] font-black uppercase leading-tight px-1 text-center">{isPinned ? 'Открепить' : 'Закрепить'}</span>
         </button>
       </div>
 
-      {/* Background Actions (Right - swipe left to see) */}
+      {/* Панель СПРАВА (Свайп влево) */}
       <div className={cn(
         "absolute inset-y-0 right-0 flex h-full z-0 transition-opacity duration-200",
-        offsetX < -5 ? "opacity-100" : "opacity-0 pointer-events-none"
+        offsetX < -10 ? "opacity-100" : "opacity-0 pointer-events-none"
       )}>
         <button onClick={(e) => { e.stopPropagation(); onMute(chat.id); resetSwipe(); }} className="w-20 bg-[#FF9500] flex flex-col items-center justify-center text-white gap-1 active:brightness-90 transition-all">
           {isMuted ? <Volume2 className="w-5 h-5" /> : <VolumeX className="w-5 h-5 fill-current" />}
-          <span className="text-[10px] font-bold leading-tight px-1 text-center">{isMuted ? 'Звук' : 'Без звука'}</span>
+          <span className="text-[10px] font-black uppercase leading-tight px-1 text-center">{isMuted ? 'Звук' : 'Тихо'}</span>
         </button>
         <button onClick={(e) => { e.stopPropagation(); onDelete(chat.id); resetSwipe(); }} className="w-20 bg-[#FF3B30] flex flex-col items-center justify-center text-white gap-1 active:brightness-90 transition-all">
           <Trash2 className="w-5 h-5 fill-current" />
-          <span className="text-[10px] font-bold leading-tight px-1 text-center">Удалить</span>
+          <span className="text-[10px] font-black uppercase leading-tight px-1 text-center">Удалить</span>
         </button>
       </div>
 
-      {/* Main Content Layer */}
+      {/* Основной контент (Верхний слой) */}
       <div 
         className={cn(
           "relative z-10 bg-[#0a0a0c] will-change-transform", 
@@ -171,11 +170,11 @@ const ChatListItem = memo(({
         <ContextMenu>
           <ContextMenuTrigger disabled={Math.abs(offsetX) > 10}>
             <div className={cn(
-              "flex items-center gap-3 px-4 py-2.5 cursor-pointer transition-colors border-none group relative",
+              "flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors border-none group relative bg-[#0a0a0c]",
               isActive && Math.abs(offsetX) < 5 ? 'bg-white/10' : 'active:bg-white/[0.05]'
             )}>
-              <UserAvatar userId={otherId} manualAvatarUrl={otherProfile?.avatarUrl || chat.avatarUrl} className="h-[52px] w-[52px]" fallbackName={finalDisplayName} showOnlineStatus />
-              <div className="flex-1 min-w-0 pb-3 h-full flex flex-col justify-center">
+              <UserAvatar userId={otherId} manualAvatarUrl={otherProfile?.avatarUrl || chat.avatarUrl} className="h-[54px] w-[54px]" fallbackName={finalDisplayName} showOnlineStatus />
+              <div className="flex-1 min-w-0 pb-1 h-full flex flex-col justify-center border-b border-white/[0.03]">
                 <div className="flex items-center justify-between mb-0.5">
                   <span className="font-bold text-[16px] text-white truncate flex items-center gap-1">
                     {isPinned && <Pin className="w-3 h-3 text-primary fill-primary rotate-45" />}
@@ -277,7 +276,7 @@ export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?:
 
   return (
     <div className="flex flex-col h-full bg-[#0a0a0c] overflow-hidden">
-      {/* Fixed Header */}
+      {/* Фиксированная Шапка */}
       <div className="px-4 pt-4 shrink-0 bg-[#0a0a0c] z-20">
         <div className="grid grid-cols-3 items-center h-12 mb-2 w-full">
           <div className="flex justify-start">
@@ -311,7 +310,7 @@ export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?:
 
       <ScrollArea className="flex-1 scrollbar-hide">
         <div className="flex flex-col">
-          {/* Stories and Tabs are now part of the scrollable content */}
+          {/* Истории и Табы уходят при скролле */}
           {!isArchiveView && (
             <div className="animate-in fade-in slide-in-from-top-4 duration-500">
               <StoriesBar />
