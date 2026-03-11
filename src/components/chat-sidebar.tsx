@@ -1,12 +1,12 @@
 
 "use client"
 
-import React, { useState, useMemo, memo, useRef, useEffect } from 'react';
+import React, { useState, useMemo, memo, useRef } from 'react';
 import { useAppState } from '@/lib/store';
 import { Button } from '@/components/ui/button';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
-  Plus, SquarePen, Ghost, Search, Star, Pin, PinOff, MessageSquare, VolumeX, Trash2, Volume2, MessageCircle
+  Plus, SquarePen, Ghost, Search, Star, Pin, PinOff, VolumeX, Trash2, Volume2, MessageCircle
 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { CreateChatModal } from './modals/create-chat-modal';
@@ -120,8 +120,8 @@ const ChatListItem = memo(({
   };
 
   return (
-    <div className="relative overflow-hidden touch-pan-y select-none bg-[#0a0a0c]">
-      {/* Кнопки СЛЕВА */}
+    <div className="relative overflow-hidden touch-pan-y select-none bg-[#0a0a0c] border-none">
+      {/* Кнопки СЛЕВА (свайп вправо) */}
       <div className={cn(
         "absolute inset-y-0 left-0 flex h-full z-0 transition-opacity duration-200",
         offsetX > 10 ? "opacity-100" : "opacity-0 pointer-events-none"
@@ -136,7 +136,7 @@ const ChatListItem = memo(({
         </button>
       </div>
 
-      {/* Кнопки СПРАВА */}
+      {/* Кнопки СПРАВА (свайп влево) */}
       <div className={cn(
         "absolute inset-y-0 right-0 flex h-full z-0 transition-opacity duration-200",
         offsetX < -10 ? "opacity-100" : "opacity-0 pointer-events-none"

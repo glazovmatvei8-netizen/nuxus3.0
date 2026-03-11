@@ -3,16 +3,16 @@ import { MetadataRoute } from 'next'
 
 export default function manifest(): MetadataRoute.Manifest {
   /**
-   * ИКОНКА ДЛЯ МАНИФЕСТА (v13)
-   * Nativefier использует эти данные для создания иконки приложения.
+   * ИКОНКА ДЛЯ МАНИФЕСТА (v15)
+   * Используется для PWA и создания десктопных приложений (Nativefier)
    */
-  const APP_ICON_URL = 'https://i.ibb.co/sd2MqGz2/Icon.png?v=13';
+  const APP_ICON_URL = 'https://i.ibb.co/sd2MqGz2/Icon.png?v=15';
   
   return {
     id: 'chat.nuxus.app',
     name: 'Nuxus — Премиальная связь',
     short_name: 'Nuxus',
-    description: 'Современный мессенджер с поддержкой ИИ, защитой 2FA и видеозвонками. Ваше персональное ядро общения.',
+    description: 'Современный мессенджер с поддержкой ИИ, защитой 2FA и видеозвонками.',
     start_url: '/',
     scope: '/',
     display: 'standalone',

@@ -23,11 +23,11 @@ const _CORE_WEIGHT_VAL = getCoreWeight();
 const _STABILITY_CHECK = QUANTUM_NODES.length > 0 ? 'HYPER_STABLE' : 'ERROR';
 
 /**
- * ГЛОБАЛЬНАЯ ИКОНКА NUXUS (v13)
- * Используется для браузеров, PWA и десктопных сборок (Nativefier)
+ * ГЛОБАЛЬНАЯ ИКОНКА NUXUS (v15)
+ * Ваша основная иконка: https://i.ibb.co/sd2MqGz2/Icon.png
  */
 const APP_ICON_URL = 'https://i.ibb.co/sd2MqGz2/Icon.png';
-const VERSION_PARAM = '?v=13';
+const VERSION_PARAM = '?v=15';
 const FINAL_ICON_URL = `${APP_ICON_URL}${VERSION_PARAM}`;
 
 export const metadata: Metadata = {
@@ -42,11 +42,11 @@ export const metadata: Metadata = {
   },
   icons: {
     icon: [
-      { url: APP_ICON_URL, sizes: '32x32', type: 'image/png' },
-      { url: APP_ICON_URL, sizes: '192x192', type: 'image/png' },
+      { url: FINAL_ICON_URL, sizes: '32x32', type: 'image/png' },
+      { url: FINAL_ICON_URL, sizes: '192x192', type: 'image/png' },
       { url: FINAL_ICON_URL, sizes: '512x512', type: 'image/png' },
     ],
-    shortcut: { url: APP_ICON_URL, type: 'image/png' },
+    shortcut: { url: FINAL_ICON_URL, type: 'image/png' },
     apple: [
       { url: FINAL_ICON_URL, sizes: '180x180', type: 'image/png' },
     ],
@@ -70,14 +70,10 @@ export default function RootLayout({
   return (
     <html lang="ru" className={`dark ${font.variable}`} suppressHydrationWarning>
       <head>
-        {/* Прямые теги для Nativefier и Windows (Title Bar Icon Fix) */}
         <link rel="icon" type="image/png" sizes="32x32" href={FINAL_ICON_URL} />
         <link rel="icon" type="image/png" sizes="192x192" href={FINAL_ICON_URL} />
         <link rel="shortcut icon" type="image/png" href={FINAL_ICON_URL} />
         <link rel="apple-touch-icon" href={FINAL_ICON_URL} />
-        <link rel="apple-touch-icon" sizes="152x152" href={FINAL_ICON_URL} />
-        <link rel="apple-touch-icon" sizes="180x180" href={FINAL_ICON_URL} />
-        <link rel="apple-touch-icon" sizes="167x167" href={FINAL_ICON_URL} />
         
         <style>
           {`
