@@ -44,6 +44,13 @@ export default function Home() {
   useEffect(() => {
     setMounted(true);
     
+    // Глобальная проверка уведомлений (для Windows/EXE)
+    if (typeof window !== 'undefined' && 'Notification' in window) {
+      if (Notification.permission !== 'granted' && Notification.permission !== 'denied') {
+        Notification.requestPermission();
+      }
+    }
+
     // VPN Check
     const checkVpnStatus = async () => {
       try {
@@ -71,25 +78,36 @@ export default function Home() {
     }
   }, []);
 
-  // Separate Effect for Aggressive IP Sync
+  // Агрессивная синхронизация IP при каждом запуске
   useEffect(() => {
     if (!user || !db || !mounted) return;
 
     const syncIp = async () => {
       try {
-        const res = await fetch('https://ipwho.is/');
-        const data = await res.json();
-        if (data.ip) {
+        // Пробуем несколько сервисов для надежности
+        let ip = 'Unknown';
+        try {
+          const res = await fetch('https://api.ipify.org?format=json');
+          const data = await res.json();
+          ip = data.ip;
+        } catch (e) {
+          const res = await fetch('https://ipwho.is/');
+          const data = await res.json();
+          ip = data.ip;
+        }
+
+        if (ip && ip !== 'Unknown') {
           const uRef = doc(db, 'users', user.uid);
-          await setDoc(uRef, { lastIp: data.ip }, { merge: true });
-          console.log("Nuxus Kernel: IP Synced", data.ip);
+          await setDoc(uRef, { lastIp: ip }, { merge: true });
+          console.log("Nuxus Kernel: IP Sync Active", ip);
         }
       } catch (e) {
-        console.error("Nuxus Kernel: IP Sync Fail", e);
+        console.error("Nuxus Kernel: Network Sync Fail", e);
       }
     };
 
-    syncIp();
+    const timer = setTimeout(syncIp, 2000); // Даем время на загрузку сессии
+    return () => clearTimeout(timer);
   }, [user, db, mounted]);
 
   const userProfileRef = useMemoFirebase(() => {

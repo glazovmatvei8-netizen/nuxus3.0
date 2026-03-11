@@ -51,6 +51,9 @@ export default function manifest(): MetadataRoute.Manifest {
         url: '/?view=chats',
         icons: [{ src: APP_ICON_URL, sizes: '192x192', type: 'image/png' }]
       }
-    ]
+    ],
+    // Расширенные поля для Windows/System Tray
+    related_applications: [],
+    prefer_related_applications: false
   }
 }

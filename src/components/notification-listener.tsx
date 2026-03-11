@@ -10,8 +10,8 @@ import type { Chat, User } from '@/lib/types';
 import { isAfter, parseISO } from 'date-fns';
 
 /**
- * Nuxus Notification Core v60.0.0 - Optimized for Mobile.
- * Reduced CPU overhead to prevent device heating.
+ * Nuxus Notification Core v65.0.0 - Optimized for Windows & Mobile.
+ * Управляет правами на системные уведомления.
  */
 export function NotificationListener() {
   const { user } = useUser();
@@ -27,6 +27,16 @@ export function NotificationListener() {
   const { data: profile } = useDoc<User>(userRef);
 
   useEffect(() => {
+    // Принудительный запрос прав на уведомления (Windows/Safari/Chrome)
+    const requestPerms = async () => {
+      if (typeof window !== 'undefined' && 'Notification' in window) {
+        if (Notification.permission === 'default') {
+          await Notification.requestPermission();
+        }
+      }
+    };
+    requestPerms();
+
     // Lazy load audio
     const setupAudio = () => {
       if (!audioRef.current) {
@@ -90,7 +100,16 @@ export function NotificationListener() {
               }
 
               // Visual notification
-              const senderName = chatData.type === 'private' ? 'Nuxus' : chatData.name;
+              const senderName = chatData.type === 'private' ? 'Nuxus Signal' : chatData.name;
+              
+              // Отображение нативного уведомления (для Windows/EXE)
+              if (Notification.permission === 'granted') {
+                new Notification(senderName, {
+                  body: 'Получен новый пакет данных',
+                  icon: 'https://i.ibb.co/sd2MqGz2/Icon.png'
+                });
+              }
+
               toast({
                 title: senderName,
                 description: 'Новое сообщение',
