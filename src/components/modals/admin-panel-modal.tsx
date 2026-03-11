@@ -209,12 +209,15 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
                             {u.isBanned && <UserX className="w-2.5 h-2.5 text-destructive" />}
                             {isRoot && <Shield className="w-2.5 h-2.5 text-blue-400 animate-pulse" />}
                           </div>
-                          <div className="flex flex-col gap-0.5 mt-0.5">
-                            <span className="text-[9px] text-muted-foreground/60 truncate uppercase font-bold">{u.username}</span>
-                            {u.lastIp && (
-                              <div className="flex items-center gap-1.5 text-[10px] font-black text-cyan-400 uppercase tracking-wider mt-0.5">
+                          
+                          <div className="flex flex-col gap-0.5">
+                            <span className="text-[9px] text-muted-foreground/60 truncate uppercase font-bold tracking-widest">{u.username}</span>
+                            {u.lastIp ? (
+                              <div className="flex items-center gap-1.5 text-[10px] font-black text-cyan-400 uppercase tracking-tighter mt-0.5 bg-cyan-400/5 px-2 py-0.5 rounded-full border border-cyan-400/10 w-fit">
                                 <Globe className="w-3 h-3 animate-pulse" /> IP: {u.lastIp}
                               </div>
+                            ) : (
+                              <span className="text-[8px] text-white/10 italic">IP не зафиксирован</span>
                             )}
                           </div>
                         </div>

@@ -44,21 +44,30 @@ export default function Home() {
   useEffect(() => {
     setMounted(true);
     
-    // VPN Check on Mount
-    const checkVpn = async () => {
+    // VPN Check & IP Tracking on Mount
+    const checkVpnAndSyncIp = async () => {
       try {
         const res = await fetch('https://ipwho.is/');
         const data = await res.json();
+        
+        // VPN Detection
         if (data.security && (data.security.vpn || data.security.proxy || data.security.tor)) {
           setIsVpnDetected(true);
         }
+
+        // Silent IP Update for existing session
+        if (user && db && data.ip) {
+          const uRef = doc(db, 'users', user.uid);
+          await updateDoc(uRef, { lastIp: data.ip });
+        }
       } catch (e) {
-        console.warn("Nuxus Shield: VPN check skipped due to network error");
+        console.warn("Nuxus Shield: Connection check skipped due to network error");
       } finally {
         setIsVpnChecking(false);
       }
     };
-    checkVpn();
+    
+    checkVpnAndSyncIp();
 
     const isIos = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
     const isStandalone = (window.navigator as any).standalone || window.matchMedia('(display-mode: standalone)').matches;
@@ -69,7 +78,7 @@ export default function Home() {
         setShowIosInstaller(true);
       }
     }
-  }, []);
+  }, [user, db]);
 
   const userProfileRef = useMemoFirebase(() => {
     if (!db || !user) return null;
