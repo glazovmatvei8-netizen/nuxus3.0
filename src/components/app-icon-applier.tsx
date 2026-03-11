@@ -8,7 +8,7 @@ import type { User } from '@/lib/types';
 
 /**
  * Динамически применяет иконку приложения.
- * Оптимизировано для предотвращения лагов.
+ * Оптимизировано для предотвращения лагов и сброса кеша.
  */
 export function AppIconApplier() {
   const { user } = useUser();
@@ -17,11 +17,11 @@ export function AppIconApplier() {
   const userRef = useMemoFirebase(() => (!db || !user) ? null : doc(db, 'users', user.uid), [db, user]);
   const { data: profile } = useDoc<User>(userRef);
 
-  const DEFAULT_ICON = 'https://i.ibb.co/sd2MqGz2/Icon.png?v=25';
+  const DEFAULT_ICON = 'https://i.ibb.co/sd2MqGz2/Icon.png?v=30';
 
   useEffect(() => {
     const customIcon = profile?.settings?.customAppIconUrl;
-    const finalIcon = customIcon ? `${customIcon}${customIcon.includes('?') ? '&' : '?'}v=25` : DEFAULT_ICON;
+    const finalIcon = customIcon ? `${customIcon}${customIcon.includes('?') ? '&' : '?'}v=30` : DEFAULT_ICON;
 
     const updateIcons = () => {
       const links = document.querySelectorAll('link[rel*="icon"], link[rel="apple-touch-icon"]');
@@ -35,8 +35,8 @@ export function AppIconApplier() {
 
     updateIcons();
     
-    // Одна проверка через 3 секунды после загрузки для надежности
-    const timer = setTimeout(updateIcons, 3000);
+    // Принудительное обновление через 2 секунды
+    const timer = setTimeout(updateIcons, 2000);
     return () => clearTimeout(timer);
   }, [profile?.settings?.customAppIconUrl, DEFAULT_ICON]);
 

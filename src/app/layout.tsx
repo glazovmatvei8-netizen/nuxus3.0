@@ -19,11 +19,11 @@ const font = Plus_Jakarta_Sans({
 });
 
 /**
- * ГЛОБАЛЬНАЯ ИКОНКА NUXUS (v25)
+ * ГЛОБАЛЬНАЯ ИКОНКА NUXUS (v30)
  * Основной источник: https://i.ibb.co/sd2MqGz2/Icon.png
  */
 const APP_ICON_URL = 'https://i.ibb.co/sd2MqGz2/Icon.png';
-const VERSION_PARAM = '?v=25';
+const VERSION_PARAM = '?v=30';
 const FINAL_ICON_URL = `${APP_ICON_URL}${VERSION_PARAM}`;
 
 export const metadata: Metadata = {
@@ -67,7 +67,6 @@ export default function RootLayout({
   return (
     <html lang="ru" className={`dark ${font.variable}`} suppressHydrationWarning>
       <head>
-        {/* Принудительная вставка favicon для Edge и Chrome */}
         <link rel="icon" type="image/png" sizes="32x32" href={FINAL_ICON_URL} />
         <link rel="shortcut icon" href={FINAL_ICON_URL} />
         <style>
