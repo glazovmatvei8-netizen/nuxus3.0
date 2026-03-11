@@ -289,9 +289,11 @@ export default function AuthScreen() {
                   </Button>
 
                   {mode === 'register' && (
-                    <p className="text-[8px] text-white/20 text-center uppercase font-bold tracking-wider px-2">
-                      Принимаю <button type="button" onClick={() => setLegalModal({ open: true, type: 'terms' })} className="text-primary/60 hover:underline">Условия</button> и <button type="button" onClick={() => setLegalModal({ open: true, type: 'privacy' })} className="text-primary/60 hover:underline">Политику</button>
-                    </p>
+                    <div className="pt-2">
+                      <p className="text-[8px] text-white/20 text-center uppercase font-bold tracking-wider px-2">
+                        Принимаю <button type="button" onClick={() => setLegalModal({ open: true, type: 'terms' })} className="text-primary/60 hover:underline">Условия</button> и <button type="button" onClick={() => setLegalModal({ open: true, type: 'privacy' })} className="text-primary/60 hover:underline">Политику</button>
+                      </p>
+                    </div>
                   )}
                 </form>
               )}
