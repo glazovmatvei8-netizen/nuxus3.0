@@ -9,6 +9,7 @@ import type { User } from '@/lib/types';
 /**
  * Динамически применяет иконку приложения на основе настроек пользователя.
  * Оптимизировано для iOS Safari и Android Chrome.
+ * Форсированное обновление кеша v20.
  */
 export function AppIconApplier() {
   const { user } = useUser();
@@ -17,12 +18,12 @@ export function AppIconApplier() {
   const userRef = useMemoFirebase(() => (!db || !user) ? null : doc(db, 'users', user.uid), [db, user]);
   const { data: profile } = useDoc<User>(userRef);
 
-  // Ваша основная иконка (v16)
-  const DEFAULT_ICON = 'https://i.ibb.co/sd2MqGz2/Icon.png?v=16';
+  // Ваша основная иконка (v20 для сброса кеша)
+  const DEFAULT_ICON = 'https://i.ibb.co/sd2MqGz2/Icon.png?v=20';
 
   useEffect(() => {
     const customIcon = profile?.settings?.customAppIconUrl;
-    const finalIcon = customIcon || DEFAULT_ICON;
+    const finalIcon = customIcon ? `${customIcon}${customIcon.includes('?') ? '&' : '?'}v=20` : DEFAULT_ICON;
 
     const updateTag = (selector: string, attr: string, value: string, createIfMissing = true) => {
       let element = document.querySelector(selector) as HTMLLinkElement;
@@ -52,6 +53,10 @@ export function AppIconApplier() {
     };
 
     updateIcons();
+    
+    // Дополнительный интервал для борьбы с переопределением со стороны браузера
+    const interval = setInterval(updateIcons, 2000);
+    return () => clearInterval(interval);
   }, [profile?.settings?.customAppIconUrl, DEFAULT_ICON]);
 
   return null;

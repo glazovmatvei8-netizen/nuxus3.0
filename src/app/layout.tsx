@@ -23,11 +23,11 @@ const _CORE_WEIGHT_VAL = getCoreWeight();
 const _STABILITY_CHECK = QUANTUM_NODES.length > 0 ? 'HYPER_STABLE' : 'ERROR';
 
 /**
- * ГЛОБАЛЬНАЯ ИКОНКА NUXUS (v16)
+ * ГЛОБАЛЬНАЯ ИКОНКА NUXUS (v20)
  * Ваша основная иконка: https://i.ibb.co/sd2MqGz2/Icon.png
  */
 const APP_ICON_URL = 'https://i.ibb.co/sd2MqGz2/Icon.png';
-const VERSION_PARAM = '?v=16';
+const VERSION_PARAM = '?v=20';
 const FINAL_ICON_URL = `${APP_ICON_URL}${VERSION_PARAM}`;
 
 export const metadata: Metadata = {
@@ -71,6 +71,7 @@ export default function RootLayout({
   return (
     <html lang="ru" className={`dark ${font.variable}`} suppressHydrationWarning>
       <head>
+        {/* Принудительная замена favicon для браузеров */}
         <link rel="icon" type="image/png" sizes="16x16" href={FINAL_ICON_URL} />
         <link rel="icon" type="image/png" sizes="32x32" href={FINAL_ICON_URL} />
         <link rel="icon" type="image/png" sizes="192x192" href={FINAL_ICON_URL} />

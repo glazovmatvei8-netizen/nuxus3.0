@@ -3,10 +3,10 @@ import { MetadataRoute } from 'next'
 
 export default function manifest(): MetadataRoute.Manifest {
   /**
-   * ИКОНКА ДЛЯ МАНИФЕСТА (v16)
+   * ИКОНКА ДЛЯ МАНИФЕСТА (v20)
    * Используется для PWA и создания десктопных приложений (Nativefier)
    */
-  const APP_ICON_URL = 'https://i.ibb.co/sd2MqGz2/Icon.png?v=16';
+  const APP_ICON_URL = 'https://i.ibb.co/sd2MqGz2/Icon.png?v=20';
   
   return {
     id: 'chat.nuxus.app',
