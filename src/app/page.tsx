@@ -5,7 +5,7 @@ import { useUser, useFirestore, useDoc, useMemoFirebase, useAuth } from '@/fireb
 import { useAppState } from '@/lib/store';
 import AuthScreen from '@/components/auth-screen';
 import ChatMain from '@/components/chat-main';
-import { Loader2, ShieldAlert, Lock, ArrowRight } from 'lucide-react';
+import { Loader2, ShieldAlert, Lock, ArrowRight, ShieldCheck } from 'lucide-react';
 import { doc, collection, query, where, limit, getDocs, arrayUnion, updateDoc, getDoc } from 'firebase/firestore';
 import type { User as UserType, Chat, StickerPack } from '@/lib/types';
 import { Button } from '@/components/ui/button';
@@ -168,26 +168,42 @@ export default function Home() {
 
   if (profile?.twoFactorEnabled && !is2FAVerified) {
     return (
-      <div className="h-screen w-full flex items-center justify-center bg-[#0a0a0c]">
-        <div className="w-full max-w-md p-8 space-y-8 text-center">
-          <div className="bg-primary/10 w-20 h-20 rounded-3xl flex items-center justify-center mx-auto">
-            <Lock className="w-10 h-10 text-primary" />
+      <div className="h-screen w-full flex flex-col items-center justify-center bg-[#0a0a0c] relative overflow-hidden px-6">
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full max-w-lg aspect-square bg-primary/5 blur-[120px] rounded-full -z-10" />
+        
+        <div className="w-full max-w-md space-y-12 text-center">
+          <div className="space-y-6">
+            <div className="relative inline-block">
+              <div className="absolute inset-0 bg-primary blur-2xl opacity-20 animate-pulse" />
+              <div className="bg-white/[0.03] border border-white/5 w-24 h-24 rounded-[2rem] flex items-center justify-center mx-auto relative z-10">
+                <Lock className="w-10 h-10 text-primary animate-float" />
+              </div>
+            </div>
+            
+            <div className="space-y-2">
+              <h2 className="text-3xl font-black uppercase italic text-white tracking-tighter">Введите PIN</h2>
+              <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-muted-foreground/60">Защита облачного пароля активна</p>
+            </div>
           </div>
-          <div className="space-y-4">
-            <h2 className="text-2xl font-black uppercase italic text-white">Введите PIN</h2>
+
+          <div className="space-y-6">
             <Input 
               type="password" 
               placeholder="••••••" 
               maxLength={6} 
-              className="bg-white/5 border-white/5 h-16 text-2xl tracking-[0.5em] text-center rounded-2xl font-black"
+              autoFocus
+              className="bg-white/5 border-white/10 h-20 text-4xl tracking-[0.8em] text-center rounded-[2rem] font-black focus:border-primary/50 transition-all shadow-[0_0_40px_rgba(0,0,0,0.3)]"
               value={twoFactorInput}
-              onChange={e => setTwoFactorInput(e.target.value)}
+              onChange={e => setTwoFactorInput(e.target.value.replace(/\D/g, ''))}
               onKeyDown={e => e.key === 'Enter' && handleVerify2FA()}
             />
-            <Button onClick={handleVerify2FA} className="w-full h-14 rounded-2xl bg-primary font-black uppercase italic tracking-widest">
-              Войти <ArrowRight className="w-5 h-5 ml-2" />
-            </Button>
-            <Button variant="ghost" onClick={() => signOut(auth)} className="w-full text-[10px] font-bold uppercase opacity-40">Выйти</Button>
+            
+            <div className="space-y-3">
+              <Button onClick={handleVerify2FA} className="w-full h-16 rounded-[1.8rem] bg-primary hover:bg-primary/90 text-white font-black uppercase italic tracking-widest text-base shadow-2xl shadow-primary/20 group">
+                Разблокировать <ArrowRight className="w-6 h-6 ml-2 group-hover:translate-x-1 transition-transform" />
+              </Button>
+              <Button variant="ghost" onClick={() => signOut(auth)} className="w-full text-[10px] font-black uppercase tracking-widest text-muted-foreground/40 hover:text-white transition-colors">Сменить узел (Выход)</Button>
+            </div>
           </div>
         </div>
       </div>
@@ -202,7 +218,7 @@ export default function Home() {
         <DialogContent className="max-w-xs bg-card border-white/10 rounded-[2.5rem] p-6 text-center">
           <DialogHeader>
             <DialogTitle className="text-xl font-black uppercase italic text-white">Новый Стикерпак</DialogTitle>
-            <DialogDescription className="text-xs uppercase font-bold tracking-widest text-muted-foreground/60">
+            <DialogDescription className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground/60">
               Вы хотите добавить этот набор?
             </DialogDescription>
           </DialogHeader>
