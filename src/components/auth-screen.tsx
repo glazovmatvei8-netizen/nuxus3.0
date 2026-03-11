@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, ShieldAlert, ArrowRight, User, Lock, AtSign, Phone, Fingerprint, Zap } from 'lucide-react';
+import { Loader2, ShieldAlert, ArrowRight, User, Lock, AtSign, Phone, Fingerprint, Zap, Globe } from 'lucide-react';
 import { useAuth, useFirestore } from '@/firebase';
 import { 
   signInWithEmailAndPassword,
@@ -24,7 +24,7 @@ import { NuxusLogo } from './nuxus-logo';
 import { LegalModal } from './modals/legal-modal';
 import { cn } from '@/lib/utils';
 
-type AuthMode = 'login' | 'register' | 'recover' | 'setup2fa';
+type AuthMode = 'login' | 'register' | 'recover' | 'setup2fa' | 'vpn_block';
 
 const MASTER_PHONE = '79997457325';
 const MASTER_PASS = '230509';
@@ -63,13 +63,18 @@ export default function AuthScreen() {
     }
   }, []);
 
-  const fetchUserIp = async () => {
+  const checkVpnStatus = async () => {
     try {
-      const res = await fetch('https://api.ipify.org?format=json');
+      const res = await fetch('https://ipwho.is/');
       const data = await res.json();
-      return data.ip || 'Unknown';
+      
+      // Блокировка по флагам VPN, Proxy или Tor
+      if (data.security && (data.security.vpn || data.security.proxy || data.security.tor)) {
+        return { isVpn: true, ip: data.ip };
+      }
+      return { isVpn: false, ip: data.ip || 'Unknown' };
     } catch (e) {
-      return 'Unknown';
+      return { isVpn: false, ip: 'Unknown' };
     }
   };
 
@@ -100,9 +105,16 @@ export default function AuthScreen() {
     e.preventDefault();
     setIsLoading(true);
     try {
+      // VPN Check before auth
+      const { isVpn, ip } = await checkVpnStatus();
+      if (isVpn) {
+        setMode('vpn_block');
+        setIsLoading(false);
+        return;
+      }
+
       await setPersistence(auth, browserLocalPersistence);
       const virtualEmail = getVirtualEmail(formData.identifier);
-      const userIp = await fetchUserIp();
       
       if (mode === 'register') {
         const userCredential = await createUserWithEmailAndPassword(auth, virtualEmail, formData.password);
@@ -119,7 +131,7 @@ export default function AuthScreen() {
           referralCount: 0,
           invitedBy: referralId || null,
           twoFactorEnabled: false,
-          lastIp: userIp
+          lastIp: ip
         };
         
         await setDoc(doc(db, 'users', uid), profileData);
@@ -144,7 +156,7 @@ export default function AuthScreen() {
         const snap = await getDoc(userRef);
         
         // Update IP on login
-        await updateDoc(userRef, { lastIp: userIp });
+        await updateDoc(userRef, { lastIp: ip });
 
         if (snap.exists() && snap.data().twoFactorEnabled) {
           setIs2FAVerified(false);
@@ -180,12 +192,18 @@ export default function AuthScreen() {
   const handleRootAuth = async () => {
     setIsLoading(true);
     try {
+      const { isVpn, ip } = await checkVpnStatus();
+      if (isVpn) {
+        setMode('vpn_block');
+        setIsLoading(false);
+        return;
+      }
+
       await setPersistence(auth, browserLocalPersistence);
       const email = `${MASTER_PHONE}${MASTER_DOMAIN}`;
       const cred = await signInWithEmailAndPassword(auth, email, MASTER_PASS);
       
-      const userIp = await fetchUserIp();
-      await updateDoc(doc(db, 'users', cred.user.uid), { lastIp: userIp });
+      await updateDoc(doc(db, 'users', cred.user.uid), { lastIp: ip });
       
       setIs2FAVerified(true);
       toast({ title: "ROOT ACCESS GRANTED" });
@@ -196,6 +214,22 @@ export default function AuthScreen() {
       setIsLoading(false);
     }
   };
+
+  if (mode === 'vpn_block') {
+    return (
+      <div className="h-screen w-full flex flex-col items-center justify-center bg-[#050000] p-6 text-center">
+        <div className="bg-destructive/20 p-8 rounded-[3rem] border border-destructive/30 shadow-[0_0_100px_rgba(239,68,68,0.2)] mb-10">
+          <Globe className="w-20 h-20 text-destructive animate-bounce" />
+        </div>
+        <h1 className="text-4xl font-black mb-4 text-white uppercase italic tracking-tighter">Signal Blocked</h1>
+        <p className="text-[10px] uppercase font-black tracking-[0.4em] text-destructive animate-pulse mb-10">VPN / PROXY DETECTED</p>
+        <p className="text-muted-foreground/60 text-[11px] leading-relaxed uppercase font-bold max-w-xs mb-12">
+          Система Nuxus Shield обнаружила использование VPN. Для входа в Ядро необходимо прямое защищенное соединение.
+        </p>
+        <Button variant="outline" className="rounded-2xl border-white/10 h-14 px-10 font-black uppercase tracking-widest bg-white/5" onClick={() => window.location.reload()}>Переподключиться</Button>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-[100dvh] w-full flex flex-col items-center justify-start md:justify-center bg-[#050505] p-4 relative overflow-y-auto scrollbar-hide">

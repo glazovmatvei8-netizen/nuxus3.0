@@ -5,7 +5,7 @@ import { useUser, useFirestore, useDoc, useMemoFirebase, useAuth } from '@/fireb
 import { useAppState } from '@/lib/store';
 import AuthScreen from '@/components/auth-screen';
 import ChatMain from '@/components/chat-main';
-import { Loader2, ShieldAlert, Lock, ArrowRight, ShieldCheck, Fingerprint } from 'lucide-react';
+import { Loader2, ShieldAlert, Lock, ArrowRight, ShieldCheck, Fingerprint, WifiOff, Globe } from 'lucide-react';
 import { doc, collection, query, where, limit, getDocs, arrayUnion, updateDoc, getDoc } from 'firebase/firestore';
 import type { User as UserType, Chat, StickerPack } from '@/lib/types';
 import { Button } from '@/components/ui/button';
@@ -36,12 +36,30 @@ export default function Home() {
   const [isJoining, setIsJoining] = useState(false);
   const [twoFactorInput, setTwoFactorInput] = useState('');
   const [showIosInstaller, setShowIosInstaller] = useState(false);
+  const [isVpnDetected, setIsVpnDetected] = useState(false);
+  const [isVpnChecking, setIsVpnChecking] = useState(true);
   
   const [stickerPackToInstall, setStickerPackToInstall] = useState<StickerPack | null>(null);
 
   useEffect(() => {
     setMounted(true);
     
+    // VPN Check on Mount
+    const checkVpn = async () => {
+      try {
+        const res = await fetch('https://ipwho.is/');
+        const data = await res.json();
+        if (data.security && (data.security.vpn || data.security.proxy || data.security.tor)) {
+          setIsVpnDetected(true);
+        }
+      } catch (e) {
+        console.warn("Nuxus Shield: VPN check skipped due to network error");
+      } finally {
+        setIsVpnChecking(false);
+      }
+    };
+    checkVpn();
+
     const isIos = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
     const isStandalone = (window.navigator as any).standalone || window.matchMedia('(display-mode: standalone)').matches;
     
@@ -134,14 +152,38 @@ export default function Home() {
 
   if (!mounted) return null;
 
-  if (isUserLoading || (user && isProfileLoading)) {
+  // VPN Block Screen
+  if (isVpnDetected) {
+    return (
+      <div className="h-screen w-full flex flex-col items-center justify-center bg-[#050000] p-6 text-center relative overflow-hidden">
+        <div className="absolute inset-0 bg-destructive/5 animate-pulse" />
+        <div className="relative z-10 space-y-8 max-w-sm">
+          <div className="bg-destructive/20 p-8 rounded-[3rem] border border-destructive/30 shadow-[0_0_100px_rgba(239,68,68,0.2)] mx-auto w-fit">
+            <Globe className="w-20 h-20 text-destructive animate-bounce" />
+          </div>
+          <div className="space-y-4">
+            <h1 className="text-4xl font-black text-white uppercase italic tracking-tighter">Signal Interference</h1>
+            <p className="text-[10px] uppercase font-black tracking-[0.4em] text-destructive animate-pulse">VPN / Proxy Detection Active</p>
+            <p className="text-muted-foreground/60 text-[11px] leading-relaxed uppercase font-bold px-4">
+              Использование анонимайзеров запрещено протоколами Ядра Nuxus. Пожалуйста, отключите VPN и перезапустите приложение.
+            </p>
+          </div>
+          <Button variant="outline" className="rounded-2xl border-white/10 h-14 px-10 font-black uppercase tracking-widest bg-white/5" onClick={() => window.location.reload()}>
+            Проверить сигнал
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  if (isUserLoading || isVpnChecking || (user && isProfileLoading)) {
     return (
       <div className="h-[100dvh] w-full flex flex-col items-center justify-center bg-[#050505] text-white">
         <NuxusLogo size={120} />
         <div className="mt-12 flex flex-col items-center gap-4">
           <Loader2 className="w-6 h-6 text-primary animate-spin" />
           <p className="text-[10px] font-black uppercase tracking-[0.5em] text-primary/60 animate-pulse">
-            Neural Syncing...
+            {isVpnChecking ? 'Shield Scanning...' : 'Neural Syncing...'}
           </p>
         </div>
       </div>
