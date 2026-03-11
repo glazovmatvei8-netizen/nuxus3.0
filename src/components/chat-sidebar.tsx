@@ -74,15 +74,20 @@ const ChatListItem = memo(({
   const handleTouchMove = (e: React.TouchEvent) => {
     if (isVerticalScroll.current) return;
 
-    const deltaX = e.touches[0].clientX - touchStartX.current;
-    const deltaY = e.touches[0].clientY - touchStartY.current;
+    const currentX = e.touches[0].clientX;
+    const currentY = e.touches[0].clientY;
+    const deltaX = currentX - touchStartX.current;
+    const deltaY = currentY - touchStartY.current;
 
     if (!directionDecided.current) {
+      // Если движение больше по вертикали, блокируем свайп
       if (Math.abs(deltaY) > Math.abs(deltaX) && Math.abs(deltaY) > 5) {
         isVerticalScroll.current = true;
         directionDecided.current = true;
+        setOffsetX(0);
         return;
       }
+      // Активируем свайп только при значимом движении вбок
       if (Math.abs(deltaX) > 10) {
         isHorizontalSwipe.current = true;
         setIsDragging(true);
@@ -91,9 +96,10 @@ const ChatListItem = memo(({
     }
 
     if (isHorizontalSwipe.current) {
-      // Ограничиваем движение, чтобы кнопки не улетали за экран
+      // Кнопки по 80px каждая, итого 160px в каждую сторону
       const newOffset = Math.max(-160, Math.min(160, deltaX));
       setOffsetX(newOffset);
+      // Предотвращаем скролл страницы при свайпе вбок
       if (e.cancelable) e.preventDefault();
     }
   };
@@ -105,7 +111,7 @@ const ChatListItem = memo(({
       return;
     }
     
-    // Порог срабатывания свайпа
+    // Фиксация кнопок или возврат
     if (offsetX > 60) setOffsetX(160);
     else if (offsetX < -60) setOffsetX(-160);
     else setOffsetX(0);
@@ -271,8 +277,9 @@ export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?:
 
   return (
     <div className="flex flex-col h-full bg-[#0a0a0c] overflow-hidden">
-      <div className="px-4 pt-4 pb-2 shrink-0">
-        <div className="grid grid-cols-3 items-center h-12 mb-6 w-full">
+      {/* Fixed Header */}
+      <div className="px-4 pt-4 shrink-0 bg-[#0a0a0c] z-20">
+        <div className="grid grid-cols-3 items-center h-12 mb-2 w-full">
           <div className="flex justify-start">
             <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full bg-white/5" onClick={() => setIsSearchOpen(true)}>
               <Search className="w-5 h-5 text-white/60" />
@@ -300,57 +307,63 @@ export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?:
             </Button>
           </div>
         </div>
-
-        {!isArchiveView && <StoriesBar />}
-
-        {!isArchiveView && (
-          <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide py-3">
-            {[
-              { id: 'all', label: 'Все' },
-              { id: 'private', label: 'Личные' },
-              { id: 'groups', label: 'Группы' }
-            ].map((tab) => (
-              <button 
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={cn(
-                  "px-4 py-1.5 rounded-full text-[12px] font-black uppercase tracking-widest transition-all whitespace-nowrap",
-                  activeTab === tab.id ? "bg-[#007AFF] text-white shadow-lg shadow-[#007AFF]/20" : "text-muted-foreground/40 hover:text-white bg-white/5"
-                )}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </div>
-        )}
       </div>
 
       <ScrollArea className="flex-1 scrollbar-hide">
-        <div className="pb-32">
-          {filteredChats.length > 0 ? (
-            filteredChats.map(chat => (
-              <ChatListItem 
-                key={chat.id} 
-                chat={chat} 
-                isActive={currentChatId === chat.id} 
-                isPinned={currentUserProfile?.pinnedChatIds?.includes(chat.id)}
-                onPinToggle={handlePinToggle}
-                onMarkUnread={handleMarkUnread}
-                onMute={handleMute}
-                onDelete={handleDelete}
-                onClick={() => setCurrentChatId(chat.id)}
-                currentUserId={user?.uid}
-                otherId={chat.type === 'private' && user ? chat.participantIds?.find((id: string) => id !== user.uid) : null} 
-              />
-            ))
-          ) : (
-            <div className="flex flex-col items-center justify-center p-20 opacity-20">
-               <Ghost className="w-12 h-12 mb-4" />
-               <p className="text-[10px] font-black uppercase tracking-widest text-center">
-                 {isArchiveView ? 'Архив пуст' : 'Нет активных каналов'}
-               </p>
+        <div className="flex flex-col">
+          {/* Stories and Tabs are now part of the scrollable content */}
+          {!isArchiveView && (
+            <div className="animate-in fade-in slide-in-from-top-4 duration-500">
+              <StoriesBar />
+              <div className="px-4">
+                <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide py-3">
+                  {[
+                    { id: 'all', label: 'Все' },
+                    { id: 'private', label: 'Личные' },
+                    { id: 'groups', label: 'Группы' }
+                  ].map((tab) => (
+                    <button 
+                      key={tab.id}
+                      onClick={() => setActiveTab(tab.id)}
+                      className={cn(
+                        "px-4 py-1.5 rounded-full text-[12px] font-black uppercase tracking-widest transition-all whitespace-nowrap",
+                        activeTab === tab.id ? "bg-[#007AFF] text-white shadow-lg shadow-[#007AFF]/20" : "text-muted-foreground/40 hover:text-white bg-white/5"
+                      )}
+                    >
+                      {tab.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
           )}
+
+          <div className="pb-32">
+            {filteredChats.length > 0 ? (
+              filteredChats.map(chat => (
+                <ChatListItem 
+                  key={chat.id} 
+                  chat={chat} 
+                  isActive={currentChatId === chat.id} 
+                  isPinned={currentUserProfile?.pinnedChatIds?.includes(chat.id)}
+                  onPinToggle={handlePinToggle}
+                  onMarkUnread={handleMarkUnread}
+                  onMute={handleMute}
+                  onDelete={handleDelete}
+                  onClick={() => setCurrentChatId(chat.id)}
+                  currentUserId={user?.uid}
+                  otherId={chat.type === 'private' && user ? chat.participantIds?.find((id: string) => id !== user.uid) : null} 
+                />
+              ))
+            ) : (
+              <div className="flex flex-col items-center justify-center p-20 opacity-20">
+                 <Ghost className="w-12 h-12 mb-4" />
+                 <p className="text-[10px] font-black uppercase tracking-widest text-center">
+                   {isArchiveView ? 'Архив пуст' : 'Нет активных каналов'}
+                 </p>
+              </div>
+            )}
+          </div>
         </div>
       </ScrollArea>
 
