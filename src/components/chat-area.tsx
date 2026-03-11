@@ -329,7 +329,7 @@ export default function ChatArea() {
   };
 
   const handleSendMessage = useCallback(async (content_msg: string = messageInput, type_msg: Message['contentType'] = 'text') => {
-    if (!content_msg.trim() && type_msg !== 'audio' && type_msg !== 'video_note') return;
+    if (!content_msg.trim() && type_msg !== 'audio' && type_msg !== 'video_note' && type_msg !== 'sticker') return;
     if (!currentChatId || !firebaseUser || !db) return;
     
     let finalContent = content_msg;

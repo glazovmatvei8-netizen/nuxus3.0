@@ -89,7 +89,7 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
 
     if (isSticker) {
       return (
-        <div className="w-40 h-40 select-none animate-in fade-in zoom-in duration-300 flex items-center justify-center">
+        <div className="w-44 h-44 select-none animate-in fade-in zoom-in duration-300 flex items-center justify-center">
           <img 
             src={content} 
             alt="Sticker" 
@@ -186,6 +186,8 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
 
   if (message.contentType === 'service') return <div className="w-full flex justify-center my-4 px-4"><div className="bg-white/5 backdrop-blur-md px-6 py-2 rounded-full border border-white/10"><p className="text-[9px] text-muted-foreground uppercase font-black tracking-widest text-center">{message.content}</p></div></div>;
 
+  const isSpecialContent = message.contentType === 'sticker' || message.contentType === 'video_note';
+
   return (
     <div id={`msg-${message.id}`} className={cn("w-full flex mb-2 transition-all scroll-mt-20", isMe ? "justify-end" : "justify-start", highlight && "scale-[1.02] z-10")}>
       <div className={cn("flex gap-3 max-w-[90%] relative group px-2 items-end", isMe ? "flex-row-reverse" : "flex-row")}>
@@ -199,9 +201,9 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
               <div className="relative group/bubble cursor-pointer active:scale-[0.98] transition-transform outline-none">
                 <div className={cn(
                   "p-2.5 rounded-2xl shadow-md border transition-all relative select-none touch-none", 
-                  isMe ? "message-bubble-me border-none" : "bg-card border-white/5 text-white",
+                  !isSpecialContent && (isMe ? "message-bubble-me border-none" : "bg-card border-white/5 text-white"),
                   highlight && "border-primary/50 shadow-primary/20 ring-1 ring-primary/30",
-                  (message.contentType === 'video_note' || message.contentType === 'sticker') && "bg-transparent border-none shadow-none p-0"
+                  isSpecialContent && "bg-transparent border-none shadow-none p-0"
                 )}>
                   {renderContent()}
                   
@@ -242,11 +244,13 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
                   )}
                 </div>
                 
-                <div className={cn("absolute top-0 opacity-0 group-hover/bubble:opacity-100 transition-opacity hidden md:flex", isMe ? "-left-10" : "-right-10")}>
-                   <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full bg-card/50 backdrop-blur-xl border border-white/10">
-                      <MoreVertical className="w-4 h-4" />
-                   </Button>
-                </div>
+                {!isSpecialContent && (
+                  <div className={cn("absolute top-0 opacity-0 group-hover/bubble:opacity-100 transition-opacity hidden md:flex", isMe ? "-left-10" : "-right-10")}>
+                    <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full bg-card/50 backdrop-blur-xl border border-white/10">
+                        <MoreVertical className="w-4 h-4" />
+                    </Button>
+                  </div>
+                )}
               </div>
             </DropdownMenuTrigger>
             

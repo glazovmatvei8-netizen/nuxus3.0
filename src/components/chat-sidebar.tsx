@@ -136,7 +136,7 @@ const ChatListItem = memo(({
         </button>
       </div>
 
-      {/* Кнопки СПРАВА (свайп влево) - FIX: Жесткое позиционирование справа */}
+      {/* Кнопки СПРАВА (свайп влево) - FIX: Жесткая фиксация у правого края */}
       <div className={cn(
         "absolute inset-y-0 right-0 flex h-full z-0 transition-opacity duration-200",
         offsetX < -10 ? "opacity-100" : "opacity-0 pointer-events-none"
