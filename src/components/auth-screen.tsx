@@ -21,7 +21,6 @@ import { useTranslations } from '@/hooks/use-translations';
 import { useAppState } from '@/lib/store';
 import type { User as UserType } from '@/lib/types';
 import { NuxusLogo } from './nuxus-logo';
-import { addMonths } from 'date-fns';
 import { LegalModal } from './modals/legal-modal';
 import { cn } from '@/lib/utils';
 

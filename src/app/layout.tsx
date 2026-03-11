@@ -19,11 +19,11 @@ const font = Plus_Jakarta_Sans({
 });
 
 /**
- * ГЛОБАЛЬНАЯ ИКОНКА NUXUS (v30)
- * Основной источник: https://i.ibb.co/sd2MqGz2/Icon.png
+ * ГЛОБАЛЬНАЯ ИКОНКА NUXUS (v35)
+ * Мы используем версию 35, чтобы пробить любой кеш Vercel и GitHub.
  */
 const APP_ICON_URL = 'https://i.ibb.co/sd2MqGz2/Icon.png';
-const VERSION_PARAM = '?v=30';
+const VERSION_PARAM = '?v=35';
 const FINAL_ICON_URL = `${APP_ICON_URL}${VERSION_PARAM}`;
 
 export const metadata: Metadata = {
@@ -67,8 +67,12 @@ export default function RootLayout({
   return (
     <html lang="ru" className={`dark ${font.variable}`} suppressHydrationWarning>
       <head>
+        {/* ПРИНУДИТЕЛЬНОЕ ПЕРЕОПРЕДЕЛЕНИЕ FAVICON */}
+        <link rel="icon" type="image/png" sizes="16x16" href={FINAL_ICON_URL} />
         <link rel="icon" type="image/png" sizes="32x32" href={FINAL_ICON_URL} />
-        <link rel="shortcut icon" href={FINAL_ICON_URL} />
+        <link rel="shortcut icon" type="image/png" href={FINAL_ICON_URL} />
+        <link rel="apple-touch-icon" href={FINAL_ICON_URL} />
+        
         <style>
           {`
           html, body { 
