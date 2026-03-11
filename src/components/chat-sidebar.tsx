@@ -38,6 +38,7 @@ const ChatListItem = memo(({
   const touchStartY = useRef(0);
   const isHorizontalSwipe = useRef(false);
   const isVerticalScroll = useRef(false);
+  const directionDecided = useRef(false);
   const [isMuted, setIsMuted] = useState(!!chat.mutedUntil);
 
   const userProfileRef = useMemoFirebase(() => (!db || !otherId) ? null : doc(db, 'users', otherId), [db, otherId]);
@@ -60,12 +61,12 @@ const ChatListItem = memo(({
     try { return format(date, 'HH:mm'); } catch (e) { return ''; }
   }, [chat.lastMessageAt, chat.createdAt]);
 
-  // FIXED: Only show unread dot if last message is from someone else and not read
   const isUnread = (lastMsg && !lastMsg.isRead && lastMsg.senderId !== currentUserId) || chat.isManualUnread;
 
   const handleTouchStart = (e: React.TouchEvent) => {
     touchStartX.current = e.touches[0].clientX;
     touchStartY.current = e.touches[0].clientY;
+    directionDecided.current = false;
     isHorizontalSwipe.current = false;
     isVerticalScroll.current = false;
   };
@@ -76,20 +77,24 @@ const ChatListItem = memo(({
     const deltaX = e.touches[0].clientX - touchStartX.current;
     const deltaY = e.touches[0].clientY - touchStartY.current;
 
-    if (!isHorizontalSwipe.current && !isVerticalScroll.current) {
-      if (Math.abs(deltaY) > Math.abs(deltaX)) {
+    if (!directionDecided.current) {
+      if (Math.abs(deltaY) > Math.abs(deltaX) && Math.abs(deltaY) > 5) {
         isVerticalScroll.current = true;
+        directionDecided.current = true;
         return;
       }
       if (Math.abs(deltaX) > 10) {
         isHorizontalSwipe.current = true;
         setIsDragging(true);
+        directionDecided.current = true;
       }
     }
 
     if (isHorizontalSwipe.current) {
+      // Ограничиваем движение, чтобы кнопки не улетали за экран
       const newOffset = Math.max(-160, Math.min(160, deltaX));
       setOffsetX(newOffset);
+      if (e.cancelable) e.preventDefault();
     }
   };
 
@@ -100,7 +105,7 @@ const ChatListItem = memo(({
       return;
     }
     
-    // Snap logic
+    // Порог срабатывания свайпа
     if (offsetX > 60) setOffsetX(160);
     else if (offsetX < -60) setOffsetX(-160);
     else setOffsetX(0);
@@ -115,8 +120,11 @@ const ChatListItem = memo(({
 
   return (
     <div className="relative overflow-hidden touch-pan-y select-none bg-[#0a0a0c] border-b border-white/[0.02]">
-      {/* Background Actions */}
-      <div className="absolute inset-y-0 left-0 flex h-full z-0">
+      {/* Background Actions (Left - swipe right to see) */}
+      <div className={cn(
+        "absolute inset-y-0 left-0 flex h-full z-0 transition-opacity duration-200",
+        offsetX > 5 ? "opacity-100" : "opacity-0 pointer-events-none"
+      )}>
         <button onClick={(e) => { e.stopPropagation(); onMarkUnread(chat.id); resetSwipe(); }} className="w-20 bg-[#007AFF] flex flex-col items-center justify-center text-white gap-1 active:brightness-90 transition-all">
           <MessageSquare className="w-5 h-5 fill-current" />
           <span className="text-[10px] font-bold leading-tight px-1 text-center">Не прочитан</span>
@@ -127,7 +135,11 @@ const ChatListItem = memo(({
         </button>
       </div>
 
-      <div className="absolute inset-y-0 right-0 flex h-full z-0">
+      {/* Background Actions (Right - swipe left to see) */}
+      <div className={cn(
+        "absolute inset-y-0 right-0 flex h-full z-0 transition-opacity duration-200",
+        offsetX < -5 ? "opacity-100" : "opacity-0 pointer-events-none"
+      )}>
         <button onClick={(e) => { e.stopPropagation(); onMute(chat.id); resetSwipe(); }} className="w-20 bg-[#FF9500] flex flex-col items-center justify-center text-white gap-1 active:brightness-90 transition-all">
           {isMuted ? <Volume2 className="w-5 h-5" /> : <VolumeX className="w-5 h-5 fill-current" />}
           <span className="text-[10px] font-bold leading-tight px-1 text-center">{isMuted ? 'Звук' : 'Без звука'}</span>
@@ -260,14 +272,14 @@ export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?:
   return (
     <div className="flex flex-col h-full bg-[#0a0a0c] overflow-hidden">
       <div className="px-4 pt-4 pb-2 shrink-0">
-        <div className="grid grid-cols-3 items-center h-12 mb-6 w-full relative">
-          <div className="flex justify-start items-center">
+        <div className="grid grid-cols-3 items-center h-12 mb-6 w-full">
+          <div className="flex justify-start">
             <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full bg-white/5" onClick={() => setIsSearchOpen(true)}>
               <Search className="w-5 h-5 text-white/60" />
             </Button>
           </div>
 
-          <div className="flex justify-center items-center">
+          <div className="flex justify-center">
             <h1 
               onClick={() => isGlobalAdmin(currentUserProfile) && setIsAdminPanelOpen(true)}
               className={cn(
@@ -279,7 +291,7 @@ export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?:
             </h1>
           </div>
 
-          <div className="flex justify-end items-center gap-2">
+          <div className="flex justify-end gap-2">
             <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full bg-white/5" onClick={() => setIsCreateModalOpen(true)}>
               <Plus className="w-5 h-5 text-white" />
             </Button>

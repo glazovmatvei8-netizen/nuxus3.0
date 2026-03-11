@@ -51,11 +51,12 @@ export function StoriesBar() {
           "relative h-[64px] w-[64px] rounded-full p-[2px] transition-all",
           myStories.length > 0 ? "bg-gradient-to-tr from-primary to-accent" : "bg-white/10"
         )}>
-          <div className="rounded-full h-full w-full overflow-hidden relative">
+          <div className="rounded-full h-full w-full overflow-hidden relative bg-[#0a0a0c]">
             <UserAvatar 
               userId={user?.uid} 
               className="h-full w-full border-none" 
               manualAvatarUrl={profile?.avatarUrl}
+              fallbackName={profile?.name || profile?.username || 'Я'}
             />
           </div>
           {myStories.length === 0 && (
@@ -98,11 +99,12 @@ function StoryCircle({ userId, stories, onView }: { userId: string, stories: Sto
         "h-[64px] w-[64px] rounded-full p-[2px] bg-gradient-to-tr transition-all",
         hasStories ? "from-primary to-accent" : "from-white/10 to-white/10"
       )}>
-        <div className="rounded-full h-full w-full overflow-hidden">
+        <div className="rounded-full h-full w-full overflow-hidden bg-[#0a0a0c]">
           <UserAvatar 
             userId={userId} 
             className="h-full w-full border-none" 
             manualAvatarUrl={profile?.avatarUrl}
+            fallbackName={profile?.name || profile?.username}
           />
         </div>
       </div>
