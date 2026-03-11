@@ -37,6 +37,7 @@ const ChatListItem = memo(({
   const touchStartX = useRef(0);
   const touchStartY = useRef(0);
   const isHorizontalSwipe = useRef(false);
+  const isVerticalScroll = useRef(false);
   const [isMuted, setIsMuted] = useState(!!chat.mutedUntil);
 
   const userProfileRef = useMemoFirebase(() => (!db || !otherId) ? null : doc(db, 'users', otherId), [db, otherId]);
@@ -59,33 +60,35 @@ const ChatListItem = memo(({
     try { return format(date, 'HH:mm'); } catch (e) { return ''; }
   }, [chat.lastMessageAt, chat.createdAt]);
 
-  // FIXED: Only show unread dot if last message is NOT from current user
+  // FIXED: Only show unread dot if last message is from someone else and not read
   const isUnread = (lastMsg && !lastMsg.isRead && lastMsg.senderId !== currentUserId) || chat.isManualUnread;
 
   const handleTouchStart = (e: React.TouchEvent) => {
     touchStartX.current = e.touches[0].clientX;
     touchStartY.current = e.touches[0].clientY;
     isHorizontalSwipe.current = false;
-    setOffsetX(offsetX); // Preserve current state if already swiped
+    isVerticalScroll.current = false;
   };
 
   const handleTouchMove = (e: React.TouchEvent) => {
+    if (isVerticalScroll.current) return;
+
     const deltaX = e.touches[0].clientX - touchStartX.current;
     const deltaY = e.touches[0].clientY - touchStartY.current;
 
-    // Detect if move is horizontal to prevent interference with vertical scroll
-    if (!isHorizontalSwipe.current && Math.abs(deltaX) > 10) {
-      if (Math.abs(deltaX) > Math.abs(deltaY)) {
+    if (!isHorizontalSwipe.current && !isVerticalScroll.current) {
+      if (Math.abs(deltaY) > Math.abs(deltaX)) {
+        isVerticalScroll.current = true;
+        return;
+      }
+      if (Math.abs(deltaX) > 10) {
         isHorizontalSwipe.current = true;
         setIsDragging(true);
       }
     }
 
     if (isHorizontalSwipe.current) {
-      // Small vibration on start of meaningful swipe
-      if (!isDragging && window.navigator.vibrate) window.navigator.vibrate(10);
-      
-      const newOffset = Math.max(-180, Math.min(180, deltaX));
+      const newOffset = Math.max(-160, Math.min(160, deltaX));
       setOffsetX(newOffset);
     }
   };
@@ -93,8 +96,7 @@ const ChatListItem = memo(({
   const handleTouchEnd = () => {
     setIsDragging(false);
     if (!isHorizontalSwipe.current) {
-      // If it wasn't a horizontal swipe, stay where we are or reset
-      if (Math.abs(offsetX) < 40) setOffsetX(0);
+      setOffsetX(0);
       return;
     }
     
@@ -258,14 +260,14 @@ export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?:
   return (
     <div className="flex flex-col h-full bg-[#0a0a0c] overflow-hidden">
       <div className="px-4 pt-4 pb-2 shrink-0">
-        <div className="grid grid-cols-3 items-center h-12 mb-6 w-full">
-          <div className="flex justify-start">
+        <div className="grid grid-cols-3 items-center h-12 mb-6 w-full relative">
+          <div className="flex justify-start items-center">
             <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full bg-white/5" onClick={() => setIsSearchOpen(true)}>
               <Search className="w-5 h-5 text-white/60" />
             </Button>
           </div>
 
-          <div className="flex justify-center">
+          <div className="flex justify-center items-center">
             <h1 
               onClick={() => isGlobalAdmin(currentUserProfile) && setIsAdminPanelOpen(true)}
               className={cn(
@@ -277,7 +279,7 @@ export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?:
             </h1>
           </div>
 
-          <div className="flex justify-end gap-1.5">
+          <div className="flex justify-end items-center gap-2">
             <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full bg-white/5" onClick={() => setIsCreateModalOpen(true)}>
               <Plus className="w-5 h-5 text-white" />
             </Button>

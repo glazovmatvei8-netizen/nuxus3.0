@@ -51,7 +51,7 @@ export function StoriesBar() {
           "relative h-[64px] w-[64px] rounded-full p-[2px] transition-all",
           myStories.length > 0 ? "bg-gradient-to-tr from-primary to-accent" : "bg-white/10"
         )}>
-          <div className="rounded-full h-full w-full overflow-hidden">
+          <div className="rounded-full h-full w-full overflow-hidden relative">
             <UserAvatar 
               userId={user?.uid} 
               className="h-full w-full border-none" 
@@ -90,7 +90,6 @@ function StoryCircle({ userId, stories, onView }: { userId: string, stories: Sto
   const userRef = useMemoFirebase(() => (!db ? null : doc(db, 'users', userId)), [db, userId]);
   const { data: profile } = useDoc<User>(userRef);
 
-  // Filter out my own view status logic if needed, but for now show highlighted if stories exist
   const hasStories = stories && stories.length > 0;
 
   return (
