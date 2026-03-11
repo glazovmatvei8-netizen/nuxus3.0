@@ -5,7 +5,7 @@ import { useUser, useFirestore, useDoc, useMemoFirebase, useAuth } from '@/fireb
 import { useAppState } from '@/lib/store';
 import AuthScreen from '@/components/auth-screen';
 import ChatMain from '@/components/chat-main';
-import { Loader2, ShieldAlert, Lock, ArrowRight, ShieldCheck } from 'lucide-react';
+import { Loader2, ShieldAlert, Lock, ArrowRight, ShieldCheck, Fingerprint } from 'lucide-react';
 import { doc, collection, query, where, limit, getDocs, arrayUnion, updateDoc, getDoc } from 'firebase/firestore';
 import type { User as UserType, Chat, StickerPack } from '@/lib/types';
 import { Button } from '@/components/ui/button';
@@ -136,12 +136,12 @@ export default function Home() {
 
   if (isUserLoading || (user && isProfileLoading)) {
     return (
-      <div className="h-[100dvh] w-full flex flex-col items-center justify-center bg-[#0a0a0c] text-white">
+      <div className="h-[100dvh] w-full flex flex-col items-center justify-center bg-[#050505] text-white">
         <NuxusLogo size={120} />
         <div className="mt-12 flex flex-col items-center gap-4">
           <Loader2 className="w-6 h-6 text-primary animate-spin" />
-          <p className="text-[10px] font-black uppercase tracking-[0.4em] text-primary/60 animate-pulse">
-            Инициализация Ядра...
+          <p className="text-[10px] font-black uppercase tracking-[0.5em] text-primary/60 animate-pulse">
+            Neural Syncing...
           </p>
         </div>
       </div>
@@ -156,53 +156,58 @@ export default function Home() {
 
   if (isBanned) {
     return (
-      <div className="h-screen w-full flex flex-col items-center justify-center bg-[#0a0a0c] p-6 text-center">
-        <div className="bg-destructive/10 p-6 rounded-full mb-6">
-          <ShieldAlert className="w-16 h-16 text-destructive" />
+      <div className="h-screen w-full flex flex-col items-center justify-center bg-[#050505] p-6 text-center">
+        <div className="bg-destructive/10 p-8 rounded-[3rem] mb-8 border border-destructive/20 shadow-[0_0_50px_rgba(239,68,68,0.2)]">
+          <ShieldAlert className="w-20 h-20 text-destructive animate-pulse" />
         </div>
-        <h1 className="text-3xl font-bold mb-4 text-white uppercase italic">Доступ ограничен</h1>
-        <Button variant="outline" className="rounded-2xl border-white/10" onClick={() => signOut(auth)}>Выйти</Button>
+        <h1 className="text-4xl font-black mb-4 text-white uppercase italic tracking-tighter">Access Denied</h1>
+        <p className="text-[10px] uppercase font-bold tracking-[0.3em] text-muted-foreground/60 mb-10">Твой узел отключен от Ядра</p>
+        <Button variant="outline" className="rounded-2xl border-white/10 h-14 px-10 font-black uppercase tracking-widest" onClick={() => signOut(auth)}>Отключиться</Button>
       </div>
     );
   }
 
   if (profile?.twoFactorEnabled && !is2FAVerified) {
     return (
-      <div className="h-screen w-full flex flex-col items-center justify-center bg-[#0a0a0c] relative overflow-hidden px-6">
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full max-w-lg aspect-square bg-primary/5 blur-[120px] rounded-full -z-10" />
+      <div className="h-screen w-full flex items-center justify-center bg-[#050505] relative overflow-hidden px-6">
+        {/* Plasma Background */}
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full max-w-2xl aspect-square bg-primary/10 blur-[150px] rounded-full -z-10 animate-pulse-glow" />
         
-        <div className="w-full max-w-md space-y-12 text-center">
-          <div className="space-y-6">
+        <div className="w-full max-w-md space-y-16 text-center animate-in fade-in zoom-in duration-700">
+          <div className="space-y-8">
             <div className="relative inline-block">
-              <div className="absolute inset-0 bg-primary blur-2xl opacity-20 animate-pulse" />
-              <div className="bg-white/[0.03] border border-white/5 w-24 h-24 rounded-[2rem] flex items-center justify-center mx-auto relative z-10">
-                <Lock className="w-10 h-10 text-primary animate-float" />
+              <div className="absolute inset-0 bg-primary blur-[60px] opacity-30 animate-pulse" />
+              <div className="bg-white/[0.03] border border-white/10 w-28 h-28 rounded-[2.5rem] flex items-center justify-center mx-auto relative z-10 shadow-2xl backdrop-blur-3xl">
+                <Fingerprint className="w-12 h-12 text-primary animate-float" />
               </div>
             </div>
             
-            <div className="space-y-2">
-              <h2 className="text-3xl font-black uppercase italic text-white tracking-tighter">Введите PIN</h2>
-              <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-muted-foreground/60">Защита облачного пароля активна</p>
+            <div className="space-y-3">
+              <h2 className="text-4xl font-black uppercase italic text-white tracking-[-0.05em]">Verify PIN</h2>
+              <p className="text-[9px] font-black uppercase tracking-[0.5em] text-primary/60">Cloud Protection Active</p>
             </div>
           </div>
 
-          <div className="space-y-6">
-            <Input 
-              type="password" 
-              placeholder="••••••" 
-              maxLength={6} 
-              autoFocus
-              className="bg-white/5 border-white/10 h-20 text-4xl tracking-[0.8em] text-center rounded-[2rem] font-black focus:border-primary/50 transition-all shadow-[0_0_40px_rgba(0,0,0,0.3)]"
-              value={twoFactorInput}
-              onChange={e => setTwoFactorInput(e.target.value.replace(/\D/g, ''))}
-              onKeyDown={e => e.key === 'Enter' && handleVerify2FA()}
-            />
+          <div className="space-y-10">
+            <div className="relative group">
+               <div className="absolute -inset-1 bg-primary/20 blur-xl opacity-0 group-focus-within:opacity-100 transition-opacity duration-500" />
+               <Input 
+                type="password" 
+                placeholder="••••••" 
+                maxLength={6} 
+                autoFocus
+                className="bg-white/[0.03] border-white/10 h-24 text-5xl tracking-[0.8em] text-center rounded-[2.5rem] font-black focus:border-primary/50 transition-all shadow-inner relative z-10"
+                value={twoFactorInput}
+                onChange={e => setTwoFactorInput(e.target.value.replace(/\D/g, ''))}
+                onKeyDown={e => e.key === 'Enter' && handleVerify2FA()}
+              />
+            </div>
             
-            <div className="space-y-3">
-              <Button onClick={handleVerify2FA} className="w-full h-16 rounded-[1.8rem] bg-primary hover:bg-primary/90 text-white font-black uppercase italic tracking-widest text-base shadow-2xl shadow-primary/20 group">
-                Разблокировать <ArrowRight className="w-6 h-6 ml-2 group-hover:translate-x-1 transition-transform" />
+            <div className="space-y-4">
+              <Button onClick={handleVerify2FA} className="w-full h-16 rounded-[2rem] bg-primary hover:bg-primary/90 text-white font-black uppercase italic tracking-widest text-lg shadow-[0_20px_50px_rgba(139,92,246,0.3)] group active:scale-[0.98]">
+                Unlock Kernel <ArrowRight className="w-6 h-6 ml-2 group-hover:translate-x-1 transition-transform" />
               </Button>
-              <Button variant="ghost" onClick={() => signOut(auth)} className="w-full text-[10px] font-black uppercase tracking-widest text-muted-foreground/40 hover:text-white transition-colors">Сменить узел (Выход)</Button>
+              <Button variant="ghost" onClick={() => signOut(auth)} className="w-full text-[9px] font-black uppercase tracking-[0.4em] text-white/20 hover:text-white transition-colors">Disconnect Node (Logout)</Button>
             </div>
           </div>
         </div>
@@ -215,29 +220,32 @@ export default function Home() {
       <ChatMain />
       
       <Dialog open={!!stickerPackToInstall} onOpenChange={() => setStickerPackToInstall(null)}>
-        <DialogContent className="max-w-xs bg-card border-white/10 rounded-[2.5rem] p-6 text-center">
+        <DialogContent className="max-w-xs bg-card/90 backdrop-blur-3xl border-white/10 rounded-[3rem] p-8 text-center shadow-2xl">
           <DialogHeader>
-            <DialogTitle className="text-xl font-black uppercase italic text-white">Новый Стикерпак</DialogTitle>
-            <DialogDescription className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground/60">
-              Вы хотите добавить этот набор?
+            <DialogTitle className="text-2xl font-black uppercase italic text-white tracking-tighter">New Signal</DialogTitle>
+            <DialogDescription className="text-[9px] uppercase font-black tracking-[0.3em] text-primary/60">
+              Install Sticker Pack?
             </DialogDescription>
           </DialogHeader>
           
-          <div className="py-6 flex flex-col items-center gap-4">
-            <div className="w-24 h-24 rounded-3xl bg-white/5 border border-white/10 flex items-center justify-center overflow-hidden">
+          <div className="py-8 flex flex-col items-center gap-5">
+            <div className="w-28 h-28 rounded-[2.5rem] bg-white/5 border border-white/10 flex items-center justify-center overflow-hidden shadow-2xl relative">
+              <div className="absolute inset-0 bg-primary/10 blur-2xl" />
               {stickerPackToInstall?.iconUrl ? (
-                <img src={stickerPackToInstall.iconUrl} className="w-full h-full object-cover" />
+                <img src={stickerPackToInstall.iconUrl} className="w-full h-full object-cover relative z-10" />
               ) : (
-                <NuxusLogo size={60} />
+                <NuxusLogo size={70} className="relative z-10" />
               )}
             </div>
-            <h3 className="text-lg font-bold text-white">{stickerPackToInstall?.name}</h3>
-            <p className="text-[10px] text-muted-foreground uppercase font-black">{stickerPackToInstall?.stickerUrls.length} стикеров</p>
+            <div className="space-y-1">
+              <h3 className="text-xl font-bold text-white">{stickerPackToInstall?.name}</h3>
+              <p className="text-[10px] text-muted-foreground uppercase font-black tracking-widest">{stickerPackToInstall?.stickerUrls.length} Units</p>
+            </div>
           </div>
 
-          <DialogFooter className="flex-col gap-2">
-            <Button onClick={handleInstallPack} className="w-full h-12 rounded-2xl bg-primary font-black uppercase tracking-widest">Установить</Button>
-            <Button variant="ghost" onClick={() => setStickerPackToInstall(null)} className="w-full h-10 rounded-xl text-[10px] font-bold uppercase opacity-40">Отмена</Button>
+          <DialogFooter className="flex-col gap-3">
+            <Button onClick={handleInstallPack} className="w-full h-14 rounded-[1.5rem] bg-primary font-black uppercase tracking-widest shadow-lg shadow-primary/20">Install</Button>
+            <Button variant="ghost" onClick={() => setStickerPackToInstall(null)} className="w-full h-10 rounded-xl text-[9px] font-black uppercase tracking-[0.2em] opacity-30 hover:opacity-100">Abort</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
