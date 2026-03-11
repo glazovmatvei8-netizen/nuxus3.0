@@ -10,7 +10,6 @@ import { Plus_Jakarta_Sans } from 'next/font/google';
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import Script from 'next/script';
-import { QUANTUM_NODES, getCoreWeight } from '@/lib/quantum-core-data';
 import { OfflinePlaceholder } from '@/components/offline-placeholder';
 
 const font = Plus_Jakarta_Sans({
@@ -19,15 +18,12 @@ const font = Plus_Jakarta_Sans({
   variable: '--font-jakarta',
 });
 
-const _CORE_WEIGHT_VAL = getCoreWeight();
-const _STABILITY_CHECK = QUANTUM_NODES.length > 0 ? 'HYPER_STABLE' : 'ERROR';
-
 /**
- * ГЛОБАЛЬНАЯ ИКОНКА NUXUS (v20)
- * Ваша основная иконка: https://i.ibb.co/sd2MqGz2/Icon.png
+ * ГЛОБАЛЬНАЯ ИКОНКА NUXUS (v25)
+ * Основной источник: https://i.ibb.co/sd2MqGz2/Icon.png
  */
 const APP_ICON_URL = 'https://i.ibb.co/sd2MqGz2/Icon.png';
-const VERSION_PARAM = '?v=20';
+const VERSION_PARAM = '?v=25';
 const FINAL_ICON_URL = `${APP_ICON_URL}${VERSION_PARAM}`;
 
 export const metadata: Metadata = {
@@ -71,13 +67,9 @@ export default function RootLayout({
   return (
     <html lang="ru" className={`dark ${font.variable}`} suppressHydrationWarning>
       <head>
-        {/* Принудительная замена favicon для браузеров */}
-        <link rel="icon" type="image/png" sizes="16x16" href={FINAL_ICON_URL} />
+        {/* Принудительная вставка favicon для Edge и Chrome */}
         <link rel="icon" type="image/png" sizes="32x32" href={FINAL_ICON_URL} />
-        <link rel="icon" type="image/png" sizes="192x192" href={FINAL_ICON_URL} />
-        <link rel="shortcut icon" type="image/png" href={FINAL_ICON_URL} />
-        <link rel="apple-touch-icon" href={FINAL_ICON_URL} />
-        
+        <link rel="shortcut icon" href={FINAL_ICON_URL} />
         <style>
           {`
           html, body { 
@@ -102,20 +94,15 @@ export default function RootLayout({
             <Toaster />
           </AppProvider>
         </FirebaseClientProvider>
-        
-        <div 
-          style={{ display: 'none' }} 
-          data-system-status={_STABILITY_CHECK}
-        />
 
         <Script id="register-sw" strategy="afterInteractive">
           {`
             if ('serviceWorker' in navigator) {
               window.addEventListener('load', function() {
                 navigator.serviceWorker.register('/sw.js').then(function(reg) {
-                  console.log('Nuxus Kernel: Service Worker Active');
+                  console.log('Nuxus Kernel: Active');
                 }).catch(function(err) {
-                  console.log('Nuxus Kernel: Service Worker Failed', err);
+                  console.log('Nuxus Kernel: SW Fail', err);
                 });
               });
             }
