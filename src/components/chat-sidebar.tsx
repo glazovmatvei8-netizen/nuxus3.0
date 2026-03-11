@@ -6,7 +6,7 @@ import { useAppState } from '@/lib/store';
 import { Button } from '@/components/ui/button';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
-  Plus, SquarePen, Ghost, Search, Star, Pin, PinOff, MessageSquare, VolumeX, Trash2, Volume2
+  Plus, SquarePen, Ghost, Search, Star, Pin, PinOff, MessageSquare, VolumeX, Trash2, Volume2, MessageCircle
 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { CreateChatModal } from './modals/create-chat-modal';
@@ -80,14 +80,12 @@ const ChatListItem = memo(({
     const deltaY = currentY - touchStartY.current;
 
     if (!directionDecided.current) {
-      // Блокируем свайп, если движение явно вертикальное (прокрутка списка)
-      if (Math.abs(deltaY) > Math.abs(deltaX) && Math.abs(deltaY) > 5) {
+      if (Math.abs(deltaY) > Math.abs(deltaX) + 5) {
         isVerticalScroll.current = true;
         directionDecided.current = true;
         setOffsetX(0);
         return;
       }
-      // Активируем свайп только при значимом движении в сторону
       if (Math.abs(deltaX) > 10) {
         isHorizontalSwipe.current = true;
         setIsDragging(true);
@@ -96,7 +94,6 @@ const ChatListItem = memo(({
     }
 
     if (isHorizontalSwipe.current) {
-      // Максимальный оффсет 160px в обе стороны (2 кнопки по 80px)
       const newOffset = Math.max(-160, Math.min(160, deltaX));
       setOffsetX(newOffset);
       if (e.cancelable) e.preventDefault();
@@ -110,7 +107,6 @@ const ChatListItem = memo(({
       return;
     }
     
-    // Фиксация панелей или возврат в центр
     if (offsetX > 60) setOffsetX(160);
     else if (offsetX < -60) setOffsetX(-160);
     else setOffsetX(0);
@@ -124,7 +120,7 @@ const ChatListItem = memo(({
   };
 
   return (
-    <div className="relative overflow-hidden touch-pan-y select-none bg-[#0a0a0c] border-b border-white/[0.02]">
+    <div className="relative overflow-hidden touch-pan-y select-none bg-[#0a0a0c]">
       {/* Панель СЛЕВА (Свайп вправо) */}
       <div className={cn(
         "absolute inset-y-0 left-0 flex h-full z-0 transition-opacity duration-200",
@@ -155,7 +151,6 @@ const ChatListItem = memo(({
         </button>
       </div>
 
-      {/* Основной контент (Верхний слой) */}
       <div 
         className={cn(
           "relative z-10 bg-[#0a0a0c] will-change-transform", 
@@ -276,7 +271,6 @@ export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?:
 
   return (
     <div className="flex flex-col h-full bg-[#0a0a0c] overflow-hidden">
-      {/* Фиксированная Шапка */}
       <div className="px-4 pt-4 shrink-0 bg-[#0a0a0c] z-20">
         <div className="grid grid-cols-3 items-center h-12 mb-2 w-full">
           <div className="flex justify-start">
@@ -310,7 +304,6 @@ export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?:
 
       <ScrollArea className="flex-1 scrollbar-hide">
         <div className="flex flex-col">
-          {/* Истории и Табы уходят при скролле */}
           {!isArchiveView && (
             <div className="animate-in fade-in slide-in-from-top-4 duration-500">
               <StoriesBar />
