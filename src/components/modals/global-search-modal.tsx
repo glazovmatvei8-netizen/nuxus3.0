@@ -30,7 +30,7 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
   const userRef = useMemoFirebase(() => (!db || !user) ? null : doc(db, 'users', user.uid), [db, user]);
   const { data: myProfile } = useDoc<User>(userRef);
 
-  // Fox stickers from ultra-stable Google Noto Emoji CDN
+  // Fox stickers from ultra-stable Google Noto Emoji CDN (fixed WebP links)
   const foxStickers = [
     'https://fonts.gstatic.com/s/e/notoemoji/latest/1f98a/512.webp',
     'https://fonts.gstatic.com/s/e/notoemoji/latest/1f60d/512.webp',
@@ -49,7 +49,7 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
   useEffect(() => {
     if (open && db) {
       const initSystemPacks = async () => {
-        const foxPackId = 'system_fox_pack_v4'; // Incremented version to refresh
+        const foxPackId = 'system_fox_pack_v5'; 
         const packRef = doc(db, 'stickerPacks', foxPackId);
         await setDoc(packRef, {
           id: foxPackId,

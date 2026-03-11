@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { UserAvatar } from '@/components/user-avatar';
 import { X, Eye, Heart, Smile, Loader2 } from 'lucide-react';
 import { useAppState } from '@/lib/store';
-import { useFirestore, useUser, useDoc, useMemoFirebase } from '@/firebase';
+import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { doc, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
 import type { Story, User } from '@/lib/types';
 import { cn, formatDisplayName } from '@/lib/utils';
@@ -52,7 +52,6 @@ export function StoryViewerModal() {
     }
   }, [index]);
 
-  // Separate effect to handle "next" transition to avoid updating AppProvider during render
   useEffect(() => {
     if (progress >= 100) {
       next();
@@ -88,7 +87,6 @@ export function StoryViewerModal() {
     };
   }, [storiesToView, index, isPaused, currentStory, hasError, showReactions]);
 
-  // Mark as viewed
   useEffect(() => {
     if (!db || !user || !currentStory || currentStory.viewers.includes(user.uid)) return;
     updateDoc(doc(db, 'stories', currentStory.id), {
@@ -117,10 +115,12 @@ export function StoryViewerModal() {
 
   return (
     <Dialog open={!!storiesToView} onOpenChange={(o) => !o && setStoriesToView(null)}>
-      <DialogContent className="max-w-[100vw] w-full h-[100dvh] p-0 bg-black border-none overflow-hidden z-[2000] rounded-none outline-none">
+      <DialogContent className="max-w-[100vw] w-full h-[100dvh] p-0 bg-black border-none overflow-hidden z-[2000] rounded-none outline-none flex items-center justify-center">
         <DialogTitle className="sr-only">Просмотр Момента</DialogTitle>
         
-        <div className="relative w-full h-full flex flex-col items-center justify-center">
+        {/* Story Frame - Constrained on Desktop */}
+        <div className="relative w-full h-full md:max-w-[450px] md:h-[90vh] md:rounded-[2rem] md:overflow-hidden bg-[#0a0a0c] shadow-2xl flex flex-col items-center justify-center">
+          
           {/* Progress Bars */}
           <div className="absolute top-4 left-4 right-4 z-[2100] flex gap-1.5 px-2">
             {storiesToView.map((_, i) => (
@@ -165,7 +165,7 @@ export function StoryViewerModal() {
             ) : currentStory.contentType === 'video' ? (
               <video 
                 src={currentStory.content} 
-                className="w-full h-full object-cover" 
+                className="w-full h-full object-contain" 
                 autoPlay 
                 muted 
                 playsInline 
@@ -175,7 +175,7 @@ export function StoryViewerModal() {
             ) : (
               <img 
                 src={currentStory.content} 
-                className="w-full h-full object-cover" 
+                className="w-full h-full object-contain" 
                 alt="Story"
                 onError={() => setHasError(true)}
               />
@@ -227,7 +227,7 @@ export function StoryViewerModal() {
               </div>
             )}
 
-            {/* Reactions Display - Fixed to be more prominent */}
+            {/* Reactions Display */}
             {currentStory.reactions && Object.entries(currentStory.reactions).some(([_, uids]) => uids.length > 0) && (
               <div className="flex gap-1.5">
                 {Object.entries(currentStory.reactions).map(([emoji, uids]) => uids.length > 0 && (
