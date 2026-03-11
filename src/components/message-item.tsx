@@ -14,7 +14,7 @@ import {
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { format } from 'date-fns';
 import { 
-  CornerUpLeft, Trash2, Check, CheckCheck, Edit2, Copy, Pin, X, MoreVertical, Share2, Play, Smile
+  CornerUpLeft, Trash2, Check, CheckCheck, Edit2, Copy, Pin, X, MoreVertical, Share2, Play, Smile, ArrowUp
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { doc, updateDoc, deleteDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
@@ -78,6 +78,19 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
     setIsGalleryOpen(true);
   };
 
+  const scrollToOriginal = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!message.replyToId) return;
+    const el = document.getElementById(`msg-${message.replyToId}`);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      el.classList.add('ring-2', 'ring-primary', 'ring-offset-2', 'ring-offset-background');
+      setTimeout(() => el.classList.remove('ring-2', 'ring-primary', 'ring-offset-2', 'ring-offset-background'), 2000);
+    } else {
+      toast({ title: "Сообщение не найдено", description: "Оно могло быть удалено или находится слишком далеко в истории." });
+    }
+  };
+
   const renderContent = () => {
     const content = message.content || '';
     const isDataImage = content.startsWith('data:image');
@@ -103,83 +116,85 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
       );
     }
 
-    if (isVideoNote) {
-      return (
-        <div className="relative w-48 h-48 rounded-full overflow-hidden border-2 border-primary/20 bg-black cursor-pointer group" onClick={() => {
-          if (videoRef.current) {
-            if (videoRef.current.paused) videoRef.current.play(); else videoRef.current.pause();
-          }
-        }}>
-          <video 
-            ref={videoRef} 
-            src={content} 
-            loop 
-            playsInline 
-            className="w-full h-full object-cover scale-x-[-1]" 
-          />
-          <div className="absolute inset-0 bg-black/20 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-            <Play className="w-8 h-8 text-white fill-white" />
-          </div>
-        </div>
-      );
-    }
-
-    if (isAudio) {
-      return (
-        <div className="flex flex-col gap-2 min-w-[200px]">
-          <div className="flex items-center gap-3 p-1">
-            <Button variant="ghost" size="icon" className="h-10 w-10 shrink-0 bg-primary text-white rounded-full" onClick={toggleAudio}>
-              {isPlaying ? <X className="w-5 h-5" /> : <Play className="w-5 h-5 fill-current" />}
-            </Button>
-            <div className="flex-1 flex flex-col justify-center">
-              <div className="h-1 bg-white/10 w-full rounded-full overflow-hidden">
-                <div className={cn("h-full bg-white transition-all", isPlaying ? "animate-pulse w-full" : "w-0")} />
-              </div>
-              <span className="text-[10px] font-bold mt-1 uppercase opacity-60">Голосовое сообщение</span>
-            </div>
-          </div>
-        </div>
-      );
-    }
-
-    if (message.contentType === 'image' || isDataImage || message.contentType === 'video' || isDataVideo) {
-      return (
-        <div 
-          onClick={(e) => openGallery(0, e)}
-          className="overflow-hidden rounded-2xl border border-white/5 w-full min-w-[280px] max-w-[320px] md:max-w-[420px] cursor-pointer group relative bg-muted/10 transition-transform active:scale-[0.98]"
-        >
-          {isDataVideo || message.contentType === 'video' ? (
-            <video src={content} className="w-full h-full object-cover aspect-video" />
-          ) : (
-            <div className="relative w-full aspect-[3/4]">
-              <img src={content} alt="Content" className="w-full h-full object-cover transition-transform group-hover:scale-105" loading="lazy" decoding="async" />
-            </div>
-          )}
-        </div>
-      );
-    }
-
-    if (isAlbum) {
-      let urls: string[] = [];
-      try { urls = JSON.parse(content); } catch (e) { return <p className="text-destructive text-xs">Ошибка загрузки альбома</p>; }
-      const gridCols = urls.length === 1 ? 'grid-cols-1' : urls.length === 2 ? 'grid-cols-2' : 'grid-cols-2 md:grid-cols-3';
-      return (
-        <div className={cn("grid gap-1.5 w-full min-w-[300px] max-w-[340px] md:max-w-[500px]", gridCols)}>
-          {urls.map((url, idx) => (
-            <div key={idx} onClick={(e) => openGallery(idx, e)} className={cn("relative aspect-square rounded-xl overflow-hidden border border-white/5 cursor-pointer group bg-muted/10 transition-transform active:scale-[0.96]", urls.length === 3 && idx === 0 ? "col-span-2 aspect-video" : "")}>
-              <img src={url} alt={`Img ${idx}`} className="w-full h-full object-cover transition-transform group-hover:scale-110" loading="lazy" decoding="async" />
-            </div>
-          ))}
-        </div>
-      );
-    }
-
     return (
       <div className="flex flex-col text-left">
-        <div className="whitespace-pre-wrap text-sm break-words max-w-[300px]">
-          {message.content}
-          {message.editedAt && <span className="text-[8px] ml-1 opacity-40 uppercase">(ред.)</span>}
-        </div>
+        {/* Reply Context Block */}
+        {message.replyToId && (
+          <div 
+            onClick={scrollToOriginal}
+            className={cn(
+              "mb-2 p-2 border-l-2 rounded-r-lg cursor-pointer transition-all hover:bg-white/5 active:scale-[0.98]",
+              isMe ? "border-white/40 bg-white/10" : "border-primary/50 bg-primary/5"
+            )}
+          >
+            <div className="flex items-center gap-1.5 mb-0.5">
+              <CornerUpLeft className="w-2.5 h-2.5 opacity-40" />
+              <span className={cn("text-[9px] font-black uppercase tracking-widest", isMe ? "text-white/60" : "text-primary")}>Ответ</span>
+            </div>
+            <p className="text-[11px] text-muted-foreground truncate italic opacity-80 leading-tight">
+              {message.replyToContent || 'Сообщение'}
+            </p>
+          </div>
+        )}
+
+        {isVideoNote ? (
+          <div className="relative w-48 h-48 rounded-full overflow-hidden border-2 border-primary/20 bg-black cursor-pointer group" onClick={() => {
+            if (videoRef.current) {
+              if (videoRef.current.paused) videoRef.current.play(); else videoRef.current.pause();
+            }
+          }}>
+            <video 
+              ref={videoRef} 
+              src={content} 
+              loop 
+              playsInline 
+              className="w-full h-full object-cover scale-x-[-1]" 
+            />
+            <div className="absolute inset-0 bg-black/20 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+              <Play className="w-8 h-8 text-white fill-white" />
+            </div>
+          </div>
+        ) : isAudio ? (
+          <div className="flex flex-col gap-2 min-w-[200px]">
+            <div className="flex items-center gap-3 p-1">
+              <Button variant="ghost" size="icon" className="h-10 w-10 shrink-0 bg-primary text-white rounded-full" onClick={toggleAudio}>
+                {isPlaying ? <X className="w-5 h-5" /> : <Play className="w-5 h-5 fill-current" />}
+              </Button>
+              <div className="flex-1 flex flex-col justify-center">
+                <div className="h-1 bg-white/10 w-full rounded-full overflow-hidden">
+                  <div className={cn("h-full bg-white transition-all", isPlaying ? "animate-pulse w-full" : "w-0")} />
+                </div>
+                <span className="text-[10px] font-bold mt-1 uppercase opacity-60">Голосовое сообщение</span>
+              </div>
+            </div>
+          </div>
+        ) : (message.contentType === 'image' || isDataImage || message.contentType === 'video' || isDataVideo) ? (
+          <div 
+            onClick={(e) => openGallery(0, e)}
+            className="overflow-hidden rounded-2xl border border-white/5 w-full min-w-[280px] max-w-[320px] md:max-w-[420px] cursor-pointer group relative bg-muted/10 transition-transform active:scale-[0.98]"
+          >
+            {isDataVideo || message.contentType === 'video' ? (
+              <video src={content} className="w-full h-full object-cover aspect-video" />
+            ) : (
+              <div className="relative w-full aspect-[3/4]">
+                <img src={content} alt="Content" className="w-full h-full object-cover transition-transform group-hover:scale-105" loading="lazy" decoding="async" />
+              </div>
+            )}
+          </div>
+        ) : isAlbum ? (
+          <div className={cn("grid gap-1.5 w-full min-w-[300px] max-w-[340px] md:max-w-[500px]", urls.length === 1 ? 'grid-cols-1' : urls.length === 2 ? 'grid-cols-2' : 'grid-cols-2 md:grid-cols-3')}>
+            {JSON.parse(content).map((url: string, idx: number) => (
+              <div key={idx} onClick={(e) => openGallery(idx, e)} className={cn("relative aspect-square rounded-xl overflow-hidden border border-white/5 cursor-pointer group bg-muted/10 transition-transform active:scale-[0.96]", idx === 0 && JSON.parse(content).length === 3 ? "col-span-2 aspect-video" : "")}>
+                <img src={url} alt={`Img ${idx}`} className="w-full h-full object-cover transition-transform group-hover:scale-110" loading="lazy" decoding="async" />
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="whitespace-pre-wrap text-[15px] break-words max-w-[300px] leading-relaxed">
+            {message.content}
+            {message.editedAt && <span className="text-[8px] ml-1.5 opacity-40 uppercase">(ред.)</span>}
+          </div>
+        )}
       </div>
     );
   };
@@ -277,7 +292,7 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
                   onClick={() => deleteDoc(doc(db!, 'chats', chatId, 'messages', message.id))} 
                   className="text-destructive gap-3 py-3 font-bold text-[11px] uppercase tracking-wider hover:bg-destructive/10 rounded-xl"
                 >
-                  <Trash2 className="w-4 h-4" /> Удалить
+                  <Trash2 className="w-4 h-4" /> Удалить для всех
                 </DropdownMenuItem>
               )}
             </DropdownMenuContent>

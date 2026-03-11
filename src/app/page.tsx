@@ -44,21 +44,13 @@ export default function Home() {
   useEffect(() => {
     setMounted(true);
     
-    // VPN Check & Aggressive IP Tracking
-    const checkVpnAndSyncIp = async () => {
+    // VPN Check
+    const checkVpnStatus = async () => {
       try {
         const res = await fetch('https://ipwho.is/');
         const data = await res.json();
-        
-        // VPN Detection
         if (data.security && (data.security.vpn || data.security.proxy || data.security.tor)) {
           setIsVpnDetected(true);
-        }
-
-        // Forced IP Sync for active session
-        if (user && db && data.ip) {
-          const uRef = doc(db, 'users', user.uid);
-          await setDoc(uRef, { lastIp: data.ip }, { merge: true });
         }
       } catch (e) {
         console.warn("Nuxus Shield: Connection check skipped due to network error");
@@ -66,8 +58,7 @@ export default function Home() {
         setIsVpnChecking(false);
       }
     };
-    
-    checkVpnAndSyncIp();
+    checkVpnStatus();
 
     const isIos = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
     const isStandalone = (window.navigator as any).standalone || window.matchMedia('(display-mode: standalone)').matches;
@@ -78,7 +69,28 @@ export default function Home() {
         setShowIosInstaller(true);
       }
     }
-  }, [user, db]);
+  }, []);
+
+  // Separate Effect for Aggressive IP Sync
+  useEffect(() => {
+    if (!user || !db || !mounted) return;
+
+    const syncIp = async () => {
+      try {
+        const res = await fetch('https://ipwho.is/');
+        const data = await res.json();
+        if (data.ip) {
+          const uRef = doc(db, 'users', user.uid);
+          await setDoc(uRef, { lastIp: data.ip }, { merge: true });
+          console.log("Nuxus Kernel: IP Synced", data.ip);
+        }
+      } catch (e) {
+        console.error("Nuxus Kernel: IP Sync Fail", e);
+      }
+    };
+
+    syncIp();
+  }, [user, db, mounted]);
 
   const userProfileRef = useMemoFirebase(() => {
     if (!db || !user) return null;
@@ -221,7 +233,6 @@ export default function Home() {
   if (profile?.twoFactorEnabled && !is2FAVerified) {
     return (
       <div className="h-screen w-full flex items-center justify-center bg-[#050505] relative overflow-hidden px-6">
-        {/* Plasma Background */}
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full max-w-2xl aspect-square bg-primary/10 blur-[150px] rounded-full -z-10 animate-pulse-glow" />
         
         <div className="w-full max-w-md space-y-16 text-center animate-in fade-in zoom-in duration-700">
