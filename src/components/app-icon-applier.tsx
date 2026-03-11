@@ -17,8 +17,8 @@ export function AppIconApplier() {
   const userRef = useMemoFirebase(() => (!db || !user) ? null : doc(db, 'users', user.uid), [db, user]);
   const { data: profile } = useDoc<User>(userRef);
 
-  // Ваша основная иконка
-  const DEFAULT_ICON = 'https://i.ibb.co/sd2MqGz2/Icon.png?v=15';
+  // Ваша основная иконка (v16)
+  const DEFAULT_ICON = 'https://i.ibb.co/sd2MqGz2/Icon.png?v=16';
 
   useEffect(() => {
     const customIcon = profile?.settings?.customAppIconUrl;
@@ -43,7 +43,7 @@ export function AppIconApplier() {
       updateTag('link[rel="shortcut icon"]', 'href', finalIcon);
       updateTag('link[rel="apple-touch-icon"]', 'href', finalIcon);
       
-      const sizes = ['57x57', '72x72', '76x76', '114x114', '120x120', '144x144', '152x152', '180x180'];
+      const sizes = ['16x16', '32x32', '57x57', '72x72', '76x76', '114x114', '120x120', '144x144', '152x152', '180x180'];
       sizes.forEach(size => {
         updateTag(`link[rel="apple-touch-icon"][sizes="${size}"]`, 'href', finalIcon);
       });
