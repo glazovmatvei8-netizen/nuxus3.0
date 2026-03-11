@@ -136,7 +136,7 @@ const ChatListItem = memo(({
         </button>
       </div>
 
-      {/* Панель СПРАВА (Свайп влево) */}
+      {/* Панель СПРАВА (Свайп влево) - FIXED Position */}
       <div className={cn(
         "absolute inset-y-0 right-0 flex h-full z-0 transition-opacity duration-200",
         offsetX < -10 ? "opacity-100" : "opacity-0 pointer-events-none"
@@ -153,7 +153,7 @@ const ChatListItem = memo(({
 
       <div 
         className={cn(
-          "relative z-10 bg-[#0a0a0c] will-change-transform", 
+          "relative z-10 bg-[#0a0a0c] will-change-transform w-full", 
           !isDragging && "transition-transform duration-300 ease-out"
         )}
         style={{ transform: `translateX(${offsetX}px)` }}
@@ -165,7 +165,7 @@ const ChatListItem = memo(({
         <ContextMenu>
           <ContextMenuTrigger disabled={Math.abs(offsetX) > 10}>
             <div className={cn(
-              "flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors border-none group relative bg-[#0a0a0c]",
+              "flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors border-none group relative bg-[#0a0a0c] w-full",
               isActive && Math.abs(offsetX) < 5 ? 'bg-white/10' : 'active:bg-white/[0.05]'
             )}>
               <UserAvatar userId={otherId} manualAvatarUrl={otherProfile?.avatarUrl || chat.avatarUrl} className="h-[54px] w-[54px]" fallbackName={finalDisplayName} showOnlineStatus />

@@ -30,26 +30,26 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
   const userRef = useMemoFirebase(() => (!db || !user) ? null : doc(db, 'users', user.uid), [db, user]);
   const { data: myProfile } = useDoc<User>(userRef);
 
-  // Fox stickers initialized from ultra-stable CDN
+  // Fox stickers from ultra-stable Google Noto Emoji CDN
   const foxStickers = [
-    'https://www.gstatic.com/android/keyboard/emojikitchen/20201001/u1f98a/u1f98a_u1f60d.png',
-    'https://www.gstatic.com/android/keyboard/emojikitchen/20201001/u1f98a/u1f98a_u1f602.png',
-    'https://www.gstatic.com/android/keyboard/emojikitchen/20201001/u1f98a/u1f98a_u1f621.png',
-    'https://www.gstatic.com/android/keyboard/emojikitchen/20201001/u1f98a/u1f98a_u1f60e.png',
-    'https://www.gstatic.com/android/keyboard/emojikitchen/20201001/u1f98a/u1f98a_u1f634.png',
-    'https://www.gstatic.com/android/keyboard/emojikitchen/20201001/u1f98a/u1f98a_u1f973.png',
-    'https://www.gstatic.com/android/keyboard/emojikitchen/20201001/u1f98a/u1f98a_u1f607.png',
-    'https://www.gstatic.com/android/keyboard/emojikitchen/20201001/u1f98a/u1f98a_u1f618.png',
-    'https://www.gstatic.com/android/keyboard/emojikitchen/20201001/u1f98a/u1f98a_u1f914.png',
-    'https://www.gstatic.com/android/keyboard/emojikitchen/20201001/u1f98a/u1f98a_u1f62d.png',
-    'https://www.gstatic.com/android/keyboard/emojikitchen/20201001/u1f98a/u1f98a_u1f631.png',
-    'https://www.gstatic.com/android/keyboard/emojikitchen/20201001/u1f98a/u1f98a_u1f60b.png'
+    'https://fonts.gstatic.com/s/e/notoemoji/latest/1f98a/512.webp',
+    'https://fonts.gstatic.com/s/e/notoemoji/latest/1f60d/512.webp',
+    'https://fonts.gstatic.com/s/e/notoemoji/latest/1f602/512.webp',
+    'https://fonts.gstatic.com/s/e/notoemoji/latest/1f621/512.webp',
+    'https://fonts.gstatic.com/s/e/notoemoji/latest/1f60e/512.webp',
+    'https://fonts.gstatic.com/s/e/notoemoji/latest/1f634/512.webp',
+    'https://fonts.gstatic.com/s/e/notoemoji/latest/1f973/512.webp',
+    'https://fonts.gstatic.com/s/e/notoemoji/latest/1f607/512.webp',
+    'https://fonts.gstatic.com/s/e/notoemoji/latest/1f618/512.webp',
+    'https://fonts.gstatic.com/s/e/notoemoji/latest/1f914/512.webp',
+    'https://fonts.gstatic.com/s/e/notoemoji/latest/1f62d/512.webp',
+    'https://fonts.gstatic.com/s/e/notoemoji/latest/1f631/512.webp'
   ];
 
   useEffect(() => {
     if (open && db) {
       const initSystemPacks = async () => {
-        const foxPackId = 'system_fox_pack_v3';
+        const foxPackId = 'system_fox_pack_v4'; // Incremented version to refresh
         const packRef = doc(db, 'stickerPacks', foxPackId);
         await setDoc(packRef, {
           id: foxPackId,
@@ -98,7 +98,6 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
       const searchVal = val.startsWith('@') ? val.toLowerCase() : '@' + val.toLowerCase();
       const foundResults: any[] = [];
 
-      // Always include Sticker Bot in results if searching for @stickers
       if ('@stickers'.includes(searchVal)) {
         foundResults.push({ 
           type: 'bot', 

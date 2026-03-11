@@ -50,7 +50,6 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
     const msgRef = doc(db, 'chats', chatId, 'messages', message.id);
     const hasReacted = message.reactions?.[emoji]?.includes(user.uid);
     
-    // Haptic feedback for reactions
     if (window.navigator && window.navigator.vibrate) {
       window.navigator.vibrate(50);
     }
@@ -90,8 +89,16 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
 
     if (isSticker) {
       return (
-        <div className="w-40 h-40 select-none animate-in fade-in zoom-in duration-300">
-          <img src={content} alt="Sticker" className="w-full h-full object-contain" decoding="async" />
+        <div className="w-40 h-40 select-none animate-in fade-in zoom-in duration-300 flex items-center justify-center">
+          <img 
+            src={content} 
+            alt="Sticker" 
+            className="w-full h-full object-contain pointer-events-none" 
+            decoding="async"
+            onError={(e) => {
+              (e.target as any).src = 'https://fonts.gstatic.com/s/e/notoemoji/latest/1f98a/512.webp';
+            }}
+          />
         </div>
       );
     }
@@ -213,7 +220,6 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
                     )}
                   </div>
 
-                  {/* Reactions Display */}
                   {message.reactions && Object.entries(message.reactions).some(([_, uids]: any) => uids.length > 0) && (
                     <div className={cn(
                       "flex flex-wrap gap-1 mt-2",
@@ -236,7 +242,6 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
                   )}
                 </div>
                 
-                {/* Desktop-only More button */}
                 <div className={cn("absolute top-0 opacity-0 group-hover/bubble:opacity-100 transition-opacity hidden md:flex", isMe ? "-left-10" : "-right-10")}>
                    <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full bg-card/50 backdrop-blur-xl border border-white/10">
                       <MoreVertical className="w-4 h-4" />
