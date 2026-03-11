@@ -170,7 +170,6 @@ export default function ChatArea() {
       
       try {
         await batch.commit();
-        // Also clear manual unread flag
         if (chat?.isManualUnread) {
           updateDoc(doc(db, 'chats', currentChatId), { isManualUnread: false });
         }
@@ -377,10 +376,17 @@ export default function ChatArea() {
     }
     
     await addDoc(collection(db, 'chats', currentChatId, 'messages'), msgData);
-    updateDocumentNonBlocking(doc(db, 'chats', currentChatId), { lastMessageAt: new Date().toISOString(), isManualUnread: false });
+    
+    // ВАЖНО: Обновляем lastSenderId для фильтрации уведомлений
+    updateDocumentNonBlocking(doc(db, 'chats', currentChatId), { 
+      lastMessageAt: new Date().toISOString(), 
+      lastSenderId: firebaseUser.uid,
+      isManualUnread: false 
+    });
 
   }, [messageInput, currentChatId, firebaseUser, db, userProfile, replyTo, editingMsg, setLocalDrafts, chat?.username]);
 
+  // Rest of the component remains same...
   const startRecording = async (type: 'audio' | 'video' = 'audio') => {
     try {
       const isVideo = type === 'video';

@@ -9,7 +9,7 @@ export default function manifest(): MetadataRoute.Manifest {
   
   return {
     id: 'chat.nuxus.app',
-    name: 'Nuxus — Премиальная связь',
+    name: 'Nuxus 2.0',
     short_name: 'Nuxus',
     description: 'Современный мессенджер с поддержкой ИИ, защитой 2FA и видеозвонками.',
     start_url: '/',
@@ -52,8 +52,6 @@ export default function manifest(): MetadataRoute.Manifest {
         icons: [{ src: APP_ICON_URL, sizes: '192x192', type: 'image/png' }]
       }
     ],
-    // Расширенные поля для Windows/System Tray
     related_applications: [],
-    prefer_related_applications: false
   }
 }

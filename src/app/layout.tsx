@@ -28,7 +28,7 @@ const FINAL_ICON_URL = `${APP_ICON_URL}${VERSION_PARAM}`;
 export const metadata: Metadata = {
   title: 'Nuxus 2.0 — Премиальная связь',
   description: 'Современный и безопасный мессенджер нового поколения.',
-  applicationName: 'NuxusChat',
+  applicationName: 'Nuxus',
   manifest: '/manifest.webmanifest',
   appleWebApp: {
     capable: true,
@@ -47,6 +47,11 @@ export const metadata: Metadata = {
       { url: FINAL_ICON_URL, sizes: '180x180', type: 'image/png' },
     ],
   },
+  other: {
+    'msapplication-TileColor': '#0a0a0c',
+    'msapplication-config': 'none',
+    'notification-app-id': 'chat.nuxus.app'
+  }
 };
 
 export const viewport: Viewport = {

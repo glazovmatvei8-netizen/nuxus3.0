@@ -10,8 +10,8 @@ import type { Chat, User } from '@/lib/types';
 import { isAfter, parseISO } from 'date-fns';
 
 /**
- * Nuxus Notification Core v65.0.0 - Optimized for Windows & Mobile.
- * Управляет правами на системные уведомления.
+ * Nuxus Notification Core v65.1.0 - Optimized for Windows & Mobile.
+ * Управляет правами на системные уведомления и фильтрует само-уведомления.
  */
 export function NotificationListener() {
   const { user } = useUser();
@@ -27,7 +27,6 @@ export function NotificationListener() {
   const { data: profile } = useDoc<User>(userRef);
 
   useEffect(() => {
-    // Принудительный запрос прав на уведомления (Windows/Safari/Chrome)
     const requestPerms = async () => {
       if (typeof window !== 'undefined' && 'Notification' in window) {
         if (Notification.permission === 'default') {
@@ -37,7 +36,6 @@ export function NotificationListener() {
     };
     requestPerms();
 
-    // Lazy load audio
     const setupAudio = () => {
       if (!audioRef.current) {
         audioRef.current = new Audio('https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3');
@@ -59,7 +57,7 @@ export function NotificationListener() {
 
     const unsubscribe = onSnapshot(chatsQuery, (snapshot) => {
       snapshot.docChanges().forEach((change) => {
-        const chatData = change.doc.data() as Chat;
+        const chatData = change.doc.data() as any; // Using any to access lastSenderId
         const chatId = change.doc.id;
 
         if (change.type === 'added') {
@@ -76,8 +74,10 @@ export function NotificationListener() {
           if (newTime && newTime !== lastTime) {
             lastProcessedTimestamps.current[chatId] = newTime;
 
-            // Only notify if not active chat and not initial load
-            if (chatId !== currentChatId && !isFirstLoad.current) {
+            // ФИЛЬТР: Не уведомлять, если это наш текущий чат ИЛИ если отправитель — мы сами
+            const isSelfMessage = chatData.lastSenderId === user.uid;
+            
+            if (chatId !== currentChatId && !isFirstLoad.current && !isSelfMessage) {
               
               // Mute check
               const userMuteTimestamp = chatData.metadata?.[user.uid]?.mutedUntil;
@@ -102,12 +102,17 @@ export function NotificationListener() {
               // Visual notification
               const senderName = chatData.type === 'private' ? 'Nuxus Signal' : chatData.name;
               
-              // Отображение нативного уведомления (для Windows/EXE)
               if (Notification.permission === 'granted') {
-                new Notification(senderName, {
-                  body: 'Получен новый пакет данных',
-                  icon: 'https://i.ibb.co/sd2MqGz2/Icon.png'
-                });
+                try {
+                  new Notification(senderName, {
+                    body: 'Получен новый пакет данных',
+                    icon: 'https://i.ibb.co/sd2MqGz2/Icon.png?v=45',
+                    tag: chatId, // grouping
+                    silent: true // we play our own audio
+                  });
+                } catch (e) {
+                  console.warn("Nuxus Push: System blocked notification");
+                }
               }
 
               toast({
