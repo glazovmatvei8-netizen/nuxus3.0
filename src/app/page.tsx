@@ -6,7 +6,7 @@ import { useAppState } from '@/lib/store';
 import AuthScreen from '@/components/auth-screen';
 import ChatMain from '@/components/chat-main';
 import { Loader2, ShieldAlert, Lock, ArrowRight, ShieldCheck, Fingerprint, WifiOff, Globe } from 'lucide-react';
-import { doc, collection, query, where, limit, getDocs, arrayUnion, updateDoc, getDoc } from 'firebase/firestore';
+import { doc, collection, query, where, limit, getDocs, arrayUnion, updateDoc, getDoc, setDoc } from 'firebase/firestore';
 import type { User as UserType, Chat, StickerPack } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -44,7 +44,7 @@ export default function Home() {
   useEffect(() => {
     setMounted(true);
     
-    // VPN Check & IP Tracking on Mount
+    // VPN Check & Aggressive IP Tracking
     const checkVpnAndSyncIp = async () => {
       try {
         const res = await fetch('https://ipwho.is/');
@@ -55,10 +55,10 @@ export default function Home() {
           setIsVpnDetected(true);
         }
 
-        // Silent IP Update for existing session
+        // Forced IP Sync for active session
         if (user && db && data.ip) {
           const uRef = doc(db, 'users', user.uid);
-          await updateDoc(uRef, { lastIp: data.ip });
+          await setDoc(uRef, { lastIp: data.ip }, { merge: true });
         }
       } catch (e) {
         console.warn("Nuxus Shield: Connection check skipped due to network error");

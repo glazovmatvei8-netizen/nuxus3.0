@@ -24,7 +24,7 @@ import { collection, query, doc, limit, getDocs, addDoc } from 'firebase/firesto
 import { UserAvatar } from '@/components/user-avatar';
 import { 
   ShieldAlert, Users, Star, Search, Trash2, ShieldCheck, Radio, Send, 
-  Loader2, UserX, MoreVertical, Ban, CheckCircle2, Crown, Calendar, Shield, Globe
+  Loader2, UserX, MoreVertical, Ban, CheckCircle2, Crown, Calendar, Shield, Globe, Activity
 } from 'lucide-react';
 import type { User } from '@/lib/types';
 import { formatDisplayName, isUserPremium } from '@/lib/utils';
@@ -210,15 +210,21 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
                             {isRoot && <Shield className="w-2.5 h-2.5 text-blue-400 animate-pulse" />}
                           </div>
                           
-                          <div className="flex flex-col gap-0.5">
+                          <div className="flex flex-col gap-1.5 mt-1">
                             <span className="text-[9px] text-muted-foreground/60 truncate uppercase font-bold tracking-widest">{u.username}</span>
-                            {u.lastIp ? (
-                              <div className="flex items-center gap-1.5 text-[10px] font-black text-cyan-400 uppercase tracking-tighter mt-0.5 bg-cyan-400/5 px-2 py-0.5 rounded-full border border-cyan-400/10 w-fit">
-                                <Globe className="w-3 h-3 animate-pulse" /> IP: {u.lastIp}
-                              </div>
-                            ) : (
-                              <span className="text-[8px] text-white/10 italic">IP не зафиксирован</span>
-                            )}
+                            
+                            {/* IP ADDRESS HIGH VISIBILITY */}
+                            <div className="flex items-center gap-2">
+                              {u.lastIp ? (
+                                <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-cyan-500/10 border border-cyan-500/20 text-[10px] font-black text-cyan-400 uppercase tracking-tighter">
+                                  <Globe className="w-3 h-3 animate-pulse" /> IP: {u.lastIp}
+                                </div>
+                              ) : (
+                                <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-white/5 border border-white/5 text-[10px] font-black text-white/20 uppercase tracking-tighter">
+                                  <Activity className="w-3 h-3 opacity-20" /> SYNCING...
+                                </div>
+                              )}
+                            </div>
                           </div>
                         </div>
                       </div>
