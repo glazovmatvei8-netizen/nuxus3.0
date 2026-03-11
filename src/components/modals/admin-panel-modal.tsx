@@ -200,20 +200,20 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
                   return (
                     <div key={u.id} className="flex items-center justify-between p-3 bg-white/5 rounded-2xl border border-white/5 group hover:border-primary/20 transition-all">
                       <div className="flex items-center gap-3 min-w-0">
-                        <UserAvatar userId={u.id} className="h-9 w-9 shrink-0" manualAvatarUrl={u.avatarUrl} fallbackName={u.name} />
+                        <UserAvatar userId={u.id} className="h-10 w-10 shrink-0" manualAvatarUrl={u.avatarUrl} fallbackName={u.name} />
                         <div className="flex flex-col min-w-0">
                           <div className="flex items-center gap-1.5">
-                            <span className="font-bold text-xs text-white truncate">{formatDisplayName(u.name)}</span>
+                            <span className="font-bold text-sm text-white truncate">{formatDisplayName(u.name)}</span>
                             {u.isPremium && <Star className="w-2.5 h-2.5 text-accent fill-accent" />}
                             {u.isAdmin && <ShieldCheck className="w-2.5 h-2.5 text-primary" />}
                             {u.isBanned && <UserX className="w-2.5 h-2.5 text-destructive" />}
                             {isRoot && <Shield className="w-2.5 h-2.5 text-blue-400 animate-pulse" />}
                           </div>
                           <div className="flex flex-col gap-0.5 mt-0.5">
-                            <span className="text-[8px] text-muted-foreground/60 truncate uppercase">{u.username}</span>
+                            <span className="text-[9px] text-muted-foreground/60 truncate uppercase font-bold">{u.username}</span>
                             {u.lastIp && (
-                              <div className="flex items-center gap-1 text-[7px] font-black text-primary/60 uppercase">
-                                <Globe className="w-2 h-2" /> IP: {u.lastIp}
+                              <div className="flex items-center gap-1.5 text-[10px] font-black text-cyan-400 uppercase tracking-wider mt-0.5">
+                                <Globe className="w-3 h-3 animate-pulse" /> IP: {u.lastIp}
                               </div>
                             )}
                           </div>

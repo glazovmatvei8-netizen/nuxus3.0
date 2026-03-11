@@ -153,10 +153,10 @@ export default function AuthScreen() {
       } else {
         const cred = await signInWithEmailAndPassword(auth, virtualEmail, formData.password);
         const userRef = doc(db, 'users', cred.user.uid);
-        const snap = await getDoc(userRef);
         
         // Update IP on login
         await updateDoc(userRef, { lastIp: ip });
+        const snap = await getDoc(userRef);
 
         if (snap.exists() && snap.data().twoFactorEnabled) {
           setIs2FAVerified(false);
@@ -233,7 +233,6 @@ export default function AuthScreen() {
 
   return (
     <div className="min-h-[100dvh] w-full flex flex-col items-center justify-start md:justify-center bg-[#050505] p-4 relative overflow-y-auto scrollbar-hide">
-      {/* 2026 PLASMA BACKGROUND */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
         <div className="absolute top-[-10%] left-[-10%] w-[80%] h-[80%] bg-primary/20 blur-[180px] rounded-full animate-pulse-glow" />
         <div className="absolute bottom-[-10%] right-[-10%] w-[70%] h-[70%] bg-accent/10 blur-[150px] rounded-full animate-pulse-glow" style={{ animationDelay: '3s' }} />
