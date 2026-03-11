@@ -136,19 +136,21 @@ const ChatListItem = memo(({
         </button>
       </div>
 
-      {/* Кнопки СПРАВА (свайп влево) */}
+      {/* Кнопки СПРАВА (свайп влево) - FIX: Жесткое позиционирование справа */}
       <div className={cn(
         "absolute inset-y-0 right-0 flex h-full z-0 transition-opacity duration-200",
         offsetX < -10 ? "opacity-100" : "opacity-0 pointer-events-none"
-      )}>
-        <button onClick={(e) => { e.stopPropagation(); onMute(chat.id); resetSwipe(); }} className="w-20 bg-[#FF9500] flex flex-col items-center justify-center text-white gap-1 active:brightness-90 transition-all">
-          {isMuted ? <Volume2 className="w-5 h-5" /> : <VolumeX className="w-5 h-5 fill-current" />}
-          <span className="text-[10px] font-black uppercase leading-tight px-1 text-center">{isMuted ? 'Звук' : 'Тихо'}</span>
-        </button>
-        <button onClick={(e) => { e.stopPropagation(); onDelete(chat.id); resetSwipe(); }} className="w-20 bg-[#FF3B30] flex flex-col items-center justify-center text-white gap-1 active:brightness-90 transition-all">
-          <Trash2 className="w-5 h-5 fill-current" />
-          <span className="text-[10px] font-black uppercase leading-tight px-1 text-center">Удалить</span>
-        </button>
+      )} style={{ width: '160px' }}>
+        <div className="flex h-full w-full">
+          <button onClick={(e) => { e.stopPropagation(); onMute(chat.id); resetSwipe(); }} className="flex-1 bg-[#FF9500] flex flex-col items-center justify-center text-white gap-1 active:brightness-90 transition-all">
+            {isMuted ? <Volume2 className="w-5 h-5" /> : <VolumeX className="w-5 h-5 fill-current" />}
+            <span className="text-[10px] font-black uppercase leading-tight px-1 text-center">{isMuted ? 'Звук' : 'Тихо'}</span>
+          </button>
+          <button onClick={(e) => { e.stopPropagation(); onDelete(chat.id); resetSwipe(); }} className="flex-1 bg-[#FF3B30] flex flex-col items-center justify-center text-white gap-1 active:brightness-90 transition-all">
+            <Trash2 className="w-5 h-5 fill-current" />
+            <span className="text-[10px] font-black uppercase leading-tight px-1 text-center">Удалить</span>
+          </button>
+        </div>
       </div>
 
       <div 
