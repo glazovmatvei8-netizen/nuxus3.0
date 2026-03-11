@@ -19,11 +19,10 @@ const font = Plus_Jakarta_Sans({
 });
 
 /**
- * ГЛОБАЛЬНАЯ ИКОНКА NUXUS (v40)
- * Повышаем версию для пробития кеша и Nativefier скрапера.
+ * ГЛОБАЛЬНАЯ ИКОНКА NUXUS (v45)
  */
 const APP_ICON_URL = 'https://i.ibb.co/sd2MqGz2/Icon.png';
-const VERSION_PARAM = '?v=40';
+const VERSION_PARAM = '?v=45';
 const FINAL_ICON_URL = `${APP_ICON_URL}${VERSION_PARAM}`;
 
 export const metadata: Metadata = {
@@ -67,7 +66,6 @@ export default function RootLayout({
   return (
     <html lang="ru" className={`dark ${font.variable}`} suppressHydrationWarning>
       <head>
-        {/* ПРИНУДИТЕЛЬНОЕ ПЕРЕОПРЕДЕЛЕНИЕ FAVICON */}
         <link rel="icon" type="image/png" sizes="16x16" href={FINAL_ICON_URL} />
         <link rel="icon" type="image/png" sizes="32x32" href={FINAL_ICON_URL} />
         <link rel="icon" type="image/png" sizes="192x192" href={FINAL_ICON_URL} />
