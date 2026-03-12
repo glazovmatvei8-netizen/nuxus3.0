@@ -1,4 +1,3 @@
-
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import { AppProvider } from '@/lib/store';
@@ -71,18 +70,7 @@ export default function RootLayout({
   return (
     <html lang="ru" className={`dark ${font.variable}`} suppressHydrationWarning>
       <head>
-        {/* МЫ УБРАЛИ РУЧНЫЕ LINK ТЕГИ, ЧТОБЫ ИЗБЕЖАТЬ ОШИБКИ removeChild В NEXT.JS */}
-        <style>
-          {`
-          html, body { 
-            background-color: #0a0a0c !important; 
-            margin: 0; 
-            padding: 0;
-            overflow: hidden;
-            color-scheme: dark;
-          }
-        `}
-        </style>
+        {/* Убрали лишние ручные теги, которые могли вызвать сбои hydration или removeChild */}
       </head>
       <body className="font-sans antialiased bg-[#0a0a0c] text-foreground overflow-hidden h-[100dvh] selection:bg-primary/30" style={{ backgroundColor: '#0a0a0c', fontFamily: 'var(--font-jakarta), ui-sans-serif, system-ui, -apple-system, sans-serif' }}>
         <FirebaseClientProvider>

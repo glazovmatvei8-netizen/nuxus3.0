@@ -7,8 +7,8 @@ import type { User } from '@/lib/types';
 
 /**
  * Динамически применяет иконку приложения (v45).
- * ИСПОЛЬЗУЕТ БЕЗОПАСНЫЕ МЕТОДЫ DOM: предотвращает ошибку "removeChild" 
- * путем проверки привязки элемента к родителю.
+ * ИСПОЛЬЗУЕТ БЕЗОПАСНЫЙ МЕТОД: не удаляет системные теги Next.js,
+ * а управляет только своими элементами через ID.
  */
 export function AppIconApplier() {
   const { user } = useUser();
@@ -27,44 +27,36 @@ export function AppIconApplier() {
       if (typeof document === 'undefined') return;
 
       try {
-        // Очищаем только те иконки, которые могли быть созданы этим скриптом ранее
-        // Мы ищем по селекторам, но удаляем максимально осторожно
-        const selectors = ['link[rel*="icon"]', 'link[rel="apple-touch-icon"]'];
-        selectors.forEach(selector => {
-          const elements = document.head.querySelectorAll(selector);
-          elements.forEach(el => {
-            // Проверяем, что элемент всё еще находится в HEAD и имеет родителя
-            if (el && el.parentNode === document.head) {
-              try {
-                document.head.removeChild(el);
-              } catch (e) {
-                // Если элемент уже был удален другим процессом (React Metadata), просто игнорируем
-              }
-            }
-          });
-        });
+        // Мы не удаляем существующие иконки (Next.js Metadata), 
+        // так как это вызывает ошибку removeChild при перестроении DOM.
+        // Вместо этого мы создаем/обновляем наши собственные теги с высшим приоритетом.
+        
+        const createOrUpdateLink = (id: string, rel: string, href: string, sizes?: string) => {
+          let link = document.getElementById(id) as HTMLLinkElement;
+          if (!link) {
+            link = document.createElement('link');
+            link.id = id;
+            link.rel = rel;
+            if (sizes) link.sizes = sizes;
+            document.head.appendChild(link);
+          }
+          link.href = href;
+        };
 
-        // Создаем новые иконки
-        const sizes = ['16x16', '32x32', '192x192', '512x512'];
-        sizes.forEach(size => {
-          const link = document.createElement('link');
-          link.rel = 'icon';
-          link.type = 'image/png';
-          link.sizes = size;
-          link.href = finalIcon;
-          document.head.appendChild(link);
-        });
-
-        const appleLink = document.createElement('link');
-        appleLink.rel = 'apple-touch-icon';
-        appleLink.href = finalIcon;
-        document.head.appendChild(appleLink);
+        // Обновляем фавиконки
+        createOrUpdateLink('nuxus-dynamic-icon-16', 'icon', finalIcon, '16x16');
+        createOrUpdateLink('nuxus-dynamic-icon-32', 'icon', finalIcon, '32x32');
+        createOrUpdateLink('nuxus-dynamic-icon-192', 'icon', finalIcon, '192x192');
+        createOrUpdateLink('nuxus-dynamic-icon-512', 'icon', finalIcon, '512x512');
+        
+        // Обновляем иконку для Apple
+        createOrUpdateLink('nuxus-dynamic-apple-icon', 'apple-touch-icon', finalIcon);
+        
       } catch (e) {
-        console.warn("Nuxus Icon Engine: Sync skipped to prevent crash", e);
+        console.warn("Nuxus Icon Engine: Safe sync failed", e);
       }
     };
 
-    // Используем requestAnimationFrame для синхронизации с циклом отрисовки браузера
     const frameId = requestAnimationFrame(updateIcons);
     return () => cancelAnimationFrame(frameId);
   }, [profile?.settings?.customAppIconUrl, DEFAULT_ICON]);
