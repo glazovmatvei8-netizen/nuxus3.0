@@ -8,6 +8,7 @@ import type { User } from '@/lib/types';
 
 /**
  * Динамически применяет иконку приложения (v45)
+ * Исправлена ошибка "removeChild" путем использования более безопасных методов манипуляции DOM.
  */
 export function AppIconApplier() {
   const { user } = useUser();
@@ -23,27 +24,41 @@ export function AppIconApplier() {
     const finalIcon = customIcon ? `${customIcon}${customIcon.includes('?') ? '&' : '?'}v=45` : DEFAULT_ICON;
 
     const updateIcons = () => {
-      const existingIcons = document.querySelectorAll('link[rel*="icon"], link[rel="apple-touch-icon"]');
-      existingIcons.forEach(el => el.remove());
+      try {
+        // Безопасное удаление старых иконок
+        const selectors = ['link[rel*="icon"]', 'link[rel="apple-touch-icon"]'];
+        selectors.forEach(selector => {
+          const elements = document.querySelectorAll(selector);
+          elements.forEach(el => {
+            if (el && el.parentNode) {
+              el.parentNode.removeChild(el);
+            }
+          });
+        });
 
-      const sizes = ['16x16', '32x32', '192x192', '512x512'];
-      sizes.forEach(size => {
-        const link = document.createElement('link');
-        link.rel = 'icon';
-        link.type = 'image/png';
-        link.sizes = size;
-        link.href = finalIcon;
-        document.head.appendChild(link);
-      });
+        const sizes = ['16x16', '32x32', '192x192', '512x512'];
+        sizes.forEach(size => {
+          const link = document.createElement('link');
+          link.rel = 'icon';
+          link.type = 'image/png';
+          link.sizes = size;
+          link.href = finalIcon;
+          document.head.appendChild(link);
+        });
 
-      const appleLink = document.createElement('link');
-      appleLink.rel = 'apple-touch-icon';
-      appleLink.href = finalIcon;
-      document.head.appendChild(appleLink);
+        const appleLink = document.createElement('link');
+        appleLink.rel = 'apple-touch-icon';
+        appleLink.href = finalIcon;
+        document.head.appendChild(appleLink);
+      } catch (e) {
+        console.warn("Nuxus Icon Engine: Head sync skipped", e);
+      }
     };
 
     updateIcons();
-    setTimeout(updateIcons, 1000);
+    // Небольшая задержка для уверенности в SPA-окружении
+    const timer = setTimeout(updateIcons, 1500);
+    return () => clearTimeout(timer);
   }, [profile?.settings?.customAppIconUrl, DEFAULT_ICON]);
 
   return null;
