@@ -55,14 +55,16 @@ export default function WalletView() {
       <ScrollArea className="flex-1">
         <div className="px-4 space-y-4 pb-32">
           <div className="flex items-center justify-between px-2">
-            <h3 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">Последние транзакции</h3>
-            <Button variant="link" className="text-[10px] font-bold uppercase text-primary p-0">Все</Button>
+            <h3 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">Транзакции Ядра</h3>
+            <Button variant="link" className="text-[10px] font-bold uppercase text-primary p-0">Синхронизировать</Button>
           </div>
 
           <div className="space-y-1">
-            <TransactionItem type="receive" amount="+500" from="Nuxus Prime" date="Сегодня, 14:20" />
-            <TransactionItem type="send" amount="-120" from="Sticker Bot" date="Вчера, 23:11" />
-            <TransactionItem type="receive" amount="+50" from="Referral Bonus" date="24 мая" />
+            {/* FIX: Очищены статичные транзакции */}
+            <div className="flex flex-col items-center justify-center py-10 opacity-20 border-2 border-dashed border-white/5 rounded-3xl">
+               <History className="w-10 h-10 mb-2" />
+               <p className="text-[10px] font-black uppercase tracking-widest">Нет активных сигналов</p>
+            </div>
           </div>
 
           <div className="mt-8 bg-primary/5 border border-primary/10 rounded-[2rem] p-6 space-y-4">
@@ -91,27 +93,5 @@ function WalletAction({ icon: Icon, label, color }: { icon: any, label: string, 
       <Icon className={cn("w-5 h-5", color, "group-hover:scale-110 transition-transform")} />
       <span className="text-[10px] font-black uppercase tracking-widest text-white">{label}</span>
     </button>
-  );
-}
-
-function TransactionItem({ type, amount, from, date }: { type: 'receive' | 'send', amount: string, from: string, date: string }) {
-  return (
-    <div className="flex items-center justify-between p-4 rounded-2xl hover:bg-white/5 transition-all cursor-pointer border border-transparent hover:border-white/5 group">
-      <div className="flex items-center gap-4">
-        <div className={cn(
-          "w-10 h-10 rounded-xl flex items-center justify-center",
-          type === 'receive' ? "bg-green-500/10 text-green-500" : "bg-red-500/10 text-red-500"
-        )}>
-          {type === 'receive' ? <ArrowDownLeft className="w-5 h-5" /> : <ArrowUpRight className="w-5 h-5" />}
-        </div>
-        <div className="flex flex-col">
-          <span className="font-bold text-[14px] text-white">{from}</span>
-          <span className="text-[10px] text-muted-foreground font-bold uppercase">{date}</span>
-        </div>
-      </div>
-      <span className={cn("font-black text-[15px] italic", type === 'receive' ? "text-green-500" : "text-white")}>
-        {amount} NX
-      </span>
-    </div>
   );
 }

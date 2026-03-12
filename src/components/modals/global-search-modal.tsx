@@ -30,7 +30,6 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
   const userRef = useMemoFirebase(() => (!db || !user) ? null : doc(db, 'users', user.uid), [db, user]);
   const { data: myProfile } = useDoc<User>(userRef);
 
-  // Fox stickers from ultra-stable Google Noto Emoji CDN (fixed WebP links)
   const foxStickers = [
     'https://fonts.gstatic.com/s/e/notoemoji/latest/1f98a/512.webp',
     'https://fonts.gstatic.com/s/e/notoemoji/latest/1f60d/512.webp',
@@ -223,12 +222,13 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
                     <Sticker className="w-4 h-4 fill-current" />
                     <span className="text-[10px] font-black uppercase tracking-widest">Витрина Стикеров</span>
                   </div>
-                  <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
+                  {/* FIX: Добавлена плавная прокрутка для мобилок */}
+                  <div className="flex gap-3 overflow-x-auto pb-2 scroll-smooth scrollbar-hide px-2">
                     {featuredPacks.map(pack => (
                       <div 
                         key={pack.id} 
                         onClick={() => handleInstallPack(pack)}
-                        className="min-w-[140px] p-4 bg-white/5 rounded-[2rem] border border-white/5 hover:border-accent/40 transition-all cursor-pointer flex flex-col items-center gap-3 active:scale-95"
+                        className="min-w-[140px] p-4 bg-white/5 rounded-[2rem] border border-white/5 hover:border-accent/40 transition-all cursor-pointer flex flex-col items-center gap-3 active:scale-95 shrink-0"
                       >
                         <div className="w-16 h-16 rounded-2xl overflow-hidden bg-black/20">
                           <img src={pack.iconUrl || ''} className="w-full h-full object-cover" alt="Pack Icon" />

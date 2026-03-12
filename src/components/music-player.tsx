@@ -14,15 +14,28 @@ export function MusicPlayer() {
   const [progress, setProgress] = useState(0);
   const [volume, setVolume] = useState([80]);
 
+  // FIX: Улучшенная логика проигрывания
   useEffect(() => {
     if (audioRef.current) {
-      if (isPlayingMusic) audioRef.current.play().catch(() => setIsPlayingMusic(false));
-      else audioRef.current.pause();
+      if (isPlayingMusic) {
+        // Даем браузеру время подгрузить новый источник
+        const playPromise = audioRef.current.play();
+        if (playPromise !== undefined) {
+          playPromise.catch(error => {
+            console.warn("Music Playback Interrupted:", error);
+            setIsPlayingMusic(false);
+          });
+        }
+      } else {
+        audioRef.current.pause();
+      }
     }
   }, [isPlayingMusic, currentTrack]);
 
   useEffect(() => {
-    if (audioRef.current) audioRef.current.volume = volume[0] / 100;
+    if (audioRef.current) {
+      audioRef.current.volume = volume[0] / 100;
+    }
   }, [volume]);
 
   if (!currentTrack) return null;
@@ -34,6 +47,7 @@ export function MusicPlayer() {
         src={currentTrack.url} 
         onTimeUpdate={(e) => setProgress((e.currentTarget.currentTime / e.currentTarget.duration) * 100)}
         onEnded={() => setIsPlayingMusic(false)}
+        autoPlay={isPlayingMusic}
       />
       
       <div className="flex items-center gap-3 flex-1 min-w-0">

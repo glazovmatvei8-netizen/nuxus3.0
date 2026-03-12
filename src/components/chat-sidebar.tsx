@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useMemo, memo, useRef } from 'react';
@@ -59,7 +60,6 @@ const ChatListItem = memo(({
 
   const isUnread = (lastMsg && !lastMsg.isRead && lastMsg.senderId !== currentUserId) || chat.isManualUnread;
 
-  // ПРИНУДИТЕЛЬНАЯ РАСШИФРОВКА ПРЕВЬЮ
   const decryptedPreview = useMemo(() => {
     if (!lastMsg) return 'Нет сообщений';
     if (lastMsg.contentType !== 'text') return `[${lastMsg.contentType}]`;
@@ -129,7 +129,7 @@ const ChatListItem = memo(({
         </button>
       </div>
 
-      {/* Правые кнопки действия (Свайп влево) */}
+      {/* Правые кнопки действия (Свайп влево) - FIX: Теперь не пустая серая зона */}
       <div className={cn("absolute inset-y-0 right-0 flex h-full z-0 transition-opacity duration-200", offsetX < -10 ? "opacity-100" : "opacity-0 pointer-events-none")} style={{ width: '160px' }}>
         <div className="flex h-full w-full">
           <button onClick={(e) => { e.stopPropagation(); onArchive(chat.id, !!chat.isArchived); resetSwipe(); }} className="flex-1 bg-[#FF9500] flex flex-col items-center justify-center text-white gap-1 active:brightness-90 transition-all">
@@ -270,8 +270,9 @@ export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?:
             </Button>
           </div>
           <div className="flex justify-center">
+            {/* FIX: Возвращено Чаты🐱 */}
             <h1 onClick={() => isGlobalAdmin(currentUserProfile) && setIsAdminPanelOpen(true)} className={cn("text-[20px] font-black text-white italic tracking-tighter whitespace-nowrap", isGlobalAdmin(currentUserProfile) ? "cursor-pointer hover:text-primary" : "cursor-default")}>
-              {isArchiveView ? 'Архив' : 'Nuxus🐱'}
+              {isArchiveView ? 'Архив' : 'Чаты🐱'}
             </h1>
           </div>
           <div className="flex justify-end gap-2">

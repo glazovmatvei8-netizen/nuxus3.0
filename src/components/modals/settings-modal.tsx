@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useRef, useEffect } from 'react';
@@ -262,10 +263,6 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                 <Button onClick={shareReferralLink} className="w-full h-14 bg-primary rounded-2xl font-black uppercase tracking-widest gap-2 shadow-xl shadow-primary/20">
                   <Share2 className="w-5 h-5" /> Пригласить друзей
                 </Button>
-                
-                <p className="text-[8px] text-muted-foreground uppercase font-bold">
-                  Уникальная ссылка будет скопирована в буфер обмена.
-                </p>
               </div>
             </TabsContent>
 
@@ -292,35 +289,8 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                     <Button variant="outline" size="sm" onClick={() => bgInputRef.current?.click()} className="h-9 rounded-xl text-[9px] uppercase font-black tracking-widest border-white/10 bg-white/5">
                       <Upload className="w-3 h-3 mr-2" /> Выбрать фото
                     </Button>
-                    <Select value={form.chatBackgroundFit} onValueChange={v => setForm({...form, chatBackgroundFit: v as any})}>
-                      <SelectTrigger className="h-8 bg-black/20 border-white/5 text-[9px] rounded-lg">Заполнение: {form.chatBackgroundFit === 'cover' ? 'По ширине' : 'Вписать'}</SelectTrigger>
-                      <SelectContent className="bg-card border-white/10">
-                        <SelectItem value="cover" className="text-[10px]">По ширине (Cover)</SelectItem>
-                        <SelectItem value="contain" className="text-[10px]">Вписать (Contain)</SelectItem>
-                      </SelectContent>
-                    </Select>
                   </div>
                   <input type="file" ref={bgInputRef} className="hidden" accept="image/*" onChange={handleBgUpload} />
-                </div>
-              </div>
-
-              <div className="space-y-4 border-t border-white/5 pt-6">
-                <Label className="text-[10px] uppercase font-black text-muted-foreground flex items-center gap-2"><Smartphone className="w-3 h-3" /> Иконка приложения</Label>
-                <div className="flex items-center gap-4 bg-muted/20 p-4 rounded-2xl border border-white/5">
-                  <div className="relative h-16 w-16 rounded-2xl overflow-hidden border border-white/10 shrink-0 bg-black/40">
-                    <img src={form.customAppIconUrl || 'https://i.ibb.co/sd2MqGz2/Icon.png'} alt="App Icon" className="w-full h-full object-cover" />
-                  </div>
-                  <div className="flex-1 flex flex-col gap-2">
-                    <Button variant="outline" size="sm" onClick={() => iconInputRef.current?.click()} className="h-9 rounded-xl text-[9px] uppercase font-black tracking-widest border-white/10 bg-white/5">
-                      <Upload className="w-3 h-3 mr-2" /> Выбрать фото
-                    </Button>
-                    {form.customAppIconUrl && (
-                      <Button variant="ghost" size="sm" onClick={() => setForm({...form, customAppIconUrl: ''})} className="h-8 rounded-xl text-[9px] uppercase font-black text-destructive">
-                        Сбросить
-                      </Button>
-                    )}
-                  </div>
-                  <input type="file" ref={iconInputRef} className="hidden" accept="image/*" onChange={handleIconUpload} />
                 </div>
               </div>
             </TabsContent>
@@ -328,28 +298,48 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
             <TabsContent value="privacy" className="space-y-6 m-0 py-6">
               <div className="space-y-6 bg-muted/20 p-6 rounded-[2.5rem] border border-white/5">
                 <div className="space-y-3">
-                  <Label className="text-[10px] uppercase font-black text-primary flex items-center gap-2">
-                    <Eye className="w-3 h-3" /> Видимость номера
-                  </Label>
+                  <Label className="text-[10px] uppercase font-black text-primary flex items-center gap-2"><Eye className="w-3 h-3" /> Кто видит номер телефона</Label>
                   <Select value={form.privacy.phoneVisibility} onValueChange={v => setForm({...form, privacy: {...form.privacy, phoneVisibility: v as any}})}>
                     <SelectTrigger className="bg-black/20 border-white/5 h-12 rounded-xl"><SelectValue /></SelectTrigger>
                     <SelectContent className="bg-card border-white/10 rounded-xl">
-                      <SelectItem value="everybody">Все пользователи</SelectItem>
+                      <SelectItem value="everybody">Все</SelectItem>
                       <SelectItem value="contacts">Только контакты</SelectItem>
                       <SelectItem value="nobody">Никто</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
 
-                <div className="space-y-3">
-                  <Label className="text-[10px] uppercase font-black text-primary flex items-center gap-2">
-                    <ShieldCheck className="w-3 h-3" /> Последняя активность
-                  </Label>
+                <div className="space-y-3 border-t border-white/5 pt-4">
+                  <Label className="text-[10px] uppercase font-black text-primary flex items-center gap-2"><ShieldCheck className="w-3 h-3" /> Время последнего входа</Label>
                   <Select value={form.privacy.lastSeenVisibility} onValueChange={v => setForm({...form, privacy: {...form.privacy, lastSeenVisibility: v as any}})}>
                     <SelectTrigger className="bg-black/20 border-white/5 h-12 rounded-xl"><SelectValue /></SelectTrigger>
                     <SelectContent className="bg-card border-white/10 rounded-xl">
-                      <SelectItem value="everybody">Показывать всем</SelectItem>
+                      <SelectItem value="everybody">Все</SelectItem>
                       <SelectItem value="nobody">Скрыть от всех</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-3 border-t border-white/5 pt-4">
+                  <Label className="text-[10px] uppercase font-black text-primary flex items-center gap-2"><Users2 className="w-3 h-3" /> Кто может добавлять в группы</Label>
+                  <Select value={form.privacy.allowGroupsFrom} onValueChange={v => setForm({...form, privacy: {...form.privacy, allowGroupsFrom: v as any}})}>
+                    <SelectTrigger className="bg-black/20 border-white/5 h-12 rounded-xl"><SelectValue /></SelectTrigger>
+                    <SelectContent className="bg-card border-white/10 rounded-xl">
+                      <SelectItem value="everybody">Все</SelectItem>
+                      <SelectItem value="contacts">Мои контакты</SelectItem>
+                      <SelectItem value="premium">Только Premium</SelectItem>
+                      <SelectItem value="nobody">Никто</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-3 border-t border-white/5 pt-4">
+                  <Label className="text-[10px] uppercase font-black text-primary flex items-center gap-2"><MessageSquareLock className="w-3 h-3" /> Кто может мне писать</Label>
+                  <Select value={form.privacy.whoCanMessageMe} onValueChange={v => setForm({...form, privacy: {...form.privacy, whoCanMessageMe: v as any}})}>
+                    <SelectTrigger className="bg-black/20 border-white/5 h-12 rounded-xl"><SelectValue /></SelectTrigger>
+                    <SelectContent className="bg-card border-white/10 rounded-xl">
+                      <SelectItem value="everybody">Все</SelectItem>
+                      <SelectItem value="premium">Только Premium</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -360,7 +350,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
               <div className="bg-muted/20 p-6 rounded-[2.5rem] border border-white/5 space-y-6">
                 <div className="flex items-center justify-between">
                   <div className="flex flex-col gap-1">
-                    <span className="text-[11px] font-black text-white uppercase tracking-wider">Облачный пароль (2FA)</span>
+                    <span className="text-[11px] font-black text-white uppercase tracking-wider">Квантовый PIN (2FA)</span>
                     <span className="text-[9px] text-muted-foreground uppercase font-bold">Дополнительная защита при входе</span>
                   </div>
                   <Switch checked={form.twoFactorEnabled} onCheckedChange={v => setForm({...form, twoFactorEnabled: v})} />
@@ -385,7 +375,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
 
           <div className="p-6 border-t border-white/5 bg-muted/20 shrink-0 flex gap-3">
             <Button variant="ghost" className="h-14 w-14 rounded-2xl bg-destructive/10 text-destructive" onClick={() => signOut(auth)}> <LogOut className="w-6 h-6" /></Button>
-            <Button className="flex-1 h-14 rounded-2xl font-black uppercase tracking-widest bg-primary shadow-lg shadow-primary/20" onClick={handleSave}><Check className="w-5 h-5 mr-2" /> Применить изменения</Button>
+            <Button className="flex-1 h-14 rounded-2xl font-black uppercase tracking-widest bg-primary shadow-lg shadow-primary/20" onClick={handleSave}><Check className="w-5 h-5 mr-2" /> Сохранить Ядро</Button>
           </div>
         </Tabs>
       </DialogContent>
