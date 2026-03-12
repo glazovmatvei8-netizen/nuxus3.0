@@ -34,6 +34,17 @@ export interface Track {
   duration: number;
 }
 
+export interface Transaction {
+  id: string;
+  userId: string;
+  amount: number;
+  type: 'deposit' | 'withdrawal' | 'transfer_in' | 'transfer_out';
+  status: 'completed' | 'pending' | 'failed';
+  otherPartyId?: string;
+  otherPartyName?: string;
+  createdAt: string;
+}
+
 export interface Message {
   id: string;
   chatId: string;

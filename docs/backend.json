@@ -15,9 +15,27 @@
         "lastSeen": { "type": "string", "format": "date-time" },
         "createdAt": { "type": "string", "format": "date-time" },
         "isPremium": { "type": "boolean" },
+        "balance": { "type": "number", "default": 0 },
         "installedStickerPackIds": { "type": "array", "items": { "type": "string" } }
       },
       "required": ["id", "name", "username", "phone", "createdAt"]
+    },
+    "Transaction": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Transaction",
+      "type": "object",
+      "description": "Financial transaction record.",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "amount": { "type": "number" },
+        "type": { "type": "string", "enum": ["deposit", "withdrawal", "transfer_in", "transfer_out"] },
+        "status": { "type": "string", "enum": ["completed", "pending", "failed"] },
+        "otherPartyId": { "type": "string" },
+        "otherPartyName": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "userId", "amount", "type", "status", "createdAt"]
     },
     "StickerPack": {
       "$schema": "http://json-schema.org/draft-07/schema#",
@@ -89,6 +107,10 @@
       {
         "path": "/users/{userId}",
         "definition": { "entityName": "UserProfile", "schema": { "$ref": "#/backend/entities/UserProfile" }, "description": "Stores user profiles." }
+      },
+      {
+        "path": "/users/{userId}/transactions/{transactionId}",
+        "definition": { "entityName": "Transaction", "schema": { "$ref": "#/backend/entities/Transaction" }, "description": "Stores user transaction history." }
       },
       {
         "path": "/stickerPacks/{packId}",
