@@ -30,6 +30,17 @@ service cloud.firestore {
         allow read: if isSignedIn();
         allow write: if isPrimeAdmin();
       }
+
+      match /transactions/{txId} {
+        allow read: if isSignedIn() && request.auth.uid == userId;
+      }
+    }
+
+    // Заявки на пополнение
+    match /topUpRequests/{requestId} {
+      allow create: if isSignedIn();
+      allow read: if isSignedIn() && (isPrimeAdmin() || resource.data.userId == request.auth.uid);
+      allow update, delete: if isPrimeAdmin();
     }
 
     // Чаты (Группы, Каналы, ЛС)

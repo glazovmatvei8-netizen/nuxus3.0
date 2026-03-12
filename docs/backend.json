@@ -37,6 +37,21 @@
       },
       "required": ["id", "userId", "amount", "type", "status", "createdAt"]
     },
+    "TopUpRequest": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "TopUpRequest",
+      "type": "object",
+      "description": "A manual request to top up balance.",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "userName": { "type": "string" },
+        "amount": { "type": "number" },
+        "status": { "type": "string", "enum": ["pending", "approved", "rejected"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "userId", "amount", "status", "createdAt"]
+    },
     "StickerPack": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "StickerPack",
@@ -111,6 +126,10 @@
       {
         "path": "/users/{userId}/transactions/{transactionId}",
         "definition": { "entityName": "Transaction", "schema": { "$ref": "#/backend/entities/Transaction" }, "description": "Stores user transaction history." }
+      },
+      {
+        "path": "/topUpRequests/{requestId}",
+        "definition": { "entityName": "TopUpRequest", "schema": { "$ref": "#/backend/entities/TopUpRequest" }, "description": "Stores manual top-up requests." }
       },
       {
         "path": "/stickerPacks/{packId}",

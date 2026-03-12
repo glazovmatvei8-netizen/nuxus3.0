@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useMemo } from 'react';
@@ -19,13 +20,13 @@ import {
   DropdownMenuSubContent
 } from "@/components/ui/dropdown-menu";
 import { useFirestore, useCollection, useMemoFirebase, useUser } from '@/firebase';
-import { collection, query, doc, limit, getDocs, addDoc, orderBy } from 'firebase/firestore';
+import { collection, query, doc, limit, getDocs, addDoc, orderBy, writeBatch, increment } from 'firebase/firestore';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
   ShieldAlert, Users, Star, Search, Trash2, ShieldCheck, Radio, Send, 
-  Loader2, UserX, MoreVertical, Ban, CheckCircle2, Crown, Calendar, Shield, Globe, Activity, Eye, MessageCircle, ArrowLeft
+  Loader2, UserX, MoreVertical, Ban, CheckCircle2, Crown, Calendar, Shield, Globe, Activity, Eye, MessageCircle, ArrowLeft, CreditCard, Check, X
 } from 'lucide-react';
-import type { User, Chat } from '@/lib/types';
+import type { User, Chat, Transaction } from '@/lib/types';
 import { formatDisplayName, isUserPremium, cn } from '@/lib/utils';
 import { updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { useToast } from '@/hooks/use-toast';
@@ -45,8 +46,8 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
   const [broadcastMessage, setBroadcastMessage] = useState('');
   const [isBroadcasting, setIsBroadcasting] = useState(false);
   const [activeTab, setActiveTab] = useState('users');
+  const [isProcessingRequest, setIsProcessingRequest] = useState(false);
   
-  // Состояние для проверки чатов конкретного пользователя
   const [inspectingUser, setInspectingUser] = useState<User | null>(null);
   
   const usersQuery = useMemoFirebase(() => (!db ? null : query(collection(db, 'users'), limit(500))), [db]);
@@ -54,6 +55,9 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
 
   const chatsQuery = useMemoFirebase(() => (!db ? null : query(collection(db, 'chats'), limit(200))), [db]);
   const { data: allChats } = useCollection<Chat>(chatsQuery);
+
+  const requestsQuery = useMemoFirebase(() => (!db ? null : query(collection(db, 'topUpRequests'), orderBy('createdAt', 'desc'), limit(50))), [db]);
+  const { data: topUpRequests } = useCollection<any>(requestsQuery);
 
   const stats = useMemo(() => {
     if (!users) return { total: 0, banned: 0, premium: 0, admins: 0 };
@@ -83,12 +87,6 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
     const bTime = b.lastMessageAt ? new Date(b.lastMessageAt).getTime() : 0;
     return bTime - aTime;
   });
-
-  // Чаты конкретного пользователя для режима "Проверить чаты"
-  const inspectingUserChats = useMemo(() => {
-    if (!inspectingUser || !allChats) return [];
-    return allChats.filter(c => c.participantIds.includes(inspectingUser.id));
-  }, [inspectingUser, allChats]);
 
   const handleAction = async (targetId: string, action: string, value?: any) => {
     if (!db) return;
@@ -130,6 +128,40 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
     }
 
     updateDocumentNonBlocking(userRef, update);
+  };
+
+  const handleProcessRequest = async (request: any, status: 'approved' | 'rejected') => {
+    if (!db || isProcessingRequest) return;
+    setIsProcessingRequest(true);
+    try {
+      const batch = writeBatch(db);
+      const reqRef = doc(db, 'topUpRequests', request.id);
+      
+      batch.update(reqRef, { status, processedAt: new Date().toISOString() });
+
+      if (status === 'approved') {
+        const uRef = doc(db, 'users', request.userId);
+        const tRef = doc(collection(db, 'users', request.userId, 'transactions'));
+        
+        batch.update(uRef, { balance: increment(request.amount) });
+        batch.set(tRef, {
+          id: tRef.id,
+          userId: request.userId,
+          amount: request.amount,
+          type: 'deposit',
+          status: 'completed',
+          createdAt: new Date().toISOString(),
+          processedBy: currentUser?.uid
+        });
+      }
+
+      await batch.commit();
+      toast({ title: status === 'approved' ? "Заявка одобрена" : "Заявка отклонена" });
+    } catch (e: any) {
+      toast({ title: "Ошибка обработки", description: e.message, variant: "destructive" });
+    } finally {
+      setIsProcessingRequest(false);
+    }
   };
 
   const handleIntercept = (chatId: string) => {
@@ -188,63 +220,15 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
           </DialogTitle>
         </DialogHeader>
 
-        {inspectingUser ? (
-          <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
-            <div className="p-6 border-b border-white/5 bg-white/5 space-y-3 shrink-0">
-              <div className="flex items-center gap-4">
-                <UserAvatar userId={inspectingUser.id} className="h-14 w-14" manualAvatarUrl={inspectingUser.avatarUrl} />
-                <div className="flex flex-col">
-                  <h3 className="font-black text-lg text-white leading-none mb-1">{formatDisplayName(inspectingUser.name)}</h3>
-                  <span className="text-[10px] text-primary uppercase font-bold tracking-[0.2em]">{inspectingUser.username}</span>
-                </div>
-              </div>
-              <p className="text-[9px] font-black uppercase text-muted-foreground tracking-widest">Перехват сигналов узла: {inspectingUserChats.length} каналов</p>
-            </div>
-            <ScrollArea className="flex-1">
-              <div className="p-6 space-y-3">
-                {inspectingUserChats.length > 0 ? (
-                  inspectingUserChats.map(chat => (
-                    <div key={chat.id} className="flex items-center justify-between p-4 bg-white/5 rounded-[1.8rem] border border-white/5 hover:border-accent/30 transition-all group">
-                      <div className="flex items-center gap-4 min-w-0">
-                        <div className="relative">
-                          <UserAvatar userId={null} className="h-10 w-10" manualAvatarUrl={chat.avatarUrl} fallbackName={chat.name} />
-                          <div className={cn(
-                            "absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-[#0a0a0c] flex items-center justify-center",
-                            chat.type === 'private' ? "bg-blue-500" : "bg-purple-500"
-                          )}>
-                            {chat.type === 'private' ? <Shield className="w-2 h-2 text-white" /> : <Users className="w-2 h-2 text-white" />}
-                          </div>
-                        </div>
-                        <div className="flex flex-col min-w-0 text-left">
-                          <span className="font-bold text-sm text-white truncate">{chat.name || 'Приватный узел'}</span>
-                          <span className="text-[9px] text-muted-foreground/60 uppercase font-black">{chat.type}</span>
-                        </div>
-                      </div>
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        onClick={() => handleIntercept(chat.id)}
-                        className="h-8 rounded-xl bg-accent/10 text-accent hover:bg-accent hover:text-white font-black uppercase text-[8px] tracking-widest px-4"
-                      >
-                        Вход
-                      </Button>
-                    </div>
-                  ))
-                ) : (
-                  <div className="text-center py-20 opacity-20">
-                    <MessageCircle className="w-12 h-12 mx-auto mb-4" />
-                    <p className="text-[10px] font-black uppercase tracking-widest">Узел не имеет активных сигналов</p>
-                  </div>
-                )}
-              </div>
-            </ScrollArea>
-          </div>
-        ) : (
+        {!inspectingUser && (
           <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0 overflow-hidden">
             <div className="px-6 pt-4 shrink-0">
-              <TabsList className="grid grid-cols-3 w-full bg-white/5 p-1 rounded-2xl">
+              <TabsList className="grid grid-cols-4 w-full bg-white/5 p-1 rounded-2xl">
                 <TabsTrigger value="users" className="rounded-xl text-[9px] uppercase font-black tracking-widest gap-1">
                   <Users className="w-3 h-3" /> Ядро
+                </TabsTrigger>
+                <TabsTrigger value="requests" className="rounded-xl text-[9px] uppercase font-black tracking-widest gap-1">
+                  <CreditCard className="w-3 h-3" /> Заявки
                 </TabsTrigger>
                 <TabsTrigger value="signals" className="rounded-xl text-[9px] uppercase font-black tracking-widest gap-1">
                   <Eye className="w-3 h-3" /> Сигналы
@@ -303,22 +287,12 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
                               {u.isBanned && <UserX className="w-2.5 h-2.5 text-destructive" />}
                               {isRoot && <Shield className="w-2.5 h-2.5 text-blue-400 animate-pulse" />}
                             </div>
-                            
-                            <div className="flex flex-col gap-1.5 mt-1">
-                              <span className="text-[9px] text-muted-foreground/60 truncate uppercase font-bold tracking-widest">{u.username}</span>
-                              
-                              <div className="flex items-center gap-2">
-                                {u.lastIp ? (
-                                  <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-cyan-500/10 border border-cyan-500/20 text-[10px] font-black text-cyan-400 uppercase tracking-tighter">
-                                    <Globe className="w-3 h-3 animate-pulse" /> IP: {u.lastIp}
-                                  </div>
-                                ) : (
-                                  <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-white/5 border border-white/5 text-[10px] font-black text-white/20 uppercase tracking-tighter">
-                                    <Activity className="w-3 h-3 opacity-20" /> SYNCING...
-                                  </div>
-                                )}
+                            <span className="text-[9px] text-muted-foreground/60 truncate uppercase font-bold tracking-widest">{u.username}</span>
+                            {u.lastIp && (
+                              <div className="flex items-center gap-1 mt-1 text-[8px] text-cyan-400 font-black">
+                                <Globe className="w-2.5 h-2.5" /> {u.lastIp}
                               </div>
-                            </div>
+                            )}
                           </div>
                         </div>
 
@@ -366,29 +340,14 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
                                 <Star className="w-4 h-4" /> Подарить Premium
                               </DropdownMenuSubTrigger>
                               <DropdownMenuSubContent className="bg-card border-white/10">
-                                <DropdownMenuItem onClick={() => handleAction(u.id, 'give_premium', 1)} className="gap-2">
-                                  <Calendar className="w-4 h-4" /> 1 месяц
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => handleAction(u.id, 'give_premium', 6)} className="gap-2">
-                                  <Calendar className="w-4 h-4" /> 6 месяцев
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => handleAction(u.id, 'give_premium', 12)} className="gap-2">
-                                  <Star className="w-4 h-4" /> 1 год
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => handleAction(u.id, 'give_premium', 24)} className="gap-2 text-primary font-black">
-                                  <Crown className="w-4 h-4" /> 2 года
-                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleAction(u.id, 'give_premium', 1)} className="gap-2">1 месяц</DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleAction(u.id, 'give_premium', 6)} className="gap-2">6 месяцев</DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleAction(u.id, 'give_premium', 12)} className="gap-2">1 год</DropdownMenuItem>
                               </DropdownMenuSubContent>
                             </DropdownMenuSub>
 
-                            {u.isPremium && (
-                              <DropdownMenuItem onClick={() => handleAction(u.id, 'remove_premium')} className="gap-2 text-muted-foreground" disabled={isRoot}>
-                                <Trash2 className="w-4 h-4" /> Снять Premium
-                              </DropdownMenuItem>
-                            )}
-
                             <DropdownMenuSeparator className="bg-white/5" />
-                            <DropdownMenuItem onClick={() => confirm(`Удалить ${u.name}?`) && deleteDocumentNonBlocking(doc(db, 'users', u.id))} className="text-destructive gap-2" disabled={isRoot}>
+                            <DropdownMenuItem onClick={() => confirm(`Удалить ${u.name}?`) && deleteDocumentNonBlocking(doc(db!, 'users', u.id))} className="text-destructive gap-2" disabled={isRoot}>
                               <Trash2 className="w-4 h-4" /> Удалить из базы
                             </DropdownMenuItem>
                           </DropdownMenuContent>
@@ -396,6 +355,61 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
                       </div>
                     );
                   })}
+                </div>
+              </ScrollArea>
+            </TabsContent>
+
+            <TabsContent value="requests" className="flex-1 data-[state=active]:flex flex-col min-h-0 m-0 overflow-hidden outline-none">
+              <div className="p-6 shrink-0 border-b border-white/5 bg-white/5">
+                <div className="flex items-center gap-3 text-primary mb-1">
+                  <CreditCard className="w-5 h-5 animate-pulse" />
+                  <h3 className="text-[10px] font-black uppercase tracking-widest">Заявки на пополнение</h3>
+                </div>
+                <p className="text-[8px] text-muted-foreground uppercase font-bold">Подтвердите оплату для зачисления NX.</p>
+              </div>
+
+              <ScrollArea className="flex-1">
+                <div className="px-6 py-4 space-y-3">
+                  {topUpRequests && topUpRequests.length > 0 ? (
+                    topUpRequests.filter((r: any) => r.status === 'pending').map((req: any) => (
+                      <div key={req.id} className="p-4 bg-white/5 border border-white/5 rounded-[1.8rem] flex flex-col gap-4">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <UserAvatar userId={req.userId} className="h-10 w-10" fallbackName={req.userName} />
+                            <div className="flex flex-col">
+                              <span className="text-sm font-bold text-white">{req.userName}</span>
+                              <span className="text-[9px] text-muted-foreground font-black">{new Date(req.createdAt).toLocaleString()}</span>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <span className="text-lg font-black italic text-primary">+{req.amount} NX</span>
+                          </div>
+                        </div>
+                        <div className="flex gap-2">
+                          <Button 
+                            disabled={isProcessingRequest}
+                            onClick={() => handleProcessRequest(req, 'approved')}
+                            className="flex-1 bg-green-500 hover:bg-green-600 text-white rounded-xl h-10 font-black uppercase text-[9px] tracking-widest gap-2"
+                          >
+                            <Check className="w-4 h-4" /> Принять
+                          </Button>
+                          <Button 
+                            disabled={isProcessingRequest}
+                            onClick={() => handleProcessRequest(req, 'rejected')}
+                            variant="ghost"
+                            className="flex-1 bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded-xl h-10 font-black uppercase text-[9px] tracking-widest gap-2"
+                          >
+                            <X className="w-4 h-4" /> Отклонить
+                          </Button>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-center py-20 opacity-20">
+                      <CreditCard className="w-12 h-12 mx-auto mb-4" />
+                      <p className="text-[10px] font-black uppercase tracking-widest">Нет активных заявок</p>
+                    </div>
+                  )}
                 </div>
               </ScrollArea>
             </TabsContent>
@@ -476,6 +490,44 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
               </Button>
             </TabsContent>
           </Tabs>
+        )}
+
+        {inspectingUser && (
+          <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+            <div className="p-6 border-b border-white/5 bg-white/5 space-y-3 shrink-0">
+              <div className="flex items-center gap-4">
+                <UserAvatar userId={inspectingUser.id} className="h-14 w-14" manualAvatarUrl={inspectingUser.avatarUrl} />
+                <div className="flex flex-col">
+                  <h3 className="font-black text-lg text-white leading-none mb-1">{formatDisplayName(inspectingUser.name)}</h3>
+                  <span className="text-[10px] text-primary uppercase font-bold tracking-[0.2em]">{inspectingUser.username}</span>
+                </div>
+              </div>
+            </div>
+            <ScrollArea className="flex-1">
+              {/* Список чатов пользователя при инспекции */}
+              <div className="p-6 space-y-3">
+                {allChats?.filter(c => c.participantIds.includes(inspectingUser.id)).map(chat => (
+                  <div key={chat.id} className="flex items-center justify-between p-4 bg-white/5 rounded-[1.8rem] border border-white/5 hover:border-accent/30 transition-all group">
+                    <div className="flex items-center gap-4 min-w-0">
+                      <UserAvatar userId={null} className="h-10 w-10" manualAvatarUrl={chat.avatarUrl} fallbackName={chat.name} />
+                      <div className="flex flex-col min-w-0 text-left">
+                        <span className="font-bold text-sm text-white truncate">{chat.name || 'Приватный узел'}</span>
+                        <span className="text-[9px] text-muted-foreground/60 uppercase font-black">{chat.type}</span>
+                      </div>
+                    </div>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={() => handleIntercept(chat.id)}
+                      className="h-8 rounded-xl bg-accent/10 text-accent hover:bg-accent hover:text-white font-black uppercase text-[8px] tracking-widest px-4"
+                    >
+                      Вход
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            </ScrollArea>
+          </div>
         )}
       </DialogContent>
     </Dialog>

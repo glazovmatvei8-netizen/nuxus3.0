@@ -7,7 +7,7 @@ import { doc, collection, query, orderBy, limit, writeBatch, increment, getDocs,
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Wallet, ArrowUpRight, ArrowDownLeft, Plus, Zap, History, ShieldCheck, Loader2, Search, CheckCircle2, XCircle } from 'lucide-react';
+import { Wallet, ArrowUpRight, ArrowDownLeft, Plus, Zap, History, ShieldCheck, Loader2, Search, CheckCircle2, XCircle, Clock } from 'lucide-react';
 import { cn, formatDisplayName } from '@/lib/utils';
 import type { User, Transaction } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
@@ -74,31 +74,28 @@ export default function WalletView() {
     }
   };
 
-  const handleTopUpAction = async () => {
+  const handleTopUpRequest = async () => {
     const amount = parseFloat(topUpAmount);
-    if (isNaN(amount) || amount <= 0 || !db || !user) return;
+    if (isNaN(amount) || amount <= 0 || !db || !user || !profile) return;
 
     setIsProcessing(true);
     try {
-      const batch = writeBatch(db);
-      const uRef = doc(db, 'users', user.uid);
-      const tRef = doc(collection(db, 'users', user.uid, 'transactions'));
-
-      batch.update(uRef, { balance: increment(amount) });
-      batch.set(tRef, {
-        id: tRef.id,
+      // Вместо мгновенного пополнения создаем Заявку
+      await addDoc(collection(db, 'topUpRequests'), {
         userId: user.uid,
+        userName: profile.name,
         amount: amount,
-        type: 'deposit',
-        status: 'completed',
+        status: 'pending',
         createdAt: new Date().toISOString()
       });
 
-      await batch.commit();
-      toast({ title: "Баланс пополнен", description: `Зачислено ${amount} NX` });
+      toast({ 
+        title: "Заявка отправлена", 
+        description: `Ожидайте подтверждения пополнения на ${amount} NX администратором.` 
+      });
       setIsTopUpOpen(false);
     } catch (e) {
-      toast({ title: "Ошибка пополнения", variant: "destructive" });
+      toast({ title: "Ошибка заявки", variant: "destructive" });
     } finally {
       setIsProcessing(false);
     }
@@ -263,11 +260,13 @@ export default function WalletView() {
               />
               <span className="absolute right-4 top-1/2 -translate-y-1/2 font-black text-white/20 italic">NX</span>
             </div>
-            <p className="text-[9px] text-muted-foreground uppercase font-bold px-4">Введите сумму для мгновенной синхронизации баланса с Ядром.</p>
+            <p className="text-[9px] text-muted-foreground uppercase font-bold px-4 leading-relaxed">
+              Ваш запрос будет передан Оператору Ядра. После оплаты заявка будет подтверждена вручную.
+            </p>
           </div>
           <DialogFooter>
-            <Button disabled={isProcessing} onClick={handleTopUpAction} className="w-full h-14 bg-primary rounded-2xl font-black uppercase italic tracking-widest shadow-xl shadow-primary/20">
-              {isProcessing ? <Loader2 className="animate-spin" /> : "Authorize Pay"}
+            <Button disabled={isProcessing} onClick={handleTopUpRequest} className="w-full h-14 bg-primary rounded-2xl font-black uppercase italic tracking-widest shadow-xl shadow-primary/20">
+              {isProcessing ? <Loader2 className="animate-spin" /> : <>Отправить запрос <Clock className="w-4 h-4 ml-2" /></>}
             </Button>
           </DialogFooter>
         </DialogContent>
