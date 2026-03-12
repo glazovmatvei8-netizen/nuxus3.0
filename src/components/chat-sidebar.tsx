@@ -6,7 +6,7 @@ import { useAppState } from '@/lib/store';
 import { Button } from '@/components/ui/button';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
-  Plus, SquarePen, Ghost, Search, Star, Pin, PinOff, VolumeX, Trash2, Volume2, MessageCircle, Archive
+  Plus, SquarePen, Ghost, Search, Star, Pin, PinOff, VolumeX, Trash2, Volume2, MessageCircle, Archive, Lock
 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { CreateChatModal } from './modals/create-chat-modal';
@@ -16,7 +16,7 @@ import { StoriesBar } from './stories-bar';
 import type { User, Message, Chat } from '@/lib/types';
 import { useFirestore, useUser, useCollection, useDoc, useMemoFirebase } from '@/firebase';
 import { collection, query, where, doc, limit, orderBy, updateDoc, arrayUnion, arrayRemove, deleteDoc } from 'firebase/firestore';
-import { formatDisplayName, cn, isGlobalAdmin } from '@/lib/utils';
+import { formatDisplayName, cn, isGlobalAdmin, decryptSignal } from '@/lib/utils';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { 
@@ -60,6 +60,15 @@ const ChatListItem = memo(({
   }, [chat.lastMessageAt, chat.createdAt]);
 
   const isUnread = (lastMsg && !lastMsg.isRead && lastMsg.senderId !== currentUserId) || chat.isManualUnread;
+
+  // Расшифровка превью последнего сообщения
+  const decryptedPreview = useMemo(() => {
+    if (!lastMsg) return 'Нет сообщений';
+    if (lastMsg.contentType !== 'text') return `[${lastMsg.contentType}]`;
+    return decryptSignal(lastMsg.content);
+  }, [lastMsg]);
+
+  const isEncrypted = lastMsg?.contentType === 'text' && lastMsg?.content?.startsWith('NX_');
 
   const handleTouchStart = (e: React.TouchEvent) => {
     touchStartX.current = e.touches[0].clientX;
@@ -155,8 +164,9 @@ const ChatListItem = memo(({
                   <span className="text-[13px] text-muted-foreground/60 font-medium">{displayTime}</span>
                 </div>
                 <div className="flex items-center justify-between pr-2">
-                  <p className="text-[14px] text-muted-foreground/60 truncate flex-1">
-                    {lastMsg?.contentType === 'text' ? lastMsg.content : (lastMsg ? `[${lastMsg.contentType}]` : 'Нет сообщений')}
+                  <p className="text-[14px] text-muted-foreground/60 truncate flex-1 flex items-center gap-1.5">
+                    {isEncrypted && <Lock className="w-2.5 h-2.5 shrink-0 opacity-40" />}
+                    {decryptedPreview}
                   </p>
                   {isUnread && <div className="w-2.5 h-2.5 bg-[#007AFF] rounded-full shadow-[0_0_8px_rgba(0,122,255,0.5)] shrink-0 ml-2" />}
                 </div>
