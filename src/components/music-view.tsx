@@ -12,6 +12,7 @@ import type { Track } from '@/lib/types';
 
 /**
  * ГЛОБАЛЬНАЯ МЕДИАТЕКА NUXUS (2015-2026)
+ * Расширенный архив хитов.
  */
 const NUXUS_LIBRARY: Track[] = [
   { id: 'm1', title: 'Me gustas tu', artist: 'Manu Chao (Nuxus Remix)', url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3', coverUrl: 'https://picsum.photos/seed/me-gustas/400/400', duration: 210 },
@@ -30,6 +31,10 @@ const NUXUS_LIBRARY: Track[] = [
   { id: 'm14', title: 'Enemy', artist: 'Imagine Dragons', url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-14.mp3', coverUrl: 'https://picsum.photos/seed/dragons/400/400', duration: 173 },
   { id: 'm15', title: 'Another Love', artist: 'Tom Odell', url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-15.mp3', coverUrl: 'https://picsum.photos/seed/love/400/400', duration: 244 },
   { id: 'm16', title: 'Bad Habit', artist: 'Steve Lacy', url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-16.mp3', coverUrl: 'https://picsum.photos/seed/habit/400/400', duration: 232 },
+  { id: 'm17', title: 'Golden Hour', artist: 'JVKE', url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3', coverUrl: 'https://picsum.photos/seed/golden/400/400', duration: 200 },
+  { id: 'm18', title: 'Creepin', artist: 'Metro Boomin', url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3', coverUrl: 'https://picsum.photos/seed/creepin/400/400', duration: 221 },
+  { id: 'm19', title: 'Anti-Hero', artist: 'Taylor Swift', url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3', coverUrl: 'https://picsum.photos/seed/hero/400/400', duration: 200 },
+  { id: 'm20', title: 'Unholy', artist: 'Sam Smith', url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3', coverUrl: 'https://picsum.photos/seed/unholy/400/400', duration: 156 }
 ];
 
 export default function MusicView() {

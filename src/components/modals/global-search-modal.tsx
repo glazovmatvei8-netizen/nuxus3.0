@@ -222,8 +222,7 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
                     <Sticker className="w-4 h-4 fill-current" />
                     <span className="text-[10px] font-black uppercase tracking-widest">Витрина Стикеров</span>
                   </div>
-                  {/* FIX: Добавлена плавная прокрутка для мобилок */}
-                  <div className="flex gap-3 overflow-x-auto pb-2 scroll-smooth scrollbar-hide px-2">
+                  <div className="flex gap-3 overflow-x-auto pb-4 scroll-smooth scrollbar-hide px-2 -webkit-overflow-scrolling-touch">
                     {featuredPacks.map(pack => (
                       <div 
                         key={pack.id} 

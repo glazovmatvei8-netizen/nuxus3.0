@@ -67,14 +67,17 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
     if (!audioRef.current) {
       audioRef.current = new Audio(message.content);
       audioRef.current.onended = () => setIsPlaying(false);
-      audioRef.current.onerror = () => { toast({ title: "Ошибка воспроизведения", variant: "destructive" }); setIsPlaying(false); };
+      audioRef.current.onerror = () => { 
+        toast({ title: "Ошибка проигрывателя", variant: "destructive" }); 
+        setIsPlaying(false); 
+      };
     }
     
     if (isPlaying) {
       audioRef.current.pause();
     } else {
       audioRef.current.play().catch(() => {
-        toast({ title: "Ошибка проигрывателя", variant: "destructive" });
+        toast({ title: "Ошибка безопасности браузера", variant: "destructive" });
       });
     }
     setIsPlaying(!isPlaying);
@@ -84,7 +87,10 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
     if (message.contentType === 'sticker') return <img src={message.content} alt="Sticker" className="w-40 h-40 object-contain pointer-events-none" />;
     
     if (message.contentType === 'image') return (
-      <div className="relative max-w-[280px] rounded-2xl overflow-hidden border border-white/5 shadow-2xl bg-black/20">
+      <div 
+        className="relative max-w-[280px] rounded-2xl overflow-hidden border border-white/5 shadow-2xl bg-black/20 cursor-pointer active:scale-[0.98] transition-transform"
+        onClick={(e) => { e.stopPropagation(); window.open(message.content, '_blank'); }}
+      >
         <img 
           src={message.content} 
           alt="Shared Image" 
@@ -96,7 +102,7 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
 
     if (message.contentType === 'video_note') return (
       <div 
-        className="relative w-48 h-48 rounded-full overflow-hidden border-2 border-primary/20 bg-black group" 
+        className="relative w-48 h-48 rounded-full overflow-hidden border-2 border-primary/20 bg-black group cursor-pointer" 
         onClick={(e) => { 
           e.stopPropagation();
           if (videoRef.current) { if (videoRef.current.paused) videoRef.current.play(); else videoRef.current.pause(); } 
@@ -108,8 +114,8 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
     );
 
     if (message.contentType === 'audio') return (
-      <div className="flex items-center gap-3 p-1 min-w-[200px]" onClick={toggleAudio}>
-        <Button size="icon" className="h-10 w-10 rounded-full bg-primary shadow-lg shadow-primary/20">
+      <div className="flex items-center gap-3 p-1 min-w-[200px] cursor-pointer" onClick={toggleAudio}>
+        <Button size="icon" className="h-10 w-10 rounded-full bg-primary shadow-lg shadow-primary/20 pointer-events-none">
           {isPlaying ? <X /> : <Play fill="currentColor" />}
         </Button>
         <div className="flex-1 flex flex-col justify-center">
@@ -120,6 +126,24 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
             {isTranscribing ? <Loader2 className="animate-spin w-3 h-3" /> : <><Languages className="w-3 h-3" /> A💬</>}
           </button>
         </div>
+      </div>
+    );
+
+    if (message.contentType === 'poll') return (
+      <div className="bg-white/5 rounded-2xl p-4 border border-white/10 min-w-[240px]">
+        <div className="flex items-center gap-2 mb-3">
+          <div className="bg-primary/20 p-1.5 rounded-lg"><CheckCheck className="w-4 h-4 text-primary" /></div>
+          <span className="font-bold text-sm">{message.pollData?.question}</span>
+        </div>
+        <div className="space-y-2">
+          {message.pollData?.options.map((opt: any) => (
+            <button key={opt.id} className="w-full text-left p-3 rounded-xl bg-white/5 border border-white/5 hover:border-primary/40 transition-all text-xs flex justify-between items-center group">
+              <span>{opt.text}</span>
+              <span className="opacity-40 group-hover:opacity-100">{opt.votes?.length || 0}</span>
+            </button>
+          ))}
+        </div>
+        <p className="text-[8px] text-muted-foreground uppercase font-bold mt-3 text-center tracking-widest">{message.pollData?.isAnonymous ? 'Анонимный опрос' : 'Открытый опрос'}</p>
       </div>
     );
 
