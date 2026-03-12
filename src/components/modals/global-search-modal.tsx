@@ -50,7 +50,7 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
     if (open && db) {
       const initSystemPacks = async () => {
         const foxPackId = 'system_fox_pack_v5'; 
-        const packRef = doc(db, 'stickerPacks', foxPackId);
+        const packRef = doc(db!, 'stickerPacks', foxPackId);
         await setDoc(packRef, {
           id: foxPackId,
           ownerId: 'system',
@@ -69,11 +69,11 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
       const fetchDiscoveryData = async () => {
         setIsLoading(true);
         try {
-          const chatQ = query(collection(db, 'chats'), where('isPublic', '==', true), limit(10));
+          const chatQ = query(collection(db!, 'chats'), where('isPublic', '==', true), limit(10));
           const chatSnap = await getDocs(chatQ);
           setTrends(chatSnap.docs.map(d => ({ id: d.id, ...d.data() } as Chat)));
 
-          const packQ = query(collection(db, 'stickerPacks'), limit(10));
+          const packQ = query(collection(db!, 'stickerPacks'), limit(10));
           const packSnap = await getDocs(packQ);
           setFeaturedPacks(packSnap.docs.map(d => ({ id: d.id, ...d.data() } as StickerPack)));
         } catch (e) {
@@ -131,7 +131,7 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
   const handleInstallPack = async (pack: StickerPack) => {
     if (!db || !user) return;
     try {
-      await updateDoc(doc(db, 'users', user.uid), {
+      await updateDoc(doc(db!, 'users', user.uid), {
         installedStickerPackIds: arrayUnion(pack.id)
       });
       toast({ title: "Успех", description: `Стикерпак "${pack.name}" добавлен!` });
@@ -144,12 +144,12 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
   const openBotChat = async () => {
     if (!db || !user) return;
     try {
-      const q = query(collection(db, 'chats'), where('username', '==', '@stickers'), where('participantIds', 'array-contains', user.uid), limit(1));
+      const q = query(collection(db!, 'chats'), where('username', '==', '@stickers'), where('participantIds', 'array-contains', user.uid), limit(1));
       const snap = await getDocs(q);
       if (!snap.empty) {
         setCurrentChatId(snap.docs[0].id);
       } else {
-        const newChat = await addDoc(collection(db, 'chats'), {
+        const newChat = await addDoc(collection(db!, 'chats'), {
           type: 'private',
           participantIds: [user.uid, 'bot_stickers'],
           ownerId: user.uid,
@@ -179,7 +179,7 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
               placeholder="Поиск по @username или пакам..." 
               value={searchQuery}
               onChange={e => handleSearch(e.target.value)}
-              className="bg-white/5 border-white/5 h-14 rounded-2xl pl-12 text-lg"
+              className="bg-white/5 border-white/10 h-14 rounded-2xl pl-12 text-lg"
               autoFocus
             />
             {isLoading && <div className="absolute right-4 top-1/2 -translate-y-1/2"><Loader2 className="w-5 h-5 text-primary animate-spin" /></div>}

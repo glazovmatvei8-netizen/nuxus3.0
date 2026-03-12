@@ -8,29 +8,31 @@ import { UserAvatar } from '@/components/user-avatar';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { 
-  QrCode, Pencil, Bell, Lock, Bookmark, ChevronRight, Star, Smile
+  QrCode, Pencil, Bell, Lock, Bookmark, ChevronRight, Star, Smile, Share2, Trophy
 } from 'lucide-react';
 import { useAppState } from '@/lib/store';
 import { formatDisplayName, cn, isUserPremium } from '@/lib/utils';
 import type { User } from '@/lib/types';
+import { useToast } from '@/hooks/use-toast';
 
 export default function ProfileView() {
   const { user } = useUser();
   const db = useFirestore();
+  const { toast } = useToast();
   const { setIsSettingsOpen, setSettingsTab, setCurrentChatId, setActiveView } = useAppState();
   
-  const userProfileRef = useMemoFirebase(() => (!db || !user) ? null : doc(db, 'users', user.uid), [db, user]);
+  const userProfileRef = useMemoFirebase(() => (!db || !user) ? null : doc(db!, 'users', user.uid), [db, user]);
   const { data: profile } = useDoc<User>(userProfileRef);
 
   const openSavedMessages = async () => {
     if (!db || !user) return;
     try {
-      const q = query(collection(db, 'chats'), where('type', '==', 'saved'), where('participantIds', 'array-contains', user.uid), limit(1));
+      const q = query(collection(db!, 'chats'), where('type', '==', 'saved'), where('participantIds', 'array-contains', user.uid), limit(1));
       const snap = await getDocs(q);
       if (!snap.empty) { 
         setCurrentChatId(snap.docs[0].id); 
       } else {
-        const newChat = await addDoc(collection(db, 'chats'), { 
+        const newChat = await addDoc(collection(db!, 'chats'), { 
           type: 'saved', 
           participantIds: [user.uid], 
           ownerId: user.uid, 
@@ -43,10 +45,17 @@ export default function ProfileView() {
     } catch (e) {}
   };
 
+  const copyRefLink = () => {
+    if (!user) return;
+    const link = `${window.location.origin}/?ref=${user.uid}`;
+    navigator.clipboard.writeText(link);
+    toast({ title: "Ссылка скопирована!", description: "Отправьте её друзьям для приглашения." });
+  };
+
   return (
     <div className="flex flex-col h-full bg-[#0a0a0c] overflow-hidden">
       <div className="px-4 pt-6 pb-4 flex items-center justify-between shrink-0">
-        <Button variant="ghost" size="icon" className="text-white"><QrCode className="w-6 h-6" /></Button>
+        <Button variant="ghost" size="icon" className="text-white" onClick={copyRefLink}><Share2 className="w-6 h-6" /></Button>
         <div className="flex items-center gap-2">
           <UserAvatar userId={user?.uid} className="h-8 w-8" />
           <span className="font-bold text-white text-[17px] flex items-center gap-1.5">
@@ -61,6 +70,20 @@ export default function ProfileView() {
 
       <ScrollArea className="flex-1">
         <div className="px-4 space-y-4 pb-24">
+          {/* Stats Bar */}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="bg-white/5 border border-white/5 p-4 rounded-3xl flex flex-col items-center justify-center gap-1">
+              <Trophy className="w-5 h-5 text-primary mb-1" />
+              <span className="text-[18px] font-black text-white">{profile?.referralCount || 0}</span>
+              <span className="text-[8px] uppercase font-black text-muted-foreground tracking-widest">Инвайтов</span>
+            </div>
+            <div className="bg-white/5 border border-white/5 p-4 rounded-3xl flex flex-col items-center justify-center gap-1">
+              <Star className="w-5 h-5 text-accent mb-1" />
+              <span className="text-[18px] font-black text-white">{profile?.isPremium ? 'Active' : 'Basic'}</span>
+              <span className="text-[8px] uppercase font-black text-muted-foreground tracking-widest">Статус</span>
+            </div>
+          </div>
+
           {/* Status Display */}
           {(profile?.statusEmoji || profile?.statusText) && (
             <div 
@@ -78,6 +101,7 @@ export default function ProfileView() {
           )}
 
           <div className="bg-[#1c1c1e] rounded-[2rem] overflow-hidden divide-y divide-white/[0.05] border border-white/5">
+            <SettingsItem icon={Share2} label="Реферальная программа" color="text-primary" onClick={() => { setSettingsTab('referral'); setIsSettingsOpen(true); }} />
             <SettingsItem icon={Bell} label="Уведомления" color="text-white" onClick={() => { setSettingsTab('appearance'); setIsSettingsOpen(true); }} />
             <SettingsItem icon={Lock} label="Безопасность" color="text-white" onClick={() => { setSettingsTab('security'); setIsSettingsOpen(true); }} />
             <SettingsItem icon={Bookmark} label="Избранное" color="text-white" onClick={openSavedMessages} />

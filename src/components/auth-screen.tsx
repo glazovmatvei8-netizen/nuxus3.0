@@ -59,7 +59,11 @@ export default function AuthScreen() {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
       const ref = params.get('ref');
-      if (ref) setReferralId(ref);
+      if (ref) {
+        setReferralId(ref);
+        setMode('register');
+        toast({ title: "Приглашение принято", description: "Загрузка параметров Ядра..." });
+      }
     }
   }, []);
 
@@ -67,8 +71,6 @@ export default function AuthScreen() {
     try {
       const res = await fetch('https://ipwho.is/');
       const data = await res.json();
-      
-      // Блокировка по флагам VPN, Proxy или Tor
       if (data.security && (data.security.vpn || data.security.proxy || data.security.tor)) {
         return { isVpn: true, ip: data.ip };
       }
@@ -105,7 +107,6 @@ export default function AuthScreen() {
     e.preventDefault();
     setIsLoading(true);
     try {
-      // VPN Check before auth
       const { isVpn, ip } = await checkVpnStatus();
       if (isVpn) {
         setMode('vpn_block');
@@ -134,15 +135,11 @@ export default function AuthScreen() {
           lastIp: ip
         };
         
-        await setDoc(doc(db, 'users', uid), profileData);
+        await setDoc(doc(db!, 'users', uid), profileData);
 
         if (referralId && referralId !== uid) {
-          const inviterRef = doc(db, 'users', referralId);
-          const inviterSnap = await getDoc(inviterRef);
-          if (inviterSnap.exists()) {
-            const updateData: any = { referralCount: increment(1) };
-            await setDoc(inviterRef, updateData, { merge: true });
-          }
+          const inviterRef = doc(db!, 'users', referralId);
+          await updateDoc(inviterRef, { referralCount: increment(1) });
         }
 
         if (formData.enable2FA) {
@@ -152,9 +149,7 @@ export default function AuthScreen() {
         }
       } else {
         const cred = await signInWithEmailAndPassword(auth, virtualEmail, formData.password);
-        const userRef = doc(db, 'users', cred.user.uid);
-        
-        // Update IP on login
+        const userRef = doc(db!, 'users', cred.user.uid);
         await updateDoc(userRef, { lastIp: ip });
         const snap = await getDoc(userRef);
 
@@ -165,7 +160,7 @@ export default function AuthScreen() {
         }
       }
     } catch (err: any) {
-      toast({ title: "Ошибка доступа", variant: "destructive" });
+      toast({ title: "Ошибка доступа", description: err.message, variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
@@ -176,7 +171,7 @@ export default function AuthScreen() {
     if (!registeredUid || !formData.pin2FA) return;
     setIsLoading(true);
     try {
-      await setDoc(doc(db, 'users', registeredUid), {
+      await setDoc(doc(db!, 'users', registeredUid), {
         twoFactorEnabled: true,
         twoFactorPin: formData.pin2FA
       }, { merge: true });
@@ -202,9 +197,7 @@ export default function AuthScreen() {
       await setPersistence(auth, browserLocalPersistence);
       const email = `${MASTER_PHONE}${MASTER_DOMAIN}`;
       const cred = await signInWithEmailAndPassword(auth, email, MASTER_PASS);
-      
-      await updateDoc(doc(db, 'users', cred.user.uid), { lastIp: ip });
-      
+      await updateDoc(doc(db!, 'users', cred.user.uid), { lastIp: ip });
       setIs2FAVerified(true);
       toast({ title: "ROOT ACCESS GRANTED" });
     } catch (err: any) {

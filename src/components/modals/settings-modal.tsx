@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useRef, useEffect } from 'react';
@@ -14,7 +15,7 @@ import { UserAvatar } from '@/components/user-avatar';
 import { 
   LogOut, Palette, Check, Settings2, Camera, Lock, Image as ImageIcon, 
   Paintbrush, Move, Maximize, Shield, UserCircle, Layout, Smile, FileText, ChevronRight,
-  ShieldCheck, Eye, Users2, MessageSquareLock, Upload, Trash2, Smartphone, Info
+  ShieldCheck, Eye, Users2, MessageSquareLock, Upload, Trash2, Smartphone, Info, Share2, Copy, Trophy
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { signOut } from 'firebase/auth';
@@ -45,7 +46,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
   const bgInputRef = useRef<HTMLInputElement>(null);
   const iconInputRef = useRef<HTMLInputElement>(null);
 
-  const userRef = useMemoFirebase(() => (!db || !user) ? null : doc(db, 'users', user.uid), [db, user]);
+  const userRef = useMemoFirebase(() => (!db || !user) ? null : doc(db!, 'users', user.uid), [db, user]);
   const { data: profile } = useDoc<User>(userRef);
 
   const [legalModal, setLegalModal] = useState<{ open: boolean, type: 'privacy' | 'terms' }>({ open: false, type: 'privacy' });
@@ -126,7 +127,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
   const handleSave = async () => {
     if (!db || !user) return;
     try {
-      const userDocRef = doc(db, 'users', user.uid);
+      const userDocRef = doc(db!, 'users', user.uid);
       await updateDoc(userDocRef, {
         name: form.name,
         username: '@' + form.username.toLowerCase(),
@@ -149,6 +150,13 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
     } catch (e: any) {
       toast({ title: "Ошибка сохранения", description: e.message, variant: "destructive" });
     }
+  };
+
+  const shareReferralLink = () => {
+    if (!user) return;
+    const link = `${window.location.origin}/?ref=${user.uid}`;
+    navigator.clipboard.writeText(link);
+    toast({ title: "Ссылка скопирована!", description: "Отправьте её друзьям для приглашения в Ядро." });
   };
 
   const handleBgUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -187,10 +195,10 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         <Tabs value={settingsTab} onValueChange={setSettingsTab} className="flex-1 flex flex-col min-h-0">
           <TabsList className="flex bg-muted/50 p-1 mx-6 mt-4 rounded-2xl shrink-0 overflow-x-auto scrollbar-hide">
             <TabsTrigger value="profile" className="flex-1 text-[9px] uppercase font-bold tracking-widest whitespace-nowrap">Профиль</TabsTrigger>
+            <TabsTrigger value="referral" className="flex-1 text-[9px] uppercase font-bold tracking-widest whitespace-nowrap">Рост</TabsTrigger>
             <TabsTrigger value="appearance" className="flex-1 text-[9px] uppercase font-bold tracking-widest whitespace-nowrap">Стиль</TabsTrigger>
             <TabsTrigger value="privacy" className="flex-1 text-[9px] uppercase font-bold tracking-widest whitespace-nowrap">Приватность</TabsTrigger>
             <TabsTrigger value="security" className="flex-1 text-[9px] uppercase font-bold tracking-widest whitespace-nowrap">Защита</TabsTrigger>
-            <TabsTrigger value="interface" className="flex-1 text-[9px] uppercase font-bold tracking-widest whitespace-nowrap">Вид</TabsTrigger>
           </TabsList>
 
           <ScrollArea className="flex-1 px-6">
@@ -227,6 +235,41 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
               </div>
             </TabsContent>
 
+            <TabsContent value="referral" className="space-y-6 m-0 py-6">
+              <div className="bg-primary/5 border border-primary/20 p-6 rounded-[2.5rem] space-y-6 text-center">
+                <div className="w-20 h-20 bg-primary/10 rounded-3xl flex items-center justify-center mx-auto border border-primary/20">
+                  <Trophy className="w-10 h-10 text-primary animate-bounce" />
+                </div>
+                <div className="space-y-2">
+                  <h3 className="text-xl font-black uppercase italic tracking-tighter text-white">Программа Роста</h3>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground leading-relaxed">
+                    Приглашайте новых участников и расширяйте Ядро Nuxus вместе с нами!
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3 py-4">
+                  <div className="bg-black/20 p-4 rounded-2xl border border-white/5 text-center">
+                    <p className="text-[8px] uppercase font-black text-muted-foreground">Приглашено</p>
+                    <p className="text-2xl font-black text-primary">{profile?.referralCount || 0}</p>
+                  </div>
+                  <div className="bg-black/20 p-4 rounded-2xl border border-white/5 text-center">
+                    <p className="text-[8px] uppercase font-black text-muted-foreground">Ранг узла</p>
+                    <p className="text-sm font-black text-white uppercase italic">
+                      {(profile?.referralCount || 0) > 10 ? 'Core Master' : 'Node Active'}
+                    </p>
+                  </div>
+                </div>
+
+                <Button onClick={shareReferralLink} className="w-full h-14 bg-primary rounded-2xl font-black uppercase tracking-widest gap-2 shadow-xl shadow-primary/20">
+                  <Share2 className="w-5 h-5" /> Пригласить друзей
+                </Button>
+                
+                <p className="text-[8px] text-muted-foreground uppercase font-bold">
+                  Уникальная ссылка будет скопирована в буфер обмена.
+                </p>
+              </div>
+            </TabsContent>
+
             <TabsContent value="appearance" className="space-y-8 m-0 py-6">
               <div className="space-y-4">
                 <Label className="text-[10px] uppercase font-black text-muted-foreground flex items-center gap-2"><Paintbrush className="w-3 h-3" /> Цветовая схема</Label>
@@ -257,61 +300,6 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                     )}
                   </div>
                   <input type="file" ref={iconInputRef} className="hidden" accept="image/*" onChange={handleIconUpload} />
-                </div>
-
-                {/* Инструкция для iOS */}
-                <div className="bg-primary/5 p-4 rounded-2xl border border-primary/10 space-y-2">
-                  <div className="flex items-center gap-2 text-primary">
-                    <Info className="w-3.5 h-3.5" />
-                    <span className="text-[10px] font-black uppercase">Как применить на iPhone?</span>
-                  </div>
-                  <p className="text-[9px] text-muted-foreground uppercase font-bold leading-relaxed">
-                    iOS не умеет менять иконку у уже созданного ярлыка. Чтобы увидеть новую иконку на рабочем столе:
-                    <br />1. Удалите старый ярлык мессенджера.
-                    <br />2. Нажмите «Поделиться» → «На экран Домой» заново.
-                  </p>
-                </div>
-              </div>
-
-              <div className="space-y-4 border-t border-white/5 pt-6">
-                <Label className="text-[10px] uppercase font-black text-muted-foreground flex items-center gap-2"><ImageIcon className="w-3 h-3" /> Фон чата</Label>
-                
-                <div className="space-y-4">
-                  {form.chatBackground ? (
-                    <div className="relative aspect-video rounded-2xl overflow-hidden border border-white/10 group">
-                      <img src={form.chatBackground} alt="Background Preview" className={cn("w-full h-full", form.chatBackgroundFit === 'contain' ? 'object-contain' : 'object-cover')} />
-                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2 backdrop-blur-sm">
-                        <Button variant="destructive" size="sm" onClick={() => setForm(prev => ({ ...prev, chatBackground: '' }))} className="h-8 text-[10px] uppercase font-black tracking-widest"><Trash2 className="w-3 h-3 mr-1" /> Удалить</Button>
-                        <Button variant="secondary" size="sm" onClick={() => bgInputRef.current?.click()} className="h-8 text-[10px] uppercase font-black tracking-widest"><Upload className="w-3 h-3 mr-1" /> Заменить</Button>
-                      </div>
-                    </div>
-                  ) : (
-                    <button 
-                      onClick={() => bgInputRef.current?.click()}
-                      className="w-full aspect-video rounded-2xl border-2 border-dashed border-white/10 flex flex-col items-center justify-center gap-2 hover:bg-white/5 transition-all text-muted-foreground"
-                    >
-                      <Upload className="w-6 h-6" />
-                      <span className="text-[10px] font-black uppercase tracking-[0.2em]">Выбрать изображение</span>
-                    </button>
-                  )}
-                  <input type="file" ref={bgInputRef} className="hidden" accept="image/*" onChange={handleBgUpload} />
-
-                  {form.chatBackground && (
-                    <div className="grid grid-cols-2 gap-2">
-                      <button 
-                        onClick={() => setForm(prev => ({ ...prev, chatBackgroundFit: 'cover' }))}
-                        className={cn("p-3 rounded-xl border text-[10px] font-black uppercase tracking-widest transition-all", form.chatBackgroundFit === 'cover' ? "bg-primary/10 border-primary text-primary" : "bg-white/5 border-white/5 text-muted-foreground")}
-                      >
-                        Заполнение
-                      </button>
-                      <button 
-                        onClick={() => setForm(prev => ({ ...prev, chatBackgroundFit: 'contain' }))}
-                        className={cn("p-3 rounded-xl border text-[10px] font-black uppercase tracking-widest transition-all", form.chatBackgroundFit === 'contain' ? "bg-primary/10 border-primary text-primary" : "bg-white/5 border-white/5 text-muted-foreground")}
-                      >
-                        Вписать
-                      </button>
-                    </div>
-                  )}
                 </div>
               </div>
             </TabsContent>
@@ -344,49 +332,6 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                     </SelectContent>
                   </Select>
                 </div>
-
-                <div className="space-y-3">
-                  <Label className="text-[10px] uppercase font-black text-primary flex items-center gap-2">
-                    <Users2 className="w-3 h-3" /> Кто может добавлять в группы
-                  </Label>
-                  <Select value={form.privacy.allowGroupsFrom} onValueChange={v => setForm({...form, privacy: {...form.privacy, allowGroupsFrom: v as any}})}>
-                    <SelectTrigger className="bg-black/20 border-white/5 h-12 rounded-xl"><SelectValue /></SelectTrigger>
-                    <SelectContent className="bg-card border-white/10 rounded-xl">
-                      <SelectItem value="everybody">Все</SelectItem>
-                      <SelectItem value="contacts">Только контакты</SelectItem>
-                      <SelectItem value="premium">Только Premium</SelectItem>
-                      <SelectItem value="nobody">Никто</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-3">
-                  <Label className="text-[10px] uppercase font-black text-primary flex items-center gap-2">
-                    <MessageSquareLock className="w-3 h-3" /> Кто может писать мне
-                  </Label>
-                  <Select value={form.privacy.whoCanMessageMe} onValueChange={v => setForm({...form, privacy: {...form.privacy, whoCanMessageMe: v as any}})}>
-                    <SelectTrigger className="bg-black/20 border-white/5 h-12 rounded-xl"><SelectValue /></SelectTrigger>
-                    <SelectContent className="bg-card border-white/10 rounded-xl">
-                      <SelectItem value="everybody">Все</SelectItem>
-                      <SelectItem value="premium">Только Premium</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              <div className="space-y-2 pt-4">
-                <Label className="text-[10px] uppercase font-black text-muted-foreground ml-1">Юридические данные</Label>
-                <div className="bg-muted/20 rounded-2xl border border-white/5 overflow-hidden">
-                  <button onClick={() => setLegalModal({ open: true, type: 'terms' })} className="w-full flex items-center justify-between p-4 hover:bg-white/5 transition-all text-left">
-                    <span className="text-xs font-bold text-white flex items-center gap-2"><FileText className="w-4 h-4 text-accent" /> Условия использования</span>
-                    <ChevronRight className="w-4 h-4 opacity-40" />
-                  </button>
-                  <div className="h-px bg-white/5 w-full" />
-                  <button onClick={() => setLegalModal({ open: true, type: 'privacy' })} className="w-full flex items-center justify-between p-4 hover:bg-white/5 transition-all text-left">
-                    <span className="text-xs font-bold text-white flex items-center gap-2"><Shield className="w-4 h-4 text-primary" /> Конфиденциальность</span>
-                    <ChevronRight className="w-4 h-4 opacity-40" />
-                  </button>
-                </div>
               </div>
             </TabsContent>
 
@@ -415,28 +360,10 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                 )}
               </div>
             </TabsContent>
-
-            <TabsContent value="interface" className="space-y-6 m-0 py-6">
-              <div className="bg-muted/20 p-6 rounded-[2.5rem] border border-white/5 space-y-6">
-                <div className="flex items-center gap-2 mb-2"><Layout className="w-4 h-4 text-primary" /><Label className="text-[10px] uppercase font-black text-white">Нижняя навигация</Label></div>
-                <div className="space-y-4">
-                  {[
-                    { id: 'contacts', label: 'Раздел Контакты' },
-                    { id: 'calls', label: 'Раздел Звонки' },
-                    { id: 'archive', label: 'Раздел Архив' }
-                  ].map(item => (
-                    <div key={item.id} className="flex items-center justify-between p-3 bg-black/20 rounded-xl">
-                      <span className="text-[11px] font-bold text-white uppercase tracking-wider">{item.label}</span>
-                      <Switch checked={(form.navVisibility as any)[item.id]} onCheckedChange={v => setForm({...form, navVisibility: {...form.navVisibility, [item.id]: v}})} />
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </TabsContent>
           </ScrollArea>
 
           <div className="p-6 border-t border-white/5 bg-muted/20 shrink-0 flex gap-3">
-            <Button variant="ghost" className="h-14 w-14 rounded-2xl bg-destructive/10 text-destructive" onClick={() => signOut(auth)}><LogOut className="w-6 h-6" /></Button>
+            <Button variant="ghost" className="h-14 w-14 rounded-2xl bg-destructive/10 text-destructive" onClick={() => signOut(auth)}> <LogOut className="w-6 h-6" /></Button>
             <Button className="flex-1 h-14 rounded-2xl font-black uppercase tracking-widest bg-primary shadow-lg shadow-primary/20" onClick={handleSave}><Check className="w-5 h-5 mr-2" /> Применить изменения</Button>
           </div>
         </Tabs>
