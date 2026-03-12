@@ -26,7 +26,7 @@ import {
   Loader2, UserX, MoreVertical, Ban, CheckCircle2, Crown, Calendar, Shield, Globe, Activity, Eye, MessageCircle, ArrowLeft
 } from 'lucide-react';
 import type { User, Chat } from '@/lib/types';
-import { formatDisplayName, isUserPremium } from '@/lib/utils';
+import { formatDisplayName, isUserPremium, cn } from '@/lib/utils';
 import { updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { useToast } from '@/hooks/use-toast';
 import { useAppState } from '@/lib/store';
@@ -206,7 +206,15 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
                   inspectingUserChats.map(chat => (
                     <div key={chat.id} className="flex items-center justify-between p-4 bg-white/5 rounded-[1.8rem] border border-white/5 hover:border-accent/30 transition-all group">
                       <div className="flex items-center gap-4 min-w-0">
-                        <UserAvatar userId={null} className="h-10 w-10" manualAvatarUrl={chat.avatarUrl} fallbackName={chat.name} />
+                        <div className="relative">
+                          <UserAvatar userId={null} className="h-10 w-10" manualAvatarUrl={chat.avatarUrl} fallbackName={chat.name} />
+                          <div className={cn(
+                            "absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-[#0a0a0c] flex items-center justify-center",
+                            chat.type === 'private' ? "bg-blue-500" : "bg-purple-500"
+                          )}>
+                            {chat.type === 'private' ? <Shield className="w-2 h-2 text-white" /> : <Users className="w-2 h-2 text-white" />}
+                          </div>
+                        </div>
                         <div className="flex flex-col min-w-0 text-left">
                           <span className="font-bold text-sm text-white truncate">{chat.name || 'Приватный узел'}</span>
                           <span className="text-[9px] text-muted-foreground/60 uppercase font-black">{chat.type}</span>
