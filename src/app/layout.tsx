@@ -71,12 +71,7 @@ export default function RootLayout({
   return (
     <html lang="ru" className={`dark ${font.variable}`} suppressHydrationWarning>
       <head>
-        <link rel="icon" type="image/png" sizes="16x16" href={FINAL_ICON_URL} />
-        <link rel="icon" type="image/png" sizes="32x32" href={FINAL_ICON_URL} />
-        <link rel="icon" type="image/png" sizes="192x192" href={FINAL_ICON_URL} />
-        <link rel="shortcut icon" type="image/png" href={FINAL_ICON_URL} />
-        <link rel="apple-touch-icon" href={FINAL_ICON_URL} />
-        
+        {/* МЫ УБРАЛИ РУЧНЫЕ LINK ТЕГИ, ЧТОБЫ ИЗБЕЖАТЬ ОШИБКИ removeChild В NEXT.JS */}
         <style>
           {`
           html, body { 

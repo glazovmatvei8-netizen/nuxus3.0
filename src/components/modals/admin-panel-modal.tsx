@@ -47,7 +47,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
   const [isBroadcasting, setIsBroadcasting] = useState(false);
   const [activeTab, setActiveTab] = useState('users');
   
-  // State for inspecting specific user's chats
+  // Состояние для проверки чатов конкретного пользователя
   const [inspectingUser, setInspectingUser] = useState<User | null>(null);
   
   const usersQuery = useMemoFirebase(() => (!db ? null : query(collection(db, 'users'), limit(500))), [db]);
@@ -85,7 +85,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
     return bTime - aTime;
   });
 
-  // Chats specific to the inspecting user
+  // Чаты конкретного пользователя для режима "Проверить чаты"
   const inspectingUserChats = useMemo(() => {
     if (!inspectingUser || !allChats) return [];
     return allChats.filter(c => c.participantIds.includes(inspectingUser.id));
@@ -181,7 +181,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
               ) : (
                 <>
                   <ShieldAlert className="w-5 h-5 text-primary animate-pulse" /> 
-                  <span>Nuxus Admin v0.65.0</span>
+                  <span>Nuxus Admin v0.65.8</span>
                 </>
               )}
             </div>

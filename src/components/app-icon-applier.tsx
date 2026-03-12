@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useEffect } from 'react';
@@ -7,8 +6,9 @@ import { doc } from 'firebase/firestore';
 import type { User } from '@/lib/types';
 
 /**
- * Динамически применяет иконку приложения (v45)
- * Исправлена ошибка "removeChild" путем использования более безопасных методов манипуляции DOM.
+ * Динамически применяет иконку приложения (v45).
+ * ИСПОЛЬЗУЕТ БЕЗОПАСНЫЕ МЕТОДЫ DOM: предотвращает ошибку "removeChild" 
+ * путем проверки привязки элемента к родителю.
  */
 export function AppIconApplier() {
   const { user } = useUser();
@@ -24,18 +24,27 @@ export function AppIconApplier() {
     const finalIcon = customIcon ? `${customIcon}${customIcon.includes('?') ? '&' : '?'}v=45` : DEFAULT_ICON;
 
     const updateIcons = () => {
+      if (typeof document === 'undefined') return;
+
       try {
-        // Безопасное удаление старых иконок
+        // Очищаем только те иконки, которые могли быть созданы этим скриптом ранее
+        // Мы ищем по селекторам, но удаляем максимально осторожно
         const selectors = ['link[rel*="icon"]', 'link[rel="apple-touch-icon"]'];
         selectors.forEach(selector => {
-          const elements = document.querySelectorAll(selector);
+          const elements = document.head.querySelectorAll(selector);
           elements.forEach(el => {
-            if (el && el.parentNode) {
-              el.parentNode.removeChild(el);
+            // Проверяем, что элемент всё еще находится в HEAD и имеет родителя
+            if (el && el.parentNode === document.head) {
+              try {
+                document.head.removeChild(el);
+              } catch (e) {
+                // Если элемент уже был удален другим процессом (React Metadata), просто игнорируем
+              }
             }
           });
         });
 
+        // Создаем новые иконки
         const sizes = ['16x16', '32x32', '192x192', '512x512'];
         sizes.forEach(size => {
           const link = document.createElement('link');
@@ -51,14 +60,13 @@ export function AppIconApplier() {
         appleLink.href = finalIcon;
         document.head.appendChild(appleLink);
       } catch (e) {
-        console.warn("Nuxus Icon Engine: Head sync skipped", e);
+        console.warn("Nuxus Icon Engine: Sync skipped to prevent crash", e);
       }
     };
 
-    updateIcons();
-    // Небольшая задержка для уверенности в SPA-окружении
-    const timer = setTimeout(updateIcons, 1500);
-    return () => clearTimeout(timer);
+    // Используем requestAnimationFrame для синхронизации с циклом отрисовки браузера
+    const frameId = requestAnimationFrame(updateIcons);
+    return () => cancelAnimationFrame(frameId);
   }, [profile?.settings?.customAppIconUrl, DEFAULT_ICON]);
 
   return null;
