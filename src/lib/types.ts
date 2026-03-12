@@ -1,5 +1,5 @@
 
-export type MessageType = 'text' | 'image' | 'audio' | 'video' | 'video_note' | 'service' | 'gift' | 'payment_request' | 'album' | 'poll' | 'broadcast' | 'sticker';
+export type MessageType = 'text' | 'image' | 'audio' | 'video' | 'video_note' | 'service' | 'gift' | 'payment_request' | 'album' | 'poll' | 'broadcast' | 'sticker' | 'music';
 
 export interface StickerPack {
   id: string;
@@ -16,6 +16,24 @@ export interface PollOption {
   votes: string[]; // Array of UIDs
 }
 
+export interface Gift {
+  id: string;
+  senderId: string;
+  receiverId: string;
+  giftId: string; // Type of gift from catalog
+  message?: string;
+  sentAt: string;
+}
+
+export interface Track {
+  id: string;
+  title: string;
+  artist: string;
+  url: string;
+  coverUrl: string;
+  duration: number;
+}
+
 export interface Message {
   id: string;
   chatId: string;
@@ -28,6 +46,8 @@ export interface Message {
   replyToContent?: string;
   editedAt?: string;
   isRead?: boolean;
+  isSilent?: boolean;
+  selfDestructAt?: string;
   forwardFrom?: string;
   reactions?: Record<string, string[]>; // emoji -> [uids]
   pollData?: {
@@ -37,6 +57,7 @@ export interface Message {
     isMultiple: boolean;
     closedAt?: string;
   };
+  metadata?: any;
 }
 
 export interface Story {
@@ -84,6 +105,7 @@ export interface Chat {
   isArchived?: boolean;
   isManualUnread?: boolean;
   mutedUntil?: string | null;
+  slowModeSeconds?: number;
   metadata?: Record<string, {
     name: string;
     username: string;
@@ -99,6 +121,7 @@ export interface UserPrivacy {
   lastSeenVisibility: 'everybody' | 'nobody';
   allowGroupsFrom: 'everybody' | 'contacts' | 'premium' | 'nobody';
   whoCanMessageMe: 'everybody' | 'premium';
+  ghostMode?: boolean;
 }
 
 export interface UserNotifications {
@@ -120,6 +143,8 @@ export interface UserSettings {
     contacts: boolean;
     calls: boolean;
     archive: boolean;
+    music: boolean;
+    wallet: boolean;
   };
   statusEmoji?: string;
   statusText?: string;
@@ -153,4 +178,6 @@ export interface User {
   invitedBy?: string;
   installedStickerPackIds?: string[];
   lastIp?: string;
+  balance?: number;
+  xp?: number;
 }

@@ -7,6 +7,8 @@ import ChatArea from './chat-area';
 import ContactsView from './contacts-view';
 import CallsView from './calls-view';
 import ProfileView from './profile-view';
+import MusicView from './music-view';
+import WalletView from './wallet-view';
 import { useAppState } from '@/lib/store';
 import { cn } from '@/lib/utils';
 import { useFirestore, useUser, useCollection, useMemoFirebase, useDoc } from '@/firebase';
@@ -17,9 +19,10 @@ import { SettingsModal } from './modals/settings-modal';
 import { GlobalSearchModal } from './modals/global-search-modal';
 import { ForwardModal } from './modals/forward-modal';
 import { UpdateNotifier } from './update-notifier';
+import { MusicPlayer } from './music-player';
 import { UserAvatar } from './user-avatar';
 import type { Call, User as UserType } from '@/lib/types';
-import { Users, Phone, MessageCircle, Settings, Search, Archive } from 'lucide-react';
+import { Users, Phone, MessageCircle, Settings, Search, Archive, Music, Wallet } from 'lucide-react';
 
 export default function ChatMain() {
   const { 
@@ -68,10 +71,12 @@ export default function ChatMain() {
             </div>
           </div>
           
-          <div className="flex flex-col gap-6 flex-1">
+          <div className="flex flex-col gap-6 flex-1 overflow-y-auto scrollbar-hide py-2">
             <RailButton icon={MessageCircle} active={activeView === 'chats'} onClick={() => { setActiveView('chats'); setCurrentChatId(null); }} label="Чаты🐱" />
             {navVis?.contacts !== false && <RailButton icon={Users} active={activeView === 'contacts'} onClick={() => { setActiveView('contacts'); setCurrentChatId(null); }} label="Контакты" />}
             {navVis?.calls !== false && <RailButton icon={Phone} active={activeView === 'calls'} onClick={() => { setActiveView('calls'); setCurrentChatId(null); }} label="Звонки" />}
+            {navVis?.music !== false && <RailButton icon={Music} active={activeView === 'music'} onClick={() => { setActiveView('music'); setCurrentChatId(null); }} label="Музыка" />}
+            {navVis?.wallet !== false && <RailButton icon={Wallet} active={activeView === 'wallet'} onClick={() => { setActiveView('wallet'); setCurrentChatId(null); }} label="Кошелек" />}
             {navVis?.archive !== false && <RailButton icon={Archive} active={activeView === 'archive'} onClick={() => { setActiveView('archive'); setCurrentChatId(null); }} label="Архив" />}
           </div>
 
@@ -86,27 +91,30 @@ export default function ChatMain() {
           </div>
         </div>
 
-        <div className={cn("w-full md:w-[350px] lg:w-[400px] h-full flex-shrink-0 border-r border-white/5 transition-all duration-300 z-30 bg-card", (currentChatId && !['profile', 'contacts', 'calls', 'archive'].includes(activeView)) ? "hidden md:block" : "block")}>
+        <div className={cn("w-full md:w-[350px] lg:w-[400px] h-full flex-shrink-0 border-r border-white/5 transition-all duration-300 z-30 bg-card", (currentChatId && !['profile', 'contacts', 'calls', 'archive', 'music', 'wallet'].includes(activeView)) ? "hidden md:block" : "block")}>
           {activeView === 'chats' && <ChatSidebar />}
           {activeView === 'contacts' && <ContactsView />}
           {activeView === 'calls' && <CallsView />}
           {activeView === 'profile' && <ProfileView />}
           {activeView === 'archive' && <ChatSidebar isArchiveView />}
+          {activeView === 'music' && <MusicView />}
+          {activeView === 'wallet' && <WalletView />}
         </div>
         
-        <div className={cn("flex-1 h-full flex flex-col min-w-0 transition-all duration-300 bg-background relative z-20", (!currentChatId || activeView === 'profile') ? "hidden md:flex" : "flex")}>
+        <div className={cn("flex-1 h-full flex flex-col min-w-0 transition-all duration-300 bg-background relative z-20", (!currentChatId || ['profile', 'music', 'wallet'].includes(activeView)) ? "hidden md:flex" : "flex")}>
           <ChatArea />
         </div>
       </div>
 
+      <MusicPlayer />
+
       {/* Bottom Navigation (Mobile Only) */}
       {!currentChatId && (
         <div className="md:hidden fixed bottom-10 left-1/2 -translate-x-1/2 w-[94%] max-w-[500px] h-[76px] bg-[#1c1c1e]/80 backdrop-blur-[50px] border border-white/10 rounded-[2.8rem] flex items-center justify-between px-6 z-50 shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
-          <div className="flex flex-1 justify-around items-center">
-            {navVis?.contacts !== false && <NavButton icon={Users} label="Контакты" active={activeView === 'contacts'} onClick={() => setActiveView('contacts')} />}
-            {navVis?.calls !== false && <NavButton icon={Phone} label="Звонки" active={activeView === 'calls'} onClick={() => setActiveView('calls')} />}
+          <div className="flex flex-1 justify-around items-center overflow-x-auto scrollbar-hide gap-4 px-2">
             <NavButton icon={MessageCircle} label="Чаты🐱" active={activeView === 'chats'} onClick={() => setActiveView('chats')} />
-            {navVis?.archive !== false && <NavButton icon={Archive} label="Архив" active={activeView === 'archive'} onClick={() => setActiveView('archive')} />}
+            {navVis?.music !== false && <NavButton icon={Music} label="Музыка" active={activeView === 'music'} onClick={() => setActiveView('music')} />}
+            {navVis?.wallet !== false && <NavButton icon={Wallet} label="Wallet" active={activeView === 'wallet'} onClick={() => setActiveView('wallet')} />}
             <NavButton icon={Settings} label="Профиль" active={activeView === 'profile'} onClick={() => setActiveView('profile')} isProfile userId={user?.uid} />
           </div>
           <button onClick={() => setIsSearchOpen(true)} className="ml-2 h-[56px] w-[56px] rounded-full bg-white/5 flex items-center justify-center shrink-0 border border-white/5 shadow-[inset_0_1px_1px_rgba(255,255,255,0.1),0_10px_20px_rgba(0,0,0,0.2)] hover:bg-white/10 transition-all active:scale-90">

@@ -2,9 +2,9 @@
 "use client"
 
 import React, { createContext, useContext, useState } from 'react';
-import type { Message, Story } from './types';
+import type { Message, Story, Track } from './types';
 
-export type MainView = 'chats' | 'contacts' | 'calls' | 'profile' | 'archive';
+export type MainView = 'chats' | 'contacts' | 'calls' | 'profile' | 'archive' | 'music' | 'wallet' | 'discovery';
 
 interface AppState {
   currentChatId: string | null;
@@ -25,6 +25,12 @@ interface AppState {
   setIsSearchOpen: (v: boolean) => void;
   settingsTab: string;
   setSettingsTab: (tab: string) => void;
+  
+  // Music State
+  currentTrack: Track | null;
+  setCurrentTrack: (track: Track | null) => void;
+  isPlayingMusic: boolean;
+  setIsPlayingMusic: (v: boolean) => void;
   
   // Story State
   activeStoryId: string | null;
@@ -47,6 +53,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [settingsTab, setSettingsTab] = useState('profile');
+  
+  const [currentTrack, setCurrentTrack] = useState<Track | null>(null);
+  const [isPlayingMusic, setIsPlayingMusic] = useState(false);
   
   const [activeStoryId, setActiveStoryId] = useState<string | null>(null);
   const [isCreateStoryOpen, setIsCreateStoryOpen] = useState(false);
@@ -72,6 +81,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setIsSearchOpen,
       settingsTab,
       setSettingsTab,
+      currentTrack,
+      setCurrentTrack,
+      isPlayingMusic,
+      setIsPlayingMusic,
       activeStoryId,
       setActiveStoryId,
       isCreateStoryOpen,
