@@ -117,6 +117,7 @@ const ChatListItem = memo(({
 
   return (
     <div className="relative overflow-hidden touch-pan-y select-none bg-[#0a0a0c] border-none">
+      {/* Левые кнопки действия (Свайп вправо) */}
       <div className={cn("absolute inset-y-0 left-0 flex h-full z-0 transition-opacity duration-200", offsetX > 10 ? "opacity-100" : "opacity-0 pointer-events-none")}>
         <button onClick={(e) => { e.stopPropagation(); onMarkUnread(chat.id); resetSwipe(); }} className="w-20 bg-[#007AFF] flex flex-col items-center justify-center text-white gap-1 active:brightness-90 transition-all">
           <MessageCircle className="w-5 h-5 fill-current" />
@@ -128,6 +129,7 @@ const ChatListItem = memo(({
         </button>
       </div>
 
+      {/* Правые кнопки действия (Свайп влево) */}
       <div className={cn("absolute inset-y-0 right-0 flex h-full z-0 transition-opacity duration-200", offsetX < -10 ? "opacity-100" : "opacity-0 pointer-events-none")} style={{ width: '160px' }}>
         <div className="flex h-full w-full">
           <button onClick={(e) => { e.stopPropagation(); onArchive(chat.id, !!chat.isArchived); resetSwipe(); }} className="flex-1 bg-[#FF9500] flex flex-col items-center justify-center text-white gap-1 active:brightness-90 transition-all">
@@ -254,7 +256,7 @@ export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?:
     });
     if (isArchiveView) return result.filter(c => c.isArchived);
     if (activeTab === 'private') return result.filter(c => c.type === 'private' && !c.isArchived);
-    if (activeTab === 'groups') return result.filter(c => (c.type === 'group' || c.type === 'channel') && !c.isArchived);
+    if (activeTab === 'groups') return result.filter(c => (c.type === 'group' || c.type === 'channel' || c.type === 'saved') && !c.isArchived);
     return result.filter(c => !c.isArchived);
   }, [chats, activeTab, isArchiveView, currentUserProfile?.pinnedChatIds]);
 

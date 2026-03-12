@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useRef, useEffect } from 'react';
@@ -280,6 +279,28 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                       {form.theme === theme.id && <Check className="w-5 h-5 text-primary" />}
                     </button>
                   ))}
+                </div>
+              </div>
+
+              <div className="space-y-4 border-t border-white/5 pt-6">
+                <Label className="text-[10px] uppercase font-black text-muted-foreground flex items-center gap-2"><ImageIcon className="w-3 h-3" /> Фон чатов</Label>
+                <div className="flex items-center gap-4 bg-muted/20 p-4 rounded-2xl border border-white/5">
+                  <div className="relative h-16 w-16 rounded-2xl overflow-hidden border border-white/10 shrink-0 bg-black/40">
+                    {form.chatBackground ? <img src={form.chatBackground} className="w-full h-full object-cover" /> : <ImageIcon className="w-6 h-6 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-20" />}
+                  </div>
+                  <div className="flex-1 flex flex-col gap-2">
+                    <Button variant="outline" size="sm" onClick={() => bgInputRef.current?.click()} className="h-9 rounded-xl text-[9px] uppercase font-black tracking-widest border-white/10 bg-white/5">
+                      <Upload className="w-3 h-3 mr-2" /> Выбрать фото
+                    </Button>
+                    <Select value={form.chatBackgroundFit} onValueChange={v => setForm({...form, chatBackgroundFit: v as any})}>
+                      <SelectTrigger className="h-8 bg-black/20 border-white/5 text-[9px] rounded-lg">Заполнение: {form.chatBackgroundFit === 'cover' ? 'По ширине' : 'Вписать'}</SelectTrigger>
+                      <SelectContent className="bg-card border-white/10">
+                        <SelectItem value="cover" className="text-[10px]">По ширине (Cover)</SelectItem>
+                        <SelectItem value="contain" className="text-[10px]">Вписать (Contain)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <input type="file" ref={bgInputRef} className="hidden" accept="image/*" onChange={handleBgUpload} />
                 </div>
               </div>
 

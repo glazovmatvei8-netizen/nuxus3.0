@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useRef, useEffect, useMemo, useCallback, memo } from 'react';
@@ -88,16 +87,44 @@ export default function ChatArea() {
   const messagesQuery = useMemoFirebase(() => (!db || !currentChatId) ? null : query(collection(db, 'chats', currentChatId, 'messages'), orderBy('sentAt', 'asc')), [db, currentChatId]);
   const { data: messages } = useCollection<Message>(messagesQuery);
 
+  const pinnedMessage = useMemo(() => messages?.find(m => m.id === chat?.pinnedMessageId), [messages, chat?.pinnedMessageId]);
+
   const isTyping = useMemo(() => {
     if (!chat?.typing) return false;
     return Object.entries(chat.typing).some(([uid, active]) => active && uid !== firebaseUser?.uid);
   }, [chat?.typing, firebaseUser?.uid]);
+
+  useEffect(() => {
+    if (currentChatId && localDrafts[currentChatId]) {
+      setMessageInput(localDrafts[currentChatId]);
+    } else {
+      setMessageInput('');
+    }
+  }, [currentChatId, localDrafts]);
 
   const handleInputChange = (val: string) => {
     setMessageInput(val);
     if (currentChatId) setLocalDrafts(prev => ({ ...prev, [currentChatId]: val }));
     if (db && currentChatId && firebaseUser) {
       updateDocumentNonBlocking(doc(db, 'chats', currentChatId), { [`typing.${firebaseUser.uid}`]: !!val });
+    }
+  };
+
+  const handleAiDraft = async () => {
+    if (!currentChatId || !messages) return;
+    setIsAiLoading(true);
+    try {
+      const history = messages.slice(-5).map(m => ({
+        sender: m.senderName,
+        message: m.contentType === 'text' ? decryptSignal(m.content) : `[${m.contentType}]`
+      }));
+      const res = await suggestMessageDraft({ conversationHistory: history, currentUserInput: messageInput });
+      handleInputChange(res.draftMessage);
+      toast({ title: "Nuxus AI", description: "Ответ сгенерирован!" });
+    } catch (e) {
+      toast({ title: "Ошибка ИИ", variant: "destructive" });
+    } finally {
+      setIsAiLoading(false);
     }
   };
 
@@ -148,11 +175,18 @@ export default function ChatArea() {
       chatId: currentChatId, senderId: firebaseUser.uid, senderName: userProfile?.name || 'Nuxus User', 
       content: finalContent, contentType: type_msg, sentAt: new Date().toISOString(), isRead: false
     };
-    if (captureReply) { msgData.replyToId = captureReply.id; msgData.replyToContent = captureReply.contentType === 'text' ? captureReply.content : `[${captureReply.contentType}]`; }
+    if (captureReply) { 
+      msgData.replyToId = captureReply.id; 
+      msgData.replyToContent = captureReply.contentType === 'text' ? captureReply.content : `[${captureReply.contentType}]`; 
+    }
     
     await addDoc(collection(db, 'chats', currentChatId, 'messages'), msgData);
-    updateDocumentNonBlocking(doc(db, 'chats', currentChatId), { lastMessageAt: new Date().toISOString(), lastSenderId: firebaseUser.uid, [`typing.${firebaseUser.uid}`]: false });
-  }, [messageInput, currentChatId, firebaseUser, db, userProfile, replyTo, editingMsg]);
+    updateDocumentNonBlocking(doc(db, 'chats', currentChatId), { 
+      lastMessageAt: new Date().toISOString(), 
+      lastSenderId: firebaseUser.uid, 
+      [`typing.${firebaseUser.uid}`]: false 
+    });
+  }, [messageInput, currentChatId, firebaseUser, db, userProfile, replyTo, editingMsg, setLocalDrafts]);
 
   return (
     <div className="flex-1 flex flex-col h-full bg-background relative overflow-hidden z-20">
@@ -176,6 +210,26 @@ export default function ChatArea() {
           <Button variant="ghost" size="icon" onClick={() => setIsChatInfoOpen(true)}><Info className="w-5 h-5" /></Button>
         </div>
       </header>
+
+      {pinnedMessage && (
+        <div className="h-12 bg-white/5 backdrop-blur-md border-b border-white/5 flex items-center justify-between px-4 animate-in slide-in-from-top-2 z-20">
+          <div className="flex items-center gap-3 min-w-0 cursor-pointer overflow-hidden">
+            <div className="w-1 h-8 bg-primary rounded-full" />
+            <div className="flex flex-col min-w-0">
+              <span className="text-[10px] font-black text-primary uppercase tracking-widest">Закреплено</span>
+              <p className="text-xs text-white/60 truncate italic">{pinnedMessage.contentType === 'text' ? decryptSignal(pinnedMessage.content) : `[${pinnedMessage.contentType}]`}</p>
+            </div>
+          </div>
+          <Button variant="ghost" size="icon" className="h-8 w-8 text-white/40" onClick={() => updateDocumentNonBlocking(doc(db!, 'chats', currentChatId!), { pinnedMessageId: null })}><X className="w-4 h-4" /></Button>
+        </div>
+      )}
+
+      {isSearchMode && (
+        <div className="p-2 bg-card/90 backdrop-blur-md border-b border-white/5 flex gap-2 z-20">
+          <Input placeholder="Поиск в этом чате..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="bg-white/5 border-white/10 h-10 rounded-xl text-xs" autoFocus />
+          <Button variant="ghost" onClick={() => { setIsSearchMode(false); setSearchQuery(''); }}>Отмена</Button>
+        </div>
+      )}
 
       <div className="flex-1 relative overflow-hidden">
         <ScrollArea ref={scrollRef} className="h-full w-full relative z-10 scrollbar-hide">
@@ -208,7 +262,10 @@ export default function ChatArea() {
             }} />
             <div className="flex-1 flex items-center bg-white/[0.03] rounded-2xl border border-white/[0.05] h-11 px-4 relative group">
               <Input placeholder="Сообщение" className="bg-transparent border-none focus-visible:ring-0" value={messageInput} onChange={e => handleInputChange(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSendMessage()} />
-              <button onClick={() => setShowEmojiPicker(!showEmojiPicker)} className="text-white/20 hover:text-white transition-colors"><Smile /></button>
+              <div className="flex items-center gap-2">
+                {isAiLoading ? <Loader2 className="w-4 h-4 animate-spin text-primary" /> : <button onClick={handleAiDraft} className="text-primary/40 hover:text-primary transition-colors"><Sparkles className="w-4 h-4" /></button>}
+                <button onClick={() => setShowEmojiPicker(!showEmojiPicker)} className="text-white/20 hover:text-white transition-colors"><Smile /></button>
+              </div>
             </div>
             {messageInput.trim() ? (
               <Button size="icon" className="h-10 w-10 rounded-full bg-primary shadow-lg" onClick={() => handleSendMessage()}><Send className="w-5 h-5" /></Button>
