@@ -17,11 +17,12 @@ export function AppIconApplier() {
   const userRef = useMemoFirebase(() => (!db || !user) ? null : doc(db, 'users', user.uid), [db, user]);
   const { data: profile } = useDoc<User>(userRef);
 
+  // ПРИНУДИТЕЛЬНО v45 ПО УМОЛЧАНИЮ
   const DEFAULT_ICON = 'https://i.ibb.co/sd2MqGz2/Icon.png?v=45';
 
   useEffect(() => {
     const customIcon = profile?.settings?.customAppIconUrl;
-    // Принудительно добавляем v45 если это стандартная иконка, чтобы избежать кэша
+    // Принудительно добавляем v45 если это стандартная иконка или кастомная, чтобы избежать кэша
     const finalIcon = customIcon 
       ? (customIcon.includes('?') ? `${customIcon}&v=45` : `${customIcon}?v=45`)
       : DEFAULT_ICON;

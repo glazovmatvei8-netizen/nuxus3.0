@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useMemo, memo, useRef } from 'react';
@@ -37,7 +36,6 @@ const ChatListItem = memo(({
   const isHorizontalSwipe = useRef(false);
   const isVerticalScroll = useRef(false);
   const directionDecided = useRef(false);
-  const [isMuted, setIsMuted] = useState(!!chat.mutedUntil);
 
   const userProfileRef = useMemoFirebase(() => (!db || !otherId) ? null : doc(db, 'users', otherId), [db, otherId]);
   const { data: otherProfile } = useDoc<User>(userProfileRef);
@@ -61,7 +59,7 @@ const ChatListItem = memo(({
 
   const isUnread = (lastMsg && !lastMsg.isRead && lastMsg.senderId !== currentUserId) || chat.isManualUnread;
 
-  // Расшифровка превью последнего сообщения
+  // ПРИНУДИТЕЛЬНАЯ РАСШИФРОВКА ПРЕВЬЮ
   const decryptedPreview = useMemo(() => {
     if (!lastMsg) return 'Нет сообщений';
     if (lastMsg.contentType !== 'text') return `[${lastMsg.contentType}]`;

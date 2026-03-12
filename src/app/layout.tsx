@@ -18,7 +18,7 @@ const font = Plus_Jakarta_Sans({
 });
 
 /**
- * ГЛОБАЛЬНАЯ ИКОНКА NUXUS (v45) - ЗАКРЕПЛЕНО
+ * ГЛОБАЛЬНАЯ ИКОНКА NUXUS (v45) - ПРИНУДИТЕЛЬНО ЗАКРЕПЛЕНО
  */
 const APP_ICON_URL = 'https://i.ibb.co/sd2MqGz2/Icon.png';
 const VERSION_PARAM = '?v=45';
