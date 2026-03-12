@@ -8,17 +8,19 @@ import { Input } from '@/components/ui/input';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
   Send, Info, ChevronLeft, X, Paperclip, Mic, StopCircle, ChevronDown, Edit2, Pin, Search, PinOff,
-  Smile, Instagram, Camera, Video, Sticker, Copy, Share2, Sparkles, Loader2, RefreshCw, Zap, Trash2, Pause, Play
+  Smile, Instagram, Camera, Video, Sticker, Copy, Share2, Sparkles, Loader2, RefreshCw, Zap, Trash2, Pause, Play,
+  BarChart3, Image as ImageIcon
 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { MessageItem } from './message-item';
 import { useToast } from '@/hooks/use-toast';
 import { ChatInfoModal } from './modals/chat-info-modal';
 import { ImagePreviewModal } from './modals/image-preview-modal';
+import { CreatePollModal } from './modals/create-poll-modal';
 import { useFirestore, useUser, useCollection, useDoc, useMemoFirebase } from '@/firebase';
 import { collection, query, orderBy, doc, addDoc, limit, updateDoc, writeBatch, arrayUnion, getDocs, where, setDoc, getDoc } from 'firebase/firestore';
 import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
-import { formatDisplayName, cn, formatLastSeen, compressImage, encryptSignal, isGlobalAdmin } from '@/lib/utils';
+import { formatDisplayName, cn, formatLastSeen, compressImage, encryptSignal, isGlobalAdmin, decryptSignal } from '@/lib/utils';
 import type { Message, User as UserType, Chat, StickerPack } from '@/lib/types';
 import { EmojiPicker } from './emoji-picker';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -47,7 +49,9 @@ const MessageList = memo(({
   }, [messages]);
 
   const filteredMessages = searchQuery 
-    ? sortedMessages.filter((m: Message) => m.content?.toLowerCase().includes(searchQuery.toLowerCase()))
+    ? sortedMessages.filter((m: Message) => 
+        decryptSignal(m.content)?.toLowerCase().includes(searchQuery.toLowerCase())
+      )
     : sortedMessages;
 
   return (
@@ -65,7 +69,7 @@ const MessageList = memo(({
           isGroup={isGroup}
           onEdit={onEdit}
           onForward={onForward}
-          highlight={searchQuery && msg.content?.toLowerCase().includes(searchQuery.toLowerCase())}
+          highlight={searchQuery && decryptSignal(msg.content)?.toLowerCase().includes(searchQuery.toLowerCase())}
           viewerProfile={viewerProfile}
         />
       ))}
@@ -80,6 +84,7 @@ export default function ChatArea() {
   const { currentChatId, setCurrentChatId, setForwardingMessage, localDrafts, setLocalDrafts } = useAppState();
   
   const [isChatInfoOpen, setIsChatInfoOpen] = useState(false);
+  const [isPollModalOpen, setIsPollModalOpen] = useState(false);
   const [replyTo, setReplyTo] = useState<Message | null>(null);
   const [editingMsg, setEditingMsg] = useState<Message | null>(null);
   const [messageInput, setMessageInput] = useState('');
@@ -159,8 +164,6 @@ export default function ChatArea() {
 
   useEffect(() => {
     if (!db || !currentChatId || !firebaseUser || !messages || !chat) return;
-    
-    // Админ не помечает как прочитанные если просто подглядывает
     if (!chat.participantIds.includes(firebaseUser.uid)) return;
 
     const markAsRead = async () => {
@@ -198,6 +201,15 @@ export default function ChatArea() {
     if (scrollRef.current) {
       const viewport = scrollRef.current.querySelector('[data-radix-scroll-area-viewport]');
       if (viewport) viewport.scrollTo({ top: viewport.scrollHeight, behavior });
+    }
+  }, []);
+
+  const scrollToMessage = useCallback((msgId: string) => {
+    const el = document.getElementById(`msg-${msgId}`);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      el.classList.add('ring-2', 'ring-primary', 'ring-offset-2', 'rounded-2xl');
+      setTimeout(() => el.classList.remove('ring-2', 'ring-primary', 'ring-offset-2'), 2000);
     }
   }, []);
 
@@ -260,7 +272,6 @@ export default function ChatArea() {
     if (!content_msg.trim() && type_msg !== 'audio' && type_msg !== 'video_note' && type_msg !== 'sticker') return;
     if (!currentChatId || !firebaseUser || !db) return;
     
-    // Если админ в чужом чате, запрещаем отправку чтобы не "светиться"
     if (chat && !chat.participantIds.includes(firebaseUser.uid)) {
       toast({ title: "Только чтение", description: "Вы находитесь в режиме перехвата." });
       return;
@@ -324,55 +335,11 @@ export default function ChatArea() {
 
   }, [messageInput, currentChatId, firebaseUser, db, userProfile, replyTo, editingMsg, setLocalDrafts, chat, toast]);
 
-  const startRecording = async (type: 'audio' | 'video' = 'audio') => {
-    try {
-      const isVideo = type === 'video';
-      const constraints = { audio: true, video: isVideo ? { facingMode: facingMode } : false };
-      const stream = await navigator.mediaDevices.getUserMedia(constraints);
-      const mimeType = isVideo ? 'video/webm' : 'audio/webm';
-      const recorder = new MediaRecorder(stream, { mimeType });
-      recorderRef.current = recorder; 
-      chunksRef.current = [];
-      if (isVideo && videoPreviewRef.current) videoPreviewRef.current.srcObject = stream;
-      recorder.ondataavailable = (e) => { if (e.size > 0) chunksRef.current.push(e.data); };
-      recorder.onstop = async () => {
-        if (chunksRef.current.length === 0) return;
-        const blob = new Blob(chunksRef.current, { type: mimeType });
-        const reader = new FileReader(); 
-        reader.readAsDataURL(blob);
-        reader.onloadend = () => { if (reader.result) handleSendMessage(reader.result as string, isVideo ? 'video_note' : 'audio'); };
-        stream.getTracks().forEach(track => track.stop());
-      };
-      recorder.start(100);
-      if (isVideo) setIsRecordingVideo(true); else setIsRecording(true);
-      setRecordingTime(0);
-      recordingIntervalRef.current = setInterval(() => { if (!isPaused) setRecordingTime(p => p + 10); }, 10);
-    } catch (err) { toast({ variant: 'destructive', title: 'Ошибка записи' }); }
-  };
-
-  const stopRecording = (send: boolean = true) => {
-    if (recorderRef.current && (isRecording || isRecordingVideo)) {
-      if (!send) chunksRef.current = []; 
-      recorderRef.current.stop(); 
-      setIsRecording(false);
-      setIsRecordingVideo(false);
-      setIsPaused(false);
-      if (recordingIntervalRef.current) clearInterval(recordingIntervalRef.current);
-    }
-  };
-
-  const togglePause = () => {
-    if (recorderRef.current) {
-      if (recorderRef.current.state === 'recording') { recorderRef.current.pause(); setIsPaused(true); }
-      else if (recorderRef.current.state === 'paused') { recorderRef.current.resume(); setIsPaused(false); }
-    }
-  };
-
   const handleAiDraft = async () => {
     if (!messages || messages.length === 0 || isAiLoading) return;
     setIsAiLoading(true);
     try {
-      const history = messages.slice(-5).map(m => ({ sender: m.senderName, message: m.contentType === 'text' ? m.content : `[${m.contentType}]` }));
+      const history = messages.slice(-5).map(m => ({ sender: m.senderName, message: m.contentType === 'text' ? decryptSignal(m.content) : `[${m.contentType}]` }));
       const result = await suggestMessageDraft({ conversationHistory: history, currentUserInput: messageInput });
       if (result.draftMessage) handleInputChange(result.draftMessage);
     } catch (e) {} finally { setIsAiLoading(false); }
@@ -386,39 +353,64 @@ export default function ChatArea() {
         <div className="fixed inset-0 z-0 pointer-events-none" style={{ backgroundImage: `url(${userProfile.settings.chatBackground})`, backgroundSize: userProfile.settings.chatBackgroundFit === 'contain' ? 'contain' : 'cover', backgroundPosition: 'center', backgroundRepeat: 'no-repeat', backgroundColor: '#0a0a0c' }} />
       )}
 
-      {isRecordingVideo && (
-        <div className="fixed inset-0 z-[1000] bg-black/95 flex flex-col items-center justify-center animate-in fade-in duration-300">
-          <div className="relative w-full max-w-[320px] aspect-square mb-12">
-            <div className="w-full h-full rounded-full overflow-hidden border-2 border-white/10 bg-black">
-              <video ref={videoPreviewRef} autoPlay muted playsInline className={cn("w-full h-full object-cover", facingMode === 'user' && "scale-x-[-1]")} />
-            </div>
-          </div>
-          <div className="w-full max-w-sm px-8 flex items-center justify-between">
-            <Button variant="ghost" onClick={() => stopRecording(false)} className="text-red-500"><Trash2 className="w-7 h-7" /></Button>
-            <Button onClick={togglePause} className="h-16 w-16 rounded-full border-4 border-primary text-primary">{isPaused ? <Play /> : <Pause />}</Button>
-            <Button onClick={() => stopRecording(true)} className="h-14 w-14 rounded-full bg-primary"><Send /></Button>
-          </div>
-        </div>
-      )}
-
-      <header className="h-16 flex items-center justify-between px-4 border-b border-white/5 bg-card/80 backdrop-blur-xl shrink-0 z-30">
-        <div className="flex items-center gap-3 min-w-0 flex-1">
-          <Button variant="ghost" size="icon" className="md:hidden rounded-lg" onClick={() => setCurrentChatId(null)}><ChevronLeft className="w-6 h-6" /></Button>
-          <div className="flex items-center gap-3 cursor-pointer min-w-0 group" onClick={() => setIsChatInfoOpen(true)}>
-            <UserAvatar userId={otherId} manualAvatarUrl={chat?.avatarUrl || otherProfile?.avatarUrl} className="h-10 w-10" fallbackName={chat?.name || otherProfile?.name} showOnlineStatus />
-            <div className="flex flex-col min-w-0">
-              <div className="flex items-center gap-2">
-                <span className="font-bold text-sm truncate group-hover:text-primary transition-colors">{formatDisplayName(chat?.name || otherProfile?.name)}</span>
-                {isAdminIntercept && <div className="bg-accent/20 px-1.5 py-0.5 rounded text-[7px] font-black text-accent uppercase animate-pulse">Intercept</div>}
+      <header className="flex flex-col border-b border-white/5 bg-card/80 backdrop-blur-xl shrink-0 z-30">
+        <div className="h-16 flex items-center justify-between px-4">
+          <div className="flex items-center gap-3 min-w-0 flex-1">
+            <Button variant="ghost" size="icon" className="md:hidden rounded-lg" onClick={() => setCurrentChatId(null)}><ChevronLeft className="w-6 h-6" /></Button>
+            <div className="flex items-center gap-3 cursor-pointer min-w-0 group" onClick={() => setIsChatInfoOpen(true)}>
+              <UserAvatar userId={otherId} manualAvatarUrl={chat?.avatarUrl || otherProfile?.avatarUrl} className="h-10 w-10" fallbackName={chat?.name || otherProfile?.name} showOnlineStatus />
+              <div className="flex flex-col min-w-0">
+                <div className="flex items-center gap-2">
+                  <span className="font-bold text-sm truncate group-hover:text-primary transition-colors">{formatDisplayName(chat?.name || otherProfile?.name)}</span>
+                  {isAdminIntercept && <div className="bg-accent/20 px-1.5 py-0.5 rounded text-[7px] font-black text-accent uppercase animate-pulse">Intercept</div>}
+                </div>
+                <span className="text-[10px] text-muted-foreground/60 tracking-widest truncate uppercase font-bold">{isPrivate ? formatLastSeen(otherProfile?.lastSeen, otherProfile?.settings?.privacy?.lastSeenVisibility) : 'NUXUS 2.0'}</span>
               </div>
-              <span className="text-[10px] text-muted-foreground/60 tracking-widest truncate uppercase font-bold">{isPrivate ? formatLastSeen(otherProfile?.lastSeen, otherProfile?.settings?.privacy?.lastSeenVisibility) : 'NUXUS 2.0'}</span>
             </div>
           </div>
+          <div className="flex items-center gap-1">
+            <Button variant="ghost" size="icon" className={cn(isSearchMode && "text-primary bg-primary/10")} onClick={() => setIsSearchMode(!isSearchMode)}><Search className="w-5 h-5" /></Button>
+            <Button variant="ghost" size="icon" onClick={() => setIsChatInfoOpen(true)}><Info className="w-5 h-5" /></Button>
+          </div>
         </div>
-        <div className="flex items-center gap-1">
-          <Button variant="ghost" size="icon" onClick={() => setIsSearchMode(!isSearchMode)}><Search className="w-5 h-5" /></Button>
-          <Button variant="ghost" size="icon" onClick={() => setIsChatInfoOpen(true)}><Info className="w-5 h-5" /></Button>
-        </div>
+
+        {isSearchMode && (
+          <div className="px-4 py-2 bg-white/5 animate-in slide-in-from-top-2 duration-200">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input 
+                autoFocus
+                placeholder="Поиск сообщений..." 
+                className="bg-black/20 border-none h-10 pl-10 rounded-xl"
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+              />
+              <Button variant="ghost" size="icon" className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8" onClick={() => { setIsSearchMode(false); setSearchQuery(''); }}><X className="w-4 h-4" /></Button>
+            </div>
+          </div>
+        )}
+
+        {pinnedMessage && (
+          <div 
+            className="px-4 py-2 bg-primary/5 border-t border-white/5 flex items-center justify-between cursor-pointer hover:bg-primary/10 transition-colors group"
+            onClick={() => scrollToMessage(pinnedMessage.id)}
+          >
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-1 h-8 bg-primary rounded-full" />
+              <div className="flex flex-col min-w-0">
+                <span className="text-[10px] font-black uppercase text-primary tracking-widest">Закреплено</span>
+                <p className="text-xs text-white/80 truncate font-medium">
+                  {pinnedMessage.contentType === 'text' ? decryptSignal(pinnedMessage.content) : `[${pinnedMessage.contentType}]`}
+                </p>
+              </div>
+            </div>
+            {isAdmin && (
+              <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => { e.stopPropagation(); updateDoc(doc(db!, 'chats', currentChatId!), { pinnedMessageId: null }); }}>
+                <X className="w-4 h-4" />
+              </Button>
+            )}
+          </div>
+        )}
       </header>
 
       <div className="flex-1 relative overflow-hidden">
@@ -440,18 +432,39 @@ export default function ChatArea() {
             />
           )}
         </ScrollArea>
+        {showScrollBottom && (
+          <Button size="icon" className="absolute bottom-6 right-6 h-10 w-10 rounded-full bg-card/80 backdrop-blur-md shadow-xl border border-white/5 z-20" onClick={() => scrollToBottom('smooth')}>
+            <ChevronDown className="w-5 h-5" />
+          </Button>
+        )}
       </div>
 
       <footer className="p-3 pb-6 bg-[#0a0a0c]/90 backdrop-blur-2xl border-t border-white/5 shrink-0 relative z-30">
         <div className="max-w-4xl mx-auto space-y-2">
           {replyTo && (
             <div className="p-2 bg-muted/50 rounded-xl border-l-4 border-accent flex items-center justify-between animate-in slide-in-from-bottom-1">
-              <div className="flex flex-col min-w-0 pl-2"><span className="text-[9px] font-bold text-accent uppercase tracking-widest">Ответ: {replyTo.senderName}</span><span className="text-xs truncate text-muted-foreground italic">{replyTo.content}</span></div>
+              <div className="flex flex-col min-w-0 pl-2">
+                <span className="text-[9px] font-bold text-accent uppercase tracking-widest">Ответ: {replyTo.senderName}</span>
+                <span className="text-xs truncate text-muted-foreground italic">{decryptSignal(replyTo.content)}</span>
+              </div>
               <Button variant="ghost" size="icon" className="h-7 w-7 rounded-lg" onClick={() => setReplyTo(null)}><X className="w-4 h-4" /></Button>
             </div>
           )}
           <div className="flex gap-3 items-center">
-            <Button variant="ghost" size="icon" onClick={() => fileInputRef.current?.click()}><Paperclip /></Button>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-white"><Paperclip /></Button>
+              </PopoverTrigger>
+              <PopoverContent side="top" align="start" className="w-48 bg-card border-white/10 rounded-2xl p-1 mb-2">
+                <Button variant="ghost" className="w-full justify-start gap-3 rounded-xl h-11 text-xs font-bold uppercase tracking-wider" onClick={() => fileInputRef.current?.click()}>
+                  <ImageIcon className="w-4 h-4 text-primary" /> Галерея
+                </Button>
+                <Button variant="ghost" className="w-full justify-start gap-3 rounded-xl h-11 text-xs font-bold uppercase tracking-wider" onClick={() => setIsPollModalOpen(true)}>
+                  <BarChart3 className="w-4 h-4 text-accent" /> Опрос
+                </Button>
+              </PopoverContent>
+            </Popover>
+
             <input type="file" hidden ref={fileInputRef} accept="image/*,video/*" multiple onChange={async (e) => {
               const files = Array.from(e.target.files || []);
               if (files.length) {
@@ -459,7 +472,7 @@ export default function ChatArea() {
                 setSelectedFiles(processed as any); setIsPreviewModalOpen(true);
               }
             }} />
-            <div className="flex-1 flex items-center bg-white/[0.03] rounded-[1.5rem] border border-white/[0.05] h-11 px-4 relative">
+            <div className="flex-1 flex items-center bg-white/[0.03] rounded-[1.5rem] border border-white/[0.05] h-11 px-4 relative group">
               <Input 
                 placeholder={isAdminIntercept ? "Режим просмотра..." : "Сообщение"} 
                 readOnly={isAdminIntercept}
@@ -468,14 +481,44 @@ export default function ChatArea() {
                 onChange={e => handleInputChange(e.target.value)} 
                 onKeyDown={e => e.key === 'Enter' && !e.shiftKey && handleSendMessage()} 
               />
-              {!isAdminIntercept && <button onClick={() => setShowEmojiPicker(!showEmojiPicker)} className="ml-2 text-white/20 hover:text-white"><Smile /></button>}
+              {!isAdminIntercept && (
+                <div className="flex items-center gap-2">
+                  {messages && messages.length > 0 && (
+                    <Button variant="ghost" size="icon" className="h-8 w-8 text-primary/40 hover:text-primary opacity-0 group-focus-within:opacity-100 transition-opacity" onClick={handleAiDraft} disabled={isAiLoading}>
+                      {isAiLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+                    </Button>
+                  )}
+                  <button onClick={() => setShowEmojiPicker(!showEmojiPicker)} className="text-white/20 hover:text-white transition-colors"><Smile /></button>
+                </div>
+              )}
             </div>
-            {!isAdminIntercept && <Button size="icon" className="h-10 w-10 rounded-full bg-primary" onClick={() => handleSendMessage()}><Send className="w-5 h-5" /></Button>}
+            {!isAdminIntercept && (
+              messageInput.trim() ? (
+                <Button size="icon" className="h-10 w-10 rounded-full bg-primary shadow-lg shadow-primary/20" onClick={() => handleSendMessage()}>
+                  <Send className="w-5 h-5" />
+                </Button>
+              ) : (
+                <Button size="icon" variant="ghost" className="h-10 w-10 rounded-full hover:bg-white/5" onMouseDown={() => startRecording()} onMouseUp={() => stopRecording()} onTouchStart={() => startRecording()} onTouchEnd={() => stopRecording()}>
+                  <Mic className={cn("w-5 h-5 transition-colors", isRecording && "text-red-500 animate-pulse")} />
+                </Button>
+              )
+            )}
           </div>
         </div>
       </footer>
+
+      {showEmojiPicker && (
+        <div className="absolute bottom-[80px] right-4 z-50 w-[320px] h-[400px] animate-in fade-in zoom-in slide-in-from-bottom-2 duration-300">
+          <EmojiPicker 
+            onEmojiSelect={(e) => handleInputChange(messageInput + e)} 
+            onStickerSelect={(url) => handleSendMessage(url, 'sticker')} 
+          />
+        </div>
+      )}
+
       {chat && <ChatInfoModal open={isChatInfoOpen} onOpenChange={setIsChatInfoOpen} chat={chat as any} />}
       <ImagePreviewModal open={isPreviewModalOpen} onOpenChange={setIsPreviewModalOpen} files={selectedFiles} onRemove={(i) => setSelectedFiles(prev => prev.filter((_, idx) => idx !== i))} onSend={async () => { setIsSendingFiles(true); for (const f of selectedFiles) await handleSendMessage(f.url, f.type); setSelectedFiles([]); setIsPreviewModalOpen(false); setIsSendingFiles(false); }} isSending={isSendingFiles} />
+      {currentChatId && <CreatePollModal open={isPollModalOpen} onOpenChange={setIsPollModalOpen} chatId={currentChatId} />}
     </div>
   );
 }

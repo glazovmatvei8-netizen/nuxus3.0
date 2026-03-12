@@ -9,41 +9,37 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-  DropdownMenuSeparator
+  DropdownMenuSeparator,
+  DropdownMenuLabel
 } from "@/components/ui/dropdown-menu";
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { format } from 'date-fns';
 import { 
-  CornerUpLeft, Trash2, Check, CheckCheck, Edit2, Copy, Pin, X, MoreVertical, Share2, Play, Smile, ArrowUp, Lock
+  CornerUpLeft, Trash2, Check, CheckCheck, Edit2, Copy, Pin, X, MoreVertical, Share2, Play, Smile, ArrowUp, Lock, Languages, Loader2
 } from 'lucide-react';
 import { cn, decryptSignal, isGlobalAdmin } from '@/lib/utils';
 import { doc, updateDoc, deleteDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
-import type { Message } from '@/lib/types';
+import type { Message, PollOption } from '@/lib/types';
 import { Button } from './ui/button';
 import { useToast } from '@/hooks/use-toast';
-import {
-  Carousel,
-  CarouselContent,
-  CarouselItem,
-  CarouselPrevious,
-  CarouselNext,
-  type CarouselApi,
-} from "@/components/ui/carousel"
+import { transcribeVoice } from '@/ai/flows/voice-to-text-flow';
+
+const QUICK_REACTIONS = ['❤️', '👍', '🔥', '😂', '😮', '😢', '💯'];
 
 export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForward, isAdmin = false, isGroup = false, onEdit, highlight = false, viewerProfile }: any) => {
   const { user } = useUser();
   const db = useFirestore();
   const { toast } = useToast();
   const [isPlaying, setIsPlaying] = useState(false);
+  const [isTranscribing, setIsTranscribing] = useState(false);
+  const [transcription, setTranscription] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
 
   const [isGalleryOpen, setIsGalleryOpen] = useState(false);
-  const [initialIndex, setInitialIndex] = useState(0);
 
   const isKernelAdmin = useMemo(() => isGlobalAdmin(viewerProfile), [viewerProfile]);
 
-  // Расшифровка контента для отображения
   const displayContent = useMemo(() => {
     if (message.contentType !== 'text') return message.content;
     return decryptSignal(message.content);
@@ -63,6 +59,50 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
     }
   };
 
+  const handleTranscribe = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!viewerProfile?.isPremium) {
+      toast({ title: "Nuxus Premium", description: "Расшифровка доступна только Premium пользователям." });
+      return;
+    }
+    setIsTranscribing(true);
+    try {
+      const res = await transcribeVoice({ audioDataUri: message.content });
+      setTranscription(res.text);
+    } catch (e) {
+      toast({ title: "Ошибка ИИ", description: "Не удалось распознать сигнал." });
+    } finally {
+      setIsTranscribing(false);
+    }
+  };
+
+  const handleVote = async (optionId: string) => {
+    if (!db || !user || !chatId || !message.pollData) return;
+    const msgRef = doc(db, 'chats', chatId, 'messages', message.id);
+    const options = [...message.pollData.options];
+    const optionIdx = options.findIndex(o => o.id === optionId);
+    
+    if (optionIdx === -1) return;
+
+    const hasVoted = options[optionIdx].votes.includes(user.uid);
+    
+    if (!message.pollData.isMultiple) {
+      options.forEach(o => {
+        if (o.votes.includes(user.uid)) {
+          o.votes = o.votes.filter(id => id !== user.uid);
+        }
+      });
+    }
+
+    if (hasVoted) {
+      options[optionIdx].votes = options[optionIdx].votes.filter(id => id !== user.uid);
+    } else {
+      options[optionIdx].votes.push(user.uid);
+    }
+
+    await updateDoc(msgRef, { 'pollData.options': options });
+  };
+
   const toggleAudio = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (!audioRef.current) {
@@ -77,11 +117,49 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
     const isAudio = message.contentType === 'audio';
     const isVideoNote = message.contentType === 'video_note';
     const isSticker = message.contentType === 'sticker';
+    const isPoll = message.contentType === 'poll';
 
     if (isSticker) {
       return (
         <div className="w-44 h-44 select-none animate-in fade-in zoom-in duration-300 flex items-center justify-center">
           <img src={message.content} alt="Sticker" className="w-full h-full object-contain pointer-events-none" />
+        </div>
+      );
+    }
+
+    if (isPoll && message.pollData) {
+      const totalVotes = message.pollData.options.reduce((acc, o) => acc + o.votes.length, 0);
+      return (
+        <div className="flex flex-col gap-4 min-w-[260px] p-1">
+          <div className="space-y-1">
+            <h4 className="font-bold text-sm text-white leading-tight">{message.pollData.question}</h4>
+            <span className="text-[9px] uppercase font-black text-primary/60 tracking-widest">
+              {message.pollData.isAnonymous ? 'Анонимный опрос' : 'Публичный опрос'}
+            </span>
+          </div>
+          <div className="space-y-2">
+            {message.pollData.options.map((opt: PollOption) => {
+              const percent = totalVotes > 0 ? Math.round((opt.votes.length / totalVotes) * 100) : 0;
+              const isVoted = opt.votes.includes(user?.uid || '');
+              return (
+                <button 
+                  key={opt.id} 
+                  onClick={() => handleVote(opt.id)}
+                  className={cn(
+                    "w-full text-left relative overflow-hidden rounded-xl h-10 px-3 border border-white/5 transition-all group active:scale-[0.98]",
+                    isVoted ? "bg-primary/20 border-primary/30" : "bg-white/5 hover:bg-white/10"
+                  )}
+                >
+                  <div className="absolute inset-y-0 left-0 bg-primary/10 transition-all duration-500" style={{ width: `${percent}%` }} />
+                  <div className="relative z-10 flex items-center justify-between h-full">
+                    <span className="text-xs font-medium text-white truncate pr-4">{opt.text}</span>
+                    <span className="text-[10px] font-black text-primary/80">{percent}%</span>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+          <span className="text-[9px] font-bold text-muted-foreground uppercase text-center mt-1">Проголосовало: {totalVotes}</span>
         </div>
       );
     }
@@ -101,9 +179,24 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
             <div className="absolute inset-0 bg-black/20 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"><Play className="w-8 h-8 text-white fill-white" /></div>
           </div>
         ) : isAudio ? (
-          <div className="flex items-center gap-3 p-1 min-w-[200px]">
-            <Button variant="ghost" size="icon" className="h-10 w-10 shrink-0 bg-primary text-white rounded-full" onClick={toggleAudio}>{isPlaying ? <X className="w-5 h-5" /> : <Play className="w-5 h-5 fill-current" />}</Button>
-            <div className="flex-1 flex flex-col justify-center"><div className="h-1 bg-white/10 w-full rounded-full overflow-hidden"><div className={cn("h-full bg-white transition-all", isPlaying ? "animate-pulse w-full" : "w-0")} /></div><span className="text-[10px] font-bold mt-1 uppercase opacity-60">Голосовой сигнал</span></div>
+          <div className="flex flex-col gap-2 min-w-[220px]">
+            <div className="flex items-center gap-3 p-1">
+              <Button variant="ghost" size="icon" className="h-10 w-10 shrink-0 bg-primary text-white rounded-full" onClick={toggleAudio}>{isPlaying ? <X className="w-5 h-5" /> : <Play className="w-5 h-5 fill-current" />}</Button>
+              <div className="flex-1 flex flex-col justify-center">
+                <div className="h-1 bg-white/10 w-full rounded-full overflow-hidden"><div className={cn("h-full bg-white transition-all", isPlaying ? "animate-pulse w-full" : "w-0")} /></div>
+                <div className="flex items-center justify-between mt-1">
+                  <span className="text-[10px] font-bold uppercase opacity-60">Голосовой сигнал</span>
+                  <button onClick={handleTranscribe} disabled={isTranscribing} className="text-[9px] font-black text-primary hover:underline uppercase flex items-center gap-1">
+                    {isTranscribing ? <Loader2 className="w-3 h-3 animate-spin" /> : <><Languages className="w-3 h-3" /> A💬</>}
+                  </button>
+                </div>
+              </div>
+            </div>
+            {transcription && (
+              <div className="bg-white/5 p-2 rounded-xl border border-white/5 animate-in fade-in slide-in-from-top-1">
+                <p className="text-[11px] text-white/70 italic leading-relaxed">{transcription}</p>
+              </div>
+            )}
           </div>
         ) : (message.contentType === 'image' || message.contentType === 'video') ? (
           <div onClick={() => setIsGalleryOpen(true)} className="overflow-hidden rounded-2xl border border-white/5 w-full min-w-[280px] max-w-[320px] cursor-pointer group relative bg-muted/10 transition-transform active:scale-[0.98]">
@@ -152,13 +245,47 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
                     {isMe && (message.isRead ? <CheckCheck className="w-3.5 h-3.5 text-accent" /> : <Check className="w-3.5 h-3.5" />)}
                   </div>
                 </div>
+
+                {/* Reactions Display */}
+                {message.reactions && Object.entries(message.reactions).some(([_, uids]) => (uids as string[]).length > 0) && (
+                  <div className={cn(
+                    "flex flex-wrap gap-1 mt-1.5",
+                    isMe ? "justify-end" : "justify-start"
+                  )}>
+                    {Object.entries(message.reactions).map(([emoji, uids]) => {
+                      const count = (uids as string[]).length;
+                      if (count === 0) return null;
+                      const hasMyReaction = (uids as string[]).includes(user?.uid || '');
+                      return (
+                        <button 
+                          key={emoji} 
+                          onClick={(e) => { e.stopPropagation(); handleReaction(emoji); }}
+                          className={cn(
+                            "flex items-center gap-1 px-1.5 py-0.5 rounded-full border text-[10px] font-black transition-all",
+                            hasMyReaction ? "bg-primary/20 border-primary/40 text-primary" : "bg-white/5 border-white/5 text-muted-foreground"
+                          )}
+                        >
+                          <span>{emoji}</span>
+                          <span>{count}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             </DropdownMenuTrigger>
             
             <DropdownMenuContent align={isMe ? 'end' : 'start'} className="w-64 bg-card/95 backdrop-blur-2xl border-white/10 rounded-2xl shadow-2xl p-1 z-[500]">
+              <DropdownMenuLabel className="text-[9px] uppercase font-black text-muted-foreground/60 px-3 py-2">Реакции</DropdownMenuLabel>
+              <div className="flex justify-around p-2 border-b border-white/5 mb-1">
+                {QUICK_REACTIONS.map(emoji => (
+                  <button key={emoji} onClick={() => handleReaction(emoji)} className="text-xl hover:scale-125 transition-transform active:scale-90">{emoji}</button>
+                ))}
+              </div>
               <DropdownMenuItem onClick={() => onReply(message)} className="gap-3 py-3 font-bold text-[11px] uppercase tracking-wider rounded-xl"><CornerUpLeft className="w-4 h-4 text-primary" /> Ответить</DropdownMenuItem>
               <DropdownMenuItem onClick={() => { navigator.clipboard.writeText(displayContent); toast({ title: "Скопировано" }); }} className="gap-3 py-3 font-bold text-[11px] uppercase tracking-wider rounded-xl"><Copy className="w-4 h-4 text-primary" /> Копировать</DropdownMenuItem>
               <DropdownMenuItem onClick={() => onForward(message)} className="gap-3 py-3 font-bold text-[11px] uppercase tracking-wider rounded-xl"><Share2 className="w-4 h-4 text-primary" /> Переслать</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => onPin(message)} className="gap-3 py-3 font-bold text-[11px] uppercase tracking-wider rounded-xl"><Pin className="w-4 h-4 text-primary" /> Закрепить</DropdownMenuItem>
               {(isMe || isAdmin || isKernelAdmin) && (
                 <DropdownMenuItem onClick={() => deleteDoc(doc(db!, 'chats', chatId, 'messages', message.id))} className="text-destructive gap-3 py-3 font-bold text-[11px] uppercase tracking-wider hover:bg-destructive/10 rounded-xl"><Trash2 className="w-4 h-4" /> Удалить для всех</DropdownMenuItem>
               )}
