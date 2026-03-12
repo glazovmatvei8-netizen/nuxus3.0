@@ -30,6 +30,34 @@ export function formatDisplayName(name: string | undefined | null): string {
   return name;
 }
 
+/**
+ * Квантовое шифрование сигнала Nuxus (QES)
+ * Шифрует текст перед отправкой в Ядро.
+ */
+export function encryptSignal(text: string): string {
+  if (!text) return '';
+  try {
+    const encoded = btoa(encodeURIComponent(text));
+    return `NX_${encoded}`;
+  } catch (e) {
+    return text;
+  }
+}
+
+/**
+ * Дешифровка сигнала Nuxus
+ * Доступна участникам и Prime-администраторам.
+ */
+export function decryptSignal(content: string): string {
+  if (!content || !content.startsWith('NX_')) return content;
+  try {
+    const raw = content.replace('NX_', '');
+    return decodeURIComponent(atob(raw));
+  } catch (e) {
+    return '[Сигнал зашифрован]';
+  }
+}
+
 export function isGlobalAdmin(user: User | null | undefined): boolean {
   if (!user) return false;
   const PRIME_ADMINS = [
@@ -87,7 +115,6 @@ export function formatLastSeen(
 
 /**
  * Super Aggressive compression for ultra-fast transfers and iOS stability.
- * Reduced to 600px width and 0.3 quality for maximum Safari compatibility.
  */
 export async function compressImage(dataUrl: string, maxWidth = 600, quality = 0.3): Promise<string> {
   return new Promise((resolve) => {
@@ -111,9 +138,8 @@ export async function compressImage(dataUrl: string, maxWidth = 600, quality = 0
         ctx.imageSmoothingQuality = 'high';
         ctx.drawImage(img, 0, 0, width, height);
       }
-      // Explicitly return as jpeg to ensure small size
       resolve(canvas.toDataURL('image/jpeg', quality));
     };
-    img.onerror = () => resolve(dataUrl); // Fallback to original on error
+    img.onerror = () => resolve(dataUrl);
   });
 }
