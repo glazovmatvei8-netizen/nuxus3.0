@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useRef, useEffect, useMemo, useCallback, memo } from 'react';
@@ -158,7 +159,14 @@ export default function ChatArea() {
     if (!content_msg.trim() && type_msg !== 'video_note' && type_msg !== 'sticker') return;
     if (!currentChatId || !firebaseUser || !db) return;
     
-    let finalContent = type_msg === 'text' ? encryptSignal(content_msg) : content_msg;
+    let finalContent = content_msg;
+    if (type_msg === 'text') {
+      finalContent = encryptSignal(content_msg);
+    } else if (type_msg === 'image') {
+      // Агрессивное сжатие для стабильности базы
+      finalContent = await compressImage(content_msg, 800, 0.4);
+    }
+
     const captureReply = replyTo;
     const captureEdit = editingMsg;
 
@@ -272,7 +280,7 @@ export default function ChatArea() {
             ) : (
               <div className="flex gap-1">
                 <Button size="icon" variant="ghost" className={cn("h-10 w-10 rounded-full", isRecordingVideo && "text-red-500 animate-pulse")} onMouseDown={startVideoNote} onMouseUp={stopVideoNote} onTouchStart={startVideoNote} onTouchEnd={stopVideoNote}><Video className="w-5 h-5" /></Button>
-                <Button size="icon" variant="ghost" className="h-10 w-10 rounded-full"><Mic className="w-5 h-5" /></Button>
+                <Button size="icon" variant="ghost" className="h-10 w-10 rounded-full" onClick={() => toast({ title: "Удерживайте для записи" })}><Mic className="w-5 h-5" /></Button>
               </div>
             )}
           </div>

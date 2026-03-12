@@ -12,9 +12,15 @@ import {
   DropdownMenuSeparator,
   DropdownMenuLabel
 } from "@/components/ui/dropdown-menu";
+import { 
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuTrigger,
+} from "@/components/ui/context-menu";
 import { format } from 'date-fns';
 import { 
-  CornerUpLeft, Trash2, Check, CheckCheck, Edit2, Copy, Pin, X, Share2, Play, Smile, Lock, Languages, Loader2
+  CornerUpLeft, Trash2, Check, CheckCheck, Edit2, Copy, Pin, X, Share2, Play, Smile, Lock, Languages, Loader2, Image as ImageIcon
 } from 'lucide-react';
 import { cn, decryptSignal, isGlobalAdmin } from '@/lib/utils';
 import { doc, updateDoc, deleteDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
@@ -56,23 +62,67 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
     catch (e) { toast({ title: "Ошибка ИИ" }); } finally { setIsTranscribing(false); }
   };
 
+  const toggleAudio = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!audioRef.current) {
+      audioRef.current = new Audio(message.content);
+      audioRef.current.onended = () => setIsPlaying(false);
+      audioRef.current.onerror = () => { toast({ title: "Ошибка воспроизведения", variant: "destructive" }); setIsPlaying(false); };
+    }
+    
+    if (isPlaying) {
+      audioRef.current.pause();
+    } else {
+      audioRef.current.play().catch(() => {
+        toast({ title: "Ошибка проигрывателя", variant: "destructive" });
+      });
+    }
+    setIsPlaying(!isPlaying);
+  };
+
   const renderContent = () => {
     if (message.contentType === 'sticker') return <img src={message.content} alt="Sticker" className="w-40 h-40 object-contain pointer-events-none" />;
+    
+    if (message.contentType === 'image') return (
+      <div className="relative max-w-[280px] rounded-2xl overflow-hidden border border-white/5 shadow-2xl bg-black/20">
+        <img 
+          src={message.content} 
+          alt="Shared Image" 
+          className="w-full h-auto object-cover max-h-[400px] animate-in fade-in duration-500" 
+          loading="lazy"
+        />
+      </div>
+    );
+
     if (message.contentType === 'video_note') return (
-      <div className="relative w-48 h-48 rounded-full overflow-hidden border-2 border-primary/20 bg-black cursor-pointer group" onClick={() => { if (videoRef.current) { if (videoRef.current.paused) videoRef.current.play(); else videoRef.current.pause(); } }}>
+      <div 
+        className="relative w-48 h-48 rounded-full overflow-hidden border-2 border-primary/20 bg-black group" 
+        onClick={(e) => { 
+          e.stopPropagation();
+          if (videoRef.current) { if (videoRef.current.paused) videoRef.current.play(); else videoRef.current.pause(); } 
+        }}
+      >
         <video ref={videoRef} src={message.content} loop playsInline className="w-full h-full object-cover scale-x-[-1]" />
         <div className="absolute inset-0 bg-black/20 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"><Play className="w-8 h-8 text-white fill-white" /></div>
       </div>
     );
+
     if (message.contentType === 'audio') return (
-      <div className="flex items-center gap-3 p-1 min-w-[200px]">
-        <Button size="icon" className="h-10 w-10 rounded-full bg-primary" onClick={() => { if (!audioRef.current) { audioRef.current = new Audio(message.content); audioRef.current.onended = () => setIsPlaying(false); } if (isPlaying) audioRef.current.pause(); else audioRef.current.play(); setIsPlaying(!isPlaying); }}>{isPlaying ? <X /> : <Play fill="currentColor" />}</Button>
+      <div className="flex items-center gap-3 p-1 min-w-[200px]" onClick={toggleAudio}>
+        <Button size="icon" className="h-10 w-10 rounded-full bg-primary shadow-lg shadow-primary/20">
+          {isPlaying ? <X /> : <Play fill="currentColor" />}
+        </Button>
         <div className="flex-1 flex flex-col justify-center">
-          <div className="h-1 bg-white/10 w-full rounded-full overflow-hidden"><div className={cn("h-full bg-white transition-all", isPlaying ? "w-full animate-pulse" : "w-0")} /></div>
-          <button onClick={handleTranscribe} className="text-[9px] font-black text-primary uppercase mt-1 flex items-center gap-1">{isTranscribing ? <Loader2 className="animate-spin w-3 h-3" /> : <><Languages className="w-3 h-3" /> A💬</>}</button>
+          <div className="h-1 bg-white/10 w-full rounded-full overflow-hidden">
+            <div className={cn("h-full bg-white transition-all", isPlaying ? "w-full animate-pulse" : "w-0")} />
+          </div>
+          <button onClick={handleTranscribe} className="text-[9px] font-black text-primary uppercase mt-1 flex items-center gap-1">
+            {isTranscribing ? <Loader2 className="animate-spin w-3 h-3" /> : <><Languages className="w-3 h-3" /> A💬</>}
+          </button>
         </div>
       </div>
     );
+
     return <div className="whitespace-pre-wrap text-[15px] break-words max-w-[300px] leading-relaxed relative">{displayContent} {message.editedAt && <span className="text-[8px] ml-1.5 opacity-40 uppercase">(ред.)</span>}</div>;
   };
 
@@ -84,9 +134,10 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
         {!isMe && <UserAvatar userId={message.senderId} className="h-9 w-9 shrink-0" fallbackName={message.senderName} />}
         <div className={cn("flex flex-col min-w-0 max-w-full", isMe ? "items-end" : "items-start")}>
           {!isMe && isGroup && <span className="text-[9px] font-black text-primary uppercase tracking-widest mb-1 ml-1 truncate max-w-[150px]">{message.senderName}</span>}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <div className="cursor-pointer active:scale-[0.98] outline-none">
+          
+          <ContextMenu>
+            <ContextMenuTrigger>
+              <div className="cursor-pointer active:scale-[0.98] outline-none group/bubble">
                 <div className={cn("p-2.5 rounded-2xl border transition-all relative", isMe ? "message-bubble-me border-none" : "bg-card border-white/5 text-white")}>
                   {message.replyToId && <div className="mb-2 p-2 border-l-2 bg-white/5 rounded-r-lg opacity-60 text-[10px] truncate">{decryptSignal(message.replyToContent)}</div>}
                   {renderContent()}
@@ -106,22 +157,25 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
                   </div>
                 )}
               </div>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align={isMe ? 'end' : 'start'} className="w-64 bg-card border-white/10 rounded-2xl shadow-2xl p-1">
+            </ContextMenuTrigger>
+            
+            <ContextMenuContent className="w-64 bg-card/95 backdrop-blur-xl border-white/10 rounded-2xl shadow-2xl p-1">
               <div className="flex justify-around p-2 border-b border-white/5 mb-1">
                 {QUICK_REACTIONS.map(emoji => (
                   <button key={emoji} onClick={() => handleReaction(emoji)} className="text-xl hover:scale-125 transition-transform">{emoji}</button>
                 ))}
               </div>
-              <DropdownMenuItem onClick={() => onReply(message)} className="gap-3 py-3 font-bold text-[11px] uppercase tracking-wider rounded-xl"><CornerUpLeft className="w-4 h-4" /> Ответить</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => onEdit(message)} className="gap-3 py-3 font-bold text-[11px] uppercase tracking-wider rounded-xl"><Edit2 className="w-4 h-4" /> Изменить</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => onForward(message)} className="gap-3 py-3 font-bold text-[11px] uppercase tracking-wider rounded-xl"><Share2 className="w-4 h-4" /> Переслать</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => onPin(message)} className="gap-3 py-3 font-bold text-[11px] uppercase tracking-wider rounded-xl"><Pin className="w-4 h-4" /> Закрепить</DropdownMenuItem>
+              <ContextMenuItem onClick={() => onReply(message)} className="gap-3 py-3 font-bold text-[11px] uppercase tracking-wider rounded-xl"><CornerUpLeft className="w-4 h-4" /> Ответить</ContextMenuItem>
+              {isMe && <ContextMenuItem onClick={() => onEdit(message)} className="gap-3 py-3 font-bold text-[11px] uppercase tracking-wider rounded-xl"><Edit2 className="w-4 h-4" /> Изменить</ContextMenuItem>}
+              <ContextMenuItem onClick={() => onForward(message)} className="gap-3 py-3 font-bold text-[11px] uppercase tracking-wider rounded-xl"><Share2 className="w-4 h-4" /> Переслать</ContextMenuItem>
+              <ContextMenuItem onClick={() => onPin(message)} className="gap-3 py-3 font-bold text-[11px] uppercase tracking-wider rounded-xl"><Pin className="w-4 h-4" /> Закрепить</ContextMenuItem>
+              <ContextMenuItem onClick={() => { navigator.clipboard.writeText(displayContent); toast({ title: "Скопировано" }); }} className="gap-3 py-3 font-bold text-[11px] uppercase tracking-wider rounded-xl"><Copy className="w-4 h-4" /> Копировать</ContextMenuItem>
+              <DropdownMenuSeparator className="bg-white/5" />
               {(isMe || isAdmin || isKernelAdmin) && (
-                <DropdownMenuItem onClick={() => deleteDoc(doc(db!, 'chats', chatId, 'messages', message.id))} className="text-destructive gap-3 py-3 font-bold text-[11px] uppercase tracking-wider"><Trash2 className="w-4 h-4" /> Удалить</DropdownMenuItem>
+                <ContextMenuItem onClick={() => deleteDoc(doc(db!, 'chats', chatId, 'messages', message.id))} className="text-destructive gap-3 py-3 font-bold text-[11px] uppercase tracking-wider"><Trash2 className="w-4 h-4" /> Удалить</ContextMenuItem>
               )}
-            </DropdownMenuContent>
-          </DropdownMenu>
+            </ContextMenuContent>
+          </ContextMenu>
         </div>
       </div>
     </div>

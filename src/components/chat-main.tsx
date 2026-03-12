@@ -112,9 +112,9 @@ export default function ChatMain() {
       {!currentChatId && (
         <div className="md:hidden fixed bottom-10 left-1/2 -translate-x-1/2 w-[94%] max-w-[500px] h-[76px] bg-[#1c1c1e]/80 backdrop-blur-[50px] border border-white/10 rounded-[2.8rem] flex items-center justify-between px-6 z-50 shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
           <div className="flex flex-1 justify-around items-center overflow-x-auto scrollbar-hide gap-4 px-2">
-            <NavButton icon={MessageCircle} label="Чаты🐱" active={activeView === 'chats'} onClick={() => setActiveView('chats')} />
             <NavButton icon={Phone} label="Calls" active={activeView === 'calls'} onClick={() => setActiveView('calls')} />
             <NavButton icon={Music} label="Music" active={activeView === 'music'} onClick={() => setActiveView('music')} />
+            <NavButton icon={MessageCircle} label="Чаты🐱" active={activeView === 'chats'} onClick={() => setActiveView('chats')} />
             <NavButton icon={Wallet} label="Wallet" active={activeView === 'wallet'} onClick={() => setActiveView('wallet')} />
             <NavButton icon={Settings} label="Profile" active={activeView === 'profile'} onClick={() => setActiveView('profile')} isProfile userId={user?.uid} />
           </div>
