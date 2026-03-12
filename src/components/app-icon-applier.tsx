@@ -21,16 +21,15 @@ export function AppIconApplier() {
 
   useEffect(() => {
     const customIcon = profile?.settings?.customAppIconUrl;
-    const finalIcon = customIcon ? `${customIcon}${customIcon.includes('?') ? '&' : '?'}v=45` : DEFAULT_ICON;
+    // Принудительно добавляем v45 если это стандартная иконка, чтобы избежать кэша
+    const finalIcon = customIcon 
+      ? (customIcon.includes('?') ? `${customIcon}&v=45` : `${customIcon}?v=45`)
+      : DEFAULT_ICON;
 
     const updateIcons = () => {
       if (typeof document === 'undefined') return;
 
       try {
-        // Мы не удаляем существующие иконки (Next.js Metadata), 
-        // так как это вызывает ошибку removeChild при перестроении DOM.
-        // Вместо этого мы создаем/обновляем наши собственные теги с высшим приоритетом.
-        
         const createOrUpdateLink = (id: string, rel: string, href: string, sizes?: string) => {
           let link = document.getElementById(id) as HTMLLinkElement;
           if (!link) {
@@ -43,13 +42,13 @@ export function AppIconApplier() {
           link.href = href;
         };
 
-        // Обновляем фавиконки
+        // Обновляем фавиконки (v45)
         createOrUpdateLink('nuxus-dynamic-icon-16', 'icon', finalIcon, '16x16');
         createOrUpdateLink('nuxus-dynamic-icon-32', 'icon', finalIcon, '32x32');
         createOrUpdateLink('nuxus-dynamic-icon-192', 'icon', finalIcon, '192x192');
         createOrUpdateLink('nuxus-dynamic-icon-512', 'icon', finalIcon, '512x512');
         
-        // Обновляем иконку для Apple
+        // Обновляем иконку для Apple (v45)
         createOrUpdateLink('nuxus-dynamic-apple-icon', 'apple-touch-icon', finalIcon);
         
       } catch (e) {

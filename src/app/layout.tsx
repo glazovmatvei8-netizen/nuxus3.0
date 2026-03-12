@@ -18,7 +18,7 @@ const font = Plus_Jakarta_Sans({
 });
 
 /**
- * ГЛОБАЛЬНАЯ ИКОНКА NUXUS (v45)
+ * ГЛОБАЛЬНАЯ ИКОНКА NUXUS (v45) - ЗАКРЕПЛЕНО
  */
 const APP_ICON_URL = 'https://i.ibb.co/sd2MqGz2/Icon.png';
 const VERSION_PARAM = '?v=45';
@@ -69,9 +69,6 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ru" className={`dark ${font.variable}`} suppressHydrationWarning>
-      <head>
-        {/* Убрали лишние ручные теги, которые могли вызвать сбои hydration или removeChild */}
-      </head>
       <body className="font-sans antialiased bg-[#0a0a0c] text-foreground overflow-hidden h-[100dvh] selection:bg-primary/30" style={{ backgroundColor: '#0a0a0c', fontFamily: 'var(--font-jakarta), ui-sans-serif, system-ui, -apple-system, sans-serif' }}>
         <FirebaseClientProvider>
           <AppProvider>

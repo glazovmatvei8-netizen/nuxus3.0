@@ -1,4 +1,3 @@
-
 {
   "placeholderImages": [
     {
@@ -9,14 +8,14 @@
     },
     {
       "id": "nuxus-auth-logo",
-      "description": "Nuxus Authorization User Icon v10",
-      "imageUrl": "https://i.ibb.co/sd2MqGz2/Icon.png?v=10",
+      "description": "Nuxus Authorization User Icon v45",
+      "imageUrl": "https://i.ibb.co/sd2MqGz2/Icon.png?v=45",
       "imageHint": "app icon"
     },
     {
       "id": "nuxus-app-icon",
-      "description": "Nuxus Final Logo N Premium v10",
-      "imageUrl": "https://i.ibb.co/sd2MqGz2/Icon.png?v=10",
+      "description": "Nuxus Final Logo N Premium v45",
+      "imageUrl": "https://i.ibb.co/sd2MqGz2/Icon.png?v=45",
       "imageHint": "tech logo letter N"
     },
     {
@@ -27,14 +26,14 @@
     },
     {
       "id": "pwa-icon-192",
-      "description": "Nuxus PWA Icon 192x192 v10",
-      "imageUrl": "https://i.ibb.co/sd2MqGz2/Icon.png?v=10",
+      "description": "Nuxus PWA Icon 192x192 v45",
+      "imageUrl": "https://i.ibb.co/sd2MqGz2/Icon.png?v=45",
       "imageHint": "app icon"
     },
     {
       "id": "pwa-icon-512",
-      "description": "Nuxus PWA Icon 512x512 v10",
-      "imageUrl": "https://i.ibb.co/sd2MqGz2/Icon.png?v=10",
+      "description": "Nuxus PWA Icon 512x512 v45",
+      "imageUrl": "https://i.ibb.co/sd2MqGz2/Icon.png?v=45",
       "imageHint": "app icon"
     }
   ]
