@@ -6,21 +6,19 @@ import { useAppState } from '@/lib/store';
 import { Button } from '@/components/ui/button';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
-  Plus, SquarePen, Ghost, Search, Star, Pin, PinOff, VolumeX, Trash2, Volume2, MessageCircle
+  Plus, SquarePen, Ghost, Search, Star, Pin, PinOff, VolumeX, Trash2, Volume2, MessageCircle, Archive
 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { CreateChatModal } from './modals/create-chat-modal';
 import { ChatEditorModal } from './modals/chat-editor-modal';
 import { AdminPanelModal } from './modals/admin-panel-modal';
 import { StoriesBar } from './stories-bar';
-import { CreateStoryModal } from './modals/create-story-modal';
-import { StoryViewerModal } from './modals/story-viewer-modal';
 import type { User, Message, Chat } from '@/lib/types';
 import { useFirestore, useUser, useCollection, useDoc, useMemoFirebase } from '@/firebase';
 import { collection, query, where, doc, limit, orderBy, updateDoc, arrayUnion, arrayRemove, deleteDoc } from 'firebase/firestore';
 import { formatDisplayName, cn, isGlobalAdmin } from '@/lib/utils';
 import { format } from 'date-fns';
-import { toast } from '@/hooks/use-toast';
+import { useToast } from '@/hooks/use-toast';
 import { 
   ContextMenu,
   ContextMenuContent,
@@ -29,7 +27,7 @@ import {
 } from "@/components/ui/context-menu";
 
 const ChatListItem = memo(({ 
-  chat, isActive, otherId, isPinned, onPinToggle, onClick, onMute, onMarkUnread, onDelete, currentUserId
+  chat, isActive, otherId, isPinned, onPinToggle, onClick, onMute, onMarkUnread, onDelete, onArchive, currentUserId
 }: any) => {
   const db = useFirestore();
   const [offsetX, setOffsetX] = useState(0);
@@ -73,7 +71,6 @@ const ChatListItem = memo(({
 
   const handleTouchMove = (e: React.TouchEvent) => {
     if (isVerticalScroll.current) return;
-
     const currentX = e.touches[0].clientX;
     const currentY = e.touches[0].clientY;
     const deltaX = currentX - touchStartX.current;
@@ -102,30 +99,18 @@ const ChatListItem = memo(({
 
   const handleTouchEnd = () => {
     setIsDragging(false);
-    if (!isHorizontalSwipe.current) {
-      setOffsetX(0);
-      return;
-    }
-    
+    if (!isHorizontalSwipe.current) { setOffsetX(0); return; }
     if (offsetX > 60) setOffsetX(160);
     else if (offsetX < -60) setOffsetX(-160);
     else setOffsetX(0);
-    
     isHorizontalSwipe.current = false;
   };
 
-  const resetSwipe = () => {
-    setOffsetX(0);
-    setIsDragging(false);
-  };
+  const resetSwipe = () => { setOffsetX(0); setIsDragging(false); };
 
   return (
     <div className="relative overflow-hidden touch-pan-y select-none bg-[#0a0a0c] border-none">
-      {/* Кнопки СЛЕВА (свайп вправо) */}
-      <div className={cn(
-        "absolute inset-y-0 left-0 flex h-full z-0 transition-opacity duration-200",
-        offsetX > 10 ? "opacity-100" : "opacity-0 pointer-events-none"
-      )}>
+      <div className={cn("absolute inset-y-0 left-0 flex h-full z-0 transition-opacity duration-200", offsetX > 10 ? "opacity-100" : "opacity-0 pointer-events-none")}>
         <button onClick={(e) => { e.stopPropagation(); onMarkUnread(chat.id); resetSwipe(); }} className="w-20 bg-[#007AFF] flex flex-col items-center justify-center text-white gap-1 active:brightness-90 transition-all">
           <MessageCircle className="w-5 h-5 fill-current" />
           <span className="text-[10px] font-black uppercase leading-tight px-1 text-center">Не прочит.</span>
@@ -136,15 +121,11 @@ const ChatListItem = memo(({
         </button>
       </div>
 
-      {/* Кнопки СПРАВА (свайп влево) - FIX: Жесткая фиксация у правого края */}
-      <div className={cn(
-        "absolute inset-y-0 right-0 flex h-full z-0 transition-opacity duration-200",
-        offsetX < -10 ? "opacity-100" : "opacity-0 pointer-events-none"
-      )} style={{ width: '160px' }}>
+      <div className={cn("absolute inset-y-0 right-0 flex h-full z-0 transition-opacity duration-200", offsetX < -10 ? "opacity-100" : "opacity-0 pointer-events-none")} style={{ width: '160px' }}>
         <div className="flex h-full w-full">
-          <button onClick={(e) => { e.stopPropagation(); onMute(chat.id); resetSwipe(); }} className="flex-1 bg-[#FF9500] flex flex-col items-center justify-center text-white gap-1 active:brightness-90 transition-all">
-            {isMuted ? <Volume2 className="w-5 h-5" /> : <VolumeX className="w-5 h-5 fill-current" />}
-            <span className="text-[10px] font-black uppercase leading-tight px-1 text-center">{isMuted ? 'Звук' : 'Тихо'}</span>
+          <button onClick={(e) => { e.stopPropagation(); onArchive(chat.id, !!chat.isArchived); resetSwipe(); }} className="flex-1 bg-[#FF9500] flex flex-col items-center justify-center text-white gap-1 active:brightness-90 transition-all">
+            <Archive className="w-5 h-5 fill-current" />
+            <span className="text-[10px] font-black uppercase leading-tight px-1 text-center">{chat.isArchived ? 'Достать' : 'Архив'}</span>
           </button>
           <button onClick={(e) => { e.stopPropagation(); onDelete(chat.id); resetSwipe(); }} className="flex-1 bg-[#FF3B30] flex flex-col items-center justify-center text-white gap-1 active:brightness-90 transition-all">
             <Trash2 className="w-5 h-5 fill-current" />
@@ -154,10 +135,7 @@ const ChatListItem = memo(({
       </div>
 
       <div 
-        className={cn(
-          "relative z-10 bg-[#0a0a0c] will-change-transform w-full border-none", 
-          !isDragging && "transition-transform duration-300 ease-out"
-        )}
+        className={cn("relative z-10 bg-[#0a0a0c] will-change-transform w-full border-none", !isDragging && "transition-transform duration-300 ease-out")}
         style={{ transform: `translateX(${offsetX}px)` }}
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
@@ -166,10 +144,7 @@ const ChatListItem = memo(({
       >
         <ContextMenu>
           <ContextMenuTrigger disabled={Math.abs(offsetX) > 10}>
-            <div className={cn(
-              "flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors border-none group relative bg-[#0a0a0c] w-full h-[80px]",
-              isActive && Math.abs(offsetX) < 5 ? 'bg-white/10' : 'active:bg-white/[0.05]'
-            )}>
+            <div className={cn("flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors border-none group relative bg-[#0a0a0c] w-full h-[80px]", isActive && Math.abs(offsetX) < 5 ? 'bg-white/10' : 'active:bg-white/[0.05]')}>
               <UserAvatar userId={otherId} manualAvatarUrl={otherProfile?.avatarUrl || chat.avatarUrl} className="h-[54px] w-[54px]" fallbackName={finalDisplayName} showOnlineStatus />
               <div className="flex-1 min-w-0 pb-1 h-full flex flex-col justify-center border-b border-white/[0.03]">
                 <div className="flex items-center justify-between mb-0.5">
@@ -203,7 +178,8 @@ ChatListItem.displayName = 'ChatListItem';
 export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?: boolean }) {
   const { user } = useUser();
   const db = useFirestore();
-  const { currentChatId, setCurrentChatId, setIsSearchOpen, isCreateStoryOpen, setIsCreateStoryOpen } = useAppState();
+  const { currentChatId, setCurrentChatId, setIsSearchOpen } = useAppState();
+  const { toast } = useToast();
   
   const [activeTab, setActiveTab] = useState(isArchiveView ? 'archived' : 'all');
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -222,9 +198,7 @@ export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?:
   const handlePinToggle = async (chatId: string) => {
     if (!db || !user || !userProfileRef) return;
     const isPinned = currentUserProfile?.pinnedChatIds?.includes(chatId);
-    await updateDoc(userProfileRef, {
-      pinnedChatIds: isPinned ? arrayRemove(chatId) : arrayUnion(chatId)
-    });
+    await updateDoc(userProfileRef, { pinnedChatIds: isPinned ? arrayRemove(chatId) : arrayUnion(chatId) });
     if (window.navigator && window.navigator.vibrate) window.navigator.vibrate(50);
     toast({ title: isPinned ? "Откреплено" : "Закреплено" });
   };
@@ -236,12 +210,17 @@ export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?:
     if (window.navigator && window.navigator.vibrate) window.navigator.vibrate(50);
   };
 
+  const handleArchive = async (chatId: string, currentStatus: boolean) => {
+    if (!db) return;
+    await updateDoc(doc(db, 'chats', chatId), { isArchived: !currentStatus });
+    toast({ title: currentStatus ? "Вернулся из архива" : "В архиве" });
+  };
+
   const handleMute = async (chatId: string) => {
-    if (!db || !user) return;
+    if (!db) return;
     const cSnap = chats?.find(c => c.id === chatId);
     const isCurrentlyMuted = !!cSnap?.mutedUntil;
     await updateDoc(doc(db, 'chats', chatId), { mutedUntil: isCurrentlyMuted ? null : new Date(9999, 11, 31).toISOString() });
-    if (window.navigator && window.navigator.vibrate) window.navigator.vibrate(50);
     toast({ title: isCurrentlyMuted ? "Звук включен" : "Без звука" });
   };
 
@@ -267,7 +246,7 @@ export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?:
     });
     if (isArchiveView) return result.filter(c => c.isArchived);
     if (activeTab === 'private') return result.filter(c => c.type === 'private' && !c.isArchived);
-    if (activeTab === 'groups') return result.filter(c => c.type === 'group' && !c.isArchived);
+    if (activeTab === 'groups') return result.filter(c => (c.type === 'group' || c.type === 'channel') && !c.isArchived);
     return result.filter(c => !c.isArchived);
   }, [chats, activeTab, isArchiveView, currentUserProfile?.pinnedChatIds]);
 
@@ -280,19 +259,11 @@ export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?:
               <Search className="w-5 h-5 text-white/60" />
             </Button>
           </div>
-
           <div className="flex justify-center">
-            <h1 
-              onClick={() => isGlobalAdmin(currentUserProfile) && setIsAdminPanelOpen(true)}
-              className={cn(
-                "text-[20px] font-black text-white italic tracking-tighter whitespace-nowrap",
-                isGlobalAdmin(currentUserProfile) ? "cursor-pointer hover:text-primary transition-colors active:scale-95" : "cursor-default"
-              )}
-            >
-              {isArchiveView ? 'Архив' : 'Чаты🐱'}
+            <h1 onClick={() => isGlobalAdmin(currentUserProfile) && setIsAdminPanelOpen(true)} className={cn("text-[20px] font-black text-white italic tracking-tighter whitespace-nowrap", isGlobalAdmin(currentUserProfile) ? "cursor-pointer hover:text-primary" : "cursor-default")}>
+              {isArchiveView ? 'Архив' : 'Nuxus🐱'}
             </h1>
           </div>
-
           <div className="flex justify-end gap-2">
             <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full bg-white/5" onClick={() => setIsCreateModalOpen(true)}>
               <Plus className="w-5 h-5 text-white" />
@@ -314,16 +285,9 @@ export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?:
                   {[
                     { id: 'all', label: 'Все' },
                     { id: 'private', label: 'Личные' },
-                    { id: 'groups', label: 'Группы' }
+                    { id: 'groups', label: 'Сообщества' }
                   ].map((tab) => (
-                    <button 
-                      key={tab.id}
-                      onClick={() => setActiveTab(tab.id)}
-                      className={cn(
-                        "px-4 py-1.5 rounded-full text-[12px] font-black uppercase tracking-widest transition-all whitespace-nowrap",
-                        activeTab === tab.id ? "bg-[#007AFF] text-white shadow-lg shadow-[#007AFF]/20" : "text-muted-foreground/40 hover:text-white bg-white/5"
-                      )}
-                    >
+                    <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={cn("px-4 py-1.5 rounded-full text-[12px] font-black uppercase tracking-widest transition-all whitespace-nowrap", activeTab === tab.id ? "bg-[#007AFF] text-white shadow-lg" : "text-muted-foreground/40 hover:text-white bg-white/5")}>
                       {tab.label}
                     </button>
                   ))}
@@ -336,25 +300,17 @@ export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?:
             {filteredChats.length > 0 ? (
               filteredChats.map(chat => (
                 <ChatListItem 
-                  key={chat.id} 
-                  chat={chat} 
-                  isActive={currentChatId === chat.id} 
+                  key={chat.id} chat={chat} isActive={currentChatId === chat.id} 
                   isPinned={currentUserProfile?.pinnedChatIds?.includes(chat.id)}
-                  onPinToggle={handlePinToggle}
-                  onMarkUnread={handleMarkUnread}
-                  onMute={handleMute}
-                  onDelete={handleDelete}
-                  onClick={() => setCurrentChatId(chat.id)}
-                  currentUserId={user?.uid}
-                  otherId={chat.type === 'private' && user ? chat.participantIds?.find((id: string) => id !== user.uid) : null} 
+                  onPinToggle={handlePinToggle} onMarkUnread={handleMarkUnread} onMute={handleMute} onArchive={handleArchive}
+                  onDelete={handleDelete} onClick={() => setCurrentChatId(chat.id)}
+                  currentUserId={user?.uid} otherId={chat.type === 'private' && user ? chat.participantIds?.find((id: string) => id !== user.uid) : null} 
                 />
               ))
             ) : (
               <div className="flex flex-col items-center justify-center p-20 opacity-20">
                  <Ghost className="w-12 h-12 mb-4" />
-                 <p className="text-[10px] font-black uppercase tracking-widest text-center">
-                   {isArchiveView ? 'Архив пуст' : 'Нет активных каналов'}
-                 </p>
+                 <p className="text-[10px] font-black uppercase tracking-widest text-center">{isArchiveView ? 'Архив пуст' : 'Нет чатов'}</p>
               </div>
             )}
           </div>
@@ -364,8 +320,6 @@ export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?:
       <CreateChatModal open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen} />
       <ChatEditorModal open={isEditorModalOpen} onOpenChange={setIsEditorModalOpen} />
       <AdminPanelModal open={isAdminPanelOpen} onOpenChange={setIsAdminPanelOpen} />
-      <CreateStoryModal open={isCreateStoryOpen} onOpenChange={setIsCreateStoryOpen} />
-      <StoryViewerModal />
     </div>
   );
 }

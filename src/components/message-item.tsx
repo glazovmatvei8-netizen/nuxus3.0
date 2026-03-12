@@ -12,10 +12,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuLabel
 } from "@/components/ui/dropdown-menu";
-import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { format } from 'date-fns';
 import { 
-  CornerUpLeft, Trash2, Check, CheckCheck, Edit2, Copy, Pin, X, MoreVertical, Share2, Play, Smile, ArrowUp, Lock, Languages, Loader2
+  CornerUpLeft, Trash2, Check, CheckCheck, Edit2, Copy, Pin, X, Share2, Play, Smile, Lock, Languages, Loader2
 } from 'lucide-react';
 import { cn, decryptSignal, isGlobalAdmin } from '@/lib/utils';
 import { doc, updateDoc, deleteDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
@@ -36,15 +35,8 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
 
-  const [isGalleryOpen, setIsGalleryOpen] = useState(false);
-
   const isKernelAdmin = useMemo(() => isGlobalAdmin(viewerProfile), [viewerProfile]);
-
-  const displayContent = useMemo(() => {
-    if (message.contentType !== 'text') return message.content;
-    return decryptSignal(message.content);
-  }, [message.content, message.contentType]);
-
+  const displayContent = useMemo(() => message.contentType === 'text' ? decryptSignal(message.content) : message.content, [message.content, message.contentType]);
   const formattedTime = message.sentAt ? format(new Date(message.sentAt), 'HH:mm') : '';
 
   const handleReaction = async (emoji: string) => {
@@ -52,263 +44,87 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
     const msgRef = doc(db, 'chats', chatId, 'messages', message.id);
     const hasReacted = message.reactions?.[emoji]?.includes(user.uid);
     if (window.navigator && window.navigator.vibrate) window.navigator.vibrate(50);
-    if (hasReacted) {
-      await updateDoc(msgRef, { [`reactions.${emoji}`]: arrayRemove(user.uid) });
-    } else {
-      await updateDoc(msgRef, { [`reactions.${emoji}`]: arrayUnion(user.uid) });
-    }
+    if (hasReacted) await updateDoc(msgRef, { [`reactions.${emoji}`]: arrayRemove(user.uid) });
+    else await updateDoc(msgRef, { [`reactions.${emoji}`]: arrayUnion(user.uid) });
   };
 
   const handleTranscribe = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!viewerProfile?.isPremium) {
-      toast({ title: "Nuxus Premium", description: "Расшифровка доступна только Premium пользователям." });
-      return;
-    }
+    if (!viewerProfile?.isPremium) { toast({ title: "Nuxus Premium", description: "Расшифровка только для Premium." }); return; }
     setIsTranscribing(true);
-    try {
-      const res = await transcribeVoice({ audioDataUri: message.content });
-      setTranscription(res.text);
-    } catch (e) {
-      toast({ title: "Ошибка ИИ", description: "Не удалось распознать сигнал." });
-    } finally {
-      setIsTranscribing(false);
-    }
-  };
-
-  const handleVote = async (optionId: string) => {
-    if (!db || !user || !chatId || !message.pollData) return;
-    const msgRef = doc(db, 'chats', chatId, 'messages', message.id);
-    const options = [...message.pollData.options];
-    const optionIdx = options.findIndex(o => o.id === optionId);
-    
-    if (optionIdx === -1) return;
-
-    const hasVoted = options[optionIdx].votes.includes(user.uid);
-    
-    if (!message.pollData.isMultiple) {
-      options.forEach(o => {
-        if (o.votes.includes(user.uid)) {
-          o.votes = o.votes.filter(id => id !== user.uid);
-        }
-      });
-    }
-
-    if (hasVoted) {
-      options[optionIdx].votes = options[optionIdx].votes.filter(id => id !== user.uid);
-    } else {
-      options[optionIdx].votes.push(user.uid);
-    }
-
-    await updateDoc(msgRef, { 'pollData.options': options });
-  };
-
-  const toggleAudio = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (!audioRef.current) {
-      audioRef.current = new Audio(message.content);
-      audioRef.current.addEventListener('ended', () => setIsPlaying(false));
-    }
-    if (isPlaying) audioRef.current.pause(); else audioRef.current.play().catch(() => {});
-    setIsPlaying(!isPlaying);
+    try { const res = await transcribeVoice({ audioDataUri: message.content }); setTranscription(res.text); }
+    catch (e) { toast({ title: "Ошибка ИИ" }); } finally { setIsTranscribing(false); }
   };
 
   const renderContent = () => {
-    const isAudio = message.contentType === 'audio';
-    const isVideoNote = message.contentType === 'video_note';
-    const isSticker = message.contentType === 'sticker';
-    const isPoll = message.contentType === 'poll';
-
-    if (isSticker) {
-      return (
-        <div className="w-44 h-44 select-none animate-in fade-in zoom-in duration-300 flex items-center justify-center">
-          <img src={message.content} alt="Sticker" className="w-full h-full object-contain pointer-events-none" />
-        </div>
-      );
-    }
-
-    if (isPoll && message.pollData) {
-      const totalVotes = message.pollData.options.reduce((acc, o) => acc + o.votes.length, 0);
-      return (
-        <div className="flex flex-col gap-4 min-w-[260px] p-1">
-          <div className="space-y-1">
-            <h4 className="font-bold text-sm text-white leading-tight">{message.pollData.question}</h4>
-            <span className="text-[9px] uppercase font-black text-primary/60 tracking-widest">
-              {message.pollData.isAnonymous ? 'Анонимный опрос' : 'Публичный опрос'}
-            </span>
-          </div>
-          <div className="space-y-2">
-            {message.pollData.options.map((opt: PollOption) => {
-              const percent = totalVotes > 0 ? Math.round((opt.votes.length / totalVotes) * 100) : 0;
-              const isVoted = opt.votes.includes(user?.uid || '');
-              return (
-                <button 
-                  key={opt.id} 
-                  onClick={() => handleVote(opt.id)}
-                  className={cn(
-                    "w-full text-left relative overflow-hidden rounded-xl h-10 px-3 border border-white/5 transition-all group active:scale-[0.98]",
-                    isVoted ? "bg-primary/20 border-primary/30" : "bg-white/5 hover:bg-white/10"
-                  )}
-                >
-                  <div className="absolute inset-y-0 left-0 bg-primary/10 transition-all duration-500" style={{ width: `${percent}%` }} />
-                  <div className="relative z-10 flex items-center justify-between h-full">
-                    <span className="text-xs font-medium text-white truncate pr-4">{opt.text}</span>
-                    <span className="text-[10px] font-black text-primary/80">{percent}%</span>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-          <span className="text-[9px] font-bold text-muted-foreground uppercase text-center mt-1">Проголосовало: {totalVotes}</span>
-        </div>
-      );
-    }
-
-    return (
-      <div className="flex flex-col text-left">
-        {message.replyToId && (
-          <div className={cn("mb-2 p-2 border-l-2 rounded-r-lg cursor-pointer transition-all hover:bg-white/5", isMe ? "border-white/40 bg-white/10" : "border-primary/50 bg-primary/5")}>
-            <div className="flex items-center gap-1.5 mb-0.5"><CornerUpLeft className="w-2.5 h-2.5 opacity-40" /><span className={cn("text-[9px] font-black uppercase tracking-widest", isMe ? "text-white/60" : "text-primary")}>Ответ</span></div>
-            <p className="text-[11px] text-muted-foreground truncate italic opacity-80 leading-tight">{decryptSignal(message.replyToContent) || 'Сообщение'}</p>
-          </div>
-        )}
-
-        {isVideoNote ? (
-          <div className="relative w-48 h-48 rounded-full overflow-hidden border-2 border-primary/20 bg-black cursor-pointer group" onClick={() => { if (videoRef.current) { if (videoRef.current.paused) videoRef.current.play(); else videoRef.current.pause(); } }}>
-            <video ref={videoRef} src={message.content} loop playsInline className="w-full h-full object-cover scale-x-[-1]" />
-            <div className="absolute inset-0 bg-black/20 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"><Play className="w-8 h-8 text-white fill-white" /></div>
-          </div>
-        ) : isAudio ? (
-          <div className="flex flex-col gap-2 min-w-[220px]">
-            <div className="flex items-center gap-3 p-1">
-              <Button variant="ghost" size="icon" className="h-10 w-10 shrink-0 bg-primary text-white rounded-full" onClick={toggleAudio}>{isPlaying ? <X className="w-5 h-5" /> : <Play className="w-5 h-5 fill-current" />}</Button>
-              <div className="flex-1 flex flex-col justify-center">
-                <div className="h-1 bg-white/10 w-full rounded-full overflow-hidden"><div className={cn("h-full bg-white transition-all", isPlaying ? "animate-pulse w-full" : "w-0")} /></div>
-                <div className="flex items-center justify-between mt-1">
-                  <span className="text-[10px] font-bold uppercase opacity-60">Голосовой сигнал</span>
-                  <button onClick={handleTranscribe} disabled={isTranscribing} className="text-[9px] font-black text-primary hover:underline uppercase flex items-center gap-1">
-                    {isTranscribing ? <Loader2 className="w-3 h-3 animate-spin" /> : <><Languages className="w-3 h-3" /> A💬</>}
-                  </button>
-                </div>
-              </div>
-            </div>
-            {transcription && (
-              <div className="bg-white/5 p-2 rounded-xl border border-white/5 animate-in fade-in slide-in-from-top-1">
-                <p className="text-[11px] text-white/70 italic leading-relaxed">{transcription}</p>
-              </div>
-            )}
-          </div>
-        ) : (message.contentType === 'image' || message.contentType === 'video') ? (
-          <div onClick={() => setIsGalleryOpen(true)} className="overflow-hidden rounded-2xl border border-white/5 w-full min-w-[280px] max-w-[320px] cursor-pointer group relative bg-muted/10 transition-transform active:scale-[0.98]">
-            {message.contentType === 'video' ? <video src={message.content} className="w-full h-full object-cover aspect-video" /> : <img src={message.content} alt="Content" className="w-full h-full object-cover" />}
-          </div>
-        ) : (
-          <div className="whitespace-pre-wrap text-[15px] break-words max-w-[300px] leading-relaxed relative">
-            {displayContent}
-            {message.editedAt && <span className="text-[8px] ml-1.5 opacity-40 uppercase">(ред.)</span>}
-          </div>
-        )}
+    if (message.contentType === 'sticker') return <img src={message.content} alt="Sticker" className="w-40 h-40 object-contain pointer-events-none" />;
+    if (message.contentType === 'video_note') return (
+      <div className="relative w-48 h-48 rounded-full overflow-hidden border-2 border-primary/20 bg-black cursor-pointer group" onClick={() => { if (videoRef.current) { if (videoRef.current.paused) videoRef.current.play(); else videoRef.current.pause(); } }}>
+        <video ref={videoRef} src={message.content} loop playsInline className="w-full h-full object-cover scale-x-[-1]" />
+        <div className="absolute inset-0 bg-black/20 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"><Play className="w-8 h-8 text-white fill-white" /></div>
       </div>
     );
+    if (message.contentType === 'audio') return (
+      <div className="flex items-center gap-3 p-1 min-w-[200px]">
+        <Button size="icon" className="h-10 w-10 rounded-full bg-primary" onClick={() => { if (!audioRef.current) { audioRef.current = new Audio(message.content); audioRef.current.onended = () => setIsPlaying(false); } if (isPlaying) audioRef.current.pause(); else audioRef.current.play(); setIsPlaying(!isPlaying); }}>{isPlaying ? <X /> : <Play fill="currentColor" />}</Button>
+        <div className="flex-1 flex flex-col justify-center">
+          <div className="h-1 bg-white/10 w-full rounded-full overflow-hidden"><div className={cn("h-full bg-white transition-all", isPlaying ? "w-full animate-pulse" : "w-0")} /></div>
+          <button onClick={handleTranscribe} className="text-[9px] font-black text-primary uppercase mt-1 flex items-center gap-1">{isTranscribing ? <Loader2 className="animate-spin w-3 h-3" /> : <><Languages className="w-3 h-3" /> A💬</>}</button>
+        </div>
+      </div>
+    );
+    return <div className="whitespace-pre-wrap text-[15px] break-words max-w-[300px] leading-relaxed relative">{displayContent} {message.editedAt && <span className="text-[8px] ml-1.5 opacity-40 uppercase">(ред.)</span>}</div>;
   };
 
-  if (message.contentType === 'service') return <div className="w-full flex justify-center my-4 px-4"><div className="bg-white/5 backdrop-blur-md px-6 py-2 rounded-full border border-white/10"><p className="text-[9px] text-muted-foreground uppercase font-black tracking-widest text-center">{message.content}</p></div></div>;
-
-  const isSpecialContent = message.contentType === 'sticker' || message.contentType === 'video_note';
+  if (message.contentType === 'service') return <div className="w-full flex justify-center my-4"><div className="bg-white/5 backdrop-blur-md px-6 py-2 rounded-full border border-white/10"><p className="text-[9px] text-muted-foreground uppercase font-black tracking-widest">{message.content}</p></div></div>;
 
   return (
-    <div id={`msg-${message.id}`} className={cn("w-full flex mb-2 transition-all scroll-mt-20", isMe ? "justify-end" : "justify-start", highlight && "scale-[1.02] z-10")}>
-      <div className={cn("flex gap-3 max-w-[90%] relative group px-2 items-end", isMe ? "flex-row-reverse" : "flex-row")}>
+    <div className={cn("w-full flex mb-2 transition-all", isMe ? "justify-end" : "justify-start", highlight && "scale-[1.02]")}>
+      <div className={cn("flex gap-3 max-w-[90%] items-end", isMe ? "flex-row-reverse" : "flex-row")}>
         {!isMe && <UserAvatar userId={message.senderId} className="h-9 w-9 shrink-0" fallbackName={message.senderName} />}
-        
-        <div className={cn("flex flex-col min-w-0 max-w-full relative", isMe ? "items-end" : "items-start")}>
+        <div className={cn("flex flex-col min-w-0 max-w-full", isMe ? "items-end" : "items-start")}>
           {!isMe && isGroup && <span className="text-[9px] font-black text-primary uppercase tracking-widest mb-1 ml-1 truncate max-w-[150px]">{message.senderName}</span>}
-          
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <div className="relative group/bubble cursor-pointer active:scale-[0.98] transition-transform outline-none">
-                <div className={cn(
-                  "p-2.5 rounded-2xl shadow-md border transition-all relative select-none touch-none", 
-                  !isSpecialContent && (isMe ? "message-bubble-me border-none" : "bg-card border-white/5 text-white"),
-                  highlight && "border-primary/50 shadow-primary/20",
-                  isSpecialContent && "bg-transparent border-none shadow-none p-0"
-                )}>
+              <div className="cursor-pointer active:scale-[0.98] outline-none">
+                <div className={cn("p-2.5 rounded-2xl border transition-all relative", isMe ? "message-bubble-me border-none" : "bg-card border-white/5 text-white")}>
+                  {message.replyToId && <div className="mb-2 p-2 border-l-2 bg-white/5 rounded-r-lg opacity-60 text-[10px] truncate">{decryptSignal(message.replyToContent)}</div>}
                   {renderContent()}
-                  
-                  <div className={cn(
-                    "flex items-center justify-end gap-1 mt-1.5 opacity-60", 
-                    message.contentType === 'video_note' && "absolute bottom-2 right-4 bg-black/40 px-2 py-0.5 rounded-full backdrop-blur-md",
-                    message.contentType === 'sticker' && "absolute -bottom-5 right-0 opacity-40"
-                  )}>
-                    {message.contentType === 'text' && <Lock className="w-2.5 h-2.5 text-primary/60" />}
+                  <div className="flex items-center justify-end gap-1 mt-1 opacity-60">
+                    {message.contentType === 'text' && <Lock className="w-2.5 h-2.5" />}
                     <span className="text-[9px] font-bold">{formattedTime}</span>
                     {isMe && (message.isRead ? <CheckCheck className="w-3.5 h-3.5 text-accent" /> : <Check className="w-3.5 h-3.5" />)}
                   </div>
                 </div>
-
-                {/* Reactions Display */}
-                {message.reactions && Object.entries(message.reactions).some(([_, uids]) => (uids as string[]).length > 0) && (
-                  <div className={cn(
-                    "flex flex-wrap gap-1 mt-1.5",
-                    isMe ? "justify-end" : "justify-start"
-                  )}>
-                    {Object.entries(message.reactions).map(([emoji, uids]) => {
-                      const count = (uids as string[]).length;
-                      if (count === 0) return null;
-                      const hasMyReaction = (uids as string[]).includes(user?.uid || '');
-                      return (
-                        <button 
-                          key={emoji} 
-                          onClick={(e) => { e.stopPropagation(); handleReaction(emoji); }}
-                          className={cn(
-                            "flex items-center gap-1 px-1.5 py-0.5 rounded-full border text-[10px] font-black transition-all",
-                            hasMyReaction ? "bg-primary/20 border-primary/40 text-primary" : "bg-white/5 border-white/5 text-muted-foreground"
-                          )}
-                        >
-                          <span>{emoji}</span>
-                          <span>{count}</span>
-                        </button>
-                      );
-                    })}
+                {message.reactions && Object.keys(message.reactions).length > 0 && (
+                  <div className="flex flex-wrap gap-1 mt-1">
+                    {Object.entries(message.reactions).map(([emoji, uids]) => (uids as string[]).length > 0 && (
+                      <button key={emoji} onClick={(e) => { e.stopPropagation(); handleReaction(emoji); }} className={cn("flex items-center gap-1 px-1.5 py-0.5 rounded-full border text-[10px] font-black", (uids as string[]).includes(user?.uid || '') ? "bg-primary/20 border-primary/40 text-primary" : "bg-white/5 border-white/5 text-muted-foreground")}>
+                        <span>{emoji}</span><span>{(uids as string[]).length}</span>
+                      </button>
+                    ))}
                   </div>
                 )}
               </div>
             </DropdownMenuTrigger>
-            
-            <DropdownMenuContent align={isMe ? 'end' : 'start'} className="w-64 bg-card/95 backdrop-blur-2xl border-white/10 rounded-2xl shadow-2xl p-1 z-[500]">
-              <DropdownMenuLabel className="text-[9px] uppercase font-black text-muted-foreground/60 px-3 py-2">Реакции</DropdownMenuLabel>
+            <DropdownMenuContent align={isMe ? 'end' : 'start'} className="w-64 bg-card border-white/10 rounded-2xl shadow-2xl p-1">
               <div className="flex justify-around p-2 border-b border-white/5 mb-1">
                 {QUICK_REACTIONS.map(emoji => (
-                  <button key={emoji} onClick={() => handleReaction(emoji)} className="text-xl hover:scale-125 transition-transform active:scale-90">{emoji}</button>
+                  <button key={emoji} onClick={() => handleReaction(emoji)} className="text-xl hover:scale-125 transition-transform">{emoji}</button>
                 ))}
               </div>
-              <DropdownMenuItem onClick={() => onReply(message)} className="gap-3 py-3 font-bold text-[11px] uppercase tracking-wider rounded-xl"><CornerUpLeft className="w-4 h-4 text-primary" /> Ответить</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => { navigator.clipboard.writeText(displayContent); toast({ title: "Скопировано" }); }} className="gap-3 py-3 font-bold text-[11px] uppercase tracking-wider rounded-xl"><Copy className="w-4 h-4 text-primary" /> Копировать</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => onForward(message)} className="gap-3 py-3 font-bold text-[11px] uppercase tracking-wider rounded-xl"><Share2 className="w-4 h-4 text-primary" /> Переслать</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => onPin(message)} className="gap-3 py-3 font-bold text-[11px] uppercase tracking-wider rounded-xl"><Pin className="w-4 h-4 text-primary" /> Закрепить</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => onReply(message)} className="gap-3 py-3 font-bold text-[11px] uppercase tracking-wider rounded-xl"><CornerUpLeft className="w-4 h-4" /> Ответить</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => onEdit(message)} className="gap-3 py-3 font-bold text-[11px] uppercase tracking-wider rounded-xl"><Edit2 className="w-4 h-4" /> Изменить</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => onForward(message)} className="gap-3 py-3 font-bold text-[11px] uppercase tracking-wider rounded-xl"><Share2 className="w-4 h-4" /> Переслать</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => onPin(message)} className="gap-3 py-3 font-bold text-[11px] uppercase tracking-wider rounded-xl"><Pin className="w-4 h-4" /> Закрепить</DropdownMenuItem>
               {(isMe || isAdmin || isKernelAdmin) && (
-                <DropdownMenuItem onClick={() => deleteDoc(doc(db!, 'chats', chatId, 'messages', message.id))} className="text-destructive gap-3 py-3 font-bold text-[11px] uppercase tracking-wider hover:bg-destructive/10 rounded-xl"><Trash2 className="w-4 h-4" /> Удалить для всех</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => deleteDoc(doc(db!, 'chats', chatId, 'messages', message.id))} className="text-destructive gap-3 py-3 font-bold text-[11px] uppercase tracking-wider"><Trash2 className="w-4 h-4" /> Удалить</DropdownMenuItem>
               )}
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
       </div>
-      <MediaGalleryModal isOpen={isGalleryOpen} onOpenChange={setIsGalleryOpen} media={[message.content]} type={message.contentType} />
     </div>
   );
 });
 MessageItem.displayName = 'MessageItem';
-
-function MediaGalleryModal({ isOpen, onOpenChange, media, type }: any) {
-  return (
-    <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[100vw] w-full h-[100dvh] p-0 bg-black/98 border-none flex items-center justify-center rounded-none">
-        <DialogTitle className="sr-only">Nuxus Media</DialogTitle>
-        <div className="relative w-full h-full flex items-center justify-center p-4">
-          {type === 'video' ? <video src={media[0]} controls autoPlay className="max-w-full max-h-full rounded-xl" /> : <img src={media[0]} alt="Media" className="max-w-full max-h-full object-contain" />}
-          <Button variant="ghost" size="icon" className="absolute top-6 right-6 h-12 w-12 rounded-full bg-white/10 text-white" onClick={() => onOpenChange(false)}><X className="w-6 h-6" /></Button>
-        </div>
-      </DialogContent>
-    </Dialog>
-  );
-}

@@ -82,6 +82,7 @@ export interface Chat {
   typing?: Record<string, boolean>;
   isPublic?: boolean;
   isArchived?: boolean;
+  isManualUnread?: boolean;
   mutedUntil?: string | null;
   metadata?: Record<string, {
     name: string;
