@@ -6,9 +6,8 @@ import { doc } from 'firebase/firestore';
 import type { User } from '@/lib/types';
 
 /**
- * Динамически применяет иконку приложения (v45).
- * ИСПОЛЬЗУЕТ БЕЗОПАСНЫЙ МЕТОД: не удаляет системные теги Next.js,
- * а управляет только своими элементами через ID.
+ * АГРЕССИВНЫЙ ОБНОВЛЯТОР ИКОНОК (v45).
+ * Находит все существующие теги иконок и принудительно меняет их href.
  */
 export function AppIconApplier() {
   const { user } = useUser();
@@ -17,49 +16,59 @@ export function AppIconApplier() {
   const userRef = useMemoFirebase(() => (!db || !user) ? null : doc(db, 'users', user.uid), [db, user]);
   const { data: profile } = useDoc<User>(userRef);
 
-  // ПРИНУДИТЕЛЬНО v45 ПО УМОЛЧАНИЮ
-  const DEFAULT_ICON = 'https://i.ibb.co/sd2MqGz2/Icon.png?v=45';
+  // ГЛОБАЛЬНЫЙ ПРИОРИТЕТ v45
+  const TARGET_ICON = 'https://i.ibb.co/sd2MqGz2/Icon.png?v=45';
 
   useEffect(() => {
-    const customIcon = profile?.settings?.customAppIconUrl;
-    // Принудительно добавляем v45 если это стандартная иконка или кастомная, чтобы избежать кэша
-    const finalIcon = customIcon 
-      ? (customIcon.includes('?') ? `${customIcon}&v=45` : `${customIcon}?v=45`)
-      : DEFAULT_ICON;
-
-    const updateIcons = () => {
+    const updateIconsNuclear = () => {
       if (typeof document === 'undefined') return;
 
       try {
-        const createOrUpdateLink = (id: string, rel: string, href: string, sizes?: string) => {
-          let link = document.getElementById(id) as HTMLLinkElement;
-          if (!link) {
-            link = document.createElement('link');
-            link.id = id;
-            link.rel = rel;
-            if (sizes) link.sizes = sizes;
-            document.head.appendChild(link);
-          }
-          link.href = href;
-        };
+        const customIcon = profile?.settings?.customAppIconUrl;
+        const finalIcon = customIcon 
+          ? (customIcon.includes('?') ? `${customIcon}&v=45` : `${customIcon}?v=45`)
+          : TARGET_ICON;
 
-        // Обновляем фавиконки (v45)
-        createOrUpdateLink('nuxus-dynamic-icon-16', 'icon', finalIcon, '16x16');
-        createOrUpdateLink('nuxus-dynamic-icon-32', 'icon', finalIcon, '32x32');
-        createOrUpdateLink('nuxus-dynamic-icon-192', 'icon', finalIcon, '192x192');
-        createOrUpdateLink('nuxus-dynamic-icon-512', 'icon', finalIcon, '512x512');
-        
-        // Обновляем иконку для Apple (v45)
-        createOrUpdateLink('nuxus-dynamic-apple-icon', 'apple-touch-icon', finalIcon);
+        // Ищем вообще все теги иконок (стандартные и яблочные)
+        const selectors = [
+          "link[rel='icon']",
+          "link[rel='shortcut icon']",
+          "link[rel='apple-touch-icon']",
+          "link[rel='apple-touch-icon-precomposed']"
+        ];
+
+        selectors.forEach(selector => {
+          const elements = document.querySelectorAll(selector);
+          elements.forEach(el => {
+            if (el.getAttribute('href') !== finalIcon) {
+              el.setAttribute('href', finalIcon);
+            }
+          });
+        });
+
+        // Если тегов нет вообще (редкий случай), создаем базовый
+        if (document.querySelectorAll("link[rel='icon']").length === 0) {
+          const newLink = document.createElement('link');
+          newLink.rel = 'icon';
+          newLink.href = finalIcon;
+          document.head.appendChild(newLink);
+        }
         
       } catch (e) {
-        console.warn("Nuxus Icon Engine: Safe sync failed", e);
+        console.warn("Nuxus Icon Shield: Critical overwrite failed", e);
       }
     };
 
-    const frameId = requestAnimationFrame(updateIcons);
-    return () => cancelAnimationFrame(frameId);
-  }, [profile?.settings?.customAppIconUrl, DEFAULT_ICON]);
+    // Запускаем сразу и через микро-задержку для надежности
+    updateIconsNuclear();
+    const timeout = setTimeout(updateIconsNuclear, 1000);
+    const interval = setInterval(updateIconsNuclear, 5000); // Повторяем проверку
+
+    return () => {
+      clearTimeout(timeout);
+      clearInterval(interval);
+    };
+  }, [profile?.settings?.customAppIconUrl]);
 
   return null;
 }

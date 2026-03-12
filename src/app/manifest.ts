@@ -2,7 +2,7 @@ import { MetadataRoute } from 'next'
 
 export default function manifest(): MetadataRoute.Manifest {
   /**
-   * ИКОНКА ДЛЯ МАНИФЕСТА (v45) - ПРИНУДИТЕЛЬНО
+   * ИКОНКА ДЛЯ МАНИФЕСТА (v45) - АБСОЛЮТ
    */
   const APP_ICON_URL = 'https://i.ibb.co/sd2MqGz2/Icon.png?v=45';
   

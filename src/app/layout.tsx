@@ -18,11 +18,9 @@ const font = Plus_Jakarta_Sans({
 });
 
 /**
- * ГЛОБАЛЬНАЯ ИКОНКА NUXUS (v45) - ПРИНУДИТЕЛЬНО ЗАКРЕПЛЕНО
+ * ГЛОБАЛЬНАЯ ИКОНКА NUXUS (v45) - КОНСТАНТА
  */
-const APP_ICON_URL = 'https://i.ibb.co/sd2MqGz2/Icon.png';
-const VERSION_PARAM = '?v=45';
-const FINAL_ICON_URL = `${APP_ICON_URL}${VERSION_PARAM}`;
+const FINAL_ICON_URL = 'https://i.ibb.co/sd2MqGz2/Icon.png?v=45';
 
 export const metadata: Metadata = {
   title: 'Nuxus 2.0 — Премиальная связь',
@@ -41,10 +39,8 @@ export const metadata: Metadata = {
       { url: FINAL_ICON_URL, sizes: '192x192', type: 'image/png' },
       { url: FINAL_ICON_URL, sizes: '512x512', type: 'image/png' },
     ],
-    shortcut: { url: FINAL_ICON_URL, type: 'image/png' },
-    apple: [
-      { url: FINAL_ICON_URL, sizes: '180x180', type: 'image/png' },
-    ],
+    shortcut: FINAL_ICON_URL,
+    apple: FINAL_ICON_URL,
   },
   other: {
     'msapplication-TileColor': '#0a0a0c',
@@ -69,6 +65,12 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ru" className={`dark ${font.variable}`} suppressHydrationWarning>
+      <head>
+        {/* Прямая вставка для обхода кэша и приоритета браузера */}
+        <link rel="icon" href={FINAL_ICON_URL} sizes="any" />
+        <link rel="apple-touch-icon" href={FINAL_ICON_URL} />
+        <link rel="shortcut icon" href={FINAL_ICON_URL} />
+      </head>
       <body className="font-sans antialiased bg-[#0a0a0c] text-foreground overflow-hidden h-[100dvh] selection:bg-primary/30" style={{ backgroundColor: '#0a0a0c', fontFamily: 'var(--font-jakarta), ui-sans-serif, system-ui, -apple-system, sans-serif' }}>
         <FirebaseClientProvider>
           <AppProvider>
