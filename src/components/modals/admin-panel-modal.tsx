@@ -20,16 +20,17 @@ import {
   DropdownMenuSubContent
 } from "@/components/ui/dropdown-menu";
 import { useFirestore, useCollection, useMemoFirebase, useUser } from '@/firebase';
-import { collection, query, doc, limit, getDocs, addDoc } from 'firebase/firestore';
+import { collection, query, doc, limit, getDocs, addDoc, orderBy } from 'firebase/firestore';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
   ShieldAlert, Users, Star, Search, Trash2, ShieldCheck, Radio, Send, 
-  Loader2, UserX, MoreVertical, Ban, CheckCircle2, Crown, Calendar, Shield, Globe, Activity
+  Loader2, UserX, MoreVertical, Ban, CheckCircle2, Crown, Calendar, Shield, Globe, Activity, Eye, MessageCircle
 } from 'lucide-react';
-import type { User } from '@/lib/types';
+import type { User, Chat } from '@/lib/types';
 import { formatDisplayName, isUserPremium } from '@/lib/utils';
 import { updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { useToast } from '@/hooks/use-toast';
+import { useAppState } from '@/lib/store';
 import { addMonths } from 'date-fns';
 
 const ROOT_UID = 'GCvLucN8CjNcdaxPO2vmpZ84hNl1';
@@ -37,15 +38,20 @@ const ROOT_UID = 'GCvLucN8CjNcdaxPO2vmpZ84hNl1';
 export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const db = useFirestore();
   const { user: currentUser } = useUser();
+  const { setCurrentChatId, setActiveView } = useAppState();
   const { toast } = useToast();
   
   const [userSearch, setUserSearch] = useState('');
+  const [chatSearch, setChatSearch] = useState('');
   const [broadcastMessage, setBroadcastMessage] = useState('');
   const [isBroadcasting, setIsBroadcasting] = useState(false);
   const [activeTab, setActiveTab] = useState('users');
   
   const usersQuery = useMemoFirebase(() => (!db ? null : query(collection(db, 'users'), limit(500))), [db]);
   const { data: users } = useCollection<User>(usersQuery);
+
+  const chatsQuery = useMemoFirebase(() => (!db ? null : query(collection(db, 'chats'), limit(200))), [db]);
+  const { data: allChats } = useCollection<Chat>(chatsQuery);
 
   const stats = useMemo(() => {
     if (!users) return { total: 0, banned: 0, premium: 0, admins: 0 };
@@ -65,6 +71,15 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
     if (a.id === ROOT_UID) return -1;
     if (b.id === ROOT_UID) return 1;
     return 0;
+  });
+
+  const filteredChats = (allChats || []).filter(c => 
+    c.name?.toLowerCase().includes(chatSearch.toLowerCase()) || 
+    c.username?.toLowerCase().includes(chatSearch.toLowerCase())
+  ).sort((a, b) => {
+    const aTime = a.lastMessageAt ? new Date(a.lastMessageAt).getTime() : 0;
+    const bTime = b.lastMessageAt ? new Date(b.lastMessageAt).getTime() : 0;
+    return bTime - aTime;
   });
 
   const handleAction = async (targetId: string, action: string, value?: any) => {
@@ -109,6 +124,13 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
     updateDocumentNonBlocking(userRef, update);
   };
 
+  const handleIntercept = (chatId: string) => {
+    setCurrentChatId(chatId);
+    setActiveView('chats');
+    onOpenChange(false);
+    toast({ title: "Вход в узел выполнен", description: "Режим перехвата активирован" });
+  };
+
   const handleGlobalBroadcast = async () => {
     if (!broadcastMessage.trim() || !db || !currentUser) return;
     
@@ -151,12 +173,15 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0 overflow-hidden">
           <div className="px-6 pt-4 shrink-0">
-            <TabsList className="grid grid-cols-2 w-full bg-white/5 p-1 rounded-2xl">
-              <TabsTrigger value="users" className="rounded-xl text-[10px] uppercase font-black tracking-widest gap-2">
-                <Users className="w-3.5 h-3.5" /> Ядро
+            <TabsList className="grid grid-cols-3 w-full bg-white/5 p-1 rounded-2xl">
+              <TabsTrigger value="users" className="rounded-xl text-[9px] uppercase font-black tracking-widest gap-1">
+                <Users className="w-3 h-3" /> Ядро
               </TabsTrigger>
-              <TabsTrigger value="broadcast" className="rounded-xl text-[10px] uppercase font-black tracking-widest gap-2">
-                <Radio className="w-3.5 h-3.5" /> Сигнал
+              <TabsTrigger value="signals" className="rounded-xl text-[9px] uppercase font-black tracking-widest gap-1">
+                <Eye className="w-3 h-3" /> Сигналы
+              </TabsTrigger>
+              <TabsTrigger value="broadcast" className="rounded-xl text-[9px] uppercase font-black tracking-widest gap-1">
+                <Radio className="w-3 h-3" /> Маяк
               </TabsTrigger>
             </TabsList>
           </div>
@@ -213,7 +238,6 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
                           <div className="flex flex-col gap-1.5 mt-1">
                             <span className="text-[9px] text-muted-foreground/60 truncate uppercase font-bold tracking-widest">{u.username}</span>
                             
-                            {/* IP ADDRESS HIGH VISIBILITY */}
                             <div className="flex items-center gap-2">
                               {u.lastIp ? (
                                 <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-cyan-500/10 border border-cyan-500/20 text-[10px] font-black text-cyan-400 uppercase tracking-tighter">
@@ -297,6 +321,59 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
                     </div>
                   );
                 })}
+              </div>
+            </ScrollArea>
+          </TabsContent>
+
+          <TabsContent value="signals" className="flex-1 data-[state=active]:flex flex-col min-h-0 m-0 overflow-hidden outline-none">
+            <div className="p-4 px-6 shrink-0 space-y-4">
+              <div className="bg-accent/5 border border-accent/20 p-3 rounded-2xl flex items-center gap-3">
+                <Eye className="w-5 h-5 text-accent animate-pulse" />
+                <div className="flex flex-col">
+                  <span className="text-[10px] font-black uppercase text-white">Перехват Сигналов</span>
+                  <span className="text-[8px] font-bold text-muted-foreground uppercase">Доступ ко всем узлам переписки</span>
+                </div>
+              </div>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/40" />
+                <Input 
+                  placeholder="Поиск чатов..." 
+                  value={chatSearch}
+                  onChange={e => setChatSearch(e.target.value)}
+                  className="bg-white/5 border-white/10 h-10 rounded-xl text-sm pl-10"
+                />
+              </div>
+            </div>
+
+            <ScrollArea className="flex-1">
+              <div className="px-6 pb-6 space-y-2">
+                {filteredChats.map(chat => (
+                  <div key={chat.id} className="flex items-center justify-between p-3 bg-white/5 rounded-2xl border border-white/5 hover:border-accent/30 transition-all group">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="relative">
+                        <UserAvatar userId={null} className="h-10 w-10 shrink-0" manualAvatarUrl={chat.avatarUrl} fallbackName={chat.name} />
+                        <div className={cn(
+                          "absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-[#0a0a0c] flex items-center justify-center",
+                          chat.type === 'private' ? "bg-blue-500" : "bg-purple-500"
+                        )}>
+                          {chat.type === 'private' ? <Shield className="w-2 h-2 text-white" /> : <Users className="w-2 h-2 text-white" />}
+                        </div>
+                      </div>
+                      <div className="flex flex-col min-w-0 text-left">
+                        <span className="font-bold text-sm text-white truncate">{chat.name || 'Приватный узел'}</span>
+                        <span className="text-[9px] text-muted-foreground/60 uppercase font-black tracking-tighter">{chat.username || chat.id.slice(0, 8)}</span>
+                      </div>
+                    </div>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={() => handleIntercept(chat.id)}
+                      className="h-8 rounded-xl bg-accent/10 text-accent hover:bg-accent hover:text-white font-black uppercase text-[8px] tracking-widest px-3"
+                    >
+                      Вход
+                    </Button>
+                  </div>
+                ))}
               </div>
             </ScrollArea>
           </TabsContent>

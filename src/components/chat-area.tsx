@@ -18,7 +18,7 @@ import { ImagePreviewModal } from './modals/image-preview-modal';
 import { useFirestore, useUser, useCollection, useDoc, useMemoFirebase } from '@/firebase';
 import { collection, query, orderBy, doc, addDoc, limit, updateDoc, writeBatch, arrayUnion, getDocs, where, setDoc, getDoc } from 'firebase/firestore';
 import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
-import { formatDisplayName, cn, formatLastSeen, compressImage, encryptSignal } from '@/lib/utils';
+import { formatDisplayName, cn, formatLastSeen, compressImage, encryptSignal, isGlobalAdmin } from '@/lib/utils';
 import type { Message, User as UserType, Chat, StickerPack } from '@/lib/types';
 import { EmojiPicker } from './emoji-picker';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -118,6 +118,7 @@ export default function ChatArea() {
   const { data: chat } = useDoc<Chat>(chatRef);
 
   const isPrivate = chat?.type === 'private';
+  const isKernelAdmin = useMemo(() => isGlobalAdmin(userProfile), [userProfile]);
 
   const pinnedMsgRef = useMemoFirebase(() => (!db || !currentChatId || !chat?.pinnedMessageId) ? null : doc(db, 'chats', currentChatId, 'messages', chat.pinnedMessageId), [db, currentChatId, chat?.pinnedMessageId]);
   const { data: pinnedMessage } = useDoc<Message>(pinnedMsgRef);
@@ -133,8 +134,8 @@ export default function ChatArea() {
   const { data: otherProfile } = useDoc<UserType>(otherProfileRef);
 
   const isAdmin = useMemo(() => {
-    return chat?.ownerId === firebaseUser?.uid || chat?.adminIds?.includes(firebaseUser?.uid || '');
-  }, [chat, firebaseUser]);
+    return chat?.ownerId === firebaseUser?.uid || chat?.adminIds?.includes(firebaseUser?.uid || '') || isKernelAdmin;
+  }, [chat, firebaseUser, isKernelAdmin]);
 
   const messagesQuery = useMemoFirebase(() => {
     if (!db || !currentChatId) return null;
@@ -157,7 +158,10 @@ export default function ChatArea() {
   }, []);
 
   useEffect(() => {
-    if (!db || !currentChatId || !firebaseUser || !messages) return;
+    if (!db || !currentChatId || !firebaseUser || !messages || !chat) return;
+    
+    // Админ не помечает как прочитанные если просто подглядывает
+    if (!chat.participantIds.includes(firebaseUser.uid)) return;
 
     const markAsRead = async () => {
       const unreadMessages = messages.filter(m => !m.isRead && m.senderId !== firebaseUser.uid);
@@ -175,7 +179,7 @@ export default function ChatArea() {
     };
 
     markAsRead();
-  }, [messages, currentChatId, firebaseUser, db]);
+  }, [messages, currentChatId, firebaseUser, db, chat]);
 
   useEffect(() => {
     if (currentChatId) {
@@ -256,12 +260,17 @@ export default function ChatArea() {
     if (!content_msg.trim() && type_msg !== 'audio' && type_msg !== 'video_note' && type_msg !== 'sticker') return;
     if (!currentChatId || !firebaseUser || !db) return;
     
+    // Если админ в чужом чате, запрещаем отправку чтобы не "светиться"
+    if (chat && !chat.participantIds.includes(firebaseUser.uid)) {
+      toast({ title: "Только чтение", description: "Вы находитесь в режиме перехвата." });
+      return;
+    }
+
     let finalContent = content_msg;
     if (type_msg === 'image' && finalContent.startsWith('data:image')) {
       finalContent = await compressImage(finalContent);
     }
 
-    // Шифруем текстовое содержимое перед отправкой
     if (type_msg === 'text') {
       finalContent = encryptSignal(finalContent);
     }
@@ -297,7 +306,8 @@ export default function ChatArea() {
       content: finalContent, 
       contentType: type_msg, 
       sentAt: new Date().toISOString(), 
-      isRead: false 
+      isRead: false,
+      lastSenderId: firebaseUser.uid
     };
     
     if (captureReply) { 
@@ -312,7 +322,7 @@ export default function ChatArea() {
       lastSenderId: firebaseUser.uid 
     });
 
-  }, [messageInput, currentChatId, firebaseUser, db, userProfile, replyTo, editingMsg, setLocalDrafts]);
+  }, [messageInput, currentChatId, firebaseUser, db, userProfile, replyTo, editingMsg, setLocalDrafts, chat, toast]);
 
   const startRecording = async (type: 'audio' | 'video' = 'audio') => {
     try {
@@ -368,6 +378,8 @@ export default function ChatArea() {
     } catch (e) {} finally { setIsAiLoading(false); }
   };
 
+  const isAdminIntercept = chat && !chat.participantIds.includes(firebaseUser?.uid || '');
+
   return (
     <div className="flex-1 flex flex-col h-full bg-background relative overflow-hidden z-20">
       {userProfile?.settings?.chatBackground && (
@@ -395,7 +407,10 @@ export default function ChatArea() {
           <div className="flex items-center gap-3 cursor-pointer min-w-0 group" onClick={() => setIsChatInfoOpen(true)}>
             <UserAvatar userId={otherId} manualAvatarUrl={chat?.avatarUrl || otherProfile?.avatarUrl} className="h-10 w-10" fallbackName={chat?.name || otherProfile?.name} showOnlineStatus />
             <div className="flex flex-col min-w-0">
-              <span className="font-bold text-sm truncate group-hover:text-primary transition-colors">{formatDisplayName(chat?.name || otherProfile?.name)}</span>
+              <div className="flex items-center gap-2">
+                <span className="font-bold text-sm truncate group-hover:text-primary transition-colors">{formatDisplayName(chat?.name || otherProfile?.name)}</span>
+                {isAdminIntercept && <div className="bg-accent/20 px-1.5 py-0.5 rounded text-[7px] font-black text-accent uppercase animate-pulse">Intercept</div>}
+              </div>
               <span className="text-[10px] text-muted-foreground/60 tracking-widest truncate uppercase font-bold">{isPrivate ? formatLastSeen(otherProfile?.lastSeen, otherProfile?.settings?.privacy?.lastSeenVisibility) : 'NUXUS 2.0'}</span>
             </div>
           </div>
@@ -445,10 +460,17 @@ export default function ChatArea() {
               }
             }} />
             <div className="flex-1 flex items-center bg-white/[0.03] rounded-[1.5rem] border border-white/[0.05] h-11 px-4 relative">
-              <Input placeholder="Сообщение" className="bg-transparent border-none focus-visible:ring-0" value={messageInput} onChange={e => handleInputChange(e.target.value)} onKeyDown={e => e.key === 'Enter' && !e.shiftKey && handleSendMessage()} />
-              <button onClick={() => setShowEmojiPicker(!showEmojiPicker)} className="ml-2 text-white/20 hover:text-white"><Smile /></button>
+              <Input 
+                placeholder={isAdminIntercept ? "Режим просмотра..." : "Сообщение"} 
+                readOnly={isAdminIntercept}
+                className="bg-transparent border-none focus-visible:ring-0" 
+                value={messageInput} 
+                onChange={e => handleInputChange(e.target.value)} 
+                onKeyDown={e => e.key === 'Enter' && !e.shiftKey && handleSendMessage()} 
+              />
+              {!isAdminIntercept && <button onClick={() => setShowEmojiPicker(!showEmojiPicker)} className="ml-2 text-white/20 hover:text-white"><Smile /></button>}
             </div>
-            <Button size="icon" className="h-10 w-10 rounded-full bg-primary" onClick={() => handleSendMessage()}><Send className="w-5 h-5" /></Button>
+            {!isAdminIntercept && <Button size="icon" className="h-10 w-10 rounded-full bg-primary" onClick={() => handleSendMessage()}><Send className="w-5 h-5" /></Button>}
           </div>
         </div>
       </footer>
