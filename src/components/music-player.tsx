@@ -21,30 +21,30 @@ export function MusicPlayer() {
 
     const audio = audioRef.current;
     
-    // Принудительная перезагрузка источника
-    audio.pause();
-    audio.src = currentTrack.url;
-    audio.load();
-
-    if (isPlayingMusic) {
-      const playPromise = audio.play();
-      if (playPromise !== undefined) {
-        playPromise.catch(e => {
-          console.warn("Autoplay blocked:", e);
-          setIsPlayingMusic(false);
-        });
+    const playNewTrack = async () => {
+      try {
+        audio.pause();
+        audio.src = currentTrack.url;
+        audio.load();
+        
+        if (isPlayingMusic) {
+          await audio.play();
+        }
+      } catch (e) {
+        console.warn("Nuxus Audio: Playback failed or blocked", e);
+        setIsPlayingMusic(false);
       }
-    }
+    };
+
+    playNewTrack();
   }, [currentTrack?.id]);
 
   // Управление воспроизведением
   useEffect(() => {
     if (!audioRef.current || !currentTrack) return;
+    
     if (isPlayingMusic) {
-      const playPromise = audioRef.current.play();
-      if (playPromise !== undefined) {
-        playPromise.catch(() => setIsPlayingMusic(false));
-      }
+      audioRef.current.play().catch(() => setIsPlayingMusic(false));
     } else {
       audioRef.current.pause();
     }
@@ -70,6 +70,10 @@ export function MusicPlayer() {
         onEnded={() => setIsPlayingMusic(false)}
         onWaiting={() => setIsBuffering(true)}
         onPlaying={() => setIsBuffering(false)}
+        onError={() => {
+          console.error("Nuxus Audio: Source Error");
+          setIsPlayingMusic(false);
+        }}
       />
       
       <div className="flex items-center gap-4 flex-1 min-w-0">
