@@ -15,28 +15,33 @@ export function MusicPlayer() {
   const [volume, setVolume] = useState([80]);
   const [isBuffering, setIsBuffering] = useState(false);
 
-  // Обработка смены трека и воспроизведения
+  // Обработка смены трека
   useEffect(() => {
     if (!audioRef.current || !currentTrack) return;
 
     const audio = audioRef.current;
+    
+    // Принудительная перезагрузка источника
+    audio.src = currentTrack.url;
+    audio.load();
 
-    // При смене трека загружаем новый ресурс
-    const playTrack = async () => {
-      try {
-        if (isPlayingMusic) {
-          await audio.play();
-        } else {
-          audio.pause();
-        }
-      } catch (e) {
-        console.warn("Nuxus Music: Playback prevented by browser policy or error", e);
+    if (isPlayingMusic) {
+      audio.play().catch(e => {
+        console.warn("Autoplay blocked:", e);
         setIsPlayingMusic(false);
-      }
-    };
+      });
+    }
+  }, [currentTrack?.id]);
 
-    playTrack();
-  }, [currentTrack, isPlayingMusic, setIsPlayingMusic]);
+  // Управление воспроизведением
+  useEffect(() => {
+    if (!audioRef.current) return;
+    if (isPlayingMusic) {
+      audioRef.current.play().catch(() => setIsPlayingMusic(false));
+    } else {
+      audioRef.current.pause();
+    }
+  }, [isPlayingMusic]);
 
   // Управление громкостью
   useEffect(() => {
@@ -51,12 +56,13 @@ export function MusicPlayer() {
     <div className="fixed bottom-[100px] md:bottom-6 left-1/2 -translate-x-1/2 w-[94%] max-w-[800px] h-[76px] bg-[#1c1c1e]/95 backdrop-blur-[50px] border border-white/10 rounded-[2.5rem] flex items-center px-5 z-[100] shadow-[0_30px_60px_rgba(0,0,0,0.6)] animate-in slide-in-from-bottom-10 duration-500">
       <audio 
         ref={audioRef} 
-        src={currentTrack.url} 
-        onTimeUpdate={(e) => setProgress((e.currentTarget.currentTime / e.currentTarget.duration) * 100)}
+        onTimeUpdate={(e) => {
+          const p = (e.currentTarget.currentTime / e.currentTarget.duration) * 100;
+          if (!isNaN(p)) setProgress(p);
+        }}
         onEnded={() => setIsPlayingMusic(false)}
         onWaiting={() => setIsBuffering(true)}
         onPlaying={() => setIsBuffering(false)}
-        autoPlay={isPlayingMusic}
       />
       
       <div className="flex items-center gap-4 flex-1 min-w-0">

@@ -9,7 +9,7 @@ import { UserAvatar } from '@/components/user-avatar';
 import { 
   Send, Info, ChevronLeft, X, Paperclip, Mic, StopCircle, ChevronDown, Edit2, Pin, Search, PinOff,
   Smile, Instagram, Camera, Video, Sticker, Copy, Share2, Sparkles, Loader2, RefreshCw, Zap, Trash2, Pause, Play,
-  BarChart3, Image as ImageIcon
+  BarChart3, Image as ImageIcon, ArrowDown
 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { MessageItem } from './message-item';
@@ -63,13 +63,10 @@ export default function ChatArea() {
   const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
   
   const [isRecordingVideo, setIsRecordingVideo] = useState(false);
-  const [recordingTime, setRecordingTime] = useState(0);
+  const [isRecordingAudio, setIsRecordingAudio] = useState(false);
   const recorderRef = useRef<MediaRecorder | null>(null);
-  const videoPreviewRef = useRef<HTMLVideoElement>(null);
-
-  const inputRef = useRef<HTMLInputElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
   const userProfileRef = useMemoFirebase(() => (!db || !firebaseUser) ? null : doc(db, 'users', firebaseUser.uid), [db, firebaseUser]);
@@ -77,9 +74,6 @@ export default function ChatArea() {
 
   const chatRef = useMemoFirebase(() => (!db || !currentChatId) ? null : doc(db, 'chats', currentChatId), [db, currentChatId]);
   const { data: chat } = useDoc<Chat>(chatRef);
-
-  const isPrivate = chat?.type === 'private';
-  const isKernelAdmin = useMemo(() => isGlobalAdmin(userProfile), [userProfile]);
 
   const otherId = useMemo(() => (chat?.type === 'private' && firebaseUser) ? chat.participantIds.find(id => id !== firebaseUser.uid) : null, [chat, firebaseUser]);
   const otherProfileRef = useMemoFirebase(() => (!db || !otherId) ? null : doc(db, 'users', otherId), [db, otherId]);
@@ -94,6 +88,33 @@ export default function ChatArea() {
     if (!chat?.typing) return false;
     return Object.entries(chat.typing).some(([uid, active]) => active && uid !== firebaseUser?.uid);
   }, [chat?.typing, firebaseUser?.uid]);
+
+  // AUTO SCROLL TO BOTTOM
+  const scrollToBottom = useCallback((behavior: ScrollBehavior = 'smooth') => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior });
+    }
+  }, []);
+
+  useEffect(() => {
+    if (messages && messages.length > 0) {
+      // Small delay to ensure images/content are rendered
+      setTimeout(() => scrollToBottom('instant'), 100);
+    }
+  }, [currentChatId]); // Scroll on chat switch
+
+  useEffect(() => {
+    if (messages && messages.length > 0) {
+      // Scroll on new message if user is already near bottom
+      scrollToBottom('smooth');
+    }
+  }, [messages?.length]);
+
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const target = e.currentTarget;
+    const isNearBottom = target.scrollHeight - target.scrollTop - target.clientHeight < 300;
+    setShowScrollBottom(!isNearBottom);
+  };
 
   useEffect(() => {
     if (currentChatId && localDrafts[currentChatId]) {
@@ -129,41 +150,59 @@ export default function ChatArea() {
     }
   };
 
-  const startVideoNote = async () => {
+  // RECORDING LOGIC (PC SUPPORTED)
+  const startRecording = async (type: 'video_note' | 'audio') => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-      setIsRecordingVideo(true);
+      const constraints = type === 'video_note' ? { video: true, audio: true } : { audio: true };
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
       const recorder = new MediaRecorder(stream);
       const chunks: Blob[] = [];
+      
       recorder.ondataavailable = (e) => chunks.push(e.data);
       recorder.onstop = async () => {
-        const blob = new Blob(chunks, { type: 'video/webm' });
+        const mimeType = type === 'video_note' ? 'video/webm' : 'audio/webm';
+        const blob = new Blob(chunks, { type: mimeType });
         const reader = new FileReader();
-        reader.onloadend = () => handleSendMessage(reader.result as string, 'video_note');
+        reader.onloadend = () => handleSendMessage(reader.result as string, type);
         reader.readAsDataURL(blob);
         stream.getTracks().forEach(t => t.stop());
       };
+
       recorderRef.current = recorder;
       recorder.start();
-    } catch (e) { toast({ title: "Ошибка камеры" }); }
+      if (type === 'video_note') setIsRecordingVideo(true);
+      else setIsRecordingAudio(true);
+    } catch (e) {
+      toast({ title: "Ошибка доступа к медиа", variant: "destructive" });
+    }
   };
 
-  const stopVideoNote = () => {
-    if (recorderRef.current && isRecordingVideo) {
+  const stopRecording = () => {
+    if (recorderRef.current && recorderRef.current.state !== 'inactive') {
       recorderRef.current.stop();
       setIsRecordingVideo(false);
+      setIsRecordingAudio(false);
+    }
+  };
+
+  // Handle PC/Touch difference for recording
+  const handleRecordInteraction = (type: 'video_note' | 'audio') => {
+    const isRecording = type === 'video_note' ? isRecordingVideo : isRecordingAudio;
+    if (isRecording) {
+      stopRecording();
+    } else {
+      startRecording(type);
     }
   };
 
   const handleSendMessage = useCallback(async (content_msg: string = messageInput, type_msg: Message['contentType'] = 'text') => {
-    if (!content_msg.trim() && type_msg !== 'video_note' && type_msg !== 'sticker') return;
+    if (!content_msg.trim() && type_msg !== 'video_note' && type_msg !== 'sticker' && type_msg !== 'audio') return;
     if (!currentChatId || !firebaseUser || !db) return;
     
     let finalContent = content_msg;
     if (type_msg === 'text') {
       finalContent = encryptSignal(content_msg);
     } else if (type_msg === 'image') {
-      // Агрессивное сжатие для стабильности базы
       finalContent = await compressImage(content_msg, 800, 0.4);
     }
 
@@ -194,7 +233,8 @@ export default function ChatArea() {
       lastSenderId: firebaseUser.uid, 
       [`typing.${firebaseUser.uid}`]: false 
     });
-  }, [messageInput, currentChatId, firebaseUser, db, userProfile, replyTo, editingMsg, setLocalDrafts]);
+    scrollToBottom();
+  }, [messageInput, currentChatId, firebaseUser, db, userProfile, replyTo, editingMsg, setLocalDrafts, scrollToBottom]);
 
   return (
     <div className="flex-1 flex flex-col h-full bg-background relative overflow-hidden z-20">
@@ -209,7 +249,7 @@ export default function ChatArea() {
             <UserAvatar userId={otherId} manualAvatarUrl={chat?.avatarUrl || otherProfile?.avatarUrl} className="h-10 w-10" fallbackName={chat?.name || otherProfile?.name} showOnlineStatus />
             <div className="flex flex-col min-w-0">
               <span className="font-bold text-sm truncate">{formatDisplayName(chat?.name || otherProfile?.name)}</span>
-              <span className="text-[10px] text-primary/80 font-bold uppercase tracking-widest">{isTyping ? 'печатает...' : (isPrivate ? formatLastSeen(otherProfile?.lastSeen) : 'сообщество')}</span>
+              <span className="text-[10px] text-primary/80 font-bold uppercase tracking-widest">{isTyping ? 'печатает...' : (chat?.type === 'private' ? formatLastSeen(otherProfile?.lastSeen) : 'сообщество')}</span>
             </div>
           </div>
         </div>
@@ -232,17 +272,35 @@ export default function ChatArea() {
         </div>
       )}
 
-      {isSearchMode && (
-        <div className="p-2 bg-card/90 backdrop-blur-md border-b border-white/5 flex gap-2 z-20">
-          <Input placeholder="Поиск в этом чате..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="bg-white/5 border-white/10 h-10 rounded-xl text-xs" autoFocus />
-          <Button variant="ghost" onClick={() => { setIsSearchMode(false); setSearchQuery(''); }}>Отмена</Button>
-        </div>
-      )}
-
       <div className="flex-1 relative overflow-hidden">
-        <ScrollArea ref={scrollRef} className="h-full w-full relative z-10 scrollbar-hide">
-          <MessageList messages={messages} userId={firebaseUser?.uid} chatId={currentChatId} onReply={setReplyTo} onEdit={setEditingMsg} amIPremium={userProfile?.isPremium} isAdmin={isKernelAdmin} isGroup={chat?.type !== 'private'} searchQuery={searchQuery} viewerProfile={userProfile} />
+        <ScrollArea 
+          onScroll={handleScroll}
+          className="h-full w-full relative z-10 scrollbar-hide"
+        >
+          <MessageList 
+            messages={messages} 
+            userId={firebaseUser?.uid} 
+            chatId={currentChatId} 
+            onReply={setReplyTo} 
+            onEdit={setEditingMsg} 
+            amIPremium={userProfile?.isPremium} 
+            isAdmin={isGlobalAdmin(userProfile)} 
+            isGroup={chat?.type !== 'private'} 
+            searchQuery={searchQuery} 
+            viewerProfile={userProfile} 
+          />
+          <div ref={messagesEndRef} className="h-4" />
         </ScrollArea>
+
+        {showScrollBottom && (
+          <Button 
+            size="icon" 
+            className="absolute bottom-6 right-6 h-10 w-10 rounded-full bg-card/80 backdrop-blur-xl border border-white/10 shadow-2xl z-40 animate-in fade-in zoom-in"
+            onClick={() => scrollToBottom()}
+          >
+            <ArrowDown className="w-5 h-5 text-primary" />
+          </Button>
+        )}
       </div>
 
       <footer className="p-3 pb-6 bg-[#0a0a0c]/90 backdrop-blur-2xl border-t border-white/5 shrink-0 z-30">
@@ -279,8 +337,22 @@ export default function ChatArea() {
               <Button size="icon" className="h-10 w-10 rounded-full bg-primary shadow-lg" onClick={() => handleSendMessage()}><Send className="w-5 h-5" /></Button>
             ) : (
               <div className="flex gap-1">
-                <Button size="icon" variant="ghost" className={cn("h-10 w-10 rounded-full", isRecordingVideo && "text-red-500 animate-pulse")} onMouseDown={startVideoNote} onMouseUp={stopVideoNote} onTouchStart={startVideoNote} onTouchEnd={stopVideoNote}><Video className="w-5 h-5" /></Button>
-                <Button size="icon" variant="ghost" className="h-10 w-10 rounded-full" onClick={() => toast({ title: "Удерживайте для записи" })}><Mic className="w-5 h-5" /></Button>
+                <Button 
+                  size="icon" 
+                  variant="ghost" 
+                  className={cn("h-10 w-10 rounded-full", isRecordingVideo && "text-red-500 bg-red-500/10")} 
+                  onClick={() => handleRecordInteraction('video_note')}
+                >
+                  {isRecordingVideo ? <StopCircle className="w-5 h-5" /> : <Video className="w-5 h-5" />}
+                </Button>
+                <Button 
+                  size="icon" 
+                  variant="ghost" 
+                  className={cn("h-10 w-10 rounded-full", isRecordingAudio && "text-primary bg-primary/10")} 
+                  onClick={() => handleRecordInteraction('audio')}
+                >
+                  {isRecordingAudio ? <StopCircle className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
+                </Button>
               </div>
             )}
           </div>
