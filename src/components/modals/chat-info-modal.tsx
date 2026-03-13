@@ -144,7 +144,7 @@ export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onO
 
           {!isEditing ? (
             <>
-              <DialogTitle className="text-xl flex items-center justify-center gap-2">
+              <DialogTitle className="text-xl flex items-center justify-center gap-2 text-white font-black italic">
                 {chatName} {isUserPremium(otherUserProfile) && <Star className="w-4 h-4 text-accent fill-accent" />}
               </DialogTitle>
               <DialogDescription className="text-xs font-mono opacity-60">

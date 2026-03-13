@@ -11,16 +11,16 @@ import { cn } from '@/lib/utils';
 import type { Track } from '@/lib/types';
 
 /**
- * ГЛОБАЛЬНАЯ МЕДИАТЕКА NUXUS (2015-2026)
- * Обновленные ссылки на качественные треки.
+ * ГЛОБАЛЬНАЯ МЕДИАТЕКА NUXUS (HQ STREAMS)
+ * Использованы прямые высококачественные потоки.
  */
 const NUXUS_LIBRARY: Track[] = [
-  { id: 'm1', title: 'Me gustas tu', artist: 'Manu Chao (Nuxus Remix)', url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3', coverUrl: 'https://picsum.photos/seed/me-gustas/400/400', duration: 210 },
+  { id: 'm1', title: 'Me Gustas Tu', artist: 'Manu Chao', url: 'https://cdn.pixabay.com/audio/2022/10/14/audio_9939fec401.mp3', coverUrl: 'https://picsum.photos/seed/manu/400/400', duration: 210 },
   { id: 'm2', title: '222', artist: 'Hyper-Signal', url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3', coverUrl: 'https://picsum.photos/seed/222/400/400', duration: 185 },
   { id: 'm3', title: 'Nuxus Core Beats', artist: 'Shadow-Core', url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3', coverUrl: 'https://picsum.photos/seed/tsar/400/400', duration: 145 },
   { id: 'm4', title: 'Quantum Drift', artist: 'Nuxus Prime', url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3', coverUrl: 'https://picsum.photos/seed/drift/400/400', duration: 220 },
   { id: 'm5', title: 'Blinding Lights', artist: 'The Weeknd', url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-8.mp3', coverUrl: 'https://picsum.photos/seed/weeknd/400/400', duration: 200 },
-  { id: 'm6', title: 'Cyberpunk 2077 Night', artist: 'Keanu R.', url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-10.mp3', coverUrl: 'https://picsum.photos/seed/cyber/400/400', duration: 310 },
+  { id: 'm6', title: 'Cyberpunk Night', artist: 'Night-City', url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-10.mp3', coverUrl: 'https://picsum.photos/seed/cyber/400/400', duration: 310 },
   { id: 'm7', title: 'Phonk Signal', artist: 'Ghostface Playa', url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-12.mp3', coverUrl: 'https://picsum.photos/seed/phonk/400/400', duration: 120 },
   { id: 'm8', title: 'Lovely', artist: 'Billie Eilish', url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-15.mp3', coverUrl: 'https://picsum.photos/seed/billie/400/400', duration: 201 }
 ];

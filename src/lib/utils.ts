@@ -37,7 +37,7 @@ export function formatDisplayName(name: string | undefined | null): string {
 export function encryptSignal(text: string): string {
   if (!text) return '';
   try {
-    const encoded = btoa(encodeURIComponent(text));
+    const encoded = btoa(encodeURIComponent(text.trim()));
     return `NX_${encoded}`;
   } catch (e) {
     return text;
@@ -51,16 +51,18 @@ export function encryptSignal(text: string): string {
 export function decryptSignal(content: string): string {
   if (!content) return '';
   if (typeof content !== 'string') return String(content);
-  if (!content.startsWith('NX_')) return content;
+  
+  const trimmed = content.trim();
+  if (!trimmed.startsWith('NX_')) return trimmed;
   
   try {
-    const raw = content.replace('NX_', '');
+    const raw = trimmed.replace('NX_', '');
     // Пробуем расшифровать стандартный Base64 + URI
     return decodeURIComponent(atob(raw));
   } catch (e) {
     try {
       // Fallback: пробуем просто atob если URI поломался
-      return atob(content.replace('NX_', ''));
+      return atob(trimmed.replace('NX_', ''));
     } catch (e2) {
       console.warn("Signal Decryption Fail:", content);
       return '[Сигнал зашифрован]';
