@@ -77,13 +77,14 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
       
       if (isPlaying) {
         audioRef.current.pause();
+        setIsPlaying(false);
       } else {
-        audioRef.current.play().catch(err => {
+        audioRef.current.play().then(() => {
+          setIsPlaying(true);
+        }).catch(err => {
           console.warn("Audio play blocked", err);
-          toast({ title: "Нажмите еще раз", variant: "destructive" });
         });
       }
-      setIsPlaying(!isPlaying);
     } catch (err) {
       console.error("Audio Engine Fail", err);
     }

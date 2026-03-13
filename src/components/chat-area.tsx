@@ -11,7 +11,6 @@ import {
   Smile, Instagram, Camera, Video, Sticker, Copy, Share2, Sparkles, Loader2, RefreshCw, Zap, Trash2, Pause, Play,
   BarChart3, Image as ImageIcon, ArrowDown
 } from 'lucide-react';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { MessageItem } from './message-item';
 import { useToast } from '@/hooks/use-toast';
 import { ChatInfoModal } from './modals/chat-info-modal';
@@ -100,18 +99,11 @@ export default function ChatArea() {
 
   // Агрессивный скролл вниз при смене чата
   useEffect(() => {
-    if (currentChatId) {
-      const timer = setTimeout(() => scrollToBottom('instant'), 100);
+    if (currentChatId && messages) {
+      const timer = setTimeout(() => scrollToBottom('instant'), 50);
       return () => clearTimeout(timer);
     }
-  }, [currentChatId, scrollToBottom]);
-
-  // Скролл при новых сообщениях
-  useEffect(() => {
-    if (messages && messages.length > 0) {
-      scrollToBottom('smooth');
-    }
-  }, [messages?.length, scrollToBottom]);
+  }, [currentChatId, messages?.length, scrollToBottom]);
 
   const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
     const target = e.currentTarget;
@@ -301,10 +293,11 @@ export default function ChatArea() {
         </div>
       )}
 
-      <div className="flex-1 relative overflow-hidden">
-        <ScrollArea 
+      <div className="flex-1 relative overflow-hidden flex flex-col">
+        <div 
+          ref={scrollViewportRef}
           onScroll={handleScroll}
-          className="h-full w-full relative z-10 scrollbar-hide"
+          className="flex-1 w-full relative z-10 overflow-y-auto scroll-smooth scrollbar-hide"
         >
           <MessageList 
             messages={messages} 
@@ -319,12 +312,12 @@ export default function ChatArea() {
             viewerProfile={userProfile} 
           />
           <div ref={messagesEndRef} className="h-4" />
-        </ScrollArea>
+        </div>
 
         {showScrollBottom && (
           <Button 
             size="icon" 
-            className="absolute bottom-24 right-6 h-12 w-12 rounded-full bg-primary shadow-[0_0_30px_rgba(139,92,246,0.4)] z-40 animate-in fade-in zoom-in group"
+            className="absolute bottom-6 right-6 h-12 w-12 rounded-full bg-primary shadow-[0_0_30px_rgba(139,92,246,0.4)] z-40 animate-in fade-in zoom-in group"
             onClick={() => scrollToBottom()}
           >
             <ArrowDown className="w-6 h-6 text-white animate-bounce" />
