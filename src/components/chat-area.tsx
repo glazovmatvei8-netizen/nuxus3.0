@@ -33,7 +33,7 @@ const MessageList = memo(({
   const filteredMessages = searchQuery ? sortedMessages.filter((m: Message) => decryptSignal(m.content)?.toLowerCase().includes(searchQuery.toLowerCase())) : sortedMessages;
 
   return (
-    <div className="flex flex-col gap-3 max-w-4xl mx-auto px-4 md:px-6 py-8 min-h-full">
+    <div className="flex flex-col gap-3 max-w-4xl mx-auto px-4 md:px-6 py-8 min-h-full touch-pan-y">
       {filteredMessages.map((msg: Message) => (
         <MessageItem key={msg.id} message={msg} isMe={msg.senderId === userId} chatId={chatId} onReply={onReply} onPin={onPin} amIPremium={amIPremium} isAdmin={isAdmin} isGroup={isGroup} onEdit={onEdit} onForward={onForward} highlight={searchQuery && decryptSignal(msg.content)?.toLowerCase().includes(searchQuery.toLowerCase())} viewerProfile={viewerProfile} />
       ))}
@@ -245,7 +245,6 @@ export default function ChatArea() {
         } else if (lower === '/newpack') {
           botReply = "Отлично! Как мы назовем твой новый стикерпак? Отправь название.";
         } else if (lower === '/mypacks') {
-          // Реальный поиск паков
           const packsQuery = query(collection(db, 'stickerPacks'), where('ownerId', '==', firebaseUser.uid));
           const snap = await getDocs(packsQuery);
           if (snap.empty) {
@@ -256,7 +255,6 @@ export default function ChatArea() {
         } else if (lower === '/stats') {
           botReply = "Статистика Ядра:\n\nУзлов: 120+\nСтикеров: 4500+\nТвой статус: Active Node";
         } else if (lastBotText.includes('назовем твой новый стикерпак')) {
-          // Проверка уникальности имени
           const nameQuery = query(collection(db, 'stickerPacks'), where('name', '==', content_msg.trim()));
           const nameSnap = await getDocs(nameQuery);
           if (!nameSnap.empty) {
@@ -267,11 +265,8 @@ export default function ChatArea() {
         }
       } else if (type_msg === 'image' || type_msg === 'sticker') {
         if (lastBotText.includes('отправь мне первый стикер')) {
-          // Извлекаем имя из прошлого сообщения бота
           const match = lastBotText.match(/Пак "(.*)" инициализирован/);
           const packName = match ? match[1] : "Новый пак";
-          
-          // РЕАЛЬНОЕ СОЗДАНИЕ ПАКА
           const newPackRef = await addDoc(collection(db, 'stickerPacks'), {
             ownerId: firebaseUser.uid,
             name: packName,
@@ -279,12 +274,9 @@ export default function ChatArea() {
             stickerUrls: [content_msg],
             createdAt: new Date().toISOString()
           });
-
-          // Добавляем создателю
           await updateDoc(doc(db, 'users', firebaseUser.uid), {
             installedStickerPackIds: arrayUnion(newPackRef.id)
           });
-
           botReply = `Успех! Пак "${packName}" скомпилирован и добавлен в твой узел. 🦊\n\nСсылка для друзей:\n${window.location.origin}/?stickers=${newPackRef.id}`;
         }
       }
@@ -300,7 +292,7 @@ export default function ChatArea() {
             sentAt: new Date().toISOString(),
             isRead: false
           });
-        }, 400); // Ускорил ответ бота
+        }, 400); 
       }
     }
 
@@ -355,6 +347,11 @@ export default function ChatArea() {
     }
   };
 
+  const chatDisplayName = useMemo(() => {
+    if (chat?.type === 'private' && otherProfile) return formatDisplayName(otherProfile.name);
+    return formatDisplayName(chat?.name || otherProfile?.name || 'Чат');
+  }, [chat?.type, chat?.name, otherProfile]);
+
   return (
     <div className="flex-1 flex flex-col h-full bg-background relative overflow-hidden z-20">
       {userProfile?.settings?.chatBackground && (
@@ -365,9 +362,9 @@ export default function ChatArea() {
         <div className="flex items-center gap-3 flex-1 min-w-0">
           <Button variant="ghost" size="icon" className="md:hidden rounded-lg" onClick={() => setCurrentChatId(null)}><ChevronLeft /></Button>
           <div className="flex items-center gap-3 cursor-pointer min-w-0" onClick={() => setIsChatInfoOpen(true)}>
-            <UserAvatar userId={otherId} manualAvatarUrl={chat?.avatarUrl || otherProfile?.avatarUrl} className="h-10 w-10" fallbackName={chat?.name || otherProfile?.name} showOnlineStatus />
+            <UserAvatar userId={otherId} manualAvatarUrl={chat?.avatarUrl || otherProfile?.avatarUrl} className="h-10 w-10" fallbackName={chatDisplayName} showOnlineStatus />
             <div className="flex flex-col min-w-0">
-              <span className="font-bold text-sm truncate">{formatDisplayName(chat?.name || otherProfile?.name)}</span>
+              <span className="font-bold text-sm truncate">{chatDisplayName}</span>
               <span className="text-[10px] text-primary/80 font-bold uppercase tracking-widest">{isTyping ? 'печатает...' : (chat?.type === 'private' ? formatLastSeen(otherProfile?.lastSeen) : 'сообщество')}</span>
             </div>
           </div>
@@ -395,7 +392,7 @@ export default function ChatArea() {
         <div 
           ref={scrollViewportRef}
           onScroll={handleScroll}
-          className="flex-1 w-full relative z-10 overflow-y-auto scroll-smooth scrollbar-hide"
+          className="flex-1 w-full relative z-10 overflow-y-auto scroll-smooth scrollbar-hide touch-pan-y"
         >
           <MessageList 
             messages={messages} userId={firebaseUser?.uid} chatId={currentChatId} onReply={setReplyTo} onEdit={setEditingMsg} 

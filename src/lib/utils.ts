@@ -49,12 +49,22 @@ export function encryptSignal(text: string): string {
  * Доступна участникам и Prime-администраторам.
  */
 export function decryptSignal(content: string): string {
-  if (!content || !content.startsWith('NX_')) return content;
+  if (!content) return '';
+  if (typeof content !== 'string') return String(content);
+  if (!content.startsWith('NX_')) return content;
+  
   try {
     const raw = content.replace('NX_', '');
+    // Пробуем расшифровать стандартный Base64 + URI
     return decodeURIComponent(atob(raw));
   } catch (e) {
-    return '[Сигнал зашифрован]';
+    try {
+      // Fallback: пробуем просто atob если URI поломался
+      return atob(content.replace('NX_', ''));
+    } catch (e2) {
+      console.warn("Signal Decryption Fail:", content);
+      return '[Сигнал зашифрован]';
+    }
   }
 }
 

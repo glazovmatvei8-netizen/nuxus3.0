@@ -12,29 +12,17 @@ import type { Track } from '@/lib/types';
 
 /**
  * ГЛОБАЛЬНАЯ МЕДИАТЕКА NUXUS (2015-2026)
- * Расширенный архив хитов.
+ * Обновленные ссылки на качественные треки.
  */
 const NUXUS_LIBRARY: Track[] = [
   { id: 'm1', title: 'Me gustas tu', artist: 'Manu Chao (Nuxus Remix)', url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3', coverUrl: 'https://picsum.photos/seed/me-gustas/400/400', duration: 210 },
   { id: 'm2', title: '222', artist: 'Hyper-Signal', url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3', coverUrl: 'https://picsum.photos/seed/222/400/400', duration: 185 },
-  { id: 'm3', title: 'Против царя', artist: 'Shadow-Core', url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3', coverUrl: 'https://picsum.photos/seed/tsar/400/400', duration: 145 },
+  { id: 'm3', title: 'Nuxus Core Beats', artist: 'Shadow-Core', url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3', coverUrl: 'https://picsum.photos/seed/tsar/400/400', duration: 145 },
   { id: 'm4', title: 'Quantum Drift', artist: 'Nuxus Prime', url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3', coverUrl: 'https://picsum.photos/seed/drift/400/400', duration: 220 },
-  { id: 'm5', title: 'Blinding Lights', artist: 'The Weeknd', url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-5.mp3', coverUrl: 'https://picsum.photos/seed/weeknd/400/400', duration: 200 },
-  { id: 'm6', title: 'Cyberpunk 2077 Night', artist: 'Keanu R.', url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-6.mp3', coverUrl: 'https://picsum.photos/seed/cyber/400/400', duration: 310 },
-  { id: 'm7', title: 'Phonk Signal', artist: 'Ghostface Playa', url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-7.mp3', coverUrl: 'https://picsum.photos/seed/phonk/400/400', duration: 120 },
-  { id: 'm8', title: 'Lovely', artist: 'Billie Eilish', url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-8.mp3', coverUrl: 'https://picsum.photos/seed/billie/400/400', duration: 201 },
-  { id: 'm9', title: 'Starboy', artist: 'The Weeknd', url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-9.mp3', coverUrl: 'https://picsum.photos/seed/starboy/400/400', duration: 230 },
-  { id: 'm10', title: 'Industry Baby', artist: 'Lil Nas X', url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-10.mp3', coverUrl: 'https://picsum.photos/seed/industry/400/400', duration: 212 },
-  { id: 'm11', title: 'Heat Waves', artist: 'Glass Animals', url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-11.mp3', coverUrl: 'https://picsum.photos/seed/heat/400/400', duration: 238 },
-  { id: 'm12', title: 'As It Was', artist: 'Harry Styles', url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-12.mp3', coverUrl: 'https://picsum.photos/seed/harry/400/400', duration: 167 },
-  { id: 'm13', title: 'The Motto', artist: 'Tiësto', url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-13.mp3', coverUrl: 'https://picsum.photos/seed/tiesto/400/400', duration: 164 },
-  { id: 'm14', title: 'Enemy', artist: 'Imagine Dragons', url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-14.mp3', coverUrl: 'https://picsum.photos/seed/dragons/400/400', duration: 173 },
-  { id: 'm15', title: 'Another Love', artist: 'Tom Odell', url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-15.mp3', coverUrl: 'https://picsum.photos/seed/love/400/400', duration: 244 },
-  { id: 'm16', title: 'Bad Habit', artist: 'Steve Lacy', url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-16.mp3', coverUrl: 'https://picsum.photos/seed/habit/400/400', duration: 232 },
-  { id: 'm17', title: 'Golden Hour', artist: 'JVKE', url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3', coverUrl: 'https://picsum.photos/seed/golden/400/400', duration: 200 },
-  { id: 'm18', title: 'Creepin', artist: 'Metro Boomin', url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3', coverUrl: 'https://picsum.photos/seed/creepin/400/400', duration: 221 },
-  { id: 'm19', title: 'Anti-Hero', artist: 'Taylor Swift', url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3', coverUrl: 'https://picsum.photos/seed/hero/400/400', duration: 200 },
-  { id: 'm20', title: 'Unholy', artist: 'Sam Smith', url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3', coverUrl: 'https://picsum.photos/seed/unholy/400/400', duration: 156 }
+  { id: 'm5', title: 'Blinding Lights', artist: 'The Weeknd', url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-8.mp3', coverUrl: 'https://picsum.photos/seed/weeknd/400/400', duration: 200 },
+  { id: 'm6', title: 'Cyberpunk 2077 Night', artist: 'Keanu R.', url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-10.mp3', coverUrl: 'https://picsum.photos/seed/cyber/400/400', duration: 310 },
+  { id: 'm7', title: 'Phonk Signal', artist: 'Ghostface Playa', url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-12.mp3', coverUrl: 'https://picsum.photos/seed/phonk/400/400', duration: 120 },
+  { id: 'm8', title: 'Lovely', artist: 'Billie Eilish', url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-15.mp3', coverUrl: 'https://picsum.photos/seed/billie/400/400', duration: 201 }
 ];
 
 export default function MusicView() {

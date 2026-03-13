@@ -106,24 +106,16 @@ export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onO
     toast({ title: "Уведомления включены" });
   };
 
-  const chatName = formatDisplayName(isPrivate ? otherUserProfile?.name : (chat.name || 'Чат'));
+  const chatName = useMemo(() => {
+    if (isPrivate && otherUserProfile) return formatDisplayName(otherUserProfile.name);
+    return formatDisplayName(chat.name || otherUserProfile?.name || 'Чат');
+  }, [isPrivate, otherUserProfile, chat.name]);
 
   return (
     <>
     <Dialog open={open} onOpenChange={(o) => { onOpenChange(o); if(!o) setIsEditing(false); }}>
       <DialogContent className="max-w-md bg-card border-border p-0 overflow-hidden h-[85vh] flex flex-col rounded-[2.5rem] shadow-2xl">
         <DialogHeader className="p-6 text-center flex flex-col items-center shrink-0 space-y-0 relative">
-          {isChatAdmin && (
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              className="absolute top-4 right-14 rounded-full bg-white/5 z-10" 
-              onClick={() => setIsEditing(!isEditing)}
-            >
-              {isEditing ? <X className="w-4 h-4" /> : <Edit3 className="w-4 h-4" />}
-            </Button>
-          )}
-
           <div className="relative group mb-3">
             <UserAvatar 
               userId={isPrivate ? otherId : null} 
@@ -158,11 +150,24 @@ export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onO
               <DialogDescription className="text-xs font-mono opacity-60">
                 {isPrivate ? formatLastSeen(otherUserProfile?.lastSeen, otherUserProfile?.settings?.privacy?.lastSeenVisibility) : chat.username}
               </DialogDescription>
+              
+              {/* Кнопка редактирования перенесена вниз, чтобы не мешать крестику */}
+              {isChatAdmin && !isPrivate && (
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="mt-2 rounded-full bg-white/5 text-[10px] uppercase font-black tracking-widest gap-2 h-8 px-4" 
+                  onClick={() => setIsEditing(true)}
+                >
+                  <Edit3 className="w-3.5 h-3.5" /> Редактировать
+                </Button>
+              )}
             </>
           ) : (
             <div className="w-full space-y-3 px-6 mt-2">
               <Input value={editForm.name} onChange={e => setEditForm({...editForm, name: e.target.value})} className="bg-white/5 border-white/5 h-10 text-center font-bold" placeholder="Название" />
               {!isPrivate && <Input value={editForm.username} onChange={e => setEditForm({...editForm, username: e.target.value})} className="bg-white/5 border-white/5 h-10 text-center font-mono text-xs" placeholder="@username" />}
+              <Button variant="ghost" size="sm" className="w-fit mx-auto rounded-xl text-[9px] uppercase font-bold opacity-40" onClick={() => setIsEditing(false)}>Отмена</Button>
             </div>
           )}
           

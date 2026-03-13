@@ -50,8 +50,10 @@ const ChatListItem = memo(({
 
   const finalDisplayName = useMemo(() => {
     if (chat.type === 'saved') return 'Избранное';
-    return formatDisplayName(otherProfile?.name || chat.name || 'User');
-  }, [chat.type, otherProfile?.name, chat.name]);
+    // ДЛЯ ЛИЧНЫХ ЧАТОВ: Всегда берем имя из профиля, чтобы видеть изменения
+    if (chat.type === 'private' && otherProfile) return formatDisplayName(otherProfile.name);
+    return formatDisplayName(chat.name || otherProfile?.name || 'User');
+  }, [chat.type, otherProfile?.name, chat.name, otherProfile]);
 
   const displayTime = useMemo(() => {
     const date = chat.lastMessageAt ? new Date(chat.lastMessageAt) : new Date(chat.createdAt);
@@ -240,7 +242,7 @@ export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?:
       return bTime - aTime;
     });
 
-    // Deduplicate private chats (safety net)
+    // Deduplicate private chats
     const seenPrivateUsers = new Set();
     result = result.filter(c => {
       if (c.type === 'private') {
