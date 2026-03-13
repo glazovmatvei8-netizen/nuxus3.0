@@ -9,7 +9,7 @@ import { UserAvatar } from '@/components/user-avatar';
 import { 
   Send, Info, ChevronLeft, X, Paperclip, Mic, StopCircle, ChevronDown, Edit2, Pin, Search, PinOff,
   Smile, Instagram, Camera, Video, Sticker, Copy, Share2, Sparkles, Loader2, RefreshCw, Zap, Trash2, Pause, Play,
-  BarChart3, Image as ImageIcon, ArrowDown, Menu as MenuIcon, List
+  BarChart3, Image as ImageIcon, ArrowDown, Menu as MenuIcon, List, Phone
 } from 'lucide-react';
 import { MessageItem } from './message-item';
 import { useToast } from '@/hooks/use-toast';
@@ -45,7 +45,7 @@ MessageList.displayName = 'MessageList';
 export default function ChatArea() {
   const { user: firebaseUser } = useUser();
   const db = useFirestore();
-  const { currentChatId, setCurrentChatId, setForwardingMessage, localDrafts, setLocalDrafts } = useAppState();
+  const { currentChatId, setCurrentChatId, setForwardingMessage, localDrafts, setLocalDrafts, setActiveCallId } = useAppState();
   
   const [isChatInfoOpen, setIsChatInfoOpen] = useState(false);
   const [isPollModalOpen, setIsPollModalOpen] = useState(false);
@@ -127,6 +127,23 @@ export default function ChatArea() {
     if (currentChatId) setLocalDrafts(prev => ({ ...prev, [currentChatId]: val }));
     if (db && currentChatId && firebaseUser) {
       updateDocumentNonBlocking(doc(db, 'chats', currentChatId), { [`typing.${firebaseUser.uid}`]: !!val });
+    }
+  };
+
+  const startCall = async (type: 'audio' | 'video') => {
+    if (!db || !firebaseUser || !otherId) return;
+    try {
+      const callRef = await addDoc(collection(db, 'calls'), {
+        callerId: firebaseUser.uid,
+        receiverId: otherId,
+        chatId: currentChatId,
+        type,
+        status: 'calling',
+        createdAt: new Date().toISOString()
+      });
+      setActiveCallId(callRef.id);
+    } catch (e) {
+      toast({ title: "Ошибка вызова", variant: "destructive" });
     }
   };
 
@@ -374,6 +391,12 @@ export default function ChatArea() {
           </div>
         </div>
         <div className="flex items-center gap-1">
+          {chat?.type === 'private' && (
+            <>
+              <Button variant="ghost" size="icon" onClick={() => startCall('audio')} className="text-white/60 hover:text-primary"><Phone className="w-5 h-5" /></Button>
+              <Button variant="ghost" size="icon" onClick={() => startCall('video')} className="text-white/60 hover:text-primary"><Video className="w-5 h-5" /></Button>
+            </>
+          )}
           <Button variant="ghost" size="icon" onClick={() => setIsSearchMode(!isSearchMode)} className={cn(isSearchMode && "text-primary")}><Search className="w-5 h-5" /></Button>
           <Button variant="ghost" size="icon" onClick={() => setIsChatInfoOpen(true)}><Info className="w-5 h-5" /></Button>
         </div>

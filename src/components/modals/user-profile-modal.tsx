@@ -21,7 +21,7 @@ import { ru } from 'date-fns/locale';
 export function UserProfileModal() {
   const db = useFirestore();
   const { user: currentUser } = useUser();
-  const { inspectedUserId, setInspectedUserId, setCurrentChatId, setActiveView } = useAppState();
+  const { inspectedUserId, setInspectedUserId, setCurrentChatId, setActiveView, setActiveCallId } = useAppState();
   const { toast } = useToast();
 
   const targetUserRef = useMemoFirebase(() => (!db || !inspectedUserId) ? null : doc(db, 'users', inspectedUserId), [db, inspectedUserId]);
@@ -60,7 +60,25 @@ export function UserProfileModal() {
       setActiveView('chats');
       toast({ title: "Диалог открыт" });
     } catch (e: any) {
-      toast({ title: "Ошибка", description: e.message, variant: "destructive" });
+      toast({ title: "Ошибка открытия чата", description: e.message, variant: "destructive" });
+    }
+  };
+
+  const startCall = async (type: 'audio' | 'video') => {
+    if (!db || !currentUser || !targetUser) return;
+    try {
+      const callRef = await addDoc(collection(db, 'calls'), {
+        callerId: currentUser.uid,
+        receiverId: targetUser.id,
+        chatId: 'global_profile',
+        type,
+        status: 'calling',
+        createdAt: new Date().toISOString()
+      });
+      setActiveCallId(callRef.id);
+      setInspectedUserId(null);
+    } catch (e) {
+      toast({ title: "Ошибка вызова", variant: "destructive" });
     }
   };
 
@@ -76,7 +94,7 @@ export function UserProfileModal() {
 
   return (
     <Dialog open={!!inspectedUserId} onOpenChange={(o) => !o && setInspectedUserId(null)}>
-      <DialogContent className="max-w-md bg-[#0a0a0c] border-white/10 p-0 overflow-hidden h-auto max-h-[90vh] flex flex-col rounded-[2.5rem] shadow-2xl">
+      <DialogContent className="max-w-[340px] bg-[#0a0a0c] border-white/10 p-0 overflow-hidden h-auto rounded-[2.5rem] shadow-2xl">
         <DialogHeader className="sr-only">
           <DialogTitle>{formatDisplayName(targetUser?.name)}</DialogTitle>
           <DialogDescription>Node information details</DialogDescription>
@@ -84,11 +102,12 @@ export function UserProfileModal() {
 
         <div className="absolute inset-0 nuxus-core-glow opacity-20 pointer-events-none" />
         
-        <div className="relative h-24 bg-gradient-to-b from-primary/20 to-transparent shrink-0">
-          <div className="absolute -bottom-8 left-1/2 -translate-x-1/2">
+        {/* Background / Header */}
+        <div className="relative h-32 bg-gradient-to-b from-primary/20 to-transparent shrink-0">
+          <div className="absolute -bottom-12 left-1/2 -translate-x-1/2">
             <UserAvatar 
               userId={inspectedUserId} 
-              className="h-20 w-20 border-4 border-[#0a0a0c] shadow-2xl" 
+              className="h-24 w-24 border-4 border-[#0a0a0c] shadow-2xl" 
               manualAvatarUrl={targetUser?.avatarUrl}
               fallbackName={targetUser?.name}
               showOnlineStatus
@@ -96,50 +115,60 @@ export function UserProfileModal() {
           </div>
         </div>
 
-        <div className="mt-10 px-5 text-center shrink-0">
-          <h2 className="text-lg font-black text-white flex items-center justify-center gap-2">
+        {/* User Identity */}
+        <div className="mt-14 px-6 text-center shrink-0">
+          <h2 className="text-xl font-black text-white flex items-center justify-center gap-2">
             {formatDisplayName(targetUser?.name)}
-            {isUserPremium(targetUser) && <Star className="w-3.5 h-3.5 text-accent fill-accent" />}
+            {isUserPremium(targetUser) && <Star className="w-4 h-4 text-accent fill-accent" />}
           </h2>
-          <p className="text-[8px] text-primary font-black uppercase tracking-[0.3em] mt-0.5">{targetUser?.username}</p>
-          <p className="text-[8px] text-muted-foreground uppercase font-bold mt-1 opacity-60">
+          <p className="text-[10px] text-primary font-black uppercase tracking-[0.3em] mt-1">{targetUser?.username}</p>
+          <p className="text-[9px] text-muted-foreground uppercase font-bold mt-1.5 opacity-60">
             {formatLastSeen(targetUser?.lastSeen, targetUser?.settings?.privacy?.lastSeenVisibility)}
           </p>
         </div>
 
-        <div className="flex-1 mt-3 overflow-y-auto scrollbar-hide px-5 space-y-3 pb-6">
+        {/* Content Area */}
+        <div className="mt-6 px-6 space-y-4 pb-8">
           <div className="flex gap-2">
-            <Button onClick={handleStartChat} className="flex-1 h-10 bg-primary text-white rounded-2xl font-black uppercase italic tracking-widest gap-2 shadow-xl shadow-primary/20 text-[9px]">
-              <MessageCircle className="w-3.5 h-3.5" /> Написать
+            <Button onClick={handleStartChat} className="flex-1 h-12 bg-primary text-white rounded-2xl font-black uppercase italic tracking-widest gap-2 shadow-xl shadow-primary/20 text-[10px]">
+              <MessageCircle className="w-4 h-4" /> Написать
             </Button>
-            <Button variant="ghost" size="icon" className="h-10 w-10 rounded-2xl bg-white/5 text-white" onClick={copyId}>
-              <Copy className="w-3.5 h-3.5" />
+            <Button variant="ghost" size="icon" className="h-12 w-12 rounded-2xl bg-white/5 text-white" onClick={copyId}>
+              <Copy className="w-4 h-4" />
             </Button>
           </div>
 
           {targetUser?.bio && (
-            <div className="space-y-1">
-              <h3 className="text-[7px] font-black uppercase tracking-widest text-muted-foreground/60 px-1">О себе</h3>
-              <div className="bg-white/5 p-2.5 rounded-xl border border-white/5">
-                <p className="text-[11px] text-white/80 leading-snug">{targetUser.bio}</p>
+            <div className="space-y-1.5">
+              <h3 className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/60 px-1">О себе</h3>
+              <div className="bg-white/5 p-3 rounded-2xl border border-white/5">
+                <p className="text-xs text-white/80 leading-relaxed">{targetUser.bio}</p>
               </div>
             </div>
           )}
 
-          <div className="space-y-1">
-            <h3 className="text-[7px] font-black uppercase tracking-widest text-muted-foreground/60 px-1">Параметры</h3>
-            <div className="bg-white/5 rounded-xl border border-white/5 overflow-hidden divide-y divide-white/[0.03]">
+          <div className="space-y-1.5">
+            <h3 className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/60 px-1">Инфо</h3>
+            <div className="bg-white/5 rounded-2xl border border-white/5 overflow-hidden divide-y divide-white/[0.03]">
               <InfoRow icon={Calendar} label="Вход" value={registrationDate} />
               <InfoRow icon={Shield} label="Узел" value={targetUser?.isPremium ? "Quantum" : "Basic"} color={targetUser?.isPremium ? "text-accent" : ""} />
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-2">
-            <Button variant="outline" className="h-9 rounded-xl border-white/10 text-[8px] font-black uppercase tracking-widest gap-2 opacity-60 hover:opacity-100">
-              <Phone className="w-3 h-3" /> Звонок
+          <div className="grid grid-cols-2 gap-2 pt-2">
+            <Button 
+              variant="outline" 
+              onClick={() => startCall('audio')}
+              className="h-11 rounded-2xl border-white/10 bg-white/5 text-[9px] font-black uppercase tracking-widest gap-2 hover:bg-primary/10 hover:text-primary transition-all"
+            >
+              <Phone className="w-3.5 h-3.5" /> Звонок
             </Button>
-            <Button variant="outline" className="h-9 rounded-xl border-white/10 text-[8px] font-black uppercase tracking-widest gap-2 opacity-60 hover:opacity-100">
-              <Video className="w-3 h-3" /> Видео
+            <Button 
+              variant="outline" 
+              onClick={() => startCall('video')}
+              className="h-11 rounded-2xl border-white/10 bg-white/5 text-[9px] font-black uppercase tracking-widest gap-2 hover:bg-primary/10 hover:text-primary transition-all"
+            >
+              <Video className="w-3.5 h-3.5" /> Видео
             </Button>
           </div>
         </div>
@@ -150,12 +179,12 @@ export function UserProfileModal() {
 
 function InfoRow({ icon: Icon, label, value, color }: any) {
   return (
-    <div className="flex items-center justify-between p-2.5">
-      <div className="flex items-center gap-2">
-        <Icon className="w-3 h-3 text-muted-foreground/40" />
-        <span className="text-[9px] text-muted-foreground font-medium">{label}</span>
+    <div className="flex items-center justify-between p-3">
+      <div className="flex items-center gap-2.5">
+        <Icon className="w-3.5 h-3.5 text-muted-foreground/40" />
+        <span className="text-[10px] text-muted-foreground font-medium uppercase">{label}</span>
       </div>
-      <span className={`text-[9px] font-bold ${color || 'text-white'}`}>{value}</span>
+      <span className={`text-[10px] font-bold ${color || 'text-white'}`}>{value}</span>
     </div>
   );
 }
