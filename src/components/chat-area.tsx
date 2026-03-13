@@ -9,7 +9,7 @@ import { UserAvatar } from '@/components/user-avatar';
 import { 
   Send, Info, ChevronLeft, X, Paperclip, Mic, StopCircle, ChevronDown, Edit2, Pin, Search, PinOff,
   Smile, Instagram, Camera, Video, Sticker, Copy, Share2, Sparkles, Loader2, RefreshCw, Zap, Trash2, Pause, Play,
-  BarChart3, Image as ImageIcon, ArrowDown
+  BarChart3, Image as ImageIcon, ArrowDown, Menu as MenuIcon, List
 } from 'lucide-react';
 import { MessageItem } from './message-item';
 import { useToast } from '@/hooks/use-toast';
@@ -57,6 +57,7 @@ export default function ChatArea() {
   const [searchQuery, setSearchQuery] = useState('');
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [isAiLoading, setIsAiLoading] = useState(false);
+  const [showBotMenu, setShowBotMenu] = useState(false);
 
   const [selectedFiles, setSelectedFiles] = useState<{ url: string; type: 'image' | 'video' }[]>([]);
   const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
@@ -90,6 +91,8 @@ export default function ChatArea() {
     if (!chat?.typing) return false;
     return Object.entries(chat.typing).some(([uid, active]) => active && uid !== firebaseUser?.uid);
   }, [chat?.typing, firebaseUser?.uid]);
+
+  const isBot = useMemo(() => chat?.username === '@stickers', [chat?.username]);
 
   const scrollToBottom = useCallback((behavior: ScrollBehavior = 'smooth') => {
     if (messagesEndRef.current) {
@@ -219,14 +222,46 @@ export default function ChatArea() {
       msgData.replyToContent = captureReply.contentType === 'text' ? captureReply.content : `[${captureReply.contentType}]`; 
     }
     
-    await addDoc(collection(db, 'chats', currentChatId, 'messages'), msgData);
+    const newMsgRef = await addDoc(collection(db, 'chats', currentChatId, 'messages'), msgData);
+    
+    // БОТ ЛОГИКА (@stickers)
+    if (isBot && type_msg === 'text') {
+      const lower = content_msg.toLowerCase();
+      let botReply = "Извините, я не понимаю этот сигнал. Используйте Меню.";
+      
+      if (lower === '/start' || lower === '/help') {
+        botReply = "Привет! Я Sticker Bot 🎨. Я помогу тебе управлять твоими стикерпаками.\n\n/newpack - Создать новый пак\n/mypacks - Твои паки\n/stats - Статистика использования";
+      } else if (lower === '/newpack') {
+        botReply = "Отлично! Как мы назовем твой новый стикерпак? Отправь название.";
+      } else if (lower === '/mypacks') {
+        botReply = "У тебя пока нет созданных паков. Хочешь создать первый? /newpack";
+      }
+
+      setTimeout(async () => {
+        await addDoc(collection(db!, 'chats', currentChatId, 'messages'), {
+          chatId: currentChatId,
+          senderId: 'bot_stickers',
+          senderName: 'Sticker Bot 🎨',
+          content: encryptSignal(botReply),
+          contentType: 'text',
+          sentAt: new Date().toISOString(),
+          isRead: false
+        });
+      }, 800);
+    }
+
     updateDocumentNonBlocking(doc(db, 'chats', currentChatId), { 
       lastMessageAt: new Date().toISOString(), 
       lastSenderId: firebaseUser.uid, 
       [`typing.${firebaseUser.uid}`]: false 
     });
     setTimeout(() => scrollToBottom('smooth'), 100);
-  }, [messageInput, currentChatId, firebaseUser, db, userProfile, replyTo, editingMsg, setLocalDrafts, scrollToBottom]);
+  }, [messageInput, currentChatId, firebaseUser, db, userProfile, replyTo, editingMsg, setLocalDrafts, scrollToBottom, isBot]);
+
+  const handleBotCommand = (cmd: string) => {
+    handleSendMessage(cmd, 'text');
+    setShowBotMenu(false);
+  };
 
   return (
     <div className="flex-1 flex flex-col h-full bg-background relative overflow-hidden z-20">
@@ -253,7 +288,9 @@ export default function ChatArea() {
 
       {pinnedMessage && (
         <div className="h-12 bg-white/5 backdrop-blur-md border-b border-white/5 flex items-center justify-between px-4 animate-in slide-in-from-top-2 z-20">
-          <div className="flex items-center gap-3 min-w-0 cursor-pointer overflow-hidden">
+          <div className="flex items-center gap-3 min-w-0 cursor-pointer overflow-hidden" onClick={() => {
+             // Logic to scroll to pinned could be here
+          }}>
             <div className="w-1 h-8 bg-primary rounded-full" />
             <div className="flex flex-col min-w-0">
               <span className="text-[10px] font-black text-primary uppercase tracking-widest">Закреплено</span>
@@ -290,7 +327,7 @@ export default function ChatArea() {
       </div>
 
       <footer className="p-3 pb-6 bg-[#0a0a0c]/90 backdrop-blur-2xl border-t border-white/5 shrink-0 z-30">
-        <div className="max-w-4xl mx-auto space-y-2">
+        <div className="max-w-4xl mx-auto space-y-2 relative">
           {replyTo && (
             <div className="p-2 bg-muted/50 rounded-xl border-l-4 border-accent flex items-center justify-between animate-in slide-in-from-bottom-1">
               <div className="flex flex-col min-w-0 pl-2">
@@ -300,7 +337,39 @@ export default function ChatArea() {
               <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setReplyTo(null)}><X className="w-4 h-4" /></Button>
             </div>
           )}
+          
           <div className="flex gap-3 items-center">
+            {isBot && (
+              <Popover open={showBotMenu} onOpenChange={setShowBotMenu}>
+                <PopoverTrigger asChild>
+                  <Button variant="ghost" size="icon" className="text-primary hover:bg-primary/10 rounded-xl">
+                    <MenuIcon className="w-5 h-5" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent side="top" align="start" className="w-64 bg-card/95 backdrop-blur-3xl border-white/10 p-2 rounded-[1.8rem] mb-4 shadow-2xl">
+                  <div className="space-y-1">
+                    <button onClick={() => handleBotCommand('/newpack')} className="w-full flex items-center justify-between p-3 rounded-xl hover:bg-white/5 transition-all group">
+                      <span className="text-xs font-bold text-white group-hover:text-primary transition-colors">Создать стикерпак</span>
+                      <span className="text-[9px] font-black text-muted-foreground uppercase">/newpack</span>
+                    </button>
+                    <button onClick={() => handleBotCommand('/mypacks')} className="w-full flex items-center justify-between p-3 rounded-xl hover:bg-white/5 transition-all group">
+                      <span className="text-xs font-bold text-white group-hover:text-primary transition-colors">Мои паки</span>
+                      <span className="text-[9px] font-black text-muted-foreground uppercase">/mypacks</span>
+                    </button>
+                    <button onClick={() => handleBotCommand('/stats')} className="w-full flex items-center justify-between p-3 rounded-xl hover:bg-white/5 transition-all group">
+                      <span className="text-xs font-bold text-white group-hover:text-primary transition-colors">Статистика</span>
+                      <span className="text-[9px] font-black text-muted-foreground uppercase">/stats</span>
+                    </button>
+                    <div className="h-px bg-white/5 my-1" />
+                    <button onClick={() => handleBotCommand('/help')} className="w-full flex items-center justify-between p-3 rounded-xl hover:bg-white/5 transition-all group">
+                      <span className="text-xs font-bold text-white group-hover:text-primary transition-colors">Помощь</span>
+                      <span className="text-[9px] font-black text-muted-foreground uppercase">/help</span>
+                    </button>
+                  </div>
+                </PopoverContent>
+              </Popover>
+            )}
+
             <Popover>
               <PopoverTrigger asChild><Button variant="ghost" size="icon"><Paperclip /></Button></PopoverTrigger>
               <PopoverContent side="top" align="start" className="w-48 bg-card border-white/10 rounded-2xl p-1 mb-2">
@@ -308,12 +377,14 @@ export default function ChatArea() {
                 <Button variant="ghost" className="w-full justify-start gap-3 rounded-xl h-11 text-xs" onClick={() => setIsPollModalOpen(true)}><BarChart3 className="w-4 h-4" /> Опрос</Button>
               </PopoverContent>
             </Popover>
+            
             <input type="file" hidden ref={fileInputRef} accept="image/*,video/*" multiple onChange={async (e) => {
               const processed = await Promise.all(Array.from(e.target.files || []).map(f => new Promise(res => { 
                 const r = new FileReader(); r.onloadend = () => res({ url: r.result as string, type: f.type.startsWith('video') ? 'video' : 'image' }); r.readAsDataURL(f); 
               })));
               setSelectedFiles(processed as any); setIsPreviewModalOpen(true);
             }} />
+            
             <div className="flex-1 flex items-center bg-white/[0.03] rounded-2xl border border-white/[0.05] h-11 px-4 relative group">
               <Input placeholder="Сообщение" className="bg-transparent border-none focus-visible:ring-0" value={messageInput} onChange={e => handleInputChange(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSendMessage()} />
               <div className="flex items-center gap-2">

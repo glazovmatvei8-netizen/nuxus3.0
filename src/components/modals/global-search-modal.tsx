@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useEffect } from 'react';
@@ -64,7 +65,7 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
           type: 'bot', 
           data: { 
             id: 'bot_stickers', 
-            name: 'Sticker Manager Bot', 
+            name: 'Sticker Bot 🎨', 
             username: '@stickers', 
             avatarUrl: 'https://i.ibb.co/sd2MqGz2/Icon.png' 
           } 
@@ -108,7 +109,9 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
       }
       onOpenChange(false);
       setActiveView('chats');
-    } catch (e) {}
+    } catch (e) {
+      console.error("Bot open error:", e);
+    }
   };
 
   return (
