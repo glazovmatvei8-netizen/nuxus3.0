@@ -29,6 +29,7 @@ import type { Message, PollOption } from '@/lib/types';
 import { Button } from './ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { transcribeVoice } from '@/ai/flows/voice-to-text-flow';
+import { useAppState } from '@/lib/store';
 
 const QUICK_REACTIONS = ['❤️', '👍', '🔥', '😂', '😮', '😢', '💯'];
 
@@ -40,6 +41,7 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
   const { user } = useUser();
   const db = useFirestore();
   const { toast } = useToast();
+  const { setInspectedUserId } = useAppState();
   const [isPlaying, setIsPlaying] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
   const [transcription, setTranscription] = useState<string | null>(null);
@@ -166,7 +168,11 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
   return (
     <div className={cn("w-full flex mb-2 transition-all", isMe ? "justify-end" : "justify-start", highlight && "scale-[1.02]")}>
       <div className={cn("flex gap-3 max-w-[90%] items-end", isMe ? "flex-row-reverse" : "flex-row")}>
-        {!isMe && <UserAvatar userId={message.senderId} className="h-9 w-9 shrink-0" fallbackName={message.senderName} />}
+        {!isMe && (
+          <div className="cursor-pointer active:scale-90 transition-transform" onClick={() => setInspectedUserId(message.senderId)}>
+            <UserAvatar userId={message.senderId} className="h-9 w-9 shrink-0" fallbackName={message.senderName} />
+          </div>
+        )}
         <div className={cn("flex flex-col min-w-0 max-w-full", isMe ? "items-end" : "items-start")}>
           {!isMe && isGroup && <span className="text-[9px] font-black text-primary uppercase tracking-widest mb-1 ml-1 truncate max-w-[150px]">{message.senderName}</span>}
           

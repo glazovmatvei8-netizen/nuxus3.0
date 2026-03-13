@@ -26,6 +26,10 @@ interface AppState {
   settingsTab: string;
   setSettingsTab: (tab: string) => void;
   
+  // User Inspection State
+  inspectedUserId: string | null;
+  setInspectedUserId: (id: string | null) => void;
+  
   // Music State
   currentTrack: Track | null;
   setCurrentTrack: (track: Track | null) => void;
@@ -53,6 +57,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [settingsTab, setSettingsTab] = useState('profile');
+  const [inspectedUserId, setInspectedUserId] = useState<string | null>(null);
   
   const [currentTrack, setCurrentTrack] = useState<Track | null>(null);
   const [isPlayingMusic, setIsPlayingMusic] = useState(false);
@@ -81,6 +86,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setIsSearchOpen,
       settingsTab,
       setSettingsTab,
+      inspectedUserId,
+      setInspectedUserId,
       currentTrack,
       setCurrentTrack,
       isPlayingMusic,

@@ -18,6 +18,7 @@ import { NotificationListener } from './notification-listener';
 import { SettingsModal } from './modals/settings-modal';
 import { GlobalSearchModal } from './modals/global-search-modal';
 import { ForwardModal } from './modals/forward-modal';
+import { UserProfileModal } from './modals/user-profile-modal';
 import { UpdateNotifier } from './update-notifier';
 import { MusicPlayer } from './music-player';
 import { UserAvatar } from './user-avatar';
@@ -131,6 +132,7 @@ export default function ChatMain() {
       <SettingsModal open={isSettingsOpen} onOpenChange={setIsSettingsOpen} />
       <GlobalSearchModal open={isSearchOpen} onOpenChange={setIsSearchOpen} />
       <ForwardModal />
+      <UserProfileModal />
     </div>
   );
 }
