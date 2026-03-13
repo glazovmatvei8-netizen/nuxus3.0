@@ -60,6 +60,7 @@ export default function ChatArea() {
 
   const [selectedFiles, setSelectedFiles] = useState<{ url: string; type: 'image' | 'video' }[]>([]);
   const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
+  const [isSendingFiles, setIsSendingFiles] = useState(false);
   
   const [isRecordingVideo, setIsRecordingVideo] = useState(false);
   const [isRecordingAudio, setIsRecordingAudio] = useState(false);
@@ -99,7 +100,6 @@ export default function ChatArea() {
     }
   }, []);
 
-  // Автоскролл при загрузке или новых сообщениях
   useEffect(() => {
     if (currentChatId && messages) {
       const timer = setTimeout(() => scrollToBottom('instant'), 100);
@@ -204,8 +204,14 @@ export default function ChatArea() {
     const captureReply = replyTo;
     const captureEdit = editingMsg;
 
-    setMessageInput(''); setReplyTo(null); setEditingMsg(null); setShowEmojiPicker(false);
-    if (currentChatId) setLocalDrafts(prev => ({ ...prev, [currentChatId]: '' }));
+    if (type_msg === 'text') {
+      setMessageInput('');
+      if (currentChatId) setLocalDrafts(prev => ({ ...prev, [currentChatId]: '' }));
+    }
+    
+    setReplyTo(null); 
+    setEditingMsg(null); 
+    setShowEmojiPicker(false);
 
     if (captureEdit) {
       updateDocumentNonBlocking(doc(db, 'chats', currentChatId, 'messages', captureEdit.id), { content: finalContent, editedAt: new Date().toISOString() });
@@ -221,43 +227,48 @@ export default function ChatArea() {
       msgData.replyToContent = captureReply.contentType === 'text' ? captureReply.content : `[${captureReply.contentType}]`; 
     }
     
-    const newMsgRef = await addDoc(collection(db, 'chats', currentChatId, 'messages'), msgData);
+    await addDoc(collection(db, 'chats', currentChatId, 'messages'), msgData);
     
     // БОТ ЛОГИКА (@stickers)
-    if (isBot && type_msg === 'text' && !captureReply) {
-      const lower = content_msg.toLowerCase();
-      let botReply = "Извините, я не понимаю этот сигнал. Используйте Меню.";
+    if (isBot && !captureReply) {
+      const lower = type_msg === 'text' ? content_msg.toLowerCase() : '';
+      let botReply = "";
       
-      // Ищем последнее сообщение бота для контекста
       const botMessages = messages?.filter(m => m.senderId === 'bot_stickers');
       const lastBotMsg = botMessages?.[botMessages.length - 1];
       const lastBotText = lastBotMsg ? decryptSignal(lastBotMsg.content) : '';
 
-      if (lower === '/start' || lower === '/help') {
-        botReply = "Привет! Я Sticker Bot 🎨. Я помогу тебе управлять твоими стикерпаками.\n\n/newpack - Создать новый пак\n/mypacks - Твои паки\n/stats - Статистика использования";
-      } else if (lower === '/newpack') {
-        botReply = "Отлично! Как мы назовем твой новый стикерпак? Отправь название.";
-      } else if (lower === '/mypacks') {
-        botReply = "У тебя пока нет созданных паков. Хочешь создать первый? /newpack";
-      } else if (lower === '/stats') {
-        botReply = "Статистика Ядра:\n\nУзлов: 120+\nСтикеров: 4500+\nТвой статус: Active Node";
-      } else if (lastBotText.includes('назовем твой новый стикерпак')) {
-        botReply = `Пак "${content_msg}" инициализирован! Теперь отправь мне первый стикер (фото или эмодзи) для этого набора.`;
-      } else if (lastBotText.includes('отправь мне первый стикер')) {
-        botReply = "Стикер принят! Пак находится в стадии компиляции. Когда он будет готов, я пришлю тебе ссылку на установку.";
+      if (type_msg === 'text') {
+        if (lower === '/start' || lower === '/help') {
+          botReply = "Привет! Я Sticker Bot 🎨. Я помогу тебе управлять твоими стикерпаками.\n\n/newpack - Создать новый пак\n/mypacks - Твои паки\n/stats - Статистика использования";
+        } else if (lower === '/newpack') {
+          botReply = "Отлично! Как мы назовем твой новый стикерпак? Отправь название.";
+        } else if (lower === '/mypacks') {
+          botReply = "У тебя пока нет созданных паков. Хочешь создать первый? /newpack";
+        } else if (lower === '/stats') {
+          botReply = "Статистика Ядра:\n\nУзлов: 120+\nСтикеров: 4500+\nТвой статус: Active Node";
+        } else if (lastBotText.includes('назовем твой новый стикерпак')) {
+          botReply = `Пак "${content_msg}" инициализирован! Теперь отправь мне первый стикер (фото или эмодзи) для этого набора.`;
+        }
+      } else if (type_msg === 'image' || type_msg === 'sticker') {
+        if (lastBotText.includes('отправь мне первый стикер')) {
+          botReply = "Стикер принят! Пак находится в стадии компиляции. Когда он будет готов, я пришлю тебе ссылку на установку.";
+        }
       }
 
-      setTimeout(async () => {
-        await addDoc(collection(db!, 'chats', currentChatId, 'messages'), {
-          chatId: currentChatId,
-          senderId: 'bot_stickers',
-          senderName: 'Sticker Bot 🎨',
-          content: encryptSignal(botReply),
-          contentType: 'text',
-          sentAt: new Date().toISOString(),
-          isRead: false
-        });
-      }, 800);
+      if (botReply) {
+        setTimeout(async () => {
+          await addDoc(collection(db!, 'chats', currentChatId, 'messages'), {
+            chatId: currentChatId,
+            senderId: 'bot_stickers',
+            senderName: 'Sticker Bot 🎨',
+            content: encryptSignal(botReply),
+            contentType: 'text',
+            sentAt: new Date().toISOString(),
+            isRead: false
+          });
+        }, 800);
+      }
     }
 
     updateDocumentNonBlocking(doc(db, 'chats', currentChatId), { 
@@ -271,6 +282,45 @@ export default function ChatArea() {
   const handleBotCommand = (cmd: string) => {
     handleSendMessage(cmd, 'text');
     setShowBotMenu(false);
+  };
+
+  const onFilesSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    try {
+      const processed = await Promise.all(Array.from(files).map(f => new Promise(res => { 
+        const r = new FileReader(); 
+        r.onloadend = () => res({ 
+          url: r.result as string, 
+          type: f.type.startsWith('video') ? 'video' : 'image' 
+        }); 
+        r.readAsDataURL(f); 
+      })));
+      setSelectedFiles(processed as any);
+      setIsPreviewModalOpen(true);
+    } catch (err) {
+      toast({ title: "Ошибка загрузки", variant: "destructive" });
+    } finally {
+      // Сбрасываем значение input, чтобы можно было выбрать тот же файл снова
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  const onSendFilesFromPreview = async () => {
+    if (isSendingFiles) return;
+    setIsSendingFiles(true);
+    try {
+      for (const f of selectedFiles) {
+        await handleSendMessage(f.url, f.type);
+      }
+      setSelectedFiles([]);
+      setIsPreviewModalOpen(false);
+    } catch (e) {
+      toast({ title: "Ошибка при отправке", variant: "destructive" });
+    } finally {
+      setIsSendingFiles(false);
+    }
   };
 
   return (
@@ -388,12 +438,14 @@ export default function ChatArea() {
               </PopoverContent>
             </Popover>
             
-            <input type="file" hidden ref={fileInputRef} accept="image/*,video/*" multiple onChange={async (e) => {
-              const processed = await Promise.all(Array.from(e.target.files || []).map(f => new Promise(res => { 
-                const r = new FileReader(); r.onloadend = () => res({ url: r.result as string, type: f.type.startsWith('video') ? 'video' : 'image' }); r.readAsDataURL(f); 
-              })));
-              setSelectedFiles(processed as any); setIsPreviewModalOpen(true);
-            }} />
+            <input 
+              type="file" 
+              hidden 
+              ref={fileInputRef} 
+              accept="image/*,video/*" 
+              multiple 
+              onChange={onFilesSelected} 
+            />
             
             <div className="flex-1 flex items-center bg-white/[0.03] rounded-2xl border border-white/[0.05] h-11 px-4 relative group">
               <Input placeholder="Сообщение" className="bg-transparent border-none focus-visible:ring-0" value={messageInput} onChange={e => handleInputChange(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSendMessage()} />
@@ -420,7 +472,16 @@ export default function ChatArea() {
 
       {showEmojiPicker && <div className="absolute bottom-24 right-4 z-50 w-[320px] h-[400px]"><EmojiPicker onEmojiSelect={(e) => handleInputChange(messageInput + e)} onStickerSelect={(url) => handleSendMessage(url, 'sticker')} /></div>}
       {chat && <ChatInfoModal open={isChatInfoOpen} onOpenChange={setIsChatInfoOpen} chat={chat as any} />}
-      <ImagePreviewModal open={isPreviewModalOpen} onOpenChange={setIsPreviewModalOpen} files={selectedFiles} onRemove={(i) => setSelectedFiles(prev => prev.filter((_, idx) => idx !== i))} onSend={async () => { for (const f of selectedFiles) await handleSendMessage(f.url, f.type); setSelectedFiles([]); setIsPreviewModalOpen(false); }} isSending={false} />
+      
+      <ImagePreviewModal 
+        open={isPreviewModalOpen} 
+        onOpenChange={setIsPreviewModalOpen} 
+        files={selectedFiles} 
+        onRemove={(i) => setSelectedFiles(prev => prev.filter((_, idx) => idx !== i))} 
+        onSend={onSendFilesFromPreview} 
+        isSending={isSendingFiles} 
+      />
+      
       {currentChatId && <CreatePollModal open={isPollModalOpen} onOpenChange={setIsPollModalOpen} chatId={currentChatId} />}
     </div>
   );
