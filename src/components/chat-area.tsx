@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useRef, useEffect, useMemo, useCallback, memo } from 'react';
@@ -244,15 +245,47 @@ export default function ChatArea() {
         } else if (lower === '/newpack') {
           botReply = "Отлично! Как мы назовем твой новый стикерпак? Отправь название.";
         } else if (lower === '/mypacks') {
-          botReply = "У тебя пока нет созданных паков. Хочешь создать первый? /newpack";
+          // Реальный поиск паков
+          const packsQuery = query(collection(db, 'stickerPacks'), where('ownerId', '==', firebaseUser.uid));
+          const snap = await getDocs(packsQuery);
+          if (snap.empty) {
+            botReply = "У тебя пока нет созданных паков. Хочешь создать первый? /newpack";
+          } else {
+            botReply = "Твои стикерпаки:\n\n" + snap.docs.map((d, i) => `${i+1}. ${d.data().name} — /info_${d.id}`).join('\n');
+          }
         } else if (lower === '/stats') {
           botReply = "Статистика Ядра:\n\nУзлов: 120+\nСтикеров: 4500+\nТвой статус: Active Node";
         } else if (lastBotText.includes('назовем твой новый стикерпак')) {
-          botReply = `Пак "${content_msg}" инициализирован! Теперь отправь мне первый стикер (фото или эмодзи) для этого набора.`;
+          // Проверка уникальности имени
+          const nameQuery = query(collection(db, 'stickerPacks'), where('name', '==', content_msg.trim()));
+          const nameSnap = await getDocs(nameQuery);
+          if (!nameSnap.empty) {
+            botReply = `Ошибка: Пак с названием "${content_msg}" уже существует в Ядре. Выбери другое имя.`;
+          } else {
+            botReply = `Пак "${content_msg}" инициализирован! Теперь отправь мне первый стикер (фото) для этого набора.`;
+          }
         }
       } else if (type_msg === 'image' || type_msg === 'sticker') {
         if (lastBotText.includes('отправь мне первый стикер')) {
-          botReply = "Стикер принят! Пак находится в стадии компиляции. Когда он будет готов, я пришлю тебе ссылку на установку.";
+          // Извлекаем имя из прошлого сообщения бота
+          const match = lastBotText.match(/Пак "(.*)" инициализирован/);
+          const packName = match ? match[1] : "Новый пак";
+          
+          // РЕАЛЬНОЕ СОЗДАНИЕ ПАКА
+          const newPackRef = await addDoc(collection(db, 'stickerPacks'), {
+            ownerId: firebaseUser.uid,
+            name: packName,
+            iconUrl: content_msg,
+            stickerUrls: [content_msg],
+            createdAt: new Date().toISOString()
+          });
+
+          // Добавляем создателю
+          await updateDoc(doc(db, 'users', firebaseUser.uid), {
+            installedStickerPackIds: arrayUnion(newPackRef.id)
+          });
+
+          botReply = `Успех! Пак "${packName}" скомпилирован и добавлен в твой узел. 🦊\n\nСсылка для друзей:\n${window.location.origin}/?stickers=${newPackRef.id}`;
         }
       }
 
@@ -267,7 +300,7 @@ export default function ChatArea() {
             sentAt: new Date().toISOString(),
             isRead: false
           });
-        }, 800);
+        }, 400); // Ускорил ответ бота
       }
     }
 
@@ -302,7 +335,6 @@ export default function ChatArea() {
     } catch (err) {
       toast({ title: "Ошибка загрузки", variant: "destructive" });
     } finally {
-      // Сбрасываем значение input, чтобы можно было выбрать тот же файл снова
       if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
@@ -348,9 +380,7 @@ export default function ChatArea() {
 
       {pinnedMessage && (
         <div className="h-12 bg-white/5 backdrop-blur-md border-b border-white/5 flex items-center justify-between px-4 animate-in slide-in-from-top-2 z-20">
-          <div className="flex items-center gap-3 min-w-0 cursor-pointer overflow-hidden" onClick={() => {
-             // Logic to scroll to pinned could be here
-          }}>
+          <div className="flex items-center gap-3 min-w-0 cursor-pointer overflow-hidden" onClick={() => {}}>
             <div className="w-1 h-8 bg-primary rounded-full" />
             <div className="flex flex-col min-w-0">
               <span className="text-[10px] font-black text-primary uppercase tracking-widest">Закреплено</span>

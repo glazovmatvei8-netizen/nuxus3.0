@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -75,7 +76,8 @@ export function EmojiPicker({ onEmojiSelect, onStickerSelect, className }: Emoji
     if (!db || !user || activePackId === 'custom') return;
     if (confirm(`Удалить набор "${activePackName}"?`)) {
       try {
-        await updateDoc(doc(db, 'users', user.uid), {
+        const uRef = doc(db, 'users', user.uid);
+        await updateDoc(uRef, {
           installedStickerPackIds: arrayRemove(activePackId)
         });
         setActivePackId('custom');
@@ -91,10 +93,10 @@ export function EmojiPicker({ onEmojiSelect, onStickerSelect, className }: Emoji
     <div className={cn("bg-[#1c1c1e]/90 backdrop-blur-2xl border border-white/10 rounded-[2rem] overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.5)] flex flex-col h-full", className)}>
       <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0">
         <TabsList className="grid grid-cols-2 h-12 bg-white/5 border-b border-white/5 shrink-0 rounded-none p-0">
-          <TabsTrigger value="emoji" className="h-full rounded-none data-[state=active]:bg-white/10 data-[state=active]:text-primary gap-2">
+          <TabsTrigger value="emoji" className="h-full rounded-none data-[state=active]:bg-white/10 data-[state=active]:text-primary gap-2 transition-all">
             <Smile className="w-4 h-4" /> <span className="text-[10px] font-black uppercase tracking-widest">Эмодзи</span>
           </TabsTrigger>
-          <TabsTrigger value="stickers" className="h-full rounded-none data-[state=active]:bg-white/10 data-[state=active]:text-primary gap-2">
+          <TabsTrigger value="stickers" className="h-full rounded-none data-[state=active]:bg-white/10 data-[state=active]:text-primary gap-2 transition-all">
             <Sticker className="w-4 h-4" /> <span className="text-[10px] font-black uppercase tracking-widest">Стикеры</span>
           </TabsTrigger>
         </TabsList>
@@ -132,7 +134,7 @@ export function EmojiPicker({ onEmojiSelect, onStickerSelect, className }: Emoji
         </TabsContent>
 
         <TabsContent value="stickers" className="flex-1 min-h-0 m-0 outline-none flex flex-col">
-          <div className="flex gap-2 p-2 bg-white/10 border-b border-white/5 overflow-x-auto scrollbar-hide shrink-0 items-center">
+          <div className="flex gap-2 p-2 bg-white/5 border-b border-white/5 overflow-x-auto scrollbar-hide shrink-0 items-center">
             <button 
               onClick={() => setActivePackId('custom')}
               className={cn("h-10 min-w-[40px] rounded-xl flex items-center justify-center border transition-all", activePackId === 'custom' ? "bg-primary border-primary shadow-lg shadow-primary/20" : "bg-black/40 border-white/10 opacity-60")}
@@ -163,9 +165,9 @@ export function EmojiPicker({ onEmojiSelect, onStickerSelect, className }: Emoji
              {activePackId !== 'custom' && (
                <button 
                 onClick={handleDeletePack}
-                className="text-white/20 hover:text-red-500 transition-colors"
+                className="text-white/40 hover:text-red-500 transition-colors p-1"
                >
-                 <Trash2 className="w-3.5 h-3.5" />
+                 <Trash2 className="w-4 h-4" />
                </button>
              )}
           </div>
@@ -189,7 +191,7 @@ export function EmojiPicker({ onEmojiSelect, onStickerSelect, className }: Emoji
                   <Ghost className="w-12 h-12" />
                   <div className="space-y-1">
                     <p className="text-[10px] font-black uppercase tracking-widest text-white">Список пуст</p>
-                    <p className="text-[8px] font-bold uppercase tracking-wider text-muted-foreground">Устанавливайте паки<br />по ссылкам от друзей!</p>
+                    <p className="text-[8px] font-bold uppercase tracking-wider text-muted-foreground">Устанавливайте паки<br />через Sticker Bot!</p>
                   </div>
                 </div>
               )}
