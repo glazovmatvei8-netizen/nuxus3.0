@@ -24,6 +24,10 @@ import { UserAvatar } from './user-avatar';
 import type { Call, User as UserType } from '@/lib/types';
 import { Users, Phone, MessageCircle, Settings, Search, Archive, Music, Wallet } from 'lucide-react';
 
+/**
+ * ОСНОВНОЙ КОНТЕЙНЕР NUXUS
+ * Навигация: Чаты по центру!
+ */
 export default function ChatMain() {
   const { 
     currentChatId, activeCallId, setActiveCallId, 
@@ -65,19 +69,18 @@ export default function ChatMain() {
       <div className="flex-1 flex overflow-hidden w-full relative">
         {/* Desktop Navigation Rail */}
         <div className="hidden md:flex w-[72px] h-full flex-col items-center py-6 bg-[#0a0a0c] border-r border-white/5 shrink-0 z-40">
-          <div className="mb-8 cursor-pointer active:scale-90 transition-transform" onClick={() => setActiveView('chats')}>
+          <div className="mb-8 cursor-pointer active:scale-90 transition-transform" onClick={() => { setActiveView('chats'); setCurrentChatId(null); }}>
             <div className="w-12 h-12 bg-primary/10 rounded-2xl flex items-center justify-center border border-primary/20 shadow-[0_0_20px_rgba(139,92,246,0.1)]">
               <MessageCircle className="w-6 h-6 text-primary" />
             </div>
           </div>
           
           <div className="flex flex-col gap-6 flex-1 overflow-y-auto scrollbar-hide py-2">
+            <RailButton icon={Phone} active={activeView === 'calls'} onClick={() => { setActiveView('calls'); setCurrentChatId(null); }} label="Звонки" />
+            <RailButton icon={Music} active={activeView === 'music'} onClick={() => { setActiveView('music'); setCurrentChatId(null); }} label="Музыка" />
             <RailButton icon={MessageCircle} active={activeView === 'chats'} onClick={() => { setActiveView('chats'); setCurrentChatId(null); }} label="Чаты🐱" />
-            {navVis?.contacts !== false && <RailButton icon={Users} active={activeView === 'contacts'} onClick={() => { setActiveView('contacts'); setCurrentChatId(null); }} label="Контакты" />}
-            {navVis?.calls !== false && <RailButton icon={Phone} active={activeView === 'calls'} onClick={() => { setActiveView('calls'); setCurrentChatId(null); }} label="Звонки" />}
-            {navVis?.music !== false && <RailButton icon={Music} active={activeView === 'music'} onClick={() => { setActiveView('music'); setCurrentChatId(null); }} label="Музыка" />}
-            {navVis?.wallet !== false && <RailButton icon={Wallet} active={activeView === 'wallet'} onClick={() => { setActiveView('wallet'); setCurrentChatId(null); }} label="Кошелек" />}
-            {navVis?.archive !== false && <RailButton icon={Archive} active={activeView === 'archive'} onClick={() => { setActiveView('archive'); setCurrentChatId(null); }} label="Архив" />}
+            <RailButton icon={Wallet} active={activeView === 'wallet'} onClick={() => { setActiveView('wallet'); setCurrentChatId(null); }} label="Кошелек" />
+            <RailButton icon={Archive} active={activeView === 'archive'} onClick={() => { setActiveView('archive'); setCurrentChatId(null); }} label="Архив" />
           </div>
 
           <div className="mt-auto flex flex-col gap-6 items-center">
@@ -108,13 +111,13 @@ export default function ChatMain() {
 
       <MusicPlayer />
 
-      {/* Bottom Navigation (Mobile Only) */}
+      {/* Bottom Navigation (Mobile Only) - ЦЕНТРОВКА */}
       {!currentChatId && (
         <div className="md:hidden fixed bottom-10 left-1/2 -translate-x-1/2 w-[94%] max-w-[500px] h-[76px] bg-[#1c1c1e]/80 backdrop-blur-[50px] border border-white/10 rounded-[2.8rem] flex items-center justify-between px-6 z-50 shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
-          <div className="flex flex-1 justify-around items-center overflow-x-auto scrollbar-hide gap-4 px-2">
+          <div className="flex flex-1 justify-around items-center gap-2 px-2">
             <NavButton icon={Phone} label="Calls" active={activeView === 'calls'} onClick={() => setActiveView('calls')} />
             <NavButton icon={Music} label="Music" active={activeView === 'music'} onClick={() => setActiveView('music')} />
-            <NavButton icon={MessageCircle} label="Чаты🐱" active={activeView === 'chats'} onClick={() => setActiveView('chats')} />
+            <NavButton icon={MessageCircle} label="Чаты🐱" active={activeView === 'chats'} onClick={() => setActiveView('chats')} isCenter />
             <NavButton icon={Wallet} label="Wallet" active={activeView === 'wallet'} onClick={() => setActiveView('wallet')} />
             <NavButton icon={Settings} label="Profile" active={activeView === 'profile'} onClick={() => setActiveView('profile')} isProfile userId={user?.uid} />
           </div>
@@ -144,18 +147,22 @@ function RailButton({ icon: Icon, active, onClick, label }: { icon: any, active?
   );
 }
 
-function NavButton({ icon: Icon, label, active, badge, onClick, isProfile, userId }: { icon: any, label: string, active?: boolean, badge?: string, onClick: () => void, isProfile?: boolean, userId?: string }) {
+function NavButton({ icon: Icon, label, active, badge, onClick, isProfile, userId, isCenter }: { icon: any, label: string, active?: boolean, badge?: string, onClick: () => void, isProfile?: boolean, userId?: string, isCenter?: boolean }) {
   return (
-    <button onClick={onClick} className={cn("flex flex-col items-center gap-0.5 transition-all relative outline-none", active ? "text-[#007AFF]" : "text-muted-foreground/60")}>
-      <div className="relative">
+    <button onClick={onClick} className={cn(
+      "flex flex-col items-center gap-0.5 transition-all relative outline-none", 
+      active ? "text-[#007AFF]" : "text-muted-foreground/60",
+      isCenter && "scale-110 -translate-y-1"
+    )}>
+      <div className={cn("relative", isCenter && "bg-primary/10 p-2 rounded-2xl border border-primary/20 shadow-lg shadow-primary/5")}>
         {isProfile ? (
           <UserAvatar userId={userId} className={cn("h-6 w-6 border transition-all", active ? "border-[#007AFF] scale-110" : "border-transparent opacity-60")} />
         ) : (
-          <Icon className={cn("w-6 h-6 transition-all", active ? "fill-current scale-110" : "scale-100")} />
+          <Icon className={cn("w-6 h-6 transition-all", active ? "fill-current scale-110" : "scale-100", isCenter && active && "text-primary")} />
         )}
         {badge && <div className="absolute -top-1 -right-2 bg-[#FF3B30] text-white text-[9px] font-black rounded-full h-4 min-w-4 flex items-center justify-center px-1 border-2 border-[#1c1c1e]">{badge}</div>}
       </div>
-      <span className="text-[9px] font-bold mt-0.5 whitespace-nowrap">{label}</span>
+      <span className={cn("text-[9px] font-bold mt-0.5 whitespace-nowrap", isCenter && "text-primary/80")}>{label}</span>
     </button>
   );
 }

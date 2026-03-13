@@ -20,7 +20,8 @@ import {
 } from "@/components/ui/context-menu";
 import { format } from 'date-fns';
 import { 
-  CornerUpLeft, Trash2, Check, CheckCheck, Edit2, Copy, Pin, X, Share2, Play, Smile, Lock, Languages, Loader2, Image as ImageIcon
+  CornerUpLeft, Trash2, Check, CheckCheck, Edit2, Copy, Pin, X, Share2, Play, Smile, Lock, Languages, Loader2, Image as ImageIcon,
+  MessageCircle, Star
 } from 'lucide-react';
 import { cn, decryptSignal, isGlobalAdmin } from '@/lib/utils';
 import { doc, updateDoc, deleteDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
@@ -31,6 +32,10 @@ import { transcribeVoice } from '@/ai/flows/voice-to-text-flow';
 
 const QUICK_REACTIONS = ['❤️', '👍', '🔥', '😂', '😮', '😢', '💯'];
 
+/**
+ * ОПТИМИЗИРОВАННЫЙ MESSAGE ITEM
+ * 1 Клик = Действие. Долгий тап = Меню.
+ */
 export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForward, isAdmin = false, isGroup = false, onEdit, highlight = false, viewerProfile }: any) => {
   const { user } = useUser();
   const db = useFirestore();
@@ -64,23 +69,24 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
 
   const toggleAudio = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!audioRef.current) {
-      audioRef.current = new Audio(message.content);
-      audioRef.current.onended = () => setIsPlaying(false);
-      audioRef.current.onerror = () => { 
-        toast({ title: "Ошибка проигрывателя", variant: "destructive" }); 
-        setIsPlaying(false); 
-      };
+    try {
+      if (!audioRef.current) {
+        audioRef.current = new Audio(message.content);
+        audioRef.current.onended = () => setIsPlaying(false);
+      }
+      
+      if (isPlaying) {
+        audioRef.current.pause();
+      } else {
+        audioRef.current.play().catch(err => {
+          console.warn("Audio play blocked", err);
+          toast({ title: "Нажмите еще раз", variant: "destructive" });
+        });
+      }
+      setIsPlaying(!isPlaying);
+    } catch (err) {
+      console.error("Audio Engine Fail", err);
     }
-    
-    if (isPlaying) {
-      audioRef.current.pause();
-    } else {
-      audioRef.current.play().catch(() => {
-        toast({ title: "Ошибка безопасности браузера", variant: "destructive" });
-      });
-    }
-    setIsPlaying(!isPlaying);
   };
 
   const renderContent = () => {
@@ -116,14 +122,14 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
     if (message.contentType === 'audio') return (
       <div className="flex items-center gap-3 p-1 min-w-[200px] cursor-pointer" onClick={toggleAudio}>
         <Button size="icon" className="h-10 w-10 rounded-full bg-primary shadow-lg shadow-primary/20 pointer-events-none">
-          {isPlaying ? <X /> : <Play fill="currentColor" />}
+          {isPlaying ? <X /> : <Play fill="currentColor" className="ml-0.5" />}
         </Button>
         <div className="flex-1 flex flex-col justify-center">
           <div className="h-1 bg-white/10 w-full rounded-full overflow-hidden">
             <div className={cn("h-full bg-white transition-all", isPlaying ? "w-full animate-pulse" : "w-0")} />
           </div>
           <button onClick={handleTranscribe} className="text-[9px] font-black text-primary uppercase mt-1 flex items-center gap-1">
-            {isTranscribing ? <Loader2 className="animate-spin w-3 h-3" /> : <><Languages className="w-3 h-3" /> A💬</>}
+            {isTranscribing ? <Loader2 className="animate-spin w-3 h-3" /> : <><Languages className="w-3 h-3" /> Расшифровать</>}
           </button>
         </div>
       </div>
@@ -143,11 +149,15 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
             </button>
           ))}
         </div>
-        <p className="text-[8px] text-muted-foreground uppercase font-bold mt-3 text-center tracking-widest">{message.pollData?.isAnonymous ? 'Анонимный опрос' : 'Открытый опрос'}</p>
       </div>
     );
 
-    return <div className="whitespace-pre-wrap text-[15px] break-words max-w-[300px] leading-relaxed relative">{displayContent} {message.editedAt && <span className="text-[8px] ml-1.5 opacity-40 uppercase">(ред.)</span>}</div>;
+    return (
+      <div className="whitespace-pre-wrap text-[15px] break-words max-w-[300px] leading-relaxed relative">
+        {displayContent} 
+        {message.editedAt && <span className="text-[8px] ml-1.5 opacity-40 uppercase">(ред.)</span>}
+      </div>
+    );
   };
 
   if (message.contentType === 'service') return <div className="w-full flex justify-center my-4"><div className="bg-white/5 backdrop-blur-md px-6 py-2 rounded-full border border-white/10"><p className="text-[9px] text-muted-foreground uppercase font-black tracking-widest">{message.content}</p></div></div>;
@@ -163,7 +173,11 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
             <ContextMenuTrigger>
               <div className="cursor-pointer active:scale-[0.98] outline-none group/bubble">
                 <div className={cn("p-2.5 rounded-2xl border transition-all relative", isMe ? "message-bubble-me border-none" : "bg-card border-white/5 text-white")}>
-                  {message.replyToId && <div className="mb-2 p-2 border-l-2 bg-white/5 rounded-r-lg opacity-60 text-[10px] truncate">{decryptSignal(message.replyToContent)}</div>}
+                  {message.replyToId && (
+                    <div className="mb-2 p-2 border-l-2 border-accent bg-white/5 rounded-r-lg opacity-60 text-[10px] truncate max-w-[200px]">
+                      {decryptSignal(message.replyToContent)}
+                    </div>
+                  )}
                   {renderContent()}
                   <div className="flex items-center justify-end gap-1 mt-1 opacity-60">
                     {message.contentType === 'text' && <Lock className="w-2.5 h-2.5" />}
