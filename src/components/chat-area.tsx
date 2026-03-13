@@ -348,9 +348,13 @@ export default function ChatArea() {
   };
 
   const chatDisplayName = useMemo(() => {
-    if (chat?.type === 'private' && otherProfile) return formatDisplayName(otherProfile.name);
+    if (chat?.type === 'private') {
+      const myMeta = chat.metadata?.[firebaseUser?.uid || ''];
+      if (myMeta?.customName) return myMeta.customName;
+      if (otherProfile?.name) return formatDisplayName(otherProfile.name);
+    }
     return formatDisplayName(chat?.name || otherProfile?.name || 'Чат');
-  }, [chat?.type, chat?.name, otherProfile]);
+  }, [chat, firebaseUser?.uid, otherProfile]);
 
   return (
     <div className="flex-1 flex flex-col h-full bg-background relative overflow-hidden z-20">

@@ -12,17 +12,15 @@ import type { Track } from '@/lib/types';
 
 /**
  * ГЛОБАЛЬНАЯ МЕДИАТЕКА NUXUS (HQ STREAMS)
- * Использованы прямые высококачественные потоки.
+ * Обновлено: Прямые ссылки на MP3 потоки.
  */
 const NUXUS_LIBRARY: Track[] = [
   { id: 'm1', title: 'Me Gustas Tu', artist: 'Manu Chao', url: 'https://cdn.pixabay.com/audio/2022/10/14/audio_9939fec401.mp3', coverUrl: 'https://picsum.photos/seed/manu/400/400', duration: 210 },
-  { id: 'm2', title: '222', artist: 'Hyper-Signal', url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3', coverUrl: 'https://picsum.photos/seed/222/400/400', duration: 185 },
-  { id: 'm3', title: 'Nuxus Core Beats', artist: 'Shadow-Core', url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3', coverUrl: 'https://picsum.photos/seed/tsar/400/400', duration: 145 },
-  { id: 'm4', title: 'Quantum Drift', artist: 'Nuxus Prime', url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3', coverUrl: 'https://picsum.photos/seed/drift/400/400', duration: 220 },
-  { id: 'm5', title: 'Blinding Lights', artist: 'The Weeknd', url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-8.mp3', coverUrl: 'https://picsum.photos/seed/weeknd/400/400', duration: 200 },
-  { id: 'm6', title: 'Cyberpunk Night', artist: 'Night-City', url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-10.mp3', coverUrl: 'https://picsum.photos/seed/cyber/400/400', duration: 310 },
-  { id: 'm7', title: 'Phonk Signal', artist: 'Ghostface Playa', url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-12.mp3', coverUrl: 'https://picsum.photos/seed/phonk/400/400', duration: 120 },
-  { id: 'm8', title: 'Lovely', artist: 'Billie Eilish', url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-15.mp3', coverUrl: 'https://picsum.photos/seed/billie/400/400', duration: 201 }
+  { id: 'm2', title: 'Phonk Signal', artist: 'Ghostface Playa', url: 'https://cdn.pixabay.com/audio/2023/05/15/audio_8b61ed33cd.mp3', coverUrl: 'https://picsum.photos/seed/phonk/400/400', duration: 120 },
+  { id: 'm3', title: 'Blinding Lights', artist: 'The Weeknd', url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-8.mp3', coverUrl: 'https://picsum.photos/seed/weeknd/400/400', duration: 200 },
+  { id: 'm4', title: 'Nuxus Core Beats', artist: 'Shadow-Core', url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3', coverUrl: 'https://picsum.photos/seed/tsar/400/400', duration: 145 },
+  { id: 'm5', title: 'Quantum Drift', artist: 'Nuxus Prime', url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3', coverUrl: 'https://picsum.photos/seed/drift/400/400', duration: 220 },
+  { id: 'm6', title: 'Lovely', artist: 'Billie Eilish', url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-15.mp3', coverUrl: 'https://picsum.photos/seed/billie/400/400', duration: 201 }
 ];
 
 export default function MusicView() {
@@ -38,7 +36,7 @@ export default function MusicView() {
     <div className="flex flex-col h-full bg-[#0a0a0c] overflow-hidden">
       <div className="px-4 pt-6 pb-2 shrink-0">
         <h1 className="text-[32px] font-black text-white tracking-tight mb-6 flex items-center gap-3 italic uppercase">
-          Music <span className="text-[10px] bg-primary/20 text-primary px-2 py-0.5 rounded-full border border-primary/20 not-italic">KERNEL 2.0</span>
+          Music <span className="text-[10px] bg-primary/20 text-primary px-2 py-0.5 rounded-full border border-primary/20 not-italic">HQ FLOW</span>
         </h1>
 
         <div className="relative mb-6">

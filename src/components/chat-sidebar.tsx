@@ -50,10 +50,19 @@ const ChatListItem = memo(({
 
   const finalDisplayName = useMemo(() => {
     if (chat.type === 'saved') return 'Избранное';
-    // ДЛЯ ЛИЧНЫХ ЧАТОВ: Всегда берем имя из профиля, чтобы видеть изменения
-    if (chat.type === 'private' && otherProfile) return formatDisplayName(otherProfile.name);
+    
+    // ПРИОРИТЕТ: 
+    // 1. Моё локальное имя для друга (customName)
+    // 2. Глобальное имя друга из его профиля
+    // 3. Имя из чата (запасной вариант)
+    if (chat.type === 'private') {
+      const myMeta = chat.metadata?.[currentUserId || ''];
+      if (myMeta?.customName) return myMeta.customName;
+      if (otherProfile?.name) return formatDisplayName(otherProfile.name);
+    }
+    
     return formatDisplayName(chat.name || otherProfile?.name || 'User');
-  }, [chat.type, otherProfile?.name, chat.name, otherProfile]);
+  }, [chat, otherProfile, currentUserId]);
 
   const displayTime = useMemo(() => {
     const date = chat.lastMessageAt ? new Date(chat.lastMessageAt) : new Date(chat.createdAt);
