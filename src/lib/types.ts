@@ -16,15 +16,6 @@ export interface PollOption {
   votes: string[]; // Array of UIDs
 }
 
-export interface Gift {
-  id: string;
-  senderId: string;
-  receiverId: string;
-  giftId: string; // Type of gift from catalog
-  message?: string;
-  sentAt: string;
-}
-
 export interface Track {
   id: string;
   title: string;
@@ -132,14 +123,6 @@ export interface UserPrivacy {
   lastSeenVisibility: 'everybody' | 'nobody';
   allowGroupsFrom: 'everybody' | 'contacts' | 'premium' | 'nobody';
   whoCanMessageMe: 'everybody' | 'premium';
-  ghostMode?: boolean;
-}
-
-export interface UserNotifications {
-  messages: boolean;
-  groups: boolean;
-  channels: boolean;
-  previews: boolean;
 }
 
 export interface UserSettings {
@@ -149,13 +132,16 @@ export interface UserSettings {
   customAppIconUrl?: string;
   messageSize: 'small' | 'medium' | 'large';
   privacy: UserPrivacy;
-  notifications?: UserNotifications;
+  notifications?: {
+    messages: boolean;
+    groups: boolean;
+    channels: boolean;
+    previews: boolean;
+  };
   navVisibility?: {
     contacts: boolean;
     calls: boolean;
     archive: boolean;
-    music: boolean;
-    wallet: boolean;
   };
   statusEmoji?: string;
   statusText?: string;
@@ -190,5 +176,4 @@ export interface User {
   installedStickerPackIds?: string[];
   lastIp?: string;
   balance?: number;
-  xp?: number;
 }
