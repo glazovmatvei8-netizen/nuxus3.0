@@ -67,6 +67,7 @@ export default function ChatArea() {
   const recorderRef = useRef<MediaRecorder | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
   const userProfileRef = useMemoFirebase(() => (!db || !firebaseUser) ? null : doc(db, 'users', firebaseUser.uid), [db, firebaseUser]);
@@ -98,14 +99,13 @@ export default function ChatArea() {
 
   useEffect(() => {
     if (messages && messages.length > 0) {
-      // Small delay to ensure images/content are rendered
-      setTimeout(() => scrollToBottom('instant'), 100);
+      setTimeout(() => scrollToBottom('instant'), 50);
     }
-  }, [currentChatId]); // Scroll on chat switch
+  }, [currentChatId]);
 
   useEffect(() => {
     if (messages && messages.length > 0) {
-      // Scroll on new message if user is already near bottom
+      // Только если пользователь внизу или это его сообщение
       scrollToBottom('smooth');
     }
   }, [messages?.length]);
@@ -150,7 +150,6 @@ export default function ChatArea() {
     }
   };
 
-  // RECORDING LOGIC (PC SUPPORTED)
   const startRecording = async (type: 'video_note' | 'audio') => {
     try {
       const constraints = type === 'video_note' ? { video: true, audio: true } : { audio: true };
@@ -185,7 +184,6 @@ export default function ChatArea() {
     }
   };
 
-  // Handle PC/Touch difference for recording
   const handleRecordInteraction = (type: 'video_note' | 'audio') => {
     const isRecording = type === 'video_note' ? isRecordingVideo : isRecordingAudio;
     if (isRecording) {
@@ -233,7 +231,7 @@ export default function ChatArea() {
       lastSenderId: firebaseUser.uid, 
       [`typing.${firebaseUser.uid}`]: false 
     });
-    scrollToBottom();
+    setTimeout(() => scrollToBottom('smooth'), 100);
   }, [messageInput, currentChatId, firebaseUser, db, userProfile, replyTo, editingMsg, setLocalDrafts, scrollToBottom]);
 
   return (

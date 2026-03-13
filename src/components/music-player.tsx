@@ -22,22 +22,29 @@ export function MusicPlayer() {
     const audio = audioRef.current;
     
     // Принудительная перезагрузка источника
+    audio.pause();
     audio.src = currentTrack.url;
     audio.load();
 
     if (isPlayingMusic) {
-      audio.play().catch(e => {
-        console.warn("Autoplay blocked:", e);
-        setIsPlayingMusic(false);
-      });
+      const playPromise = audio.play();
+      if (playPromise !== undefined) {
+        playPromise.catch(e => {
+          console.warn("Autoplay blocked:", e);
+          setIsPlayingMusic(false);
+        });
+      }
     }
   }, [currentTrack?.id]);
 
   // Управление воспроизведением
   useEffect(() => {
-    if (!audioRef.current) return;
+    if (!audioRef.current || !currentTrack) return;
     if (isPlayingMusic) {
-      audioRef.current.play().catch(() => setIsPlayingMusic(false));
+      const playPromise = audioRef.current.play();
+      if (playPromise !== undefined) {
+        playPromise.catch(() => setIsPlayingMusic(false));
+      }
     } else {
       audioRef.current.pause();
     }
