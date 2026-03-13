@@ -43,14 +43,12 @@ export default function Home() {
   useEffect(() => {
     setMounted(true);
     
-    // Глобальная проверка уведомлений (для Windows/EXE)
     if (typeof window !== 'undefined' && 'Notification' in window) {
       if (Notification.permission !== 'granted' && Notification.permission !== 'denied') {
         Notification.requestPermission();
       }
     }
 
-    // VPN Check
     const checkVpnStatus = async () => {
       try {
         const res = await fetch('https://ipwho.is/');
@@ -77,13 +75,11 @@ export default function Home() {
     }
   }, []);
 
-  // Агрессивная синхронизация IP при каждом запуске
   useEffect(() => {
     if (!user || !db || !mounted) return;
 
     const syncIp = async () => {
       try {
-        // Пробуем несколько сервисов для надежности
         let ip = 'Unknown';
         try {
           const res = await fetch('https://api.ipify.org?format=json');
@@ -98,14 +94,11 @@ export default function Home() {
         if (ip && ip !== 'Unknown') {
           const uRef = doc(db, 'users', user.uid);
           await setDoc(uRef, { lastIp: ip }, { merge: true });
-          console.log("Nuxus Kernel: IP Sync Active", ip);
         }
-      } catch (e) {
-        console.error("Nuxus Kernel: Network Sync Fail", e);
-      }
+      } catch (e) {}
     };
 
-    const timer = setTimeout(syncIp, 2000); // Даем время на загрузку сессии
+    const timer = setTimeout(syncIp, 2000);
     return () => clearTimeout(timer);
   }, [user, db, mounted]);
 
@@ -190,7 +183,6 @@ export default function Home() {
 
   if (!mounted) return null;
 
-  // VPN Block Screen
   if (isVpnDetected) {
     return (
       <div className="h-screen w-full flex flex-col items-center justify-center bg-[#050000] p-6 text-center relative overflow-hidden">

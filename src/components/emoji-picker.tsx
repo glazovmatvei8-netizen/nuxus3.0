@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -28,17 +27,14 @@ export function EmojiPicker({ onEmojiSelect, onStickerSelect, className }: Emoji
   const db = useFirestore();
   const [recent, setRecent] = useState<string[]>([]);
   const [activeTab, setActiveTab] = useState('emoji');
-  const [activePackId, setActivePackId] = useState<string | 'custom'>('system_fox_pack_v5');
+  const [activePackId, setActivePackId] = useState<string | 'custom'>('custom');
 
   const userRef = useMemoFirebase(() => (!db || !user) ? null : doc(db, 'users', user.uid), [db, user]);
   const { data: profile } = useDoc<User>(userRef);
 
   const packsQuery = useMemoFirebase(() => {
-    if (!db) return null;
-    const installedIds = profile?.installedStickerPackIds || [];
-    // Всегда включаем системную лису, чтобы она была доступна сразу
-    const allIds = [...new Set([...installedIds, 'system_fox_pack_v5'])];
-    return query(collection(db, 'stickerPacks'), where('id', 'in', allIds.slice(0, 10)));
+    if (!db || !profile?.installedStickerPackIds?.length) return null;
+    return query(collection(db, 'stickerPacks'), where('id', 'in', profile.installedStickerPackIds.slice(0, 10)));
   }, [db, profile?.installedStickerPackIds]);
 
   const { data: stickerPacks, isLoading: isPacksLoading } = useCollection<StickerPack>(packsQuery);
@@ -47,6 +43,12 @@ export function EmojiPicker({ onEmojiSelect, onStickerSelect, className }: Emoji
     const saved = localStorage.getItem('nuxus_recent_emojis');
     if (saved) setRecent(JSON.parse(saved));
   }, []);
+
+  useEffect(() => {
+    if (stickerPacks && stickerPacks.length > 0 && activePackId === 'custom' && (!profile?.settings?.stickers || profile.settings.stickers.length === 0)) {
+      setActivePackId(stickerPacks[0].id);
+    }
+  }, [stickerPacks, profile?.settings?.stickers]);
 
   const handleEmojiClick = (emoji: string) => {
     onEmojiSelect(emoji);
@@ -112,7 +114,6 @@ export function EmojiPicker({ onEmojiSelect, onStickerSelect, className }: Emoji
         </TabsContent>
 
         <TabsContent value="stickers" className="flex-1 min-h-0 m-0 outline-none flex flex-col">
-          {/* Packs Selector */}
           <div className="flex gap-2 p-2 bg-white/10 border-b border-white/5 overflow-x-auto scrollbar-hide shrink-0 items-center">
             <button 
               onClick={() => setActivePackId('custom')}
@@ -134,9 +135,6 @@ export function EmojiPicker({ onEmojiSelect, onStickerSelect, className }: Emoji
                   ) : (
                     <div className="w-full h-full bg-primary/20 flex items-center justify-center text-[10px] font-bold text-primary">{pack.name[0]}</div>
                   )}
-                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                     <span className="text-[6px] font-black uppercase text-white truncate px-1">{pack.name}</span>
-                  </div>
                 </button>
               ))
             )}
@@ -164,8 +162,8 @@ export function EmojiPicker({ onEmojiSelect, onStickerSelect, className }: Emoji
                 <div className="flex flex-col items-center justify-center py-20 opacity-30 text-center space-y-4">
                   <Ghost className="w-12 h-12" />
                   <div className="space-y-1">
-                    <p className="text-[10px] font-black uppercase tracking-widest text-white">Пусто</p>
-                    <p className="text-[8px] font-bold uppercase tracking-wider text-muted-foreground">Напишите @stickers,<br />чтобы наполнить пак!</p>
+                    <p className="text-[10px] font-black uppercase tracking-widest text-white">Список пуст</p>
+                    <p className="text-[8px] font-bold uppercase tracking-wider text-muted-foreground">Устанавливайте паки<br />по ссылкам от друзей!</p>
                   </div>
                 </div>
               )}
