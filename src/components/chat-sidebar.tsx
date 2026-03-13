@@ -6,7 +6,7 @@ import { useAppState } from '@/lib/store';
 import { Button } from '@/components/ui/button';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
-  Plus, SquarePen, Ghost, Search, Star, Pin, PinOff, VolumeX, Trash2, Volume2, MessageCircle, Archive, Lock
+  Plus, SquarePen, Ghost, Search, Star, Pin, PinOff, Archive, Lock, Trash2, MessageCircle
 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { CreateChatModal } from './modals/create-chat-modal';
@@ -27,7 +27,7 @@ import {
 } from "@/components/ui/context-menu";
 
 const ChatListItem = memo(({ 
-  chat, isActive, otherId, isPinned, onPinToggle, onClick, onMute, onMarkUnread, onDelete, onArchive, currentUserId
+  chat, isActive, otherId, isPinned, onPinToggle, onClick, onMarkUnread, onDelete, onArchive, currentUserId
 }: any) => {
   const db = useFirestore();
   const [offsetX, setOffsetX] = useState(0);
@@ -117,7 +117,6 @@ const ChatListItem = memo(({
 
   return (
     <div className="relative overflow-hidden touch-pan-y select-none bg-[#0a0a0c] border-none">
-      {/* Левые кнопки действия (Свайп вправо) */}
       <div className={cn("absolute inset-y-0 left-0 flex h-full z-0 transition-opacity duration-200", offsetX > 10 ? "opacity-100" : "opacity-0 pointer-events-none")}>
         <button onClick={(e) => { e.stopPropagation(); onMarkUnread(chat.id); resetSwipe(); }} className="w-20 bg-[#007AFF] flex flex-col items-center justify-center text-white gap-1 active:brightness-90 transition-all">
           <MessageCircle className="w-5 h-5 fill-current" />
@@ -129,7 +128,6 @@ const ChatListItem = memo(({
         </button>
       </div>
 
-      {/* Правые кнопки действия (Свайп влево) */}
       <div className={cn("absolute inset-y-0 right-0 flex h-full z-0 transition-opacity duration-200", offsetX < -10 ? "opacity-100" : "opacity-0 pointer-events-none")} style={{ width: '160px' }}>
         <div className="flex h-full w-full">
           <button onClick={(e) => { e.stopPropagation(); onArchive(chat.id, !!chat.isArchived); resetSwipe(); }} className="flex-1 bg-[#FF9500] flex flex-col items-center justify-center text-white gap-1 active:brightness-90 transition-all">
@@ -226,14 +224,6 @@ export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?:
     toast({ title: currentStatus ? "Вернулся из архива" : "В архиве" });
   };
 
-  const handleMute = async (chatId: string) => {
-    if (!db) return;
-    const cSnap = chats?.find(c => c.id === chatId);
-    const isCurrentlyMuted = !!cSnap?.mutedUntil;
-    await updateDoc(doc(db, 'chats', chatId), { mutedUntil: isCurrentlyMuted ? null : new Date(9999, 11, 31).toISOString() });
-    toast({ title: isCurrentlyMuted ? "Звук включен" : "Без звука" });
-  };
-
   const handleDelete = async (chatId: string) => {
     if (!db) return;
     if (confirm('Удалить этот чат навсегда?')) {
@@ -249,16 +239,31 @@ export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?:
       const bTime = b.lastMessageAt ? new Date(b.lastMessageAt).getTime() : new Date(b.createdAt).getTime();
       return bTime - aTime;
     });
+
+    // Deduplicate private chats (safety net)
+    const seenPrivateUsers = new Set();
+    result = result.filter(c => {
+      if (c.type === 'private') {
+        const otherId = c.participantIds?.find(id => id !== user?.uid);
+        if (otherId) {
+          if (seenPrivateUsers.has(otherId)) return false;
+          seenPrivateUsers.add(otherId);
+        }
+      }
+      return true;
+    });
+
     result.sort((a, b) => {
       const aPinned = currentUserProfile?.pinnedChatIds?.includes(a.id) ? 1 : 0;
       const bPinned = currentUserProfile?.pinnedChatIds?.includes(b.id) ? 1 : 0;
       return bPinned - aPinned;
     });
+
     if (isArchiveView) return result.filter(c => c.isArchived);
     if (activeTab === 'private') return result.filter(c => c.type === 'private' && !c.isArchived);
     if (activeTab === 'groups') return result.filter(c => (c.type === 'group' || c.type === 'channel' || c.type === 'saved') && !c.isArchived);
     return result.filter(c => !c.isArchived);
-  }, [chats, activeTab, isArchiveView, currentUserProfile?.pinnedChatIds]);
+  }, [chats, activeTab, isArchiveView, currentUserProfile?.pinnedChatIds, user?.uid]);
 
   return (
     <div className="flex flex-col h-full bg-[#0a0a0c] overflow-hidden">
@@ -312,7 +317,7 @@ export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?:
                 <ChatListItem 
                   key={chat.id} chat={chat} isActive={currentChatId === chat.id} 
                   isPinned={currentUserProfile?.pinnedChatIds?.includes(chat.id)}
-                  onPinToggle={handlePinToggle} onMarkUnread={handleMarkUnread} onMute={handleMute} onArchive={handleArchive}
+                  onPinToggle={handlePinToggle} onMarkUnread={handleMarkUnread} onArchive={handleArchive}
                   onDelete={handleDelete} onClick={() => setCurrentChatId(chat.id)}
                   currentUserId={user?.uid} otherId={chat.type === 'private' && user ? chat.participantIds?.find((id: string) => id !== user.uid) : null} 
                 />

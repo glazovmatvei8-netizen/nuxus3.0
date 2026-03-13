@@ -7,13 +7,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useFirestore, useUser, useDoc, useMemoFirebase } from '@/firebase';
-import { collection, query, where, getDocs, doc, limit, addDoc, orderBy, updateDoc, arrayUnion, setDoc } from 'firebase/firestore';
+import { collection, query, where, getDocs, doc, limit, addDoc } from 'firebase/firestore';
 import { useAppState } from '@/lib/store';
 import { useToast } from '@/hooks/use-toast';
-import { Search, Loader2, Radio, Users, Check, ArrowRight, X, Star, Zap, Bot, Sticker } from 'lucide-react';
+import { Search, Loader2, ArrowRight, Zap } from 'lucide-react';
 import { UserAvatar } from '@/components/user-avatar';
-import { isUserPremium } from '@/lib/utils';
-import type { User, Chat, StickerPack } from '@/lib/types';
+import type { User, Chat } from '@/lib/types';
 
 export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const { user } = useUser();
@@ -47,6 +46,44 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
     }
   }, [open, searchQuery, db]);
 
+  const openPrivateChat = async (targetUser: User) => {
+    if (!db || !user || !myProfile) return;
+    setIsLoading(true);
+    try {
+      const q = query(
+        collection(db, 'chats'),
+        where('type', '==', 'private'),
+        where('participantIds', 'array-contains', user.uid)
+      );
+      const snapshot = await getDocs(q);
+      const existing = snapshot.docs.find(d => {
+        const pIds = d.data().participantIds;
+        return pIds.includes(targetUser.id) && pIds.length === 2;
+      });
+
+      if (existing) {
+        setCurrentChatId(existing.id);
+      } else {
+        const newChat = await addDoc(collection(db, 'chats'), {
+          type: 'private',
+          participantIds: [user.uid, targetUser.id],
+          ownerId: user.uid,
+          createdAt: new Date().toISOString(),
+          name: targetUser.name,
+          username: targetUser.username,
+          avatarUrl: targetUser.avatarUrl || null
+        });
+        setCurrentChatId(newChat.id);
+      }
+      onOpenChange(false);
+      setActiveView('chats');
+    } catch (e) {
+      toast({ title: "Ошибка открытия чата", variant: "destructive" });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleSearch = async (val: string) => {
     setSearchQuery(val);
     if (val.length < 3) {
@@ -59,7 +96,6 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
       const searchVal = val.startsWith('@') ? val.toLowerCase() : '@' + val.toLowerCase();
       const foundResults: any[] = [];
 
-      // Системные боты (например, @stickers для управления своими паками)
       if ('@stickers'.includes(searchVal)) {
         foundResults.push({ 
           type: 'bot', 
@@ -142,6 +178,7 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
                 {results.map((res, idx) => (
                   <div key={idx} className="flex items-center justify-between p-4 bg-white/5 rounded-[1.8rem] hover:bg-white/10 cursor-pointer" onClick={() => {
                     if (res.type === 'bot') openBotChat();
+                    else if (res.type === 'user') openPrivateChat(res.data);
                     else { setCurrentChatId(res.data.id); onOpenChange(false); }
                   }}>
                     <div className="flex items-center gap-4">
