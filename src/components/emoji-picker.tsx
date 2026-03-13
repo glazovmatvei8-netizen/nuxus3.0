@@ -4,10 +4,11 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
-import { Smile, Sticker, Ghost, Star, Loader2 } from 'lucide-react';
+import { Smile, Sticker, Ghost, Star, Loader2, Trash2 } from 'lucide-react';
 import { useUser, useFirestore, useDoc, useMemoFirebase, useCollection } from '@/firebase';
-import { doc, collection, query, where } from 'firebase/firestore';
+import { doc, collection, query, where, updateDoc, arrayRemove } from 'firebase/firestore';
 import type { User, StickerPack } from '@/lib/types';
+import { useToast } from '@/hooks/use-toast';
 
 const EMOJI_DATA = [
   { category: 'Смайлы', emojis: ['😀', '😃', '😄', '😁', '😆', '😅', '😂', '🤣', '😊', '😇', '🙂', '🙃', '😉', '😌', '😍', '🥰', '😘', '😗', '😙', '😚', '😋', '😛', '😝', '😜', '🤪', '🤨', '🧐', '🤓', '😎', '🤩', '🥳', '😏', '😒', '😞', '😔', '😟', '😕', '🙁', '☹️', '😮', '😯', '😲', '😳', '🥺', '😦', '😧', '😨', '😰', '😥', '😢', '😭', '😱', '😖', '😣', '😞', '😓', '😩', '😫', '🥱', '😤', '😡', '😠', '🤬', '😈', '👿', '💀', '☠️', '💩', '🤡', '👹', '👺', '👻', '👽', '👾', '🤖'] },
@@ -25,6 +26,7 @@ interface EmojiPickerProps {
 export function EmojiPicker({ onEmojiSelect, onStickerSelect, className }: EmojiPickerProps) {
   const { user } = useUser();
   const db = useFirestore();
+  const { toast } = useToast();
   const [recent, setRecent] = useState<string[]>([]);
   const [activeTab, setActiveTab] = useState('emoji');
   const [activePackId, setActivePackId] = useState<string | 'custom'>('custom');
@@ -68,6 +70,22 @@ export function EmojiPicker({ onEmojiSelect, onStickerSelect, className }: Emoji
     if (activePackId === 'custom') return 'Мои стикеры';
     return stickerPacks?.find(p => p.id === activePackId)?.name || 'Стикерпак';
   }, [activePackId, stickerPacks]);
+
+  const handleDeletePack = async () => {
+    if (!db || !user || activePackId === 'custom') return;
+    if (confirm(`Удалить набор "${activePackName}"?`)) {
+      try {
+        await updateDoc(doc(db, 'users', user.uid), {
+          installedStickerPackIds: arrayRemove(activePackId)
+        });
+        setActivePackId('custom');
+        if (window.navigator && window.navigator.vibrate) window.navigator.vibrate(50);
+        toast({ title: "Пак удален" });
+      } catch (e) {
+        toast({ title: "Ошибка удаления", variant: "destructive" });
+      }
+    }
+  };
 
   return (
     <div className={cn("bg-[#1c1c1e]/90 backdrop-blur-2xl border border-white/10 rounded-[2rem] overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.5)] flex flex-col h-full", className)}>
@@ -140,8 +158,16 @@ export function EmojiPicker({ onEmojiSelect, onStickerSelect, className }: Emoji
             )}
           </div>
 
-          <div className="px-4 py-2 bg-white/5 border-b border-white/5">
+          <div className="px-4 py-2 bg-white/5 border-b border-white/5 flex items-center justify-between">
              <span className="text-[9px] font-black uppercase tracking-widest text-primary/60">{activePackName}</span>
+             {activePackId !== 'custom' && (
+               <button 
+                onClick={handleDeletePack}
+                className="text-white/20 hover:text-red-500 transition-colors"
+               >
+                 <Trash2 className="w-3.5 h-3.5" />
+               </button>
+             )}
           </div>
 
           <ScrollArea className="flex-1">

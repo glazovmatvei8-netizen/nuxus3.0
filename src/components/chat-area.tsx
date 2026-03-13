@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useRef, useEffect, useMemo, useCallback, memo } from 'react';
@@ -225,16 +224,27 @@ export default function ChatArea() {
     const newMsgRef = await addDoc(collection(db, 'chats', currentChatId, 'messages'), msgData);
     
     // БОТ ЛОГИКА (@stickers)
-    if (isBot && type_msg === 'text') {
+    if (isBot && type_msg === 'text' && !captureReply) {
       const lower = content_msg.toLowerCase();
       let botReply = "Извините, я не понимаю этот сигнал. Используйте Меню.";
       
+      // Ищем последнее сообщение бота для контекста
+      const botMessages = messages?.filter(m => m.senderId === 'bot_stickers');
+      const lastBotMsg = botMessages?.[botMessages.length - 1];
+      const lastBotText = lastBotMsg ? decryptSignal(lastBotMsg.content) : '';
+
       if (lower === '/start' || lower === '/help') {
         botReply = "Привет! Я Sticker Bot 🎨. Я помогу тебе управлять твоими стикерпаками.\n\n/newpack - Создать новый пак\n/mypacks - Твои паки\n/stats - Статистика использования";
       } else if (lower === '/newpack') {
         botReply = "Отлично! Как мы назовем твой новый стикерпак? Отправь название.";
       } else if (lower === '/mypacks') {
         botReply = "У тебя пока нет созданных паков. Хочешь создать первый? /newpack";
+      } else if (lower === '/stats') {
+        botReply = "Статистика Ядра:\n\nУзлов: 120+\nСтикеров: 4500+\nТвой статус: Active Node";
+      } else if (lastBotText.includes('назовем твой новый стикерпак')) {
+        botReply = `Пак "${content_msg}" инициализирован! Теперь отправь мне первый стикер (фото или эмодзи) для этого набора.`;
+      } else if (lastBotText.includes('отправь мне первый стикер')) {
+        botReply = "Стикер принят! Пак находится в стадии компиляции. Когда он будет готов, я пришлю тебе ссылку на установку.";
       }
 
       setTimeout(async () => {
@@ -256,7 +266,7 @@ export default function ChatArea() {
       [`typing.${firebaseUser.uid}`]: false 
     });
     setTimeout(() => scrollToBottom('smooth'), 100);
-  }, [messageInput, currentChatId, firebaseUser, db, userProfile, replyTo, editingMsg, setLocalDrafts, scrollToBottom, isBot]);
+  }, [messageInput, currentChatId, firebaseUser, db, userProfile, replyTo, editingMsg, setLocalDrafts, scrollToBottom, isBot, messages]);
 
   const handleBotCommand = (cmd: string) => {
     handleSendMessage(cmd, 'text');
