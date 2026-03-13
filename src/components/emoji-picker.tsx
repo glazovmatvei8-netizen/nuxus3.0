@@ -4,7 +4,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
-import { Smile, Sticker, Ghost, Star, Plus, Loader2 } from 'lucide-react';
+import { Smile, Sticker, Ghost, Star, Loader2 } from 'lucide-react';
 import { useUser, useFirestore, useDoc, useMemoFirebase, useCollection } from '@/firebase';
 import { doc, collection, query, where } from 'firebase/firestore';
 import type { User, StickerPack } from '@/lib/types';
@@ -34,7 +34,7 @@ export function EmojiPicker({ onEmojiSelect, onStickerSelect, className }: Emoji
 
   const packsQuery = useMemoFirebase(() => {
     if (!db || !profile?.installedStickerPackIds?.length) return null;
-    return query(collection(db, 'stickerPacks'), where('id', 'in', profile.installedStickerPackIds.slice(0, 10)));
+    return query(collection(db, 'stickerPacks'), where('id', 'in', profile.installedStickerPackIds));
   }, [db, profile?.installedStickerPackIds]);
 
   const { data: stickerPacks, isLoading: isPacksLoading } = useCollection<StickerPack>(packsQuery);
