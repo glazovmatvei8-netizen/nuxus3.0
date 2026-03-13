@@ -117,7 +117,7 @@ export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onO
             <Button 
               variant="ghost" 
               size="icon" 
-              className="absolute top-4 right-4 rounded-full bg-white/5" 
+              className="absolute top-4 right-14 rounded-full bg-white/5 z-10" 
               onClick={() => setIsEditing(!isEditing)}
             >
               {isEditing ? <X className="w-4 h-4" /> : <Edit3 className="w-4 h-4" />}
