@@ -30,19 +30,20 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
   const userRef = useMemoFirebase(() => (!db || !user) ? null : doc(db, 'users', user.uid), [db, user]);
   const { data: myProfile } = useDoc<User>(userRef);
 
+  // ПРЕМИАЛЬНЫЙ ПАК ЛИСЫ (QES READY)
   const foxStickers = [
-    'https://fonts.gstatic.com/s/e/notoemoji/latest/1f98a/512.webp',
-    'https://fonts.gstatic.com/s/e/notoemoji/latest/1f60d/512.webp',
-    'https://fonts.gstatic.com/s/e/notoemoji/latest/1f602/512.webp',
-    'https://fonts.gstatic.com/s/e/notoemoji/latest/1f621/512.webp',
-    'https://fonts.gstatic.com/s/e/notoemoji/latest/1f60e/512.webp',
-    'https://fonts.gstatic.com/s/e/notoemoji/latest/1f634/512.webp',
-    'https://fonts.gstatic.com/s/e/notoemoji/latest/1f973/512.webp',
-    'https://fonts.gstatic.com/s/e/notoemoji/latest/1f607/512.webp',
-    'https://fonts.gstatic.com/s/e/notoemoji/latest/1f618/512.webp',
-    'https://fonts.gstatic.com/s/e/notoemoji/latest/1f914/512.webp',
-    'https://fonts.gstatic.com/s/e/notoemoji/latest/1f62d/512.webp',
-    'https://fonts.gstatic.com/s/e/notoemoji/latest/1f631/512.webp'
+    'https://fonts.gstatic.com/s/e/notoemoji/latest/1f98a/512.webp', // Обычная
+    'https://fonts.gstatic.com/s/e/notoemoji/latest/1f60d/512.webp', // Влюбленная
+    'https://fonts.gstatic.com/s/e/notoemoji/latest/1f602/512.webp', // Смеется
+    'https://fonts.gstatic.com/s/e/notoemoji/latest/1f621/512.webp', // Злая
+    'https://fonts.gstatic.com/s/e/notoemoji/latest/1f60e/512.webp', // Крутая
+    'https://fonts.gstatic.com/s/e/notoemoji/latest/1f634/512.webp', // Спит
+    'https://fonts.gstatic.com/s/e/notoemoji/latest/1f973/512.webp', // Праздник
+    'https://fonts.gstatic.com/s/e/notoemoji/latest/1f607/512.webp', // Ангел
+    'https://fonts.gstatic.com/s/e/notoemoji/latest/1f618/512.webp', // Поцелуй
+    'https://fonts.gstatic.com/s/e/notoemoji/latest/1f914/512.webp', // Думает
+    'https://fonts.gstatic.com/s/e/notoemoji/latest/1f62d/512.webp', // Плачет
+    'https://fonts.gstatic.com/s/e/notoemoji/latest/1f631/512.webp'  // Шок
   ];
 
   useEffect(() => {

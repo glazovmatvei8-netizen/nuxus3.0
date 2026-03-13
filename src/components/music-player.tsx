@@ -15,7 +15,13 @@ export function MusicPlayer() {
   const [volume, setVolume] = useState([80]);
   const [isBuffering, setIsBuffering] = useState(false);
 
-  // Обработка смены трека
+  // Глобальная инициализация аудио для обхода блокировок браузера
+  useEffect(() => {
+    if (!audioRef.current) return;
+    audioRef.current.volume = volume[0] / 100;
+  }, [volume]);
+
+  // Обработка смены трека (Ядерная синхронизация)
   useEffect(() => {
     if (!audioRef.current || !currentTrack) return;
 
@@ -23,15 +29,25 @@ export function MusicPlayer() {
     
     const playNewTrack = async () => {
       try {
+        setIsBuffering(true);
         audio.pause();
         audio.src = currentTrack.url;
         audio.load();
         
+        // Автозапуск при смене трека, если плеер активен
         if (isPlayingMusic) {
-          await audio.play();
+          const playPromise = audio.play();
+          if (playPromise !== undefined) {
+            playPromise.then(() => {
+              setIsBuffering(false);
+            }).catch(e => {
+              console.warn("Nuxus Audio: Play blocked by browser policy", e);
+              setIsPlayingMusic(false);
+            });
+          }
         }
       } catch (e) {
-        console.warn("Nuxus Audio: Playback failed or blocked", e);
+        console.warn("Nuxus Audio: Logic Engine Error", e);
         setIsPlayingMusic(false);
       }
     };
@@ -39,7 +55,7 @@ export function MusicPlayer() {
     playNewTrack();
   }, [currentTrack?.id]);
 
-  // Управление воспроизведением
+  // Прямое управление состоянием Play/Pause
   useEffect(() => {
     if (!audioRef.current || !currentTrack) return;
     
@@ -49,13 +65,6 @@ export function MusicPlayer() {
       audioRef.current.pause();
     }
   }, [isPlayingMusic]);
-
-  // Управление громкостью
-  useEffect(() => {
-    if (audioRef.current) {
-      audioRef.current.volume = volume[0] / 100;
-    }
-  }, [volume]);
 
   if (!currentTrack) return null;
 
@@ -71,7 +80,7 @@ export function MusicPlayer() {
         onWaiting={() => setIsBuffering(true)}
         onPlaying={() => setIsBuffering(false)}
         onError={() => {
-          console.error("Nuxus Audio: Source Error");
+          console.error("Nuxus Audio: Signal Loss");
           setIsPlayingMusic(false);
         }}
       />

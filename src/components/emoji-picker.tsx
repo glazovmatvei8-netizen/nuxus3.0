@@ -28,14 +28,17 @@ export function EmojiPicker({ onEmojiSelect, onStickerSelect, className }: Emoji
   const db = useFirestore();
   const [recent, setRecent] = useState<string[]>([]);
   const [activeTab, setActiveTab] = useState('emoji');
-  const [activePackId, setActivePackId] = useState<string | 'custom'>('custom');
+  const [activePackId, setActivePackId] = useState<string | 'custom'>('system_fox_pack_v5');
 
   const userRef = useMemoFirebase(() => (!db || !user) ? null : doc(db, 'users', user.uid), [db, user]);
   const { data: profile } = useDoc<User>(userRef);
 
   const packsQuery = useMemoFirebase(() => {
-    if (!db || !profile?.installedStickerPackIds?.length) return null;
-    return query(collection(db, 'stickerPacks'), where('id', 'in', profile.installedStickerPackIds.slice(0, 10)));
+    if (!db) return null;
+    const installedIds = profile?.installedStickerPackIds || [];
+    // Всегда включаем системную лису, чтобы она была доступна сразу
+    const allIds = [...new Set([...installedIds, 'system_fox_pack_v5'])];
+    return query(collection(db, 'stickerPacks'), where('id', 'in', allIds.slice(0, 10)));
   }, [db, profile?.installedStickerPackIds]);
 
   const { data: stickerPacks, isLoading: isPacksLoading } = useCollection<StickerPack>(packsQuery);
@@ -53,9 +56,10 @@ export function EmojiPicker({ onEmojiSelect, onStickerSelect, className }: Emoji
   };
 
   const displayedStickers = useMemo(() => {
-    if (activePackId === 'custom') return profile?.settings?.stickers || [];
     const pack = stickerPacks?.find(p => p.id === activePackId);
-    return pack?.stickerUrls || [];
+    if (pack) return pack.stickerUrls;
+    if (activePackId === 'custom') return profile?.settings?.stickers || [];
+    return [];
   }, [activePackId, profile?.settings?.stickers, stickerPacks]);
 
   const activePackName = useMemo(() => {
