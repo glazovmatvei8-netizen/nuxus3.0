@@ -12,13 +12,13 @@ import type { Track } from '@/lib/types';
 
 /**
  * ГЛОБАЛЬНАЯ МЕДИАТЕКА NUXUS (HQ STREAMS)
- * Обновлено: Прямые ссылки на MP3 потоки.
+ * Использование прямых аудио-потоков для демо.
  */
 const NUXUS_LIBRARY: Track[] = [
-  { id: 'm1', title: 'Me Gustas Tu', artist: 'Manu Chao', url: 'https://cdn.pixabay.com/audio/2022/10/14/audio_9939fec401.mp3', coverUrl: 'https://picsum.photos/seed/manu/400/400', duration: 210 },
-  { id: 'm2', title: 'Phonk Signal', artist: 'Ghostface Playa', url: 'https://cdn.pixabay.com/audio/2023/05/15/audio_8b61ed33cd.mp3', coverUrl: 'https://picsum.photos/seed/phonk/400/400', duration: 120 },
+  { id: 'm1', title: 'Me Gustas Tu', artist: 'Manu Chao', url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3', coverUrl: 'https://picsum.photos/seed/manu/400/400', duration: 210 },
+  { id: 'm2', title: 'Phonk Signal', artist: 'Ghostface Playa', url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3', coverUrl: 'https://picsum.photos/seed/phonk/400/400', duration: 120 },
   { id: 'm3', title: 'Blinding Lights', artist: 'The Weeknd', url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-8.mp3', coverUrl: 'https://picsum.photos/seed/weeknd/400/400', duration: 200 },
-  { id: 'm4', title: 'Nuxus Core Beats', artist: 'Shadow-Core', url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3', coverUrl: 'https://picsum.photos/seed/tsar/400/400', duration: 145 },
+  { id: 'm4', title: 'Nuxus Core Beats', artist: 'Shadow-Core', url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3', coverUrl: 'https://picsum.photos/seed/beats/400/400', duration: 145 },
   { id: 'm5', title: 'Quantum Drift', artist: 'Nuxus Prime', url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3', coverUrl: 'https://picsum.photos/seed/drift/400/400', duration: 220 },
   { id: 'm6', title: 'Lovely', artist: 'Billie Eilish', url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-15.mp3', coverUrl: 'https://picsum.photos/seed/billie/400/400', duration: 201 }
 ];
@@ -35,8 +35,8 @@ export default function MusicView() {
   return (
     <div className="flex flex-col h-full bg-[#0a0a0c] overflow-hidden">
       <div className="px-4 pt-6 pb-2 shrink-0">
-        <h1 className="text-[32px] font-black text-white tracking-tight mb-6 flex items-center gap-3 italic uppercase">
-          Music <span className="text-[10px] bg-primary/20 text-primary px-2 py-0.5 rounded-full border border-primary/20 not-italic">HQ FLOW</span>
+        <h1 className="text-[28px] md:text-[32px] font-black text-white tracking-tight mb-6 flex items-center gap-3 italic uppercase">
+          Music <span className="text-[9px] bg-primary/20 text-primary px-2 py-0.5 rounded-full border border-primary/20 not-italic">HQ FLOW</span>
         </h1>
 
         <div className="relative mb-6">
@@ -58,7 +58,7 @@ export default function MusicView() {
       </div>
 
       <ScrollArea className="flex-1">
-        <div className="px-4 space-y-1 pb-32">
+        <div className="px-4 space-y-1 pb-40">
           {filteredTracks.map(track => (
             <div 
               key={track.id} 
@@ -72,8 +72,12 @@ export default function MusicView() {
               }}
             >
               <div className="flex items-center gap-4 min-w-0">
-                <div className="relative h-12 w-12 rounded-xl overflow-hidden shrink-0 border border-white/5 shadow-md">
-                  <img src={track.coverUrl} className="w-full h-full object-cover" alt={track.title} />
+                <div className="relative h-12 w-12 rounded-xl overflow-hidden shrink-0 border border-white/5 shadow-md bg-white/5">
+                  {track.coverUrl ? (
+                    <img src={track.coverUrl} className="w-full h-full object-cover" alt={track.title} />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center"><Music className="w-5 h-5 opacity-20" /></div>
+                  )}
                   <div className={cn(
                     "absolute inset-0 bg-black/40 flex items-center justify-center transition-opacity",
                     currentTrack?.id === track.id ? "opacity-100" : "opacity-0 group-hover:opacity-100"
@@ -88,12 +92,9 @@ export default function MusicView() {
                   <span className="text-[12px] text-muted-foreground/60 truncate font-medium uppercase tracking-wider">{track.artist}</span>
                 </div>
               </div>
-              <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+              <div className="flex items-center gap-2 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
                 <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-white rounded-full">
                   <Plus className="w-4 h-4" />
-                </Button>
-                <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-white rounded-full">
-                  <MoreVertical className="w-4 h-4" />
                 </Button>
               </div>
             </div>

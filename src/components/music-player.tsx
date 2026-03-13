@@ -14,14 +14,13 @@ export function MusicPlayer() {
   const [progress, setProgress] = useState(0);
   const [volume, setVolume] = useState([80]);
   const [isBuffering, setIsBuffering] = useState(false);
+  const [hasError, setHasError] = useState(false);
 
-  // Глобальная инициализация аудио для обхода блокировок браузера
   useEffect(() => {
     if (!audioRef.current) return;
     audioRef.current.volume = volume[0] / 100;
   }, [volume]);
 
-  // Обработка смены трека (Ядерная синхронизация)
   useEffect(() => {
     if (!audioRef.current || !currentTrack) return;
 
@@ -29,25 +28,25 @@ export function MusicPlayer() {
     
     const playNewTrack = async () => {
       try {
+        setHasError(false);
         setIsBuffering(true);
         audio.pause();
         audio.src = currentTrack.url;
         audio.load();
         
-        // Автозапуск при смене трека, если плеер активен
         if (isPlayingMusic) {
           const playPromise = audio.play();
           if (playPromise !== undefined) {
             playPromise.then(() => {
               setIsBuffering(false);
             }).catch(e => {
-              console.warn("Nuxus Audio: Play blocked by browser policy", e);
+              console.warn("Nuxus Audio: Play blocked", e);
               setIsPlayingMusic(false);
             });
           }
         }
       } catch (e) {
-        console.warn("Nuxus Audio: Logic Engine Error", e);
+        setHasError(true);
         setIsPlayingMusic(false);
       }
     };
@@ -55,7 +54,6 @@ export function MusicPlayer() {
     playNewTrack();
   }, [currentTrack?.id]);
 
-  // Прямое управление состоянием Play/Pause
   useEffect(() => {
     if (!audioRef.current || !currentTrack) return;
     
@@ -69,7 +67,7 @@ export function MusicPlayer() {
   if (!currentTrack) return null;
 
   return (
-    <div className="fixed bottom-[100px] md:bottom-6 left-1/2 -translate-x-1/2 w-[94%] max-w-[800px] h-[76px] bg-[#1c1c1e]/95 backdrop-blur-[50px] border border-white/10 rounded-[2.5rem] flex items-center px-5 z-[100] shadow-[0_30px_60px_rgba(0,0,0,0.6)] animate-in slide-in-from-bottom-10 duration-500">
+    <div className="fixed bottom-[126px] md:bottom-6 left-1/2 -translate-x-1/2 w-[92%] max-w-[650px] h-[64px] md:h-[76px] bg-[#1c1c1e]/90 backdrop-blur-[40px] border border-white/10 rounded-2xl md:rounded-[2.5rem] flex items-center px-3 md:px-5 z-[100] shadow-[0_20px_50px_rgba(0,0,0,0.5)] animate-in slide-in-from-bottom-10 duration-500">
       <audio 
         ref={audioRef} 
         onTimeUpdate={(e) => {
@@ -79,65 +77,57 @@ export function MusicPlayer() {
         onEnded={() => setIsPlayingMusic(false)}
         onWaiting={() => setIsBuffering(true)}
         onPlaying={() => setIsBuffering(false)}
-        onError={() => {
-          console.error("Nuxus Audio: Signal Loss");
-          setIsPlayingMusic(false);
-        }}
+        onError={() => setHasError(true)}
       />
       
-      <div className="flex items-center gap-4 flex-1 min-w-0">
-        <div className="h-12 w-12 rounded-2xl overflow-hidden shrink-0 border border-white/10 shadow-lg relative group">
-          <img src={currentTrack.coverUrl} className="w-full h-full object-cover" alt="Cover" />
-          <div className="absolute inset-0 bg-black/20 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-            <Maximize2 className="w-4 h-4 text-white" />
-          </div>
+      <div className="flex items-center gap-3 md:gap-4 flex-1 min-w-0">
+        <div className="h-10 w-10 md:h-12 md:w-12 rounded-xl overflow-hidden shrink-0 border border-white/10 shadow-lg relative group bg-white/5">
+          {currentTrack.coverUrl ? (
+            <img src={currentTrack.coverUrl} className="w-full h-full object-cover" alt="Cover" />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center"><Music className="w-4 h-4 opacity-20" /></div>
+          )}
         </div>
         <div className="flex flex-col min-w-0">
-          <span className="font-bold text-[14px] text-white truncate leading-tight">{currentTrack.title}</span>
-          <span className="text-[10px] text-primary/60 truncate font-black uppercase tracking-widest mt-0.5">{currentTrack.artist}</span>
+          <span className="font-bold text-[13px] md:text-[14px] text-white truncate leading-tight">{currentTrack.title}</span>
+          <span className="text-[9px] md:text-[10px] text-primary/60 truncate font-black uppercase tracking-widest mt-0.5">{currentTrack.artist}</span>
         </div>
       </div>
 
-      <div className="flex flex-col items-center gap-1 flex-1 px-4">
-        <div className="flex items-center gap-5">
-          <Button variant="ghost" size="icon" className="h-8 w-8 text-white/20 hover:text-white transition-colors"><SkipBack className="w-5 h-5 fill-current" /></Button>
+      <div className="flex flex-col items-center gap-1 flex-1 px-2 md:px-4">
+        <div className="flex items-center gap-3 md:gap-5">
+          <Button variant="ghost" size="icon" className="h-7 w-7 text-white/20 hover:text-white transition-colors hidden sm:flex"><SkipBack className="w-4 h-4 fill-current" /></Button>
           
           <Button 
-            className="h-11 w-11 rounded-full bg-white text-black hover:bg-white/90 shadow-2xl shadow-white/10 transition-transform active:scale-90"
+            className="h-9 w-9 md:h-11 md:w-11 rounded-full bg-white text-black hover:bg-white/90 shadow-xl transition-transform active:scale-90"
             onClick={() => setIsPlayingMusic(!isPlayingMusic)}
           >
             {isBuffering ? (
-              <Loader2 className="w-5 h-5 animate-spin" />
+              <Loader2 className="w-4 h-4 md:w-5 md:h-5 animate-spin" />
             ) : isPlayingMusic ? (
-              <Pause className="w-5 h-5 fill-current" />
+              <Pause className="w-4 h-4 md:w-5 md:h-5 fill-current" />
             ) : (
-              <Play className="w-5 h-5 fill-current ml-0.5" />
+              <Play className="w-4 h-4 md:w-5 md:h-5 fill-current ml-0.5" />
             )}
           </Button>
           
-          <Button variant="ghost" size="icon" className="h-8 w-8 text-white/20 hover:text-white transition-colors"><SkipForward className="w-5 h-5 fill-current" /></Button>
+          <Button variant="ghost" size="icon" className="h-7 w-7 text-white/20 hover:text-white transition-colors hidden sm:flex"><SkipForward className="w-4 h-4 fill-current" /></Button>
         </div>
         
-        <div className="w-full max-w-[200px] h-[3px] bg-white/5 rounded-full overflow-hidden mt-1">
+        <div className="w-full max-w-[150px] md:max-w-[200px] h-[2px] md:h-[3px] bg-white/5 rounded-full overflow-hidden mt-1">
           <div className="h-full bg-primary shadow-[0_0_10px_rgba(139,92,246,0.8)] transition-all duration-300" style={{ width: `${progress}%` }} />
         </div>
       </div>
 
-      <div className="hidden md:flex items-center gap-4 flex-1 justify-end">
-        <div className="flex items-center gap-2 group">
+      <div className="flex items-center gap-2 md:gap-4 shrink-0 justify-end">
+        <div className="hidden lg:flex items-center gap-2 group">
           <Volume2 className="w-4 h-4 text-white/20 group-hover:text-primary transition-colors" />
-          <div className="w-20">
+          <div className="w-16">
             <Slider value={volume} onValueChange={setVolume} max={100} step={1} />
           </div>
         </div>
-        <Button variant="ghost" size="icon" className="h-10 w-10 text-white/20 hover:text-red-500 transition-colors ml-2" onClick={() => { setCurrentTrack(null); setIsPlayingMusic(false); }}>
-          <X className="w-5 h-5" />
-        </Button>
-      </div>
-      
-      <div className="md:hidden flex items-center gap-2">
-        <Button variant="ghost" size="icon" className="h-10 w-10 text-white/40" onClick={() => { setCurrentTrack(null); setIsPlayingMusic(false); }}>
-          <X className="w-5 h-5" />
+        <Button variant="ghost" size="icon" className="h-8 w-8 md:h-10 md:w-10 text-white/20 hover:text-red-500 transition-colors" onClick={() => { setCurrentTrack(null); setIsPlayingMusic(false); }}>
+          <X className="w-4 h-4 md:w-5 md:h-5" />
         </Button>
       </div>
     </div>
