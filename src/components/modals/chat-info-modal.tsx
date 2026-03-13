@@ -30,8 +30,8 @@ import { addHours, isAfter, parseISO } from 'date-fns';
 import { AddMemberModal } from './add-member-modal';
 
 /**
- * ЧАТ-ИНФО 3.0
- * Теперь поддерживает локальные имена (как в контактах ТГ)
+ * ЧАТ-ИНФО 3.1
+ * Исправлено наложение кнопок и работа локальных имен.
  */
 export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onOpenChange: (o: boolean) => void, chat: Chat }) {
   const db = useFirestore();
@@ -46,7 +46,6 @@ export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onO
   const [isEditing, setIsEditing] = useState(false);
   const [isAddMemberOpen, setIsAddMemberOpen] = useState(false);
   
-  // Инициализируем форму
   const [editForm, setEditForm] = useState({
     name: '',
     username: chat.username || '',
@@ -61,7 +60,6 @@ export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onO
   const otherUserProfileRef = useMemoFirebase(() => (!db || !otherId) ? null : doc(db, 'users', otherId), [db, otherId]);
   const { data: otherUserProfile } = useDoc<User>(otherUserProfileRef);
 
-  // Подгружаем локальное имя из метаданных чата
   useEffect(() => {
     if (open) {
       const myMetadata = chat.metadata?.[user?.uid || ''];
@@ -87,22 +85,15 @@ export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onO
   const userMuteTimestamp = chat.metadata?.[user?.uid || '']?.mutedUntil;
   const isCurrentlyMuted = userMuteTimestamp && isAfter(parseISO(userMuteTimestamp), new Date());
 
-  const inviteLink = useMemo(() => {
-    if (typeof window === 'undefined' || isPrivate || !chat.username) return '';
-    return `${window.location.origin}/?join=${chat.username.replace('@', '')}`;
-  }, [chat.username, isPrivate]);
-
   const handleSaveEdit = async () => {
     if (!db || !chat.id || !user) return;
     try {
       if (isPrivate) {
-        // ДЛЯ ЛИЧНЫХ ЧАТОВ: Сохраняем имя ТОЛЬКО для себя в метаданные
         await updateDoc(doc(db, 'chats', chat.id), {
           [`metadata.${user.uid}.customName`]: editForm.name
         });
         toast({ title: "Имя сохранено", description: "Это имя видите только вы" });
       } else {
-        // ДЛЯ ГРУПП: Глобальное обновление
         const formattedUsername = editForm.username.startsWith('@') ? editForm.username.toLowerCase() : '@' + editForm.username.toLowerCase();
         await updateDoc(doc(db, 'chats', chat.id), {
           name: editForm.name,
@@ -154,6 +145,7 @@ export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onO
     <Dialog open={open} onOpenChange={(o) => { onOpenChange(o); if(!o) setIsEditing(false); }}>
       <DialogContent className="max-w-md bg-card border-border p-0 overflow-hidden h-[85vh] flex flex-col rounded-[2.5rem] shadow-2xl">
         <DialogHeader className="p-6 text-center flex flex-col items-center shrink-0 space-y-0 relative border-b border-white/5">
+          {/* Аватар */}
           <div className="relative group mb-4">
             <UserAvatar 
               userId={isPrivate ? otherId : null} 
@@ -276,16 +268,6 @@ export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onO
               <div className="space-y-1">
                 <h3 className="text-[10px] font-bold uppercase tracking-widest text-primary">О канале</h3>
                 <p className="text-sm text-white/80 leading-relaxed">{chat.description}</p>
-              </div>
-            )}
-
-            {!isEditing && !isPrivate && inviteLink && (
-              <div className="p-4 bg-primary/5 rounded-[1.5rem] border border-primary/10 space-y-3">
-                <div className="flex items-center gap-2 text-[9px] font-black uppercase tracking-widest text-primary"><Link className="w-3.5 h-3.5" /> Ссылка на приглашение</div>
-                <div className="flex gap-2">
-                  <Input readOnly value={inviteLink} className="bg-black/20 border-white/5 h-10 text-[10px] font-mono rounded-xl truncate" />
-                  <Button size="icon" variant="outline" className="h-10 w-10 shrink-0 rounded-xl border-white/10" onClick={() => { navigator.clipboard.writeText(inviteLink); toast({ title: "Ссылка скопирована!" }); }}><Copy className="w-4 h-4" /></Button>
-                </div>
               </div>
             )}
 

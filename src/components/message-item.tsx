@@ -21,7 +21,7 @@ import {
 import { format } from 'date-fns';
 import { 
   CornerUpLeft, Trash2, Check, CheckCheck, Edit2, Copy, Pin, X, Share2, Play, Smile, Lock, Languages, Loader2, Image as ImageIcon,
-  MessageCircle, Star
+  MessageCircle, Star, Pause
 } from 'lucide-react';
 import { cn, decryptSignal, isGlobalAdmin } from '@/lib/utils';
 import { doc, updateDoc, deleteDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
@@ -35,22 +35,34 @@ const QUICK_REACTIONS = ['❤️', '👍', '🔥', '😂', '😮', '😢', '💯
 
 /**
  * ОПТИМИЗИРОВАННЫЙ MESSAGE ITEM
- * 1 Клик = Действие. Долгий тап = Меню.
+ * Исправлено воспроизведение ГС и инспекция профилей.
  */
 export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForward, isAdmin = false, isGroup = false, onEdit, highlight = false, viewerProfile }: any) => {
   const { user } = useUser();
   const db = useFirestore();
   const { toast } = useToast();
   const { setInspectedUserId } = useAppState();
+  
   const [isPlaying, setIsPlaying] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
   const [transcription, setTranscription] = useState<string | null>(null);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
+  
+  const audioInstance = useRef<HTMLAudioElement | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
 
   const isKernelAdmin = useMemo(() => isGlobalAdmin(viewerProfile), [viewerProfile]);
   const displayContent = useMemo(() => message.contentType === 'text' ? decryptSignal(message.content) : message.content, [message.content, message.contentType]);
   const formattedTime = message.sentAt ? format(new Date(message.sentAt), 'HH:mm') : '';
+
+  // Очистка аудио при размонтировании
+  useEffect(() => {
+    return () => {
+      if (audioInstance.current) {
+        audioInstance.current.pause();
+        audioInstance.current = null;
+      }
+    };
+  }, []);
 
   const handleReaction = async (emoji: string) => {
     if (!db || !user || !chatId) return;
@@ -72,23 +84,33 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
   const toggleAudio = (e: React.MouseEvent) => {
     e.stopPropagation();
     try {
-      if (!audioRef.current) {
-        audioRef.current = new Audio(message.content);
-        audioRef.current.onended = () => setIsPlaying(false);
+      if (!audioInstance.current) {
+        // Создаем инстанс с поддержкой автозапуска
+        audioInstance.current = new Audio(message.content);
+        audioInstance.current.onended = () => setIsPlaying(false);
+        audioInstance.current.onerror = () => {
+          setIsPlaying(false);
+          toast({ title: "Ошибка аудио", description: "Не удалось загрузить ГС", variant: "destructive" });
+        };
       }
       
       if (isPlaying) {
-        audioRef.current.pause();
+        audioInstance.current.pause();
         setIsPlaying(false);
       } else {
-        audioRef.current.play().then(() => {
-          setIsPlaying(true);
-        }).catch(err => {
-          console.warn("Audio play blocked", err);
-        });
+        const playPromise = audioInstance.current.play();
+        if (playPromise !== undefined) {
+          playPromise.then(() => {
+            setIsPlaying(true);
+          }).catch(err => {
+            console.warn("Audio play blocked by browser", err);
+            // Пытаемся еще раз после микро-жеста если нужно
+            setIsPlaying(false);
+          });
+        }
       }
     } catch (err) {
-      console.error("Audio Engine Fail", err);
+      console.error("Audio Engine Critical Fail", err);
     }
   };
 
@@ -124,16 +146,20 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
 
     if (message.contentType === 'audio') return (
       <div className="flex items-center gap-3 p-1 min-w-[200px] cursor-pointer" onClick={toggleAudio}>
-        <Button size="icon" className="h-10 w-10 rounded-full bg-primary shadow-lg shadow-primary/20 pointer-events-none">
-          {isPlaying ? <X /> : <Play fill="currentColor" className="ml-0.5" />}
+        <Button size="icon" className="h-10 w-10 rounded-full bg-primary shadow-lg shadow-primary/20 pointer-events-none transition-all active:scale-90">
+          {isPlaying ? <Pause className="fill-current" /> : <Play fill="currentColor" className="ml-0.5" />}
         </Button>
         <div className="flex-1 flex flex-col justify-center">
-          <div className="h-1 bg-white/10 w-full rounded-full overflow-hidden">
-            <div className={cn("h-full bg-white transition-all", isPlaying ? "w-full animate-pulse" : "w-0")} />
+          <div className="h-1.5 bg-white/10 w-full rounded-full overflow-hidden relative">
+            <div className={cn("absolute inset-y-0 left-0 bg-white transition-all duration-100", isPlaying ? "w-full animate-pulse" : "w-0")} />
           </div>
-          <button onClick={handleTranscribe} className="text-[9px] font-black text-primary uppercase mt-1 flex items-center gap-1">
-            {isTranscribing ? <Loader2 className="animate-spin w-3 h-3" /> : <><Languages className="w-3 h-3" /> Расшифровать</>}
-          </button>
+          <div className="flex items-center justify-between mt-1">
+            <button onClick={handleTranscribe} className="text-[9px] font-black text-primary uppercase flex items-center gap-1 hover:opacity-100 opacity-70 transition-opacity">
+              {isTranscribing ? <Loader2 className="animate-spin w-3 h-3" /> : <><Languages className="w-3 h-3" /> Расшифровать</>}
+            </button>
+            {transcription && <span className="text-[8px] text-white/40 uppercase">AI Transcribed</span>}
+          </div>
+          {transcription && <p className="text-[11px] text-white/80 mt-2 italic border-t border-white/5 pt-1 animate-in fade-in slide-in-from-top-1">{transcription}</p>}
         </div>
       </div>
     );
