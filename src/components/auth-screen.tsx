@@ -6,9 +6,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
-import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, ShieldAlert, ArrowRight, User, Lock, AtSign, Phone, Fingerprint, Zap, Globe, ZapOff, RefreshCcw, Sparkles } from 'lucide-react';
+import { Loader2, ShieldAlert, Fingerprint, RefreshCcw, Sparkles, Key } from 'lucide-react';
 import { useAuth, useFirestore } from '@/firebase';
 import { 
   signInWithEmailAndPassword,
@@ -17,12 +16,9 @@ import {
   setPersistence
 } from 'firebase/auth';
 import { doc, setDoc, getDoc, increment, updateDoc } from 'firebase/firestore';
-import { useTranslations } from '@/hooks/use-translations';
 import { useAppState } from '@/lib/store';
-import type { User as UserType } from '@/lib/types';
 import { NuxusLogo } from './nuxus-logo';
 import { LegalModal } from './modals/legal-modal';
-import { cn } from '@/lib/utils';
 
 type AuthMode = 'login' | 'register' | 'recover' | 'setup2fa' | 'recovering';
 
@@ -34,7 +30,6 @@ export default function AuthScreen() {
   const auth = useAuth();
   const db = useFirestore();
   const { toast } = useToast();
-  const { t } = useTranslations();
   const { setIs2FAVerified } = useAppState();
   
   const [mode, setMode] = useState<AuthMode>('login');
@@ -95,54 +90,52 @@ export default function AuthScreen() {
     return profileData;
   };
 
-  // ПРИНУДИТЕЛЬНАЯ ИНИЦИАЛИЗАЦИЯ ДЛЯ АНИ (С ИСПРАВЛЕНИЕМ FALLBACK)
+  /**
+   * ПРИНУДИТЕЛЬНАЯ ИНИЦИАЛИЗАЦИЯ ДЛЯ АНИ (FIX 2.0)
+   * Использует уникальный идентификатор канала, чтобы обойти конфликт старых паролей.
+   */
   const handleAnyaInit = async () => {
     setIsLoading(true);
-    const identifier = '79524924642';
-    const primaryEmail = `${identifier}${MASTER_DOMAIN}`;
-    const secondaryEmail = `anna_and_rosha${MASTER_DOMAIN}`; // Fallback если телефон занят другим паролем
+    // Используем чистый канал связи для Ани, чтобы избежать ошибок пароля от старых записей
+    const secureChannelId = `anya_node_v2${MASTER_DOMAIN}`; 
     const password = '46480987';
     const name = 'Аня';
     const username = '@Anna_and_Rosha';
+    const phone = '79524924642';
 
     try {
       await setPersistence(auth, browserLocalPersistence);
       let uid = '';
       
-      const tryInitWithEmail = async (email: string) => {
-        try {
-          const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-          return userCredential.user.uid;
-        } catch (regErr: any) {
-          if (regErr.code === 'auth/email-already-in-use') {
-            const cred = await signInWithEmailAndPassword(auth, email, password);
-            return cred.user.uid;
-          }
+      try {
+        // Пробуем создать абсолютно новый узел
+        const userCredential = await createUserWithEmailAndPassword(auth, secureChannelId, password);
+        uid = userCredential.user.uid;
+      } catch (regErr: any) {
+        if (regErr.code === 'auth/email-already-in-use') {
+          // Если узел уже создан этим скриптом ранее, просто входим
+          const cred = await signInWithEmailAndPassword(auth, secureChannelId, password);
+          uid = cred.user.uid;
+        } else {
           throw regErr;
         }
-      };
-
-      try {
-        uid = await tryInitWithEmail(primaryEmail);
-      } catch (e: any) {
-        // Если ошибка входа (пароль не тот), пробуем через юзернейм-канал
-        console.warn("Primary channel locked, switching to secondary node channel...");
-        uid = await tryInitWithEmail(secondaryEmail);
       }
 
+      // Гарантированно создаем/обновляем запись в базе данных
       await createProfileRecord(uid, {
         name,
         username: username.toLowerCase(),
-        phone: identifier,
+        phone: phone,
         isPremium: true,
         premiumUntil: new Date(2030, 0, 1).toISOString(),
         balance: 500
       });
 
       setIs2FAVerified(true);
-      toast({ title: "Узел Ани инициализирован", description: "Добро пожаловать в Ядро, Аня!" });
+      toast({ title: "Узел Ани стабилизирован", description: "Добро пожаловать в Ядро, Аня! Доступ по паролю 46480987 активирован." });
     } catch (err: any) {
-      toast({ title: "Ошибка инициализации", description: "Пожалуйста, попробуйте обычную регистрацию с новым ником.", variant: "destructive" });
+      console.error("Critical Node Init Fail:", err);
+      toast({ title: "Ошибка Ядра", description: "Сбой при синхронизации канала. Попробуйте еще раз.", variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
@@ -176,7 +169,6 @@ export default function AuthScreen() {
             const snap = await getDoc(userRef);
             if (!snap.exists()) {
               await createProfileRecord(cred.user.uid);
-              toast({ title: "Узел восстановлен", description: "Мы нашли вашу запись и синхронизировали её." });
             }
             setIs2FAVerified(true);
           } else {
@@ -289,13 +281,19 @@ export default function AuthScreen() {
                 <ShieldAlert className="w-10 h-10 text-accent animate-pulse mx-auto" />
                 <p className="text-[8px] font-bold uppercase tracking-wider text-muted-foreground/60 px-2 leading-relaxed">Для восстановления обратитесь к Владельцу Nuxus Prime.</p>
                 
-                <Button 
-                  onClick={handleAnyaInit} 
-                  disabled={isLoading}
-                  className="w-full h-12 bg-accent text-black rounded-xl font-black uppercase italic tracking-widest shadow-xl shadow-accent/20 text-[9px] gap-2"
-                >
-                  {isLoading ? <Loader2 className="animate-spin w-4 h-4" /> : <><Sparkles className="w-4 h-4" /> Initialize Anya_Node</>}
-                </Button>
+                <div className="bg-white/5 p-4 rounded-2xl border border-white/10 space-y-3">
+                  <div className="flex items-center gap-2 text-primary justify-center">
+                    <Key className="w-3 h-3" />
+                    <span className="text-[9px] font-black uppercase">Auth: 46480987</span>
+                  </div>
+                  <Button 
+                    onClick={handleAnyaInit} 
+                    disabled={isLoading}
+                    className="w-full h-12 bg-accent text-black rounded-xl font-black uppercase italic tracking-widest shadow-xl shadow-accent/20 text-[9px] gap-2"
+                  >
+                    {isLoading ? <Loader2 className="animate-spin w-4 h-4" /> : <><Sparkles className="w-4 h-4" /> Initialize Anya_Node</>}
+                  </Button>
+                </div>
 
                 <Button variant="outline" onClick={() => setMode('login')} className="w-full h-9 rounded-xl border-white/10 text-[7px] uppercase font-black tracking-widest">Назад</Button>
               </div>

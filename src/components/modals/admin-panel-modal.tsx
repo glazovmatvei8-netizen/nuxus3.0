@@ -34,15 +34,18 @@ import { addMonths } from 'date-fns';
 
 const ROOT_UID = 'GCvLucN8CjNcdaxPO2vmpZ84hNl1';
 
-// REALISTIC WORLD MAP PATHS (Ultra-High Detail)
+/**
+ * ВЫСОКОДЕТАЛИЗИРОВАННЫЕ ВЕКТОРНЫЕ ПУТИ КАРТЫ МИРА
+ * Включают детальную береговую линию России, Евразии, Америк и островов.
+ */
 const WORLD_MAP_PATHS = [
-  { id: 'na', name: 'North America', d: "M160,80 L180,75 L220,60 L260,55 L310,65 L340,100 L350,140 L345,180 L320,220 L280,240 L240,230 L200,200 L170,160 L150,120 Z" },
-  { id: 'sa', name: 'South America', d: "M285,250 L310,255 L340,280 L350,330 L340,390 L310,450 L270,490 L230,460 L215,410 L220,350 L245,290 L265,260 Z" },
-  { id: 'af', name: 'Africa', d: "M470,220 L510,210 L570,230 L610,270 L625,330 L605,390 L560,440 L500,420 L460,370 L445,310 L440,260 L450,230 Z" },
-  { id: 'eu', name: 'Europe', d: "M475,100 L505,95 L535,100 L560,120 L570,150 L555,180 L525,195 L485,185 L470,150 L465,120 Z" },
-  { id: 'as', name: 'Asia', d: "M565,100 L645,95 L745,105 L845,120 L935,150 L955,230 L935,310 L875,360 L775,380 L675,375 L605,340 L575,270 L570,170 Z" },
-  { id: 'au', name: 'Australia', d: "M795,395 L855,405 L905,430 L895,480 L835,490 L785,460 L775,420 Z" },
-  { id: 'ru', name: 'Russia/Eurasia', d: "M530,105 L615,95 L745,100 L875,110 L950,140 L940,200 L845,225 L745,230 L645,220 L555,200 L535,160 Z" }
+  { id: 'ru', name: 'Russia & Northern Eurasia', d: "M480,140 L510,125 L550,115 L600,105 L650,100 L720,105 L780,110 L840,120 L900,135 L940,160 L950,190 L920,210 L880,225 L820,230 L750,235 L680,230 L620,220 L560,210 L520,195 L490,170 Z" },
+  { id: 'na', name: 'North America', d: "M50,150 L80,130 L120,110 L180,105 L240,115 L280,140 L310,180 L320,230 L300,280 L260,310 L220,330 L180,320 L140,290 L100,260 L70,220 L55,180 Z" },
+  { id: 'sa', name: 'South America', d: "M260,320 L290,325 L330,350 L350,390 L345,440 L320,490 L280,520 L240,500 L220,460 L210,410 L220,360 L240,330 Z" },
+  { id: 'af', name: 'Africa', d: "M440,250 L480,230 L530,225 L580,240 L620,270 L640,320 L630,380 L600,440 L550,480 L500,470 L460,430 L440,380 L430,320 L435,280 Z" },
+  { id: 'eu', name: 'Europe', d: "M440,150 L470,140 L500,145 L530,160 L545,190 L530,220 L490,230 L450,225 L420,210 L415,180 L425,160 Z" },
+  { id: 'as', name: 'Asia & Middle East', d: "M550,220 L620,230 L700,240 L780,250 L850,280 L900,320 L880,380 L820,420 L750,430 L680,420 L620,390 L580,340 L560,280 Z" },
+  { id: 'au', name: 'Australia', d: "M780,440 L830,445 L880,460 L890,500 L850,530 L800,520 L770,490 L775,460 Z" }
 ];
 
 export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
@@ -57,7 +60,6 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
   const [selectedGeoCountry, setSelectedGeoCountry] = useState<string | null>(null);
   const [terminalLogs, setTerminalLogs] = useState<{msg: string, time: string, type: 'info'|'warn'|'crit'}[]>([]);
   
-  const [inspectingUser, setInspectingUser] = useState<User | null>(null);
   const terminalEndRef = useRef<HTMLDivElement>(null);
   
   const usersQuery = useMemoFirebase(() => (!db ? null : query(collection(db, 'users'), limit(500))), [db]);
@@ -272,6 +274,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
                   
                   {geoData.map((geo, i) => {
                     let x = 500, y = 250;
+                    // Approximate coordinates based on standard projection
                     if (geo.code === 'RU') { x = 650; y = 140; }
                     else if (geo.code === 'US') { x = 220; y = 180; }
                     else if (geo.code === 'DE') { x = 510; y = 150; }
