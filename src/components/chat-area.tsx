@@ -9,7 +9,7 @@ import { UserAvatar } from '@/components/user-avatar';
 import { 
   Send, Info, ChevronLeft, X, Paperclip, Mic, StopCircle, ChevronDown, Edit2, Pin, Search, PinOff,
   Smile, Instagram, Camera, Video, Sticker, Copy, Share2, Sparkles, Loader2, RefreshCw, Zap, Trash2, Pause, Play,
-  BarChart3, Image as ImageIcon, ArrowDown, Menu as MenuIcon, List, Phone, Radio, UserPlus
+  BarChart3, Image as ImageIcon, ArrowDown, Menu as MenuIcon, List, Phone, Radio, UserPlus, CircleStop
 } from 'lucide-react';
 import { MessageItem } from './message-item';
 import { useToast } from '@/hooks/use-toast';
@@ -81,8 +81,12 @@ export default function ChatArea() {
 
   // Recording states
   const [isRecording, setIsRecording] = useState(false);
+  const [recordingType, setRecordingType] = useState<'audio' | 'video_note'>('audio');
+  const [recordingTime, setRecordingTime] = useState(0);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
+  const recordingTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const videoPreviewRef = useRef<HTMLVideoElement>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const scrollViewportRef = useRef<HTMLDivElement>(null);
@@ -166,8 +170,22 @@ export default function ChatArea() {
 
   const startRecording = async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mediaRecorder = new MediaRecorder(stream);
+      const isVideo = recordingType === 'video_note';
+      const constraints = { 
+        audio: true, 
+        video: isVideo ? { facingMode: 'user', width: 480, height: 480 } : false 
+      };
+      
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
+      
+      if (isVideo && videoPreviewRef.current) {
+        videoPreviewRef.current.srcObject = stream;
+      }
+
+      const mediaRecorder = new MediaRecorder(stream, {
+        mimeType: isVideo ? 'video/webm;codecs=vp8,opus' : 'audio/webm'
+      });
+      
       mediaRecorderRef.current = mediaRecorder;
       audioChunksRef.current = [];
 
@@ -176,21 +194,24 @@ export default function ChatArea() {
       };
 
       mediaRecorder.onstop = async () => {
-        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        const blob = new Blob(audioChunksRef.current, { type: isVideo ? 'video/webm' : 'audio/webm' });
         const reader = new FileReader();
         reader.onloadend = () => {
-          const base64Audio = reader.result as string;
-          handleSendMessage(base64Audio, 'audio');
+          const base64Data = reader.result as string;
+          handleSendMessage(base64Data, isVideo ? 'video_note' : 'audio');
         };
-        reader.readAsDataURL(audioBlob);
+        reader.readAsDataURL(blob);
         stream.getTracks().forEach(track => track.stop());
       };
 
       mediaRecorder.start();
       setIsRecording(true);
+      setRecordingTime(0);
+      recordingTimerRef.current = setInterval(() => setRecordingTime(p => p + 1), 1000);
+      
       if (window.navigator && window.navigator.vibrate) window.navigator.vibrate(100);
     } catch (err) {
-      toast({ title: "Ошибка микрофона", description: "Разрешите доступ к микрофону в настройках браузера.", variant: "destructive" });
+      toast({ title: "Ошибка доступа", description: "Разрешите доступ к камере/микрофону.", variant: "destructive" });
     }
   };
 
@@ -198,6 +219,7 @@ export default function ChatArea() {
     if (mediaRecorderRef.current && isRecording) {
       mediaRecorderRef.current.stop();
       setIsRecording(false);
+      if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
       if (window.navigator && window.navigator.vibrate) window.navigator.vibrate(50);
     }
   };
@@ -260,6 +282,12 @@ export default function ChatArea() {
     });
     setTimeout(() => scrollToBottom('smooth'), 100);
   }, [messageInput, currentChatId, firebaseUser, db, userProfile, replyTo, editingMsg, setLocalDrafts, scrollToBottom, isInterception, canPost]);
+
+  const formatDuration = (s: number) => {
+    const mins = Math.floor(s / 60);
+    const secs = s % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
 
   const chatDisplayName = useMemo(() => {
     if (isInterception && chat?.type === 'private') {
@@ -340,6 +368,16 @@ export default function ChatArea() {
             <ArrowDown className="w-6 h-6 text-white animate-bounce" />
           </Button>
         )}
+
+        {/* Video Note Center Preview Animation */}
+        {isRecording && recordingType === 'video_note' && (
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[100] animate-in zoom-in duration-300">
+            <div className="relative w-64 h-64 rounded-full overflow-hidden border-4 border-primary shadow-[0_0_50px_rgba(139,92,246,0.5)]">
+              <video ref={videoPreviewRef} autoPlay muted playsInline className="w-full h-full object-cover scale-x-[-1]" />
+              <div className="absolute inset-0 bg-red-500/10 animate-pulse" />
+            </div>
+          </div>
+        )}
       </div>
 
       {isInterception ? (
@@ -361,7 +399,37 @@ export default function ChatArea() {
           </p>
         </div>
       ) : (
-        <footer className="p-3 pb-6 bg-[#0a0a0c]/90 backdrop-blur-2xl border-t border-white/5 shrink-0 z-30">
+        <footer className="p-3 pb-6 bg-[#0a0a0c]/90 backdrop-blur-2xl border-t border-white/5 shrink-0 z-30 relative">
+          {/* Recording Overlay UI */}
+          {isRecording && (
+            <div className="absolute inset-0 bg-[#0a0a0c] z-50 flex items-center justify-between px-6 animate-in slide-in-from-bottom-2">
+              <div className="flex items-center gap-4">
+                <div className="relative flex items-center justify-center">
+                  <div className="absolute w-8 h-8 bg-red-500/20 rounded-full animate-ripple-out" />
+                  <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse z-10" />
+                </div>
+                <span className="text-sm font-black tabular-nums italic text-red-500">{formatDuration(recordingTime)}</span>
+              </div>
+              
+              <div className="flex items-center gap-1.5 h-6">
+                {[...Array(12)].map((_, i) => (
+                  <div 
+                    key={i} 
+                    className="w-1 bg-primary/40 rounded-full animate-voice-wave" 
+                    style={{ animationDelay: `${i * 0.05}s` }} 
+                  />
+                ))}
+              </div>
+
+              <button 
+                onClick={stopRecording} 
+                className="text-destructive font-black text-[10px] uppercase tracking-widest hover:bg-red-500/10 px-4 py-2 rounded-xl transition-colors"
+              >
+                Отмена
+              </button>
+            </div>
+          )}
+
           <div className="max-w-4xl mx-auto space-y-2 relative">
             {replyTo && (
               <div className="p-2 bg-muted/50 rounded-xl border-l-4 border-accent flex items-center justify-between animate-in slide-in-from-bottom-1">
@@ -390,14 +458,37 @@ export default function ChatArea() {
                 </div>
               </div>
 
-              {messageInput.trim() || isRecording ? (
-                <Button size="icon" className="h-10 w-10 rounded-full bg-primary shadow-lg" onClick={() => isRecording ? stopRecording() : handleSendMessage()}>
-                  {isRecording ? <StopCircle className="w-5 h-5 animate-pulse text-red-500" /> : <Send className="w-5 h-5" />}
+              {messageInput.trim() ? (
+                <Button size="icon" className="h-10 w-10 rounded-full bg-primary shadow-lg" onClick={() => handleSendMessage()}>
+                  <Send className="w-5 h-5" />
                 </Button>
               ) : (
-                <Button size="icon" variant="ghost" className="h-10 w-10 rounded-full hover:bg-primary/10 text-primary" onMouseDown={startRecording} onMouseUp={stopRecording} onTouchStart={startRecording} onTouchEnd={stopRecording}>
-                  <Mic className="w-5 h-5" />
-                </Button>
+                <div className="flex items-center gap-1 bg-white/5 p-1 rounded-full">
+                  <Button 
+                    size="icon" 
+                    variant="ghost" 
+                    className={cn("h-10 w-10 rounded-full transition-all", recordingType === 'audio' ? "bg-primary text-white scale-110 shadow-lg" : "text-white/40")}
+                    onClick={() => setRecordingType('audio')}
+                    onMouseDown={recordingType === 'audio' ? startRecording : undefined}
+                    onMouseUp={recordingType === 'audio' ? stopRecording : undefined}
+                    onTouchStart={recordingType === 'audio' ? startRecording : undefined}
+                    onTouchEnd={recordingType === 'audio' ? stopRecording : undefined}
+                  >
+                    <Mic className="w-5 h-5" />
+                  </Button>
+                  <Button 
+                    size="icon" 
+                    variant="ghost" 
+                    className={cn("h-10 w-10 rounded-full transition-all", recordingType === 'video_note' ? "bg-primary text-white scale-110 shadow-lg" : "text-white/40")}
+                    onClick={() => setRecordingType('video_note')}
+                    onMouseDown={recordingType === 'video_note' ? startRecording : undefined}
+                    onMouseUp={recordingType === 'video_note' ? stopRecording : undefined}
+                    onTouchStart={recordingType === 'video_note' ? startRecording : undefined}
+                    onTouchEnd={recordingType === 'video_note' ? stopRecording : undefined}
+                  >
+                    <Video className="w-5 h-5" />
+                  </Button>
+                </div>
               )}
             </div>
           </div>
