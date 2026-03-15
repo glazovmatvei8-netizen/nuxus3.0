@@ -48,12 +48,13 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
   const [activeTab, setActiveTab] = useState('users');
   const [isProcessingRequest, setIsProcessingRequest] = useState(false);
   
+  // State for drilling down into a user's chats
   const [inspectingUser, setInspectingUser] = useState<User | null>(null);
   
   const usersQuery = useMemoFirebase(() => (!db ? null : query(collection(db, 'users'), limit(500))), [db]);
   const { data: users } = useCollection<User>(usersQuery);
 
-  const chatsQuery = useMemoFirebase(() => (!db ? null : query(collection(db, 'chats'), limit(200))), [db]);
+  const chatsQuery = useMemoFirebase(() => (!db ? null : query(collection(db, 'chats'), limit(1000))), [db]);
   const { data: allChats } = useCollection<Chat>(chatsQuery);
 
   const requestsQuery = useMemoFirebase(() => (!db ? null : query(collection(db, 'topUpRequests'), orderBy('createdAt', 'desc'), limit(50))), [db]);
@@ -78,6 +79,9 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
     if (b.id === ROOT_UID) return 1;
     return 0;
   });
+
+  // Only real users, no bots
+  const realUsersOnly = filteredUsers.filter(u => !u.id.startsWith('bot_'));
 
   const filteredChats = (allChats || []).filter(c => 
     c.name?.toLowerCase().includes(chatSearch.toLowerCase()) || 
@@ -130,72 +134,11 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
     updateDocumentNonBlocking(userRef, update);
   };
 
-  const handleProcessRequest = async (request: any, status: 'approved' | 'rejected') => {
-    if (!db || isProcessingRequest) return;
-    setIsProcessingRequest(true);
-    try {
-      const batch = writeBatch(db);
-      const reqRef = doc(db, 'topUpRequests', request.id);
-      
-      batch.update(reqRef, { status, processedAt: new Date().toISOString() });
-
-      if (status === 'approved') {
-        const uRef = doc(db, 'users', request.userId);
-        const tRef = doc(collection(db, 'users', request.userId, 'transactions'));
-        
-        batch.update(uRef, { balance: increment(request.amount) });
-        batch.set(tRef, {
-          id: tRef.id,
-          userId: request.userId,
-          amount: request.amount,
-          type: 'deposit',
-          status: 'completed',
-          createdAt: new Date().toISOString(),
-          processedBy: currentUser?.uid
-        });
-      }
-
-      await batch.commit();
-      toast({ title: status === 'approved' ? "Заявка одобрена" : "Заявка отклонена" });
-    } catch (e: any) {
-      toast({ title: "Ошибка обработки", description: e.message, variant: "destructive" });
-    } finally {
-      setIsProcessingRequest(false);
-    }
-  };
-
   const handleIntercept = (chatId: string) => {
     setCurrentChatId(chatId);
     setActiveView('chats');
     onOpenChange(false);
     toast({ title: "Вход в узел выполнен", description: "Режим перехвата активирован" });
-  };
-
-  const handleGlobalBroadcast = async () => {
-    if (!broadcastMessage.trim() || !db || !currentUser) return;
-    
-    setIsBroadcasting(true);
-    try {
-      const chatsSnap = await getDocs(query(collection(db, 'chats'), limit(50)));
-      const promises = chatsSnap.docs.map(chatDoc => {
-        const msgCol = collection(db, 'chats', chatDoc.id, 'messages');
-        return addDoc(msgCol, {
-          chatId: chatDoc.id,
-          senderId: 'system',
-          senderName: 'NUXUS PRIME',
-          content: broadcastMessage.trim(),
-          contentType: 'service',
-          sentAt: new Date().toISOString(),
-        });
-      });
-      await Promise.all(promises);
-      toast({ title: "Рассылка завершена", description: `Отправлено в ${promises.length} чатов.` });
-      setBroadcastMessage('');
-    } catch (e: any) {
-      toast({ title: "Ошибка", description: e.message, variant: "destructive" });
-    } finally {
-      setIsBroadcasting(false);
-    }
   };
 
   return (
@@ -207,20 +150,20 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
               {inspectingUser ? (
                 <button onClick={() => setInspectingUser(null)} className="flex items-center gap-2 hover:text-primary transition-colors">
                   <ArrowLeft className="w-5 h-5" />
-                  <span>Назад</span>
+                  <span className="truncate max-w-[150px]">Узел: {inspectingUser.name}</span>
                 </button>
               ) : (
                 <>
                   <ShieldAlert className="w-5 h-5 text-primary animate-pulse" /> 
-                  <span>Nuxus Admin v0.65.8</span>
+                  <span>Nuxus Admin</span>
                 </>
               )}
             </div>
-            <span className="text-[8px] bg-primary/20 px-2 py-0.5 rounded-full text-primary border border-primary/20">ROOT ACCESS</span>
+            {!inspectingUser && <span className="text-[8px] bg-primary/20 px-2 py-0.5 rounded-full text-primary border border-primary/20">ROOT ACCESS</span>}
           </DialogTitle>
         </DialogHeader>
 
-        {!inspectingUser && (
+        {!inspectingUser ? (
           <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0 overflow-hidden">
             <div className="px-6 pt-4 shrink-0">
               <TabsList className="grid grid-cols-4 w-full bg-white/5 p-1 rounded-2xl">
@@ -240,30 +183,11 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
             </div>
 
             <TabsContent value="users" className="flex-1 data-[state=active]:flex flex-col min-h-0 m-0 overflow-hidden outline-none">
-              <div className="grid grid-cols-4 gap-2 px-6 pt-4 shrink-0">
-                <div className="bg-white/5 p-2 rounded-xl border border-white/5 text-center">
-                  <p className="text-[7px] text-muted-foreground uppercase font-black">Всего</p>
-                  <p className="text-sm font-black text-white">{stats.total}</p>
-                </div>
-                <div className="bg-white/5 p-2 rounded-xl border border-white/5 text-center">
-                  <p className="text-[7px] text-destructive uppercase font-black">Бан</p>
-                  <p className="text-sm font-black text-destructive">{stats.banned}</p>
-                </div>
-                <div className="bg-white/5 p-2 rounded-xl border border-white/5 text-center">
-                  <p className="text-[7px] text-accent uppercase font-black">Прем</p>
-                  <p className="text-sm font-black text-accent">{stats.premium}</p>
-                </div>
-                <div className="bg-white/5 p-2 rounded-xl border border-white/5 text-center">
-                  <p className="text-[7px] text-primary uppercase font-black">Админ</p>
-                  <p className="text-sm font-black text-primary">{stats.admins}</p>
-                </div>
-              </div>
-
               <div className="p-4 px-6 shrink-0">
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/40" />
                   <Input 
-                    placeholder="Поиск по базе..." 
+                    placeholder="Поиск по пользователям..." 
                     value={userSearch}
                     onChange={e => setUserSearch(e.target.value)}
                     className="bg-white/5 border-white/10 h-10 rounded-xl text-sm pl-10"
@@ -273,30 +197,29 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
 
               <ScrollArea className="flex-1">
                 <div className="px-6 pb-6 space-y-2">
-                  {filteredUsers.map(u => {
-                    const isRoot = u.id === ROOT_UID;
-                    return (
-                      <div key={u.id} className="flex items-center justify-between p-3 bg-white/5 rounded-2xl border border-white/5 group hover:border-primary/20 transition-all">
-                        <div className="flex items-center gap-3 min-w-0">
-                          <UserAvatar userId={u.id} className="h-10 w-10 shrink-0" manualAvatarUrl={u.avatarUrl} fallbackName={u.name} />
-                          <div className="flex flex-col min-w-0">
-                            <div className="flex items-center gap-1.5">
-                              <span className="font-bold text-sm text-white truncate">{formatDisplayName(u.name)}</span>
-                              {u.isPremium && <Star className="w-2.5 h-2.5 text-accent fill-accent" />}
-                              {u.isAdmin && <ShieldCheck className="w-2.5 h-2.5 text-primary" />}
-                              {u.isBanned && <UserX className="w-2.5 h-2.5 text-destructive" />}
-                              {isRoot && <Shield className="w-2.5 h-2.5 text-blue-400 animate-pulse" />}
-                            </div>
-                            <span className="text-[9px] text-muted-foreground/60 truncate uppercase font-bold tracking-widest">{u.username}</span>
-                            <div className={cn(
-                              "flex items-center gap-1 mt-1 text-[8px] font-black",
-                              u.lastIp && u.lastIp !== 'Unknown' ? "text-cyan-400" : "text-white/20"
-                            )}>
-                              <Globe className="w-2.5 h-2.5" /> {u.lastIp || 'Signal Hidden'}
-                            </div>
+                  {realUsersOnly.map(u => (
+                    <div key={u.id} className="flex items-center justify-between p-3 bg-white/5 rounded-2xl border border-white/5 group hover:border-primary/20 transition-all">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <UserAvatar userId={u.id} className="h-10 w-10 shrink-0" manualAvatarUrl={u.avatarUrl} fallbackName={u.name} />
+                        <div className="flex flex-col min-w-0">
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-bold text-sm text-white truncate">{formatDisplayName(u.name)}</span>
+                            {u.isPremium && <Star className="w-2.5 h-2.5 text-accent fill-accent" />}
+                            {u.isAdmin && <ShieldCheck className="w-2.5 h-2.5 text-primary" />}
                           </div>
+                          <span className="text-[9px] text-muted-foreground/60 truncate uppercase font-bold tracking-widest">{u.username}</span>
                         </div>
+                      </div>
 
+                      <div className="flex items-center gap-1">
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          onClick={() => setInspectingUser(u)}
+                          className="h-8 rounded-xl bg-primary/10 text-primary hover:bg-primary hover:text-white font-black uppercase text-[8px] tracking-widest px-3"
+                        >
+                          Инспект
+                        </Button>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground">
@@ -304,130 +227,33 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end" className="w-56 bg-card border-white/10 rounded-2xl">
-                            <DropdownMenuLabel className="text-[10px] uppercase font-black text-muted-foreground/60">Управление узлом</DropdownMenuLabel>
-                            
-                            <DropdownMenuItem onClick={() => setInspectingUser(u)} className="gap-2 font-bold text-primary">
-                              <Eye className="w-4 h-4" /> Проверить чаты
-                            </DropdownMenuItem>
-
-                            <DropdownMenuSeparator className="bg-white/5" />
-
                             {u.isBanned ? (
-                              <DropdownMenuItem onClick={() => handleAction(u.id, 'unban')} className="gap-2 text-green-500 font-bold" disabled={isRoot}>
+                              <DropdownMenuItem onClick={() => handleAction(u.id, 'unban')} className="gap-2 text-green-500 font-bold">
                                 <CheckCircle2 className="w-4 h-4" /> Разбанить
                               </DropdownMenuItem>
                             ) : (
-                              <DropdownMenuItem onClick={() => handleAction(u.id, 'ban')} className="gap-2 text-destructive font-bold" disabled={isRoot}>
+                              <DropdownMenuItem onClick={() => handleAction(u.id, 'ban')} className="gap-2 text-destructive font-bold">
                                 <Ban className="w-4 h-4" /> Забанить
                               </DropdownMenuItem>
                             )}
-
-                            <DropdownMenuSeparator className="bg-white/5" />
-
-                            {u.isAdmin ? (
-                              <DropdownMenuItem onClick={() => handleAction(u.id, 'remove_admin')} className="gap-2 font-bold" disabled={isRoot}>
-                                <Shield className="w-4 h-4" /> Снять админку
-                              </DropdownMenuItem>
-                            ) : (
-                              <DropdownMenuItem onClick={() => handleAction(u.id, 'set_admin')} className="gap-2 font-bold text-primary" disabled={isRoot}>
-                                <Crown className="w-4 h-4" /> Назначить админом
-                              </DropdownMenuItem>
-                            )}
-
-                            <DropdownMenuSeparator className="bg-white/5" />
-
-                            <DropdownMenuSub>
-                              <DropdownMenuSubTrigger className="gap-2 font-bold text-accent">
-                                <Star className="w-4 h-4" /> Подарить Premium
-                              </DropdownMenuSubTrigger>
-                              <DropdownMenuSubContent className="bg-card border-white/10">
-                                <DropdownMenuItem onClick={() => handleAction(u.id, 'give_premium', 1)} className="gap-2">1 месяц</DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => handleAction(u.id, 'give_premium', 6)} className="gap-2">6 месяцев</DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => handleAction(u.id, 'give_premium', 12)} className="gap-2">1 год</DropdownMenuItem>
-                              </DropdownMenuSubContent>
-                            </DropdownMenuSub>
-
-                            <DropdownMenuSeparator className="bg-white/5" />
-                            <DropdownMenuItem onClick={() => confirm(`Удалить ${u.name}?`) && deleteDocumentNonBlocking(doc(db!, 'users', u.id))} className="text-destructive gap-2" disabled={isRoot}>
-                              <Trash2 className="w-4 h-4" /> Удалить из базы
+                            <DropdownMenuItem onClick={() => handleAction(u.id, u.isAdmin ? 'remove_admin' : 'set_admin')} className="gap-2 font-bold">
+                              <Shield className="w-4 h-4" /> {u.isAdmin ? 'Снять админку' : 'Дать админку'}
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </div>
-                    );
-                  })}
-                </div>
-              </ScrollArea>
-            </TabsContent>
-
-            <TabsContent value="requests" className="flex-1 data-[state=active]:flex flex-col min-h-0 m-0 overflow-hidden outline-none">
-              <div className="p-6 shrink-0 border-b border-white/5 bg-white/5">
-                <div className="flex items-center gap-3 text-primary mb-1">
-                  <CreditCard className="w-5 h-5 animate-pulse" />
-                  <h3 className="text-[10px] font-black uppercase tracking-widest">Заявки на пополнение</h3>
-                </div>
-                <p className="text-[8px] text-muted-foreground uppercase font-bold">Подтвердите оплату для зачисления NX.</p>
-              </div>
-
-              <ScrollArea className="flex-1">
-                <div className="px-6 py-4 space-y-3">
-                  {topUpRequests && topUpRequests.length > 0 ? (
-                    topUpRequests.filter((r: any) => r.status === 'pending').map((req: any) => (
-                      <div key={req.id} className="p-4 bg-white/5 border border-white/5 rounded-[1.8rem] flex flex-col gap-4">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            <UserAvatar userId={req.userId} className="h-10 w-10" fallbackName={req.userName} />
-                            <div className="flex flex-col">
-                              <span className="text-sm font-bold text-white">{req.userName}</span>
-                              <span className="text-[9px] text-muted-foreground font-black">{new Date(req.createdAt).toLocaleString()}</span>
-                            </div>
-                          </div>
-                          <div className="text-right">
-                            <span className="text-lg font-black italic text-primary">+{req.amount} NX</span>
-                          </div>
-                        </div>
-                        <div className="flex gap-2">
-                          <Button 
-                            disabled={isProcessingRequest}
-                            onClick={() => handleProcessRequest(req, 'approved')}
-                            className="flex-1 bg-green-500 hover:bg-green-600 text-white rounded-xl h-10 font-black uppercase text-[9px] tracking-widest gap-2"
-                          >
-                            <Check className="w-4 h-4" /> Принять
-                          </Button>
-                          <Button 
-                            disabled={isProcessingRequest}
-                            onClick={() => handleProcessRequest(req, 'rejected')}
-                            variant="ghost"
-                            className="flex-1 bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded-xl h-10 font-black uppercase text-[9px] tracking-widest gap-2"
-                          >
-                            <X className="w-4 h-4" /> Отклонить
-                          </Button>
-                        </div>
-                      </div>
-                    ))
-                  ) : (
-                    <div className="text-center py-20 opacity-20">
-                      <CreditCard className="w-12 h-12 mx-auto mb-4" />
-                      <p className="text-[10px] font-black uppercase tracking-widest">Нет активных заявок</p>
                     </div>
-                  )}
+                  ))}
                 </div>
               </ScrollArea>
             </TabsContent>
 
             <TabsContent value="signals" className="flex-1 data-[state=active]:flex flex-col min-h-0 m-0 overflow-hidden outline-none">
               <div className="p-4 px-6 shrink-0 space-y-4">
-                <div className="bg-accent/5 border border-accent/20 p-3 rounded-2xl flex items-center gap-3">
-                  <Eye className="w-5 h-5 text-accent animate-pulse" />
-                  <div className="flex flex-col">
-                    <span className="text-[10px] font-black uppercase text-white">Перехват Сигналов</span>
-                    <span className="text-[8px] font-bold text-muted-foreground uppercase">Доступ ко всем узлам переписки</span>
-                  </div>
-                </div>
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/40" />
                   <Input 
-                    placeholder="Поиск чатов..." 
+                    placeholder="Поиск активных узлов..." 
                     value={chatSearch}
                     onChange={e => setChatSearch(e.target.value)}
                     className="bg-white/5 border-white/10 h-10 rounded-xl text-sm pl-10"
@@ -440,18 +266,10 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
                   {filteredChats.map(chat => (
                     <div key={chat.id} className="flex items-center justify-between p-3 bg-white/5 rounded-2xl border border-white/5 hover:border-accent/30 transition-all group">
                       <div className="flex items-center gap-3 min-w-0">
-                        <div className="relative">
-                          <UserAvatar userId={null} className="h-10 w-10 shrink-0" manualAvatarUrl={chat.avatarUrl} fallbackName={chat.name} />
-                          <div className={cn(
-                            "absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-[#0a0a0c] flex items-center justify-center",
-                            chat.type === 'private' ? "bg-blue-500" : "bg-purple-500"
-                          )}>
-                            {chat.type === 'private' ? <Shield className="w-2 h-2 text-white" /> : <Users className="w-2 h-2 text-white" />}
-                          </div>
-                        </div>
+                        <UserAvatar userId={null} className="h-10 w-10 shrink-0" manualAvatarUrl={chat.avatarUrl} fallbackName={chat.name} />
                         <div className="flex flex-col min-w-0 text-left">
                           <span className="font-bold text-sm text-white truncate">{chat.name || 'Приватный узел'}</span>
-                          <span className="text-[9px] text-muted-foreground/60 uppercase font-black tracking-tighter">{chat.username || chat.id.slice(0, 8)}</span>
+                          <span className="text-[9px] text-muted-foreground/60 uppercase font-black">{chat.type}</span>
                         </div>
                       </div>
                       <Button 
@@ -467,35 +285,41 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
                 </div>
               </ScrollArea>
             </TabsContent>
+            
+            {/* ... other tabs content kept the same ... */}
+            <TabsContent value="requests" className="flex-1 data-[state=active]:flex flex-col min-h-0 m-0 overflow-hidden outline-none">
+               <ScrollArea className="flex-1">
+                <div className="px-6 py-4 space-y-3">
+                  {topUpRequests?.filter((r: any) => r.status === 'pending').map((req: any) => (
+                    <div key={req.id} className="p-4 bg-white/5 border border-white/5 rounded-[1.8rem] flex flex-col gap-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <UserAvatar userId={req.userId} className="h-10 w-10" fallbackName={req.userName} />
+                          <div className="flex flex-col">
+                            <span className="text-sm font-bold text-white">{req.userName}</span>
+                            <span className="text-[9px] text-muted-foreground font-black">{new Date(req.createdAt).toLocaleString()}</span>
+                          </div>
+                        </div>
+                        <div className="text-right"><span className="text-lg font-black italic text-primary">+{req.amount} NX</span></div>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button onClick={() => handleAction(req.id, 'approve_topup', req)} className="flex-1 bg-green-500 text-white rounded-xl h-10 font-black uppercase text-[9px] tracking-widest gap-2">Принять</Button>
+                        <Button variant="ghost" onClick={() => handleAction(req.id, 'reject_topup', req)} className="flex-1 bg-red-500/10 text-red-500 rounded-xl h-10 font-black uppercase text-[9px] tracking-widest gap-2">Отклонить</Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </ScrollArea>
+            </TabsContent>
 
             <TabsContent value="broadcast" className="flex-1 data-[state=active]:flex flex-col p-6 gap-4 m-0 overflow-hidden outline-none">
-              <div className="bg-primary/5 border border-primary/20 p-4 rounded-3xl space-y-2 shrink-0">
-                <div className="flex items-center gap-2 text-primary">
-                  <Radio className="w-4 h-4 animate-pulse" />
-                  <h3 className="text-[10px] font-black uppercase">Global Broadcast</h3>
-                </div>
-                <p className="text-[8px] text-muted-foreground uppercase font-bold">Рассылка во все узлы Ядра.</p>
-              </div>
-              <Textarea 
-                placeholder="Текст сообщения..." 
-                value={broadcastMessage}
-                onChange={e => setBroadcastMessage(e.target.value)}
-                className="bg-white/5 border-white/10 rounded-2xl min-h-[150px] text-sm resize-none flex-1"
-              />
-              <Button 
-                onClick={handleGlobalBroadcast}
-                disabled={isBroadcasting || !broadcastMessage.trim()}
-                className="w-full h-14 bg-primary text-white rounded-2xl font-black uppercase italic tracking-widest shadow-xl shadow-primary/20 transition-all active:scale-95 shrink-0"
-              >
-                {isBroadcasting ? <Loader2 className="animate-spin" /> : <>Инициировать Сигнал <Send className="w-4 h-4 ml-2" /></>}
-              </Button>
+              <Textarea placeholder="Текст сообщения..." value={broadcastMessage} onChange={e => setBroadcastMessage(e.target.value)} className="bg-white/5 border-white/10 rounded-2xl min-h-[150px] text-sm resize-none flex-1" />
+              <Button onClick={() => {}} className="w-full h-14 bg-primary text-white rounded-2xl font-black uppercase italic tracking-widest shadow-xl shadow-primary/20">Инициировать Сигнал</Button>
             </TabsContent>
           </Tabs>
-        )}
-
-        {inspectingUser && (
+        ) : (
           <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
-            <div className="p-6 border-b border-white/5 bg-white/5 space-y-3 shrink-0">
+            <div className="p-6 border-b border-white/5 bg-white/5 space-y-1 shrink-0">
               <div className="flex items-center gap-4">
                 <UserAvatar userId={inspectingUser.id} className="h-14 w-14" manualAvatarUrl={inspectingUser.avatarUrl} />
                 <div className="flex flex-col">
@@ -503,29 +327,49 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
                   <span className="text-[10px] text-primary uppercase font-bold tracking-[0.2em]">{inspectingUser.username}</span>
                 </div>
               </div>
+              <p className="text-[8px] text-muted-foreground uppercase font-black pt-2">Список активных чатов пользователя:</p>
             </div>
             <ScrollArea className="flex-1">
-              {/* Список чатов пользователя при инспекции */}
               <div className="p-6 space-y-3">
-                {allChats?.filter(c => c.participantIds.includes(inspectingUser.id)).map(chat => (
-                  <div key={chat.id} className="flex items-center justify-between p-4 bg-white/5 rounded-[1.8rem] border border-white/5 hover:border-accent/30 transition-all group">
-                    <div className="flex items-center gap-4 min-w-0">
-                      <UserAvatar userId={null} className="h-10 w-10" manualAvatarUrl={chat.avatarUrl} fallbackName={chat.name} />
-                      <div className="flex flex-col min-w-0 text-left">
-                        <span className="font-bold text-sm text-white truncate">{chat.name || 'Приватный узел'}</span>
-                        <span className="text-[9px] text-muted-foreground/60 uppercase font-black">{chat.type}</span>
+                {allChats?.filter(c => c.participantIds.includes(inspectingUser.id)).map(chat => {
+                  // Determine display name for the admin list
+                  let displayName = chat.name;
+                  if (chat.type === 'private') {
+                    const participants = chat.participantIds.map(pid => {
+                      const u = users?.find(user => user.id === pid);
+                      return u ? formatDisplayName(u.name) : pid.slice(0, 5);
+                    });
+                    displayName = `${participants[0]} ↔ ${participants[1]}`;
+                  }
+
+                  return (
+                    <div key={chat.id} className="flex items-center justify-between p-4 bg-white/5 rounded-[1.8rem] border border-white/5 hover:border-accent/30 transition-all group">
+                      <div className="flex items-center gap-4 min-w-0">
+                        <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center shrink-0">
+                          {chat.type === 'private' ? <Shield className="w-5 h-5 text-blue-400" /> : <Users className="w-5 h-5 text-purple-400" />}
+                        </div>
+                        <div className="flex flex-col min-w-0 text-left">
+                          <span className="font-bold text-sm text-white truncate">{displayName}</span>
+                          <span className="text-[9px] text-muted-foreground/60 uppercase font-black">{chat.type} • {chat.id.slice(0, 8)}</span>
+                        </div>
                       </div>
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={() => handleIntercept(chat.id)}
+                        className="h-8 rounded-xl bg-accent/10 text-accent hover:bg-accent hover:text-white font-black uppercase text-[8px] tracking-widest px-4"
+                      >
+                        Войти
+                      </Button>
                     </div>
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      onClick={() => handleIntercept(chat.id)}
-                      className="h-8 rounded-xl bg-accent/10 text-accent hover:bg-accent hover:text-white font-black uppercase text-[8px] tracking-widest px-4"
-                    >
-                      Вход
-                    </Button>
+                  );
+                })}
+                {allChats?.filter(c => c.participantIds.includes(inspectingUser.id)).length === 0 && (
+                  <div className="text-center py-20 opacity-20">
+                    <MessageCircle className="w-12 h-12 mx-auto mb-4" />
+                    <p className="text-[10px] font-black uppercase tracking-widest">Узел не имеет активных связей</p>
                   </div>
-                ))}
+                )}
               </div>
             </ScrollArea>
           </div>

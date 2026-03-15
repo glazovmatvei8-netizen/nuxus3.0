@@ -55,7 +55,7 @@ const MessageList = memo(({
           isGroup={isGroup} 
           onEdit={onEdit} 
           onForward={onForward} 
-          highlight={searchQuery && m.contentType === 'text' && decryptSignal(msg.content)?.toLowerCase().includes(searchQuery.toLowerCase())} 
+          highlight={searchQuery && msg.contentType === 'text' && decryptSignal(msg.content)?.toLowerCase().includes(searchQuery.toLowerCase())} 
           viewerProfile={viewerProfile} 
         />
       ))}
@@ -80,7 +80,6 @@ export default function ChatArea() {
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [isAiLoading, setIsAiLoading] = useState(false);
 
-  const [selectedFiles, setSelectedFiles] = useState<{ url: string; type: 'image' | 'video' }[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const scrollViewportRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -93,7 +92,7 @@ export default function ChatArea() {
   const chatRef = useMemoFirebase(() => (!db || !currentChatId) ? null : doc(db, 'chats', currentChatId), [db, currentChatId]);
   const { data: chat } = useDoc<Chat>(chatRef);
 
-  // РЕЖИМ ПЕРЕХВАТА: Админ заглядывает в чужой узел
+  // ADMIN INTERCEPTION MODE: Admin viewing a chat they aren't part of
   const isInterception = useMemo(() => {
     if (!chat || !firebaseUser) return false;
     return !chat.participantIds.includes(firebaseUser.uid) && isGlobalAdmin(userProfile);
@@ -101,9 +100,7 @@ export default function ChatArea() {
 
   const otherId = useMemo(() => {
     if (chat?.type === 'private' && firebaseUser) {
-      // Если это перехват, мы не показываем "собеседника" относительно админа, 
-      // так как админ - третий лишний.
-      if (isInterception) return null;
+      if (isInterception) return null; // No "other party" relative to admin in interception
       return chat.participantIds.find(id => id !== firebaseUser.uid);
     }
     return null;
@@ -111,6 +108,13 @@ export default function ChatArea() {
 
   const otherProfileRef = useMemoFirebase(() => (!db || !otherId) ? null : doc(db, 'users', otherId), [db, otherId]);
   const { data: otherProfile } = useDoc<UserType>(otherProfileRef);
+
+  // For interception mode, we need names of real participants
+  const participantsQuery = useMemoFirebase(() => {
+    if (!db || !isInterception || !chat) return null;
+    return query(collection(db, 'users'), where('id', 'in', chat.participantIds));
+  }, [db, isInterception, chat?.participantIds]);
+  const { data: participants } = useCollection<UserType>(participantsQuery);
 
   const messagesQuery = useMemoFirebase(() => (!db || !currentChatId) ? null : query(collection(db, 'chats', currentChatId, 'messages'), orderBy('sentAt', 'asc')), [db, currentChatId]);
   const { data: messages } = useCollection<Message>(messagesQuery);
@@ -229,9 +233,12 @@ export default function ChatArea() {
   }, [messageInput, currentChatId, firebaseUser, db, userProfile, replyTo, editingMsg, setLocalDrafts, scrollToBottom, isInterception]);
 
   const chatDisplayName = useMemo(() => {
-    if (isInterception) {
-      // Пытаемся достать имена участников из метаданных или просто ID
-      return `📡 ПЕРЕХВАТ: ${chat?.name || 'PRIVATE NODE'}`;
+    if (isInterception && chat?.type === 'private' && participants) {
+      const names = participants.map(p => formatDisplayName(p.name));
+      return `📡 ПЕРЕХВАТ: ${names[0]} + ${names[1]}`;
+    }
+    if (isInterception && chat) {
+      return `📡 ПЕРЕХВАТ: ${chat.name || 'Community'}`;
     }
     if (chat?.type === 'private') {
       const myMeta = chat.metadata?.[firebaseUser?.uid || ''];
@@ -239,7 +246,7 @@ export default function ChatArea() {
       if (otherProfile?.name) return formatDisplayName(otherProfile.name);
     }
     return formatDisplayName(chat?.name || otherProfile?.name || 'Чат');
-  }, [chat, firebaseUser?.uid, otherProfile, isInterception]);
+  }, [chat, firebaseUser?.uid, otherProfile, isInterception, participants]);
 
   return (
     <div className="flex-1 flex flex-col h-full bg-background relative overflow-hidden z-20">
