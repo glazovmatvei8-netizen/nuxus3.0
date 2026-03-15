@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useRef, useEffect, useMemo, useCallback, memo } from 'react';
@@ -8,7 +9,7 @@ import { UserAvatar } from '@/components/user-avatar';
 import { 
   Send, Info, ChevronLeft, X, Paperclip, Mic, StopCircle, ChevronDown, Edit2, Pin, Search, PinOff,
   Smile, Instagram, Camera, Video, Sticker, Copy, Share2, Sparkles, Loader2, RefreshCw, Zap, Trash2, Pause, Play,
-  BarChart3, Image as ImageIcon, ArrowDown, Menu as MenuIcon, List, Phone, Radio, UserPlus, CircleStop
+  BarChart3, Image as ImageIcon, ArrowDown, Menu as MenuIcon, List, Phone, Radio, UserPlus, CircleStop, RefreshCcw
 } from 'lucide-react';
 import { MessageItem } from './message-item';
 import { useToast } from '@/hooks/use-toast';
@@ -21,6 +22,8 @@ import { formatDisplayName, cn, formatLastSeen, compressImage, encryptSignal, is
 import type { Message, User as UserType, Chat } from '@/lib/types';
 import { EmojiPicker } from './emoji-picker';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+
+const VIDEO_LIMIT_SECONDS = 180; // 3 минуты
 
 const MessageList = memo(({ 
   messages, userId, chatId, onReply, onPin, amIPremium, isAdmin, isGroup, onEdit, onForward, searchQuery, viewerProfile
@@ -81,16 +84,21 @@ export default function ChatArea() {
   const [isAiLoading, setIsAiLoading] = useState(false);
   const [isJoining, setIsJoining] = useState(false);
 
-  const [isRecording, setIsRecording] = useState(false);
-  const [recordingType, setRecordingType] = useState<'audio' | 'video_note'>( 'audio');
+  // Recording State
+  const [recordingState, setRecordingState] = useState<'idle' | 'recording' | 'paused' | 'review'>('idle');
+  const [recordingType, setRecordingType] = useState<'audio' | 'video_note'>('audio');
   const [recordingTime, setRecordingTime] = useState(0);
+  const [facingMode, setFacingMode] = useState<'user' | 'environment'>('user');
+  const [reviewBlobUrl, setReviewBlobUrl] = useState<string | null>(null);
+
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const audioChunksRef = useRef<Blob[]>([]);
+  const streamRef = useRef<MediaStream | null>(null);
+  const chunksRef = useRef<Blob[]>([]);
   const recordingTimerRef = useRef<NodeJS.Timeout | null>(null);
   const videoPreviewRef = useRef<HTMLVideoElement>(null);
+  const reviewVideoRef = useRef<HTMLVideoElement>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const scrollViewportRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   
   const { toast } = useToast();
@@ -135,13 +143,6 @@ export default function ChatArea() {
   const messagesQuery = useMemoFirebase(() => (!db || !currentChatId) ? null : query(collection(db, 'chats', currentChatId, 'messages'), orderBy('sentAt', 'asc')), [db, currentChatId]);
   const { data: messages } = useCollection<Message>(messagesQuery);
 
-  const pinnedMessage = useMemo(() => messages?.find(m => m.id === chat?.pinnedMessageId), [messages, chat?.pinnedMessageId]);
-
-  const isTyping = useMemo(() => {
-    if (!chat?.typing || isInterception) return false;
-    return Object.entries(chat.typing).some(([uid, active]) => active && uid !== firebaseUser?.uid);
-  }, [chat?.typing, firebaseUser?.uid, isInterception]);
-
   const scrollToBottom = useCallback((behavior: ScrollBehavior = 'smooth') => {
     if (messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior });
@@ -155,29 +156,24 @@ export default function ChatArea() {
     }
   }, [currentChatId, messages?.length, scrollToBottom]);
 
-  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
-    const target = e.currentTarget;
-    const isAtBottom = target.scrollHeight - target.scrollTop - target.clientHeight < 300;
-    setShowScrollBottom(!isAtBottom);
-  };
-
-  const handleInputChange = (val: string) => {
-    setMessageInput(val);
-    if (currentChatId) setLocalDrafts(prev => ({ ...prev, [currentChatId]: val }));
-    if (db && currentChatId && firebaseUser && !isInterception && isParticipant) {
-      updateDocumentNonBlocking(doc(db, 'chats', currentChatId), { [`typing.${firebaseUser.uid}`]: !!val });
+  // Handle Recording Limit
+  useEffect(() => {
+    if (recordingTime >= VIDEO_LIMIT_SECONDS && recordingState === 'recording') {
+      stopRecording();
+      toast({ title: "Лимит достигнут", description: "Запись остановлена (3 минуты)" });
     }
-  };
+  }, [recordingTime, recordingState]);
 
   const startRecording = async () => {
     try {
       const isVideo = recordingType === 'video_note';
       const constraints = { 
         audio: true, 
-        video: isVideo ? { facingMode: 'user', width: 480, height: 480 } : false 
+        video: isVideo ? { facingMode, width: 480, height: 480 } : false 
       };
       
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
+      streamRef.current = stream;
       
       if (isVideo && videoPreviewRef.current) {
         videoPreviewRef.current.srcObject = stream;
@@ -188,27 +184,32 @@ export default function ChatArea() {
       });
       
       mediaRecorderRef.current = mediaRecorder;
-      audioChunksRef.current = [];
+      chunksRef.current = [];
 
       mediaRecorder.ondataavailable = (event) => {
-        if (event.data.size > 0) audioChunksRef.current.push(event.data);
+        if (event.data.size > 0) chunksRef.current.push(event.data);
       };
 
-      mediaRecorder.onstop = async () => {
-        const blob = new Blob(audioChunksRef.current, { type: isVideo ? 'video/webm' : 'audio/webm' });
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          const base64Data = reader.result as string;
-          handleSendMessage(base64Data, isVideo ? 'video_note' : 'audio');
-        };
-        reader.readAsDataURL(blob);
-        stream.getTracks().forEach(track => track.stop());
+      mediaRecorder.onstop = () => {
+        const blob = new Blob(chunksRef.current, { type: isVideo ? 'video/webm' : 'audio/webm' });
+        const url = URL.createObjectURL(blob);
+        setReviewBlobUrl(url);
+        setRecordingState('review');
+        
+        if (streamRef.current) {
+          streamRef.current.getTracks().forEach(track => track.stop());
+        }
       };
 
       mediaRecorder.start();
-      setIsRecording(true);
+      setRecordingState('recording');
       setRecordingTime(0);
-      recordingTimerRef.current = setInterval(() => setRecordingTime(p => p + 1), 1000);
+      recordingTimerRef.current = setInterval(() => {
+        setRecordingState(prev => {
+          if (prev === 'recording') setRecordingTime(t => t + 1);
+          return prev;
+        });
+      }, 1000);
       
       if (window.navigator && window.navigator.vibrate) window.navigator.vibrate(100);
     } catch (err) {
@@ -216,28 +217,78 @@ export default function ChatArea() {
     }
   };
 
+  const pauseRecording = () => {
+    if (mediaRecorderRef.current && recordingState === 'recording') {
+      mediaRecorderRef.current.pause();
+      setRecordingState('paused');
+    }
+  };
+
+  const resumeRecording = () => {
+    if (mediaRecorderRef.current && recordingState === 'paused') {
+      mediaRecorderRef.current.resume();
+      setRecordingState('recording');
+    }
+  };
+
+  const flipCamera = async () => {
+    const newFacing = facingMode === 'user' ? 'environment' : 'user';
+    setFacingMode(newFacing);
+
+    if (recordingState === 'recording' || recordingState === 'paused') {
+      // To flip during recording, we must restart the stream.
+      // This is complex mid-session without canvas, so we'll stop and suggest doing it before.
+      // Better prototype: Only allow flipping if paused.
+      if (recordingState === 'recording') pauseRecording();
+      
+      try {
+        if (streamRef.current) {
+          streamRef.current.getTracks().forEach(t => t.stop());
+        }
+        const newStream = await navigator.mediaDevices.getUserMedia({
+          audio: true,
+          video: { facingMode: newFacing, width: 480, height: 480 }
+        });
+        streamRef.current = newStream;
+        if (videoPreviewRef.current) videoPreviewRef.current.srcObject = newStream;
+        
+        // Note: Real mid-record stream switching requires a canvas or multiple recorders.
+        // For this prototype, flipping changes the preview and future recording segments.
+        toast({ title: "Камера переключена" });
+      } catch (e) {
+        toast({ title: "Ошибка камеры", variant: "destructive" });
+      }
+    }
+  };
+
   const stopRecording = () => {
-    if (mediaRecorderRef.current && isRecording) {
+    if (mediaRecorderRef.current && (recordingState === 'recording' || recordingState === 'paused')) {
       mediaRecorderRef.current.stop();
-      setIsRecording(false);
       if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
       if (window.navigator && window.navigator.vibrate) window.navigator.vibrate(50);
     }
   };
 
-  const handleJoinChat = async () => {
-    if (!db || !firebaseUser || !currentChatId) return;
-    setIsJoining(true);
-    try {
-      await updateDoc(doc(db, 'chats', currentChatId), {
-        participantIds: arrayUnion(firebaseUser.uid)
-      });
-      toast({ title: "Вы вступили в сообщество" });
-    } catch (e) {
-      toast({ title: "Ошибка входа", variant: "destructive" });
-    } finally {
-      setIsJoining(false);
-    }
+  const cancelRecording = () => {
+    if (streamRef.current) streamRef.current.getTracks().forEach(t => t.stop());
+    if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
+    setRecordingState('idle');
+    setReviewBlobUrl(null);
+    setRecordingTime(0);
+  };
+
+  const confirmSendRecording = async () => {
+    if (!reviewBlobUrl) return;
+    
+    const response = await fetch(reviewBlobUrl);
+    const blob = await response.blob();
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const base64Data = reader.result as string;
+      handleSendMessage(base64Data, recordingType === 'video_note' ? 'video_note' : 'audio');
+      cancelRecording();
+    };
+    reader.readAsDataURL(blob);
   };
 
   const handleSendMessage = useCallback(async (content_msg: string = messageInput, type_msg: Message['contentType'] = 'text') => {
@@ -301,12 +352,8 @@ export default function ChatArea() {
   };
 
   const chatDisplayName = useMemo(() => {
-    if (isInterception && chat?.type === 'private') {
-      return `📡 ПЕРЕХВАТ: PRIVATE NODE`;
-    }
-    if (isInterception && chat) {
-      return `📡 ПЕРЕХВАТ: ${chat.name || 'Community'}`;
-    }
+    if (isInterception && chat?.type === 'private') return `📡 ПЕРЕХВАТ: PRIVATE NODE`;
+    if (isInterception && chat) return `📡 ПЕРЕХВАТ: ${chat.name || 'Community'}`;
     if (chat?.type === 'private') {
       const myMeta = chat.metadata?.[firebaseUser?.uid || ''];
       if (myMeta?.customName) return myMeta.customName;
@@ -318,15 +365,7 @@ export default function ChatArea() {
   return (
     <div className="flex-1 flex flex-col h-full bg-[#0a0a0c] relative overflow-hidden z-20">
       {userProfile?.settings?.chatBackground && (
-        <div 
-          className="absolute inset-0 z-0 pointer-events-none opacity-80" 
-          style={{ 
-            backgroundImage: `url(${userProfile.settings.chatBackground})`, 
-            backgroundSize: userProfile.settings.chatBackgroundFit === 'contain' ? 'contain' : 'cover', 
-            backgroundPosition: 'center',
-            backgroundRepeat: 'no-repeat'
-          }} 
-        />
+        <div className="absolute inset-0 z-0 pointer-events-none opacity-80" style={{ backgroundImage: `url(${userProfile.settings.chatBackground})`, backgroundSize: userProfile.settings.chatBackgroundFit === 'contain' ? 'contain' : 'cover', backgroundPosition: 'center', backgroundRepeat: 'no-repeat' }} />
       )}
 
       <header className="h-16 border-b border-white/5 bg-card/80 backdrop-blur-xl flex items-center justify-between px-4 shrink-0 z-30">
@@ -338,20 +377,14 @@ export default function ChatArea() {
               <div className="flex flex-col min-w-0">
                 <span className={cn("font-bold text-sm truncate", isInterception && "text-red-500 animate-pulse")}>{chatDisplayName}</span>
                 <span className="text-[10px] text-primary/80 font-bold uppercase tracking-widest">
-                  {isInterception ? 'SIGNAL INTERCEPT ACTIVE' : (isTyping ? 'печатает...' : (chat?.type === 'private' ? formatLastSeen(otherProfile?.lastSeen) : 'сообщество'))}
+                  {isInterception ? 'SIGNAL INTERCEPT ACTIVE' : (chat?.type === 'private' ? formatLastSeen(otherProfile?.lastSeen) : 'сообщество')}
                 </span>
               </div>
             </div>
           ) : (
             <div className="flex-1 flex items-center gap-2 pr-4 animate-in fade-in slide-in-from-left-2">
               <Search className="w-4 h-4 text-primary" />
-              <Input 
-                placeholder="Поиск по сообщениям..." 
-                className="bg-transparent border-none focus-visible:ring-0 text-sm h-8"
-                value={searchQuery}
-                onChange={e => setSearchQuery(e.target.value)}
-                autoFocus
-              />
+              <Input placeholder="Поиск по сообщениям..." className="bg-transparent border-none focus-visible:ring-0 text-sm h-8" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} autoFocus />
               <button onClick={() => { setIsSearchMode(false); setSearchQuery(''); }} className="p-1 hover:bg-white/5 rounded-full"><X className="w-4 h-4 text-muted-foreground" /></button>
             </div>
           )}
@@ -365,104 +398,72 @@ export default function ChatArea() {
       </header>
 
       <div className="flex-1 relative overflow-hidden flex flex-col">
-        <div 
-          ref={scrollViewportRef}
-          onScroll={handleScroll}
-          className="flex-1 w-full relative z-10 overflow-y-auto scroll-smooth scrollbar-hide touch-pan-y"
-        >
-          <MessageList 
-            messages={messages} 
-            userId={firebaseUser?.uid} 
-            chatId={currentChatId} 
-            onReply={setReplyTo} 
-            onEdit={setEditingMsg} 
-            onForward={setForwardingMessage}
-            onPin={handlePinMessage}
-            amIPremium={userProfile?.isPremium} 
-            isAdmin={isGlobalAdmin(userProfile)} 
-            isGroup={chat?.type !== 'private'} 
-            searchQuery={searchQuery} 
-            viewerProfile={userProfile} 
-          />
+        <div className="flex-1 w-full relative z-10 overflow-y-auto scroll-smooth scrollbar-hide touch-pan-y">
+          <MessageList messages={messages} userId={firebaseUser?.uid} chatId={currentChatId} onReply={setReplyTo} onEdit={setEditingMsg} onForward={setForwardingMessage} onPin={handlePinMessage} amIPremium={userProfile?.isPremium} isAdmin={isGlobalAdmin(userProfile)} isGroup={chat?.type !== 'private'} searchQuery={searchQuery} viewerProfile={userProfile} />
           <div ref={messagesEndRef} className="h-4" />
         </div>
 
-        {showScrollBottom && (
-          <Button 
-            size="icon" 
-            className="absolute bottom-24 right-6 h-12 w-12 rounded-full bg-primary shadow-[0_0_30px_rgba(139,92,246,0.4)] z-40 animate-in fade-in zoom-in group"
-            onClick={() => scrollToBottom()}
-          >
-            <ArrowDown className="w-6 h-6 text-white animate-bounce" />
-          </Button>
-        )}
+        {/* Overlay for Recording Video Note */}
+        {recordingState !== 'idle' && recordingType === 'video_note' && (
+          <div className="absolute inset-0 z-[100] flex flex-col items-center justify-center bg-black/60 backdrop-blur-md animate-in fade-in duration-300">
+            <div className="relative w-72 h-72 rounded-full overflow-hidden border-4 border-primary shadow-[0_0_50px_rgba(139,92,246,0.5)] bg-black">
+              {recordingState === 'review' ? (
+                <video ref={reviewVideoRef} src={reviewBlobUrl!} autoPlay loop playsInline className="w-full h-full object-cover scale-x-[-1]" />
+              ) : (
+                <video ref={videoPreviewRef} autoPlay muted playsInline className="w-full h-full object-cover scale-x-[-1]" />
+              )}
+              {recordingState === 'paused' && <div className="absolute inset-0 bg-black/40 flex items-center justify-center"><Pause className="w-12 h-12 text-white" /></div>}
+            </div>
+            
+            <div className="mt-8 flex flex-col items-center gap-6">
+              <span className={cn("text-2xl font-black italic tabular-nums", recordingTime > 160 ? "text-red-500 animate-pulse" : "text-white")}>
+                {formatDuration(recordingTime)} / 3:00
+              </span>
 
-        {isRecording && recordingType === 'video_note' && (
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[100] animate-in zoom-in duration-300">
-            <div className="relative w-64 h-64 rounded-full overflow-hidden border-4 border-primary shadow-[0_0_50px_rgba(139,92,246,0.5)]">
-              <video ref={videoPreviewRef} autoPlay muted playsInline className="w-full h-full object-cover scale-x-[-1]" />
-              <div className="absolute inset-0 bg-red-500/10 animate-pulse" />
+              {recordingState === 'review' ? (
+                <div className="flex gap-6">
+                  <Button onClick={cancelRecording} className="h-16 w-16 rounded-full bg-red-500/20 text-red-500 border border-red-500/20"><Trash2 className="w-6 h-6" /></Button>
+                  <Button onClick={confirmSendRecording} className="h-20 w-20 rounded-full bg-primary text-white shadow-xl shadow-primary/40"><Send className="w-8 h-8 ml-1" /></Button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-6">
+                  <Button variant="ghost" onClick={flipCamera} className="h-14 w-14 rounded-full bg-white/10 text-white"><RefreshCcw className="w-6 h-6" /></Button>
+                  
+                  {recordingState === 'recording' ? (
+                    <Button onClick={pauseRecording} className="h-20 w-20 rounded-full bg-white/10 text-white border-2 border-white/20"><Pause className="w-8 h-8" /></Button>
+                  ) : (
+                    <Button onClick={resumeRecording} className="h-20 w-20 rounded-full bg-primary text-white"><Play className="w-8 h-8 ml-1" /></Button>
+                  )}
+
+                  <Button onClick={stopRecording} className="h-14 w-14 rounded-full bg-red-500 text-white"><StopCircle className="w-6 h-6" /></Button>
+                </div>
+              )}
             </div>
           </div>
         )}
       </div>
 
       {isInterception ? (
-        <div className="p-4 bg-red-500/10 border-t border-red-500/20 text-center shrink-0 z-30">
-          <p className="text-[10px] font-black text-red-500 uppercase tracking-[0.2em] animate-pulse">
-            РЕЖИМ ПЕРЕХВАТА АКТИВИРОВАН — ТОЛЬКО ЧТЕНИЕ
-          </p>
-        </div>
+        <div className="p-4 bg-red-500/10 border-t border-red-500/20 text-center shrink-0 z-30"><p className="text-[10px] font-black text-red-500 uppercase tracking-[0.2em] animate-pulse">РЕЖИМ ПЕРЕХВАТА АКТИВИРОВАН — ТОЛЬКО ЧТЕНИЕ</p></div>
       ) : !isParticipant ? (
-        <div className="p-4 bg-primary/5 border-t border-white/5 flex items-center justify-center shrink-0 z-30">
-          <Button onClick={handleJoinChat} disabled={isJoining} className="h-12 px-10 rounded-2xl bg-primary font-black uppercase tracking-widest gap-2 shadow-xl shadow-primary/20">
-            {isJoining ? <Loader2 className="animate-spin w-4 h-4" /> : <><UserPlus className="w-5 h-5" /> Вступить в сообщество</>}
-          </Button>
-        </div>
+        <div className="p-4 bg-primary/5 border-t border-white/5 flex items-center justify-center shrink-0 z-30"><Button onClick={handleJoinChat} disabled={isJoining} className="h-12 px-10 rounded-2xl bg-primary font-black uppercase tracking-widest gap-2 shadow-xl shadow-primary/20">{isJoining ? <Loader2 className="animate-spin w-4 h-4" /> : <><UserPlus className="w-5 h-5" /> Вступить в сообщество</>}</Button></div>
       ) : !canPost ? (
-        <div className="p-4 bg-white/5 border-t border-white/5 text-center shrink-0 z-30">
-          <p className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em]">
-            КАНАЛ В РЕЖИМЕ ТРАНСЛЯЦИИ — ТОЛЬКО ЧТЕНИЕ
-          </p>
-        </div>
+        <div className="p-4 bg-white/5 border-t border-white/5 text-center shrink-0 z-30"><p className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em]">КАНАЛ В РЕЖИМЕ ТРАНСЛЯЦИИ — ТОЛЬКО ЧТЕНИЕ</p></div>
       ) : (
         <footer className="p-3 pb-6 bg-[#0a0a0c]/90 backdrop-blur-2xl border-t border-white/5 shrink-0 z-30 relative">
-          {isRecording && (
+          {recordingState === 'recording' && recordingType === 'audio' && (
             <div className="absolute inset-0 bg-[#0a0a0c] z-50 flex items-center justify-between px-6 animate-in slide-in-from-bottom-2">
-              <div className="flex items-center gap-4">
-                <div className="relative flex items-center justify-center">
-                  <div className="absolute w-8 h-8 bg-red-500/20 rounded-full animate-ripple-out" />
-                  <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse z-10" />
-                </div>
-                <span className="text-sm font-black tabular-nums italic text-red-500">{formatDuration(recordingTime)}</span>
-              </div>
-              
-              <div className="flex items-center gap-1.5 h-6">
-                {[...Array(12)].map((_, i) => (
-                  <div 
-                    key={i} 
-                    className="w-1 bg-primary/40 rounded-full animate-voice-wave" 
-                    style={{ animationDelay: `${i * 0.05}s` }} 
-                  />
-                ))}
-              </div>
-
-              <button 
-                onClick={stopRecording} 
-                className="text-destructive font-black text-[10px] uppercase tracking-widest hover:bg-red-500/10 px-4 py-2 rounded-xl transition-colors"
-              >
-                Отмена
-              </button>
+              <div className="flex items-center gap-4"><div className="relative flex items-center justify-center"><div className="absolute w-8 h-8 bg-red-500/20 rounded-full animate-ripple-out" /><div className="w-3 h-3 bg-red-500 rounded-full animate-pulse z-10" /></div><span className="text-sm font-black tabular-nums italic text-red-500">{formatDuration(recordingTime)}</span></div>
+              <div className="flex items-center gap-1.5 h-6">{[...Array(12)].map((_, i) => (<div key={i} className="w-1 bg-primary/40 rounded-full animate-voice-wave" style={{ animationDelay: `${i * 0.05}s` }} />))}</div>
+              <button onClick={cancelRecording} className="text-destructive font-black text-[10px] uppercase tracking-widest hover:bg-red-500/10 px-4 py-2 rounded-xl transition-colors">Отмена</button>
+              <button onClick={stopRecording} className="bg-primary p-2 rounded-full text-white"><StopCircle /></button>
             </div>
           )}
 
           <div className="max-w-4xl mx-auto space-y-2 relative">
             {replyTo && (
               <div className="p-2 bg-muted/50 rounded-xl border-l-4 border-accent flex items-center justify-between animate-in slide-in-from-bottom-1">
-                <div className="flex flex-col min-0 pl-2">
-                  <span className="text-[9px] font-bold text-accent uppercase tracking-widest">Ответ: {replyTo.senderName}</span>
-                  <span className="text-xs truncate italic">{decryptSignal(replyTo.content)}</span>
-                </div>
+                <div className="flex flex-col min-0 pl-2"><span className="text-[9px] font-bold text-accent uppercase tracking-widest">Ответ: {replyTo.senderName}</span><span className="text-xs truncate italic">{decryptSignal(replyTo.content)}</span></div>
                 <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setReplyTo(null)}><X className="w-4 h-4" /></Button>
               </div>
             )}
@@ -477,43 +478,18 @@ export default function ChatArea() {
               </Popover>
               
               <div className="flex-1 flex items-center bg-white/[0.03] rounded-2xl border border-white/[0.05] h-11 px-4 relative group">
-                <Input placeholder="Сообщение" className="bg-transparent border-none focus-visible:ring-0" value={messageInput} onChange={e => handleInputChange(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSendMessage()} />
+                <Input placeholder="Сообщение" className="bg-transparent border-none focus-visible:ring-0" value={messageInput} onChange={e => setMessageInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSendMessage()} />
                 <div className="flex items-center gap-2">
-                  {isAiLoading ? <Loader2 className="w-4 h-4 animate-spin text-primary" /> : <button onClick={() => {}} className="text-primary/40 hover:text-primary transition-colors"><Sparkles className="w-4 h-4" /></button>}
                   <button onClick={() => setShowEmojiPicker(!showEmojiPicker)} className="text-white/20 hover:text-white transition-colors"><Smile /></button>
                 </div>
               </div>
 
               {messageInput.trim() ? (
-                <Button size="icon" className="h-10 w-10 rounded-full bg-primary shadow-lg" onClick={() => handleSendMessage()}>
-                  <Send className="w-5 h-5" />
-                </Button>
+                <Button size="icon" className="h-10 w-10 rounded-full bg-primary shadow-lg" onClick={() => handleSendMessage()}><Send className="w-5 h-5" /></Button>
               ) : (
                 <div className="flex items-center gap-1 bg-white/5 p-1 rounded-full">
-                  <Button 
-                    size="icon" 
-                    variant="ghost" 
-                    className={cn("h-10 w-10 rounded-full transition-all", recordingType === 'audio' ? "bg-primary text-white scale-110 shadow-lg" : "text-white/40")}
-                    onClick={() => setRecordingType('audio')}
-                    onMouseDown={recordingType === 'audio' ? startRecording : undefined}
-                    onMouseUp={recordingType === 'audio' ? stopRecording : undefined}
-                    onTouchStart={recordingType === 'audio' ? startRecording : undefined}
-                    onTouchEnd={recordingType === 'audio' ? stopRecording : undefined}
-                  >
-                    <Mic className="w-5 h-5" />
-                  </Button>
-                  <Button 
-                    size="icon" 
-                    variant="ghost" 
-                    className={cn("h-10 w-10 rounded-full transition-all", recordingType === 'video_note' ? "bg-primary text-white scale-110 shadow-lg" : "text-white/40")}
-                    onClick={() => setRecordingType('video_note')}
-                    onMouseDown={recordingType === 'video_note' ? startRecording : undefined}
-                    onMouseUp={recordingType === 'video_note' ? stopRecording : undefined}
-                    onTouchStart={recordingType === 'video_note' ? startRecording : undefined}
-                    onTouchEnd={recordingType === 'video_note' ? stopRecording : undefined}
-                  >
-                    <Video className="w-5 h-5" />
-                  </Button>
+                  <Button size="icon" variant="ghost" className={cn("h-10 w-10 rounded-full transition-all", recordingType === 'audio' ? "bg-primary text-white scale-110 shadow-lg" : "text-white/40")} onClick={() => { setRecordingType('audio'); startRecording(); }}><Mic className="w-5 h-5" /></Button>
+                  <Button size="icon" variant="ghost" className={cn("h-10 w-10 rounded-full transition-all", recordingType === 'video_note' ? "bg-primary text-white scale-110 shadow-lg" : "text-white/40")} onClick={() => { setRecordingType('video_note'); startRecording(); }}><Video className="w-5 h-5" /></Button>
                 </div>
               )}
             </div>
@@ -521,7 +497,7 @@ export default function ChatArea() {
         </footer>
       )}
 
-      {showEmojiPicker && <div className="absolute bottom-24 right-4 z-50 w-[320px] h-[400px]"><EmojiPicker onEmojiSelect={(e) => handleInputChange(messageInput + e)} onStickerSelect={(url) => handleSendMessage(url, 'sticker')} /></div>}
+      {showEmojiPicker && <div className="absolute bottom-24 right-4 z-50 w-[320px] h-[400px]"><EmojiPicker onEmojiSelect={(e) => setMessageInput(messageInput + e)} onStickerSelect={(url) => handleSendMessage(url, 'sticker')} /></div>}
       {chat && <ChatInfoModal open={isChatInfoOpen} onOpenChange={setIsChatInfoOpen} chat={chat as any} />}
       <CreatePollModal open={isPollModalOpen} onOpenChange={setIsPollModalOpen} chatId={currentChatId!} />
       <input type="file" ref={fileInputRef} hidden accept="image/*,video/*" />

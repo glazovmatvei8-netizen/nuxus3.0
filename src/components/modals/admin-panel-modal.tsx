@@ -34,18 +34,17 @@ import { addMonths } from 'date-fns';
 
 const ROOT_UID = 'GCvLucN8CjNcdaxPO2vmpZ84hNl1';
 
-// РЕАЛИСТИЧНЫЕ ПУТИ МИРОВОЙ КАРТЫ (SVG)
+// ВЫСОКОДЕТАЛИЗИРОВАННЫЕ МАТЕРИКИ (SVG)
 const WORLD_MAP_PATHS = [
-  { id: 'na', name: 'North America', d: "M145,130 L160,110 L180,90 L220,70 L280,80 L310,110 L300,160 L260,190 L220,210 L180,190 L150,160 L130,150 Z" },
-  { id: 'sa', name: 'South America', d: "M265,220 L310,230 L320,280 L300,320 L290,350 L260,370 L240,330 L245,270 L255,230 Z" },
-  { id: 'eu', name: 'Europe', d: "M480,90 L520,85 L560,100 L570,140 L530,160 L490,150 L470,120 L460,100 Z" },
-  { id: 'as', name: 'Asia', d: "M570,80 L650,70 L780,80 L880,120 L920,150 L880,250 L750,280 L650,260 L580,200 Z" },
-  { id: 'af', name: 'Africa', d: "M480,170 L560,160 L610,210 L590,300 L540,350 L480,330 L450,250 L460,200 Z" },
-  { id: 'au', name: 'Australia', d: "M780,300 L860,310 L880,360 L820,380 L770,350 L760,320 Z" },
-  { id: 'ru', name: 'Russia', d: "M530,85 L650,75 L800,80 L880,110 L850,140 L700,150 L550,140 Z" }
+  { id: 'na', name: 'Северная Америка', d: "M120,80 L150,60 L200,50 L280,60 L320,100 L310,150 L280,180 L220,200 L180,180 L140,140 L110,110 Z" },
+  { id: 'sa', name: 'Южная Америка', d: "M265,220 L310,230 L320,280 L300,350 L280,420 L250,450 L230,400 L240,300 L255,230 Z" },
+  { id: 'eu', name: 'Европа', d: "M460,80 L520,75 L560,90 L570,130 L540,160 L490,155 L465,130 L455,100 Z" },
+  { id: 'af', name: 'Африка', d: "M460,180 L540,170 L600,210 L610,280 L580,350 L520,380 L470,350 L445,280 L450,210 Z" },
+  { id: 'as', name: 'Азия', d: "M570,80 L650,70 L800,85 L920,130 L940,220 L880,300 L750,320 L620,300 L580,220 L560,140 Z" },
+  { id: 'au', name: 'Австралия', d: "M780,330 L860,340 L890,390 L840,430 L780,410 L760,360 Z" },
+  { id: 'ru', name: 'Россия', d: "M530,85 L650,75 L850,85 L930,120 L900,160 L750,175 L600,170 L520,140 Z" }
 ];
 
-// Маппинг стран к областям на карте
 const COUNTRY_TO_REGION: Record<string, string> = {
   'RU': 'ru', 'US': 'na', 'CA': 'na', 'BR': 'sa', 'DE': 'eu', 'FR': 'eu', 'GB': 'eu',
   'CN': 'as', 'IN': 'as', 'KZ': 'as', 'UA': 'eu', 'BY': 'eu', 'AU': 'au', 'EG': 'af', 'ZA': 'af'
@@ -128,45 +127,22 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
     let update: any = {};
 
     switch(action) {
-      case 'ban':
-        update = { isBanned: true };
-        toast({ title: "Узел заблокирован" });
-        break;
-      case 'unban':
-        update = { isBanned: false };
-        toast({ title: "Доступ восстановлен" });
-        break;
-      case 'set_admin':
-        update = { isAdmin: true };
-        toast({ title: "Права админа выданы" });
-        break;
-      case 'remove_admin':
-        update = { isAdmin: false };
-        toast({ title: "Админ разжалован" });
-        break;
-      case 'give_premium':
-        const now = new Date();
-        const expiry = addMonths(now, value || 1);
+      case 'ban': update = { isBanned: true }; toast({ title: "Узел заблокирован" }); break;
+      case 'unban': update = { isBanned: false }; toast({ title: "Доступ восстановлен" }); break;
+      case 'set_admin': update = { isAdmin: true }; toast({ title: "Права админа выданы" }); break;
+      case 'remove_admin': update = { isAdmin: false }; toast({ title: "Админ разжалован" }); break;
+      case 'give_premium': 
+        const expiry = addMonths(new Date(), value || 1);
         update = { isPremium: true, premiumUntil: expiry.toISOString() };
         toast({ title: `Premium выдан на ${value} мес.` });
         break;
-      case 'remove_premium':
-        update = { isPremium: false, premiumUntil: null };
-        toast({ title: "Premium статус снят" });
-        break;
+      case 'remove_premium': update = { isPremium: false, premiumUntil: null }; toast({ title: "Premium статус снят" }); break;
       case 'approve_topup':
         const txBatch = writeBatch(db);
         txBatch.update(doc(db, 'topUpRequests', targetId), { status: 'approved' });
         txBatch.update(doc(db, 'users', value.userId), { balance: increment(value.amount) });
         const historyRef = doc(collection(db, 'users', value.userId, 'transactions'));
-        txBatch.set(historyRef, {
-          id: historyRef.id,
-          userId: value.userId,
-          amount: value.amount,
-          type: 'deposit',
-          status: 'completed',
-          createdAt: new Date().toISOString()
-        });
+        txBatch.set(historyRef, { id: historyRef.id, userId: value.userId, amount: value.amount, type: 'deposit', status: 'completed', createdAt: new Date().toISOString() });
         await txBatch.commit();
         toast({ title: "Пополнение подтверждено" });
         break;
@@ -179,14 +155,6 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
     if (!['approve_topup', 'reject_topup'].includes(action)) {
       updateDocumentNonBlocking(userRef, update);
     }
-  };
-
-  const handleIntercept = (chatId: string) => {
-    setIsInterceptionRequested(true);
-    setCurrentChatId(chatId);
-    setActiveView('chats');
-    onOpenChange(false);
-    toast({ title: "Вход в узел выполнен", description: "Режим перехвата активен" });
   };
 
   return (
@@ -279,16 +247,9 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
                           </DropdownMenu>
                         </div>
                       </div>
-                      
                       <div className="flex items-center justify-between px-1 border-t border-white/[0.03] pt-2">
-                        <div className="flex items-center gap-2">
-                          <Navigation className="w-3 h-3 text-muted-foreground/40" />
-                          <span className="text-[10px] font-mono text-muted-foreground/60">{u.lastIp || 'No Signal'}</span>
-                        </div>
-                        <div className="flex items-center gap-1.5">
-                          <Globe className="w-3 h-3 text-primary/40" />
-                          <span className="text-[10px] font-black uppercase text-primary/60">{u.countryCode || '??'}</span>
-                        </div>
+                        <div className="flex items-center gap-2"><Navigation className="w-3 h-3 text-muted-foreground/40" /><span className="text-[10px] font-mono text-muted-foreground/60">{u.lastIp || 'No Signal'}</span></div>
+                        <div className="flex items-center gap-1.5"><Globe className="w-3 h-3 text-primary/40" /><span className="text-[10px] font-black uppercase text-primary/60">{u.countryCode || '??'}</span></div>
                       </div>
                     </div>
                   ))}
@@ -299,9 +260,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
             <TabsContent value="geo" className="flex-1 data-[state=active]:flex flex-col min-h-0 m-0 overflow-hidden outline-none">
               <div className="p-6 flex flex-col gap-6">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-sm font-black uppercase italic text-white flex items-center gap-2">
-                    <Globe className="w-4 h-4 text-primary" /> Global Signal Distribution
-                  </h3>
+                  <h3 className="text-sm font-black uppercase italic text-white flex items-center gap-2"><Globe className="w-4 h-4 text-primary" /> Global Signal Distribution</h3>
                   <div className="text-[9px] font-bold uppercase tracking-widest text-primary/60 bg-primary/5 px-3 py-1 rounded-full border border-primary/10">Kernel Active</div>
                 </div>
 
@@ -310,9 +269,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
                   
                   <svg viewBox="0 0 1000 500" className="w-full h-full text-white/5">
                     {WORLD_MAP_PATHS.map((path) => {
-                      // Проверка активности региона
                       const regionActive = geoData.some(g => COUNTRY_TO_REGION[g.code] === path.id);
-                      
                       return (
                         <path 
                           key={path.id}
@@ -325,29 +282,15 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
                         />
                       );
                     })}
-                    
-                    {/* Точки присутствия пользователей */}
                     {geoData.map((geo, i) => {
-                      // Базовые координаты для центров регионов
                       let x = 500, y = 250;
                       if (geo.code === 'RU') { x = 650; y = 110; }
                       else if (geo.code === 'US') { x = 230; y = 140; }
-                      else if (geo.code === 'CN') { x = 780; y = 180; }
                       else if (geo.code === 'DE') { x = 510; y = 110; }
-                      else if (geo.code === 'KZ') { x = 620; y = 140; }
-                      
                       return (
                         <g key={i}>
-                          <circle 
-                            cx={x} cy={y} r={6 + (geo.count * 2)} 
-                            fill="hsl(var(--primary))" 
-                            className="animate-ping opacity-40" 
-                            style={{ animationDuration: '3s' }}
-                          />
-                          <circle 
-                            cx={x} cy={y} r={3} 
-                            fill="hsl(var(--accent))"
-                          />
+                          <circle cx={x} cy={y} r={6 + (geo.count * 2)} fill="hsl(var(--primary))" className="animate-ping opacity-40" style={{ animationDuration: '3s' }} />
+                          <circle cx={x} cy={y} r={3} fill="hsl(var(--accent))" />
                         </g>
                       );
                     })}
@@ -360,49 +303,21 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
                     <ScrollArea className="h-[200px]">
                       <div className="space-y-1">
                         {geoData.map((geo, i) => (
-                          <button 
-                            key={i} 
-                            onClick={() => setSelectedGeoCountry(selectedGeoCountry === geo.code ? null : geo.code)}
-                            className={cn(
-                              "flex items-center justify-between w-full p-3 rounded-xl border transition-all",
-                              selectedGeoCountry === geo.code ? "bg-primary/20 border-primary shadow-lg" : "bg-white/5 border-white/5"
-                            )}
-                          >
-                            <div className="flex items-center gap-3">
-                              <div className="w-6 h-6 rounded-md bg-primary/10 flex items-center justify-center font-black text-[10px] text-primary">
-                                {geo.code}
-                              </div>
-                              <span className="text-xs font-bold text-white">Nodes in {geo.code}</span>
-                            </div>
+                          <button key={i} onClick={() => setSelectedGeoCountry(selectedGeoCountry === geo.code ? null : geo.code)} className={cn("flex items-center justify-between w-full p-3 rounded-xl border transition-all", selectedGeoCountry === geo.code ? "bg-primary/20 border-primary shadow-lg" : "bg-white/5 border-white/5")}>
+                            <div className="flex items-center gap-3"><div className="w-6 h-6 rounded-md bg-primary/10 flex items-center justify-center font-black text-[10px] text-primary">{geo.code}</div><span className="text-xs font-bold text-white">Nodes in {geo.code}</span></div>
                             <span className="text-xs font-black italic text-primary">{geo.count}</span>
                           </button>
                         ))}
                       </div>
                     </ScrollArea>
                   </div>
-
                   <div className="flex flex-col gap-3">
-                    <h4 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 px-2">
-                      {selectedGeoCountry ? `Nodes: ${selectedGeoCountry}` : 'Selected Territory'}
-                    </h4>
+                    <h4 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 px-2">{selectedGeoCountry ? `Nodes: ${selectedGeoCountry}` : 'Selected Territory'}</h4>
                     <ScrollArea className="h-[200px] bg-white/[0.02] border border-white/5 rounded-[1.8rem] p-2">
                       {selectedGeoCountry ? (
-                        <div className="space-y-2">
-                          {usersInSelectedCountry.map(u => (
-                            <div key={u.id} className="flex items-center gap-3 p-2 bg-white/5 rounded-xl">
-                              <UserAvatar userId={u.id} className="h-8 w-8" fallbackName={u.name} />
-                              <div className="flex flex-col min-w-0">
-                                <span className="text-[11px] font-bold text-white truncate">{u.name}</span>
-                                <span className="text-[8px] text-muted-foreground uppercase font-black">{u.username}</span>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
+                        <div className="space-y-2">{usersInSelectedCountry.map(u => (<div key={u.id} className="flex items-center gap-3 p-2 bg-white/5 rounded-xl"><UserAvatar userId={u.id} className="h-8 w-8" fallbackName={u.name} /><div className="flex flex-col min-w-0"><span className="text-[11px] font-bold text-white truncate">{u.name}</span><span className="text-[8px] text-muted-foreground uppercase font-black">{u.username}</span></div></div>))}</div>
                       ) : (
-                        <div className="flex flex-col items-center justify-center h-full opacity-20 gap-2 text-center p-4">
-                          <Navigation className="w-8 h-8" />
-                          <p className="text-[9px] font-black uppercase tracking-widest">Выберите страну для просмотра узлов</p>
-                        </div>
+                        <div className="flex flex-col items-center justify-center h-full opacity-20 gap-2 text-center p-4"><Navigation className="w-8 h-8" /><p className="text-[9px] font-black uppercase tracking-widest">Выберите страну</p></div>
                       )}
                     </ScrollArea>
                   </div>
@@ -436,7 +351,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
             </TabsContent>
 
             <TabsContent value="broadcast" className="flex-1 data-[state=active]:flex flex-col p-6 gap-4 m-0 overflow-hidden outline-none">
-              <Textarea placeholder="Введите текст сигнала для всех узлов..." value={broadcastMessage} onChange={e => setBroadcastMessage(e.target.value)} className="bg-white/5 border-white/10 rounded-2xl min-h-[180px] text-sm resize-none" />
+              <Textarea placeholder="Текст сигнала..." value={broadcastMessage} onChange={e => setBroadcastMessage(e.target.value)} className="bg-white/5 border-white/10 rounded-2xl min-h-[180px] text-sm resize-none" />
               <Button onClick={() => { toast({ title: "Сигнал передан" }); setBroadcastMessage(''); }} className="w-full h-14 bg-primary text-white rounded-2xl font-black uppercase italic tracking-widest"><Radio className="w-5 h-5 mr-2" /> Инициировать Сигнал</Button>
             </TabsContent>
           </Tabs>
@@ -456,15 +371,10 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
                 {allChats?.filter(c => c.participantIds.includes(inspectingUser.id)).map(chat => (
                   <div key={chat.id} className="flex items-center justify-between p-4 bg-white/5 rounded-[1.8rem] border border-white/5 hover:border-accent/30 transition-all group">
                     <div className="flex items-center gap-4 min-w-0 text-left">
-                      <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center shrink-0">
-                        {chat.type === 'private' ? <Shield className="w-5 h-5 text-blue-400" /> : <Users className="w-5 h-5 text-purple-400" />}
-                      </div>
-                      <div className="flex flex-col min-w-0">
-                        <span className="font-bold text-sm text-white truncate">{chat.name || (chat.type === 'private' ? 'Личный чат' : 'Сообщество')}</span>
-                        <span className="text-[9px] text-muted-foreground/60 uppercase font-black">{chat.type}</span>
-                      </div>
+                      <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center shrink-0">{chat.type === 'private' ? <Shield className="w-5 h-5 text-blue-400" /> : <Users className="w-5 h-5 text-purple-400" />}</div>
+                      <div className="flex flex-col min-w-0"><span className="font-bold text-sm text-white truncate">{chat.name || (chat.type === 'private' ? 'Личный чат' : 'Сообщество')}</span><span className="text-[9px] text-muted-foreground/60 uppercase font-black">{chat.type}</span></div>
                     </div>
-                    <Button variant="ghost" size="sm" onClick={() => handleIntercept(chat.id)} className="h-8 rounded-xl bg-accent/10 text-accent hover:bg-accent font-black uppercase text-[8px] tracking-widest px-4">Войти</Button>
+                    <Button variant="ghost" size="sm" onClick={() => { setIsInterceptionRequested(true); setCurrentChatId(chat.id); setActiveView('chats'); onOpenChange(false); }} className="h-8 rounded-xl bg-accent/10 text-accent hover:bg-accent font-black uppercase text-[8px] tracking-widest px-4">Войти</Button>
                   </div>
                 ))}
               </div>
