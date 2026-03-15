@@ -26,7 +26,7 @@ import {
   Loader2, UserX, MoreVertical, Ban, CheckCircle2, Crown, Calendar, Shield, Globe, Activity, Eye, MessageCircle, ArrowLeft, CreditCard, Check, X, ShieldOff, Zap
 } from 'lucide-react';
 import type { User, Chat, Transaction } from '@/lib/types';
-import { formatDisplayName, isUserPremium, cn } from '@/lib/utils';
+import { formatDisplayName, isUserPremium, cn, isGlobalAdmin } from '@/lib/utils';
 import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { useToast } from '@/hooks/use-toast';
 import { useAppState } from '@/lib/store';
@@ -44,7 +44,6 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
   const [broadcastMessage, setBroadcastMessage] = useState('');
   const [activeTab, setActiveTab] = useState('users');
   
-  // State for drilling down into a user's chats
   const [inspectingUser, setInspectingUser] = useState<User | null>(null);
   
   const usersQuery = useMemoFirebase(() => (!db ? null : query(collection(db, 'users'), limit(500))), [db]);
@@ -56,12 +55,30 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
   const requestsQuery = useMemoFirebase(() => (!db ? null : query(collection(db, 'topUpRequests'), orderBy('createdAt', 'desc'), limit(50))), [db]);
   const { data: topUpRequests } = useCollection<any>(requestsQuery);
 
-  // Фильтруем список пользователей: исключаем админа и ботов
-  const realUsersOnly = useMemo(() => {
+  // Statistics Calculation (Including ME)
+  const stats = useMemo(() => {
+    if (!users) return { total: 0, premium: 0, admins: 0, banned: 0 };
+    
+    // Фильтруем только ботов для статистики, ОСТАВЛЯЕМ реальных людей включая админа
+    const allRealUsers = users.filter(u => {
+      const isBot = u.id.startsWith('bot_') || u.username === '@stickers' || u.name?.toLowerCase().includes('bot');
+      return !isBot;
+    });
+
+    return {
+      total: allRealUsers.length,
+      premium: allRealUsers.filter(u => isUserPremium(u)).length,
+      admins: allRealUsers.filter(u => isGlobalAdmin(u)).length,
+      banned: allRealUsers.filter(u => u.isBanned).length
+    };
+  }, [users]);
+
+  // Список для управления (НЕ показываем МЕНЯ)
+  const realUsersForList = useMemo(() => {
     if (!users) return [];
     return users.filter(u => {
       const isMe = u.id === currentUser?.uid;
-      const isBot = u.id.startsWith('bot_') || u.username === '@stickers' || u.name?.includes('Bot');
+      const isBot = u.id.startsWith('bot_') || u.username === '@stickers' || u.name?.toLowerCase().includes('bot');
       const matchesSearch = u.name?.toLowerCase().includes(userSearch.toLowerCase()) || 
                            u.username?.toLowerCase().includes(userSearch.toLowerCase()) ||
                            u.phone?.includes(userSearch);
@@ -72,18 +89,6 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
       return 0;
     });
   }, [users, currentUser?.uid, userSearch]);
-
-  // Statistics Calculation
-  const stats = useMemo(() => {
-    if (!users) return { total: 0, premium: 0, admins: 0, banned: 0 };
-    const filtered = users.filter(u => !u.id.startsWith('bot_') && u.id !== currentUser?.uid);
-    return {
-      total: filtered.length,
-      premium: filtered.filter(u => u.isPremium).length,
-      admins: filtered.filter(u => u.isAdmin).length,
-      banned: filtered.filter(u => u.isBanned).length
-    };
-  }, [users, currentUser?.uid]);
 
   const handleAction = async (targetId: string, action: string, value?: any) => {
     if (!db) return;
@@ -219,14 +224,14 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
 
               <ScrollArea className="flex-1">
                 <div className="px-6 pb-6 space-y-2">
-                  {realUsersOnly.map(u => (
+                  {realUsersForList.map(u => (
                     <div key={u.id} className="flex items-center justify-between p-3 bg-white/5 rounded-2xl border border-white/5 group hover:border-primary/20 transition-all">
                       <div className="flex items-center gap-3 min-w-0">
                         <UserAvatar userId={u.id} className="h-10 w-10 shrink-0" manualAvatarUrl={u.avatarUrl} fallbackName={u.name} />
                         <div className="flex flex-col min-w-0">
                           <div className="flex items-center gap-1.5">
                             <span className="font-bold text-sm text-white truncate">{formatDisplayName(u.name)}</span>
-                            {u.isPremium && <Star className="w-2.5 h-2.5 text-accent fill-accent" />}
+                            {isUserPremium(u) && <Star className="w-2.5 h-2.5 text-accent fill-accent" />}
                             {u.isAdmin && <ShieldCheck className="w-2.5 h-2.5 text-primary" />}
                           </div>
                           <span className="text-[9px] text-muted-foreground/60 truncate uppercase font-bold tracking-widest">{u.username}</span>
@@ -264,12 +269,12 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
                               <DropdownMenuSubTrigger className="gap-3 py-3 font-bold text-[10px] uppercase rounded-xl">
                                 <Crown className="w-4 h-4 text-accent" /> Premium статус
                               </DropdownMenuSubTrigger>
-                              <DropdownMenuSubContent sideOffset={8} alignOffset={-5} className="bg-card border-white/10 rounded-xl min-w-[140px] shadow-2xl">
-                                <DropdownMenuItem onClick={() => handleAction(u.id, 'give_premium', 1)} className="text-[10px] font-bold uppercase py-2.5">На 1 Месяц</DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => handleAction(u.id, 'give_premium', 3)} className="text-[10px] font-bold uppercase py-2.5">На 3 Месяца</DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => handleAction(u.id, 'give_premium', 12)} className="text-[10px] font-bold uppercase py-2.5">На 1 Год</DropdownMenuItem>
+                              <DropdownMenuSubContent sideOffset={12} alignOffset={-5} className="bg-card border-white/10 rounded-xl min-w-[140px] shadow-2xl p-1">
+                                <DropdownMenuItem onClick={() => handleAction(u.id, 'give_premium', 1)} className="text-[10px] font-bold uppercase py-2.5 rounded-lg">На 1 Месяц</DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleAction(u.id, 'give_premium', 3)} className="text-[10px] font-bold uppercase py-2.5 rounded-lg">На 3 Месяца</DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleAction(u.id, 'give_premium', 12)} className="text-[10px] font-bold uppercase py-2.5 rounded-lg">На 1 Год</DropdownMenuItem>
                                 <DropdownMenuSeparator className="bg-white/5" />
-                                <DropdownMenuItem onClick={() => handleAction(u.id, 'remove_premium')} className="text-destructive text-[10px] font-bold uppercase py-2.5">Снять Premium</DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleAction(u.id, 'remove_premium')} className="text-destructive text-[10px] font-bold uppercase py-2.5 rounded-lg">Снять Premium</DropdownMenuItem>
                               </DropdownMenuSubContent>
                             </DropdownMenuSub>
 
