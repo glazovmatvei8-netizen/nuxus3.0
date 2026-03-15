@@ -19,7 +19,7 @@ export default function ProfileView() {
   const { user } = useUser();
   const db = useFirestore();
   const { toast } = useToast();
-  const { setIsSettingsOpen, setSettingsTab, setActiveView } = useAppState();
+  const { setIsSettingsOpen, setSettingsTab } = useAppState();
   
   const userProfileRef = useMemoFirebase(() => (!db || !user) ? null : doc(db!, 'users', user.uid), [db, user]);
   const { data: profile } = useDoc<User>(userProfileRef);
@@ -32,27 +32,26 @@ export default function ProfileView() {
   };
 
   return (
-    <div className="flex flex-col h-full bg-[#0a0a0c] overflow-hidden">
+    <div className="flex flex-col h-full bg-background overflow-hidden">
       <div className="px-4 pt-6 pb-4 flex items-center justify-between shrink-0">
-        <Button variant="ghost" size="icon" className="text-white" onClick={copyRefLink}><Share2 className="w-6 h-6" /></Button>
+        <Button variant="ghost" size="icon" className="text-foreground" onClick={copyRefLink}><Share2 className="w-6 h-6" /></Button>
         <div className="flex items-center gap-2">
           <UserAvatar userId={user?.uid} className="h-8 w-8" />
-          <span className="font-bold text-white text-[17px] flex items-center gap-1.5">
+          <span className="font-bold text-foreground text-[17px] flex items-center gap-1.5">
             {formatDisplayName(profile?.name)} 
             {isUserPremium(profile) && <Star className="w-3.5 h-3.5 text-accent fill-accent" />}
           </span>
         </div>
-        <Button variant="ghost" size="icon" className="text-white" onClick={() => { setSettingsTab('profile'); setIsSettingsOpen(true); }}>
+        <Button variant="ghost" size="icon" className="text-foreground" onClick={() => { setSettingsTab('profile'); setIsSettingsOpen(true); }}>
           <Pencil className="w-6 h-6" />
         </Button>
       </div>
 
       <ScrollArea className="flex-1">
         <div className="px-4 space-y-4 pb-24">
-          {/* Реферальная программа / Продвижение */}
           <div className="relative group">
             <div className="absolute -inset-1 bg-gradient-to-tr from-primary/40 to-accent/40 rounded-[2rem] blur-md opacity-30 group-hover:opacity-60 transition-opacity" />
-            <div className="relative bg-white/5 border border-white/10 p-6 rounded-[2rem] flex flex-col gap-4 overflow-hidden">
+            <div className="relative bg-card border border-border p-6 rounded-[2rem] flex flex-col gap-4 overflow-hidden">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-2xl bg-primary/20 flex items-center justify-center border border-primary/20">
@@ -60,33 +59,33 @@ export default function ProfileView() {
                   </div>
                   <div className="flex flex-col">
                     <span className="text-[10px] font-black uppercase text-primary tracking-widest leading-none">Referral Program</span>
-                    <span className="text-lg font-black italic text-white leading-none mt-1">{profile?.referralCount || 0}</span>
+                    <span className="text-lg font-black italic text-foreground leading-none mt-1">{profile?.referralCount || 0}</span>
                   </div>
                 </div>
-                <Button onClick={copyRefLink} className="h-10 rounded-xl bg-white text-black font-black uppercase text-[9px] tracking-widest px-4 hover:bg-white/90">Пригласить</Button>
+                <Button onClick={copyRefLink} className="h-10 rounded-xl bg-primary text-white font-black uppercase text-[9px] tracking-widest px-4">Пригласить</Button>
               </div>
               <p className="text-[8px] text-muted-foreground uppercase font-bold leading-relaxed px-1">Приглашайте новых участников и получайте Premium-статус за каждые 5 активных узлов.</p>
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
-            <div className="bg-white/5 border border-white/5 p-4 rounded-3xl flex flex-col items-center justify-center gap-1">
+            <div className="bg-card border border-border p-4 rounded-3xl flex flex-col items-center justify-center gap-1">
               <Zap className="w-5 h-5 text-yellow-500 mb-1" />
-              <span className="text-[18px] font-black text-white italic">Active</span>
+              <span className="text-[18px] font-black text-foreground italic">Active</span>
               <span className="text-[8px] uppercase font-black text-muted-foreground tracking-widest">Signal State</span>
             </div>
-            <div className="bg-white/5 border border-white/5 p-4 rounded-3xl flex flex-col items-center justify-center gap-1">
+            <div className="bg-card border border-border p-4 rounded-3xl flex flex-col items-center justify-center gap-1">
               <ShieldCheck className="w-5 h-5 text-green-500 mb-1" />
-              <span className="text-[18px] font-black text-white italic">QES 2.0</span>
+              <span className="text-[18px] font-black text-foreground italic">QES 2.0</span>
               <span className="text-[8px] uppercase font-black text-muted-foreground tracking-widest">Security Layer</span>
             </div>
           </div>
 
-          <div className="bg-[#1c1c1e] rounded-[2rem] overflow-hidden divide-y divide-white/[0.05] border border-white/5">
+          <div className="bg-card rounded-[2rem] overflow-hidden divide-y divide-border border border-border">
             <SettingsItem icon={Lock} label="Защита Ядра (E2EE)" color="text-primary" onClick={() => { setSettingsTab('privacy'); setIsSettingsOpen(true); }} />
-            <SettingsItem icon={Palette} label="Темы оформления" color="text-white" onClick={() => { setSettingsTab('appearance'); setIsSettingsOpen(true); }} />
-            <SettingsItem icon={Bookmark} label="Избранное" color="text-white" onClick={() => {}} />
-            <SettingsItem icon={HelpCircle} label="Помощь и FAQ" color="text-white" onClick={() => {}} />
+            <SettingsItem icon={Palette} label="Темы оформления" color="text-foreground" onClick={() => { setSettingsTab('appearance'); setIsSettingsOpen(true); }} />
+            <SettingsItem icon={Bookmark} label="Избранное" color="text-foreground" onClick={() => {}} />
+            <SettingsItem icon={HelpCircle} label="Помощь и FAQ" color="text-foreground" onClick={() => {}} />
           </div>
 
           <div className="pt-4 flex flex-col items-center gap-2">
@@ -105,10 +104,10 @@ export default function ProfileView() {
 
 function SettingsItem({ icon: Icon, label, color, onClick }: any) {
   return (
-    <div onClick={onClick} className="flex items-center justify-between p-4 cursor-pointer hover:bg-white/[0.02] transition-colors group">
+    <div onClick={onClick} className="flex items-center justify-between p-4 cursor-pointer hover:bg-muted/50 transition-colors group">
       <div className="flex items-center gap-4">
         <Icon className={cn("w-6 h-6", color, "opacity-70 group-hover:opacity-100")} />
-        <span className="text-white text-[16px] font-medium">{label}</span>
+        <span className="text-foreground text-[16px] font-medium">{label}</span>
       </div>
       <ChevronRight className="w-5 h-5 text-muted-foreground/30" />
     </div>

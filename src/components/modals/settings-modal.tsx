@@ -16,11 +16,11 @@ import {
   LogOut, Palette, Check, Settings2, Camera, Lock, Image as ImageIcon, 
   Paintbrush, Shield, UserCircle, Layout, Smile, FileText, ChevronRight,
   ShieldCheck, Eye, Users2, MessageSquareLock, Upload, Smartphone, Share2, Trophy,
-  Bell, Video, Mic, MonitorSmartphone, Key, Trash2, ShieldAlert, RefreshCw, Save, Zap, Moon, Sun, Monitor, Download, Share
+  Bell, Video, Mic, MonitorSmartphone, Key, Trash2, ShieldAlert, RefreshCw, Save, Zap, Moon, Sun, Monitor, Download, Share, Fingerprint
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { signOut, updatePassword } from 'firebase/auth';
-import { doc, updateDoc, deleteDoc } from 'firebase/firestore';
+import { signOut } from 'firebase/auth';
+import { doc, updateDoc } from 'firebase/firestore';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAppState } from '@/lib/store';
 import { cn } from '@/lib/utils';
@@ -52,6 +52,8 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
     avatarUrl: '',
     appearance: 'dark' as 'light' | 'dark',
     theme: 'default',
+    twoFactorEnabled: false,
+    twoFactorPin: '',
     privacy: {
       phoneVisibility: 'everybody',
       lastSeenVisibility: 'everybody',
@@ -69,6 +71,8 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         avatarUrl: profile.avatarUrl || '',
         appearance: profile.settings?.appearance || 'dark',
         theme: profile.settings?.theme || 'default',
+        twoFactorEnabled: !!profile.twoFactorEnabled,
+        twoFactorPin: profile.twoFactorPin || '',
         privacy: profile.settings?.privacy || {
           phoneVisibility: 'everybody',
           lastSeenVisibility: 'everybody',
@@ -87,6 +91,8 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         username: '@' + form.username.toLowerCase(),
         bio: form.bio,
         avatarUrl: form.avatarUrl,
+        twoFactorEnabled: form.twoFactorEnabled,
+        twoFactorPin: form.twoFactorPin,
         'settings.appearance': form.appearance,
         'settings.theme': form.theme,
         'settings.privacy': form.privacy
@@ -96,17 +102,6 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
     } catch (e: any) {
       toast({ title: "Ошибка сохранения", variant: "destructive" });
     }
-  };
-
-  const exportConfig = () => {
-    const config = JSON.stringify(form, null, 2);
-    const blob = new Blob([config], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `nuxus_config_${user?.uid?.slice(0, 6)}.json`;
-    a.click();
-    toast({ title: "Конфигурация экспортирована" });
   };
 
   return (
@@ -139,6 +134,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                 <div className="space-y-4 w-full">
                   <div className="space-y-2"><Label className="text-[10px] uppercase font-black">Имя</Label><Input value={form.name} onChange={e => setForm({...form, name: e.target.value})} className="bg-muted/30 border-white/5 h-12 rounded-2xl" /></div>
                   <div className="space-y-2"><Label className="text-[10px] uppercase font-black">Никнейм</Label><div className="relative"><span className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground">@</span><Input value={form.username} onChange={e => setForm({...form, username: e.target.value})} className="bg-muted/30 border-white/5 h-12 rounded-2xl pl-8" /></div></div>
+                  <div className="space-y-2"><Label className="text-[10px] uppercase font-black">О себе</Label><Textarea value={form.bio} onChange={e => setForm({...form, bio: e.target.value})} className="bg-muted/30 border-white/5 rounded-2xl resize-none" placeholder="Расскажите о своем узле..." /></div>
                 </div>
               </div>
             </TabsContent>
@@ -147,11 +143,11 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
               <div className="space-y-4">
                 <Label className="text-[10px] font-black uppercase text-muted-foreground flex items-center gap-2"><Monitor className="w-3 h-3" /> Режим интерфейса</Label>
                 <div className="grid grid-cols-2 gap-2">
-                  <button onClick={() => setForm({...form, appearance: 'dark'})} className={cn("flex flex-col items-center gap-2 p-4 rounded-2xl border transition-all", form.appearance === 'dark' ? 'bg-primary/10 border-primary' : 'bg-muted/20 border-white/5')}>
-                    <Moon className={cn("w-6 h-6", form.appearance === 'dark' ? 'text-primary' : 'text-muted-foreground')} /><span className="text-[10px] font-black uppercase tracking-widest">Тёмная</span>
+                  <button onClick={() => setForm({...form, appearance: 'dark'})} className={cn("flex flex-col items-center gap-2 p-4 rounded-2xl border transition-all", form.appearance === 'dark' ? "bg-primary/10 border-primary" : "bg-muted/20 border-white/5")}>
+                    <Moon className={cn("w-6 h-6", form.appearance === 'dark' ? "text-primary" : "text-muted-foreground")} /><span className="text-[10px] font-black uppercase tracking-widest">Тёмная</span>
                   </button>
-                  <button onClick={() => setForm({...form, appearance: 'light'})} className={cn("flex flex-col items-center gap-2 p-4 rounded-2xl border transition-all", form.appearance === 'light' ? 'bg-primary/10 border-primary' : 'bg-muted/20 border-white/5')}>
-                    <Sun className={cn("w-6 h-6", form.appearance === 'light' ? 'text-primary' : 'text-muted-foreground')} /><span className="text-[10px] font-black uppercase tracking-widest">Светлая</span>
+                  <button onClick={() => setForm({...form, appearance: 'light'})} className={cn("flex flex-col items-center gap-2 p-4 rounded-2xl border transition-all", form.appearance === 'light' ? "bg-primary/10 border-primary" : "bg-muted/20 border-white/5")}>
+                    <Sun className={cn("w-6 h-6", form.appearance === 'light' ? "text-primary" : "text-muted-foreground")} /><span className="text-[10px] font-black uppercase tracking-widest">Светлая</span>
                   </button>
                 </div>
               </div>
@@ -159,7 +155,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                 <Label className="text-[10px] uppercase font-black text-muted-foreground flex items-center gap-2"><Paintbrush className="w-3 h-3" /> Цветовая схема</Label>
                 <div className="grid grid-cols-1 gap-2">
                   {THEMES.map((theme) => (
-                    <button key={theme.id} onClick={() => setForm({ ...form, theme: theme.id as any })} className={cn("flex items-center justify-between p-4 rounded-2xl border transition-all", form.theme === theme.id ? 'bg-primary/10 border-primary' : 'bg-muted/20 border-white/5')}>
+                    <button key={theme.id} onClick={() => setForm({ ...form, theme: theme.id as any })} className={cn("flex items-center justify-between p-4 rounded-2xl border transition-all", form.theme === theme.id ? "bg-primary/10 border-primary" : "bg-muted/20 border-white/5")}>
                       <div className="flex items-center gap-3"><div className={cn("w-6 h-6 rounded-full", theme.color)} /><span className="text-sm font-bold text-foreground">{theme.name}</span></div>
                       {form.theme === theme.id && <Check className="w-5 h-5 text-primary" />}
                     </button>
@@ -169,36 +165,77 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
             </TabsContent>
 
             <TabsContent value="privacy" className="space-y-6 m-0 py-6">
-              <div className="bg-primary/5 p-4 rounded-3xl border border-primary/10 flex items-center gap-4 mb-4">
-                <ShieldCheck className="w-8 h-8 text-primary" />
-                <div className="flex flex-col">
-                  <span className="text-xs font-bold text-white uppercase italic">QES Encryption Active</span>
-                  <span className="text-[9px] text-muted-foreground uppercase font-black">Все ваши пакеты данных шифруются на лету.</span>
+              <div className="bg-primary/5 p-5 rounded-[2rem] border border-primary/10 space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="bg-primary/20 p-2 rounded-xl"><Fingerprint className="w-5 h-5 text-primary" /></div>
+                    <div className="flex flex-col"><span className="text-xs font-bold text-white uppercase italic">Защита 2FA</span><span className="text-[8px] text-muted-foreground uppercase font-black">Двойной барьер доступа</span></div>
+                  </div>
+                  <Switch checked={form.twoFactorEnabled} onCheckedChange={v => setForm({...form, twoFactorEnabled: v})} />
                 </div>
+                {form.twoFactorEnabled && (
+                  <div className="space-y-2 animate-in fade-in slide-in-from-top-2">
+                    <Label className="text-[9px] uppercase font-black text-primary/60 ml-1">Установить 6-значный PIN</Label>
+                    <Input 
+                      type="password" 
+                      placeholder="••••••" 
+                      maxLength={6} 
+                      value={form.twoFactorPin}
+                      onChange={e => setForm({...form, twoFactorPin: e.target.value.replace(/\D/g, '')})}
+                      className="bg-black/20 border-primary/20 h-12 rounded-xl text-center text-xl tracking-[0.5em] font-black"
+                    />
+                  </div>
+                )}
               </div>
-              <div className="space-y-4">
-                <div className="flex items-center justify-between"><div className="flex flex-col"><span className="text-xs font-bold text-white">Кто видит номер</span><span className="text-[9px] text-muted-foreground uppercase">Конфиденциальность узла</span></div><Select value={form.privacy.phoneVisibility} onValueChange={v => setForm({...form, privacy: {...form.privacy, phoneVisibility: v as any}})}><SelectTrigger className="w-[120px] h-8 text-[9px] font-bold uppercase"><SelectValue /></SelectTrigger><SelectContent className="bg-card border-white/10"><SelectItem value="everybody">Все</SelectItem><SelectItem value="contacts">Контакты</SelectItem><SelectItem value="nobody">Никто</SelectItem></SelectContent></Select></div>
+
+              <div className="space-y-4 px-1">
+                <PrivacySelect label="Кто видит номер" value={form.privacy.phoneVisibility} onChange={v => setForm({...form, privacy: {...form.privacy, phoneVisibility: v}})} icon={Smartphone} />
+                <PrivacySelect label="Последний вход" value={form.privacy.lastSeenVisibility} onChange={v => setForm({...form, privacy: {...form.privacy, lastSeenVisibility: v}})} icon={Eye} />
+                <PrivacySelect label="Добавление в группы" value={form.privacy.allowGroupsFrom} onChange={v => setForm({...form, privacy: {...form.privacy, allowGroupsFrom: v}})} icon={Users2} />
+                <PrivacySelect label="Личные сообщения" value={form.privacy.whoCanMessageMe} onChange={v => setForm({...form, privacy: {...form.privacy, whoCanMessageMe: v}})} icon={MessageSquareLock} />
               </div>
             </TabsContent>
 
             <TabsContent value="backup" className="space-y-6 m-0 py-6">
               <div className="p-6 bg-white/5 rounded-[2rem] border border-white/5 text-center">
                 <Download className="w-12 h-12 text-primary mx-auto mb-4" />
-                <h3 className="text-sm font-black uppercase text-white mb-2">Конфигурация Узла</h3>
-                <p className="text-[10px] text-muted-foreground uppercase font-bold mb-6 px-4">Экспортируйте ваши настройки стиля и приватности в JSON файл для быстрого переноса.</p>
-                <Button onClick={exportConfig} className="w-full h-12 bg-primary/10 text-primary border border-primary/20 rounded-xl font-black uppercase text-[10px] tracking-widest gap-2">
-                  <Share className="w-4 h-4" /> Экспортировать
+                <h3 className="text-sm font-black uppercase text-white mb-2">Архив Конфигурации</h3>
+                <p className="text-[10px] text-muted-foreground uppercase font-bold mb-6 px-4 leading-relaxed">Создайте резервную копию настроек вашего Узла для быстрого восстановления на другом устройстве.</p>
+                <Button className="w-full h-12 bg-primary/10 text-primary border border-primary/20 rounded-xl font-black uppercase text-[10px] tracking-widest gap-2">
+                  <Share className="w-4 h-4" /> Экспортировать JSON
                 </Button>
               </div>
             </TabsContent>
           </ScrollArea>
 
           <div className="p-6 border-t border-white/5 bg-muted/20 shrink-0 flex gap-3">
-            <Button variant="ghost" className="h-14 w-14 rounded-2xl bg-destructive/10 text-destructive" onClick={() => signOut(auth)}> <LogOut className="w-6 h-6" /></Button>
-            <Button className="flex-1 h-14 rounded-2xl font-black uppercase tracking-widest bg-primary shadow-lg shadow-primary/20" onClick={handleSave}><Check className="w-5 h-5 mr-2" /> Применить</Button>
+            <Button variant="ghost" className="h-14 w-14 rounded-2xl bg-destructive/10 text-destructive hover:bg-destructive hover:text-white transition-all" onClick={() => signOut(auth)}> <LogOut className="w-6 h-6" /></Button>
+            <Button className="flex-1 h-14 rounded-2xl font-black uppercase tracking-widest bg-primary shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all" onClick={handleSave}><Check className="w-5 h-5 mr-2" /> Применить изменения</Button>
           </div>
         </Tabs>
       </DialogContent>
     </Dialog>
+  );
+}
+
+function PrivacySelect({ label, value, onChange, icon: Icon }: any) {
+  return (
+    <div className="flex items-center justify-between py-2">
+      <div className="flex items-center gap-3">
+        <Icon className="w-4 h-4 text-muted-foreground/60" />
+        <span className="text-xs font-bold text-white/80">{label}</span>
+      </div>
+      <Select value={value} onValueChange={onChange}>
+        <SelectTrigger className="w-[120px] h-9 text-[9px] font-bold uppercase bg-white/5 border-white/10 rounded-xl">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent className="bg-card border-white/10 rounded-xl">
+          <SelectItem value="everybody" className="text-[10px] uppercase font-bold">Все</SelectItem>
+          <SelectItem value="contacts" className="text-[10px] uppercase font-bold">Контакты</SelectItem>
+          <SelectItem value="premium" className="text-[10px] uppercase font-bold">Premium</SelectItem>
+          <SelectItem value="nobody" className="text-[10px] uppercase font-bold">Никто</SelectItem>
+        </SelectContent>
+      </Select>
+    </div>
   );
 }

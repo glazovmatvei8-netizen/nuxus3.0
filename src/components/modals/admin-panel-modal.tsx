@@ -18,14 +18,14 @@ import {
   DropdownMenuSubContent
 } from "@/components/ui/dropdown-menu";
 import { useFirestore, useCollection, useMemoFirebase, useUser } from '@/firebase';
-import { collection, query, doc, limit, addDoc, orderBy, where, updateDoc } from 'firebase/firestore';
+import { collection, query, doc, limit, addDoc, updateDoc } from 'firebase/firestore';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
   ShieldAlert, Users, Star, Ban, CheckCircle2, ShieldCheck, Radio, 
   MoreVertical, ShieldOff, Zap, Trophy, Activity, BarChart3, ListChecks, X
 } from 'lucide-react';
 import { 
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as ChartTooltip, ResponsiveContainer, AreaChart, Area
+  BarChart, Bar, XAxis, YAxis, Tooltip as ChartTooltip, ResponsiveContainer, AreaChart, Area
 } from 'recharts';
 import type { User } from '@/lib/types';
 import { formatDisplayName, isUserPremium, cn, isGlobalAdmin } from '@/lib/utils';
@@ -96,7 +96,6 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
     }
     try {
       await updateDoc(userRef, update);
-      await addDoc(collection(db, 'system_logs'), { action, adminId: currentUser?.uid, targetId, createdAt: new Date().toISOString() });
       toast({ title: "Операция завершена" });
     } catch (e: any) {
       toast({ title: "Ошибка выполнения", description: e.message, variant: "destructive" });
@@ -106,41 +105,46 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl bg-[#0a0a0c] border-primary/30 p-0 overflow-hidden h-[90vh] flex flex-col rounded-[2.5rem] shadow-2xl border outline-none">
-        <DialogHeader className="p-4 md:p-6 bg-primary/5 border-b border-white/5 shrink-0">
-          <DialogTitle className="flex items-center justify-between text-white uppercase italic font-black tracking-tighter text-sm md:text-base select-none pr-8">
+        <DialogHeader className="p-4 md:p-6 bg-primary/5 border-b border-white/5 shrink-0 relative">
+          <div className="flex items-center justify-between w-full pr-8">
             <div className="flex items-center gap-2">
-              <ShieldAlert className="w-4 h-4 md:w-5 md:h-5 text-primary animate-pulse" /> 
-              <span>Nuxus Control Panel</span>
+              <ShieldAlert className="w-5 h-5 text-primary animate-pulse" /> 
+              <DialogTitle className="text-white uppercase italic font-black tracking-tighter text-sm md:text-base select-none">
+                Nuxus Control Panel
+              </DialogTitle>
             </div>
-            <div className="flex items-center gap-1.5 bg-green-500/10 px-2 py-0.5 rounded-full border border-green-500/20 mr-2">
+            <div className="flex items-center gap-1.5 bg-green-500/10 px-3 py-1 rounded-full border border-green-500/20">
               <Activity className="w-2.5 h-2.5 text-green-500 animate-pulse" />
-              <span className="text-[7px] md:text-[8px] font-black text-green-500 uppercase tracking-widest">Live Sync</span>
+              <span className="text-[8px] font-black text-green-500 uppercase tracking-widest">Live Sync</span>
             </div>
-          </DialogTitle>
+          </div>
         </DialogHeader>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0">
           <div className="px-4 md:px-6 pt-3 shrink-0">
             <TabsList className="grid w-full bg-white/5 p-1 rounded-xl grid-cols-4">
-              <TabsTrigger value="analytics" className="rounded-lg text-[8px] uppercase font-black gap-1.5"><BarChart3 className="w-3 h-3 hidden sm:block"/> Аналитика</TabsTrigger>
-              <TabsTrigger value="users" className="rounded-lg text-[8px] uppercase font-black gap-1.5"><Users className="w-3 h-3 hidden sm:block"/> Узлы</TabsTrigger>
-              <TabsTrigger value="logs" className="rounded-lg text-[8px] uppercase font-black gap-1.5"><ListChecks className="w-3 h-3 hidden sm:block"/> Логи</TabsTrigger>
-              <TabsTrigger value="broadcast" className="rounded-lg text-[8px] uppercase font-black gap-1.5"><Radio className="w-3 h-3 hidden sm:block"/> Маяк</TabsTrigger>
+              <TabsTrigger value="analytics" className="rounded-lg text-[8px] uppercase font-black gap-1.5">Аналитика</TabsTrigger>
+              <TabsTrigger value="users" className="rounded-lg text-[8px] uppercase font-black gap-1.5">Узлы</TabsTrigger>
+              <TabsTrigger value="logs" className="rounded-lg text-[8px] uppercase font-black gap-1.5">Логи</TabsTrigger>
+              <TabsTrigger value="broadcast" className="rounded-lg text-[8px] uppercase font-black gap-1.5">Маяк</TabsTrigger>
             </TabsList>
           </div>
 
           <TabsContent value="analytics" className="flex-1 overflow-y-auto scrollbar-hide p-4 md:p-6">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+            <div className="grid grid-cols-2 gap-3 mb-6">
               <StatCard label="Всего узлов" value={stats.total} icon={Users} color="text-white" />
               <StatCard label="Premium" value={stats.premium} icon={Star} color="text-accent" />
               <StatCard label="Админы" value={stats.admins} icon={ShieldCheck} color="text-primary" />
               <StatCard label="Баны" value={stats.banned} icon={Ban} color="text-red-500" />
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pb-8">
-              <div className="bg-white/5 p-4 rounded-3xl border border-white/5 h-[200px] md:h-[280px]">
-                <h3 className="text-[9px] font-black uppercase text-primary mb-3">Новые Узлы</h3>
-                <div className="h-full w-full">
-                  <ResponsiveContainer width="100%" height="80%">
+            
+            <div className="space-y-4 pb-10">
+              <div className="bg-white/5 p-5 rounded-[2rem] border border-white/5 min-h-[220px]">
+                <h3 className="text-[10px] font-black uppercase text-primary mb-4 flex items-center gap-2">
+                  <Activity className="w-3 h-3" /> Новые Узлы (7д)
+                </h3>
+                <div className="h-[140px] w-full">
+                  <ResponsiveContainer width="100%" height="100%">
                     <AreaChart data={chartData}>
                       <defs>
                         <linearGradient id="colorUsers" x1="0" y1="0" x2="0" y2="1">
@@ -148,23 +152,26 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
                           <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0}/>
                         </linearGradient>
                       </defs>
-                      <XAxis dataKey="day" stroke="rgba(255,255,255,0.3)" fontSize={9}/>
-                      <YAxis stroke="rgba(255,255,255,0.3)" fontSize={9}/>
+                      <XAxis dataKey="day" stroke="rgba(255,255,255,0.2)" fontSize={10} tickLine={false} axisLine={false} />
+                      <YAxis stroke="rgba(255,255,255,0.2)" fontSize={10} tickLine={false} axisLine={false} />
                       <ChartTooltip contentStyle={{ backgroundColor: '#1c1c1e', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.1)' }}/>
-                      <Area type="monotone" dataKey="users" stroke="hsl(var(--primary))" fill="url(#colorUsers)" strokeWidth={2} />
+                      <Area type="monotone" dataKey="users" stroke="hsl(var(--primary))" fill="url(#colorUsers)" strokeWidth={3} />
                     </AreaChart>
                   </ResponsiveContainer>
                 </div>
               </div>
-              <div className="bg-white/5 p-4 rounded-3xl border border-white/5 h-[200px] md:h-[280px]">
-                <h3 className="text-[9px] font-black uppercase text-accent mb-3">Трафик (пакеты)</h3>
-                <div className="h-full w-full">
-                  <ResponsiveContainer width="100%" height="80%">
+
+              <div className="bg-white/5 p-5 rounded-[2rem] border border-white/5 min-h-[220px]">
+                <h3 className="text-[10px] font-black uppercase text-accent mb-4 flex items-center gap-2">
+                  <BarChart3 className="w-3 h-3" /> Трафик Сигналов
+                </h3>
+                <div className="h-[140px] w-full">
+                  <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={chartData}>
-                      <XAxis dataKey="day" stroke="rgba(255,255,255,0.3)" fontSize={9}/>
-                      <YAxis stroke="rgba(255,255,255,0.3)" fontSize={9}/>
+                      <XAxis dataKey="day" stroke="rgba(255,255,255,0.2)" fontSize={10} tickLine={false} axisLine={false} />
+                      <YAxis stroke="rgba(255,255,255,0.2)" fontSize={10} tickLine={false} axisLine={false} />
                       <ChartTooltip contentStyle={{ backgroundColor: '#1c1c1e', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.1)' }}/>
-                      <Bar dataKey="signals" fill="hsl(var(--accent))" radius={[4, 4, 0, 0]} />
+                      <Bar dataKey="signals" fill="hsl(var(--accent))" radius={[6, 6, 0, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
@@ -173,49 +180,54 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
           </TabsContent>
 
           <TabsContent value="users" className="flex-1 flex flex-col min-h-0">
-            <div className="p-4 px-6"><Input placeholder="Поиск узлов..." value={userSearch} onChange={e => setUserSearch(e.target.value)} className="bg-white/5 border-white/10 h-10 rounded-xl pl-4" /></div>
+            <div className="p-4 px-6"><Input placeholder="Поиск по базе..." value={userSearch} onChange={e => setUserSearch(e.target.value)} className="bg-white/5 border-white/10 h-12 rounded-2xl pl-4" /></div>
             <ScrollArea className="flex-1">
               <div className="px-6 space-y-2 pb-10">
                 {users?.filter(u => u.name?.toLowerCase().includes(userSearch.toLowerCase())).map(u => (
-                  <div key={u.id} className="flex items-center justify-between p-3 bg-white/5 rounded-2xl border border-white/5">
+                  <div key={u.id} className="flex items-center justify-between p-4 bg-white/5 rounded-[1.8rem] border border-white/5">
                     <div className="flex items-center gap-3">
-                      <UserAvatar userId={u.id} className="h-9 w-9" fallbackName={u.name} />
+                      <UserAvatar userId={u.id} className="h-10 w-10" fallbackName={u.name} />
                       <div className="flex flex-col">
-                        <span className="font-bold text-xs">{formatDisplayName(u.name)} {isUserPremium(u) && <Star className="w-2.5 h-2.5 text-accent fill-accent ml-1" />}</span>
-                        <span className="text-[8px] text-muted-foreground uppercase">{u.username}</span>
+                        <span className="font-bold text-xs flex items-center gap-1">
+                          {formatDisplayName(u.name)} 
+                          {isUserPremium(u) && <Star className="w-3 h-3 text-accent fill-accent" />}
+                        </span>
+                        <span className="text-[9px] text-muted-foreground uppercase font-black">{u.username}</span>
                       </div>
                     </div>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon"><MoreVertical className="w-4 h-4"/></Button>
+                        <Button variant="ghost" size="icon" className="rounded-full"><MoreVertical className="w-5 h-5"/></Button>
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="w-56 bg-card border-white/10 rounded-2xl p-1">
-                        <DropdownMenuItem onClick={() => handleAction(u.id, u.isBanned ? 'unban' : 'ban')} className={cn("gap-2 font-bold uppercase text-[10px] py-3 rounded-lg", u.isBanned ? "text-green-500" : "text-destructive")}>
-                          {u.isBanned ? <CheckCircle2 className="w-4 h-4"/> : <Ban className="w-4 h-4"/>} {u.isBanned ? 'Разбан' : 'Бан'}
+                      <DropdownMenuContent align="end" className="w-56 bg-card border-white/10 rounded-2xl p-1" sideOffset={8}>
+                        <DropdownMenuItem onClick={() => handleAction(u.id, u.isBanned ? 'unban' : 'ban')} className={cn("gap-3 font-bold uppercase text-[10px] py-3 rounded-xl", u.isBanned ? "text-green-500" : "text-destructive")}>
+                          {u.isBanned ? <CheckCircle2 className="w-4 h-4"/> : <Ban className="w-4 h-4"/>} {u.isBanned ? 'Разблокировать' : 'Заблокировать'}
                         </DropdownMenuItem>
                         
-                        <DropdownMenuItem onClick={() => handleAction(u.id, u.isAdmin ? 'remove_admin' : 'make_admin')} className="gap-2 font-bold uppercase text-[10px] py-3 rounded-lg">
+                        <DropdownMenuItem onClick={() => handleAction(u.id, u.isAdmin ? 'remove_admin' : 'make_admin')} className="gap-3 font-bold uppercase text-[10px] py-3 rounded-xl">
                           {u.isAdmin ? <><ShieldOff className="w-4 h-4 text-orange-500" /> Снять админа</> : <><ShieldCheck className="w-4 h-4 text-primary" /> Дать админку</>}
                         </DropdownMenuItem>
 
                         <DropdownMenuSeparator className="bg-white/5" />
 
                         <DropdownMenuSub>
-                          <DropdownMenuSubTrigger className="gap-2 font-bold uppercase text-[10px] py-3 rounded-lg">
-                            <Zap className="w-4 h-4 text-accent" /> Premium статус
+                          <DropdownMenuSubTrigger className="gap-3 font-bold uppercase text-[10px] py-3 rounded-xl">
+                            <Star className="w-4 h-4 text-accent" /> Premium статус
                           </DropdownMenuSubTrigger>
-                          <DropdownMenuSubContent className="bg-card border-white/10 p-1" sideOffset={8}>
-                            <DropdownMenuItem onClick={() => handleAction(u.id, 'give_premium', 1)} className="text-[10px] font-bold uppercase py-3 rounded-lg flex items-center gap-2">
-                              <Star className="w-3.5 h-3.5 text-accent" /> 1 Месяц
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleAction(u.id, 'give_premium', 12)} className="text-[10px] font-bold uppercase py-3 rounded-lg flex items-center gap-2">
-                              <Trophy className="w-3.5 h-3.5 text-accent" /> 1 Год
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator className="bg-white/5" />
-                            <DropdownMenuItem onClick={() => handleAction(u.id, 'remove_premium')} className="text-destructive text-[10px] font-bold uppercase py-3 rounded-lg flex items-center gap-2">
-                              <X className="w-3.5 h-3.5" /> Удалить
-                            </DropdownMenuItem>
-                          </DropdownMenuSubContent>
+                          <DropdownMenuPortal>
+                            <DropdownMenuSubContent className="bg-card border-white/10 p-1 rounded-2xl" sideOffset={8}>
+                              <DropdownMenuItem onClick={() => handleAction(u.id, 'give_premium', 1)} className="text-[10px] font-bold uppercase py-3 rounded-xl flex items-center gap-3">
+                                <Trophy className="w-4 h-4 text-accent" /> 1 Месяц
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleAction(u.id, 'give_premium', 12)} className="text-[10px] font-bold uppercase py-3 rounded-xl flex items-center gap-3">
+                                <Zap className="w-4 h-4 text-accent" /> 1 Год
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator className="bg-white/5" />
+                              <DropdownMenuItem onClick={() => handleAction(u.id, 'remove_premium')} className="text-destructive text-[10px] font-bold uppercase py-3 rounded-xl flex items-center gap-3">
+                                <X className="w-4 h-4" /> Аннулировать
+                              </DropdownMenuItem>
+                            </DropdownMenuSubContent>
+                          </DropdownMenuPortal>
                         </DropdownMenuSub>
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -226,16 +238,16 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
           </TabsContent>
           
           <TabsContent value="logs" className="flex-1 p-6">
-             <div className="flex flex-col items-center justify-center py-20 opacity-20 border-2 border-dashed border-white/5 rounded-3xl">
+             <div className="flex flex-col items-center justify-center py-20 opacity-20 border-2 border-dashed border-white/5 rounded-[2.5rem]">
                 <ListChecks className="w-12 h-12 mb-4" />
-                <p className="text-[10px] font-black uppercase tracking-widest">Системные логи пусты</p>
+                <p className="text-[10px] font-black uppercase tracking-widest text-center">Системные логи пусты</p>
              </div>
           </TabsContent>
 
           <TabsContent value="broadcast" className="flex-1 p-6">
-             <div className="flex flex-col items-center justify-center py-20 opacity-20 border-2 border-dashed border-white/5 rounded-3xl">
+             <div className="flex flex-col items-center justify-center py-20 opacity-20 border-2 border-dashed border-white/5 rounded-[2.5rem]">
                 <Radio className="w-12 h-12 mb-4" />
-                <p className="text-[10px] font-black uppercase tracking-widest">Маяк не активен</p>
+                <p className="text-[10px] font-black uppercase tracking-widest text-center">Маяк в режиме ожидания</p>
              </div>
           </TabsContent>
         </Tabs>
@@ -246,10 +258,10 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
 
 function StatCard({ label, value, icon: Icon, color }: any) {
   return (
-    <div className="bg-white/5 p-3 rounded-[1.2rem] border border-white/5 flex flex-col items-center justify-center gap-0.5 hover:bg-white/10 transition-all">
-      <Icon className={cn("w-3.5 h-3.5 mb-1", color)} />
-      <span className="text-base font-black italic text-white">{value}</span>
-      <span className="text-[6px] font-black uppercase text-muted-foreground/60">{label}</span>
+    <div className="bg-white/5 p-4 rounded-[1.8rem] border border-white/5 flex flex-col items-center justify-center gap-1 hover:bg-white/10 transition-all shadow-xl">
+      <Icon className={cn("w-4 h-4 mb-1", color)} />
+      <span className="text-lg font-black italic text-white tracking-tight">{value}</span>
+      <span className="text-[7px] font-black uppercase text-muted-foreground/60 tracking-widest">{label}</span>
     </div>
   );
 }
