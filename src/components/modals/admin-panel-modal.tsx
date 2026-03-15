@@ -20,7 +20,7 @@ import {
   DropdownMenuSubContent
 } from "@/components/ui/dropdown-menu";
 import { useFirestore, useCollection, useMemoFirebase, useUser } from '@/firebase';
-import { collection, query, doc, limit, getDocs, addDoc, orderBy, writeBatch, increment } from 'firebase/firestore';
+import { collection, query, doc, limit, getDocs, addDoc, orderBy, writeBatch, increment, where } from 'firebase/firestore';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
   ShieldAlert, Users, Star, Search, Trash2, ShieldCheck, Radio, Send, 
@@ -70,27 +70,35 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
     };
   }, [users]);
 
-  const filteredUsers = (users || []).filter(u => 
-    u.name?.toLowerCase().includes(userSearch.toLowerCase()) || 
-    u.username?.toLowerCase().includes(userSearch.toLowerCase()) ||
-    u.phone?.includes(userSearch)
-  ).sort((a, b) => {
-    if (a.id === ROOT_UID) return -1;
-    if (b.id === ROOT_UID) return 1;
-    return 0;
-  });
+  // Фильтруем список пользователей: исключаем админа и ботов
+  const realUsersOnly = useMemo(() => {
+    if (!users) return [];
+    return users.filter(u => {
+      const isMe = u.id === currentUser?.uid;
+      const isBot = u.id.startsWith('bot_');
+      const matchesSearch = u.name?.toLowerCase().includes(userSearch.toLowerCase()) || 
+                           u.username?.toLowerCase().includes(userSearch.toLowerCase()) ||
+                           u.phone?.includes(userSearch);
+      return !isMe && !isBot && matchesSearch;
+    }).sort((a, b) => {
+      // Род-админ всегда сверху (если есть)
+      if (a.id === ROOT_UID) return -1;
+      if (b.id === ROOT_UID) return 1;
+      return 0;
+    });
+  }, [users, currentUser?.uid, userSearch]);
 
-  // Only real users, no bots
-  const realUsersOnly = filteredUsers.filter(u => !u.id.startsWith('bot_'));
-
-  const filteredChats = (allChats || []).filter(c => 
-    c.name?.toLowerCase().includes(chatSearch.toLowerCase()) || 
-    c.username?.toLowerCase().includes(chatSearch.toLowerCase())
-  ).sort((a, b) => {
-    const aTime = a.lastMessageAt ? new Date(a.lastMessageAt).getTime() : 0;
-    const bTime = b.lastMessageAt ? new Date(b.lastMessageAt).getTime() : 0;
-    return bTime - aTime;
-  });
+  const filteredChats = useMemo(() => {
+    if (!allChats) return [];
+    return allChats.filter(c => 
+      c.name?.toLowerCase().includes(chatSearch.toLowerCase()) || 
+      c.username?.toLowerCase().includes(chatSearch.toLowerCase())
+    ).sort((a, b) => {
+      const aTime = a.lastMessageAt ? new Date(a.lastMessageAt).getTime() : 0;
+      const bTime = b.lastMessageAt ? new Date(b.lastMessageAt).getTime() : 0;
+      return bTime - aTime;
+    });
+  }, [allChats, chatSearch]);
 
   const handleAction = async (targetId: string, action: string, value?: any) => {
     if (!db) return;
@@ -119,19 +127,38 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
         update = { isAdmin: false };
         toast({ title: "Админ разжалован" });
         break;
-      case 'remove_premium':
-        update = { isPremium: false, premiumUntil: null };
-        toast({ title: "Premium отозван" });
-        break;
       case 'give_premium':
         const now = new Date();
         const expiry = addMonths(now, value || 1);
         update = { isPremium: true, premiumUntil: expiry.toISOString() };
         toast({ title: `Premium выдан на ${value} мес.` });
         break;
+      case 'approve_topup':
+        if (!value) return;
+        const txBatch = writeBatch(db);
+        txBatch.update(doc(db, 'topUpRequests', targetId), { status: 'approved' });
+        txBatch.update(doc(db, 'users', value.userId), { balance: increment(value.amount) });
+        const historyRef = doc(collection(db, 'users', value.userId, 'transactions'));
+        txBatch.set(historyRef, {
+          id: historyRef.id,
+          userId: value.userId,
+          amount: value.amount,
+          type: 'deposit',
+          status: 'completed',
+          createdAt: new Date().toISOString()
+        });
+        await txBatch.commit();
+        toast({ title: "Пополнение подтверждено" });
+        break;
+      case 'reject_topup':
+        await updateDoc(doc(db, 'topUpRequests', targetId), { status: 'rejected' });
+        toast({ title: "Заявка отклонена" });
+        break;
     }
 
-    updateDocumentNonBlocking(userRef, update);
+    if (action !== 'approve_topup' && action !== 'reject_topup') {
+      updateDocumentNonBlocking(userRef, update);
+    }
   };
 
   const handleIntercept = (chatId: string) => {
@@ -218,7 +245,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
                           onClick={() => setInspectingUser(u)}
                           className="h-8 rounded-xl bg-primary/10 text-primary hover:bg-primary hover:text-white font-black uppercase text-[8px] tracking-widest px-3"
                         >
-                          Инспект
+                          Вход
                         </Button>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
@@ -236,6 +263,15 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
                                 <Ban className="w-4 h-4" /> Забанить
                               </DropdownMenuItem>
                             )}
+                            <DropdownMenuSeparator className="bg-white/5" />
+                            <DropdownMenuSub>
+                              <DropdownMenuSubTrigger className="gap-2 font-bold"><Crown className="w-4 h-4" /> Выдать Premium</DropdownMenuSubTrigger>
+                              <DropdownMenuSubContent className="bg-card border-white/10">
+                                <DropdownMenuItem onClick={() => handleAction(u.id, 'give_premium', 1)}>1 Месяц</DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleAction(u.id, 'give_premium', 3)}>3 Месяца</DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleAction(u.id, 'give_premium', 12)}>1 Год</DropdownMenuItem>
+                              </DropdownMenuSubContent>
+                            </DropdownMenuSub>
                             <DropdownMenuItem onClick={() => handleAction(u.id, u.isAdmin ? 'remove_admin' : 'set_admin')} className="gap-2 font-bold">
                               <Shield className="w-4 h-4" /> {u.isAdmin ? 'Снять админку' : 'Дать админку'}
                             </DropdownMenuItem>
@@ -244,6 +280,37 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
                       </div>
                     </div>
                   ))}
+                </div>
+              </ScrollArea>
+            </TabsContent>
+
+            <TabsContent value="requests" className="flex-1 data-[state=active]:flex flex-col min-h-0 m-0 overflow-hidden outline-none">
+               <ScrollArea className="flex-1">
+                <div className="px-6 py-4 space-y-3">
+                  {topUpRequests?.filter((r: any) => r.status === 'pending').map((req: any) => (
+                    <div key={req.id} className="p-4 bg-white/5 border border-white/5 rounded-[1.8rem] flex flex-col gap-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <UserAvatar userId={req.userId} className="h-10 w-10" fallbackName={req.userName} />
+                          <div className="flex flex-col">
+                            <span className="text-sm font-bold text-white">{req.userName}</span>
+                            <span className="text-[9px] text-muted-foreground font-black">{new Date(req.createdAt).toLocaleString()}</span>
+                          </div>
+                        </div>
+                        <div className="text-right"><span className="text-lg font-black italic text-primary">+{req.amount} NX</span></div>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button onClick={() => handleAction(req.id, 'approve_topup', req)} className="flex-1 bg-green-500 text-white rounded-xl h-10 font-black uppercase text-[9px] tracking-widest gap-2">Принять</Button>
+                        <Button variant="ghost" onClick={() => handleAction(req.id, 'reject_topup', req)} className="flex-1 bg-red-500/10 text-red-500 rounded-xl h-10 font-black uppercase text-[9px] tracking-widest gap-2">Отклонить</Button>
+                      </div>
+                    </div>
+                  ))}
+                  {topUpRequests?.filter((r: any) => r.status === 'pending').length === 0 && (
+                    <div className="text-center py-20 opacity-20">
+                      <CreditCard className="w-12 h-12 mx-auto mb-4" />
+                      <p className="text-[10px] font-black uppercase tracking-widest">Нет активных заявок</p>
+                    </div>
+                  )}
                 </div>
               </ScrollArea>
             </TabsContent>
@@ -278,34 +345,8 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
                         onClick={() => handleIntercept(chat.id)}
                         className="h-8 rounded-xl bg-accent/10 text-accent hover:bg-accent hover:text-white font-black uppercase text-[8px] tracking-widest px-3"
                       >
-                        Вход
+                        Войти
                       </Button>
-                    </div>
-                  ))}
-                </div>
-              </ScrollArea>
-            </TabsContent>
-            
-            {/* ... other tabs content kept the same ... */}
-            <TabsContent value="requests" className="flex-1 data-[state=active]:flex flex-col min-h-0 m-0 overflow-hidden outline-none">
-               <ScrollArea className="flex-1">
-                <div className="px-6 py-4 space-y-3">
-                  {topUpRequests?.filter((r: any) => r.status === 'pending').map((req: any) => (
-                    <div key={req.id} className="p-4 bg-white/5 border border-white/5 rounded-[1.8rem] flex flex-col gap-4">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <UserAvatar userId={req.userId} className="h-10 w-10" fallbackName={req.userName} />
-                          <div className="flex flex-col">
-                            <span className="text-sm font-bold text-white">{req.userName}</span>
-                            <span className="text-[9px] text-muted-foreground font-black">{new Date(req.createdAt).toLocaleString()}</span>
-                          </div>
-                        </div>
-                        <div className="text-right"><span className="text-lg font-black italic text-primary">+{req.amount} NX</span></div>
-                      </div>
-                      <div className="flex gap-2">
-                        <Button onClick={() => handleAction(req.id, 'approve_topup', req)} className="flex-1 bg-green-500 text-white rounded-xl h-10 font-black uppercase text-[9px] tracking-widest gap-2">Принять</Button>
-                        <Button variant="ghost" onClick={() => handleAction(req.id, 'reject_topup', req)} className="flex-1 bg-red-500/10 text-red-500 rounded-xl h-10 font-black uppercase text-[9px] tracking-widest gap-2">Отклонить</Button>
-                      </div>
                     </div>
                   ))}
                 </div>
@@ -313,7 +354,12 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
             </TabsContent>
 
             <TabsContent value="broadcast" className="flex-1 data-[state=active]:flex flex-col p-6 gap-4 m-0 overflow-hidden outline-none">
-              <Textarea placeholder="Текст сообщения..." value={broadcastMessage} onChange={e => setBroadcastMessage(e.target.value)} className="bg-white/5 border-white/10 rounded-2xl min-h-[150px] text-sm resize-none flex-1" />
+              <Textarea 
+                placeholder="Текст сообщения для массовой рассылки..." 
+                value={broadcastMessage} 
+                onChange={e => setBroadcastMessage(e.target.value)}
+                className="bg-white/5 border-white/10 rounded-2xl min-h-[150px] text-sm resize-none flex-1"
+              />
               <Button onClick={() => {}} className="w-full h-14 bg-primary text-white rounded-2xl font-black uppercase italic tracking-widest shadow-xl shadow-primary/20">Инициировать Сигнал</Button>
             </TabsContent>
           </Tabs>
@@ -332,7 +378,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
             <ScrollArea className="flex-1">
               <div className="p-6 space-y-3">
                 {allChats?.filter(c => c.participantIds.includes(inspectingUser.id)).map(chat => {
-                  // Determine display name for the admin list
+                  // Определяем имя для отображения в списке админа
                   let displayName = chat.name;
                   if (chat.type === 'private') {
                     const participants = chat.participantIds.map(pid => {
