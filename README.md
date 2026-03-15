@@ -2,7 +2,7 @@
 # Nuxus — Премиальный мессенджер (v0.65.8)
 
 ## 📖 Документация
-- **Wikipedia Draft**: Черновик статьи для Википедии доступен в [docs/WIKIPEDIA_DRAFT.txt](./docs/WIKIPEDIA_DRAFT.txt).
+- **Kernel Operations**: Руководство по обслуживанию системы доступно в [docs/KERNEL_OPS.txt](./docs/KERNEL_OPS.txt).
 - **Backend Schema**: Описание структуры данных в [docs/backend.json](./docs/backend.json).
 
 ## 🚀 Как запустить на macOS

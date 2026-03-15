@@ -1,7 +1,7 @@
 
 "use client"
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -23,7 +23,7 @@ import { collection, query, doc, limit, getDocs, addDoc, orderBy, writeBatch, in
 import { UserAvatar } from '@/components/user-avatar';
 import { 
   ShieldAlert, Users, Star, Search, Trash2, ShieldCheck, Radio, Send, 
-  Loader2, UserX, MoreVertical, Ban, CheckCircle2, Crown, Calendar, Shield, Globe, Activity, Eye, MessageCircle, ArrowLeft, CreditCard, Check, X, ShieldOff, Zap, Map, Navigation
+  Loader2, UserX, MoreVertical, Ban, CheckCircle2, Crown, Calendar, Shield, Globe, Activity, Eye, MessageCircle, ArrowLeft, CreditCard, Check, X, ShieldOff, Zap, Map, Navigation, Terminal, Trash
 } from 'lucide-react';
 import type { User, Chat, Transaction } from '@/lib/types';
 import { formatDisplayName, isUserPremium, cn, isGlobalAdmin } from '@/lib/utils';
@@ -34,7 +34,7 @@ import { addMonths } from 'date-fns';
 
 const ROOT_UID = 'GCvLucN8CjNcdaxPO2vmpZ84hNl1';
 
-// HIGH-DETAIL REALISTIC WORLD MAP PATHS (CONTINENTS SILHOUETTES)
+// HIGH-DETAIL REALISTIC WORLD MAP PATHS
 const WORLD_MAP_PATHS = [
   { id: 'na', name: 'North America', d: "M150,80 L180,60 L240,55 L280,70 L310,110 L320,160 L290,200 L250,215 L210,200 L170,160 L140,120 Z" },
   { id: 'sa', name: 'South America', d: "M265,235 L310,245 L325,295 L315,365 L295,435 L260,475 L225,435 L215,365 L235,295 L250,245 Z" },
@@ -60,8 +60,10 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
   const [broadcastMessage, setBroadcastMessage] = useState('');
   const [activeTab, setActiveTab] = useState('users');
   const [selectedGeoCountry, setSelectedGeoCountry] = useState<string | null>(null);
+  const [terminalLogs, setTerminalLogs] = useState<{msg: string, time: string, type: 'info'|'warn'|'crit'}[]>([]);
   
   const [inspectingUser, setInspectingUser] = useState<User | null>(null);
+  const terminalEndRef = useRef<HTMLDivElement>(null);
   
   const usersQuery = useMemoFirebase(() => (!db ? null : query(collection(db, 'users'), limit(500))), [db]);
   const { data: users } = useCollection<User>(usersQuery);
@@ -71,6 +73,23 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
 
   const requestsQuery = useMemoFirebase(() => (!db ? null : query(collection(db, 'topUpRequests'), orderBy('createdAt', 'desc'), limit(50))), [db]);
   const { data: topUpRequests } = useCollection<any>(requestsQuery);
+
+  // Terminal logic
+  useEffect(() => {
+    if (activeTab === 'terminal' && terminalLogs.length === 0) {
+      const initialLogs = [
+        { msg: "Kernel Boot Sequence Initialized...", time: new Date().toLocaleTimeString(), type: 'info' as const },
+        { msg: "Quantum Signal Encryption: ACTIVE", time: new Date().toLocaleTimeString(), type: 'info' as const },
+        { msg: "Mapping Neural Nodes...", time: new Date().toLocaleTimeString(), type: 'info' as const },
+        { msg: `Detected ${users?.length || 0} active nodes in cluster.`, time: new Date().toLocaleTimeString(), type: 'info' as const },
+      ];
+      setTerminalLogs(initialLogs);
+    }
+  }, [activeTab, users?.length]);
+
+  useEffect(() => {
+    terminalEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [terminalLogs]);
 
   const stats = useMemo(() => {
     const realUsers = (users || []).filter(u => !u.id.startsWith('bot_') && u.username !== '@stickers');
@@ -171,7 +190,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
               ) : (
                 <>
                   <ShieldAlert className="w-5 h-5 text-primary animate-pulse" /> 
-                  <span>Nuxus Kernel Admin</span>
+                  <span>Nuxus Kernel Control</span>
                 </>
               )}
             </div>
@@ -181,11 +200,12 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
         {!inspectingUser ? (
           <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0 overflow-hidden">
             <div className="px-6 pt-4 shrink-0">
-              <TabsList className="grid grid-cols-4 w-full bg-white/5 p-1 rounded-2xl">
-                <TabsTrigger value="users" className="rounded-xl text-[9px] uppercase font-black tracking-widest gap-1">Ядро</TabsTrigger>
-                <TabsTrigger value="geo" className="rounded-xl text-[9px] uppercase font-black tracking-widest gap-1">География</TabsTrigger>
-                <TabsTrigger value="requests" className="rounded-xl text-[9px] uppercase font-black tracking-widest gap-1">Заявки</TabsTrigger>
-                <TabsTrigger value="broadcast" className="rounded-xl text-[9px] uppercase font-black tracking-widest gap-1">Маяк</TabsTrigger>
+              <TabsList className="grid grid-cols-5 w-full bg-white/5 p-1 rounded-2xl overflow-x-auto scrollbar-hide">
+                <TabsTrigger value="users" className="rounded-xl text-[8px] uppercase font-black tracking-widest gap-1 px-2">Ядро</TabsTrigger>
+                <TabsTrigger value="geo" className="rounded-xl text-[8px] uppercase font-black tracking-widest gap-1 px-2">Гео</TabsTrigger>
+                <TabsTrigger value="requests" className="rounded-xl text-[8px] uppercase font-black tracking-widest gap-1 px-2">Заявки</TabsTrigger>
+                <TabsTrigger value="terminal" className="rounded-xl text-[8px] uppercase font-black tracking-widest gap-1 px-2">Terminal</TabsTrigger>
+                <TabsTrigger value="broadcast" className="rounded-xl text-[8px] uppercase font-black tracking-widest gap-1 px-2">Маяк</TabsTrigger>
               </TabsList>
             </div>
 
@@ -282,7 +302,6 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
                       );
                     })}
                     
-                    {/* Active Node Markers */}
                     {geoData.map((geo, i) => {
                       let x = 500, y = 250;
                       if (geo.code === 'RU') { x = 650; y = 110; }
@@ -350,6 +369,46 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
                   ))}
                 </div>
               </ScrollArea>
+            </TabsContent>
+
+            <TabsContent value="terminal" className="flex-1 data-[state=active]:flex flex-col min-h-0 m-0 overflow-hidden outline-none bg-black">
+              <div className="flex-1 p-4 font-mono text-[10px] leading-relaxed relative">
+                <ScrollArea className="h-full">
+                  <div className="space-y-1">
+                    {terminalLogs.map((log, i) => (
+                      <div key={i} className={cn(
+                        "flex gap-3",
+                        log.type === 'warn' ? "text-yellow-500" : log.type === 'crit' ? "text-red-500" : "text-green-500"
+                      )}>
+                        <span className="opacity-40 shrink-0">[{log.time}]</span>
+                        <span className="shrink-0">$</span>
+                        <span className="break-all">{log.msg}</span>
+                      </div>
+                    ))}
+                    <div ref={terminalEndRef} />
+                  </div>
+                </ScrollArea>
+                <div className="absolute top-4 right-4 flex gap-2">
+                  <button onClick={() => setTerminalLogs([])} className="p-2 bg-white/5 hover:bg-white/10 rounded-lg text-white/40 hover:text-white transition-all"><Trash className="w-3.5 h-3.5" /></button>
+                </div>
+              </div>
+              <div className="p-4 bg-black border-t border-white/10 flex items-center gap-3">
+                <span className="text-green-500 font-mono text-xs">root@nuxus:~$</span>
+                <input 
+                  className="flex-1 bg-transparent border-none outline-none text-green-500 font-mono text-xs" 
+                  placeholder="enter command..."
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      const val = (e.target as HTMLInputElement).value;
+                      if (!val) return;
+                      setTerminalLogs(prev => [...prev, { msg: `EXECUTING: ${val}`, time: new Date().toLocaleTimeString(), type: 'info' }]);
+                      if (val === 'clear') setTerminalLogs([]);
+                      if (val === 'status') setTerminalLogs(prev => [...prev, { msg: "SYSTEM: ALL SYSTEMS OPERATIONAL", time: new Date().toLocaleTimeString(), type: 'info' }]);
+                      (e.target as HTMLInputElement).value = '';
+                    }
+                  }}
+                />
+              </div>
             </TabsContent>
 
             <TabsContent value="broadcast" className="flex-1 data-[state=active]:flex flex-col p-6 gap-4 m-0 overflow-hidden outline-none">
