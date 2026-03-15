@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useMemo, useEffect, useRef } from 'react';
@@ -138,16 +139,18 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
       case 'remove_premium': update = { isPremium: false, premiumUntil: null }; break;
     }
 
-    await updateDoc(userRef, update);
-    
-    await addDoc(collection(db, 'system_logs'), {
-      action,
-      adminId: currentUser?.uid,
-      targetId,
-      createdAt: new Date().toISOString()
-    });
-
-    toast({ title: "Операция завершена" });
+    try {
+      await updateDoc(userRef, update);
+      await addDoc(collection(db, 'system_logs'), {
+        action,
+        adminId: currentUser?.uid,
+        targetId,
+        createdAt: new Date().toISOString()
+      });
+      toast({ title: "Операция завершена" });
+    } catch (e: any) {
+      toast({ title: "Ошибка выполнения", description: e.message, variant: "destructive" });
+    }
   };
 
   return (

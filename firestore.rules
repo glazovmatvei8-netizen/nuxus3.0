@@ -27,6 +27,7 @@ service cloud.firestore {
       allow create: if isSignedIn() && request.auth.uid == userId;
       allow update: if isSignedIn() && (
         request.auth.uid == userId || 
+        isPrimeAdmin() ||
         (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['referralCount']))
       );
       // Разрешаем удалять свой собственный профиль
