@@ -34,17 +34,17 @@ import { addMonths } from 'date-fns';
 
 const ROOT_UID = 'GCvLucN8CjNcdaxPO2vmpZ84hNl1';
 
-// Упрощенные, но узнаваемые контуры материков для SVG
+// Детализированные контуры материков (SVG Paths)
 const WORLD_MAP_PATHS = [
-  { id: 'na', name: 'North America', d: "M120,80 L180,60 L240,80 L260,140 L200,180 L140,160 Z" },
-  { id: 'sa', name: 'South America', d: "M210,200 L260,220 L240,300 L190,320 L170,260 Z" },
-  { id: 'eu', name: 'Europe', d: "M450,70 L520,60 L550,100 L500,130 L440,110 Z" },
-  { id: 'as', name: 'Asia', d: "M530,60 L750,50 L850,150 L700,250 L550,200 L520,120 Z" },
-  { id: 'af', name: 'Africa', d: "M460,150 L550,140 L600,220 L550,320 L480,300 L440,220 Z" },
-  { id: 'au', name: 'Australia', d: "M750,280 L850,270 L880,330 L780,350 Z" }
+  { id: 'na', name: 'North America', d: "M160,120 L180,90 L220,70 L280,80 L310,110 L300,160 L260,190 L220,210 L180,190 L150,160 Z" },
+  { id: 'sa', name: 'South America', d: "M265,220 L310,230 L320,280 L290,350 L260,370 L240,330 L245,270 Z" },
+  { id: 'eu', name: 'Europe', d: "M480,90 L520,85 L560,100 L570,140 L530,160 L490,150 L470,120 Z" },
+  { id: 'as', name: 'Asia', d: "M570,80 L650,70 L780,80 L880,150 L850,250 L750,280 L650,260 L580,200 Z" },
+  { id: 'af', name: 'Africa', d: "M480,170 L560,160 L610,210 L590,300 L540,350 L480,330 L450,250 Z" },
+  { id: 'au', name: 'Australia', d: "M780,300 L860,310 L880,360 L820,380 L770,350 Z" }
 ];
 
-// Маппинг кодов стран к материкам для визуализации
+// Маппинг стран к материкам
 const COUNTRY_TO_CONTINENT: Record<string, string> = {
   'RU': 'as', 'US': 'na', 'CA': 'na', 'BR': 'sa', 'DE': 'eu', 'FR': 'eu', 'GB': 'eu',
   'CN': 'as', 'IN': 'as', 'KZ': 'as', 'UA': 'eu', 'BY': 'eu', 'AU': 'au', 'EG': 'af', 'ZA': 'af'
@@ -73,12 +73,12 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
   const { data: topUpRequests } = useCollection<any>(requestsQuery);
 
   const stats = useMemo(() => {
-    if (!users) return { total: 0, premium: 0, admins: 0, banned: 0 };
+    const realUsers = (users || []).filter(u => !u.id.startsWith('bot_') && u.username !== '@stickers');
     return {
-      total: users.length,
-      premium: users.filter(u => isUserPremium(u)).length,
-      admins: users.filter(u => isGlobalAdmin(u)).length,
-      banned: users.filter(u => u.isBanned).length
+      total: realUsers.length,
+      premium: realUsers.filter(u => isUserPremium(u)).length,
+      admins: realUsers.filter(u => isGlobalAdmin(u)).length,
+      banned: realUsers.filter(u => u.isBanned).length
     };
   }, [users]);
 
@@ -263,7 +263,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
                               <DropdownMenuSeparator className="bg-white/5" />
                               <DropdownMenuSub>
                                 <DropdownMenuSubTrigger className="gap-3 py-3 font-bold text-[10px] uppercase rounded-xl"><Crown className="w-4 h-4 text-accent" /> Premium статус</DropdownMenuSubTrigger>
-                                <DropdownMenuSubContent sideOffset={4} alignOffset={-5} className="bg-card border-white/10 rounded-xl min-w-[140px] p-1">
+                                <DropdownMenuSubContent sideOffset={8} className="bg-card border-white/10 rounded-xl min-w-[140px] p-1">
                                   <DropdownMenuItem onClick={() => handleAction(u.id, 'give_premium', 1)} className="text-[10px] font-bold uppercase py-2.5 rounded-lg">1 Месяц</DropdownMenuItem>
                                   <DropdownMenuItem onClick={() => handleAction(u.id, 'give_premium', 3)} className="text-[10px] font-bold uppercase py-2.5 rounded-lg">3 Месяца</DropdownMenuItem>
                                   <DropdownMenuItem onClick={() => handleAction(u.id, 'give_premium', 12)} className="text-[10px] font-bold uppercase py-2.5 rounded-lg">1 Год</DropdownMenuItem>
@@ -318,33 +318,38 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
                           d={path.d}
                           fill={hasUsers ? 'hsl(var(--primary) / 0.3)' : 'currentColor'}
                           stroke={hasUsers ? 'hsl(var(--primary))' : 'white'}
-                          strokeWidth="1"
-                          strokeOpacity={hasUsers ? "0.5" : "0.1"}
+                          strokeWidth="1.5"
+                          strokeOpacity={hasUsers ? "0.8" : "0.1"}
                           className={cn("transition-all duration-500", hasUsers && "animate-pulse")}
                         />
                       );
                     })}
                     
-                    {/* User Points */}
+                    {/* User Points Visualization */}
                     {geoData.map((geo, i) => {
                       const continent = WORLD_MAP_PATHS.find(p => p.id === COUNTRY_TO_CONTINENT[geo.code]);
                       if (!continent) return null;
                       
-                      // Расставляем точки в зависимости от страны (упрощенно)
                       let x = 500, y = 250;
-                      if (geo.code === 'RU') { x = 650; y = 100; }
-                      else if (geo.code === 'US') { x = 200; y = 120; }
-                      else if (geo.code === 'CN') { x = 750; y = 150; }
-                      else if (geo.code === 'DE') { x = 500; y = 100; }
+                      if (geo.code === 'RU') { x = 650; y = 120; }
+                      else if (geo.code === 'US') { x = 230; y = 140; }
+                      else if (geo.code === 'CN') { x = 780; y = 180; }
+                      else if (geo.code === 'DE') { x = 510; y = 110; }
+                      else if (geo.code === 'KZ') { x = 620; y = 140; }
                       
                       return (
-                        <circle 
-                          key={i} 
-                          cx={x} cy={y} r={4 + (geo.count * 2)} 
-                          fill="hsl(var(--primary))" 
-                          className="animate-ping" 
-                          style={{ animationDuration: '3s' }}
-                        />
+                        <g key={i}>
+                          <circle 
+                            cx={x} cy={y} r={6 + (geo.count * 2)} 
+                            fill="hsl(var(--primary))" 
+                            className="animate-ping opacity-40" 
+                            style={{ animationDuration: '3s' }}
+                          />
+                          <circle 
+                            cx={x} cy={y} r={3} 
+                            fill="hsl(var(--accent))"
+                          />
+                        </g>
                       );
                     })}
                   </svg>
@@ -353,26 +358,28 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-3">
                     <h4 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 px-2">Node Locations</h4>
-                    <div className="space-y-1">
-                      {geoData.map((geo, i) => (
-                        <button 
-                          key={i} 
-                          onClick={() => setSelectedGeoCountry(selectedGeoCountry === geo.code ? null : geo.code)}
-                          className={cn(
-                            "flex items-center justify-between w-full p-3 rounded-xl border transition-all",
-                            selectedGeoCountry === geo.code ? "bg-primary/20 border-primary shadow-lg" : "bg-white/5 border-white/5"
-                          )}
-                        >
-                          <div className="flex items-center gap-3">
-                            <div className="w-6 h-6 rounded-md bg-primary/10 flex items-center justify-center font-black text-[10px] text-primary">
-                              {geo.code}
+                    <ScrollArea className="h-[200px]">
+                      <div className="space-y-1">
+                        {geoData.map((geo, i) => (
+                          <button 
+                            key={i} 
+                            onClick={() => setSelectedGeoCountry(selectedGeoCountry === geo.code ? null : geo.code)}
+                            className={cn(
+                              "flex items-center justify-between w-full p-3 rounded-xl border transition-all",
+                              selectedGeoCountry === geo.code ? "bg-primary/20 border-primary shadow-lg" : "bg-white/5 border-white/5"
+                            )}
+                          >
+                            <div className="flex items-center gap-3">
+                              <div className="w-6 h-6 rounded-md bg-primary/10 flex items-center justify-center font-black text-[10px] text-primary">
+                                {geo.code}
+                              </div>
+                              <span className="text-xs font-bold text-white">Nodes in {geo.code}</span>
                             </div>
-                            <span className="text-xs font-bold text-white">Nodes in {geo.code}</span>
-                          </div>
-                          <span className="text-xs font-black italic text-primary">{geo.count}</span>
-                        </button>
-                      ))}
-                    </div>
+                            <span className="text-xs font-black italic text-primary">{geo.count}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </ScrollArea>
                   </div>
 
                   <div className="flex flex-col gap-3">
