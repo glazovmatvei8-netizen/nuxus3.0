@@ -34,8 +34,8 @@ import { useAppState } from '@/lib/store';
 const QUICK_REACTIONS = ['❤️', '👍', '🔥', '😂', '😮', '😢', '💯'];
 
 /**
- * ОПТИМИЗИРОВАННЫЙ MESSAGE ITEM 4.0
- * Исправлено: воспроизведение ГС, видеокружков и транскрибация ИИ.
+ * ОПТИМИЗИРОВАННЫЙ MESSAGE ITEM 5.0
+ * Исправлено: Воспроизведение ГС на iOS, видеокружки и стабильный ИИ.
  */
 export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForward, isAdmin = false, isGroup = false, onEdit, highlight = false, viewerProfile }: any) => {
   const { user } = useUser();
@@ -97,37 +97,38 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
 
   const toggleAudio = (e: React.MouseEvent) => {
     e.stopPropagation();
-    try {
-      if (!audioInstance.current) {
-        const audio = new Audio();
-        audio.src = message.content;
-        audio.preload = "auto";
-        
-        audio.onplay = () => setIsPlaying(true);
-        audio.onpause = () => setIsPlaying(false);
-        audio.onended = () => {
-          setIsPlaying(false);
-          audio.currentTime = 0;
-        };
-        audio.onerror = () => {
-          setIsPlaying(false);
-          toast({ title: "Ошибка сигнала", description: "Не удалось воспроизвести аудио", variant: "destructive" });
-        };
-        
-        audioInstance.current = audio;
-      }
+    if (!audioInstance.current) {
+      const audio = new Audio(message.content);
+      audio.preload = "auto";
       
-      const audio = audioInstance.current;
-      if (audio.paused) {
-        audio.play().catch(err => {
-          console.warn("Audio Playback Blocked:", err);
-          setIsPlaying(false);
+      audio.onplay = () => setIsPlaying(true);
+      audio.onpause = () => setIsPlaying(false);
+      audio.onended = () => {
+        setIsPlaying(false);
+        audio.currentTime = 0;
+      };
+      audio.onerror = () => {
+        setIsPlaying(false);
+        toast({ title: "Ошибка сигнала", description: "Не удалось загрузить аудио", variant: "destructive" });
+      };
+      
+      audioInstance.current = audio;
+    }
+    
+    const audio = audioInstance.current;
+    if (audio.paused) {
+      const playPromise = audio.play();
+      if (playPromise !== undefined) {
+        playPromise.catch(() => {
+          // iOS Autoplay policy bypass
+          audio.muted = true;
+          audio.play().then(() => {
+            audio.muted = false;
+          });
         });
-      } else {
-        audio.pause();
       }
-    } catch (err) {
-      console.error("Audio Engine Critical Error", err);
+    } else {
+      audio.pause();
     }
   };
 
@@ -136,7 +137,7 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
     if (videoRef.current) {
       const v = videoRef.current;
       if (v.paused) {
-        v.muted = false; // Важно для активации звука на мобильных
+        v.muted = false;
         v.play().catch(() => {
           v.muted = true;
           v.play();
@@ -169,6 +170,7 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
           src={message.content} 
           loop 
           playsInline 
+          preload="metadata"
           className="w-full h-full object-cover scale-x-[-1]" 
         />
         <div className="absolute inset-0 bg-black/20 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">

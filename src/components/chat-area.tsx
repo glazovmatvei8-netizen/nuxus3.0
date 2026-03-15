@@ -22,7 +22,6 @@ import { formatDisplayName, cn, formatLastSeen, compressImage, encryptSignal, is
 import type { Message, User as UserType, Chat } from '@/lib/types';
 import { EmojiPicker } from './emoji-picker';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { suggestMessageDraft } from '@/ai/flows/ai-message-drafting-flow';
 
 const MessageList = memo(({ 
   messages, userId, chatId, onReply, onPin, amIPremium, isAdmin, isGroup, onEdit, onForward, searchQuery, viewerProfile
@@ -80,6 +79,11 @@ export default function ChatArea() {
   const [isAiLoading, setIsAiLoading] = useState(false);
   const [isJoining, setIsJoining] = useState(false);
 
+  // Recording states
+  const [isRecording, setIsRecording] = useState(false);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   const scrollViewportRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -94,7 +98,6 @@ export default function ChatArea() {
 
   const isKernelAdmin = useMemo(() => isGlobalAdmin(userProfile), [userProfile]);
 
-  // ADMIN INTERCEPTION MODE: Explicit requested and admin is not in chat
   const isInterception = useMemo(() => {
     if (!chat || !firebaseUser || !isInterceptionRequested) return false;
     return !chat.participantIds.includes(firebaseUser.uid) && isKernelAdmin;
@@ -158,6 +161,44 @@ export default function ChatArea() {
     if (currentChatId) setLocalDrafts(prev => ({ ...prev, [currentChatId]: val }));
     if (db && currentChatId && firebaseUser && !isInterception && isParticipant) {
       updateDocumentNonBlocking(doc(db, 'chats', currentChatId), { [`typing.${firebaseUser.uid}`]: !!val });
+    }
+  };
+
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = mediaRecorder;
+      audioChunksRef.current = [];
+
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) audioChunksRef.current.push(event.data);
+      };
+
+      mediaRecorder.onstop = async () => {
+        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          const base64Audio = reader.result as string;
+          handleSendMessage(base64Audio, 'audio');
+        };
+        reader.readAsDataURL(audioBlob);
+        stream.getTracks().forEach(track => track.stop());
+      };
+
+      mediaRecorder.start();
+      setIsRecording(true);
+      if (window.navigator && window.navigator.vibrate) window.navigator.vibrate(100);
+    } catch (err) {
+      toast({ title: "Ошибка микрофона", description: "Разрешите доступ к микрофону в настройках браузера.", variant: "destructive" });
+    }
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && isRecording) {
+      mediaRecorderRef.current.stop();
+      setIsRecording(false);
+      if (window.navigator && window.navigator.vibrate) window.navigator.vibrate(50);
     }
   };
 
@@ -348,7 +389,16 @@ export default function ChatArea() {
                   <button onClick={() => setShowEmojiPicker(!showEmojiPicker)} className="text-white/20 hover:text-white transition-colors"><Smile /></button>
                 </div>
               </div>
-              <Button size="icon" className="h-10 w-10 rounded-full bg-primary shadow-lg" onClick={() => handleSendMessage()}><Send className="w-5 h-5" /></Button>
+
+              {messageInput.trim() || isRecording ? (
+                <Button size="icon" className="h-10 w-10 rounded-full bg-primary shadow-lg" onClick={() => isRecording ? stopRecording() : handleSendMessage()}>
+                  {isRecording ? <StopCircle className="w-5 h-5 animate-pulse text-red-500" /> : <Send className="w-5 h-5" />}
+                </Button>
+              ) : (
+                <Button size="icon" variant="ghost" className="h-10 w-10 rounded-full hover:bg-primary/10 text-primary" onMouseDown={startRecording} onMouseUp={stopRecording} onTouchStart={startRecording} onTouchEnd={stopRecording}>
+                  <Mic className="w-5 h-5" />
+                </Button>
+              )}
             </div>
           </div>
         </footer>
