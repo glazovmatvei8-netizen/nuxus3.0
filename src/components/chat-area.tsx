@@ -122,11 +122,12 @@ export default function ChatArea() {
 
   const canPost = useMemo(() => {
     if (isInterception) return false;
+    if (isKernelAdmin) return true; // BYPASS FOR GLOBAL ADMIN
     if (!chat || !firebaseUser) return false;
     if (chat.type === 'channel') {
-      return chat.adminIds?.includes(firebaseUser.uid) || isKernelAdmin;
+      return chat.adminIds?.includes(firebaseUser.uid);
     }
-    return isParticipant || isKernelAdmin; // Admin can bypass restriction
+    return isParticipant;
   }, [chat, firebaseUser, isKernelAdmin, isInterception, isParticipant]);
 
   const otherId = useMemo(() => {
@@ -149,21 +150,6 @@ export default function ChatArea() {
     }
   }, []);
 
-  useEffect(() => {
-    if (currentChatId && messages) {
-      const timer = setTimeout(() => scrollToBottom('instant'), 100);
-      return () => clearTimeout(timer);
-    }
-  }, [currentChatId, messages?.length, scrollToBottom]);
-
-  // Handle Recording Limit
-  useEffect(() => {
-    if (recordingTime >= VIDEO_LIMIT_SECONDS && recordingState === 'recording') {
-      stopRecording();
-      toast({ title: "Лимит достигнут", description: "Запись остановлена (3 минуты)" });
-    }
-  }, [recordingTime, recordingState]);
-
   const handleJoinChat = useCallback(async () => {
     if (!currentChatId || !firebaseUser || !db) return;
     setIsJoining(true);
@@ -179,6 +165,21 @@ export default function ChatArea() {
       setIsJoining(false);
     }
   }, [currentChatId, firebaseUser, db, toast]);
+
+  useEffect(() => {
+    if (currentChatId && messages) {
+      const timer = setTimeout(() => scrollToBottom('instant'), 100);
+      return () => clearTimeout(timer);
+    }
+  }, [currentChatId, messages?.length, scrollToBottom]);
+
+  // Handle Recording Limit
+  useEffect(() => {
+    if (recordingTime >= VIDEO_LIMIT_SECONDS && recordingState === 'recording') {
+      stopRecording();
+      toast({ title: "Лимит достигнут", description: "Запись остановлена (3 минуты)" });
+    }
+  }, [recordingTime, recordingState]);
 
   const startRecording = async () => {
     try {
@@ -409,7 +410,7 @@ export default function ChatArea() {
 
       <div className="flex-1 relative overflow-hidden flex flex-col">
         <div className="flex-1 w-full relative z-10 overflow-y-auto scroll-smooth scrollbar-hide touch-pan-y">
-          <MessageList messages={messages} userId={firebaseUser?.uid} chatId={currentChatId} onReply={setReplyTo} onEdit={setEditingMsg} onForward={setForwardingMessage} onPin={handlePinMessage} amIPremium={userProfile?.isPremium} isAdmin={isGlobalAdmin(userProfile)} isGroup={chat?.type !== 'private'} searchQuery={searchQuery} viewerProfile={userProfile} />
+          <MessageList messages={messages} userId={firebaseUser?.uid} chatId={currentChatId} onReply={setReplyTo} onEdit={setEditingMsg} onForward={setForwardingMessage} onPin={handlePinMessage} amIPremium={userProfile?.isPremium} isAdmin={isKernelAdmin} isGroup={chat?.type !== 'private'} searchQuery={searchQuery} viewerProfile={userProfile} />
           <div ref={messagesEndRef} className="h-4" />
         </div>
 

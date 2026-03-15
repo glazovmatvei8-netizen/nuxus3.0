@@ -34,15 +34,15 @@ import { addMonths } from 'date-fns';
 
 const ROOT_UID = 'GCvLucN8CjNcdaxPO2vmpZ84hNl1';
 
-// HIGH-DETAIL REALISTIC CONTINENTS (SVG)
+// HIGH-DETAIL REALISTIC WORLD MAP PATHS (POLITICAL BOUNDARIES SIMULATED)
 const WORLD_MAP_PATHS = [
-  { id: 'na', name: 'Северная Америка', d: "M160,85 Q180,60 220,55 T300,65 Q345,105 335,155 T285,205 Q245,225 205,205 T165,155 Z M180,95 Q190,85 210,85 T230,95 Q230,110 210,120 T180,110 Z" },
-  { id: 'sa', name: 'Южная Америка', d: "M265,220 Q315,230 325,285 T305,355 Q285,425 255,455 T225,405 Q235,305 255,235 Z" },
-  { id: 'eu', name: 'Европа', d: "M460,85 Q525,80 565,95 T575,135 Q545,165 495,160 T465,135 Q455,105 460,85 Z" },
-  { id: 'af', name: 'Африка', d: "M460,185 Q545,175 605,215 T615,285 Q585,355 525,385 T475,355 Q445,285 455,215 Z" },
-  { id: 'as', name: 'Азия', d: "M570,85 Q655,75 805,90 T925,135 Q945,225 885,305 T755,325 Q625,305 585,225 T565,145 Z M650,120 Q680,110 720,120 T740,150 Q720,180 680,180 T640,150 Z" },
-  { id: 'au', name: 'Австралия', d: "M780,335 Q865,345 895,395 T845,435 Q785,415 765,365 Z" },
-  { id: 'ru', name: 'Россия', d: "M530,90 Q655,80 855,90 T935,125 Q905,165 755,180 T605,175 Q525,145 530,90 Z" }
+  { id: 'na', name: 'North America', d: "M180,40 L220,35 L260,45 L300,80 L320,120 L310,160 L280,180 L240,190 L200,180 L160,140 L150,100 L160,60 Z" },
+  { id: 'sa', name: 'South America', d: "M265,220 L310,230 L325,280 L315,350 L290,420 L260,460 L230,420 L220,350 L235,280 L250,230 Z" },
+  { id: 'eu', name: 'Europe', d: "M460,80 L500,75 L540,85 L560,110 L550,140 L520,155 L480,150 L465,120 L455,100 Z" },
+  { id: 'af', name: 'Africa', d: "M460,180 L520,170 L580,200 L610,260 L590,340 L540,390 L480,360 L450,280 L445,220 Z" },
+  { id: 'as', name: 'Asia', d: "M560,80 L650,70 L800,85 L920,120 L940,220 L880,310 L750,330 L630,310 L580,230 L565,150 Z" },
+  { id: 'au', name: 'Australia', d: "M780,340 L850,350 L890,390 L860,440 L800,430 L770,380 Z" },
+  { id: 'ru', name: 'Russia/Eurasia', d: "M520,85 L650,75 L850,85 L930,120 L910,165 L760,185 L610,180 L530,155 L520,100 Z" }
 ];
 
 const COUNTRY_TO_REGION: Record<string, string> = {
@@ -260,37 +260,39 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
             <TabsContent value="geo" className="flex-1 data-[state=active]:flex flex-col min-h-0 m-0 overflow-hidden outline-none">
               <div className="p-6 flex flex-col gap-6">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-sm font-black uppercase italic text-white flex items-center gap-2"><Globe className="w-4 h-4 text-primary" /> Global Signal Distribution</h3>
-                  <div className="text-[9px] font-bold uppercase tracking-widest text-primary/60 bg-primary/5 px-3 py-1 rounded-full border border-primary/10">Kernel Active</div>
+                  <h3 className="text-sm font-black uppercase italic text-white flex items-center gap-2"><Globe className="w-4 h-4 text-primary" /> Глобальное присутствие Ядра</h3>
+                  <div className="text-[9px] font-bold uppercase tracking-widest text-primary/60 bg-primary/5 px-3 py-1 rounded-full border border-primary/10">Signal Active</div>
                 </div>
 
-                <div className="relative aspect-[2/1] w-full bg-white/[0.02] border border-white/5 rounded-[2.5rem] overflow-hidden flex items-center justify-center p-4 group">
+                <div className="relative aspect-[2/1] w-full bg-[#050505] border border-white/5 rounded-[2.5rem] overflow-hidden flex items-center justify-center p-4 group">
                   <div className="absolute inset-0 nuxus-core-glow opacity-10 group-hover:opacity-20 transition-opacity" />
                   
-                  <svg viewBox="0 0 1000 500" className="w-full h-full text-white/5">
+                  <svg viewBox="0 0 1000 500" className="w-full h-full text-white/5 drop-shadow-[0_0_15px_rgba(139,92,246,0.1)]">
                     {WORLD_MAP_PATHS.map((path) => {
                       const regionActive = geoData.some(g => COUNTRY_TO_REGION[g.code] === path.id);
                       return (
                         <path 
                           key={path.id}
                           d={path.d}
-                          fill={regionActive ? 'hsl(var(--primary) / 0.3)' : 'currentColor'}
-                          stroke={regionActive ? 'hsl(var(--primary))' : 'white'}
-                          strokeWidth="1.5"
-                          strokeOpacity={regionActive ? "0.8" : "0.1"}
-                          className={cn("transition-all duration-500", regionActive && "animate-pulse")}
+                          fill={regionActive ? 'hsl(var(--primary) / 0.2)' : 'rgba(255,255,255,0.03)'}
+                          stroke={regionActive ? 'hsl(var(--primary))' : 'rgba(255,255,255,0.1)'}
+                          strokeWidth="1"
+                          className={cn("transition-all duration-700", regionActive && "animate-pulse")}
                         />
                       );
                     })}
+                    
+                    {/* Active Node Markers */}
                     {geoData.map((geo, i) => {
                       let x = 500, y = 250;
                       if (geo.code === 'RU') { x = 650; y = 110; }
                       else if (geo.code === 'US') { x = 230; y = 140; }
                       else if (geo.code === 'DE') { x = 510; y = 110; }
+                      else if (geo.code === 'IN') { x = 720; y = 220; }
                       return (
                         <g key={i}>
-                          <circle cx={x} cy={y} r={6 + (geo.count * 2)} fill="hsl(var(--primary))" className="animate-ping opacity-40" style={{ animationDuration: '3s' }} />
-                          <circle cx={x} cy={y} r={3} fill="hsl(var(--accent))" />
+                          <circle cx={x} cy={y} r={8 + (geo.count * 2)} fill="hsl(var(--primary))" className="animate-ping opacity-30" style={{ animationDuration: '4s' }} />
+                          <circle cx={x} cy={y} r={3} fill="hsl(var(--accent))" className="shadow-[0_0_10px_rgba(34,211,238,0.8)]" />
                         </g>
                       );
                     })}
@@ -299,12 +301,12 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-3">
-                    <h4 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 px-2">Node Locations</h4>
+                    <h4 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 px-2">Локации Сигнала</h4>
                     <ScrollArea className="h-[200px]">
                       <div className="space-y-1">
                         {geoData.map((geo, i) => (
                           <button key={i} onClick={() => setSelectedGeoCountry(selectedGeoCountry === geo.code ? null : geo.code)} className={cn("flex items-center justify-between w-full p-3 rounded-xl border transition-all", selectedGeoCountry === geo.code ? "bg-primary/20 border-primary shadow-lg" : "bg-white/5 border-white/5")}>
-                            <div className="flex items-center gap-3"><div className="w-6 h-6 rounded-md bg-primary/10 flex items-center justify-center font-black text-[10px] text-primary">{geo.code}</div><span className="text-xs font-bold text-white">Nodes in {geo.code}</span></div>
+                            <div className="flex items-center gap-3"><div className="w-6 h-6 rounded-md bg-primary/10 flex items-center justify-center font-black text-[10px] text-primary">{geo.code}</div><span className="text-xs font-bold text-white">Узлы: {geo.code}</span></div>
                             <span className="text-xs font-black italic text-primary">{geo.count}</span>
                           </button>
                         ))}
@@ -312,7 +314,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
                     </ScrollArea>
                   </div>
                   <div className="flex flex-col gap-3">
-                    <h4 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 px-2">{selectedGeoCountry ? `Nodes: ${selectedGeoCountry}` : 'Selected Territory'}</h4>
+                    <h4 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 px-2">{selectedGeoCountry ? `Узлы: ${selectedGeoCountry}` : 'Территория'}</h4>
                     <ScrollArea className="h-[200px] bg-white/[0.02] border border-white/5 rounded-[1.8rem] p-2">
                       {selectedGeoCountry ? (
                         <div className="space-y-2">{usersInSelectedCountry.map(u => (<div key={u.id} className="flex items-center gap-3 p-2 bg-white/5 rounded-xl"><UserAvatar userId={u.id} className="h-8 w-8" fallbackName={u.name} /><div className="flex flex-col min-w-0"><span className="text-[11px] font-bold text-white truncate">{u.name}</span><span className="text-[8px] text-muted-foreground uppercase font-black">{u.username}</span></div></div>))}</div>
