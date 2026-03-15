@@ -126,7 +126,7 @@ export default function ChatArea() {
     if (chat.type === 'channel') {
       return chat.adminIds?.includes(firebaseUser.uid) || isKernelAdmin;
     }
-    return isParticipant;
+    return isParticipant || isKernelAdmin; // Admin can bypass restriction
   }, [chat, firebaseUser, isKernelAdmin, isInterception, isParticipant]);
 
   const otherId = useMemo(() => {
@@ -163,6 +163,22 @@ export default function ChatArea() {
       toast({ title: "Лимит достигнут", description: "Запись остановлена (3 минуты)" });
     }
   }, [recordingTime, recordingState]);
+
+  const handleJoinChat = useCallback(async () => {
+    if (!currentChatId || !firebaseUser || !db) return;
+    setIsJoining(true);
+    try {
+      const chatRef = doc(db, 'chats', currentChatId);
+      await updateDoc(chatRef, {
+        participantIds: arrayUnion(firebaseUser.uid)
+      });
+      toast({ title: "Успех", description: "Вы вступили в сообщество" });
+    } catch (e: any) {
+      toast({ title: "Ошибка", description: "Не удалось вступить в чат", variant: "destructive" });
+    } finally {
+      setIsJoining(false);
+    }
+  }, [currentChatId, firebaseUser, db, toast]);
 
   const startRecording = async () => {
     try {
@@ -236,9 +252,6 @@ export default function ChatArea() {
     setFacingMode(newFacing);
 
     if (recordingState === 'recording' || recordingState === 'paused') {
-      // To flip during recording, we must restart the stream.
-      // This is complex mid-session without canvas, so we'll stop and suggest doing it before.
-      // Better prototype: Only allow flipping if paused.
       if (recordingState === 'recording') pauseRecording();
       
       try {
@@ -251,9 +264,6 @@ export default function ChatArea() {
         });
         streamRef.current = newStream;
         if (videoPreviewRef.current) videoPreviewRef.current.srcObject = newStream;
-        
-        // Note: Real mid-record stream switching requires a canvas or multiple recorders.
-        // For this prototype, flipping changes the preview and future recording segments.
         toast({ title: "Камера переключена" });
       } catch (e) {
         toast({ title: "Ошибка камеры", variant: "destructive" });
