@@ -23,7 +23,7 @@ import { collection, query, doc, limit, getDocs, addDoc, orderBy, writeBatch, in
 import { UserAvatar } from '@/components/user-avatar';
 import { 
   ShieldAlert, Users, Star, Search, Trash2, ShieldCheck, Radio, Send, 
-  Loader2, UserX, MoreVertical, Ban, CheckCircle2, Crown, Calendar, Shield, Globe, Activity, Eye, MessageCircle, ArrowLeft, CreditCard, Check, X, ShieldOff, Zap, Map
+  Loader2, UserX, MoreVertical, Ban, CheckCircle2, Crown, Calendar, Shield, Globe, Activity, Eye, MessageCircle, ArrowLeft, CreditCard, Check, X, ShieldOff, Zap, Map, Navigation
 } from 'lucide-react';
 import type { User, Chat, Transaction } from '@/lib/types';
 import { formatDisplayName, isUserPremium, cn, isGlobalAdmin } from '@/lib/utils';
@@ -34,6 +34,22 @@ import { addMonths } from 'date-fns';
 
 const ROOT_UID = 'GCvLucN8CjNcdaxPO2vmpZ84hNl1';
 
+// Упрощенные, но узнаваемые контуры материков для SVG
+const WORLD_MAP_PATHS = [
+  { id: 'na', name: 'North America', d: "M120,80 L180,60 L240,80 L260,140 L200,180 L140,160 Z" },
+  { id: 'sa', name: 'South America', d: "M210,200 L260,220 L240,300 L190,320 L170,260 Z" },
+  { id: 'eu', name: 'Europe', d: "M450,70 L520,60 L550,100 L500,130 L440,110 Z" },
+  { id: 'as', name: 'Asia', d: "M530,60 L750,50 L850,150 L700,250 L550,200 L520,120 Z" },
+  { id: 'af', name: 'Africa', d: "M460,150 L550,140 L600,220 L550,320 L480,300 L440,220 Z" },
+  { id: 'au', name: 'Australia', d: "M750,280 L850,270 L880,330 L780,350 Z" }
+];
+
+// Маппинг кодов стран к материкам для визуализации
+const COUNTRY_TO_CONTINENT: Record<string, string> = {
+  'RU': 'as', 'US': 'na', 'CA': 'na', 'BR': 'sa', 'DE': 'eu', 'FR': 'eu', 'GB': 'eu',
+  'CN': 'as', 'IN': 'as', 'KZ': 'as', 'UA': 'eu', 'BY': 'eu', 'AU': 'au', 'EG': 'af', 'ZA': 'af'
+};
+
 export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const db = useFirestore();
   const { user: currentUser } = useUser();
@@ -43,6 +59,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
   const [userSearch, setUserSearch] = useState('');
   const [broadcastMessage, setBroadcastMessage] = useState('');
   const [activeTab, setActiveTab] = useState('users');
+  const [selectedGeoCountry, setSelectedGeoCountry] = useState<string | null>(null);
   
   const [inspectingUser, setInspectingUser] = useState<User | null>(null);
   
@@ -57,15 +74,11 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
 
   const stats = useMemo(() => {
     if (!users) return { total: 0, premium: 0, admins: 0, banned: 0 };
-    const allRealUsers = users.filter(u => {
-      const isBot = u.id.startsWith('bot_') || u.username === '@stickers' || u.name?.toLowerCase().includes('bot');
-      return !isBot;
-    });
     return {
-      total: allRealUsers.length,
-      premium: allRealUsers.filter(u => isUserPremium(u)).length,
-      admins: allRealUsers.filter(u => isGlobalAdmin(u)).length,
-      banned: allRealUsers.filter(u => u.isBanned).length
+      total: users.length,
+      premium: users.filter(u => isUserPremium(u)).length,
+      admins: users.filter(u => isGlobalAdmin(u)).length,
+      banned: users.filter(u => u.isBanned).length
     };
   }, [users]);
 
@@ -86,7 +99,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
     if (!users) return [];
     return users.filter(u => {
       const isMe = u.id === currentUser?.uid;
-      const isBot = u.id.startsWith('bot_') || u.username === '@stickers' || u.name?.toLowerCase().includes('bot');
+      const isBot = u.id.startsWith('bot_') || u.username === '@stickers';
       const matchesSearch = u.name?.toLowerCase().includes(userSearch.toLowerCase()) || 
                            u.username?.toLowerCase().includes(userSearch.toLowerCase()) ||
                            u.phone?.includes(userSearch);
@@ -97,6 +110,11 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
       return 0;
     });
   }, [users, currentUser?.uid, userSearch]);
+
+  const usersInSelectedCountry = useMemo(() => {
+    if (!selectedGeoCountry || !users) return [];
+    return users.filter(u => u.countryCode === selectedGeoCountry);
+  }, [selectedGeoCountry, users]);
 
   const handleAction = async (targetId: string, action: string, value?: any) => {
     if (!db) return;
@@ -222,41 +240,54 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
               <ScrollArea className="flex-1">
                 <div className="px-6 pb-6 space-y-2">
                   {realUsersForList.map(u => (
-                    <div key={u.id} className="flex items-center justify-between p-3 bg-white/5 rounded-2xl border border-white/5">
-                      <div className="flex items-center gap-3 min-w-0">
-                        <UserAvatar userId={u.id} className="h-10 w-10 shrink-0" fallbackName={u.name} />
-                        <div className="flex flex-col min-w-0">
-                          <div className="flex items-center gap-1.5">
-                            <span className="font-bold text-sm text-white truncate">{formatDisplayName(u.name)}</span>
-                            {isUserPremium(u) && <Star className="w-2.5 h-2.5 text-accent fill-accent" />}
+                    <div key={u.id} className="flex flex-col p-3 bg-white/5 rounded-2xl border border-white/5 gap-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <UserAvatar userId={u.id} className="h-10 w-10 shrink-0" fallbackName={u.name} />
+                          <div className="flex flex-col min-w-0">
+                            <div className="flex items-center gap-1.5">
+                              <span className="font-bold text-sm text-white truncate">{formatDisplayName(u.name)}</span>
+                              {isUserPremium(u) && <Star className="w-2.5 h-2.5 text-accent fill-accent" />}
+                            </div>
+                            <span className="text-[9px] text-muted-foreground/60 uppercase font-bold tracking-widest">{u.username}</span>
                           </div>
-                          <span className="text-[9px] text-muted-foreground/60 uppercase font-bold tracking-widest">{u.username}</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Button variant="ghost" size="sm" onClick={() => setInspectingUser(u)} className="h-8 rounded-xl bg-primary/10 text-primary font-black uppercase text-[8px] tracking-widest px-3">Инфо</Button>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8"><MoreVertical className="w-4 h-4" /></Button></DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-56 bg-card border-white/10 rounded-2xl p-1">
+                              <DropdownMenuItem onClick={() => handleAction(u.id, u.isBanned ? 'unban' : 'ban')} className={cn("gap-3 py-3 font-bold text-[10px] uppercase rounded-xl", u.isBanned ? "text-green-500" : "text-destructive")}>
+                                {u.isBanned ? <CheckCircle2 className="w-4 h-4" /> : <Ban className="w-4 h-4" />} {u.isBanned ? 'Разблокировать' : 'Заблокировать'}
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator className="bg-white/5" />
+                              <DropdownMenuSub>
+                                <DropdownMenuSubTrigger className="gap-3 py-3 font-bold text-[10px] uppercase rounded-xl"><Crown className="w-4 h-4 text-accent" /> Premium статус</DropdownMenuSubTrigger>
+                                <DropdownMenuSubContent sideOffset={4} alignOffset={-5} className="bg-card border-white/10 rounded-xl min-w-[140px] p-1">
+                                  <DropdownMenuItem onClick={() => handleAction(u.id, 'give_premium', 1)} className="text-[10px] font-bold uppercase py-2.5 rounded-lg">1 Месяц</DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => handleAction(u.id, 'give_premium', 3)} className="text-[10px] font-bold uppercase py-2.5 rounded-lg">3 Месяца</DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => handleAction(u.id, 'give_premium', 12)} className="text-[10px] font-bold uppercase py-2.5 rounded-lg">1 Год</DropdownMenuItem>
+                                  <DropdownMenuSeparator className="bg-white/5" />
+                                  <DropdownMenuItem onClick={() => handleAction(u.id, 'remove_premium')} className="text-destructive text-[10px] font-bold uppercase py-2.5 rounded-lg">Снять Premium</DropdownMenuItem>
+                                </DropdownMenuSubContent>
+                              </DropdownMenuSub>
+                              <DropdownMenuItem onClick={() => handleAction(u.id, u.isAdmin ? 'remove_admin' : 'set_admin')} className="gap-3 py-3 font-bold text-[10px] uppercase rounded-xl">
+                                <ShieldCheck className="w-4 h-4 text-primary" /> {u.isAdmin ? 'Снять Админку' : 'Назначить Админом'}
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </div>
                       </div>
-                      <div className="flex items-center gap-1">
-                        <Button variant="ghost" size="sm" onClick={() => setInspectingUser(u)} className="h-8 rounded-xl bg-primary/10 text-primary font-black uppercase text-[8px] tracking-widest px-3">Вход</Button>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8"><MoreVertical className="w-4 h-4" /></Button></DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="w-56 bg-card border-white/10 rounded-2xl p-1">
-                            <DropdownMenuItem onClick={() => handleAction(u.id, u.isBanned ? 'unban' : 'ban')} className={cn("gap-3 py-3 font-bold text-[10px] uppercase rounded-xl", u.isBanned ? "text-green-500" : "text-destructive")}>
-                              {u.isBanned ? <CheckCircle2 className="w-4 h-4" /> : <Ban className="w-4 h-4" />} {u.isBanned ? 'Разблокировать' : 'Заблокировать'}
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator className="bg-white/5" />
-                            <DropdownMenuSub>
-                              <DropdownMenuSubTrigger className="gap-3 py-3 font-bold text-[10px] uppercase rounded-xl"><Crown className="w-4 h-4 text-accent" /> Premium статус</DropdownMenuSubTrigger>
-                              <DropdownMenuSubContent sideOffset={4} alignOffset={-5} className="bg-card border-white/10 rounded-xl min-w-[140px] p-1">
-                                <DropdownMenuItem onClick={() => handleAction(u.id, 'give_premium', 1)} className="text-[10px] font-bold uppercase py-2.5 rounded-lg">1 Месяц</DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => handleAction(u.id, 'give_premium', 3)} className="text-[10px] font-bold uppercase py-2.5 rounded-lg">3 Месяца</DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => handleAction(u.id, 'give_premium', 12)} className="text-[10px] font-bold uppercase py-2.5 rounded-lg">1 Год</DropdownMenuItem>
-                                <DropdownMenuSeparator className="bg-white/5" />
-                                <DropdownMenuItem onClick={() => handleAction(u.id, 'remove_premium')} className="text-destructive text-[10px] font-bold uppercase py-2.5 rounded-lg">Снять Premium</DropdownMenuItem>
-                              </DropdownMenuSubContent>
-                            </DropdownMenuSub>
-                            <DropdownMenuItem onClick={() => handleAction(u.id, u.isAdmin ? 'remove_admin' : 'set_admin')} className="gap-3 py-3 font-bold text-[10px] uppercase rounded-xl">
-                              <ShieldCheck className="w-4 h-4 text-primary" /> {u.isAdmin ? 'Снять Админку' : 'Назначить Админом'}
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                      
+                      <div className="flex items-center justify-between px-1 border-t border-white/[0.03] pt-2">
+                        <div className="flex items-center gap-2">
+                          <Navigation className="w-3 h-3 text-muted-foreground/40" />
+                          <span className="text-[10px] font-mono text-muted-foreground/60">{u.lastIp || 'No Signal'}</span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <Globe className="w-3 h-3 text-primary/40" />
+                          <span className="text-[10px] font-black uppercase text-primary/60">{u.countryCode || '??'}</span>
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -268,57 +299,106 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
               <div className="p-6 flex flex-col gap-6">
                 <div className="flex items-center justify-between">
                   <h3 className="text-sm font-black uppercase italic text-white flex items-center gap-2">
-                    <Globe className="w-4 h-4 text-primary" /> Countries Distribution
+                    <Globe className="w-4 h-4 text-primary" /> Global Signal Distribution
                   </h3>
-                  <div className="text-[9px] font-bold uppercase tracking-widest text-primary/60 bg-primary/5 px-3 py-1 rounded-full border border-primary/10">Signal Active</div>
+                  <div className="text-[9px] font-bold uppercase tracking-widest text-primary/60 bg-primary/5 px-3 py-1 rounded-full border border-primary/10">Kernel Active</div>
                 </div>
 
-                <div className="relative aspect-[2/1] w-full bg-white/[0.02] border border-white/5 rounded-[2rem] overflow-hidden flex items-center justify-center p-4">
-                  <div className="absolute inset-0 nuxus-core-glow opacity-10" />
-                  {/* Simplified World Map Visualization */}
-                  <svg viewBox="0 0 1000 500" className="w-full h-full text-white/5 drop-shadow-[0_0_20px_rgba(139,92,246,0.1)]">
-                    <path fill="currentColor" d="M150,150 L200,120 L250,140 L280,180 L240,220 L180,210 Z" /> {/* North America Placeholder */}
-                    <path fill="currentColor" d="M250,250 L300,280 L280,350 L220,380 L180,320 Z" /> {/* South America Placeholder */}
-                    <path fill="currentColor" d="M450,100 L600,80 L750,120 L800,200 L700,250 L550,220 Z" /> {/* Eurasia Placeholder */}
-                    <path fill="currentColor" d="M480,250 L550,240 L600,300 L580,380 L500,400 L450,350 Z" /> {/* Africa Placeholder */}
-                    <path fill="currentColor" d="M750,300 L850,280 L900,350 L820,400 L750,380 Z" /> {/* Australia Placeholder */}
+                <div className="relative aspect-[2/1] w-full bg-white/[0.02] border border-white/5 rounded-[2.5rem] overflow-hidden flex items-center justify-center p-4 group">
+                  <div className="absolute inset-0 nuxus-core-glow opacity-10 group-hover:opacity-20 transition-opacity" />
+                  
+                  <svg viewBox="0 0 1000 500" className="w-full h-full text-white/5">
+                    {WORLD_MAP_PATHS.map((path) => {
+                      const continentUsers = geoData.filter(g => COUNTRY_TO_CONTINENT[g.code] === path.id);
+                      const hasUsers = continentUsers.length > 0;
+                      
+                      return (
+                        <path 
+                          key={path.id}
+                          d={path.d}
+                          fill={hasUsers ? 'hsl(var(--primary) / 0.3)' : 'currentColor'}
+                          stroke={hasUsers ? 'hsl(var(--primary))' : 'white'}
+                          strokeWidth="1"
+                          strokeOpacity={hasUsers ? "0.5" : "0.1"}
+                          className={cn("transition-all duration-500", hasUsers && "animate-pulse")}
+                        />
+                      );
+                    })}
                     
-                    {/* Signal Highlights for specific countries */}
+                    {/* User Points */}
                     {geoData.map((geo, i) => {
-                      if (geo.code === 'RU') return <path key={i} fill="hsl(var(--primary))" className="animate-pulse" d="M550,100 L700,80 L750,120 L780,180 L650,200 Z" />;
-                      if (geo.code === 'US') return <path key={i} fill="hsl(var(--accent))" className="animate-pulse" d="M160,160 L240,140 L260,180 L220,210 L170,200 Z" />;
-                      if (geo.code === 'CA') return <path key={i} fill="orange" className="opacity-60" d="M150,100 L250,80 L280,130 L200,140 Z" />;
-                      return null;
+                      const continent = WORLD_MAP_PATHS.find(p => p.id === COUNTRY_TO_CONTINENT[geo.code]);
+                      if (!continent) return null;
+                      
+                      // Расставляем точки в зависимости от страны (упрощенно)
+                      let x = 500, y = 250;
+                      if (geo.code === 'RU') { x = 650; y = 100; }
+                      else if (geo.code === 'US') { x = 200; y = 120; }
+                      else if (geo.code === 'CN') { x = 750; y = 150; }
+                      else if (geo.code === 'DE') { x = 500; y = 100; }
+                      
+                      return (
+                        <circle 
+                          key={i} 
+                          cx={x} cy={y} r={4 + (geo.count * 2)} 
+                          fill="hsl(var(--primary))" 
+                          className="animate-ping" 
+                          style={{ animationDuration: '3s' }}
+                        />
+                      );
                     })}
                   </svg>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-3">
-                    <h4 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 px-2">Top Locations</h4>
+                    <h4 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 px-2">Node Locations</h4>
                     <div className="space-y-1">
-                      {geoData.slice(0, 5).map((geo, i) => (
-                        <div key={i} className="flex items-center justify-between p-3 bg-white/5 rounded-xl border border-white/5">
+                      {geoData.map((geo, i) => (
+                        <button 
+                          key={i} 
+                          onClick={() => setSelectedGeoCountry(selectedGeoCountry === geo.code ? null : geo.code)}
+                          className={cn(
+                            "flex items-center justify-between w-full p-3 rounded-xl border transition-all",
+                            selectedGeoCountry === geo.code ? "bg-primary/20 border-primary shadow-lg" : "bg-white/5 border-white/5"
+                          )}
+                        >
                           <div className="flex items-center gap-3">
                             <div className="w-6 h-6 rounded-md bg-primary/10 flex items-center justify-center font-black text-[10px] text-primary">
                               {geo.code}
                             </div>
-                            <span className="text-xs font-bold text-white">{geo.code === 'RU' ? 'Russia' : geo.code === 'US' ? 'United States' : geo.code === 'CA' ? 'Canada' : geo.code}</span>
+                            <span className="text-xs font-bold text-white">Nodes in {geo.code}</span>
                           </div>
-                          <span className="text-xs font-black italic text-primary">{geo.count} Nodes</span>
-                        </div>
+                          <span className="text-xs font-black italic text-primary">{geo.count}</span>
+                        </button>
                       ))}
-                      {geoData.length === 0 && (
-                        <div className="text-center py-8 opacity-20 text-[10px] font-black uppercase">No Geo Data Recorded</div>
-                      )}
                     </div>
                   </div>
-                  <div className="bg-primary/5 rounded-[2rem] border border-primary/10 p-6 flex flex-col items-center justify-center text-center gap-2">
-                    <Activity className="w-8 h-8 text-primary animate-bounce" />
-                    <h4 className="text-sm font-black text-white uppercase italic">Active Zones</h4>
-                    <p className="text-[9px] text-muted-foreground uppercase font-bold leading-relaxed">
-                      Ядро мониторит подключения в реальном времени. Всплески активности в {geoData[0]?.code || 'новых'} зонах сигнализируют о расширении сети.
-                    </p>
+
+                  <div className="flex flex-col gap-3">
+                    <h4 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 px-2">
+                      {selectedGeoCountry ? `Nodes: ${selectedGeoCountry}` : 'Selected Territory'}
+                    </h4>
+                    <ScrollArea className="h-[200px] bg-white/[0.02] border border-white/5 rounded-[1.8rem] p-2">
+                      {selectedGeoCountry ? (
+                        <div className="space-y-2">
+                          {usersInSelectedCountry.map(u => (
+                            <div key={u.id} className="flex items-center gap-3 p-2 bg-white/5 rounded-xl">
+                              <UserAvatar userId={u.id} className="h-8 w-8" fallbackName={u.name} />
+                              <div className="flex flex-col min-w-0">
+                                <span className="text-[11px] font-bold text-white truncate">{u.name}</span>
+                                <span className="text-[8px] text-muted-foreground uppercase font-black">{u.username}</span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="flex flex-col items-center justify-center h-full opacity-20 gap-2 text-center p-4">
+                          <Navigation className="w-8 h-8" />
+                          <p className="text-[9px] font-black uppercase tracking-widest">Выберите страну для просмотра узлов</p>
+                        </div>
+                      )}
+                    </ScrollArea>
                   </div>
                 </div>
               </div>
