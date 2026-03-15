@@ -17,9 +17,6 @@ const font = Plus_Jakarta_Sans({
   variable: '--font-jakarta',
 });
 
-/**
- * ГЛОБАЛЬНАЯ ИКОНКА NUXUS (v45) - КОНСТАНТА
- */
 const FINAL_ICON_URL = 'https://i.ibb.co/sd2MqGz2/Icon.png?v=45';
 
 export const metadata: Metadata = {
@@ -31,6 +28,7 @@ export const metadata: Metadata = {
     capable: true,
     statusBarStyle: 'black-translucent',
     title: 'Nuxus',
+    startupImage: FINAL_ICON_URL,
   },
   icons: {
     icon: [
@@ -45,7 +43,9 @@ export const metadata: Metadata = {
   other: {
     'msapplication-TileColor': '#0a0a0c',
     'msapplication-config': 'none',
-    'notification-app-id': 'chat.nuxus.app'
+    'notification-app-id': 'chat.nuxus.app',
+    'mobile-web-app-capable': 'yes',
+    'format-detection': 'telephone=no'
   }
 };
 
@@ -66,10 +66,11 @@ export default function RootLayout({
   return (
     <html lang="ru" className={`dark ${font.variable}`} suppressHydrationWarning>
       <head>
-        {/* Прямая вставка для обхода кэша и приоритета браузера */}
         <link rel="icon" href={FINAL_ICON_URL} sizes="any" />
         <link rel="apple-touch-icon" href={FINAL_ICON_URL} />
         <link rel="shortcut icon" href={FINAL_ICON_URL} />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
       </head>
       <body className="font-sans antialiased bg-[#0a0a0c] text-foreground overflow-hidden h-[100dvh] selection:bg-primary/30" style={{ backgroundColor: '#0a0a0c', fontFamily: 'var(--font-jakarta), ui-sans-serif, system-ui, -apple-system, sans-serif' }}>
         <FirebaseClientProvider>

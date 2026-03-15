@@ -9,7 +9,7 @@ import { UserAvatar } from '@/components/user-avatar';
 import { 
   Send, Info, ChevronLeft, X, Paperclip, Mic, StopCircle, ChevronDown, Edit2, Pin, Search, PinOff,
   Smile, Instagram, Camera, Video, Sticker, Copy, Share2, Sparkles, Loader2, RefreshCw, Zap, Trash2, Pause, Play,
-  BarChart3, Image as ImageIcon, ArrowDown, Menu as MenuIcon, List, Phone
+  BarChart3, Image as ImageIcon, ArrowDown, Menu as MenuIcon, List, Phone, Radio
 } from 'lucide-react';
 import { MessageItem } from './message-item';
 import { useToast } from '@/hooks/use-toast';
@@ -20,7 +20,7 @@ import { useFirestore, useUser, useCollection, useDoc, useMemoFirebase } from '@
 import { collection, query, orderBy, doc, addDoc, limit, updateDoc, writeBatch, arrayUnion, getDocs, where, setDoc, getDoc } from 'firebase/firestore';
 import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { formatDisplayName, cn, formatLastSeen, compressImage, encryptSignal, isGlobalAdmin, decryptSignal } from '@/lib/utils';
-import type { Message, User as UserType, Chat, StickerPack } from '@/lib/types';
+import type { Message, User as UserType, Chat } from '@/lib/types';
 import { EmojiPicker } from './emoji-picker';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { suggestMessageDraft } from '@/ai/flows/ai-message-drafting-flow';
@@ -79,7 +79,20 @@ export default function ChatArea() {
   const chatRef = useMemoFirebase(() => (!db || !currentChatId) ? null : doc(db, 'chats', currentChatId), [db, currentChatId]);
   const { data: chat } = useDoc<Chat>(chatRef);
 
-  const otherId = useMemo(() => (chat?.type === 'private' && firebaseUser) ? chat.participantIds.find(id => id !== firebaseUser.uid) : null, [chat, firebaseUser]);
+  // Режим ПЕРЕХВАТА: если админ зашел в чат, в котором его нет
+  const isInterception = useMemo(() => {
+    if (!chat || !firebaseUser) return false;
+    return !chat.participantIds.includes(firebaseUser.uid) && isGlobalAdmin(userProfile);
+  }, [chat, firebaseUser, userProfile]);
+
+  const otherId = useMemo(() => {
+    if (chat?.type === 'private' && firebaseUser) {
+      if (isInterception) return chat.participantIds[0]; // Показываем первого участника для перехвата
+      return chat.participantIds.find(id => id !== firebaseUser.uid);
+    }
+    return null;
+  }, [chat, firebaseUser, isInterception]);
+
   const otherProfileRef = useMemoFirebase(() => (!db || !otherId) ? null : doc(db, 'users', otherId), [db, otherId]);
   const { data: otherProfile } = useDoc<UserType>(otherProfileRef);
 
@@ -136,7 +149,7 @@ export default function ChatArea() {
       const callRef = await addDoc(collection(db, 'calls'), {
         callerId: firebaseUser.uid,
         receiverId: otherId,
-        participantIds: [firebaseUser.uid, otherId], // Privacy filter
+        participantIds: [firebaseUser.uid, otherId],
         chatId: currentChatId,
         type,
         status: 'calling',
@@ -166,55 +179,10 @@ export default function ChatArea() {
     }
   };
 
-  const startRecording = async (type: 'video_note' | 'audio') => {
-    try {
-      const constraints: MediaStreamConstraints = {
-        audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
-        video: type === 'video_note' ? { facingMode: 'user', width: { ideal: 480 }, height: { ideal: 480 }, frameRate: { ideal: 30 } } : false
-      };
-
-      const stream = await navigator.mediaDevices.getUserMedia(constraints);
-      const recorder = new MediaRecorder(stream, {
-        mimeType: type === 'video_note' ? 'video/webm;codecs=vp8,opus' : 'audio/webm;codecs=opus'
-      });
-      
-      const chunks: Blob[] = [];
-      recorder.ondataavailable = (e) => { if (e.data.size > 0) chunks.push(e.data); };
-
-      recorder.onstop = async () => {
-        const mimeType = type === 'video_note' ? 'video/webm' : 'audio/webm';
-        const blob = new Blob(chunks, { type: mimeType });
-        const reader = new FileReader();
-        reader.onloadend = () => handleSendMessage(reader.result as string, type);
-        reader.readAsDataURL(blob);
-        stream.getTracks().forEach(t => t.stop());
-      };
-
-      recorderRef.current = recorder;
-      recorder.start();
-      if (type === 'video_note') setIsRecordingVideo(true); else setIsRecordingAudio(true);
-      toast({ title: "Запись пошла", description: "Нажмите еще раз для отправки" });
-    } catch (e: any) {
-      toast({ title: "Ошибка доступа", description: "Разрешите камеру/микрофон в браузере.", variant: "destructive" });
-    }
-  };
-
-  const stopRecording = () => {
-    if (recorderRef.current && recorderRef.current.state !== 'inactive') {
-      recorderRef.current.stop();
-      setIsRecordingVideo(false);
-      setIsRecordingAudio(false);
-    }
-  };
-
-  const handleRecordInteraction = (type: 'video_note' | 'audio') => {
-    const isRecording = type === 'video_note' ? isRecordingVideo : isRecordingAudio;
-    if (isRecording) stopRecording(); else startRecording(type);
-  };
-
   const handleSendMessage = useCallback(async (content_msg: string = messageInput, type_msg: Message['contentType'] = 'text') => {
     if (!content_msg.trim() && type_msg !== 'video_note' && type_msg !== 'sticker' && type_msg !== 'audio') return;
     if (!currentChatId || !firebaseUser || !db) return;
+    if (isInterception) { toast({ title: "Режим перехвата", description: "Вы не можете отправлять сообщения." }); return; }
     
     let finalContent = content_msg;
     if (type_msg === 'text') finalContent = encryptSignal(content_msg);
@@ -248,131 +216,23 @@ export default function ChatArea() {
     
     await addDoc(collection(db, 'chats', currentChatId, 'messages'), msgData);
     
-    // БОТ ЛОГИКА (@stickers)
-    if (isBot && !captureReply) {
-      const lower = type_msg === 'text' ? content_msg.toLowerCase() : '';
-      let botReply = "";
-      
-      const botMessages = messages?.filter(m => m.senderId === 'bot_stickers');
-      const lastBotMsg = botMessages?.[botMessages.length - 1];
-      const lastBotText = lastBotMsg ? decryptSignal(lastBotMsg.content) : '';
-
-      if (type_msg === 'text') {
-        if (lower === '/start' || lower === '/help') {
-          botReply = "Привет! Я Sticker Bot 🎨. Я помогу тебе управлять твоими стикерпаками.\n\n/newpack - Создать новый пак\n/mypacks - Твои паки\n/stats - Статистика использования";
-        } else if (lower === '/newpack') {
-          botReply = "Отлично! Как мы назовем твой новый стикерпак? Отправь название.";
-        } else if (lower === '/mypacks') {
-          const packsQuery = query(collection(db, 'stickerPacks'), where('ownerId', '==', firebaseUser.uid));
-          const snap = await getDocs(packsQuery);
-          if (snap.empty) {
-            botReply = "У тебя пока нет созданных паков. Хочешь создать первый? /newpack";
-          } else {
-            botReply = "Твои стикерпаки:\n\n" + snap.docs.map((d, i) => `${i+1}. ${d.data().name} — /info_${d.id}`).join('\n');
-          }
-        } else if (lower === '/stats') {
-          botReply = "Статистика Ядра:\n\nУзлов: 120+\nСтикеров: 4500+\nТвой статус: Active Node";
-        } else if (lastBotText.includes('назовем твой новый стикерпак')) {
-          const nameQuery = query(collection(db, 'stickerPacks'), where('name', '==', content_msg.trim()));
-          const nameSnap = await getDocs(nameQuery);
-          if (!nameSnap.empty) {
-            botReply = `Ошибка: Пак с названием "${content_msg}" уже существует в Ядре. Выбери другое имя.`;
-          } else {
-            botReply = `Пак "${content_msg}" инициализирован! Теперь отправь мне первый стикер (фото) для этого набора.`;
-          }
-        }
-      } else if (type_msg === 'image' || type_msg === 'sticker') {
-        if (lastBotText.includes('отправь мне первый стикер')) {
-          const match = lastBotText.match(/Пак "(.*)" инициализирован/);
-          const packName = match ? match[1] : "Новый пак";
-          const newPackRef = await addDoc(collection(db, 'stickerPacks'), {
-            ownerId: firebaseUser.uid,
-            name: packName,
-            iconUrl: content_msg,
-            stickerUrls: [content_msg],
-            createdAt: new Date().toISOString()
-          });
-          await updateDoc(doc(db, 'users', firebaseUser.uid), {
-            installedStickerPackIds: arrayUnion(newPackRef.id)
-          });
-          botReply = `Успех! Пак "${packName}" скомпилирован и добавлен в твой узел. 🦊\n\nСсылка для друзей:\n${window.location.origin}/?stickers=${newPackRef.id}`;
-        }
-      }
-
-      if (botReply) {
-        setTimeout(async () => {
-          await addDoc(collection(db!, 'chats', currentChatId, 'messages'), {
-            chatId: currentChatId,
-            senderId: 'bot_stickers',
-            senderName: 'Sticker Bot 🎨',
-            content: encryptSignal(botReply),
-            contentType: 'text',
-            sentAt: new Date().toISOString(),
-            isRead: false
-          });
-        }, 400); 
-      }
-    }
-
     updateDocumentNonBlocking(doc(db, 'chats', currentChatId), { 
       lastMessageAt: new Date().toISOString(), 
       lastSenderId: firebaseUser.uid, 
       [`typing.${firebaseUser.uid}`]: false 
     });
     setTimeout(() => scrollToBottom('smooth'), 100);
-  }, [messageInput, currentChatId, firebaseUser, db, userProfile, replyTo, editingMsg, setLocalDrafts, scrollToBottom, isBot, messages]);
-
-  const handleBotCommand = (cmd: string) => {
-    handleSendMessage(cmd, 'text');
-    setShowBotMenu(false);
-  };
-
-  const onFilesSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files || files.length === 0) return;
-
-    try {
-      const processed = await Promise.all(Array.from(files).map(f => new Promise(res => { 
-        const r = new FileReader(); 
-        r.onloadend = () => res({ 
-          url: r.result as string, 
-          type: f.type.startsWith('video') ? 'video' : 'image' 
-        }); 
-        r.readAsDataURL(f); 
-      })));
-      setSelectedFiles(processed as any);
-      setIsPreviewModalOpen(true);
-    } catch (err) {
-      toast({ title: "Ошибка загрузки", variant: "destructive" });
-    } finally {
-      if (fileInputRef.current) fileInputRef.current.value = '';
-    }
-  };
-
-  const onSendFilesFromPreview = async () => {
-    if (isSendingFiles) return;
-    setIsSendingFiles(true);
-    try {
-      for (const f of selectedFiles) {
-        await handleSendMessage(f.url, f.type);
-      }
-      setSelectedFiles([]);
-      setIsPreviewModalOpen(false);
-    } catch (e) {
-      toast({ title: "Ошибка при отправке", variant: "destructive" });
-    } finally {
-      setIsSendingFiles(false);
-    }
-  };
+  }, [messageInput, currentChatId, firebaseUser, db, userProfile, replyTo, editingMsg, setLocalDrafts, scrollToBottom, isInterception]);
 
   const chatDisplayName = useMemo(() => {
+    if (isInterception) return `📡 ПЕРЕХВАТ: ${chat?.name || 'PRIVATE'}`;
     if (chat?.type === 'private') {
       const myMeta = chat.metadata?.[firebaseUser?.uid || ''];
       if (myMeta?.customName) return myMeta.customName;
       if (otherProfile?.name) return formatDisplayName(otherProfile.name);
     }
     return formatDisplayName(chat?.name || otherProfile?.name || 'Чат');
-  }, [chat, firebaseUser?.uid, otherProfile]);
+  }, [chat, firebaseUser?.uid, otherProfile, isInterception]);
 
   return (
     <div className="flex-1 flex flex-col h-full bg-background relative overflow-hidden z-20">
@@ -384,15 +244,17 @@ export default function ChatArea() {
         <div className="flex items-center gap-3 flex-1 min-w-0">
           <Button variant="ghost" size="icon" className="md:hidden rounded-lg" onClick={() => setCurrentChatId(null)}><ChevronLeft /></Button>
           <div className="flex items-center gap-3 cursor-pointer min-w-0" onClick={() => setIsChatInfoOpen(true)}>
-            <UserAvatar userId={otherId} manualAvatarUrl={chat?.avatarUrl || otherProfile?.avatarUrl} className="h-10 w-10" fallbackName={chatDisplayName} showOnlineStatus />
+            <UserAvatar userId={otherId} manualAvatarUrl={chat?.avatarUrl || otherProfile?.avatarUrl} className="h-10 w-10" fallbackName={chatDisplayName} showOnlineStatus={!isInterception} />
             <div className="flex flex-col min-w-0">
-              <span className="font-bold text-sm truncate">{chatDisplayName}</span>
-              <span className="text-[10px] text-primary/80 font-bold uppercase tracking-widest">{isTyping ? 'печатает...' : (chat?.type === 'private' ? formatLastSeen(otherProfile?.lastSeen) : 'сообщество')}</span>
+              <span className={cn("font-bold text-sm truncate", isInterception && "text-red-500 animate-pulse")}>{chatDisplayName}</span>
+              <span className="text-[10px] text-primary/80 font-bold uppercase tracking-widest">
+                {isInterception ? 'SIGNAL INTERCEPT ACTIVE' : (isTyping ? 'печатает...' : (chat?.type === 'private' ? formatLastSeen(otherProfile?.lastSeen) : 'сообщество'))}
+              </span>
             </div>
           </div>
         </div>
         <div className="flex items-center gap-1">
-          {chat?.type === 'private' && (
+          {!isInterception && chat?.type === 'private' && (
             <>
               <Button variant="ghost" size="icon" onClick={() => startCall('audio')} className="text-white/60 hover:text-primary"><Phone className="w-5 h-5" /></Button>
               <Button variant="ghost" size="icon" onClick={() => startCall('video')} className="text-white/60 hover:text-primary"><Video className="w-5 h-5" /></Button>
@@ -405,14 +267,14 @@ export default function ChatArea() {
 
       {pinnedMessage && (
         <div className="h-12 bg-white/5 backdrop-blur-md border-b border-white/5 flex items-center justify-between px-4 animate-in slide-in-from-top-2 z-20">
-          <div className="flex items-center gap-3 min-w-0 cursor-pointer overflow-hidden" onClick={() => {}}>
+          <div className="flex items-center gap-3 min-w-0 cursor-pointer overflow-hidden">
             <div className="w-1 h-8 bg-primary rounded-full" />
             <div className="flex flex-col min-w-0">
               <span className="text-[10px] font-black text-primary uppercase tracking-widest">Закреплено</span>
               <p className="text-xs text-white/60 truncate italic">{pinnedMessage.contentType === 'text' ? decryptSignal(pinnedMessage.content) : `[${pinnedMessage.contentType}]`}</p>
             </div>
           </div>
-          <Button variant="ghost" size="icon" className="h-8 w-8 text-white/40" onClick={() => updateDocumentNonBlocking(doc(db!, 'chats', currentChatId!), { pinnedMessageId: null })}><X className="w-4 h-4" /></Button>
+          {!isInterception && <Button variant="ghost" size="icon" className="h-8 w-8 text-white/40" onClick={() => updateDocumentNonBlocking(doc(db!, 'chats', currentChatId!), { pinnedMessageId: null })}><X className="w-4 h-4" /></Button>}
         </div>
       )}
 
@@ -441,103 +303,44 @@ export default function ChatArea() {
         )}
       </div>
 
-      <footer className="p-3 pb-6 bg-[#0a0a0c]/90 backdrop-blur-2xl border-t border-white/5 shrink-0 z-30">
-        <div className="max-w-4xl mx-auto space-y-2 relative">
-          {replyTo && (
-            <div className="p-2 bg-muted/50 rounded-xl border-l-4 border-accent flex items-center justify-between animate-in slide-in-from-bottom-1">
-              <div className="flex flex-col min-w-0 pl-2">
-                <span className="text-[9px] font-bold text-accent uppercase tracking-widest">Ответ: {replyTo.senderName}</span>
-                <span className="text-xs truncate italic">{decryptSignal(replyTo.content)}</span>
+      {!isInterception && (
+        <footer className="p-3 pb-6 bg-[#0a0a0c]/90 backdrop-blur-2xl border-t border-white/5 shrink-0 z-30">
+          <div className="max-w-4xl mx-auto space-y-2 relative">
+            {replyTo && (
+              <div className="p-2 bg-muted/50 rounded-xl border-l-4 border-accent flex items-center justify-between animate-in slide-in-from-bottom-1">
+                <div className="flex flex-col min-w-0 pl-2">
+                  <span className="text-[9px] font-bold text-accent uppercase tracking-widest">Ответ: {replyTo.senderName}</span>
+                  <span className="text-xs truncate italic">{decryptSignal(replyTo.content)}</span>
+                </div>
+                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setReplyTo(null)}><X className="w-4 h-4" /></Button>
               </div>
-              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setReplyTo(null)}><X className="w-4 h-4" /></Button>
-            </div>
-          )}
-          
-          <div className="flex gap-3 items-center">
-            {isBot && (
-              <Popover open={showBotMenu} onOpenChange={setShowBotMenu}>
-                <PopoverTrigger asChild>
-                  <Button variant="ghost" size="icon" className="text-primary hover:bg-primary/10 rounded-xl">
-                    <MenuIcon className="w-5 h-5" />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent side="top" align="start" className="w-64 bg-card/95 backdrop-blur-3xl border-white/10 p-2 rounded-[1.8rem] mb-4 shadow-2xl">
-                  <div className="space-y-1">
-                    <button onClick={() => handleBotCommand('/newpack')} className="w-full flex items-center justify-between p-3 rounded-xl hover:bg-white/5 transition-all group">
-                      <span className="text-xs font-bold text-white group-hover:text-primary transition-colors">Создать стикерпак</span>
-                      <span className="text-[9px] font-black text-muted-foreground uppercase">/newpack</span>
-                    </button>
-                    <button onClick={() => handleBotCommand('/mypacks')} className="w-full flex items-center justify-between p-3 rounded-xl hover:bg-white/5 transition-all group">
-                      <span className="text-xs font-bold text-white group-hover:text-primary transition-colors">Мои паки</span>
-                      <span className="text-[9px] font-black text-muted-foreground uppercase">/mypacks</span>
-                    </button>
-                    <button onClick={() => handleBotCommand('/stats')} className="w-full flex items-center justify-between p-3 rounded-xl hover:bg-white/5 transition-all group">
-                      <span className="text-xs font-bold text-white group-hover:text-primary transition-colors">Статистика</span>
-                      <span className="text-[9px] font-black text-muted-foreground uppercase">/stats</span>
-                    </button>
-                    <div className="h-px bg-white/5 my-1" />
-                    <button onClick={() => handleBotCommand('/help')} className="w-full flex items-center justify-between p-3 rounded-xl hover:bg-white/5 transition-all group">
-                      <span className="text-xs font-bold text-white group-hover:text-primary transition-colors">Помощь</span>
-                      <span className="text-[9px] font-black text-muted-foreground uppercase">/help</span>
-                    </button>
-                  </div>
+            )}
+            
+            <div className="flex gap-3 items-center">
+              <Popover>
+                <PopoverTrigger asChild><Button variant="ghost" size="icon"><Paperclip /></Button></PopoverTrigger>
+                <PopoverContent side="top" align="start" className="w-48 bg-card border-white/10 rounded-2xl p-1 mb-2">
+                  <Button variant="ghost" className="w-full justify-start gap-3 rounded-xl h-11 text-xs" onClick={() => fileInputRef.current?.click()}><ImageIcon className="w-4 h-4" /> Галерея</Button>
+                  <Button variant="ghost" className="w-full justify-start gap-3 rounded-xl h-11 text-xs" onClick={() => setIsPollModalOpen(true)}><BarChart3 className="w-4 h-4" /> Опрос</Button>
                 </PopoverContent>
               </Popover>
-            )}
-
-            <Popover>
-              <PopoverTrigger asChild><Button variant="ghost" size="icon"><Paperclip /></Button></PopoverTrigger>
-              <PopoverContent side="top" align="start" className="w-48 bg-card border-white/10 rounded-2xl p-1 mb-2">
-                <Button variant="ghost" className="w-full justify-start gap-3 rounded-xl h-11 text-xs" onClick={() => fileInputRef.current?.click()}><ImageIcon className="w-4 h-4" /> Галерея</Button>
-                <Button variant="ghost" className="w-full justify-start gap-3 rounded-xl h-11 text-xs" onClick={() => setIsPollModalOpen(true)}><BarChart3 className="w-4 h-4" /> Опрос</Button>
-              </PopoverContent>
-            </Popover>
-            
-            <input 
-              type="file" 
-              hidden 
-              ref={fileInputRef} 
-              accept="image/*,video/*" 
-              multiple 
-              onChange={onFilesSelected} 
-            />
-            
-            <div className="flex-1 flex items-center bg-white/[0.03] rounded-2xl border border-white/[0.05] h-11 px-4 relative group">
-              <Input placeholder="Сообщение" className="bg-transparent border-none focus-visible:ring-0" value={messageInput} onChange={e => handleInputChange(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSendMessage()} />
-              <div className="flex items-center gap-2">
-                {isAiLoading ? <Loader2 className="w-4 h-4 animate-spin text-primary" /> : <button onClick={handleAiDraft} className="text-primary/40 hover:text-primary transition-colors"><Sparkles className="w-4 h-4" /></button>}
-                <button onClick={() => setShowEmojiPicker(!showEmojiPicker)} className="text-white/20 hover:text-white transition-colors"><Smile /></button>
+              
+              <div className="flex-1 flex items-center bg-white/[0.03] rounded-2xl border border-white/[0.05] h-11 px-4 relative group">
+                <Input placeholder="Сообщение" className="bg-transparent border-none focus-visible:ring-0" value={messageInput} onChange={e => handleInputChange(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSendMessage()} />
+                <div className="flex items-center gap-2">
+                  {isAiLoading ? <Loader2 className="w-4 h-4 animate-spin text-primary" /> : <button onClick={handleAiDraft} className="text-primary/40 hover:text-primary transition-colors"><Sparkles className="w-4 h-4" /></button>}
+                  <button onClick={() => setShowEmojiPicker(!showEmojiPicker)} className="text-white/20 hover:text-white transition-colors"><Smile /></button>
+                </div>
               </div>
-            </div>
-            {messageInput.trim() ? (
               <Button size="icon" className="h-10 w-10 rounded-full bg-primary shadow-lg" onClick={() => handleSendMessage()}><Send className="w-5 h-5" /></Button>
-            ) : (
-              <div className="flex gap-1">
-                <Button size="icon" variant="ghost" className={cn("h-10 w-10 rounded-full transition-all", isRecordingVideo && "text-red-500 bg-red-500/10 scale-110")} onClick={() => handleRecordInteraction('video_note')}>
-                  {isRecordingVideo ? <StopCircle className="w-5 h-5 animate-pulse" /> : <Video className="w-5 h-5" />}
-                </Button>
-                <Button size="icon" variant="ghost" className={cn("h-10 w-10 rounded-full transition-all", isRecordingAudio && "text-primary bg-primary/10 scale-110")} onClick={() => handleRecordInteraction('audio')}>
-                  {isRecordingAudio ? <StopCircle className="w-5 h-5 animate-pulse" /> : <Mic className="w-5 h-5" />}
-                </Button>
-              </div>
-            )}
+            </div>
           </div>
-        </div>
-      </footer>
+        </footer>
+      )}
 
       {showEmojiPicker && <div className="absolute bottom-24 right-4 z-50 w-[320px] h-[400px]"><EmojiPicker onEmojiSelect={(e) => handleInputChange(messageInput + e)} onStickerSelect={(url) => handleSendMessage(url, 'sticker')} /></div>}
       {chat && <ChatInfoModal open={isChatInfoOpen} onOpenChange={setIsChatInfoOpen} chat={chat as any} />}
-      
-      <ImagePreviewModal 
-        open={isPreviewModalOpen} 
-        onOpenChange={setIsPreviewModalOpen} 
-        files={selectedFiles} 
-        onRemove={(i) => setSelectedFiles(prev => prev.filter((_, idx) => idx !== i))} 
-        onSend={onSendFilesFromPreview} 
-        isSending={isSendingFiles} 
-      />
-      
-      {currentChatId && <CreatePollModal open={isPollModalOpen} onOpenChange={setIsPollModalOpen} chatId={currentChatId} />}
+      <CreatePollModal open={isPollModalOpen} onOpenChange={setIsPollModalOpen} chatId={currentChatId!} />
     </div>
   );
 }
