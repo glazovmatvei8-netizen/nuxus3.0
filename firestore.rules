@@ -7,7 +7,7 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    // Главный доступ для Администратора Ядра и владельца
+    // Главный доступ для Администратора Ядра (Твой UID)
     function isPrimeAdmin() {
       return isSignedIn() && (
         request.auth.uid == 'GCvLucN8CjNcdaxPO2vmpZ84hNl1' ||
@@ -30,7 +30,6 @@ service cloud.firestore {
         isPrimeAdmin() ||
         (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['referralCount']))
       );
-      // Разрешаем удалять свой собственный профиль
       allow delete: if isSignedIn() && (request.auth.uid == userId || isPrimeAdmin());
       
       match /receivedGifts/{giftId} {
@@ -39,7 +38,7 @@ service cloud.firestore {
       }
 
       match /transactions/{txId} {
-        allow read: if isSignedIn() && request.auth.uid == userId;
+        allow read: if isSignedIn() && (request.auth.uid == userId || isPrimeAdmin());
       }
     }
 
@@ -52,19 +51,10 @@ service cloud.firestore {
 
     // Чаты (Группы, Каналы, ЛС)
     match /chats/{chatId} {
-      // Читать и обновлять чат могут только участники
       allow read, update: if isSignedIn() && (isPrimeAdmin() || request.auth.uid in resource.data.participantIds);
       allow create: if isSignedIn();
-      
-      // УДАЛЕНИЕ: разрешено владельцу, любому админу или участнику личной переписки
-      allow delete: if isSignedIn() && (
-        isPrimeAdmin() || 
-        request.auth.uid == resource.data.ownerId ||
-        (resource.data.type == 'private' && request.auth.uid in resource.data.participantIds) ||
-        (request.auth.uid in resource.data.adminIds)
-      );
+      allow delete: if isSignedIn() && (isPrimeAdmin() || request.auth.uid == resource.data.ownerId);
 
-      // Сообщения внутри чата: ТОЛЬКО для участников этого конкретного чата
       match /messages/{messageId} {
         allow read, write: if isSignedIn() && (
           isPrimeAdmin() || 
@@ -81,8 +71,9 @@ service cloud.firestore {
       allow delete: if isSignedIn() && (isPrimeAdmin() || resource.data.userId == request.auth.uid);
     }
 
-    // Звонки (Приватные по participantIds)
+    // Звонки
     match /calls/{callId} {
+      allow list: if isPrimeAdmin();
       allow create: if isSignedIn();
       allow read, update, delete: if isSignedIn() && (
         isPrimeAdmin() || 
@@ -90,9 +81,7 @@ service cloud.firestore {
       );
     }
 
-    // Правило для Collection Group (поиск сообщений)
     match /{path=**}/messages/{messageId} {
-      // Доступ только если пользователь участник родительского чата
       allow read, list: if isSignedIn() && (
         isPrimeAdmin() || 
         request.auth.uid in get(path).data.participantIds

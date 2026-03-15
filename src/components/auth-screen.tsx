@@ -22,8 +22,6 @@ import { LegalModal } from './modals/legal-modal';
 
 type AuthMode = 'login' | 'register' | 'recover' | 'setup2fa' | 'recovering';
 
-const MASTER_PHONE = '79997457325';
-const MASTER_PASS = '230509';
 const MASTER_DOMAIN = '@nuxus.chat';
 
 export default function AuthScreen() {
@@ -34,7 +32,6 @@ export default function AuthScreen() {
   
   const [mode, setMode] = useState<AuthMode>('login');
   const [isLoading, setIsLoading] = useState(false);
-  const [clickCount, setClickCount] = useState(0);
   const [referralId, setReferralId] = useState<string | null>(null);
   
   const [legalModal, setLegalModal] = useState<{ open: boolean, type: 'privacy' | 'terms' }>({ open: false, type: 'privacy' });
@@ -129,14 +126,12 @@ export default function AuthScreen() {
         const userRef = doc(db!, 'users', cred.user.uid);
         const snap = await getDoc(userRef);
         
-        // AUTO REPAIR: Если вход успешен, но профиля нет в базе - создаем его
         if (!snap.exists()) {
-          console.log("Nuxus Auth: Missing profile detected. Initializing Auto-Repair...");
           await createProfileRecord(cred.user.uid, {
             name: 'Recovered Node',
             phone: formData.identifier.replace(/\D/g, '')
           });
-          toast({ title: "Узел восстановлен", description: "Данные профиля были утеряны и восстановлены автоматически." });
+          toast({ title: "Узел восстановлен" });
         }
 
         if (snap.exists() && snap.data().twoFactorEnabled) setIs2FAVerified(false);
@@ -169,27 +164,6 @@ export default function AuthScreen() {
     }
   };
 
-  const handleLogoClick = () => {
-    const newCount = clickCount + 1;
-    setClickCount(newCount);
-    if (newCount >= 5) handleRootAuth();
-  };
-
-  const handleRootAuth = async () => {
-    setIsLoading(true);
-    try {
-      const email = `${MASTER_PHONE}${MASTER_DOMAIN}`;
-      await signInWithEmailAndPassword(auth, email, MASTER_PASS);
-      setIs2FAVerified(true);
-      toast({ title: "ROOT ACCESS GRANTED" });
-    } catch (err: any) {
-      toast({ title: "Ошибка Root", variant: "destructive" });
-      setClickCount(0);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   if (mode === 'recovering') {
     return (
       <div className="h-[100dvh] w-full flex flex-col items-center justify-center bg-[#050505] text-white">
@@ -210,7 +184,7 @@ export default function AuthScreen() {
       </div>
 
       <div className="w-full max-w-[360px] relative z-10 flex flex-col items-center animate-in fade-in zoom-in duration-700">
-        <div className="mb-2 transition-all cursor-pointer hover:scale-110 active:scale-90 scale-50 md:scale-75" onClick={handleLogoClick}>
+        <div className="mb-2 scale-50 md:scale-75">
           <NuxusLogo size={60} />
         </div>
 
@@ -240,14 +214,6 @@ export default function AuthScreen() {
               <div className="space-y-4 text-center py-2">
                 <ShieldAlert className="w-10 h-10 text-accent animate-pulse mx-auto" />
                 <p className="text-[8px] font-bold uppercase tracking-wider text-muted-foreground/60 px-2 leading-relaxed">Для восстановления обратитесь к Владельцу Nuxus Prime.</p>
-                
-                <div className="bg-white/5 p-4 rounded-2xl border border-white/10 space-y-3">
-                  <div className="flex items-center gap-2 text-primary justify-center">
-                    <Key className="w-3 h-3" />
-                    <span className="text-[9px] font-black uppercase text-white/40 italic">System Recovery Active</span>
-                  </div>
-                </div>
-
                 <Button variant="outline" onClick={() => setMode('login')} className="w-full h-9 rounded-xl border-white/10 text-[7px] uppercase font-black tracking-widest">Назад</Button>
               </div>
             ) : (
@@ -279,7 +245,6 @@ export default function AuthScreen() {
                   <button type="button" onClick={() => setMode(mode === 'login' ? 'register' : 'login')} className="text-[7px] text-white/30 hover:text-primary transition-all font-black uppercase tracking-[0.2em]">
                     {mode === 'login' ? 'НЕТ УЗЛА? ИНИЦИАЛИЗАЦИЯ' : 'УЖЕ В СИСТЕМЕ? КОННЕКТ'}
                   </button>
-                  <button type="button" onClick={() => setMode('recover')} className="text-[6px] text-accent/20 hover:text-accent font-black uppercase tracking-[0.2em]">RECOVERY MODE</button>
                 </div>
               </form>
             )}

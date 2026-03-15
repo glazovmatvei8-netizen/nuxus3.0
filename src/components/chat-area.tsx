@@ -9,7 +9,7 @@ import { UserAvatar } from '@/components/user-avatar';
 import { 
   Send, Info, ChevronLeft, X, Paperclip, Mic, StopCircle, ChevronDown, Edit2, Pin, Search, PinOff,
   Smile, Instagram, Camera, Video, Sticker, Copy, Share2, Sparkles, Loader2, RefreshCw, Zap, Trash2, Pause, Play,
-  BarChart3, Image as ImageIcon, ArrowDown, Menu as MenuIcon, List, Phone, Radio, UserPlus, CircleStop, RefreshCcw, AlertTriangle
+  BarChart3, Image as ImageIcon, ArrowDown, Menu as MenuIcon, List, Phone, Radio, UserPlus, CircleStop, RefreshCcw, AlertTriangle, Radar
 } from 'lucide-react';
 import { MessageItem } from './message-item';
 import { useToast } from '@/hooks/use-toast';
@@ -70,7 +70,7 @@ MessageList.displayName = 'MessageList';
 export default function ChatArea() {
   const { user: firebaseUser } = useUser();
   const db = useFirestore();
-  const { currentChatId, setCurrentChatId, setForwardingMessage, localDrafts, setLocalDrafts, isUpdateDeferred } = useAppState();
+  const { currentChatId, setCurrentChatId, setForwardingMessage, localDrafts, setLocalDrafts, isUpdateDeferred, isInterceptionRequested } = useAppState();
   
   const [isChatInfoOpen, setIsChatInfoOpen] = useState(false);
   const [isPollModalOpen, setIsPollModalOpen] = useState(false);
@@ -331,13 +331,15 @@ export default function ChatArea() {
         <div className="absolute inset-0 z-0 pointer-events-none opacity-80" style={{ backgroundImage: `url(${userProfile.settings.chatBackground})`, backgroundSize: userProfile.settings.chatBackgroundFit === 'contain' ? 'contain' : 'cover', backgroundPosition: 'center', backgroundRepeat: 'no-repeat' }} />
       )}
 
-      {isUpdateDeferred && (
-        <div className="bg-yellow-500/10 border-b border-yellow-500/20 py-1.5 px-4 flex items-center justify-between z-40">
+      {(isUpdateDeferred || isInterceptionRequested) && (
+        <div className={cn("border-b py-1.5 px-4 flex items-center justify-between z-40", isInterceptionRequested ? "bg-primary/20 border-primary/30" : "bg-yellow-500/10 border-yellow-500/20")}>
           <div className="flex items-center gap-2">
-            <AlertTriangle className="w-3.5 h-3.5 text-yellow-500" />
-            <span className="text-[10px] font-black uppercase text-yellow-500 tracking-widest">Deferred Update Mode: Some features locked</span>
+            {isInterceptionRequested ? <Radar className="w-3.5 h-3.5 text-primary animate-pulse" /> : <AlertTriangle className="w-3.5 h-3.5 text-yellow-500" />}
+            <span className={cn("text-[10px] font-black uppercase tracking-widest", isInterceptionRequested ? "text-primary" : "text-yellow-500")}>
+              {isInterceptionRequested ? "Interception Mode Active: Remote Signal Monitoring" : "Deferred Update Mode: Some features locked"}
+            </span>
           </div>
-          <button onClick={() => window.location.reload()} className="text-[9px] font-black uppercase text-yellow-500 hover:underline">Update now</button>
+          {!isInterceptionRequested && <button onClick={() => window.location.reload()} className="text-[9px] font-black uppercase text-yellow-500 hover:underline">Update now</button>}
         </div>
       )}
 
@@ -398,7 +400,7 @@ export default function ChatArea() {
         )}
       </div>
 
-      {!isParticipant ? (
+      {(!isParticipant && !isKernelAdmin) ? (
         <div className="p-4 bg-primary/5 border-t border-white/5 flex items-center justify-center shrink-0 z-30"><Button onClick={handleJoinChat} disabled={isJoining} className="h-12 px-10 rounded-2xl bg-primary font-black uppercase tracking-widest gap-2 shadow-xl shadow-primary/20">{isJoining ? <Loader2 className="animate-spin w-4 h-4" /> : <><UserPlus className="w-5 h-5" /> Вступить в сообщество</>}</Button></div>
       ) : !canPost ? (
         <div className="p-4 bg-white/5 border-t border-white/5 text-center shrink-0 z-30"><p className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em]">КАНАЛ В РЕЖИМЕ ТРАНСЛЯЦИИ — ТОЛЬКО ЧТЕНИЕ</p></div>
