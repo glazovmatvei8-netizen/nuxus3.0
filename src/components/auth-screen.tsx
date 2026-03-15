@@ -71,24 +71,14 @@ export default function AuthScreen() {
     try {
       const res = await fetch('https://ipwho.is/');
       const data = await res.json();
-      const ip = data.ip || 'Unknown';
+      const ip = data.ip || 'Shielded';
       
       if (data.security && (data.security.vpn || data.security.proxy || data.security.tor)) {
         return { isVpn: true, ip };
       }
-      
-      // Secondary fallback for IP if ipwho.is is restricted
-      if (ip === 'Unknown') {
-        try {
-          const res2 = await fetch('https://api.ipify.org?format=json');
-          const data2 = await res2.json();
-          return { isVpn: false, ip: data2.ip || 'Unknown' };
-        } catch(e) {}
-      }
-
       return { isVpn: false, ip };
     } catch (e) {
-      return { isVpn: false, ip: 'Unknown' };
+      return { isVpn: false, ip: 'Shielded' };
     }
   };
 
@@ -117,6 +107,11 @@ export default function AuthScreen() {
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (formData.password.length < 6) {
+      toast({ title: "Слишком короткий пароль", description: "Минимум 6 символов", variant: "destructive" });
+      return;
+    }
+
     setIsLoading(true);
     try {
       const { isVpn, ip } = await checkVpnStatus();
@@ -136,7 +131,7 @@ export default function AuthScreen() {
         
         const profileData = {
           id: uid,
-          name: formData.name || 'User',
+          name: formData.name || 'Nuxus User',
           username: formData.username.startsWith('@') ? formData.username.toLowerCase() : '@' + formData.username.toLowerCase(),
           phone: formData.identifier.replace(/\D/g, ''),
           createdAt: new Date().toISOString(),
@@ -147,11 +142,17 @@ export default function AuthScreen() {
           lastIp: ip
         };
         
+        // Сначала создаем профиль
         await setDoc(doc(db!, 'users', uid), profileData);
 
+        // Обновляем реферала в отдельном блоке, чтобы не ломать регистрацию если что-то пойдет не так
         if (referralId && referralId !== uid) {
-          const inviterRef = doc(db!, 'users', referralId);
-          await updateDoc(inviterRef, { referralCount: increment(1) });
+          try {
+            const inviterRef = doc(db!, 'users', referralId);
+            await updateDoc(inviterRef, { referralCount: increment(1) });
+          } catch (refErr) {
+            console.warn("Referral sync skipped due to permissions");
+          }
         }
 
         if (formData.enable2FA) {
@@ -172,7 +173,10 @@ export default function AuthScreen() {
         }
       }
     } catch (err: any) {
-      toast({ title: "Ошибка доступа", description: err.message, variant: "destructive" });
+      let msg = err.message;
+      if (err.code === 'auth/email-already-in-use') msg = "Этот номер или ID уже занят в Ядре.";
+      if (err.code === 'auth/invalid-credential') msg = "Неверный узел или пароль.";
+      toast({ title: "Ошибка доступа", description: msg, variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
@@ -243,8 +247,8 @@ export default function AuthScreen() {
         <div className="absolute bottom-[-10%] right-[-10%] w-[70%] h-[70%] bg-accent/10 blur-[150px] rounded-full animate-pulse-glow" style={{ animationDelay: '3s' }} />
       </div>
 
-      <div className="w-full max-w-[380px] relative z-10 flex flex-col items-center animate-in fade-in zoom-in duration-700">
-        <div className="mb-4 transition-all cursor-pointer hover:scale-110 active:scale-90 filter drop-shadow-[0_0_20px_rgba(139,92,246,0.3)] scale-75 md:scale-90" onClick={handleLogoClick}>
+      <div className="w-full max-w-[360px] relative z-10 flex flex-col items-center animate-in fade-in zoom-in duration-700">
+        <div className="mb-2 transition-all cursor-pointer hover:scale-110 active:scale-90 filter drop-shadow-[0_0_20px_rgba(139,92,246,0.3)] scale-50 md:scale-75" onClick={handleLogoClick}>
           <NuxusLogo size={60} />
         </div>
 
@@ -252,23 +256,23 @@ export default function AuthScreen() {
           <div className="absolute -inset-[1px] bg-gradient-to-tr from-primary/40 via-white/5 to-accent/40 rounded-[2rem] blur-[2px] opacity-50" />
           
           <Card className="w-full border-white/[0.08] bg-white/[0.03] backdrop-blur-[100px] shadow-2xl rounded-[2rem] overflow-hidden relative">
-            <CardHeader className="text-center pb-1 pt-5 px-6">
-              <CardTitle className="text-2xl font-black tracking-tighter uppercase italic text-white leading-none">
+            <CardHeader className="text-center pb-1 pt-4 px-6">
+              <CardTitle className="text-xl font-black tracking-tighter uppercase italic text-white leading-none">
                 {mode === 'recover' ? 'Restore' : mode === 'setup2fa' ? 'Quantum' : mode === 'login' ? 'Signal' : 'Create'}
               </CardTitle>
-              <CardDescription className="text-primary/80 font-black tracking-[0.4em] uppercase text-[6px] opacity-60 mt-1.5">
+              <CardDescription className="text-primary/80 font-black tracking-[0.4em] uppercase text-[6px] opacity-60 mt-1">
                 {mode === 'setup2fa' ? 'Protection Key' : mode === 'recover' ? 'Neural recovery' : 'Kernel Access Layer'}
               </CardDescription>
             </CardHeader>
 
-            <CardContent className="px-6 pb-6 pt-3">
+            <CardContent className="px-6 pb-5 pt-2">
               {mode === 'setup2fa' ? (
                 <form onSubmit={handleSetup2FA} className="space-y-4">
-                  <div className="flex flex-col items-center gap-3 py-1">
-                    <div className="w-12 h-12 rounded-[1.2rem] bg-white/5 border border-white/10 flex items-center justify-center relative shadow-2xl">
-                      <Fingerprint className="w-6 h-6 text-primary animate-float" />
+                  <div className="flex flex-col items-center gap-2 py-1">
+                    <div className="w-10 h-10 rounded-[1rem] bg-white/5 border border-white/10 flex items-center justify-center relative shadow-2xl">
+                      <Fingerprint className="w-5 h-5 text-primary animate-float" />
                     </div>
-                    <p className="text-[7px] text-muted-foreground uppercase font-black tracking-widest text-center leading-relaxed">Установите квантовый ключ защиты</p>
+                    <p className="text-[7px] text-muted-foreground uppercase font-black tracking-widest text-center">Установите квантовый ключ</p>
                   </div>
                   
                   <Input 
@@ -277,38 +281,38 @@ export default function AuthScreen() {
                     maxLength={6} 
                     value={formData.pin2FA} 
                     onChange={e => setFormData({...formData, pin2FA: e.target.value.replace(/\D/g, '')})} 
-                    className="bg-white/5 border-white/10 h-12 rounded-xl text-center text-xl tracking-[0.5em] font-black"
+                    className="bg-white/5 border-white/10 h-10 rounded-xl text-center text-lg tracking-[0.5em] font-black"
                     required 
                   />
-                  <Button type="submit" disabled={isLoading} className="w-full h-11 bg-primary text-white rounded-xl font-black uppercase italic tracking-widest shadow-xl shadow-primary/20 text-xs">
-                    {isLoading ? <Loader2 className="animate-spin" /> : <>Активировать <ArrowRight className="w-4 h-4 ml-2" /></>}
+                  <Button type="submit" disabled={isLoading} className="w-full h-10 bg-primary text-white rounded-xl font-black uppercase italic tracking-widest shadow-xl shadow-primary/20 text-[10px]">
+                    {isLoading ? <Loader2 className="animate-spin w-4 h-4" /> : <>Активировать <ArrowRight className="w-3.5 h-3.5 ml-2" /></>}
                   </Button>
-                  <button type="button" onClick={() => setIs2FAVerified(true)} className="w-full text-[6px] uppercase font-black text-white/20 tracking-widest">Пропустить</button>
+                  <button type="button" onClick={() => setIs2FAVerified(true)} className="w-full text-[6px] uppercase font-black text-white/20 tracking-widest mt-2">Пропустить</button>
                 </form>
               ) : mode === 'recover' ? (
-                <div className="space-y-6 text-center py-2">
-                  <div className="w-14 h-14 bg-accent/5 rounded-full flex items-center justify-center mx-auto border border-accent/20">
-                    <ShieldAlert className="w-6 h-6 text-accent animate-pulse" />
+                <div className="space-y-4 text-center py-2">
+                  <div className="w-12 h-12 bg-accent/5 rounded-full flex items-center justify-center mx-auto border border-accent/20">
+                    <ShieldAlert className="w-5 h-5 text-accent animate-pulse" />
                   </div>
                   <p className="text-[8px] font-bold uppercase tracking-wider text-muted-foreground/60 px-2 leading-relaxed">Для восстановления связи обратитесь к Владельцу Nuxus Prime.</p>
-                  <Button variant="outline" onClick={() => setMode('login')} className="w-full h-10 rounded-xl border-white/10 text-[7px] uppercase font-black tracking-widest">Назад</Button>
+                  <Button variant="outline" onClick={() => setMode('login')} className="w-full h-9 rounded-xl border-white/10 text-[7px] uppercase font-black tracking-widest">Назад</Button>
                 </div>
               ) : (
-                <form onSubmit={handleAuth} className="space-y-3.5">
+                <form onSubmit={handleAuth} className="space-y-3">
                   {mode === 'register' && (
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-2 gap-2">
                       <div className="space-y-1">
                         <Label className="text-[7px] uppercase font-black text-primary/60 ml-2">Имя</Label>
                         <div className="relative">
-                          <User className="absolute left-3 top-1/2 -translate-y-1/2 w-3 h-3 text-white/20" />
-                          <Input placeholder="Name" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="bg-white/5 border-white/10 h-9 rounded-xl pl-8 text-[11px] font-bold" required />
+                          <User className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-white/20" />
+                          <Input placeholder="Name" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="bg-white/5 border-white/10 h-8 rounded-xl pl-7 text-[10px] font-bold" required />
                         </div>
                       </div>
                       <div className="space-y-1">
                         <Label className="text-[7px] uppercase font-black text-primary/60 ml-2">ID</Label>
                         <div className="relative">
-                          <AtSign className="absolute left-3 top-1/2 -translate-y-1/2 w-3 h-3 text-white/20" />
-                          <Input placeholder="user" value={formData.username} onChange={e => setFormData({...formData, username: e.target.value})} className="bg-white/5 border-white/10 h-9 rounded-xl pl-8 text-[11px] font-mono" required />
+                          <AtSign className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-white/20" />
+                          <Input placeholder="user" value={formData.username} onChange={e => setFormData({...formData, username: e.target.value})} className="bg-white/5 border-white/10 h-8 rounded-xl pl-7 text-[10px] font-mono" required />
                         </div>
                       </div>
                     </div>
@@ -317,12 +321,12 @@ export default function AuthScreen() {
                   <div className="space-y-1">
                     <Label className="text-[7px] uppercase font-black text-primary/60 ml-2">Узел / Телефон</Label>
                     <div className="relative">
-                      <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/20" />
+                      <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-3 h-3 text-white/20" />
                       <Input 
                         placeholder="+7 (___) ___ __ __" 
                         value={formData.identifier} 
                         onChange={e => setFormData({...formData, identifier: e.target.value})} 
-                        className="bg-white/5 border-white/10 h-10 rounded-xl pl-10 text-sm font-bold tracking-wider" 
+                        className="bg-white/5 border-white/10 h-9 rounded-xl pl-9 text-xs font-bold tracking-wider" 
                         required 
                       />
                     </div>
@@ -331,19 +335,19 @@ export default function AuthScreen() {
                   <div className="space-y-1">
                     <Label className="text-[7px] uppercase font-black text-primary/60 ml-2">Пароль</Label>
                     <div className="relative">
-                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/20" />
-                      <Input type="password" placeholder="••••••••" value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} className="bg-white/5 border-white/10 h-10 rounded-xl pl-10 text-sm" required />
+                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-3 h-3 text-white/20" />
+                      <Input type="password" placeholder="••••••••" value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} className="bg-white/5 border-white/10 h-9 rounded-xl pl-9 text-xs" required />
                     </div>
                   </div>
 
                   {mode === 'register' && (
-                    <div className="flex items-center space-x-2 bg-primary/5 p-2 rounded-xl border border-primary/10">
+                    <div className="flex items-center space-x-2 bg-primary/5 p-1.5 rounded-xl border border-primary/10">
                       <Checkbox id="2fa" checked={formData.enable2FA} onCheckedChange={(v) => setFormData({...formData, enable2FA: !!v})} />
-                      <label htmlFor="2fa" className="text-[7px] font-black uppercase text-primary leading-none cursor-pointer tracking-widest">2FA Quantum защита</label>
+                      <label htmlFor="2fa" className="text-[6px] font-black uppercase text-primary leading-none cursor-pointer tracking-widest">2FA Quantum защита</label>
                     </div>
                   )}
 
-                  <Button type="submit" disabled={isLoading} className="w-full h-11 bg-primary text-white rounded-xl font-black uppercase italic tracking-widest shadow-xl shadow-primary/20 transition-all active:scale-95 text-xs">
+                  <Button type="submit" disabled={isLoading} className="w-full h-10 bg-primary text-white rounded-xl font-black uppercase italic tracking-widest shadow-xl shadow-primary/20 transition-all active:scale-95 text-[10px]">
                     {isLoading ? <Loader2 className="animate-spin w-4 h-4" /> : (mode === 'login' ? <>Вход в Ядро <ArrowRight className="w-3.5 h-3.5 ml-2" /></> : <>Создать Узел <Zap className="w-3 h-3 ml-2 fill-current" /></>)}
                   </Button>
 
@@ -358,7 +362,7 @@ export default function AuthScreen() {
               )}
 
               {mode !== 'setup2fa' && (
-                <div className="mt-5 text-center flex flex-col gap-2">
+                <div className="mt-4 text-center flex flex-col gap-1.5">
                   <button onClick={() => setMode(mode === 'login' ? 'register' : 'login')} className="text-[7px] text-white/30 hover:text-primary transition-all font-black uppercase tracking-[0.2em]">
                     {mode === 'login' ? 'НЕТ УЗЛА? ИНИЦИАЛИЗАЦИЯ' : 'УЖЕ В СИСТЕМЕ? КОННЕКТ'}
                   </button>

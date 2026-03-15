@@ -24,7 +24,12 @@ service cloud.firestore {
     // Профили пользователей
     match /users/{userId} {
       allow read: if isSignedIn();
-      allow write: if isSignedIn() && request.auth.uid == userId;
+      allow create: if isSignedIn() && request.auth.uid == userId;
+      // Разрешаем обновлять свой профиль ИЛИ инкрементировать referralCount другим (для системы инвайтов)
+      allow update: if isSignedIn() && (
+        request.auth.uid == userId || 
+        (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['referralCount']))
+      );
       
       match /receivedGifts/{giftId} {
         allow read: if isSignedIn();
