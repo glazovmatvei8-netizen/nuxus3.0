@@ -136,6 +136,7 @@ export default function ChatArea() {
       const callRef = await addDoc(collection(db, 'calls'), {
         callerId: firebaseUser.uid,
         receiverId: otherId,
+        participantIds: [firebaseUser.uid, otherId], // Privacy filter
         chatId: currentChatId,
         type,
         status: 'calling',

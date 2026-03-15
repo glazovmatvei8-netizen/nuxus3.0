@@ -1,3 +1,4 @@
+
 "use client"
 
 import { useUser, useFirestore, useDoc, useMemoFirebase, useAuth } from '@/firebase';
@@ -244,22 +245,22 @@ export default function Home() {
       <div className="h-screen w-full flex items-center justify-center bg-[#050505] relative overflow-hidden px-6">
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full max-w-2xl aspect-square bg-primary/10 blur-[150px] rounded-full -z-10 animate-pulse-glow" />
         
-        <div className="w-full max-w-md space-y-16 text-center animate-in fade-in zoom-in duration-700">
-          <div className="space-y-8">
+        <div className="w-full max-w-sm space-y-8 text-center animate-in fade-in zoom-in duration-700">
+          <div className="space-y-6">
             <div className="relative inline-block">
-              <div className="absolute inset-0 bg-primary blur-[60px] opacity-30 animate-pulse" />
-              <div className="bg-white/[0.03] border border-white/10 w-28 h-28 rounded-[2.5rem] flex items-center justify-center mx-auto relative z-10 shadow-2xl backdrop-blur-3xl">
-                <Fingerprint className="w-12 h-12 text-primary animate-float" />
+              <div className="absolute inset-0 bg-primary blur-[40px] opacity-30 animate-pulse" />
+              <div className="bg-white/[0.03] border border-white/10 w-24 h-24 rounded-[2rem] flex items-center justify-center mx-auto relative z-10 shadow-2xl backdrop-blur-3xl">
+                <Fingerprint className="w-10 h-10 text-primary animate-float" />
               </div>
             </div>
             
-            <div className="space-y-3">
-              <h2 className="text-4xl font-black uppercase italic text-white tracking-[-0.05em]">Verify PIN</h2>
-              <p className="text-[9px] font-black uppercase tracking-[0.5em] text-primary/60">Cloud Protection Active</p>
+            <div className="space-y-2">
+              <h2 className="text-3xl font-black uppercase italic text-white tracking-tight">Verify PIN</h2>
+              <p className="text-[8px] font-black uppercase tracking-[0.4em] text-primary/60">Cloud Protection Active</p>
             </div>
           </div>
 
-          <div className="space-y-10">
+          <div className="space-y-8">
             <div className="relative group">
                <div className="absolute -inset-1 bg-primary/20 blur-xl opacity-0 group-focus-within:opacity-100 transition-opacity duration-500" />
                <Input 
@@ -267,18 +268,18 @@ export default function Home() {
                 placeholder="••••••" 
                 maxLength={6} 
                 autoFocus
-                className="bg-white/[0.03] border-white/10 h-24 text-5xl tracking-[0.8em] text-center rounded-[2.5rem] font-black focus:border-primary/50 transition-all shadow-inner relative z-10"
+                className="bg-white/[0.03] border-white/10 h-16 text-3xl tracking-[0.6em] text-center rounded-[1.5rem] font-black focus:border-primary/50 transition-all shadow-inner relative z-10"
                 value={twoFactorInput}
                 onChange={e => setTwoFactorInput(e.target.value.replace(/\D/g, ''))}
                 onKeyDown={e => e.key === 'Enter' && handleVerify2FA()}
               />
             </div>
             
-            <div className="space-y-4">
-              <Button onClick={handleVerify2FA} className="w-full h-16 rounded-[2rem] bg-primary hover:bg-primary/90 text-white font-black uppercase italic tracking-widest text-lg shadow-[0_20px_50px_rgba(139,92,246,0.3)] group active:scale-[0.98]">
-                Unlock Kernel <ArrowRight className="w-6 h-6 ml-2 group-hover:translate-x-1 transition-transform" />
+            <div className="space-y-3">
+              <Button onClick={handleVerify2FA} className="w-full h-14 rounded-2xl bg-primary hover:bg-primary/90 text-white font-black uppercase italic tracking-widest shadow-xl shadow-primary/20 group active:scale-[0.98]">
+                Unlock Kernel <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
               </Button>
-              <Button variant="ghost" onClick={() => signOut(auth)} className="w-full text-[9px] font-black uppercase tracking-[0.4em] text-white/20 hover:text-white transition-colors">Disconnect Node (Logout)</Button>
+              <Button variant="ghost" onClick={() => signOut(auth)} className="w-full text-[8px] font-black uppercase tracking-[0.3em] text-white/20 hover:text-white transition-colors">Disconnect Node (Logout)</Button>
             </div>
           </div>
         </div>

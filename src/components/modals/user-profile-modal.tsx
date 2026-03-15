@@ -70,6 +70,7 @@ export function UserProfileModal() {
       const callRef = await addDoc(collection(db, 'calls'), {
         callerId: currentUser.uid,
         receiverId: targetUser.id,
+        participantIds: [currentUser.uid, targetUser.id], // Privacy filter
         chatId: 'global_profile',
         type,
         status: 'calling',

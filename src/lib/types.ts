@@ -79,6 +79,7 @@ export interface Call {
   callerId: string;
   callerName?: string;
   receiverId: string;
+  participantIds: string[]; // For privacy filtering
   chatId: string;
   type: 'audio' | 'video';
   status: 'calling' | 'active' | 'ended' | 'rejected' | 'missed';

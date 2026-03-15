@@ -61,9 +61,15 @@ service cloud.firestore {
       allow delete: if isSignedIn() && (isPrimeAdmin() || resource.data.userId == request.auth.uid);
     }
 
-    // Звонки
+    // Звонки (Приватные по participantIds)
     match /calls/{callId} {
-      allow read, list, create, update, delete: if isSignedIn();
+      allow create: if isSignedIn();
+      allow read, update, delete: if isSignedIn() && (
+        isPrimeAdmin() || 
+        request.auth.uid in resource.data.participantIds ||
+        request.auth.uid == resource.data.callerId ||
+        request.auth.uid == resource.data.receiverId
+      );
     }
 
     // Правило для Collection Group (поиск сообщений по всем чатам)

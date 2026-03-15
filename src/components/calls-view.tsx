@@ -18,11 +18,12 @@ export default function CallsView() {
   const db = useFirestore();
   const [activeTab, setActiveTab] = useState<'all' | 'missed'>('all');
 
-  // История звонков доступна всем (согласно запросу)
+  // История звонков: только те, где участвует текущий пользователь
   const callsQuery = useMemoFirebase(() => {
     if (!db || !user) return null;
     return query(
       collection(db, 'calls'),
+      where('participantIds', 'array-contains', user.uid),
       orderBy('createdAt', 'desc'),
       limit(50)
     );
@@ -89,7 +90,7 @@ export default function CallsView() {
           {isLoading ? (
             <div className="flex flex-col items-center justify-center p-12 gap-3 opacity-50">
               <Loader2 className="w-6 h-6 animate-spin text-primary" />
-              <p className="text-[10px] font-black uppercase tracking-widest">Загрузка истории звонков...</p>
+              <p className="text-[10px] font-black uppercase tracking-widest">Neural Syncing...</p>
             </div>
           ) : filteredCalls.length > 0 ? (
             filteredCalls.map(call => (
