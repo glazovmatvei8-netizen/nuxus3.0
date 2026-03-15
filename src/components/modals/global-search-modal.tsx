@@ -15,7 +15,7 @@ import { UserAvatar } from '@/components/user-avatar';
 import type { User, Chat } from '@/lib/types';
 
 /**
- * GLOBAL SEARCH 4.0: Внедрен Discovery Hub для нахождения публичных сообществ.
+ * GLOBAL SEARCH 5.0: Исправлено раздвоение результатов и утечки приватности.
  */
 export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const { user } = useUser();
@@ -31,13 +31,17 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
   const userRef = useMemoFirebase(() => (!db || !user) ? null : doc(db, 'users', user.uid), [db, user]);
   const { data: myProfile } = useDoc<User>(userRef);
 
-  // Discovery Hub Logic
+  // Discovery Hub Logic: Только ПУБЛИЧНЫЕ чаты
   useEffect(() => {
     if (open && !searchQuery.trim() && db) {
       const fetchDiscoveryData = async () => {
         setIsLoading(true);
         try {
-          const chatQ = query(collection(db!, 'chats'), where('isPublic', '==', true), limit(15));
+          const chatQ = query(
+            collection(db!, 'chats'), 
+            where('isPublic', '==', true), 
+            limit(15)
+          );
           const chatSnap = await getDocs(chatQ);
           const publicChats = chatSnap.docs.map(d => ({ id: d.id, ...d.data() } as Chat));
           setTrends(publicChats);
@@ -56,7 +60,8 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
     setIsInterceptionRequested(false);
     setIsLoading(true);
     try {
-      if (!targetChat.participantIds.includes(user.uid)) {
+      // Присоединяемся только если это публичная группа/канал
+      if (targetChat.type !== 'private' && !targetChat.participantIds.includes(user.uid)) {
         await updateDoc(doc(db, 'chats', targetChat.id), {
           participantIds: arrayUnion(user.uid)
         });
@@ -116,7 +121,7 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
 
   const handleSearch = async (val: string) => {
     setSearchQuery(val);
-    if (val.length < 3) {
+    if (val.length < 2) {
       setResults([]);
       return;
     }
@@ -126,6 +131,7 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
       const searchVal = val.startsWith('@') ? val.toLowerCase() : '@' + val.toLowerCase();
       const foundResults: any[] = [];
 
+      // Боты
       if ('@stickers'.includes(searchVal)) {
         foundResults.push({ 
           type: 'bot', 
@@ -138,13 +144,27 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
         });
       }
 
-      const chatQuery = query(collection(db!, 'chats'), where('username', '==', searchVal), limit(5));
-      const userQuery = query(collection(db!, 'users'), where('username', '==', searchVal), limit(5));
+      // 1. Ищем только ПУБЛИЧНЫЕ чаты (группы/каналы)
+      const chatQuery = query(
+        collection(db!, 'chats'), 
+        where('username', '==', searchVal), 
+        where('isPublic', '==', true),
+        limit(10)
+      );
+      
+      // 2. Ищем пользователей
+      const userQuery = query(
+        collection(db!, 'users'), 
+        where('username', '==', searchVal), 
+        limit(10)
+      );
 
       const [chatSnap, userSnap] = await Promise.all([getDocs(chatQuery), getDocs(userQuery)]);
       
       const foundChats = chatSnap.docs.map(d => ({ type: 'chat' as const, data: { id: d.id, ...d.data() } }));
-      const foundUsers = userSnap.docs.map(d => ({ type: 'user' as const, data: { id: d.id, ...d.data() } })).filter(u => u.data.id !== user?.uid);
+      const foundUsers = userSnap.docs
+        .map(d => ({ type: 'user' as const, data: { id: d.id, ...d.data() } }))
+        .filter(u => u.data.id !== user?.uid); // Не показываем себя
 
       setResults([...foundResults, ...foundChats, ...foundUsers]);
     } catch (e) {
@@ -204,12 +224,12 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
 
         <ScrollArea className="flex-1">
           <div className="p-4 space-y-6">
-            {searchQuery.trim().length >= 3 ? (
+            {searchQuery.trim().length >= 2 ? (
               <div className="space-y-3">
                 <div className="flex items-center gap-2 px-2 text-muted-foreground/60">
                   <span className="text-[9px] font-black uppercase tracking-[0.2em]">Результаты поиска</span>
                 </div>
-                {results.map((res, idx) => (
+                {results.length > 0 ? results.map((res, idx) => (
                   <div key={idx} className="flex items-center justify-between p-4 bg-white/5 rounded-[1.8rem] hover:bg-white/10 cursor-pointer border border-white/5 active:scale-[0.98] transition-all" onClick={() => {
                     if (res.type === 'bot') openBotChat();
                     else if (res.type === 'user') openPrivateChat(res.data);
@@ -227,7 +247,11 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
                     </div>
                     <ArrowRight className="w-5 h-5 text-primary/40" />
                   </div>
-                ))}
+                )) : (
+                  <div className="text-center py-10 opacity-40">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-white">Ничего не найдено</p>
+                  </div>
+                )}
               </div>
             ) : (
               <div className="space-y-6">

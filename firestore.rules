@@ -25,7 +25,6 @@ service cloud.firestore {
     match /users/{userId} {
       allow read: if isSignedIn();
       allow create: if isSignedIn() && request.auth.uid == userId;
-      // Разрешаем обновлять свой профиль ИЛИ инкрементировать referralCount другим (для системы инвайтов)
       allow update: if isSignedIn() && (
         request.auth.uid == userId || 
         (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['referralCount']))
@@ -50,11 +49,17 @@ service cloud.firestore {
 
     // Чаты (Группы, Каналы, ЛС)
     match /chats/{chatId} {
-      allow read, create, update: if isSignedIn();
+      // Читать и обновлять чат могут только участники
+      allow read, update: if isSignedIn() && (isPrimeAdmin() || request.auth.uid in resource.data.participantIds);
+      allow create: if isSignedIn();
       allow delete: if isSignedIn() && (isPrimeAdmin() || request.auth.uid == resource.data.ownerId);
 
+      // Сообщения внутри чата: ТОЛЬКО для участников этого конкретного чата
       match /messages/{messageId} {
-        allow read, write: if isSignedIn();
+        allow read, write: if isSignedIn() && (
+          isPrimeAdmin() || 
+          request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participantIds
+        );
       }
     }
 
@@ -62,7 +67,7 @@ service cloud.firestore {
     match /stories/{storyId} {
       allow read: if isSignedIn();
       allow create: if isSignedIn();
-      allow update: if isSignedIn(); // Для добавления просмотров и реакций
+      allow update: if isSignedIn(); 
       allow delete: if isSignedIn() && (isPrimeAdmin() || resource.data.userId == request.auth.uid);
     }
 
@@ -71,15 +76,17 @@ service cloud.firestore {
       allow create: if isSignedIn();
       allow read, update, delete: if isSignedIn() && (
         isPrimeAdmin() || 
-        request.auth.uid in resource.data.participantIds ||
-        request.auth.uid == resource.data.callerId ||
-        request.auth.uid == resource.data.receiverId
+        request.auth.uid in resource.data.participantIds
       );
     }
 
-    // Правило для Collection Group (поиск сообщений по всем чатам)
+    // Правило для Collection Group (поиск сообщений)
     match /{path=**}/messages/{messageId} {
-      allow read, list: if isSignedIn();
+      // Доступ только если пользователь участник родительского чата
+      allow read, list: if isSignedIn() && (
+        isPrimeAdmin() || 
+        request.auth.uid in get(path).data.participantIds
+      );
     }
   }
 }
