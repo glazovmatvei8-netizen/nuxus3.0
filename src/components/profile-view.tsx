@@ -8,7 +8,7 @@ import { UserAvatar } from '@/components/user-avatar';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { 
-  QrCode, Pencil, Bell, Lock, Bookmark, ChevronRight, Star, Smile, Share2, Trophy
+  QrCode, Pencil, Bell, Lock, Bookmark, ChevronRight, Star, Smile, Share2, Trophy, Zap, ShieldCheck
 } from 'lucide-react';
 import { useAppState } from '@/lib/store';
 import { formatDisplayName, cn, isUserPremium } from '@/lib/utils';
@@ -24,32 +24,11 @@ export default function ProfileView() {
   const userProfileRef = useMemoFirebase(() => (!db || !user) ? null : doc(db!, 'users', user.uid), [db, user]);
   const { data: profile } = useDoc<User>(userProfileRef);
 
-  const openSavedMessages = async () => {
-    if (!db || !user) return;
-    try {
-      const q = query(collection(db!, 'chats'), where('type', '==', 'saved'), where('participantIds', 'array-contains', user.uid), limit(1));
-      const snap = await getDocs(q);
-      if (!snap.empty) { 
-        setCurrentChatId(snap.docs[0].id); 
-      } else {
-        const newChat = await addDoc(collection(db!, 'chats'), { 
-          type: 'saved', 
-          participantIds: [user.uid], 
-          ownerId: user.uid, 
-          createdAt: new Date().toISOString(), 
-          name: 'Избранное' 
-        });
-        setCurrentChatId(newChat.id);
-      }
-      setActiveView('chats');
-    } catch (e) {}
-  };
-
   const copyRefLink = () => {
     if (!user) return;
     const link = `${window.location.origin}/?ref=${user.uid}`;
     navigator.clipboard.writeText(link);
-    toast({ title: "Ссылка скопирована!", description: "Отправьте её друзьям для приглашения." });
+    toast({ title: "Инвайт-код скопирован!", description: "Отправьте его для расширения Ядра." });
   };
 
   return (
@@ -70,45 +49,53 @@ export default function ProfileView() {
 
       <ScrollArea className="flex-1">
         <div className="px-4 space-y-4 pb-24">
-          {/* Stats Bar */}
+          {/* Реферальная программа / Продвижение */}
+          <div className="relative group">
+            <div className="absolute -inset-1 bg-gradient-to-tr from-primary/40 to-accent/40 rounded-[2rem] blur-md opacity-30 group-hover:opacity-60 transition-opacity" />
+            <div className="relative bg-white/5 border border-white/10 p-6 rounded-[2rem] flex flex-col gap-4 overflow-hidden">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-2xl bg-primary/20 flex items-center justify-center border border-primary/20">
+                    <Trophy className="w-5 h-5 text-primary" />
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-[10px] font-black uppercase text-primary tracking-widest leading-none">Referral Program</span>
+                    <span className="text-lg font-black italic text-white leading-none mt-1">{profile?.referralCount || 0}</span>
+                  </div>
+                </div>
+                <Button onClick={copyRefLink} className="h-10 rounded-xl bg-white text-black font-black uppercase text-[9px] tracking-widest px-4 hover:bg-white/90">Пригласить</Button>
+              </div>
+              <p className="text-[8px] text-muted-foreground uppercase font-bold leading-relaxed px-1">Приглашайте новых участников и получайте Premium-статус за каждые 5 активных узлов.</p>
+            </div>
+          </div>
+
           <div className="grid grid-cols-2 gap-3">
             <div className="bg-white/5 border border-white/5 p-4 rounded-3xl flex flex-col items-center justify-center gap-1">
-              <Trophy className="w-5 h-5 text-primary mb-1" />
-              <span className="text-[18px] font-black text-white">{profile?.referralCount || 0}</span>
-              <span className="text-[8px] uppercase font-black text-muted-foreground tracking-widest">Инвайтов</span>
+              <Zap className="w-5 h-5 text-yellow-500 mb-1" />
+              <span className="text-[18px] font-black text-white italic">Active</span>
+              <span className="text-[8px] uppercase font-black text-muted-foreground tracking-widest">Signal State</span>
             </div>
             <div className="bg-white/5 border border-white/5 p-4 rounded-3xl flex flex-col items-center justify-center gap-1">
-              <Star className="w-5 h-5 text-accent mb-1" />
-              <span className="text-[18px] font-black text-white">{profile?.isPremium ? 'Active' : 'Basic'}</span>
-              <span className="text-[8px] uppercase font-black text-muted-foreground tracking-widest">Статус</span>
+              <ShieldCheck className="w-5 h-5 text-green-500 mb-1" />
+              <span className="text-[18px] font-black text-white italic">QES 2.0</span>
+              <span className="text-[8px] uppercase font-black text-muted-foreground tracking-widest">Security Layer</span>
             </div>
           </div>
-
-          {/* Status Display */}
-          {(profile?.statusEmoji || profile?.statusText) && (
-            <div 
-              className="bg-white/5 border border-white/5 p-4 rounded-3xl flex items-center gap-3 cursor-pointer active:scale-95 transition-all"
-              onClick={() => { setSettingsTab('profile'); setIsSettingsOpen(true); }}
-            >
-              <div className="text-2xl h-12 w-12 rounded-2xl bg-white/5 flex items-center justify-center shrink-0">
-                {profile.statusEmoji || <Smile className="w-6 h-6 opacity-40" />}
-              </div>
-              <div className="flex flex-col min-w-0">
-                <span className="text-[10px] font-black uppercase tracking-widest text-primary mb-0.5">Текущий статус</span>
-                <p className="text-sm font-medium text-white truncate">{profile.statusText || 'Установить статус...'}</p>
-              </div>
-            </div>
-          )}
 
           <div className="bg-[#1c1c1e] rounded-[2rem] overflow-hidden divide-y divide-white/[0.05] border border-white/5">
-            <SettingsItem icon={Share2} label="Реферальная программа" color="text-primary" onClick={() => { setSettingsTab('referral'); setIsSettingsOpen(true); }} />
-            <SettingsItem icon={Bell} label="Уведомления" color="text-white" onClick={() => { setSettingsTab('appearance'); setIsSettingsOpen(true); }} />
-            <SettingsItem icon={Lock} label="Безопасность" color="text-white" onClick={() => { setSettingsTab('security'); setIsSettingsOpen(true); }} />
-            <SettingsItem icon={Bookmark} label="Избранное" color="text-white" onClick={openSavedMessages} />
+            <SettingsItem icon={Lock} label="Защита Ядра (E2EE)" color="text-primary" onClick={() => { setSettingsTab('privacy'); setIsSettingsOpen(true); }} />
+            <SettingsItem icon={Palette} label="Темы оформления" color="text-white" onClick={() => { setSettingsTab('appearance'); setIsSettingsOpen(true); }} />
+            <SettingsItem icon={Bookmark} label="Избранное" color="text-white" onClick={() => {}} />
+            <SettingsItem icon={HelpCircle} label="Помощь и FAQ" color="text-white" onClick={() => {}} />
           </div>
 
-          <div className="pt-2">
-            <p className="text-[11px] text-muted-foreground/40 uppercase font-black text-center tracking-[0.2em]">Nuxus Core v0.65.8</p>
+          <div className="pt-4 flex flex-col items-center gap-2">
+            <p className="text-[11px] text-muted-foreground/40 uppercase font-black tracking-[0.2em]">Nuxus Kernel v2.5.0</p>
+            <div className="flex gap-4 opacity-20">
+              <Globe className="w-4 h-4" />
+              <Server className="w-4 h-4" />
+              <Lock className="w-4 h-4" />
+            </div>
           </div>
         </div>
       </ScrollArea>
@@ -116,7 +103,7 @@ export default function ProfileView() {
   );
 }
 
-function SettingsItem({ icon: Icon, label, color, onClick }: { icon: any, label: string, color: string, onClick?: () => void }) {
+function SettingsItem({ icon: Icon, label, color, onClick }: any) {
   return (
     <div onClick={onClick} className="flex items-center justify-between p-4 cursor-pointer hover:bg-white/[0.02] transition-colors group">
       <div className="flex items-center gap-4">

@@ -16,7 +16,7 @@ import {
   LogOut, Palette, Check, Settings2, Camera, Lock, Image as ImageIcon, 
   Paintbrush, Shield, UserCircle, Layout, Smile, FileText, ChevronRight,
   ShieldCheck, Eye, Users2, MessageSquareLock, Upload, Smartphone, Share2, Trophy,
-  Bell, Video, Mic, MonitorSmartphone, Key, Trash2, ShieldAlert, RefreshCw, Save, Zap, Moon, Sun, Monitor
+  Bell, Video, Mic, MonitorSmartphone, Key, Trash2, ShieldAlert, RefreshCw, Save, Zap, Moon, Sun, Monitor, Download, Share
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { signOut, updatePassword } from 'firebase/auth';
@@ -41,24 +41,9 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
   const { toast } = useToast();
   const { settingsTab, setSettingsTab } = useAppState();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const bgInputRef = useRef<HTMLInputElement>(null);
 
   const userRef = useMemoFirebase(() => (!db || !user) ? null : doc(db!, 'users', user.uid), [db, user]);
   const { data: profile } = useDoc<User>(userRef);
-
-  const [perms, setPerms] = useState({ notifications: 'default', camera: 'default', mic: 'default' });
-  const [newPassword, setNewPassword] = useState('');
-  const [isPasswordLoading, setIsPasswordLoading] = useState(false);
-
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      setPerms({
-        notifications: typeof Notification !== 'undefined' ? Notification.permission : 'default',
-        camera: 'Разрешено',
-        mic: 'Разрешено'
-      });
-    }
-  }, [open]);
 
   const [form, setForm] = useState({
     name: '',
@@ -67,10 +52,6 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
     avatarUrl: '',
     appearance: 'dark' as 'light' | 'dark',
     theme: 'default',
-    chatBackground: '',
-    chatBackgroundFit: 'cover' as 'cover' | 'contain',
-    twoFactorEnabled: false,
-    twoFactorPin: '',
     privacy: {
       phoneVisibility: 'everybody',
       lastSeenVisibility: 'everybody',
@@ -79,10 +60,8 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
     }
   });
 
-  const isInitialized = useRef(false);
-
   useEffect(() => {
-    if (profile && open && !isInitialized.current) {
+    if (profile && open) {
       setForm({
         name: profile.name || '',
         username: (profile.username || '').replace('@', ''),
@@ -90,20 +69,14 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         avatarUrl: profile.avatarUrl || '',
         appearance: profile.settings?.appearance || 'dark',
         theme: profile.settings?.theme || 'default',
-        chatBackground: profile.settings?.chatBackground || '',
-        chatBackgroundFit: profile.settings?.chatBackgroundFit || 'cover',
-        twoFactorEnabled: !!profile.twoFactorEnabled,
-        twoFactorPin: profile.twoFactorPin || '',
-        privacy: {
-          phoneVisibility: profile.settings?.privacy?.phoneVisibility || 'everybody',
-          lastSeenVisibility: profile.settings?.privacy?.lastSeenVisibility || 'everybody',
-          allowGroupsFrom: profile.settings?.privacy?.allowGroupsFrom || 'everybody',
-          whoCanMessageMe: profile.settings?.privacy?.whoCanMessageMe || 'everybody'
+        privacy: profile.settings?.privacy || {
+          phoneVisibility: 'everybody',
+          lastSeenVisibility: 'everybody',
+          allowGroupsFrom: 'everybody',
+          whoCanMessageMe: 'everybody'
         }
       });
-      isInitialized.current = true;
     }
-    if (!open) isInitialized.current = false;
   }, [profile, open]);
 
   const handleSave = async () => {
@@ -114,12 +87,8 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         username: '@' + form.username.toLowerCase(),
         bio: form.bio,
         avatarUrl: form.avatarUrl,
-        twoFactorEnabled: form.twoFactorEnabled,
-        twoFactorPin: form.twoFactorPin,
         'settings.appearance': form.appearance,
         'settings.theme': form.theme,
-        'settings.chatBackground': form.chatBackground,
-        'settings.chatBackgroundFit': form.chatBackgroundFit,
         'settings.privacy': form.privacy
       });
       onOpenChange(false);
@@ -129,25 +98,18 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
     }
   };
 
-  const handleChangePassword = async () => {
-    if (!auth.currentUser || !newPassword || newPassword.length < 6) {
-      toast({ title: "Минимум 6 символов", variant: "destructive" });
-      return;
-    }
-    setIsPasswordLoading(true);
-    try {
-      await updatePassword(auth.currentUser, newPassword);
-      toast({ title: "Пароль успешно изменен" });
-      setNewPassword('');
-    } catch (e: any) {
-      toast({ title: "Ошибка системы", description: e.message, variant: "destructive" });
-    } finally {
-      setIsPasswordLoading(false);
-    }
+  const exportConfig = () => {
+    const config = JSON.stringify(form, null, 2);
+    const blob = new Blob([config], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `nuxus_config_${user?.uid?.slice(0, 6)}.json`;
+    a.click();
+    toast({ title: "Конфигурация экспортирована" });
   };
 
   return (
-    <>
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md bg-card border-border p-0 overflow-hidden h-[85vh] flex flex-col rounded-[2.5rem] shadow-2xl">
         <DialogHeader className="p-6 border-b border-white/5 shrink-0">
@@ -159,9 +121,9 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         <Tabs value={settingsTab} onValueChange={setSettingsTab} className="flex-1 flex flex-col min-h-0">
           <TabsList className="flex bg-muted/50 p-1 mx-6 mt-4 rounded-2xl shrink-0 overflow-x-auto scrollbar-hide">
             <TabsTrigger value="profile" className="flex-1 text-[9px] uppercase font-bold tracking-widest">Профиль</TabsTrigger>
-            <TabsTrigger value="system" className="flex-1 text-[9px] uppercase font-bold tracking-widest">Система</TabsTrigger>
             <TabsTrigger value="appearance" className="flex-1 text-[9px] uppercase font-bold tracking-widest">Стиль</TabsTrigger>
-            <TabsTrigger value="privacy" className="flex-1 text-[9px] uppercase font-bold tracking-widest">Приватность</TabsTrigger>
+            <TabsTrigger value="privacy" className="flex-1 text-[9px] uppercase font-bold tracking-widest">Защита</TabsTrigger>
+            <TabsTrigger value="backup" className="flex-1 text-[9px] uppercase font-bold tracking-widest">Архив</TabsTrigger>
           </TabsList>
 
           <ScrollArea className="flex-1 px-6">
@@ -174,7 +136,6 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                   </div>
                   <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={(e) => { const f = e.target.files?.[0]; if(f) { const r = new FileReader(); r.onloadend = () => setForm({...form, avatarUrl: r.result as string}); r.readAsDataURL(f); } }} />
                 </div>
-                
                 <div className="space-y-4 w-full">
                   <div className="space-y-2"><Label className="text-[10px] uppercase font-black">Имя</Label><Input value={form.name} onChange={e => setForm({...form, name: e.target.value})} className="bg-muted/30 border-white/5 h-12 rounded-2xl" /></div>
                   <div className="space-y-2"><Label className="text-[10px] uppercase font-black">Никнейм</Label><div className="relative"><span className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground">@</span><Input value={form.username} onChange={e => setForm({...form, username: e.target.value})} className="bg-muted/30 border-white/5 h-12 rounded-2xl pl-8" /></div></div>
@@ -183,29 +144,17 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
             </TabsContent>
 
             <TabsContent value="appearance" className="space-y-8 m-0 py-6">
-              {/* Тема (Light/Dark) */}
               <div className="space-y-4">
-                <Label className="text-[10px] font-black uppercase text-muted-foreground flex items-center gap-2">
-                  <Monitor className="w-3 h-3" /> Режим интерфейса
-                </Label>
+                <Label className="text-[10px] font-black uppercase text-muted-foreground flex items-center gap-2"><Monitor className="w-3 h-3" /> Режим интерфейса</Label>
                 <div className="grid grid-cols-2 gap-2">
-                  <button 
-                    onClick={() => setForm({...form, appearance: 'dark'})}
-                    className={cn("flex flex-col items-center gap-2 p-4 rounded-2xl border transition-all", form.appearance === 'dark' ? 'bg-primary/10 border-primary' : 'bg-muted/20 border-white/5')}
-                  >
-                    <Moon className={cn("w-6 h-6", form.appearance === 'dark' ? 'text-primary' : 'text-muted-foreground')} />
-                    <span className="text-[10px] font-black uppercase tracking-widest">Тёмная</span>
+                  <button onClick={() => setForm({...form, appearance: 'dark'})} className={cn("flex flex-col items-center gap-2 p-4 rounded-2xl border transition-all", form.appearance === 'dark' ? 'bg-primary/10 border-primary' : 'bg-muted/20 border-white/5')}>
+                    <Moon className={cn("w-6 h-6", form.appearance === 'dark' ? 'text-primary' : 'text-muted-foreground')} /><span className="text-[10px] font-black uppercase tracking-widest">Тёмная</span>
                   </button>
-                  <button 
-                    onClick={() => setForm({...form, appearance: 'light'})}
-                    className={cn("flex flex-col items-center gap-2 p-4 rounded-2xl border transition-all", form.appearance === 'light' ? 'bg-primary/10 border-primary' : 'bg-muted/20 border-white/5')}
-                  >
-                    <Sun className={cn("w-6 h-6", form.appearance === 'light' ? 'text-primary' : 'text-muted-foreground')} />
-                    <span className="text-[10px] font-black uppercase tracking-widest">Светлая</span>
+                  <button onClick={() => setForm({...form, appearance: 'light'})} className={cn("flex flex-col items-center gap-2 p-4 rounded-2xl border transition-all", form.appearance === 'light' ? 'bg-primary/10 border-primary' : 'bg-muted/20 border-white/5')}>
+                    <Sun className={cn("w-6 h-6", form.appearance === 'light' ? 'text-primary' : 'text-muted-foreground')} /><span className="text-[10px] font-black uppercase tracking-widest">Светлая</span>
                   </button>
                 </div>
               </div>
-
               <div className="space-y-4 pt-4 border-t border-white/5">
                 <Label className="text-[10px] uppercase font-black text-muted-foreground flex items-center gap-2"><Paintbrush className="w-3 h-3" /> Цветовая схема</Label>
                 <div className="grid grid-cols-1 gap-2">
@@ -219,20 +168,27 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
               </div>
             </TabsContent>
 
-            <TabsContent value="system" className="space-y-6 m-0 py-6">
-              <div className="space-y-4">
-                <h3 className="text-[10px] font-black uppercase tracking-widest text-primary flex items-center gap-2 px-1">
-                  <ShieldAlert className="w-4 h-4" /> Security Center
-                </h3>
-                <div className="bg-muted/20 p-4 rounded-[1.8rem] border border-white/5 space-y-4">
-                  <div className="space-y-2">
-                    <Label className="text-[9px] uppercase font-black text-foreground/40 ml-1">Новый пароль</Label>
-                    <div className="flex gap-2">
-                      <Input type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} className="bg-black/20 border-white/10 h-11 rounded-xl" />
-                      <Button size="icon" onClick={handleChangePassword} disabled={isPasswordLoading} className="h-11 w-11 rounded-xl bg-primary"><Save className="w-4 h-4" /></Button>
-                    </div>
-                  </div>
+            <TabsContent value="privacy" className="space-y-6 m-0 py-6">
+              <div className="bg-primary/5 p-4 rounded-3xl border border-primary/10 flex items-center gap-4 mb-4">
+                <ShieldCheck className="w-8 h-8 text-primary" />
+                <div className="flex flex-col">
+                  <span className="text-xs font-bold text-white uppercase italic">QES Encryption Active</span>
+                  <span className="text-[9px] text-muted-foreground uppercase font-black">Все ваши пакеты данных шифруются на лету.</span>
                 </div>
+              </div>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between"><div className="flex flex-col"><span className="text-xs font-bold text-white">Кто видит номер</span><span className="text-[9px] text-muted-foreground uppercase">Конфиденциальность узла</span></div><Select value={form.privacy.phoneVisibility} onValueChange={v => setForm({...form, privacy: {...form.privacy, phoneVisibility: v as any}})}><SelectTrigger className="w-[120px] h-8 text-[9px] font-bold uppercase"><SelectValue /></SelectTrigger><SelectContent className="bg-card border-white/10"><SelectItem value="everybody">Все</SelectItem><SelectItem value="contacts">Контакты</SelectItem><SelectItem value="nobody">Никто</SelectItem></SelectContent></Select></div>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="backup" className="space-y-6 m-0 py-6">
+              <div className="p-6 bg-white/5 rounded-[2rem] border border-white/5 text-center">
+                <Download className="w-12 h-12 text-primary mx-auto mb-4" />
+                <h3 className="text-sm font-black uppercase text-white mb-2">Конфигурация Узла</h3>
+                <p className="text-[10px] text-muted-foreground uppercase font-bold mb-6 px-4">Экспортируйте ваши настройки стиля и приватности в JSON файл для быстрого переноса.</p>
+                <Button onClick={exportConfig} className="w-full h-12 bg-primary/10 text-primary border border-primary/20 rounded-xl font-black uppercase text-[10px] tracking-widest gap-2">
+                  <Share className="w-4 h-4" /> Экспортировать
+                </Button>
               </div>
             </TabsContent>
           </ScrollArea>
@@ -244,6 +200,5 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         </Tabs>
       </DialogContent>
     </Dialog>
-    </>
   );
 }

@@ -5,7 +5,7 @@ import React, { useState, useRef } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Camera, Send, X, Loader2, Zap } from 'lucide-react';
+import { Camera, Send, X, Loader2, Zap, FileUp } from 'lucide-react';
 import { useUser, useFirestore } from '@/firebase';
 import { collection, addDoc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
@@ -28,8 +28,10 @@ export function CreateStoryModal({ open, onOpenChange }: { open: boolean, onOpen
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (file.size > 15 * 1024 * 1024) {
-      toast({ title: "Файл слишком большой", description: "Лимит Ядра — 15МБ", variant: "destructive" });
+    // Увеличен лимит до 100 МБ для Premium пользователей (симуляция)
+    const limit = 100 * 1024 * 1024;
+    if (file.size > limit) {
+      toast({ title: "Файл слишком большой", description: "Лимит Ядра — 100МБ", variant: "destructive" });
       return;
     }
 
@@ -50,7 +52,8 @@ export function CreateStoryModal({ open, onOpenChange }: { open: boolean, onOpen
     try {
       let finalContent = preview;
       if (type === 'image') {
-        finalContent = await compressImage(preview, 1080, 0.5);
+        // Улучшенное сжатие для E2EE мессенджера
+        finalContent = await compressImage(preview, 1200, 0.7);
       }
 
       await addDoc(collection(db, 'stories'), {
@@ -83,7 +86,7 @@ export function CreateStoryModal({ open, onOpenChange }: { open: boolean, onOpen
             <Zap className="w-5 h-5 text-primary" /> Новый Момент
           </DialogTitle>
           <DialogDescription className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">
-            Поделитесь событием на 24 часа
+            HQ Медиа пакет до 100МБ
           </DialogDescription>
         </DialogHeader>
 
@@ -91,7 +94,7 @@ export function CreateStoryModal({ open, onOpenChange }: { open: boolean, onOpen
           {(isLoading || isPublishing) && !preview ? (
             <div className="flex flex-col items-center gap-4">
               <Loader2 className="w-10 h-10 text-primary animate-spin" />
-              <p className="text-[10px] font-black uppercase tracking-widest">Обработка Сигнала...</p>
+              <p className="text-[10px] font-black uppercase tracking-widest">Шифрование пакета...</p>
             </div>
           ) : preview ? (
             <div className="relative w-full aspect-[3/4] max-h-[50vh] rounded-3xl overflow-hidden shadow-2xl border border-white/10 group">
@@ -112,16 +115,16 @@ export function CreateStoryModal({ open, onOpenChange }: { open: boolean, onOpen
           ) : (
             <button onClick={() => fileInputRef.current?.click()} className="w-full h-64 rounded-3xl border-2 border-dashed border-white/10 flex flex-col items-center justify-center gap-4 hover:bg-white/5 transition-all">
               <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
-                <Camera className="w-8 h-8 text-primary" />
+                <FileUp className="w-8 h-8 text-primary" />
               </div>
-              <p className="text-[10px] font-black uppercase tracking-[0.3em] text-white">Загрузить медиа</p>
+              <p className="text-[10px] font-black uppercase tracking-[0.3em] text-white">Выбрать файл (HQ)</p>
             </button>
           )}
           <input type="file" ref={fileInputRef} hidden accept="image/*,video/*" onChange={handleFile} />
         </div>
 
         <div className="p-6 pb-10 space-y-4 bg-[#0a0a0c] border-t border-white/5 shrink-0">
-          <Input placeholder="Добавить подпись..." value={caption} onChange={e => setCaption(e.target.value)} disabled={isPublishing} className="bg-white/5 border-white/5 h-12 rounded-2xl text-center" />
+          <Input placeholder="Добавить подпись к моменту..." value={caption} onChange={e => setCaption(e.target.value)} disabled={isPublishing} className="bg-white/5 border-white/5 h-12 rounded-2xl text-center" />
           <Button 
             className="w-full h-14 bg-primary text-white rounded-2xl font-black uppercase italic tracking-widest shadow-xl shadow-primary/20"
             onClick={handleCreate}

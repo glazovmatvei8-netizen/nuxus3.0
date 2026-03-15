@@ -4,140 +4,84 @@
 import React from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { FileText, ShieldCheck, Scale, Globe, Lock, ShieldAlert, Cpu, Database, Server, Key, EyeOff, Gavel, Zap } from 'lucide-react';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { FileText, ShieldCheck, Scale, Globe, Lock, ShieldAlert, Cpu, Database, Server, Key, EyeOff, Gavel, Zap, Info, HelpCircle } from 'lucide-react';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 
-interface LegalModalProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  type: 'privacy' | 'terms';
-}
-
-export function LegalModal({ open, onOpenChange, type }: LegalModalProps) {
+export function LegalModal({ open, onOpenChange, type }: { open: boolean, onOpenChange: (o: boolean) => void, type: 'privacy' | 'terms' }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl bg-[#0a0a0c] border-white/10 rounded-[2.5rem] p-0 overflow-hidden shadow-2xl flex flex-col h-[80vh]">
+      <DialogContent className="max-w-2xl bg-[#0a0a0c] border-white/10 rounded-[2.5rem] p-0 overflow-hidden shadow-2xl flex flex-col h-[85vh]">
         <DialogHeader className="p-6 border-b border-white/5 shrink-0">
           <DialogTitle className="text-xl font-black uppercase italic text-white flex items-center gap-3">
-            {type === 'privacy' ? (
-              <><ShieldCheck className="w-6 h-6 text-primary" /> Политика конфиденциальности 2.0</>
-            ) : (
-              <><Scale className="w-6 h-6 text-accent" /> Условия использования 2.0</>
-            )}
+            <ShieldCheck className="w-6 h-6 text-primary" /> База Знаний Ядра
           </DialogTitle>
           <DialogDescription className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">
-            Nuxus Kernel Legal Documentation v2.0 — Hyper-Quantum Edition
+            Nuxus Kernel 2.0.65 — Help & Support Center
           </DialogDescription>
         </DialogHeader>
 
-        <ScrollArea className="flex-1 p-8">
-          <div className="space-y-10 text-sm text-muted-foreground leading-relaxed font-medium">
-            {type === 'privacy' ? (
-              <>
-                <section className="space-y-4">
-                  <h3 className="text-white font-black uppercase tracking-wider flex items-center gap-2">
-                    <Database className="w-4 h-4 text-primary" /> 1. ФУНДАМЕНТАЛЬНЫЕ ПРИНЦИПЫ ЯДРА
-                  </h3>
-                  <p>Ядро Nuxus оперирует на базе децентрализованной архитектуры и принципа абсолютной минимизации данных. Мы не являемся классическим мессенджером; мы — платформа маршрутизации зашифрованных сигналов. В рамках версии 2.0 мы внедрили протоколы нулевого разглашения (Zero-Knowledge Proofs), что гарантирует:</p>
-                  <ul className="list-disc pl-5 space-y-3">
-                    <li><b>Анонимность узла:</b> Мы не сопоставляем ваш номер телефона с вашей реальной личностью. Номер используется исключительно как идентификатор в сети Quantum Core.</li>
-                    <li><b>Метаданные:</b> Система не сохраняет историю ваших подключений, IP-адресов или геолокацию в долгосрочной перспективе. Все метаданные удаляются автоматически после завершения сессии синхронизации.</li>
-                    <li><b>Облачные зашифрованные контейнеры:</b> Ваша переписка хранится на серверах только в виде зашифрованных фрагментов, ключи к которым находятся исключительно на конечном устройстве пользователя.</li>
-                  </ul>
-                </section>
-
-                <section className="space-y-4">
-                  <h3 className="text-white font-black uppercase tracking-wider flex items-center gap-2">
-                    <Key className="w-4 h-4 text-primary" /> 2. ТЕХНОЛОГИЯ QUANTUM ENCRYPTION
-                  </h3>
-                  <p>Все данные, передаваемые через Ядро Nuxus, защищены многослойным шифрованием. Мы используем комбинацию алгоритмов AES-256-GCM и пост-квантовой криптографии для обеспечения долгосрочной безопасности:</p>
-                  <p>Это означает, что даже при использовании сверхмощных вычислительных систем в будущем, ваши текущие диалоги останутся защищенными. Ключи дешифрования генерируются локально и никогда не передаются в открытом виде через магистральные узлы Ядра.</p>
-                  <p><b>ВНИМАНИЕ:</b> Оператор Ядра не имеет технической возможности восстановить ваш пароль или PIN-код 2FA. Утрата этих данных ведет к безвозвратной потере доступа к зашифрованному контейнеру сообщений.</p>
-                </section>
-
-                <section className="space-y-4">
-                  <h3 className="text-white font-black uppercase tracking-wider flex items-center gap-2">
-                    <EyeOff className="w-4 h-4 text-primary" /> 3. ТРЕТЬИ ЛИЦА И РАСКРЫТИЕ ДАННЫХ
-                  </h3>
-                  <p>Nuxus придерживается политики полной изоляции от рекламных сетей и систем слежения. Мы гарантируем, что:</p>
-                  <ul className="list-disc pl-5 space-y-3">
-                    <li>Ваши данные никогда не будут проданы или переданы аналитическим компаниям для профилирования.</li>
-                    <li>Мы не интегрируем сторонние SDK (за исключением базовых сервисов Vercel для мониторинга стабильности бандла), которые могут собирать информацию в фоновом режиме.</li>
-                    <li>Раскрытие информации государственным органам возможно только при наличии законного судебного ордера, признанного международным правом. Однако даже в этом случае мы сможем предоставить только зашифрованные фрагменты данных без ключей доступа.</li>
-                  </ul>
-                </section>
-
-                <section className="space-y-4">
-                  <h3 className="text-white font-black uppercase tracking-wider flex items-center gap-2">
-                    <Zap className="w-4 h-4 text-primary" /> 4. АВТОНОМНОЕ ХРАНЕНИЕ (OFFLINE KERNEL)
-                  </h3>
-                  <p>В версии 2.0 введена функция Offline Kernel. Это означает, что часть вашего профиля и кэш последних сообщений хранятся в защищенном хранилище вашего устройства (LocalStorage/IndexedDB). Мы рекомендуем использовать системные средства защиты устройства (FaceID/TouchID/Пароль), чтобы предотвратить несанкционированный физический доступ к этим данным.</p>
-                </section>
-
-                <section className="space-y-4">
-                  <h3 className="text-white font-black uppercase tracking-wider flex items-center gap-2">
-                    <Server className="w-4 h-4 text-primary" /> 5. УДАЛЕНИЕ И ПРАВО НА ЗАБВЕНИЕ
-                  </h3>
-                  <p>Вы обладаете полным суверенитетом над своим цифровым следом. В любой момент вы можете инициировать процедуру "Самоуничтожения Узла". Это приведет к:</p>
-                  <ul className="list-disc pl-5 space-y-2">
-                    <li>Мгновенному удалению вашего профиля из глобального реестра Ядра.</li>
-                    <li>Стиранию всех зашифрованных сообщений в личных чатах на сервере.</li>
-                    <li>Аннулированию всех активных сессий на всех устройствах.</li>
-                  </ul>
-                </section>
-              </>
-            ) : (
-              <>
-                <section className="space-y-4">
-                  <h3 className="text-white font-black uppercase tracking-wider flex items-center gap-2">
-                    <Gavel className="w-4 h-4 text-accent" /> 1. СОГЛАСИЕ И ПРИНЯТИЕ УСЛОВИЙ
-                  </h3>
-                  <p>Использование программного комплекса Nuxus 2.0 (далее — "Ядро") означает ваше полное и безоговорочное согласие с данными условиями. Если вы не согласны хотя бы с одним из пунктов, вы обязаны немедленно прекратить использование приложения и удалить свой узел связи.</p>
-                  <p>Настоящее соглашение является публичной офертой и может быть изменено администрацией Ядра в одностороннем порядке без предварительного уведомления пользователей.</p>
-                </section>
-
-                <section className="space-y-4">
-                  <h3 className="text-white font-black uppercase tracking-wider flex items-center gap-2">
-                    <ShieldAlert className="w-4 h-4 text-accent" /> 2. ПРАВИЛА ПОВЕДЕНИЯ И ОГРАНИЧЕНИЯ
-                  </h3>
-                  <p>Ядро Nuxus создано для обеспечения свободы слова и безопасной связи. Однако использование системы для совершения противоправных действий строго запрещено. К таким действиям относятся:</p>
-                  <ul className="list-disc pl-5 space-y-3">
-                    <li><b>Деструктивная деятельность:</b> Попытки взлома Ядра, проведение DDoS-атак на узлы системы, распространение вредоносного ПО.</li>
-                    <li><b>Нарушение прав личности:</b> Массовая рассылка спама (Spamming), кибербуллинг, домогательства и разжигание ненависти.</li>
-                    <li><b>Незаконный контент:</b> Распространение материалов, содержащих детскую порнографию, инструкции по изготовлению оружия или пропаганду терроризма.</li>
-                    <li><b>Нарушение авторских прав:</b> Использование каналов и групп для массового распространения интеллектуальной собственности без согласия правообладателей.</li>
-                  </ul>
-                  <p>Администрация оставляет за собой право блокировать узлы (аккаунты), нарушающие данные правила, без права восстановления.</p>
-                </section>
-
-                <section className="space-y-4">
-                  <h3 className="text-white font-black uppercase tracking-wider flex items-center gap-2">
-                    <Lock className="w-4 h-4 text-accent" /> 3. ОТВЕТСТВЕННОСТЬ СТОРОН
-                  </h3>
-                  <p>Поскольку Nuxus является инструментом с глубоким шифрованием, вы несете полную и исключительную ответственность за контент, который вы передаете через систему. Администрация Ядра не осуществляет предварительную модерацию личных сообщений и не несет за них ответственности.</p>
-                  <p>Система предоставляется по принципу "AS IS" (как есть). Мы не гарантируем 100% аптайм в условиях глобальных сбоев инфраструктуры интернета или атак на магистральные узлы. Мы также не несем ответственности за косвенные убытки, возникшие в результате использования или невозможности использования Ядра.</p>
-                </section>
-
-                <section className="space-y-4">
-                  <h3 className="text-white font-black uppercase tracking-wider flex items-center gap-2">
-                    <Cpu className="w-4 h-4 text-accent" /> 4. ПРЕМИАЛЬНЫЕ ФУНКЦИИ И МОНЕТИЗАЦИЯ
-                  </h3>
-                  <p>Базовые функции общения в Nuxus всегда будут бесплатными. Мы оставляем за собой право вводить платные подписки (Nuxus Premium) для получения доступа к расширенным ресурсам Ядра (увеличенное облако, эксклюзивные статусы, приоритетная поддержка). Все платежи обрабатываются через защищенные шлюзы третьих лиц, и Nuxus не получает доступа к вашим банковским данным.</p>
-                </section>
-
-                <section className="space-y-4">
-                  <h3 className="text-white font-black uppercase tracking-wider flex items-center gap-2">
-                    <Globe className="w-4 h-4 text-accent" /> 5. ЮРИСДИКЦИЯ
-                  </h3>
-                  <p>Настоящее соглашение регулируется международными нормами права. В случае возникновения споров, стороны обязуются пытаться решить их путем переговоров в рамках цифровой этики Ядра Nuxus.</p>
-                </section>
-              </>
-            )}
-            <div className="pt-16 pb-10 text-center">
-              <p className="text-[10px] uppercase font-black tracking-[0.4em] opacity-30">Nuxus — Технологии на страже вашей свободы</p>
-              <p className="text-[8px] uppercase font-bold mt-2 opacity-20">BUILD 2.0.65 — QUANTUM READY</p>
-            </div>
+        <Tabs defaultValue="faq" className="flex-1 flex flex-col min-h-0">
+          <div className="px-6 pt-2 shrink-0">
+            <TabsList className="grid grid-cols-2 bg-white/5 p-1 rounded-2xl">
+              <TabsTrigger value="faq" className="rounded-xl text-[10px] font-black uppercase tracking-widest">База знаний</TabsTrigger>
+              <TabsTrigger value="legal" className="rounded-xl text-[10px] font-black uppercase tracking-widest">Юридическая инфо</TabsTrigger>
+            </TabsList>
           </div>
-        </ScrollArea>
+
+          <TabsContent value="faq" className="flex-1 m-0 overflow-hidden data-[state=active]:flex flex-col">
+            <ScrollArea className="flex-1 p-8">
+              <div className="space-y-6">
+                <h3 className="text-white font-black uppercase tracking-[0.2em] flex items-center gap-3 text-sm">
+                  <HelpCircle className="w-5 h-5 text-primary" /> Часто задаваемые вопросы
+                </h3>
+                
+                <Accordion type="single" collapsible className="space-y-2">
+                  <AccordionItem value="item-1" className="border-white/5 px-4 rounded-2xl bg-white/[0.02]">
+                    <AccordionTrigger className="text-[11px] font-bold uppercase text-white/80 hover:no-underline">Как работает сквозное шифрование (E2EE)?</AccordionTrigger>
+                    <AccordionContent className="text-[10px] text-muted-foreground leading-relaxed">
+                      Все ваши текстовые сообщения шифруются протоколом QES на вашем устройстве. Только получатель имеет ключ для дешифровки пакета. Ядро (сервер) видит только зашифрованный шум.
+                    </AccordionContent>
+                  </AccordionItem>
+
+                  <AccordionItem value="item-2" className="border-white/5 px-4 rounded-2xl bg-white/[0.02]">
+                    <AccordionTrigger className="text-[11px] font-bold uppercase text-white/80 hover:no-underline">Почему лимит медиа — 100 МБ?</AccordionTrigger>
+                    <AccordionContent className="text-[10px] text-muted-foreground leading-relaxed">
+                      Для обеспечения высокой скорости синхронизации и стабильности на мобильных устройствах мы установили лимит в 100 МБ для высококачественных фото и видео (HQ).
+                    </AccordionContent>
+                  </AccordionItem>
+
+                  <AccordionItem value="item-3" className="border-white/5 px-4 rounded-2xl bg-white/[0.02]">
+                    <AccordionTrigger className="text-[11px] font-bold uppercase text-white/80 hover:no-underline">Как работает реферальная программа?</AccordionTrigger>
+                    <AccordionContent className="text-[10px] text-muted-foreground leading-relaxed">
+                      Вы можете скопировать свою уникальную ссылку в профиле. За каждого нового пользователя, активировавшего узел по вашей ссылке, вы получаете бонусные баллы активности в Ядре.
+                    </AccordionContent>
+                  </AccordionItem>
+                </Accordion>
+
+                <div className="p-6 bg-primary/5 rounded-3xl border border-primary/10 mt-8">
+                  <h4 className="text-[10px] font-black uppercase text-primary mb-2">Нужна прямая поддержка?</h4>
+                  <p className="text-[9px] text-muted-foreground uppercase font-bold leading-relaxed">Отправьте сообщение в чат @nuxus_support или обратитесь к Оператору Ядра через тикет-систему.</p>
+                </div>
+              </div>
+            </ScrollArea>
+          </TabsContent>
+
+          <TabsContent value="legal" className="flex-1 m-0 overflow-hidden data-[state=active]:flex flex-col">
+            <ScrollArea className="flex-1 p-8">
+              <div className="space-y-10 text-sm text-muted-foreground font-medium">
+                <section className="space-y-4">
+                  <h3 className="text-white font-black uppercase tracking-wider flex items-center gap-2"><Database className="w-4 h-4 text-primary" /> ПРИНЦИПЫ ЯДРА</h3>
+                  <p>Ядро Nuxus оперирует на базе децентрализованной архитектуры и принципа абсолютной минимизации данных. Все метаданные удаляются автоматически после завершения сессии синхронизации.</p>
+                </section>
+                <section className="space-y-4">
+                  <h3 className="text-white font-black uppercase tracking-wider flex items-center gap-2"><Key className="w-4 h-4 text-primary" /> БЕЗОПАСНОСТЬ QES</h3>
+                  <p>Протокол Quantum Encryption Signal использует каскадное шифрование. Утрата пароля ведет к безвозвратной потере доступа к сообщениям, так как ключи дешифровки не хранятся на сервере.</p>
+                </section>
+              </div>
+            </ScrollArea>
+          </TabsContent>
+        </Tabs>
       </DialogContent>
     </Dialog>
   );
