@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useMemo, memo, useRef } from 'react';
@@ -122,7 +121,7 @@ const ChatListItem = memo(({
   const resetSwipe = () => { setOffsetX(0); setIsDragging(false); };
 
   return (
-    <div className="relative overflow-hidden touch-pan-y select-none bg-[#0a0a0c] border-none" style={{ WebkitTouchCallout: 'none' }}>
+    <div className="relative overflow-hidden touch-pan-y select-none bg-background border-none" style={{ WebkitTouchCallout: 'none' }}>
       <div className={cn("absolute inset-y-0 left-0 flex h-full z-0 transition-opacity duration-200", offsetX > 10 ? "opacity-100" : "opacity-0 pointer-events-none")}>
         <button onClick={(e) => { e.stopPropagation(); onMarkUnread(chat.id); resetSwipe(); }} className="w-20 bg-[#007AFF] flex flex-col items-center justify-center text-white gap-1 active:brightness-90 transition-all">
           <MessageCircle className="w-5 h-5 fill-current" />
@@ -148,7 +147,7 @@ const ChatListItem = memo(({
       </div>
 
       <div 
-        className={cn("relative z-10 bg-[#0a0a0c] will-change-transform w-full border-none select-none", !isDragging && "transition-transform duration-300 ease-out")}
+        className={cn("relative z-10 bg-background will-change-transform w-full border-none select-none", !isDragging && "transition-transform duration-300 ease-out")}
         style={{ transform: `translateX(${offsetX}px)` }}
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
@@ -157,11 +156,11 @@ const ChatListItem = memo(({
       >
         <ContextMenu>
           <ContextMenuTrigger disabled={Math.abs(offsetX) > 10 || isDragging}>
-            <div className={cn("flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors border-none group relative bg-[#0a0a0c] w-full h-[80px] select-none", isActive && Math.abs(offsetX) < 5 ? 'bg-white/10' : 'active:bg-white/[0.05]')}>
+            <div className={cn("flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors border-none group relative w-full h-[80px] select-none", isActive && Math.abs(offsetX) < 5 ? 'bg-primary/10' : 'active:bg-muted/50')}>
               <UserAvatar userId={otherId} manualAvatarUrl={otherProfile?.avatarUrl || chat.avatarUrl} className="h-[54px] w-[54px]" fallbackName={finalDisplayName} showOnlineStatus />
-              <div className="flex-1 min-w-0 pb-1 h-full flex flex-col justify-center border-b border-white/[0.03]">
+              <div className="flex-1 min-w-0 pb-1 h-full flex flex-col justify-center border-b border-border/40">
                 <div className="flex items-center justify-between mb-0.5">
-                  <span className="font-bold text-[16px] text-white truncate flex items-center gap-1">
+                  <span className="font-bold text-[16px] truncate flex items-center gap-1">
                     {isPinned && <Pin className="w-3 h-3 text-primary fill-primary rotate-45" />}
                     {finalDisplayName} {otherProfile?.isPremium && <Star className="w-3 h-3 text-accent fill-accent inline ml-1" />}
                   </span>
@@ -172,27 +171,27 @@ const ChatListItem = memo(({
                     {isEncrypted && <Lock className="w-2.5 h-2.5 shrink-0 opacity-40" />}
                     {decryptedPreview}
                   </p>
-                  {isUnread && <div className="w-2.5 h-2.5 bg-[#007AFF] rounded-full shadow-[0_0_8px_rgba(0,122,255,0.5)] shrink-0 ml-2" />}
+                  {isUnread && <div className="w-2.5 h-2.5 bg-primary rounded-full shadow-[0_0_8px_rgba(var(--primary),0.5)] shrink-0 ml-2" />}
                 </div>
               </div>
             </div>
           </ContextMenuTrigger>
-          <ContextMenuContent className="w-64 bg-card/95 backdrop-blur-xl border-white/10 rounded-2xl shadow-2xl p-1">
-            <ContextMenuItem onClick={() => onMarkUnread(chat.id)} className="gap-3 py-3 font-bold uppercase text-[11px] tracking-widest rounded-xl hover:bg-white/5">
+          <ContextMenuContent className="w-64 bg-card/95 backdrop-blur-xl border-border rounded-2xl shadow-2xl p-1">
+            <ContextMenuItem onClick={() => onMarkUnread(chat.id)} className="gap-3 py-3 font-bold uppercase text-[11px] tracking-widest rounded-xl">
               <MessageCircle className="w-4 h-4 text-[#007AFF]" /> {chat.isManualUnread ? 'Прочитать' : 'Не прочит.'}
             </ContextMenuItem>
             
-            <ContextMenuItem onClick={() => onPinToggle(chat.id)} className="gap-3 py-3 font-bold uppercase text-[11px] tracking-widest rounded-xl hover:bg-white/5">
+            <ContextMenuItem onClick={() => onPinToggle(chat.id)} className="gap-3 py-3 font-bold uppercase text-[11px] tracking-widest rounded-xl">
               {isPinned ? <><PinOff className="w-4 h-4 text-[#34C759]" /> Открепить</> : <><Pin className="w-4 h-4 text-[#34C759]" /> Закрепить</>}
             </ContextMenuItem>
 
-            <ContextMenuItem onClick={() => onArchive(chat.id, !!chat.isArchived)} className="gap-3 py-3 font-bold uppercase text-[11px] tracking-widest rounded-xl hover:bg-white/5">
+            <ContextMenuItem onClick={() => onArchive(chat.id, !!chat.isArchived)} className="gap-3 py-3 font-bold uppercase text-[11px] tracking-widest rounded-xl">
               <Archive className="w-4 h-4 text-[#FF9500]" /> {chat.isArchived ? 'Вернуть' : 'В архив'}
             </ContextMenuItem>
 
-            <ContextMenuSeparator className="bg-white/5" />
+            <ContextMenuSeparator className="bg-border/40" />
 
-            <ContextMenuItem onClick={() => onDelete(chat.id)} className="gap-3 py-3 font-bold uppercase text-[11px] tracking-widest rounded-xl text-[#FF3B30] hover:bg-red-500/10">
+            <ContextMenuItem onClick={() => onDelete(chat.id)} className="gap-3 py-3 font-bold uppercase text-[11px] tracking-widest rounded-xl text-destructive hover:bg-destructive/10">
               <Trash2 className="w-4 h-4" /> Удалить узел
             </ContextMenuItem>
           </ContextMenuContent>
@@ -260,7 +259,6 @@ export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?:
       return bTime - aTime;
     });
 
-    // Deduplicate private chats
     const seenPrivateUsers = new Set();
     result = result.filter(c => {
       if (c.type === 'private') {
@@ -286,25 +284,25 @@ export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?:
   }, [chats, activeTab, isArchiveView, currentUserProfile?.pinnedChatIds, user?.uid]);
 
   return (
-    <div className="flex flex-col h-full bg-[#0a0a0c] overflow-hidden">
-      <div className="px-4 pt-4 shrink-0 bg-[#0a0a0c] z-20">
+    <div className="flex flex-col h-full bg-background overflow-hidden">
+      <div className="px-4 pt-4 shrink-0 bg-background z-20">
         <div className="grid grid-cols-3 items-center h-12 mb-2 w-full">
           <div className="flex justify-start">
-            <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full bg-white/5" onClick={() => setIsSearchOpen(true)}>
-              <Search className="w-5 h-5 text-white/60" />
+            <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full bg-muted" onClick={() => setIsSearchOpen(true)}>
+              <Search className="w-5 h-5 text-muted-foreground" />
             </Button>
           </div>
           <div className="flex justify-center">
-            <h1 onClick={() => isGlobalAdmin(currentUserProfile) && setIsAdminPanelOpen(true)} className={cn("text-[20px] font-black text-white italic tracking-tighter whitespace-nowrap", isGlobalAdmin(currentUserProfile) ? "cursor-pointer hover:text-primary" : "cursor-default")}>
+            <h1 onClick={() => isGlobalAdmin(currentUserProfile) && setIsAdminPanelOpen(true)} className={cn("text-[20px] font-black italic tracking-tighter whitespace-nowrap", isGlobalAdmin(currentUserProfile) ? "cursor-pointer hover:text-primary" : "cursor-default")}>
               {isArchiveView ? 'Архив' : 'Чаты🐱'}
             </h1>
           </div>
           <div className="flex justify-end gap-2">
-            <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full bg-white/5" onClick={() => setIsCreateModalOpen(true)}>
-              <Plus className="w-5 h-5 text-white" />
+            <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full bg-muted" onClick={() => setIsCreateModalOpen(true)}>
+              <Plus className="w-5 h-5" />
             </Button>
-            <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full bg-white/5" onClick={() => setIsEditorModalOpen(true)}>
-              <SquarePen className="w-5 h-5 text-white" />
+            <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full bg-muted" onClick={() => setIsEditorModalOpen(true)}>
+              <SquarePen className="w-5 h-5" />
             </Button>
           </div>
         </div>
@@ -322,7 +320,7 @@ export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?:
                     { id: 'private', label: 'Личные' },
                     { id: 'groups', label: 'Сообщества' }
                   ].map((tab) => (
-                    <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={cn("px-4 py-1.5 rounded-full text-[12px] font-black uppercase tracking-widest transition-all whitespace-nowrap", activeTab === tab.id ? "bg-[#007AFF] text-white shadow-lg" : "text-muted-foreground/40 hover:text-white bg-white/5")}>
+                    <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={cn("px-4 py-1.5 rounded-full text-[12px] font-black uppercase tracking-widest transition-all whitespace-nowrap", activeTab === tab.id ? "bg-primary text-white shadow-lg" : "text-muted-foreground/60 hover:text-foreground bg-muted")}>
                       {tab.label}
                     </button>
                   ))}
