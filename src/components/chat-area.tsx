@@ -81,7 +81,7 @@ export default function ChatArea() {
 
   // Recording states
   const [isRecording, setIsRecording] = useState(false);
-  const [recordingType, setRecordingType] = useState<'audio' | 'video_note'>('audio');
+  const [recordingType, setRecordingType] = useState<'audio' | 'video_note'>( 'audio');
   const [recordingTime, setRecordingTime] = useState(0);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
@@ -283,6 +283,16 @@ export default function ChatArea() {
     setTimeout(() => scrollToBottom('smooth'), 100);
   }, [messageInput, currentChatId, firebaseUser, db, userProfile, replyTo, editingMsg, setLocalDrafts, scrollToBottom, isInterception, canPost]);
 
+  const handlePinMessage = useCallback(async (msg: Message) => {
+    if (!db || !currentChatId) return;
+    try {
+      await updateDoc(doc(db, 'chats', currentChatId), { pinnedMessageId: msg.id });
+      toast({ title: "Сообщение закреплено" });
+    } catch (e) {
+      toast({ title: "Ошибка закрепления", variant: "destructive" });
+    }
+  }, [db, currentChatId, toast]);
+
   const formatDuration = (s: number) => {
     const mins = Math.floor(s / 60);
     const secs = s % 60;
@@ -361,9 +371,18 @@ export default function ChatArea() {
           className="flex-1 w-full relative z-10 overflow-y-auto scroll-smooth scrollbar-hide touch-pan-y"
         >
           <MessageList 
-            messages={messages} userId={firebaseUser?.uid} chatId={currentChatId} onReply={setReplyTo} onEdit={setEditingMsg} 
-            amIPremium={userProfile?.isPremium} isAdmin={isGlobalAdmin(userProfile)} isGroup={chat?.type !== 'private'} 
-            searchQuery={searchQuery} viewerProfile={userProfile} 
+            messages={messages} 
+            userId={firebaseUser?.uid} 
+            chatId={currentChatId} 
+            onReply={setReplyTo} 
+            onEdit={setEditingMsg} 
+            onForward={setForwardingMessage}
+            onPin={handlePinMessage}
+            amIPremium={userProfile?.isPremium} 
+            isAdmin={isGlobalAdmin(userProfile)} 
+            isGroup={chat?.type !== 'private'} 
+            searchQuery={searchQuery} 
+            viewerProfile={userProfile} 
           />
           <div ref={messagesEndRef} className="h-4" />
         </div>
