@@ -50,17 +50,11 @@ const ChatListItem = memo(({
 
   const finalDisplayName = useMemo(() => {
     if (chat.type === 'saved') return 'Избранное';
-    
-    // ПРИОРИТЕТ: 
-    // 1. Моё локальное имя для друга (customName)
-    // 2. Глобальное имя друга из его профиля
-    // 3. Имя из чата (запасной вариант)
     if (chat.type === 'private') {
       const myMeta = chat.metadata?.[currentUserId || ''];
       if (myMeta?.customName) return myMeta.customName;
       if (otherProfile?.name) return formatDisplayName(otherProfile.name);
     }
-    
     return formatDisplayName(chat.name || otherProfile?.name || 'User');
   }, [chat, otherProfile, currentUserId]);
 
@@ -127,7 +121,7 @@ const ChatListItem = memo(({
   const resetSwipe = () => { setOffsetX(0); setIsDragging(false); };
 
   return (
-    <div className="relative overflow-hidden touch-pan-y select-none bg-[#0a0a0c] border-none">
+    <div className="relative overflow-hidden touch-pan-y select-none bg-[#0a0a0c] border-none" style={{ WebkitTouchCallout: 'none' }}>
       <div className={cn("absolute inset-y-0 left-0 flex h-full z-0 transition-opacity duration-200", offsetX > 10 ? "opacity-100" : "opacity-0 pointer-events-none")}>
         <button onClick={(e) => { e.stopPropagation(); onMarkUnread(chat.id); resetSwipe(); }} className="w-20 bg-[#007AFF] flex flex-col items-center justify-center text-white gap-1 active:brightness-90 transition-all">
           <MessageCircle className="w-5 h-5 fill-current" />
@@ -153,7 +147,7 @@ const ChatListItem = memo(({
       </div>
 
       <div 
-        className={cn("relative z-10 bg-[#0a0a0c] will-change-transform w-full border-none", !isDragging && "transition-transform duration-300 ease-out")}
+        className={cn("relative z-10 bg-[#0a0a0c] will-change-transform w-full border-none select-none", !isDragging && "transition-transform duration-300 ease-out")}
         style={{ transform: `translateX(${offsetX}px)` }}
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
@@ -161,8 +155,8 @@ const ChatListItem = memo(({
         onClick={Math.abs(offsetX) > 10 ? resetSwipe : onClick}
       >
         <ContextMenu>
-          <ContextMenuTrigger disabled={Math.abs(offsetX) > 10}>
-            <div className={cn("flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors border-none group relative bg-[#0a0a0c] w-full h-[80px]", isActive && Math.abs(offsetX) < 5 ? 'bg-white/10' : 'active:bg-white/[0.05]')}>
+          <ContextMenuTrigger disabled={Math.abs(offsetX) > 10 || isDragging}>
+            <div className={cn("flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors border-none group relative bg-[#0a0a0c] w-full h-[80px] select-none", isActive && Math.abs(offsetX) < 5 ? 'bg-white/10' : 'active:bg-white/[0.05]')}>
               <UserAvatar userId={otherId} manualAvatarUrl={otherProfile?.avatarUrl || chat.avatarUrl} className="h-[54px] w-[54px]" fallbackName={finalDisplayName} showOnlineStatus />
               <div className="flex-1 min-w-0 pb-1 h-full flex flex-col justify-center border-b border-white/[0.03]">
                 <div className="flex items-center justify-between mb-0.5">

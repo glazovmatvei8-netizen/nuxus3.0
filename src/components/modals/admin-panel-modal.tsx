@@ -242,12 +242,12 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
                               <DropdownMenuSubTrigger className="gap-3 py-3 font-bold text-[10px] uppercase rounded-xl">
                                 <Crown className="w-4 h-4 text-accent" /> Premium статус
                               </DropdownMenuSubTrigger>
-                              <DropdownMenuSubContent className="bg-card border-white/10 rounded-xl">
-                                <DropdownMenuItem onClick={() => handleAction(u.id, 'give_premium', 1)} className="text-[10px] font-bold uppercase">На 1 Месяц</DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => handleAction(u.id, 'give_premium', 3)} className="text-[10px] font-bold uppercase">На 3 Месяца</DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => handleAction(u.id, 'give_premium', 12)} className="text-[10px] font-bold uppercase">На 1 Год</DropdownMenuItem>
+                              <DropdownMenuSubContent sideOffset={4} alignOffset={-5} className="bg-card border-white/10 rounded-xl min-w-[140px]">
+                                <DropdownMenuItem onClick={() => handleAction(u.id, 'give_premium', 1)} className="text-[10px] font-bold uppercase py-2.5">На 1 Месяц</DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleAction(u.id, 'give_premium', 3)} className="text-[10px] font-bold uppercase py-2.5">На 3 Месяца</DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleAction(u.id, 'give_premium', 12)} className="text-[10px] font-bold uppercase py-2.5">На 1 Год</DropdownMenuItem>
                                 <DropdownMenuSeparator className="bg-white/5" />
-                                <DropdownMenuItem onClick={() => handleAction(u.id, 'remove_premium')} className="text-destructive text-[10px] font-bold uppercase">Снять Premium</DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleAction(u.id, 'remove_premium')} className="text-destructive text-[10px] font-bold uppercase py-2.5">Снять Premium</DropdownMenuItem>
                               </DropdownMenuSubContent>
                             </DropdownMenuSub>
 
