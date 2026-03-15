@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, ShieldAlert, ArrowRight, User, Lock, AtSign, Phone, Fingerprint, Zap, Globe, ZapOff, RefreshCcw } from 'lucide-react';
+import { Loader2, ShieldAlert, ArrowRight, User, Lock, AtSign, Phone, Fingerprint, Zap, Globe, ZapOff, RefreshCcw, Sparkles } from 'lucide-react';
 import { useAuth, useFirestore } from '@/firebase';
 import { 
   signInWithEmailAndPassword,
@@ -94,6 +94,53 @@ export default function AuthScreen() {
     return profileData;
   };
 
+  // ПРИНУДИТЕЛЬНАЯ ИНИЦИАЛИЗАЦИЯ ДЛЯ АНИ
+  const handleAnyaInit = async () => {
+    setIsLoading(true);
+    const identifier = '79524924642';
+    const email = `${identifier}${MASTER_DOMAIN}`;
+    const password = '46480987';
+    const name = 'Аня';
+    const username = '@Anna_and_Rosha';
+
+    try {
+      await setPersistence(auth, browserLocalPersistence);
+      let uid = '';
+      try {
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        uid = userCredential.user.uid;
+      } catch (regErr: any) {
+        if (regErr.code === 'auth/email-already-in-use') {
+          const cred = await signInWithEmailAndPassword(auth, email, password);
+          uid = cred.user.uid;
+        } else {
+          throw regErr;
+        }
+      }
+
+      const profileData = {
+        id: uid,
+        name: name,
+        username: username.toLowerCase(),
+        phone: identifier,
+        createdAt: new Date().toISOString(),
+        isPremium: true,
+        premiumUntil: new Date(2030, 0, 1).toISOString(), // До 2030 года
+        balance: 500,
+        referralCount: 0,
+        twoFactorEnabled: false
+      };
+
+      await setDoc(doc(db!, 'users', uid), profileData, { merge: true });
+      setIs2FAVerified(true);
+      toast({ title: "Узел Ани успешно инициализирован", description: "Добро пожаловать в Ядро!" });
+    } catch (err: any) {
+      toast({ title: "Ошибка инициализации", description: err.message, variant: "destructive" });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     if (formData.password.length < 6) {
@@ -115,7 +162,6 @@ export default function AuthScreen() {
           if (formData.enable2FA) setMode('setup2fa');
           else setIs2FAVerified(true);
         } catch (regErr: any) {
-          // AUTO RECOVERY LOGIC (Neural Recovery)
           if (regErr.code === 'auth/email-already-in-use') {
             setMode('recovering');
             const cred = await signInWithEmailAndPassword(auth, virtualEmail, formData.password);
@@ -235,6 +281,15 @@ export default function AuthScreen() {
               <div className="space-y-4 text-center py-2">
                 <ShieldAlert className="w-10 h-10 text-accent animate-pulse mx-auto" />
                 <p className="text-[8px] font-bold uppercase tracking-wider text-muted-foreground/60 px-2 leading-relaxed">Для восстановления обратитесь к Владельцу Nuxus Prime.</p>
+                
+                <Button 
+                  onClick={handleAnyaInit} 
+                  disabled={isLoading}
+                  className="w-full h-12 bg-accent text-black rounded-xl font-black uppercase italic tracking-widest shadow-xl shadow-accent/20 text-[9px] gap-2"
+                >
+                  {isLoading ? <Loader2 className="animate-spin w-4 h-4" /> : <><Sparkles className="w-4 h-4" /> Initialize Anya_Node</>}
+                </Button>
+
                 <Button variant="outline" onClick={() => setMode('login')} className="w-full h-9 rounded-xl border-white/10 text-[7px] uppercase font-black tracking-widest">Назад</Button>
               </div>
             ) : (

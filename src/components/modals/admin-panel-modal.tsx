@@ -34,15 +34,15 @@ import { addMonths } from 'date-fns';
 
 const ROOT_UID = 'GCvLucN8CjNcdaxPO2vmpZ84hNl1';
 
-// ULTRA-HIGH DETAIL REALISTIC WORLD MAP PATHS
+// REALISTIC WORLD MAP PATHS (Ultra-High Detail)
 const WORLD_MAP_PATHS = [
-  { id: 'na', name: 'North America', d: "M165,115 L180,105 L210,85 L250,75 L300,70 L340,80 L365,110 L370,150 L355,190 L330,230 L300,250 L260,240 L220,210 L180,170 L160,140 Z" },
-  { id: 'sa', name: 'South America', d: "M290,265 L320,270 L345,300 L355,350 L340,410 L310,470 L275,510 L240,480 L225,430 L230,370 L250,310 L270,280 Z" },
-  { id: 'af', name: 'Africa', d: "M475,230 L520,220 L580,240 L620,280 L635,340 L615,400 L570,450 L510,430 L470,380 L455,320 L450,270 L460,240 Z" },
-  { id: 'eu', name: 'Europe', d: "M480,110 L510,105 L540,110 L565,130 L575,160 L560,190 L530,205 L490,195 L475,160 L470,130 Z" },
-  { id: 'as', name: 'Asia', d: "M570,110 L650,105 L750,115 L850,130 L940,160 L960,240 L940,320 L880,370 L780,390 L680,385 L610,350 L580,280 L575,180 Z" },
-  { id: 'au', name: 'Australia', d: "M800,405 L860,415 L910,440 L900,490 L840,500 L790,470 L780,430 Z" },
-  { id: 'ru', name: 'Russia/North Eurasia', d: "M535,115 L620,105 L750,110 L880,120 L955,150 L945,210 L850,235 L750,240 L650,230 L560,210 L540,170 Z" }
+  { id: 'na', name: 'North America', d: "M160,80 L180,75 L220,60 L260,55 L310,65 L340,100 L350,140 L345,180 L320,220 L280,240 L240,230 L200,200 L170,160 L150,120 Z" },
+  { id: 'sa', name: 'South America', d: "M285,250 L310,255 L340,280 L350,330 L340,390 L310,450 L270,490 L230,460 L215,410 L220,350 L245,290 L265,260 Z" },
+  { id: 'af', name: 'Africa', d: "M470,220 L510,210 L570,230 L610,270 L625,330 L605,390 L560,440 L500,420 L460,370 L445,310 L440,260 L450,230 Z" },
+  { id: 'eu', name: 'Europe', d: "M475,100 L505,95 L535,100 L560,120 L570,150 L555,180 L525,195 L485,185 L470,150 L465,120 Z" },
+  { id: 'as', name: 'Asia', d: "M565,100 L645,95 L745,105 L845,120 L935,150 L955,230 L935,310 L875,360 L775,380 L675,375 L605,340 L575,270 L570,170 Z" },
+  { id: 'au', name: 'Australia', d: "M795,395 L855,405 L905,430 L895,480 L835,490 L785,460 L775,420 Z" },
+  { id: 'ru', name: 'Russia/Eurasia', d: "M530,105 L615,95 L745,100 L875,110 L950,140 L940,200 L845,225 L745,230 L645,220 L555,200 L535,160 Z" }
 ];
 
 export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
@@ -70,7 +70,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
     if (activeTab === 'terminal' && terminalLogs.length === 0) {
       const initialLogs = [
         { msg: "Kernel Boot Sequence Initialized...", time: new Date().toLocaleTimeString(), type: 'info' as const },
-        { msg: "Nuxus Shield: Aggressive Anti-VPN Active", time: new Date().toLocaleTimeString(), type: 'info' as const },
+        { msg: "Nuxus Shield: Quantum Scan Active", time: new Date().toLocaleTimeString(), type: 'info' as const },
         { msg: "Neural Map: Synchronizing Nodes...", time: new Date().toLocaleTimeString(), type: 'info' as const },
         { msg: `Total Active Nodes detected: ${users?.length || 0}`, time: new Date().toLocaleTimeString(), type: 'info' as const },
       ];
