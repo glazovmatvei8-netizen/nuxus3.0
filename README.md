@@ -1,6 +1,10 @@
 
 # Nuxus — Премиальный мессенджер (v0.65.8)
 
+## 📖 Документация
+- **Wikipedia Draft**: Черновик статьи для Википедии доступен в [docs/WIKIPEDIA_DRAFT.txt](./docs/WIKIPEDIA_DRAFT.txt).
+- **Backend Schema**: Описание структуры данных в [docs/backend.json](./docs/backend.json).
+
 ## 🚀 Как запустить на macOS
 Если система блокирует запуск из-за "неизвестного разработчика":
 1. Переместите `Nuxus.app` в папку **Программы** (Applications).
@@ -25,7 +29,7 @@
 
 ## 📦 Сборка через GitHub Actions
 Для получения готовых билдов для всех платформ (iOS, macOS, Linux, Windows):
-1. Перейдите в раздел **Actions** вашего репозитория.
+1. Перейти в раздел **Actions** вашего репозитория.
 2. Выберите workflow: `Build Desktop` или `Build iOS`.
 3. Нажмите **Run workflow**.
 4. По завершении скачайте готовые файлы из раздела **Artifacts**.
