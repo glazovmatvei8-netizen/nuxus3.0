@@ -15,6 +15,7 @@ const font = Plus_Jakarta_Sans({
   subsets: ['latin'],
   display: 'swap',
   variable: '--font-jakarta',
+  preload: true,
 });
 
 const FINAL_ICON_URL = 'https://i.ibb.co/sd2MqGz2/Icon.png?v=45';
@@ -66,6 +67,9 @@ export default function RootLayout({
   return (
     <html lang="ru" className={`dark ${font.variable}`} suppressHydrationWarning>
       <head>
+        <link rel="preconnect" href="https://images.unsplash.com" />
+        <link rel="preconnect" href="https://i.ibb.co" />
+        <link rel="preconnect" href="https://ipwho.is" />
         <link rel="icon" href={FINAL_ICON_URL} sizes="any" />
         <link rel="apple-touch-icon" href={FINAL_ICON_URL} />
         <link rel="shortcut icon" href={FINAL_ICON_URL} />

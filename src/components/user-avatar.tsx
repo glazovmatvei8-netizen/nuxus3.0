@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useEffect, memo, useMemo } from 'react';
@@ -9,6 +8,7 @@ import { cn, formatDisplayName, isUserPremium } from '@/lib/utils';
 import { Star } from 'lucide-react';
 import type { User } from '@/lib/types';
 import { differenceInMinutes, parseISO } from 'date-fns';
+import Image from 'next/image';
 
 interface UserAvatarProps {
   userId: string | null | undefined;
@@ -19,10 +19,6 @@ interface UserAvatarProps {
   showOnlineStatus?: boolean;
 }
 
-/**
- * Smart Avatar component optimized for iOS Safari.
- * Uses standard img tag for Base64 compatibility.
- */
 export const UserAvatar = memo(({ userId, className, fallbackName, fallbackClassName, manualAvatarUrl, showOnlineStatus = false }: UserAvatarProps) => {
   const db = useFirestore();
   const [imgError, setImgError] = useState(false);
@@ -64,14 +60,14 @@ export const UserAvatar = memo(({ userId, className, fallbackName, fallbackClass
     <div className="relative inline-block shrink-0 will-change-transform">
       <Avatar className={cn("shrink-0 relative overflow-hidden", className)}>
         {!isLoading && displayAvatar && !imgError ? (
-          /* Standard img is more reliable for heavy Base64 on iOS */
-          <img 
+          <Image 
             src={displayAvatar} 
             alt={displayName} 
-            className="absolute inset-0 w-full h-full object-cover animate-in fade-in duration-300"
+            fill
+            sizes="(max-width: 768px) 100vw, 50vw"
+            className="object-cover animate-in fade-in duration-300"
             onError={() => setImgError(true)}
-            decoding="async"
-            loading="lazy"
+            unoptimized={displayAvatar.startsWith('data:')}
           />
         ) : (
           <AvatarFallback className={cn("bg-primary/20 text-primary font-bold uppercase h-full w-full flex items-center justify-center", fallbackClassName)}>
@@ -80,14 +76,12 @@ export const UserAvatar = memo(({ userId, className, fallbackName, fallbackClass
         )}
       </Avatar>
 
-      {/* Online Status Dot */}
       {showOnlineStatus && isOnline && (
         <div className="absolute top-0 right-0 z-20 translate-x-[10%] translate-y-[10%]">
           <div className="h-3 w-3 bg-[#22C55E] rounded-full border-2 border-[#0a0a0c] shadow-[0_0_10px_rgba(34,197,94,0.5)]" />
         </div>
       )}
 
-      {/* Premium Badge (Bottom Right) */}
       {premium && (
         <div className="absolute bottom-0 right-0 z-10 translate-x-[15%] translate-y-[15%]">
           <div className="bg-[#0a0a0c] rounded-full p-[1.5px] shadow-sm">

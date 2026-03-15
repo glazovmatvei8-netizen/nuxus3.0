@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useRef, useEffect, useMemo, useCallback, memo } from 'react';
@@ -26,15 +25,18 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 const MessageList = memo(({ 
   messages, userId, chatId, onReply, onPin, amIPremium, isAdmin, isGroup, onEdit, onForward, searchQuery, viewerProfile
 }: any) => {
-  if (!messages) return null;
-  
-  const sortedMessages = useMemo(() => [...messages].sort((a, b) => new Date(a.sentAt).getTime() - new Date(b.sentAt).getTime()), [messages]);
+  const sortedMessages = useMemo(() => {
+    if (!messages) return [];
+    return [...messages].sort((a, b) => new Date(a.sentAt).getTime() - new Date(b.sentAt).getTime());
+  }, [messages]);
   
   const filteredMessages = useMemo(() => {
     if (!searchQuery) return sortedMessages;
+    const q = searchQuery.toLowerCase();
     return sortedMessages.filter((m: Message) => {
-      const text = m.contentType === 'text' ? decryptSignal(m.content)?.toLowerCase() : '';
-      return text.includes(searchQuery.toLowerCase());
+      if (m.contentType !== 'text') return false;
+      const text = decryptSignal(m.content)?.toLowerCase() || '';
+      return text.includes(q);
     });
   }, [sortedMessages, searchQuery]);
 
@@ -79,7 +81,6 @@ export default function ChatArea() {
   const [isAiLoading, setIsAiLoading] = useState(false);
   const [isJoining, setIsJoining] = useState(false);
 
-  // Recording states
   const [isRecording, setIsRecording] = useState(false);
   const [recordingType, setRecordingType] = useState<'audio' | 'video_note'>( 'audio');
   const [recordingTime, setRecordingTime] = useState(0);
@@ -316,7 +317,6 @@ export default function ChatArea() {
 
   return (
     <div className="flex-1 flex flex-col h-full bg-[#0a0a0c] relative overflow-hidden z-20">
-      {/* ЧАТ ФОН (Wallpaper Engine) */}
       {userProfile?.settings?.chatBackground && (
         <div 
           className="absolute inset-0 z-0 pointer-events-none opacity-80" 
@@ -397,7 +397,6 @@ export default function ChatArea() {
           </Button>
         )}
 
-        {/* Video Note Center Preview Animation */}
         {isRecording && recordingType === 'video_note' && (
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[100] animate-in zoom-in duration-300">
             <div className="relative w-64 h-64 rounded-full overflow-hidden border-4 border-primary shadow-[0_0_50px_rgba(139,92,246,0.5)]">
@@ -428,7 +427,6 @@ export default function ChatArea() {
         </div>
       ) : (
         <footer className="p-3 pb-6 bg-[#0a0a0c]/90 backdrop-blur-2xl border-t border-white/5 shrink-0 z-30 relative">
-          {/* Recording Overlay UI */}
           {isRecording && (
             <div className="absolute inset-0 bg-[#0a0a0c] z-50 flex items-center justify-between px-6 animate-in slide-in-from-bottom-2">
               <div className="flex items-center gap-4">

@@ -1,4 +1,3 @@
-
 "use client"
 
 import { useUser, useFirestore, useDoc, useMemoFirebase, useAuth } from '@/firebase';
@@ -11,7 +10,7 @@ import type { User as UserType, Chat, StickerPack } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { signOut } from 'firebase/auth';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useTransition } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { isUserActuallyBanned } from '@/lib/utils';
 import { NuxusLogo } from '@/components/nuxus-logo';
@@ -38,42 +37,56 @@ export default function Home() {
   const [showIosInstaller, setShowIosInstaller] = useState(false);
   const [isVpnDetected, setIsVpnDetected] = useState(false);
   const [isVpnChecking, setIsVpnChecking] = useState(true);
+  const [isPending, startTransition] = useTransition();
   
   const [stickerPackToInstall, setStickerPackToInstall] = useState<StickerPack | null>(null);
 
   useEffect(() => {
     setMounted(true);
     
-    if (typeof window !== 'undefined' && 'Notification' in window) {
-      if (Notification.permission !== 'granted' && Notification.permission !== 'denied') {
-        Notification.requestPermission();
-      }
-    }
-
-    const checkVpnStatus = async () => {
-      try {
-        const res = await fetch('https://ipwho.is/');
-        const data = await res.json();
-        if (data.security && (data.security.vpn || data.security.proxy || data.security.tor)) {
-          setIsVpnDetected(true);
+    // Defer non-critical logic to next tick to improve FCP
+    const timer = setTimeout(() => {
+      if (typeof window !== 'undefined' && 'Notification' in window) {
+        if (Notification.permission !== 'granted' && Notification.permission !== 'denied') {
+          Notification.requestPermission();
         }
-      } catch (e) {
-        console.warn("Nuxus Shield: Connection check skipped due to network error");
-      } finally {
-        setIsVpnChecking(false);
       }
-    };
-    checkVpnStatus();
 
-    const isIos = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
-    const isStandalone = (window.navigator as any).standalone || window.matchMedia('(display-mode: standalone)').matches;
-    
-    if (isIos && !isStandalone) {
-      const dismissed = localStorage.getItem('ios_installer_dismissed');
-      if (!dismissed) {
-        setShowIosInstaller(true);
+      const checkVpnStatus = async () => {
+        try {
+          const cachedVpn = sessionStorage.getItem('nuxus_vpn_status');
+          if (cachedVpn === 'detected') {
+            setIsVpnDetected(true);
+            setIsVpnChecking(false);
+            return;
+          }
+
+          const res = await fetch('https://ipwho.is/');
+          const data = await res.json();
+          if (data.security && (data.security.vpn || data.security.proxy || data.security.tor)) {
+            setIsVpnDetected(true);
+            sessionStorage.setItem('nuxus_vpn_status', 'detected');
+          }
+        } catch (e) {
+          console.warn("Nuxus Shield: Connection check skipped due to network error");
+        } finally {
+          setIsVpnChecking(false);
+        }
+      };
+      checkVpnStatus();
+
+      const isIos = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
+      const isStandalone = (window.navigator as any).standalone || window.matchMedia('(display-mode: standalone)').matches;
+      
+      if (isIos && !isStandalone) {
+        const dismissed = localStorage.getItem('ios_installer_dismissed');
+        if (!dismissed) {
+          setShowIosInstaller(true);
+        }
       }
-    }
+    }, 100);
+
+    return () => clearTimeout(timer);
   }, []);
 
   useEffect(() => {
@@ -82,7 +95,6 @@ export default function Home() {
     const syncIp = async () => {
       try {
         let ip = 'Unknown';
-        // Multi-level IP fallback detection
         const apis = [
           'https://api.ipify.org?format=json',
           'https://ipwho.is/',
@@ -108,7 +120,7 @@ export default function Home() {
       } catch (e) {}
     };
 
-    const timer = setTimeout(syncIp, 2000);
+    const timer = setTimeout(syncIp, 5000); // Wait longer to not compete with main JS
     return () => clearTimeout(timer);
   }, [user, db, mounted]);
 
