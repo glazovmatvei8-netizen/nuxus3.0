@@ -31,7 +31,7 @@ const THEMES = [
   { id: 'default', name: 'Nuxus Original', color: 'bg-[#8B5CF6]' },
   { id: 'ocean', name: 'Океан', color: 'bg-[#0EA5E9]' },
   { id: 'rainbow', name: 'Радужный', color: 'bg-gradient-to-r from-pink-500 via-yellow-500 to-cyan-500' },
-  { id: 'gold', name: 'Золотой Квант', color: 'bg-[#EAB308]' },
+  { id: 'gold', name: 'Золотой Премиум', color: 'bg-[#EAB308]' },
   { id: 'emerald', name: 'Изумруд', color: 'bg-[#22C55E]' },
 ];
 
@@ -333,7 +333,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
               <div className="space-y-6 bg-muted/20 p-6 rounded-[2.5rem] border border-white/5">
                 <div className="flex items-center justify-between">
                   <div className="flex flex-col gap-1">
-                    <span className="text-[11px] font-black text-white uppercase tracking-wider">Квантовый PIN (2FA)</span>
+                    <span className="text-[11px] font-black text-white uppercase tracking-wider">Premium PIN (2FA)</span>
                     <span className="text-[9px] text-muted-foreground uppercase font-bold">Защита при входе</span>
                   </div>
                   <Switch checked={form.twoFactorEnabled} onCheckedChange={v => setForm({...form, twoFactorEnabled: v})} />

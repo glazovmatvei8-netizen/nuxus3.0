@@ -96,7 +96,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
 
   const handleAction = async (targetId: string, action: string, value?: any) => {
     if (!db) return;
-    if (targetId === ROOT_UID && action !== 'give_premium') {
+    if (targetId === ROOT_UID && !['give_premium', 'remove_premium'].includes(action)) {
       toast({ title: "Ошибка", description: "Владелец неприкосновенен", variant: "destructive" });
       return;
     }
@@ -107,6 +107,8 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
     switch(action) {
       case 'ban': update = { isBanned: true }; break;
       case 'unban': update = { isBanned: false }; break;
+      case 'make_admin': update = { isAdmin: true }; break;
+      case 'remove_admin': update = { isAdmin: false }; break;
       case 'give_premium': 
         const expiry = addMonths(new Date(), value || 1);
         update = { isPremium: true, premiumUntil: expiry.toISOString() };
@@ -153,7 +155,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
           <TabsContent value="users" className="flex-1 data-[state=active]:flex flex-col min-h-0 m-0 outline-none">
             <div className="p-4 px-6 shrink-0 grid grid-cols-4 gap-2 border-b border-white/5 pb-6">
               <StatCard label="Узлы" value={stats.total} icon={Users} color="text-white" />
-              <StatCard label="Quantum" value={stats.premium} icon={Star} color="text-accent" />
+              <StatCard label="Premium" value={stats.premium} icon={Star} color="text-accent" />
               <StatCard label="Admins" value={stats.admins} icon={ShieldCheck} color="text-primary" />
               <StatCard label="Blocked" value={stats.banned} icon={Ban} color="text-red-500" />
             </div>
@@ -182,17 +184,42 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
                       </div>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8"><MoreVertical className="w-4 h-4" /></Button></DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-56 bg-card border-white/10 rounded-2xl p-1">
+                        <DropdownMenuContent align="end" className="w-56 bg-card border-white/10 rounded-2xl p-1 z-50">
                           <DropdownMenuItem onClick={() => handleAction(u.id, u.isBanned ? 'unban' : 'ban')} className={cn("gap-3 py-3 font-bold text-[10px] uppercase rounded-xl", u.isBanned ? "text-green-500" : "text-destructive")}>
-                            {u.isBanned ? <CheckCircle2 className="w-4 h-4" /> : <Ban className="w-4 h-4" />} {u.isBanned ? 'Восстановить' : 'Блокировать'}
+                            {u.isBanned ? <CheckCircle2 className="w-4 h-4" /> : <Ban className="w-4 h-4" />} {u.isBanned ? 'Разблокировать' : 'Блокировать'}
                           </DropdownMenuItem>
+                          
                           <DropdownMenuSeparator className="bg-white/5" />
+                          
+                          {/* Управление Админкой */}
+                          {u.isAdmin ? (
+                            <DropdownMenuItem onClick={() => handleAction(u.id, 'remove_admin')} className="gap-3 py-3 font-bold text-[10px] uppercase rounded-xl text-red-400">
+                              <ShieldOff className="w-4 h-4" /> Снять админа
+                            </DropdownMenuItem>
+                          ) : (
+                            <DropdownMenuItem onClick={() => handleAction(u.id, 'make_admin')} className="gap-3 py-3 font-bold text-[10px] uppercase rounded-xl text-primary">
+                              <ShieldCheck className="w-4 h-4" /> Сделать админом
+                            </DropdownMenuItem>
+                          )}
+
+                          <DropdownMenuSeparator className="bg-white/5" />
+                          
+                          {/* Управление Premium */}
                           <DropdownMenuSub>
-                            <DropdownMenuSubTrigger className="gap-3 py-3 font-bold text-[10px] uppercase rounded-xl"><Crown className="w-4 h-4 text-accent" /> Quantum статус</DropdownMenuSubTrigger>
-                            <DropdownMenuSubContent className="bg-card border-white/10 rounded-xl min-w-[140px] p-1">
-                              <DropdownMenuItem onClick={() => handleAction(u.id, 'give_premium', 1)} className="text-[10px] font-bold uppercase py-2 rounded-lg">1 Месяц</DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => handleAction(u.id, 'give_premium', 12)} className="text-[10px] font-bold uppercase py-2 rounded-lg">1 Год</DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => handleAction(u.id, 'remove_premium')} className="text-destructive text-[10px] font-bold uppercase py-2 rounded-lg">Снять статус</DropdownMenuItem>
+                            <DropdownMenuSubTrigger className="gap-3 py-3 font-bold text-[10px] uppercase rounded-xl">
+                              <Crown className="w-4 h-4 text-accent" /> Premium статус
+                            </DropdownMenuSubTrigger>
+                            <DropdownMenuSubContent className="bg-card border-white/10 rounded-xl min-w-[160px] p-1 shadow-2xl ml-1">
+                              <DropdownMenuItem onClick={() => handleAction(u.id, 'give_premium', 1)} className="text-[10px] font-bold uppercase py-3 rounded-lg flex items-center gap-2">
+                                <Calendar className="w-3.5 h-3.5" /> 1 Месяц
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleAction(u.id, 'give_premium', 12)} className="text-[10px] font-bold uppercase py-3 rounded-lg flex items-center gap-2">
+                                <Trophy className="w-3.5 h-3.5" /> 1 Год
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator className="bg-white/5" />
+                              <DropdownMenuItem onClick={() => handleAction(u.id, 'remove_premium')} className="text-destructive text-[10px] font-bold uppercase py-3 rounded-lg flex items-center gap-2">
+                                <Trash2 className="w-3.5 h-3.5" /> Снять Premium
+                              </DropdownMenuItem>
                             </DropdownMenuSubContent>
                           </DropdownMenuSub>
                         </DropdownMenuContent>
