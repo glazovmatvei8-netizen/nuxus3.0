@@ -3,12 +3,12 @@
 
 import React from 'react';
 import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
-import { doc, query, collection, where, limit, getDocs, addDoc } from 'firebase/firestore';
+import { doc } from 'firebase/firestore';
 import { UserAvatar } from '@/components/user-avatar';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { 
-  QrCode, Pencil, Bell, Lock, Bookmark, ChevronRight, Star, Smile, Share2, Trophy, Zap, ShieldCheck
+  Pencil, Lock, Bookmark, ChevronRight, Star, Share2, Trophy, Zap, ShieldCheck, Palette, HelpCircle, Globe, Server
 } from 'lucide-react';
 import { useAppState } from '@/lib/store';
 import { formatDisplayName, cn, isUserPremium } from '@/lib/utils';
@@ -19,7 +19,7 @@ export default function ProfileView() {
   const { user } = useUser();
   const db = useFirestore();
   const { toast } = useToast();
-  const { setIsSettingsOpen, setSettingsTab, setCurrentChatId, setActiveView } = useAppState();
+  const { setIsSettingsOpen, setSettingsTab, setActiveView } = useAppState();
   
   const userProfileRef = useMemoFirebase(() => (!db || !user) ? null : doc(db!, 'users', user.uid), [db, user]);
   const { data: profile } = useDoc<User>(userProfileRef);

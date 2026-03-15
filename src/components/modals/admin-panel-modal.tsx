@@ -1,11 +1,10 @@
 
 "use client"
 
-import React, { useState, useMemo, useEffect, useRef } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { 
@@ -19,53 +18,32 @@ import {
   DropdownMenuSubContent
 } from "@/components/ui/dropdown-menu";
 import { useFirestore, useCollection, useMemoFirebase, useUser } from '@/firebase';
-import { collection, query, doc, limit, getDocs, addDoc, orderBy, writeBatch, increment, where, updateDoc } from 'firebase/firestore';
+import { collection, query, doc, limit, addDoc, orderBy, where, updateDoc } from 'firebase/firestore';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
-  ShieldAlert, Users, Star, Search, Trash2, ShieldCheck, Radio, Send, 
-  Loader2, UserX, MoreVertical, Ban, CheckCircle2, Crown, Calendar, Shield, Activity, Eye, MessageCircle, ArrowLeft, CreditCard, Check, X, ShieldOff, Zap, Terminal, Trash, Navigation, Trophy, Globe, Server, BarChart3, ListChecks
+  ShieldAlert, Users, Star, Ban, CheckCircle2, ShieldCheck, Radio, 
+  MoreVertical, ShieldOff, Zap, Trophy, Activity, BarChart3, ListChecks, X
 } from 'lucide-react';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as ChartTooltip, ResponsiveContainer, AreaChart, Area
 } from 'recharts';
-import { useAppState } from '@/lib/store';
-import type { User, Chat, Transaction } from '@/lib/types';
+import type { User } from '@/lib/types';
 import { formatDisplayName, isUserPremium, cn, isGlobalAdmin } from '@/lib/utils';
-import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { useToast } from '@/hooks/use-toast';
-import { addMonths, format, subDays, startOfDay, isSameDay } from 'date-fns';
-import { ru } from 'date-fns/locale';
+import { addMonths, subDays, isSameDay } from 'date-fns';
 
 const ROOT_UID = 'GCvLucN8CjNcdaxPO2vmpZ84hNl1';
 
 export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const db = useFirestore();
   const { user: currentUser } = useUser();
-  const { setCurrentChatId, setActiveView } = useAppState();
   const { toast } = useToast();
   
   const [userSearch, setUserSearch] = useState('');
   const [activeTab, setActiveTab] = useState('analytics');
-  const [terminalLogs, setTerminalLogs] = useState<{msg: string, time: string, type: 'info'|'warn'|'crit'|'edge'}[]>([]);
-  
-  const terminalEndRef = useRef<HTMLDivElement>(null);
   
   const usersQuery = useMemoFirebase(() => (!db ? null : query(collection(db, 'users'), limit(500))), [db]);
   const { data: users } = useCollection<User>(usersQuery);
-
-  const logsQuery = useMemoFirebase(() => (!db ? null : query(collection(db, 'system_logs'), orderBy('createdAt', 'desc'), limit(100))), [db]);
-  const { data: systemLogs } = useCollection<any>(logsQuery);
-
-  useEffect(() => {
-    if (activeTab === 'terminal' && terminalLogs.length === 0) {
-      setTerminalLogs([
-        { msg: "Kernel Boot Sequence Initialized...", time: new Date().toLocaleTimeString(), type: 'info' },
-        { msg: "Global Edge Node: Frankfurt [ACTIVE]", time: new Date().toLocaleTimeString(), type: 'edge' },
-        { msg: "Latency Optimization: 12ms", time: new Date().toLocaleTimeString(), type: 'info' },
-        { msg: "E2EE Protocol: SECURE (NX_ METRIC)", time: new Date().toLocaleTimeString(), type: 'info' },
-      ]);
-    }
-  }, [activeTab, terminalLogs.length]);
 
   const stats = useMemo(() => {
     if (!users) return { total: 0, premium: 0, admins: 0, banned: 0 };
@@ -129,12 +107,12 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl bg-[#0a0a0c] border-primary/30 p-0 overflow-hidden h-[90vh] flex flex-col rounded-[2.5rem] shadow-2xl border outline-none">
         <DialogHeader className="p-4 md:p-6 bg-primary/5 border-b border-white/5 shrink-0">
-          <DialogTitle className="flex items-center justify-between text-white uppercase italic font-black tracking-tighter text-sm md:text-base select-none">
+          <DialogTitle className="flex items-center justify-between text-white uppercase italic font-black tracking-tighter text-sm md:text-base select-none pr-8">
             <div className="flex items-center gap-2">
               <ShieldAlert className="w-4 h-4 md:w-5 md:h-5 text-primary animate-pulse" /> 
               <span>Nuxus Control Panel</span>
             </div>
-            <div className="flex items-center gap-1.5 bg-green-500/10 px-2 py-0.5 rounded-full border border-green-500/20">
+            <div className="flex items-center gap-1.5 bg-green-500/10 px-2 py-0.5 rounded-full border border-green-500/20 mr-2">
               <Activity className="w-2.5 h-2.5 text-green-500 animate-pulse" />
               <span className="text-[7px] md:text-[8px] font-black text-green-500 uppercase tracking-widest">Live Sync</span>
             </div>
@@ -143,12 +121,11 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0">
           <div className="px-4 md:px-6 pt-3 shrink-0">
-            <TabsList className="grid w-full bg-white/5 p-1 rounded-xl grid-cols-5">
-              <TabsTrigger value="analytics" className="rounded-lg text-[8px] uppercase font-black"><BarChart3 className="w-3 h-3 hidden sm:block"/> Аналитика</TabsTrigger>
-              <TabsTrigger value="users" className="rounded-lg text-[8px] uppercase font-black"><Users className="w-3 h-3 hidden sm:block"/> Узлы</TabsTrigger>
-              <TabsTrigger value="logs" className="rounded-lg text-[8px] uppercase font-black"><ListChecks className="w-3 h-3 hidden sm:block"/> Логи</TabsTrigger>
-              <TabsTrigger value="terminal" className="rounded-lg text-[8px] uppercase font-black"><Terminal className="w-3 h-3 hidden sm:block"/> Терминал</TabsTrigger>
-              <TabsTrigger value="broadcast" className="rounded-lg text-[8px] uppercase font-black"><Radio className="w-3 h-3 hidden sm:block"/> Маяк</TabsTrigger>
+            <TabsList className="grid w-full bg-white/5 p-1 rounded-xl grid-cols-4">
+              <TabsTrigger value="analytics" className="rounded-lg text-[8px] uppercase font-black gap-1.5"><BarChart3 className="w-3 h-3 hidden sm:block"/> Аналитика</TabsTrigger>
+              <TabsTrigger value="users" className="rounded-lg text-[8px] uppercase font-black gap-1.5"><Users className="w-3 h-3 hidden sm:block"/> Узлы</TabsTrigger>
+              <TabsTrigger value="logs" className="rounded-lg text-[8px] uppercase font-black gap-1.5"><ListChecks className="w-3 h-3 hidden sm:block"/> Логи</TabsTrigger>
+              <TabsTrigger value="broadcast" className="rounded-lg text-[8px] uppercase font-black gap-1.5"><Radio className="w-3 h-3 hidden sm:block"/> Маяк</TabsTrigger>
             </TabsList>
           </div>
 
@@ -159,59 +136,108 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
               <StatCard label="Админы" value={stats.admins} icon={ShieldCheck} color="text-primary" />
               <StatCard label="Баны" value={stats.banned} icon={Ban} color="text-red-500" />
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="bg-white/5 p-4 rounded-3xl border border-white/5 h-[180px] md:h-[250px]">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pb-8">
+              <div className="bg-white/5 p-4 rounded-3xl border border-white/5 h-[200px] md:h-[280px]">
                 <h3 className="text-[9px] font-black uppercase text-primary mb-3">Новые Узлы</h3>
-                <ResponsiveContainer width="100%" height="85%"><AreaChart data={chartData}><defs><linearGradient id="colorUsers" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3}/><stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0}/></linearGradient></defs><XAxis dataKey="day" stroke="rgba(255,255,255,0.3)" fontSize={9}/><YAxis stroke="rgba(255,255,255,0.3)" fontSize={9}/><ChartTooltip contentStyle={{ backgroundColor: '#1c1c1e', borderRadius: '12px' }}/><Area type="monotone" dataKey="users" stroke="hsl(var(--primary))" fill="url(#colorUsers)" /></AreaChart></ResponsiveContainer>
+                <div className="h-full w-full">
+                  <ResponsiveContainer width="100%" height="80%">
+                    <AreaChart data={chartData}>
+                      <defs>
+                        <linearGradient id="colorUsers" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3}/>
+                          <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0}/>
+                        </linearGradient>
+                      </defs>
+                      <XAxis dataKey="day" stroke="rgba(255,255,255,0.3)" fontSize={9}/>
+                      <YAxis stroke="rgba(255,255,255,0.3)" fontSize={9}/>
+                      <ChartTooltip contentStyle={{ backgroundColor: '#1c1c1e', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.1)' }}/>
+                      <Area type="monotone" dataKey="users" stroke="hsl(var(--primary))" fill="url(#colorUsers)" strokeWidth={2} />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
               </div>
-              <div className="bg-white/5 p-4 rounded-3xl border border-white/5 h-[180px] md:h-[250px]">
+              <div className="bg-white/5 p-4 rounded-3xl border border-white/5 h-[200px] md:h-[280px]">
                 <h3 className="text-[9px] font-black uppercase text-accent mb-3">Трафик (пакеты)</h3>
-                <ResponsiveContainer width="100%" height="85%"><BarChart data={chartData}><XAxis dataKey="day" stroke="rgba(255,255,255,0.3)" fontSize={9}/><YAxis stroke="rgba(255,255,255,0.3)" fontSize={9}/><ChartTooltip contentStyle={{ backgroundColor: '#1c1c1e', borderRadius: '12px' }}/><Bar dataKey="signals" fill="hsl(var(--accent))" radius={[4, 4, 0, 0]} /></BarChart></ResponsiveContainer>
+                <div className="h-full w-full">
+                  <ResponsiveContainer width="100%" height="80%">
+                    <BarChart data={chartData}>
+                      <XAxis dataKey="day" stroke="rgba(255,255,255,0.3)" fontSize={9}/>
+                      <YAxis stroke="rgba(255,255,255,0.3)" fontSize={9}/>
+                      <ChartTooltip contentStyle={{ backgroundColor: '#1c1c1e', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.1)' }}/>
+                      <Bar dataKey="signals" fill="hsl(var(--accent))" radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
               </div>
             </div>
           </TabsContent>
 
           <TabsContent value="users" className="flex-1 flex flex-col min-h-0">
             <div className="p-4 px-6"><Input placeholder="Поиск узлов..." value={userSearch} onChange={e => setUserSearch(e.target.value)} className="bg-white/5 border-white/10 h-10 rounded-xl pl-4" /></div>
-            <ScrollArea className="flex-1"><div className="px-6 space-y-2">{users?.filter(u => u.name?.toLowerCase().includes(userSearch.toLowerCase())).map(u => (
-              <div key={u.id} className="flex items-center justify-between p-3 bg-white/5 rounded-2xl border border-white/5">
-                <div className="flex items-center gap-3"><UserAvatar userId={u.id} className="h-9 w-9" fallbackName={u.name} /><div className="flex flex-col"><span className="font-bold text-xs">{formatDisplayName(u.name)} {isUserPremium(u) && <Star className="w-2.5 h-2.5 text-accent fill-accent ml-1" />}</span><span className="text-[8px] text-muted-foreground uppercase">{u.username}</span></div></div>
-                <DropdownMenu><DropdownMenuTrigger asChild><Button variant="ghost" size="icon"><MoreVertical className="w-4 h-4"/></Button></DropdownMenuTrigger><DropdownMenuContent align="end" className="w-56 bg-card border-white/10 rounded-2xl p-1">
-                  <DropdownMenuItem onClick={() => handleAction(u.id, u.isBanned ? 'unban' : 'ban')} className={cn("gap-2 font-bold uppercase text-[10px] py-3 rounded-lg", u.isBanned ? "text-green-500" : "text-destructive")}>
-                    {u.isBanned ? <CheckCircle2 className="w-4 h-4"/> : <Ban className="w-4 h-4"/>} {u.isBanned ? 'Разбан' : 'Бан'}
-                  </DropdownMenuItem>
-                  
-                  <DropdownMenuItem onClick={() => handleAction(u.id, u.isAdmin ? 'remove_admin' : 'make_admin')} className="gap-2 font-bold uppercase text-[10px] py-3 rounded-lg">
-                    {u.isAdmin ? <><ShieldOff className="w-4 h-4 text-orange-500" /> Снять админа</> : <><ShieldCheck className="w-4 h-4 text-primary" /> Дать админку</>}
-                  </DropdownMenuItem>
+            <ScrollArea className="flex-1">
+              <div className="px-6 space-y-2 pb-10">
+                {users?.filter(u => u.name?.toLowerCase().includes(userSearch.toLowerCase())).map(u => (
+                  <div key={u.id} className="flex items-center justify-between p-3 bg-white/5 rounded-2xl border border-white/5">
+                    <div className="flex items-center gap-3">
+                      <UserAvatar userId={u.id} className="h-9 w-9" fallbackName={u.name} />
+                      <div className="flex flex-col">
+                        <span className="font-bold text-xs">{formatDisplayName(u.name)} {isUserPremium(u) && <Star className="w-2.5 h-2.5 text-accent fill-accent ml-1" />}</span>
+                        <span className="text-[8px] text-muted-foreground uppercase">{u.username}</span>
+                      </div>
+                    </div>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon"><MoreVertical className="w-4 h-4"/></Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-56 bg-card border-white/10 rounded-2xl p-1">
+                        <DropdownMenuItem onClick={() => handleAction(u.id, u.isBanned ? 'unban' : 'ban')} className={cn("gap-2 font-bold uppercase text-[10px] py-3 rounded-lg", u.isBanned ? "text-green-500" : "text-destructive")}>
+                          {u.isBanned ? <CheckCircle2 className="w-4 h-4"/> : <Ban className="w-4 h-4"/>} {u.isBanned ? 'Разбан' : 'Бан'}
+                        </DropdownMenuItem>
+                        
+                        <DropdownMenuItem onClick={() => handleAction(u.id, u.isAdmin ? 'remove_admin' : 'make_admin')} className="gap-2 font-bold uppercase text-[10px] py-3 rounded-lg">
+                          {u.isAdmin ? <><ShieldOff className="w-4 h-4 text-orange-500" /> Снять админа</> : <><ShieldCheck className="w-4 h-4 text-primary" /> Дать админку</>}
+                        </DropdownMenuItem>
 
-                  <DropdownMenuSeparator className="bg-white/5" />
+                        <DropdownMenuSeparator className="bg-white/5" />
 
-                  <DropdownMenuSub>
-                    <DropdownMenuSubTrigger className="gap-2 font-bold uppercase text-[10px] py-3 rounded-lg">
-                      <Zap className="w-4 h-4 text-accent" /> Premium статус
-                    </DropdownMenuSubTrigger>
-                    <DropdownMenuSubContent className="bg-card border-white/10 p-1" sideOffset={8}>
-                      <DropdownMenuItem onClick={() => handleAction(u.id, 'give_premium', 1)} className="text-[10px] font-bold uppercase py-3 rounded-lg flex items-center gap-2">
-                        <Star className="w-3.5 h-3.5 text-accent" /> 1 Месяц
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => handleAction(u.id, 'give_premium', 12)} className="text-[10px] font-bold uppercase py-3 rounded-lg flex items-center gap-2">
-                        <Trophy className="w-3.5 h-3.5 text-accent" /> 1 Год
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator className="bg-white/5" />
-                      <DropdownMenuItem onClick={() => handleAction(u.id, 'remove_premium')} className="text-destructive text-[10px] font-bold uppercase py-3 rounded-lg flex items-center gap-2">
-                        <X className="w-3.5 h-3.5" /> Удалить
-                      </DropdownMenuItem>
-                    </DropdownMenuSubContent>
-                  </DropdownMenuSub>
-                </DropdownMenuContent></DropdownMenu>
+                        <DropdownMenuSub>
+                          <DropdownMenuSubTrigger className="gap-2 font-bold uppercase text-[10px] py-3 rounded-lg">
+                            <Zap className="w-4 h-4 text-accent" /> Premium статус
+                          </DropdownMenuSubTrigger>
+                          <DropdownMenuSubContent className="bg-card border-white/10 p-1" sideOffset={8}>
+                            <DropdownMenuItem onClick={() => handleAction(u.id, 'give_premium', 1)} className="text-[10px] font-bold uppercase py-3 rounded-lg flex items-center gap-2">
+                              <Star className="w-3.5 h-3.5 text-accent" /> 1 Месяц
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleAction(u.id, 'give_premium', 12)} className="text-[10px] font-bold uppercase py-3 rounded-lg flex items-center gap-2">
+                              <Trophy className="w-3.5 h-3.5 text-accent" /> 1 Год
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator className="bg-white/5" />
+                            <DropdownMenuItem onClick={() => handleAction(u.id, 'remove_premium')} className="text-destructive text-[10px] font-bold uppercase py-3 rounded-lg flex items-center gap-2">
+                              <X className="w-3.5 h-3.5" /> Удалить
+                            </DropdownMenuItem>
+                          </DropdownMenuSubContent>
+                        </DropdownMenuSub>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                ))}
               </div>
-            ))}</div></ScrollArea>
+            </ScrollArea>
+          </TabsContent>
+          
+          <TabsContent value="logs" className="flex-1 p-6">
+             <div className="flex flex-col items-center justify-center py-20 opacity-20 border-2 border-dashed border-white/5 rounded-3xl">
+                <ListChecks className="w-12 h-12 mb-4" />
+                <p className="text-[10px] font-black uppercase tracking-widest">Системные логи пусты</p>
+             </div>
           </TabsContent>
 
-          <TabsContent value="terminal" className="flex-1 flex flex-col bg-black"><ScrollArea className="flex-1 p-4 font-mono text-[9px] text-green-500">{terminalLogs.map((log, i) => (
-            <div key={i} className="flex gap-2"><span className="opacity-40">[{log.time}]</span><span>{log.msg}</span></div>
-          ))}<div ref={terminalEndRef} /></ScrollArea></TabsContent>
+          <TabsContent value="broadcast" className="flex-1 p-6">
+             <div className="flex flex-col items-center justify-center py-20 opacity-20 border-2 border-dashed border-white/5 rounded-3xl">
+                <Radio className="w-12 h-12 mb-4" />
+                <p className="text-[10px] font-black uppercase tracking-widest">Маяк не активен</p>
+             </div>
+          </TabsContent>
         </Tabs>
       </DialogContent>
     </Dialog>
