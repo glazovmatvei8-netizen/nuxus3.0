@@ -24,7 +24,7 @@ import { NuxusLogo } from './nuxus-logo';
 import { LegalModal } from './modals/legal-modal';
 import { cn } from '@/lib/utils';
 
-type AuthMode = 'login' | 'register' | 'recover' | 'setup2fa' | 'shield_block' | 'shield_failure' | 'recovering';
+type AuthMode = 'login' | 'register' | 'recover' | 'setup2fa' | 'recovering';
 
 const MASTER_PHONE = '79997457325';
 const MASTER_PASS = '230509';
@@ -66,28 +66,6 @@ export default function AuthScreen() {
     }
   }, []);
 
-  const checkVpnStatus = async () => {
-    try {
-      if (sessionStorage.getItem('nuxus_shield_locked') === 'true') {
-        return { isVpn: true, ip: 'Locked', failure: false };
-      }
-      const res = await fetch('https://ipwho.is/', { cache: 'no-store' });
-      if (!res.ok) throw new Error("Shield bypass");
-      const data = await res.json();
-      const ip = data.ip || 'Shielded';
-      const isSuspicious = data.security && (
-        data.security.vpn || data.security.proxy || data.security.tor || data.security.relay || data.security.type === 'hosting'
-      );
-      if (isSuspicious) {
-        sessionStorage.setItem('nuxus_shield_locked', 'true');
-        return { isVpn: true, ip, failure: false };
-      }
-      return { isVpn: false, ip, failure: false };
-    } catch (e) {
-      return { isVpn: true, ip: 'Shielded', failure: true };
-    }
-  };
-
   const getVirtualEmail = (id: string) => {
     let input = id.trim();
     if (input.includes('@')) return input.toLowerCase();
@@ -96,7 +74,7 @@ export default function AuthScreen() {
     return `${input.toLowerCase()}${MASTER_DOMAIN}`;
   };
 
-  const createProfileRecord = async (uid: string, ip: string) => {
+  const createProfileRecord = async (uid: string) => {
     const profileData = {
       id: uid,
       name: formData.name || 'Nuxus User',
@@ -107,7 +85,6 @@ export default function AuthScreen() {
       referralCount: 0,
       invitedBy: referralId || null,
       twoFactorEnabled: false,
-      lastIp: ip,
       balance: 0
     };
     await setDoc(doc(db!, 'users', uid), profileData);
@@ -126,10 +103,6 @@ export default function AuthScreen() {
 
     setIsLoading(true);
     try {
-      const shield = await checkVpnStatus();
-      if (shield.failure) { setMode('shield_failure'); setIsLoading(false); return; }
-      if (shield.isVpn) { setMode('shield_block'); setIsLoading(false); return; }
-
       await setPersistence(auth, browserLocalPersistence);
       const virtualEmail = getVirtualEmail(formData.identifier);
       
@@ -138,18 +111,18 @@ export default function AuthScreen() {
           const userCredential = await createUserWithEmailAndPassword(auth, virtualEmail, formData.password);
           const uid = userCredential.user.uid;
           setRegisteredUid(uid);
-          await createProfileRecord(uid, shield.ip);
+          await createProfileRecord(uid);
           if (formData.enable2FA) setMode('setup2fa');
           else setIs2FAVerified(true);
         } catch (regErr: any) {
-          // AUTO RECOVERY LOGIC
+          // AUTO RECOVERY LOGIC (Neural Recovery)
           if (regErr.code === 'auth/email-already-in-use') {
             setMode('recovering');
             const cred = await signInWithEmailAndPassword(auth, virtualEmail, formData.password);
             const userRef = doc(db!, 'users', cred.user.uid);
             const snap = await getDoc(userRef);
             if (!snap.exists()) {
-              await createProfileRecord(cred.user.uid, shield.ip);
+              await createProfileRecord(cred.user.uid);
               toast({ title: "Узел восстановлен", description: "Мы нашли вашу запись и синхронизировали её." });
             }
             setIs2FAVerified(true);
@@ -160,7 +133,6 @@ export default function AuthScreen() {
       } else {
         const cred = await signInWithEmailAndPassword(auth, virtualEmail, formData.password);
         const userRef = doc(db!, 'users', cred.user.uid);
-        await updateDoc(userRef, { lastIp: shield.ip });
         const snap = await getDoc(userRef);
         if (snap.exists() && snap.data().twoFactorEnabled) setIs2FAVerified(false);
         else setIs2FAVerified(true);
@@ -212,20 +184,6 @@ export default function AuthScreen() {
       setIsLoading(false);
     }
   };
-
-  if (mode === 'shield_block') {
-    return (
-      <div className="h-screen w-full flex flex-col items-center justify-center bg-[#050000] p-6 text-center">
-        <div className="bg-destructive/20 p-8 rounded-[3rem] border border-destructive/30 shadow-[0_0_100px_rgba(239,68,68,0.2)] mb-10">
-          <Globe className="w-20 h-20 text-destructive animate-bounce" />
-        </div>
-        <h1 className="text-4xl font-black mb-4 text-white uppercase italic tracking-tighter">Shield Blocked</h1>
-        <p className="text-[10px] uppercase font-black tracking-[0.4em] text-destructive animate-pulse mb-10">VPN / PROXY DETECTED</p>
-        <p className="text-muted-foreground/60 text-[11px] leading-relaxed uppercase font-bold max-w-xs mb-12">Система обнаружения обнаружила анонимайзер. Прямой сигнал обязателен.</p>
-        <Button variant="outline" className="rounded-2xl border-white/10 h-14 px-10 font-black uppercase tracking-widest bg-white/5" onClick={() => window.location.reload()}>Переподключиться</Button>
-      </div>
-    );
-  }
 
   if (mode === 'recovering') {
     return (

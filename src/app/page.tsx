@@ -16,14 +16,6 @@ import { useToast } from '@/hooks/use-toast';
 import { isUserActuallyBanned } from '@/lib/utils';
 import { NuxusLogo } from '@/components/nuxus-logo';
 import { IosInstaller } from '@/components/ios-installer';
-import { 
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter
-} from '@/components/ui/dialog';
 
 export default function Home() {
   const { user, isUserLoading } = useUser();
@@ -33,59 +25,12 @@ export default function Home() {
   const { toast } = useToast();
   
   const [mounted, setMounted] = useState(false);
-  const [isJoining, setIsJoining] = useState(false);
   const [twoFactorInput, setTwoFactorInput] = useState('');
   const [showIosInstaller, setShowIosInstaller] = useState(false);
   
-  // NUXUS SHIELD STATES
-  const [isVpnDetected, setIsVpnDetected] = useState(false);
-  const [isShieldFailure, setIsShieldFailure] = useState(false);
-  const [isVpnChecking, setIsVpnChecking] = useState(true);
-  
-  const [isPending, startTransition] = useTransition();
-  const [stickerPackToInstall, setStickerPackToInstall] = useState<StickerPack | null>(null);
-
   useEffect(() => {
     setMounted(true);
     
-    const checkVpnStatus = async () => {
-      try {
-        // Проверка локального кеша блокировки
-        if (sessionStorage.getItem('nuxus_shield_locked') === 'true') {
-          setIsVpnDetected(true);
-          setIsVpnChecking(false);
-          return;
-        }
-
-        const res = await fetch('https://ipwho.is/', { cache: 'no-store' });
-        if (!res.ok) throw new Error("Shield bypass attempt detected");
-        
-        const data = await res.json();
-        
-        // Агрессивная проверка: VPN, Proxy, TOR или Cloud Hosting
-        const isSuspicious = data.security && (
-          data.security.vpn || 
-          data.security.proxy || 
-          data.security.tor || 
-          data.security.relay ||
-          data.security.type === 'hosting'
-        );
-
-        if (isSuspicious) {
-          setIsVpnDetected(true);
-          sessionStorage.setItem('nuxus_shield_locked', 'true');
-        }
-      } catch (e) {
-        console.error("Nuxus Shield: Critical scan error", e);
-        // В параноидальном режиме мы блокируем вход, если не смогли проверить IP
-        setIsShieldFailure(true);
-      } finally {
-        setIsVpnChecking(false);
-      }
-    };
-
-    const timer = setTimeout(checkVpnStatus, 500);
-
     // iOS PWA Check
     const checkIos = () => {
       const isIos = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
@@ -95,10 +40,9 @@ export default function Home() {
       }
     };
     checkIos();
-
-    return () => clearTimeout(timer);
   }, []);
 
+  // Фоновая синхронизация IP (без блокировки)
   useEffect(() => {
     if (!user || !db || !mounted) return;
 
@@ -140,52 +84,14 @@ export default function Home() {
 
   if (!mounted) return null;
 
-  // NUXUS SHIELD: VPN BLOCK UI
-  if (isVpnDetected) {
-    return (
-      <div className="h-screen w-full flex flex-col items-center justify-center bg-[#050000] p-6 text-center relative overflow-hidden">
-        <div className="absolute inset-0 bg-destructive/5 animate-pulse" />
-        <div className="relative z-10 space-y-8 max-w-sm">
-          <div className="bg-destructive/20 p-8 rounded-[3rem] border border-destructive/30 shadow-[0_0_100px_rgba(239,68,68,0.2)] mx-auto w-fit">
-            <Globe className="w-20 h-20 text-destructive animate-bounce" />
-          </div>
-          <div className="space-y-4">
-            <h1 className="text-4xl font-black text-white uppercase italic tracking-tighter">Signal Blocked</h1>
-            <p className="text-[10px] uppercase font-black tracking-[0.4em] text-destructive animate-pulse">VPN / Proxy Detection Active</p>
-            <p className="text-muted-foreground/60 text-[11px] leading-relaxed uppercase font-bold px-4">
-              Использование анонимайзеров строго запрещено протоколами Ядра Nuxus. Пожалуйста, отключите VPN и перезапустите браузер.
-            </p>
-          </div>
-          <Button variant="outline" className="rounded-2xl border-white/10 h-14 px-10 font-black uppercase tracking-widest bg-white/5" onClick={() => window.location.reload()}>
-            Проверить сигнал
-          </Button>
-        </div>
-      </div>
-    );
-  }
-
-  // NUXUS SHIELD: SCAN FAILURE
-  if (isShieldFailure) {
-    return (
-      <div className="h-screen w-full flex flex-col items-center justify-center bg-[#050000] p-6 text-center">
-        <ZapOff className="w-16 h-16 text-primary/40 mb-6" />
-        <h2 className="text-xl font-black text-white uppercase italic mb-2">Shield Offline</h2>
-        <p className="text-[10px] text-muted-foreground uppercase font-bold max-w-xs mb-8">
-          Не удалось связаться с узлом безопасности. Проверьте интернет-соединение или отключите блокировщики рекламы.
-        </p>
-        <Button variant="ghost" onClick={() => window.location.reload()} className="font-black uppercase text-[10px] tracking-widest">Переподключить</Button>
-      </div>
-    );
-  }
-
-  if (isUserLoading || isVpnChecking || (user && isProfileLoading)) {
+  if (isUserLoading || (user && isProfileLoading)) {
     return (
       <div className="h-[100dvh] w-full flex flex-col items-center justify-center bg-[#050505] text-white">
         <NuxusLogo size={120} />
         <div className="mt-12 flex flex-col items-center gap-4">
           <Loader2 className="w-6 h-6 text-primary animate-spin" />
           <p className="text-[10px] font-black uppercase tracking-[0.5em] text-primary/60 animate-pulse">
-            {isVpnChecking ? 'Shield Scanning...' : 'Neural Syncing...'}
+            Neural Syncing...
           </p>
         </div>
       </div>
