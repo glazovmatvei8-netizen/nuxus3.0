@@ -23,7 +23,7 @@ import { collection, query, doc, limit, getDocs, addDoc, orderBy, writeBatch, in
 import { UserAvatar } from '@/components/user-avatar';
 import { 
   ShieldAlert, Users, Star, Search, Trash2, ShieldCheck, Radio, Send, 
-  Loader2, UserX, MoreVertical, Ban, CheckCircle2, Crown, Calendar, Shield, Activity, Eye, MessageCircle, ArrowLeft, CreditCard, Check, X, ShieldOff, Zap, Terminal, Trash, Navigation, Trophy
+  Loader2, UserX, MoreVertical, Ban, CheckCircle2, Crown, Calendar, Shield, Activity, Eye, MessageCircle, ArrowLeft, CreditCard, Check, X, ShieldOff, Zap, Terminal, Trash, Navigation, Trophy, Globe, Server
 } from 'lucide-react';
 import type { User, Chat, Transaction } from '@/lib/types';
 import { formatDisplayName, isUserPremium, cn, isGlobalAdmin } from '@/lib/utils';
@@ -43,7 +43,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
   const [userSearch, setUserSearch] = useState('');
   const [broadcastMessage, setBroadcastMessage] = useState('');
   const [activeTab, setActiveTab] = useState('users');
-  const [terminalLogs, setTerminalLogs] = useState<{msg: string, time: string, type: 'info'|'warn'|'crit'}[]>([]);
+  const [terminalLogs, setTerminalLogs] = useState<{msg: string, time: string, type: 'info'|'warn'|'crit'|'edge'}[]>([]);
   
   const terminalEndRef = useRef<HTMLDivElement>(null);
   
@@ -57,8 +57,11 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
     if (activeTab === 'terminal' && terminalLogs.length === 0) {
       const initialLogs = [
         { msg: "Kernel Boot Sequence Initialized...", time: new Date().toLocaleTimeString(), type: 'info' as const },
+        { msg: "Nuxus Global Edge: Synchronizing Nodes...", time: new Date().toLocaleTimeString(), type: 'edge' as const },
+        { msg: "Edge Node [Frankfurt]: ACTIVE (Latency: 12ms)", time: new Date().toLocaleTimeString(), type: 'edge' as const },
+        { msg: "Edge Node [New York]: ACTIVE (Latency: 45ms)", time: new Date().toLocaleTimeString(), type: 'edge' as const },
+        { msg: "Edge Node [Moscow]: ACTIVE (Latency: 8ms)", time: new Date().toLocaleTimeString(), type: 'edge' as const },
         { msg: "Nuxus Shield: System Scan Active", time: new Date().toLocaleTimeString(), type: 'info' as const },
-        { msg: "Neural Map: Synchronizing Nodes...", time: new Date().toLocaleTimeString(), type: 'info' as const },
         { msg: `Total Active Nodes detected: ${users?.length || 0}`, time: new Date().toLocaleTimeString(), type: 'info' as const },
       ];
       setTerminalLogs(initialLogs);
@@ -138,6 +141,10 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
             <div className="flex items-center gap-3">
               <ShieldAlert className="w-5 h-5 text-primary animate-pulse" /> 
               <span>Nuxus Prime Control</span>
+            </div>
+            <div className="flex items-center gap-2 bg-green-500/10 px-3 py-1 rounded-full border border-green-500/20">
+              <Globe className="w-3 h-3 text-green-500 animate-spin-slow" />
+              <span className="text-[8px] font-black text-green-500 uppercase tracking-widest">Global Edge: Active</span>
             </div>
           </DialogTitle>
         </DialogHeader>
@@ -263,9 +270,14 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
               <ScrollArea className="h-full">
                 <div className="space-y-1">
                   {terminalLogs.map((log, i) => (
-                    <div key={i} className={cn("flex gap-3", log.type === 'warn' ? "text-yellow-500" : log.type === 'crit' ? "text-red-500" : "text-green-500")}>
+                    <div key={i} className={cn("flex gap-3", 
+                      log.type === 'warn' ? "text-yellow-500" : 
+                      log.type === 'crit' ? "text-red-500" : 
+                      log.type === 'edge' ? "text-cyan-400" :
+                      "text-green-500"
+                    )}>
                       <span className="opacity-40 shrink-0">[{log.time}]</span>
-                      <span className="shrink-0">$</span>
+                      <span className="shrink-0">{log.type === 'edge' ? '🌐' : '$'}</span>
                       <span className="break-all">{log.msg}</span>
                     </div>
                   ))}
@@ -284,7 +296,8 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
                     if (!val) return;
                     setTerminalLogs(prev => [...prev, { msg: `EXEC: ${val.toUpperCase()}`, time: new Date().toLocaleTimeString(), type: 'info' }]);
                     if (val === 'clear') setTerminalLogs([]);
-                    if (val === 'status') setTerminalLogs(prev => [...prev, { msg: "CORE STABLE. SHIELD 2.1 ACTIVE. RECOVERY PROTOCOLS READY.", time: new Date().toLocaleTimeString(), type: 'info' }]);
+                    if (val === 'status') setTerminalLogs(prev => [...prev, { msg: "CORE STABLE. GLOBAL EDGE SYNCED. SHIELD 2.1 ACTIVE.", time: new Date().toLocaleTimeString(), type: 'info' }]);
+                    if (val === 'edge') setTerminalLogs(prev => [...prev, { msg: "GEO-DISTRIBUTION: Vercel Global Edge (Moscow/Frankfurt/NY).", time: new Date().toLocaleTimeString(), type: 'edge' }]);
                     (e.target as HTMLInputElement).value = '';
                   }
                 }}
