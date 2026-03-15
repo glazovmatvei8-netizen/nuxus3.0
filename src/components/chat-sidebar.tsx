@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useMemo, memo, useRef } from 'react';
@@ -71,7 +72,7 @@ const ChatListItem = memo(({
     return decryptSignal(lastMsg.content);
   }, [lastMsg]);
 
-  const isEncrypted = lastMsg?.contentType === 'text' && lastMsg?.content?.startsWith('NX_');
+  const isEncrypted = lastMsg?.contentType === 'text' && lastMsg?.content?.startsWith('NX_SECURE_');
 
   const handleTouchStart = (e: React.TouchEvent) => {
     touchStartX.current = e.touches[0].clientX;
@@ -259,6 +260,7 @@ export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?:
       return bTime - aTime;
     });
 
+    // Deduplicate private chats by other user ID
     const seenPrivateUsers = new Set();
     result = result.filter(c => {
       if (c.type === 'private') {

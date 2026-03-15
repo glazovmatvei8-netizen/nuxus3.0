@@ -109,6 +109,15 @@ export default function ChatArea() {
 
   const isKernelAdmin = useMemo(() => isGlobalAdmin(userProfile), [userProfile]);
 
+  // AUTO-POPULATE INPUT ON EDIT
+  useEffect(() => {
+    if (editingMsg && editingMsg.contentType === 'text') {
+      setMessageInput(decryptSignal(editingMsg.content));
+    } else if (!editingMsg) {
+      setMessageInput('');
+    }
+  }, [editingMsg]);
+
   const isParticipant = useMemo(() => {
     return chat?.participantIds?.includes(firebaseUser?.uid || '');
   }, [chat, firebaseUser]);
@@ -396,10 +405,17 @@ export default function ChatArea() {
       ) : (
         <footer className="p-3 pb-6 bg-background/90 backdrop-blur-2xl border-t border-white/5 shrink-0 z-30 relative">
           <div className="max-w-4xl mx-auto space-y-2 relative">
-            {replyTo && (
+            {(replyTo || editingMsg) && (
               <div className="p-2 bg-muted/50 rounded-xl border-l-4 border-accent flex items-center justify-between animate-in slide-in-from-bottom-1">
-                <div className="flex flex-col min-0 pl-2"><span className="text-[9px] font-bold text-accent uppercase tracking-widest">Ответ: {replyTo.senderName}</span><span className="text-xs truncate italic">{decryptSignal(replyTo.content)}</span></div>
-                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setReplyTo(null)}><X className="w-4 h-4" /></Button>
+                <div className="flex flex-col min-0 pl-2">
+                  <span className="text-[9px] font-bold text-accent uppercase tracking-widest">
+                    {editingMsg ? "Редактирование" : `Ответ: ${replyTo?.senderName}`}
+                  </span>
+                  <span className="text-xs truncate italic">
+                    {decryptSignal(editingMsg?.content || replyTo?.content)}
+                  </span>
+                </div>
+                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => { setReplyTo(null); setEditingMsg(null); }}><X className="w-4 h-4" /></Button>
               </div>
             )}
             
@@ -417,7 +433,7 @@ export default function ChatArea() {
                 <button onClick={() => setShowEmojiPicker(!showEmojiPicker)} className="text-muted-foreground hover:text-foreground transition-colors"><Smile /></button>
               </div>
 
-              {messageInput.trim() ? (
+              {(messageInput.trim() || editingMsg) ? (
                 <Button size="icon" className="h-10 w-10 rounded-full bg-primary shadow-lg" onClick={() => handleSendMessage()}><Send className="w-5 h-5" /></Button>
               ) : (
                 <div className="flex items-center gap-1 bg-white/5 p-1 rounded-full">
