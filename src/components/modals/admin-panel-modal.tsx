@@ -23,7 +23,7 @@ import { collection, query, doc, limit, getDocs, addDoc, orderBy, writeBatch, in
 import { UserAvatar } from '@/components/user-avatar';
 import { 
   ShieldAlert, Users, Star, Search, Trash2, ShieldCheck, Radio, Send, 
-  Loader2, UserX, MoreVertical, Ban, CheckCircle2, Crown, Calendar, Shield, Activity, Eye, MessageCircle, ArrowLeft, CreditCard, Check, X, ShieldOff, Zap, Terminal, Trash, Navigation, Trophy, Globe, Server, BarChart3, ListChecks, Radar
+  Loader2, UserX, MoreVertical, Ban, CheckCircle2, Crown, Calendar, Shield, Activity, Eye, MessageCircle, ArrowLeft, CreditCard, Check, X, ShieldOff, Zap, Terminal, Trash, Navigation, Trophy, Globe, Server, BarChart3, ListChecks
 } from 'lucide-react';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as ChartTooltip, ResponsiveContainer, AreaChart, Area
@@ -41,22 +41,17 @@ const ROOT_UID = 'GCvLucN8CjNcdaxPO2vmpZ84hNl1';
 export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const db = useFirestore();
   const { user: currentUser } = useUser();
-  const { setCurrentChatId, setActiveView, setIsInterceptionRequested } = useAppState();
+  const { setCurrentChatId, setActiveView } = useAppState();
   const { toast } = useToast();
   
   const [userSearch, setUserSearch] = useState('');
   const [activeTab, setActiveTab] = useState('analytics');
-  const [clickCount, setClickCount] = useState(0);
-  const [isInterceptionEnabled, setIsInterceptionEnabled] = useState(false);
   const [terminalLogs, setTerminalLogs] = useState<{msg: string, time: string, type: 'info'|'warn'|'crit'|'edge'}[]>([]);
   
   const terminalEndRef = useRef<HTMLDivElement>(null);
   
   const usersQuery = useMemoFirebase(() => (!db ? null : query(collection(db, 'users'), limit(500))), [db]);
   const { data: users } = useCollection<User>(usersQuery);
-
-  const allChatsQuery = useMemoFirebase(() => (!db ? null : query(collection(db, 'chats'), limit(100))), [db]);
-  const { data: allChats } = useCollection<Chat>(allChatsQuery);
 
   const logsQuery = useMemoFirebase(() => (!db ? null : query(collection(db, 'system_logs'), orderBy('createdAt', 'desc'), limit(100))), [db]);
   const { data: systemLogs } = useCollection<any>(logsQuery);
@@ -130,29 +125,12 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
     }
   };
 
-  const handleIntercept = (chatId: string) => {
-    setIsInterceptionRequested(true);
-    setCurrentChatId(chatId);
-    setActiveView('chats');
-    onOpenChange(false);
-    toast({ title: "Перехват активен", description: "Вы вошли в узел как наблюдатель" });
-  };
-
-  const onTitleClick = () => {
-    const next = clickCount + 1;
-    setClickCount(next);
-    if (next >= 3) {
-      setIsInterceptionEnabled(true);
-      toast({ title: "Interception Mode Enabled", description: "Signal monitoring active" });
-    }
-  };
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl bg-[#0a0a0c] border-primary/30 p-0 overflow-hidden h-[90vh] flex flex-col rounded-[2.5rem] shadow-2xl border outline-none">
         <DialogHeader className="p-4 md:p-6 bg-primary/5 border-b border-white/5 shrink-0">
           <DialogTitle className="flex items-center justify-between text-white uppercase italic font-black tracking-tighter text-sm md:text-base select-none">
-            <div className="flex items-center gap-2 cursor-pointer active:scale-95 transition-transform" onClick={onTitleClick}>
+            <div className="flex items-center gap-2">
               <ShieldAlert className="w-4 h-4 md:w-5 md:h-5 text-primary animate-pulse" /> 
               <span>Nuxus Control Panel</span>
             </div>
@@ -165,10 +143,9 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0">
           <div className="px-4 md:px-6 pt-3 shrink-0">
-            <TabsList className={cn("grid w-full bg-white/5 p-1 rounded-xl", isInterceptionEnabled ? "grid-cols-6" : "grid-cols-5")}>
+            <TabsList className="grid w-full bg-white/5 p-1 rounded-xl grid-cols-5">
               <TabsTrigger value="analytics" className="rounded-lg text-[8px] uppercase font-black"><BarChart3 className="w-3 h-3 hidden sm:block"/> Аналитика</TabsTrigger>
               <TabsTrigger value="users" className="rounded-lg text-[8px] uppercase font-black"><Users className="w-3 h-3 hidden sm:block"/> Узлы</TabsTrigger>
-              {isInterceptionEnabled && <TabsTrigger value="interception" className="rounded-lg text-[8px] uppercase font-black text-primary"><Radar className="w-3 h-3 hidden sm:block"/> Перехват</TabsTrigger>}
               <TabsTrigger value="logs" className="rounded-lg text-[8px] uppercase font-black"><ListChecks className="w-3 h-3 hidden sm:block"/> Логи</TabsTrigger>
               <TabsTrigger value="terminal" className="rounded-lg text-[8px] uppercase font-black"><Terminal className="w-3 h-3 hidden sm:block"/> Терминал</TabsTrigger>
               <TabsTrigger value="broadcast" className="rounded-lg text-[8px] uppercase font-black"><Radio className="w-3 h-3 hidden sm:block"/> Маяк</TabsTrigger>
@@ -199,31 +176,38 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
             <ScrollArea className="flex-1"><div className="px-6 space-y-2">{users?.filter(u => u.name?.toLowerCase().includes(userSearch.toLowerCase())).map(u => (
               <div key={u.id} className="flex items-center justify-between p-3 bg-white/5 rounded-2xl border border-white/5">
                 <div className="flex items-center gap-3"><UserAvatar userId={u.id} className="h-9 w-9" fallbackName={u.name} /><div className="flex flex-col"><span className="font-bold text-xs">{formatDisplayName(u.name)} {isUserPremium(u) && <Star className="w-2.5 h-2.5 text-accent fill-accent ml-1" />}</span><span className="text-[8px] text-muted-foreground uppercase">{u.username}</span></div></div>
-                <DropdownMenu><DropdownMenuTrigger asChild><Button variant="ghost" size="icon"><MoreVertical className="w-4 h-4"/></Button></DropdownMenuTrigger><DropdownMenuContent align="end" className="w-56 bg-card border-white/10 rounded-2xl"><DropdownMenuItem onClick={() => handleAction(u.id, u.isBanned ? 'unban' : 'ban')} className={cn("gap-2", u.isBanned ? "text-green-500" : "text-destructive")}>{u.isBanned ? <CheckCircle2 className="w-4 h-4"/> : <Ban className="w-4 h-4"/>} {u.isBanned ? 'Разбан' : 'Бан'}</DropdownMenuItem><DropdownMenuItem onClick={() => handleAction(u.id, u.isAdmin ? 'remove_admin' : 'make_admin')}>{u.isAdmin ? 'Снять админа' : 'Дать админку'}</DropdownMenuItem><DropdownMenuSub><DropdownMenuSubTrigger>Premium статус</DropdownMenuSubTrigger><DropdownMenuSubContent className="bg-card border-white/10"><DropdownMenuItem onClick={() => handleAction(u.id, 'give_premium', 1)}>1 Месяц</DropdownMenuItem><DropdownMenuItem onClick={() => handleAction(u.id, 'give_premium', 12)}>1 Год</DropdownMenuItem><DropdownMenuItem onClick={() => handleAction(u.id, 'remove_premium')} className="text-destructive">Удалить</DropdownMenuItem></DropdownMenuSubContent></DropdownMenuSub></DropdownMenuContent></DropdownMenu>
+                <DropdownMenu><DropdownMenuTrigger asChild><Button variant="ghost" size="icon"><MoreVertical className="w-4 h-4"/></Button></DropdownMenuTrigger><DropdownMenuContent align="end" className="w-56 bg-card border-white/10 rounded-2xl p-1">
+                  <DropdownMenuItem onClick={() => handleAction(u.id, u.isBanned ? 'unban' : 'ban')} className={cn("gap-2 font-bold uppercase text-[10px] py-3 rounded-lg", u.isBanned ? "text-green-500" : "text-destructive")}>
+                    {u.isBanned ? <CheckCircle2 className="w-4 h-4"/> : <Ban className="w-4 h-4"/>} {u.isBanned ? 'Разбан' : 'Бан'}
+                  </DropdownMenuItem>
+                  
+                  <DropdownMenuItem onClick={() => handleAction(u.id, u.isAdmin ? 'remove_admin' : 'make_admin')} className="gap-2 font-bold uppercase text-[10px] py-3 rounded-lg">
+                    {u.isAdmin ? <><ShieldOff className="w-4 h-4 text-orange-500" /> Снять админа</> : <><ShieldCheck className="w-4 h-4 text-primary" /> Дать админку</>}
+                  </DropdownMenuItem>
+
+                  <DropdownMenuSeparator className="bg-white/5" />
+
+                  <DropdownMenuSub>
+                    <DropdownMenuSubTrigger className="gap-2 font-bold uppercase text-[10px] py-3 rounded-lg">
+                      <Zap className="w-4 h-4 text-accent" /> Premium статус
+                    </DropdownMenuSubTrigger>
+                    <DropdownMenuSubContent className="bg-card border-white/10 p-1" sideOffset={8}>
+                      <DropdownMenuItem onClick={() => handleAction(u.id, 'give_premium', 1)} className="text-[10px] font-bold uppercase py-3 rounded-lg flex items-center gap-2">
+                        <Star className="w-3.5 h-3.5 text-accent" /> 1 Месяц
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleAction(u.id, 'give_premium', 12)} className="text-[10px] font-bold uppercase py-3 rounded-lg flex items-center gap-2">
+                        <Trophy className="w-3.5 h-3.5 text-accent" /> 1 Год
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator className="bg-white/5" />
+                      <DropdownMenuItem onClick={() => handleAction(u.id, 'remove_premium')} className="text-destructive text-[10px] font-bold uppercase py-3 rounded-lg flex items-center gap-2">
+                        <X className="w-3.5 h-3.5" /> Удалить
+                      </DropdownMenuItem>
+                    </DropdownMenuSubContent>
+                  </DropdownMenuSub>
+                </DropdownMenuContent></DropdownMenu>
               </div>
             ))}</div></ScrollArea>
           </TabsContent>
-
-          {isInterceptionEnabled && (
-            <TabsContent value="interception" className="flex-1 flex flex-col min-h-0 m-0 outline-none">
-              <ScrollArea className="flex-1 p-6">
-                <div className="space-y-2">
-                  {allChats?.map(chat => (
-                    <div key={chat.id} className="flex items-center justify-between p-4 bg-primary/5 border border-primary/10 rounded-2xl hover:bg-primary/10 transition-all cursor-pointer group" onClick={() => handleIntercept(chat.id)}>
-                      <div className="flex items-center gap-4">
-                        <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center"><Radar className="w-5 h-5 text-primary" /></div>
-                        <div className="flex flex-col">
-                          <span className="text-sm font-bold text-white">{chat.name || chat.username || 'Приватный узел'}</span>
-                          <span className="text-[9px] text-muted-foreground uppercase font-black">Signals: {chat.participantIds?.length} • Type: {chat.type}</span>
-                        </div>
-                      </div>
-                      <Send className="w-4 h-4 text-primary opacity-0 group-hover:opacity-100 transition-opacity" />
-                    </div>
-                  ))}
-                </div>
-              </ScrollArea>
-            </TabsContent>
-          )}
 
           <TabsContent value="terminal" className="flex-1 flex flex-col bg-black"><ScrollArea className="flex-1 p-4 font-mono text-[9px] text-green-500">{terminalLogs.map((log, i) => (
             <div key={i} className="flex gap-2"><span className="opacity-40">[{log.time}]</span><span>{log.msg}</span></div>
