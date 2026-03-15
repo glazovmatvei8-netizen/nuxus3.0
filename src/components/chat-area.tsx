@@ -29,13 +29,35 @@ const MessageList = memo(({
   messages, userId, chatId, onReply, onPin, amIPremium, isAdmin, isGroup, onEdit, onForward, searchQuery, viewerProfile
 }: any) => {
   if (!messages) return null;
+  
   const sortedMessages = useMemo(() => [...messages].sort((a, b) => new Date(a.sentAt).getTime() - new Date(b.sentAt).getTime()), [messages]);
-  const filteredMessages = searchQuery ? sortedMessages.filter((m: Message) => decryptSignal(m.content)?.toLowerCase().includes(searchQuery.toLowerCase())) : sortedMessages;
+  
+  const filteredMessages = useMemo(() => {
+    if (!searchQuery) return sortedMessages;
+    return sortedMessages.filter((m: Message) => {
+      const text = m.contentType === 'text' ? decryptSignal(m.content)?.toLowerCase() : '';
+      return text.includes(searchQuery.toLowerCase());
+    });
+  }, [sortedMessages, searchQuery]);
 
   return (
     <div className="flex flex-col gap-3 max-w-4xl mx-auto px-4 md:px-6 py-8 min-h-full touch-pan-y">
       {filteredMessages.map((msg: Message) => (
-        <MessageItem key={msg.id} message={msg} isMe={msg.senderId === userId} chatId={chatId} onReply={onReply} onPin={onPin} amIPremium={amIPremium} isAdmin={isAdmin} isGroup={isGroup} onEdit={onEdit} onForward={onForward} highlight={searchQuery && decryptSignal(msg.content)?.toLowerCase().includes(searchQuery.toLowerCase())} viewerProfile={viewerProfile} />
+        <MessageItem 
+          key={msg.id} 
+          message={msg} 
+          isMe={msg.senderId === userId} 
+          chatId={chatId} 
+          onReply={onReply} 
+          onPin={onPin} 
+          amIPremium={amIPremium} 
+          isAdmin={isAdmin} 
+          isGroup={isGroup} 
+          onEdit={onEdit} 
+          onForward={onForward} 
+          highlight={searchQuery && m.contentType === 'text' && decryptSignal(msg.content)?.toLowerCase().includes(searchQuery.toLowerCase())} 
+          viewerProfile={viewerProfile} 
+        />
       ))}
     </div>
   );
@@ -57,19 +79,11 @@ export default function ChatArea() {
   const [searchQuery, setSearchQuery] = useState('');
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [isAiLoading, setIsAiLoading] = useState(false);
-  const [showBotMenu, setShowBotMenu] = useState(false);
 
   const [selectedFiles, setSelectedFiles] = useState<{ url: string; type: 'image' | 'video' }[]>([]);
-  const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
-  const [isSendingFiles, setIsSendingFiles] = useState(false);
-  
-  const [isRecordingVideo, setIsRecordingVideo] = useState(false);
-  const [isRecordingAudio, setIsRecordingAudio] = useState(false);
-  
-  const recorderRef = useRef<MediaRecorder | null>(null);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const scrollViewportRef = useRef<HTMLDivElement>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
   
   const { toast } = useToast();
 
@@ -79,7 +93,7 @@ export default function ChatArea() {
   const chatRef = useMemoFirebase(() => (!db || !currentChatId) ? null : doc(db, 'chats', currentChatId), [db, currentChatId]);
   const { data: chat } = useDoc<Chat>(chatRef);
 
-  // Режим ПЕРЕХВАТА: если админ зашел в чат, в котором его нет
+  // РЕЖИМ ПЕРЕХВАТА: Админ заглядывает в чужой узел
   const isInterception = useMemo(() => {
     if (!chat || !firebaseUser) return false;
     return !chat.participantIds.includes(firebaseUser.uid) && isGlobalAdmin(userProfile);
@@ -87,7 +101,9 @@ export default function ChatArea() {
 
   const otherId = useMemo(() => {
     if (chat?.type === 'private' && firebaseUser) {
-      if (isInterception) return chat.participantIds[0]; // Показываем первого участника для перехвата
+      // Если это перехват, мы не показываем "собеседника" относительно админа, 
+      // так как админ - третий лишний.
+      if (isInterception) return null;
       return chat.participantIds.find(id => id !== firebaseUser.uid);
     }
     return null;
@@ -102,11 +118,9 @@ export default function ChatArea() {
   const pinnedMessage = useMemo(() => messages?.find(m => m.id === chat?.pinnedMessageId), [messages, chat?.pinnedMessageId]);
 
   const isTyping = useMemo(() => {
-    if (!chat?.typing) return false;
+    if (!chat?.typing || isInterception) return false;
     return Object.entries(chat.typing).some(([uid, active]) => active && uid !== firebaseUser?.uid);
-  }, [chat?.typing, firebaseUser?.uid]);
-
-  const isBot = useMemo(() => chat?.username === '@stickers', [chat?.username]);
+  }, [chat?.typing, firebaseUser?.uid, isInterception]);
 
   const scrollToBottom = useCallback((behavior: ScrollBehavior = 'smooth') => {
     if (messagesEndRef.current) {
@@ -127,24 +141,16 @@ export default function ChatArea() {
     setShowScrollBottom(!isAtBottom);
   };
 
-  useEffect(() => {
-    if (currentChatId && localDrafts[currentChatId]) {
-      setMessageInput(localDrafts[currentChatId]);
-    } else {
-      setMessageInput('');
-    }
-  }, [currentChatId, localDrafts]);
-
   const handleInputChange = (val: string) => {
     setMessageInput(val);
     if (currentChatId) setLocalDrafts(prev => ({ ...prev, [currentChatId]: val }));
-    if (db && currentChatId && firebaseUser) {
+    if (db && currentChatId && firebaseUser && !isInterception) {
       updateDocumentNonBlocking(doc(db, 'chats', currentChatId), { [`typing.${firebaseUser.uid}`]: !!val });
     }
   };
 
   const startCall = async (type: 'audio' | 'video') => {
-    if (!db || !firebaseUser || !otherId) return;
+    if (!db || !firebaseUser || !otherId || isInterception) return;
     try {
       const callRef = await addDoc(collection(db, 'calls'), {
         callerId: firebaseUser.uid,
@@ -162,7 +168,7 @@ export default function ChatArea() {
   };
 
   const handleAiDraft = async () => {
-    if (!currentChatId || !messages) return;
+    if (!currentChatId || !messages || isInterception) return;
     setIsAiLoading(true);
     try {
       const history = messages.slice(-5).map(m => ({
@@ -171,7 +177,6 @@ export default function ChatArea() {
       }));
       const res = await suggestMessageDraft({ conversationHistory: history, currentUserInput: messageInput });
       handleInputChange(res.draftMessage);
-      toast({ title: "Nuxus AI", description: "Ответ сгенерирован!" });
     } catch (e) {
       toast({ title: "Ошибка ИИ", variant: "destructive" });
     } finally {
@@ -181,8 +186,7 @@ export default function ChatArea() {
 
   const handleSendMessage = useCallback(async (content_msg: string = messageInput, type_msg: Message['contentType'] = 'text') => {
     if (!content_msg.trim() && type_msg !== 'video_note' && type_msg !== 'sticker' && type_msg !== 'audio') return;
-    if (!currentChatId || !firebaseUser || !db) return;
-    if (isInterception) { toast({ title: "Режим перехвата", description: "Вы не можете отправлять сообщения." }); return; }
+    if (!currentChatId || !firebaseUser || !db || isInterception) return;
     
     let finalContent = content_msg;
     if (type_msg === 'text') finalContent = encryptSignal(content_msg);
@@ -225,7 +229,10 @@ export default function ChatArea() {
   }, [messageInput, currentChatId, firebaseUser, db, userProfile, replyTo, editingMsg, setLocalDrafts, scrollToBottom, isInterception]);
 
   const chatDisplayName = useMemo(() => {
-    if (isInterception) return `📡 ПЕРЕХВАТ: ${chat?.name || 'PRIVATE'}`;
+    if (isInterception) {
+      // Пытаемся достать имена участников из метаданных или просто ID
+      return `📡 ПЕРЕХВАТ: ${chat?.name || 'PRIVATE NODE'}`;
+    }
     if (chat?.type === 'private') {
       const myMeta = chat.metadata?.[firebaseUser?.uid || ''];
       if (myMeta?.customName) return myMeta.customName;
@@ -243,26 +250,42 @@ export default function ChatArea() {
       <header className="h-16 border-b border-white/5 bg-card/80 backdrop-blur-xl flex items-center justify-between px-4 shrink-0 z-30">
         <div className="flex items-center gap-3 flex-1 min-w-0">
           <Button variant="ghost" size="icon" className="md:hidden rounded-lg" onClick={() => setCurrentChatId(null)}><ChevronLeft /></Button>
-          <div className="flex items-center gap-3 cursor-pointer min-w-0" onClick={() => setIsChatInfoOpen(true)}>
-            <UserAvatar userId={otherId} manualAvatarUrl={chat?.avatarUrl || otherProfile?.avatarUrl} className="h-10 w-10" fallbackName={chatDisplayName} showOnlineStatus={!isInterception} />
-            <div className="flex flex-col min-w-0">
-              <span className={cn("font-bold text-sm truncate", isInterception && "text-red-500 animate-pulse")}>{chatDisplayName}</span>
-              <span className="text-[10px] text-primary/80 font-bold uppercase tracking-widest">
-                {isInterception ? 'SIGNAL INTERCEPT ACTIVE' : (isTyping ? 'печатает...' : (chat?.type === 'private' ? formatLastSeen(otherProfile?.lastSeen) : 'сообщество'))}
-              </span>
+          {!isSearchMode ? (
+            <div className="flex items-center gap-3 cursor-pointer min-w-0" onClick={() => setIsChatInfoOpen(true)}>
+              <UserAvatar userId={otherId} manualAvatarUrl={chat?.avatarUrl || otherProfile?.avatarUrl} className="h-10 w-10" fallbackName={chatDisplayName} showOnlineStatus={!isInterception} />
+              <div className="flex flex-col min-w-0">
+                <span className={cn("font-bold text-sm truncate", isInterception && "text-red-500 animate-pulse")}>{chatDisplayName}</span>
+                <span className="text-[10px] text-primary/80 font-bold uppercase tracking-widest">
+                  {isInterception ? 'SIGNAL INTERCEPT ACTIVE' : (isTyping ? 'печатает...' : (chat?.type === 'private' ? formatLastSeen(otherProfile?.lastSeen) : 'сообщество'))}
+                </span>
+              </div>
             </div>
-          </div>
-        </div>
-        <div className="flex items-center gap-1">
-          {!isInterception && chat?.type === 'private' && (
-            <>
-              <Button variant="ghost" size="icon" onClick={() => startCall('audio')} className="text-white/60 hover:text-primary"><Phone className="w-5 h-5" /></Button>
-              <Button variant="ghost" size="icon" onClick={() => startCall('video')} className="text-white/60 hover:text-primary"><Video className="w-5 h-5" /></Button>
-            </>
+          ) : (
+            <div className="flex-1 flex items-center gap-2 pr-4 animate-in fade-in slide-in-from-left-2">
+              <Search className="w-4 h-4 text-primary" />
+              <Input 
+                placeholder="Поиск по сообщениям..." 
+                className="bg-transparent border-none focus-visible:ring-0 text-sm h-8"
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                autoFocus
+              />
+              <button onClick={() => { setIsSearchMode(false); setSearchQuery(''); }} className="p-1 hover:bg-white/5 rounded-full"><X className="w-4 h-4 text-muted-foreground" /></button>
+            </div>
           )}
-          <Button variant="ghost" size="icon" onClick={() => setIsSearchMode(!isSearchMode)} className={cn(isSearchMode && "text-primary")}><Search className="w-5 h-5" /></Button>
-          <Button variant="ghost" size="icon" onClick={() => setIsChatInfoOpen(true)}><Info className="w-5 h-5" /></Button>
         </div>
+        {!isSearchMode && (
+          <div className="flex items-center gap-1">
+            {!isInterception && chat?.type === 'private' && (
+              <>
+                <Button variant="ghost" size="icon" onClick={() => startCall('audio')} className="text-white/60 hover:text-primary"><Phone className="w-5 h-5" /></Button>
+                <Button variant="ghost" size="icon" onClick={() => startCall('video')} className="text-white/60 hover:text-primary"><Video className="w-5 h-5" /></Button>
+              </>
+            )}
+            <Button variant="ghost" size="icon" onClick={() => setIsSearchMode(true)} className="text-white/60 hover:text-primary"><Search className="w-5 h-5" /></Button>
+            <Button variant="ghost" size="icon" onClick={() => setIsChatInfoOpen(true)} className="text-white/60 hover:text-primary"><Info className="w-5 h-5" /></Button>
+          </div>
+        )}
       </header>
 
       {pinnedMessage && (
@@ -303,7 +326,7 @@ export default function ChatArea() {
         )}
       </div>
 
-      {!isInterception && (
+      {!isInterception ? (
         <footer className="p-3 pb-6 bg-[#0a0a0c]/90 backdrop-blur-2xl border-t border-white/5 shrink-0 z-30">
           <div className="max-w-4xl mx-auto space-y-2 relative">
             {replyTo && (
@@ -319,7 +342,7 @@ export default function ChatArea() {
             <div className="flex gap-3 items-center">
               <Popover>
                 <PopoverTrigger asChild><Button variant="ghost" size="icon"><Paperclip /></Button></PopoverTrigger>
-                <PopoverContent side="top" align="start" className="w-48 bg-card border-white/10 rounded-2xl p-1 mb-2">
+                <PopoverContent side="top" align="start" className="w-48 bg-card border-white/10 rounded-2xl p-1 mb-2 shadow-2xl">
                   <Button variant="ghost" className="w-full justify-start gap-3 rounded-xl h-11 text-xs" onClick={() => fileInputRef.current?.click()}><ImageIcon className="w-4 h-4" /> Галерея</Button>
                   <Button variant="ghost" className="w-full justify-start gap-3 rounded-xl h-11 text-xs" onClick={() => setIsPollModalOpen(true)}><BarChart3 className="w-4 h-4" /> Опрос</Button>
                 </PopoverContent>
@@ -336,11 +359,18 @@ export default function ChatArea() {
             </div>
           </div>
         </footer>
+      ) : (
+        <div className="p-4 bg-red-500/10 border-t border-red-500/20 text-center shrink-0 z-30">
+          <p className="text-[10px] font-black text-red-500 uppercase tracking-[0.2em] animate-pulse">
+            РЕЖИМ ПЕРЕХВАТА АКТИВИРОВАН — ТОЛЬКО ЧТЕНИЕ
+          </p>
+        </div>
       )}
 
       {showEmojiPicker && <div className="absolute bottom-24 right-4 z-50 w-[320px] h-[400px]"><EmojiPicker onEmojiSelect={(e) => handleInputChange(messageInput + e)} onStickerSelect={(url) => handleSendMessage(url, 'sticker')} /></div>}
       {chat && <ChatInfoModal open={isChatInfoOpen} onOpenChange={setIsChatInfoOpen} chat={chat as any} />}
       <CreatePollModal open={isPollModalOpen} onOpenChange={setIsPollModalOpen} chatId={currentChatId!} />
+      <input type="file" ref={fileInputRef} hidden accept="image/*,video/*" />
     </div>
   );
 }

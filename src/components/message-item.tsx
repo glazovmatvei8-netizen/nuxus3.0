@@ -54,7 +54,6 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
   const displayContent = useMemo(() => message.contentType === 'text' ? decryptSignal(message.content) : message.content, [message.content, message.contentType]);
   const formattedTime = message.sentAt ? format(new Date(message.sentAt), 'HH:mm') : '';
 
-  // Очистка аудио при размонтировании
   useEffect(() => {
     return () => {
       if (audioInstance.current) {
@@ -85,12 +84,11 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
     e.stopPropagation();
     try {
       if (!audioInstance.current) {
-        // Создаем инстанс с поддержкой автозапуска
         audioInstance.current = new Audio(message.content);
         audioInstance.current.onended = () => setIsPlaying(false);
         audioInstance.current.onerror = () => {
           setIsPlaying(false);
-          toast({ title: "Ошибка аудио", description: "Не удалось загрузить ГС", variant: "destructive" });
+          toast({ title: "Ошибка аудио", variant: "destructive" });
         };
       }
       
@@ -100,17 +98,11 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
       } else {
         const playPromise = audioInstance.current.play();
         if (playPromise !== undefined) {
-          playPromise.then(() => {
-            setIsPlaying(true);
-          }).catch(err => {
-            console.warn("Audio play blocked by browser", err);
-            // Пытаемся еще раз после микро-жеста если нужно
-            setIsPlaying(false);
-          });
+          playPromise.then(() => setIsPlaying(true)).catch(() => setIsPlaying(false));
         }
       }
     } catch (err) {
-      console.error("Audio Engine Critical Fail", err);
+      console.error("Audio Engine Error", err);
     }
   };
 
@@ -122,23 +114,12 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
         className="relative max-w-[280px] rounded-2xl overflow-hidden border border-white/5 shadow-2xl bg-black/20 cursor-pointer active:scale-[0.98] transition-transform"
         onClick={(e) => { e.stopPropagation(); window.open(message.content, '_blank'); }}
       >
-        <img 
-          src={message.content} 
-          alt="Shared Image" 
-          className="w-full h-auto object-cover max-h-[400px] animate-in fade-in duration-500" 
-          loading="lazy"
-        />
+        <img src={message.content} alt="Image" className="w-full h-auto object-cover max-h-[400px]" loading="lazy" />
       </div>
     );
 
     if (message.contentType === 'video_note') return (
-      <div 
-        className="relative w-48 h-48 rounded-full overflow-hidden border-2 border-primary/20 bg-black group cursor-pointer" 
-        onClick={(e) => { 
-          e.stopPropagation();
-          if (videoRef.current) { if (videoRef.current.paused) videoRef.current.play(); else videoRef.current.pause(); } 
-        }}
-      >
+      <div className="relative w-48 h-48 rounded-full overflow-hidden border-2 border-primary/20 bg-black group cursor-pointer" onClick={(e) => { e.stopPropagation(); if (videoRef.current) { if (videoRef.current.paused) videoRef.current.play(); else videoRef.current.pause(); } }}>
         <video ref={videoRef} src={message.content} loop playsInline className="w-full h-full object-cover scale-x-[-1]" />
         <div className="absolute inset-0 bg-black/20 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"><Play className="w-8 h-8 text-white fill-white" /></div>
       </div>
@@ -146,7 +127,7 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
 
     if (message.contentType === 'audio') return (
       <div className="flex items-center gap-3 p-1 min-w-[200px] cursor-pointer" onClick={toggleAudio}>
-        <Button size="icon" className="h-10 w-10 rounded-full bg-primary shadow-lg shadow-primary/20 pointer-events-none transition-all active:scale-90">
+        <Button size="icon" className="h-10 w-10 rounded-full bg-primary shadow-lg pointer-events-none transition-all active:scale-90">
           {isPlaying ? <Pause className="fill-current" /> : <Play fill="currentColor" className="ml-0.5" />}
         </Button>
         <div className="flex-1 flex flex-col justify-center">
@@ -154,12 +135,11 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
             <div className={cn("absolute inset-y-0 left-0 bg-white transition-all duration-100", isPlaying ? "w-full animate-pulse" : "w-0")} />
           </div>
           <div className="flex items-center justify-between mt-1">
-            <button onClick={handleTranscribe} className="text-[9px] font-black text-primary uppercase flex items-center gap-1 hover:opacity-100 opacity-70 transition-opacity">
+            <button onClick={handleTranscribe} className="text-[9px] font-black text-primary uppercase flex items-center gap-1 opacity-70">
               {isTranscribing ? <Loader2 className="animate-spin w-3 h-3" /> : <><Languages className="w-3 h-3" /> Расшифровать</>}
             </button>
-            {transcription && <span className="text-[8px] text-white/40 uppercase">AI Transcribed</span>}
           </div>
-          {transcription && <p className="text-[11px] text-white/80 mt-2 italic border-t border-white/5 pt-1 animate-in fade-in slide-in-from-top-1">{transcription}</p>}
+          {transcription && <p className="text-[11px] text-white/80 mt-2 italic border-t border-white/5 pt-1 animate-in fade-in">{transcription}</p>}
         </div>
       </div>
     );
@@ -172,10 +152,10 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
         </div>
         <div className="space-y-2">
           {message.pollData?.options.map((opt: any) => (
-            <button key={opt.id} className="w-full text-left p-3 rounded-xl bg-white/5 border border-white/5 hover:border-primary/40 transition-all text-xs flex justify-between items-center group">
+            <div key={opt.id} className="w-full p-3 rounded-xl bg-white/5 border border-white/5 text-xs flex justify-between items-center">
               <span>{opt.text}</span>
-              <span className="opacity-40 group-hover:opacity-100">{opt.votes?.length || 0}</span>
-            </button>
+              <span className="opacity-40">{opt.votes?.length || 0}</span>
+            </div>
           ))}
         </div>
       </div>
@@ -192,7 +172,7 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
   if (message.contentType === 'service') return <div className="w-full flex justify-center my-4"><div className="bg-white/5 backdrop-blur-md px-6 py-2 rounded-full border border-white/10"><p className="text-[9px] text-muted-foreground uppercase font-black tracking-widest">{message.content}</p></div></div>;
 
   return (
-    <div className={cn("w-full flex mb-2 transition-all", isMe ? "justify-end" : "justify-start", highlight && "scale-[1.02]")}>
+    <div className={cn("w-full flex mb-2 transition-all", isMe ? "justify-end" : "justify-start", highlight && "scale-105 z-10")}>
       <div className={cn("flex gap-3 max-w-[90%] items-end", isMe ? "flex-row-reverse" : "flex-row")}>
         {!isMe && (
           <div className="cursor-pointer active:scale-90 transition-transform" onClick={() => setInspectedUserId(message.senderId)}>
@@ -204,8 +184,12 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
           
           <ContextMenu>
             <ContextMenuTrigger>
-              <div className="cursor-pointer active:scale-[0.98] outline-none group/bubble">
-                <div className={cn("p-2.5 rounded-2xl border transition-all relative", isMe ? "message-bubble-me border-none" : "bg-card border-white/5 text-white")}>
+              <div className="cursor-pointer active:scale-[0.98] outline-none">
+                <div className={cn(
+                  "p-2.5 rounded-2xl border transition-all relative", 
+                  isMe ? "message-bubble-me border-none" : "bg-card border-white/5 text-white",
+                  highlight && "ring-2 ring-primary shadow-[0_0_20px_rgba(139,92,246,0.5)]"
+                )}>
                   {message.replyToId && (
                     <div className="mb-2 p-2 border-l-2 border-accent bg-white/5 rounded-r-lg opacity-60 text-[10px] truncate max-w-[200px]">
                       {decryptSignal(message.replyToContent)}
