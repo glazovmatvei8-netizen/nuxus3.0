@@ -29,6 +29,8 @@ interface AppState {
   // User Inspection State
   inspectedUserId: string | null;
   setInspectedUserId: (id: string | null) => void;
+  isInterceptionRequested: boolean;
+  setIsInterceptionRequested: (v: boolean) => void;
   
   // Music State
   currentTrack: Track | null;
@@ -58,6 +60,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [settingsTab, setSettingsTab] = useState('profile');
   const [inspectedUserId, setInspectedUserId] = useState<string | null>(null);
+  const [isInterceptionRequested, setIsInterceptionRequested] = useState(false);
   
   const [currentTrack, setCurrentTrack] = useState<Track | null>(null);
   const [isPlayingMusic, setIsPlayingMusic] = useState(false);
@@ -88,6 +91,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setSettingsTab,
       inspectedUserId,
       setInspectedUserId,
+      isInterceptionRequested,
+      setIsInterceptionRequested,
       currentTrack,
       setCurrentTrack,
       isPlayingMusic,

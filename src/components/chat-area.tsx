@@ -67,7 +67,7 @@ MessageList.displayName = 'MessageList';
 export default function ChatArea() {
   const { user: firebaseUser } = useUser();
   const db = useFirestore();
-  const { currentChatId, setCurrentChatId, setForwardingMessage, localDrafts, setLocalDrafts, setActiveCallId } = useAppState();
+  const { currentChatId, setCurrentChatId, setForwardingMessage, localDrafts, setLocalDrafts, setActiveCallId, isInterceptionRequested } = useAppState();
   
   const [isChatInfoOpen, setIsChatInfoOpen] = useState(false);
   const [isPollModalOpen, setIsPollModalOpen] = useState(false);
@@ -92,15 +92,15 @@ export default function ChatArea() {
   const chatRef = useMemoFirebase(() => (!db || !currentChatId) ? null : doc(db, 'chats', currentChatId), [db, currentChatId]);
   const { data: chat } = useDoc<Chat>(chatRef);
 
-  // ADMIN INTERCEPTION MODE: Admin viewing a chat they aren't part of
+  // ADMIN INTERCEPTION MODE: Only if explicitly requested from Admin Panel AND admin is not in chat
   const isInterception = useMemo(() => {
-    if (!chat || !firebaseUser) return false;
+    if (!chat || !firebaseUser || !isInterceptionRequested) return false;
     return !chat.participantIds.includes(firebaseUser.uid) && isGlobalAdmin(userProfile);
-  }, [chat, firebaseUser, userProfile]);
+  }, [chat, firebaseUser, userProfile, isInterceptionRequested]);
 
   const otherId = useMemo(() => {
     if (chat?.type === 'private' && firebaseUser) {
-      if (isInterception) return null; // No "other party" relative to admin in interception
+      if (isInterception) return null; 
       return chat.participantIds.find(id => id !== firebaseUser.uid);
     }
     return null;
@@ -109,7 +109,6 @@ export default function ChatArea() {
   const otherProfileRef = useMemoFirebase(() => (!db || !otherId) ? null : doc(db, 'users', otherId), [db, otherId]);
   const { data: otherProfile } = useDoc<UserType>(otherProfileRef);
 
-  // For interception mode, we need names of real participants
   const participantsQuery = useMemoFirebase(() => {
     if (!db || !isInterception || !chat) return null;
     return query(collection(db, 'users'), where('id', 'in', chat.participantIds));
@@ -235,7 +234,7 @@ export default function ChatArea() {
   const chatDisplayName = useMemo(() => {
     if (isInterception && chat?.type === 'private' && participants) {
       const names = participants.map(p => formatDisplayName(p.name));
-      return `📡 ПЕРЕХВАТ: ${names[0]} + ${names[1]}`;
+      return `📡 ПЕРЕХВАТ: ${names[0] || '?'} + ${names[1] || '?'}`;
     }
     if (isInterception && chat) {
       return `📡 ПЕРЕХВАТ: ${chat.name || 'Community'}`;
@@ -338,7 +337,7 @@ export default function ChatArea() {
           <div className="max-w-4xl mx-auto space-y-2 relative">
             {replyTo && (
               <div className="p-2 bg-muted/50 rounded-xl border-l-4 border-accent flex items-center justify-between animate-in slide-in-from-bottom-1">
-                <div className="flex flex-col min-w-0 pl-2">
+                <div className="flex flex-col min-0 pl-2">
                   <span className="text-[9px] font-bold text-accent uppercase tracking-widest">Ответ: {replyTo.senderName}</span>
                   <span className="text-xs truncate italic">{decryptSignal(replyTo.content)}</span>
                 </div>

@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useFirestore, useUser, useDoc, useMemoFirebase } from '@/firebase';
-import { collection, query, where, getDocs, doc, limit, addDoc } from 'firebase/firestore';
+import { collection, query, where, getDocs, doc, limit, addDoc, updateDoc, arrayUnion } from 'firebase/firestore';
 import { useAppState } from '@/lib/store';
 import { useToast } from '@/hooks/use-toast';
 import { Search, Loader2, ArrowRight, Zap, Globe, MessageCircle, Star } from 'lucide-react';
@@ -20,7 +20,7 @@ import type { User, Chat } from '@/lib/types';
 export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const { user } = useUser();
   const db = useFirestore();
-  const { setCurrentChatId, setActiveView } = useAppState();
+  const { setCurrentChatId, setActiveView, setIsInterceptionRequested } = useAppState();
   const { toast } = useToast();
   
   const [searchQuery, setSearchQuery] = useState('');
@@ -31,19 +31,18 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
   const userRef = useMemoFirebase(() => (!db || !user) ? null : doc(db, 'users', user.uid), [db, user]);
   const { data: myProfile } = useDoc<User>(userRef);
 
-  // Discovery Hub Logic: Подгружаем публичные чаты
+  // Discovery Hub Logic
   useEffect(() => {
     if (open && !searchQuery.trim() && db) {
       const fetchDiscoveryData = async () => {
         setIsLoading(true);
         try {
-          // Ищем чаты с пометкой isPublic
           const chatQ = query(collection(db!, 'chats'), where('isPublic', '==', true), limit(15));
           const chatSnap = await getDocs(chatQ);
           const publicChats = chatSnap.docs.map(d => ({ id: d.id, ...d.data() } as Chat));
           setTrends(publicChats);
         } catch (e) {
-          console.warn("Nuxus Discovery: Signal synchronization active...");
+          console.warn("Nuxus Discovery: Syncing...");
         } finally {
           setIsLoading(false);
         }
@@ -52,8 +51,29 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
     }
   }, [open, searchQuery, db]);
 
+  const handleChatClick = async (targetChat: Chat) => {
+    if (!db || !user) return;
+    setIsInterceptionRequested(false);
+    setIsLoading(true);
+    try {
+      if (!targetChat.participantIds.includes(user.uid)) {
+        await updateDoc(doc(db, 'chats', targetChat.id), {
+          participantIds: arrayUnion(user.uid)
+        });
+      }
+      setCurrentChatId(targetChat.id);
+      onOpenChange(false);
+      setActiveView('chats');
+    } catch (e) {
+      toast({ title: "Ошибка входа в узел", variant: "destructive" });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const openPrivateChat = async (targetUser: User) => {
     if (!db || !user || !myProfile) return;
+    setIsInterceptionRequested(false);
     setIsLoading(true);
     try {
       const q = query(
@@ -106,7 +126,6 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
       const searchVal = val.startsWith('@') ? val.toLowerCase() : '@' + val.toLowerCase();
       const foundResults: any[] = [];
 
-      // Интеграция ботов
       if ('@stickers'.includes(searchVal)) {
         foundResults.push({ 
           type: 'bot', 
@@ -119,7 +138,6 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
         });
       }
 
-      // Глобальный поиск по юзерам и чатам
       const chatQuery = query(collection(db!, 'chats'), where('username', '==', searchVal), limit(5));
       const userQuery = query(collection(db!, 'users'), where('username', '==', searchVal), limit(5));
 
@@ -138,6 +156,7 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
 
   const openBotChat = async () => {
     if (!db || !user) return;
+    setIsInterceptionRequested(false);
     try {
       const q = query(collection(db!, 'chats'), where('username', '==', '@stickers'), where('participantIds', 'array-contains', user.uid), limit(1));
       const snap = await getDocs(q);
@@ -194,7 +213,7 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
                   <div key={idx} className="flex items-center justify-between p-4 bg-white/5 rounded-[1.8rem] hover:bg-white/10 cursor-pointer border border-white/5 active:scale-[0.98] transition-all" onClick={() => {
                     if (res.type === 'bot') openBotChat();
                     else if (res.type === 'user') openPrivateChat(res.data);
-                    else { setCurrentChatId(res.data.id); onOpenChange(false); setActiveView('chats'); }
+                    else handleChatClick(res.data);
                   }}>
                     <div className="flex items-center gap-4">
                       <UserAvatar userId={res.type === 'user' ? res.data.id : null} manualAvatarUrl={res.data.avatarUrl} className="h-12 w-12" fallbackName={res.data.name} />
@@ -209,12 +228,6 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
                     <ArrowRight className="w-5 h-5 text-primary/40" />
                   </div>
                 ))}
-                {results.length === 0 && !isLoading && (
-                  <div className="text-center py-10 opacity-20">
-                    <MessageCircle className="w-12 h-12 mx-auto mb-2" />
-                    <p className="text-[10px] font-black uppercase tracking-widest">Сигнал не обнаружен</p>
-                  </div>
-                )}
               </div>
             ) : (
               <div className="space-y-6">
@@ -227,8 +240,8 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
                 </div>
 
                 <div className="space-y-2">
-                  {trends.length > 0 ? trends.map(chat => (
-                    <div key={chat.id} className="flex items-center justify-between p-4 bg-white/5 rounded-[1.8rem] hover:bg-white/10 cursor-pointer border border-white/5 active:scale-[0.98] transition-all" onClick={() => { setCurrentChatId(chat.id); onOpenChange(false); setActiveView('chats'); }}>
+                  {trends.map(chat => (
+                    <div key={chat.id} className="flex items-center justify-between p-4 bg-white/5 rounded-[1.8rem] hover:bg-white/10 cursor-pointer border border-white/5 active:scale-[0.98] transition-all" onClick={() => handleChatClick(chat)}>
                       <div className="flex items-center gap-4">
                         <UserAvatar userId={null} manualAvatarUrl={chat.avatarUrl} className="h-12 w-12" fallbackName={chat.name} />
                         <div className="flex flex-col">
@@ -241,19 +254,7 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
                       </div>
                       <ArrowRight className="w-5 h-5 text-primary/40" />
                     </div>
-                  )) : (
-                    <div className="text-center py-20 opacity-20">
-                      <Zap className="w-12 h-12 mx-auto mb-4" />
-                      <p className="text-[10px] font-black uppercase tracking-widest">Ядро синхронизирует публичные узлы...</p>
-                    </div>
-                  )}
-                </div>
-
-                <div className="bg-primary/5 p-6 rounded-[2rem] border border-primary/10 space-y-3">
-                  <h4 className="text-[9px] font-black uppercase text-primary tracking-[0.3em]">Как попасть в Discovery?</h4>
-                  <p className="text-[8px] text-muted-foreground font-bold uppercase leading-relaxed">
-                    Создайте группу или канал и включите «Публичный доступ» в настройках. Ваш узел станет видимым для всего Ядра.
-                  </p>
+                  ))}
                 </div>
               </div>
             )}

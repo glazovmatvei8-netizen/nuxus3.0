@@ -191,7 +191,7 @@ ChatListItem.displayName = 'ChatListItem';
 export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?: boolean }) {
   const { user } = useUser();
   const db = useFirestore();
-  const { currentChatId, setCurrentChatId, setIsSearchOpen } = useAppState();
+  const { currentChatId, setCurrentChatId, setIsSearchOpen, setIsInterceptionRequested } = useAppState();
   const { toast } = useToast();
   
   const [activeTab, setActiveTab] = useState(isArchiveView ? 'archived' : 'all');
@@ -323,7 +323,7 @@ export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?:
                   key={chat.id} chat={chat} isActive={currentChatId === chat.id} 
                   isPinned={currentUserProfile?.pinnedChatIds?.includes(chat.id)}
                   onPinToggle={handlePinToggle} onMarkUnread={handleMarkUnread} onArchive={handleArchive}
-                  onDelete={handleDelete} onClick={() => setCurrentChatId(chat.id)}
+                  onDelete={handleDelete} onClick={() => { setIsInterceptionRequested(false); setCurrentChatId(chat.id); }}
                   currentUserId={user?.uid} otherId={chat.type === 'private' && user ? chat.participantIds?.find((id: string) => id !== user.uid) : null} 
                 />
               ))
