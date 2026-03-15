@@ -15,14 +15,15 @@ import {
   DropdownMenuSeparator,
   DropdownMenuSub,
   DropdownMenuSubTrigger,
-  DropdownMenuSubContent
+  DropdownMenuSubContent,
+  DropdownMenuPortal
 } from "@/components/ui/dropdown-menu";
 import { useFirestore, useCollection, useMemoFirebase, useUser } from '@/firebase';
 import { collection, query, doc, limit, addDoc, updateDoc } from 'firebase/firestore';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
   ShieldAlert, Users, Star, Ban, CheckCircle2, ShieldCheck, Radio, 
-  MoreVertical, ShieldOff, Zap, Trophy, Activity, BarChart3, ListChecks, X
+  MoreVertical, ShieldOff, Zap, Trophy, Activity, BarChart3, ListChecks, X, Globe, Server
 } from 'lucide-react';
 import { 
   BarChart, Bar, XAxis, YAxis, Tooltip as ChartTooltip, ResponsiveContainer, AreaChart, Area
@@ -192,7 +193,14 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
                           {formatDisplayName(u.name)} 
                           {isUserPremium(u) && <Star className="w-3 h-3 text-accent fill-accent" />}
                         </span>
-                        <span className="text-[9px] text-muted-foreground uppercase font-black">{u.username}</span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-[9px] text-muted-foreground uppercase font-black">{u.username}</span>
+                          {u.lastIp && (
+                            <span className="text-[8px] bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono leading-none border border-primary/20">
+                              {u.lastIp} {u.countryCode ? `(${u.countryCode})` : ''}
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </div>
                     <DropdownMenu>
