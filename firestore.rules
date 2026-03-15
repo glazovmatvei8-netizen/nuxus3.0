@@ -29,6 +29,8 @@ service cloud.firestore {
         request.auth.uid == userId || 
         (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['referralCount']))
       );
+      // Разрешаем удалять свой собственный профиль
+      allow delete: if isSignedIn() && (request.auth.uid == userId || isPrimeAdmin());
       
       match /receivedGifts/{giftId} {
         allow read: if isSignedIn();
@@ -52,7 +54,12 @@ service cloud.firestore {
       // Читать и обновлять чат могут только участники
       allow read, update: if isSignedIn() && (isPrimeAdmin() || request.auth.uid in resource.data.participantIds);
       allow create: if isSignedIn();
-      allow delete: if isSignedIn() && (isPrimeAdmin() || request.auth.uid == resource.data.ownerId);
+      // Удалять может владелец ИЛИ участник личной переписки
+      allow delete: if isSignedIn() && (
+        isPrimeAdmin() || 
+        request.auth.uid == resource.data.ownerId ||
+        (resource.data.type == 'private' && request.auth.uid in resource.data.participantIds)
+      );
 
       // Сообщения внутри чата: ТОЛЬКО для участников этого конкретного чата
       match /messages/{messageId} {

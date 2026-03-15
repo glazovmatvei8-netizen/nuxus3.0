@@ -11,7 +11,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { 
-  Crown, Star, LogOut, Shield, UserCheck, UserPlus2, Link, Copy, X, Bell, BellOff, Clock, Edit3, Camera, Save, UserPlus
+  Crown, Star, LogOut, Shield, UserCheck, UserPlus2, Link, Copy, X, Bell, BellOff, Clock, Edit3, Camera, Save, UserPlus, Trash2
 } from 'lucide-react';
 import { 
   DropdownMenu,
@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useFirestore, useUser, useDoc, useMemoFirebase } from '@/firebase';
 import { doc, updateDoc, arrayRemove, arrayUnion, deleteDoc } from 'firebase/firestore';
+import { deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { useToast } from '@/hooks/use-toast';
 import { useAppState } from '@/lib/store';
 import { formatDisplayName, isUserPremium, formatLastSeen } from '@/lib/utils';
@@ -30,8 +31,8 @@ import { addHours, isAfter, parseISO } from 'date-fns';
 import { AddMemberModal } from './add-member-modal';
 
 /**
- * ЧАТ-ИНФО 3.1
- * Исправлено наложение кнопок и работа локальных имен.
+ * ЧАТ-ИНФО 3.2
+ * Исправлена работа удаления и обновлены права доступа.
  */
 export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onOpenChange: (o: boolean) => void, chat: Chat }) {
   const db = useFirestore();
@@ -130,6 +131,24 @@ export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onO
     if (!db || !user || !chat.id) return;
     await updateDoc(doc(db, 'chats', chat.id), { [`metadata.${user.uid}.mutedUntil`]: null });
     toast({ title: "Уведомления включены" });
+  };
+
+  const handleDeleteNode = () => {
+    if (!db || !chat.id || !user) return;
+    
+    const confirmMsg = isPrivate ? 'Удалить этот диалог навсегда для всех?' : (isOwner ? 'Удалить это сообщество навсегда?' : 'Выйти из этого сообщества?');
+    
+    if (confirm(confirmMsg)) {
+      if (isPrivate || isOwner) {
+        deleteDocumentNonBlocking(doc(db, 'chats', chat.id));
+        toast({ title: "Узел уничтожен" });
+      } else {
+        updateDoc(doc(db, 'chats', chat.id), { participantIds: arrayRemove(user.uid) });
+        toast({ title: "Вы покинули узел" });
+      }
+      setCurrentChatId(null);
+      onOpenChange(false);
+    }
   };
 
   const currentDisplayName = useMemo(() => {
@@ -298,17 +317,9 @@ export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onO
             )}
 
             <div className="pt-4 pb-12 space-y-2">
-              <Button variant="ghost" className="w-full text-destructive hover:bg-destructive/10 rounded-xl font-bold uppercase text-[10px] tracking-widest" onClick={() => {
-                if (confirm('Покинуть этот чат?')) {
-                  if (isPrivate || isOwner) {
-                    deleteDoc(doc(db, 'chats', chat.id));
-                  } else {
-                    updateDoc(doc(db, 'chats', chat.id), { participantIds: arrayRemove(user?.uid) });
-                  }
-                  setCurrentChatId(null);
-                  onOpenChange(false);
-                }
-              }}>{isOwner ? "Удалить узел" : "Отключиться от узла"}</Button>
+              <Button variant="ghost" className="w-full text-destructive hover:bg-destructive/10 rounded-xl font-bold uppercase text-[10px] tracking-widest gap-2" onClick={handleDeleteNode}>
+                <Trash2 className="w-4 h-4" /> {isPrivate || isOwner ? "Удалить узел" : "Отключиться от узла"}
+              </Button>
             </div>
           </div>
         </ScrollArea>

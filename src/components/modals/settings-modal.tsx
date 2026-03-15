@@ -16,11 +16,11 @@ import {
   LogOut, Palette, Check, Settings2, Camera, Lock, Image as ImageIcon, 
   Paintbrush, Shield, UserCircle, Layout, Smile, FileText, ChevronRight,
   ShieldCheck, Eye, Users2, MessageSquareLock, Upload, Smartphone, Share2, Trophy,
-  Bell, Video, Mic, MonitorSmartphone, Key, Trash2, ShieldAlert, RefreshCw, Save
+  Bell, Video, Mic, MonitorSmartphone, Key, Trash2, ShieldAlert, RefreshCw, Save, Zap
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { signOut, updatePassword } from 'firebase/auth';
-import { doc, updateDoc } from 'firebase/firestore';
+import { doc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAppState } from '@/lib/store';
 import { cn } from '@/lib/utils';
@@ -153,6 +153,19 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
       }
     } finally {
       setIsPasswordLoading(false);
+    }
+  };
+
+  const handleSelfDestruct = async () => {
+    if (!db || !user) return;
+    if (confirm('ВНИМАНИЕ: Это полностью удалит ваш узел (профиль) из Ядра навсегда. Вы уверены?')) {
+      try {
+        await deleteDoc(doc(db, 'users', user.uid));
+        await signOut(auth);
+        toast({ title: "Узел уничтожен", description: "Данные стерты навсегда." });
+      } catch (e: any) {
+        toast({ title: "Ошибка удаления", description: e.message, variant: "destructive" });
+      }
     }
   };
 
@@ -328,6 +341,22 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                 {form.twoFactorEnabled && (
                   <Input type="password" placeholder="••••••" maxLength={6} value={form.twoFactorPin} onChange={e => setForm({...form, twoFactorPin: e.target.value.replace(/\D/g, '')})} className="bg-black/40 border-white/10 h-12 rounded-xl text-center text-xl tracking-[0.5em] font-black" />
                 )}
+              </div>
+
+              <div className="space-y-4 pt-4 border-t border-white/5">
+                <h3 className="text-[10px] font-black uppercase tracking-widest text-destructive flex items-center gap-2 px-1">
+                  <ShieldAlert className="w-4 h-4" /> Danger Zone
+                </h3>
+                <Button 
+                  variant="ghost" 
+                  onClick={handleSelfDestruct}
+                  className="w-full h-14 bg-red-500/10 text-red-500 hover:bg-red-500/20 border border-red-500/20 rounded-[1.8rem] font-black uppercase italic tracking-widest gap-2"
+                >
+                  <Zap className="w-4 h-4" /> Самоуничтожение Узла
+                </Button>
+                <p className="text-[7px] text-center text-muted-foreground uppercase font-bold px-6 leading-relaxed">
+                  Все ваши данные будут стерты из Ядра навсегда. Это действие необратимо.
+                </p>
               </div>
             </TabsContent>
           </ScrollArea>
