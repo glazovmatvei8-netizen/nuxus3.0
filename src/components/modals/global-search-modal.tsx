@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useEffect } from 'react';
@@ -20,7 +19,7 @@ type SearchFilter = 'all' | 'users' | 'groups' | 'bots';
 export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const { user } = useUser();
   const db = useFirestore();
-  const { setCurrentChatId, setActiveView } = useAppState();
+  const { setCurrentChatId, setActiveView, setInspectedUserId } = useAppState();
   const { toast } = useToast();
   
   const [searchQuery, setSearchQuery] = useState('');
@@ -64,19 +63,31 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
         foundResults.push({ type: 'bot', data: { id: 'bot_stickers', name: 'Sticker Bot 🎨', username: '@stickers', avatarUrl: 'https://i.ibb.co/sd2MqGz2/Icon.png' } });
       }
 
-      // Публичные чаты
+      // Публичные чаты (Только группы и каналы, личные чаты тут не ищем чтобы не было раздвоения)
       if (activeFilter === 'all' || activeFilter === 'groups') {
-        const chatQuery = query(collection(db!, 'chats'), where('username', '==', searchVal), where('isPublic', '==', true), limit(10));
+        const chatQuery = query(
+          collection(db!, 'chats'), 
+          where('username', '==', searchVal), 
+          where('isPublic', '==', true),
+          limit(10)
+        );
         const chatSnap = await getDocs(chatQuery);
-        chatSnap.docs.forEach(d => foundResults.push({ type: 'chat', data: { id: d.id, ...d.data() } }));
+        chatSnap.docs.forEach(d => {
+          const data = d.data();
+          if (data.type !== 'private') {
+            foundResults.push({ type: 'chat', data: { id: d.id, ...data } });
+          }
+        });
       }
 
-      // Пользователи
+      // Пользователи (Личные переписки начинаются отсюда)
       if (activeFilter === 'all' || activeFilter === 'users') {
         const userQuery = query(collection(db!, 'users'), where('username', '==', searchVal), limit(10));
         const userSnap = await getDocs(userQuery);
         userSnap.docs.forEach(d => {
-          if (d.id !== user?.uid) foundResults.push({ type: 'user', data: { id: d.id, ...d.data() } });
+          if (d.id !== user?.uid) {
+            foundResults.push({ type: 'user', data: { id: d.id, ...d.data() } });
+          }
         });
       }
 
@@ -85,6 +96,17 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
       console.error("Search error:", e);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleSelectResult = (res: { type: 'chat' | 'user' | 'bot', data: any }) => {
+    if (res.type === 'user') {
+      setInspectedUserId(res.data.id);
+      onOpenChange(false);
+    } else if (res.type === 'chat') {
+      setCurrentChatId(res.data.id);
+      setActiveView('chats');
+      onOpenChange(false);
     }
   };
 
@@ -115,12 +137,12 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
             {results.length > 0 ? (
               <div className="space-y-2">
                 {results.map((res, idx) => (
-                  <div key={idx} className="flex items-center justify-between p-4 bg-white/5 rounded-[1.8rem] hover:bg-white/10 cursor-pointer border border-white/5 transition-all">
+                  <div key={idx} onClick={() => handleSelectResult(res)} className="flex items-center justify-between p-4 bg-white/5 rounded-[1.8rem] hover:bg-white/10 cursor-pointer border border-white/5 transition-all">
                     <div className="flex items-center gap-4">
                       <UserAvatar userId={res.type === 'user' ? res.data.id : null} manualAvatarUrl={res.data.avatarUrl} className="h-12 w-12" fallbackName={res.data.name} />
                       <div className="flex flex-col">
                         <span className="font-bold text-white flex items-center gap-2">{res.data.name} {res.data.isPremium && <Star className="w-3 h-3 text-accent fill-accent" />}</span>
-                        <span className="text-[10px] text-muted-foreground uppercase font-black">{res.data.username} • {res.type}</span>
+                        <span className="text-[10px] text-muted-foreground uppercase font-black">{res.data.username} • {res.type === 'user' ? 'профиль' : res.type === 'chat' ? 'сообщество' : 'бот'}</span>
                       </div>
                     </div>
                     <ArrowRight className="w-5 h-5 text-primary/40" />
@@ -134,7 +156,7 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
                   <span className="text-[10px] font-black uppercase tracking-[0.2em]">Популярное в Ядре</span>
                 </div>
                 {trends.map(chat => (
-                  <div key={chat.id} className="flex items-center justify-between p-4 bg-white/5 rounded-[1.8rem] hover:bg-white/10 cursor-pointer border border-white/5 transition-all">
+                  <div key={chat.id} onClick={() => handleSelectResult({ type: 'chat', data: chat })} className="flex items-center justify-between p-4 bg-white/5 rounded-[1.8rem] hover:bg-white/10 cursor-pointer border border-white/5 transition-all">
                     <div className="flex items-center gap-4">
                       <UserAvatar userId={null} manualAvatarUrl={chat.avatarUrl} className="h-12 w-12" fallbackName={chat.name} />
                       <div className="flex flex-col">

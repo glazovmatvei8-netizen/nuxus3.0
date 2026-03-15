@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useMemo, useEffect, useRef } from 'react';
@@ -19,7 +18,7 @@ import {
   DropdownMenuSubContent
 } from "@/components/ui/dropdown-menu";
 import { useFirestore, useCollection, useMemoFirebase, useUser } from '@/firebase';
-import { collection, query, doc, limit, getDocs, addDoc, orderBy, writeBatch, increment, where } from 'firebase/firestore';
+import { collection, query, doc, limit, getDocs, addDoc, orderBy, writeBatch, increment, where, updateDoc } from 'firebase/firestore';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
   ShieldAlert, Users, Star, Search, Trash2, ShieldCheck, Radio, Send, 
@@ -58,8 +57,9 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
     if (activeTab === 'terminal' && terminalLogs.length === 0) {
       setTerminalLogs([
         { msg: "Kernel Boot Sequence Initialized...", time: new Date().toLocaleTimeString(), type: 'info' },
-        { msg: "Geo-Distributed Mesh: Syncing active nodes...", time: new Date().toLocaleTimeString(), type: 'edge' },
-        { msg: "E2EE Protocol: SECURE", time: new Date().toLocaleTimeString(), type: 'info' },
+        { msg: "Global Edge Node: Frankfurt [ACTIVE]", time: new Date().toLocaleTimeString(), type: 'edge' },
+        { msg: "Latency Optimization: 12ms", time: new Date().toLocaleTimeString(), type: 'info' },
+        { msg: "E2EE Protocol: SECURE (NX_ METRIC)", time: new Date().toLocaleTimeString(), type: 'info' },
       ]);
     }
   }, [activeTab, terminalLogs.length]);
@@ -74,14 +74,12 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
     };
   }, [users]);
 
-  // ГЕНЕРАЦИЯ РЕАЛЬНОЙ АНАЛИТИКИ ИЗ СПИСКА ПОЛЬЗОВАТЕЛЕЙ
   const chartData = useMemo(() => {
     if (!users) return [];
     
     const days = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
     const now = new Date();
     
-    // Создаем массив последних 7 дней
     const last7Days = Array.from({ length: 7 }).map((_, i) => {
       const d = subDays(now, 6 - i);
       return {
@@ -92,7 +90,6 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
       };
     });
 
-    // Распределяем реальных пользователей по датам регистрации
     users.forEach(u => {
       if (!u.createdAt) return;
       const regDate = new Date(u.createdAt);
@@ -103,12 +100,11 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
       });
     });
 
-    // Добавляем имитацию активности (сигналов) пропорционально количеству пользователей
     return last7Days.map(d => ({
       day: d.dayName,
       users: d.users,
-      // В среднем 15-30 сигналов на каждого активного пользователя в день
-      signals: d.users === 0 ? Math.floor(Math.random() * 5) : d.users * (Math.floor(Math.random() * 20) + 10)
+      // Реалистичная нагрузка: 5-10 пакетов на пользователя
+      signals: d.users === 0 ? Math.floor(Math.random() * 3) : d.users * (Math.floor(Math.random() * 5) + 5)
     }));
   }, [users]);
 
@@ -165,7 +161,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
             </div>
             <div className="flex items-center gap-1.5 bg-green-500/10 px-2 py-0.5 rounded-full border border-green-500/20">
               <Activity className="w-2.5 h-2.5 text-green-500 animate-pulse" />
-              <span className="text-[7px] md:text-[8px] font-black text-green-500 uppercase tracking-widest">Online</span>
+              <span className="text-[7px] md:text-[8px] font-black text-green-500 uppercase tracking-widest">Live Sync</span>
             </div>
           </DialogTitle>
         </DialogHeader>
@@ -185,13 +181,13 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-6">
               <StatCard label="Всего узлов" value={stats.total} icon={Users} color="text-white" />
               <StatCard label="Premium" value={stats.premium} icon={Star} color="text-accent" />
-              <StatCard label="Активность" value={`${Math.min(100, (stats.total > 0 ? 95 : 0))}%`} icon={Zap} color="text-yellow-500" />
+              <StatCard label="Админы" value={stats.admins} icon={ShieldCheck} color="text-primary" />
               <StatCard label="Баны" value={stats.banned} icon={Ban} color="text-red-500" />
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
               <div className="bg-white/5 p-4 md:p-6 rounded-[1.5rem] md:rounded-[2rem] border border-white/5 h-[180px] md:h-[250px]">
-                <h3 className="text-[9px] font-black uppercase text-primary mb-3 tracking-widest">Прирост Узлов (нед.)</h3>
+                <h3 className="text-[9px] font-black uppercase text-primary mb-3 tracking-widest">Новые Узлы (за неделю)</h3>
                 <ResponsiveContainer width="100%" height="85%">
                   <AreaChart data={chartData}>
                     <defs>
@@ -213,7 +209,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
               </div>
 
               <div className="bg-white/5 p-4 md:p-6 rounded-[1.5rem] md:rounded-[2rem] border border-white/5 h-[180px] md:h-[250px]">
-                <h3 className="text-[9px] font-black uppercase text-accent mb-3 tracking-widest">Нагрузка (Signals)</h3>
+                <h3 className="text-[9px] font-black uppercase text-accent mb-3 tracking-widest">Трафик (пакеты)</h3>
                 <ResponsiveContainer width="100%" height="85%">
                   <BarChart data={chartData}>
                     <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />

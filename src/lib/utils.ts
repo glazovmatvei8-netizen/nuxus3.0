@@ -1,4 +1,3 @@
-
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
 import { formatDistanceToNow, parseISO, differenceInSeconds } from 'date-fns';
@@ -37,9 +36,9 @@ export function formatDisplayName(name: string | undefined | null): string {
 export function encryptSignal(text: string): string {
   if (!text) return '';
   try {
-    // Используем Base64 + URI кодирование для поддержки эмодзи и спецсимволов
+    // Используем короткий префикс NX_ для экономии места и соответствия скриншотам
     const encoded = btoa(encodeURIComponent(text.trim()));
-    return `NX_SECURE_${encoded}`;
+    return `NX_${encoded}`;
   } catch (e) {
     return text;
   }
@@ -47,19 +46,21 @@ export function encryptSignal(text: string): string {
 
 /**
  * Дешифровка сигнала
- * Если текст зашифрован, возвращает оригинал. Если нет — возвращает текст как есть.
  */
 export function decryptSignal(content: string | undefined | null): string {
   if (!content || typeof content !== 'string') return content || '';
   
-  if (!content.startsWith('NX_SECURE_')) return content;
+  // Поддерживаем оба варианта префикса для обратной совместимости
+  const prefix = content.startsWith('NX_SECURE_') ? 'NX_SECURE_' : content.startsWith('NX_') ? 'NX_' : null;
+  
+  if (!prefix) return content;
   
   try {
-    const raw = content.replace('NX_SECURE_', '');
+    const raw = content.replace(prefix, '');
     return decodeURIComponent(atob(raw));
   } catch (e) {
     console.warn("Nuxus Signal: Decryption failed for a packet.");
-    return content; // Возвращаем как есть, если не удалось расшифровать
+    return content;
   }
 }
 
@@ -118,9 +119,6 @@ export function formatLastSeen(
   }
 }
 
-/**
- * Агрессивное сжатие для быстрой передачи.
- */
 export async function compressImage(dataUrl: string, maxWidth = 1200, quality = 0.6): Promise<string> {
   return new Promise((resolve) => {
     const img = new Image();
