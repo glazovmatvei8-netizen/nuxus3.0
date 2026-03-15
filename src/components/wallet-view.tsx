@@ -80,7 +80,6 @@ export default function WalletView() {
 
     setIsProcessing(true);
     try {
-      // Вместо мгновенного пополнения создаем Заявку
       await addDoc(collection(db, 'topUpRequests'), {
         userId: user.uid,
         userName: profile.name,
@@ -118,11 +117,9 @@ export default function WalletView() {
       const senderTxRef = doc(collection(db, 'users', user.uid, 'transactions'));
       const receiverTxRef = doc(collection(db, 'users', foundUser.id, 'transactions'));
 
-      // Update balances
       batch.update(senderRef, { balance: increment(-amount) });
       batch.update(receiverRef, { balance: increment(amount) });
 
-      // Records
       batch.set(senderTxRef, {
         id: senderTxRef.id,
         userId: user.uid,
@@ -169,7 +166,7 @@ export default function WalletView() {
             <div className="absolute top-0 right-0 p-6 opacity-10">
               <Wallet className="w-32 h-32" />
             </div>
-            <p className="text-[10px] font-black uppercase tracking-[0.4em] text-primary/60 mb-2">Quantum Balance</p>
+            <p className="text-[10px] font-black uppercase tracking-[0.4em] text-primary/60 mb-2">Premium Balance</p>
             <div className="flex items-baseline gap-2">
               <span className="text-5xl font-black text-white italic tracking-tighter">{profile?.balance?.toFixed(2) || '0.00'}</span>
               <span className="text-xl font-bold text-primary italic">NX</span>
@@ -243,12 +240,11 @@ export default function WalletView() {
         </div>
       </ScrollArea>
 
-      {/* Top Up Modal */}
       <Dialog open={isTopUpOpen} onOpenChange={setIsTopUpOpen}>
         <DialogContent className="max-w-xs bg-card border-white/10 rounded-[2.5rem] p-8 text-center shadow-2xl">
           <DialogHeader>
             <DialogTitle className="text-2xl font-black uppercase italic text-white tracking-tighter">Top Up</DialogTitle>
-            <DialogDescription className="text-[9px] uppercase font-black tracking-[0.3em] text-primary/60">Quantum Ingestion</DialogDescription>
+            <DialogDescription className="text-[9px] uppercase font-black tracking-[0.3em] text-primary/60">Premium Ingestion</DialogDescription>
           </DialogHeader>
           <div className="py-6 space-y-4">
             <div className="relative">
@@ -272,7 +268,6 @@ export default function WalletView() {
         </DialogContent>
       </Dialog>
 
-      {/* Transfer Modal */}
       <Dialog open={isTransferOpen} onOpenChange={setIsTransferOpen}>
         <DialogContent className="max-w-sm bg-card border-white/10 rounded-[2.5rem] p-8 shadow-2xl">
           <DialogHeader>

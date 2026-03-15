@@ -23,7 +23,7 @@ import { collection, query, doc, limit, getDocs, addDoc, orderBy, writeBatch, in
 import { UserAvatar } from '@/components/user-avatar';
 import { 
   ShieldAlert, Users, Star, Search, Trash2, ShieldCheck, Radio, Send, 
-  Loader2, UserX, MoreVertical, Ban, CheckCircle2, Crown, Calendar, Shield, Activity, Eye, MessageCircle, ArrowLeft, CreditCard, Check, X, ShieldOff, Zap, Terminal, Trash, Navigation
+  Loader2, UserX, MoreVertical, Ban, CheckCircle2, Crown, Calendar, Shield, Activity, Eye, MessageCircle, ArrowLeft, CreditCard, Check, X, ShieldOff, Zap, Terminal, Trash, Navigation, Trophy
 } from 'lucide-react';
 import type { User, Chat, Transaction } from '@/lib/types';
 import { formatDisplayName, isUserPremium, cn, isGlobalAdmin } from '@/lib/utils';
@@ -57,7 +57,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
     if (activeTab === 'terminal' && terminalLogs.length === 0) {
       const initialLogs = [
         { msg: "Kernel Boot Sequence Initialized...", time: new Date().toLocaleTimeString(), type: 'info' as const },
-        { msg: "Nuxus Shield: Quantum Scan Active", time: new Date().toLocaleTimeString(), type: 'info' as const },
+        { msg: "Nuxus Shield: System Scan Active", time: new Date().toLocaleTimeString(), type: 'info' as const },
         { msg: "Neural Map: Synchronizing Nodes...", time: new Date().toLocaleTimeString(), type: 'info' as const },
         { msg: `Total Active Nodes detected: ${users?.length || 0}`, time: new Date().toLocaleTimeString(), type: 'info' as const },
       ];
@@ -191,7 +191,6 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
                           
                           <DropdownMenuSeparator className="bg-white/5" />
                           
-                          {/* Управление Админкой */}
                           {u.isAdmin ? (
                             <DropdownMenuItem onClick={() => handleAction(u.id, 'remove_admin')} className="gap-3 py-3 font-bold text-[10px] uppercase rounded-xl text-red-400">
                               <ShieldOff className="w-4 h-4" /> Снять админа
@@ -204,12 +203,11 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
 
                           <DropdownMenuSeparator className="bg-white/5" />
                           
-                          {/* Управление Premium */}
                           <DropdownMenuSub>
                             <DropdownMenuSubTrigger className="gap-3 py-3 font-bold text-[10px] uppercase rounded-xl">
                               <Crown className="w-4 h-4 text-accent" /> Premium статус
                             </DropdownMenuSubTrigger>
-                            <DropdownMenuSubContent className="bg-card border-white/10 rounded-xl min-w-[160px] p-1 shadow-2xl ml-1">
+                            <DropdownMenuSubContent sideOffset={8} className="bg-card border-white/10 rounded-xl min-w-[160px] p-1 shadow-2xl">
                               <DropdownMenuItem onClick={() => handleAction(u.id, 'give_premium', 1)} className="text-[10px] font-bold uppercase py-3 rounded-lg flex items-center gap-2">
                                 <Calendar className="w-3.5 h-3.5" /> 1 Месяц
                               </DropdownMenuItem>

@@ -152,7 +152,7 @@ export function UserProfileModal() {
             <h3 className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/60 px-1">Инфо</h3>
             <div className="bg-white/5 rounded-2xl border border-white/5 overflow-hidden divide-y divide-white/[0.03]">
               <InfoRow icon={Calendar} label="Вход" value={registrationDate} />
-              <InfoRow icon={Shield} label="Узел" value={targetUser?.isPremium ? "Quantum" : "Basic"} color={targetUser?.isPremium ? "text-accent" : ""} />
+              <InfoRow icon={Shield} label="Узел" value={targetUser?.isPremium ? "Premium" : "Basic"} color={targetUser?.isPremium ? "text-accent" : ""} />
             </div>
           </div>
 
