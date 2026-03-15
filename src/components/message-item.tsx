@@ -34,8 +34,8 @@ import { useAppState } from '@/lib/store';
 const QUICK_REACTIONS = ['❤️', '👍', '🔥', '😂', '😮', '😢', '💯'];
 
 /**
- * ОПТИМИЗИРОВАННЫЙ MESSAGE ITEM 5.0
- * Исправлено: Воспроизведение ГС на iOS, видеокружки и стабильный ИИ.
+ * ОПТИМИЗИРОВАННЫЙ MESSAGE ITEM 6.0
+ * Реализован плавный прогресс-бар и таймер обратного отсчета для ГС.
  */
 export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForward, isAdmin = false, isGroup = false, onEdit, highlight = false, viewerProfile }: any) => {
   const { user } = useUser();
@@ -47,6 +47,11 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
   const [isTranscribing, setIsTranscribing] = useState(false);
   const [transcription, setTranscription] = useState<string | null>(null);
   
+  // Playback states
+  const [progress, setProgress] = useState(0);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
+  
   const audioInstance = useRef<HTMLAudioElement | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
 
@@ -54,14 +59,31 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
   const displayContent = useMemo(() => message.contentType === 'text' ? decryptSignal(message.content) : message.content, [message.content, message.contentType]);
   const formattedTime = message.sentAt ? format(new Date(message.sentAt), 'HH:mm') : '';
 
+  // Helper to format seconds to M:SS
+  const formatDuration = (seconds: number) => {
+    if (isNaN(seconds) || seconds === Infinity) return "0:00";
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
   useEffect(() => {
+    // Preload metadata to get duration for the initial view
+    if (message.contentType === 'audio') {
+      const tempAudio = new Audio(message.content);
+      tempAudio.preload = "metadata";
+      tempAudio.onloadedmetadata = () => {
+        setDuration(tempAudio.duration);
+      };
+    }
+
     return () => {
       if (audioInstance.current) {
         audioInstance.current.pause();
         audioInstance.current = null;
       }
     };
-  }, []);
+  }, [message.content, message.contentType]);
 
   const handleReaction = async (emoji: string) => {
     if (!db || !user || !chatId) return;
@@ -106,6 +128,17 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
       audio.onended = () => {
         setIsPlaying(false);
         audio.currentTime = 0;
+        setCurrentTime(0);
+        setProgress(0);
+      };
+      audio.onloadedmetadata = () => {
+        setDuration(audio.duration);
+      };
+      audio.ontimeupdate = () => {
+        setCurrentTime(audio.currentTime);
+        if (audio.duration) {
+          setProgress((audio.currentTime / audio.duration) * 100);
+        }
       };
       audio.onerror = () => {
         setIsPlaying(false);
@@ -180,17 +213,21 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
     );
 
     if (message.contentType === 'audio') return (
-      <div className="flex items-center gap-3 p-1 min-w-[220px] cursor-pointer group/audio" onClick={toggleAudio}>
+      <div className="flex items-center gap-3 p-1 min-w-[240px] cursor-pointer group/audio" onClick={toggleAudio}>
         <Button size="icon" className="h-10 w-10 rounded-full bg-primary shadow-lg pointer-events-none transition-all active:scale-90 shrink-0">
           {isPlaying ? <Pause className="fill-current" /> : <Play fill="currentColor" className="ml-0.5" />}
         </Button>
-        <div className="flex-1 flex flex-col justify-center min-w-0">
+        <div className="flex-1 flex flex-col justify-center min-w-0 gap-1.5">
           <div className="h-1 bg-white/10 w-full rounded-full overflow-hidden relative">
             <div 
-              className={cn("absolute inset-y-0 left-0 bg-primary transition-all duration-100 shadow-[0_0_8px_rgba(139,92,246,0.8)]", isPlaying ? "w-full animate-pulse" : "w-0")} 
+              className="absolute inset-y-0 left-0 bg-primary transition-all duration-150 shadow-[0_0_8px_rgba(139,92,246,0.8)]"
+              style={{ width: `${progress}%` }}
             />
           </div>
-          <div className="flex items-center justify-between mt-2">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-bold text-white/40 tabular-nums">
+              {isPlaying ? `-${formatDuration(Math.max(0, duration - currentTime))}` : formatDuration(duration)}
+            </span>
             <button 
               onClick={handleTranscribe} 
               disabled={isTranscribing}
@@ -200,7 +237,7 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
             </button>
           </div>
           {transcription && (
-            <div className="mt-2 p-2 bg-white/5 rounded-xl border border-white/5 animate-in fade-in slide-in-from-top-1">
+            <div className="mt-1 p-2 bg-white/5 rounded-xl border border-white/5 animate-in fade-in slide-in-from-top-1">
               <p className="text-[11px] text-white/80 italic leading-relaxed">{transcription}</p>
             </div>
           )}
