@@ -10,6 +10,9 @@ import { Plus, Loader2 } from 'lucide-react';
 import type { Story, User } from '@/lib/types';
 import { cn, formatDisplayName } from '@/lib/utils';
 
+/**
+ * FIXED: Улучшенная отрисовка аватара пользователя и группировка историй.
+ */
 export function StoriesBar() {
   const { user } = useUser();
   const db = useFirestore();
@@ -21,6 +24,7 @@ export function StoriesBar() {
   const storiesQuery = useMemoFirebase(() => {
     if (!db) return null;
     const now = new Date().toISOString();
+    // Показываем только актуальные истории (не старше 24ч)
     return query(
       collection(db, 'stories'),
       where('expiresAt', '>', now),
@@ -45,13 +49,13 @@ export function StoriesBar() {
 
   return (
     <div className="flex gap-4 p-4 overflow-x-auto scrollbar-hide bg-[#0a0a0c] border-b border-white/5 shrink-0">
-      {/* Кнопка "Моя история" - FIX: Используем UserAvatar для фото */}
+      {/* Кнопка "Моя история" */}
       <div className="flex flex-col items-center gap-1.5 shrink-0 group cursor-pointer" onClick={() => myStories.length > 0 ? setStoriesToView(myStories) : setIsCreateStoryOpen(true)}>
         <div className={cn(
           "relative h-[64px] w-[64px] rounded-full p-[2px] transition-all",
-          myStories.length > 0 ? "bg-gradient-to-tr from-primary to-accent" : "bg-white/10"
+          myStories.length > 0 ? "bg-gradient-to-tr from-primary to-accent scale-105" : "bg-white/10 hover:bg-white/20"
         )}>
-          <div className="rounded-full h-full w-full overflow-hidden relative">
+          <div className="rounded-full h-full w-full overflow-hidden relative bg-[#0a0a0c]">
             <UserAvatar 
               userId={user?.uid} 
               className="h-full w-full border-none" 
@@ -60,17 +64,17 @@ export function StoriesBar() {
             />
           </div>
           {myStories.length === 0 && (
-            <div className="absolute bottom-0 right-0 h-5 w-5 bg-primary rounded-full border-2 border-[#0a0a0c] flex items-center justify-center">
+            <div className="absolute bottom-0 right-0 h-5 w-5 bg-primary rounded-full border-2 border-[#0a0a0c] flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
               <Plus className="w-3 h-3 text-white" />
             </div>
           )}
         </div>
-        <span className="text-[10px] font-black uppercase text-muted-foreground/60 tracking-widest truncate w-[64px] text-center">
-          {profile?.username ? profile.username.replace('@', '') : 'Я'}
+        <span className="text-[9px] font-black uppercase text-muted-foreground/60 tracking-[0.2em] truncate w-[64px] text-center">
+          {myStories.length > 0 ? 'Моя' : 'Момент'}
         </span>
       </div>
 
-      {isLoading ? (
+      {isLoading && !allStories ? (
         <div className="h-[64px] flex items-center px-4"><Loader2 className="w-5 h-5 animate-spin text-primary/40" /></div>
       ) : (
         otherUserIds.map(uid => (
