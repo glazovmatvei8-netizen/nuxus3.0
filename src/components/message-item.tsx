@@ -34,8 +34,8 @@ import { useAppState } from '@/lib/store';
 const QUICK_REACTIONS = ['❤️', '👍', '🔥', '😂', '😮', '😢', '💯'];
 
 /**
- * ОПТИМИЗИРОВАННЫЙ MESSAGE ITEM
- * Исправлено воспроизведение ГС и инспекция профилей.
+ * ОПТИМИЗИРОВАННЫЙ MESSAGE ITEM 4.0
+ * Исправлено: воспроизведение ГС, видеокружков и транскрибация ИИ.
  */
 export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForward, isAdmin = false, isGroup = false, onEdit, highlight = false, viewerProfile }: any) => {
   const { user } = useUser();
@@ -74,35 +74,76 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
 
   const handleTranscribe = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!viewerProfile?.isPremium) { toast({ title: "Nuxus Premium", description: "Расшифровка только для Premium." }); return; }
+    if (!viewerProfile?.isPremium) { 
+      toast({ title: "Nuxus Premium", description: "Расшифровка доступна только Quantum-узлам." }); 
+      return; 
+    }
     setIsTranscribing(true);
-    try { const res = await transcribeVoice({ audioDataUri: message.content }); setTranscription(res.text); }
-    catch (e) { toast({ title: "Ошибка ИИ" }); } finally { setIsTranscribing(false); }
+    try { 
+      const res = await transcribeVoice({ audioDataUri: message.content }); 
+      if (res && res.text) {
+        setTranscription(res.text); 
+      } else {
+        throw new Error("Empty response");
+      }
+    }
+    catch (e) { 
+      console.error("AI Transcription Error:", e);
+      toast({ title: "Ошибка ИИ", description: "Не удалось распознать сигнал" }); 
+    } finally { 
+      setIsTranscribing(false); 
+    }
   };
 
   const toggleAudio = (e: React.MouseEvent) => {
     e.stopPropagation();
     try {
       if (!audioInstance.current) {
-        audioInstance.current = new Audio(message.content);
-        audioInstance.current.onended = () => setIsPlaying(false);
-        audioInstance.current.onerror = () => {
+        const audio = new Audio();
+        audio.src = message.content;
+        audio.preload = "auto";
+        
+        audio.onplay = () => setIsPlaying(true);
+        audio.onpause = () => setIsPlaying(false);
+        audio.onended = () => {
           setIsPlaying(false);
-          toast({ title: "Ошибка аудио", variant: "destructive" });
+          audio.currentTime = 0;
         };
+        audio.onerror = () => {
+          setIsPlaying(false);
+          toast({ title: "Ошибка сигнала", description: "Не удалось воспроизвести аудио", variant: "destructive" });
+        };
+        
+        audioInstance.current = audio;
       }
       
-      if (isPlaying) {
-        audioInstance.current.pause();
-        setIsPlaying(false);
+      const audio = audioInstance.current;
+      if (audio.paused) {
+        audio.play().catch(err => {
+          console.warn("Audio Playback Blocked:", err);
+          setIsPlaying(false);
+        });
       } else {
-        const playPromise = audioInstance.current.play();
-        if (playPromise !== undefined) {
-          playPromise.then(() => setIsPlaying(true)).catch(() => setIsPlaying(false));
-        }
+        audio.pause();
       }
     } catch (err) {
-      console.error("Audio Engine Error", err);
+      console.error("Audio Engine Critical Error", err);
+    }
+  };
+
+  const toggleVideo = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (videoRef.current) {
+      const v = videoRef.current;
+      if (v.paused) {
+        v.muted = false; // Важно для активации звука на мобильных
+        v.play().catch(() => {
+          v.muted = true;
+          v.play();
+        });
+      } else {
+        v.pause();
+      }
     }
   };
 
@@ -119,27 +160,48 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
     );
 
     if (message.contentType === 'video_note') return (
-      <div className="relative w-48 h-48 rounded-full overflow-hidden border-2 border-primary/20 bg-black group cursor-pointer" onClick={(e) => { e.stopPropagation(); if (videoRef.current) { if (videoRef.current.paused) videoRef.current.play(); else videoRef.current.pause(); } }}>
-        <video ref={videoRef} src={message.content} loop playsInline className="w-full h-full object-cover scale-x-[-1]" />
-        <div className="absolute inset-0 bg-black/20 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"><Play className="w-8 h-8 text-white fill-white" /></div>
+      <div 
+        className="relative w-48 h-48 rounded-full overflow-hidden border-2 border-primary/20 bg-black group cursor-pointer shadow-[0_0_20px_rgba(139,92,246,0.2)]" 
+        onClick={toggleVideo}
+      >
+        <video 
+          ref={videoRef} 
+          src={message.content} 
+          loop 
+          playsInline 
+          className="w-full h-full object-cover scale-x-[-1]" 
+        />
+        <div className="absolute inset-0 bg-black/20 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+          <Play className="w-8 h-8 text-white fill-white" />
+        </div>
       </div>
     );
 
     if (message.contentType === 'audio') return (
-      <div className="flex items-center gap-3 p-1 min-w-[200px] cursor-pointer" onClick={toggleAudio}>
-        <Button size="icon" className="h-10 w-10 rounded-full bg-primary shadow-lg pointer-events-none transition-all active:scale-90">
+      <div className="flex items-center gap-3 p-1 min-w-[220px] cursor-pointer group/audio" onClick={toggleAudio}>
+        <Button size="icon" className="h-10 w-10 rounded-full bg-primary shadow-lg pointer-events-none transition-all active:scale-90 shrink-0">
           {isPlaying ? <Pause className="fill-current" /> : <Play fill="currentColor" className="ml-0.5" />}
         </Button>
-        <div className="flex-1 flex flex-col justify-center">
-          <div className="h-1.5 bg-white/10 w-full rounded-full overflow-hidden relative">
-            <div className={cn("absolute inset-y-0 left-0 bg-white transition-all duration-100", isPlaying ? "w-full animate-pulse" : "w-0")} />
+        <div className="flex-1 flex flex-col justify-center min-w-0">
+          <div className="h-1 bg-white/10 w-full rounded-full overflow-hidden relative">
+            <div 
+              className={cn("absolute inset-y-0 left-0 bg-primary transition-all duration-100 shadow-[0_0_8px_rgba(139,92,246,0.8)]", isPlaying ? "w-full animate-pulse" : "w-0")} 
+            />
           </div>
-          <div className="flex items-center justify-between mt-1">
-            <button onClick={handleTranscribe} className="text-[9px] font-black text-primary uppercase flex items-center gap-1 opacity-70">
+          <div className="flex items-center justify-between mt-2">
+            <button 
+              onClick={handleTranscribe} 
+              disabled={isTranscribing}
+              className="text-[9px] font-black text-primary uppercase flex items-center gap-1.5 opacity-70 hover:opacity-100 transition-opacity disabled:opacity-40"
+            >
               {isTranscribing ? <Loader2 className="animate-spin w-3 h-3" /> : <><Languages className="w-3 h-3" /> Расшифровать</>}
             </button>
           </div>
-          {transcription && <p className="text-[11px] text-white/80 mt-2 italic border-t border-white/5 pt-1 animate-in fade-in">{transcription}</p>}
+          {transcription && (
+            <div className="mt-2 p-2 bg-white/5 rounded-xl border border-white/5 animate-in fade-in slide-in-from-top-1">
+              <p className="text-[11px] text-white/80 italic leading-relaxed">{transcription}</p>
+            </div>
+          )}
         </div>
       </div>
     );
