@@ -34,19 +34,20 @@ import { addMonths } from 'date-fns';
 
 const ROOT_UID = 'GCvLucN8CjNcdaxPO2vmpZ84hNl1';
 
-// Детализированные контуры материков (SVG Paths)
+// РЕАЛИСТИЧНЫЕ ПУТИ МИРОВОЙ КАРТЫ (SVG)
 const WORLD_MAP_PATHS = [
-  { id: 'na', name: 'North America', d: "M160,120 L180,90 L220,70 L280,80 L310,110 L300,160 L260,190 L220,210 L180,190 L150,160 Z" },
-  { id: 'sa', name: 'South America', d: "M265,220 L310,230 L320,280 L290,350 L260,370 L240,330 L245,270 Z" },
-  { id: 'eu', name: 'Europe', d: "M480,90 L520,85 L560,100 L570,140 L530,160 L490,150 L470,120 Z" },
-  { id: 'as', name: 'Asia', d: "M570,80 L650,70 L780,80 L880,150 L850,250 L750,280 L650,260 L580,200 Z" },
-  { id: 'af', name: 'Africa', d: "M480,170 L560,160 L610,210 L590,300 L540,350 L480,330 L450,250 Z" },
-  { id: 'au', name: 'Australia', d: "M780,300 L860,310 L880,360 L820,380 L770,350 Z" }
+  { id: 'na', name: 'North America', d: "M145,130 L160,110 L180,90 L220,70 L280,80 L310,110 L300,160 L260,190 L220,210 L180,190 L150,160 L130,150 Z" },
+  { id: 'sa', name: 'South America', d: "M265,220 L310,230 L320,280 L300,320 L290,350 L260,370 L240,330 L245,270 L255,230 Z" },
+  { id: 'eu', name: 'Europe', d: "M480,90 L520,85 L560,100 L570,140 L530,160 L490,150 L470,120 L460,100 Z" },
+  { id: 'as', name: 'Asia', d: "M570,80 L650,70 L780,80 L880,120 L920,150 L880,250 L750,280 L650,260 L580,200 Z" },
+  { id: 'af', name: 'Africa', d: "M480,170 L560,160 L610,210 L590,300 L540,350 L480,330 L450,250 L460,200 Z" },
+  { id: 'au', name: 'Australia', d: "M780,300 L860,310 L880,360 L820,380 L770,350 L760,320 Z" },
+  { id: 'ru', name: 'Russia', d: "M530,85 L650,75 L800,80 L880,110 L850,140 L700,150 L550,140 Z" }
 ];
 
-// Маппинг стран к материкам
-const COUNTRY_TO_CONTINENT: Record<string, string> = {
-  'RU': 'as', 'US': 'na', 'CA': 'na', 'BR': 'sa', 'DE': 'eu', 'FR': 'eu', 'GB': 'eu',
+// Маппинг стран к областям на карте
+const COUNTRY_TO_REGION: Record<string, string> = {
+  'RU': 'ru', 'US': 'na', 'CA': 'na', 'BR': 'sa', 'DE': 'eu', 'FR': 'eu', 'GB': 'eu',
   'CN': 'as', 'IN': 'as', 'KZ': 'as', 'UA': 'eu', 'BY': 'eu', 'AU': 'au', 'EG': 'af', 'ZA': 'af'
 };
 
@@ -309,29 +310,27 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
                   
                   <svg viewBox="0 0 1000 500" className="w-full h-full text-white/5">
                     {WORLD_MAP_PATHS.map((path) => {
-                      const continentUsers = geoData.filter(g => COUNTRY_TO_CONTINENT[g.code] === path.id);
-                      const hasUsers = continentUsers.length > 0;
+                      // Проверка активности региона
+                      const regionActive = geoData.some(g => COUNTRY_TO_REGION[g.code] === path.id);
                       
                       return (
                         <path 
                           key={path.id}
                           d={path.d}
-                          fill={hasUsers ? 'hsl(var(--primary) / 0.3)' : 'currentColor'}
-                          stroke={hasUsers ? 'hsl(var(--primary))' : 'white'}
+                          fill={regionActive ? 'hsl(var(--primary) / 0.3)' : 'currentColor'}
+                          stroke={regionActive ? 'hsl(var(--primary))' : 'white'}
                           strokeWidth="1.5"
-                          strokeOpacity={hasUsers ? "0.8" : "0.1"}
-                          className={cn("transition-all duration-500", hasUsers && "animate-pulse")}
+                          strokeOpacity={regionActive ? "0.8" : "0.1"}
+                          className={cn("transition-all duration-500", regionActive && "animate-pulse")}
                         />
                       );
                     })}
                     
-                    {/* User Points Visualization */}
+                    {/* Точки присутствия пользователей */}
                     {geoData.map((geo, i) => {
-                      const continent = WORLD_MAP_PATHS.find(p => p.id === COUNTRY_TO_CONTINENT[geo.code]);
-                      if (!continent) return null;
-                      
+                      // Базовые координаты для центров регионов
                       let x = 500, y = 250;
-                      if (geo.code === 'RU') { x = 650; y = 120; }
+                      if (geo.code === 'RU') { x = 650; y = 110; }
                       else if (geo.code === 'US') { x = 230; y = 140; }
                       else if (geo.code === 'CN') { x = 780; y = 180; }
                       else if (geo.code === 'DE') { x = 510; y = 110; }
