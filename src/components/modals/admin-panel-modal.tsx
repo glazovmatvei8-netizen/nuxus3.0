@@ -23,7 +23,7 @@ import { collection, query, doc, limit, getDocs, addDoc, orderBy, writeBatch, in
 import { UserAvatar } from '@/components/user-avatar';
 import { 
   ShieldAlert, Users, Star, Search, Trash2, ShieldCheck, Radio, Send, 
-  Loader2, UserX, MoreVertical, Ban, CheckCircle2, Crown, Calendar, Shield, Globe, Activity, Eye, MessageCircle, ArrowLeft, CreditCard, Check, X, ShieldOff
+  Loader2, UserX, MoreVertical, Ban, CheckCircle2, Crown, Calendar, Shield, Globe, Activity, Eye, MessageCircle, ArrowLeft, CreditCard, Check, X, ShieldOff, Zap
 } from 'lucide-react';
 import type { User, Chat, Transaction } from '@/lib/types';
 import { formatDisplayName, isUserPremium, cn } from '@/lib/utils';
@@ -72,6 +72,18 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
       return 0;
     });
   }, [users, currentUser?.uid, userSearch]);
+
+  // Statistics Calculation
+  const stats = useMemo(() => {
+    if (!users) return { total: 0, premium: 0, admins: 0, banned: 0 };
+    const filtered = users.filter(u => !u.id.startsWith('bot_') && u.id !== currentUser?.uid);
+    return {
+      total: filtered.length,
+      premium: filtered.filter(u => u.isPremium).length,
+      admins: filtered.filter(u => u.isAdmin).length,
+      banned: filtered.filter(u => u.isBanned).length
+    };
+  }, [users, currentUser?.uid]);
 
   const handleAction = async (targetId: string, action: string, value?: any) => {
     if (!db) return;
@@ -151,8 +163,8 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
           <DialogTitle className="flex items-center justify-between text-white uppercase italic font-black tracking-tighter">
             <div className="flex items-center gap-3">
               {inspectingUser ? (
-                <button onClick={() => setInspectingUser(null)} className="flex items-center gap-2 hover:text-primary transition-colors">
-                  <ArrowLeft className="w-5 h-5" />
+                <button onClick={() => setInspectingUser(null)} className="flex items-center gap-2 hover:text-primary transition-colors text-left">
+                  <ArrowLeft className="w-5 h-5 shrink-0" />
                   <span className="truncate max-w-[150px]">Узел: {inspectingUser.name}</span>
                 </button>
               ) : (
@@ -183,6 +195,16 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
             </div>
 
             <TabsContent value="users" className="flex-1 data-[state=active]:flex flex-col min-h-0 m-0 overflow-hidden outline-none">
+              {/* Statistics Dashboard */}
+              <div className="px-6 pt-4 pb-2 shrink-0">
+                <div className="grid grid-cols-4 gap-2">
+                  <StatCard label="Nodes" value={stats.total} icon={Users} color="text-white" />
+                  <StatCard label="Premium" value={stats.premium} icon={Star} color="text-accent" />
+                  <StatCard label="Admins" value={stats.admins} icon={ShieldCheck} color="text-primary" />
+                  <StatCard label="Blocked" value={stats.banned} icon={Ban} color="text-red-500" />
+                </div>
+              </div>
+
               <div className="p-4 px-6 shrink-0">
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/40" />
@@ -242,7 +264,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
                               <DropdownMenuSubTrigger className="gap-3 py-3 font-bold text-[10px] uppercase rounded-xl">
                                 <Crown className="w-4 h-4 text-accent" /> Premium статус
                               </DropdownMenuSubTrigger>
-                              <DropdownMenuSubContent sideOffset={4} alignOffset={-5} className="bg-card border-white/10 rounded-xl min-w-[140px]">
+                              <DropdownMenuSubContent sideOffset={8} alignOffset={-5} className="bg-card border-white/10 rounded-xl min-w-[140px] shadow-2xl">
                                 <DropdownMenuItem onClick={() => handleAction(u.id, 'give_premium', 1)} className="text-[10px] font-bold uppercase py-2.5">На 1 Месяц</DropdownMenuItem>
                                 <DropdownMenuItem onClick={() => handleAction(u.id, 'give_premium', 3)} className="text-[10px] font-bold uppercase py-2.5">На 3 Месяца</DropdownMenuItem>
                                 <DropdownMenuItem onClick={() => handleAction(u.id, 'give_premium', 12)} className="text-[10px] font-bold uppercase py-2.5">На 1 Год</DropdownMenuItem>
@@ -313,11 +335,11 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
           <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
             <div className="p-6 border-b border-white/5 bg-white/5 space-y-1 shrink-0 relative overflow-hidden">
               <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none"><MessageCircle size={100} /></div>
-              <div className="flex items-center gap-4 relative z-10">
+              <div className="flex items-center gap-4 relative z-10 text-left">
                 <UserAvatar userId={inspectingUser.id} className="h-14 w-14 border-2 border-primary/20" manualAvatarUrl={inspectingUser.avatarUrl} />
-                <div className="flex flex-col">
-                  <h3 className="font-black text-lg text-white leading-none mb-1">{formatDisplayName(inspectingUser.name)}</h3>
-                  <span className="text-[10px] text-primary uppercase font-bold tracking-[0.2em]">{inspectingUser.username}</span>
+                <div className="flex flex-col min-w-0">
+                  <h3 className="font-black text-lg text-white leading-none mb-1 truncate">{formatDisplayName(inspectingUser.name)}</h3>
+                  <span className="text-[10px] text-primary uppercase font-bold tracking-[0.2em] truncate">{inspectingUser.username}</span>
                 </div>
               </div>
               <p className="text-[8px] text-muted-foreground uppercase font-black pt-3">Активные связи узла ({allChats?.filter(c => c.participantIds.includes(inspectingUser.id)).length}):</p>
@@ -367,5 +389,15 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
         )}
       </DialogContent>
     </Dialog>
+  );
+}
+
+function StatCard({ label, value, icon: Icon, color }: any) {
+  return (
+    <div className="bg-white/5 p-3 rounded-2xl border border-white/5 flex flex-col items-center justify-center gap-1">
+      <Icon className={cn("w-3.5 h-3.5", color)} />
+      <span className="text-lg font-black italic text-white leading-none">{value}</span>
+      <span className="text-[6px] font-black uppercase tracking-widest text-muted-foreground/60">{label}</span>
+    </div>
   );
 }
