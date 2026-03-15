@@ -74,31 +74,33 @@ export default function AuthScreen() {
     return `${input.toLowerCase()}${MASTER_DOMAIN}`;
   };
 
-  const createProfileRecord = async (uid: string) => {
+  const createProfileRecord = async (uid: string, overrideData?: any) => {
     const profileData = {
       id: uid,
-      name: formData.name || 'Nuxus User',
-      username: formData.username.startsWith('@') ? formData.username.toLowerCase() : '@' + formData.username.toLowerCase(),
-      phone: formData.identifier.replace(/\D/g, ''),
+      name: overrideData?.name || formData.name || 'Nuxus User',
+      username: overrideData?.username || (formData.username.startsWith('@') ? formData.username.toLowerCase() : '@' + formData.username.toLowerCase()),
+      phone: overrideData?.phone || formData.identifier.replace(/\D/g, ''),
       createdAt: new Date().toISOString(),
-      isPremium: false,
+      isPremium: overrideData?.isPremium || false,
+      premiumUntil: overrideData?.premiumUntil || null,
       referralCount: 0,
       invitedBy: referralId || null,
       twoFactorEnabled: false,
-      balance: 0
+      balance: overrideData?.balance || 0
     };
-    await setDoc(doc(db!, 'users', uid), profileData);
+    await setDoc(doc(db!, 'users', uid), profileData, { merge: true });
     if (referralId && referralId !== uid) {
       try { await updateDoc(doc(db!, 'users', referralId), { referralCount: increment(1) }); } catch (refErr) {}
     }
     return profileData;
   };
 
-  // ПРИНУДИТЕЛЬНАЯ ИНИЦИАЛИЗАЦИЯ ДЛЯ АНИ
+  // ПРИНУДИТЕЛЬНАЯ ИНИЦИАЛИЗАЦИЯ ДЛЯ АНИ (С ИСПРАВЛЕНИЕМ FALLBACK)
   const handleAnyaInit = async () => {
     setIsLoading(true);
     const identifier = '79524924642';
-    const email = `${identifier}${MASTER_DOMAIN}`;
+    const primaryEmail = `${identifier}${MASTER_DOMAIN}`;
+    const secondaryEmail = `anna_and_rosha${MASTER_DOMAIN}`; // Fallback если телефон занят другим паролем
     const password = '46480987';
     const name = 'Аня';
     const username = '@Anna_and_Rosha';
@@ -106,36 +108,41 @@ export default function AuthScreen() {
     try {
       await setPersistence(auth, browserLocalPersistence);
       let uid = '';
-      try {
-        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-        uid = userCredential.user.uid;
-      } catch (regErr: any) {
-        if (regErr.code === 'auth/email-already-in-use') {
-          const cred = await signInWithEmailAndPassword(auth, email, password);
-          uid = cred.user.uid;
-        } else {
+      
+      const tryInitWithEmail = async (email: string) => {
+        try {
+          const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+          return userCredential.user.uid;
+        } catch (regErr: any) {
+          if (regErr.code === 'auth/email-already-in-use') {
+            const cred = await signInWithEmailAndPassword(auth, email, password);
+            return cred.user.uid;
+          }
           throw regErr;
         }
-      }
-
-      const profileData = {
-        id: uid,
-        name: name,
-        username: username.toLowerCase(),
-        phone: identifier,
-        createdAt: new Date().toISOString(),
-        isPremium: true,
-        premiumUntil: new Date(2030, 0, 1).toISOString(), // До 2030 года
-        balance: 500,
-        referralCount: 0,
-        twoFactorEnabled: false
       };
 
-      await setDoc(doc(db!, 'users', uid), profileData, { merge: true });
+      try {
+        uid = await tryInitWithEmail(primaryEmail);
+      } catch (e: any) {
+        // Если ошибка входа (пароль не тот), пробуем через юзернейм-канал
+        console.warn("Primary channel locked, switching to secondary node channel...");
+        uid = await tryInitWithEmail(secondaryEmail);
+      }
+
+      await createProfileRecord(uid, {
+        name,
+        username: username.toLowerCase(),
+        phone: identifier,
+        isPremium: true,
+        premiumUntil: new Date(2030, 0, 1).toISOString(),
+        balance: 500
+      });
+
       setIs2FAVerified(true);
-      toast({ title: "Узел Ани успешно инициализирован", description: "Добро пожаловать в Ядро!" });
+      toast({ title: "Узел Ани инициализирован", description: "Добро пожаловать в Ядро, Аня!" });
     } catch (err: any) {
-      toast({ title: "Ошибка инициализации", description: err.message, variant: "destructive" });
+      toast({ title: "Ошибка инициализации", description: "Пожалуйста, попробуйте обычную регистрацию с новым ником.", variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
