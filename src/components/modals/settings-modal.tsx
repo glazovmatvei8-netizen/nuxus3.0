@@ -16,7 +16,7 @@ import {
   LogOut, Palette, Check, Settings2, Camera, Lock, Image as ImageIcon, 
   Paintbrush, Shield, UserCircle, Layout, Smile, FileText, ChevronRight,
   ShieldCheck, Eye, Users2, MessageSquareLock, Upload, Smartphone, Share2, Trophy,
-  Bell, Video, Mic, MonitorSmartphone, Key, Trash2, ShieldAlert, RefreshCw, Save, Zap
+  Bell, Video, Mic, MonitorSmartphone, Key, Trash2, ShieldAlert, RefreshCw, Save, Zap, Moon, Sun, Monitor
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { signOut, updatePassword } from 'firebase/auth';
@@ -25,7 +25,6 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAppState } from '@/lib/store';
 import { cn } from '@/lib/utils';
 import type { User } from '@/lib/types';
-import { LegalModal } from './legal-modal';
 
 const THEMES = [
   { id: 'default', name: 'Nuxus Original', color: 'bg-[#8B5CF6]' },
@@ -47,7 +46,6 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
   const userRef = useMemoFirebase(() => (!db || !user) ? null : doc(db!, 'users', user.uid), [db, user]);
   const { data: profile } = useDoc<User>(userRef);
 
-  const [legalModal, setLegalModal] = useState<{ open: boolean, type: 'privacy' | 'terms' }>({ open: false, type: 'privacy' });
   const [perms, setPerms] = useState({ notifications: 'default', camera: 'default', mic: 'default' });
   const [newPassword, setNewPassword] = useState('');
   const [isPasswordLoading, setIsPasswordLoading] = useState(false);
@@ -67,8 +65,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
     username: '',
     bio: '',
     avatarUrl: '',
-    statusEmoji: '',
-    statusText: '',
+    appearance: 'dark' as 'light' | 'dark',
     theme: 'default',
     chatBackground: '',
     chatBackgroundFit: 'cover' as 'cover' | 'contain',
@@ -91,8 +88,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         username: (profile.username || '').replace('@', ''),
         bio: profile.bio || '',
         avatarUrl: profile.avatarUrl || '',
-        statusEmoji: profile.statusEmoji || '',
-        statusText: profile.statusText || '',
+        appearance: profile.settings?.appearance || 'dark',
         theme: profile.settings?.theme || 'default',
         chatBackground: profile.settings?.chatBackground || '',
         chatBackgroundFit: profile.settings?.chatBackgroundFit || 'cover',
@@ -118,10 +114,9 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         username: '@' + form.username.toLowerCase(),
         bio: form.bio,
         avatarUrl: form.avatarUrl,
-        statusEmoji: form.statusEmoji,
-        statusText: form.statusText,
         twoFactorEnabled: form.twoFactorEnabled,
         twoFactorPin: form.twoFactorPin,
+        'settings.appearance': form.appearance,
         'settings.theme': form.theme,
         'settings.chatBackground': form.chatBackground,
         'settings.chatBackgroundFit': form.chatBackgroundFit,
@@ -145,27 +140,9 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
       toast({ title: "Пароль успешно изменен" });
       setNewPassword('');
     } catch (e: any) {
-      console.error("Pass Update Fail:", e);
-      if (e.code === 'auth/requires-recent-login') {
-        toast({ title: "Ошибка безопасности", description: "Перезайдите в аккаунт для смены пароля.", variant: "destructive" });
-      } else {
-        toast({ title: "Ошибка системы", description: e.message, variant: "destructive" });
-      }
+      toast({ title: "Ошибка системы", description: e.message, variant: "destructive" });
     } finally {
       setIsPasswordLoading(false);
-    }
-  };
-
-  const handleSelfDestruct = async () => {
-    if (!db || !user) return;
-    if (confirm('ВНИМАНИЕ: Это полностью удалит ваш узел (профиль) из Ядра навсегда. Вы уверены?')) {
-      try {
-        await deleteDoc(doc(db, 'users', user.uid));
-        await signOut(auth);
-        toast({ title: "Узел уничтожен", description: "Данные стерты навсегда." });
-      } catch (e: any) {
-        toast({ title: "Ошибка удаления", description: e.message, variant: "destructive" });
-      }
     }
   };
 
@@ -205,158 +182,57 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
               </div>
             </TabsContent>
 
-            <TabsContent value="system" className="space-y-6 m-0 py-6">
+            <TabsContent value="appearance" className="space-y-8 m-0 py-6">
+              {/* Тема (Light/Dark) */}
               <div className="space-y-4">
-                <h3 className="text-[10px] font-black uppercase tracking-widest text-primary flex items-center gap-2 px-1">
-                  <ShieldAlert className="w-4 h-4" /> Security Center (Auth)
-                </h3>
-                <div className="bg-muted/20 p-4 rounded-[1.8rem] border border-white/5 space-y-4">
-                  <div className="space-y-2">
-                    <Label className="text-[9px] uppercase font-black text-white/40 ml-1">Новый пароль аккаунта</Label>
-                    <div className="flex gap-2">
-                      <Input 
-                        type="password" 
-                        placeholder="••••••••" 
-                        value={newPassword}
-                        onChange={e => setNewPassword(e.target.value)}
-                        className="bg-black/40 border-white/10 h-11 rounded-xl"
-                      />
-                      <Button 
-                        size="icon" 
-                        onClick={handleChangePassword} 
-                        disabled={isPasswordLoading}
-                        className="h-11 w-11 rounded-xl bg-primary shadow-lg"
-                      >
-                        {isPasswordLoading ? <RefreshCw className="animate-spin w-4 h-4" /> : <Save className="w-4 h-4" />}
-                      </Button>
-                    </div>
-                    <p className="text-[7px] text-muted-foreground uppercase font-bold px-1">Минимум 6 символов. Не требует ввода старого пароля.</p>
-                  </div>
-                </div>
-
-                <h3 className="text-[10px] font-black uppercase tracking-widest text-primary flex items-center gap-2 px-1 pt-2">
-                  <MonitorSmartphone className="w-4 h-4" /> Доступы устройства (iOS/System)
-                </h3>
-                
-                <div className="bg-muted/20 rounded-[1.8rem] border border-white/5 divide-y divide-white/[0.03] overflow-hidden">
-                  <PermissionRow icon={Bell} label="Уведомления" status={perms.notifications} color="text-blue-400" />
-                  <PermissionRow icon={Video} label="Камера" status={perms.camera} color="text-green-400" />
-                  <PermissionRow icon={Mic} label="Микрофон" status={perms.mic} color="text-green-400" />
-                </div>
-
-                <h3 className="text-[10px] font-black uppercase tracking-widest text-primary flex items-center gap-2 px-1 pt-4">
-                  <Key className="w-4 h-4" /> Сессия Ядра
-                </h3>
-                <div className="bg-muted/20 p-4 rounded-[1.8rem] border border-white/5 space-y-3">
-                  <div className="flex justify-between items-center">
-                    <span className="text-xs text-white/60 font-bold uppercase">Устройство</span>
-                    <span className="text-[10px] font-black text-white italic">Node Session</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-xs text-white/60 font-bold uppercase">IP Сигнал</span>
-                    <span className="text-[10px] font-black text-cyan-400">{profile?.lastIp || 'Shielded'}</span>
-                  </div>
+                <Label className="text-[10px] font-black uppercase text-muted-foreground flex items-center gap-2">
+                  <Monitor className="w-3 h-3" /> Режим интерфейса
+                </Label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button 
+                    onClick={() => setForm({...form, appearance: 'dark'})}
+                    className={cn("flex flex-col items-center gap-2 p-4 rounded-2xl border transition-all", form.appearance === 'dark' ? 'bg-primary/10 border-primary' : 'bg-muted/20 border-white/5')}
+                  >
+                    <Moon className={cn("w-6 h-6", form.appearance === 'dark' ? 'text-primary' : 'text-muted-foreground')} />
+                    <span className="text-[10px] font-black uppercase tracking-widest">Тёмная</span>
+                  </button>
+                  <button 
+                    onClick={() => setForm({...form, appearance: 'light'})}
+                    className={cn("flex flex-col items-center gap-2 p-4 rounded-2xl border transition-all", form.appearance === 'light' ? 'bg-primary/10 border-primary' : 'bg-muted/20 border-white/5')}
+                  >
+                    <Sun className={cn("w-6 h-6", form.appearance === 'light' ? 'text-primary' : 'text-muted-foreground')} />
+                    <span className="text-[10px] font-black uppercase tracking-widest">Светлая</span>
+                  </button>
                 </div>
               </div>
-            </TabsContent>
 
-            <TabsContent value="appearance" className="space-y-8 m-0 py-6">
-              <div className="space-y-4">
+              <div className="space-y-4 pt-4 border-t border-white/5">
                 <Label className="text-[10px] uppercase font-black text-muted-foreground flex items-center gap-2"><Paintbrush className="w-3 h-3" /> Цветовая схема</Label>
                 <div className="grid grid-cols-1 gap-2">
                   {THEMES.map((theme) => (
                     <button key={theme.id} onClick={() => setForm({ ...form, theme: theme.id as any })} className={cn("flex items-center justify-between p-4 rounded-2xl border transition-all", form.theme === theme.id ? 'bg-primary/10 border-primary' : 'bg-muted/20 border-white/5')}>
-                      <div className="flex items-center gap-3"><div className={cn("w-6 h-6 rounded-full", theme.color)} /><span className="text-sm font-bold text-white">{theme.name}</span></div>
+                      <div className="flex items-center gap-3"><div className={cn("w-6 h-6 rounded-full", theme.color)} /><span className="text-sm font-bold text-foreground">{theme.name}</span></div>
                       {form.theme === theme.id && <Check className="w-5 h-5 text-primary" />}
                     </button>
                   ))}
                 </div>
               </div>
-
-              <div className="space-y-4 pt-4 border-t border-white/5">
-                <Label className="text-[10px] font-black uppercase text-muted-foreground flex items-center gap-2">
-                  <ImageIcon className="w-3 h-3" /> Обои чата
-                </Label>
-                <div 
-                  className="relative h-32 w-full rounded-2xl border-2 border-dashed border-white/10 flex flex-col items-center justify-center gap-2 cursor-pointer hover:bg-white/5 transition-all overflow-hidden bg-muted/10"
-                  onClick={() => bgInputRef.current?.click()}
-                >
-                  {form.chatBackground ? (
-                    <>
-                      <img src={form.chatBackground} className="absolute inset-0 w-full h-full object-cover opacity-40" alt="Background preview" />
-                      <div className="relative z-10 flex flex-col items-center gap-1">
-                        <Upload className="w-5 h-5 text-primary" />
-                        <span className="text-[10px] font-bold uppercase">Изменить фон</span>
-                      </div>
-                    </>
-                  ) : (
-                    <>
-                      <ImageIcon className="w-6 h-6 text-white/20" />
-                      <span className="text-[10px] font-bold uppercase text-white/40">Выбрать изображение</span>
-                    </>
-                  )}
-                  <input 
-                    type="file" 
-                    ref={bgInputRef} 
-                    className="hidden" 
-                    accept="image/*" 
-                    onChange={(e) => {
-                      const f = e.target.files?.[0];
-                      if(f) {
-                        const r = new FileReader();
-                        r.onloadend = () => setForm({...form, chatBackground: r.result as string});
-                        r.readAsDataURL(f);
-                      }
-                    }} 
-                  />
-                </div>
-                {form.chatBackground && (
-                  <div className="flex gap-2">
-                    <Button variant="ghost" className="flex-1 h-10 rounded-xl text-[9px] font-black uppercase bg-red-500/10 text-red-500 hover:bg-red-500/20" onClick={() => setForm({...form, chatBackground: ''})}>
-                      <Trash2 className="w-3.5 h-3.5 mr-2" /> Удалить
-                    </Button>
-                    <Select value={form.chatBackgroundFit} onValueChange={(v: any) => setForm({...form, chatBackgroundFit: v})}>
-                      <SelectTrigger className="flex-1 bg-muted/20 border-white/5 h-10 rounded-xl text-[9px] font-bold uppercase">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent className="bg-card border-white/10 rounded-xl">
-                        <SelectItem value="cover" className="text-[9px] font-bold uppercase">Заполнение</SelectItem>
-                        <SelectItem value="contain" className="text-[9px] font-bold uppercase">Вписать</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                )}
-              </div>
             </TabsContent>
 
-            <TabsContent value="privacy" className="space-y-6 m-0 py-6">
-              <div className="space-y-6 bg-muted/20 p-6 rounded-[2.5rem] border border-white/5">
-                <div className="flex items-center justify-between">
-                  <div className="flex flex-col gap-1">
-                    <span className="text-[11px] font-black text-white uppercase tracking-wider">Premium PIN (2FA)</span>
-                    <span className="text-[9px] text-muted-foreground uppercase font-bold">Защита при входе</span>
-                  </div>
-                  <Switch checked={form.twoFactorEnabled} onCheckedChange={v => setForm({...form, twoFactorEnabled: v})} />
-                </div>
-                {form.twoFactorEnabled && (
-                  <Input type="password" placeholder="••••••" maxLength={6} value={form.twoFactorPin} onChange={e => setForm({...form, twoFactorPin: e.target.value.replace(/\D/g, '')})} className="bg-black/40 border-white/10 h-12 rounded-xl text-center text-xl tracking-[0.5em] font-black" />
-                )}
-              </div>
-
-              <div className="space-y-4 pt-4 border-t border-white/5">
-                <h3 className="text-[10px] font-black uppercase tracking-widest text-destructive flex items-center gap-2 px-1">
-                  <ShieldAlert className="w-4 h-4" /> Danger Zone
+            <TabsContent value="system" className="space-y-6 m-0 py-6">
+              <div className="space-y-4">
+                <h3 className="text-[10px] font-black uppercase tracking-widest text-primary flex items-center gap-2 px-1">
+                  <ShieldAlert className="w-4 h-4" /> Security Center
                 </h3>
-                <Button 
-                  variant="ghost" 
-                  onClick={handleSelfDestruct}
-                  className="w-full h-14 bg-red-500/10 text-red-500 hover:bg-red-500/20 border border-red-500/20 rounded-[1.8rem] font-black uppercase italic tracking-widest gap-2"
-                >
-                  <Zap className="w-4 h-4" /> Самоуничтожение Узла
-                </Button>
-                <p className="text-[7px] text-center text-muted-foreground uppercase font-bold px-6 leading-relaxed">
-                  Все ваши данные будут стерты из Ядра навсегда. Это действие необратимо.
-                </p>
+                <div className="bg-muted/20 p-4 rounded-[1.8rem] border border-white/5 space-y-4">
+                  <div className="space-y-2">
+                    <Label className="text-[9px] uppercase font-black text-foreground/40 ml-1">Новый пароль</Label>
+                    <div className="flex gap-2">
+                      <Input type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} className="bg-black/20 border-white/10 h-11 rounded-xl" />
+                      <Button size="icon" onClick={handleChangePassword} disabled={isPasswordLoading} className="h-11 w-11 rounded-xl bg-primary"><Save className="w-4 h-4" /></Button>
+                    </div>
+                  </div>
+                </div>
               </div>
             </TabsContent>
           </ScrollArea>
@@ -369,19 +245,5 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
       </DialogContent>
     </Dialog>
     </>
-  );
-}
-
-function PermissionRow({ icon: Icon, label, status, color }: { icon: any, label: string, status: string, color: string }) {
-  return (
-    <div className="flex items-center justify-between p-4 hover:bg-white/[0.02] transition-colors">
-      <div className="flex items-center gap-3">
-        <Icon className={cn("w-4 h-4", color)} />
-        <span className="text-xs font-bold text-white uppercase">{label}</span>
-      </div>
-      <span className={cn("text-[9px] font-black uppercase tracking-widest", status === 'granted' || status === 'Разрешено' ? "text-green-500" : "text-muted-foreground")}>
-        {status === 'granted' ? 'Активно' : status}
-      </span>
-    </div>
   );
 }

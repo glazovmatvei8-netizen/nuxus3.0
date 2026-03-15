@@ -26,6 +26,10 @@ interface AppState {
   settingsTab: string;
   setSettingsTab: (tab: string) => void;
   
+  // Update State
+  isUpdateDeferred: boolean;
+  setIsUpdateDeferred: (v: boolean) => void;
+  
   // User Inspection State
   inspectedUserId: string | null;
   setInspectedUserId: (id: string | null) => void;
@@ -59,6 +63,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [settingsTab, setSettingsTab] = useState('profile');
+  const [isUpdateDeferred, setIsUpdateDeferred] = useState(false);
+  
   const [inspectedUserId, setInspectedUserId] = useState<string | null>(null);
   const [isInterceptionRequested, setIsInterceptionRequested] = useState(false);
   
@@ -89,6 +95,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setIsSearchOpen,
       settingsTab,
       setSettingsTab,
+      isUpdateDeferred,
+      setIsUpdateDeferred,
       inspectedUserId,
       setInspectedUserId,
       isInterceptionRequested,

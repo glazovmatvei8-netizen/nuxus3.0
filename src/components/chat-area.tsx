@@ -9,7 +9,7 @@ import { UserAvatar } from '@/components/user-avatar';
 import { 
   Send, Info, ChevronLeft, X, Paperclip, Mic, StopCircle, ChevronDown, Edit2, Pin, Search, PinOff,
   Smile, Instagram, Camera, Video, Sticker, Copy, Share2, Sparkles, Loader2, RefreshCw, Zap, Trash2, Pause, Play,
-  BarChart3, Image as ImageIcon, ArrowDown, Menu as MenuIcon, List, Phone, Radio, UserPlus, CircleStop, RefreshCcw
+  BarChart3, Image as ImageIcon, ArrowDown, Menu as MenuIcon, List, Phone, Radio, UserPlus, CircleStop, RefreshCcw, AlertTriangle
 } from 'lucide-react';
 import { MessageItem } from './message-item';
 import { useToast } from '@/hooks/use-toast';
@@ -70,18 +70,16 @@ MessageList.displayName = 'MessageList';
 export default function ChatArea() {
   const { user: firebaseUser } = useUser();
   const db = useFirestore();
-  const { currentChatId, setCurrentChatId, setForwardingMessage, localDrafts, setLocalDrafts, setActiveCallId, isInterceptionRequested } = useAppState();
+  const { currentChatId, setCurrentChatId, setForwardingMessage, localDrafts, setLocalDrafts, isUpdateDeferred } = useAppState();
   
   const [isChatInfoOpen, setIsChatInfoOpen] = useState(false);
   const [isPollModalOpen, setIsPollModalOpen] = useState(false);
   const [replyTo, setReplyTo] = useState<Message | null>(null);
   const [editingMsg, setEditingMsg] = useState<Message | null>(null);
   const [messageInput, setMessageInput] = useState('');
-  const [showScrollBottom, setShowScrollBottom] = useState(false);
   const [isSearchMode, setIsSearchMode] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
-  const [isAiLoading, setIsAiLoading] = useState(false);
   const [isJoining, setIsJoining] = useState(false);
 
   // Recording State
@@ -111,32 +109,25 @@ export default function ChatArea() {
 
   const isKernelAdmin = useMemo(() => isGlobalAdmin(userProfile), [userProfile]);
 
-  const isInterception = useMemo(() => {
-    if (!chat || !firebaseUser || !isInterceptionRequested) return false;
-    return !chat.participantIds.includes(firebaseUser.uid) && isKernelAdmin;
-  }, [chat, firebaseUser, userProfile, isInterceptionRequested, isKernelAdmin]);
-
   const isParticipant = useMemo(() => {
     return chat?.participantIds?.includes(firebaseUser?.uid || '');
   }, [chat, firebaseUser]);
 
   const canPost = useMemo(() => {
-    if (isInterception) return false;
-    if (isKernelAdmin) return true; // BYPASS FOR GLOBAL ADMIN
+    if (isKernelAdmin) return true; 
     if (!chat || !firebaseUser) return false;
     if (chat.type === 'channel') {
       return chat.adminIds?.includes(firebaseUser.uid);
     }
     return isParticipant;
-  }, [chat, firebaseUser, isKernelAdmin, isInterception, isParticipant]);
+  }, [chat, firebaseUser, isKernelAdmin, isParticipant]);
 
   const otherId = useMemo(() => {
     if (chat?.type === 'private' && firebaseUser) {
-      if (isInterception) return null; 
       return chat.participantIds.find(id => id !== firebaseUser.uid);
     }
     return null;
-  }, [chat, firebaseUser, isInterception]);
+  }, [chat, firebaseUser]);
 
   const otherProfileRef = useMemoFirebase(() => (!db || !otherId) ? null : doc(db, 'users', otherId), [db, otherId]);
   const { data: otherProfile } = useDoc<UserType>(otherProfileRef);
@@ -234,44 +225,6 @@ export default function ChatArea() {
     }
   };
 
-  const pauseRecording = () => {
-    if (mediaRecorderRef.current && recordingState === 'recording') {
-      mediaRecorderRef.current.pause();
-      setRecordingState('paused');
-    }
-  };
-
-  const resumeRecording = () => {
-    if (mediaRecorderRef.current && recordingState === 'paused') {
-      mediaRecorderRef.current.resume();
-      setRecordingState('recording');
-    }
-  };
-
-  const flipCamera = async () => {
-    const newFacing = facingMode === 'user' ? 'environment' : 'user';
-    setFacingMode(newFacing);
-
-    if (recordingState === 'recording' || recordingState === 'paused') {
-      if (recordingState === 'recording') pauseRecording();
-      
-      try {
-        if (streamRef.current) {
-          streamRef.current.getTracks().forEach(t => t.stop());
-        }
-        const newStream = await navigator.mediaDevices.getUserMedia({
-          audio: true,
-          video: { facingMode: newFacing, width: 480, height: 480 }
-        });
-        streamRef.current = newStream;
-        if (videoPreviewRef.current) videoPreviewRef.current.srcObject = newStream;
-        toast({ title: "Камера переключена" });
-      } catch (e) {
-        toast({ title: "Ошибка камеры", variant: "destructive" });
-      }
-    }
-  };
-
   const stopRecording = () => {
     if (mediaRecorderRef.current && (recordingState === 'recording' || recordingState === 'paused')) {
       mediaRecorderRef.current.stop();
@@ -290,13 +243,11 @@ export default function ChatArea() {
 
   const confirmSendRecording = async () => {
     if (!reviewBlobUrl) return;
-    
     const response = await fetch(reviewBlobUrl);
     const blob = await response.blob();
     const reader = new FileReader();
     reader.onloadend = () => {
-      const base64Data = reader.result as string;
-      handleSendMessage(base64Data, recordingType === 'video_note' ? 'video_note' : 'audio');
+      handleSendMessage(reader.result as string, recordingType === 'video_note' ? 'video_note' : 'audio');
       cancelRecording();
     };
     reader.readAsDataURL(blob);
@@ -304,7 +255,7 @@ export default function ChatArea() {
 
   const handleSendMessage = useCallback(async (content_msg: string = messageInput, type_msg: Message['contentType'] = 'text') => {
     if (!content_msg.trim() && type_msg !== 'video_note' && type_msg !== 'sticker' && type_msg !== 'audio') return;
-    if (!currentChatId || !firebaseUser || !db || isInterception || !canPost) return;
+    if (!currentChatId || !firebaseUser || !db || !canPost) return;
     
     let finalContent = content_msg;
     if (type_msg === 'text') finalContent = encryptSignal(content_msg);
@@ -344,7 +295,7 @@ export default function ChatArea() {
       [`typing.${firebaseUser.uid}`]: false 
     });
     setTimeout(() => scrollToBottom('smooth'), 100);
-  }, [messageInput, currentChatId, firebaseUser, db, userProfile, replyTo, editingMsg, setLocalDrafts, scrollToBottom, isInterception, canPost]);
+  }, [messageInput, currentChatId, firebaseUser, db, userProfile, replyTo, editingMsg, setLocalDrafts, scrollToBottom, canPost]);
 
   const handlePinMessage = useCallback(async (msg: Message) => {
     if (!db || !currentChatId) return;
@@ -356,27 +307,29 @@ export default function ChatArea() {
     }
   }, [db, currentChatId, toast]);
 
-  const formatDuration = (s: number) => {
-    const mins = Math.floor(s / 60);
-    const secs = s % 60;
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
-  };
-
   const chatDisplayName = useMemo(() => {
-    if (isInterception && chat?.type === 'private') return `📡 ПЕРЕХВАТ: PRIVATE NODE`;
-    if (isInterception && chat) return `📡 ПЕРЕХВАТ: ${chat.name || 'Community'}`;
     if (chat?.type === 'private') {
       const myMeta = chat.metadata?.[firebaseUser?.uid || ''];
       if (myMeta?.customName) return myMeta.customName;
       if (otherProfile?.name) return formatDisplayName(otherProfile.name);
     }
     return formatDisplayName(chat?.name || otherProfile?.name || 'Чат');
-  }, [chat, firebaseUser?.uid, otherProfile, isInterception]);
+  }, [chat, firebaseUser?.uid, otherProfile]);
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-[#0a0a0c] relative overflow-hidden z-20">
+    <div className="flex-1 flex flex-col h-full bg-background relative overflow-hidden z-20">
       {userProfile?.settings?.chatBackground && (
         <div className="absolute inset-0 z-0 pointer-events-none opacity-80" style={{ backgroundImage: `url(${userProfile.settings.chatBackground})`, backgroundSize: userProfile.settings.chatBackgroundFit === 'contain' ? 'contain' : 'cover', backgroundPosition: 'center', backgroundRepeat: 'no-repeat' }} />
+      )}
+
+      {isUpdateDeferred && (
+        <div className="bg-yellow-500/10 border-b border-yellow-500/20 py-1.5 px-4 flex items-center justify-between z-40">
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="w-3.5 h-3.5 text-yellow-500" />
+            <span className="text-[10px] font-black uppercase text-yellow-500 tracking-widest">Deferred Update Mode: Some features locked</span>
+          </div>
+          <button onClick={() => window.location.reload()} className="text-[9px] font-black uppercase text-yellow-500 hover:underline">Update now</button>
+        </div>
       )}
 
       <header className="h-16 border-b border-white/5 bg-card/80 backdrop-blur-xl flex items-center justify-between px-4 shrink-0 z-30">
@@ -384,16 +337,16 @@ export default function ChatArea() {
           <Button variant="ghost" size="icon" className="md:hidden rounded-lg" onClick={() => setCurrentChatId(null)}><ChevronLeft /></Button>
           {!isSearchMode ? (
             <div className="flex items-center gap-3 cursor-pointer min-w-0" onClick={() => setIsChatInfoOpen(true)}>
-              <UserAvatar userId={otherId} manualAvatarUrl={chat?.avatarUrl || otherProfile?.avatarUrl} className="h-10 w-10" fallbackName={chatDisplayName} showOnlineStatus={!isInterception} />
+              <UserAvatar userId={otherId} manualAvatarUrl={chat?.avatarUrl || otherProfile?.avatarUrl} className="h-10 w-10" fallbackName={chatDisplayName} showOnlineStatus />
               <div className="flex flex-col min-w-0">
-                <span className={cn("font-bold text-sm truncate", isInterception && "text-red-500 animate-pulse")}>{chatDisplayName}</span>
+                <span className="font-bold text-sm truncate">{chatDisplayName}</span>
                 <span className="text-[10px] text-primary/80 font-bold uppercase tracking-widest">
-                  {isInterception ? 'SIGNAL INTERCEPT ACTIVE' : (chat?.type === 'private' ? formatLastSeen(otherProfile?.lastSeen) : 'сообщество')}
+                  {chat?.type === 'private' ? formatLastSeen(otherProfile?.lastSeen) : 'сообщество'}
                 </span>
               </div>
             </div>
           ) : (
-            <div className="flex-1 flex items-center gap-2 pr-4 animate-in fade-in slide-in-from-left-2">
+            <div className="flex-1 flex items-center gap-2 pr-4">
               <Search className="w-4 h-4 text-primary" />
               <Input placeholder="Поиск по сообщениям..." className="bg-transparent border-none focus-visible:ring-0 text-sm h-8" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} autoFocus />
               <button onClick={() => { setIsSearchMode(false); setSearchQuery(''); }} className="p-1 hover:bg-white/5 rounded-full"><X className="w-4 h-4 text-muted-foreground" /></button>
@@ -402,8 +355,8 @@ export default function ChatArea() {
         </div>
         {!isSearchMode && (
           <div className="flex items-center gap-1">
-            <Button variant="ghost" size="icon" onClick={() => setIsSearchMode(true)} className="text-white/60 hover:text-primary"><Search className="w-5 h-5" /></Button>
-            <Button variant="ghost" size="icon" onClick={() => setIsChatInfoOpen(true)} className="text-white/60 hover:text-primary"><Info className="w-5 h-5" /></Button>
+            <Button variant="ghost" size="icon" onClick={() => setIsSearchMode(true)} className="text-muted-foreground hover:text-primary"><Search className="w-5 h-5" /></Button>
+            <Button variant="ghost" size="icon" onClick={() => setIsChatInfoOpen(true)} className="text-muted-foreground hover:text-primary"><Info className="w-5 h-5" /></Button>
           </div>
         )}
       </header>
@@ -414,63 +367,34 @@ export default function ChatArea() {
           <div ref={messagesEndRef} className="h-4" />
         </div>
 
-        {/* Overlay for Recording Video Note */}
         {recordingState !== 'idle' && recordingType === 'video_note' && (
-          <div className="absolute inset-0 z-[100] flex flex-col items-center justify-center bg-black/60 backdrop-blur-md animate-in fade-in duration-300">
-            <div className="relative w-72 h-72 rounded-full overflow-hidden border-4 border-primary shadow-[0_0_50px_rgba(139,92,246,0.5)] bg-black">
+          <div className="absolute inset-0 z-[100] flex flex-col items-center justify-center bg-black/60 backdrop-blur-md">
+            <div className="relative w-72 h-72 rounded-full overflow-hidden border-4 border-primary shadow-2xl bg-black">
               {recordingState === 'review' ? (
                 <video ref={reviewVideoRef} src={reviewBlobUrl!} autoPlay loop playsInline className="w-full h-full object-cover scale-x-[-1]" />
               ) : (
                 <video ref={videoPreviewRef} autoPlay muted playsInline className="w-full h-full object-cover scale-x-[-1]" />
               )}
-              {recordingState === 'paused' && <div className="absolute inset-0 bg-black/40 flex items-center justify-center"><Pause className="w-12 h-12 text-white" /></div>}
             </div>
             
-            <div className="mt-8 flex flex-col items-center gap-6">
-              <span className={cn("text-2xl font-black italic tabular-nums", recordingTime > 160 ? "text-red-500 animate-pulse" : "text-white")}>
-                {formatDuration(recordingTime)} / 3:00
-              </span>
-
+            <div className="mt-8 flex gap-6">
+              <Button onClick={cancelRecording} className="h-16 w-16 rounded-full bg-red-500/20 text-red-500"><Trash2 className="w-6 h-6" /></Button>
               {recordingState === 'review' ? (
-                <div className="flex gap-6">
-                  <Button onClick={cancelRecording} className="h-16 w-16 rounded-full bg-red-500/20 text-red-500 border border-red-500/20"><Trash2 className="w-6 h-6" /></Button>
-                  <Button onClick={confirmSendRecording} className="h-20 w-20 rounded-full bg-primary text-white shadow-xl shadow-primary/40"><Send className="w-8 h-8 ml-1" /></Button>
-                </div>
+                <Button onClick={confirmSendRecording} className="h-20 w-20 rounded-full bg-primary text-white"><Send className="w-8 h-8 ml-1" /></Button>
               ) : (
-                <div className="flex items-center gap-6">
-                  <Button variant="ghost" onClick={flipCamera} className="h-14 w-14 rounded-full bg-white/10 text-white"><RefreshCcw className="w-6 h-6" /></Button>
-                  
-                  {recordingState === 'recording' ? (
-                    <Button onClick={pauseRecording} className="h-20 w-20 rounded-full bg-white/10 text-white border-2 border-white/20"><Pause className="w-8 h-8" /></Button>
-                  ) : (
-                    <Button onClick={resumeRecording} className="h-20 w-20 rounded-full bg-primary text-white"><Play className="w-8 h-8 ml-1" /></Button>
-                  )}
-
-                  <Button onClick={stopRecording} className="h-14 w-14 rounded-full bg-red-500 text-white"><StopCircle className="w-6 h-6" /></Button>
-                </div>
+                <Button onClick={stopRecording} className="h-20 w-20 rounded-full bg-red-500 text-white"><StopCircle className="w-8 h-8" /></Button>
               )}
             </div>
           </div>
         )}
       </div>
 
-      {isInterception ? (
-        <div className="p-4 bg-red-500/10 border-t border-red-500/20 text-center shrink-0 z-30"><p className="text-[10px] font-black text-red-500 uppercase tracking-[0.2em] animate-pulse">РЕЖИМ ПЕРЕХВАТА АКТИВИРОВАН — ТОЛЬКО ЧТЕНИЕ</p></div>
-      ) : !isParticipant ? (
+      {!isParticipant ? (
         <div className="p-4 bg-primary/5 border-t border-white/5 flex items-center justify-center shrink-0 z-30"><Button onClick={handleJoinChat} disabled={isJoining} className="h-12 px-10 rounded-2xl bg-primary font-black uppercase tracking-widest gap-2 shadow-xl shadow-primary/20">{isJoining ? <Loader2 className="animate-spin w-4 h-4" /> : <><UserPlus className="w-5 h-5" /> Вступить в сообщество</>}</Button></div>
       ) : !canPost ? (
         <div className="p-4 bg-white/5 border-t border-white/5 text-center shrink-0 z-30"><p className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em]">КАНАЛ В РЕЖИМЕ ТРАНСЛЯЦИИ — ТОЛЬКО ЧТЕНИЕ</p></div>
       ) : (
-        <footer className="p-3 pb-6 bg-[#0a0a0c]/90 backdrop-blur-2xl border-t border-white/5 shrink-0 z-30 relative">
-          {recordingState === 'recording' && recordingType === 'audio' && (
-            <div className="absolute inset-0 bg-[#0a0a0c] z-50 flex items-center justify-between px-6 animate-in slide-in-from-bottom-2">
-              <div className="flex items-center gap-4"><div className="relative flex items-center justify-center"><div className="absolute w-8 h-8 bg-red-500/20 rounded-full animate-ripple-out" /><div className="w-3 h-3 bg-red-500 rounded-full animate-pulse z-10" /></div><span className="text-sm font-black tabular-nums italic text-red-500">{formatDuration(recordingTime)}</span></div>
-              <div className="flex items-center gap-1.5 h-6">{[...Array(12)].map((_, i) => (<div key={i} className="w-1 bg-primary/40 rounded-full animate-voice-wave" style={{ animationDelay: `${i * 0.05}s` }} />))}</div>
-              <button onClick={cancelRecording} className="text-destructive font-black text-[10px] uppercase tracking-widest hover:bg-red-500/10 px-4 py-2 rounded-xl transition-colors">Отмена</button>
-              <button onClick={stopRecording} className="bg-primary p-2 rounded-full text-white"><StopCircle /></button>
-            </div>
-          )}
-
+        <footer className="p-3 pb-6 bg-background/90 backdrop-blur-2xl border-t border-white/5 shrink-0 z-30 relative">
           <div className="max-w-4xl mx-auto space-y-2 relative">
             {replyTo && (
               <div className="p-2 bg-muted/50 rounded-xl border-l-4 border-accent flex items-center justify-between animate-in slide-in-from-bottom-1">
@@ -488,19 +412,17 @@ export default function ChatArea() {
                 </PopoverContent>
               </Popover>
               
-              <div className="flex-1 flex items-center bg-white/[0.03] rounded-2xl border border-white/[0.05] h-11 px-4 relative group">
+              <div className="flex-1 flex items-center bg-muted/30 rounded-2xl border border-white/[0.05] h-11 px-4 relative group">
                 <Input placeholder="Сообщение" className="bg-transparent border-none focus-visible:ring-0" value={messageInput} onChange={e => setMessageInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSendMessage()} />
-                <div className="flex items-center gap-2">
-                  <button onClick={() => setShowEmojiPicker(!showEmojiPicker)} className="text-white/20 hover:text-white transition-colors"><Smile /></button>
-                </div>
+                <button onClick={() => setShowEmojiPicker(!showEmojiPicker)} className="text-muted-foreground hover:text-foreground transition-colors"><Smile /></button>
               </div>
 
               {messageInput.trim() ? (
                 <Button size="icon" className="h-10 w-10 rounded-full bg-primary shadow-lg" onClick={() => handleSendMessage()}><Send className="w-5 h-5" /></Button>
               ) : (
                 <div className="flex items-center gap-1 bg-white/5 p-1 rounded-full">
-                  <Button size="icon" variant="ghost" className={cn("h-10 w-10 rounded-full transition-all", recordingType === 'audio' ? "bg-primary text-white scale-110 shadow-lg" : "text-white/40")} onClick={() => { setRecordingType('audio'); startRecording(); }}><Mic className="w-5 h-5" /></Button>
-                  <Button size="icon" variant="ghost" className={cn("h-10 w-10 rounded-full transition-all", recordingType === 'video_note' ? "bg-primary text-white scale-110 shadow-lg" : "text-white/40")} onClick={() => { setRecordingType('video_note'); startRecording(); }}><Video className="w-5 h-5" /></Button>
+                  <Button size="icon" variant="ghost" className="h-10 w-10 rounded-full text-muted-foreground" onClick={() => { setRecordingType('audio'); startRecording(); }}><Mic className="w-5 h-5" /></Button>
+                  <Button size="icon" variant="ghost" className="h-10 w-10 rounded-full text-muted-foreground" onClick={() => { setRecordingType('video_note'); startRecording(); }}><Video className="w-5 h-5" /></Button>
                 </div>
               )}
             </div>

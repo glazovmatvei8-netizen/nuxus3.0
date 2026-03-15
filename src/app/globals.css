@@ -1,9 +1,33 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
   :root {
+    --background: 0 0% 100%;
+    --foreground: 240 10% 3.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 240 10% 3.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 240 10% 3.9%;
+    --primary: 263 70% 55%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 240 4.8% 95.9%;
+    --secondary-foreground: 240 5.9% 10%;
+    --muted: 240 4.8% 95.9%;
+    --muted-foreground: 240 3.8% 46.1%;
+    --accent: 190 90% 50%;
+    --accent-foreground: 240 5.9% 10%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 240 5.9% 90%;
+    --input: 240 5.9% 90%;
+    --ring: 263 70% 55%;
+    --radius: 1rem;
+  }
+
+  .dark {
     --background: 240 10% 3.9%;
     --foreground: 0 0% 98%;
     --card: 240 10% 6%;
@@ -23,7 +47,6 @@
     --border: 240 5% 15%;
     --input: 240 5% 15%;
     --ring: 263 70% 55%;
-    --radius: 1rem;
   }
 
   [data-theme='ocean'] {
@@ -56,8 +79,7 @@
     @apply border-border;
   }
   html, body {
-    @apply bg-[#0a0a0c] text-foreground antialiased;
-    background-color: #0a0a0c !important;
+    @apply bg-background text-foreground antialiased;
     text-rendering: optimizeLegibility;
   }
   body {
@@ -97,33 +119,6 @@
   scrollbar-width: none;
 }
 
-/* Performance optimization for lists */
-.pb-32, .pb-24, .pb-40 {
-  content-visibility: auto;
-  contain-intrinsic-size: 1px 1000px;
-}
-
-@keyframes float {
-  0% { transform: translateY(0px); }
-  50% { transform: translateY(-4px); }
-  100% { transform: translateY(0px); }
-}
-
-.animate-float {
-  animation: float 6s ease-in-out infinite;
-  will-change: transform;
-}
-
-@keyframes pulse-glow {
-  0%, 100% { opacity: 0.4; transform: scale(1); }
-  50% { opacity: 0.6; transform: scale(1.05); }
-}
-
-.animate-pulse-glow {
-  animation: pulse-glow 4s ease-in-out infinite;
-  will-change: transform, opacity;
-}
-
 @keyframes typing-dot {
   0%, 20% { opacity: 0; transform: translateY(0); }
   50% { opacity: 1; transform: translateY(-1px); }
@@ -132,16 +127,6 @@
 
 .animate-typing-dot {
   animation: typing-dot 1.4s infinite both;
-  will-change: transform, opacity;
-}
-
-@keyframes ripple-out {
-  0% { transform: scale(1); opacity: 0.5; }
-  100% { transform: scale(2.5); opacity: 0; }
-}
-
-.animate-ripple-out {
-  animation: ripple-out 1.5s cubic-bezier(0, 0.2, 0.8, 1) infinite;
 }
 
 @keyframes voice-wave {
@@ -160,8 +145,4 @@
 
 .nuxus-core-glow {
   background: radial-gradient(circle, hsl(var(--primary) / 0.15) 0%, transparent 70%);
-}
-
-.transition-all {
-  transition-duration: 150ms;
 }

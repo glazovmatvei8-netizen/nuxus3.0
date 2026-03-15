@@ -128,6 +128,7 @@ export interface UserPrivacy {
 
 export interface UserSettings {
   theme: 'default' | 'ocean' | 'midnight' | 'rainbow' | 'gold' | 'emerald';
+  appearance: 'light' | 'dark';
   chatBackground: string;
   chatBackgroundFit?: 'cover' | 'contain';
   customAppIconUrl?: string;
