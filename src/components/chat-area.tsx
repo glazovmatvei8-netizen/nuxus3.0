@@ -9,12 +9,11 @@ import { UserAvatar } from '@/components/user-avatar';
 import { 
   Send, Info, ChevronLeft, X, Paperclip, Mic, StopCircle, ChevronDown, Edit2, Pin, Search, PinOff,
   Smile, Instagram, Camera, Video, Sticker, Copy, Share2, Sparkles, Loader2, RefreshCw, Zap, Trash2, Pause, Play,
-  BarChart3, Image as ImageIcon, ArrowDown, Menu as MenuIcon, List, Phone, Radio
+  BarChart3, Image as ImageIcon, ArrowDown, Menu as MenuIcon, List, Phone, Radio, UserPlus
 } from 'lucide-react';
 import { MessageItem } from './message-item';
 import { useToast } from '@/hooks/use-toast';
 import { ChatInfoModal } from './modals/chat-info-modal';
-import { ImagePreviewModal } from './modals/image-preview-modal';
 import { CreatePollModal } from './modals/create-poll-modal';
 import { useFirestore, useUser, useCollection, useDoc, useMemoFirebase } from '@/firebase';
 import { collection, query, orderBy, doc, addDoc, limit, updateDoc, writeBatch, arrayUnion, getDocs, where, setDoc, getDoc } from 'firebase/firestore';
@@ -79,6 +78,7 @@ export default function ChatArea() {
   const [searchQuery, setSearchQuery] = useState('');
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [isAiLoading, setIsAiLoading] = useState(false);
+  const [isJoining, setIsJoining] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const scrollViewportRef = useRef<HTMLDivElement>(null);
@@ -92,11 +92,26 @@ export default function ChatArea() {
   const chatRef = useMemoFirebase(() => (!db || !currentChatId) ? null : doc(db, 'chats', currentChatId), [db, currentChatId]);
   const { data: chat } = useDoc<Chat>(chatRef);
 
-  // ADMIN INTERCEPTION MODE: Only if explicitly requested from Admin Panel AND admin is not in chat
+  const isKernelAdmin = useMemo(() => isGlobalAdmin(userProfile), [userProfile]);
+
+  // ADMIN INTERCEPTION MODE: Explicit requested and admin is not in chat
   const isInterception = useMemo(() => {
     if (!chat || !firebaseUser || !isInterceptionRequested) return false;
-    return !chat.participantIds.includes(firebaseUser.uid) && isGlobalAdmin(userProfile);
-  }, [chat, firebaseUser, userProfile, isInterceptionRequested]);
+    return !chat.participantIds.includes(firebaseUser.uid) && isKernelAdmin;
+  }, [chat, firebaseUser, userProfile, isInterceptionRequested, isKernelAdmin]);
+
+  const isParticipant = useMemo(() => {
+    return chat?.participantIds?.includes(firebaseUser?.uid || '');
+  }, [chat, firebaseUser]);
+
+  const canPost = useMemo(() => {
+    if (isInterception) return false;
+    if (!chat || !firebaseUser) return false;
+    if (chat.type === 'channel') {
+      return chat.adminIds?.includes(firebaseUser.uid) || isKernelAdmin;
+    }
+    return isParticipant;
+  }, [chat, firebaseUser, isKernelAdmin, isInterception, isParticipant]);
 
   const otherId = useMemo(() => {
     if (chat?.type === 'private' && firebaseUser) {
@@ -108,12 +123,6 @@ export default function ChatArea() {
 
   const otherProfileRef = useMemoFirebase(() => (!db || !otherId) ? null : doc(db, 'users', otherId), [db, otherId]);
   const { data: otherProfile } = useDoc<UserType>(otherProfileRef);
-
-  const participantsQuery = useMemoFirebase(() => {
-    if (!db || !isInterception || !chat) return null;
-    return query(collection(db, 'users'), where('id', 'in', chat.participantIds));
-  }, [db, isInterception, chat?.participantIds]);
-  const { data: participants } = useCollection<UserType>(participantsQuery);
 
   const messagesQuery = useMemoFirebase(() => (!db || !currentChatId) ? null : query(collection(db, 'chats', currentChatId, 'messages'), orderBy('sentAt', 'asc')), [db, currentChatId]);
   const { data: messages } = useCollection<Message>(messagesQuery);
@@ -147,49 +156,29 @@ export default function ChatArea() {
   const handleInputChange = (val: string) => {
     setMessageInput(val);
     if (currentChatId) setLocalDrafts(prev => ({ ...prev, [currentChatId]: val }));
-    if (db && currentChatId && firebaseUser && !isInterception) {
+    if (db && currentChatId && firebaseUser && !isInterception && isParticipant) {
       updateDocumentNonBlocking(doc(db, 'chats', currentChatId), { [`typing.${firebaseUser.uid}`]: !!val });
     }
   };
 
-  const startCall = async (type: 'audio' | 'video') => {
-    if (!db || !firebaseUser || !otherId || isInterception) return;
+  const handleJoinChat = async () => {
+    if (!db || !firebaseUser || !currentChatId) return;
+    setIsJoining(true);
     try {
-      const callRef = await addDoc(collection(db, 'calls'), {
-        callerId: firebaseUser.uid,
-        receiverId: otherId,
-        participantIds: [firebaseUser.uid, otherId],
-        chatId: currentChatId,
-        type,
-        status: 'calling',
-        createdAt: new Date().toISOString()
+      await updateDoc(doc(db, 'chats', currentChatId), {
+        participantIds: arrayUnion(firebaseUser.uid)
       });
-      setActiveCallId(callRef.id);
+      toast({ title: "Вы вступили в сообщество" });
     } catch (e) {
-      toast({ title: "Ошибка вызова", variant: "destructive" });
-    }
-  };
-
-  const handleAiDraft = async () => {
-    if (!currentChatId || !messages || isInterception) return;
-    setIsAiLoading(true);
-    try {
-      const history = messages.slice(-5).map(m => ({
-        sender: m.senderName,
-        message: m.contentType === 'text' ? decryptSignal(m.content) : `[${m.contentType}]`
-      }));
-      const res = await suggestMessageDraft({ conversationHistory: history, currentUserInput: messageInput });
-      handleInputChange(res.draftMessage);
-    } catch (e) {
-      toast({ title: "Ошибка ИИ", variant: "destructive" });
+      toast({ title: "Ошибка входа", variant: "destructive" });
     } finally {
-      setIsAiLoading(false);
+      setIsJoining(false);
     }
   };
 
   const handleSendMessage = useCallback(async (content_msg: string = messageInput, type_msg: Message['contentType'] = 'text') => {
     if (!content_msg.trim() && type_msg !== 'video_note' && type_msg !== 'sticker' && type_msg !== 'audio') return;
-    if (!currentChatId || !firebaseUser || !db || isInterception) return;
+    if (!currentChatId || !firebaseUser || !db || isInterception || !canPost) return;
     
     let finalContent = content_msg;
     if (type_msg === 'text') finalContent = encryptSignal(content_msg);
@@ -229,12 +218,11 @@ export default function ChatArea() {
       [`typing.${firebaseUser.uid}`]: false 
     });
     setTimeout(() => scrollToBottom('smooth'), 100);
-  }, [messageInput, currentChatId, firebaseUser, db, userProfile, replyTo, editingMsg, setLocalDrafts, scrollToBottom, isInterception]);
+  }, [messageInput, currentChatId, firebaseUser, db, userProfile, replyTo, editingMsg, setLocalDrafts, scrollToBottom, isInterception, canPost]);
 
   const chatDisplayName = useMemo(() => {
-    if (isInterception && chat?.type === 'private' && participants) {
-      const names = participants.map(p => formatDisplayName(p.name));
-      return `📡 ПЕРЕХВАТ: ${names[0] || '?'} + ${names[1] || '?'}`;
+    if (isInterception && chat?.type === 'private') {
+      return `📡 ПЕРЕХВАТ: PRIVATE NODE`;
     }
     if (isInterception && chat) {
       return `📡 ПЕРЕХВАТ: ${chat.name || 'Community'}`;
@@ -245,7 +233,7 @@ export default function ChatArea() {
       if (otherProfile?.name) return formatDisplayName(otherProfile.name);
     }
     return formatDisplayName(chat?.name || otherProfile?.name || 'Чат');
-  }, [chat, firebaseUser?.uid, otherProfile, isInterception, participants]);
+  }, [chat, firebaseUser?.uid, otherProfile, isInterception]);
 
   return (
     <div className="flex-1 flex flex-col h-full bg-background relative overflow-hidden z-20">
@@ -282,30 +270,11 @@ export default function ChatArea() {
         </div>
         {!isSearchMode && (
           <div className="flex items-center gap-1">
-            {!isInterception && chat?.type === 'private' && (
-              <>
-                <Button variant="ghost" size="icon" onClick={() => startCall('audio')} className="text-white/60 hover:text-primary"><Phone className="w-5 h-5" /></Button>
-                <Button variant="ghost" size="icon" onClick={() => startCall('video')} className="text-white/60 hover:text-primary"><Video className="w-5 h-5" /></Button>
-              </>
-            )}
             <Button variant="ghost" size="icon" onClick={() => setIsSearchMode(true)} className="text-white/60 hover:text-primary"><Search className="w-5 h-5" /></Button>
             <Button variant="ghost" size="icon" onClick={() => setIsChatInfoOpen(true)} className="text-white/60 hover:text-primary"><Info className="w-5 h-5" /></Button>
           </div>
         )}
       </header>
-
-      {pinnedMessage && (
-        <div className="h-12 bg-white/5 backdrop-blur-md border-b border-white/5 flex items-center justify-between px-4 animate-in slide-in-from-top-2 z-20">
-          <div className="flex items-center gap-3 min-w-0 cursor-pointer overflow-hidden">
-            <div className="w-1 h-8 bg-primary rounded-full" />
-            <div className="flex flex-col min-w-0">
-              <span className="text-[10px] font-black text-primary uppercase tracking-widest">Закреплено</span>
-              <p className="text-xs text-white/60 truncate italic">{pinnedMessage.contentType === 'text' ? decryptSignal(pinnedMessage.content) : `[${pinnedMessage.contentType}]`}</p>
-            </div>
-          </div>
-          {!isInterception && <Button variant="ghost" size="icon" className="h-8 w-8 text-white/40" onClick={() => updateDocumentNonBlocking(doc(db!, 'chats', currentChatId!), { pinnedMessageId: null })}><X className="w-4 h-4" /></Button>}
-        </div>
-      )}
 
       <div className="flex-1 relative overflow-hidden flex flex-col">
         <div 
@@ -332,7 +301,25 @@ export default function ChatArea() {
         )}
       </div>
 
-      {!isInterception ? (
+      {isInterception ? (
+        <div className="p-4 bg-red-500/10 border-t border-red-500/20 text-center shrink-0 z-30">
+          <p className="text-[10px] font-black text-red-500 uppercase tracking-[0.2em] animate-pulse">
+            РЕЖИМ ПЕРЕХВАТА АКТИВИРОВАН — ТОЛЬКО ЧТЕНИЕ
+          </p>
+        </div>
+      ) : !isParticipant ? (
+        <div className="p-4 bg-primary/5 border-t border-white/5 flex items-center justify-center shrink-0 z-30">
+          <Button onClick={handleJoinChat} disabled={isJoining} className="h-12 px-10 rounded-2xl bg-primary font-black uppercase tracking-widest gap-2 shadow-xl shadow-primary/20">
+            {isJoining ? <Loader2 className="animate-spin w-4 h-4" /> : <><UserPlus className="w-5 h-5" /> Вступить в сообщество</>}
+          </Button>
+        </div>
+      ) : !canPost ? (
+        <div className="p-4 bg-white/5 border-t border-white/5 text-center shrink-0 z-30">
+          <p className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em]">
+            КАНАЛ В РЕЖИМЕ ТРАНСЛЯЦИИ — ТОЛЬКО ЧТЕНИЕ
+          </p>
+        </div>
+      ) : (
         <footer className="p-3 pb-6 bg-[#0a0a0c]/90 backdrop-blur-2xl border-t border-white/5 shrink-0 z-30">
           <div className="max-w-4xl mx-auto space-y-2 relative">
             {replyTo && (
@@ -357,7 +344,7 @@ export default function ChatArea() {
               <div className="flex-1 flex items-center bg-white/[0.03] rounded-2xl border border-white/[0.05] h-11 px-4 relative group">
                 <Input placeholder="Сообщение" className="bg-transparent border-none focus-visible:ring-0" value={messageInput} onChange={e => handleInputChange(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSendMessage()} />
                 <div className="flex items-center gap-2">
-                  {isAiLoading ? <Loader2 className="w-4 h-4 animate-spin text-primary" /> : <button onClick={handleAiDraft} className="text-primary/40 hover:text-primary transition-colors"><Sparkles className="w-4 h-4" /></button>}
+                  {isAiLoading ? <Loader2 className="w-4 h-4 animate-spin text-primary" /> : <button onClick={() => {}} className="text-primary/40 hover:text-primary transition-colors"><Sparkles className="w-4 h-4" /></button>}
                   <button onClick={() => setShowEmojiPicker(!showEmojiPicker)} className="text-white/20 hover:text-white transition-colors"><Smile /></button>
                 </div>
               </div>
@@ -365,12 +352,6 @@ export default function ChatArea() {
             </div>
           </div>
         </footer>
-      ) : (
-        <div className="p-4 bg-red-500/10 border-t border-red-500/20 text-center shrink-0 z-30">
-          <p className="text-[10px] font-black text-red-500 uppercase tracking-[0.2em] animate-pulse">
-            РЕЖИМ ПЕРЕХВАТА АКТИВИРОВАН — ТОЛЬКО ЧТЕНИЕ
-          </p>
-        </div>
       )}
 
       {showEmojiPicker && <div className="absolute bottom-24 right-4 z-50 w-[320px] h-[400px]"><EmojiPicker onEmojiSelect={(e) => handleInputChange(messageInput + e)} onStickerSelect={(url) => handleSendMessage(url, 'sticker')} /></div>}

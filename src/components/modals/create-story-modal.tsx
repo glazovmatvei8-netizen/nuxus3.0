@@ -12,9 +12,6 @@ import { useToast } from '@/hooks/use-toast';
 import { compressImage } from '@/lib/utils';
 import { addHours } from 'date-fns';
 
-/**
- * FIXED: Улучшенная логика отправки и сброса состояния кнопки публикации.
- */
 export function CreateStoryModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const { user } = useUser();
   const db = useFirestore();
@@ -22,6 +19,7 @@ export function CreateStoryModal({ open, onOpenChange }: { open: boolean, onOpen
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [isLoading, setIsLoading] = useState(false);
+  const [isPublishing, setIsPublishing] = useState(false);
   const [preview, setPreview] = useState<string | null>(null);
   const [type, setType] = useState<'image' | 'video'>('image');
   const [caption, setCaption] = useState('');
@@ -46,9 +44,9 @@ export function CreateStoryModal({ open, onOpenChange }: { open: boolean, onOpen
   };
 
   const handleCreate = async () => {
-    if (!db || !user || !preview || isLoading) return;
+    if (!db || !user || !preview || isPublishing) return;
     
-    setIsLoading(true);
+    setIsPublishing(true);
     try {
       let finalContent = preview;
       if (type === 'image') {
@@ -73,12 +71,12 @@ export function CreateStoryModal({ open, onOpenChange }: { open: boolean, onOpen
     } catch (e: any) {
       toast({ title: "Ошибка Ядра", description: "Попробуйте снова", variant: "destructive" });
     } finally {
-      setIsLoading(false);
+      setIsPublishing(false);
     }
   };
 
   return (
-    <Dialog open={open} onOpenChange={(o) => { if(!isLoading) onOpenChange(o); }}>
+    <Dialog open={open} onOpenChange={(o) => { if(!isPublishing) onOpenChange(o); }}>
       <DialogContent className="max-w-md bg-[#0a0a0c] border-white/10 rounded-[2.5rem] p-0 overflow-hidden shadow-2xl h-[85vh] flex flex-col outline-none">
         <DialogHeader className="p-6 border-b border-white/5 shrink-0 bg-[#0a0a0c]">
           <DialogTitle className="text-xl font-black uppercase italic text-white flex items-center gap-2">
@@ -90,10 +88,10 @@ export function CreateStoryModal({ open, onOpenChange }: { open: boolean, onOpen
         </DialogHeader>
 
         <div className="flex-1 relative flex flex-col p-4 items-center justify-center bg-white/[0.02] min-h-0 overflow-y-auto">
-          {isLoading && !preview ? (
+          {(isLoading || isPublishing) && !preview ? (
             <div className="flex flex-col items-center gap-4">
               <Loader2 className="w-10 h-10 text-primary animate-spin" />
-              <p className="text-[10px] font-black uppercase tracking-widest">Обработка...</p>
+              <p className="text-[10px] font-black uppercase tracking-widest">Обработка Сигнала...</p>
             </div>
           ) : preview ? (
             <div className="relative w-full aspect-[3/4] max-h-[50vh] rounded-3xl overflow-hidden shadow-2xl border border-white/10 group">
@@ -102,8 +100,13 @@ export function CreateStoryModal({ open, onOpenChange }: { open: boolean, onOpen
               ) : (
                 <img src={preview} className="w-full h-full object-cover" alt="Preview" />
               )}
-              {!isLoading && (
+              {!isPublishing && (
                 <Button variant="destructive" size="icon" className="absolute top-4 right-4 rounded-full bg-black/60" onClick={() => setPreview(null)}><X className="w-4 h-4" /></Button>
+              )}
+              {isPublishing && (
+                <div className="absolute inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center">
+                  <Loader2 className="w-12 h-12 text-primary animate-spin" />
+                </div>
               )}
             </div>
           ) : (
@@ -118,13 +121,13 @@ export function CreateStoryModal({ open, onOpenChange }: { open: boolean, onOpen
         </div>
 
         <div className="p-6 pb-10 space-y-4 bg-[#0a0a0c] border-t border-white/5 shrink-0">
-          <Input placeholder="Добавить подпись..." value={caption} onChange={e => setCaption(e.target.value)} disabled={isLoading} className="bg-white/5 border-white/5 h-12 rounded-2xl text-center" />
+          <Input placeholder="Добавить подпись..." value={caption} onChange={e => setCaption(e.target.value)} disabled={isPublishing} className="bg-white/5 border-white/5 h-12 rounded-2xl text-center" />
           <Button 
             className="w-full h-14 bg-primary text-white rounded-2xl font-black uppercase italic tracking-widest shadow-xl shadow-primary/20"
             onClick={handleCreate}
-            disabled={!preview || isLoading}
+            disabled={!preview || isPublishing}
           >
-            {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <><Send className="w-5 h-5 mr-2" /> Опубликовать</>}
+            {isPublishing ? <Loader2 className="w-5 h-5 animate-spin" /> : <><Send className="w-5 h-5 mr-2" /> Опубликовать</>}
           </Button>
         </div>
       </DialogContent>

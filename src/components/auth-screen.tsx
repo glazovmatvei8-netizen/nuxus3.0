@@ -142,10 +142,8 @@ export default function AuthScreen() {
           lastIp: ip
         };
         
-        // Сначала создаем профиль
         await setDoc(doc(db!, 'users', uid), profileData);
 
-        // Обновляем реферала в отдельном блоке, чтобы не ломать регистрацию если что-то пойдет не так
         if (referralId && referralId !== uid) {
           try {
             const inviterRef = doc(db!, 'users', referralId);
