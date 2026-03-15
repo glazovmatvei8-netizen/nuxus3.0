@@ -24,6 +24,7 @@ import {
   ContextMenuContent,
   ContextMenuItem,
   ContextMenuTrigger,
+  ContextMenuSeparator,
 } from "@/components/ui/context-menu";
 
 const ChatListItem = memo(({ 
@@ -176,9 +177,23 @@ const ChatListItem = memo(({
               </div>
             </div>
           </ContextMenuTrigger>
-          <ContextMenuContent className="w-56 bg-card/95 backdrop-blur-xl border-white/10 rounded-2xl shadow-2xl">
-            <ContextMenuItem onClick={() => onPinToggle(chat.id)} className="gap-3 py-3 font-bold uppercase text-[11px] tracking-widest rounded-xl">
-              {isPinned ? <><PinOff className="w-4 h-4 text-primary" /> Открепить</> : <><Pin className="w-4 h-4 text-primary" /> Закрепить</>}
+          <ContextMenuContent className="w-64 bg-card/95 backdrop-blur-xl border-white/10 rounded-2xl shadow-2xl p-1">
+            <ContextMenuItem onClick={() => onMarkUnread(chat.id)} className="gap-3 py-3 font-bold uppercase text-[11px] tracking-widest rounded-xl hover:bg-white/5">
+              <MessageCircle className="w-4 h-4 text-[#007AFF]" /> {chat.isManualUnread ? 'Прочитать' : 'Не прочит.'}
+            </ContextMenuItem>
+            
+            <ContextMenuItem onClick={() => onPinToggle(chat.id)} className="gap-3 py-3 font-bold uppercase text-[11px] tracking-widest rounded-xl hover:bg-white/5">
+              {isPinned ? <><PinOff className="w-4 h-4 text-[#34C759]" /> Открепить</> : <><Pin className="w-4 h-4 text-[#34C759]" /> Закрепить</>}
+            </ContextMenuItem>
+
+            <ContextMenuItem onClick={() => onArchive(chat.id, !!chat.isArchived)} className="gap-3 py-3 font-bold uppercase text-[11px] tracking-widest rounded-xl hover:bg-white/5">
+              <Archive className="w-4 h-4 text-[#FF9500]" /> {chat.isArchived ? 'Вернуть' : 'В архив'}
+            </ContextMenuItem>
+
+            <ContextMenuSeparator className="bg-white/5" />
+
+            <ContextMenuItem onClick={() => onDelete(chat.id)} className="gap-3 py-3 font-bold uppercase text-[11px] tracking-widest rounded-xl text-[#FF3B30] hover:bg-red-500/10">
+              <Trash2 className="w-4 h-4" /> Удалить узел
             </ContextMenuItem>
           </ContextMenuContent>
         </ContextMenu>
