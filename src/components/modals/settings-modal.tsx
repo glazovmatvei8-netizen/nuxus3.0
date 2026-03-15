@@ -16,7 +16,7 @@ import {
   LogOut, Palette, Check, Settings2, Camera, Lock, Image as ImageIcon, 
   Paintbrush, Shield, UserCircle, Layout, Smile, FileText, ChevronRight,
   ShieldCheck, Eye, Users2, MessageSquareLock, Upload, Smartphone, Share2, Trophy,
-  Bell, Video, Mic, MonitorSmartphone, Key
+  Bell, Video, Mic, MonitorSmartphone, Key, Trash2
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { signOut } from 'firebase/auth';
@@ -34,8 +34,6 @@ const THEMES = [
   { id: 'gold', name: 'Золотой Квант', color: 'bg-[#EAB308]' },
   { id: 'emerald', name: 'Изумруд', color: 'bg-[#22C55E]' },
 ];
-
-const EMOJI_STATUSES = ['💎', '⚡️', '🦾', '🔥', '👑', '🌌', '👾', '✨', '💤', '🎯'];
 
 export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const auth = useAuth();
@@ -55,9 +53,9 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
   useEffect(() => {
     if (typeof window !== 'undefined') {
       setPerms({
-        notifications: Notification.permission,
-        camera: 'Checking...', // Browser API needed for live check
-        mic: 'Checking...'
+        notifications: typeof Notification !== 'undefined' ? Notification.permission : 'default',
+        camera: 'Разрешено',
+        mic: 'Разрешено'
       });
     }
   }, [open]);
@@ -178,8 +176,8 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                 
                 <div className="bg-muted/20 rounded-[1.8rem] border border-white/5 divide-y divide-white/[0.03] overflow-hidden">
                   <PermissionRow icon={Bell} label="Уведомления" status={perms.notifications} color="text-blue-400" />
-                  <PermissionRow icon={Video} label="Камера" status="Разрешено" color="text-green-400" />
-                  <PermissionRow icon={Mic} label="Микрофон" status="Разрешено" color="text-green-400" />
+                  <PermissionRow icon={Video} label="Камера" status={perms.camera} color="text-green-400" />
+                  <PermissionRow icon={Mic} label="Микрофон" status={perms.mic} color="text-green-400" />
                 </div>
 
                 <h3 className="text-[10px] font-black uppercase tracking-widest text-primary flex items-center gap-2 px-1 pt-4">
@@ -188,7 +186,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                 <div className="bg-muted/20 p-4 rounded-[1.8rem] border border-white/5 space-y-3">
                   <div className="flex justify-between items-center">
                     <span className="text-xs text-white/60 font-bold uppercase">Устройство</span>
-                    <span className="text-[10px] font-black text-white italic">iPhone / Safari Mode</span>
+                    <span className="text-[10px] font-black text-white italic">Node Session</span>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-xs text-white/60 font-bold uppercase">IP Сигнал</span>
@@ -209,6 +207,61 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                     </button>
                   ))}
                 </div>
+              </div>
+
+              <div className="space-y-4 pt-4 border-t border-white/5">
+                <Label className="text-[10px] font-black uppercase text-muted-foreground flex items-center gap-2">
+                  <ImageIcon className="w-3 h-3" /> Обои чата
+                </Label>
+                <div 
+                  className="relative h-32 w-full rounded-2xl border-2 border-dashed border-white/10 flex flex-col items-center justify-center gap-2 cursor-pointer hover:bg-white/5 transition-all overflow-hidden bg-muted/10"
+                  onClick={() => bgInputRef.current?.click()}
+                >
+                  {form.chatBackground ? (
+                    <>
+                      <img src={form.chatBackground} className="absolute inset-0 w-full h-full object-cover opacity-40" alt="Background preview" />
+                      <div className="relative z-10 flex flex-col items-center gap-1">
+                        <Upload className="w-5 h-5 text-primary" />
+                        <span className="text-[10px] font-bold uppercase">Изменить фон</span>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <ImageIcon className="w-6 h-6 text-white/20" />
+                      <span className="text-[10px] font-bold uppercase text-white/40">Выбрать изображение</span>
+                    </>
+                  )}
+                  <input 
+                    type="file" 
+                    ref={bgInputRef} 
+                    className="hidden" 
+                    accept="image/*" 
+                    onChange={(e) => {
+                      const f = e.target.files?.[0];
+                      if(f) {
+                        const r = new FileReader();
+                        r.onloadend = () => setForm({...form, chatBackground: r.result as string});
+                        r.readAsDataURL(f);
+                      }
+                    }} 
+                  />
+                </div>
+                {form.chatBackground && (
+                  <div className="flex gap-2">
+                    <Button variant="ghost" className="flex-1 h-10 rounded-xl text-[9px] font-black uppercase bg-red-500/10 text-red-500 hover:bg-red-500/20" onClick={() => setForm({...form, chatBackground: ''})}>
+                      <Trash2 className="w-3.5 h-3.5 mr-2" /> Удалить
+                    </Button>
+                    <Select value={form.chatBackgroundFit} onValueChange={(v: any) => setForm({...form, chatBackgroundFit: v})}>
+                      <SelectTrigger className="flex-1 bg-muted/20 border-white/5 h-10 rounded-xl text-[9px] font-bold uppercase">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="bg-card border-white/10 rounded-xl">
+                        <SelectItem value="cover" className="text-[9px] font-bold uppercase">Заполнение</SelectItem>
+                        <SelectItem value="contain" className="text-[9px] font-bold uppercase">Вписать</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
               </div>
             </TabsContent>
 

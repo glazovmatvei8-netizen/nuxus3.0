@@ -39,7 +39,7 @@ const MessageList = memo(({
   }, [sortedMessages, searchQuery]);
 
   return (
-    <div className="flex flex-col gap-3 max-w-4xl mx-auto px-4 md:px-6 py-8 min-h-full touch-pan-y">
+    <div className="flex flex-col gap-3 max-w-4xl mx-auto px-4 md:px-6 py-8 min-h-full touch-pan-y relative z-10">
       {filteredMessages.map((msg: Message) => (
         <MessageItem 
           key={msg.id} 
@@ -305,9 +305,18 @@ export default function ChatArea() {
   }, [chat, firebaseUser?.uid, otherProfile, isInterception]);
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-background relative overflow-hidden z-20">
+    <div className="flex-1 flex flex-col h-full bg-[#0a0a0c] relative overflow-hidden z-20">
+      {/* ЧАТ ФОН (Wallpaper Engine) */}
       {userProfile?.settings?.chatBackground && (
-        <div className="fixed inset-0 z-0 pointer-events-none" style={{ backgroundImage: `url(${userProfile.settings.chatBackground})`, backgroundSize: userProfile.settings.chatBackgroundFit === 'contain' ? 'contain' : 'cover', backgroundPosition: 'center', backgroundColor: '#0a0a0c' }} />
+        <div 
+          className="absolute inset-0 z-0 pointer-events-none opacity-80" 
+          style={{ 
+            backgroundImage: `url(${userProfile.settings.chatBackground})`, 
+            backgroundSize: userProfile.settings.chatBackgroundFit === 'contain' ? 'contain' : 'cover', 
+            backgroundPosition: 'center',
+            backgroundRepeat: 'no-repeat'
+          }} 
+        />
       )}
 
       <header className="h-16 border-b border-white/5 bg-card/80 backdrop-blur-xl flex items-center justify-between px-4 shrink-0 z-30">
