@@ -1,0 +1,75 @@
+name: Build Desktop (macOS, Linux, Windows)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build Desktop Apps
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      matrix:
+        os: [macos-latest, ubuntu-latest, windows-latest]
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: Install Dependencies
+        run: npm install
+
+      - name: Build Web Project
+        run: npm run build
+
+      - name: Install Nativefier
+        run: npm install -g nativefier
+
+      - name: Package App (macOS)
+        if: matrix.os == 'macos-latest'
+        run: |
+          nativefier --name "Nuxus" \
+                     --icon "https://i.ibb.co/sd2MqGz2/Icon.png" \
+                     --internal-urls ".*" \
+                     --single-instance \
+                     --app-version "0.65.8" \
+                     --platform "mac" \
+                     "https://studio-5946432351-bbd5e.web.app/"
+          zip -r Nuxus-macOS.zip Nuxus-darwin-x64/
+
+      - name: Package App (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          nativefier --name "Nuxus" \
+                     --icon "https://i.ibb.co/sd2MqGz2/Icon.png" \
+                     --internal-urls ".*" \
+                     --single-instance \
+                     --app-version "0.65.8" \
+                     --platform "linux" \
+                     "https://studio-5946432351-bbd5e.web.app/"
+          tar -czvf Nuxus-Linux.tar.gz Nuxus-linux-x64/
+
+      - name: Package App (Windows)
+        if: matrix.os == 'windows-latest'
+        run: |
+          npx nativefier --name "Nuxus" `
+                         --icon "https://i.ibb.co/sd2MqGz2/Icon.png" `
+                         --internal-urls ".*" `
+                         --single-instance `
+                         --app-version "0.65.8" `
+                         --platform "windows" `
+                         "https://studio-5946432351-bbd5e.web.app/"
+          Compress-Archive -Path Nuxus-win32-x64 -DestinationPath Nuxus-Windows.zip
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: Nuxus-Desktop-${{ matrix.os }}
+          path: |
+            *.zip
+            *.tar.gz

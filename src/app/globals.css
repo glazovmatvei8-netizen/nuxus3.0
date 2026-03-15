@@ -69,6 +69,26 @@
   }
 }
 
+/* Custom Scrollbars for Desktop (macOS/Linux style) */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: hsl(var(--primary) / 0.2);
+  border-radius: 10px;
+  transition: background 0.3s;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--primary) / 0.5);
+}
+
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
 }

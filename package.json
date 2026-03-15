@@ -8,6 +8,7 @@
     "genkit:watch": "genkit start -- tsx --watch src/ai/dev.ts",
     "build": "next build",
     "export": "next build && next export",
+    "build:desktop": "npm run build && npx cap copy",
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit"
