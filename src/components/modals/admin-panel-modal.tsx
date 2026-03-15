@@ -36,13 +36,13 @@ const ROOT_UID = 'GCvLucN8CjNcdaxPO2vmpZ84hNl1';
 
 // ULTRA-HIGH DETAIL REALISTIC WORLD MAP PATHS
 const WORLD_MAP_PATHS = [
-  { id: 'na', name: 'North America', d: "M160,120 L180,100 L220,80 L280,70 L340,80 L360,120 L350,180 L320,240 L280,260 L240,240 L200,200 L170,160 Z" },
-  { id: 'sa', name: 'South America', d: "M285,270 L330,280 L350,330 L340,400 L310,480 L270,520 L230,480 L220,400 L240,330 L260,280 Z" },
-  { id: 'af', name: 'Africa', d: "M480,240 L540,230 L610,260 L640,320 L620,410 L560,460 L500,430 L470,340 L460,280 Z" },
-  { id: 'eu', name: 'Europe', d: "M485,120 L520,110 L560,120 L580,150 L570,190 L540,210 L500,200 L480,160 Z" },
-  { id: 'as', name: 'Asia', d: "M580,120 L680,110 L840,120 L950,160 L970,280 L900,380 L760,400 L650,380 L600,290 L585,190 Z" },
-  { id: 'au', name: 'Australia', d: "M810,410 L880,420 L920,460 L890,510 L820,500 L790,450 Z" },
-  { id: 'ru', name: 'Russia/Eurasia Upper', d: "M540,120 L680,110 L880,120 L960,160 L940,220 L780,240 L630,230 L550,200 L540,140 Z" }
+  { id: 'na', name: 'North America', d: "M165,115 L180,105 L210,85 L250,75 L300,70 L340,80 L365,110 L370,150 L355,190 L330,230 L300,250 L260,240 L220,210 L180,170 L160,140 Z" },
+  { id: 'sa', name: 'South America', d: "M290,265 L320,270 L345,300 L355,350 L340,410 L310,470 L275,510 L240,480 L225,430 L230,370 L250,310 L270,280 Z" },
+  { id: 'af', name: 'Africa', d: "M475,230 L520,220 L580,240 L620,280 L635,340 L615,400 L570,450 L510,430 L470,380 L455,320 L450,270 L460,240 Z" },
+  { id: 'eu', name: 'Europe', d: "M480,110 L510,105 L540,110 L565,130 L575,160 L560,190 L530,205 L490,195 L475,160 L470,130 Z" },
+  { id: 'as', name: 'Asia', d: "M570,110 L650,105 L750,115 L850,130 L940,160 L960,240 L940,320 L880,370 L780,390 L680,385 L610,350 L580,280 L575,180 Z" },
+  { id: 'au', name: 'Australia', d: "M800,405 L860,415 L910,440 L900,490 L840,500 L790,470 L780,430 Z" },
+  { id: 'ru', name: 'Russia/North Eurasia', d: "M535,115 L620,105 L750,110 L880,120 L955,150 L945,210 L850,235 L750,240 L650,230 L560,210 L540,170 Z" }
 ];
 
 export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
@@ -62,9 +62,6 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
   
   const usersQuery = useMemoFirebase(() => (!db ? null : query(collection(db, 'users'), limit(500))), [db]);
   const { data: users } = useCollection<User>(usersQuery);
-
-  const chatsQuery = useMemoFirebase(() => (!db ? null : query(collection(db, 'chats'), limit(1000))), [db]);
-  const { data: allChats } = useCollection<Chat>(chatsQuery);
 
   const requestsQuery = useMemoFirebase(() => (!db ? null : query(collection(db, 'topUpRequests'), orderBy('createdAt', 'desc'), limit(50))), [db]);
   const { data: topUpRequests } = useCollection<any>(requestsQuery);
@@ -136,8 +133,6 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
     switch(action) {
       case 'ban': update = { isBanned: true }; break;
       case 'unban': update = { isBanned: false }; break;
-      case 'set_admin': update = { isAdmin: true }; break;
-      case 'remove_admin': update = { isAdmin: false }; break;
       case 'give_premium': 
         const expiry = addMonths(new Date(), value || 1);
         update = { isPremium: true, premiumUntil: expiry.toISOString() };
@@ -247,39 +242,47 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
                 <div className="text-[9px] font-bold uppercase tracking-widest text-primary/60 bg-primary/5 px-3 py-1 rounded-full border border-primary/10">Detection Active</div>
               </div>
 
-              <div className="relative aspect-[2/1] w-full bg-[#050505] border border-white/5 rounded-[2.5rem] overflow-hidden flex items-center justify-center p-4 group">
+              <div className="relative aspect-[2/1] w-full bg-[#050505] border border-white/5 rounded-[2.5rem] overflow-hidden flex items-center justify-center p-4 group shadow-[inset_0_0_50px_rgba(0,0,0,1)]">
                 <div className="absolute inset-0 nuxus-core-glow opacity-10" />
                 
-                <svg viewBox="0 0 1000 550" className="w-full h-full text-white/5 drop-shadow-[0_0_20px_rgba(139,92,246,0.1)]">
+                <svg viewBox="0 0 1000 550" className="w-full h-full text-white/5 drop-shadow-[0_0_30px_rgba(139,92,246,0.2)]">
+                  <defs>
+                    <filter id="glow">
+                      <feGaussianBlur stdDeviation="2" result="blur" />
+                      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                    </filter>
+                  </defs>
                   {WORLD_MAP_PATHS.map((path) => {
                     const regionActive = geoData.some(g => {
-                      const regionMap: any = { 'RU': 'ru', 'US': 'na', 'BR': 'sa', 'DE': 'eu', 'CN': 'as', 'AU': 'au' };
+                      const regionMap: any = { 'RU': 'ru', 'US': 'na', 'BR': 'sa', 'DE': 'eu', 'CN': 'as', 'AU': 'au', 'UA': 'eu', 'KZ': 'ru' };
                       return regionMap[g.code] === path.id;
                     });
                     return (
                       <path 
                         key={path.id}
                         d={path.d}
-                        fill={regionActive ? 'hsl(var(--primary) / 0.2)' : 'rgba(255,255,255,0.03)'}
-                        stroke={regionActive ? 'hsl(var(--primary))' : 'rgba(255,255,255,0.1)'}
-                        strokeWidth="1.5"
-                        className={cn("transition-all duration-700", regionActive && "animate-pulse")}
+                        fill={regionActive ? 'hsl(var(--primary) / 0.25)' : 'rgba(255,255,255,0.02)'}
+                        stroke={regionActive ? 'hsl(var(--primary))' : 'rgba(255,255,255,0.08)'}
+                        strokeWidth={regionActive ? "1.5" : "0.8"}
+                        className={cn("transition-all duration-1000", regionActive && "animate-pulse")}
+                        filter={regionActive ? "url(#glow)" : ""}
                       />
                     );
                   })}
                   
                   {geoData.map((geo, i) => {
-                    // Approximate coordinates for dots
                     let x = 500, y = 250;
                     if (geo.code === 'RU') { x = 650; y = 140; }
                     else if (geo.code === 'US') { x = 220; y = 180; }
                     else if (geo.code === 'DE') { x = 510; y = 150; }
+                    else if (geo.code === 'UA') { x = 530; y = 160; }
                     else if (geo.code === 'IN') { x = 720; y = 280; }
                     else if (geo.code === 'AU') { x = 850; y = 450; }
+                    else if (geo.code === 'BR') { x = 320; y = 380; }
                     return (
                       <g key={i}>
-                        <circle cx={x} cy={y} r={10 + (geo.count * 3)} fill="hsl(var(--primary))" className="animate-ping opacity-20" />
-                        <circle cx={x} cy={y} r={4} fill="hsl(var(--accent))" className="shadow-[0_0_15px_rgba(34,211,238,1)]" />
+                        <circle cx={x} cy={y} r={12 + (geo.count * 2)} fill="hsl(var(--primary))" className="animate-ping opacity-20" />
+                        <circle cx={x} cy={y} r={5} fill="hsl(var(--accent))" className="shadow-[0_0_20px_rgba(34,211,238,1)]" />
                       </g>
                     );
                   })}
@@ -293,7 +296,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
                     <div className="space-y-1">
                       {geoData.map((geo, i) => (
                         <button key={i} onClick={() => setSelectedGeoCountry(selectedGeoCountry === geo.code ? null : geo.code)} className={cn("flex items-center justify-between w-full p-3 rounded-xl border transition-all", selectedGeoCountry === geo.code ? "bg-primary/20 border-primary shadow-lg" : "bg-white/5 border-white/5")}>
-                          <div className="flex items-center gap-3"><span className="w-6 h-6 rounded-md bg-primary/10 flex items-center justify-center font-black text-[10px] text-primary">{geo.code}</span><span className="text-xs font-bold text-white">Node Segment {geo.code}</span></div>
+                          <div className="flex items-center gap-3"><span className="w-6 h-6 rounded-md bg-primary/10 flex items-center justify-center font-black text-[10px] text-primary">{geo.code}</span><span className="text-xs font-bold text-white">Segment {geo.code}</span></div>
                           <span className="text-xs font-black italic text-primary">{geo.count}</span>
                         </button>
                       ))}
@@ -301,7 +304,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
                   </ScrollArea>
                 </div>
                 <div className="flex flex-col gap-3">
-                  <h4 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 px-2">Инспекция Узлов</h4>
+                  <h4 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 px-2">Инспекция</h4>
                   <ScrollArea className="flex-1 bg-white/[0.02] border border-white/5 rounded-[1.8rem] p-2">
                     {selectedGeoCountry ? (
                       <div className="space-y-2">
@@ -318,7 +321,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
                     ) : (
                       <div className="flex flex-col items-center justify-center h-full opacity-20 text-center p-4">
                         <Navigation className="w-8 h-8 mb-2" />
-                        <p className="text-[9px] font-black uppercase tracking-widest">Выберите сектор на карте</p>
+                        <p className="text-[9px] font-black uppercase tracking-widest">Выберите сектор</p>
                       </div>
                     )}
                   </ScrollArea>
@@ -357,10 +360,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
               <ScrollArea className="h-full">
                 <div className="space-y-1">
                   {terminalLogs.map((log, i) => (
-                    <div key={i} className={cn(
-                      "flex gap-3",
-                      log.type === 'warn' ? "text-yellow-500" : log.type === 'crit' ? "text-red-500" : "text-green-500"
-                    )}>
+                    <div key={i} className={cn("flex gap-3", log.type === 'warn' ? "text-yellow-500" : log.type === 'crit' ? "text-red-500" : "text-green-500")}>
                       <span className="opacity-40 shrink-0">[{log.time}]</span>
                       <span className="shrink-0">$</span>
                       <span className="break-all">{log.msg}</span>
@@ -369,22 +369,19 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
                   <div ref={terminalEndRef} />
                 </div>
               </ScrollArea>
-              <div className="absolute top-4 right-4 flex gap-2">
-                <button onClick={() => setTerminalLogs([])} className="p-2 bg-white/5 hover:bg-white/10 rounded-lg text-white/40 transition-all"><Trash className="w-3.5 h-3.5" /></button>
-              </div>
             </div>
             <div className="p-4 bg-black border-t border-white/10 flex items-center gap-3">
               <span className="text-green-500 font-mono text-xs">root@nuxus:~$</span>
               <input 
                 className="flex-1 bg-transparent border-none outline-none text-green-500 font-mono text-xs" 
-                placeholder="enter kernel command..."
+                placeholder="enter command..."
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') {
                     const val = (e.target as HTMLInputElement).value;
                     if (!val) return;
-                    setTerminalLogs(prev => [...prev, { msg: `EXECUTING: ${val.toUpperCase()}`, time: new Date().toLocaleTimeString(), type: 'info' }]);
+                    setTerminalLogs(prev => [...prev, { msg: `EXEC: ${val.toUpperCase()}`, time: new Date().toLocaleTimeString(), type: 'info' }]);
                     if (val === 'clear') setTerminalLogs([]);
-                    if (val === 'status') setTerminalLogs(prev => [...prev, { msg: "SYSTEM: ALL KERNEL NODES STABLE. SHIELD ACTIVE.", time: new Date().toLocaleTimeString(), type: 'info' }]);
+                    if (val === 'status') setTerminalLogs(prev => [...prev, { msg: "CORE STABLE. SHIELD 2.1 ACTIVE. RECOVERY PROTOCOLS READY.", time: new Date().toLocaleTimeString(), type: 'info' }]);
                     (e.target as HTMLInputElement).value = '';
                   }
                 }}
@@ -393,7 +390,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
           </TabsContent>
 
           <TabsContent value="broadcast" className="flex-1 data-[state=active]:flex flex-col p-6 gap-4 m-0 outline-none">
-            <Textarea placeholder="Введите текст глобального сигнала..." className="bg-white/5 border-white/10 rounded-2xl min-h-[180px] text-sm resize-none focus:border-primary/40" />
+            <Textarea placeholder="Текст глобального сигнала..." className="bg-white/5 border-white/10 rounded-2xl min-h-[180px] text-sm resize-none" />
             <Button className="w-full h-14 bg-primary text-white rounded-2xl font-black uppercase italic tracking-widest shadow-xl shadow-primary/20"><Radio className="w-5 h-5 mr-2" /> Транслировать Сигнал</Button>
           </TabsContent>
         </Tabs>
