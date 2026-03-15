@@ -73,7 +73,7 @@ export default function AuthScreen() {
     const profileData = {
       id: uid,
       name: overrideData?.name || formData.name || 'Nuxus User',
-      username: overrideData?.username || (formData.username.startsWith('@') ? formData.username.toLowerCase() : '@' + formData.username.toLowerCase()),
+      username: overrideData?.username || (formData.username.startsWith('@') ? formData.username.toLowerCase() : '@' + (formData.username || 'user' + Math.floor(Math.random()*1000)).toLowerCase()),
       phone: overrideData?.phone || formData.identifier.replace(/\D/g, ''),
       createdAt: new Date().toISOString(),
       isPremium: overrideData?.isPremium || false,
@@ -128,6 +128,17 @@ export default function AuthScreen() {
         const cred = await signInWithEmailAndPassword(auth, virtualEmail, formData.password);
         const userRef = doc(db!, 'users', cred.user.uid);
         const snap = await getDoc(userRef);
+        
+        // AUTO REPAIR: Если вход успешен, но профиля нет в базе - создаем его
+        if (!snap.exists()) {
+          console.log("Nuxus Auth: Missing profile detected. Initializing Auto-Repair...");
+          await createProfileRecord(cred.user.uid, {
+            name: 'Recovered Node',
+            phone: formData.identifier.replace(/\D/g, '')
+          });
+          toast({ title: "Узел восстановлен", description: "Данные профиля были утеряны и восстановлены автоматически." });
+        }
+
         if (snap.exists() && snap.data().twoFactorEnabled) setIs2FAVerified(false);
         else setIs2FAVerified(true);
       }
