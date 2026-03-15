@@ -16,10 +16,10 @@ import {
   LogOut, Palette, Check, Settings2, Camera, Lock, Image as ImageIcon, 
   Paintbrush, Shield, UserCircle, Layout, Smile, FileText, ChevronRight,
   ShieldCheck, Eye, Users2, MessageSquareLock, Upload, Smartphone, Share2, Trophy,
-  Bell, Video, Mic, MonitorSmartphone, Key, Trash2
+  Bell, Video, Mic, MonitorSmartphone, Key, Trash2, ShieldAlert, RefreshCw, Save
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { signOut } from 'firebase/auth';
+import { signOut, updatePassword } from 'firebase/auth';
 import { doc, updateDoc } from 'firebase/firestore';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAppState } from '@/lib/store';
@@ -49,6 +49,8 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
 
   const [legalModal, setLegalModal] = useState<{ open: boolean, type: 'privacy' | 'terms' }>({ open: false, type: 'privacy' });
   const [perms, setPerms] = useState({ notifications: 'default', camera: 'default', mic: 'default' });
+  const [newPassword, setNewPassword] = useState('');
+  const [isPasswordLoading, setIsPasswordLoading] = useState(false);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -132,6 +134,28 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
     }
   };
 
+  const handleChangePassword = async () => {
+    if (!auth.currentUser || !newPassword || newPassword.length < 6) {
+      toast({ title: "Минимум 6 символов", variant: "destructive" });
+      return;
+    }
+    setIsPasswordLoading(true);
+    try {
+      await updatePassword(auth.currentUser, newPassword);
+      toast({ title: "Пароль успешно изменен" });
+      setNewPassword('');
+    } catch (e: any) {
+      console.error("Pass Update Fail:", e);
+      if (e.code === 'auth/requires-recent-login') {
+        toast({ title: "Ошибка безопасности", description: "Перезайдите в аккаунт для смены пароля.", variant: "destructive" });
+      } else {
+        toast({ title: "Ошибка системы", description: e.message, variant: "destructive" });
+      }
+    } finally {
+      setIsPasswordLoading(false);
+    }
+  };
+
   return (
     <>
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -171,6 +195,33 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
             <TabsContent value="system" className="space-y-6 m-0 py-6">
               <div className="space-y-4">
                 <h3 className="text-[10px] font-black uppercase tracking-widest text-primary flex items-center gap-2 px-1">
+                  <ShieldAlert className="w-4 h-4" /> Security Center (Auth)
+                </h3>
+                <div className="bg-muted/20 p-4 rounded-[1.8rem] border border-white/5 space-y-4">
+                  <div className="space-y-2">
+                    <Label className="text-[9px] uppercase font-black text-white/40 ml-1">Новый пароль аккаунта</Label>
+                    <div className="flex gap-2">
+                      <Input 
+                        type="password" 
+                        placeholder="••••••••" 
+                        value={newPassword}
+                        onChange={e => setNewPassword(e.target.value)}
+                        className="bg-black/40 border-white/10 h-11 rounded-xl"
+                      />
+                      <Button 
+                        size="icon" 
+                        onClick={handleChangePassword} 
+                        disabled={isPasswordLoading}
+                        className="h-11 w-11 rounded-xl bg-primary shadow-lg"
+                      >
+                        {isPasswordLoading ? <RefreshCw className="animate-spin w-4 h-4" /> : <Save className="w-4 h-4" />}
+                      </Button>
+                    </div>
+                    <p className="text-[7px] text-muted-foreground uppercase font-bold px-1">Минимум 6 символов. Не требует ввода старого пароля.</p>
+                  </div>
+                </div>
+
+                <h3 className="text-[10px] font-black uppercase tracking-widest text-primary flex items-center gap-2 px-1 pt-2">
                   <MonitorSmartphone className="w-4 h-4" /> Доступы устройства (iOS/System)
                 </h3>
                 

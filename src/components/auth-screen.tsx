@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, ShieldAlert, Fingerprint, RefreshCcw, Sparkles, Key } from 'lucide-react';
+import { Loader2, ShieldAlert, Fingerprint, RefreshCcw, Key } from 'lucide-react';
 import { useAuth, useFirestore } from '@/firebase';
 import { 
   signInWithEmailAndPassword,
@@ -88,57 +88,6 @@ export default function AuthScreen() {
       try { await updateDoc(doc(db!, 'users', referralId), { referralCount: increment(1) }); } catch (refErr) {}
     }
     return profileData;
-  };
-
-  /**
-   * ПРИНУДИТЕЛЬНАЯ ИНИЦИАЛИЗАЦИЯ ДЛЯ АНИ (FIX 2.0)
-   * Использует уникальный идентификатор канала, чтобы обойти конфликт старых паролей.
-   */
-  const handleAnyaInit = async () => {
-    setIsLoading(true);
-    // Используем чистый канал связи для Ани, чтобы избежать ошибок пароля от старых записей
-    const secureChannelId = `anya_node_v2${MASTER_DOMAIN}`; 
-    const password = '46480987';
-    const name = 'Аня';
-    const username = '@Anna_and_Rosha';
-    const phone = '79524924642';
-
-    try {
-      await setPersistence(auth, browserLocalPersistence);
-      let uid = '';
-      
-      try {
-        // Пробуем создать абсолютно новый узел
-        const userCredential = await createUserWithEmailAndPassword(auth, secureChannelId, password);
-        uid = userCredential.user.uid;
-      } catch (regErr: any) {
-        if (regErr.code === 'auth/email-already-in-use') {
-          // Если узел уже создан этим скриптом ранее, просто входим
-          const cred = await signInWithEmailAndPassword(auth, secureChannelId, password);
-          uid = cred.user.uid;
-        } else {
-          throw regErr;
-        }
-      }
-
-      // Гарантированно создаем/обновляем запись в базе данных
-      await createProfileRecord(uid, {
-        name,
-        username: username.toLowerCase(),
-        phone: phone,
-        isPremium: true,
-        premiumUntil: new Date(2030, 0, 1).toISOString(),
-        balance: 500
-      });
-
-      setIs2FAVerified(true);
-      toast({ title: "Узел Ани стабилизирован", description: "Добро пожаловать в Ядро, Аня! Доступ по паролю 46480987 активирован." });
-    } catch (err: any) {
-      console.error("Critical Node Init Fail:", err);
-      toast({ title: "Ошибка Ядра", description: "Сбой при синхронизации канала. Попробуйте еще раз.", variant: "destructive" });
-    } finally {
-      setIsLoading(false);
-    }
   };
 
   const handleAuth = async (e: React.FormEvent) => {
@@ -284,15 +233,8 @@ export default function AuthScreen() {
                 <div className="bg-white/5 p-4 rounded-2xl border border-white/10 space-y-3">
                   <div className="flex items-center gap-2 text-primary justify-center">
                     <Key className="w-3 h-3" />
-                    <span className="text-[9px] font-black uppercase">Auth: 46480987</span>
+                    <span className="text-[9px] font-black uppercase text-white/40 italic">System Recovery Active</span>
                   </div>
-                  <Button 
-                    onClick={handleAnyaInit} 
-                    disabled={isLoading}
-                    className="w-full h-12 bg-accent text-black rounded-xl font-black uppercase italic tracking-widest shadow-xl shadow-accent/20 text-[9px] gap-2"
-                  >
-                    {isLoading ? <Loader2 className="animate-spin w-4 h-4" /> : <><Sparkles className="w-4 h-4" /> Initialize Anya_Node</>}
-                  </Button>
                 </div>
 
                 <Button variant="outline" onClick={() => setMode('login')} className="w-full h-9 rounded-xl border-white/10 text-[7px] uppercase font-black tracking-widest">Назад</Button>
