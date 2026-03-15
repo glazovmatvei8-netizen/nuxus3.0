@@ -26,25 +26,23 @@ import {
   Loader2, UserX, MoreVertical, Ban, CheckCircle2, Crown, Calendar, Shield, Activity, Eye, MessageCircle, ArrowLeft, CreditCard, Check, X, ShieldOff, Zap, Terminal, Trash, Navigation, Trophy, Globe, Server, BarChart3, ListChecks
 } from 'lucide-react';
 import { 
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as ChartTooltip, ResponsiveContainer, LineChart, Line, AreaChart, Area
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as ChartTooltip, ResponsiveContainer, AreaChart, Area
 } from 'recharts';
 import type { User, Chat, Transaction } from '@/lib/types';
 import { formatDisplayName, isUserPremium, cn, isGlobalAdmin } from '@/lib/utils';
 import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { useToast } from '@/hooks/use-toast';
-import { useAppState } from '@/lib/store';
-import { addMonths, subDays, format } from 'date-fns';
+import { addMonths } from 'date-fns';
 
 const ROOT_UID = 'GCvLucN8CjNcdaxPO2vmpZ84hNl1';
 
-// Фиктивные данные для аналитики
 const MOCK_ANALYTICS = [
   { day: 'Пн', users: 400, signals: 2400 },
   { day: 'Вт', users: 300, signals: 1398 },
   { day: 'Ср', users: 200, signals: 9800 },
   { day: 'Чт', users: 278, signals: 3908 },
   { day: 'Пт', users: 189, signals: 4800 },
-  { day: 'Суб', users: 239, signals: 3800 },
+  { day: 'Сб', users: 239, signals: 3800 },
   { day: 'Вс', users: 349, signals: 4300 },
 ];
 
@@ -69,11 +67,11 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
     if (activeTab === 'terminal' && terminalLogs.length === 0) {
       setTerminalLogs([
         { msg: "Kernel Boot Sequence Initialized...", time: new Date().toLocaleTimeString(), type: 'info' },
-        { msg: "Geo-Distributed Mesh: Syncing 4 active nodes...", time: new Date().toLocaleTimeString(), type: 'edge' },
-        { msg: "E2EE Handshake Protocol: STABLE", time: new Date().toLocaleTimeString(), type: 'info' },
+        { msg: "Geo-Distributed Mesh: Syncing active nodes...", time: new Date().toLocaleTimeString(), type: 'edge' },
+        { msg: "E2EE Protocol: SECURE", time: new Date().toLocaleTimeString(), type: 'info' },
       ]);
     }
-  }, [activeTab]);
+  }, [activeTab, terminalLogs.length]);
 
   const stats = useMemo(() => {
     if (!users) return { total: 0, premium: 0, admins: 0, banned: 0 };
@@ -117,7 +115,6 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
 
     await updateDoc(userRef, update);
     
-    // Логируем действие
     await addDoc(collection(db, 'system_logs'), {
       action,
       adminId: currentUser?.uid,
@@ -125,48 +122,48 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
       createdAt: new Date().toISOString()
     });
 
-    toast({ title: "Действие выполнено" });
+    toast({ title: "Операция завершена" });
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl bg-[#0a0a0c] border-primary/30 p-0 overflow-hidden h-[90vh] flex flex-col rounded-[2.5rem] shadow-2xl border">
-        <DialogHeader className="p-6 bg-primary/5 border-b border-white/5 shrink-0">
-          <DialogTitle className="flex items-center justify-between text-white uppercase italic font-black tracking-tighter">
-            <div className="flex items-center gap-3">
-              <ShieldAlert className="w-5 h-5 text-primary animate-pulse" /> 
-              <span>Nuxus Prime Control v2.5</span>
+      <DialogContent className="max-w-4xl bg-[#0a0a0c] border-primary/30 p-0 overflow-hidden h-[90vh] flex flex-col rounded-[2rem] shadow-2xl border outline-none">
+        <DialogHeader className="p-4 md:p-6 bg-primary/5 border-b border-white/5 shrink-0">
+          <DialogTitle className="flex items-center justify-between text-white uppercase italic font-black tracking-tighter text-sm md:text-base">
+            <div className="flex items-center gap-2">
+              <ShieldAlert className="w-4 h-4 md:w-5 md:h-5 text-primary animate-pulse" /> 
+              <span>Nuxus Control Panel</span>
             </div>
-            <div className="flex items-center gap-2 bg-green-500/10 px-3 py-1 rounded-full border border-green-500/20">
-              <Activity className="w-3 h-3 text-green-500 animate-pulse" />
-              <span className="text-[8px] font-black text-green-500 uppercase tracking-widest">Core Status: Stable</span>
+            <div className="flex items-center gap-1.5 bg-green-500/10 px-2 py-0.5 rounded-full border border-green-500/20">
+              <Activity className="w-2.5 h-2.5 text-green-500 animate-pulse" />
+              <span className="text-[7px] md:text-[8px] font-black text-green-500 uppercase tracking-widest">Online</span>
             </div>
           </DialogTitle>
         </DialogHeader>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0">
-          <div className="px-6 pt-4 shrink-0">
-            <TabsList className="grid grid-cols-5 w-full bg-white/5 p-1 rounded-2xl">
-              <TabsTrigger value="analytics" className="rounded-xl text-[9px] uppercase font-black tracking-widest gap-2"><BarChart3 className="w-3 h-3"/> Аналитика</TabsTrigger>
-              <TabsTrigger value="users" className="rounded-xl text-[9px] uppercase font-black tracking-widest gap-2"><Users className="w-3 h-3"/> Узлы</TabsTrigger>
-              <TabsTrigger value="logs" className="rounded-xl text-[9px] uppercase font-black tracking-widest gap-2"><ListChecks className="w-3 h-3"/> Логи</TabsTrigger>
-              <TabsTrigger value="terminal" className="rounded-xl text-[9px] uppercase font-black tracking-widest gap-2"><Terminal className="w-3 h-3"/> Терминал</TabsTrigger>
-              <TabsTrigger value="broadcast" className="rounded-xl text-[9px] uppercase font-black tracking-widest gap-2"><Radio className="w-3 h-3"/> Маяк</TabsTrigger>
+          <div className="px-4 md:px-6 pt-3 shrink-0">
+            <TabsList className="grid grid-cols-5 w-full bg-white/5 p-1 rounded-xl">
+              <TabsTrigger value="analytics" className="rounded-lg text-[8px] md:text-[9px] uppercase font-black tracking-tighter md:tracking-widest gap-1"><BarChart3 className="w-3 h-3 hidden sm:block"/> Аналитика</TabsTrigger>
+              <TabsTrigger value="users" className="rounded-lg text-[8px] md:text-[9px] uppercase font-black tracking-tighter md:tracking-widest gap-1"><Users className="w-3 h-3 hidden sm:block"/> Узлы</TabsTrigger>
+              <TabsTrigger value="logs" className="rounded-lg text-[8px] md:text-[9px] uppercase font-black tracking-tighter md:tracking-widest gap-1"><ListChecks className="w-3 h-3 hidden sm:block"/> Логи</TabsTrigger>
+              <TabsTrigger value="terminal" className="rounded-lg text-[8px] md:text-[9px] uppercase font-black tracking-tighter md:tracking-widest gap-1"><Terminal className="w-3 h-3 hidden sm:block"/> Терминал</TabsTrigger>
+              <TabsTrigger value="broadcast" className="rounded-lg text-[8px] md:text-[9px] uppercase font-black tracking-tighter md:tracking-widest gap-1"><Radio className="w-3 h-3 hidden sm:block"/> Маяк</TabsTrigger>
             </TabsList>
           </div>
 
-          <TabsContent value="analytics" className="flex-1 data-[state=active]:flex flex-col p-6 m-0 outline-none overflow-y-auto">
-            <div className="grid grid-cols-4 gap-4 mb-8">
+          <TabsContent value="analytics" className="flex-1 data-[state=active]:flex flex-col p-4 md:p-6 m-0 outline-none overflow-y-auto scrollbar-hide">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-6">
               <StatCard label="Всего узлов" value={stats.total} icon={Users} color="text-white" />
               <StatCard label="Premium" value={stats.premium} icon={Star} color="text-accent" />
               <StatCard label="Активность" value="98%" icon={Zap} color="text-yellow-500" />
               <StatCard label="Баны" value={stats.banned} icon={Ban} color="text-red-500" />
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 h-[300px] mb-8">
-              <div className="bg-white/5 p-6 rounded-[2rem] border border-white/5">
-                <h3 className="text-[10px] font-black uppercase text-primary mb-4 tracking-widest">Рост Сигнала (Узлы)</h3>
-                <ResponsiveContainer width="100%" height="100%">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+              <div className="bg-white/5 p-4 md:p-6 rounded-[1.5rem] md:rounded-[2rem] border border-white/5 h-[180px] md:h-[250px]">
+                <h3 className="text-[9px] font-black uppercase text-primary mb-3 tracking-widest">Рост Узлов</h3>
+                <ResponsiveContainer width="100%" height="85%">
                   <AreaChart data={MOCK_ANALYTICS}>
                     <defs>
                       <linearGradient id="colorUsers" x1="0" y1="0" x2="0" y2="1">
@@ -175,24 +172,24 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
                       </linearGradient>
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
-                    <XAxis dataKey="day" stroke="rgba(255,255,255,0.3)" fontSize={10} axisLine={false} tickLine={false} />
-                    <YAxis stroke="rgba(255,255,255,0.3)" fontSize={10} axisLine={false} tickLine={false} />
+                    <XAxis dataKey="day" stroke="rgba(255,255,255,0.3)" fontSize={9} axisLine={false} tickLine={false} />
+                    <YAxis stroke="rgba(255,255,255,0.3)" fontSize={9} axisLine={false} tickLine={false} />
                     <ChartTooltip 
                       contentStyle={{ backgroundColor: '#1c1c1e', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px' }}
-                      itemStyle={{ color: '#fff', fontSize: '10px' }}
+                      itemStyle={{ color: '#fff', fontSize: '9px' }}
                     />
                     <Area type="monotone" dataKey="users" stroke="hsl(var(--primary))" fillOpacity={1} fill="url(#colorUsers)" />
                   </AreaChart>
                 </ResponsiveContainer>
               </div>
 
-              <div className="bg-white/5 p-6 rounded-[2rem] border border-white/5">
-                <h3 className="text-[10px] font-black uppercase text-accent mb-4 tracking-widest">Нагрузка (Пакеты)</h3>
-                <ResponsiveContainer width="100%" height="100%">
+              <div className="bg-white/5 p-4 md:p-6 rounded-[1.5rem] md:rounded-[2rem] border border-white/5 h-[180px] md:h-[250px]">
+                <h3 className="text-[9px] font-black uppercase text-accent mb-3 tracking-widest">Нагрузка сети</h3>
+                <ResponsiveContainer width="100%" height="85%">
                   <BarChart data={MOCK_ANALYTICS}>
                     <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
-                    <XAxis dataKey="day" stroke="rgba(255,255,255,0.3)" fontSize={10} axisLine={false} tickLine={false} />
-                    <YAxis stroke="rgba(255,255,255,0.3)" fontSize={10} axisLine={false} tickLine={false} />
+                    <XAxis dataKey="day" stroke="rgba(255,255,255,0.3)" fontSize={9} axisLine={false} tickLine={false} />
+                    <YAxis stroke="rgba(255,255,255,0.3)" fontSize={9} axisLine={false} tickLine={false} />
                     <ChartTooltip 
                       contentStyle={{ backgroundColor: '#1c1c1e', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px' }}
                     />
@@ -207,7 +204,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
             <div className="p-4 px-6 shrink-0">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/40" />
-                <Input placeholder="Поиск по ID или нику..." value={userSearch} onChange={e => setUserSearch(e.target.value)} className="bg-white/5 border-white/10 h-10 rounded-xl text-sm pl-10" />
+                <Input placeholder="Поиск узлов..." value={userSearch} onChange={e => setUserSearch(e.target.value)} className="bg-white/5 border-white/10 h-10 rounded-xl text-sm pl-10" />
               </div>
             </div>
 
@@ -216,18 +213,18 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
                 {realUsersForList.map(u => (
                   <div key={u.id} className="flex items-center justify-between p-3 bg-white/5 rounded-2xl border border-white/5 group">
                     <div className="flex items-center gap-3">
-                      <UserAvatar userId={u.id} className="h-10 w-10" fallbackName={u.name} />
+                      <UserAvatar userId={u.id} className="h-9 w-9" fallbackName={u.name} />
                       <div className="flex flex-col">
                         <div className="flex items-center gap-1.5">
-                          <span className="font-bold text-sm text-white">{formatDisplayName(u.name)}</span>
+                          <span className="font-bold text-xs text-white">{formatDisplayName(u.name)}</span>
                           {isUserPremium(u) && <Star className="w-2.5 h-2.5 text-accent fill-accent" />}
                         </div>
-                        <span className="text-[9px] text-muted-foreground/60 uppercase font-black">{u.username}</span>
+                        <span className="text-[8px] text-muted-foreground/60 uppercase font-black">{u.username}</span>
                       </div>
                     </div>
                     <DropdownMenu>
-                      <DropdownMenuTrigger asChild><Button variant="ghost" size="icon"><MoreVertical className="w-4 h-4"/></Button></DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="w-56 bg-card border-white/10 rounded-2xl p-1">
+                      <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8"><MoreVertical className="w-4 h-4"/></Button></DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-56 bg-card border-white/10 rounded-2xl p-1" sideOffset={8}>
                         <DropdownMenuItem onClick={() => handleAction(u.id, u.isBanned ? 'unban' : 'ban')} className={cn("gap-3 py-3 font-bold text-[10px] uppercase rounded-xl", u.isBanned ? "text-green-500" : "text-destructive")}>
                           {u.isBanned ? <CheckCircle2 className="w-4 h-4" /> : <Ban className="w-4 h-4" />} {u.isBanned ? 'Разблокировать' : 'Бан'}
                         </DropdownMenuItem>
@@ -239,11 +236,17 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
                           <DropdownMenuSubTrigger className="gap-3 py-3 font-bold text-[10px] uppercase rounded-xl">
                             <Star className="w-4 h-4 text-accent" /> Premium статус
                           </DropdownMenuSubTrigger>
-                          <DropdownMenuSubContent className="bg-card border-white/10 rounded-xl p-1">
-                            <DropdownMenuItem onClick={() => handleAction(u.id, 'give_premium', 1)} className="text-[10px] font-bold uppercase py-2">1 Месяц</DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleAction(u.id, 'give_premium', 12)} className="text-[10px] font-bold uppercase py-2">1 Год</DropdownMenuItem>
+                          <DropdownMenuSubContent className="bg-card border-white/10 rounded-xl p-1" sideOffset={8}>
+                            <DropdownMenuItem onClick={() => handleAction(u.id, 'give_premium', 1)} className="text-[10px] font-bold uppercase py-3 rounded-lg flex items-center gap-2">
+                               <Calendar className="w-3.5 h-3.5" /> 1 Месяц
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleAction(u.id, 'give_premium', 12)} className="text-[10px] font-bold uppercase py-3 rounded-lg flex items-center gap-2">
+                               <Trophy className="w-3.5 h-3.5" /> 1 Год
+                            </DropdownMenuItem>
                             <DropdownMenuSeparator className="bg-white/5" />
-                            <DropdownMenuItem onClick={() => handleAction(u.id, 'remove_premium')} className="text-destructive text-[10px] font-bold uppercase py-2">Удалить</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleAction(u.id, 'remove_premium')} className="text-destructive text-[10px] font-bold uppercase py-3 rounded-lg flex items-center gap-2">
+                               <Trash2 className="w-3.5 h-3.5" /> Удалить
+                            </DropdownMenuItem>
                           </DropdownMenuSubContent>
                         </DropdownMenuSub>
                       </DropdownMenuContent>
@@ -256,19 +259,19 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
 
           <TabsContent value="logs" className="flex-1 data-[state=active]:flex flex-col min-h-0 m-0 outline-none">
             <ScrollArea className="flex-1">
-              <div className="p-6 space-y-3">
+              <div className="p-4 md:p-6 space-y-2">
                 {systemLogs?.map((log: any) => (
                   <div key={log.id} className="p-3 bg-white/5 border border-white/5 rounded-xl flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
-                        <Activity className="w-4 h-4 text-primary" />
+                      <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center">
+                        <Activity className="w-3.5 h-3.5 text-primary" />
                       </div>
                       <div className="flex flex-col">
-                        <span className="text-[10px] font-black uppercase text-white">{log.action}</span>
-                        <span className="text-[8px] text-muted-foreground">Admin: {log.adminId?.slice(0,8)}...</span>
+                        <span className="text-[9px] font-black uppercase text-white">{log.action}</span>
+                        <span className="text-[7px] text-muted-foreground uppercase">Target: {log.targetId?.slice(0,6)}...</span>
                       </div>
                     </div>
-                    <span className="text-[8px] text-muted-foreground font-mono">{new Date(log.createdAt).toLocaleString()}</span>
+                    <span className="text-[7px] text-muted-foreground font-mono">{new Date(log.createdAt).toLocaleTimeString()}</span>
                   </div>
                 ))}
               </div>
@@ -276,10 +279,10 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
           </TabsContent>
 
           <TabsContent value="terminal" className="flex-1 data-[state=active]:flex flex-col min-h-0 m-0 outline-none bg-black">
-            <div className="flex-1 p-4 font-mono text-[10px] leading-relaxed relative overflow-y-auto">
+            <div className="flex-1 p-4 font-mono text-[9px] md:text-[10px] leading-relaxed relative overflow-y-auto scrollbar-hide">
               <div className="space-y-1">
                 {terminalLogs.map((log, i) => (
-                  <div key={i} className={cn("flex gap-3", log.type === 'edge' ? "text-cyan-400" : "text-green-500")}>
+                  <div key={i} className={cn("flex gap-2", log.type === 'edge' ? "text-cyan-400" : "text-green-500")}>
                     <span className="opacity-40 shrink-0">[{log.time}]</span>
                     <span className="break-all">{log.msg}</span>
                   </div>
@@ -289,9 +292,9 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
             </div>
           </TabsContent>
 
-          <TabsContent value="broadcast" className="flex-1 data-[state=active]:flex flex-col p-6 gap-4 m-0 outline-none">
-            <Textarea placeholder="Текст глобального маяка..." className="bg-white/5 border-white/10 rounded-2xl min-h-[180px] text-sm resize-none" />
-            <Button className="w-full h-14 bg-primary text-white rounded-2xl font-black uppercase italic tracking-widest shadow-xl shadow-primary/20"><Radio className="w-5 h-5 mr-2" /> Транслировать Сигнал</Button>
+          <TabsContent value="broadcast" className="flex-1 data-[state=active]:flex flex-col p-4 md:p-6 gap-4 m-0 outline-none">
+            <Textarea placeholder="Текст глобального маяка..." className="bg-white/5 border-white/10 rounded-2xl min-h-[120px] md:min-h-[180px] text-xs resize-none" />
+            <Button className="w-full h-12 md:h-14 bg-primary text-white rounded-2xl font-black uppercase italic tracking-widest shadow-xl shadow-primary/20"><Radio className="w-4 h-4 md:w-5 md:h-5 mr-2" /> Транслировать</Button>
           </TabsContent>
         </Tabs>
       </DialogContent>
@@ -301,10 +304,10 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
 
 function StatCard({ label, value, icon: Icon, color }: any) {
   return (
-    <div className="bg-white/5 p-4 rounded-[1.8rem] border border-white/5 flex flex-col items-center justify-center gap-1 transition-all hover:bg-white/10">
-      <Icon className={cn("w-4 h-4 mb-1", color)} />
-      <span className="text-xl font-black italic text-white">{value}</span>
-      <span className="text-[7px] font-black uppercase tracking-widest text-muted-foreground/60">{label}</span>
+    <div className="bg-white/5 p-3 md:p-4 rounded-[1.2rem] md:rounded-[1.8rem] border border-white/5 flex flex-col items-center justify-center gap-0.5 transition-all hover:bg-white/10">
+      <Icon className={cn("w-3.5 h-3.5 mb-1", color)} />
+      <span className="text-base md:text-xl font-black italic text-white leading-none">{value}</span>
+      <span className="text-[6px] md:text-[7px] font-black uppercase tracking-widest text-muted-foreground/60 text-center">{label}</span>
     </div>
   );
 }
