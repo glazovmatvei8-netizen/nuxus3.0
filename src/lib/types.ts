@@ -176,5 +176,6 @@ export interface User {
   invitedBy?: string;
   installedStickerPackIds?: string[];
   lastIp?: string;
+  countryCode?: string;
   balance?: number;
 }

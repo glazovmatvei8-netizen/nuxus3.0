@@ -1,3 +1,4 @@
+
 "use client"
 
 import { useUser, useFirestore, useDoc, useMemoFirebase, useAuth } from '@/firebase';
@@ -92,35 +93,47 @@ export default function Home() {
   useEffect(() => {
     if (!user || !db || !mounted) return;
 
-    const syncIp = async () => {
+    const syncIpAndGeo = async () => {
       try {
         let ip = 'Unknown';
-        const apis = [
-          'https://api.ipify.org?format=json',
-          'https://ipwho.is/',
-          'https://api.seeip.org/jsonip'
-        ];
+        let countryCode = null;
+        
+        // Priority to ipwho.is for geo data
+        try {
+          const res = await fetch('https://ipwho.is/');
+          const data = await res.json();
+          if (data.ip) {
+            ip = data.ip;
+            countryCode = data.country_code;
+          }
+        } catch (e) {}
 
-        for (const api of apis) {
-          try {
-            const res = await fetch(api);
-            const data = await res.json();
-            const foundIp = data.ip || data.ip_address;
-            if (foundIp && foundIp !== 'Unknown') {
-              ip = foundIp;
-              break;
-            }
-          } catch (e) {}
+        if (ip === 'Unknown') {
+          const apis = ['https://api.ipify.org?format=json', 'https://api.seeip.org/jsonip'];
+          for (const api of apis) {
+            try {
+              const res = await fetch(api);
+              const data = await res.json();
+              const foundIp = data.ip || data.ip_address;
+              if (foundIp && foundIp !== 'Unknown') {
+                ip = foundIp;
+                break;
+              }
+            } catch (e) {}
+          }
         }
 
         if (ip && ip !== 'Unknown') {
           const uRef = doc(db, 'users', user.uid);
-          await setDoc(uRef, { lastIp: ip }, { merge: true });
+          await setDoc(uRef, { 
+            lastIp: ip,
+            ...(countryCode && { countryCode })
+          }, { merge: true });
         }
       } catch (e) {}
     };
 
-    const timer = setTimeout(syncIp, 5000); // Wait longer to not compete with main JS
+    const timer = setTimeout(syncIpAndGeo, 5000); 
     return () => clearTimeout(timer);
   }, [user, db, mounted]);
 

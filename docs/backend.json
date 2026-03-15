@@ -16,7 +16,8 @@
         "createdAt": { "type": "string", "format": "date-time" },
         "isPremium": { "type": "boolean" },
         "balance": { "type": "number", "default": 0 },
-        "installedStickerPackIds": { "type": "array", "items": { "type": "string" } }
+        "installedStickerPackIds": { "type": "array", "items": { "type": "string" } },
+        "countryCode": { "type": "string", "description": "ISO 3166-1 alpha-2 country code." }
       },
       "required": ["id", "name", "username", "phone", "createdAt"]
     },

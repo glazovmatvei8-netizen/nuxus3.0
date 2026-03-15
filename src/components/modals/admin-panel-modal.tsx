@@ -23,7 +23,7 @@ import { collection, query, doc, limit, getDocs, addDoc, orderBy, writeBatch, in
 import { UserAvatar } from '@/components/user-avatar';
 import { 
   ShieldAlert, Users, Star, Search, Trash2, ShieldCheck, Radio, Send, 
-  Loader2, UserX, MoreVertical, Ban, CheckCircle2, Crown, Calendar, Shield, Globe, Activity, Eye, MessageCircle, ArrowLeft, CreditCard, Check, X, ShieldOff, Zap
+  Loader2, UserX, MoreVertical, Ban, CheckCircle2, Crown, Calendar, Shield, Globe, Activity, Eye, MessageCircle, ArrowLeft, CreditCard, Check, X, ShieldOff, Zap, Map
 } from 'lucide-react';
 import type { User, Chat, Transaction } from '@/lib/types';
 import { formatDisplayName, isUserPremium, cn, isGlobalAdmin } from '@/lib/utils';
@@ -67,6 +67,19 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
       admins: allRealUsers.filter(u => isGlobalAdmin(u)).length,
       banned: allRealUsers.filter(u => u.isBanned).length
     };
+  }, [users]);
+
+  const geoData = useMemo(() => {
+    if (!users) return [];
+    const countries: Record<string, number> = {};
+    users.forEach(u => {
+      if (u.countryCode) {
+        countries[u.countryCode] = (countries[u.countryCode] || 0) + 1;
+      }
+    });
+    return Object.entries(countries)
+      .map(([code, count]) => ({ code, count }))
+      .sort((a, b) => b.count - a.count);
   }, [users]);
 
   const realUsersForList = useMemo(() => {
@@ -159,7 +172,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
 
   return (
     <Dialog open={open} onOpenChange={(o) => { onOpenChange(o); if(!o) setInspectingUser(null); }}>
-      <DialogContent className="max-w-md bg-[#0a0a0c] border-primary/30 p-0 overflow-hidden h-[85vh] flex flex-col rounded-[2.5rem] shadow-[0_0_50px_rgba(139,92,246,0.3)] border">
+      <DialogContent className="max-w-2xl bg-[#0a0a0c] border-primary/30 p-0 overflow-hidden h-[85vh] flex flex-col rounded-[2.5rem] shadow-[0_0_50px_rgba(139,92,246,0.3)] border">
         <DialogHeader className="p-6 bg-primary/5 border-b border-white/5 shrink-0">
           <DialogTitle className="flex items-center justify-between text-white uppercase italic font-black tracking-tighter">
             <div className="flex items-center gap-3">
@@ -181,8 +194,9 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
         {!inspectingUser ? (
           <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0 overflow-hidden">
             <div className="px-6 pt-4 shrink-0">
-              <TabsList className="grid grid-cols-3 w-full bg-white/5 p-1 rounded-2xl">
+              <TabsList className="grid grid-cols-4 w-full bg-white/5 p-1 rounded-2xl">
                 <TabsTrigger value="users" className="rounded-xl text-[9px] uppercase font-black tracking-widest gap-1">Ядро</TabsTrigger>
+                <TabsTrigger value="geo" className="rounded-xl text-[9px] uppercase font-black tracking-widest gap-1">География</TabsTrigger>
                 <TabsTrigger value="requests" className="rounded-xl text-[9px] uppercase font-black tracking-widest gap-1">Заявки</TabsTrigger>
                 <TabsTrigger value="broadcast" className="rounded-xl text-[9px] uppercase font-black tracking-widest gap-1">Маяк</TabsTrigger>
               </TabsList>
@@ -250,7 +264,67 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
               </ScrollArea>
             </TabsContent>
 
-            <TabsContent value="requests" className="flex-1 data-[state=active]:flex flex-col min-h-0 m-0 outline-none">
+            <TabsContent value="geo" className="flex-1 data-[state=active]:flex flex-col min-h-0 m-0 overflow-hidden outline-none">
+              <div className="p-6 flex flex-col gap-6">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-black uppercase italic text-white flex items-center gap-2">
+                    <Globe className="w-4 h-4 text-primary" /> Countries Distribution
+                  </h3>
+                  <div className="text-[9px] font-bold uppercase tracking-widest text-primary/60 bg-primary/5 px-3 py-1 rounded-full border border-primary/10">Signal Active</div>
+                </div>
+
+                <div className="relative aspect-[2/1] w-full bg-white/[0.02] border border-white/5 rounded-[2rem] overflow-hidden flex items-center justify-center p-4">
+                  <div className="absolute inset-0 nuxus-core-glow opacity-10" />
+                  {/* Simplified World Map Visualization */}
+                  <svg viewBox="0 0 1000 500" className="w-full h-full text-white/5 drop-shadow-[0_0_20px_rgba(139,92,246,0.1)]">
+                    <path fill="currentColor" d="M150,150 L200,120 L250,140 L280,180 L240,220 L180,210 Z" /> {/* North America Placeholder */}
+                    <path fill="currentColor" d="M250,250 L300,280 L280,350 L220,380 L180,320 Z" /> {/* South America Placeholder */}
+                    <path fill="currentColor" d="M450,100 L600,80 L750,120 L800,200 L700,250 L550,220 Z" /> {/* Eurasia Placeholder */}
+                    <path fill="currentColor" d="M480,250 L550,240 L600,300 L580,380 L500,400 L450,350 Z" /> {/* Africa Placeholder */}
+                    <path fill="currentColor" d="M750,300 L850,280 L900,350 L820,400 L750,380 Z" /> {/* Australia Placeholder */}
+                    
+                    {/* Signal Highlights for specific countries */}
+                    {geoData.map((geo, i) => {
+                      if (geo.code === 'RU') return <path key={i} fill="hsl(var(--primary))" className="animate-pulse" d="M550,100 L700,80 L750,120 L780,180 L650,200 Z" />;
+                      if (geo.code === 'US') return <path key={i} fill="hsl(var(--accent))" className="animate-pulse" d="M160,160 L240,140 L260,180 L220,210 L170,200 Z" />;
+                      if (geo.code === 'CA') return <path key={i} fill="orange" className="opacity-60" d="M150,100 L250,80 L280,130 L200,140 Z" />;
+                      return null;
+                    })}
+                  </svg>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-3">
+                    <h4 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 px-2">Top Locations</h4>
+                    <div className="space-y-1">
+                      {geoData.slice(0, 5).map((geo, i) => (
+                        <div key={i} className="flex items-center justify-between p-3 bg-white/5 rounded-xl border border-white/5">
+                          <div className="flex items-center gap-3">
+                            <div className="w-6 h-6 rounded-md bg-primary/10 flex items-center justify-center font-black text-[10px] text-primary">
+                              {geo.code}
+                            </div>
+                            <span className="text-xs font-bold text-white">{geo.code === 'RU' ? 'Russia' : geo.code === 'US' ? 'United States' : geo.code === 'CA' ? 'Canada' : geo.code}</span>
+                          </div>
+                          <span className="text-xs font-black italic text-primary">{geo.count} Nodes</span>
+                        </div>
+                      ))}
+                      {geoData.length === 0 && (
+                        <div className="text-center py-8 opacity-20 text-[10px] font-black uppercase">No Geo Data Recorded</div>
+                      )}
+                    </div>
+                  </div>
+                  <div className="bg-primary/5 rounded-[2rem] border border-primary/10 p-6 flex flex-col items-center justify-center text-center gap-2">
+                    <Activity className="w-8 h-8 text-primary animate-bounce" />
+                    <h4 className="text-sm font-black text-white uppercase italic">Active Zones</h4>
+                    <p className="text-[9px] text-muted-foreground uppercase font-bold leading-relaxed">
+                      Ядро мониторит подключения в реальном времени. Всплески активности в {geoData[0]?.code || 'новых'} зонах сигнализируют о расширении сети.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="requests" className="flex-1 data-[state=active]:flex flex-col min-h-0 m-0 overflow-hidden outline-none">
                <ScrollArea className="flex-1">
                 <div className="px-6 py-4 space-y-3">
                   {topUpRequests?.filter((r: any) => r.status === 'pending').map((req: any) => (
