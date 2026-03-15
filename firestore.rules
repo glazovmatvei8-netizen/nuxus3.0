@@ -54,11 +54,13 @@ service cloud.firestore {
       // Читать и обновлять чат могут только участники
       allow read, update: if isSignedIn() && (isPrimeAdmin() || request.auth.uid in resource.data.participantIds);
       allow create: if isSignedIn();
-      // Удалять может владелец ИЛИ участник личной переписки
+      
+      // УДАЛЕНИЕ: разрешено владельцу, любому админу или участнику личной переписки
       allow delete: if isSignedIn() && (
         isPrimeAdmin() || 
         request.auth.uid == resource.data.ownerId ||
-        (resource.data.type == 'private' && request.auth.uid in resource.data.participantIds)
+        (resource.data.type == 'private' && request.auth.uid in resource.data.participantIds) ||
+        (request.auth.uid in resource.data.adminIds)
       );
 
       // Сообщения внутри чата: ТОЛЬКО для участников этого конкретного чата

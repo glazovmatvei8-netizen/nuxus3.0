@@ -31,8 +31,8 @@ import { addHours, isAfter, parseISO } from 'date-fns';
 import { AddMemberModal } from './add-member-modal';
 
 /**
- * ЧАТ-ИНФО 3.2
- * Исправлена работа удаления и обновлены права доступа.
+ * ЧАТ-ИНФО 3.3
+ * Реализовано полное удаление для администраторов и владельцев.
  */
 export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onOpenChange: (o: boolean) => void, chat: Chat }) {
   const db = useFirestore();
@@ -136,10 +136,15 @@ export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onO
   const handleDeleteNode = () => {
     if (!db || !chat.id || !user) return;
     
-    const confirmMsg = isPrivate ? 'Удалить этот диалог навсегда для всех?' : (isOwner ? 'Удалить это сообщество навсегда?' : 'Выйти из этого сообщества?');
+    // Если приватный чат ИЛИ пользователь админ/владелец — удаляем полностью
+    const canDeleteFully = isPrivate || isChatAdmin;
+    
+    const confirmMsg = canDeleteFully 
+      ? (isPrivate ? 'Удалить этот диалог навсегда для всех?' : 'Удалить это сообщество навсегда для всех?') 
+      : 'Выйти из этого сообщества?';
     
     if (confirm(confirmMsg)) {
-      if (isPrivate || isOwner) {
+      if (canDeleteFully) {
         deleteDocumentNonBlocking(doc(db, 'chats', chat.id));
         toast({ title: "Узел уничтожен" });
       } else {
@@ -277,7 +282,7 @@ export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onO
                   <Textarea value={editForm.description} onChange={e => setEditForm({...editForm, description: e.target.value})} className="bg-black/20 border-white/5 min-h-[80px] text-xs" />
                 </div>
                 <div className="flex items-center justify-between">
-                  <div className="flex flex-col"><span className="text-[11px] font-bold text-white">Публичный доступ</span><span className="text-[9px] text-muted-foreground uppercase">Доступен через поиск</span></div>
+                  <div className="flex flex-col"><span className="text-11px] font-bold text-white">Публичный доступ</span><span className="text-[9px] text-muted-foreground uppercase">Доступен через поиск</span></div>
                   <Switch checked={editForm.isPublic} onCheckedChange={v => setEditForm({...editForm, isPublic: v})} />
                 </div>
               </div>
@@ -318,7 +323,7 @@ export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onO
 
             <div className="pt-4 pb-12 space-y-2">
               <Button variant="ghost" className="w-full text-destructive hover:bg-destructive/10 rounded-xl font-bold uppercase text-[10px] tracking-widest gap-2" onClick={handleDeleteNode}>
-                <Trash2 className="w-4 h-4" /> {isPrivate || isOwner ? "Удалить узел" : "Отключиться от узла"}
+                <Trash2 className="w-4 h-4" /> {(isPrivate || isChatAdmin) ? "Удалить узел" : "Отключиться от узла"}
               </Button>
             </div>
           </div>
