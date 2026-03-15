@@ -5,7 +5,7 @@ import { useUser, useFirestore, useDoc, useMemoFirebase, useAuth } from '@/fireb
 import { useAppState } from '@/lib/store';
 import AuthScreen from '@/components/auth-screen';
 import ChatMain from '@/components/chat-main';
-import { Loader2, ShieldAlert, Lock, ArrowRight, ShieldCheck, Fingerprint, WifiOff, Globe } from 'lucide-react';
+import { Loader2, ShieldAlert, Lock, ArrowRight, ShieldCheck, Fingerprint, WifiOff, Globe, ZapOff } from 'lucide-react';
 import { doc, collection, query, where, limit, getDocs, arrayUnion, updateDoc, getDoc, setDoc } from 'firebase/firestore';
 import type { User as UserType, Chat, StickerPack } from '@/lib/types';
 import { Button } from '@/components/ui/button';
@@ -36,57 +36,65 @@ export default function Home() {
   const [isJoining, setIsJoining] = useState(false);
   const [twoFactorInput, setTwoFactorInput] = useState('');
   const [showIosInstaller, setShowIosInstaller] = useState(false);
-  const [isVpnDetected, setIsVpnDetected] = useState(false);
-  const [isVpnChecking, setIsVpnChecking] = useState(true);
-  const [isPending, startTransition] = useTransition();
   
+  // NUXUS SHIELD STATES
+  const [isVpnDetected, setIsVpnDetected] = useState(false);
+  const [isShieldFailure, setIsShieldFailure] = useState(false);
+  const [isVpnChecking, setIsVpnChecking] = useState(true);
+  
+  const [isPending, startTransition] = useTransition();
   const [stickerPackToInstall, setStickerPackToInstall] = useState<StickerPack | null>(null);
 
   useEffect(() => {
     setMounted(true);
     
-    // Defer non-critical logic to next tick to improve FCP
-    const timer = setTimeout(() => {
-      if (typeof window !== 'undefined' && 'Notification' in window) {
-        if (Notification.permission !== 'granted' && Notification.permission !== 'denied') {
-          Notification.requestPermission();
-        }
-      }
-
-      const checkVpnStatus = async () => {
-        try {
-          const cachedVpn = sessionStorage.getItem('nuxus_vpn_status');
-          if (cachedVpn === 'detected') {
-            setIsVpnDetected(true);
-            setIsVpnChecking(false);
-            return;
-          }
-
-          const res = await fetch('https://ipwho.is/');
-          const data = await res.json();
-          // Nuxus Shield: Block VPN/Proxy for maximum security nodes
-          if (data.security && (data.security.vpn || data.security.proxy || data.security.tor)) {
-            setIsVpnDetected(true);
-            sessionStorage.setItem('nuxus_vpn_status', 'detected');
-          }
-        } catch (e) {
-          console.warn("Nuxus Shield: Connection check skipped due to network error");
-        } finally {
+    const checkVpnStatus = async () => {
+      try {
+        // Проверка локального кеша блокировки
+        if (sessionStorage.getItem('nuxus_shield_locked') === 'true') {
+          setIsVpnDetected(true);
           setIsVpnChecking(false);
+          return;
         }
-      };
-      checkVpnStatus();
 
+        const res = await fetch('https://ipwho.is/', { cache: 'no-store' });
+        if (!res.ok) throw new Error("Shield bypass attempt detected");
+        
+        const data = await res.json();
+        
+        // Агрессивная проверка: VPN, Proxy, TOR или Cloud Hosting
+        const isSuspicious = data.security && (
+          data.security.vpn || 
+          data.security.proxy || 
+          data.security.tor || 
+          data.security.relay ||
+          data.security.type === 'hosting'
+        );
+
+        if (isSuspicious) {
+          setIsVpnDetected(true);
+          sessionStorage.setItem('nuxus_shield_locked', 'true');
+        }
+      } catch (e) {
+        console.error("Nuxus Shield: Critical scan error", e);
+        // В параноидальном режиме мы блокируем вход, если не смогли проверить IP
+        setIsShieldFailure(true);
+      } finally {
+        setIsVpnChecking(false);
+      }
+    };
+
+    const timer = setTimeout(checkVpnStatus, 500);
+
+    // iOS PWA Check
+    const checkIos = () => {
       const isIos = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
       const isStandalone = (window.navigator as any).standalone || window.matchMedia('(display-mode: standalone)').matches;
-      
-      if (isIos && !isStandalone) {
-        const dismissed = localStorage.getItem('ios_installer_dismissed');
-        if (!dismissed) {
-          setShowIosInstaller(true);
-        }
+      if (isIos && !isStandalone && !localStorage.getItem('ios_installer_dismissed')) {
+        setShowIosInstaller(true);
       }
-    }, 100);
+    };
+    checkIos();
 
     return () => clearTimeout(timer);
   }, []);
@@ -96,45 +104,19 @@ export default function Home() {
 
     const syncIpAndGeo = async () => {
       try {
-        let ip = 'Unknown';
-        let countryCode = null;
-        
-        // Priority to ipwho.is for geo data
-        try {
-          const res = await fetch('https://ipwho.is/');
-          const data = await res.json();
-          if (data.ip) {
-            ip = data.ip;
-            countryCode = data.country_code;
-          }
-        } catch (e) {}
-
-        if (ip === 'Unknown') {
-          const apis = ['https://api.ipify.org?format=json', 'https://api.seeip.org/jsonip'];
-          for (const api of apis) {
-            try {
-              const res = await fetch(api);
-              const data = await res.json();
-              const foundIp = data.ip || data.ip_address;
-              if (foundIp && foundIp !== 'Unknown') {
-                ip = foundIp;
-                break;
-              }
-            } catch (e) {}
-          }
-        }
-
-        if (ip && ip !== 'Unknown') {
+        const res = await fetch('https://ipwho.is/');
+        const data = await res.json();
+        if (data.ip) {
           const uRef = doc(db, 'users', user.uid);
           await setDoc(uRef, { 
-            lastIp: ip,
-            ...(countryCode && { countryCode })
+            lastIp: data.ip,
+            countryCode: data.country_code || '??'
           }, { merge: true });
         }
       } catch (e) {}
     };
 
-    const timer = setTimeout(syncIpAndGeo, 5000); 
+    const timer = setTimeout(syncIpAndGeo, 3000); 
     return () => clearTimeout(timer);
   }, [user, db, mounted]);
 
@@ -147,62 +129,6 @@ export default function Home() {
 
   const isBanned = isUserActuallyBanned(profile);
 
-  useEffect(() => {
-    if (!user || !db || isJoining || !mounted) return;
-
-    const params = new URLSearchParams(window.location.search);
-    const joinParam = params.get('join');
-    const stickerParam = params.get('stickers');
-
-    if (stickerParam) {
-      const fetchPack = async () => {
-        const packRef = doc(db, 'stickerPacks', stickerParam);
-        const packSnap = await getDoc(packRef);
-        if (packSnap.exists()) {
-          setStickerPackToInstall({ id: packSnap.id, ...packSnap.data() } as StickerPack);
-        }
-        window.history.replaceState({}, document.title, window.location.pathname);
-      };
-      fetchPack();
-    }
-
-    if (joinParam) {
-      const handleJoin = async () => {
-        setIsJoining(true);
-        try {
-          const searchUsername = joinParam.startsWith('@') ? joinParam.toLowerCase() : '@' + joinParam.toLowerCase();
-          const q = query(collection(db, 'chats'), where('username', '==', searchUsername), limit(1));
-          const snap = await getDocs(q);
-
-          if (!snap.empty) {
-            const chatDoc = snap.docs[0];
-            const chatData = { id: chatDoc.id, ...chatDoc.data() } as Chat;
-            if (!chatData.participantIds.includes(user.uid)) {
-              await updateDoc(doc(db, 'chats', chatDoc.id), { participantIds: arrayUnion(user.uid) });
-              toast({ title: "Успех", description: `Вы вступили в ${chatData.name}` });
-            }
-            setCurrentChatId(chatDoc.id);
-            window.history.replaceState({}, document.title, window.location.pathname);
-          }
-        } catch (e) {
-          console.error("Join error:", e);
-        } finally {
-          setIsJoining(false);
-        }
-      };
-      handleJoin();
-    }
-  }, [user, db, setCurrentChatId, toast, isJoining, mounted]);
-
-  const handleInstallPack = async () => {
-    if (!db || !user || !stickerPackToInstall) return;
-    await updateDoc(doc(db, 'users', user.uid), {
-      installedStickerPackIds: arrayUnion(stickerPackToInstall.id)
-    });
-    toast({ title: "Успех", description: `Стикерпак "${stickerPackToInstall.name}" добавлен!` });
-    setStickerPackToInstall(null);
-  };
-
   const handleVerify2FA = () => {
     if (twoFactorInput === profile?.twoFactorPin) {
       setIs2FAVerified(true);
@@ -210,11 +136,6 @@ export default function Home() {
     } else {
       toast({ title: "Ошибка PIN", variant: "destructive" });
     }
-  };
-
-  const dismissIosInstaller = () => {
-    setShowIosInstaller(false);
-    localStorage.setItem('ios_installer_dismissed', 'true');
   };
 
   if (!mounted) return null;
@@ -229,16 +150,30 @@ export default function Home() {
             <Globe className="w-20 h-20 text-destructive animate-bounce" />
           </div>
           <div className="space-y-4">
-            <h1 className="text-4xl font-black text-white uppercase italic tracking-tighter">Signal Interference</h1>
+            <h1 className="text-4xl font-black text-white uppercase italic tracking-tighter">Signal Blocked</h1>
             <p className="text-[10px] uppercase font-black tracking-[0.4em] text-destructive animate-pulse">VPN / Proxy Detection Active</p>
             <p className="text-muted-foreground/60 text-[11px] leading-relaxed uppercase font-bold px-4">
-              Использование анонимайзеров запрещено протоколами Ядра Nuxus. Пожалуйста, отключите VPN и перезапустите приложение.
+              Использование анонимайзеров строго запрещено протоколами Ядра Nuxus. Пожалуйста, отключите VPN и перезапустите браузер.
             </p>
           </div>
           <Button variant="outline" className="rounded-2xl border-white/10 h-14 px-10 font-black uppercase tracking-widest bg-white/5" onClick={() => window.location.reload()}>
             Проверить сигнал
           </Button>
         </div>
+      </div>
+    );
+  }
+
+  // NUXUS SHIELD: SCAN FAILURE
+  if (isShieldFailure) {
+    return (
+      <div className="h-screen w-full flex flex-col items-center justify-center bg-[#050000] p-6 text-center">
+        <ZapOff className="w-16 h-16 text-primary/40 mb-6" />
+        <h2 className="text-xl font-black text-white uppercase italic mb-2">Shield Offline</h2>
+        <p className="text-[10px] text-muted-foreground uppercase font-bold max-w-xs mb-8">
+          Не удалось связаться с узлом безопасности. Проверьте интернет-соединение или отключите блокировщики рекламы.
+        </p>
+        <Button variant="ghost" onClick={() => window.location.reload()} className="font-black uppercase text-[10px] tracking-widest">Переподключить</Button>
       </div>
     );
   }
@@ -258,7 +193,7 @@ export default function Home() {
   }
 
   if (showIosInstaller) {
-    return <IosInstaller onDismiss={dismissIosInstaller} />;
+    return <IosInstaller onDismiss={() => setShowIosInstaller(false)} />;
   }
 
   if (!user) return <AuthScreen />;
@@ -323,40 +258,5 @@ export default function Home() {
     );
   }
 
-  return (
-    <>
-      <ChatMain />
-      
-      <Dialog open={!!stickerPackToInstall} onOpenChange={() => setStickerPackToInstall(null)}>
-        <DialogContent className="max-w-xs bg-card/90 backdrop-blur-3xl border-white/10 rounded-[3rem] p-8 text-center shadow-2xl">
-          <DialogHeader>
-            <DialogTitle className="text-2xl font-black uppercase italic text-white tracking-tighter">New Signal</DialogTitle>
-            <DialogDescription className="text-[9px] uppercase font-black tracking-[0.3em] text-primary/60">
-              Install Sticker Pack?
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="py-8 flex flex-col items-center gap-5">
-            <div className="w-28 h-28 rounded-[2.5rem] bg-white/5 border border-white/10 flex items-center justify-center overflow-hidden shadow-2xl relative">
-              <div className="absolute inset-0 bg-primary/10 blur-2xl" />
-              {stickerPackToInstall?.iconUrl ? (
-                <img src={stickerPackToInstall.iconUrl} className="w-full h-full object-cover relative z-10" />
-              ) : (
-                <NuxusLogo size={70} className="relative z-10" />
-              )}
-            </div>
-            <div className="space-y-1">
-              <h3 className="text-xl font-bold text-white">{stickerPackToInstall?.name}</h3>
-              <p className="text-[10px] text-muted-foreground uppercase font-black tracking-widest">{stickerPackToInstall?.stickerUrls.length} Units</p>
-            </div>
-          </div>
-
-          <DialogFooter className="flex-col gap-3">
-            <Button onClick={handleInstallPack} className="w-full h-14 rounded-[1.5rem] bg-primary font-black uppercase tracking-widest shadow-lg shadow-primary/20">Install</Button>
-            <Button variant="ghost" onClick={() => setStickerPackToInstall(null)} className="w-full h-10 rounded-xl text-[9px] font-black uppercase tracking-[0.2em] opacity-30 hover:opacity-100">Abort</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </>
-  );
+  return <ChatMain />;
 }
