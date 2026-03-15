@@ -64,6 +64,7 @@ export default function Home() {
 
           const res = await fetch('https://ipwho.is/');
           const data = await res.json();
+          // Nuxus Shield: Block VPN/Proxy for maximum security nodes
           if (data.security && (data.security.vpn || data.security.proxy || data.security.tor)) {
             setIsVpnDetected(true);
             sessionStorage.setItem('nuxus_vpn_status', 'detected');
@@ -218,6 +219,7 @@ export default function Home() {
 
   if (!mounted) return null;
 
+  // NUXUS SHIELD: VPN BLOCK UI
   if (isVpnDetected) {
     return (
       <div className="h-screen w-full flex flex-col items-center justify-center bg-[#050000] p-6 text-center relative overflow-hidden">
