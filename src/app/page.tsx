@@ -82,14 +82,23 @@ export default function Home() {
     const syncIp = async () => {
       try {
         let ip = 'Unknown';
-        try {
-          const res = await fetch('https://api.ipify.org?format=json');
-          const data = await res.json();
-          ip = data.ip;
-        } catch (e) {
-          const res = await fetch('https://ipwho.is/');
-          const data = await res.json();
-          ip = data.ip;
+        // Multi-level IP fallback detection
+        const apis = [
+          'https://api.ipify.org?format=json',
+          'https://ipwho.is/',
+          'https://api.seeip.org/jsonip'
+        ];
+
+        for (const api of apis) {
+          try {
+            const res = await fetch(api);
+            const data = await res.json();
+            const foundIp = data.ip || data.ip_address;
+            if (foundIp && foundIp !== 'Unknown') {
+              ip = foundIp;
+              break;
+            }
+          } catch (e) {}
         }
 
         if (ip && ip !== 'Unknown') {
@@ -245,41 +254,41 @@ export default function Home() {
       <div className="h-screen w-full flex items-center justify-center bg-[#050505] relative overflow-hidden px-6">
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full max-w-2xl aspect-square bg-primary/10 blur-[150px] rounded-full -z-10 animate-pulse-glow" />
         
-        <div className="w-full max-w-sm space-y-8 text-center animate-in fade-in zoom-in duration-700">
-          <div className="space-y-6">
-            <div className="relative inline-block">
+        <div className="w-full max-w-sm space-y-6 text-center animate-in fade-in zoom-in duration-700">
+          <div className="space-y-4">
+            <div className="relative inline-block scale-75 md:scale-100">
               <div className="absolute inset-0 bg-primary blur-[40px] opacity-30 animate-pulse" />
-              <div className="bg-white/[0.03] border border-white/10 w-24 h-24 rounded-[2rem] flex items-center justify-center mx-auto relative z-10 shadow-2xl backdrop-blur-3xl">
-                <Fingerprint className="w-10 h-10 text-primary animate-float" />
+              <div className="bg-white/[0.03] border border-white/10 w-20 h-20 rounded-[1.8rem] flex items-center justify-center mx-auto relative z-10 shadow-2xl backdrop-blur-3xl">
+                <Fingerprint className="w-8 h-8 text-primary animate-float" />
               </div>
             </div>
             
-            <div className="space-y-2">
-              <h2 className="text-3xl font-black uppercase italic text-white tracking-tight">Verify PIN</h2>
-              <p className="text-[8px] font-black uppercase tracking-[0.4em] text-primary/60">Cloud Protection Active</p>
+            <div className="space-y-1">
+              <h2 className="text-2xl font-black uppercase italic text-white tracking-tight">Verify PIN</h2>
+              <p className="text-[7px] font-black uppercase tracking-[0.4em] text-primary/60">Cloud Protection Active</p>
             </div>
           </div>
 
-          <div className="space-y-8">
-            <div className="relative group">
+          <div className="space-y-6">
+            <div className="relative group max-w-[240px] mx-auto">
                <div className="absolute -inset-1 bg-primary/20 blur-xl opacity-0 group-focus-within:opacity-100 transition-opacity duration-500" />
                <Input 
                 type="password" 
                 placeholder="••••••" 
                 maxLength={6} 
                 autoFocus
-                className="bg-white/[0.03] border-white/10 h-16 text-3xl tracking-[0.6em] text-center rounded-[1.5rem] font-black focus:border-primary/50 transition-all shadow-inner relative z-10"
+                className="bg-white/[0.03] border-white/10 h-14 text-2xl tracking-[0.5em] text-center rounded-[1.2rem] font-black focus:border-primary/50 transition-all shadow-inner relative z-10"
                 value={twoFactorInput}
                 onChange={e => setTwoFactorInput(e.target.value.replace(/\D/g, ''))}
                 onKeyDown={e => e.key === 'Enter' && handleVerify2FA()}
               />
             </div>
             
-            <div className="space-y-3">
-              <Button onClick={handleVerify2FA} className="w-full h-14 rounded-2xl bg-primary hover:bg-primary/90 text-white font-black uppercase italic tracking-widest shadow-xl shadow-primary/20 group active:scale-[0.98]">
-                Unlock Kernel <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
+            <div className="space-y-2 max-w-[240px] mx-auto">
+              <Button onClick={handleVerify2FA} className="w-full h-12 rounded-xl bg-primary hover:bg-primary/90 text-white font-black uppercase italic tracking-widest shadow-xl shadow-primary/20 group active:scale-[0.98] text-xs">
+                Unlock Kernel <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
               </Button>
-              <Button variant="ghost" onClick={() => signOut(auth)} className="w-full text-[8px] font-black uppercase tracking-[0.3em] text-white/20 hover:text-white transition-colors">Disconnect Node (Logout)</Button>
+              <Button variant="ghost" onClick={() => signOut(auth)} className="w-full text-[7px] font-black uppercase tracking-[0.3em] text-white/20 hover:text-white transition-colors">Disconnect (Logout)</Button>
             </div>
           </div>
         </div>

@@ -288,11 +288,12 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
                               {isRoot && <Shield className="w-2.5 h-2.5 text-blue-400 animate-pulse" />}
                             </div>
                             <span className="text-[9px] text-muted-foreground/60 truncate uppercase font-bold tracking-widest">{u.username}</span>
-                            {u.lastIp && (
-                              <div className="flex items-center gap-1 mt-1 text-[8px] text-cyan-400 font-black">
-                                <Globe className="w-2.5 h-2.5" /> {u.lastIp}
-                              </div>
-                            )}
+                            <div className={cn(
+                              "flex items-center gap-1 mt-1 text-[8px] font-black",
+                              u.lastIp && u.lastIp !== 'Unknown' ? "text-cyan-400" : "text-white/20"
+                            )}>
+                              <Globe className="w-2.5 h-2.5" /> {u.lastIp || 'Signal Hidden'}
+                            </div>
                           </div>
                         </div>
 
