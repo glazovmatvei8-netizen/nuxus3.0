@@ -130,8 +130,8 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
             </TabsList>
           </div>
 
-          <TabsContent value="analytics" className="flex-1 m-0 p-0 outline-none overflow-hidden bg-background">
-            <ScrollArea className="h-full">
+          <TabsContent value="analytics" className="flex-1 m-0 p-0 outline-none overflow-hidden data-[state=active]:flex flex-col bg-background">
+            <ScrollArea className="flex-1">
               <div className="px-4 md:px-6 py-4 space-y-6 pb-20">
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                   <StatCard label="Всего узлов" value={stats.total} icon={Users} color="text-white" />
@@ -145,7 +145,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
                     <h3 className="text-[10px] font-black uppercase text-primary mb-4 flex items-center gap-2">
                       <Activity className="w-3 h-3" /> Новые Узлы (7д)
                     </h3>
-                    <div className="h-[160px] w-full">
+                    <div className="h-[180px] w-full">
                       <ResponsiveContainer width="100%" height="100%">
                         <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                           <defs>
@@ -167,7 +167,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
                     <h3 className="text-[10px] font-black uppercase text-accent mb-4 flex items-center gap-2">
                       <BarChart3 className="w-3 h-3" /> Трафик Сигналов
                     </h3>
-                    <div className="h-[160px] w-full">
+                    <div className="h-[180px] w-full">
                       <ResponsiveContainer width="100%" height="100%">
                         <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                           <XAxis dataKey="day" stroke="rgba(255,255,255,0.2)" fontSize={10} tickLine={false} axisLine={false} />
@@ -183,12 +183,12 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
             </ScrollArea>
           </TabsContent>
 
-          <TabsContent value="users" className="flex-1 m-0 p-0 outline-none overflow-hidden bg-background">
+          <TabsContent value="users" className="flex-1 m-0 p-0 outline-none overflow-hidden data-[state=active]:flex flex-col bg-background">
             <div className="p-4 px-6 shrink-0">
               <Input placeholder="Поиск по базе..." value={userSearch} onChange={e => setUserSearch(e.target.value)} className="bg-white/5 border-white/10 h-12 rounded-2xl pl-4" />
             </div>
             <ScrollArea className="flex-1">
-              <div className="px-6 space-y-2 pb-32">
+              <div className="px-6 space-y-2 pb-20">
                 {users?.filter(u => u.name?.toLowerCase().includes(userSearch.toLowerCase()) || u.username?.toLowerCase().includes(userSearch.toLowerCase())).map(u => (
                   <div key={u.id} className="flex items-center justify-between p-4 bg-white/5 rounded-[1.8rem] border border-white/5">
                     <div className="flex items-center gap-3 min-w-0">
