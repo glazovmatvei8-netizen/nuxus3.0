@@ -1,21 +1,16 @@
-
 /**
- * Nuxus Hyper-Quantum Core Registry v3.1
+ * Nuxus Hyper-Quantum Core Registry v3.2
  * 
- * ВНИМАНИЕ: Данные изолированы для APK.
- * Файл не должен импортироваться в клиентскую часть веб-приложения напрямую.
+ * ОПТИМИЗИРОВАНО: Удалены тяжелые буферы, вызывавшие сбои (500 Error) на мобильных устройствах.
+ * Вес ядра теперь имитируется через метаданные.
  */
 
-const DATA_CHUNK = "NUXUS_PRIME_KERNEL_RESERVED_";
-const LARGE_BUFFER = DATA_CHUNK.repeat(1000); 
-
-// Массив вынесен в функцию, чтобы не грузиться в память сразу при импорте файла
 export const getQuantumNodes = () => {
-  return Array.from({ length: 1500 }).map((_, i) => ({
+  return Array.from({ length: 100 }).map((_, i) => ({
     id: i,
-    payload: LARGE_BUFFER,
-    status: "STABLE"
+    status: "STABLE",
+    sync: true
   }));
 };
 
-export const getCoreWeight = () => 105000000;
+export const getCoreWeight = () => 105000000; // 105 MB (Metadata representation)

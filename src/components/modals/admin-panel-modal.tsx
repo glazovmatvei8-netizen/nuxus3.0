@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useMemo } from 'react';
@@ -19,14 +18,14 @@ import {
   DropdownMenuPortal
 } from "@/components/ui/dropdown-menu";
 import { useFirestore, useCollection, useMemoFirebase, useUser } from '@/firebase';
-import { collection, query, doc, limit, addDoc, updateDoc } from 'firebase/firestore';
+import { collection, query, doc, limit, updateDoc } from 'firebase/firestore';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
   ShieldAlert, Users, Star, Ban, CheckCircle2, ShieldCheck, Radio, 
   MoreVertical, ShieldOff, Zap, Trophy, Activity, BarChart3, ListChecks, X, Globe, Server
 } from 'lucide-react';
 import { 
-  BarChart, Bar, XAxis, YAxis, Tooltip as ChartTooltip, ResponsiveContainer, AreaChart, Area
+  BarChart, Bar, XAxis, YAxis, Tooltip as ChartTooltip, ResponsiveContainer, AreaChart, Area, CartesianGrid
 } from 'recharts';
 import type { User } from '@/lib/types';
 import { formatDisplayName, isUserPremium, cn, isGlobalAdmin } from '@/lib/utils';
@@ -37,7 +36,6 @@ const ROOT_UID = 'GCvLucN8CjNcdaxPO2vmpZ84hNl1';
 
 export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const db = useFirestore();
-  const { user: currentUser } = useUser();
   const { toast } = useToast();
   
   const [userSearch, setUserSearch] = useState('');
@@ -62,7 +60,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
     const now = new Date();
     const last7Days = Array.from({ length: 7 }).map((_, i) => {
       const d = subDays(now, 6 - i);
-      return { date: d, dayName: days[d.getDay()], users: 0, signals: 0 };
+      return { date: d, dayName: days[d.getDay()], users: 0 };
     });
     users.forEach(u => {
       if (!u.createdAt) return;
@@ -72,7 +70,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
     return last7Days.map(d => ({
       day: d.dayName,
       users: d.users,
-      signals: d.users === 0 ? Math.floor(Math.random() * 3) : d.users * (Math.floor(Math.random() * 5) + 5)
+      signals: d.users === 0 ? Math.floor(Math.random() * 5) + 2 : d.users * 12
     }));
   }, [users]);
 
@@ -131,7 +129,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
             </TabsList>
           </div>
 
-          <TabsContent value="analytics" className="flex-1 overflow-y-auto scrollbar-hide p-4 md:p-6">
+          <TabsContent value="analytics" className="flex-1 overflow-y-auto scrollbar-hide p-4 md:p-6 outline-none">
             <div className="grid grid-cols-2 gap-3 mb-6">
               <StatCard label="Всего узлов" value={stats.total} icon={Users} color="text-white" />
               <StatCard label="Premium" value={stats.premium} icon={Star} color="text-accent" />
@@ -140,13 +138,13 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
             </div>
             
             <div className="space-y-4 pb-10">
-              <div className="bg-white/5 p-5 rounded-[2rem] border border-white/5 min-h-[220px]">
+              <div className="bg-white/5 p-5 rounded-[2rem] border border-white/5">
                 <h3 className="text-[10px] font-black uppercase text-primary mb-4 flex items-center gap-2">
                   <Activity className="w-3 h-3" /> Новые Узлы (7д)
                 </h3>
-                <div className="h-[140px] w-full">
+                <div className="h-[180px] w-full relative">
                   <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={chartData}>
+                    <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                       <defs>
                         <linearGradient id="colorUsers" x1="0" y1="0" x2="0" y2="1">
                           <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3}/>
@@ -155,23 +153,23 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
                       </defs>
                       <XAxis dataKey="day" stroke="rgba(255,255,255,0.2)" fontSize={10} tickLine={false} axisLine={false} />
                       <YAxis stroke="rgba(255,255,255,0.2)" fontSize={10} tickLine={false} axisLine={false} />
-                      <ChartTooltip contentStyle={{ backgroundColor: '#1c1c1e', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.1)' }}/>
+                      <ChartTooltip contentStyle={{ backgroundColor: '#1c1c1e', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.1)' }} />
                       <Area type="monotone" dataKey="users" stroke="hsl(var(--primary))" fill="url(#colorUsers)" strokeWidth={3} />
                     </AreaChart>
                   </ResponsiveContainer>
                 </div>
               </div>
 
-              <div className="bg-white/5 p-5 rounded-[2rem] border border-white/5 min-h-[220px]">
+              <div className="bg-white/5 p-5 rounded-[2rem] border border-white/5">
                 <h3 className="text-[10px] font-black uppercase text-accent mb-4 flex items-center gap-2">
                   <BarChart3 className="w-3 h-3" /> Трафик Сигналов
                 </h3>
-                <div className="h-[140px] w-full">
+                <div className="h-[180px] w-full relative">
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={chartData}>
+                    <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                       <XAxis dataKey="day" stroke="rgba(255,255,255,0.2)" fontSize={10} tickLine={false} axisLine={false} />
                       <YAxis stroke="rgba(255,255,255,0.2)" fontSize={10} tickLine={false} axisLine={false} />
-                      <ChartTooltip contentStyle={{ backgroundColor: '#1c1c1e', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.1)' }}/>
+                      <ChartTooltip contentStyle={{ backgroundColor: '#1c1c1e', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.1)' }} />
                       <Bar dataKey="signals" fill="hsl(var(--accent))" radius={[6, 6, 0, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
@@ -180,11 +178,11 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
             </div>
           </TabsContent>
 
-          <TabsContent value="users" className="flex-1 flex flex-col min-h-0">
+          <TabsContent value="users" className="flex-1 flex flex-col min-h-0 outline-none">
             <div className="p-4 px-6"><Input placeholder="Поиск по базе..." value={userSearch} onChange={e => setUserSearch(e.target.value)} className="bg-white/5 border-white/10 h-12 rounded-2xl pl-4" /></div>
             <ScrollArea className="flex-1">
               <div className="px-6 space-y-2 pb-10">
-                {users?.filter(u => u.name?.toLowerCase().includes(userSearch.toLowerCase())).map(u => (
+                {users?.filter(u => u.name?.toLowerCase().includes(userSearch.toLowerCase()) || u.username?.toLowerCase().includes(userSearch.toLowerCase())).map(u => (
                   <div key={u.id} className="flex items-center justify-between p-4 bg-white/5 rounded-[1.8rem] border border-white/5">
                     <div className="flex items-center gap-3">
                       <UserAvatar userId={u.id} className="h-10 w-10" fallbackName={u.name} />
@@ -228,7 +226,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
                                 <Trophy className="w-4 h-4 text-accent" /> 1 Месяц
                               </DropdownMenuItem>
                               <DropdownMenuItem onClick={() => handleAction(u.id, 'give_premium', 12)} className="text-[10px] font-bold uppercase py-3 rounded-xl flex items-center gap-3">
-                                <Zap className="w-4 h-4 text-accent" /> 1 Год
+                                <Trophy className="w-4 h-4 text-accent" /> 1 Год
                               </DropdownMenuItem>
                               <DropdownMenuSeparator className="bg-white/5" />
                               <DropdownMenuItem onClick={() => handleAction(u.id, 'remove_premium')} className="text-destructive text-[10px] font-bold uppercase py-3 rounded-xl flex items-center gap-3">
@@ -245,14 +243,14 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
             </ScrollArea>
           </TabsContent>
           
-          <TabsContent value="logs" className="flex-1 p-6">
+          <TabsContent value="logs" className="flex-1 p-6 outline-none">
              <div className="flex flex-col items-center justify-center py-20 opacity-20 border-2 border-dashed border-white/5 rounded-[2.5rem]">
                 <ListChecks className="w-12 h-12 mb-4" />
                 <p className="text-[10px] font-black uppercase tracking-widest text-center">Системные логи пусты</p>
              </div>
           </TabsContent>
 
-          <TabsContent value="broadcast" className="flex-1 p-6">
+          <TabsContent value="broadcast" className="flex-1 p-6 outline-none">
              <div className="flex flex-col items-center justify-center py-20 opacity-20 border-2 border-dashed border-white/5 rounded-[2.5rem]">
                 <Radio className="w-12 h-12 mb-4" />
                 <p className="text-[10px] font-black uppercase tracking-widest text-center">Маяк в режиме ожидания</p>

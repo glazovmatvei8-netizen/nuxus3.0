@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useRef, useEffect, useMemo, useCallback, memo } from 'react';
@@ -9,7 +8,7 @@ import { UserAvatar } from '@/components/user-avatar';
 import { 
   Send, Info, ChevronLeft, X, Paperclip, Mic, StopCircle, ChevronDown, Edit2, Pin, Search, PinOff,
   Smile, Instagram, Camera, Video, Sticker, Copy, Share2, Sparkles, Loader2, RefreshCw, Zap, Trash2, Pause, Play,
-  BarChart3, Image as ImageIcon, ArrowDown, Menu as MenuIcon, List, Phone, Radio, UserPlus, CircleStop, RefreshCcw, AlertTriangle, Radar
+  BarChart3, Image as ImageIcon, ArrowDown, Menu as MenuIcon, List, Phone, Radio, UserPlus, CircleStop, RefreshCcw, AlertTriangle, Radar, AtSign
 } from 'lucide-react';
 import { MessageItem } from './message-item';
 import { useToast } from '@/hooks/use-toast';
@@ -22,8 +21,9 @@ import { formatDisplayName, cn, formatLastSeen, compressImage, encryptSignal, is
 import type { Message, User as UserType, Chat } from '@/lib/types';
 import { EmojiPicker } from './emoji-picker';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { ScrollArea } from './ui/scroll-area';
 
-const VIDEO_LIMIT_SECONDS = 180; // 3 минуты
+const VIDEO_LIMIT_SECONDS = 180;
 
 const MessageList = memo(({ 
   messages, userId, chatId, onReply, onPin, amIPremium, isAdmin, isGroup, onEdit, onForward, searchQuery, viewerProfile
@@ -82,6 +82,10 @@ export default function ChatArea() {
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [isJoining, setIsJoining] = useState(false);
 
+  // Mention State
+  const [mentionSearch, setMentionSearch] = useState<string | null>(null);
+  const [mentionIndex, setMentionIndex] = useState(0);
+
   // Recording State
   const [recordingState, setRecordingState] = useState<'idle' | 'recording' | 'paused' | 'review'>('idle');
   const [recordingType, setRecordingType] = useState<'audio' | 'video_note'>('audio');
@@ -109,7 +113,6 @@ export default function ChatArea() {
 
   const isKernelAdmin = useMemo(() => isGlobalAdmin(userProfile), [userProfile]);
 
-  // AUTO-POPULATE INPUT ON EDIT
   useEffect(() => {
     if (editingMsg && editingMsg.contentType === 'text') {
       setMessageInput(decryptSignal(editingMsg.content));
@@ -143,6 +146,44 @@ export default function ChatArea() {
   const messagesQuery = useMemoFirebase(() => (!db || !currentChatId) ? null : query(collection(db, 'chats', currentChatId, 'messages'), orderBy('sentAt', 'asc')), [db, currentChatId]);
   const { data: messages } = useCollection<Message>(messagesQuery);
 
+  // Mention logic: Fetch actual participant profiles
+  const participantIds = useMemo(() => chat?.participantIds || [], [chat?.participantIds]);
+  const participantsQuery = useMemoFirebase(() => {
+    if (!db || participantIds.length === 0) return null;
+    return query(collection(db, 'users'), where('id', 'in', participantIds.slice(0, 10)));
+  }, [db, participantIds]);
+  const { data: participants } = useCollection<UserType>(participantsQuery);
+
+  const filteredMentions = useMemo(() => {
+    if (mentionSearch === null || !participants) return [];
+    const search = mentionSearch.toLowerCase();
+    return participants.filter(p => 
+      p.id !== firebaseUser?.uid && 
+      (p.name?.toLowerCase().includes(search) || p.username?.toLowerCase().includes(search))
+    );
+  }, [mentionSearch, participants, firebaseUser?.uid]);
+
+  const handleInputChange = (val: string) => {
+    setMessageInput(val);
+    
+    // Check for @ mention
+    const lastWord = val.split(' ').pop() || '';
+    if (lastWord.startsWith('@')) {
+      setMentionSearch(lastWord.slice(1));
+      setMentionIndex(0);
+    } else {
+      setMentionSearch(null);
+    }
+  };
+
+  const selectMention = (p: UserType) => {
+    const words = messageInput.split(' ');
+    words.pop();
+    const newVal = words.join(' ') + (words.length > 0 ? ' ' : '') + p.username + ' ';
+    setMessageInput(newVal);
+    setMentionSearch(null);
+  };
+
   const scrollToBottom = useCallback((behavior: ScrollBehavior = 'smooth') => {
     if (messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior });
@@ -172,14 +213,6 @@ export default function ChatArea() {
     }
   }, [currentChatId, messages?.length, scrollToBottom]);
 
-  // Handle Recording Limit
-  useEffect(() => {
-    if (recordingTime >= VIDEO_LIMIT_SECONDS && recordingState === 'recording') {
-      stopRecording();
-      toast({ title: "Лимит достигнут", description: "Запись остановлена (3 минуты)" });
-    }
-  }, [recordingTime, recordingState]);
-
   const startRecording = async () => {
     try {
       const isVideo = recordingType === 'video_note';
@@ -187,57 +220,32 @@ export default function ChatArea() {
         audio: true, 
         video: isVideo ? { facingMode, width: 480, height: 480 } : false 
       };
-      
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
       streamRef.current = stream;
-      
-      if (isVideo && videoPreviewRef.current) {
-        videoPreviewRef.current.srcObject = stream;
-      }
-
-      const mediaRecorder = new MediaRecorder(stream, {
-        mimeType: isVideo ? 'video/webm;codecs=vp8,opus' : 'audio/webm'
-      });
-      
+      if (isVideo && videoPreviewRef.current) videoPreviewRef.current.srcObject = stream;
+      const mediaRecorder = new MediaRecorder(stream, { mimeType: isVideo ? 'video/webm;codecs=vp8,opus' : 'audio/webm' });
       mediaRecorderRef.current = mediaRecorder;
       chunksRef.current = [];
-
-      mediaRecorder.ondataavailable = (event) => {
-        if (event.data.size > 0) chunksRef.current.push(event.data);
-      };
-
+      mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) chunksRef.current.push(e.data); };
       mediaRecorder.onstop = () => {
         const blob = new Blob(chunksRef.current, { type: isVideo ? 'video/webm' : 'audio/webm' });
-        const url = URL.createObjectURL(blob);
-        setReviewBlobUrl(url);
+        setReviewBlobUrl(URL.createObjectURL(blob));
         setRecordingState('review');
-        
-        if (streamRef.current) {
-          streamRef.current.getTracks().forEach(track => track.stop());
-        }
+        if (streamRef.current) streamRef.current.getTracks().forEach(t => t.stop());
       };
-
       mediaRecorder.start();
       setRecordingState('recording');
       setRecordingTime(0);
-      recordingTimerRef.current = setInterval(() => {
-        setRecordingState(prev => {
-          if (prev === 'recording') setRecordingTime(t => t + 1);
-          return prev;
-        });
-      }, 1000);
-      
-      if (window.navigator && window.navigator.vibrate) window.navigator.vibrate(100);
+      recordingTimerRef.current = setInterval(() => setRecordingTime(t => t + 1), 1000);
     } catch (err) {
-      toast({ title: "Ошибка доступа", description: "Разрешите доступ к камере/микрофону.", variant: "destructive" });
+      toast({ title: "Ошибка доступа", variant: "destructive" });
     }
   };
 
   const stopRecording = () => {
-    if (mediaRecorderRef.current && (recordingState === 'recording' || recordingState === 'paused')) {
+    if (mediaRecorderRef.current && recordingState === 'recording') {
       mediaRecorderRef.current.stop();
       if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
-      if (window.navigator && window.navigator.vibrate) window.navigator.vibrate(50);
     }
   };
 
@@ -246,7 +254,6 @@ export default function ChatArea() {
     if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
     setRecordingState('idle');
     setReviewBlobUrl(null);
-    setRecordingTime(0);
   };
 
   const confirmSendRecording = async () => {
@@ -274,6 +281,7 @@ export default function ChatArea() {
 
     if (type_msg === 'text') {
       setMessageInput('');
+      setMentionSearch(null);
       if (currentChatId) setLocalDrafts(prev => ({ ...prev, [currentChatId]: '' }));
     }
     
@@ -296,52 +304,26 @@ export default function ChatArea() {
     }
     
     await addDoc(collection(db, 'chats', currentChatId, 'messages'), msgData);
-    
-    updateDocumentNonBlocking(doc(db, 'chats', currentChatId), { 
-      lastMessageAt: new Date().toISOString(), 
-      lastSenderId: firebaseUser.uid, 
-      [`typing.${firebaseUser.uid}`]: false 
-    });
+    updateDocumentNonBlocking(doc(db, 'chats', currentChatId), { lastMessageAt: new Date().toISOString(), lastSenderId: firebaseUser.uid });
     setTimeout(() => scrollToBottom('smooth'), 100);
   }, [messageInput, currentChatId, firebaseUser, db, userProfile, replyTo, editingMsg, setLocalDrafts, scrollToBottom, canPost]);
 
   const handlePinMessage = useCallback(async (msg: Message) => {
     if (!db || !currentChatId) return;
-    try {
-      await updateDoc(doc(db, 'chats', currentChatId), { pinnedMessageId: msg.id });
-      toast({ title: "Сообщение закреплено" });
-    } catch (e) {
-      toast({ title: "Ошибка закрепления", variant: "destructive" });
-    }
+    await updateDoc(doc(db, 'chats', currentChatId), { pinnedMessageId: msg.id });
+    toast({ title: "Сообщение закреплено" });
   }, [db, currentChatId, toast]);
 
   const chatDisplayName = useMemo(() => {
     if (chat?.type === 'private') {
       const myMeta = chat.metadata?.[firebaseUser?.uid || ''];
-      if (myMeta?.customName) return myMeta.customName;
-      if (otherProfile?.name) return formatDisplayName(otherProfile.name);
+      return myMeta?.customName || formatDisplayName(otherProfile?.name);
     }
-    return formatDisplayName(chat?.name || otherProfile?.name || 'Чат');
+    return formatDisplayName(chat?.name || 'Чат');
   }, [chat, firebaseUser?.uid, otherProfile]);
 
   return (
     <div className="flex-1 flex flex-col h-full bg-background relative overflow-hidden z-20">
-      {userProfile?.settings?.chatBackground && (
-        <div className="absolute inset-0 z-0 pointer-events-none opacity-80" style={{ backgroundImage: `url(${userProfile.settings.chatBackground})`, backgroundSize: userProfile.settings.chatBackgroundFit === 'contain' ? 'contain' : 'cover', backgroundPosition: 'center', backgroundRepeat: 'no-repeat' }} />
-      )}
-
-      {isUpdateDeferred && (
-        <div className="border-b py-1.5 px-4 flex items-center justify-between z-40 bg-yellow-500/10 border-yellow-500/20">
-          <div className="flex items-center gap-2">
-            <AlertTriangle className="w-3.5 h-3.5 text-yellow-500" />
-            <span className="text-[10px] font-black uppercase tracking-widest text-yellow-500">
-              Deferred Update Mode: Some features locked
-            </span>
-          </div>
-          <button onClick={() => window.location.reload()} className="text-[9px] font-black uppercase text-yellow-500 hover:underline">Update now</button>
-        </div>
-      )}
-
       <header className="h-16 border-b border-white/5 bg-card/80 backdrop-blur-xl flex items-center justify-between px-4 shrink-0 z-30">
         <div className="flex items-center gap-3 flex-1 min-w-0">
           <Button variant="ghost" size="icon" className="md:hidden rounded-lg" onClick={() => setCurrentChatId(null)}><ChevronLeft /></Button>
@@ -358,8 +340,8 @@ export default function ChatArea() {
           ) : (
             <div className="flex-1 flex items-center gap-2 pr-4">
               <Search className="w-4 h-4 text-primary" />
-              <Input placeholder="Поиск по сообщениям..." className="bg-transparent border-none focus-visible:ring-0 text-sm h-8" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} autoFocus />
-              <button onClick={() => { setIsSearchMode(false); setSearchQuery(''); }} className="p-1 hover:bg-white/5 rounded-full"><X className="w-4 h-4 text-muted-foreground" /></button>
+              <Input placeholder="Поиск..." className="bg-transparent border-none focus-visible:ring-0 text-sm h-8" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} autoFocus />
+              <button onClick={() => { setIsSearchMode(false); setSearchQuery(''); }}><X className="w-4 h-4 text-muted-foreground" /></button>
             </div>
           )}
         </div>
@@ -372,10 +354,10 @@ export default function ChatArea() {
       </header>
 
       <div className="flex-1 relative overflow-hidden flex flex-col">
-        <div className="flex-1 w-full relative z-10 overflow-y-auto scroll-smooth scrollbar-hide touch-pan-y">
+        <ScrollArea className="flex-1 w-full relative z-10 scrollbar-hide">
           <MessageList messages={messages} userId={firebaseUser?.uid} chatId={currentChatId} onReply={setReplyTo} onEdit={setEditingMsg} onForward={setForwardingMessage} onPin={handlePinMessage} amIPremium={userProfile?.isPremium} isAdmin={isKernelAdmin} isGroup={chat?.type !== 'private'} searchQuery={searchQuery} viewerProfile={userProfile} />
           <div ref={messagesEndRef} className="h-4" />
-        </div>
+        </ScrollArea>
 
         {recordingState !== 'idle' && recordingType === 'video_note' && (
           <div className="absolute inset-0 z-[100] flex flex-col items-center justify-center bg-black/60 backdrop-blur-md">
@@ -386,7 +368,6 @@ export default function ChatArea() {
                 <video ref={videoPreviewRef} autoPlay muted playsInline className="w-full h-full object-cover scale-x-[-1]" />
               )}
             </div>
-            
             <div className="mt-8 flex gap-6">
               <Button onClick={cancelRecording} className="h-16 w-16 rounded-full bg-red-500/20 text-red-500"><Trash2 className="w-6 h-6" /></Button>
               {recordingState === 'review' ? (
@@ -400,21 +381,41 @@ export default function ChatArea() {
       </div>
 
       {(!isParticipant && !isKernelAdmin) ? (
-        <div className="p-4 bg-primary/5 border-t border-white/5 flex items-center justify-center shrink-0 z-30"><Button onClick={handleJoinChat} disabled={isJoining} className="h-12 px-10 rounded-2xl bg-primary font-black uppercase tracking-widest gap-2 shadow-xl shadow-primary/20">{isJoining ? <Loader2 className="animate-spin w-4 h-4" /> : <><UserPlus className="w-5 h-5" /> Вступить в сообщество</>}</Button></div>
+        <div className="p-4 bg-primary/5 border-t border-white/5 flex items-center justify-center shrink-0 z-30">
+          <Button onClick={handleJoinChat} disabled={isJoining} className="h-12 px-10 rounded-2xl bg-primary font-black uppercase tracking-widest gap-2 shadow-xl shadow-primary/20">
+            {isJoining ? <Loader2 className="animate-spin w-4 h-4" /> : <><UserPlus className="w-5 h-5" /> Вступить в сообщество</>}
+          </Button>
+        </div>
       ) : !canPost ? (
-        <div className="p-4 bg-white/5 border-t border-white/5 text-center shrink-0 z-30"><p className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em]">КАНАЛ В РЕЖИМЕ ТРАНСЛЯЦИИ — ТОЛЬКО ЧТЕНИЕ</p></div>
+        <div className="p-4 bg-white/5 border-t border-white/5 text-center shrink-0 z-30">
+          <p className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em]">ТОЛЬКО ЧТЕНИЕ</p>
+        </div>
       ) : (
         <footer className="p-3 pb-6 bg-background/90 backdrop-blur-2xl border-t border-white/5 shrink-0 z-30 relative">
           <div className="max-w-4xl mx-auto space-y-2 relative">
+            {mentionSearch !== null && filteredMentions.length > 0 && (
+              <div className="absolute bottom-full left-0 right-0 mb-2 bg-card border border-white/10 rounded-2xl shadow-2xl overflow-hidden animate-in slide-in-from-bottom-2 duration-200">
+                <ScrollArea className="max-h-48">
+                  <div className="p-1">
+                    {filteredMentions.map((p) => (
+                      <button key={p.id} onClick={() => selectMention(p)} className="w-full flex items-center gap-3 p-3 hover:bg-white/5 transition-colors text-left rounded-xl">
+                        <UserAvatar userId={p.id} className="h-8 w-8" manualAvatarUrl={p.avatarUrl} />
+                        <div className="flex flex-col">
+                          <span className="text-sm font-bold">{p.name}</span>
+                          <span className="text-[10px] text-muted-foreground uppercase font-black">{p.username}</span>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </ScrollArea>
+              </div>
+            )}
+
             {(replyTo || editingMsg) && (
-              <div className="p-2 bg-muted/50 rounded-xl border-l-4 border-accent flex items-center justify-between animate-in slide-in-from-bottom-1">
+              <div className="p-2 bg-muted/50 rounded-xl border-l-4 border-accent flex items-center justify-between">
                 <div className="flex flex-col min-0 pl-2">
-                  <span className="text-[9px] font-bold text-accent uppercase tracking-widest">
-                    {editingMsg ? "Редактирование" : `Ответ: ${replyTo?.senderName}`}
-                  </span>
-                  <span className="text-xs truncate italic">
-                    {decryptSignal(editingMsg?.content || replyTo?.content)}
-                  </span>
+                  <span className="text-[9px] font-bold text-accent uppercase tracking-widest">{editingMsg ? "Редактирование" : `Ответ: ${replyTo?.senderName}`}</span>
+                  <span className="text-xs truncate italic">{decryptSignal(editingMsg?.content || replyTo?.content)}</span>
                 </div>
                 <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => { setReplyTo(null); setEditingMsg(null); }}><X className="w-4 h-4" /></Button>
               </div>
@@ -430,7 +431,7 @@ export default function ChatArea() {
               </Popover>
               
               <div className="flex-1 flex items-center bg-muted/30 rounded-2xl border border-white/[0.05] h-11 px-4 relative group">
-                <Input placeholder="Сообщение" className="bg-transparent border-none focus-visible:ring-0" value={messageInput} onChange={e => setMessageInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSendMessage()} />
+                <Input placeholder="Сообщение" className="bg-transparent border-none focus-visible:ring-0" value={messageInput} onChange={e => handleInputChange(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSendMessage()} />
                 <button onClick={() => setShowEmojiPicker(!showEmojiPicker)} className="text-muted-foreground hover:text-foreground transition-colors"><Smile /></button>
               </div>
 
