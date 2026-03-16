@@ -104,7 +104,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl bg-[#0a0a0c] border-primary/30 p-0 overflow-hidden h-[90vh] flex flex-col rounded-[2.5rem] shadow-2xl border outline-none">
+      <DialogContent className="max-w-4xl bg-[#0a0a0c] border-primary/30 p-0 overflow-hidden h-[85vh] flex flex-col rounded-[2.5rem] shadow-2xl border outline-none">
         <DialogHeader className="p-4 md:p-6 bg-primary/5 border-b border-white/5 shrink-0 relative">
           <div className="flex items-center justify-between w-full pr-8">
             <div className="flex items-center gap-2">
@@ -120,7 +120,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
           </div>
         </DialogHeader>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0 bg-transparent">
           <div className="px-4 md:px-6 pt-3 shrink-0">
             <TabsList className="grid w-full bg-white/5 p-1 rounded-xl grid-cols-4">
               <TabsTrigger value="analytics" className="rounded-lg text-[8px] uppercase font-black gap-1.5">Аналитика</TabsTrigger>
@@ -130,8 +130,8 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
             </TabsList>
           </div>
 
-          <TabsContent value="analytics" className="flex-1 flex flex-col min-h-0 outline-none">
-            <ScrollArea className="flex-1 px-4 md:px-6 py-4">
+          <TabsContent value="analytics" className="flex-1 m-0 p-0 outline-none overflow-hidden">
+            <ScrollArea className="h-full px-4 md:px-6 py-4">
               <div className="grid grid-cols-2 gap-3 mb-6">
                 <StatCard label="Всего узлов" value={stats.total} icon={Users} color="text-white" />
                 <StatCard label="Premium" value={stats.premium} icon={Star} color="text-accent" />
@@ -144,7 +144,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
                   <h3 className="text-[10px] font-black uppercase text-primary mb-4 flex items-center gap-2">
                     <Activity className="w-3 h-3" /> Новые Узлы (7д)
                   </h3>
-                  <div className="h-[160px] w-full relative">
+                  <div className="h-[160px] w-full">
                     <ResponsiveContainer width="100%" height="100%">
                       <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                         <defs>
@@ -166,7 +166,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
                   <h3 className="text-[10px] font-black uppercase text-accent mb-4 flex items-center gap-2">
                     <BarChart3 className="w-3 h-3" /> Трафик Сигналов
                   </h3>
-                  <div className="h-[160px] w-full relative">
+                  <div className="h-[160px] w-full">
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                         <XAxis dataKey="day" stroke="rgba(255,255,255,0.2)" fontSize={10} tickLine={false} axisLine={false} />
@@ -181,7 +181,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
             </ScrollArea>
           </TabsContent>
 
-          <TabsContent value="users" className="flex-1 flex flex-col min-h-0 outline-none">
+          <TabsContent value="users" className="flex-1 m-0 p-0 outline-none overflow-hidden flex flex-col">
             <div className="p-4 px-6 shrink-0"><Input placeholder="Поиск по базе..." value={userSearch} onChange={e => setUserSearch(e.target.value)} className="bg-white/5 border-white/10 h-12 rounded-2xl pl-4" /></div>
             <ScrollArea className="flex-1">
               <div className="px-6 space-y-2 pb-20">
@@ -246,15 +246,15 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
             </ScrollArea>
           </TabsContent>
           
-          <TabsContent value="logs" className="flex-1 p-6 outline-none">
-             <div className="flex flex-col items-center justify-center py-20 opacity-20 border-2 border-dashed border-white/5 rounded-[2.5rem]">
+          <TabsContent value="logs" className="flex-1 m-0 p-6 outline-none overflow-hidden">
+             <div className="h-full flex flex-col items-center justify-center opacity-20 border-2 border-dashed border-white/5 rounded-[2.5rem]">
                 <ListChecks className="w-12 h-12 mb-4" />
                 <p className="text-[10px] font-black uppercase tracking-widest text-center">Системные логи пусты</p>
              </div>
           </TabsContent>
 
-          <TabsContent value="broadcast" className="flex-1 p-6 outline-none">
-             <div className="flex flex-col items-center justify-center py-20 opacity-20 border-2 border-dashed border-white/5 rounded-[2.5rem]">
+          <TabsContent value="broadcast" className="flex-1 m-0 p-6 outline-none overflow-hidden">
+             <div className="h-full flex flex-col items-center justify-center opacity-20 border-2 border-dashed border-white/5 rounded-[2.5rem]">
                 <Radio className="w-12 h-12 mb-4" />
                 <p className="text-[10px] font-black uppercase tracking-widest text-center">Маяк в режиме ожидания</p>
              </div>

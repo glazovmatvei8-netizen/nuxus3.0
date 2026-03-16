@@ -150,7 +150,6 @@ export default function ChatArea() {
   const participantIds = useMemo(() => chat?.participantIds || [], [chat?.participantIds]);
   const participantsQuery = useMemoFirebase(() => {
     if (!db || participantIds.length === 0) return null;
-    // Limit to 30 for performance in mention list
     return query(collection(db, 'users'), where('id', 'in', participantIds.slice(0, 30)));
   }, [db, participantIds]);
   const { data: participants } = useCollection<UserType>(participantsQuery);
@@ -167,22 +166,24 @@ export default function ChatArea() {
   const handleInputChange = (val: string) => {
     setMessageInput(val);
     
-    // Find if we just typed @ or are editing an @word
-    const words = val.split(/\s/);
-    const lastWord = words[words.length - 1];
-    
-    if (lastWord.startsWith('@')) {
-      setMentionSearch(lastWord.slice(1));
-    } else {
-      setMentionSearch(null);
+    // Improved regex to find the last @mention part
+    const lastAtIndex = val.lastIndexOf('@');
+    if (lastAtIndex !== -1) {
+      const textAfterAt = val.substring(lastAtIndex + 1);
+      // Ensure there are no spaces between @ and search text
+      if (!textAfterAt.includes(' ')) {
+        setMentionSearch(textAfterAt);
+        return;
+      }
     }
+    setMentionSearch(null);
   };
 
   const selectMention = (p: UserType) => {
-    const words = messageInput.split(/\s/);
-    words.pop();
+    const lastAtIndex = messageInput.lastIndexOf('@');
+    const prefix = messageInput.substring(0, lastAtIndex);
     const cleanUsername = p.username.startsWith('@') ? p.username : `@${p.username}`;
-    const newVal = words.join(' ') + (words.length > 0 ? ' ' : '') + cleanUsername + ' ';
+    const newVal = prefix + cleanUsername + ' ';
     setMessageInput(newVal);
     setMentionSearch(null);
   };
@@ -396,9 +397,10 @@ export default function ChatArea() {
       ) : (
         <footer className="p-3 pb-6 bg-background/90 backdrop-blur-2xl border-t border-white/5 shrink-0 z-40 relative">
           <div className="max-w-4xl mx-auto space-y-2 relative">
-            {/* Mention List - Robust implementation */}
+            
+            {/* Robust Mention List UI */}
             {mentionSearch !== null && filteredMentions.length > 0 && (
-              <div className="absolute bottom-full left-0 right-0 mb-4 bg-card/95 backdrop-blur-3xl border border-white/10 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] overflow-hidden animate-in slide-in-from-bottom-2 duration-200 z-[100]">
+              <div className="absolute bottom-[110%] left-0 right-0 mb-2 bg-card/95 backdrop-blur-3xl border border-white/10 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] overflow-hidden animate-in slide-in-from-bottom-2 duration-200 z-[1000]">
                 <div className="p-2 border-b border-white/5 flex items-center justify-between">
                   <span className="text-[10px] font-black uppercase tracking-widest text-primary/60 px-2">Упомянуть...</span>
                   <AtSign className="w-3 h-3 text-primary/40 mr-2" />
