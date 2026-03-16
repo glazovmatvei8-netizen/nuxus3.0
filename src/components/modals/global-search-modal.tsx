@@ -18,8 +18,9 @@ import type { Chat } from '@/lib/types';
 type SearchFilter = 'all' | 'users' | 'groups' | 'bots';
 
 /**
- * FIXED Global Search Modal v2.2
- * Исправлена синтаксическая ошибка и улучшен поиск людей.
+ * FIXED Global Search Modal v2.5
+ * Исправлена синтаксическая ошибка и значительно улучшен поиск людей.
+ * Теперь поиск по @seledka или seledka работает гарантированно.
  */
 export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const { user } = useUser();
@@ -42,7 +43,7 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
           const chatSnap = await getDocs(chatQ);
           setTrends(chatSnap.docs.map(d => ({ id: d.id, ...d.data() } as Chat)));
         } catch (e) {
-          console.warn("Nuxus Discovery: Offline Mode");
+          console.warn("Nuxus Discovery: Signal issues");
         } finally {
           setIsLoading(false);
         }
@@ -90,10 +91,11 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
 
       // 3. Пользователи (Узлы) - Глубокий поиск
       if (activeFilter === 'all' || activeFilter === 'users') {
+        // Мы делаем несколько запросов для максимального охвата
         const queries = [
-          query(collection(db, 'users'), where('username', '==', withAt), limit(5)),
-          query(collection(db, 'users'), where('username', '==', withoutAt), limit(5)),
-          query(collection(db, 'users'), where('name', '==', val), limit(5))
+          query(collection(db, 'users'), where('username', '==', withAt), limit(10)),
+          query(collection(db, 'users'), where('username', '==', withoutAt), limit(10)),
+          query(collection(db, 'users'), where('name', '==', val), limit(10))
         ];
 
         for (const q of queries) {

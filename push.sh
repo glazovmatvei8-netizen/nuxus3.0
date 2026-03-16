@@ -1,10 +1,13 @@
 
 #!/bin/bash
 
-# Nuxus Kernel Sync Utility v1.1
+# Nuxus Kernel Sync Utility v1.2
 # Скрипт для отправки изменений в твой репозиторий
 
 echo "🚀 Подготовка к отправке в GitHub: glazovmatvei8-netizen/nuxus"
+
+# Конфигурация для решения проблем с расхождением веток
+git config pull.rebase false
 
 # Инициализация гит, если нужно
 if [ ! -d ".git" ]; then
@@ -12,6 +15,10 @@ if [ ! -d ".git" ]; then
     git remote add origin https://github.com/glazovmatvei8-netizen/nuxus.git
     git branch -M main
 fi
+
+# Попытка синхронизации перед пушем
+echo "📥 Синхронизация с облаком..."
+git pull origin main --tags
 
 # Добавляем все файлы
 git add .

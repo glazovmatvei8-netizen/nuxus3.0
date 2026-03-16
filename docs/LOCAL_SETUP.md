@@ -21,21 +21,28 @@
    cd nuxus
    ```
 
-## 3. Открытие в VS Code
+## 3. Решение ошибки "divergent branches" (Pull Error)
+Если при попытке обновить код Git выдает ошибку `fatal: Need to specify how to reconcile divergent branches`, введи эту команду один раз:
+```bash
+git config pull.rebase false
+```
+Затем снова попробуй `git pull origin main`.
+
+## 4. Открытие в VS Code
 Введи в терминале:
 ```bash
 code .
 ```
 Или просто перетащи папку `nuxus` в окно VS Code.
 
-## 4. Установка зависимостей
+## 5. Установка зависимостей
 Открой встроенный терминал в VS Code (Ctrl + `) и введи:
 ```bash
 npm install
 ```
 *Это загрузит все библиотеки в папку `node_modules`. Дождись завершения.*
 
-## 5. Настройка Firebase (.env)
+## 6. Настройка Firebase (.env)
 Тебе нужно создать файл `.env` в корне проекта (рядом с `package.json`).
 Скопируй туда свои ключи из консоли Firebase:
 ```env
@@ -48,14 +55,14 @@ NEXT_PUBLIC_FIREBASE_APP_ID=ваш_app_id
 GOOGLE_GENERATIVE_AI_API_KEY=ваш_ключ_gemini
 ```
 
-## 6. Запуск проекта
+## 7. Запуск проекта
 В терминале VS Code введи:
 ```bash
 npm run dev
 ```
 Проект будет доступен по адресу: [http://localhost:3000](http://localhost:3000)
 
-## 7. Как опубликовать изменения на GitHub
+## 8. Как опубликовать изменения на GitHub
 Я создал файл `push.sh`. Чтобы отправить все свои изменения в репозиторий `glazovmatvei8-netizen/nuxus`, просто введи в терминале:
 ```bash
 sh push.sh

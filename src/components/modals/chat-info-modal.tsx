@@ -31,8 +31,8 @@ import { addHours, isAfter, parseISO } from 'date-fns';
 import { AddMemberModal } from './add-member-modal';
 
 /**
- * ЧАТ-ИНФО 3.4
- * Реализовано открытие профиля по клику на участника.
+ * ЧАТ-ИНФО 3.5
+ * Реализовано открытие профиля по клику на участника (аватар или имя).
  */
 export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onOpenChange: (o: boolean) => void, chat: Chat }) {
   const db = useFirestore();
@@ -279,7 +279,7 @@ export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onO
                   <Textarea value={editForm.description} onChange={e => setEditForm({...editForm, description: e.target.value})} className="bg-black/20 border-white/5 min-h-[80px] text-xs" />
                 </div>
                 <div className="flex items-center justify-between">
-                  <div className="flex flex-col"><span className="text-11px] font-bold text-white">Публичный доступ</span><span className="text-[9px] text-muted-foreground uppercase">Доступен через поиск</span></div>
+                  <div className="flex flex-col"><span className="text-[11px] font-bold text-white">Публичный доступ</span><span className="text-[9px] text-muted-foreground uppercase">Доступен через поиск</span></div>
                   <Switch checked={editForm.isPublic} onCheckedChange={v => setEditForm({...editForm, isPublic: v})} />
                 </div>
               </div>
@@ -363,17 +363,17 @@ function MemberRow({ userId, ownerId, adminIds, isViewerAdmin, viewerId, chatId,
   return (
     <div className="flex items-center justify-between p-3 rounded-xl hover:bg-white/5 transition-colors group">
       <div 
-        className="flex items-center gap-3 cursor-pointer active:scale-95 transition-transform"
+        className="flex items-center gap-3 cursor-pointer active:scale-95 transition-transform flex-1 min-w-0"
         onClick={() => { setInspectedUserId(m.id); onOpenParent(false); }}
       >
         <UserAvatar userId={m.id} className="h-10 w-10" fallbackName={m.name} showOnlineStatus />
-        <div className="flex flex-col text-left">
-          <span className="text-sm font-semibold flex items-center gap-1">
+        <div className="flex flex-col text-left min-w-0">
+          <span className="text-sm font-semibold flex items-center gap-1 truncate">
             {formatDisplayName(m.name)} 
             {isUserPremium(m) && <Star className="w-3 h-3 text-accent fill-accent" />}
             {isTargetOwner ? <Crown className="w-3 h-3 text-primary" /> : isTargetAdmin && <Shield className="w-3 h-3 text-primary" />}
           </span>
-          <span className="text-[10px] text-muted-foreground">{m.username}</span>
+          <span className="text-[10px] text-muted-foreground truncate">{m.username}</span>
         </div>
       </div>
 

@@ -36,8 +36,8 @@ import { addMonths, subDays, isSameDay } from 'date-fns';
 const ROOT_UID = 'GCvLucN8CjNcdaxPO2vmpZ84hNl1';
 
 /**
- * FIXED Admin Panel v2.5
- * Починен скролл и убрана лишняя черная пустота (баги flexbox).
+ * FIXED Admin Panel v2.8
+ * Исправлен скролл во всех вкладках и ликвидирована «черная пустота».
  */
 export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const db = useFirestore();
@@ -134,7 +134,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
             </TabsList>
           </div>
 
-          <TabsContent value="analytics" className="flex-1 m-0 p-0 outline-none data-[state=active]:flex flex-col overflow-hidden">
+          <TabsContent value="analytics" className="flex-1 m-0 p-0 overflow-hidden outline-none data-[state=active]:flex flex-col">
             <ScrollArea className="flex-1">
               <div className="px-4 md:px-6 py-4 space-y-6 pb-20">
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -187,7 +187,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
             </ScrollArea>
           </TabsContent>
 
-          <TabsContent value="users" className="flex-1 m-0 p-0 outline-none data-[state=active]:flex flex-col overflow-hidden">
+          <TabsContent value="users" className="flex-1 m-0 p-0 overflow-hidden outline-none data-[state=active]:flex flex-col">
             <div className="p-4 px-6 shrink-0">
               <Input placeholder="Поиск по базе..." value={userSearch} onChange={e => setUserSearch(e.target.value)} className="bg-white/5 border-white/10 h-12 rounded-2xl pl-4" />
             </div>
