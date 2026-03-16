@@ -84,7 +84,7 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
         });
       }
 
-      // 3. Пользователи - Улучшенный поиск для "@seledka"
+      // 3. Пользователи - Глубокий поиск для @seledka и других
       if (activeFilter === 'all' || activeFilter === 'users') {
         const q1 = query(collection(db, 'users'), where('username', '==', withAt), limit(10));
         const q2 = query(collection(db, 'users'), where('username', '==', withoutAt), limit(10));

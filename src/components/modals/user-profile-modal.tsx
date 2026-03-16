@@ -86,15 +86,19 @@ export function UserProfileModal() {
   const copyId = async () => {
     if (!inspectedUserId) return;
     try {
-      if (typeof navigator !== 'undefined' && navigator.clipboard) {
+      if (typeof navigator !== 'undefined' && navigator.clipboard && navigator.clipboard.writeText) {
         await navigator.clipboard.writeText(inspectedUserId);
         toast({ title: "ID скопирован" });
       } else {
         throw new Error("Clipboard API unavailable");
       }
     } catch (err) {
-      console.warn("Nuxus Clipboard: Access denied");
-      toast({ title: "Ошибка копирования", description: "Используйте HTTPS соединение", variant: "destructive" });
+      console.warn("Nuxus Clipboard: Access denied or restricted");
+      toast({ 
+        title: "Ошибка копирования", 
+        description: "Ваш браузер ограничил доступ к буферу обмена. Попробуйте использовать HTTPS.", 
+        variant: "destructive" 
+      });
     }
   };
 

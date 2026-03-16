@@ -1,13 +1,13 @@
 
 #!/bin/bash
 
-# Nuxus Kernel Sync Utility v1.7
+# Nuxus Kernel Sync Utility v1.8
 # Скрипт для автоматического решения ошибок синхронизации и отправки в GitHub
 
 echo "🚀 Подготовка к отправке в GitHub: glazovmatvei8-netizen/nuxus-message"
 
-# ЛЕЧЕНИЕ ОШИБКИ: Divergent Branches
-# Настраиваем гибридное слияние веток
+# ЛЕЧЕНИЕ ОШИБКИ: Divergent Branches (Срочный патч)
+# Настраиваем гибридное слияние веток по умолчанию
 git config pull.rebase false
 
 # Инициализация гит, если нужно
@@ -25,7 +25,7 @@ git pull origin main --tags
 git add .
 
 # Формируем сообщение
-COMMIT_MSG="Nuxus Core Update: $(date '+%Y-%m-%d %H:%M:%S') [Auto-Sync Fix]"
+COMMIT_MSG="Nuxus Core Update: $(date '+%Y-%m-%d %H:%M:%S') [Auto-Sync & Search Fix]"
 
 # Коммит
 git commit -m "$COMMIT_MSG"
