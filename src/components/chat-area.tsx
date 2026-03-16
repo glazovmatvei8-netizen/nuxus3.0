@@ -163,6 +163,7 @@ export default function ChatArea() {
     setMessageInput(val);
     const lastAtIndex = val.lastIndexOf('@');
     if (lastAtIndex !== -1) {
+      // Список появляется если @ в начале или после пробела
       const isStart = lastAtIndex === 0;
       const isAfterSpace = lastAtIndex > 0 && val[lastAtIndex - 1] === ' ';
       
@@ -397,6 +398,7 @@ export default function ChatArea() {
         <footer className="p-3 pb-6 bg-background/90 backdrop-blur-2xl border-t border-white/5 shrink-0 z-40 relative">
           <div className="max-w-4xl mx-auto space-y-2 relative">
             
+            {/* Mention Suggestions Popup */}
             {mentionSearch !== null && filteredMentions.length > 0 && (
               <div className="absolute bottom-[110%] left-0 right-0 mb-2 bg-card/95 backdrop-blur-3xl border border-white/10 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] overflow-hidden animate-in slide-in-from-bottom-2 duration-200 z-[1000]">
                 <div className="p-2 border-b border-white/5 flex items-center justify-between">

@@ -130,8 +130,8 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
             </TabsList>
           </div>
 
-          <div className="flex-1 overflow-hidden h-[calc(85vh-130px)]">
-            <TabsContent value="analytics" className="h-full m-0 p-0 outline-none data-[state=active]:flex flex-col bg-background">
+          <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+            <TabsContent value="analytics" className="flex-1 m-0 p-0 outline-none data-[state=active]:flex flex-col bg-background overflow-hidden">
               <ScrollArea className="flex-1">
                 <div className="px-4 md:px-6 py-4 space-y-6 pb-20">
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -184,7 +184,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
               </ScrollArea>
             </TabsContent>
 
-            <TabsContent value="users" className="h-full m-0 p-0 outline-none data-[state=active]:flex flex-col bg-background">
+            <TabsContent value="users" className="flex-1 m-0 p-0 outline-none data-[state=active]:flex flex-col bg-background overflow-hidden">
               <div className="p-4 px-6 shrink-0">
                 <Input placeholder="Поиск по базе..." value={userSearch} onChange={e => setUserSearch(e.target.value)} className="bg-white/5 border-white/10 h-12 rounded-2xl pl-4" />
               </div>
@@ -251,14 +251,14 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
               </ScrollArea>
             </TabsContent>
             
-            <TabsContent value="logs" className="h-full m-0 p-6 overflow-hidden bg-background data-[state=active]:flex flex-col">
+            <TabsContent value="logs" className="flex-1 m-0 p-6 overflow-hidden bg-background data-[state=active]:flex flex-col">
                <div className="h-full flex flex-col items-center justify-center opacity-20 border-2 border-dashed border-white/5 rounded-[2.5rem]">
                   <ListChecks className="w-12 h-12 mb-4" />
                   <p className="text-[10px] font-black uppercase tracking-widest text-center">Системные логи пусты</p>
                </div>
             </TabsContent>
 
-            <TabsContent value="broadcast" className="h-full m-0 p-6 overflow-hidden bg-background data-[state=active]:flex flex-col">
+            <TabsContent value="broadcast" className="flex-1 m-0 p-6 overflow-hidden bg-background data-[state=active]:flex flex-col">
                <div className="h-full flex flex-col items-center justify-center opacity-20 border-2 border-dashed border-white/5 rounded-[2.5rem]">
                   <Radio className="w-12 h-12 mb-4" />
                   <p className="text-[10px] font-black uppercase tracking-widest text-center">Маяк в режиме ожидания</p>

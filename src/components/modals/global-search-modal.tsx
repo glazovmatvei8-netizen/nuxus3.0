@@ -62,12 +62,12 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
       
       const foundResults: any[] = [];
 
-      // Боты
+      // 1. Боты
       if ('@stickers'.includes(cleanVal) && (activeFilter === 'all' || activeFilter === 'bots')) {
         foundResults.push({ type: 'bot', data: { id: 'bot_stickers', name: 'Sticker Bot 🎨', username: '@stickers', avatarUrl: 'https://i.ibb.co/sd2MqGz2/Icon.png' } });
       }
 
-      // Публичные чаты
+      // 2. Группы и Каналы
       if (activeFilter === 'all' || activeFilter === 'groups') {
         const chatQuery = query(
           collection(db, 'chats'), 
@@ -84,9 +84,9 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
         });
       }
 
-      // Пользователи
+      // 3. Пользователи (Узлы) - Глубокий поиск
       if (activeFilter === 'all' || activeFilter === 'users') {
-        // Ищем по нику с @ и без него для надежности
+        // Проверяем оба варианта: с @ и без
         const userQueries = [
           query(collection(db, 'users'), where('username', '==', withAt), limit(5)),
           query(collection(db, 'users'), where('username', '==', withoutAt), limit(5))
@@ -96,6 +96,7 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
           const snap = await getDocs(q);
           snap.docs.forEach(d => {
             const data = d.data();
+            // Не добавляем себя и исключаем дубликаты
             if (d.id !== user?.uid && !foundResults.some(r => r.data.id === d.id)) {
               foundResults.push({ type: 'user', data: { id: d.id, ...data } });
             }
@@ -105,7 +106,7 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
 
       setResults(foundResults);
     } catch (e) {
-      console.error("Search error:", e);
+      console.error("Nuxus Search: Signal error", e);
     } finally {
       setIsLoading(false);
     }
@@ -132,7 +133,13 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
         <div className="px-6 py-4 shrink-0 space-y-4">
           <div className="relative group">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground/40 group-focus-within:text-primary transition-colors" />
-            <Input placeholder="Поиск по @username..." value={searchQuery} onChange={e => handleSearch(e.target.value)} className="bg-white/5 border-white/10 h-14 rounded-2xl pl-12 text-lg focus:border-primary/40 transition-all" autoFocus />
+            <Input 
+              placeholder="Поиск по @username..." 
+              value={searchQuery} 
+              onChange={e => handleSearch(e.target.value)} 
+              className="bg-white/5 border-white/10 h-14 rounded-2xl pl-12 text-lg focus:border-primary/40 transition-all" 
+              autoFocus 
+            />
             {isLoading && <div className="absolute right-4 top-1/2 -translate-y-1/2"><Loader2 className="w-5 h-5 text-primary animate-spin" /></div>}
           </div>
 
@@ -153,8 +160,13 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
                     <div className="flex items-center gap-4">
                       <UserAvatar userId={res.type === 'user' ? res.data.id : null} manualAvatarUrl={res.data.avatarUrl} className="h-12 w-12" fallbackName={res.data.name} />
                       <div className="flex flex-col">
-                        <span className="font-bold text-white flex items-center gap-2">{res.data.name} {res.data.isPremium && <Star className="w-3 h-3 text-accent fill-accent" />}</span>
-                        <span className="text-[10px] text-muted-foreground uppercase font-black">{res.data.username} • {res.type === 'user' ? 'профиль' : res.type === 'chat' ? 'сообщество' : 'бот'}</span>
+                        <span className="font-bold text-white flex items-center gap-2">
+                          {res.data.name} 
+                          {res.data.isPremium && <Star className="w-3 h-3 text-accent fill-accent" />}
+                        </span>
+                        <span className="text-[10px] text-muted-foreground uppercase font-black">
+                          {res.data.username} • {res.type === 'user' ? 'профиль' : res.type === 'chat' ? 'сообщество' : 'бот'}
+                        </span>
                       </div>
                     </div>
                     <ArrowRight className="w-5 h-5 text-primary/40" />
@@ -180,7 +192,7 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
                   </div>
                 ))}
               </div>
-            ) : searchQuery.length >= 2 && !isLoading ? (
+            ) : (searchQuery.length >= 2 && !isLoading) ? (
               <div className="flex flex-col items-center justify-center py-20 opacity-20">
                 <Search className="w-12 h-12 mb-4" />
                 <p className="text-[10px] font-black uppercase tracking-widest text-center">Сигнал не найден</p>
