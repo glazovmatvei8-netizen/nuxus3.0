@@ -150,7 +150,8 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
 
         <ScrollArea className="flex-1">
           <div className="p-4 pt-0">
-            {results.length > 0 ? (
+            {/* РЕЗУЛЬТАТЫ ПОИСКА */}
+            {results.length > 0 && (
               <div className="space-y-2">
                 {results.map((res, idx) => (
                   <div key={idx} onClick={() => handleSelectResult(res)} className="flex items-center justify-between p-4 bg-white/5 rounded-[1.8rem] hover:bg-white/10 cursor-pointer border border-white/5 transition-all">
@@ -170,12 +171,18 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
                   </div>
                 ))}
               </div>
-            ) : searchQuery.length >= 2 && !isLoading ? (
+            )}
+
+            {/* ПУСТОЙ РЕЗУЛЬТАТ */}
+            {results.length === 0 && searchQuery.length >= 2 && !isLoading && (
               <div className="flex flex-col items-center justify-center py-20 opacity-20">
                 <Search className="w-12 h-12 mb-4" />
                 <p className="text-[10px] font-black uppercase tracking-widest text-center">Сигнал не найден</p>
               </div>
-            ) : searchQuery.length < 2 && trends.length > 0 ? (
+            )}
+
+            {/* ТРЕНДЫ (КОГДА ПОИСК ПУСТОЙ) */}
+            {searchQuery.length < 2 && trends.length > 0 && (
               <div className="space-y-4">
                 <div className="flex items-center gap-2 px-2 text-primary">
                   <Zap className="w-4 h-4 fill-current animate-pulse" />
@@ -194,7 +201,7 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
                   </div>
                 ))}
               </div>
-            ) : null}
+            )}
           </div>
         </ScrollArea>
       </DialogContent>
