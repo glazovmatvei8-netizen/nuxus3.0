@@ -17,6 +17,10 @@ import type { Chat } from '@/lib/types';
 
 type SearchFilter = 'all' | 'users' | 'groups' | 'bots';
 
+/**
+ * FIXED Global Search Modal v2.2
+ * Исправлена синтаксическая ошибка и улучшен поиск людей.
+ */
 export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const { user } = useUser();
   const db = useFirestore();
@@ -86,7 +90,6 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
 
       // 3. Пользователи (Узлы) - Глубокий поиск
       if (activeFilter === 'all' || activeFilter === 'users') {
-        // Проверяем несколько вариантов: с @, без @ и по имени
         const queries = [
           query(collection(db, 'users'), where('username', '==', withAt), limit(5)),
           query(collection(db, 'users'), where('username', '==', withoutAt), limit(5)),

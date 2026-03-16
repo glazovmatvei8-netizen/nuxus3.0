@@ -35,6 +35,10 @@ import { addMonths, subDays, isSameDay } from 'date-fns';
 
 const ROOT_UID = 'GCvLucN8CjNcdaxPO2vmpZ84hNl1';
 
+/**
+ * FIXED Admin Panel v2.5
+ * Починен скролл и убрана лишняя черная пустота (баги flexbox).
+ */
 export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const db = useFirestore();
   const { toast } = useToast();

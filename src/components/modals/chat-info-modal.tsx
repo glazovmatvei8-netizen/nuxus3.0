@@ -31,8 +31,8 @@ import { addHours, isAfter, parseISO } from 'date-fns';
 import { AddMemberModal } from './add-member-modal';
 
 /**
- * ЧАТ-ИНФО 3.3
- * Реализовано полное удаление для администраторов и владельцев.
+ * ЧАТ-ИНФО 3.4
+ * Реализовано открытие профиля по клику на участника.
  */
 export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onOpenChange: (o: boolean) => void, chat: Chat }) {
   const db = useFirestore();
@@ -136,9 +136,7 @@ export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onO
   const handleDeleteNode = () => {
     if (!db || !chat.id || !user) return;
     
-    // Если приватный чат ИЛИ пользователь админ/владелец — удаляем полностью
     const canDeleteFully = isPrivate || isChatAdmin;
-    
     const confirmMsg = canDeleteFully 
       ? (isPrivate ? 'Удалить этот диалог навсегда для всех?' : 'Удалить это сообщество навсегда для всех?') 
       : 'Выйти из этого сообщества?';
@@ -169,7 +167,6 @@ export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onO
     <Dialog open={open} onOpenChange={(o) => { onOpenChange(o); if(!o) setIsEditing(false); }}>
       <DialogContent className="max-w-md bg-card border-border p-0 overflow-hidden h-[85vh] flex flex-col rounded-[2.5rem] shadow-2xl">
         <DialogHeader className="p-6 text-center flex flex-col items-center shrink-0 space-y-0 relative border-b border-white/5">
-          {/* Аватар */}
           <div className="relative group mb-4">
             <UserAvatar 
               userId={isPrivate ? otherId : null} 
@@ -315,6 +312,7 @@ export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onO
                       isViewerAdmin={isChatAdmin}
                       viewerId={user?.uid || ''}
                       chatId={chat.id}
+                      onOpenParent={onOpenChange}
                     />
                   ))}
                 </div>
@@ -341,8 +339,9 @@ export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onO
   );
 }
 
-function MemberRow({ userId, ownerId, adminIds, isViewerAdmin, viewerId, chatId }: any) {
+function MemberRow({ userId, ownerId, adminIds, isViewerAdmin, viewerId, chatId, onOpenParent }: any) {
   const db = useFirestore();
+  const { setInspectedUserId } = useAppState();
   const { toast } = useToast();
   const userRef = useMemoFirebase(() => (!db ? null : doc(db, 'users', userId)), [db, userId]);
   const { data: m } = useDoc<User>(userRef);
@@ -363,7 +362,10 @@ function MemberRow({ userId, ownerId, adminIds, isViewerAdmin, viewerId, chatId 
   
   return (
     <div className="flex items-center justify-between p-3 rounded-xl hover:bg-white/5 transition-colors group">
-      <div className="flex items-center gap-3">
+      <div 
+        className="flex items-center gap-3 cursor-pointer active:scale-95 transition-transform"
+        onClick={() => { setInspectedUserId(m.id); onOpenParent(false); }}
+      >
         <UserAvatar userId={m.id} className="h-10 w-10" fallbackName={m.name} showOnlineStatus />
         <div className="flex flex-col text-left">
           <span className="text-sm font-semibold flex items-center gap-1">
