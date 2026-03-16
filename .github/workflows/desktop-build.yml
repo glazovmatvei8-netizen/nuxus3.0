@@ -1,3 +1,4 @@
+
 name: Build Desktop (macOS, Linux, Windows)
 
 on:
@@ -39,7 +40,7 @@ jobs:
                      --single-instance \
                      --app-version "0.65.8" \
                      --platform "mac" \
-                     "https://studio-5946432351-bbd5e.web.app/"
+                     "https://nuxus-computer.vercel.app"
           zip -r Nuxus-macOS.zip Nuxus-darwin-x64/
 
       - name: Package App (Linux)
@@ -51,7 +52,7 @@ jobs:
                      --single-instance \
                      --app-version "0.65.8" \
                      --platform "linux" \
-                     "https://studio-5946432351-bbd5e.web.app/"
+                     "https://nuxus-computer.vercel.app"
           tar -czvf Nuxus-Linux.tar.gz Nuxus-linux-x64/
 
       - name: Package App (Windows)
@@ -63,7 +64,7 @@ jobs:
                          --single-instance `
                          --app-version "0.65.8" `
                          --platform "windows" `
-                         "https://studio-5946432351-bbd5e.web.app/"
+                         "https://nuxus-computer.vercel.app"
           Compress-Archive -Path Nuxus-win32-x64 -DestinationPath Nuxus-Windows.zip
 
       - name: Upload Artifacts

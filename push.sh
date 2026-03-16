@@ -1,7 +1,7 @@
 
 #!/bin/bash
 
-# Nuxus Kernel Sync Utility v2.0
+# Nuxus Kernel Sync Utility v2.1
 # Скрипт для автоматического решения ошибок синхронизации и отправки в GitHub
 
 echo "🚀 Подготовка к отправке в GitHub: glazovmatvei8-netizen/nuxus-message"
@@ -15,7 +15,7 @@ fi
 
 # 1. ЛЕЧЕНИЕ ОШИБКИ: No tracking information
 # Принудительно связываем локальную ветку main с удаленной
-git branch --set-upstream-to=origin/main main || echo "Узел уже связан или ветка не создана"
+git branch --set-upstream-to=origin/main main 2>/dev/null || git checkout -b main && git branch --set-upstream-to=origin/main main
 
 # 2. ЛЕЧЕНИЕ ОШИБКИ: Divergent Branches (Стратегия слияния)
 git config pull.rebase false
@@ -28,7 +28,7 @@ git pull origin main --tags || echo "Конфликты или пустой ре
 git add .
 
 # Формируем сообщение
-COMMIT_MSG="Nuxus Core Update: $(date '+%Y-%m-%d %H:%M:%S') [Fix: Git Sync & Global Search]"
+COMMIT_MSG="Nuxus Core Update: $(date '+%Y-%m-%d %H:%M:%S') [Fix: Domain Separation & Group Permissions]"
 
 # Коммит
 git commit -m "$COMMIT_MSG"
@@ -37,4 +37,4 @@ git commit -m "$COMMIT_MSG"
 echo "🛰️ Трансляция данных в репозиторий..."
 git push -u origin main
 
-echo "✅ Успех! Ядро синхронизировано. Ошибки Git устранены."
+echo "✅ Успех! Ядро синхронизировано. Все ошибки устранены."

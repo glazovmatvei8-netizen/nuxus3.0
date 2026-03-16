@@ -1,7 +1,7 @@
 
 "use client"
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -46,7 +46,7 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
     }
   }, [open, searchQuery, db]);
 
-  const handleSearch = async (val: string) => {
+  const handleSearch = useCallback(async (val: string) => {
     setSearchQuery(val);
     if (val.length < 2 || !db) {
       setResults([]);
@@ -70,7 +70,7 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
       if (activeFilter === 'all' || activeFilter === 'groups') {
         const chatQ = query(
           collection(db, 'chats'), 
-          where('username', 'in', [withAt, withoutAt]), 
+          where('username', 'in', [withAt, withoutAt, cleanVal]), 
           where('isPublic', '==', true),
           limit(10)
         );
@@ -105,7 +105,7 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [db, activeFilter, user?.uid]);
 
   const handleSelectResult = (res: { type: 'chat' | 'user' | 'bot', data: any }) => {
     if (res.type === 'user') {

@@ -5,7 +5,7 @@
   "webDir": "out",
   "bundledWebRuntime": false,
   "server": {
-    "url": "https://nuxus-message.vercel.app",
+    "url": "https://nuxusmobile.vercel.app",
     "allowNavigation": ["*"]
   }
 }
