@@ -131,50 +131,52 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
           </div>
 
           <TabsContent value="analytics" className="flex-1 m-0 p-0 outline-none overflow-hidden">
-            <ScrollArea className="h-full px-4 md:px-6 py-4">
-              <div className="grid grid-cols-2 gap-3 mb-6">
-                <StatCard label="Всего узлов" value={stats.total} icon={Users} color="text-white" />
-                <StatCard label="Premium" value={stats.premium} icon={Star} color="text-accent" />
-                <StatCard label="Админы" value={stats.admins} icon={ShieldCheck} color="text-primary" />
-                <StatCard label="Баны" value={stats.banned} icon={Ban} color="text-red-500" />
-              </div>
-              
-              <div className="space-y-4 pb-20">
-                <div className="bg-white/5 p-5 rounded-[2rem] border border-white/5">
-                  <h3 className="text-[10px] font-black uppercase text-primary mb-4 flex items-center gap-2">
-                    <Activity className="w-3 h-3" /> Новые Узлы (7д)
-                  </h3>
-                  <div className="h-[160px] w-full">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                        <defs>
-                          <linearGradient id="colorUsers" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3}/>
-                            <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0}/>
-                          </linearGradient>
-                        </defs>
-                        <XAxis dataKey="day" stroke="rgba(255,255,255,0.2)" fontSize={10} tickLine={false} axisLine={false} />
-                        <YAxis stroke="rgba(255,255,255,0.2)" fontSize={10} tickLine={false} axisLine={false} />
-                        <ChartTooltip contentStyle={{ backgroundColor: '#1c1c1e', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.1)' }} />
-                        <Area type="monotone" dataKey="users" stroke="hsl(var(--primary))" fill="url(#colorUsers)" strokeWidth={3} />
-                      </AreaChart>
-                    </ResponsiveContainer>
-                  </div>
+            <ScrollArea className="h-full">
+              <div className="px-4 md:px-6 py-4 space-y-6 pb-24">
+                <div className="grid grid-cols-2 gap-3">
+                  <StatCard label="Всего узлов" value={stats.total} icon={Users} color="text-white" />
+                  <StatCard label="Premium" value={stats.premium} icon={Star} color="text-accent" />
+                  <StatCard label="Админы" value={stats.admins} icon={ShieldCheck} color="text-primary" />
+                  <StatCard label="Баны" value={stats.banned} icon={Ban} color="text-red-500" />
                 </div>
+                
+                <div className="space-y-4">
+                  <div className="bg-white/5 p-5 rounded-[2rem] border border-white/5">
+                    <h3 className="text-[10px] font-black uppercase text-primary mb-4 flex items-center gap-2">
+                      <Activity className="w-3 h-3" /> Новые Узлы (7д)
+                    </h3>
+                    <div className="h-[160px] w-full">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                          <defs>
+                            <linearGradient id="colorUsers" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3}/>
+                              <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0}/>
+                            </linearGradient>
+                          </defs>
+                          <XAxis dataKey="day" stroke="rgba(255,255,255,0.2)" fontSize={10} tickLine={false} axisLine={false} />
+                          <YAxis stroke="rgba(255,255,255,0.2)" fontSize={10} tickLine={false} axisLine={false} />
+                          <ChartTooltip contentStyle={{ backgroundColor: '#1c1c1e', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.1)' }} />
+                          <Area type="monotone" dataKey="users" stroke="hsl(var(--primary))" fill="url(#colorUsers)" strokeWidth={3} />
+                        </AreaChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </div>
 
-                <div className="bg-white/5 p-5 rounded-[2rem] border border-white/5">
-                  <h3 className="text-[10px] font-black uppercase text-accent mb-4 flex items-center gap-2">
-                    <BarChart3 className="w-3 h-3" /> Трафик Сигналов
-                  </h3>
-                  <div className="h-[160px] w-full">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                        <XAxis dataKey="day" stroke="rgba(255,255,255,0.2)" fontSize={10} tickLine={false} axisLine={false} />
-                        <YAxis stroke="rgba(255,255,255,0.2)" fontSize={10} tickLine={false} axisLine={false} />
-                        <ChartTooltip contentStyle={{ backgroundColor: '#1c1c1e', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.1)' }} />
-                        <Bar dataKey="signals" fill="hsl(var(--accent))" radius={[6, 6, 0, 0]} />
-                      </BarChart>
-                    </ResponsiveContainer>
+                  <div className="bg-white/5 p-5 rounded-[2rem] border border-white/5">
+                    <h3 className="text-[10px] font-black uppercase text-accent mb-4 flex items-center gap-2">
+                      <BarChart3 className="w-3 h-3" /> Трафик Сигналов
+                    </h3>
+                    <div className="h-[160px] w-full">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                          <XAxis dataKey="day" stroke="rgba(255,255,255,0.2)" fontSize={10} tickLine={false} axisLine={false} />
+                          <YAxis stroke="rgba(255,255,255,0.2)" fontSize={10} tickLine={false} axisLine={false} />
+                          <ChartTooltip contentStyle={{ backgroundColor: '#1c1c1e', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.1)' }} />
+                          <Bar dataKey="signals" fill="hsl(var(--accent))" radius={[6, 6, 0, 0]} />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -184,7 +186,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
           <TabsContent value="users" className="flex-1 m-0 p-0 outline-none overflow-hidden flex flex-col">
             <div className="p-4 px-6 shrink-0"><Input placeholder="Поиск по базе..." value={userSearch} onChange={e => setUserSearch(e.target.value)} className="bg-white/5 border-white/10 h-12 rounded-2xl pl-4" /></div>
             <ScrollArea className="flex-1">
-              <div className="px-6 space-y-2 pb-20">
+              <div className="px-6 space-y-2 pb-24">
                 {users?.filter(u => u.name?.toLowerCase().includes(userSearch.toLowerCase()) || u.username?.toLowerCase().includes(userSearch.toLowerCase())).map(u => (
                   <div key={u.id} className="flex items-center justify-between p-4 bg-white/5 rounded-[1.8rem] border border-white/5">
                     <div className="flex items-center gap-3 min-w-0">
