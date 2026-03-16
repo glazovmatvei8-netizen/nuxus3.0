@@ -26,7 +26,7 @@ import {
   MoreVertical, ShieldOff, Zap, Trophy, Activity, BarChart3, ListChecks, X, Globe, Server
 } from 'lucide-react';
 import { 
-  BarChart, Bar, XAxis, YAxis, Tooltip as ChartTooltip, ResponsiveContainer, AreaChart, Area, CartesianGrid
+  BarChart, Bar, XAxis, YAxis, Tooltip as ChartTooltip, ResponsiveContainer, AreaChart, Area
 } from 'recharts';
 import type { User } from '@/lib/types';
 import { formatDisplayName, isUserPremium, cn, isGlobalAdmin } from '@/lib/utils';
@@ -130,8 +130,8 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
             </TabsList>
           </div>
 
-          <TabsContent value="analytics" className="flex-1 m-0 p-0 outline-none overflow-hidden">
-            <ScrollArea className="h-full">
+          <TabsContent value="analytics" className="flex-1 m-0 p-0 outline-none overflow-hidden flex flex-col">
+            <ScrollArea className="flex-1">
               <div className="px-4 md:px-6 py-4 space-y-6 pb-24">
                 <div className="grid grid-cols-2 gap-3">
                   <StatCard label="Всего узлов" value={stats.total} icon={Users} color="text-white" />
@@ -156,7 +156,6 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
                           </defs>
                           <XAxis dataKey="day" stroke="rgba(255,255,255,0.2)" fontSize={10} tickLine={false} axisLine={false} />
                           <YAxis stroke="rgba(255,255,255,0.2)" fontSize={10} tickLine={false} axisLine={false} />
-                          <ChartTooltip contentStyle={{ backgroundColor: '#1c1c1e', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.1)' }} />
                           <Area type="monotone" dataKey="users" stroke="hsl(var(--primary))" fill="url(#colorUsers)" strokeWidth={3} />
                         </AreaChart>
                       </ResponsiveContainer>
@@ -172,7 +171,6 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
                         <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                           <XAxis dataKey="day" stroke="rgba(255,255,255,0.2)" fontSize={10} tickLine={false} axisLine={false} />
                           <YAxis stroke="rgba(255,255,255,0.2)" fontSize={10} tickLine={false} axisLine={false} />
-                          <ChartTooltip contentStyle={{ backgroundColor: '#1c1c1e', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.1)' }} />
                           <Bar dataKey="signals" fill="hsl(var(--accent))" radius={[6, 6, 0, 0]} />
                         </BarChart>
                       </ResponsiveContainer>
