@@ -120,7 +120,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
           </div>
         </DialogHeader>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0 bg-background overflow-hidden">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0 overflow-hidden">
           <div className="px-4 md:px-6 pt-3 shrink-0">
             <TabsList className="grid w-full bg-white/5 p-1 rounded-xl grid-cols-4">
               <TabsTrigger value="analytics" className="rounded-lg text-[8px] uppercase font-black gap-1.5">Аналитика</TabsTrigger>
@@ -130,141 +130,136 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
             </TabsList>
           </div>
 
-          <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
-            <TabsContent value="analytics" className="flex-1 m-0 p-0 outline-none data-[state=active]:flex flex-col bg-background overflow-hidden">
-              <ScrollArea className="flex-1">
-                <div className="px-4 md:px-6 py-4 space-y-6 pb-20">
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                    <StatCard label="Всего узлов" value={stats.total} icon={Users} color="text-white" />
-                    <StatCard label="Premium" value={stats.premium} icon={Star} color="text-accent" />
-                    <StatCard label="Админы" value={stats.admins} icon={ShieldCheck} color="text-primary" />
-                    <StatCard label="Баны" value={stats.banned} icon={Ban} color="text-red-500" />
-                  </div>
-                  
-                  <div className="space-y-4">
-                    <div className="bg-white/5 p-5 rounded-[2rem] border border-white/5">
-                      <h3 className="text-[10px] font-black uppercase text-primary mb-4 flex items-center gap-2">
-                        <Activity className="w-3 h-3" /> Новые Узлы (7д)
-                      </h3>
-                      <div className="h-[180px] w-full">
-                        <ResponsiveContainer width="100%" height="100%">
-                          <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                            <defs>
-                              <linearGradient id="colorUsers" x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3}/>
-                                <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0}/>
-                              </linearGradient>
-                            </defs>
-                            <XAxis dataKey="day" stroke="rgba(255,255,255,0.2)" fontSize={10} tickLine={false} axisLine={false} />
-                            <YAxis stroke="rgba(255,255,255,0.2)" fontSize={10} tickLine={false} axisLine={false} />
-                            <Tooltip contentStyle={{ backgroundColor: '#1c1c1e', border: 'none', borderRadius: '12px', fontSize: '10px' }} />
-                            <Area type="monotone" dataKey="users" stroke="hsl(var(--primary))" fill="url(#colorUsers)" strokeWidth={3} />
-                          </AreaChart>
-                        </ResponsiveContainer>
-                      </div>
+          <TabsContent value="analytics" className="flex-1 m-0 p-0 outline-none data-[state=active]:flex flex-col overflow-hidden">
+            <ScrollArea className="flex-1">
+              <div className="px-4 md:px-6 py-4 space-y-6 pb-20">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  <StatCard label="Всего узлов" value={stats.total} icon={Users} color="text-white" />
+                  <StatCard label="Premium" value={stats.premium} icon={Star} color="text-accent" />
+                  <StatCard label="Админы" value={stats.admins} icon={ShieldCheck} color="text-primary" />
+                  <StatCard label="Баны" value={stats.banned} icon={Ban} color="text-red-500" />
+                </div>
+                
+                <div className="space-y-4">
+                  <div className="bg-white/5 p-5 rounded-[2rem] border border-white/5">
+                    <h3 className="text-[10px] font-black uppercase text-primary mb-4 flex items-center gap-2">
+                      <Activity className="w-3 h-3" /> Новые Узлы (7д)
+                    </h3>
+                    <div className="h-[180px] w-full">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                          <defs>
+                            <linearGradient id="colorUsers" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3}/>
+                              <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0}/>
+                            </linearGradient>
+                          </defs>
+                          <XAxis dataKey="day" stroke="rgba(255,255,255,0.2)" fontSize={10} tickLine={false} axisLine={false} />
+                          <YAxis stroke="rgba(255,255,255,0.2)" fontSize={10} tickLine={false} axisLine={false} />
+                          <Tooltip contentStyle={{ backgroundColor: '#1c1c1e', border: 'none', borderRadius: '12px', fontSize: '10px' }} />
+                          <Area type="monotone" dataKey="users" stroke="hsl(var(--primary))" fill="url(#colorUsers)" strokeWidth={3} />
+                        </AreaChart>
+                      </ResponsiveContainer>
                     </div>
+                  </div>
 
-                    <div className="bg-white/5 p-5 rounded-[2rem] border border-white/5">
-                      <h3 className="text-[10px] font-black uppercase text-accent mb-4 flex items-center gap-2">
-                        <BarChart3 className="w-3 h-3" /> Трафик Сигналов
-                      </h3>
-                      <div className="h-[180px] w-full">
-                        <ResponsiveContainer width="100%" height="100%">
-                          <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                            <XAxis dataKey="day" stroke="rgba(255,255,255,0.2)" fontSize={10} tickLine={false} axisLine={false} />
-                            <YAxis stroke="rgba(255,255,255,0.2)" fontSize={10} tickLine={false} axisLine={false} />
-                            <Tooltip contentStyle={{ backgroundColor: '#1c1c1e', border: 'none', borderRadius: '12px', fontSize: '10px' }} />
-                            <Bar dataKey="signals" fill="hsl(var(--accent))" radius={[6, 6, 0, 0]} />
-                          </BarChart>
-                        </ResponsiveContainer>
-                      </div>
+                  <div className="bg-white/5 p-5 rounded-[2rem] border border-white/5">
+                    <h3 className="text-[10px] font-black uppercase text-accent mb-4 flex items-center gap-2">
+                      <BarChart3 className="w-3 h-3" /> Трафик Сигналов
+                    </h3>
+                    <div className="h-[180px] w-full">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                          <XAxis dataKey="day" stroke="rgba(255,255,255,0.2)" fontSize={10} tickLine={false} axisLine={false} />
+                          <YAxis stroke="rgba(255,255,255,0.2)" fontSize={10} tickLine={false} axisLine={false} />
+                          <Tooltip contentStyle={{ backgroundColor: '#1c1c1e', border: 'none', borderRadius: '12px', fontSize: '10px' }} />
+                          <Bar dataKey="signals" fill="hsl(var(--accent))" radius={[6, 6, 0, 0]} />
+                        </BarChart>
+                      </ResponsiveContainer>
                     </div>
                   </div>
                 </div>
-              </ScrollArea>
-            </TabsContent>
-
-            <TabsContent value="users" className="flex-1 m-0 p-0 outline-none data-[state=active]:flex flex-col bg-background overflow-hidden">
-              <div className="p-4 px-6 shrink-0">
-                <Input placeholder="Поиск по базе..." value={userSearch} onChange={e => setUserSearch(e.target.value)} className="bg-white/5 border-white/10 h-12 rounded-2xl pl-4" />
               </div>
-              <ScrollArea className="flex-1">
-                <div className="px-6 space-y-2 pb-20">
-                  {users?.filter(u => u.name?.toLowerCase().includes(userSearch.toLowerCase()) || u.username?.toLowerCase().includes(userSearch.toLowerCase())).map(u => (
-                    <div key={u.id} className="flex items-center justify-between p-4 bg-white/5 rounded-[1.8rem] border border-white/5">
-                      <div className="flex items-center gap-3 min-w-0">
-                        <UserAvatar userId={u.id} className="h-10 w-10" fallbackName={u.name} />
-                        <div className="flex flex-col min-w-0">
-                          <span className="font-bold text-xs flex items-center gap-1 truncate">
-                            {formatDisplayName(u.name)} 
-                            {isUserPremium(u) && <Star className="w-3 h-3 text-accent fill-accent" />}
-                          </span>
-                          <div className="flex items-center gap-2">
-                            <span className="text-[9px] text-muted-foreground uppercase font-black truncate">{u.username}</span>
-                            {u.lastIp && (
-                              <span className="text-[8px] bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono leading-none border border-primary/20 shrink-0">
-                                {u.lastIp}
-                              </span>
-                            )}
-                          </div>
+            </ScrollArea>
+          </TabsContent>
+
+          <TabsContent value="users" className="flex-1 m-0 p-0 outline-none data-[state=active]:flex flex-col overflow-hidden">
+            <div className="p-4 px-6 shrink-0">
+              <Input placeholder="Поиск по базе..." value={userSearch} onChange={e => setUserSearch(e.target.value)} className="bg-white/5 border-white/10 h-12 rounded-2xl pl-4" />
+            </div>
+            <ScrollArea className="flex-1">
+              <div className="px-6 space-y-2 pb-20">
+                {users?.filter(u => u.name?.toLowerCase().includes(userSearch.toLowerCase()) || u.username?.toLowerCase().includes(userSearch.toLowerCase())).map(u => (
+                  <div key={u.id} className="flex items-center justify-between p-4 bg-white/5 rounded-[1.8rem] border border-white/5">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <UserAvatar userId={u.id} className="h-10 w-10" fallbackName={u.name} />
+                      <div className="flex flex-col min-w-0">
+                        <span className="font-bold text-xs flex items-center gap-1 truncate">
+                          {formatDisplayName(u.name)} 
+                          {isUserPremium(u) && <Star className="w-3 h-3 text-accent fill-accent" />}
+                        </span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-[9px] text-muted-foreground uppercase font-black truncate">{u.username}</span>
+                          {u.lastIp && (
+                            <span className="text-[8px] bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono leading-none border border-primary/20 shrink-0">
+                              {u.lastIp}
+                            </span>
+                          )}
                         </div>
                       </div>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="rounded-full shrink-0"><MoreVertical className="w-5 h-5"/></Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-56 bg-card border-white/10 rounded-2xl p-1" sideOffset={8}>
-                          <DropdownMenuItem onClick={() => handleAction(u.id, u.isBanned ? 'unban' : 'ban')} className={cn("gap-3 font-bold uppercase text-[10px] py-3 rounded-xl", u.isBanned ? "text-green-500" : "text-destructive")}>
-                            {u.isBanned ? <CheckCircle2 className="w-4 h-4"/> : <Ban className="w-4 h-4"/>} {u.isBanned ? 'Разблокировать' : 'Заблокировать'}
-                          </DropdownMenuItem>
-                          
-                          <DropdownMenuItem onClick={() => handleAction(u.id, u.isAdmin ? 'remove_admin' : 'make_admin')} className="gap-3 font-bold uppercase text-[10px] py-3 rounded-xl">
-                            {u.isAdmin ? <><ShieldOff className="w-4 h-4 text-orange-500" /> Снять админа</> : <><ShieldCheck className="w-4 h-4 text-primary" /> Дать админку</>}
-                          </DropdownMenuItem>
-
-                          <DropdownMenuSeparator className="bg-white/5" />
-
-                          <DropdownMenuSub>
-                            <DropdownMenuSubTrigger className="gap-3 font-bold uppercase text-[10px] py-3 rounded-xl">
-                              <Star className="w-4 h-4 text-accent" /> Premium статус
-                            </DropdownMenuSubTrigger>
-                            <DropdownMenuPortal>
-                              <DropdownMenuSubContent className="bg-card border-white/10 p-1 rounded-2xl" sideOffset={8}>
-                                <DropdownMenuItem onClick={() => handleAction(u.id, 'give_premium', 1)} className="text-[10px] font-bold uppercase py-3 rounded-xl flex items-center gap-3">
-                                  <Trophy className="w-4 h-4 text-accent" /> 1 Месяц
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => handleAction(u.id, 'give_premium', 12)} className="text-[10px] font-bold uppercase py-3 rounded-xl flex items-center gap-3">
-                                  <Trophy className="w-4 h-4 text-accent" /> 1 Год
-                                </DropdownMenuItem>
-                                <DropdownMenuSeparator className="bg-white/5" />
-                                <DropdownMenuItem onClick={() => handleAction(u.id, 'remove_premium')} className="text-destructive text-[10px] font-bold uppercase py-3 rounded-xl flex items-center gap-3">
-                                  <X className="w-4 h-4" /> Аннулировать
-                                </DropdownMenuItem>
-                              </DropdownMenuSubContent>
-                            </DropdownMenuPortal>
-                          </DropdownMenuSub>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
                     </div>
-                  ))}
-                </div>
-              </ScrollArea>
-            </TabsContent>
-            
-            <TabsContent value="logs" className="flex-1 m-0 p-6 overflow-hidden bg-background data-[state=active]:flex flex-col">
-               <div className="h-full flex flex-col items-center justify-center opacity-20 border-2 border-dashed border-white/5 rounded-[2.5rem]">
-                  <ListChecks className="w-12 h-12 mb-4" />
-                  <p className="text-[10px] font-black uppercase tracking-widest text-center">Системные логи пусты</p>
-               </div>
-            </TabsContent>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="rounded-full shrink-0"><MoreVertical className="w-5 h-5"/></Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-56 bg-card border-white/10 rounded-2xl p-1" sideOffset={8}>
+                        <DropdownMenuItem onClick={() => handleAction(u.id, u.isBanned ? 'unban' : 'ban')} className={cn("gap-3 font-bold uppercase text-[10px] py-3 rounded-xl", u.isBanned ? "text-green-500" : "text-destructive")}>
+                          {u.isBanned ? <CheckCircle2 className="w-4 h-4"/> : <Ban className="w-4 h-4"/>} {u.isBanned ? 'Разблокировать' : 'Заблокировать'}
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleAction(u.id, u.isAdmin ? 'remove_admin' : 'make_admin')} className="gap-3 font-bold uppercase text-[10px] py-3 rounded-xl">
+                          {u.isAdmin ? <><ShieldOff className="w-4 h-4 text-orange-500" /> Снять админа</> : <><ShieldCheck className="w-4 h-4 text-primary" /> Дать админку</>}
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator className="bg-white/5" />
+                        <DropdownMenuSub>
+                          <DropdownMenuSubTrigger className="gap-3 font-bold uppercase text-[10px] py-3 rounded-xl">
+                            <Star className="w-4 h-4 text-accent" /> Premium статус
+                          </DropdownMenuSubTrigger>
+                          <DropdownMenuPortal>
+                            <DropdownMenuSubContent className="bg-card border-white/10 p-1 rounded-2xl" sideOffset={8}>
+                              <DropdownMenuItem onClick={() => handleAction(u.id, 'give_premium', 1)} className="text-[10px] font-bold uppercase py-3 rounded-xl flex items-center gap-3">
+                                <Trophy className="w-4 h-4 text-accent" /> 1 Месяц
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleAction(u.id, 'give_premium', 12)} className="text-[10px] font-bold uppercase py-3 rounded-xl flex items-center gap-3">
+                                <Trophy className="w-4 h-4 text-accent" /> 1 Год
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator className="bg-white/5" />
+                              <DropdownMenuItem onClick={() => handleAction(u.id, 'remove_premium')} className="text-destructive text-[10px] font-bold uppercase py-3 rounded-xl flex items-center gap-3">
+                                <X className="w-4 h-4" /> Аннулировать
+                              </DropdownMenuItem>
+                            </DropdownMenuSubContent>
+                          </DropdownMenuPortal>
+                        </DropdownMenuSub>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                ))}
+              </div>
+            </ScrollArea>
+          </TabsContent>
+          
+          <TabsContent value="logs" className="flex-1 m-0 p-6 overflow-hidden data-[state=active]:flex flex-col">
+             <div className="h-full flex flex-col items-center justify-center opacity-20 border-2 border-dashed border-white/5 rounded-[2.5rem]">
+                <ListChecks className="w-12 h-12 mb-4" />
+                <p className="text-[10px] font-black uppercase tracking-widest text-center">Системные логи пусты</p>
+             </div>
+          </TabsContent>
 
-            <TabsContent value="broadcast" className="flex-1 m-0 p-6 overflow-hidden bg-background data-[state=active]:flex flex-col">
-               <div className="h-full flex flex-col items-center justify-center opacity-20 border-2 border-dashed border-white/5 rounded-[2.5rem]">
-                  <Radio className="w-12 h-12 mb-4" />
-                  <p className="text-[10px] font-black uppercase tracking-widest text-center">Маяк в режиме ожидания</p>
-               </div>
-            </TabsContent>
-          </div>
+          <TabsContent value="broadcast" className="flex-1 m-0 p-6 overflow-hidden data-[state=active]:flex flex-col">
+             <div className="h-full flex flex-col items-center justify-center opacity-20 border-2 border-dashed border-white/5 rounded-[2.5rem]">
+                <Radio className="w-12 h-12 mb-4" />
+                <p className="text-[10px] font-black uppercase tracking-widest text-center">Маяк в режиме ожидания</p>
+             </div>
+          </TabsContent>
         </Tabs>
       </DialogContent>
     </Dialog>

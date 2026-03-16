@@ -70,7 +70,7 @@ export function UserProfileModal() {
       const callRef = await addDoc(collection(db, 'calls'), {
         callerId: currentUser.uid,
         receiverId: targetUser.id,
-        participantIds: [currentUser.uid, targetUser.id], // Privacy filter
+        participantIds: [currentUser.uid, targetUser.id], 
         chatId: 'global_profile',
         type,
         status: 'calling',
@@ -83,10 +83,19 @@ export function UserProfileModal() {
     }
   };
 
-  const copyId = () => {
+  const copyId = async () => {
     if (!inspectedUserId) return;
-    navigator.clipboard.writeText(inspectedUserId);
-    toast({ title: "ID скопирован" });
+    try {
+      if (typeof navigator !== 'undefined' && navigator.clipboard) {
+        await navigator.clipboard.writeText(inspectedUserId);
+        toast({ title: "ID скопирован" });
+      } else {
+        throw new Error("Clipboard API unavailable");
+      }
+    } catch (err) {
+      console.warn("Nuxus Clipboard: Access denied");
+      toast({ title: "Ошибка копирования", description: "Используйте HTTPS соединение", variant: "destructive" });
+    }
   };
 
   if (!inspectedUserId) return null;
@@ -103,7 +112,6 @@ export function UserProfileModal() {
 
         <div className="absolute inset-0 nuxus-core-glow opacity-20 pointer-events-none" />
         
-        {/* Background / Header */}
         <div className="relative h-32 bg-gradient-to-b from-primary/20 to-transparent shrink-0">
           <div className="absolute -bottom-12 left-1/2 -translate-x-1/2">
             <UserAvatar 
@@ -116,7 +124,6 @@ export function UserProfileModal() {
           </div>
         </div>
 
-        {/* User Identity */}
         <div className="mt-14 px-6 text-center shrink-0">
           <h2 className="text-xl font-black text-white flex items-center justify-center gap-2">
             {formatDisplayName(targetUser?.name)}
@@ -128,7 +135,6 @@ export function UserProfileModal() {
           </p>
         </div>
 
-        {/* Content Area */}
         <div className="mt-6 px-6 space-y-4 pb-8">
           <div className="flex gap-2">
             <Button onClick={handleStartChat} className="flex-1 h-12 bg-primary text-white rounded-2xl font-black uppercase italic tracking-widest gap-2 shadow-xl shadow-primary/20 text-[10px]">

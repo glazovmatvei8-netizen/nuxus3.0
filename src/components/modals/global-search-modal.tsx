@@ -86,17 +86,17 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
 
       // 3. Пользователи (Узлы) - Глубокий поиск
       if (activeFilter === 'all' || activeFilter === 'users') {
-        // Проверяем оба варианта: с @ и без
-        const userQueries = [
+        // Проверяем несколько вариантов: с @, без @ и по имени
+        const queries = [
           query(collection(db, 'users'), where('username', '==', withAt), limit(5)),
-          query(collection(db, 'users'), where('username', '==', withoutAt), limit(5))
+          query(collection(db, 'users'), where('username', '==', withoutAt), limit(5)),
+          query(collection(db, 'users'), where('name', '==', val), limit(5))
         ];
 
-        for (const q of userQueries) {
+        for (const q of queries) {
           const snap = await getDocs(q);
           snap.docs.forEach(d => {
             const data = d.data();
-            // Не добавляем себя и исключаем дубликаты
             if (d.id !== user?.uid && !foundResults.some(r => r.data.id === d.id)) {
               foundResults.push({ type: 'user', data: { id: d.id, ...data } });
             }
@@ -121,6 +121,66 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
       setActiveView('chats');
       onOpenChange(false);
     }
+  };
+
+  const renderContent = () => {
+    if (results.length > 0) {
+      return (
+        <div className="space-y-2">
+          {results.map((res, idx) => (
+            <div key={idx} onClick={() => handleSelectResult(res)} className="flex items-center justify-between p-4 bg-white/5 rounded-[1.8rem] hover:bg-white/10 cursor-pointer border border-white/5 transition-all">
+              <div className="flex items-center gap-4">
+                <UserAvatar userId={res.type === 'user' ? res.data.id : null} manualAvatarUrl={res.data.avatarUrl} className="h-12 w-12" fallbackName={res.data.name} />
+                <div className="flex flex-col">
+                  <span className="font-bold text-white flex items-center gap-2">
+                    {res.data.name} 
+                    {res.data.isPremium && <Star className="w-3 h-3 text-accent fill-accent" />}
+                  </span>
+                  <span className="text-[10px] text-muted-foreground uppercase font-black">
+                    {res.data.username} • {res.type === 'user' ? 'профиль' : res.type === 'chat' ? 'сообщество' : 'бот'}
+                  </span>
+                </div>
+              </div>
+              <ArrowRight className="w-5 h-5 text-primary/40" />
+            </div>
+          ))}
+        </div>
+      );
+    }
+
+    if (searchQuery.length < 2 && trends.length > 0) {
+      return (
+        <div className="space-y-4">
+          <div className="flex items-center gap-2 px-2 text-primary">
+            <Zap className="w-4 h-4 fill-current animate-pulse" />
+            <span className="text-[10px] font-black uppercase tracking-[0.2em]">Популярное в Ядре</span>
+          </div>
+          {trends.map(chat => (
+            <div key={chat.id} onClick={() => handleSelectResult({ type: 'chat', data: chat })} className="flex items-center justify-between p-4 bg-white/5 rounded-[1.8rem] hover:bg-white/10 cursor-pointer border border-white/5 transition-all">
+              <div className="flex items-center gap-4">
+                <UserAvatar userId={null} manualAvatarUrl={chat.avatarUrl} className="h-12 w-12" fallbackName={chat.name} />
+                <div className="flex flex-col">
+                  <span className="font-bold text-white">{chat.name}</span>
+                  <span className="text-[10px] text-muted-foreground uppercase font-black">{chat.username}</span>
+                </div>
+              </div>
+              <Button variant="ghost" size="sm" className="h-8 rounded-xl text-[9px] uppercase font-black text-primary">Вступить</Button>
+            </div>
+          ))}
+        </div>
+      );
+    }
+
+    if (searchQuery.length >= 2 && !isLoading) {
+      return (
+        <div className="flex flex-col items-center justify-center py-20 opacity-20">
+          <Search className="w-12 h-12 mb-4" />
+          <p className="text-[10px] font-black uppercase tracking-widest text-center">Сигнал не найден</p>
+        </div>
+      );
+    }
+
+    return null;
   };
 
   return (
@@ -153,51 +213,7 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
 
         <ScrollArea className="flex-1">
           <div className="p-4 pt-0">
-            {results.length > 0 ? (
-              <div className="space-y-2">
-                {results.map((res, idx) => (
-                  <div key={idx} onClick={() => handleSelectResult(res)} className="flex items-center justify-between p-4 bg-white/5 rounded-[1.8rem] hover:bg-white/10 cursor-pointer border border-white/5 transition-all">
-                    <div className="flex items-center gap-4">
-                      <UserAvatar userId={res.type === 'user' ? res.data.id : null} manualAvatarUrl={res.data.avatarUrl} className="h-12 w-12" fallbackName={res.data.name} />
-                      <div className="flex flex-col">
-                        <span className="font-bold text-white flex items-center gap-2">
-                          {res.data.name} 
-                          {res.data.isPremium && <Star className="w-3 h-3 text-accent fill-accent" />}
-                        </span>
-                        <span className="text-[10px] text-muted-foreground uppercase font-black">
-                          {res.data.username} • {res.type === 'user' ? 'профиль' : res.type === 'chat' ? 'сообщество' : 'бот'}
-                        </span>
-                      </div>
-                    </div>
-                    <ArrowRight className="w-5 h-5 text-primary/40" />
-                  </div>
-                ))}
-              </div>
-            ) : searchQuery.length < 2 && trends.length > 0 ? (
-              <div className="space-y-4">
-                <div className="flex items-center gap-2 px-2 text-primary">
-                  <Zap className="w-4 h-4 fill-current animate-pulse" />
-                  <span className="text-[10px] font-black uppercase tracking-[0.2em]">Популярное в Ядре</span>
-                </div>
-                {trends.map(chat => (
-                  <div key={chat.id} onClick={() => handleSelectResult({ type: 'chat', data: chat })} className="flex items-center justify-between p-4 bg-white/5 rounded-[1.8rem] hover:bg-white/10 cursor-pointer border border-white/5 transition-all">
-                    <div className="flex items-center gap-4">
-                      <UserAvatar userId={null} manualAvatarUrl={chat.avatarUrl} className="h-12 w-12" fallbackName={chat.name} />
-                      <div className="flex flex-col">
-                        <span className="font-bold text-white">{chat.name}</span>
-                        <span className="text-[10px] text-muted-foreground uppercase font-black">{chat.username}</span>
-                      </div>
-                    </div>
-                    <Button variant="ghost" size="sm" className="h-8 rounded-xl text-[9px] uppercase font-black text-primary">Вступить</Button>
-                  </div>
-                ))}
-              </div>
-            ) : (searchQuery.length >= 2 && !isLoading) ? (
-              <div className="flex flex-col items-center justify-center py-20 opacity-20">
-                <Search className="w-12 h-12 mb-4" />
-                <p className="text-[10px] font-black uppercase tracking-widest text-center">Сигнал не найден</p>
-              </div>
-            ) : null}
+            {renderContent()}
           </div>
         </ScrollArea>
       </DialogContent>
