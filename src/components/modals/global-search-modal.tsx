@@ -21,7 +21,6 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
   const { user } = useUser();
   const db = useFirestore();
   const { setCurrentChatId, setActiveView, setInspectedUserId } = useAppState();
-  const { toast } = useToast();
   
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState<SearchFilter>('all');
@@ -84,15 +83,14 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
         });
       }
 
-      // 3. Пользователи - Глубокий поиск для @seledka и других
+      // 3. Пользователи - Глубокий поиск
       if (activeFilter === 'all' || activeFilter === 'users') {
         const q1 = query(collection(db, 'users'), where('username', '==', withAt), limit(10));
         const q2 = query(collection(db, 'users'), where('username', '==', withoutAt), limit(10));
-        const q3 = query(collection(db, 'users'), where('name', '>=', val.trim()), where('name', '<=', val.trim() + '\uf8ff'), limit(10));
-
-        const [s1, s2, s3] = await Promise.all([getDocs(q1), getDocs(q2), getDocs(q3)]);
         
-        const allDocs = [...s1.docs, ...s2.docs, ...s3.docs];
+        const [s1, s2] = await Promise.all([getDocs(q1), getDocs(q2)]);
+        
+        const allDocs = [...s1.docs, ...s2.docs];
         allDocs.forEach(d => {
           const data = d.data();
           if (d.id !== user?.uid && !foundResults.some(r => r.data.id === d.id)) {
@@ -141,17 +139,36 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
           </div>
 
           <div className="flex gap-2 overflow-x-auto scrollbar-hide py-1">
-            <SearchFilterBtn label="Все" active={activeFilter === 'all'} onClick={() => setActiveFilter('all')} icon={Globe} />
-            <SearchFilterBtn label="Люди" active={activeFilter === 'users'} onClick={() => setActiveFilter('users')} icon={User} />
-            <SearchFilterBtn label="Группы" active={activeFilter === 'groups'} onClick={() => setActiveFilter('groups')} icon={Users} />
-            <SearchFilterBtn label="Боты" active={activeFilter === 'bots'} onClick={() => setActiveFilter('bots')} icon={Bot} />
+            <button 
+              onClick={() => setActiveFilter('all')} 
+              className={cn("flex items-center gap-2 px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all whitespace-nowrap", activeFilter === 'all' ? "bg-primary text-white" : "bg-white/5 text-muted-foreground")}
+            >
+              <Globe className="w-3 h-3" /> Все
+            </button>
+            <button 
+              onClick={() => setActiveFilter('users')} 
+              className={cn("flex items-center gap-2 px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all whitespace-nowrap", activeFilter === 'users' ? "bg-primary text-white" : "bg-white/5 text-muted-foreground")}
+            >
+              <User className="w-3 h-3" /> Люди
+            </button>
+            <button 
+              onClick={() => setActiveFilter('groups')} 
+              className={cn("flex items-center gap-2 px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all whitespace-nowrap", activeFilter === 'groups' ? "bg-primary text-white" : "bg-white/5 text-muted-foreground")}
+            >
+              <Users className="w-3 h-3" /> Группы
+            </button>
+            <button 
+              onClick={() => setActiveFilter('bots')} 
+              className={cn("flex items-center gap-2 px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all whitespace-nowrap", activeFilter === 'bots' ? "bg-primary text-white" : "bg-white/5 text-muted-foreground")}
+            >
+              <Bot className="w-3 h-3" /> Боты
+            </button>
           </div>
         </div>
 
         <ScrollArea className="flex-1">
           <div className="p-4 pt-0">
-            {/* РЕЗУЛЬТАТЫ ПОИСКА */}
-            {results.length > 0 && (
+            {results.length > 0 ? (
               <div className="space-y-2">
                 {results.map((res, idx) => (
                   <div key={idx} onClick={() => handleSelectResult(res)} className="flex items-center justify-between p-4 bg-white/5 rounded-[1.8rem] hover:bg-white/10 cursor-pointer border border-white/5 transition-all">
@@ -171,18 +188,12 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
                   </div>
                 ))}
               </div>
-            )}
-
-            {/* ПУСТОЙ РЕЗУЛЬТАТ */}
-            {results.length === 0 && searchQuery.length >= 2 && !isLoading && (
+            ) : searchQuery.length >= 2 && !isLoading ? (
               <div className="flex flex-col items-center justify-center py-20 opacity-20">
                 <Search className="w-12 h-12 mb-4" />
                 <p className="text-[10px] font-black uppercase tracking-widest text-center">Сигнал не найден</p>
               </div>
-            )}
-
-            {/* ТРЕНДЫ (КОГДА ПОИСК ПУСТОЙ) */}
-            {searchQuery.length < 2 && trends.length > 0 && (
+            ) : searchQuery.length < 2 && trends.length > 0 ? (
               <div className="space-y-4">
                 <div className="flex items-center gap-2 px-2 text-primary">
                   <Zap className="w-4 h-4 fill-current animate-pulse" />
@@ -201,18 +212,10 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
                   </div>
                 ))}
               </div>
-            )}
+            ) : null}
           </div>
         </ScrollArea>
       </DialogContent>
     </Dialog>
-  );
-}
-
-function SearchFilterBtn({ label, active, onClick, icon: Icon }: any) {
-  return (
-    <button onClick={onClick} className={cn("flex items-center gap-2 px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all whitespace-nowrap", active ? "bg-primary text-white shadow-lg shadow-primary/20" : "bg-white/5 text-muted-foreground hover:bg-white/10")}>
-      <Icon className="w-3 h-3" /> {label}
-    </button>
   );
 }
