@@ -44,6 +44,18 @@
     --ring: 45 93% 47%;
   }
 
+  [data-theme='secret'] {
+    --primary: 45 93% 47%;
+    --accent: 45 93% 70%;
+    --ring: 45 93% 47%;
+    --background: 12 10% 8%;
+    --surface: 12 8% 12%;
+    --text: 0 0% 95%;
+    --text-muted: 0 0% 60%;
+    --border: 0 0% 20%;
+
+  }
+
   [data-theme='emerald'] {
     --primary: 142 71% 45%;
     --accent: 142 71% 70%;
