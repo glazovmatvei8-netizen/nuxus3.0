@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useEffect } from 'react';
@@ -5,14 +6,14 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { useFirestore, useUser, useDoc, useMemoFirebase } from '@/firebase';
-import { collection, query, where, getDocs, doc, limit, addDoc, updateDoc, arrayUnion } from 'firebase/firestore';
+import { useFirestore, useUser } from '@/firebase';
+import { collection, query, where, getDocs, limit } from 'firebase/firestore';
 import { useAppState } from '@/lib/store';
 import { useToast } from '@/hooks/use-toast';
-import { Search, Loader2, ArrowRight, Zap, Globe, MessageCircle, Star, Users, User, Bot, Filter } from 'lucide-react';
+import { Search, Loader2, ArrowRight, Zap, Globe, Star, Users, User, Bot } from 'lucide-react';
 import { UserAvatar } from '@/components/user-avatar';
 import { cn } from '@/lib/utils';
-import type { User as UserType, Chat } from '@/lib/types';
+import type { Chat } from '@/lib/types';
 
 type SearchFilter = 'all' | 'users' | 'groups' | 'bots';
 
@@ -33,7 +34,7 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
       const fetchDiscoveryData = async () => {
         setIsLoading(true);
         try {
-          const chatQ = query(collection(db!, 'chats'), where('isPublic', '==', true), limit(15));
+          const chatQ = query(collection(db, 'chats'), where('isPublic', '==', true), limit(15));
           const chatSnap = await getDocs(chatQ);
           setTrends(chatSnap.docs.map(d => ({ id: d.id, ...d.data() } as Chat)));
         } catch (e) {
@@ -48,26 +49,29 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
 
   const handleSearch = async (val: string) => {
     setSearchQuery(val);
-    if (val.length < 2) {
+    if (val.length < 2 || !db) {
       setResults([]);
       return;
     }
 
     setIsLoading(true);
     try {
-      const searchVal = val.startsWith('@') ? val.toLowerCase() : '@' + val.toLowerCase();
+      const cleanVal = val.toLowerCase().trim();
+      const withAt = cleanVal.startsWith('@') ? cleanVal : '@' + cleanVal;
+      const withoutAt = cleanVal.replace('@', '');
+      
       const foundResults: any[] = [];
 
       // Боты
-      if ('@stickers'.includes(searchVal) && (activeFilter === 'all' || activeFilter === 'bots')) {
+      if ('@stickers'.includes(cleanVal) && (activeFilter === 'all' || activeFilter === 'bots')) {
         foundResults.push({ type: 'bot', data: { id: 'bot_stickers', name: 'Sticker Bot 🎨', username: '@stickers', avatarUrl: 'https://i.ibb.co/sd2MqGz2/Icon.png' } });
       }
 
-      // Публичные чаты (Только группы и каналы, личные чаты тут не ищем чтобы не было раздвоения)
+      // Публичные чаты
       if (activeFilter === 'all' || activeFilter === 'groups') {
         const chatQuery = query(
-          collection(db!, 'chats'), 
-          where('username', '==', searchVal), 
+          collection(db, 'chats'), 
+          where('username', '==', withAt), 
           where('isPublic', '==', true),
           limit(10)
         );
@@ -80,15 +84,23 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
         });
       }
 
-      // Пользователи (Личные переписки начинаются отсюда)
+      // Пользователи
       if (activeFilter === 'all' || activeFilter === 'users') {
-        const userQuery = query(collection(db!, 'users'), where('username', '==', searchVal), limit(10));
-        const userSnap = await getDocs(userQuery);
-        userSnap.docs.forEach(d => {
-          if (d.id !== user?.uid) {
-            foundResults.push({ type: 'user', data: { id: d.id, ...d.data() } });
-          }
-        });
+        // Ищем по нику с @ и без него для надежности
+        const userQueries = [
+          query(collection(db, 'users'), where('username', '==', withAt), limit(5)),
+          query(collection(db, 'users'), where('username', '==', withoutAt), limit(5))
+        ];
+
+        for (const q of userQueries) {
+          const snap = await getDocs(q);
+          snap.docs.forEach(d => {
+            const data = d.data();
+            if (d.id !== user?.uid && !foundResults.some(r => r.data.id === d.id)) {
+              foundResults.push({ type: 'user', data: { id: d.id, ...data } });
+            }
+          });
+        }
       }
 
       setResults(foundResults);
@@ -149,7 +161,7 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
                   </div>
                 ))}
               </div>
-            ) : searchQuery.length < 2 && trends.length > 0 && (
+            ) : searchQuery.length < 2 && trends.length > 0 ? (
               <div className="space-y-4">
                 <div className="flex items-center gap-2 px-2 text-primary">
                   <Zap className="w-4 h-4 fill-current animate-pulse" />
@@ -168,7 +180,12 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
                   </div>
                 ))}
               </div>
-            )}
+            ) : searchQuery.length >= 2 && !isLoading ? (
+              <div className="flex flex-col items-center justify-center py-20 opacity-20">
+                <Search className="w-12 h-12 mb-4" />
+                <p className="text-[10px] font-black uppercase tracking-widest text-center">Сигнал не найден</p>
+              </div>
+            ) : null}
           </div>
         </ScrollArea>
       </DialogContent>
