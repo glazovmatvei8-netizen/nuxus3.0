@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useRef, useEffect, useMemo, useCallback, memo } from 'react';
@@ -70,7 +71,7 @@ MessageList.displayName = 'MessageList';
 export default function ChatArea() {
   const { user: firebaseUser } = useUser();
   const db = useFirestore();
-  const { currentChatId, setCurrentChatId, setForwardingMessage, localDrafts, setLocalDrafts, isUpdateDeferred } = useAppState();
+  const { currentChatId, setCurrentChatId, setForwardingMessage, localDrafts, setLocalDrafts } = useAppState();
   
   const [isChatInfoOpen, setIsChatInfoOpen] = useState(false);
   const [isPollModalOpen, setIsPollModalOpen] = useState(false);
@@ -84,7 +85,6 @@ export default function ChatArea() {
 
   // Mention State
   const [mentionSearch, setMentionSearch] = useState<string | null>(null);
-  const [mentionIndex, setMentionIndex] = useState(0);
 
   // Recording State
   const [recordingState, setRecordingState] = useState<'idle' | 'recording' | 'paused' | 'review'>('idle');
@@ -116,10 +116,10 @@ export default function ChatArea() {
   useEffect(() => {
     if (editingMsg && editingMsg.contentType === 'text') {
       setMessageInput(decryptSignal(editingMsg.content));
-    } else if (!editingMsg) {
+    } else if (!editingMsg && !currentChatId) {
       setMessageInput('');
     }
-  }, [editingMsg]);
+  }, [editingMsg, currentChatId]);
 
   const isParticipant = useMemo(() => {
     return chat?.participantIds?.includes(firebaseUser?.uid || '');
@@ -146,11 +146,12 @@ export default function ChatArea() {
   const messagesQuery = useMemoFirebase(() => (!db || !currentChatId) ? null : query(collection(db, 'chats', currentChatId, 'messages'), orderBy('sentAt', 'asc')), [db, currentChatId]);
   const { data: messages } = useCollection<Message>(messagesQuery);
 
-  // Mention logic: Fetch actual participant profiles
+  // Mention logic: Fetch actual participant profiles from ALL participants
   const participantIds = useMemo(() => chat?.participantIds || [], [chat?.participantIds]);
   const participantsQuery = useMemoFirebase(() => {
     if (!db || participantIds.length === 0) return null;
-    return query(collection(db, 'users'), where('id', 'in', participantIds.slice(0, 10)));
+    // Limit to 30 for performance in mention list
+    return query(collection(db, 'users'), where('id', 'in', participantIds.slice(0, 30)));
   }, [db, participantIds]);
   const { data: participants } = useCollection<UserType>(participantsQuery);
 
@@ -166,20 +167,22 @@ export default function ChatArea() {
   const handleInputChange = (val: string) => {
     setMessageInput(val);
     
-    // Check for @ mention
-    const lastWord = val.split(' ').pop() || '';
+    // Find if we just typed @ or are editing an @word
+    const words = val.split(/\s/);
+    const lastWord = words[words.length - 1];
+    
     if (lastWord.startsWith('@')) {
       setMentionSearch(lastWord.slice(1));
-      setMentionIndex(0);
     } else {
       setMentionSearch(null);
     }
   };
 
   const selectMention = (p: UserType) => {
-    const words = messageInput.split(' ');
+    const words = messageInput.split(/\s/);
     words.pop();
-    const newVal = words.join(' ') + (words.length > 0 ? ' ' : '') + p.username + ' ';
+    const cleanUsername = p.username.startsWith('@') ? p.username : `@${p.username}`;
+    const newVal = words.join(' ') + (words.length > 0 ? ' ' : '') + cleanUsername + ' ';
     setMessageInput(newVal);
     setMentionSearch(null);
   };
@@ -391,18 +394,23 @@ export default function ChatArea() {
           <p className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em]">ТОЛЬКО ЧТЕНИЕ</p>
         </div>
       ) : (
-        <footer className="p-3 pb-6 bg-background/90 backdrop-blur-2xl border-t border-white/5 shrink-0 z-30 relative">
+        <footer className="p-3 pb-6 bg-background/90 backdrop-blur-2xl border-t border-white/5 shrink-0 z-40 relative">
           <div className="max-w-4xl mx-auto space-y-2 relative">
+            {/* Mention List - Robust implementation */}
             {mentionSearch !== null && filteredMentions.length > 0 && (
-              <div className="absolute bottom-full left-0 right-0 mb-2 bg-card border border-white/10 rounded-2xl shadow-2xl overflow-hidden animate-in slide-in-from-bottom-2 duration-200">
-                <ScrollArea className="max-h-48">
+              <div className="absolute bottom-full left-0 right-0 mb-4 bg-card/95 backdrop-blur-3xl border border-white/10 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] overflow-hidden animate-in slide-in-from-bottom-2 duration-200 z-[100]">
+                <div className="p-2 border-b border-white/5 flex items-center justify-between">
+                  <span className="text-[10px] font-black uppercase tracking-widest text-primary/60 px-2">Упомянуть...</span>
+                  <AtSign className="w-3 h-3 text-primary/40 mr-2" />
+                </div>
+                <ScrollArea className="max-h-60">
                   <div className="p-1">
                     {filteredMentions.map((p) => (
-                      <button key={p.id} onClick={() => selectMention(p)} className="w-full flex items-center gap-3 p-3 hover:bg-white/5 transition-colors text-left rounded-xl">
-                        <UserAvatar userId={p.id} className="h-8 w-8" manualAvatarUrl={p.avatarUrl} />
-                        <div className="flex flex-col">
-                          <span className="text-sm font-bold">{p.name}</span>
-                          <span className="text-[10px] text-muted-foreground uppercase font-black">{p.username}</span>
+                      <button key={p.id} onClick={() => selectMention(p)} className="w-full flex items-center gap-3 p-3 hover:bg-primary/10 transition-colors text-left rounded-xl group">
+                        <UserAvatar userId={p.id} className="h-9 w-9 border-2 border-transparent group-hover:border-primary/20" manualAvatarUrl={p.avatarUrl} />
+                        <div className="flex flex-col min-w-0">
+                          <span className="text-sm font-bold text-white truncate">{p.name}</span>
+                          <span className="text-[10px] text-muted-foreground uppercase font-black truncate">{p.username}</span>
                         </div>
                       </button>
                     ))}

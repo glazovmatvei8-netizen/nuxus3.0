@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useMemo } from 'react';
@@ -108,7 +109,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
           <div className="flex items-center justify-between w-full pr-8">
             <div className="flex items-center gap-2">
               <ShieldAlert className="w-5 h-5 text-primary animate-pulse" /> 
-              <DialogTitle className="text-white uppercase italic font-black tracking-tighter text-sm md:text-base select-none">
+              <DialogTitle className="text-white uppercase italic font-black tracking-tighter text-xs md:text-base select-none">
                 Nuxus Control Panel
               </DialogTitle>
             </div>
@@ -129,73 +130,75 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
             </TabsList>
           </div>
 
-          <TabsContent value="analytics" className="flex-1 overflow-y-auto scrollbar-hide p-4 md:p-6 outline-none">
-            <div className="grid grid-cols-2 gap-3 mb-6">
-              <StatCard label="Всего узлов" value={stats.total} icon={Users} color="text-white" />
-              <StatCard label="Premium" value={stats.premium} icon={Star} color="text-accent" />
-              <StatCard label="Админы" value={stats.admins} icon={ShieldCheck} color="text-primary" />
-              <StatCard label="Баны" value={stats.banned} icon={Ban} color="text-red-500" />
-            </div>
-            
-            <div className="space-y-4 pb-10">
-              <div className="bg-white/5 p-5 rounded-[2rem] border border-white/5">
-                <h3 className="text-[10px] font-black uppercase text-primary mb-4 flex items-center gap-2">
-                  <Activity className="w-3 h-3" /> Новые Узлы (7д)
-                </h3>
-                <div className="h-[180px] w-full relative">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                      <defs>
-                        <linearGradient id="colorUsers" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3}/>
-                          <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0}/>
-                        </linearGradient>
-                      </defs>
-                      <XAxis dataKey="day" stroke="rgba(255,255,255,0.2)" fontSize={10} tickLine={false} axisLine={false} />
-                      <YAxis stroke="rgba(255,255,255,0.2)" fontSize={10} tickLine={false} axisLine={false} />
-                      <ChartTooltip contentStyle={{ backgroundColor: '#1c1c1e', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.1)' }} />
-                      <Area type="monotone" dataKey="users" stroke="hsl(var(--primary))" fill="url(#colorUsers)" strokeWidth={3} />
-                    </AreaChart>
-                  </ResponsiveContainer>
-                </div>
+          <TabsContent value="analytics" className="flex-1 flex flex-col min-h-0 outline-none">
+            <ScrollArea className="flex-1 px-4 md:px-6 py-4">
+              <div className="grid grid-cols-2 gap-3 mb-6">
+                <StatCard label="Всего узлов" value={stats.total} icon={Users} color="text-white" />
+                <StatCard label="Premium" value={stats.premium} icon={Star} color="text-accent" />
+                <StatCard label="Админы" value={stats.admins} icon={ShieldCheck} color="text-primary" />
+                <StatCard label="Баны" value={stats.banned} icon={Ban} color="text-red-500" />
               </div>
+              
+              <div className="space-y-4 pb-20">
+                <div className="bg-white/5 p-5 rounded-[2rem] border border-white/5">
+                  <h3 className="text-[10px] font-black uppercase text-primary mb-4 flex items-center gap-2">
+                    <Activity className="w-3 h-3" /> Новые Узлы (7д)
+                  </h3>
+                  <div className="h-[160px] w-full relative">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                        <defs>
+                          <linearGradient id="colorUsers" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3}/>
+                            <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0}/>
+                          </linearGradient>
+                        </defs>
+                        <XAxis dataKey="day" stroke="rgba(255,255,255,0.2)" fontSize={10} tickLine={false} axisLine={false} />
+                        <YAxis stroke="rgba(255,255,255,0.2)" fontSize={10} tickLine={false} axisLine={false} />
+                        <ChartTooltip contentStyle={{ backgroundColor: '#1c1c1e', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.1)' }} />
+                        <Area type="monotone" dataKey="users" stroke="hsl(var(--primary))" fill="url(#colorUsers)" strokeWidth={3} />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
 
-              <div className="bg-white/5 p-5 rounded-[2rem] border border-white/5">
-                <h3 className="text-[10px] font-black uppercase text-accent mb-4 flex items-center gap-2">
-                  <BarChart3 className="w-3 h-3" /> Трафик Сигналов
-                </h3>
-                <div className="h-[180px] w-full relative">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                      <XAxis dataKey="day" stroke="rgba(255,255,255,0.2)" fontSize={10} tickLine={false} axisLine={false} />
-                      <YAxis stroke="rgba(255,255,255,0.2)" fontSize={10} tickLine={false} axisLine={false} />
-                      <ChartTooltip contentStyle={{ backgroundColor: '#1c1c1e', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.1)' }} />
-                      <Bar dataKey="signals" fill="hsl(var(--accent))" radius={[6, 6, 0, 0]} />
-                    </BarChart>
-                  </ResponsiveContainer>
+                <div className="bg-white/5 p-5 rounded-[2rem] border border-white/5">
+                  <h3 className="text-[10px] font-black uppercase text-accent mb-4 flex items-center gap-2">
+                    <BarChart3 className="w-3 h-3" /> Трафик Сигналов
+                  </h3>
+                  <div className="h-[160px] w-full relative">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                        <XAxis dataKey="day" stroke="rgba(255,255,255,0.2)" fontSize={10} tickLine={false} axisLine={false} />
+                        <YAxis stroke="rgba(255,255,255,0.2)" fontSize={10} tickLine={false} axisLine={false} />
+                        <ChartTooltip contentStyle={{ backgroundColor: '#1c1c1e', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.1)' }} />
+                        <Bar dataKey="signals" fill="hsl(var(--accent))" radius={[6, 6, 0, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
                 </div>
               </div>
-            </div>
+            </ScrollArea>
           </TabsContent>
 
           <TabsContent value="users" className="flex-1 flex flex-col min-h-0 outline-none">
-            <div className="p-4 px-6"><Input placeholder="Поиск по базе..." value={userSearch} onChange={e => setUserSearch(e.target.value)} className="bg-white/5 border-white/10 h-12 rounded-2xl pl-4" /></div>
+            <div className="p-4 px-6 shrink-0"><Input placeholder="Поиск по базе..." value={userSearch} onChange={e => setUserSearch(e.target.value)} className="bg-white/5 border-white/10 h-12 rounded-2xl pl-4" /></div>
             <ScrollArea className="flex-1">
-              <div className="px-6 space-y-2 pb-10">
+              <div className="px-6 space-y-2 pb-20">
                 {users?.filter(u => u.name?.toLowerCase().includes(userSearch.toLowerCase()) || u.username?.toLowerCase().includes(userSearch.toLowerCase())).map(u => (
                   <div key={u.id} className="flex items-center justify-between p-4 bg-white/5 rounded-[1.8rem] border border-white/5">
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-3 min-w-0">
                       <UserAvatar userId={u.id} className="h-10 w-10" fallbackName={u.name} />
-                      <div className="flex flex-col">
-                        <span className="font-bold text-xs flex items-center gap-1">
+                      <div className="flex flex-col min-w-0">
+                        <span className="font-bold text-xs flex items-center gap-1 truncate">
                           {formatDisplayName(u.name)} 
                           {isUserPremium(u) && <Star className="w-3 h-3 text-accent fill-accent" />}
                         </span>
                         <div className="flex items-center gap-2">
-                          <span className="text-[9px] text-muted-foreground uppercase font-black">{u.username}</span>
+                          <span className="text-[9px] text-muted-foreground uppercase font-black truncate">{u.username}</span>
                           {u.lastIp && (
-                            <span className="text-[8px] bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono leading-none border border-primary/20">
-                              {u.lastIp} {u.countryCode ? `(${u.countryCode})` : ''}
+                            <span className="text-[8px] bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono leading-none border border-primary/20 shrink-0">
+                              {u.lastIp}
                             </span>
                           )}
                         </div>
@@ -203,7 +206,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
                     </div>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="rounded-full"><MoreVertical className="w-5 h-5"/></Button>
+                        <Button variant="ghost" size="icon" className="rounded-full shrink-0"><MoreVertical className="w-5 h-5"/></Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className="w-56 bg-card border-white/10 rounded-2xl p-1" sideOffset={8}>
                         <DropdownMenuItem onClick={() => handleAction(u.id, u.isBanned ? 'unban' : 'ban')} className={cn("gap-3 font-bold uppercase text-[10px] py-3 rounded-xl", u.isBanned ? "text-green-500" : "text-destructive")}>
@@ -267,7 +270,7 @@ function StatCard({ label, value, icon: Icon, color }: any) {
     <div className="bg-white/5 p-4 rounded-[1.8rem] border border-white/5 flex flex-col items-center justify-center gap-1 hover:bg-white/10 transition-all shadow-xl">
       <Icon className={cn("w-4 h-4 mb-1", color)} />
       <span className="text-lg font-black italic text-white tracking-tight">{value}</span>
-      <span className="text-[7px] font-black uppercase text-muted-foreground/60 tracking-widest">{label}</span>
+      <span className="text-[7px] font-black uppercase text-muted-foreground/60 tracking-widest text-center leading-none">{label}</span>
     </div>
   );
 }
