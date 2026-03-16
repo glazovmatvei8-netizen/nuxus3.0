@@ -98,6 +98,7 @@ export default function ChatArea() {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const textInputRef = useRef<HTMLInputElement>(null);
   
   const { toast } = useToast();
 
@@ -162,7 +163,6 @@ export default function ChatArea() {
     setMessageInput(val);
     const lastAtIndex = val.lastIndexOf('@');
     if (lastAtIndex !== -1) {
-      // Check if it's actually a mention trigger (at start or after space)
       const isStart = lastAtIndex === 0;
       const isAfterSpace = lastAtIndex > 0 && val[lastAtIndex - 1] === ' ';
       
@@ -184,6 +184,7 @@ export default function ChatArea() {
     const newVal = prefix + cleanUsername + ' ';
     setMessageInput(newVal);
     setMentionSearch(null);
+    if (textInputRef.current) textInputRef.current.focus();
   };
 
   const scrollToBottom = useCallback((behavior: ScrollBehavior = 'smooth') => {
@@ -438,7 +439,7 @@ export default function ChatArea() {
               </Popover>
               
               <div className="flex-1 flex items-center bg-muted/30 rounded-2xl border border-white/[0.05] h-11 px-4 relative group">
-                <Input placeholder="Сообщение" className="bg-transparent border-none focus-visible:ring-0" value={messageInput} onChange={e => handleInputChange(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSendMessage()} />
+                <Input ref={textInputRef} placeholder="Сообщение" className="bg-transparent border-none focus-visible:ring-0" value={messageInput} onChange={e => handleInputChange(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSendMessage()} />
                 <button onClick={() => setShowEmojiPicker(!showEmojiPicker)} className="text-muted-foreground hover:text-foreground transition-colors"><Smile /></button>
               </div>
 
