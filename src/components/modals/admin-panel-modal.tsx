@@ -26,7 +26,7 @@ import {
   MoreVertical, ShieldOff, Activity, BarChart3, ListChecks, X, Globe, Trophy
 } from 'lucide-react';
 import { 
-  BarChart, Bar, XAxis, YAxis, ResponsiveContainer, AreaChart, Area
+  BarChart, Bar, XAxis, YAxis, ResponsiveContainer, AreaChart, Area, Tooltip
 } from 'recharts';
 import type { User } from '@/lib/types';
 import { formatDisplayName, isUserPremium, cn, isGlobalAdmin } from '@/lib/utils';
@@ -132,7 +132,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
 
           <TabsContent value="analytics" className="flex-1 m-0 p-0 outline-none flex flex-col overflow-hidden">
             <ScrollArea className="flex-1 h-full">
-              <div className="px-4 md:px-6 py-4 space-y-6 pb-24">
+              <div className="px-4 md:px-6 py-4 space-y-6 pb-32">
                 <div className="grid grid-cols-2 gap-3">
                   <StatCard label="Всего узлов" value={stats.total} icon={Users} color="text-white" />
                   <StatCard label="Premium" value={stats.premium} icon={Star} color="text-accent" />
@@ -156,6 +156,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
                           </defs>
                           <XAxis dataKey="day" stroke="rgba(255,255,255,0.2)" fontSize={10} tickLine={false} axisLine={false} />
                           <YAxis stroke="rgba(255,255,255,0.2)" fontSize={10} tickLine={false} axisLine={false} />
+                          <Tooltip contentStyle={{ backgroundColor: '#1c1c1e', border: 'none', borderRadius: '12px', fontSize: '10px' }} />
                           <Area type="monotone" dataKey="users" stroke="hsl(var(--primary))" fill="url(#colorUsers)" strokeWidth={3} />
                         </AreaChart>
                       </ResponsiveContainer>
@@ -171,6 +172,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
                         <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                           <XAxis dataKey="day" stroke="rgba(255,255,255,0.2)" fontSize={10} tickLine={false} axisLine={false} />
                           <YAxis stroke="rgba(255,255,255,0.2)" fontSize={10} tickLine={false} axisLine={false} />
+                          <Tooltip contentStyle={{ backgroundColor: '#1c1c1e', border: 'none', borderRadius: '12px', fontSize: '10px' }} />
                           <Bar dataKey="signals" fill="hsl(var(--accent))" radius={[6, 6, 0, 0]} />
                         </BarChart>
                       </ResponsiveContainer>
@@ -186,7 +188,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
               <Input placeholder="Поиск по базе..." value={userSearch} onChange={e => setUserSearch(e.target.value)} className="bg-white/5 border-white/10 h-12 rounded-2xl pl-4" />
             </div>
             <ScrollArea className="flex-1 h-full">
-              <div className="px-6 space-y-2 pb-24">
+              <div className="px-6 space-y-2 pb-32">
                 {users?.filter(u => u.name?.toLowerCase().includes(userSearch.toLowerCase()) || u.username?.toLowerCase().includes(userSearch.toLowerCase())).map(u => (
                   <div key={u.id} className="flex items-center justify-between p-4 bg-white/5 rounded-[1.8rem] border border-white/5">
                     <div className="flex items-center gap-3 min-w-0">

@@ -162,10 +162,16 @@ export default function ChatArea() {
     setMessageInput(val);
     const lastAtIndex = val.lastIndexOf('@');
     if (lastAtIndex !== -1) {
-      const textAfterAt = val.substring(lastAtIndex + 1);
-      if (!textAfterAt.includes(' ')) {
-        setMentionSearch(textAfterAt);
-        return;
+      // Check if it's actually a mention trigger (at start or after space)
+      const isStart = lastAtIndex === 0;
+      const isAfterSpace = lastAtIndex > 0 && val[lastAtIndex - 1] === ' ';
+      
+      if (isStart || isAfterSpace) {
+        const textAfterAt = val.substring(lastAtIndex + 1);
+        if (!textAfterAt.includes(' ')) {
+          setMentionSearch(textAfterAt);
+          return;
+        }
       }
     }
     setMentionSearch(null);
