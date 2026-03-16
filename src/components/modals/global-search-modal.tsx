@@ -69,14 +69,13 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
 
       // 2. Группы и Каналы
       if (activeFilter === 'all' || activeFilter === 'groups') {
-        // Поиск по никнейму чата
-        const chatQuery = query(
+        const chatQ = query(
           collection(db, 'chats'), 
           where('username', 'in', [withAt, withoutAt]), 
           where('isPublic', '==', true),
           limit(10)
         );
-        const chatSnap = await getDocs(chatQuery);
+        const chatSnap = await getDocs(chatQ);
         chatSnap.docs.forEach(d => {
           const data = d.data();
           if (data.type !== 'private') {
@@ -85,17 +84,16 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
         });
       }
 
-      // 3. Пользователи (Узлы) - Глубокий поиск
+      // 3. Пользователи - Улучшенный поиск для "@seledka"
       if (activeFilter === 'all' || activeFilter === 'users') {
-        // Проверяем никнейм (с @ и без) и имя
-        const q1 = query(collection(db, 'users'), where('username', '==', withAt), limit(5));
-        const q2 = query(collection(db, 'users'), where('username', '==', withoutAt), limit(5));
-        const q3 = query(collection(db, 'users'), where('name', '==', val.trim()), limit(5));
+        const q1 = query(collection(db, 'users'), where('username', '==', withAt), limit(10));
+        const q2 = query(collection(db, 'users'), where('username', '==', withoutAt), limit(10));
+        const q3 = query(collection(db, 'users'), where('name', '>=', val.trim()), where('name', '<=', val.trim() + '\uf8ff'), limit(10));
 
         const [s1, s2, s3] = await Promise.all([getDocs(q1), getDocs(q2), getDocs(q3)]);
         
-        const allUserDocs = [...s1.docs, ...s2.docs, ...s3.docs];
-        allUserDocs.forEach(d => {
+        const allDocs = [...s1.docs, ...s2.docs, ...s3.docs];
+        allDocs.forEach(d => {
           const data = d.data();
           if (d.id !== user?.uid && !foundResults.some(r => r.data.id === d.id)) {
             foundResults.push({ type: 'user', data: { id: d.id, ...data } });
@@ -125,7 +123,7 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md bg-card border-white/10 rounded-[2.5rem] p-0 overflow-hidden shadow-2xl h-[80vh] flex flex-col outline-none">
-        <DialogHeader className="p-6 pb-0 shrink-0">
+        <DialogHeader className="p-6 pb-0 shrink-0 text-left">
           <DialogTitle className="text-white font-black uppercase italic tracking-tighter text-xl">Signal Discovery</DialogTitle>
         </DialogHeader>
 
@@ -158,7 +156,7 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
                   <div key={idx} onClick={() => handleSelectResult(res)} className="flex items-center justify-between p-4 bg-white/5 rounded-[1.8rem] hover:bg-white/10 cursor-pointer border border-white/5 transition-all">
                     <div className="flex items-center gap-4">
                       <UserAvatar userId={res.type === 'user' ? res.data.id : null} manualAvatarUrl={res.data.avatarUrl} className="h-12 w-12" fallbackName={res.data.name} />
-                      <div className="flex flex-col">
+                      <div className="flex flex-col text-left">
                         <span className="font-bold text-white flex items-center gap-2">
                           {res.data.name} 
                           {res.data.isPremium && <Star className="w-3 h-3 text-accent fill-accent" />}
@@ -187,7 +185,7 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
                   <div key={chat.id} onClick={() => handleSelectResult({ type: 'chat', data: chat })} className="flex items-center justify-between p-4 bg-white/5 rounded-[1.8rem] hover:bg-white/10 cursor-pointer border border-white/5 transition-all">
                     <div className="flex items-center gap-4">
                       <UserAvatar userId={null} manualAvatarUrl={chat.avatarUrl} className="h-12 w-12" fallbackName={chat.name} />
-                      <div className="flex flex-col">
+                      <div className="flex flex-col text-left">
                         <span className="font-bold text-white">{chat.name}</span>
                         <span className="text-[10px] text-muted-foreground uppercase font-black">{chat.username}</span>
                       </div>

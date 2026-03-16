@@ -105,7 +105,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl bg-[#0a0a0c] border-primary/30 p-0 overflow-hidden h-[85vh] flex flex-col rounded-[2.5rem] shadow-2xl border outline-none">
-        <DialogHeader className="p-4 md:p-6 bg-primary/5 border-b border-white/5 shrink-0 relative">
+        <DialogHeader className="p-4 md:p-6 bg-primary/5 border-b border-white/5 shrink-0 relative text-left">
           <div className="flex items-center justify-between w-full pr-8">
             <div className="flex items-center gap-2">
               <ShieldAlert className="w-5 h-5 text-primary animate-pulse" /> 
@@ -193,8 +193,8 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
                   <div key={u.id} className="flex items-center justify-between p-4 bg-white/5 rounded-[1.8rem] border border-white/5">
                     <div className="flex items-center gap-3 min-w-0">
                       <UserAvatar userId={u.id} className="h-10 w-10" fallbackName={u.name} />
-                      <div className="flex flex-col min-w-0">
-                        <span className="font-bold text-xs flex items-center gap-1 truncate">
+                      <div className="flex flex-col min-w-0 text-left">
+                        <span className="font-bold text-xs flex items-center gap-1 truncate text-white">
                           {formatDisplayName(u.name)} 
                           {isUserPremium(u) && <Star className="w-3 h-3 text-accent fill-accent" />}
                         </span>
