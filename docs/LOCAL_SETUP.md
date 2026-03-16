@@ -1,5 +1,5 @@
 
-# 🚀 Локальное развертывание Nuxus Kernel
+# 🚀 Локальное развертывание Nuxus Kernel (v0.65.8)
 
 Этот документ поможет вам перенести проект из GitHub в VS Code на ваш персональный компьютер и запустить его.
 
@@ -12,13 +12,13 @@
 ## 2. Клонирование репозитория на ПК
 1. Открой терминал на своем компьютере (или командную строку).
 2. Перейди в папку, где хочешь хранить проект (например, `cd Documents`).
-3. Введи команду (подставь свою ссылку):
+3. Введи команду (подставь свою актуальную ссылку):
    ```bash
-   git clone https://github.com/glazovmatvei8-netizen/nuxus.git
+   git clone https://github.com/glazovmatvei8-netizen/nuxus-message.git
    ```
 4. Перейди в папку проекта:
    ```bash
-   cd nuxus
+   cd nuxus-message
    ```
 
 ## 3. Решение ошибки "divergent branches" (Pull Error)
@@ -33,27 +33,17 @@ git config pull.rebase false
 ```bash
 code .
 ```
-Или просто перетащи папку `nuxus` в окно VS Code.
+Или просто перетащи папку проекта в окно VS Code.
 
 ## 5. Установка зависимостей
 Открой встроенный терминал в VS Code (Ctrl + `) и введи:
 ```bash
 npm install
 ```
-*Это загрузит все библиотеки в папку `node_modules`. Дождись завершения.*
+*Это загрузит все библиотеки. Дождись завершения.*
 
 ## 6. Настройка Firebase (.env)
-Тебе нужно создать файл `.env` в корне проекта (рядом с `package.json`).
-Скопируй туда свои ключи из консоли Firebase:
-```env
-NEXT_PUBLIC_FIREBASE_API_KEY=ваш_ключ
-NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=ваш_проект.firebaseapp.com
-NEXT_PUBLIC_FIREBASE_PROJECT_ID=ваш_id
-NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=ваш_бакет.appspot.com
-NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=ваш_id
-NEXT_PUBLIC_FIREBASE_APP_ID=ваш_app_id
-GOOGLE_GENERATIVE_AI_API_KEY=ваш_ключ_gemini
-```
+Создайте файл `.env` в корне проекта и добавьте туда свои ключи из Firebase Console.
 
 ## 7. Запуск проекта
 В терминале VS Code введи:
@@ -63,11 +53,10 @@ npm run dev
 Проект будет доступен по адресу: [http://localhost:3000](http://localhost:3000)
 
 ## 8. Как опубликовать изменения на GitHub
-Я создал файл `push.sh`. Чтобы отправить все свои изменения в репозиторий `glazovmatvei8-netizen/nuxus`, просто введи в терминале:
+Я создал файл `push.sh`. Чтобы отправить изменения, просто введи в терминале:
 ```bash
 sh push.sh
 ```
-*Если спросит логин/пароль — введи данные от GitHub.*
 
 ---
 ### 📡 Настройки AmneziaWG (Германия/Франкфурт)

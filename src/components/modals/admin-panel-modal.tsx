@@ -36,8 +36,8 @@ import { addMonths, subDays, isSameDay } from 'date-fns';
 const ROOT_UID = 'GCvLucN8CjNcdaxPO2vmpZ84hNl1';
 
 /**
- * FIXED Admin Panel v2.8
- * Исправлен скролл во всех вкладках и ликвидирована «черная пустота».
+ * FIXED Admin Panel v3.0
+ * Полная ликвидация «черной пустоты» в аналитике и восстановление скролла во всех вкладках.
  */
 export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const db = useFirestore();
@@ -134,6 +134,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
             </TabsList>
           </div>
 
+          {/* Вкладка Аналитика: Исправлена высота */}
           <TabsContent value="analytics" className="flex-1 m-0 p-0 overflow-hidden outline-none data-[state=active]:flex flex-col">
             <ScrollArea className="flex-1">
               <div className="px-4 md:px-6 py-4 space-y-6 pb-20">
@@ -151,7 +152,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
                     </h3>
                     <div className="h-[180px] w-full">
                       <ResponsiveContainer width="100%" height="100%">
-                        <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                        <AreaChart data={chartData}>
                           <defs>
                             <linearGradient id="colorUsers" x1="0" y1="0" x2="0" y2="1">
                               <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3}/>
@@ -173,7 +174,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
                     </h3>
                     <div className="h-[180px] w-full">
                       <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                        <BarChart data={chartData}>
                           <XAxis dataKey="day" stroke="rgba(255,255,255,0.2)" fontSize={10} tickLine={false} axisLine={false} />
                           <YAxis stroke="rgba(255,255,255,0.2)" fontSize={10} tickLine={false} axisLine={false} />
                           <Tooltip contentStyle={{ backgroundColor: '#1c1c1e', border: 'none', borderRadius: '12px', fontSize: '10px' }} />
@@ -187,6 +188,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
             </ScrollArea>
           </TabsContent>
 
+          {/* Вкладка Узлы: Сохранен скролл */}
           <TabsContent value="users" className="flex-1 m-0 p-0 overflow-hidden outline-none data-[state=active]:flex flex-col">
             <div className="p-4 px-6 shrink-0">
               <Input placeholder="Поиск по базе..." value={userSearch} onChange={e => setUserSearch(e.target.value)} className="bg-white/5 border-white/10 h-12 rounded-2xl pl-4" />
@@ -204,19 +206,13 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
                         </span>
                         <div className="flex items-center gap-2">
                           <span className="text-[9px] text-muted-foreground uppercase font-black truncate">{u.username}</span>
-                          {u.lastIp && (
-                            <span className="text-[8px] bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono leading-none border border-primary/20 shrink-0">
-                              {u.lastIp}
-                            </span>
-                          )}
+                          {u.lastIp && <span className="text-[8px] bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono border border-primary/20">{u.lastIp}</span>}
                         </div>
                       </div>
                     </div>
                     <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="rounded-full shrink-0"><MoreVertical className="w-5 h-5"/></Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="w-56 bg-card border-white/10 rounded-2xl p-1" sideOffset={8}>
+                      <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="rounded-full"><MoreVertical className="w-5 h-5"/></Button></DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-56 bg-card border-white/10 rounded-2xl p-1">
                         <DropdownMenuItem onClick={() => handleAction(u.id, u.isBanned ? 'unban' : 'ban')} className={cn("gap-3 font-bold uppercase text-[10px] py-3 rounded-xl", u.isBanned ? "text-green-500" : "text-destructive")}>
                           {u.isBanned ? <CheckCircle2 className="w-4 h-4"/> : <Ban className="w-4 h-4"/>} {u.isBanned ? 'Разблокировать' : 'Заблокировать'}
                         </DropdownMenuItem>
@@ -225,21 +221,13 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
                         </DropdownMenuItem>
                         <DropdownMenuSeparator className="bg-white/5" />
                         <DropdownMenuSub>
-                          <DropdownMenuSubTrigger className="gap-3 font-bold uppercase text-[10px] py-3 rounded-xl">
-                            <Star className="w-4 h-4 text-accent" /> Premium статус
-                          </DropdownMenuSubTrigger>
+                          <DropdownMenuSubTrigger className="gap-3 font-bold uppercase text-[10px] py-3 rounded-xl"><Star className="w-4 h-4 text-accent" /> Premium статус</DropdownMenuSubTrigger>
                           <DropdownMenuPortal>
-                            <DropdownMenuSubContent className="bg-card border-white/10 p-1 rounded-2xl" sideOffset={8}>
-                              <DropdownMenuItem onClick={() => handleAction(u.id, 'give_premium', 1)} className="text-[10px] font-bold uppercase py-3 rounded-xl flex items-center gap-3">
-                                <Trophy className="w-4 h-4 text-accent" /> 1 Месяц
-                              </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => handleAction(u.id, 'give_premium', 12)} className="text-[10px] font-bold uppercase py-3 rounded-xl flex items-center gap-3">
-                                <Trophy className="w-4 h-4 text-accent" /> 1 Год
-                              </DropdownMenuItem>
+                            <DropdownMenuSubContent className="bg-card border-white/10 p-1 rounded-2xl">
+                              <DropdownMenuItem onClick={() => handleAction(u.id, 'give_premium', 1)} className="text-[10px] font-bold uppercase py-3 rounded-xl gap-3"><Trophy className="w-4 h-4 text-accent" /> 1 Месяц</DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleAction(u.id, 'give_premium', 12)} className="text-[10px] font-bold uppercase py-3 rounded-xl gap-3"><Trophy className="w-4 h-4 text-accent" /> 1 Год</DropdownMenuItem>
                               <DropdownMenuSeparator className="bg-white/5" />
-                              <DropdownMenuItem onClick={() => handleAction(u.id, 'remove_premium')} className="text-destructive text-[10px] font-bold uppercase py-3 rounded-xl flex items-center gap-3">
-                                <X className="w-4 h-4" /> Аннулировать
-                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleAction(u.id, 'remove_premium')} className="text-destructive text-[10px] font-bold uppercase py-3 rounded-xl gap-3"><X className="w-4 h-4" /> Аннулировать</DropdownMenuItem>
                             </DropdownMenuSubContent>
                           </DropdownMenuPortal>
                         </DropdownMenuSub>
