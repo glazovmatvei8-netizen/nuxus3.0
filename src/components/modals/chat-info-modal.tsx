@@ -30,10 +30,6 @@ import type { User, Chat } from '@/lib/types';
 import { addHours, isAfter, parseISO } from 'date-fns';
 import { AddMemberModal } from './add-member-modal';
 
-/**
- * ЧАТ-ИНФО 3.5
- * Реализовано открытие профиля по клику на участника (аватар или имя).
- */
 export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onOpenChange: (o: boolean) => void, chat: Chat }) {
   const db = useFirestore();
   const { user } = useUser();

@@ -17,11 +17,6 @@ import type { Chat } from '@/lib/types';
 
 type SearchFilter = 'all' | 'users' | 'groups' | 'bots';
 
-/**
- * FIXED Global Search Modal v2.8
- * Исправлена синтаксическая ошибка и значительно улучшен поиск людей.
- * Теперь поиск по @seledka или seledka работает гарантированно.
- */
 export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const { user } = useUser();
   const db = useFirestore();
@@ -74,9 +69,10 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
 
       // 2. Группы и Каналы
       if (activeFilter === 'all' || activeFilter === 'groups') {
+        // Поиск по никнейму чата
         const chatQuery = query(
           collection(db, 'chats'), 
-          where('username', '==', withAt), 
+          where('username', 'in', [withAt, withoutAt]), 
           where('isPublic', '==', true),
           limit(10)
         );
@@ -91,21 +87,20 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
 
       // 3. Пользователи (Узлы) - Глубокий поиск
       if (activeFilter === 'all' || activeFilter === 'users') {
-        const queries = [
-          query(collection(db, 'users'), where('username', '==', withAt), limit(10)),
-          query(collection(db, 'users'), where('username', '==', withoutAt), limit(10)),
-          query(collection(db, 'users'), where('name', '==', val), limit(10))
-        ];
+        // Проверяем никнейм (с @ и без) и имя
+        const q1 = query(collection(db, 'users'), where('username', '==', withAt), limit(5));
+        const q2 = query(collection(db, 'users'), where('username', '==', withoutAt), limit(5));
+        const q3 = query(collection(db, 'users'), where('name', '==', val.trim()), limit(5));
 
-        for (const q of queries) {
-          const snap = await getDocs(q);
-          snap.docs.forEach(d => {
-            const data = d.data();
-            if (d.id !== user?.uid && !foundResults.some(r => r.data.id === d.id)) {
-              foundResults.push({ type: 'user', data: { id: d.id, ...data } });
-            }
-          });
-        }
+        const [s1, s2, s3] = await Promise.all([getDocs(q1), getDocs(q2), getDocs(q3)]);
+        
+        const allUserDocs = [...s1.docs, ...s2.docs, ...s3.docs];
+        allUserDocs.forEach(d => {
+          const data = d.data();
+          if (d.id !== user?.uid && !foundResults.some(r => r.data.id === d.id)) {
+            foundResults.push({ type: 'user', data: { id: d.id, ...data } });
+          }
+        });
       }
 
       setResults(foundResults);
@@ -177,6 +172,11 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
                   </div>
                 ))}
               </div>
+            ) : searchQuery.length >= 2 && !isLoading ? (
+              <div className="flex flex-col items-center justify-center py-20 opacity-20">
+                <Search className="w-12 h-12 mb-4" />
+                <p className="text-[10px] font-black uppercase tracking-widest text-center">Сигнал не найден</p>
+              </div>
             ) : searchQuery.length < 2 && trends.length > 0 ? (
               <div className="space-y-4">
                 <div className="flex items-center gap-2 px-2 text-primary">
@@ -195,11 +195,6 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
                     <Button variant="ghost" size="sm" className="h-8 rounded-xl text-[9px] uppercase font-black text-primary">Вступить</Button>
                   </div>
                 ))}
-              </div>
-            ) : searchQuery.length >= 2 && !isLoading ? (
-              <div className="flex flex-col items-center justify-center py-20 opacity-20">
-                <Search className="w-12 h-12 mb-4" />
-                <p className="text-[10px] font-black uppercase tracking-widest text-center">Сигнал не найден</p>
               </div>
             ) : null}
           </div>

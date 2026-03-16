@@ -163,7 +163,6 @@ export default function ChatArea() {
     setMessageInput(val);
     const lastAtIndex = val.lastIndexOf('@');
     if (lastAtIndex !== -1) {
-      // Список появляется если @ в начале или после пробела
       const isStart = lastAtIndex === 0;
       const isAfterSpace = lastAtIndex > 0 && val[lastAtIndex - 1] === ' ';
       

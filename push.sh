@@ -1,7 +1,7 @@
 
 #!/bin/bash
 
-# Nuxus Kernel Sync Utility v1.5
+# Nuxus Kernel Sync Utility v1.6
 # Скрипт для отправки изменений в твой репозиторий
 
 echo "🚀 Подготовка к отправке в GitHub: glazovmatvei8-netizen/nuxus-message"
