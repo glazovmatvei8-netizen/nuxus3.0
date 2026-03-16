@@ -7,24 +7,21 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
-  Send, Info, ChevronLeft, X, Paperclip, Mic, StopCircle, ChevronDown, Edit2, Pin, Search, PinOff,
-  Smile, Instagram, Camera, Video, Sticker, Copy, Share2, Sparkles, Loader2, RefreshCw, Zap, Trash2, Pause, Play,
-  BarChart3, Image as ImageIcon, ArrowDown, Menu as MenuIcon, List, Phone, Radio, UserPlus, CircleStop, RefreshCcw, AlertTriangle, Radar, AtSign
+  Send, Info, ChevronLeft, X, Paperclip, Mic, StopCircle, Edit2, Search,
+  Smile, ImageIcon, Video, Trash2, Loader2, UserPlus, AtSign
 } from 'lucide-react';
 import { MessageItem } from './message-item';
 import { useToast } from '@/hooks/use-toast';
 import { ChatInfoModal } from './modals/chat-info-modal';
 import { CreatePollModal } from './modals/create-poll-modal';
 import { useFirestore, useUser, useCollection, useDoc, useMemoFirebase } from '@/firebase';
-import { collection, query, orderBy, doc, addDoc, limit, updateDoc, writeBatch, arrayUnion, getDocs, where, setDoc, getDoc } from 'firebase/firestore';
+import { collection, query, orderBy, doc, addDoc, updateDoc, arrayUnion, where } from 'firebase/firestore';
 import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { formatDisplayName, cn, formatLastSeen, compressImage, encryptSignal, isGlobalAdmin, decryptSignal } from '@/lib/utils';
 import type { Message, User as UserType, Chat } from '@/lib/types';
 import { EmojiPicker } from './emoji-picker';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { ScrollArea } from './ui/scroll-area';
-
-const VIDEO_LIMIT_SECONDS = 180;
 
 const MessageList = memo(({ 
   messages, userId, chatId, onReply, onPin, amIPremium, isAdmin, isGroup, onEdit, onForward, searchQuery, viewerProfile
@@ -71,7 +68,7 @@ MessageList.displayName = 'MessageList';
 export default function ChatArea() {
   const { user: firebaseUser } = useUser();
   const db = useFirestore();
-  const { currentChatId, setCurrentChatId, setForwardingMessage, localDrafts, setLocalDrafts } = useAppState();
+  const { currentChatId, setCurrentChatId, setForwardingMessage, setLocalDrafts } = useAppState();
   
   const [isChatInfoOpen, setIsChatInfoOpen] = useState(false);
   const [isPollModalOpen, setIsPollModalOpen] = useState(false);
@@ -87,10 +84,9 @@ export default function ChatArea() {
   const [mentionSearch, setMentionSearch] = useState<string | null>(null);
 
   // Recording State
-  const [recordingState, setRecordingState] = useState<'idle' | 'recording' | 'paused' | 'review'>('idle');
+  const [recordingState, setRecordingState] = useState<'idle' | 'recording' | 'review'>('idle');
   const [recordingType, setRecordingType] = useState<'audio' | 'video_note'>('audio');
   const [recordingTime, setRecordingTime] = useState(0);
-  const [facingMode, setFacingMode] = useState<'user' | 'environment'>('user');
   const [reviewBlobUrl, setReviewBlobUrl] = useState<string | null>(null);
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -146,7 +142,6 @@ export default function ChatArea() {
   const messagesQuery = useMemoFirebase(() => (!db || !currentChatId) ? null : query(collection(db, 'chats', currentChatId, 'messages'), orderBy('sentAt', 'asc')), [db, currentChatId]);
   const { data: messages } = useCollection<Message>(messagesQuery);
 
-  // Mention logic: Fetch actual participant profiles from ALL participants
   const participantIds = useMemo(() => chat?.participantIds || [], [chat?.participantIds]);
   const participantsQuery = useMemoFirebase(() => {
     if (!db || participantIds.length === 0) return null;
@@ -165,12 +160,9 @@ export default function ChatArea() {
 
   const handleInputChange = (val: string) => {
     setMessageInput(val);
-    
-    // Improved regex to find the last @mention part
     const lastAtIndex = val.lastIndexOf('@');
     if (lastAtIndex !== -1) {
       const textAfterAt = val.substring(lastAtIndex + 1);
-      // Ensure there are no spaces between @ and search text
       if (!textAfterAt.includes(' ')) {
         setMentionSearch(textAfterAt);
         return;
@@ -222,7 +214,7 @@ export default function ChatArea() {
       const isVideo = recordingType === 'video_note';
       const constraints = { 
         audio: true, 
-        video: isVideo ? { facingMode, width: 480, height: 480 } : false 
+        video: isVideo ? { facingMode: 'user', width: 480, height: 480 } : false 
       };
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
       streamRef.current = stream;
@@ -398,7 +390,6 @@ export default function ChatArea() {
         <footer className="p-3 pb-6 bg-background/90 backdrop-blur-2xl border-t border-white/5 shrink-0 z-40 relative">
           <div className="max-w-4xl mx-auto space-y-2 relative">
             
-            {/* Robust Mention List UI */}
             {mentionSearch !== null && filteredMentions.length > 0 && (
               <div className="absolute bottom-[110%] left-0 right-0 mb-2 bg-card/95 backdrop-blur-3xl border border-white/10 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] overflow-hidden animate-in slide-in-from-bottom-2 duration-200 z-[1000]">
                 <div className="p-2 border-b border-white/5 flex items-center justify-between">
@@ -436,7 +427,7 @@ export default function ChatArea() {
                 <PopoverTrigger asChild><Button variant="ghost" size="icon"><Paperclip /></Button></PopoverTrigger>
                 <PopoverContent side="top" align="start" className="w-48 bg-card border-white/10 rounded-2xl p-1 mb-2 shadow-2xl">
                   <Button variant="ghost" className="w-full justify-start gap-3 rounded-xl h-11 text-xs" onClick={() => fileInputRef.current?.click()}><ImageIcon className="w-4 h-4" /> Галерея</Button>
-                  <Button variant="ghost" className="w-full justify-start gap-3 rounded-xl h-11 text-xs" onClick={() => setIsPollModalOpen(true)}><BarChart3 className="w-4 h-4" /> Опрос</Button>
+                  <Button variant="ghost" className="w-full justify-start gap-3 rounded-xl h-11 text-xs" onClick={() => setIsPollModalOpen(true)}><AtSign className="w-4 h-4" /> Опрос</Button>
                 </PopoverContent>
               </Popover>
               

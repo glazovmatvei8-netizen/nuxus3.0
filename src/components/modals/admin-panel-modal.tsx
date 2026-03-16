@@ -18,15 +18,15 @@ import {
   DropdownMenuSubContent,
   DropdownMenuPortal
 } from "@/components/ui/dropdown-menu";
-import { useFirestore, useCollection, useMemoFirebase, useUser } from '@/firebase';
+import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, query, doc, limit, updateDoc } from 'firebase/firestore';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
   ShieldAlert, Users, Star, Ban, CheckCircle2, ShieldCheck, Radio, 
-  MoreVertical, ShieldOff, Zap, Trophy, Activity, BarChart3, ListChecks, X, Globe, Server
+  MoreVertical, ShieldOff, Activity, BarChart3, ListChecks, X, Globe, Trophy
 } from 'lucide-react';
 import { 
-  BarChart, Bar, XAxis, YAxis, Tooltip as ChartTooltip, ResponsiveContainer, AreaChart, Area
+  BarChart, Bar, XAxis, YAxis, ResponsiveContainer, AreaChart, Area
 } from 'recharts';
 import type { User } from '@/lib/types';
 import { formatDisplayName, isUserPremium, cn, isGlobalAdmin } from '@/lib/utils';
@@ -120,7 +120,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
           </div>
         </DialogHeader>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0 bg-transparent">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0">
           <div className="px-4 md:px-6 pt-3 shrink-0">
             <TabsList className="grid w-full bg-white/5 p-1 rounded-xl grid-cols-4">
               <TabsTrigger value="analytics" className="rounded-lg text-[8px] uppercase font-black gap-1.5">Аналитика</TabsTrigger>
@@ -130,8 +130,8 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
             </TabsList>
           </div>
 
-          <TabsContent value="analytics" className="flex-1 m-0 p-0 outline-none overflow-hidden flex flex-col">
-            <ScrollArea className="flex-1">
+          <TabsContent value="analytics" className="flex-1 m-0 p-0 outline-none flex flex-col overflow-hidden">
+            <ScrollArea className="flex-1 h-full">
               <div className="px-4 md:px-6 py-4 space-y-6 pb-24">
                 <div className="grid grid-cols-2 gap-3">
                   <StatCard label="Всего узлов" value={stats.total} icon={Users} color="text-white" />
@@ -181,9 +181,11 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
             </ScrollArea>
           </TabsContent>
 
-          <TabsContent value="users" className="flex-1 m-0 p-0 outline-none overflow-hidden flex flex-col">
-            <div className="p-4 px-6 shrink-0"><Input placeholder="Поиск по базе..." value={userSearch} onChange={e => setUserSearch(e.target.value)} className="bg-white/5 border-white/10 h-12 rounded-2xl pl-4" /></div>
-            <ScrollArea className="flex-1">
+          <TabsContent value="users" className="flex-1 m-0 p-0 outline-none flex flex-col overflow-hidden">
+            <div className="p-4 px-6 shrink-0">
+              <Input placeholder="Поиск по базе..." value={userSearch} onChange={e => setUserSearch(e.target.value)} className="bg-white/5 border-white/10 h-12 rounded-2xl pl-4" />
+            </div>
+            <ScrollArea className="flex-1 h-full">
               <div className="px-6 space-y-2 pb-24">
                 {users?.filter(u => u.name?.toLowerCase().includes(userSearch.toLowerCase()) || u.username?.toLowerCase().includes(userSearch.toLowerCase())).map(u => (
                   <div key={u.id} className="flex items-center justify-between p-4 bg-white/5 rounded-[1.8rem] border border-white/5">
@@ -246,14 +248,14 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
             </ScrollArea>
           </TabsContent>
           
-          <TabsContent value="logs" className="flex-1 m-0 p-6 outline-none overflow-hidden">
+          <TabsContent value="logs" className="flex-1 m-0 p-6 outline-none flex flex-col overflow-hidden">
              <div className="h-full flex flex-col items-center justify-center opacity-20 border-2 border-dashed border-white/5 rounded-[2.5rem]">
                 <ListChecks className="w-12 h-12 mb-4" />
                 <p className="text-[10px] font-black uppercase tracking-widest text-center">Системные логи пусты</p>
              </div>
           </TabsContent>
 
-          <TabsContent value="broadcast" className="flex-1 m-0 p-6 outline-none overflow-hidden">
+          <TabsContent value="broadcast" className="flex-1 m-0 p-6 outline-none flex flex-col overflow-hidden">
              <div className="h-full flex flex-col items-center justify-center opacity-20 border-2 border-dashed border-white/5 rounded-[2.5rem]">
                 <Radio className="w-12 h-12 mb-4" />
                 <p className="text-[10px] font-black uppercase tracking-widest text-center">Маяк в режиме ожидания</p>
