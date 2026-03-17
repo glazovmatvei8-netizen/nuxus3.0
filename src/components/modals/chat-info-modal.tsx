@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useMemo, useRef, useEffect } from 'react';
@@ -25,7 +24,7 @@ import { doc, updateDoc, arrayRemove, arrayUnion, deleteDoc } from 'firebase/fir
 import { deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { useToast } from '@/hooks/use-toast';
 import { useAppState } from '@/lib/store';
-import { formatDisplayName, isUserPremium, formatLastSeen } from '@/lib/utils';
+import { formatDisplayName, isUserPremium, formatLastSeen, cn } from '@/lib/utils';
 import type { User, Chat } from '@/lib/types';
 import { addHours, isAfter, parseISO } from 'date-fns';
 import { AddMemberModal } from './add-member-modal';
