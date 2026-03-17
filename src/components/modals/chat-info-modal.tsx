@@ -33,7 +33,7 @@ import { AddMemberModal } from './add-member-modal';
 export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onOpenChange: (o: boolean) => void, chat: Chat }) {
   const db = useFirestore();
   const { user } = useUser();
-  const { setCurrentChatId } = useAppState();
+  const { setCurrentChatId, setInspectedUserId } = useAppState();
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -164,13 +164,18 @@ export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onO
       <DialogContent className="max-w-md bg-card border-border p-0 overflow-hidden h-[85vh] flex flex-col rounded-[2.5rem] shadow-2xl">
         <DialogHeader className="p-6 text-center flex flex-col items-center shrink-0 space-y-0 relative border-b border-white/5">
           <div className="relative group mb-4">
-            <UserAvatar 
-              userId={isPrivate ? otherId : null} 
-              manualAvatarUrl={isEditing && !isPrivate ? editForm.avatarUrl : (isPrivate ? otherUserProfile?.avatarUrl : chat.avatarUrl)} 
-              className="h-24 w-24 border-4 border-primary/20 shadow-2xl" 
-              fallbackName={currentDisplayName} 
-              showOnlineStatus={!isEditing}
-            />
+            <div 
+              className={cn("relative cursor-pointer", isPrivate && "active:scale-95 transition-transform")}
+              onClick={() => isPrivate && otherId && (onOpenChange(false), setInspectedUserId(otherId))}
+            >
+              <UserAvatar 
+                userId={isPrivate ? otherId : null} 
+                manualAvatarUrl={isEditing && !isPrivate ? editForm.avatarUrl : (isPrivate ? otherUserProfile?.avatarUrl : chat.avatarUrl)} 
+                className="h-24 w-24 border-4 border-primary/20 shadow-2xl" 
+                fallbackName={currentDisplayName} 
+                showOnlineStatus={!isEditing}
+              />
+            </div>
             {isEditing && !isPrivate && (
               <div 
                 className="absolute inset-0 bg-black/60 rounded-full flex items-center justify-center cursor-pointer backdrop-blur-sm"
@@ -217,7 +222,7 @@ export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onO
                 {isPrivate && otherUserProfile && (
                   <Button 
                     variant={isContact ? "secondary" : "default"} 
-                    className="w-full h-10 rounded-xl gap-2 font-bold text-[10px] uppercase tracking-widest"
+                    className="w-full h-12 rounded-xl gap-2 font-bold text-[10px] uppercase tracking-widest"
                     onClick={handleToggleContact}
                   >
                     {isContact ? <UserCheck className="w-4 h-4" /> : <UserPlus2 className="w-4 h-4" />}
@@ -228,7 +233,7 @@ export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onO
                 <div className="flex gap-2">
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button variant="outline" className="flex-1 h-10 rounded-xl gap-2 font-bold text-[10px] uppercase tracking-widest border-white/5 bg-white/5">
+                      <Button variant="outline" className="flex-1 h-12 rounded-xl gap-2 font-bold text-[10px] uppercase tracking-widest border-white/5 bg-white/5">
                         {isCurrentlyMuted ? <BellOff className="w-4 h-4 text-primary" /> : <Bell className="w-4 h-4" />}
                         Мьюз
                       </Button>
@@ -247,11 +252,10 @@ export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onO
                     </DropdownMenuContent>
                   </DropdownMenu>
 
-                  {/* Ограничение: Кнопка "Правка" доступна в личных чатах (локальное имя) или только админам в группах */}
                   {(isPrivate || isChatAdmin) && (
                     <Button 
                       variant="outline" 
-                      className="flex-1 h-10 rounded-xl gap-2 font-bold text-[10px] uppercase tracking-widest border-white/5 bg-white/5"
+                      className="flex-1 h-12 rounded-xl gap-2 font-bold text-[10px] uppercase tracking-widest border-white/5 bg-white/5"
                       onClick={() => setIsEditing(true)}
                     >
                       <Edit3 className="w-4 h-4" /> {isPrivate ? "Имя" : "Правка"}
@@ -278,7 +282,7 @@ export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onO
                   <Textarea value={editForm.description} onChange={e => setEditForm({...editForm, description: e.target.value})} className="bg-black/20 border-white/5 min-h-[80px] text-xs" />
                 </div>
                 <div className="flex items-center justify-between">
-                  <div className="flex flex-col"><span className="text-11px] font-bold text-white">Публичный доступ</span><span className="text-[9px] text-muted-foreground uppercase">Доступен через поиск</span></div>
+                  <div className="flex flex-col"><span className="text-[11px] font-bold text-white">Публичный доступ</span><span className="text-[9px] text-muted-foreground uppercase">Доступен через поиск</span></div>
                   <Switch checked={editForm.isPublic} onCheckedChange={v => setEditForm({...editForm, isPublic: v})} />
                 </div>
               </div>
@@ -363,7 +367,7 @@ function MemberRow({ userId, ownerId, adminIds, isViewerAdmin, viewerId, chatId,
     <div className="flex items-center justify-between p-3 rounded-xl hover:bg-white/5 transition-colors group">
       <div 
         className="flex items-center gap-3 cursor-pointer active:scale-95 transition-transform flex-1 min-w-0"
-        onClick={() => { setInspectedUserId(m.id); onOpenParent(false); }}
+        onClick={() => { onOpenParent(false); setInspectedUserId(m.id); }}
       >
         <UserAvatar userId={m.id} className="h-10 w-10" fallbackName={m.name} showOnlineStatus />
         <div className="flex flex-col text-left min-w-0">

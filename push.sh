@@ -1,7 +1,7 @@
 
 #!/bin/bash
 
-# Nuxus Kernel Sync Utility v2.1
+# Nuxus Kernel Sync Utility v2.2
 # Скрипт для автоматического решения ошибок синхронизации и отправки в GitHub
 
 echo "🚀 Подготовка к отправке в GitHub: glazovmatvei8-netizen/nuxus-message"
@@ -18,6 +18,7 @@ fi
 git branch --set-upstream-to=origin/main main 2>/dev/null || git checkout -b main && git branch --set-upstream-to=origin/main main
 
 # 2. ЛЕЧЕНИЕ ОШИБКИ: Divergent Branches (Стратегия слияния)
+# Это лечит ошибку 'fatal: Need to specify how to reconcile divergent branches'
 git config pull.rebase false
 
 # Попытка синхронизации перед пушем
