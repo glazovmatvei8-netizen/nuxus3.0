@@ -71,11 +71,11 @@ service cloud.firestore {
       allow delete: if isSignedIn() && (isPrimeAdmin() || resource.data.userId == request.auth.uid);
     }
 
-    // Звонки (Явное разрешение list для админа исправляет ошибку)
+    // Звонки
     match /calls/{callId} {
-      allow list: if isPrimeAdmin();
+      allow list: if isSignedIn(); 
       allow create: if isSignedIn();
-      allow read, update, delete: if isSignedIn() && (
+      allow get, update, delete: if isSignedIn() && (
         isPrimeAdmin() || 
         request.auth.uid in resource.data.participantIds
       );

@@ -1,7 +1,7 @@
 
 #!/bin/bash
 
-# Nuxus Kernel Sync Utility v2.2
+# Nuxus Kernel Sync Utility v2.3
 # Скрипт для автоматического решения ошибок синхронизации и отправки в GitHub
 
 echo "🚀 Подготовка к отправке в GitHub: glazovmatvei8-netizen/nuxus-message"
@@ -13,7 +13,7 @@ if [ ! -d ".git" ]; then
     git branch -M main
 fi
 
-# 1. ЛЕЧЕНИЕ ОШИБКИ: No tracking information
+# 1. ЛЕЧЕНИЕ ОШИБКИ: Tracking information
 # Принудительно связываем локальную ветку main с удаленной
 git branch --set-upstream-to=origin/main main 2>/dev/null || git checkout -b main && git branch --set-upstream-to=origin/main main
 

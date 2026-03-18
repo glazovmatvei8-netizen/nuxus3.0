@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -86,10 +87,11 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
       if (activeFilter === 'all' || activeFilter === 'users') {
         const q1 = query(collection(db, 'users'), where('username', '==', withAt), limit(10));
         const q2 = query(collection(db, 'users'), where('username', '==', withoutAt), limit(10));
+        const q3 = query(collection(db, 'users'), where('name', '==', cleanVal), limit(10));
         
-        const [s1, s2] = await Promise.all([getDocs(q1), getDocs(q2)]);
+        const [s1, s2, s3] = await Promise.all([getDocs(q1), getDocs(q2), getDocs(q3)]);
         
-        const allDocs = [...s1.docs, ...s2.docs];
+        const allDocs = [...s1.docs, ...s2.docs, ...s3.docs];
         allDocs.forEach(d => {
           const data = d.data();
           if (d.id !== user?.uid && !foundResults.some(r => r.data.id === d.id)) {
