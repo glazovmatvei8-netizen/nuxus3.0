@@ -1,8 +1,8 @@
 
 #!/bin/bash
 
-# Nuxus Kernel Sync Utility v2.3
-# Скрипт для автоматического решения ошибок синхронизации и отправки в GitHub
+# Nuxus Kernel Sync Utility v2.5
+# Скрипт для автоматического решения всех ошибок Git (Tracking, Divergent Branches)
 
 echo "🚀 Подготовка к отправке в GitHub: glazovmatvei8-netizen/nuxus-message"
 
@@ -13,13 +13,13 @@ if [ ! -d ".git" ]; then
     git branch -M main
 fi
 
-# 1. ЛЕЧЕНИЕ ОШИБКИ: Tracking information
+# 1. ЛЕЧЕНИЕ ОШИБКИ: Divergent Branches
+# Принудительно устанавливаем стратегию слияния
+git config pull.rebase false
+
+# 2. ЛЕЧЕНИЕ ОШИБКИ: Tracking information
 # Принудительно связываем локальную ветку main с удаленной
 git branch --set-upstream-to=origin/main main 2>/dev/null || git checkout -b main && git branch --set-upstream-to=origin/main main
-
-# 2. ЛЕЧЕНИЕ ОШИБКИ: Divergent Branches (Стратегия слияния)
-# Это лечит ошибку 'fatal: Need to specify how to reconcile divergent branches'
-git config pull.rebase false
 
 # Попытка синхронизации перед пушем
 echo "📥 Синхронизация с облаком (объединение версий)..."

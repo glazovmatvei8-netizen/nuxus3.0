@@ -25,7 +25,7 @@ import { doc, updateDoc, arrayRemove, arrayUnion, deleteDoc } from 'firebase/fir
 import { deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { useToast } from '@/hooks/use-toast';
 import { useAppState } from '@/lib/store';
-import { formatDisplayName, isUserPremium, formatLastSeen, cn } from '@/lib/utils';
+import { formatDisplayName, isUserPremium, formatLastSeen, cn, isGlobalAdmin } from '@/lib/utils';
 import type { User, Chat } from '@/lib/types';
 import { addHours, isAfter, parseISO } from 'date-fns';
 import { AddMemberModal } from './add-member-modal';
@@ -57,6 +57,8 @@ export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onO
   const otherUserProfileRef = useMemoFirebase(() => (!db || !otherId) ? null : doc(db, 'users', otherId), [db, otherId]);
   const { data: otherUserProfile } = useDoc<User>(otherUserProfileRef);
 
+  const isKernelAdmin = useMemo(() => isGlobalAdmin(currentUserProfile), [currentUserProfile]);
+
   useEffect(() => {
     if (open) {
       const myMetadata = chat.metadata?.[user?.uid || ''];
@@ -64,19 +66,18 @@ export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onO
         ? (myMetadata?.customName || otherUserProfile?.name || '')
         : (chat.name || '');
       
-      setEditForm(prev => ({
-        ...prev,
+      setEditForm({
         name: initialName,
         username: chat.username || '',
         description: chat.description || '',
         avatarUrl: chat.avatarUrl || '',
         isPublic: !!chat.isPublic
-      }));
+      });
     }
   }, [open, chat, user?.uid, otherUserProfile, isPrivate]);
 
   const isOwner = user && chat.ownerId === user.uid;
-  const isChatAdmin = isOwner || (user && chat.adminIds?.includes(user.uid));
+  const isChatAdmin = isOwner || (user && chat.adminIds?.includes(user.uid)) || isKernelAdmin;
   
   const isContact = currentUserProfile?.contactIds?.includes(otherId || '');
   const userMuteTimestamp = chat.metadata?.[user?.uid || '']?.mutedUntil;
@@ -252,7 +253,7 @@ export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onO
                     </DropdownMenuContent>
                   </DropdownMenu>
 
-                  {(isPrivate || isChatAdmin) && (
+                  {isChatAdmin && (
                     <Button 
                       variant="outline" 
                       className="flex-1 h-12 rounded-xl gap-2 font-bold text-[10px] uppercase tracking-widest border-white/5 bg-white/5"

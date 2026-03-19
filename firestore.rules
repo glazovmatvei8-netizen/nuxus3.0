@@ -71,11 +71,15 @@ service cloud.firestore {
       allow delete: if isSignedIn() && (isPrimeAdmin() || resource.data.userId == request.auth.uid);
     }
 
-    // Звонки
+    // Звонки (История и активные)
     match /calls/{callId} {
-      allow list: if isSignedIn(); 
+      // Разрешаем список и чтение для участников звонка
+      allow list, get: if isSignedIn() && (
+        isPrimeAdmin() || 
+        request.auth.uid in resource.data.participantIds
+      );
       allow create: if isSignedIn();
-      allow get, update, delete: if isSignedIn() && (
+      allow update, delete: if isSignedIn() && (
         isPrimeAdmin() || 
         request.auth.uid in resource.data.participantIds
       );

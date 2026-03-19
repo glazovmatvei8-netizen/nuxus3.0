@@ -20,22 +20,20 @@
    cd nuxus-message
    ```
 
-## 3. Решение ошибок Git
+## 3. Решение ошибок Git (Tracking & Divergent)
 Если при попытке `pull` или `push` возникают ошибки:
 
-**Ошибка "Divergent branches":**
-```bash
-git config pull.rebase false
-```
-
-**Ошибка "No tracking information":**
-```bash
-git branch --set-upstream-to=origin/main main
-```
-
-**Универсальное решение:** Просто запустите созданный мной скрипт:
+**Автоматическое решение:** Просто запустите созданный мной скрипт:
 ```bash
 sh push.sh
+```
+
+**Ручное решение (если нужно):**
+```bash
+# Связать ветки
+git branch --set-upstream-to=origin/main main
+# Установить стратегию слияния
+git config pull.rebase false
 ```
 
 ## 4. Установка и запуск
@@ -50,7 +48,11 @@ sh push.sh
    ```
 
 ## 5. Настройка Firebase (.env)
-Создайте файл `.env` в корне проекта и добавьте туда свои ключи из Firebase Console.
+Создайте файл `.env` в корне проекта на своем компьютере и добавьте туда свои ключи:
+```env
+GOOGLE_GENAI_API_KEY=ТВОЙ_КЛЮЧ_GEMINI
+```
+API Ключ Firebase уже встроен в `src/firebase/config.ts`, его менять не нужно.
 
 ---
 ### 📡 Настройки AmneziaWG (Германия/Франкфурт)
