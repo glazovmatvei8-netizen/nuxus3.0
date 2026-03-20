@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useFirestore, useUser } from '@/firebase';
-import { collection, query, where, getDocs, limit } from 'firebase/firestore';
+import { collection, query, where, getDocs, limit, or } from 'firebase/firestore';
 import { useAppState } from '@/lib/store';
 import { useToast } from '@/hooks/use-toast';
 import { Search, Loader2, ArrowRight, Zap, Globe, Star, Users, User, Bot } from 'lucide-react';
@@ -83,16 +83,22 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
         });
       }
 
-      // 3. Пользователи
+      // 3. Пользователи (Улучшенный поиск)
       if (activeFilter === 'all' || activeFilter === 'users') {
-        const q1 = query(collection(db, 'users'), where('username', '==', withAt), limit(10));
-        const q2 = query(collection(db, 'users'), where('username', '==', withoutAt), limit(10));
-        const q3 = query(collection(db, 'users'), where('name', '==', cleanVal), limit(10));
+        // Ищем по username с @, без @ и по имени
+        const userQ = query(
+          collection(db, 'users'),
+          or(
+            where('username', '==', withAt),
+            where('username', '==', withoutAt),
+            where('name', '>=', val),
+            where('name', '<=', val + '\uf8ff')
+          ),
+          limit(20)
+        );
         
-        const [s1, s2, s3] = await Promise.all([getDocs(q1), getDocs(q2), getDocs(q3)]);
-        
-        const allDocs = [...s1.docs, ...s2.docs, ...s3.docs];
-        allDocs.forEach(d => {
+        const userSnap = await getDocs(userQ);
+        userSnap.docs.forEach(d => {
           const data = d.data();
           if (d.id !== user?.uid && !foundResults.some(r => r.data.id === d.id)) {
             foundResults.push({ type: 'user', data: { id: d.id, ...data } });
