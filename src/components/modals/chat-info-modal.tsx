@@ -374,7 +374,7 @@ function MemberRow({ userId, ownerId, adminIds, isViewerAdmin, viewerId, chatId,
         <div className="flex flex-col text-left min-w-0">
           <span className="text-sm font-semibold flex items-center gap-1 truncate">
             {formatDisplayName(m.name)} 
-            {isUserPremium(m) && <Star className="w-3 h-3 text-accent fill-accent" />}
+            {isUserPremium(m) && <Star className="w-3.5 h-3.5 text-accent fill-accent" />}
             {isTargetOwner ? <Crown className="w-3 h-3 text-primary" /> : isTargetAdmin && <Shield className="w-3 h-3 text-primary" />}
           </span>
           <span className="text-[10px] text-muted-foreground truncate">{m.username}</span>

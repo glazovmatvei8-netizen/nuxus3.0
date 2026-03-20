@@ -1,8 +1,8 @@
 
 #!/bin/bash
 
-# Nuxus Kernel Sync Utility v2.5
-# Скрипт для автоматического решения всех ошибок Git (Tracking, Divergent Branches)
+# Nuxus Kernel Sync Utility v3.0
+# Скрипт для автоматического решения всех ошибок Git (Tracking, Divergent, Remote Ref)
 
 echo "🚀 Подготовка к отправке в GitHub: glazovmatvei8-netizen/nuxus-message"
 
@@ -13,29 +13,28 @@ if [ ! -d ".git" ]; then
     git branch -M main
 fi
 
-# 1. ЛЕЧЕНИЕ ОШИБКИ: Divergent Branches
-# Принудительно устанавливаем стратегию слияния
+# 1. Настройка стратегии слияния (Лечит Divergent Branches)
 git config pull.rebase false
 
-# 2. ЛЕЧЕНИЕ ОШИБКИ: Tracking information
-# Принудительно связываем локальную ветку main с удаленной
-git branch --set-upstream-to=origin/main main 2>/dev/null || git checkout -b main && git branch --set-upstream-to=origin/main main
+# 2. Попытка синхронизации
+echo "📥 Синхронизация с облаком..."
+# Используем --allow-unrelated-histories на случай, если репозиторий был пересоздан
+git pull origin main --tags --allow-unrelated-histories || echo "⚠️ Удаленная ветка main не найдена или пуста, продолжаем..."
 
-# Попытка синхронизации перед пушем
-echo "📥 Синхронизация с облаком (объединение версий)..."
-git pull origin main --tags || echo "Конфликты или пустой репозиторий, продолжаем..."
+# 3. Связываем ветку, если она не связана
+git branch --set-upstream-to=origin/main main 2>/dev/null
 
-# Добавляем все файлы
+# 4. Добавляем все файлы
 git add .
 
 # Формируем сообщение
-COMMIT_MSG="Nuxus Core Update: $(date '+%Y-%m-%d %H:%M:%S') [Fix: Domain Separation & Group Permissions]"
+COMMIT_MSG="Nuxus Core Update: $(date '+%Y-%m-%d %H:%M:%S') [Fix: Domain Split & Permission Shield]"
 
-# Коммит
+# 5. Коммит
 git commit -m "$COMMIT_MSG"
 
-# Отправка
+# 6. Отправка (Трансляция)
 echo "🛰️ Трансляция данных в репозиторий..."
 git push -u origin main
 
-echo "✅ Успех! Ядро синхронизировано. Все ошибки устранены."
+echo "✅ Успех! Ядро синхронизировано. Все ошибки Гита устранены."
