@@ -13,11 +13,11 @@
 1. Откройте терминал на своем компьютере.
 2. Перейдите в папку проекта:
    ```bash
-   git clone https://github.com/glazovmatvei8-netizen/nuxus-message.git
+   git clone https://github.com/glazovmatvei8-netizen/nuxus.git
    ```
 3. Зайдите в папку:
    ```bash
-   cd nuxus-message
+   cd nuxus
    ```
 
 ## 3. Решение ошибок Git (Tracking & Divergent)

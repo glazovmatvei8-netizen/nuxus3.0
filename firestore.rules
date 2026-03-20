@@ -7,7 +7,7 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    // Главный доступ для Администратора Ядра (Твой UID)
+    // Главный доступ для Администратора Ядра
     function isPrimeAdmin() {
       return isSignedIn() && (
         request.auth.uid == 'GCvLucN8CjNcdaxPO2vmpZ84hNl1' ||
@@ -73,9 +73,8 @@ service cloud.firestore {
 
     // Звонки (История и активные)
     match /calls/{callId} {
-      allow read: if isSignedIn();
-      // Разрешаем список только если пользователь является участником звонка
-      allow list: if isSignedIn() && (isPrimeAdmin() || request.auth.uid in resource.data.participantIds);
+      allow read: if isSignedIn() && (isPrimeAdmin() || request.auth.uid in resource.data.participantIds);
+      allow list: if isSignedIn();
       allow create: if isSignedIn();
       allow update, delete: if isSignedIn() && (
         isPrimeAdmin() || 
