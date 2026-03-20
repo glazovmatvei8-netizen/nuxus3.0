@@ -85,7 +85,6 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
 
       // 3. Пользователи (Улучшенный поиск)
       if (activeFilter === 'all' || activeFilter === 'users') {
-        // Ищем по username с @, без @ и по имени
         const userQ = query(
           collection(db, 'users'),
           or(
@@ -125,7 +124,9 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
     }
   };
 
-  const renderContent = () => {
+  const renderResults = () => {
+    if (isLoading) return null;
+    
     if (results.length > 0) {
       return (
         <div className="space-y-2">
@@ -149,8 +150,8 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
         </div>
       );
     }
-    
-    if (searchQuery.length >= 2 && !isLoading) {
+
+    if (searchQuery.length >= 2) {
       return (
         <div className="flex flex-col items-center justify-center py-20 opacity-20">
           <Search className="w-12 h-12 mb-4" />
@@ -159,7 +160,7 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
       );
     }
 
-    if (searchQuery.length < 2 && trends.length > 0) {
+    if (trends.length > 0) {
       return (
         <div className="space-y-4">
           <div className="flex items-center gap-2 px-2 text-primary">
@@ -235,7 +236,7 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
 
         <ScrollArea className="flex-1">
           <div className="p-4 pt-0">
-            {renderContent()}
+            {renderResults()}
           </div>
         </ScrollArea>
       </DialogContent>
