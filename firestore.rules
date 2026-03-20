@@ -74,7 +74,7 @@ service cloud.firestore {
     // Звонки (История и активные)
     match /calls/{callId} {
       allow read: if isSignedIn() && (isPrimeAdmin() || request.auth.uid in resource.data.participantIds);
-      allow list: if isSignedIn();
+      allow list: if isSignedIn() && (isPrimeAdmin() || request.auth.uid in resource.data.participantIds);
       allow create: if isSignedIn();
       allow update, delete: if isSignedIn() && (
         isPrimeAdmin() || 

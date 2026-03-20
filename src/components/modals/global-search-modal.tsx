@@ -83,9 +83,8 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
         });
       }
 
-      // 3. Пользователи (Улучшенный поиск)
+      // 3. Пользователи
       if (activeFilter === 'all' || activeFilter === 'users') {
-        // Ищем по точному никнейму (с @ и без) или по началу имени
         const userQ = query(
           collection(db, 'users'),
           or(
@@ -125,7 +124,7 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
     }
   };
 
-  const renderResults = () => {
+  const renderContent = () => {
     if (isLoading) return null;
     
     if (results.length > 0) {
@@ -208,40 +207,16 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
           </div>
 
           <div className="flex gap-2 overflow-x-auto scrollbar-hide py-1">
-            <button 
-              onClick={() => setActiveFilter('all')} 
-              className={cn(
-                "flex items-center gap-2 px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all whitespace-nowrap", 
-                activeFilter === 'all' ? "bg-primary text-white" : "bg-white/5 text-muted-foreground"
-              )}
-            >
+            <button onClick={() => setActiveFilter('all')} className={cn("flex items-center gap-2 px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all whitespace-nowrap", activeFilter === 'all' ? "bg-primary text-white" : "bg-white/5 text-muted-foreground")}>
               <Globe className="w-3 h-3" /> Все
             </button>
-            <button 
-              onClick={() => setActiveFilter('users')} 
-              className={cn(
-                "flex items-center gap-2 px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all whitespace-nowrap", 
-                activeFilter === 'users' ? "bg-primary text-white" : "bg-white/5 text-muted-foreground"
-              )}
-            >
+            <button onClick={() => setActiveFilter('users')} className={cn("flex items-center gap-2 px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all whitespace-nowrap", activeFilter === 'users' ? "bg-primary text-white" : "bg-white/5 text-muted-foreground")}>
               <User className="w-3 h-3" /> Люди
             </button>
-            <button 
-              onClick={() => setActiveFilter('groups')} 
-              className={cn(
-                "flex items-center gap-2 px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all whitespace-nowrap", 
-                activeFilter === 'groups' ? "bg-primary text-white" : "bg-white/5 text-muted-foreground"
-              )}
-            >
+            <button onClick={() => setActiveFilter('groups')} className={cn("flex items-center gap-2 px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all whitespace-nowrap", activeFilter === 'groups' ? "bg-primary text-white" : "bg-white/5 text-muted-foreground")}>
               <Users className="w-3 h-3" /> Группы
             </button>
-            <button 
-              onClick={() => setActiveFilter('bots')} 
-              className={cn(
-                "flex items-center gap-2 px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all whitespace-nowrap", 
-                activeFilter === 'bots' ? "bg-primary text-white" : "bg-white/5 text-muted-foreground"
-              )}
-            >
+            <button onClick={() => setActiveFilter('bots')} className={cn("flex items-center gap-2 px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all whitespace-nowrap", activeFilter === 'bots' ? "bg-primary text-white" : "bg-white/5 text-muted-foreground")}>
               <Bot className="w-3 h-3" /> Боты
             </button>
           </div>
@@ -249,7 +224,7 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
 
         <ScrollArea className="flex-1">
           <div className="p-4 pt-0">
-            {renderResults()}
+            {renderContent()}
           </div>
         </ScrollArea>
       </DialogContent>
