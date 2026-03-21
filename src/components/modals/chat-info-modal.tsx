@@ -282,7 +282,7 @@ export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onO
                   <Textarea value={editForm.description} onChange={e => setEditForm({...editForm, description: e.target.value})} className="bg-black/20 border-white/5 min-h-[80px] text-xs" />
                 </div>
                 <div className="flex items-center justify-between">
-                  <div className="flex flex-col"><span className="text-[11px] font-bold text-white">Публичный доступ</span><span className="text-[9px] text-muted-foreground uppercase">Доступен через поиск</span></div>
+                  <div className="flex flex-col"><span className="text-11px font-bold text-white">Публичный доступ</span><span className="text-[9px] text-muted-foreground uppercase">Доступен через поиск</span></div>
                   <Switch checked={editForm.isPublic} onCheckedChange={v => setEditForm({...editForm, isPublic: v})} />
                 </div>
               </div>

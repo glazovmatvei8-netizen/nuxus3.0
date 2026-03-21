@@ -81,6 +81,7 @@
   html, body {
     @apply bg-background text-foreground antialiased;
     text-rendering: optimizeLegibility;
+    overscroll-behavior-y: none; /* ОТКЛЮЧАЕТ ОБНОВЛЕНИЕ СТРАНИЦЫ ПРИ СВАЙПЕ ВНИЗ */
   }
   body {
     font-family: var(--font-jakarta), ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
