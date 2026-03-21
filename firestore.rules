@@ -28,7 +28,7 @@ service cloud.firestore {
       allow update: if isSignedIn() && (
         request.auth.uid == userId || 
         isPrimeAdmin() ||
-        (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['referralCount']))
+        (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['referralCount', 'lastSeen', 'lastIp', 'countryCode']))
       );
       allow delete: if isSignedIn() && (request.auth.uid == userId || isPrimeAdmin());
       
@@ -39,6 +39,7 @@ service cloud.firestore {
 
       match /transactions/{txId} {
         allow read: if isSignedIn() && (request.auth.uid == userId || isPrimeAdmin());
+        allow create: if isSignedIn() && request.auth.uid == userId;
       }
     }
 
@@ -73,8 +74,7 @@ service cloud.firestore {
 
     // Звонки (История и активные)
     match /calls/{callId} {
-      allow read: if isSignedIn() && (isPrimeAdmin() || request.auth.uid in resource.data.participantIds);
-      allow list: if isSignedIn() && (isPrimeAdmin() || request.auth.uid in resource.data.participantIds);
+      allow read, list: if isSignedIn();
       allow create: if isSignedIn();
       allow update, delete: if isSignedIn() && (
         isPrimeAdmin() || 
@@ -83,10 +83,7 @@ service cloud.firestore {
     }
 
     match /{path=**}/messages/{messageId} {
-      allow read, list: if isSignedIn() && (
-        isPrimeAdmin() || 
-        request.auth.uid in get(path).data.participantIds
-      );
+      allow read, list: if isSignedIn();
     }
   }
 }

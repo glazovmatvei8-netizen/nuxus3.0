@@ -13,11 +13,11 @@
 1. Откройте терминал на своем компьютере.
 2. Перейдите в папку проекта:
    ```bash
-   git clone https://github.com/glazovmatvei8-netizen/nuxus.git
+   git clone https://github.com/glazovmatvei8-netizen/nuxus2.0.git
    ```
 3. Зайдите в папку:
    ```bash
-   cd nuxus
+   cd nuxus2.0
    ```
 
 ## 3. Решение ошибок Git (Tracking & Divergent)
@@ -30,10 +30,10 @@ sh push.sh
 
 **Ручное решение (если нужно):**
 ```bash
-# Связать ветки
-git branch --set-upstream-to=origin/main main
 # Установить стратегию слияния
 git config pull.rebase false
+# Связать ветки
+git branch --set-upstream-to=origin/main main
 ```
 
 ## 4. Установка и запуск
