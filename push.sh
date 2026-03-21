@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Nuxus Kernel Sync Utility v8.0
+# Nuxus Kernel Sync Utility v9.0
 # Скрипт для принудительной синхронизации с репозиторием nuxus2.0
 
 REPO_URL="https://github.com/glazovmatvei8-netizen/nuxus2.0.git"
