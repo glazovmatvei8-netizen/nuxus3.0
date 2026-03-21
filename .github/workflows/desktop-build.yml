@@ -1,4 +1,3 @@
-
 name: Build Desktop (macOS, Linux, Windows)
 
 on:

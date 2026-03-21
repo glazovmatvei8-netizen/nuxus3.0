@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useMemo, useRef, useEffect } from 'react';
@@ -21,7 +20,7 @@ import {
   DropdownMenuSeparator
 } from "@/components/ui/dropdown-menu";
 import { useFirestore, useUser, useDoc, useMemoFirebase } from '@/firebase';
-import { doc, updateDoc, arrayRemove, arrayUnion, deleteDoc } from 'firebase/firestore';
+import { doc, updateDoc, arrayRemove, arrayUnion } from 'firebase/firestore';
 import { deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { useToast } from '@/hooks/use-toast';
 import { useAppState } from '@/lib/store';
@@ -177,7 +176,7 @@ export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onO
                 showOnlineStatus={!isEditing}
               />
             </div>
-            {isEditing && !isPrivate && (
+            {isEditing && isChatAdmin && !isPrivate && (
               <div 
                 className="absolute inset-0 bg-black/60 rounded-full flex items-center justify-center cursor-pointer backdrop-blur-sm"
                 onClick={() => fileInputRef.current?.click()}
