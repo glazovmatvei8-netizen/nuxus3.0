@@ -16,7 +16,7 @@ import { CreatePollModal } from './modals/create-poll-modal';
 import { useFirestore, useUser, useCollection, useDoc, useMemoFirebase } from '@/firebase';
 import { collection, query, orderBy, doc, addDoc, updateDoc, arrayUnion, where, getDocs, arrayRemove, limit } from 'firebase/firestore';
 import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
-import { formatDisplayName, cn, compressImage, encryptSignal, isGlobalAdmin, decryptSignal } from '@/lib/utils';
+import { formatDisplayName, cn, compressImage, encryptSignal, isGlobalAdmin, decryptSignal, formatLastSeen } from '@/lib/utils';
 import type { Message, User as UserType, Chat } from '@/lib/types';
 import { EmojiPicker } from './emoji-picker';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -79,6 +79,7 @@ export default function ChatArea() {
   const [searchQuery, setSearchQuery] = useState('');
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [isJoining, setIsJoining] = useState(false);
+  const [typingTimeout, setTypingTimeout] = useState<NodeJS.Timeout | null>(null);
 
   // Mention State
   const [mentionSearch, setMentionSearch] = useState<string | null>(null);
@@ -155,17 +156,50 @@ export default function ChatArea() {
   }, [db, participantIds]);
   const { data: participants } = useCollection<UserType>(participantsQuery);
 
-  const filteredMentions = useMemo(() => {
-    if (mentionSearch === null || !participants) return [];
-    const search = mentionSearch.toLowerCase();
-    return participants.filter(p => 
-      p.id !== firebaseUser?.uid && 
-      (p.name?.toLowerCase().includes(search) || p.username?.toLowerCase().includes(search))
-    );
-  }, [mentionSearch, participants, firebaseUser?.uid]);
+  // Typing status management
+  const updateTypingStatus = useCallback((isTyping: boolean) => {
+    if (!db || !currentChatId || !firebaseUser) return;
+    updateDocumentNonBlocking(doc(db, 'chats', currentChatId), {
+      [`typing.${firebaseUser.uid}`]: isTyping
+    });
+  }, [db, currentChatId, firebaseUser]);
+
+  const typingUsers = useMemo(() => {
+    if (!chat?.typing || !firebaseUser) return [];
+    return Object.entries(chat.typing)
+      .filter(([uid, isTyping]) => isTyping && uid !== firebaseUser.uid)
+      .map(([uid]) => participants?.find(p => p.id === uid)?.name || 'Кто-то');
+  }, [chat?.typing, firebaseUser, participants]);
+
+  const chatSubtext = useMemo(() => {
+    if (typingUsers.length > 0) {
+      if (typingUsers.length === 1) return `${typingUsers[0]} печатает...`;
+      return 'Несколько человек печатают...';
+    }
+    if (chat?.type === 'private') {
+      return formatLastSeen(otherProfile?.lastSeen, otherProfile?.settings?.privacy?.lastSeenVisibility);
+    }
+    const count = chat?.participantIds?.length || 0;
+    return `${count} участников`;
+  }, [typingUsers, chat, otherProfile]);
 
   const handleInputChange = (val: string) => {
     setMessageInput(val);
+    
+    // Typing indicator
+    if (!typingTimeout) {
+      updateTypingStatus(true);
+    } else {
+      clearTimeout(typingTimeout);
+    }
+
+    const timeout = setTimeout(() => {
+      updateTypingStatus(false);
+      setTypingTimeout(null);
+    }, 3000);
+    setTypingTimeout(timeout);
+
+    // Mention logic
     const lastAtIndex = val.lastIndexOf('@');
     if (lastAtIndex !== -1) {
       const isStart = lastAtIndex === 0;
@@ -181,6 +215,15 @@ export default function ChatArea() {
     }
     setMentionSearch(null);
   };
+
+  const filteredMentions = useMemo(() => {
+    if (mentionSearch === null || !participants) return [];
+    const search = mentionSearch.toLowerCase();
+    return participants.filter(p => 
+      p.id !== firebaseUser?.uid && 
+      (p.name?.toLowerCase().includes(search) || p.username?.toLowerCase().includes(search))
+    );
+  }, [mentionSearch, participants, firebaseUser?.uid]);
 
   const selectMention = (p: UserType) => {
     const lastAtIndex = messageInput.lastIndexOf('@');
@@ -214,18 +257,15 @@ export default function ChatArea() {
     }
   }, [currentChatId, firebaseUser, db, toast]);
 
-  // Nuxus Chat Manager Command Processor (REFINED & FIXED)
   const processBotCommand = async (input: string) => {
     const trimmed = input.trim();
     if (!trimmed.startsWith('!') || !currentChatId || !db || !chat || !firebaseUser || !isChatAdmin) return false;
     
-    // Check if Bot is in the chat
     if (!chat.participantIds.includes('bot_nuxus_manager')) return false;
 
-    // Split by any number of spaces to handle accidental spaces
     const parts = trimmed.split(/\s+/);
     const cmd = parts[0].slice(1).toLowerCase();
-    const mention = parts[1]; // Expecting @username
+    const mention = parts[1]; 
 
     let responseMessage = "";
 
@@ -259,7 +299,6 @@ export default function ChatArea() {
             if (targetId === chat.ownerId) {
               responseMessage = "⚠️ Невозможно забанить создателя узла.";
             } else {
-              // Ensure metadata is updated correctly even if it doesn't exist
               await updateDoc(doc(db, 'chats', currentChatId), {
                 participantIds: arrayRemove(targetId),
                 adminIds: arrayRemove(targetId),
@@ -392,6 +431,9 @@ export default function ChatArea() {
     if (type_msg === 'text') {
       setMessageInput('');
       setMentionSearch(null);
+      updateTypingStatus(false); // Stop typing immediately on send
+      if (typingTimeout) clearTimeout(typingTimeout);
+      setTypingTimeout(null);
       if (currentChatId) setLocalDrafts(prev => ({ ...prev, [currentChatId]: '' }));
     }
     
@@ -416,13 +458,12 @@ export default function ChatArea() {
     await addDoc(collection(db, 'chats', currentChatId, 'messages'), msgData);
     updateDocumentNonBlocking(doc(db, 'chats', currentChatId), { lastMessageAt: new Date().toISOString(), lastSenderId: firebaseUser.uid });
     
-    // Command Processing AFTER sending the message (so it stays in history)
     if (type_msg === 'text' && content_msg.trim().startsWith('!')) {
       await processBotCommand(content_msg);
     }
 
     setTimeout(() => scrollToBottom('smooth'), 100);
-  }, [messageInput, currentChatId, firebaseUser, db, userProfile, replyTo, editingMsg, setLocalDrafts, scrollToBottom, canPost, chat, isChatAdmin]);
+  }, [messageInput, currentChatId, firebaseUser, db, userProfile, replyTo, editingMsg, setLocalDrafts, scrollToBottom, canPost, chat, isChatAdmin, updateTypingStatus, typingTimeout]);
 
   const handlePinMessage = useCallback(async (msg: Message) => {
     if (!db || !currentChatId) return;
@@ -460,8 +501,11 @@ export default function ChatArea() {
               <UserAvatar userId={otherId} manualAvatarUrl={chat?.avatarUrl || otherProfile?.avatarUrl} className="h-10 w-10" fallbackName={chatDisplayName} showOnlineStatus />
               <div className="flex flex-col min-w-0">
                 <span className="font-bold text-sm truncate">{chatDisplayName}</span>
-                <span className="text-[10px] text-primary/80 font-bold uppercase tracking-widest">
-                  {chat?.type === 'private' ? formatLastSeen(otherProfile?.lastSeen) : 'сообщество'}
+                <span className={cn(
+                  "text-[10px] font-bold uppercase tracking-widest transition-colors",
+                  typingUsers.length > 0 ? "text-primary animate-pulse" : "text-primary/80"
+                )}>
+                  {chatSubtext}
                 </span>
               </div>
             </div>
@@ -482,7 +526,6 @@ export default function ChatArea() {
       </header>
 
       <div className="flex-1 relative overflow-hidden flex flex-col">
-        {/* Background Layer */}
         <div 
           className={cn("absolute inset-0 z-0 nuxus-pattern-bg", !userProfile?.settings?.chatBackground && "opacity-40")} 
           style={chatBackgroundStyle}
@@ -528,7 +571,6 @@ export default function ChatArea() {
         <footer className="p-3 pb-6 bg-background/90 backdrop-blur-2xl border-t border-white/5 shrink-0 z-40 relative">
           <div className="max-w-4xl mx-auto space-y-2 relative">
             
-            {/* Mention Suggestions Popup */}
             {mentionSearch !== null && filteredMentions.length > 0 && (
               <div className="absolute bottom-[110%] left-0 right-0 mb-2 bg-card/95 backdrop-blur-3xl border border-white/10 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] overflow-hidden animate-in slide-in-from-bottom-2 duration-200 z-[1000]">
                 <div className="p-2 border-b border-white/5 flex items-center justify-between">
