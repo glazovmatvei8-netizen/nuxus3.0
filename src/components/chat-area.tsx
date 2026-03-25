@@ -79,7 +79,6 @@ export default function ChatArea() {
   const [searchQuery, setSearchQuery] = useState('');
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [isJoining, setIsJoining] = useState(false);
-  const [typingTimeout, setTypingTimeout] = useState<NodeJS.Timeout | null>(null);
 
   // Mention State
   const [mentionSearch, setMentionSearch] = useState<string | null>(null);
@@ -156,49 +155,16 @@ export default function ChatArea() {
   }, [db, participantIds]);
   const { data: participants } = useCollection<UserType>(participantsQuery);
 
-  // Typing status management
-  const updateTypingStatus = useCallback((isTyping: boolean) => {
-    if (!db || !currentChatId || !firebaseUser) return;
-    updateDocumentNonBlocking(doc(db, 'chats', currentChatId), {
-      [`typing.${firebaseUser.uid}`]: isTyping
-    });
-  }, [db, currentChatId, firebaseUser]);
-
-  const typingUsers = useMemo(() => {
-    if (!chat?.typing || !firebaseUser) return [];
-    return Object.entries(chat.typing)
-      .filter(([uid, isTyping]) => isTyping && uid !== firebaseUser.uid)
-      .map(([uid]) => participants?.find(p => p.id === uid)?.name || 'Кто-то');
-  }, [chat?.typing, firebaseUser, participants]);
-
   const chatSubtext = useMemo(() => {
-    if (typingUsers.length > 0) {
-      if (typingUsers.length === 1) return `${typingUsers[0]} печатает...`;
-      return 'Несколько человек печатают...';
-    }
     if (chat?.type === 'private') {
       return formatLastSeen(otherProfile?.lastSeen, otherProfile?.settings?.privacy?.lastSeenVisibility);
     }
-    const count = chat?.participantIds?.length || 0;
-    return `${count} участников`;
-  }, [typingUsers, chat, otherProfile]);
+    return 'сообщество';
+  }, [chat, otherProfile]);
 
   const handleInputChange = (val: string) => {
     setMessageInput(val);
     
-    // Typing indicator
-    if (!typingTimeout) {
-      updateTypingStatus(true);
-    } else {
-      clearTimeout(typingTimeout);
-    }
-
-    const timeout = setTimeout(() => {
-      updateTypingStatus(false);
-      setTypingTimeout(null);
-    }, 3000);
-    setTypingTimeout(timeout);
-
     // Mention logic
     const lastAtIndex = val.lastIndexOf('@');
     if (lastAtIndex !== -1) {
@@ -431,9 +397,6 @@ export default function ChatArea() {
     if (type_msg === 'text') {
       setMessageInput('');
       setMentionSearch(null);
-      updateTypingStatus(false); // Stop typing immediately on send
-      if (typingTimeout) clearTimeout(typingTimeout);
-      setTypingTimeout(null);
       if (currentChatId) setLocalDrafts(prev => ({ ...prev, [currentChatId]: '' }));
     }
     
@@ -463,7 +426,7 @@ export default function ChatArea() {
     }
 
     setTimeout(() => scrollToBottom('smooth'), 100);
-  }, [messageInput, currentChatId, firebaseUser, db, userProfile, replyTo, editingMsg, setLocalDrafts, scrollToBottom, canPost, chat, isChatAdmin, updateTypingStatus, typingTimeout]);
+  }, [messageInput, currentChatId, firebaseUser, db, userProfile, replyTo, editingMsg, setLocalDrafts, scrollToBottom, canPost, chat, isChatAdmin]);
 
   const handlePinMessage = useCallback(async (msg: Message) => {
     if (!db || !currentChatId) return;
@@ -501,10 +464,7 @@ export default function ChatArea() {
               <UserAvatar userId={otherId} manualAvatarUrl={chat?.avatarUrl || otherProfile?.avatarUrl} className="h-10 w-10" fallbackName={chatDisplayName} showOnlineStatus />
               <div className="flex flex-col min-w-0">
                 <span className="font-bold text-sm truncate">{chatDisplayName}</span>
-                <span className={cn(
-                  "text-[10px] font-bold uppercase tracking-widest transition-colors",
-                  typingUsers.length > 0 ? "text-primary animate-pulse" : "text-primary/80"
-                )}>
+                <span className="text-[10px] font-bold uppercase tracking-widest text-primary/80">
                   {chatSubtext}
                 </span>
               </div>
