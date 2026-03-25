@@ -158,36 +158,36 @@ const ChatListItem = memo(({
           <ContextMenuTrigger disabled={Math.abs(offsetX) > 10 || isDragging}>
             <div className={cn(
               "flex items-center gap-4 px-4 py-4 cursor-pointer transition-all duration-500 border border-transparent group relative w-full h-[92px] select-none rounded-[2rem]", 
-              isActive && Math.abs(offsetX) < 5 ? 'bg-primary/15 border-white/10 shadow-[0_0_20px_rgba(168,85,247,0.1)] scale-[0.98]' : 'hover:bg-white/[0.03] active:scale-[0.97]'
+              isActive && Math.abs(offsetX) < 5 ? 'bg-primary/15 border-white/10 shadow-[0_0_25px_rgba(168,85,247,0.15)] scale-[0.98]' : 'hover:bg-white/[0.05] active:scale-[0.97]'
             )}>
               <div className="relative">
-                <UserAvatar userId={otherId} manualAvatarUrl={otherProfile?.avatarUrl || chat.avatarUrl} className="h-[60px] w-[60px] border-2 border-white/5 transition-all duration-500 group-hover:scale-105" fallbackName={finalDisplayName} showOnlineStatus />
-                {isUnread && <div className="absolute -top-1 -right-1 w-4 h-4 bg-primary rounded-full border-2 border-background shadow-[0_0_10px_rgba(168,85,247,0.8)] animate-pulse" />}
+                <UserAvatar userId={otherId} manualAvatarUrl={otherProfile?.avatarUrl || chat.avatarUrl} className="h-[64px] w-[64px] border-2 border-white/10 transition-all duration-500 group-hover:scale-105" fallbackName={finalDisplayName} showOnlineStatus />
+                {isUnread && <div className="absolute -top-1 -right-1 w-4 h-4 bg-primary rounded-full border-2 border-background shadow-[0_0_15px_rgba(168,85,247,0.8)] animate-pulse" />}
               </div>
               
               <div className="flex-1 min-w-0 h-full flex flex-col justify-center">
-                <div className="flex items-center justify-between mb-1">
-                  <span className="font-black text-[17px] truncate flex items-center gap-2 tracking-tight italic">
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="font-black text-[17px] truncate flex items-center gap-2 tracking-tight italic text-white/90">
                     {finalDisplayName} 
                     {otherProfile?.isPremium && <Star className="w-3.5 h-3.5 text-accent fill-accent animate-pulse" />}
                     {isPinned && <Pin className="w-3 h-3 text-primary rotate-45" />}
                   </span>
-                  <span className="text-[11px] text-primary/60 font-black tracking-widest tabular-nums">{displayTime}</span>
+                  <span className="text-[11px] text-primary/80 font-black tracking-widest tabular-nums">{displayTime}</span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <p className="text-[13px] text-muted-foreground/60 truncate flex-1 flex items-center gap-2 font-medium">
-                    {isEncrypted && <Lock className="w-3 h-3 shrink-0 text-primary/40" />}
+                  <p className="text-[13px] text-muted-foreground/70 truncate flex-1 flex items-center gap-2 font-medium">
+                    {isEncrypted && <Lock className="w-3.5 h-3.5 shrink-0 text-primary/40" />}
                     {decryptedPreview}
                   </p>
                 </div>
               </div>
               
               {isActive && (
-                <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1.5 h-10 bg-primary rounded-r-full shadow-[0_0_15px_rgba(168,85,247,0.8)]" />
+                <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1.5 h-12 bg-primary rounded-r-full shadow-[0_0_20px_rgba(168,85,247,0.8)]" />
               )}
             </div>
           </ContextMenuTrigger>
-          <ContextMenuContent className="w-64 bg-[#0a0a0c]/90 backdrop-blur-3xl border-white/10 rounded-[1.8rem] shadow-2xl p-1.5">
+          <ContextMenuContent className="w-64 bg-[#0a0a0c]/95 backdrop-blur-3xl border-white/10 rounded-[1.8rem] shadow-2xl p-1.5">
             <ContextMenuItem onClick={() => onMarkUnread(chat.id)} className="gap-3 py-3 font-black uppercase text-[10px] tracking-[0.2em] rounded-xl hover:bg-primary/10 hover:text-primary transition-all">
               <MessageCircle className="w-4 h-4 text-[#007AFF]" /> {chat.isManualUnread ? 'Пометить прочитанным' : 'Пометить непрочитанным'}
             </ContextMenuItem>
@@ -219,7 +219,7 @@ export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?:
   const { currentChatId, setCurrentChatId, setIsSearchOpen, setIsInterceptionRequested } = useAppState();
   const { toast } = useToast();
   
-  const [activeTab, setActiveTab] = useState(isArchiveView ? 'archived' : 'all');
+  const [activeTab, setActiveTab] = useState('all');
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isEditorModalOpen, setIsEditorModalOpen] = useState(false);
   const [isAdminPanelOpen, setIsAdminPanelOpen] = useState(false);
@@ -295,17 +295,17 @@ export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?:
   }, [chats, activeTab, isArchiveView, currentUserProfile?.pinnedChatIds, user?.uid]);
 
   return (
-    <div className="flex flex-col h-full bg-background overflow-hidden relative">
+    <div className="flex flex-col h-full bg-background/40 backdrop-blur-xl overflow-hidden relative">
       {/* Search & Header */}
-      <div className="px-6 pt-8 pb-4 shrink-0 bg-background/50 backdrop-blur-xl z-20 space-y-6">
+      <div className="px-6 pt-8 pb-4 shrink-0 bg-transparent z-20 space-y-6">
         <div className="flex flex-col items-center gap-4 w-full">
           <div className="flex items-center justify-between w-full">
-            <div className="w-12" /> {/* Spacer for symmetry */}
-            <h1 onClick={() => isGlobalAdmin(currentUserProfile) && setIsAdminPanelOpen(true)} className={cn("text-2xl font-bold italic tracking-tight text-white transition-all flex items-center gap-2", isGlobalAdmin(currentUserProfile) ? "cursor-pointer hover:text-primary hover:drop-shadow-[0_0_10px_rgba(168,85,247,0.5)]" : "cursor-default")}>
+            <div className="w-10 h-10" /> {/* Spacer */}
+            <h1 onClick={() => isGlobalAdmin(currentUserProfile) && setIsAdminPanelOpen(true)} className={cn("text-2xl font-black italic tracking-tight text-white transition-all flex items-center gap-2", isGlobalAdmin(currentUserProfile) ? "cursor-pointer hover:text-primary hover:drop-shadow-[0_0_15px_rgba(168,85,247,0.6)]" : "cursor-default")}>
               {isArchiveView ? 'Архив 🐱' : 'Чаты 🐱'}
             </h1>
             <div className="flex gap-2">
-              <Button variant="ghost" size="icon" className="h-10 w-10 rounded-xl bg-white/[0.03] border border-white/5 hover:border-primary/40 transition-all group" onClick={() => setIsCreateModalOpen(true)}>
+              <Button variant="ghost" size="icon" className="h-10 w-10 rounded-xl bg-white/[0.05] border border-white/5 hover:border-primary/40 transition-all group" onClick={() => setIsCreateModalOpen(true)}>
                 <Plus className="w-5 h-5 group-hover:rotate-90 transition-transform duration-500" />
               </Button>
             </div>
@@ -316,7 +316,7 @@ export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?:
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground/40 group-focus-within:text-primary transition-colors" />
           <input 
             placeholder="Поиск сообщений..." 
-            className="w-full h-12 bg-white/[0.03] border border-white/[0.08] rounded-[1.2rem] pl-12 text-sm font-bold uppercase tracking-widest placeholder:text-muted-foreground/30 focus:outline-none focus:border-primary/40 focus:ring-1 focus:ring-primary/20 transition-all"
+            className="w-full h-12 bg-white/[0.05] border border-white/[0.1] rounded-[1.2rem] pl-12 text-sm font-bold uppercase tracking-widest placeholder:text-muted-foreground/30 focus:outline-none focus:border-primary/40 focus:ring-1 focus:ring-primary/20 transition-all"
             onClick={() => setIsSearchOpen(true)}
             readOnly
           />
@@ -335,7 +335,7 @@ export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?:
                     { id: 'private', label: 'ЛИЧНЫЕ' },
                     { id: 'groups', label: 'СООБЩЕСТВА' }
                   ].map((tab) => (
-                    <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={cn("px-6 py-2 rounded-full text-[10px] font-black uppercase tracking-[0.3em] transition-all whitespace-nowrap border italic", activeTab === tab.id ? "bg-primary text-white border-primary shadow-[0_0_15px_rgba(168,85,247,0.3)]" : "text-muted-foreground/40 border-white/[0.05] hover:text-white hover:bg-white/[0.02]")}>
+                    <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={cn("px-6 py-2 rounded-full text-[10px] font-black uppercase tracking-[0.3em] transition-all whitespace-nowrap border italic", activeTab === tab.id ? "bg-primary text-white border-primary shadow-[0_0_20px_rgba(168,85,247,0.4)]" : "text-muted-foreground/50 border-white/[0.08] hover:text-white hover:bg-white/5")}>
                       {tab.label}
                     </button>
                   ))}
@@ -344,7 +344,7 @@ export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?:
             </div>
           )}
 
-          <div className="pb-40 space-y-1">
+          <div className="pb-40 space-y-1.5">
             {filteredChats.length > 0 ? (
               filteredChats.map(chat => (
                 <ChatListItem 

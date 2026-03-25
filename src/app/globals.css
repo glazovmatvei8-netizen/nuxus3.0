@@ -38,10 +38,11 @@
   * { @apply border-border; }
   body {
     @apply bg-background text-foreground antialiased;
+    /* Улучшенный яркий фон с градиентами */
     background-image: 
-      radial-gradient(circle at 20% 20%, hsl(var(--primary) / 0.08), transparent 40%),
-      radial-gradient(circle at 80% 80%, hsl(var(--accent) / 0.05), transparent 40%),
-      linear-gradient(to bottom, #0a0a0f, #020203);
+      radial-gradient(circle at 50% 0%, hsl(var(--primary) / 0.15), transparent 50%),
+      radial-gradient(circle at 100% 100%, hsl(var(--accent) / 0.08), transparent 50%),
+      linear-gradient(to bottom, #0f0f1a, #050508);
     overscroll-behavior-y: none !important;
     position: fixed;
     width: 100%;
@@ -51,8 +52,8 @@
 }
 
 @keyframes pulse-glow {
-  0%, 100% { opacity: 0.3; filter: blur(40px); }
-  50% { opacity: 0.5; filter: blur(60px); }
+  0%, 100% { opacity: 0.4; filter: blur(40px); }
+  50% { opacity: 0.6; filter: blur(60px); }
 }
 
 @keyframes float {
@@ -61,27 +62,32 @@
 }
 
 .nuxus-glass {
-  @apply bg-white/[0.03] backdrop-blur-3xl border border-white/[0.08] shadow-2xl;
+  @apply bg-white/[0.04] backdrop-blur-3xl border border-white/[0.1] shadow-2xl;
 }
 
 .message-bubble-me {
-  background: linear-gradient(135deg, hsl(var(--primary)) 0%, #6d28d9 100%);
+  background: linear-gradient(135deg, hsl(var(--primary)) 0%, #7c3aed 100%);
   color: white !important;
   box-shadow: 0 8px 25px -5px hsl(var(--primary) / 0.4);
 }
 
 .message-bubble-other {
-  @apply bg-white/[0.06] backdrop-blur-2xl border border-white/[0.1];
+  @apply bg-white/[0.08] backdrop-blur-2xl border border-white/[0.12];
 }
 
-/* TG-Inspired Premium Pattern Background */
+/* TG-Inspired Premium Pattern Background - Brightened */
 .chat-pattern-bg {
-  background-color: #0d0d12;
+  background-color: #0d0d15;
   background-image: 
-    radial-gradient(circle at 50% 50%, rgba(168, 85, 247, 0.05) 0%, transparent 50%),
-    url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M30 30l2-2m-2 2l-2-2m2 2l2 2m-2-2l-2 2' stroke='%23ffffff' stroke-opacity='0.03' stroke-width='1' fill='none'/%3E%3C/svg%3E");
+    radial-gradient(circle at 50% 50%, rgba(168, 85, 247, 0.08) 0%, transparent 60%),
+    url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M30 30l2-2m-2 2l-2-2m2 2l2 2m-2-2l-2 2' stroke='%23ffffff' stroke-opacity='0.05' stroke-width='1' fill='none'/%3E%3C/svg%3E");
   background-attachment: fixed;
 }
 
 .scrollbar-hide::-webkit-scrollbar { display: none; }
 .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+
+[data-theme='ocean'] { --primary: 200 100% 50%; --ring: 200 100% 50%; }
+[data-theme='rainbow'] { --primary: 300 100% 60%; --ring: 300 100% 60%; }
+[data-theme='gold'] { --primary: 45 100% 50%; --ring: 45 100% 50%; }
+[data-theme='emerald'] { --primary: 150 100% 50%; --ring: 150 100% 50%; }
