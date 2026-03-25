@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -6,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useFirestore, useUser } from '@/firebase';
-import { collection, query, where, getDocs, limit, or, doc, updateDoc, arrayUnion } from 'firebase/firestore';
+import { collection, query, where, getDocs, limit, or, and, doc, updateDoc, arrayUnion } from 'firebase/firestore';
 import { useAppState } from '@/lib/store';
 import { useToast } from '@/hooks/use-toast';
 import { Search, Loader2, ArrowRight, Zap, Globe, Star, Users, User, Bot, ShieldCheck } from 'lucide-react';
@@ -72,17 +73,19 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
         if (activeFilter === 'all' || activeFilter === 'bots') foundResults.push(stickerBot);
       }
 
-      // 2. Группы и Каналы
+      // 2. Группы и Каналы (Исправлено: использование and() для нескольких фильтров верхнего уровня)
       if (activeFilter === 'all' || activeFilter === 'groups') {
         const chatQ = query(
           collection(db, 'chats'), 
-          or(
-            where('username', '==', withAt),
-            where('username', '==', withoutAt),
-            where('name', '>=', val),
-            where('name', '<=', val + '\uf8ff')
+          and(
+            or(
+              where('username', '==', withAt),
+              where('username', '==', withoutAt),
+              where('name', '>=', val),
+              where('name', '<=', val + '\uf8ff')
+            ),
+            where('isPublic', '==', true)
           ),
-          where('isPublic', '==', true),
           limit(15)
         );
         const chatSnap = await getDocs(chatQ);
@@ -189,7 +192,9 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
 
         <ScrollArea className="flex-1">
           <div className="p-4 pt-0">
-            {isLoading ? null : (results.length > 0 ? (
+            {isLoading ? (
+              <div className="flex justify-center p-12"><Loader2 className="animate-spin text-primary" /></div>
+            ) : (results.length > 0 ? (
               <div className="space-y-2">
                 {results.map((res, idx) => (
                   <div key={idx} onClick={() => handleSelectResult(res)} className="flex items-center justify-between p-4 bg-white/5 rounded-[1.8rem] hover:bg-white/10 cursor-pointer border border-white/5 transition-all">
