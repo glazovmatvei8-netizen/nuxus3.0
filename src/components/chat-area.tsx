@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useRef, useEffect, useMemo, useCallback, memo } from 'react';
@@ -78,22 +77,8 @@ export default function ChatArea() {
   const [isSearchMode, setIsSearchMode] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [isJoining, setIsJoining] = useState(false);
-  const [mentionSearch, setMentionSearch] = useState<string | null>(null);
   const [isTyping, setIsTyping] = useState(false);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-
-  // Recording State
-  const [recordingState, setRecordingState] = useState<'idle' | 'recording' | 'review'>('idle');
-  const [recordingType, setRecordingType] = useState<'audio' | 'video_note'>('audio');
-  const [recordingTime, setRecordingTime] = useState(0);
-  const [reviewBlobUrl, setReviewBlobUrl] = useState<string | null>(null);
-
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const streamRef = useRef<MediaStream | null>(null);
-  const chunksRef = useRef<Blob[]>([]);
-  const recordingTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const videoPreviewRef = useRef<HTMLVideoElement>(null);
-  const reviewVideoRef = useRef<HTMLVideoElement>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -182,7 +167,6 @@ export default function ChatArea() {
   const handleInputChange = (val: string) => {
     setMessageInput(val);
     
-    // Typing status
     if (firebaseUser && currentChatId && db) {
       if (!isTyping) {
         setIsTyping(true);
@@ -198,30 +182,6 @@ export default function ChatArea() {
         });
       }, 3000);
     }
-
-    const lastAtIndex = val.lastIndexOf('@');
-    if (lastAtIndex !== -1) {
-      const isStart = lastAtIndex === 0;
-      const isAfterSpace = lastAtIndex > 0 && val[lastAtIndex - 1] === ' ';
-      if (isStart || isAfterSpace) {
-        const textAfterAt = val.substring(lastAtIndex + 1);
-        if (!textAfterAt.includes(' ')) {
-          setMentionSearch(textAfterAt);
-          return;
-        }
-      }
-    }
-    setMentionSearch(null);
-  };
-
-  const selectMention = (p: UserType) => {
-    const lastAtIndex = messageInput.lastIndexOf('@');
-    const prefix = messageInput.substring(0, lastAtIndex);
-    const cleanUsername = p.username.startsWith('@') ? p.username : `@${p.username}`;
-    const newVal = prefix + cleanUsername + ' ';
-    setMessageInput(newVal);
-    setMentionSearch(null);
-    if (textInputRef.current) textInputRef.current.focus();
   };
 
   const scrollToBottom = useCallback((behavior: ScrollBehavior = 'smooth') => {
@@ -246,115 +206,10 @@ export default function ChatArea() {
     }
   }, [currentChatId, firebaseUser, db, toast]);
 
-  const processBotCommand = async (input: string) => {
-    const trimmed = input.trim();
-    if (!trimmed.startsWith('!') || !currentChatId || !db || !chat || !firebaseUser || !isChatAdmin) return false;
-    
-    if (!chat.participantIds.includes('bot_nuxus_manager')) return false;
-
-    const parts = trimmed.split(/\s+/);
-    const cmd = parts[0].slice(1).toLowerCase();
-    const mention = parts[1]; 
-
-    let responseMessage = "";
-
-    try {
-      if (['хелп', 'help', 'помощь'].includes(cmd)) {
-        responseMessage = "🤖 **Команды Nuxus Chat Manager**:\n\n!кик @user - Исключить участника\n!бан @user - Забанить навсегда\n!админ @user - Назначить администратором\n!разжаловать @user - Снять права админа\n!мут @user <мин> - Заглушить на время\n!анмут @user - Снять мут\n!статус - Информация о чате";
-      } else if (['статус', 'status'].includes(cmd)) {
-        responseMessage = `📊 **Статистика Узла**:\n\nУчастников: ${chat.participantIds.length}\nАдминов: ${chat.adminIds?.length || 1}\nТип: ${chat.type}\nID: ${chat.id}`;
-      } else if (mention && mention.startsWith('@')) {
-        const username = mention.toLowerCase();
-        const userQ = query(collection(db, 'users'), where('username', '==', username), limit(1));
-        const userSnap = await getDocs(userQ);
-        
-        if (userSnap.empty) {
-          responseMessage = `❌ Узел ${username} не найден в базе Ядра.`;
-        } else {
-          const targetUser = userSnap.docs[0].data() as UserType;
-          const targetId = targetUser.id;
-
-          if (['кик', 'kick'].includes(cmd)) {
-            if (targetId === chat.ownerId) {
-              responseMessage = "⚠️ Невозможно исключить создателя узла.";
-            } else {
-              await updateDoc(doc(db, 'chats', currentChatId), {
-                participantIds: arrayRemove(targetId),
-                adminIds: arrayRemove(targetId)
-              });
-              responseMessage = `🚫 Пользователь ${targetUser.name} исключен из чата.`;
-            }
-          } else if (['бан', 'ban'].includes(cmd)) {
-            if (targetId === chat.ownerId) {
-              responseMessage = "⚠️ Невозможно забанить создателя узла.";
-            } else {
-              await updateDoc(doc(db, 'chats', currentChatId), {
-                participantIds: arrayRemove(targetId),
-                adminIds: arrayRemove(targetId),
-                [`metadata.${targetId}.isBanned`]: true
-              });
-              responseMessage = `🔨 Пользователь ${targetUser.name} забанен навсегда.`;
-            }
-          } else if (['админ', 'admin'].includes(cmd)) {
-            await updateDoc(doc(db, 'chats', currentChatId), {
-              adminIds: arrayUnion(targetId)
-            });
-            responseMessage = `⭐ ${targetUser.name} теперь администратор чата.`;
-          } else if (['разжаловать', 'unadmin'].includes(cmd)) {
-            if (targetId === chat.ownerId) {
-              responseMessage = "⚠️ Невозможно разжаловать создателя.";
-            } else {
-              await updateDoc(doc(db, 'chats', currentChatId), {
-                adminIds: arrayRemove(targetId)
-              });
-              responseMessage = `📉 ${targetUser.name} больше не администратор.`;
-            }
-          } else if (['мут', 'mute'].includes(cmd)) {
-            const mins = parseInt(parts[2]) || 60;
-            const until = addMinutes(new Date(), mins).toISOString();
-            await updateDoc(doc(db, 'chats', currentChatId), {
-              [`metadata.${targetId}.mutedUntil`]: until
-            });
-            responseMessage = `🤐 ${targetUser.name} в муте на ${mins} мин.`;
-          } else if (['анмут', 'unmute'].includes(cmd)) {
-            await updateDoc(doc(db, 'chats', currentChatId), {
-              [`metadata.${targetId}.mutedUntil`]: null
-            });
-            responseMessage = `🔊 С ${targetUser.name} сняты все ограничения.`;
-          }
-        }
-      }
-
-      if (responseMessage) {
-        await addDoc(collection(db, 'chats', currentChatId, 'messages'), {
-          chatId: currentChatId,
-          senderId: 'bot_nuxus_manager',
-          senderName: 'Nuxus Manager 🛡️',
-          content: responseMessage,
-          contentType: 'text',
-          sentAt: new Date().toISOString(),
-          isRead: false
-        });
-        return true;
-      }
-    } catch (e: any) {
-      console.error("Nuxus Bot Error:", e);
-    }
-    return false;
-  };
-
-  useEffect(() => {
-    if (currentChatId && messages) {
-      const timer = setTimeout(() => scrollToBottom('instant'), 100);
-      return () => clearTimeout(timer);
-    }
-  }, [currentChatId, messages?.length, scrollToBottom]);
-
   const handleSendMessage = useCallback(async (content_msg: string = messageInput, type_msg: Message['contentType'] = 'text') => {
     if (!content_msg.trim() && type_msg !== 'video_note' && type_msg !== 'sticker' && type_msg !== 'audio') return;
     if (!currentChatId || !firebaseUser || !db || !canPost) return;
     
-    // Clear typing
     if (type_msg === 'text') {
       setIsTyping(false);
       updateDoc(doc(db, 'chats', currentChatId), {
@@ -371,7 +226,6 @@ export default function ChatArea() {
 
     if (type_msg === 'text') {
       setMessageInput('');
-      setMentionSearch(null);
       if (currentChatId) setLocalDrafts(prev => ({ ...prev, [currentChatId]: '' }));
     }
     
@@ -395,18 +249,8 @@ export default function ChatArea() {
     await addDoc(collection(db, 'chats', currentChatId, 'messages'), msgData);
     updateDocumentNonBlocking(doc(db, 'chats', currentChatId), { lastMessageAt: new Date().toISOString(), lastSenderId: firebaseUser.uid });
     
-    if (type_msg === 'text' && content_msg.trim().startsWith('!')) {
-      await processBotCommand(content_msg);
-    }
-
     setTimeout(() => scrollToBottom('smooth'), 100);
-  }, [messageInput, currentChatId, firebaseUser, db, userProfile, replyTo, editingMsg, setLocalDrafts, scrollToBottom, canPost, chat, isChatAdmin]);
-
-  const handlePinMessage = useCallback(async (msg: Message) => {
-    if (!db || !currentChatId) return;
-    await updateDoc(doc(db, 'chats', currentChatId), { pinnedMessageId: msg.id });
-    toast({ title: "Сообщение закреплено" });
-  }, [db, currentChatId, toast]);
+  }, [messageInput, currentChatId, firebaseUser, db, userProfile, replyTo, editingMsg, setLocalDrafts, scrollToBottom, canPost]);
 
   const chatDisplayName = useMemo(() => {
     if (chat?.type === 'private') {
@@ -425,7 +269,7 @@ export default function ChatArea() {
             <div className="flex items-center gap-3 cursor-pointer min-w-0" onClick={() => setIsChatInfoOpen(true)}>
               <UserAvatar userId={otherId} manualAvatarUrl={chat?.avatarUrl || otherProfile?.avatarUrl} className="h-10 w-10" fallbackName={chatDisplayName} showOnlineStatus />
               <div className="flex flex-col min-w-0">
-                <span className="font-bold text-sm truncate">{chatDisplayName}</span>
+                <span className="font-bold text-sm truncate text-white">{chatDisplayName}</span>
                 <span className="text-[10px] font-bold uppercase tracking-widest text-primary/80">
                   {chatSubtext}
                 </span>
@@ -449,7 +293,7 @@ export default function ChatArea() {
 
       <div className="flex-1 relative overflow-hidden flex flex-col">
         <ScrollArea className="flex-1 w-full relative z-10 scrollbar-hide">
-          <MessageList messages={messages} userId={firebaseUser?.uid} chatId={currentChatId} onReply={setReplyTo} onEdit={setEditingMsg} onForward={setForwardingMessage} onPin={handlePinMessage} amIPremium={userProfile?.isPremium} isAdmin={isKernelAdmin} isGroup={chat?.type !== 'private'} searchQuery={searchQuery} viewerProfile={userProfile} />
+          <MessageList messages={messages} userId={firebaseUser?.uid} chatId={currentChatId} onReply={setReplyTo} onEdit={setEditingMsg} onForward={setForwardingMessage} amIPremium={userProfile?.isPremium} isAdmin={isKernelAdmin} isGroup={chat?.type !== 'private'} searchQuery={searchQuery} viewerProfile={userProfile} />
           <div ref={messagesEndRef} className="h-4" />
         </ScrollArea>
       </div>
@@ -457,7 +301,7 @@ export default function ChatArea() {
       {(!isParticipant && !isKernelAdmin) ? (
         <div className="p-4 bg-primary/5 border-t border-white/5 flex items-center justify-center shrink-0 z-30">
           <Button onClick={handleJoinChat} disabled={isJoining} className="h-12 px-10 rounded-2xl bg-primary font-black uppercase tracking-widest gap-2 shadow-xl shadow-primary/20">
-            {isJoining ? <Loader2 className="animate-spin w-4 h-4" /> : <><UserPlus className="w-5 h-5" /> Вступить в сообщество</>}
+            {isJoining ? <Loader2 className="animate-spin w-4 h-4" /> : <><UserPlus className="w-5 h-5" /> ВСТУПИТЬ В СООБЩЕСТВО</>}
           </Button>
         </div>
       ) : !canPost ? (
@@ -469,23 +313,24 @@ export default function ChatArea() {
           <div className="max-w-4xl mx-auto space-y-2 relative">
             <div className="flex gap-3 items-center">
               <Popover>
-                <PopoverTrigger asChild><Button variant="ghost" size="icon"><Paperclip /></Button></PopoverTrigger>
+                <PopoverTrigger asChild><Button variant="ghost" size="icon" className="text-muted-foreground"><Paperclip className="w-5 h-5" /></Button></PopoverTrigger>
                 <PopoverContent side="top" align="start" className="w-48 bg-card border-white/10 rounded-2xl p-1 mb-2 shadow-2xl">
-                  <Button variant="ghost" className="w-full justify-start gap-3 rounded-xl h-11 text-xs" onClick={() => fileInputRef.current?.click()}><ImageIcon className="w-4 h-4" /> Галерея</Button>
-                  <Button variant="ghost" className="w-full justify-start gap-3 rounded-xl h-11 text-xs" onClick={() => setIsPollModalOpen(true)}><AtSign className="w-4 h-4" /> Опрос</Button>
+                  <Button variant="ghost" className="w-full justify-start gap-3 rounded-xl h-11 text-xs" onClick={() => fileInputRef.current?.click()}><ImageIcon className="w-4 h-4" /> ГАЛЕРЕЯ</Button>
+                  <Button variant="ghost" className="w-full justify-start gap-3 rounded-xl h-11 text-xs" onClick={() => setIsPollModalOpen(true)}><AtSign className="w-4 h-4" /> ОПРОС</Button>
                 </PopoverContent>
               </Popover>
               
-              <div className="flex-1 flex items-center bg-muted/30 rounded-2xl border border-white/[0.05] h-11 px-4 relative group">
-                <Input ref={textInputRef} placeholder="Сообщение" className="bg-transparent border-none focus-visible:ring-0" value={messageInput} onChange={e => handleInputChange(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSendMessage()} />
+              <div className="flex-1 flex items-center bg-muted/30 rounded-full border border-white/[0.05] h-11 px-4 relative group">
+                <Input ref={textInputRef} placeholder="Сообщение" className="bg-transparent border-none focus-visible:ring-0 text-white placeholder:text-muted-foreground/40" value={messageInput} onChange={e => handleInputChange(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSendMessage()} />
+                <Button variant="ghost" size="icon" className="text-muted-foreground"><Smile className="w-5 h-5" /></Button>
               </div>
 
               {(messageInput.trim() || editingMsg) ? (
                 <Button size="icon" className="h-10 w-10 rounded-full bg-primary shadow-lg" onClick={() => handleSendMessage()}><Send className="w-5 h-5" /></Button>
               ) : (
-                <div className="flex items-center gap-1 bg-white/5 p-1 rounded-full">
-                  <Button size="icon" variant="ghost" className="h-10 w-10 rounded-full text-muted-foreground" onClick={() => { setRecordingType('audio'); }}><Mic className="w-5 h-5" /></Button>
-                  <Button size="icon" variant="ghost" className="h-10 w-10 rounded-full text-muted-foreground" onClick={() => { setRecordingType('video_note'); }}><Video className="w-5 h-5" /></Button>
+                <div className="flex items-center gap-1">
+                  <Button size="icon" variant="ghost" className="h-10 w-10 text-muted-foreground"><Mic className="w-5 h-5" /></Button>
+                  <Button size="icon" variant="ghost" className="h-10 w-10 text-muted-foreground"><Video className="w-5 h-5" /></Button>
                 </div>
               )}
             </div>

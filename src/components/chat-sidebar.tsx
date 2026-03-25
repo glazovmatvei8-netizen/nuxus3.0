@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useMemo, memo, useRef } from 'react';
@@ -332,9 +331,9 @@ export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?:
               <div className="px-4 py-4">
                 <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide">
                   {[
-                    { id: 'all', label: 'Все' },
-                    { id: 'private', label: 'Личные' },
-                    { id: 'groups', label: 'Группы' }
+                    { id: 'all', label: 'ВСЕ' },
+                    { id: 'private', label: 'ЛИЧНЫЕ' },
+                    { id: 'groups', label: 'СООБЩЕСТВА' }
                   ].map((tab) => (
                     <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={cn("px-6 py-2 rounded-full text-[10px] font-black uppercase tracking-[0.3em] transition-all whitespace-nowrap border italic", activeTab === tab.id ? "bg-primary text-white border-primary shadow-[0_0_15px_rgba(168,85,247,0.3)]" : "text-muted-foreground/40 border-white/[0.05] hover:text-white hover:bg-white/[0.02]")}>
                       {tab.label}
@@ -359,7 +358,7 @@ export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?:
             ) : (
               <div className="flex flex-col items-center justify-center p-24 opacity-20">
                  <Ghost className="w-16 h-16 mb-6 animate-float" />
-                 <p className="text-[10px] font-black uppercase tracking-[0.5em] text-center ml-[0.5em]">{isArchiveView ? 'Архив пуст' : 'Нет диалогов'}</p>
+                 <p className="text-[10px] font-black uppercase tracking-[0.5em] text-center ml-[0.5em]">{isArchiveView ? 'АРХИВ ПУСТ' : 'НЕТ ДИАЛОГОВ'}</p>
               </div>
             )}
           </div>
