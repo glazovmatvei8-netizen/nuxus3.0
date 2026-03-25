@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useEffect } from 'react';
@@ -67,22 +66,31 @@ export default function AuthScreen() {
   };
 
   const createProfileRecord = async (uid: string, overrideData?: any) => {
+    // Check if profile exists to prevent resetting referralCount
+    const userRef = doc(db!, 'users', uid);
+    const snap = await getDoc(userRef);
+    
     const profileData = {
       id: uid,
       name: overrideData?.name || formData.name || 'Nuxus User',
       username: overrideData?.username || (formData.username.startsWith('@') ? formData.username.toLowerCase() : '@' + (formData.username || 'user' + Math.floor(Math.random()*1000)).toLowerCase()),
       phone: overrideData?.phone || formData.identifier.replace(/\D/g, ''),
-      createdAt: new Date().toISOString(),
-      isPremium: overrideData?.isPremium || false,
-      premiumUntil: overrideData?.premiumUntil || null,
-      referralCount: 0,
-      invitedBy: referralId || null,
-      twoFactorEnabled: false,
-      balance: overrideData?.balance || 0
+      createdAt: snap.exists() ? snap.data().createdAt : new Date().toISOString(),
+      isPremium: snap.exists() ? snap.data().isPremium : (overrideData?.isPremium || false),
+      premiumUntil: snap.exists() ? snap.data().premiumUntil : (overrideData?.premiumUntil || null),
+      referralCount: snap.exists() ? snap.data().referralCount : 0,
+      invitedBy: snap.exists() ? snap.data().invitedBy : (referralId || null),
+      twoFactorEnabled: snap.exists() ? snap.data().twoFactorEnabled : false,
+      balance: snap.exists() ? snap.data().balance : (overrideData?.balance || 0)
     };
-    await setDoc(doc(db!, 'users', uid), profileData, { merge: true });
-    if (referralId && referralId !== uid) {
-      try { await updateDoc(doc(db!, 'users', referralId), { referralCount: increment(1) }); } catch (refErr) {}
+
+    await setDoc(userRef, profileData, { merge: true });
+
+    // Handle Referral Logic only if NEW user
+    if (!snap.exists() && referralId && referralId !== uid) {
+      try { 
+        await updateDoc(doc(db!, 'users', referralId), { referralCount: increment(1) }); 
+      } catch (refErr) {}
     }
     return profileData;
   };
@@ -177,7 +185,7 @@ export default function AuthScreen() {
   }
 
   return (
-    <div className="min-h-[100dvh] w-full flex flex-col items-center justify-center bg-[#050505] p-4 relative overflow-hidden">
+    <div className="min-h-[100dvh] w-full flex flex-col items-center justify-center bg-background p-4 relative overflow-hidden">
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
         <div className="absolute top-[-10%] left-[-10%] w-[80%] h-[80%] bg-primary/20 blur-[180px] rounded-full animate-pulse-glow" />
         <div className="absolute bottom-[-10%] right-[-10%] w-[70%] h-[70%] bg-accent/10 blur-[150px] rounded-full animate-pulse-glow" style={{ animationDelay: '3s' }} />

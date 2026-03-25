@@ -5,6 +5,7 @@ import { Toaster } from '@/components/ui/toaster';
 import { FirebaseClientProvider } from '@/firebase/client-provider';
 import { ThemeApplier } from '@/components/theme-applier';
 import { AppIconApplier } from '@/components/app-icon-applier';
+import { VkProvider } from '@/components/vk-provider';
 import { Plus_Jakarta_Sans } from 'next/font/google';
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/next";
@@ -75,10 +76,13 @@ export default function RootLayout({
         <link rel="shortcut icon" href={FINAL_ICON_URL} />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        {/* VK Bridge Script */}
+        <Script src="https://unpkg.com/@vkontakte/vk-bridge/dist/browser.min.js" strategy="beforeInteractive" />
       </head>
       <body className="font-sans antialiased bg-background text-foreground overflow-hidden h-[100dvh] selection:bg-primary/30" style={{ fontFamily: 'var(--font-jakarta), ui-sans-serif, system-ui, -apple-system, sans-serif' }}>
         <FirebaseClientProvider>
           <AppProvider>
+            <VkProvider />
             <ThemeApplier />
             <AppIconApplier />
             <OfflinePlaceholder />

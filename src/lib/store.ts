@@ -1,10 +1,9 @@
-
 "use client"
 
 import React, { createContext, useContext, useState } from 'react';
 import type { Message, Story, Track } from './types';
 
-export type MainView = 'chats' | 'contacts' | 'calls' | 'profile' | 'archive' | 'music' | 'wallet' | 'discovery';
+export type MainView = 'chats' | 'contacts' | 'calls' | 'profile' | 'archive' | 'music' | 'wallet' | 'discovery' | 'games';
 
 interface AppState {
   currentChatId: string | null;

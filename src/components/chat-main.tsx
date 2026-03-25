@@ -8,6 +8,7 @@ import CallsView from './calls-view';
 import ProfileView from './profile-view';
 import MusicView from './music-view';
 import WalletView from './wallet-view';
+import GamesView from './games-view';
 import { useAppState } from '@/lib/store';
 import { cn } from '@/lib/utils';
 import { useFirestore, useUser, useCollection, useMemoFirebase, useDoc } from '@/firebase';
@@ -22,7 +23,7 @@ import { UpdateNotifier } from './update-notifier';
 import { MusicPlayer } from './music-player';
 import { UserAvatar } from './user-avatar';
 import type { Call, User as UserType } from '@/lib/types';
-import { Users, Phone, MessageCircle, Settings, Search, Archive, Music, Wallet } from 'lucide-react';
+import { Users, Phone, MessageCircle, Settings, Search, Archive, Music, Wallet, Gamepad2 } from 'lucide-react';
 
 export default function ChatMain() {
   const { 
@@ -71,6 +72,7 @@ export default function ChatMain() {
           <div className="flex flex-col gap-6 flex-1 overflow-y-auto scrollbar-hide py-2">
             <RailButton icon={Phone} active={activeView === 'calls'} onClick={() => { setActiveView('calls'); setCurrentChatId(null); }} label="Звонки" />
             <RailButton icon={Music} active={activeView === 'music'} onClick={() => { setActiveView('music'); setCurrentChatId(null); }} label="Музыка" />
+            <RailButton icon={Gamepad2} active={activeView === 'games'} onClick={() => { setActiveView('games'); setCurrentChatId(null); }} label="Игры" />
             <RailButton icon={MessageCircle} active={activeView === 'chats'} onClick={() => { setActiveView('chats'); setCurrentChatId(null); }} label="Чаты🐱" />
             <RailButton icon={Wallet} active={activeView === 'wallet'} onClick={() => { setActiveView('wallet'); setCurrentChatId(null); }} label="Кошелек" />
             <RailButton icon={Archive} active={activeView === 'archive'} onClick={() => { setActiveView('archive'); setCurrentChatId(null); }} label="Архив" />
@@ -87,7 +89,7 @@ export default function ChatMain() {
           </div>
         </div>
 
-        <div className={cn("w-full md:w-[350px] lg:w-[400px] h-full flex-shrink-0 border-r border-border transition-all duration-300 z-30 bg-card", (currentChatId && !['profile', 'contacts', 'calls', 'archive', 'music', 'wallet', 'discovery'].includes(activeView)) ? "hidden md:block" : "block")}>
+        <div className={cn("w-full md:w-[350px] lg:w-[400px] h-full flex-shrink-0 border-r border-border transition-all duration-300 z-30 bg-card", (currentChatId && !['profile', 'contacts', 'calls', 'archive', 'music', 'wallet', 'discovery', 'games'].includes(activeView)) ? "hidden md:block" : "block")}>
           {activeView === 'chats' && <ChatSidebar />}
           {activeView === 'contacts' && <ContactsView />}
           {activeView === 'calls' && <CallsView />}
@@ -95,9 +97,10 @@ export default function ChatMain() {
           {activeView === 'archive' && <ChatSidebar isArchiveView />}
           {activeView === 'music' && <MusicView />}
           {activeView === 'wallet' && <WalletView />}
+          {activeView === 'games' && <GamesView />}
         </div>
         
-        <div className={cn("flex-1 h-full flex flex-col min-w-0 transition-all duration-300 bg-background relative z-20", (!currentChatId || ['profile', 'music', 'wallet'].includes(activeView)) ? "hidden md:flex" : "flex")}>
+        <div className={cn("flex-1 h-full flex flex-col min-w-0 transition-all duration-300 bg-background relative z-20", (!currentChatId || ['profile', 'music', 'wallet', 'games'].includes(activeView)) ? "hidden md:flex" : "flex")}>
           <ChatArea />
         </div>
       </div>
@@ -110,6 +113,7 @@ export default function ChatMain() {
           <div className="flex flex-1 justify-around items-center gap-2 px-2">
             <NavButton icon={Phone} label="Calls" active={activeView === 'calls'} onClick={() => setActiveView('calls')} />
             <NavButton icon={Music} label="Music" active={activeView === 'music'} onClick={() => setActiveView('music')} />
+            <NavButton icon={Gamepad2} label="Games" active={activeView === 'games'} onClick={() => setActiveView('games')} />
             <NavButton icon={MessageCircle} label="Чаты🐱" active={activeView === 'chats'} onClick={() => setActiveView('chats')} isCenter />
             <NavButton icon={Wallet} label="Wallet" active={activeView === 'wallet'} onClick={() => setActiveView('wallet')} />
             <NavButton icon={Settings} label="Profile" active={activeView === 'profile'} onClick={() => setActiveView('profile')} isProfile userId={user?.uid} />

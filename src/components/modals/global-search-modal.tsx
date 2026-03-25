@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -209,7 +208,7 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
           <div className="p-4 pt-0">
             {isLoading ? (
               <div className="flex justify-center p-12"><Loader2 className="animate-spin text-primary" /></div>
-            ) : (results.length > 0 ? (
+            ) : results.length > 0 ? (
               <div className="space-y-2">
                 {results.map((res, idx) => (
                   <div key={idx} onClick={() => res.type !== 'bot' && handleSelectResult(res)} className="flex items-center justify-between p-4 bg-white/5 rounded-[1.8rem] hover:bg-white/10 cursor-pointer border border-white/5 transition-all group">
@@ -264,7 +263,7 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
                   </div>
                 ))}
               </div>
-            ) : null)}
+            ) : null}
           </div>
         </ScrollArea>
       </DialogContent>
