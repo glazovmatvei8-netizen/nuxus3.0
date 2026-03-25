@@ -19,19 +19,19 @@ import {
   DropdownMenuPortal
 } from "@/components/ui/dropdown-menu";
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, doc, limit, updateDoc } from 'firebase/firestore';
+import { collection, query, doc, limit, updateDoc, writeBatch, increment, getDoc } from 'firebase/firestore';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
   ShieldAlert, Users, Star, Ban, CheckCircle2, ShieldCheck, Radio, 
-  MoreVertical, ShieldOff, Activity, BarChart3, ListChecks, X, Globe, Trophy
+  MoreVertical, ShieldOff, Activity, BarChart3, ListChecks, X, Globe, Trophy, Wallet, Check, Trash2
 } from 'lucide-react';
 import { 
   BarChart, Bar, XAxis, YAxis, ResponsiveContainer, AreaChart, Area, Tooltip
 } from 'recharts';
-import type { User } from '@/lib/types';
+import type { User, TopUpRequest } from '@/lib/types';
 import { formatDisplayName, isUserPremium, cn, isGlobalAdmin } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
-import { addMonths, subDays, isSameDay } from 'date-fns';
+import { addMonths, subDays, isSameDay, format } from 'date-fns';
 
 const ROOT_UID = 'GCvLucN8CjNcdaxPO2vmpZ84hNl1';
 
@@ -44,6 +44,9 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
   
   const usersQuery = useMemoFirebase(() => (!db ? null : query(collection(db, 'users'), limit(500))), [db]);
   const { data: users } = useCollection<User>(usersQuery);
+
+  const requestsQuery = useMemoFirebase(() => (!db ? null : query(collection(db, 'topUpRequests'), limit(50))), [db]);
+  const { data: requests } = useCollection<TopUpRequest>(requestsQuery);
 
   const stats = useMemo(() => {
     if (!users) return { total: 0, premium: 0, admins: 0, banned: 0 };
@@ -102,6 +105,38 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
     }
   };
 
+  const handleApproveRequest = async (req: TopUpRequest) => {
+    if (!db) return;
+    try {
+      const batch = writeBatch(db);
+      const userRef = doc(db, 'users', req.userId);
+      const reqRef = doc(db, 'topUpRequests', req.id);
+      const txRef = doc(collection(db, 'users', req.userId, 'transactions'));
+
+      batch.update(userRef, { balance: increment(req.amount) });
+      batch.update(reqRef, { status: 'approved' });
+      batch.set(txRef, {
+        id: txRef.id,
+        userId: req.userId,
+        amount: req.amount,
+        type: 'deposit',
+        status: 'completed',
+        createdAt: new Date().toISOString()
+      });
+
+      await batch.commit();
+      toast({ title: "Пополнение одобрено", description: `Зачислено ${req.amount} NX пользователю ${req.userName}` });
+    } catch (e: any) {
+      toast({ title: "Ошибка одобрения", description: e.message, variant: "destructive" });
+    }
+  };
+
+  const handleRejectRequest = async (reqId: string) => {
+    if (!db) return;
+    await updateDoc(doc(db, 'topUpRequests', reqId), { status: 'rejected' });
+    toast({ title: "Заявка отклонена" });
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl bg-[#0a0a0c] border-primary/30 p-0 overflow-hidden h-[85vh] flex flex-col rounded-[2.5rem] shadow-2xl border outline-none">
@@ -122,10 +157,10 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0 overflow-hidden">
           <div className="px-4 md:px-6 pt-3 shrink-0">
-            <TabsList className="grid w-full bg-white/5 p-1 rounded-xl grid-cols-4">
+            <TabsList className="grid w-full bg-white/5 p-1 rounded-xl grid-cols-4 gap-1">
               <TabsTrigger value="analytics" className="rounded-lg text-[8px] uppercase font-black gap-1.5">Аналитика</TabsTrigger>
               <TabsTrigger value="users" className="rounded-lg text-[8px] uppercase font-black gap-1.5">Узлы</TabsTrigger>
-              <TabsTrigger value="logs" className="rounded-lg text-[8px] uppercase font-black gap-1.5">Логи</TabsTrigger>
+              <TabsTrigger value="finance" className="rounded-lg text-[8px] uppercase font-black gap-1.5">Заявки</TabsTrigger>
               <TabsTrigger value="broadcast" className="rounded-lg text-[8px] uppercase font-black gap-1.5">Маяк</TabsTrigger>
             </TabsList>
           </div>
@@ -162,22 +197,6 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
                       </ResponsiveContainer>
                     </div>
                   </div>
-
-                  <div className="bg-white/5 p-5 rounded-[2rem] border border-white/5">
-                    <h3 className="text-[10px] font-black uppercase text-accent mb-4 flex items-center gap-2">
-                      <BarChart3 className="w-3 h-3" /> Трафик Сигналов
-                    </h3>
-                    <div className="h-[180px] w-full">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={chartData}>
-                          <XAxis dataKey="day" stroke="rgba(255,255,255,0.2)" fontSize={10} tickLine={false} axisLine={false} />
-                          <YAxis stroke="rgba(255,255,255,0.2)" fontSize={10} tickLine={false} axisLine={false} />
-                          <Tooltip contentStyle={{ backgroundColor: '#1c1c1e', border: 'none', borderRadius: '12px', fontSize: '10px' }} />
-                          <Bar dataKey="signals" fill="hsl(var(--accent))" radius={[6, 6, 0, 0]} />
-                        </BarChart>
-                      </ResponsiveContainer>
-                    </div>
-                  </div>
                 </div>
               </div>
             </ScrollArea>
@@ -191,17 +210,14 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
               <div className="px-6 space-y-2 pb-20">
                 {users?.filter(u => u.name?.toLowerCase().includes(userSearch.toLowerCase()) || u.username?.toLowerCase().includes(userSearch.toLowerCase())).map(u => (
                   <div key={u.id} className="flex items-center justify-between p-4 bg-white/5 rounded-[1.8rem] border border-white/5">
-                    <div className="flex items-center gap-3 min-w-0">
+                    <div className="flex items-center gap-3 min-w-0 text-left">
                       <UserAvatar userId={u.id} className="h-10 w-10" fallbackName={u.name} />
-                      <div className="flex flex-col min-w-0 text-left">
+                      <div className="flex flex-col min-w-0">
                         <span className="font-bold text-xs flex items-center gap-1 truncate text-white">
                           {formatDisplayName(u.name)} 
                           {isUserPremium(u) && <Star className="w-3 h-3 text-accent fill-accent" />}
                         </span>
-                        <div className="flex items-center gap-2">
-                          <span className="text-[9px] text-muted-foreground uppercase font-black truncate">{u.username}</span>
-                          {u.lastIp && <span className="text-[8px] bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono border border-primary/20">{u.lastIp}</span>}
-                        </div>
+                        <span className="text-[9px] text-muted-foreground uppercase font-black truncate">{u.username}</span>
                       </div>
                     </div>
                     <DropdownMenu>
@@ -214,17 +230,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
                           {u.isAdmin ? <><ShieldOff className="w-4 h-4 text-orange-500" /> Снять админа</> : <><ShieldCheck className="w-4 h-4 text-primary" /> Дать админку</>}
                         </DropdownMenuItem>
                         <DropdownMenuSeparator className="bg-white/5" />
-                        <DropdownMenuSub>
-                          <DropdownMenuSubTrigger className="gap-3 font-bold uppercase text-[10px] py-3 rounded-xl"><Star className="w-4 h-4 text-accent" /> Premium статус</DropdownMenuSubTrigger>
-                          <DropdownMenuPortal>
-                            <DropdownMenuSubContent className="bg-card border-white/10 p-1 rounded-2xl">
-                              <DropdownMenuItem onClick={() => handleAction(u.id, 'give_premium', 1)} className="text-[10px] font-bold uppercase py-3 rounded-xl gap-3"><Trophy className="w-4 h-4 text-accent" /> 1 Месяц</DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => handleAction(u.id, 'give_premium', 12)} className="text-[10px] font-bold uppercase py-3 rounded-xl gap-3"><Trophy className="w-4 h-4 text-accent" /> 1 Год</DropdownMenuItem>
-                              <DropdownMenuSeparator className="bg-white/5" />
-                              <DropdownMenuItem onClick={() => handleAction(u.id, 'remove_premium')} className="text-destructive text-[10px] font-bold uppercase py-3 rounded-xl gap-3"><X className="w-4 h-4" /> Аннулировать</DropdownMenuItem>
-                            </DropdownMenuSubContent>
-                          </DropdownMenuPortal>
-                        </DropdownMenuSub>
+                        <DropdownMenuItem onClick={() => handleAction(u.id, 'give_premium', 1)} className="text-[10px] font-bold uppercase py-3 rounded-xl gap-3"><Trophy className="w-4 h-4 text-accent" /> Выдать Premium</DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </div>
@@ -232,12 +238,48 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
               </div>
             </ScrollArea>
           </TabsContent>
-          
-          <TabsContent value="logs" className="flex-1 m-0 p-6 overflow-hidden data-[state=active]:flex flex-col min-h-0">
-             <div className="h-full flex flex-col items-center justify-center opacity-20 border-2 border-dashed border-white/5 rounded-[2.5rem]">
-                <ListChecks className="w-12 h-12 mb-4" />
-                <p className="text-[10px] font-black uppercase tracking-widest text-center">Системные логи пусты</p>
-             </div>
+
+          <TabsContent value="finance" className="flex-1 m-0 p-0 overflow-hidden outline-none data-[state=active]:flex flex-col min-h-0">
+            <ScrollArea className="flex-1">
+              <div className="p-6 space-y-4 pb-20">
+                <div className="flex items-center gap-2 px-2 text-primary">
+                  <Wallet className="w-4 h-4" />
+                  <span className="text-[10px] font-black uppercase tracking-[0.2em]">Запросы на пополнение</span>
+                </div>
+                
+                {requests?.filter(r => r.status === 'pending').map(req => (
+                  <div key={req.id} className="p-5 bg-white/5 border border-white/10 rounded-[2rem] space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <UserAvatar userId={req.userId} className="h-10 w-10" fallbackName={req.userName} />
+                        <div className="flex flex-col text-left">
+                          <span className="font-bold text-sm text-white">{req.userName}</span>
+                          <span className="text-[9px] text-muted-foreground uppercase font-black">{format(new Date(req.createdAt), 'dd.MM HH:mm')}</span>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <span className="text-lg font-black italic text-primary">{req.amount} NX</span>
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button onClick={() => handleApproveRequest(req)} className="flex-1 bg-green-500 hover:bg-green-600 text-white font-black uppercase text-[9px] tracking-widest rounded-xl h-10 gap-2">
+                        <Check className="w-3.5 h-3.5" /> Одобрить
+                      </Button>
+                      <Button onClick={() => handleRejectRequest(req.id)} variant="ghost" className="flex-1 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white font-black uppercase text-[9px] tracking-widest rounded-xl h-10 gap-2">
+                        <X className="w-3.5 h-3.5" /> Отклонить
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+
+                {requests?.filter(r => r.status === 'pending').length === 0 && (
+                  <div className="flex flex-col items-center justify-center py-20 opacity-20 border-2 border-dashed border-white/5 rounded-[2.5rem]">
+                    <ListChecks className="w-12 h-12 mb-4" />
+                    <p className="text-[10px] font-black uppercase tracking-widest">Нет активных заявок</p>
+                  </div>
+                )}
+              </div>
+            </ScrollArea>
           </TabsContent>
 
           <TabsContent value="broadcast" className="flex-1 m-0 p-6 overflow-hidden data-[state=active]:flex flex-col min-h-0">
