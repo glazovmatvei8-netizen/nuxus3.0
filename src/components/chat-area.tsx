@@ -20,7 +20,6 @@ import { formatDisplayName, cn, compressImage, encryptSignal, isGlobalAdmin, dec
 import type { Message, User as UserType, Chat } from '@/lib/types';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { ScrollArea } from './ui/scroll-area';
-import { addMinutes } from 'date-fns';
 
 const MessageList = memo(({ 
   messages, userId, chatId, onReply, onPin, amIPremium, isAdmin, isGroup, onEdit, onForward, searchQuery, viewerProfile
@@ -189,6 +188,21 @@ export default function ChatArea() {
       messagesEndRef.current.scrollIntoView({ behavior });
     }
   }, []);
+
+  const handleJoinChat = async () => {
+    if (!currentChatId || !firebaseUser || !db) return;
+    setIsJoining(true);
+    try {
+      await updateDoc(doc(db, 'chats', currentChatId), {
+        participantIds: arrayUnion(firebaseUser.uid)
+      });
+      toast({ title: "Вы вступили в сообщество" });
+    } catch (e: any) {
+      toast({ title: "Ошибка вступления", description: e.message, variant: "destructive" });
+    } finally {
+      setIsJoining(false);
+    }
+  };
 
   const handleSendMessage = useCallback(async (content_msg: string = messageInput, type_msg: Message['contentType'] = 'text') => {
     if (!content_msg.trim() && type_msg !== 'video_note' && type_msg !== 'sticker' && type_msg !== 'audio') return;
