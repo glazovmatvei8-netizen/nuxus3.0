@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useMemo, useRef, useEffect } from 'react';
@@ -11,7 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { 
-  Crown, Star, LogOut, Shield, UserCheck, UserPlus2, Link, Copy, X, Bell, BellOff, Clock, Edit3, Camera, Save, UserPlus, Trash2
+  Crown, Star, Shield, UserCheck, UserPlus2, X, Bell, BellOff, Clock, Edit3, Camera, Save, UserPlus, Trash2
 } from 'lucide-react';
 import { 
   DropdownMenu,
@@ -90,7 +89,7 @@ export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onO
         await updateDoc(doc(db, 'chats', chat.id), {
           [`metadata.${user.uid}.customName`]: editForm.name
         });
-        toast({ title: "Имя сохранено", description: "Это имя видите только вы" });
+        toast({ title: "Имя сохранено" });
       } else {
         const formattedUsername = editForm.username.startsWith('@') ? editForm.username.toLowerCase() : '@' + editForm.username.toLowerCase();
         await updateDoc(doc(db, 'chats', chat.id), {
@@ -132,19 +131,16 @@ export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onO
 
   const handleDeleteNode = () => {
     if (!db || !chat.id || !user) return;
-    
     const canDeleteFully = isPrivate || isChatAdmin;
     const confirmMsg = canDeleteFully 
-      ? (isPrivate ? 'Удалить этот диалог навсегда для всех?' : 'Удалить это сообщество навсегда для всех?') 
+      ? (isPrivate ? 'Удалить этот диалог навсегда?' : 'Удалить это сообщество навсегда?') 
       : 'Выйти из этого сообщества?';
     
     if (confirm(confirmMsg)) {
       if (canDeleteFully) {
         deleteDocumentNonBlocking(doc(db, 'chats', chat.id));
-        toast({ title: "Узел уничтожен" });
       } else {
         updateDoc(doc(db, 'chats', chat.id), { participantIds: arrayRemove(user.uid) });
-        toast({ title: "Вы покинули узел" });
       }
       setCurrentChatId(null);
       onOpenChange(false);
@@ -268,7 +264,7 @@ export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onO
 
             {isEditing && (
               <Button className="w-full h-12 rounded-xl bg-primary font-black uppercase tracking-widest gap-2" onClick={handleSaveEdit}>
-                <Save className="w-4 h-4" /> Сохранить {isPrivate ? "для себя" : ""}
+                <Save className="w-4 h-4" /> Сохранить
               </Button>
             )}
           </div>
@@ -323,7 +319,7 @@ export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onO
               </div>
             )}
 
-            <div className="pt-4 pb-12 space-y-2">
+            <div className="pt-4 pb-12">
               <Button variant="ghost" className="w-full text-destructive hover:bg-destructive/10 rounded-xl font-bold uppercase text-[10px] tracking-widest gap-2" onClick={handleDeleteNode}>
                 <Trash2 className="w-4 h-4" /> {(isPrivate || isChatAdmin) ? "Удалить узел" : "Отключиться от узла"}
               </Button>

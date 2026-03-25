@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
   Send, Info, ChevronLeft, X, Paperclip, Mic, StopCircle, Edit2, Search,
-  Smile, ImageIcon, Video, Trash2, Loader2, UserPlus, AtSign, ShieldAlert
+  Smile, ImageIcon, Video, Trash2, Loader2, UserPlus, AtSign
 } from 'lucide-react';
 import { MessageItem } from './message-item';
 import { useToast } from '@/hooks/use-toast';
@@ -18,7 +18,6 @@ import { collection, query, orderBy, doc, addDoc, updateDoc, arrayUnion, where, 
 import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { formatDisplayName, cn, compressImage, encryptSignal, isGlobalAdmin, decryptSignal, formatLastSeen } from '@/lib/utils';
 import type { Message, User as UserType, Chat } from '@/lib/types';
-import { EmojiPicker } from './emoji-picker';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { ScrollArea } from './ui/scroll-area';
 import { addMinutes } from 'date-fns';
@@ -77,10 +76,7 @@ export default function ChatArea() {
   const [messageInput, setMessageInput] = useState('');
   const [isSearchMode, setIsSearchMode] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [isJoining, setIsJoining] = useState(false);
-
-  // Mention State
   const [mentionSearch, setMentionSearch] = useState<string | null>(null);
 
   // Recording State
@@ -113,10 +109,8 @@ export default function ChatArea() {
   useEffect(() => {
     if (editingMsg && editingMsg.contentType === 'text') {
       setMessageInput(decryptSignal(editingMsg.content));
-    } else if (!editingMsg && !currentChatId) {
-      setMessageInput('');
     }
-  }, [editingMsg, currentChatId]);
+  }, [editingMsg]);
 
   const isParticipant = useMemo(() => {
     return chat?.participantIds?.includes(firebaseUser?.uid || '');
@@ -164,13 +158,10 @@ export default function ChatArea() {
 
   const handleInputChange = (val: string) => {
     setMessageInput(val);
-    
-    // Mention logic
     const lastAtIndex = val.lastIndexOf('@');
     if (lastAtIndex !== -1) {
       const isStart = lastAtIndex === 0;
       const isAfterSpace = lastAtIndex > 0 && val[lastAtIndex - 1] === ' ';
-      
       if (isStart || isAfterSpace) {
         const textAfterAt = val.substring(lastAtIndex + 1);
         if (!textAfterAt.includes(' ')) {
@@ -316,7 +307,6 @@ export default function ChatArea() {
       }
     } catch (e: any) {
       console.error("Nuxus Bot Error:", e);
-      toast({ title: "Ошибка бота", description: e.message || "Ошибка сигнала", variant: "destructive" });
     }
     return false;
   };
@@ -402,7 +392,6 @@ export default function ChatArea() {
     
     setReplyTo(null); 
     setEditingMsg(null); 
-    setShowEmojiPicker(false);
 
     if (captureEdit) {
       updateDocumentNonBlocking(doc(db, 'chats', currentChatId, 'messages', captureEdit.id), { content: finalContent, editedAt: new Date().toISOString() });
@@ -442,18 +431,6 @@ export default function ChatArea() {
     return formatDisplayName(chat?.name || 'Чат');
   }, [chat, firebaseUser?.uid, otherProfile]);
 
-  const chatBackgroundStyle = useMemo(() => {
-    const customBg = userProfile?.settings?.chatBackground;
-    if (customBg) {
-      return {
-        backgroundImage: `url(${customBg})`,
-        backgroundSize: userProfile?.settings?.chatBackgroundFit || 'cover',
-        backgroundPosition: 'center',
-      };
-    }
-    return {};
-  }, [userProfile?.settings?.chatBackground, userProfile?.settings?.chatBackgroundFit]);
-
   return (
     <div className="flex-1 flex flex-col h-full bg-background relative overflow-hidden z-20">
       <header className="h-16 border-b border-white/5 bg-card/80 backdrop-blur-xl flex items-center justify-between px-4 shrink-0 z-30">
@@ -486,11 +463,6 @@ export default function ChatArea() {
       </header>
 
       <div className="flex-1 relative overflow-hidden flex flex-col">
-        <div 
-          className={cn("absolute inset-0 z-0 nuxus-pattern-bg", !userProfile?.settings?.chatBackground && "opacity-40")} 
-          style={chatBackgroundStyle}
-        />
-        
         <ScrollArea className="flex-1 w-full relative z-10 scrollbar-hide">
           <MessageList messages={messages} userId={firebaseUser?.uid} chatId={currentChatId} onReply={setReplyTo} onEdit={setEditingMsg} onForward={setForwardingMessage} onPin={handlePinMessage} amIPremium={userProfile?.isPremium} isAdmin={isKernelAdmin} isGroup={chat?.type !== 'private'} searchQuery={searchQuery} viewerProfile={userProfile} />
           <div ref={messagesEndRef} className="h-4" />
@@ -532,16 +504,15 @@ export default function ChatArea() {
           <div className="max-w-4xl mx-auto space-y-2 relative">
             
             {mentionSearch !== null && filteredMentions.length > 0 && (
-              <div className="absolute bottom-[110%] left-0 right-0 mb-2 bg-card/95 backdrop-blur-3xl border border-white/10 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] overflow-hidden animate-in slide-in-from-bottom-2 duration-200 z-[1000]">
+              <div className="absolute bottom-[110%] left-0 right-0 mb-2 bg-card/95 backdrop-blur-3xl border border-white/10 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] overflow-hidden z-[1000]">
                 <div className="p-2 border-b border-white/5 flex items-center justify-between">
                   <span className="text-[10px] font-black uppercase tracking-widest text-primary/60 px-2">Упомянуть...</span>
-                  <AtSign className="w-3 h-3 text-primary/40 mr-2" />
                 </div>
                 <ScrollArea className="max-h-60">
                   <div className="p-1">
                     {filteredMentions.map((p) => (
                       <button key={p.id} onClick={() => selectMention(p)} className="w-full flex items-center gap-3 p-3 hover:bg-primary/10 transition-colors text-left rounded-xl group">
-                        <UserAvatar userId={p.id} className="h-9 w-9 border-2 border-transparent group-hover:border-primary/20" manualAvatarUrl={p.avatarUrl} />
+                        <UserAvatar userId={p.id} className="h-9 w-9" manualAvatarUrl={p.avatarUrl} />
                         <div className="flex flex-col min-w-0">
                           <span className="text-sm font-bold text-white truncate">{p.name}</span>
                           <span className="text-[10px] text-muted-foreground uppercase font-black truncate">{p.username}</span>
@@ -574,7 +545,7 @@ export default function ChatArea() {
               
               <div className="flex-1 flex items-center bg-muted/30 rounded-2xl border border-white/[0.05] h-11 px-4 relative group">
                 <Input ref={textInputRef} placeholder="Сообщение" className="bg-transparent border-none focus-visible:ring-0" value={messageInput} onChange={e => handleInputChange(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSendMessage()} />
-                <button onClick={() => setShowEmojiPicker(!showEmojiPicker)} className="text-muted-foreground hover:text-foreground transition-colors"><Smile /></button>
+                <button onClick={() => handleSendMessage(undefined, 'text')} className="hidden"><Send /></button>
               </div>
 
               {(messageInput.trim() || editingMsg) ? (
@@ -590,7 +561,6 @@ export default function ChatArea() {
         </footer>
       )}
 
-      {showEmojiPicker && <div className="absolute bottom-24 right-4 z-50 w-[320px] h-[400px]"><EmojiPicker onEmojiSelect={(e) => setMessageInput(messageInput + e)} onStickerSelect={(url) => handleSendMessage(url, 'sticker')} /></div>}
       {chat && <ChatInfoModal open={isChatInfoOpen} onOpenChange={setIsChatInfoOpen} chat={chat as any} />}
       <CreatePollModal open={isPollModalOpen} onOpenChange={setIsPollModalOpen} chatId={currentChatId!} />
       <input type="file" ref={fileInputRef} hidden accept="image/*,video/*" />

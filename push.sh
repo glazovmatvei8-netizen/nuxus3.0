@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Nuxus Kernel Sync Utility v11.0
+# Nuxus Kernel Sync Utility v12.0
 # Скрипт для принудительной синхронизации с репозиторием nuxus2.0
 
 REPO_URL="https://github.com/glazovmatvei8-netizen/nuxus2.0.git"
@@ -24,7 +24,7 @@ git config pull.rebase false
 git add .
 
 # Формируем сообщение
-COMMIT_MSG="Nuxus Core Update: $(date '+%Y-%m-%d %H:%M:%S') [System: Bot & Finance Fixes]"
+COMMIT_MSG="Nuxus Core Sync: $(date '+%Y-%m-%d %H:%M:%S') [System: Minimalist Rollback & Fixes]"
 
 # Коммит
 git commit -m "$COMMIT_MSG"
