@@ -61,7 +61,7 @@
   html, body {
     @apply bg-background text-foreground antialiased;
     text-rendering: optimizeLegibility;
-    overscroll-behavior-y: none;
+    overscroll-behavior-y: none; /* ПРЕДОТВРАЩАЕТ ОБНОВЛЕНИЕ САЙТА НА ANDROID ПРИ СКРОЛЛЕ ВВЕРХ */
   }
   body {
     font-family: var(--font-jakarta), ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;

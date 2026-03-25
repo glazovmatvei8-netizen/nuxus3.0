@@ -14,9 +14,9 @@ import { useToast } from '@/hooks/use-toast';
 import { ChatInfoModal } from './modals/chat-info-modal';
 import { CreatePollModal } from './modals/create-poll-modal';
 import { useFirestore, useUser, useCollection, useDoc, useMemoFirebase } from '@/firebase';
-import { collection, query, orderBy, doc, addDoc, updateDoc, arrayUnion, where, getDocs, arrayRemove } from 'firebase/firestore';
+import { collection, query, orderBy, doc, addDoc, updateDoc, arrayUnion, where, getDocs, arrayRemove, limit } from 'firebase/firestore';
 import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
-import { formatDisplayName, cn, formatLastSeen, compressImage, encryptSignal, isGlobalAdmin, decryptSignal } from '@/lib/utils';
+import { formatDisplayName, cn, compressImage, encryptSignal, isGlobalAdmin, decryptSignal } from '@/lib/utils';
 import type { Message, User as UserType, Chat } from '@/lib/types';
 import { EmojiPicker } from './emoji-picker';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -214,22 +214,24 @@ export default function ChatArea() {
     }
   }, [currentChatId, firebaseUser, db, toast]);
 
-  // Nuxus Chat Manager Command Processor
+  // Nuxus Chat Manager Command Processor (LOCALIZED & IMPROVED)
   const processBotCommand = async (input: string) => {
-    if (!input.startsWith('!') || !currentChatId || !db || !chat || !firebaseUser || !isChatAdmin) return false;
+    const trimmed = input.trim();
+    if (!trimmed.startsWith('!') || !currentChatId || !db || !chat || !firebaseUser || !isChatAdmin) return false;
     
     // Check if Bot is in the chat
     if (!chat.participantIds.includes('bot_nuxus_manager')) return false;
 
-    const [cmdRaw, ...args] = input.split(' ');
-    const cmd = cmdRaw.slice(1).toLowerCase();
-    const mention = args[0]; // Expecting @username
+    // Split by any number of spaces to handle accidental spaces
+    const parts = trimmed.split(/\s+/);
+    const cmd = parts[0].slice(1).toLowerCase();
+    const mention = parts[1]; // Expecting @username
 
     let responseMessage = "";
 
     try {
-      if (cmd === 'хелп' || cmd === 'help') {
-        responseMessage = "🤖 **Nuxus Chat Manager Commands**:\n\n!kick @user - Исключить\n!ban @user - Бан навсегда\n!admin @user - Дать админку\n!unadmin @user - Снять админку\n!mute @user <мин> - Мут\n!unmute @user - Снять мут\n!status - Инфо о чате";
+      if (cmd === 'хелп' || cmd === 'help' || cmd === 'помощь') {
+        responseMessage = "🤖 **Команды Nuxus Chat Manager**:\n\n!кик @user - Исключить участника\n!бан @user - Забанить навсегда\n!админ @user - Назначить администратором\n!разжаловать @user - Снять права админа\n!мут @user <мин> - Заглушить на время\n!анмут @user - Снять мут\n!статус - Информация о чате";
       } else if (cmd === 'статус' || cmd === 'status') {
         responseMessage = `📊 **Статистика Узла**:\n\nУчастников: ${chat.participantIds.length}\nАдминов: ${chat.adminIds?.length || 1}\nТип: ${chat.type}\nID: ${chat.id}`;
       } else if (mention && mention.startsWith('@')) {
@@ -267,7 +269,7 @@ export default function ChatArea() {
             });
             responseMessage = `📉 ${targetUser.name} больше не администратор.`;
           } else if (cmd === 'мут' || cmd === 'mute') {
-            const mins = parseInt(args[1]) || 60;
+            const mins = parseInt(parts[2]) || 60;
             const until = addMinutes(new Date(), mins).toISOString();
             await updateDoc(doc(db, 'chats', currentChatId), {
               [`metadata.${targetId}.mutedUntil`]: until
@@ -366,15 +368,6 @@ export default function ChatArea() {
     if (!content_msg.trim() && type_msg !== 'video_note' && type_msg !== 'sticker' && type_msg !== 'audio') return;
     if (!currentChatId || !firebaseUser || !db || !canPost) return;
     
-    // Command Processing Interception
-    if (type_msg === 'text' && content_msg.startsWith('!')) {
-      const handled = await processBotCommand(content_msg);
-      if (handled) {
-        setMessageInput('');
-        return;
-      }
-    }
-
     let finalContent = content_msg;
     if (type_msg === 'text') finalContent = encryptSignal(content_msg);
     else if (type_msg === 'image') finalContent = await compressImage(content_msg, 800, 0.4);
@@ -408,6 +401,12 @@ export default function ChatArea() {
     
     await addDoc(collection(db, 'chats', currentChatId, 'messages'), msgData);
     updateDocumentNonBlocking(doc(db, 'chats', currentChatId), { lastMessageAt: new Date().toISOString(), lastSenderId: firebaseUser.uid });
+    
+    // Command Processing AFTER sending the message (so it stays in history)
+    if (type_msg === 'text' && content_msg.trim().startsWith('!')) {
+      await processBotCommand(content_msg);
+    }
+
     setTimeout(() => scrollToBottom('smooth'), 100);
   }, [messageInput, currentChatId, firebaseUser, db, userProfile, replyTo, editingMsg, setLocalDrafts, scrollToBottom, canPost, chat, isChatAdmin]);
 
