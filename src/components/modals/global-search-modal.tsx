@@ -6,10 +6,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useFirestore, useUser } from '@/firebase';
-import { collection, query, where, getDocs, limit, or } from 'firebase/firestore';
+import { collection, query, where, getDocs, limit, or, doc, updateDoc, arrayUnion } from 'firebase/firestore';
 import { useAppState } from '@/lib/store';
 import { useToast } from '@/hooks/use-toast';
-import { Search, Loader2, ArrowRight, Zap, Globe, Star, Users, User, Bot } from 'lucide-react';
+import { Search, Loader2, ArrowRight, Zap, Globe, Star, Users, User, Bot, ShieldCheck } from 'lucide-react';
 import { UserAvatar } from '@/components/user-avatar';
 import { cn } from '@/lib/utils';
 import type { Chat } from '@/lib/types';
@@ -19,7 +19,8 @@ type SearchFilter = 'all' | 'users' | 'groups' | 'bots';
 export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const { user } = useUser();
   const db = useFirestore();
-  const { setCurrentChatId, setActiveView, setInspectedUserId } = useAppState();
+  const { setCurrentChatId, setActiveView, setInspectedUserId, currentChatId } = useAppState();
+  const { toast } = useToast();
   
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState<SearchFilter>('all');
@@ -61,8 +62,14 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
       const foundResults: any[] = [];
 
       // 1. Боты
-      if ('@stickers'.includes(cleanVal) && (activeFilter === 'all' || activeFilter === 'bots')) {
-        foundResults.push({ type: 'bot', data: { id: 'bot_stickers', name: 'Sticker Bot 🎨', username: '@stickers', avatarUrl: 'https://i.ibb.co/sd2MqGz2/Icon.png' } });
+      const nuxusManager = { type: 'bot', data: { id: 'bot_nuxus_manager', name: 'Nuxus Chat Manager 🛡️', username: '@nuxus_manager', avatarUrl: 'https://i.ibb.co/sd2MqGz2/Icon.png', isPremium: true, isBot: true } };
+      const stickerBot = { type: 'bot', data: { id: 'bot_stickers', name: 'Sticker Bot 🎨', username: '@stickers', avatarUrl: 'https://i.ibb.co/sd2MqGz2/Icon.png', isBot: true } };
+
+      if ('@nuxus_manager'.includes(cleanVal) || 'nuxus manager'.includes(cleanVal)) {
+        if (activeFilter === 'all' || activeFilter === 'bots') foundResults.push(nuxusManager);
+      }
+      if ('@stickers'.includes(cleanVal) || 'stickers'.includes(cleanVal)) {
+        if (activeFilter === 'all' || activeFilter === 'bots') foundResults.push(stickerBot);
       }
 
       // 2. Группы и Каналы
@@ -117,7 +124,7 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
     }
   }, [db, activeFilter, user?.uid]);
 
-  const handleSelectResult = (res: { type: 'chat' | 'user' | 'bot', data: any }) => {
+  const handleSelectResult = async (res: { type: 'chat' | 'user' | 'bot', data: any }) => {
     if (res.type === 'user') {
       setInspectedUserId(res.data.id);
       onOpenChange(false);
@@ -125,6 +132,22 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
       setCurrentChatId(res.data.id);
       setActiveView('chats');
       onOpenChange(false);
+    } else if (res.type === 'bot') {
+      if (res.data.id === 'bot_nuxus_manager' && currentChatId) {
+        if (confirm(`Добавить Nuxus Chat Manager в текущий чат?`)) {
+          try {
+            await updateDoc(doc(db!, 'chats', currentChatId), {
+              participantIds: arrayUnion(res.data.id)
+            });
+            toast({ title: "Успех", description: "Менеджер подключен к узлу" });
+            onOpenChange(false);
+          } catch (e) {
+            toast({ title: "Ошибка", description: "Нет прав на добавление", variant: "destructive" });
+          }
+        }
+      } else {
+        toast({ title: "Бот", description: "Добавьте бота в группу для работы" });
+      }
     }
   };
 
@@ -166,67 +189,52 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
 
         <ScrollArea className="flex-1">
           <div className="p-4 pt-0">
-            {(() => {
-              if (isLoading) return null;
-              
-              if (results.length > 0) {
-                return (
-                  <div className="space-y-2">
-                    {results.map((res, idx) => (
-                      <div key={idx} onClick={() => handleSelectResult(res)} className="flex items-center justify-between p-4 bg-white/5 rounded-[1.8rem] hover:bg-white/10 cursor-pointer border border-white/5 transition-all">
-                        <div className="flex items-center gap-4">
-                          <UserAvatar userId={res.type === 'user' ? res.data.id : null} manualAvatarUrl={res.data.avatarUrl} className="h-12 w-12" fallbackName={res.data.name} />
-                          <div className="flex flex-col text-left">
-                            <span className="font-bold text-white flex items-center gap-2">
-                              {res.data.name} 
-                              {res.data.isPremium && <Star className="w-3 h-3 text-accent fill-accent" />}
-                            </span>
-                            <span className="text-[10px] text-muted-foreground uppercase font-black">
-                              {res.data.username} • {res.type === 'user' ? 'профиль' : res.type === 'chat' ? 'сообщество' : 'бот'}
-                            </span>
-                          </div>
-                        </div>
-                        <ArrowRight className="w-5 h-5 text-primary/40" />
+            {isLoading ? null : (results.length > 0 ? (
+              <div className="space-y-2">
+                {results.map((res, idx) => (
+                  <div key={idx} onClick={() => handleSelectResult(res)} className="flex items-center justify-between p-4 bg-white/5 rounded-[1.8rem] hover:bg-white/10 cursor-pointer border border-white/5 transition-all">
+                    <div className="flex items-center gap-4 min-w-0">
+                      <UserAvatar userId={res.type === 'user' ? res.data.id : null} manualAvatarUrl={res.data.avatarUrl} className="h-12 w-12 shrink-0" fallbackName={res.data.name} />
+                      <div className="flex flex-col text-left min-w-0">
+                        <span className="font-bold text-white flex items-center gap-2 truncate">
+                          {res.data.name} 
+                          {res.data.isPremium && <Star className="w-3 h-3 text-accent fill-accent" />}
+                          {res.data.id === 'bot_nuxus_manager' && <ShieldCheck className="w-3 h-3 text-primary" />}
+                        </span>
+                        <span className="text-[10px] text-muted-foreground uppercase font-black truncate">
+                          {res.data.username} • {res.type === 'user' ? 'профиль' : res.type === 'chat' ? 'сообщество' : 'бот'}
+                        </span>
                       </div>
-                    ))}
-                  </div>
-                );
-              }
-
-              if (searchQuery.length >= 2) {
-                return (
-                  <div className="flex flex-col items-center justify-center py-20 opacity-20">
-                    <Search className="w-12 h-12 mb-4" />
-                    <p className="text-[10px] font-black uppercase tracking-widest text-center">Сигнал не найден</p>
-                  </div>
-                );
-              }
-
-              if (trends.length > 0) {
-                return (
-                  <div className="space-y-4">
-                    <div className="flex items-center gap-2 px-2 text-primary">
-                      <Zap className="w-4 h-4 fill-current animate-pulse" />
-                      <span className="text-[10px] font-black uppercase tracking-[0.2em]">Популярное в Ядре</span>
                     </div>
-                    {trends.map(chat => (
-                      <div key={chat.id} onClick={() => handleSelectResult({ type: 'chat', data: chat })} className="flex items-center justify-between p-4 bg-white/5 rounded-[1.8rem] hover:bg-white/10 cursor-pointer border border-white/5 transition-all">
-                        <div className="flex items-center gap-4">
-                          <UserAvatar userId={null} manualAvatarUrl={chat.avatarUrl} className="h-12 w-12" fallbackName={chat.name} />
-                          <div className="flex flex-col text-left">
-                            <span className="font-bold text-white">{chat.name}</span>
-                            <span className="text-[10px] text-muted-foreground uppercase font-black">{chat.username}</span>
-                          </div>
-                        </div>
-                        <Button variant="ghost" size="sm" className="h-8 rounded-xl text-[9px] uppercase font-black text-primary">Вступить</Button>
-                      </div>
-                    ))}
+                    <ArrowRight className="w-5 h-5 text-primary/40 shrink-0" />
                   </div>
-                );
-              }
-
-              return null;
-            })()}
+                ))}
+              </div>
+            ) : searchQuery.length >= 2 ? (
+              <div className="flex flex-col items-center justify-center py-20 opacity-20">
+                <Search className="w-12 h-12 mb-4" />
+                <p className="text-[10px] font-black uppercase tracking-widest text-center">Сигнал не найден</p>
+              </div>
+            ) : trends.length > 0 ? (
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 px-2 text-primary">
+                  <Zap className="w-4 h-4 fill-current animate-pulse" />
+                  <span className="text-[10px] font-black uppercase tracking-[0.2em]">Популярное в Ядре</span>
+                </div>
+                {trends.map(chat => (
+                  <div key={chat.id} onClick={() => handleSelectResult({ type: 'chat', data: chat })} className="flex items-center justify-between p-4 bg-white/5 rounded-[1.8rem] hover:bg-white/10 cursor-pointer border border-white/5 transition-all">
+                    <div className="flex items-center gap-4">
+                      <UserAvatar userId={null} manualAvatarUrl={chat.avatarUrl} className="h-12 w-12" fallbackName={chat.name} />
+                      <div className="flex flex-col text-left">
+                        <span className="font-bold text-white">{chat.name}</span>
+                        <span className="text-[10px] text-muted-foreground uppercase font-black">{chat.username}</span>
+                      </div>
+                    </div>
+                    <Button variant="ghost" size="sm" className="h-8 rounded-xl text-[9px] uppercase font-black text-primary">Вступить</Button>
+                  </div>
+                ))}
+              </div>
+            ) : null)}
           </div>
         </ScrollArea>
       </DialogContent>

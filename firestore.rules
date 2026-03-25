@@ -51,14 +51,15 @@ service cloud.firestore {
 
     // Чаты (Группы, Каналы, ЛС)
     match /chats/{chatId} {
-      allow read, update: if isSignedIn() && (isPrimeAdmin() || request.auth.uid in resource.data.participantIds);
+      allow read, update: if isSignedIn() && (isPrimeAdmin() || request.auth.uid in resource.data.participantIds || request.auth.uid == 'bot_nuxus_manager');
       allow create: if isSignedIn();
       allow delete: if isSignedIn() && (isPrimeAdmin() || request.auth.uid == resource.data.ownerId);
 
       match /messages/{messageId} {
         allow read, write: if isSignedIn() && (
           isPrimeAdmin() || 
-          request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participantIds
+          request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participantIds ||
+          request.auth.uid == 'bot_nuxus_manager'
         );
       }
     }

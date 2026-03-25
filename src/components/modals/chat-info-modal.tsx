@@ -361,6 +361,20 @@ function MemberRow({ userId, ownerId, adminIds, isViewerAdmin, viewerId, chatId,
     toast({ title: "Действие выполнено" });
   };
 
+  if (!m && userId === 'bot_nuxus_manager') {
+    return (
+      <div className="flex items-center justify-between p-3 rounded-xl bg-primary/5 border border-primary/10">
+        <div className="flex items-center gap-3">
+          <UserAvatar userId={null} className="h-10 w-10" manualAvatarUrl="https://i.ibb.co/sd2MqGz2/Icon.png" />
+          <div className="flex flex-col text-left">
+            <span className="text-sm font-black text-primary italic flex items-center gap-1">Nuxus Manager 🛡️</span>
+            <span className="text-[10px] text-muted-foreground uppercase font-black">Система защиты</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (!m) return null;
   
   return (
