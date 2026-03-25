@@ -4,30 +4,30 @@
 
 @layer base {
   :root {
-    --background: 240 10% 2%;
+    --background: 240 15% 4%;
     --foreground: 0 0% 98%;
-    --card: 240 10% 4%;
+    --card: 240 15% 6%;
     --card-foreground: 0 0% 98%;
-    --popover: 240 10% 2%;
+    --popover: 240 15% 4%;
     --popover-foreground: 0 0% 98%;
     --primary: 270 95% 65%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 240 5% 10%;
+    --secondary: 240 10% 12%;
     --secondary-foreground: 0 0% 98%;
-    --muted: 240 5% 8%;
-    --muted-foreground: 240 5% 60%;
+    --muted: 240 10% 10%;
+    --muted-foreground: 240 5% 65%;
     --accent: 180 100% 50%;
     --accent-foreground: 240 10% 4%;
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 98%;
-    --border: 240 5% 12%;
-    --input: 240 5% 12%;
+    --border: 240 10% 15%;
+    --input: 240 10% 15%;
     --ring: 270 95% 65%;
-    --radius: 1.25rem;
+    --radius: 1.5rem;
   }
 
   .dark {
-    --background: 240 10% 1%;
+    --background: 240 20% 2%;
     --foreground: 0 0% 100%;
     --primary: 270 95% 60%;
     --accent: 190 100% 50%;
@@ -39,7 +39,9 @@
   body {
     @apply bg-background text-foreground antialiased;
     background-image: 
-      radial-gradient(circle at 50% -20%, hsl(var(--primary) / 0.12), transparent 50%);
+      radial-gradient(circle at 20% 20%, hsl(var(--primary) / 0.08), transparent 40%),
+      radial-gradient(circle at 80% 80%, hsl(var(--accent) / 0.05), transparent 40%),
+      linear-gradient(to bottom, #0a0a0f, #020203);
     overscroll-behavior-y: none !important;
     position: fixed;
     width: 100%;
@@ -49,8 +51,8 @@
 }
 
 @keyframes pulse-glow {
-  0%, 100% { opacity: 0.4; filter: blur(40px); }
-  50% { opacity: 0.6; filter: blur(60px); }
+  0%, 100% { opacity: 0.3; filter: blur(40px); }
+  50% { opacity: 0.5; filter: blur(60px); }
 }
 
 @keyframes float {
@@ -58,39 +60,27 @@
   50% { transform: translateY(-10px); }
 }
 
-@keyframes scanline {
-  0% { transform: translateY(-100%); }
-  100% { transform: translateY(100%); }
-}
-
-.animate-pulse-glow {
-  animation: pulse-glow 4s ease-in-out infinite;
-}
-
-.animate-float {
-  animation: float 6s ease-in-out infinite;
-}
-
 .nuxus-glass {
-  @apply bg-white/[0.02] backdrop-blur-2xl border border-white/[0.05] shadow-2xl;
+  @apply bg-white/[0.03] backdrop-blur-3xl border border-white/[0.08] shadow-2xl;
 }
 
 .message-bubble-me {
   background: linear-gradient(135deg, hsl(var(--primary)) 0%, #6d28d9 100%);
   color: white !important;
-  box-shadow: 0 4px 15px -5px hsl(var(--primary) / 0.5);
+  box-shadow: 0 8px 25px -5px hsl(var(--primary) / 0.4);
 }
 
 .message-bubble-other {
-  @apply bg-white/[0.04] backdrop-blur-xl border border-white/[0.06];
+  @apply bg-white/[0.06] backdrop-blur-2xl border border-white/[0.1];
 }
 
-/* Pattern from photo */
+/* TG-Inspired Premium Pattern Background */
 .chat-pattern-bg {
-  background-color: #0a0a0c;
-  background-image: radial-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px);
-  background-size: 32px 32px;
-  background-position: center;
+  background-color: #0d0d12;
+  background-image: 
+    radial-gradient(circle at 50% 50%, rgba(168, 85, 247, 0.05) 0%, transparent 50%),
+    url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M30 30l2-2m-2 2l-2-2m2 2l2 2m-2-2l-2 2' stroke='%23ffffff' stroke-opacity='0.03' stroke-width='1' fill='none'/%3E%3C/svg%3E");
+  background-attachment: fixed;
 }
 
 .scrollbar-hide::-webkit-scrollbar { display: none; }

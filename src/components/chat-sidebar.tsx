@@ -167,7 +167,7 @@ const ChatListItem = memo(({
               
               <div className="flex-1 min-w-0 h-full flex flex-col justify-center">
                 <div className="flex items-center justify-between mb-1">
-                  <span className="font-black text-[17px] truncate flex items-center gap-2 tracking-tight italic uppercase">
+                  <span className="font-black text-[17px] truncate flex items-center gap-2 tracking-tight italic">
                     {finalDisplayName} 
                     {otherProfile?.isPremium && <Star className="w-3.5 h-3.5 text-accent fill-accent animate-pulse" />}
                     {isPinned && <Pin className="w-3 h-3 text-primary rotate-45" />}
@@ -298,24 +298,24 @@ export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?:
     <div className="flex flex-col h-full bg-background overflow-hidden relative">
       {/* Search & Header */}
       <div className="px-6 pt-8 pb-4 shrink-0 bg-background/50 backdrop-blur-xl z-20 space-y-6">
-        <div className="flex items-center justify-between w-full">
-          <h1 onClick={() => isGlobalAdmin(currentUserProfile) && setIsAdminPanelOpen(true)} className={cn("text-[32px] font-black italic tracking-tighter uppercase leading-none text-white transition-all", isGlobalAdmin(currentUserProfile) ? "cursor-pointer hover:text-primary hover:drop-shadow-[0_0_10px_rgba(168,85,247,0.5)]" : "cursor-default")}>
-            {isArchiveView ? 'Архив 🐱' : 'Чаты 🐱'}
-          </h1>
-          <div className="flex gap-2">
-            <Button variant="ghost" size="icon" className="h-12 w-12 rounded-[1.2rem] bg-white/[0.03] border border-white/5 hover:border-primary/40 transition-all group" onClick={() => setIsCreateModalOpen(true)}>
-              <Plus className="w-6 h-6 group-hover:rotate-90 transition-transform duration-500" />
-            </Button>
-            <Button variant="ghost" size="icon" className="h-12 w-12 rounded-[1.2rem] bg-white/[0.03] border border-white/5 hover:border-primary/40 transition-all group" onClick={() => setIsEditorModalOpen(true)}>
-              <SquarePen className="w-5 h-5 group-hover:scale-110 transition-transform" />
-            </Button>
+        <div className="flex flex-col items-center gap-4 w-full">
+          <div className="flex items-center justify-between w-full">
+            <div className="w-12" /> {/* Spacer for symmetry */}
+            <h1 onClick={() => isGlobalAdmin(currentUserProfile) && setIsAdminPanelOpen(true)} className={cn("text-2xl font-bold italic tracking-tight text-white transition-all flex items-center gap-2", isGlobalAdmin(currentUserProfile) ? "cursor-pointer hover:text-primary hover:drop-shadow-[0_0_10px_rgba(168,85,247,0.5)]" : "cursor-default")}>
+              {isArchiveView ? 'Архив 🐱' : 'Чаты 🐱'}
+            </h1>
+            <div className="flex gap-2">
+              <Button variant="ghost" size="icon" className="h-10 w-10 rounded-xl bg-white/[0.03] border border-white/5 hover:border-primary/40 transition-all group" onClick={() => setIsCreateModalOpen(true)}>
+                <Plus className="w-5 h-5 group-hover:rotate-90 transition-transform duration-500" />
+              </Button>
+            </div>
           </div>
         </div>
 
         <div className="relative group">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground/40 group-focus-within:text-primary transition-colors" />
           <input 
-            placeholder="Поиск по сообщениям..." 
+            placeholder="Поиск сообщений..." 
             className="w-full h-12 bg-white/[0.03] border border-white/[0.08] rounded-[1.2rem] pl-12 text-sm font-bold uppercase tracking-widest placeholder:text-muted-foreground/30 focus:outline-none focus:border-primary/40 focus:ring-1 focus:ring-primary/20 transition-all"
             onClick={() => setIsSearchOpen(true)}
             readOnly

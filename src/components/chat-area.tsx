@@ -260,17 +260,31 @@ export default function ChatArea() {
     return formatDisplayName(chat?.name || 'Чат');
   }, [chat, firebaseUser?.uid, otherProfile]);
 
+  const customBg = userProfile?.settings?.chatBackground;
+  const bgFit = userProfile?.settings?.chatBackgroundFit || 'cover';
+
   return (
     <div className="flex-1 flex flex-col h-full bg-background relative overflow-hidden z-20">
-      <header className="h-16 border-b border-white/5 bg-card/80 backdrop-blur-xl flex items-center justify-between px-4 shrink-0 z-30">
+      {/* Background Layer */}
+      <div 
+        className={cn("absolute inset-0 z-0", !customBg && "chat-pattern-bg")}
+        style={customBg ? { 
+          backgroundImage: `url(${customBg})`, 
+          backgroundSize: bgFit, 
+          backgroundPosition: 'center',
+          backgroundRepeat: 'no-repeat'
+        } : {}}
+      />
+
+      <header className="h-16 border-b border-white/5 bg-card/60 backdrop-blur-3xl flex items-center justify-between px-4 shrink-0 z-30">
         <div className="flex items-center gap-3 flex-1 min-w-0">
           <Button variant="ghost" size="icon" className="md:hidden rounded-lg" onClick={() => setCurrentChatId(null)}><ChevronLeft /></Button>
           {!isSearchMode ? (
             <div className="flex items-center gap-3 cursor-pointer min-w-0" onClick={() => setIsChatInfoOpen(true)}>
-              <UserAvatar userId={otherId} manualAvatarUrl={chat?.avatarUrl || otherProfile?.avatarUrl} className="h-10 w-10" fallbackName={chatDisplayName} showOnlineStatus />
+              <UserAvatar userId={otherId} manualAvatarUrl={chat?.avatarUrl || otherProfile?.avatarUrl} className="h-10 w-10 border border-white/10" fallbackName={chatDisplayName} showOnlineStatus />
               <div className="flex flex-col min-w-0">
                 <span className="font-bold text-sm truncate text-white">{chatDisplayName}</span>
-                <span className="text-[10px] font-bold uppercase tracking-widest text-primary/80">
+                <span className="text-[10px] font-black uppercase tracking-widest text-primary/80">
                   {chatSubtext}
                 </span>
               </div>
@@ -299,38 +313,40 @@ export default function ChatArea() {
       </div>
 
       {(!isParticipant && !isKernelAdmin) ? (
-        <div className="p-4 bg-primary/5 border-t border-white/5 flex items-center justify-center shrink-0 z-30">
-          <Button onClick={handleJoinChat} disabled={isJoining} className="h-12 px-10 rounded-2xl bg-primary font-black uppercase tracking-widest gap-2 shadow-xl shadow-primary/20">
-            {isJoining ? <Loader2 className="animate-spin w-4 h-4" /> : <><UserPlus className="w-5 h-5" /> ВСТУПИТЬ В СООБЩЕСТВО</>}
+        <div className="p-4 bg-primary/10 backdrop-blur-xl border-t border-white/5 flex items-center justify-center shrink-0 z-30">
+          <Button onClick={handleJoinChat} disabled={isJoining} className="h-12 px-10 rounded-2xl bg-primary font-black uppercase tracking-widest gap-2 shadow-2xl shadow-primary/30">
+            {isJoining ? <Loader2 className="animate-spin w-4 h-4" /> : <><UserPlus className="w-5 h-5" /> Вступить в сообщество</>}
           </Button>
         </div>
       ) : !canPost ? (
-        <div className="p-4 bg-white/5 border-t border-white/5 text-center shrink-0 z-30">
-          <p className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em]">ТОЛЬКО ЧТЕНИЕ</p>
+        <div className="p-4 bg-white/5 backdrop-blur-xl border-t border-white/5 text-center shrink-0 z-30">
+          <p className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em]">Только чтение</p>
         </div>
       ) : (
-        <footer className="p-3 pb-6 bg-background/90 backdrop-blur-2xl border-t border-white/5 shrink-0 z-40 relative">
+        <footer className="p-3 pb-6 bg-card/40 backdrop-blur-3xl border-t border-white/5 shrink-0 z-40 relative">
           <div className="max-w-4xl mx-auto space-y-2 relative">
             <div className="flex gap-3 items-center">
               <Popover>
                 <PopoverTrigger asChild><Button variant="ghost" size="icon" className="text-muted-foreground"><Paperclip className="w-5 h-5" /></Button></PopoverTrigger>
-                <PopoverContent side="top" align="start" className="w-48 bg-card border-white/10 rounded-2xl p-1 mb-2 shadow-2xl">
-                  <Button variant="ghost" className="w-full justify-start gap-3 rounded-xl h-11 text-xs" onClick={() => fileInputRef.current?.click()}><ImageIcon className="w-4 h-4" /> ГАЛЕРЕЯ</Button>
-                  <Button variant="ghost" className="w-full justify-start gap-3 rounded-xl h-11 text-xs" onClick={() => setIsPollModalOpen(true)}><AtSign className="w-4 h-4" /> ОПРОС</Button>
+                <PopoverContent side="top" align="start" className="w-48 bg-card/90 backdrop-blur-3xl border-white/10 rounded-[1.8rem] p-1 mb-2 shadow-2xl">
+                  <Button variant="ghost" className="w-full justify-start gap-3 rounded-xl h-11 text-xs font-bold uppercase tracking-widest" onClick={() => fileInputRef.current?.click()}><ImageIcon className="w-4 h-4 text-primary" /> Галерея</Button>
+                  <Button variant="ghost" className="w-full justify-start gap-3 rounded-xl h-11 text-xs font-bold uppercase tracking-widest" onClick={() => setIsPollModalOpen(true)}><AtSign className="w-4 h-4 text-accent" /> Опрос</Button>
                 </PopoverContent>
               </Popover>
               
-              <div className="flex-1 flex items-center bg-muted/30 rounded-full border border-white/[0.05] h-11 px-4 relative group">
-                <Input ref={textInputRef} placeholder="Сообщение" className="bg-transparent border-none focus-visible:ring-0 text-white placeholder:text-muted-foreground/40" value={messageInput} onChange={e => handleInputChange(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSendMessage()} />
-                <Button variant="ghost" size="icon" className="text-muted-foreground"><Smile className="w-5 h-5" /></Button>
+              <div className="flex-1 flex items-center bg-white/[0.05] rounded-full border border-white/[0.08] h-11 px-4 relative group transition-all focus-within:bg-white/[0.08]">
+                <Input ref={textInputRef} placeholder="Сообщение" className="bg-transparent border-none focus-visible:ring-0 text-white placeholder:text-muted-foreground/40 font-medium" value={messageInput} onChange={e => handleInputChange(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSendMessage()} />
+                <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-primary"><Smile className="w-5 h-5" /></Button>
               </div>
 
               {(messageInput.trim() || editingMsg) ? (
-                <Button size="icon" className="h-10 w-10 rounded-full bg-primary shadow-lg" onClick={() => handleSendMessage()}><Send className="w-5 h-5" /></Button>
+                <Button size="icon" className="h-10 w-10 rounded-full bg-primary shadow-xl shadow-primary/30 active:scale-90 transition-transform" onClick={() => handleSendMessage()}>
+                  <Send className="w-5 h-5 text-white" />
+                </Button>
               ) : (
                 <div className="flex items-center gap-1">
-                  <Button size="icon" variant="ghost" className="h-10 w-10 text-muted-foreground"><Mic className="w-5 h-5" /></Button>
-                  <Button size="icon" variant="ghost" className="h-10 w-10 text-muted-foreground"><Video className="w-5 h-5" /></Button>
+                  <Button size="icon" variant="ghost" className="h-10 w-10 text-muted-foreground hover:text-primary"><Mic className="w-5 h-5" /></Button>
+                  <Button size="icon" variant="ghost" className="h-10 w-10 text-muted-foreground hover:text-primary"><Video className="w-5 h-5" /></Button>
                 </div>
               )}
             </div>
