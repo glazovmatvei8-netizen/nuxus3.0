@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useRef, useEffect } from 'react';
@@ -54,6 +53,8 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
     theme: 'default',
     twoFactorEnabled: false,
     twoFactorPin: '',
+    chatBackground: '',
+    chatBackgroundFit: 'cover' as 'cover' | 'contain',
     privacy: {
       phoneVisibility: 'everybody',
       lastSeenVisibility: 'everybody',
@@ -73,6 +74,8 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         theme: profile.settings?.theme || 'default',
         twoFactorEnabled: !!profile.twoFactorEnabled,
         twoFactorPin: profile.twoFactorPin || '',
+        chatBackground: profile.settings?.chatBackground || '',
+        chatBackgroundFit: profile.settings?.chatBackgroundFit || 'cover',
         privacy: profile.settings?.privacy || {
           phoneVisibility: 'everybody',
           lastSeenVisibility: 'everybody',
@@ -95,6 +98,8 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         twoFactorPin: form.twoFactorPin,
         'settings.appearance': form.appearance,
         'settings.theme': form.theme,
+        'settings.chatBackground': form.chatBackground,
+        'settings.chatBackgroundFit': form.chatBackgroundFit,
         'settings.privacy': form.privacy
       });
       onOpenChange(false);
@@ -151,6 +156,31 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                   </button>
                 </div>
               </div>
+
+              <div className="space-y-4 pt-4 border-t border-white/5">
+                <Label className="text-[10px] uppercase font-black text-muted-foreground flex items-center gap-2"><ImageIcon className="w-3 h-3" /> Фон чатов</Label>
+                <div className="space-y-3">
+                  <Input 
+                    placeholder="URL изображения для фона..." 
+                    value={form.chatBackground} 
+                    onChange={e => setForm({...form, chatBackground: e.target.value})}
+                    className="bg-muted/30 border-white/5 h-11 rounded-xl text-xs"
+                  />
+                  <div className="flex gap-2">
+                    <Button 
+                      variant="ghost" 
+                      className={cn("flex-1 text-[9px] uppercase h-8 rounded-lg", form.chatBackgroundFit === 'cover' ? "bg-primary/20 text-primary" : "bg-white/5")}
+                      onClick={() => setForm({...form, chatBackgroundFit: 'cover'})}
+                    >Заполнение</Button>
+                    <Button 
+                      variant="ghost" 
+                      className={cn("flex-1 text-[9px] uppercase h-8 rounded-lg", form.chatBackgroundFit === 'contain' ? "bg-primary/20 text-primary" : "bg-white/5")}
+                      onClick={() => setForm({...form, chatBackgroundFit: 'contain'})}
+                    >Вписать</Button>
+                  </div>
+                </div>
+              </div>
+
               <div className="space-y-4 pt-4 border-t border-white/5">
                 <Label className="text-[10px] uppercase font-black text-muted-foreground flex items-center gap-2"><Paintbrush className="w-3 h-3" /> Цветовая схема</Label>
                 <div className="grid grid-cols-1 gap-2">

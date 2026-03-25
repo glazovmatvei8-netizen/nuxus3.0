@@ -226,7 +226,6 @@ export default function ChatArea() {
     const mention = args[0]; // Expecting @username
 
     let responseMessage = "";
-    let systemUpdate = null;
 
     try {
       if (cmd === 'хелп' || cmd === 'help') {
@@ -426,6 +425,18 @@ export default function ChatArea() {
     return formatDisplayName(chat?.name || 'Чат');
   }, [chat, firebaseUser?.uid, otherProfile]);
 
+  const chatBackgroundStyle = useMemo(() => {
+    const customBg = userProfile?.settings?.chatBackground;
+    if (customBg) {
+      return {
+        backgroundImage: `url(${customBg})`,
+        backgroundSize: userProfile?.settings?.chatBackgroundFit || 'cover',
+        backgroundPosition: 'center',
+      };
+    }
+    return {};
+  }, [userProfile?.settings?.chatBackground, userProfile?.settings?.chatBackgroundFit]);
+
   return (
     <div className="flex-1 flex flex-col h-full bg-background relative overflow-hidden z-20">
       <header className="h-16 border-b border-white/5 bg-card/80 backdrop-blur-xl flex items-center justify-between px-4 shrink-0 z-30">
@@ -458,6 +469,12 @@ export default function ChatArea() {
       </header>
 
       <div className="flex-1 relative overflow-hidden flex flex-col">
+        {/* Background Layer */}
+        <div 
+          className={cn("absolute inset-0 z-0 nuxus-pattern-bg", !userProfile?.settings?.chatBackground && "opacity-40")} 
+          style={chatBackgroundStyle}
+        />
+        
         <ScrollArea className="flex-1 w-full relative z-10 scrollbar-hide">
           <MessageList messages={messages} userId={firebaseUser?.uid} chatId={currentChatId} onReply={setReplyTo} onEdit={setEditingMsg} onForward={setForwardingMessage} onPin={handlePinMessage} amIPremium={userProfile?.isPremium} isAdmin={isKernelAdmin} isGroup={chat?.type !== 'private'} searchQuery={searchQuery} viewerProfile={userProfile} />
           <div ref={messagesEndRef} className="h-4" />
