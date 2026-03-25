@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useMemo } from 'react';
@@ -13,25 +12,22 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
   DropdownMenuSeparator,
-  DropdownMenuSub,
-  DropdownMenuSubTrigger,
-  DropdownMenuSubContent,
-  DropdownMenuPortal
 } from "@/components/ui/dropdown-menu";
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, doc, limit, updateDoc, writeBatch, increment, getDoc } from 'firebase/firestore';
+import { collection, query, doc, limit, updateDoc, writeBatch, increment } from 'firebase/firestore';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
   ShieldAlert, Users, Star, Ban, CheckCircle2, ShieldCheck, Radio, 
-  MoreVertical, ShieldOff, Activity, BarChart3, ListChecks, X, Globe, Trophy, Wallet, Check, Trash2
+  MoreVertical, ShieldOff, Activity, Wallet, Check, Trash2, X
 } from 'lucide-react';
 import { 
-  BarChart, Bar, XAxis, YAxis, ResponsiveContainer, AreaChart, Area, Tooltip
+  XAxis, YAxis, ResponsiveContainer, AreaChart, Area, Tooltip
 } from 'recharts';
 import type { User, TopUpRequest } from '@/lib/types';
 import { formatDisplayName, isUserPremium, cn, isGlobalAdmin } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { addMonths, subDays, isSameDay, format } from 'date-fns';
+import { ru } from 'date-fns/locale';
 
 const ROOT_UID = 'GCvLucN8CjNcdaxPO2vmpZ84hNl1';
 
@@ -230,7 +226,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
                           {u.isAdmin ? <><ShieldOff className="w-4 h-4 text-orange-500" /> Снять админа</> : <><ShieldCheck className="w-4 h-4 text-primary" /> Дать админку</>}
                         </DropdownMenuItem>
                         <DropdownMenuSeparator className="bg-white/5" />
-                        <DropdownMenuItem onClick={() => handleAction(u.id, 'give_premium', 1)} className="text-[10px] font-bold uppercase py-3 rounded-xl gap-3"><Trophy className="w-4 h-4 text-accent" /> Выдать Premium</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleAction(u.id, 'give_premium', 1)} className="text-[10px] font-bold uppercase py-3 rounded-xl gap-3"><Star className="w-4 h-4 text-accent" /> Выдать Premium</DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </div>
@@ -254,7 +250,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
                         <UserAvatar userId={req.userId} className="h-10 w-10" fallbackName={req.userName} />
                         <div className="flex flex-col text-left">
                           <span className="font-bold text-sm text-white">{req.userName}</span>
-                          <span className="text-[9px] text-muted-foreground uppercase font-black">{format(new Date(req.createdAt), 'dd.MM HH:mm')}</span>
+                          <span className="text-[9px] text-muted-foreground uppercase font-black">{format(new Date(req.createdAt), 'dd.MM HH:mm', { locale: ru })}</span>
                         </div>
                       </div>
                       <div className="text-right">
@@ -274,7 +270,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
 
                 {requests?.filter(r => r.status === 'pending').length === 0 && (
                   <div className="flex flex-col items-center justify-center py-20 opacity-20 border-2 border-dashed border-white/5 rounded-[2.5rem]">
-                    <ListChecks className="w-12 h-12 mb-4" />
+                    <ShieldCheck className="w-12 h-12 mb-4" />
                     <p className="text-[10px] font-black uppercase tracking-widest">Нет активных заявок</p>
                   </div>
                 )}

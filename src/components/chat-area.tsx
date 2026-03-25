@@ -214,7 +214,7 @@ export default function ChatArea() {
     }
   }, [currentChatId, firebaseUser, db, toast]);
 
-  // Nuxus Chat Manager Command Processor (LOCALIZED & IMPROVED)
+  // Nuxus Chat Manager Command Processor (REFINED & FIXED)
   const processBotCommand = async (input: string) => {
     const trimmed = input.trim();
     if (!trimmed.startsWith('!') || !currentChatId || !db || !chat || !firebaseUser || !isChatAdmin) return false;
@@ -230,9 +230,9 @@ export default function ChatArea() {
     let responseMessage = "";
 
     try {
-      if (cmd === 'хелп' || cmd === 'help' || cmd === 'помощь') {
+      if (['хелп', 'help', 'помощь'].includes(cmd)) {
         responseMessage = "🤖 **Команды Nuxus Chat Manager**:\n\n!кик @user - Исключить участника\n!бан @user - Забанить навсегда\n!админ @user - Назначить администратором\n!разжаловать @user - Снять права админа\n!мут @user <мин> - Заглушить на время\n!анмут @user - Снять мут\n!статус - Информация о чате";
-      } else if (cmd === 'статус' || cmd === 'status') {
+      } else if (['статус', 'status'].includes(cmd)) {
         responseMessage = `📊 **Статистика Узла**:\n\nУчастников: ${chat.participantIds.length}\nАдминов: ${chat.adminIds?.length || 1}\nТип: ${chat.type}\nID: ${chat.id}`;
       } else if (mention && mention.startsWith('@')) {
         const username = mention.toLowerCase();
@@ -245,37 +245,50 @@ export default function ChatArea() {
           const targetUser = userSnap.docs[0].data() as UserType;
           const targetId = targetUser.id;
 
-          if (cmd === 'кик' || cmd === 'kick') {
-            await updateDoc(doc(db, 'chats', currentChatId), {
-              participantIds: arrayRemove(targetId),
-              adminIds: arrayRemove(targetId)
-            });
-            responseMessage = `🚫 Пользователь ${targetUser.name} исключен из чата.`;
-          } else if (cmd === 'бан' || cmd === 'ban') {
-            await updateDoc(doc(db, 'chats', currentChatId), {
-              participantIds: arrayRemove(targetId),
-              adminIds: arrayRemove(targetId),
-              [`metadata.${targetId}.isBanned`]: true
-            });
-            responseMessage = `🔨 Пользователь ${targetUser.name} забанен навсегда.`;
-          } else if (cmd === 'админ' || cmd === 'admin') {
+          if (['кик', 'kick'].includes(cmd)) {
+            if (targetId === chat.ownerId) {
+              responseMessage = "⚠️ Невозможно исключить создателя узла.";
+            } else {
+              await updateDoc(doc(db, 'chats', currentChatId), {
+                participantIds: arrayRemove(targetId),
+                adminIds: arrayRemove(targetId)
+              });
+              responseMessage = `🚫 Пользователь ${targetUser.name} исключен из чата.`;
+            }
+          } else if (['бан', 'ban'].includes(cmd)) {
+            if (targetId === chat.ownerId) {
+              responseMessage = "⚠️ Невозможно забанить создателя узла.";
+            } else {
+              // Ensure metadata is updated correctly even if it doesn't exist
+              await updateDoc(doc(db, 'chats', currentChatId), {
+                participantIds: arrayRemove(targetId),
+                adminIds: arrayRemove(targetId),
+                [`metadata.${targetId}.isBanned`]: true
+              });
+              responseMessage = `🔨 Пользователь ${targetUser.name} забанен навсегда.`;
+            }
+          } else if (['админ', 'admin'].includes(cmd)) {
             await updateDoc(doc(db, 'chats', currentChatId), {
               adminIds: arrayUnion(targetId)
             });
             responseMessage = `⭐ ${targetUser.name} теперь администратор чата.`;
-          } else if (cmd === 'разжаловать' || cmd === 'unadmin') {
-            await updateDoc(doc(db, 'chats', currentChatId), {
-              adminIds: arrayRemove(targetId)
-            });
-            responseMessage = `📉 ${targetUser.name} больше не администратор.`;
-          } else if (cmd === 'мут' || cmd === 'mute') {
+          } else if (['разжаловать', 'unadmin'].includes(cmd)) {
+            if (targetId === chat.ownerId) {
+              responseMessage = "⚠️ Невозможно разжаловать создателя.";
+            } else {
+              await updateDoc(doc(db, 'chats', currentChatId), {
+                adminIds: arrayRemove(targetId)
+              });
+              responseMessage = `📉 ${targetUser.name} больше не администратор.`;
+            }
+          } else if (['мут', 'mute'].includes(cmd)) {
             const mins = parseInt(parts[2]) || 60;
             const until = addMinutes(new Date(), mins).toISOString();
             await updateDoc(doc(db, 'chats', currentChatId), {
               [`metadata.${targetId}.mutedUntil`]: until
             });
             responseMessage = `🤐 ${targetUser.name} в муте на ${mins} мин.`;
-          } else if (cmd === 'анмут' || cmd === 'unmute') {
+          } else if (['анмут', 'unmute'].includes(cmd)) {
             await updateDoc(doc(db, 'chats', currentChatId), {
               [`metadata.${targetId}.mutedUntil`]: null
             });
@@ -296,8 +309,9 @@ export default function ChatArea() {
         });
         return true;
       }
-    } catch (e) {
-      toast({ title: "Ошибка бота", variant: "destructive" });
+    } catch (e: any) {
+      console.error("Nuxus Bot Error:", e);
+      toast({ title: "Ошибка бота", description: e.message || "Ошибка сигнала", variant: "destructive" });
     }
     return false;
   };

@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState } from 'react';
@@ -10,7 +9,7 @@ import { useFirestore, useUser } from '@/firebase';
 import { Users, Radio, MessageSquarePlus, ArrowRight, Loader2, Search } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import type { ChatType } from '@/lib/types';
-import { collection, addDoc, doc, updateDoc } from 'firebase/firestore';
+import { collection, addDoc } from 'firebase/firestore';
 import { addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 interface CreateChatModalProps {
@@ -48,7 +47,8 @@ export function CreateChatModal({ open, onOpenChange }: CreateChatModalProps) {
         adminIds: [user.uid],
         ownerId: user.uid,
         createdAt: new Date().toISOString(),
-        isPublic: true
+        isPublic: true,
+        metadata: {} // Initialize metadata to prevent bot errors
       };
 
       const docRef = await addDoc(collection(db, 'chats'), newChatData);
