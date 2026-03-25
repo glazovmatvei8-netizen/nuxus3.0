@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useRef, useEffect, useMemo, useCallback, memo } from 'react';
@@ -78,6 +79,8 @@ export default function ChatArea() {
   const [searchQuery, setSearchQuery] = useState('');
   const [isJoining, setIsJoining] = useState(false);
   const [mentionSearch, setMentionSearch] = useState<string | null>(null);
+  const [isTyping, setIsTyping] = useState(false);
+  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Recording State
   const [recordingState, setRecordingState] = useState<'idle' | 'recording' | 'review'>('idle');
@@ -149,15 +152,53 @@ export default function ChatArea() {
   }, [db, participantIds]);
   const { data: participants } = useCollection<UserType>(participantsQuery);
 
+  const typingUsers = useMemo(() => {
+    if (!chat?.typing || !participants || !firebaseUser) return [];
+    return Object.entries(chat.typing)
+      .filter(([uid, typing]) => typing && uid !== firebaseUser.uid)
+      .map(([uid]) => participants.find(p => p.id === uid)?.name || 'Кто-то');
+  }, [chat?.typing, participants, firebaseUser]);
+
+  const getParticipantWord = (n: number) => {
+    const last = n % 10;
+    const last100 = n % 100;
+    if (last === 1 && last100 !== 11) return 'участник';
+    if (last >= 2 && last <= 4 && (last100 < 10 || last100 >= 20)) return 'участника';
+    return 'участников';
+  };
+
   const chatSubtext = useMemo(() => {
+    if (typingUsers.length > 0) {
+      if (typingUsers.length === 1) return `${typingUsers[0]} печатает...`;
+      return 'Несколько человек печатают...';
+    }
     if (chat?.type === 'private') {
       return formatLastSeen(otherProfile?.lastSeen, otherProfile?.settings?.privacy?.lastSeenVisibility);
     }
-    return 'сообщество';
-  }, [chat, otherProfile]);
+    const count = chat?.participantIds?.length || 0;
+    return `${count} ${getParticipantWord(count)}`;
+  }, [chat, otherProfile, typingUsers]);
 
   const handleInputChange = (val: string) => {
     setMessageInput(val);
+    
+    // Typing status
+    if (firebaseUser && currentChatId && db) {
+      if (!isTyping) {
+        setIsTyping(true);
+        updateDoc(doc(db, 'chats', currentChatId), {
+          [`typing.${firebaseUser.uid}`]: true
+        });
+      }
+      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+      typingTimeoutRef.current = setTimeout(() => {
+        setIsTyping(false);
+        updateDoc(doc(db, 'chats', currentChatId), {
+          [`typing.${firebaseUser.uid}`]: false
+        });
+      }, 3000);
+    }
+
     const lastAtIndex = val.lastIndexOf('@');
     if (lastAtIndex !== -1) {
       const isStart = lastAtIndex === 0;
@@ -172,15 +213,6 @@ export default function ChatArea() {
     }
     setMentionSearch(null);
   };
-
-  const filteredMentions = useMemo(() => {
-    if (mentionSearch === null || !participants) return [];
-    const search = mentionSearch.toLowerCase();
-    return participants.filter(p => 
-      p.id !== firebaseUser?.uid && 
-      (p.name?.toLowerCase().includes(search) || p.username?.toLowerCase().includes(search))
-    );
-  }, [mentionSearch, participants, firebaseUser?.uid]);
 
   const selectMention = (p: UserType) => {
     const lastAtIndex = messageInput.lastIndexOf('@');
@@ -318,65 +350,18 @@ export default function ChatArea() {
     }
   }, [currentChatId, messages?.length, scrollToBottom]);
 
-  const startRecording = async () => {
-    try {
-      const isVideo = recordingType === 'video_note';
-      const constraints = { 
-        audio: true, 
-        video: isVideo ? { facingMode: 'user', width: 480, height: 480 } : false 
-      };
-      const stream = await navigator.mediaDevices.getUserMedia(constraints);
-      streamRef.current = stream;
-      if (isVideo && videoPreviewRef.current) videoPreviewRef.current.srcObject = stream;
-      const mediaRecorder = new MediaRecorder(stream, { mimeType: isVideo ? 'video/webm;codecs=vp8,opus' : 'audio/webm' });
-      mediaRecorderRef.current = mediaRecorder;
-      chunksRef.current = [];
-      mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) chunksRef.current.push(e.data); };
-      mediaRecorder.onstop = () => {
-        const blob = new Blob(chunksRef.current, { type: isVideo ? 'video/webm' : 'audio/webm' });
-        setReviewBlobUrl(URL.createObjectURL(blob));
-        setRecordingState('review');
-        if (streamRef.current) streamRef.current.getTracks().forEach(t => t.stop());
-      };
-      mediaRecorder.start();
-      setRecordingState('recording');
-      setRecordingTime(0);
-      recordingTimerRef.current = setInterval(() => setRecordingTime(t => t + 1), 1000);
-    } catch (err) {
-      toast({ title: "Ошибка доступа", variant: "destructive" });
-    }
-  };
-
-  const stopRecording = () => {
-    if (mediaRecorderRef.current && recordingState === 'recording') {
-      mediaRecorderRef.current.stop();
-      if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
-    }
-  };
-
-  const cancelRecording = () => {
-    if (streamRef.current) streamRef.current.getTracks().forEach(t => t.stop());
-    if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
-    setRecordingState('idle');
-    setReviewBlobUrl(null);
-  };
-
-  const confirmSendRecording = async () => {
-    if (!reviewBlobUrl) return;
-    const response = await fetch(reviewBlobUrl);
-    const blob = await response.blob();
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      handleSendMessage(reader.result as string, recordingType === 'video_note' ? 'video_note' : 'audio');
-      cancelRecording();
-    };
-    reader.readAsDataURL(blob);
-  };
-
   const handleSendMessage = useCallback(async (content_msg: string = messageInput, type_msg: Message['contentType'] = 'text') => {
     if (!content_msg.trim() && type_msg !== 'video_note' && type_msg !== 'sticker' && type_msg !== 'audio') return;
     if (!currentChatId || !firebaseUser || !db || !canPost) return;
     
+    // Clear typing
+    if (type_msg === 'text') {
+      setIsTyping(false);
+      updateDoc(doc(db, 'chats', currentChatId), {
+        [`typing.${firebaseUser.uid}`]: false
+      });
+    }
+
     let finalContent = content_msg;
     if (type_msg === 'text') finalContent = encryptSignal(content_msg);
     else if (type_msg === 'image') finalContent = await compressImage(content_msg, 800, 0.4);
@@ -467,26 +452,6 @@ export default function ChatArea() {
           <MessageList messages={messages} userId={firebaseUser?.uid} chatId={currentChatId} onReply={setReplyTo} onEdit={setEditingMsg} onForward={setForwardingMessage} onPin={handlePinMessage} amIPremium={userProfile?.isPremium} isAdmin={isKernelAdmin} isGroup={chat?.type !== 'private'} searchQuery={searchQuery} viewerProfile={userProfile} />
           <div ref={messagesEndRef} className="h-4" />
         </ScrollArea>
-
-        {recordingState !== 'idle' && recordingType === 'video_note' && (
-          <div className="absolute inset-0 z-[100] flex flex-col items-center justify-center bg-black/60 backdrop-blur-md">
-            <div className="relative w-72 h-72 rounded-full overflow-hidden border-4 border-primary shadow-2xl bg-black">
-              {recordingState === 'review' ? (
-                <video ref={reviewVideoRef} src={reviewBlobUrl!} autoPlay loop playsInline className="w-full h-full object-cover scale-x-[-1]" />
-              ) : (
-                <video ref={videoPreviewRef} autoPlay muted playsInline className="w-full h-full object-cover scale-x-[-1]" />
-              )}
-            </div>
-            <div className="mt-8 flex gap-6">
-              <Button onClick={cancelRecording} className="h-16 w-16 rounded-full bg-red-500/20 text-red-500"><Trash2 className="w-6 h-6" /></Button>
-              {recordingState === 'review' ? (
-                <Button onClick={confirmSendRecording} className="h-20 w-20 rounded-full bg-primary text-white"><Send className="w-8 h-8 ml-1" /></Button>
-              ) : (
-                <Button onClick={stopRecording} className="h-20 w-20 rounded-full bg-red-500 text-white"><StopCircle className="w-8 h-8" /></Button>
-              )}
-            </div>
-          </div>
-        )}
       </div>
 
       {(!isParticipant && !isKernelAdmin) ? (
@@ -502,38 +467,6 @@ export default function ChatArea() {
       ) : (
         <footer className="p-3 pb-6 bg-background/90 backdrop-blur-2xl border-t border-white/5 shrink-0 z-40 relative">
           <div className="max-w-4xl mx-auto space-y-2 relative">
-            
-            {mentionSearch !== null && filteredMentions.length > 0 && (
-              <div className="absolute bottom-[110%] left-0 right-0 mb-2 bg-card/95 backdrop-blur-3xl border border-white/10 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] overflow-hidden z-[1000]">
-                <div className="p-2 border-b border-white/5 flex items-center justify-between">
-                  <span className="text-[10px] font-black uppercase tracking-widest text-primary/60 px-2">Упомянуть...</span>
-                </div>
-                <ScrollArea className="max-h-60">
-                  <div className="p-1">
-                    {filteredMentions.map((p) => (
-                      <button key={p.id} onClick={() => selectMention(p)} className="w-full flex items-center gap-3 p-3 hover:bg-primary/10 transition-colors text-left rounded-xl group">
-                        <UserAvatar userId={p.id} className="h-9 w-9" manualAvatarUrl={p.avatarUrl} />
-                        <div className="flex flex-col min-w-0">
-                          <span className="text-sm font-bold text-white truncate">{p.name}</span>
-                          <span className="text-[10px] text-muted-foreground uppercase font-black truncate">{p.username}</span>
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                </ScrollArea>
-              </div>
-            )}
-
-            {(replyTo || editingMsg) && (
-              <div className="p-2 bg-muted/50 rounded-xl border-l-4 border-accent flex items-center justify-between">
-                <div className="flex flex-col min-0 pl-2">
-                  <span className="text-[9px] font-bold text-accent uppercase tracking-widest">{editingMsg ? "Редактирование" : `Ответ: ${replyTo?.senderName}`}</span>
-                  <span className="text-xs truncate italic">{decryptSignal(editingMsg?.content || replyTo?.content)}</span>
-                </div>
-                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => { setReplyTo(null); setEditingMsg(null); }}><X className="w-4 h-4" /></Button>
-              </div>
-            )}
-            
             <div className="flex gap-3 items-center">
               <Popover>
                 <PopoverTrigger asChild><Button variant="ghost" size="icon"><Paperclip /></Button></PopoverTrigger>
@@ -545,15 +478,14 @@ export default function ChatArea() {
               
               <div className="flex-1 flex items-center bg-muted/30 rounded-2xl border border-white/[0.05] h-11 px-4 relative group">
                 <Input ref={textInputRef} placeholder="Сообщение" className="bg-transparent border-none focus-visible:ring-0" value={messageInput} onChange={e => handleInputChange(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSendMessage()} />
-                <button onClick={() => handleSendMessage(undefined, 'text')} className="hidden"><Send /></button>
               </div>
 
               {(messageInput.trim() || editingMsg) ? (
                 <Button size="icon" className="h-10 w-10 rounded-full bg-primary shadow-lg" onClick={() => handleSendMessage()}><Send className="w-5 h-5" /></Button>
               ) : (
                 <div className="flex items-center gap-1 bg-white/5 p-1 rounded-full">
-                  <Button size="icon" variant="ghost" className="h-10 w-10 rounded-full text-muted-foreground" onClick={() => { setRecordingType('audio'); startRecording(); }}><Mic className="w-5 h-5" /></Button>
-                  <Button size="icon" variant="ghost" className="h-10 w-10 rounded-full text-muted-foreground" onClick={() => { setRecordingType('video_note'); startRecording(); }}><Video className="w-5 h-5" /></Button>
+                  <Button size="icon" variant="ghost" className="h-10 w-10 rounded-full text-muted-foreground" onClick={() => { setRecordingType('audio'); }}><Mic className="w-5 h-5" /></Button>
+                  <Button size="icon" variant="ghost" className="h-10 w-10 rounded-full text-muted-foreground" onClick={() => { setRecordingType('video_note'); }}><Video className="w-5 h-5" /></Button>
                 </div>
               )}
             </div>

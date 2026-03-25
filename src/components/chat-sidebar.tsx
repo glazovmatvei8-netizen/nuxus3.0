@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useMemo, memo, useRef } from 'react';
@@ -49,13 +50,13 @@ const ChatListItem = memo(({
   const lastMsg = lastMessages?.[0];
 
   const finalDisplayName = useMemo(() => {
-    if (chat.type === 'saved') return 'Archives';
+    if (chat.type === 'saved') return 'Архив';
     if (chat.type === 'private') {
       const myMeta = chat.metadata?.[currentUserId || ''];
       if (myMeta?.customName) return myMeta.customName;
       if (otherProfile?.name) return formatDisplayName(otherProfile.name);
     }
-    return formatDisplayName(chat.name || otherProfile?.name || 'User');
+    return formatDisplayName(chat.name || otherProfile?.name || 'Пользователь');
   }, [chat, otherProfile, currentUserId]);
 
   const displayTime = useMemo(() => {
@@ -66,8 +67,8 @@ const ChatListItem = memo(({
   const isUnread = (lastMsg && !lastMsg.isRead && lastMsg.senderId !== currentUserId) || chat.isManualUnread;
 
   const decryptedPreview = useMemo(() => {
-    if (!lastMsg) return 'No signals found';
-    if (lastMsg.contentType !== 'text') return `[Packet: ${lastMsg.contentType.toUpperCase()}]`;
+    if (!lastMsg) return 'Нет сообщений';
+    if (lastMsg.contentType !== 'text') return `[Пакет: ${lastMsg.contentType.toUpperCase()}]`;
     return decryptSignal(lastMsg.content);
   }, [lastMsg]);
 
@@ -78,11 +79,11 @@ const ChatListItem = memo(({
     touchStartY.current = e.touches[0].clientY;
     directionDecided.current = false;
     isHorizontalSwipe.current = false;
-    isVerticalScroll.current = false;
+    isVerticalScroll = false;
   };
 
   const handleTouchMove = (e: React.TouchEvent) => {
-    if (isVerticalScroll.current) return;
+    if (isVerticalScroll) return;
     const currentX = e.touches[0].clientX;
     const currentY = e.touches[0].clientY;
     const deltaX = currentX - touchStartX.current;
@@ -90,7 +91,7 @@ const ChatListItem = memo(({
 
     if (!directionDecided.current) {
       if (Math.abs(deltaY) > Math.abs(deltaX) + 5) {
-        isVerticalScroll.current = true;
+        isVerticalScroll = true;
         directionDecided.current = true;
         setOffsetX(0);
         return;
@@ -125,11 +126,11 @@ const ChatListItem = memo(({
       <div className={cn("absolute inset-y-0 left-2 flex h-[calc(100%-4px)] z-0 transition-opacity duration-200 rounded-3xl overflow-hidden", offsetX > 10 ? "opacity-100" : "opacity-0 pointer-events-none")}>
         <button onClick={(e) => { e.stopPropagation(); onMarkUnread(chat.id); resetSwipe(); }} className="w-20 bg-blue-600/80 backdrop-blur-xl flex flex-col items-center justify-center text-white gap-1 active:brightness-125 transition-all">
           <MessageCircle className="w-5 h-5 fill-current" />
-          <span className="text-[8px] font-black uppercase tracking-widest">Signal</span>
+          <span className="text-[8px] font-black uppercase tracking-widest">Сигнал</span>
         </button>
         <button onClick={(e) => { e.stopPropagation(); onPinToggle(chat.id); resetSwipe(); }} className="w-20 bg-green-600/80 backdrop-blur-xl flex flex-col items-center justify-center text-white gap-1 active:brightness-125 transition-all">
           <Pin className="w-5 h-5 fill-current" />
-          <span className="text-[8px] font-black uppercase tracking-widest">{isPinned ? 'Free' : 'Lock'}</span>
+          <span className="text-[8px] font-black uppercase tracking-widest">{isPinned ? 'Снять' : 'Закрепить'}</span>
         </button>
       </div>
 
@@ -137,11 +138,11 @@ const ChatListItem = memo(({
         <div className="flex h-full w-full">
           <button onClick={(e) => { e.stopPropagation(); onArchive(chat.id, !!chat.isArchived); resetSwipe(); }} className="flex-1 bg-orange-600/80 backdrop-blur-xl flex flex-col items-center justify-center text-white gap-1 active:brightness-125 transition-all">
             <Archive className="w-5 h-5 fill-current" />
-            <span className="text-[8px] font-black uppercase tracking-widest">Vault</span>
+            <span className="text-[8px] font-black uppercase tracking-widest">Хранилище</span>
           </button>
           <button onClick={(e) => { e.stopPropagation(); onDelete(chat.id); resetSwipe(); }} className="flex-1 bg-red-600/80 backdrop-blur-xl flex flex-col items-center justify-center text-white gap-1 active:brightness-125 transition-all">
             <Trash2 className="w-5 h-5 fill-current" />
-            <span className="text-[8px] font-black uppercase tracking-widest">Purge</span>
+            <span className="text-[8px] font-black uppercase tracking-widest">Очистить</span>
           </button>
         </div>
       </div>
@@ -189,21 +190,21 @@ const ChatListItem = memo(({
           </ContextMenuTrigger>
           <ContextMenuContent className="w-64 bg-[#0a0a0c]/90 backdrop-blur-3xl border-white/10 rounded-[1.8rem] shadow-2xl p-1.5">
             <ContextMenuItem onClick={() => onMarkUnread(chat.id)} className="gap-3 py-3 font-black uppercase text-[10px] tracking-[0.2em] rounded-xl hover:bg-primary/10 hover:text-primary transition-all">
-              <MessageCircle className="w-4 h-4 text-[#007AFF]" /> {chat.isManualUnread ? 'Mark Seen' : 'Mark Signal'}
+              <MessageCircle className="w-4 h-4 text-[#007AFF]" /> {chat.isManualUnread ? 'Пометить прочитанным' : 'Пометить непрочитанным'}
             </ContextMenuItem>
             
             <ContextMenuItem onClick={() => onPinToggle(chat.id)} className="gap-3 py-3 font-black uppercase text-[10px] tracking-[0.2em] rounded-xl hover:bg-primary/10 hover:text-primary transition-all">
-              {isPinned ? <><PinOff className="w-4 h-4 text-green-500" /> Unlock Node</> : <><Pin className="w-4 h-4 text-green-500" /> Lock Node</>}
+              {isPinned ? <><PinOff className="w-4 h-4 text-green-500" /> Открепить</> : <><Pin className="w-4 h-4 text-green-500" /> Закрепить</>}
             </ContextMenuItem>
 
             <ContextMenuItem onClick={() => onArchive(chat.id, !!chat.isArchived)} className="gap-3 py-3 font-black uppercase text-[10px] tracking-[0.2em] rounded-xl hover:bg-primary/10 hover:text-primary transition-all">
-              <Archive className="w-4 h-4 text-orange-500" /> {chat.isArchived ? 'Restore' : 'Vault'}
+              <Archive className="w-4 h-4 text-orange-500" /> {chat.isArchived ? 'Извлечь из архива' : 'В архив'}
             </ContextMenuItem>
 
             <ContextMenuSeparator className="bg-white/5 mx-2" />
 
             <ContextMenuItem onClick={() => onDelete(chat.id)} className="gap-3 py-3 font-black uppercase text-[10px] tracking-[0.2em] rounded-xl text-red-500 hover:bg-red-500/10 transition-all">
-              <Trash2 className="w-4 h-4" /> Purge Sector
+              <Trash2 className="w-4 h-4" /> Удалить диалог
             </ContextMenuItem>
           </ContextMenuContent>
         </ContextMenu>
@@ -238,7 +239,7 @@ export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?:
     const isPinned = currentUserProfile?.pinnedChatIds?.includes(chatId);
     await updateDoc(userProfileRef, { pinnedChatIds: isPinned ? arrayRemove(chatId) : arrayUnion(chatId) });
     if (window.navigator && window.navigator.vibrate) window.navigator.vibrate(50);
-    toast({ title: isPinned ? "Signal Unlocked" : "Signal Latched" });
+    toast({ title: isPinned ? "Диалог откреплен" : "Диалог закреплен" });
   };
 
   const handleMarkUnread = async (chatId: string) => {
@@ -251,14 +252,14 @@ export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?:
   const handleArchive = async (chatId: string, currentStatus: boolean) => {
     if (!db) return;
     await updateDoc(doc(db, 'chats', chatId), { isArchived: !currentStatus });
-    toast({ title: currentStatus ? "Restored from Vault" : "Secured in Vault" });
+    toast({ title: currentStatus ? "Восстановлено из архива" : "Отправлено в архив" });
   };
 
   const handleDelete = async (chatId: string) => {
     if (!db) return;
-    if (confirm('Purge this signal sector permanently?')) {
+    if (confirm('Удалить этот диалог навсегда?')) {
       await deleteDoc(doc(db, 'chats', chatId));
-      toast({ title: "Sector Purged" });
+      toast({ title: "Диалог удален" });
     }
   };
 
@@ -300,7 +301,7 @@ export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?:
       <div className="px-6 pt-8 pb-4 shrink-0 bg-background/50 backdrop-blur-xl z-20 space-y-6">
         <div className="flex items-center justify-between w-full">
           <h1 onClick={() => isGlobalAdmin(currentUserProfile) && setIsAdminPanelOpen(true)} className={cn("text-[32px] font-black italic tracking-tighter uppercase leading-none text-white transition-all", isGlobalAdmin(currentUserProfile) ? "cursor-pointer hover:text-primary hover:drop-shadow-[0_0_10px_rgba(168,85,247,0.5)]" : "cursor-default")}>
-            {isArchiveView ? 'Vault' : 'Kernel'}
+            {isArchiveView ? 'Архив 🐱' : 'Чаты 🐱'}
           </h1>
           <div className="flex gap-2">
             <Button variant="ghost" size="icon" className="h-12 w-12 rounded-[1.2rem] bg-white/[0.03] border border-white/5 hover:border-primary/40 transition-all group" onClick={() => setIsCreateModalOpen(true)}>
@@ -315,7 +316,7 @@ export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?:
         <div className="relative group">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground/40 group-focus-within:text-primary transition-colors" />
           <input 
-            placeholder="Search signals..." 
+            placeholder="Поиск по сообщениям..." 
             className="w-full h-12 bg-white/[0.03] border border-white/[0.08] rounded-[1.2rem] pl-12 text-sm font-bold uppercase tracking-widest placeholder:text-muted-foreground/30 focus:outline-none focus:border-primary/40 focus:ring-1 focus:ring-primary/20 transition-all"
             onClick={() => setIsSearchOpen(true)}
             readOnly
@@ -331,9 +332,9 @@ export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?:
               <div className="px-4 py-4">
                 <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide">
                   {[
-                    { id: 'all', label: 'All' },
-                    { id: 'private', label: 'Nodes' },
-                    { id: 'groups', label: 'Sectors' }
+                    { id: 'all', label: 'Все' },
+                    { id: 'private', label: 'Личные' },
+                    { id: 'groups', label: 'Группы' }
                   ].map((tab) => (
                     <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={cn("px-6 py-2 rounded-full text-[10px] font-black uppercase tracking-[0.3em] transition-all whitespace-nowrap border italic", activeTab === tab.id ? "bg-primary text-white border-primary shadow-[0_0_15px_rgba(168,85,247,0.3)]" : "text-muted-foreground/40 border-white/[0.05] hover:text-white hover:bg-white/[0.02]")}>
                       {tab.label}
@@ -358,7 +359,7 @@ export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?:
             ) : (
               <div className="flex flex-col items-center justify-center p-24 opacity-20">
                  <Ghost className="w-16 h-16 mb-6 animate-float" />
-                 <p className="text-[10px] font-black uppercase tracking-[0.5em] text-center ml-[0.5em]">{isArchiveView ? 'Vault is Silent' : 'No Signals'}</p>
+                 <p className="text-[10px] font-black uppercase tracking-[0.5em] text-center ml-[0.5em]">{isArchiveView ? 'Архив пуст' : 'Нет диалогов'}</p>
               </div>
             )}
           </div>
