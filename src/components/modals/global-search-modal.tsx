@@ -10,7 +10,7 @@ import { useFirestore, useUser } from '@/firebase';
 import { collection, query, where, getDocs, limit, or, and, doc, updateDoc, arrayUnion } from 'firebase/firestore';
 import { useAppState } from '@/lib/store';
 import { useToast } from '@/hooks/use-toast';
-import { Search, Loader2, ArrowRight, Zap, Globe, Star, Users, User, Bot, ShieldCheck } from 'lucide-react';
+import { Search, Loader2, ArrowRight, Zap, Globe, Star, Users, User, Bot, ShieldCheck, Plus } from 'lucide-react';
 import { UserAvatar } from '@/components/user-avatar';
 import { cn } from '@/lib/utils';
 import type { Chat } from '@/lib/types';
@@ -63,28 +63,29 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
       const foundResults: any[] = [];
 
       // 1. Боты
-      const nuxusManager = { type: 'bot', data: { id: 'bot_nuxus_manager', name: 'Nuxus Chat Manager 🛡️', username: '@nuxus_manager', avatarUrl: 'https://i.ibb.co/sd2MqGz2/Icon.png', isPremium: true, isBot: true } };
-      const stickerBot = { type: 'bot', data: { id: 'bot_stickers', name: 'Sticker Bot 🎨', username: '@stickers', avatarUrl: 'https://i.ibb.co/sd2MqGz2/Icon.png', isBot: true } };
+      const bots = [
+        { type: 'bot' as const, data: { id: 'bot_nuxus_manager', name: 'Nuxus Chat Manager 🛡️', username: '@nuxus_manager', avatarUrl: 'https://i.ibb.co/sd2MqGz2/Icon.png', isPremium: true, isBot: true } },
+        { type: 'bot' as const, data: { id: 'bot_stickers', name: 'Sticker Bot 🎨', username: '@stickers', avatarUrl: 'https://i.ibb.co/sd2MqGz2/Icon.png', isBot: true } }
+      ];
 
-      if ('@nuxus_manager'.includes(cleanVal) || 'nuxus manager'.includes(cleanVal)) {
-        if (activeFilter === 'all' || activeFilter === 'bots') foundResults.push(nuxusManager);
-      }
-      if ('@stickers'.includes(cleanVal) || 'stickers'.includes(cleanVal)) {
-        if (activeFilter === 'all' || activeFilter === 'bots') foundResults.push(stickerBot);
-      }
+      bots.forEach(bot => {
+        if (bot.data.username.includes(cleanVal) || bot.data.name.toLowerCase().includes(cleanVal)) {
+          if (activeFilter === 'all' || activeFilter === 'bots') foundResults.push(bot);
+        }
+      });
 
-      // 2. Группы и Каналы (Исправлено: использование and() для нескольких фильтров верхнего уровня)
+      // 2. Группы и Каналы (Исправлено: использование and() для нескольких фильтров)
       if (activeFilter === 'all' || activeFilter === 'groups') {
         const chatQ = query(
           collection(db, 'chats'), 
           and(
+            where('isPublic', '==', true),
             or(
               where('username', '==', withAt),
               where('username', '==', withoutAt),
               where('name', '>=', val),
               where('name', '<=', val + '\uf8ff')
-            ),
-            where('isPublic', '==', true)
+            )
           ),
           limit(15)
         );
@@ -136,20 +137,20 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
       setActiveView('chats');
       onOpenChange(false);
     } else if (res.type === 'bot') {
-      if (res.data.id === 'bot_nuxus_manager' && currentChatId) {
-        if (confirm(`Добавить Nuxus Chat Manager в текущий чат?`)) {
+      if (currentChatId) {
+        if (confirm(`Добавить ${res.data.name} в текущий чат?`)) {
           try {
             await updateDoc(doc(db!, 'chats', currentChatId), {
               participantIds: arrayUnion(res.data.id)
             });
-            toast({ title: "Успех", description: "Менеджер подключен к узлу" });
+            toast({ title: "Успех", description: "Бот подключен к узлу" });
             onOpenChange(false);
           } catch (e) {
             toast({ title: "Ошибка", description: "Нет прав на добавление", variant: "destructive" });
           }
         }
       } else {
-        toast({ title: "Бот", description: "Добавьте бота в группу для работы" });
+        toast({ title: "Внимание", description: "Сначала откройте группу, в которую хотите добавить бота." });
       }
     }
   };
@@ -197,7 +198,7 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
             ) : (results.length > 0 ? (
               <div className="space-y-2">
                 {results.map((res, idx) => (
-                  <div key={idx} onClick={() => handleSelectResult(res)} className="flex items-center justify-between p-4 bg-white/5 rounded-[1.8rem] hover:bg-white/10 cursor-pointer border border-white/5 transition-all">
+                  <div key={idx} onClick={() => res.type !== 'bot' && handleSelectResult(res)} className="flex items-center justify-between p-4 bg-white/5 rounded-[1.8rem] hover:bg-white/10 cursor-pointer border border-white/5 transition-all group">
                     <div className="flex items-center gap-4 min-w-0">
                       <UserAvatar userId={res.type === 'user' ? res.data.id : null} manualAvatarUrl={res.data.avatarUrl} className="h-12 w-12 shrink-0" fallbackName={res.data.name} />
                       <div className="flex flex-col text-left min-w-0">
@@ -211,7 +212,17 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
                         </span>
                       </div>
                     </div>
-                    <ArrowRight className="w-5 h-5 text-primary/40 shrink-0" />
+                    {res.type === 'bot' ? (
+                      <Button 
+                        size="sm" 
+                        className="h-9 px-4 rounded-xl bg-primary text-white font-black uppercase text-[9px] tracking-widest gap-2 shadow-lg shadow-primary/20"
+                        onClick={(e) => { e.stopPropagation(); handleSelectResult(res); }}
+                      >
+                        <Plus className="w-3.5 h-3.5" /> Добавить
+                      </Button>
+                    ) : (
+                      <ArrowRight className="w-5 h-5 text-primary/40 shrink-0 group-hover:translate-x-1 transition-transform" />
+                    )}
                   </div>
                 ))}
               </div>
