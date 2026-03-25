@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useFirestore, useUser } from '@/firebase';
-import { collection, query, where, getDocs, limit, or, and, doc, updateDoc, arrayUnion } from 'firebase/firestore';
+import { collection, query, where, getDocs, limit, or, and, doc, updateDoc, arrayUnion, addDoc } from 'firebase/firestore';
 import { useAppState } from '@/lib/store';
 import { useToast } from '@/hooks/use-toast';
 import { Search, Loader2, ArrowRight, Zap, Globe, Star, Users, User, Bot, ShieldCheck, Plus } from 'lucide-react';
@@ -74,7 +74,7 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
         }
       });
 
-      // 2. Группы и Каналы (Исправлено: использование and() для нескольких фильтров)
+      // 2. Группы и Каналы
       if (activeFilter === 'all' || activeFilter === 'groups') {
         const chatQ = query(
           collection(db, 'chats'), 
@@ -129,6 +129,8 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
   }, [db, activeFilter, user?.uid]);
 
   const handleSelectResult = async (res: { type: 'chat' | 'user' | 'bot', data: any }) => {
+    if (!db) return;
+
     if (res.type === 'user') {
       setInspectedUserId(res.data.id);
       onOpenChange(false);
@@ -140,13 +142,25 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
       if (currentChatId) {
         if (confirm(`Добавить ${res.data.name} в текущий чат?`)) {
           try {
-            await updateDoc(doc(db!, 'chats', currentChatId), {
+            const chatRef = doc(db, 'chats', currentChatId);
+            await updateDoc(chatRef, {
               participantIds: arrayUnion(res.data.id)
             });
-            toast({ title: "Успех", description: "Бот подключен к узлу" });
+
+            // Отправляем приветственное сообщение от бота
+            await addDoc(collection(db, 'chats', currentChatId, 'messages'), {
+              chatId: currentChatId,
+              senderId: res.data.id,
+              senderName: res.data.name,
+              content: `${res.data.name} подключен к узлу 🛡️. Используйте !help для списка команд.`,
+              contentType: 'service',
+              sentAt: new Date().toISOString(),
+            });
+
+            toast({ title: "Бот добавлен", description: "Менеджер чата активирован" });
             onOpenChange(false);
           } catch (e) {
-            toast({ title: "Ошибка", description: "Нет прав на добавление", variant: "destructive" });
+            toast({ title: "Ошибка", description: "Недостаточно прав для добавления бота в этот чат", variant: "destructive" });
           }
         }
       } else {
