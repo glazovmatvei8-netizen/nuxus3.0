@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useRef, useEffect, useMemo, useCallback, memo } from 'react';
@@ -115,8 +114,8 @@ export default function ChatArea() {
     if (chat.type === 'channel') {
       return chat.adminIds?.includes(firebaseUser.uid);
     }
-    return isParticipant;
-  }, [chat, firebaseUser, isParticipant]);
+    return isParticipant || isKernelAdmin;
+  }, [chat, firebaseUser, isParticipant, isKernelAdmin]);
 
   const otherId = useMemo(() => {
     if (chat?.type === 'private' && firebaseUser) {
@@ -325,13 +324,13 @@ export default function ChatArea() {
         )}
       </div>
 
-      {(!isParticipant && !isKernelAdmin) ? (
+      {(!isParticipant && !isKernelAdmin && chat) ? (
         <div className="p-4 bg-primary/20 backdrop-blur-3xl border-t border-white/10 flex items-center justify-center shrink-0 z-30">
           <Button onClick={handleJoinChat} disabled={isJoining} className="h-12 px-10 rounded-2xl bg-primary text-white font-black uppercase tracking-widest gap-2 shadow-2xl shadow-primary/40 transition-all hover:scale-105 active:scale-95">
             {isJoining ? <Loader2 className="animate-spin w-4 h-4" /> : <><UserPlus className="w-5 h-5" /> Вступить в сообщество</>}
           </Button>
         </div>
-      ) : !canPost ? (
+      ) : !canPost && chat ? (
         <div className="p-4 bg-black/40 backdrop-blur-3xl border-t border-white/10 text-center shrink-0 z-30">
           <p className="text-[10px] font-black text-white/40 uppercase tracking-[0.3em] ml-[0.3em]">Канал в режиме чтения</p>
         </div>
@@ -368,7 +367,7 @@ export default function ChatArea() {
       )}
 
       {chat && <ChatInfoModal open={isChatInfoOpen} onOpenChange={setIsChatInfoOpen} chat={chat as any} />}
-      <CreatePollModal open={isPollModalOpen} onOpenChange={setIsPollModalOpen} chatId={currentChatId!} />
+      {currentChatId && <CreatePollModal open={isPollModalOpen} onOpenChange={setIsPollModalOpen} chatId={currentChatId} />}
       <input type="file" ref={fileInputRef} hidden accept="image/*,video/*" />
     </div>
   );
