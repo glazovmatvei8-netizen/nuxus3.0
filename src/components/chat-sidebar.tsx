@@ -184,13 +184,13 @@ const ChatListItem = memo(({
                     {isPinned && <Pin className="w-3 h-3 text-primary rotate-45 ml-1" />}
                   </span>
                 </div>
-                <div className="flex items-center justify-between gap-2 overflow-hidden">
-                  <p className="text-[13px] text-muted-foreground/70 truncate flex items-center font-medium min-w-0">
+                <div className="flex items-center justify-between gap-2 overflow-hidden w-full">
+                  <p className="text-[13px] text-muted-foreground/70 truncate flex items-center font-medium min-w-0 flex-1">
                     {isEncrypted && <Lock className="w-3.5 h-3.5 shrink-0 text-primary/40 mr-1.5" />}
                     {messagePrefix}
                     <span className="truncate">{decryptedPreview}</span>
                   </p>
-                  <span className="text-[11px] text-primary/60 font-black tracking-widest tabular-nums shrink-0 ml-auto">{displayTime}</span>
+                  <span className="text-[11px] text-primary/60 font-black tracking-widest tabular-nums shrink-0 ml-2">{displayTime}</span>
                 </div>
               </div>
               

@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useRef, useEffect, useMemo, useCallback, memo } from 'react';
@@ -140,7 +141,10 @@ export default function ChatArea() {
     if (!chat?.typing || !participants || !firebaseUser) return [];
     return Object.entries(chat.typing)
       .filter(([uid, typing]) => typing && uid !== firebaseUser.uid)
-      .map(([uid]) => participants.find(p => p.id === uid)?.name || 'Кто-то');
+      .map(([uid]) => {
+        const p = participants.find(p => p.id === uid);
+        return p?.name || 'Кто-то';
+      });
   }, [chat?.typing, participants, firebaseUser]);
 
   const getParticipantWord = (n: number) => {
@@ -169,14 +173,14 @@ export default function ChatArea() {
     if (firebaseUser && currentChatId && db) {
       if (!isTyping) {
         setIsTyping(true);
-        updateDoc(doc(db, 'chats', currentChatId), {
+        updateDocumentNonBlocking(doc(db, 'chats', currentChatId), {
           [`typing.${firebaseUser.uid}`]: true
         });
       }
       if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
       typingTimeoutRef.current = setTimeout(() => {
         setIsTyping(false);
-        updateDoc(doc(db, 'chats', currentChatId), {
+        updateDocumentNonBlocking(doc(db, 'chats', currentChatId), {
           [`typing.${firebaseUser.uid}`]: false
         });
       }, 3000);
@@ -210,7 +214,7 @@ export default function ChatArea() {
     
     if (type_msg === 'text') {
       setIsTyping(false);
-      updateDoc(doc(db, 'chats', currentChatId), {
+      updateDocumentNonBlocking(doc(db, 'chats', currentChatId), {
         [`typing.${firebaseUser.uid}`]: false
       });
     }

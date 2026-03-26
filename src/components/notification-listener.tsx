@@ -11,7 +11,7 @@ import { decryptSignal, isGlobalAdmin } from '@/lib/utils';
 import { isAfter, parseISO, addDays } from 'date-fns';
 
 /**
- * Nuxus Notification & Bot Core v65.6.0
+ * Nuxus Notification & Bot Core v65.6.5
  * Управляет уведомлениями и логикой бота Nuxus Chat Manager.
  */
 export function NotificationListener() {
@@ -43,7 +43,7 @@ export function NotificationListener() {
   useEffect(() => {
     if (!db || !user) return;
 
-    // Слушаем сообщения во всех доступных чатах через глобальный индекс или подписку на чаты
+    // Слушаем сообщения во всех доступных чатах
     const chatsQuery = query(collection(db, 'chats'), where('participantIds', 'array-contains', user.uid));
     
     const unsubscribe = onSnapshot(chatsQuery, (chatSnapshot) => {
@@ -55,15 +55,6 @@ export function NotificationListener() {
         if (change.type === 'modified' || change.type === 'added') {
           const lastTime = chatData.lastMessageAt;
           if (!lastTime) return;
-
-          // Уведомление (если чат не открыт и это не наше сообщение)
-          if (chatId !== currentChatId && !isFirstLoad.current && chatData.lastSenderId !== user.uid) {
-            if (audioRef.current) {
-              audioRef.current.currentTime = 0;
-              audioRef.current.play().catch(() => {});
-            }
-            toast({ title: chatData.name || 'Nuxus Signal', description: 'Новое сообщение' });
-          }
 
           // Проверка команд бота (слушаем последние сообщения в этом чате)
           const messagesRef = collection(db, 'chats', chatId, 'messages');
@@ -78,11 +69,20 @@ export function NotificationListener() {
             processedMessageIds.current.add(msgId);
 
             const msgData = msgDoc.data();
-            // Игнорируем старые сообщения (более 1 минуты)
-            if (Math.abs(Date.now() - new Date(msgData.sentAt).getTime()) > 60000) return;
+            
+            // Уведомление (если чат не открыт и это не наше сообщение и не старое)
+            const isFresh = Math.abs(Date.now() - new Date(msgData.sentAt).getTime()) < 30000;
+            if (chatId !== currentChatId && !isFirstLoad.current && msgData.senderId !== user.uid && isFresh) {
+              if (audioRef.current) {
+                audioRef.current.currentTime = 0;
+                audioRef.current.play().catch(() => {});
+              }
+              toast({ title: chatData.name || 'Nuxus Signal', description: 'Новое сообщение' });
+            }
 
+            // Бот обрабатывает команды
             const content = decryptSignal(msgData.content).trim();
-            if (content.startsWith('!')) {
+            if (content.startsWith('!') && isFresh) {
               handleBotCommand(chatId, chatData, content, msgData.senderId, msgId);
             }
           });
