@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
   Send, Info, ChevronLeft, X, Paperclip, Mic, StopCircle, Edit2, Search,
-  Smile, ImageIcon, Video, Trash2, Loader2, UserPlus, AtSign, ChevronDown
+  Smile, ImageIcon, Video, Trash2, Loader2, UserPlus, AtSign, ChevronDown, Wand2, Sparkles
 } from 'lucide-react';
 import { MessageItem } from './message-item';
 import { useToast } from '@/hooks/use-toast';
@@ -16,13 +16,14 @@ import { CreatePollModal } from './modals/create-poll-modal';
 import { useFirestore, useUser, useCollection, useDoc, useMemoFirebase } from '@/firebase';
 import { collection, query, orderBy, doc, addDoc, updateDoc, arrayUnion, where, getDocs, arrayRemove, limit } from 'firebase/firestore';
 import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
-import { formatDisplayName, cn, compressImage, encryptSignal, isGlobalAdmin, decryptSignal, formatLastSeen } from '@/lib/utils';
+import { formatDisplayName, cn, compressImage, encryptSignal, isGlobalAdmin, decryptSignal, formatLastSeen, isUserPremium } from '@/lib/utils';
 import type { Message, User as UserType, Chat } from '@/lib/types';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { suggestMessageDraft } from '@/ai/flows/ai-message-drafting-flow';
 
-// Изолированный компонент ввода для предотвращения перерисовок всего чата
-const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId }: any) => {
+const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, isPremium, messages }: any) => {
   const [messageInput, setMessageInput] = useState('');
+  const [isAiDrafting, setIsAiDrafting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const { user } = useUser();
@@ -49,6 +50,23 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId }
     setMessageInput('');
   };
 
+  const handleAiDraft = async () => {
+    if (!isPremium) return;
+    setIsAiDrafting(true);
+    try {
+      const history = (messages || []).slice(-5).map((m: any) => ({
+        sender: m.senderName,
+        message: m.contentType === 'text' ? decryptSignal(m.content) : `[${m.contentType}]`
+      }));
+      const { draftMessage } = await suggestMessageDraft({ conversationHistory: history, currentUserInput: messageInput });
+      setMessageInput(draftMessage);
+    } catch (e) {
+      console.warn("AI Draft failed");
+    } finally {
+      setIsAiDrafting(false);
+    }
+  };
+
   if (!canPost) return null;
 
   return (
@@ -71,7 +89,20 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId }
               onChange={e => handleInputChange(e.target.value)} 
               onKeyDown={e => e.key === 'Enter' && handleSend()} 
             />
-            <Button variant="ghost" size="icon" className="text-white/40 hover:text-primary transition-colors"><Smile className="w-5 h-5" /></Button>
+            <div className="flex items-center gap-1">
+              {isPremium && (
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  disabled={isAiDrafting}
+                  onClick={handleAiDraft}
+                  className={cn("text-accent hover:bg-accent/10", isAiDrafting && "animate-pulse")}
+                >
+                  <Wand2 className="w-4 h-4" />
+                </Button>
+              )}
+              <Button variant="ghost" size="icon" className="text-white/40 hover:text-primary transition-colors"><Smile className="w-5 h-5" /></Button>
+            </div>
           </div>
 
           {messageInput.trim() ? (
@@ -160,6 +191,7 @@ export default function ChatArea() {
   const { data: chat } = useDoc<Chat>(chatRef);
 
   const isKernelAdmin = useMemo(() => isGlobalAdmin(userProfile), [userProfile]);
+  const isPremium = useMemo(() => isUserPremium(userProfile), [userProfile]);
 
   const isParticipant = useMemo(() => {
     return chat?.participantIds?.includes(firebaseUser?.uid || '');
@@ -284,7 +316,10 @@ export default function ChatArea() {
             <div className="flex items-center gap-3 cursor-pointer min-w-0" onClick={() => setIsChatInfoOpen(true)}>
               <UserAvatar userId={otherId} manualAvatarUrl={chat?.avatarUrl || otherProfile?.avatarUrl} className="h-10 w-10 border border-white/20" fallbackName={chatDisplayName} showOnlineStatus />
               <div className="flex flex-col min-w-0">
-                <span className="font-black text-[15px] truncate text-white italic tracking-tight">{chatDisplayName}</span>
+                <div className="flex items-center gap-1.5">
+                  <span className="font-black text-[15px] truncate text-white italic tracking-tight">{chatDisplayName}</span>
+                  {otherProfile?.isPremium && <Star className="w-3 h-3 text-accent fill-accent" />}
+                </div>
                 <span className="text-[10px] font-black uppercase tracking-widest text-primary/90 animate-pulse">
                   {chatSubtext}
                 </span>
@@ -307,7 +342,6 @@ export default function ChatArea() {
       </header>
 
       <div className="flex-1 relative overflow-hidden flex flex-col">
-        {/* Native scroll for better performance */}
         <div 
           ref={scrollContainerRef}
           className="flex-1 w-full relative z-10 overflow-y-auto scrollbar-hide scroll-smooth" 
@@ -320,7 +354,7 @@ export default function ChatArea() {
             onReply={setReplyTo} 
             onEdit={setEditingMsg} 
             onForward={setForwardingMessage} 
-            amIPremium={userProfile?.isPremium} 
+            amIPremium={isPremium} 
             isAdmin={isKernelAdmin} 
             isGroup={chat?.type !== 'private'} 
             searchQuery={searchQuery} 
@@ -351,6 +385,8 @@ export default function ChatArea() {
           canPost={canPost} 
           onPollOpen={() => setIsPollModalOpen(true)}
           currentChatId={currentChatId}
+          isPremium={isPremium}
+          messages={messages}
         />
       )}
 

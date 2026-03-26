@@ -1,6 +1,9 @@
 'use server';
 /**
- * @fileOverview A Genkit flow for generating a premium AI avatar for NuxusChat users.
+ * @fileOverview A Genkit flow for generating a premium AI avatar for Nuxus users.
+ *
+ * - generateAiAvatar - A function that handles the avatar generation process.
+ * - GenerateAiAvatarOutput - The return type for the function.
  */
 
 import { ai } from '@/ai/genkit';
@@ -25,7 +28,7 @@ const generateAiAvatarFlow = ai.defineFlow(
     outputSchema: GenerateAiAvatarOutputSchema,
   },
   async () => {
-    const prompt = `A premium, high-quality, aesthetic 3D avatar icon for a tech messaging app. Abstract futuristic geometric shape, vibrant deep blue and purple gradients, glowing edges, glassmorphism style, professional studio lighting, 4k resolution, centered composition, isolated on dark background.`;
+    const prompt = `A premium, high-quality, aesthetic 3D avatar icon for a futuristic messaging app. Abstract geometric shape, vibrant neon gradients of purple and cyan, glowing edges, glassmorphism style, professional studio lighting, 4k resolution, centered composition, isolated on dark background.`;
     
     const { media } = await ai.generate({
       model: 'googleai/imagen-4.0-fast-generate-001',

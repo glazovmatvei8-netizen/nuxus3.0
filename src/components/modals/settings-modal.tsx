@@ -15,22 +15,25 @@ import {
   LogOut, Palette, Check, Settings2, Camera, Lock, Image as ImageIcon, 
   Paintbrush, Shield, UserCircle, Layout, Smile, FileText, ChevronRight,
   ShieldCheck, Eye, Users2, MessageSquareLock, Upload, Smartphone, Share2, Trophy,
-  Bell, Video, Mic, MonitorSmartphone, Key, Trash2, ShieldAlert, RefreshCw, Save, Zap, Moon, Sun, Monitor, Download, Share, Fingerprint
+  Bell, Video, Mic, MonitorSmartphone, Key, Trash2, ShieldAlert, RefreshCw, Save, Zap, Moon, Sun, Monitor, Download, Share, Fingerprint, Sparkles, Wand2, Globe
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { signOut } from 'firebase/auth';
 import { doc, updateDoc } from 'firebase/firestore';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAppState } from '@/lib/store';
-import { cn } from '@/lib/utils';
+import { cn, isUserPremium } from '@/lib/utils';
 import type { User } from '@/lib/types';
+import { generateAiAvatar } from '@/ai/flows/generate-ai-avatar-flow';
 
 const THEMES = [
   { id: 'default', name: 'Nuxus Original', color: 'bg-[#8B5CF6]' },
   { id: 'ocean', name: 'Океан', color: 'bg-[#0EA5E9]' },
   { id: 'rainbow', name: 'Радужный', color: 'bg-gradient-to-r from-pink-500 via-yellow-500 to-cyan-500' },
-  { id: 'gold', name: 'Золотой Премиум', color: 'bg-[#EAB308]' },
+  { id: 'gold', name: 'Золотой Премиум', color: 'bg-[#EAB308]', premium: true },
   { id: 'emerald', name: 'Изумруд', color: 'bg-[#22C55E]' },
+  { id: 'cyberpunk', name: 'Cyberpunk 2077', color: 'bg-[#FDE047]', premium: true },
+  { id: 'nebula', name: 'Nebula Core', color: 'bg-[#D8B4FE]', premium: true },
 ];
 
 export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
@@ -44,6 +47,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
   const userRef = useMemoFirebase(() => (!db || !user) ? null : doc(db!, 'users', user.uid), [db, user]);
   const { data: profile } = useDoc<User>(userRef);
 
+  const [isGeneratingAvatar, setIsGeneratingAvatar] = useState(false);
   const [form, setForm] = useState({
     name: '',
     username: '',
@@ -55,6 +59,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
     twoFactorPin: '',
     chatBackground: '',
     chatBackgroundFit: 'cover' as 'cover' | 'contain',
+    customAppIconUrl: '',
     privacy: {
       phoneVisibility: 'everybody',
       lastSeenVisibility: 'everybody',
@@ -76,6 +81,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         twoFactorPin: profile.twoFactorPin || '',
         chatBackground: profile.settings?.chatBackground || '',
         chatBackgroundFit: profile.settings?.chatBackgroundFit || 'cover',
+        customAppIconUrl: profile.settings?.customAppIconUrl || '',
         privacy: profile.settings?.privacy || {
           phoneVisibility: 'everybody',
           lastSeenVisibility: 'everybody',
@@ -100,12 +106,30 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         'settings.theme': form.theme,
         'settings.chatBackground': form.chatBackground,
         'settings.chatBackgroundFit': form.chatBackgroundFit,
+        'settings.customAppIconUrl': form.customAppIconUrl,
         'settings.privacy': form.privacy
       });
       onOpenChange(false);
-      toast({ title: "Ядро обновлено" });
+      toast({ title: "Аккаунт обновлен" });
     } catch (e: any) {
       toast({ title: "Ошибка сохранения", variant: "destructive" });
+    }
+  };
+
+  const handleAiAvatar = async () => {
+    if (!isUserPremium(profile)) {
+      toast({ title: "Premium функция", description: "Генерация ИИ-аватаров доступна только Premium пользователям.", variant: "destructive" });
+      return;
+    }
+    setIsGeneratingAvatar(true);
+    try {
+      const { imageUrl } = await generateAiAvatar();
+      setForm({ ...form, avatarUrl: imageUrl });
+      toast({ title: "Аватар сгенерирован!" });
+    } catch (e) {
+      toast({ title: "Ошибка генерации", variant: "destructive" });
+    } finally {
+      setIsGeneratingAvatar(false);
     }
   };
 
@@ -114,7 +138,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
       <DialogContent className="max-w-md bg-card border-border p-0 overflow-hidden h-[85vh] flex flex-col rounded-[2.5rem] shadow-2xl">
         <DialogHeader className="p-6 border-b border-white/5 shrink-0">
           <DialogTitle className="flex items-center gap-2 text-xl font-black italic uppercase tracking-tighter text-white">
-            <Settings2 className="w-5 h-5 text-primary" /> Параметры Узла
+            <Settings2 className="w-5 h-5 text-primary" /> Параметры Аккаунта
           </DialogTitle>
         </DialogHeader>
         
@@ -123,23 +147,35 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
             <TabsTrigger value="profile" className="flex-1 text-[9px] uppercase font-bold tracking-widest">Профиль</TabsTrigger>
             <TabsTrigger value="appearance" className="flex-1 text-[9px] uppercase font-bold tracking-widest">Стиль</TabsTrigger>
             <TabsTrigger value="privacy" className="flex-1 text-[9px] uppercase font-bold tracking-widest">Защита</TabsTrigger>
-            <TabsTrigger value="backup" className="flex-1 text-[9px] uppercase font-bold tracking-widest">Архив</TabsTrigger>
+            <TabsTrigger value="premium" className="flex-1 text-[9px] uppercase font-bold tracking-widest">Premium</TabsTrigger>
           </TabsList>
 
           <ScrollArea className="flex-1 px-6">
             <TabsContent value="profile" className="space-y-6 m-0 py-6">
               <div className="flex flex-col items-center gap-6">
-                <div className="relative group cursor-pointer" onClick={() => fileInputRef.current?.click()}>
+                <div className="relative group">
                   <UserAvatar userId={user?.uid} manualAvatarUrl={form.avatarUrl} className="h-32 w-32 border-4 border-primary/20 shadow-2xl" fallbackName={form.name} />
-                  <div className="absolute inset-0 bg-black/60 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all backdrop-blur-sm">
-                    <Camera className="w-8 h-8 text-white" />
+                  <div className="absolute -bottom-2 -right-2 flex gap-1">
+                    <button onClick={() => fileInputRef.current?.click()} className="bg-primary p-2 rounded-xl border border-white/20 shadow-lg hover:scale-110 transition-transform">
+                      <Camera className="w-4 h-4 text-white" />
+                    </button>
+                    <button 
+                      onClick={handleAiAvatar} 
+                      disabled={isGeneratingAvatar}
+                      className={cn(
+                        "bg-accent p-2 rounded-xl border border-white/20 shadow-lg hover:scale-110 transition-transform",
+                        isGeneratingAvatar && "animate-spin"
+                      )}
+                    >
+                      <Sparkles className="w-4 h-4 text-black" />
+                    </button>
                   </div>
                   <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={(e) => { const f = e.target.files?.[0]; if(f) { const r = new FileReader(); r.onloadend = () => setForm({...form, avatarUrl: r.result as string}); r.readAsDataURL(f); } }} />
                 </div>
                 <div className="space-y-4 w-full">
-                  <div className="space-y-2"><Label className="text-[10px] uppercase font-black">Имя</Label><Input value={form.name} onChange={e => setForm({...form, name: e.target.value})} className="bg-muted/30 border-white/5 h-12 rounded-2xl" /></div>
-                  <div className="space-y-2"><Label className="text-[10px] uppercase font-black">Никнейм</Label><div className="relative"><span className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground">@</span><Input value={form.username} onChange={e => setForm({...form, username: e.target.value})} className="bg-muted/30 border-white/5 h-12 rounded-2xl pl-8" /></div></div>
-                  <div className="space-y-2"><Label className="text-[10px] uppercase font-black">О себе</Label><Textarea value={form.bio} onChange={e => setForm({...form, bio: e.target.value})} className="bg-muted/30 border-white/5 rounded-2xl resize-none" placeholder="Расскажите о своем узле..." /></div>
+                  <div className="space-y-2"><Label className="text-[10px] uppercase font-black text-muted-foreground ml-1">Имя</Label><Input value={form.name} onChange={e => setForm({...form, name: e.target.value})} className="bg-muted/30 border-white/5 h-12 rounded-2xl" /></div>
+                  <div className="space-y-2"><Label className="text-[10px] uppercase font-black text-muted-foreground ml-1">Никнейм</Label><div className="relative"><span className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground">@</span><Input value={form.username} onChange={e => setForm({...form, username: e.target.value})} className="bg-muted/30 border-white/5 h-12 rounded-2xl pl-8" /></div></div>
+                  <div className="space-y-2"><Label className="text-[10px] uppercase font-black text-muted-foreground ml-1">О себе</Label><Textarea value={form.bio} onChange={e => setForm({...form, bio: e.target.value})} className="bg-muted/30 border-white/5 rounded-2xl resize-none h-24" placeholder="Информация об аккаунте..." /></div>
                 </div>
               </div>
             </TabsContent>
@@ -148,46 +184,58 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
               <div className="space-y-4">
                 <Label className="text-[10px] font-black uppercase text-muted-foreground flex items-center gap-2"><Monitor className="w-3 h-3" /> Режим интерфейса</Label>
                 <div className="grid grid-cols-2 gap-2">
-                  <button onClick={() => setForm({...form, appearance: 'dark'})} className={cn("flex flex-col items-center gap-2 p-4 rounded-2xl border transition-all", form.appearance === 'dark' ? "bg-primary/10 border-primary" : "bg-muted/20 border-white/5")}>
+                  <button onClick={() => setForm({...form, appearance: 'dark'})} className={cn("flex flex-col items-center gap-2 p-4 rounded-2xl border transition-all", form.appearance === 'dark' ? "bg-primary/10 border-primary shadow-[0_0_15px_rgba(168,85,247,0.2)]" : "bg-muted/20 border-white/5")}>
                     <Moon className={cn("w-6 h-6", form.appearance === 'dark' ? "text-primary" : "text-muted-foreground")} /><span className="text-[10px] font-black uppercase tracking-widest">Тёмная</span>
                   </button>
-                  <button onClick={() => setForm({...form, appearance: 'light'})} className={cn("flex flex-col items-center gap-2 p-4 rounded-2xl border transition-all", form.appearance === 'light' ? "bg-primary/10 border-primary" : "bg-muted/20 border-white/5")}>
+                  <button onClick={() => setForm({...form, appearance: 'light'})} className={cn("flex flex-col items-center gap-2 p-4 rounded-2xl border transition-all", form.appearance === 'light' ? "bg-primary/10 border-primary shadow-[0_0_15px_rgba(168,85,247,0.2)]" : "bg-muted/20 border-white/5")}>
                     <Sun className={cn("w-6 h-6", form.appearance === 'light' ? "text-primary" : "text-muted-foreground")} /><span className="text-[10px] font-black uppercase tracking-widest">Светлая</span>
                   </button>
                 </div>
               </div>
 
               <div className="space-y-4 pt-4 border-t border-white/5">
-                <Label className="text-[10px] uppercase font-black text-muted-foreground flex items-center gap-2"><ImageIcon className="w-3 h-3" /> Фон чатов</Label>
-                <div className="space-y-3">
-                  <Input 
-                    placeholder="URL изображения для фона..." 
-                    value={form.chatBackground} 
-                    onChange={e => setForm({...form, chatBackground: e.target.value})}
-                    className="bg-muted/30 border-white/5 h-11 rounded-xl text-xs"
-                  />
-                  <div className="flex gap-2">
-                    <Button 
-                      variant="ghost" 
-                      className={cn("flex-1 text-[9px] uppercase h-8 rounded-lg", form.chatBackgroundFit === 'cover' ? "bg-primary/20 text-primary" : "bg-white/5")}
-                      onClick={() => setForm({...form, chatBackgroundFit: 'cover'})}
-                    >Заполнение</Button>
-                    <Button 
-                      variant="ghost" 
-                      className={cn("flex-1 text-[9px] uppercase h-8 rounded-lg", form.chatBackgroundFit === 'contain' ? "bg-primary/20 text-primary" : "bg-white/5")}
-                      onClick={() => setForm({...form, chatBackgroundFit: 'contain'})}
-                    >Вписать</Button>
-                  </div>
+                <Label className="text-[10px] uppercase font-black text-muted-foreground flex items-center gap-2"><Paintbrush className="w-3 h-3" /> Цветовая схема</Label>
+                <div className="grid grid-cols-1 gap-2">
+                  {THEMES.map((theme) => {
+                    const isPremiumTheme = theme.premium && !isUserPremium(profile);
+                    return (
+                      <button 
+                        key={theme.id} 
+                        disabled={isPremiumTheme}
+                        onClick={() => setForm({ ...form, theme: theme.id as any })} 
+                        className={cn(
+                          "flex items-center justify-between p-4 rounded-2xl border transition-all", 
+                          form.theme === theme.id ? "bg-primary/10 border-primary" : "bg-muted/20 border-white/5",
+                          isPremiumTheme && "opacity-40 grayscale"
+                        )}
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className={cn("w-6 h-6 rounded-full shadow-lg", theme.color)} />
+                          <span className="text-sm font-bold text-foreground">{theme.name}</span>
+                          {theme.premium && <Star className="w-3 h-3 text-accent fill-accent" />}
+                        </div>
+                        {form.theme === theme.id && <Check className="w-5 h-5 text-primary" />}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 
               <div className="space-y-4 pt-4 border-t border-white/5">
-                <Label className="text-[10px] uppercase font-black text-muted-foreground flex items-center gap-2"><Paintbrush className="w-3 h-3" /> Цветовая схема</Label>
-                <div className="grid grid-cols-1 gap-2">
-                  {THEMES.map((theme) => (
-                    <button key={theme.id} onClick={() => setForm({ ...form, theme: theme.id as any })} className={cn("flex items-center justify-between p-4 rounded-2xl border transition-all", form.theme === theme.id ? "bg-primary/10 border-primary" : "bg-muted/20 border-white/5")}>
-                      <div className="flex items-center gap-3"><div className={cn("w-6 h-6 rounded-full", theme.color)} /><span className="text-sm font-bold text-foreground">{theme.name}</span></div>
-                      {form.theme === theme.id && <Check className="w-5 h-5 text-primary" />}
+                <Label className="text-[10px] uppercase font-black text-muted-foreground flex items-center gap-2"><Smartphone className="w-3 h-3" /> Иконка приложения</Label>
+                <div className="grid grid-cols-3 gap-3">
+                  {[
+                    { id: 'v45', url: 'https://i.ibb.co/sd2MqGz2/Icon.png?v=45' },
+                    { id: 'v7', url: 'https://i.ibb.co/sd2MqGz2/Icon.png?v=7' },
+                    { id: 'classic', url: 'https://i.ibb.co/sd2MqGz2/Icon.png' }
+                  ].map(icon => (
+                    <button 
+                      key={icon.id}
+                      onClick={() => setForm({...form, customAppIconUrl: icon.url})}
+                      className={cn("relative aspect-square rounded-2xl border-2 transition-all p-1", form.customAppIconUrl === icon.url ? "border-primary bg-primary/10" : "border-white/5 bg-white/5")}
+                    >
+                      <img src={icon.url} className="w-full h-full object-contain" alt={icon.id} />
+                      {form.customAppIconUrl === icon.url && <div className="absolute -top-1 -right-1 bg-primary rounded-full p-0.5"><Check className="w-3 h-3 text-white" /></div>}
                     </button>
                   ))}
                 </div>
@@ -226,15 +274,32 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
               </div>
             </TabsContent>
 
-            <TabsContent value="backup" className="space-y-6 m-0 py-6">
-              <div className="p-6 bg-white/5 rounded-[2rem] border border-white/5 text-center">
-                <Download className="w-12 h-12 text-primary mx-auto mb-4" />
-                <h3 className="text-sm font-black uppercase text-white mb-2">Архив Конфигурации</h3>
-                <p className="text-[10px] text-muted-foreground uppercase font-bold mb-6 px-4 leading-relaxed">Создайте резервную копию настроек вашего Узла для быстрого восстановления на другом устройстве.</p>
-                <Button className="w-full h-12 bg-primary/10 text-primary border border-primary/20 rounded-xl font-black uppercase text-[10px] tracking-widest gap-2">
-                  <Share className="w-4 h-4" /> Экспортировать JSON
-                </Button>
+            <TabsContent value="premium" className="space-y-6 m-0 py-6">
+              <div className="relative group">
+                <div className="absolute -inset-1 bg-gradient-to-tr from-primary to-accent rounded-[2rem] blur-md opacity-40 animate-pulse" />
+                <div className="relative bg-[#0a0a0c] border border-white/10 p-6 rounded-[2rem] text-center overflow-hidden">
+                  <Star className="w-12 h-12 text-accent fill-accent mx-auto mb-4 drop-shadow-[0_0_15px_rgba(250,204,21,0.6)]" />
+                  <h3 className="text-xl font-black uppercase italic text-white tracking-tight">Nuxus Premium</h3>
+                  <p className="text-[10px] text-muted-foreground uppercase font-black mt-2 leading-relaxed">
+                    {isUserPremium(profile) 
+                      ? `Активен до: ${new Date(profile!.premiumUntil!).toLocaleDateString()}` 
+                      : 'Откройте полный потенциал Ядра'}
+                  </p>
+                </div>
               </div>
+
+              <div className="space-y-3">
+                <PremiumFeature icon={Wand2} label="ИИ Помощник" description="Написание ответов и генерация аватаров" />
+                <PremiumFeature icon={Mic} label="Voice-to-Text" description="Расшифровка голосовых в текст" />
+                <PremiumFeature icon={Palette} label="Премиум Темы" description="Nebula, Cyberpunk и Gold стили" />
+                <PremiumFeature icon={Globe} label="HQ Storage" description="Загрузка файлов до 100МБ в облако" />
+              </div>
+
+              {!isUserPremium(profile) && (
+                <Button className="w-full h-14 bg-accent text-black rounded-2xl font-black uppercase italic tracking-widest shadow-xl shadow-accent/20">
+                  Подключить за 500 NX
+                </Button>
+              )}
             </TabsContent>
           </ScrollArea>
 
@@ -266,6 +331,18 @@ function PrivacySelect({ label, value, onChange, icon: Icon }: any) {
           <SelectItem value="nobody" className="text-[10px] uppercase font-bold">Никто</SelectItem>
         </SelectContent>
       </Select>
+    </div>
+  );
+}
+
+function PremiumFeature({ icon: Icon, label, description }: any) {
+  return (
+    <div className="flex items-center gap-4 p-4 bg-white/5 rounded-2xl border border-white/5">
+      <div className="bg-primary/10 p-2.5 rounded-xl border border-primary/20"><Icon className="w-4 h-4 text-primary" /></div>
+      <div className="flex flex-col text-left">
+        <span className="text-xs font-bold text-white uppercase">{label}</span>
+        <span className="text-[9px] text-muted-foreground uppercase font-black">{description}</span>
+      </div>
     </div>
   );
 }

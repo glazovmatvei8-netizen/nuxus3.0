@@ -20,14 +20,15 @@ import {
 import { format } from 'date-fns';
 import { 
   CornerUpLeft, Trash2, Check, CheckCheck, Edit2, Copy, Pin, X, Share2, Play, Smile, Lock, Languages, Loader2, Image as ImageIcon,
-  MessageCircle, Star, Pause, ShieldCheck, Clock
+  MessageCircle, Star, Pause, ShieldCheck, Clock, Type
 } from 'lucide-react';
-import { cn, decryptSignal, isGlobalAdmin } from '@/lib/utils';
+import { cn, decryptSignal, isGlobalAdmin, isUserPremium } from '@/lib/utils';
 import { doc, updateDoc, deleteDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
 import type { Message, PollOption } from '@/lib/types';
 import { Button } from './ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { useAppState } from '@/lib/store';
+import { transcribeVoice } from '@/ai/flows/voice-to-text-flow';
 
 const QUICK_REACTIONS = ['❤️', '👍', '🔥', '😂', '😮', '😢', '💯'];
 
@@ -35,11 +36,14 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
   const { user } = useUser();
   const db = useFirestore();
   const { setInspectedUserId } = useAppState();
+  const { toast } = useToast();
   
   const [isPlaying, setIsPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
+  const [isTranscribing, setIsTranscribing] = useState(false);
+  const [transcribedText, setTranscribedText] = useState<string | null>(null);
   
   const audioInstance = useRef<HTMLAudioElement | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -47,19 +51,7 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
   const displayContent = useMemo(() => message.contentType === 'text' ? decryptSignal(message.content) : message.content, [message.content, message.contentType]);
   const formattedTime = useMemo(() => message.sentAt ? format(new Date(message.sentAt), 'HH:mm') : '', [message.sentAt]);
 
-  const isOfflinePending = useMemo(() => {
-    if (typeof navigator !== 'undefined' && !navigator.onLine && isMe && (new Date().getTime() - new Date(message.sentAt).getTime() < 60000)) {
-      return true;
-    }
-    return false;
-  }, [message.sentAt, isMe]);
-
-  const formatDuration = (seconds: number) => {
-    if (isNaN(seconds) || seconds === Infinity) return "0:00";
-    const mins = Math.floor(seconds / 60);
-    const secs = Math.floor(seconds % 60);
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
-  };
+  const isPremium = useMemo(() => isUserPremium(viewerProfile), [viewerProfile]);
 
   useEffect(() => {
     if (message.contentType === 'audio') {
@@ -77,6 +69,22 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
     if (window.navigator && window.navigator.vibrate) window.navigator.vibrate(50);
     if (hasReacted) await updateDoc(msgRef, { [`reactions.${emoji}`]: arrayRemove(user.uid) });
     else await updateDoc(msgRef, { [`reactions.${emoji}`]: arrayUnion(user.uid) });
+  };
+
+  const handleTranscribe = async () => {
+    if (!isPremium) {
+      toast({ title: "Premium функция", description: "Расшифровка доступна только Premium пользователям." });
+      return;
+    }
+    setIsTranscribing(true);
+    try {
+      const { text } = await transcribeVoice({ audioDataUri: message.content });
+      setTranscribedText(text);
+    } catch (e) {
+      toast({ title: "Ошибка расшифровки", variant: "destructive" });
+    } finally {
+      setIsTranscribing(false);
+    }
   };
 
   const toggleAudio = (e: React.MouseEvent) => {
@@ -106,36 +114,36 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
       </div>
     );
 
-    if (message.contentType === 'video_note') return (
-      <div 
-        className="relative w-52 h-52 rounded-full overflow-hidden border-2 border-primary/40 bg-[#020203] group cursor-pointer shadow-[0_0_30px_rgba(168,85,247,0.3)]" 
-        onClick={(e) => { e.stopPropagation(); if (videoRef.current?.paused) videoRef.current.play(); else videoRef.current?.pause(); }}
-      >
-        <video ref={videoRef} src={message.content} loop playsInline preload="metadata" className="w-full h-full object-cover scale-x-[-1]" />
-        <div className="absolute inset-0 bg-primary/10 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all backdrop-blur-[2px]">
-          <Play className="w-10 h-10 text-white fill-white drop-shadow-[0_0_10px_rgba(255,255,255,0.5)]" />
-        </div>
-      </div>
-    );
-
     if (message.contentType === 'audio') return (
-      <div className="flex items-center gap-4 p-2 min-w-[260px] cursor-pointer group/audio" onClick={toggleAudio}>
-        <div className="relative">
-          <Button size="icon" className="h-12 w-12 rounded-full bg-primary text-white shadow-xl relative z-10">
-            {isPlaying ? <Pause className="fill-current" /> : <Play fill="currentColor" className="ml-1" />}
-          </Button>
-        </div>
-        <div className="flex-1 flex flex-col gap-2">
-          <div className="h-1.5 bg-white/10 w-full rounded-full overflow-hidden">
-            <div className="h-full bg-primary transition-all duration-150 shadow-[0_0_10px_rgba(168,85,247,0.8)]" style={{ width: `${progress}%` }} />
+      <div className="flex flex-col gap-2">
+        <div className="flex items-center gap-4 p-2 min-w-[260px] cursor-pointer group/audio" onClick={toggleAudio}>
+          <div className="relative">
+            <Button size="icon" className="h-12 w-12 rounded-full bg-primary text-white shadow-xl relative z-10">
+              {isPlaying ? <Pause className="fill-current" /> : <Play fill="currentColor" className="ml-1" />}
+            </Button>
           </div>
-          <div className="flex justify-between items-center px-0.5">
-            <span className="text-[10px] font-black text-primary/60 tabular-nums uppercase tracking-tighter">
-              {isPlaying ? `-${formatDuration(Math.max(0, duration - currentTime))}` : formatDuration(duration)}
-            </span>
-            <ShieldCheck className="w-3 h-3 text-primary/40" />
+          <div className="flex-1 flex flex-col gap-2">
+            <div className="h-1.5 bg-white/10 w-full rounded-full overflow-hidden">
+              <div className="h-full bg-primary transition-all duration-150 shadow-[0_0_10px_rgba(168,85,247,0.8)]" style={{ width: `${progress}%` }} />
+            </div>
+            <div className="flex justify-between items-center px-0.5">
+              <span className="text-[10px] font-black text-primary/60 tabular-nums uppercase tracking-tighter">
+                {isPlaying ? `-${formatDuration(Math.max(0, duration - currentTime))}` : formatDuration(duration)}
+              </span>
+              <div className="flex gap-2">
+                <button onClick={(e) => { e.stopPropagation(); handleTranscribe(); }} className="hover:text-primary transition-colors">
+                  {isTranscribing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Type className="w-3.5 h-3.5" />}
+                </button>
+                <ShieldCheck className="w-3.5 h-3.5 text-primary/40" />
+              </div>
+            </div>
           </div>
         </div>
+        {transcribedText && (
+          <div className="px-3 py-2 bg-white/5 rounded-xl border border-white/5 text-[11px] italic text-white/80 animate-in fade-in slide-in-from-top-1">
+            "{transcribedText}"
+          </div>
+        )}
       </div>
     );
 
@@ -145,6 +153,13 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
         {message.editedAt && <span className="text-[8px] ml-2 text-primary/40 font-black uppercase tracking-widest">(sync)</span>}
       </div>
     );
+  };
+
+  const formatDuration = (seconds: number) => {
+    if (isNaN(seconds) || seconds === Infinity) return "0:00";
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
   if (message.contentType === 'service') return (
@@ -185,13 +200,7 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
                   {renderContent()}
                   <div className="flex items-center justify-end gap-2 mt-2 opacity-40">
                     <span className="text-[9px] font-black tabular-nums tracking-widest">{formattedTime}</span>
-                    {isMe && (
-                      isOfflinePending ? (
-                        <Clock className="w-3 h-3 text-white/60 animate-pulse" />
-                      ) : (
-                        message.isRead ? <CheckCheck className="w-3.5 h-3.5 text-accent" /> : <Check className="w-3.5 h-3.5" />
-                      )
-                    )}
+                    {isMe && (message.isRead ? <CheckCheck className="w-3.5 h-3.5 text-accent" /> : <Check className="w-3.5 h-3.5" />)}
                   </div>
                 </div>
                 
@@ -216,7 +225,7 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
               <ContextMenuItem onClick={() => onReply(message)} className="gap-3 py-3 font-black text-[10px] uppercase tracking-[0.2em] rounded-xl transition-all"><CornerUpLeft className="w-4 h-4 text-primary" /> Ответить</ContextMenuItem>
               {isMe && <ContextMenuItem onClick={() => onEdit(message)} className="gap-3 py-3 font-black text-[10px] uppercase tracking-[0.2em] rounded-xl transition-all"><Edit2 className="w-4 h-4 text-primary" /> Изменить</ContextMenuItem>}
               <ContextMenuItem onClick={() => onForward(message)} className="gap-3 py-3 font-black text-[10px] uppercase tracking-[0.2em] rounded-xl transition-all"><Share2 className="w-4 h-4 text-primary" /> Переслать</ContextMenuItem>
-              <ContextMenuItem onClick={() => onPin(message)} className="gap-3 py-3 font-black text-[10px] uppercase tracking-[0.2em] rounded-xl transition-all"><Pin className="w-4 h-4 text-primary" /> Закрепить</ContextMenuItem>
+              {message.contentType === 'audio' && <ContextMenuItem onClick={handleTranscribe} className="gap-3 py-3 font-black text-[10px] uppercase tracking-[0.2em] rounded-xl transition-all"><Type className="w-4 h-4 text-accent" /> Расшифровать</ContextMenuItem>}
               <DropdownMenuSeparator className="bg-white/5 mx-2" />
               {(isMe || isAdmin) && (
                 <ContextMenuItem onClick={() => deleteDoc(doc(db!, 'chats', chatId, 'messages', message.id))} className="text-red-500 gap-3 py-3 font-black text-[10px] uppercase tracking-[0.2em] rounded-xl hover:bg-red-500/10 transition-all"><Trash2 className="w-4 h-4" /> Удалить</ContextMenuItem>
