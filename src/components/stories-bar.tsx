@@ -9,10 +9,8 @@ import { UserAvatar } from './user-avatar';
 import { Plus, Loader2 } from 'lucide-react';
 import type { Story, User } from '@/lib/types';
 import { cn, formatDisplayName } from '@/lib/utils';
+import { StoryViewerModal } from './modals/story-viewer-modal';
 
-/**
- * FIXED: Улучшенная отрисовка аватара пользователя и группировка историй.
- */
 export function StoriesBar() {
   const { user } = useUser();
   const db = useFirestore();
@@ -24,11 +22,9 @@ export function StoriesBar() {
   const storiesQuery = useMemoFirebase(() => {
     if (!db) return null;
     const now = new Date().toISOString();
-    // Показываем только актуальные истории (не старше 24ч)
     return query(
       collection(db, 'stories'),
-      where('expiresAt', '>', now),
-      orderBy('expiresAt', 'asc')
+      where('expiresAt', '>', now)
     );
   }, [db]);
 
@@ -37,7 +33,9 @@ export function StoriesBar() {
   const groupedStories = useMemo(() => {
     if (!allStories) return {};
     const groups: Record<string, Story[]> = {};
-    allStories.forEach(s => {
+    const sorted = [...allStories].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+    
+    sorted.forEach(s => {
       if (!groups[s.userId]) groups[s.userId] = [];
       groups[s.userId].push(s);
     });
@@ -48,7 +46,7 @@ export function StoriesBar() {
   const otherUserIds = Object.keys(groupedStories).filter(uid => uid !== user?.uid);
 
   return (
-    <div className="flex gap-4 p-4 overflow-x-auto scrollbar-hide bg-[#0a0a0c] border-b border-white/5 shrink-0">
+    <div className="flex gap-4 p-4 overflow-x-auto scrollbar-hide bg-transparent border-b border-white/5 shrink-0 relative z-20">
       {/* Кнопка "Моя история" */}
       <div className="flex flex-col items-center gap-1.5 shrink-0 group cursor-pointer" onClick={() => myStories.length > 0 ? setStoriesToView(myStories) : setIsCreateStoryOpen(true)}>
         <div className={cn(
@@ -86,6 +84,7 @@ export function StoriesBar() {
           />
         ))
       )}
+      <StoryViewerModal />
     </div>
   );
 }

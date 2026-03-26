@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useEffect } from 'react';
@@ -6,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, ShieldAlert, Fingerprint, RefreshCcw, Key } from 'lucide-react';
+import { Loader2, ShieldAlert, Fingerprint, RefreshCcw, Lock, ShieldCheck } from 'lucide-react';
 import { useAuth, useFirestore } from '@/firebase';
 import { 
   signInWithEmailAndPassword,
@@ -66,7 +67,6 @@ export default function AuthScreen() {
   };
 
   const createProfileRecord = async (uid: string, overrideData?: any) => {
-    // Check if profile exists to prevent resetting referralCount
     const userRef = doc(db!, 'users', uid);
     const snap = await getDoc(userRef);
     
@@ -86,7 +86,6 @@ export default function AuthScreen() {
 
     await setDoc(userRef, profileData, { merge: true });
 
-    // Handle Referral Logic only if NEW user
     if (!snap.exists() && referralId && referralId !== uid) {
       try { 
         await updateDoc(doc(db!, 'users', referralId), { referralCount: increment(1) }); 
@@ -139,7 +138,7 @@ export default function AuthScreen() {
             name: 'Recovered Node',
             phone: formData.identifier.replace(/\D/g, '')
           });
-          toast({ title: "Узел восстановлен" });
+          toast({ title: "Аккаунт восстановлен" });
         }
 
         if (snap.exists() && snap.data().twoFactorEnabled) setIs2FAVerified(false);
@@ -147,7 +146,7 @@ export default function AuthScreen() {
       }
     } catch (err: any) {
       let msg = err.message;
-      if (err.code === 'auth/invalid-credential') msg = "Неверный узел или пароль.";
+      if (err.code === 'auth/invalid-credential') msg = "Неверный аккаунт или пароль.";
       toast({ title: "Ошибка доступа", description: msg, variant: "destructive" });
     } finally {
       setIsLoading(false);
@@ -178,7 +177,7 @@ export default function AuthScreen() {
         <NuxusLogo size={120} />
         <div className="mt-12 flex flex-col items-center gap-4">
           <RefreshCcw className="w-6 h-6 text-primary animate-spin" />
-          <p className="text-[10px] font-black uppercase tracking-[0.5em] text-primary/60 animate-pulse">Node Recovery Active...</p>
+          <p className="text-[10px] font-black uppercase tracking-[0.5em] text-primary/60 animate-pulse">Account Recovery Active...</p>
         </div>
       </div>
     );
@@ -202,7 +201,7 @@ export default function AuthScreen() {
               {mode === 'recover' ? 'Restore' : mode === 'setup2fa' ? 'Quantum' : mode === 'login' ? 'Signal' : 'Create'}
             </CardTitle>
             <CardDescription className="text-primary/80 font-black tracking-[0.4em] uppercase text-[6px] opacity-60 mt-1">
-              {mode === 'setup2fa' ? 'Protection Key' : mode === 'recover' ? 'Neural recovery' : 'Kernel Access Layer'}
+              {mode === 'setup2fa' ? 'Protection Key' : mode === 'recover' ? 'Neural recovery' : 'Account Access Layer'}
             </CardDescription>
           </CardHeader>
 
@@ -239,7 +238,7 @@ export default function AuthScreen() {
                   </div>
                 )}
                 <div className="space-y-1">
-                  <Label className="text-[7px] uppercase font-black text-primary/60 ml-2">Узел / Телефон</Label>
+                  <Label className="text-[7px] uppercase font-black text-primary/60 ml-2">Аккаунт / Телефон</Label>
                   <Input placeholder="+7 (___) ___ __ __" value={formData.identifier} onChange={e => setFormData({...formData, identifier: e.target.value})} className="bg-white/5 border-white/10 h-9 rounded-xl text-xs font-bold tracking-wider" required />
                 </div>
                 <div className="space-y-1">
@@ -247,17 +246,23 @@ export default function AuthScreen() {
                   <Input type="password" placeholder="••••••••" value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} className="bg-white/5 border-white/10 h-9 rounded-xl text-xs" required />
                 </div>
                 <Button type="submit" disabled={isLoading} className="w-full h-10 bg-primary text-white rounded-xl font-black uppercase italic tracking-widest shadow-xl shadow-primary/20 text-[10px]">
-                  {isLoading ? <Loader2 className="animate-spin w-4 h-4" /> : (mode === 'login' ? "Вход в Ядро" : "Создать Узел")}
+                  {isLoading ? <Loader2 className="animate-spin w-4 h-4" /> : (mode === 'login' ? "Вход в аккаунт" : "Регистрация аккаунта")}
                 </Button>
                 <div className="mt-4 text-center flex flex-col gap-1.5">
                   <button type="button" onClick={() => setMode(mode === 'login' ? 'register' : 'login')} className="text-[7px] text-white/30 hover:text-primary transition-all font-black uppercase tracking-[0.2em]">
-                    {mode === 'login' ? 'НЕТ УЗЛА? ИНИЦИАЛИЗАЦИЯ' : 'УЖЕ В СИСТЕМЕ? КОННЕКТ'}
+                    {mode === 'login' ? 'НЕТ АККАУНТА? РЕГИСТРАЦИЯ' : 'УЖЕ ЕСТЬ АККАУНТ? ВОЙТИ'}
                   </button>
                 </div>
               </form>
             )}
           </CardContent>
         </Card>
+
+        {/* Legal Links */}
+        <div className="mt-6 flex gap-4 opacity-40">
+          <button onClick={() => setLegalModal({ open: true, type: 'terms' })} className="text-[8px] font-black uppercase tracking-widest hover:text-primary transition-colors">Условия</button>
+          <button onClick={() => setLegalModal({ open: true, type: 'privacy' })} className="text-[8px] font-black uppercase tracking-widest hover:text-primary transition-colors">Приватность</button>
+        </div>
       </div>
       <LegalModal open={legalModal.open} onOpenChange={(o) => setLegalModal({ ...legalModal, open: o })} type={legalModal.type} />
     </div>

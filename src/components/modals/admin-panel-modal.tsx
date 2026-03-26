@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useMemo } from 'react';
@@ -18,7 +19,7 @@ import { collection, query, doc, limit, updateDoc, writeBatch, increment } from 
 import { UserAvatar } from '@/components/user-avatar';
 import { 
   ShieldAlert, Users, Star, Ban, CheckCircle2, ShieldCheck, Radio, 
-  MoreVertical, ShieldOff, Activity, Wallet, Check, Trash2, X
+  MoreVertical, ShieldOff, Activity, Wallet, Check, Trash2, X, Globe, Fingerprint
 } from 'lucide-react';
 import { 
   XAxis, YAxis, ResponsiveContainer, AreaChart, Area, Tooltip
@@ -135,7 +136,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl bg-[#0a0a0c] border-primary/30 p-0 overflow-hidden h-[85vh] flex flex-col rounded-[2.5rem] shadow-2xl border outline-none">
+      <DialogContent className="max-w-4xl bg-[#0a0a0c]/90 backdrop-blur-3xl border-primary/30 p-0 overflow-hidden h-[85vh] flex flex-col rounded-[2.5rem] shadow-2xl border outline-none">
         <DialogHeader className="p-4 md:p-6 bg-primary/5 border-b border-white/5 shrink-0 relative text-left">
           <div className="flex items-center justify-between w-full pr-8">
             <div className="flex items-center gap-2">
@@ -155,7 +156,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
           <div className="px-4 md:px-6 pt-3 shrink-0">
             <TabsList className="grid w-full bg-white/5 p-1 rounded-xl grid-cols-4 gap-1">
               <TabsTrigger value="analytics" className="rounded-lg text-[8px] uppercase font-black gap-1.5">Аналитика</TabsTrigger>
-              <TabsTrigger value="users" className="rounded-lg text-[8px] uppercase font-black gap-1.5">Узлы</TabsTrigger>
+              <TabsTrigger value="users" className="rounded-lg text-[8px] uppercase font-black gap-1.5">Аккаунты</TabsTrigger>
               <TabsTrigger value="finance" className="rounded-lg text-[8px] uppercase font-black gap-1.5">Заявки</TabsTrigger>
               <TabsTrigger value="broadcast" className="rounded-lg text-[8px] uppercase font-black gap-1.5">Маяк</TabsTrigger>
             </TabsList>
@@ -165,7 +166,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
             <ScrollArea className="flex-1">
               <div className="px-4 md:px-6 py-4 space-y-6 pb-20">
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                  <StatCard label="Всего узлов" value={stats.total} icon={Users} color="text-white" />
+                  <StatCard label="Всего аккаунтов" value={stats.total} icon={Users} color="text-white" />
                   <StatCard label="Premium" value={stats.premium} icon={Star} color="text-accent" />
                   <StatCard label="Админы" value={stats.admins} icon={ShieldCheck} color="text-primary" />
                   <StatCard label="Баны" value={stats.banned} icon={Ban} color="text-red-500" />
@@ -174,7 +175,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
                 <div className="space-y-4">
                   <div className="bg-white/5 p-5 rounded-[2rem] border border-white/5">
                     <h3 className="text-[10px] font-black uppercase text-primary mb-4 flex items-center gap-2">
-                      <Activity className="w-3 h-3" /> Новые Узлы (7д)
+                      <Activity className="w-3 h-3" /> Новые Аккаунты (7д)
                     </h3>
                     <div className="h-[180px] w-full">
                       <ResponsiveContainer width="100%" height="100%">
@@ -205,7 +206,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
             <ScrollArea className="flex-1">
               <div className="px-6 space-y-2 pb-20">
                 {users?.filter(u => u.name?.toLowerCase().includes(userSearch.toLowerCase()) || u.username?.toLowerCase().includes(userSearch.toLowerCase())).map(u => (
-                  <div key={u.id} className="flex items-center justify-between p-4 bg-white/5 rounded-[1.8rem] border border-white/5">
+                  <div key={u.id} className="flex items-center justify-between p-4 bg-white/5 rounded-[1.8rem] border border-white/5 hover:bg-white/10 transition-all">
                     <div className="flex items-center gap-3 min-w-0 text-left">
                       <UserAvatar userId={u.id} className="h-10 w-10" fallbackName={u.name} />
                       <div className="flex flex-col min-w-0">
@@ -213,7 +214,14 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
                           {formatDisplayName(u.name)} 
                           {isUserPremium(u) && <Star className="w-3 h-3 text-accent fill-accent" />}
                         </span>
-                        <span className="text-[9px] text-muted-foreground uppercase font-black truncate">{u.username}</span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-[9px] text-muted-foreground uppercase font-black truncate">{u.username}</span>
+                          {u.lastIp && (
+                            <span className="flex items-center gap-1 text-[8px] text-primary/60 font-black bg-primary/5 px-1.5 rounded-full border border-primary/10">
+                              <Globe className="w-2 h-2" /> {u.lastIp} [{u.countryCode || '??'}]
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </div>
                     <DropdownMenu>
