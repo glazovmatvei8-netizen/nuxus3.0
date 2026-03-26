@@ -4,7 +4,7 @@
 import React, { createContext, useContext, useState } from 'react';
 import type { Message, Story, Track } from './types';
 
-export type MainView = 'chats' | 'contacts' | 'calls' | 'profile' | 'archive' | 'music' | 'wallet' | 'discovery';
+export type MainView = 'chats' | 'contacts' | 'calls' | 'profile' | 'archive' | 'music' | 'wallet' | 'discovery' | 'games';
 
 interface AppState {
   currentChatId: string | null;
@@ -25,6 +25,14 @@ interface AppState {
   setIsSearchOpen: (v: boolean) => void;
   settingsTab: string;
   setSettingsTab: (tab: string) => void;
+  
+  // Legal State
+  isLegalOpen: boolean;
+  setIsLegalOpen: (v: boolean) => void;
+  
+  // Update State
+  isUpdateDeferred: boolean;
+  setIsUpdateDeferred: (v: boolean) => void;
   
   // User Inspection State
   inspectedUserId: string | null;
@@ -59,6 +67,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [settingsTab, setSettingsTab] = useState('profile');
+  const [isLegalOpen, setIsLegalOpen] = useState(false);
+  const [isUpdateDeferred, setIsUpdateDeferred] = useState(false);
   const [inspectedUserId, setInspectedUserId] = useState<string | null>(null);
   const [isInterceptionRequested, setIsInterceptionRequested] = useState(false);
   
@@ -89,6 +99,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setIsSearchOpen,
       settingsTab,
       setSettingsTab,
+      isLegalOpen,
+      setIsLegalOpen,
+      isUpdateDeferred,
+      setIsUpdateDeferred,
       inspectedUserId,
       setInspectedUserId,
       isInterceptionRequested,
