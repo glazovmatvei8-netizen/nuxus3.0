@@ -138,24 +138,13 @@ export interface UserPrivacy {
 }
 
 export interface UserSettings {
-  theme: 'default' | 'ocean' | 'midnight' | 'rainbow' | 'gold' | 'emerald';
+  theme: string;
   appearance: 'light' | 'dark';
   chatBackground: string;
   chatBackgroundFit?: 'cover' | 'contain';
   customAppIconUrl?: string;
   messageSize: 'small' | 'medium' | 'large';
   privacy: UserPrivacy;
-  notifications?: {
-    messages: boolean;
-    groups: boolean;
-    channels: boolean;
-    previews: boolean;
-  };
-  navVisibility?: {
-    contacts: boolean;
-    calls: boolean;
-    archive: boolean;
-  };
   statusEmoji?: string;
   statusText?: string;
   language?: string;

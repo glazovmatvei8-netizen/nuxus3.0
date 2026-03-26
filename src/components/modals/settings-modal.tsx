@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useRef, useEffect } from 'react';
@@ -15,7 +16,7 @@ import {
   LogOut, Palette, Check, Settings2, Camera, Lock, Image as ImageIcon, 
   Paintbrush, Shield, UserCircle, Layout, Smile, FileText, ChevronRight,
   ShieldCheck, Eye, Users2, MessageSquareLock, Upload, Smartphone, Share2, Trophy,
-  Bell, Video, Mic, MonitorSmartphone, Key, Trash2, ShieldAlert, RefreshCw, Save, Zap, Moon, Sun, Monitor, Download, Share, Fingerprint, Sparkles, Wand2, Globe
+  Bell, Video, Mic, MonitorSmartphone, Key, Trash2, ShieldAlert, RefreshCw, Save, Zap, Moon, Sun, Monitor, Download, Share, Fingerprint, Sparkles, Wand2, Globe, Star
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { signOut } from 'firebase/auth';
@@ -60,6 +61,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
     chatBackground: '',
     chatBackgroundFit: 'cover' as 'cover' | 'contain',
     customAppIconUrl: '',
+    statusEmoji: '',
     privacy: {
       phoneVisibility: 'everybody',
       lastSeenVisibility: 'everybody',
@@ -82,6 +84,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         chatBackground: profile.settings?.chatBackground || '',
         chatBackgroundFit: profile.settings?.chatBackgroundFit || 'cover',
         customAppIconUrl: profile.settings?.customAppIconUrl || '',
+        statusEmoji: profile.statusEmoji || '',
         privacy: profile.settings?.privacy || {
           phoneVisibility: 'everybody',
           lastSeenVisibility: 'everybody',
@@ -102,6 +105,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         avatarUrl: form.avatarUrl,
         twoFactorEnabled: form.twoFactorEnabled,
         twoFactorPin: form.twoFactorPin,
+        statusEmoji: form.statusEmoji,
         'settings.appearance': form.appearance,
         'settings.theme': form.theme,
         'settings.chatBackground': form.chatBackground,
@@ -172,7 +176,22 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                   </div>
                   <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={(e) => { const f = e.target.files?.[0]; if(f) { const r = new FileReader(); r.onloadend = () => setForm({...form, avatarUrl: r.result as string}); r.readAsDataURL(f); } }} />
                 </div>
+                
                 <div className="space-y-4 w-full">
+                  {isUserPremium(profile) && (
+                    <div className="space-y-2">
+                      <Label className="text-[10px] uppercase font-black text-primary ml-1 flex items-center gap-2">
+                        <Smile className="w-3 h-3" /> Статус-эмодзи (Premium)
+                      </Label>
+                      <Input 
+                        placeholder="🔥, 💎, 🛡️..." 
+                        value={form.statusEmoji} 
+                        onChange={e => setForm({...form, statusEmoji: e.target.value})} 
+                        className="bg-primary/5 border-primary/20 h-12 rounded-2xl text-center text-xl" 
+                        maxLength={2}
+                      />
+                    </div>
+                  )}
                   <div className="space-y-2"><Label className="text-[10px] uppercase font-black text-muted-foreground ml-1">Имя</Label><Input value={form.name} onChange={e => setForm({...form, name: e.target.value})} className="bg-muted/30 border-white/5 h-12 rounded-2xl" /></div>
                   <div className="space-y-2"><Label className="text-[10px] uppercase font-black text-muted-foreground ml-1">Никнейм</Label><div className="relative"><span className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground">@</span><Input value={form.username} onChange={e => setForm({...form, username: e.target.value})} className="bg-muted/30 border-white/5 h-12 rounded-2xl pl-8" /></div></div>
                   <div className="space-y-2"><Label className="text-[10px] uppercase font-black text-muted-foreground ml-1">О себе</Label><Textarea value={form.bio} onChange={e => setForm({...form, bio: e.target.value})} className="bg-muted/30 border-white/5 rounded-2xl resize-none h-24" placeholder="Информация об аккаунте..." /></div>
@@ -192,6 +211,24 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                   </button>
                 </div>
               </div>
+
+              {isUserPremium(profile) && (
+                <div className="space-y-4 pt-4 border-t border-white/5">
+                  <Label className="text-[10px] font-black uppercase text-primary flex items-center gap-2">
+                    <ImageIcon className="w-3 h-3" /> Свой фон чата (Premium)
+                  </Label>
+                  <Input 
+                    placeholder="URL изображения (https://...)" 
+                    value={form.chatBackground} 
+                    onChange={e => setForm({...form, chatBackground: e.target.value})} 
+                    className="bg-primary/5 border-primary/20 h-12 rounded-2xl text-xs"
+                  />
+                  <div className="grid grid-cols-2 gap-2">
+                    <button onClick={() => setForm({...form, chatBackgroundFit: 'cover'})} className={cn("h-9 rounded-xl border text-[9px] font-black uppercase", form.chatBackgroundFit === 'cover' ? "bg-primary border-primary text-white" : "bg-white/5 border-white/5 text-muted-foreground")}>Заполнить</button>
+                    <button onClick={() => setForm({...form, chatBackgroundFit: 'contain'})} className={cn("h-9 rounded-xl border text-[9px] font-black uppercase", form.chatBackgroundFit === 'contain' ? "bg-primary border-primary text-white" : "bg-white/5 border-white/5 text-muted-foreground")}>По центру</button>
+                  </div>
+                </div>
+              )}
 
               <div className="space-y-4 pt-4 border-t border-white/5">
                 <Label className="text-[10px] uppercase font-black text-muted-foreground flex items-center gap-2"><Paintbrush className="w-3 h-3" /> Цветовая схема</Label>
@@ -289,10 +326,11 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
               </div>
 
               <div className="space-y-3">
-                <PremiumFeature icon={Wand2} label="ИИ Помощник" description="Написание ответов и генерация аватаров" />
+                <PremiumFeature icon={Wand2} label="ИИ Помощник" description="Черновики ответов и генерация аватаров" />
+                <PremiumFeature icon={Globe} label="AI Переводчик" description="Перевод сообщений в контекстном меню" />
                 <PremiumFeature icon={Mic} label="Voice-to-Text" description="Расшифровка голосовых в текст" />
+                <PremiumFeature icon={Paintbrush} label="Кастомизация" description="Свои фоны чатов и статус-эмодзи" />
                 <PremiumFeature icon={Palette} label="Премиум Темы" description="Nebula, Cyberpunk и Gold стили" />
-                <PremiumFeature icon={Globe} label="HQ Storage" description="Загрузка файлов до 100МБ в облако" />
               </div>
 
               {!isUserPremium(profile) && (

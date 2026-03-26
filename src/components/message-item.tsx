@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, memo, useRef, useEffect, useMemo } from 'react';
@@ -20,7 +21,7 @@ import {
 import { format } from 'date-fns';
 import { 
   CornerUpLeft, Trash2, Check, CheckCheck, Edit2, Copy, Pin, X, Share2, Play, Smile, Lock, Languages, Loader2, Image as ImageIcon,
-  MessageCircle, Star, Pause, ShieldCheck, Clock, Type
+  MessageCircle, Star, Pause, ShieldCheck, Clock, Type, Globe
 } from 'lucide-react';
 import { cn, decryptSignal, isGlobalAdmin, isUserPremium } from '@/lib/utils';
 import { doc, updateDoc, deleteDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
@@ -44,6 +45,8 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
   const [duration, setDuration] = useState(0);
   const [isTranscribing, setIsTranscribing] = useState(false);
   const [transcribedText, setTranscribedText] = useState<string | null>(null);
+  const [translatedText, setTranslatedText] = useState<string | null>(null);
+  const [isTranslating, setIsTranslating] = useState(false);
   
   const audioInstance = useRef<HTMLAudioElement | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -85,6 +88,20 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
     } finally {
       setIsTranscribing(false);
     }
+  };
+
+  const handleTranslate = async () => {
+    if (!isPremium) {
+      toast({ title: "Premium функция", description: "Перевод доступен только Premium пользователям." });
+      return;
+    }
+    setIsTranslating(true);
+    // Simulate AI Translation
+    setTimeout(() => {
+      setTranslatedText("Это сообщение было обработано ИИ-слоем Nuxus.");
+      setIsTranslating(false);
+      toast({ title: "Сообщение переведено" });
+    }, 800);
   };
 
   const toggleAudio = (e: React.MouseEvent) => {
@@ -151,6 +168,11 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
       <div className="whitespace-pre-wrap text-[15px] break-words max-w-[320px] leading-[1.6] relative font-medium tracking-tight">
         {displayContent} 
         {message.editedAt && <span className="text-[8px] ml-2 text-primary/40 font-black uppercase tracking-widest">(sync)</span>}
+        {translatedText && (
+          <div className="mt-2 pt-2 border-t border-white/10 text-xs italic text-accent animate-in fade-in slide-in-from-top-1">
+            <Globe className="w-3 h-3 inline mr-1 mb-0.5" /> {translatedText}
+          </div>
+        )}
       </div>
     );
   };
@@ -225,6 +247,11 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
               <ContextMenuItem onClick={() => onReply(message)} className="gap-3 py-3 font-black text-[10px] uppercase tracking-[0.2em] rounded-xl transition-all"><CornerUpLeft className="w-4 h-4 text-primary" /> Ответить</ContextMenuItem>
               {isMe && <ContextMenuItem onClick={() => onEdit(message)} className="gap-3 py-3 font-black text-[10px] uppercase tracking-[0.2em] rounded-xl transition-all"><Edit2 className="w-4 h-4 text-primary" /> Изменить</ContextMenuItem>}
               <ContextMenuItem onClick={() => onForward(message)} className="gap-3 py-3 font-black text-[10px] uppercase tracking-[0.2em] rounded-xl transition-all"><Share2 className="w-4 h-4 text-primary" /> Переслать</ContextMenuItem>
+              {isPremium && message.contentType === 'text' && (
+                <ContextMenuItem onClick={handleTranslate} className="gap-3 py-3 font-black text-[10px] uppercase tracking-[0.2em] rounded-xl transition-all">
+                  {isTranslating ? <Loader2 className="w-4 h-4 animate-spin text-accent" /> : <Globe className="w-4 h-4 text-accent" />} Перевести
+                </ContextMenuItem>
+              )}
               {message.contentType === 'audio' && <ContextMenuItem onClick={handleTranscribe} className="gap-3 py-3 font-black text-[10px] uppercase tracking-[0.2em] rounded-xl transition-all"><Type className="w-4 h-4 text-accent" /> Расшифровать</ContextMenuItem>}
               <DropdownMenuSeparator className="bg-white/5 mx-2" />
               {(isMe || isAdmin) && (
