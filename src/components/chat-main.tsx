@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useEffect } from 'react';
@@ -19,6 +20,7 @@ import { SettingsModal } from './modals/settings-modal';
 import { GlobalSearchModal } from './modals/global-search-modal';
 import { ForwardModal } from './modals/forward-modal';
 import { UserProfileModal } from './modals/user-profile-modal';
+import { LegalModal } from './modals/legal-modal';
 import { UpdateNotifier } from './update-notifier';
 import { MusicPlayer } from './music-player';
 import { UserAvatar } from './user-avatar';
@@ -29,7 +31,8 @@ export default function ChatMain() {
   const { 
     currentChatId, activeCallId, setActiveCallId, 
     activeView, setActiveView, isSettingsOpen, setIsSettingsOpen,
-    isSearchOpen, setIsSearchOpen, setCurrentChatId
+    isSearchOpen, setIsSearchOpen, setCurrentChatId,
+    isLegalOpen, setIsLegalOpen
   } = useAppState();
   const { user } = useUser();
   const db = useFirestore();
@@ -134,6 +137,7 @@ export default function ChatMain() {
       <GlobalSearchModal open={isSearchOpen} onOpenChange={setIsSearchOpen} />
       <ForwardModal />
       <UserProfileModal />
+      <LegalModal open={isLegalOpen} onOpenChange={setIsLegalOpen} type="privacy" />
     </div>
   );
 }

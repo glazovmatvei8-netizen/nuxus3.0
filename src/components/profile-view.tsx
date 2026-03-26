@@ -19,7 +19,7 @@ export default function ProfileView() {
   const { user } = useUser();
   const db = useFirestore();
   const { toast } = useToast();
-  const { setIsSettingsOpen, setSettingsTab } = useAppState();
+  const { setIsSettingsOpen, setSettingsTab, setIsLegalOpen } = useAppState();
   
   const userProfileRef = useMemoFirebase(() => (!db || !user) ? null : doc(db!, 'users', user.uid), [db, user]);
   const { data: profile } = useDoc<User>(userProfileRef);
@@ -64,7 +64,7 @@ export default function ProfileView() {
                 </div>
                 <Button onClick={copyRefLink} className="h-10 rounded-xl bg-primary text-white font-black uppercase text-[9px] tracking-widest px-4">Пригласить</Button>
               </div>
-              <p className="text-[8px] text-muted-foreground uppercase font-bold leading-relaxed px-1">Приглашайте новых участников и получайте Premium-статус за каждые 5 активных узлов.</p>
+              <p className="text-[8px] text-muted-foreground uppercase font-bold leading-relaxed px-1">Приглашайте новых участников и получайте Premium-статус за каждые 5 активных аккаунтов.</p>
             </div>
           </div>
 
@@ -85,7 +85,7 @@ export default function ProfileView() {
             <SettingsItem icon={Lock} label="Защита Ядра (E2EE)" color="text-primary" onClick={() => { setSettingsTab('privacy'); setIsSettingsOpen(true); }} />
             <SettingsItem icon={Palette} label="Темы оформления" color="text-foreground" onClick={() => { setSettingsTab('appearance'); setIsSettingsOpen(true); }} />
             <SettingsItem icon={Bookmark} label="Избранное" color="text-foreground" onClick={() => {}} />
-            <SettingsItem icon={HelpCircle} label="Помощь и FAQ" color="text-foreground" onClick={() => {}} />
+            <SettingsItem icon={HelpCircle} label="Помощь и FAQ" color="text-foreground" onClick={() => setIsLegalOpen(true)} />
           </div>
 
           <div className="pt-4 flex flex-col items-center gap-2">

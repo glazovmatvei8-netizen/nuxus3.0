@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { createContext, useContext, useState } from 'react';
@@ -24,6 +25,10 @@ interface AppState {
   setIsSearchOpen: (v: boolean) => void;
   settingsTab: string;
   setSettingsTab: (tab: string) => void;
+  
+  // Legal State
+  isLegalOpen: boolean;
+  setIsLegalOpen: (v: boolean) => void;
   
   // Update State
   isUpdateDeferred: boolean;
@@ -60,6 +65,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [settingsTab, setSettingsTab] = useState('profile');
+  const [isLegalOpen, setIsLegalOpen] = useState(false);
   const [isUpdateDeferred, setIsUpdateDeferred] = useState(false);
   
   const [inspectedUserId, setInspectedUserId] = useState<string | null>(null);
@@ -91,6 +97,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setIsSearchOpen,
       settingsTab,
       setSettingsTab,
+      isLegalOpen,
+      setIsLegalOpen,
       isUpdateDeferred,
       setIsUpdateDeferred,
       inspectedUserId,

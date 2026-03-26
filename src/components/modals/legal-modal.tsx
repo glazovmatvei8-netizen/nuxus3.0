@@ -54,7 +54,7 @@ export function LegalModal({ open, onOpenChange, type }: { open: boolean, onOpen
                   <AccordionItem value="item-3" className="border-white/5 px-4 rounded-2xl bg-white/[0.02]">
                     <AccordionTrigger className="text-[11px] font-bold uppercase text-white/80 hover:no-underline">Как работает реферальная программа?</AccordionTrigger>
                     <AccordionContent className="text-[10px] text-muted-foreground leading-relaxed">
-                      Вы можете скопировать свою уникальную ссылку в профиле. За каждого нового пользователя, активировавшего узел по вашей ссылке, вы получаете бонусные баллы активности в Ядре.
+                      Вы можете скопировать свою уникальную ссылку в профиле. За каждого нового пользователя, активировавшего аккаунт по вашей ссылке, вы получаете бонусные баллы активности в Ядре.
                     </AccordionContent>
                   </AccordionItem>
                 </Accordion>
@@ -71,12 +71,26 @@ export function LegalModal({ open, onOpenChange, type }: { open: boolean, onOpen
             <ScrollArea className="flex-1 p-8">
               <div className="space-y-10 text-sm text-muted-foreground font-medium">
                 <section className="space-y-4">
-                  <h3 className="text-white font-black uppercase tracking-wider flex items-center gap-2"><Database className="w-4 h-4 text-primary" /> ПРИНЦИПЫ ЯДРА</h3>
-                  <p>Ядро Nuxus оперирует на базе децентрализованной архитектуры и принципа абсолютной минимизации данных. Все метаданные удаляются автоматически после завершения сессии синхронизации.</p>
+                  <h3 className="text-white font-black uppercase tracking-wider flex items-center gap-2"><Scale className="w-4 h-4 text-primary" /> УСЛОВИЯ ИСПОЛЬЗОВАНИЯ</h3>
+                  <div className="text-[11px] leading-relaxed space-y-2 uppercase font-bold">
+                    <p>1. СОГЛАШЕНИЕ С УСЛОВИЯМИ: ИСПОЛЬЗУЯ NUXUS KERNEL, ВЫ ПОДТВЕРЖДАЕТЕ СВОЕ СОГЛАСИЕ С ДАННЫМИ ПРАВИЛАМИ.</p>
+                    <p>2. ОТВЕТСТВЕННОСТЬ: ПОЛЬЗОВАТЕЛЬ НЕСЕТ ПОЛНУЮ ОТВЕТСТВЕННОСТЬ ЗА ПЕРЕДАВАЕМЫЙ КОНТЕНТ. ЯДРО ОБЕСПЕЧИВАЕТ ТРАНСПОРТНУЮ БЕЗОПАСНОСТЬ.</p>
+                    <p>3. ПРАВИЛА СООБЩЕСТВА: ЗАПРЕЩЕНА ЛЮБАЯ ДЕЯТЕЛЬНОСТЬ, НАРУШАЮЩАЯ ЦЕЛОСТНОСТЬ СИСТЕМЫ ИЛИ ПРАВА ДРУГИХ ПОЛЬЗОВАТЕЛЕЙ.</p>
+                  </div>
                 </section>
+
                 <section className="space-y-4">
-                  <h3 className="text-white font-black uppercase tracking-wider flex items-center gap-2"><Key className="w-4 h-4 text-primary" /> БЕЗОПАСНОСТЬ QES</h3>
-                  <p>Протокол Quantum Encryption Signal использует каскадное шифрование. Утрата пароля ведет к безвозвратной потере доступа к сообщениям, так как ключи дешифровки не хранятся на сервере.</p>
+                  <h3 className="text-white font-black uppercase tracking-wider flex items-center gap-2"><Lock className="w-4 h-4 text-primary" /> ПОЛИТИКА КОНФИДЕНЦИАЛЬНОСТИ</h3>
+                  <div className="text-[11px] leading-relaxed space-y-2 uppercase font-bold">
+                    <p>1. МИНИМИЗАЦИЯ ДАННЫХ: МЫ НЕ ХРАНИМ ВАШИ СООБЩЕНИЯ В ОТКРЫТОМ ВИДЕ. ВСЕ ДАННЫЕ ШИФРУЮТСЯ КЛИЕНТСКИМ КЛЮЧОМ.</p>
+                    <p>2. IP-АДРЕСА: ЛОГИ IP-АДРЕСОВ ИСПОЛЬЗУЮТСЯ ТОЛЬКО ДЛЯ ПРЕДОТВРАЩЕНИЯ АТАК И УДАЛЯЮТСЯ ПОСЛЕ ЗАВЕРШЕНИЯ СЕССИИ.</p>
+                    <p>3. ТРЕТЬИ ЛИЦА: ВАШИ ДАННЫЕ НИКОГДА НЕ ПЕРЕДАЮТСЯ РЕКЛАМНЫМ АГЕНТСТВАМ ИЛИ СТОРОННИМ СЕРВИСАМ.</p>
+                  </div>
+                </section>
+
+                <section className="space-y-4">
+                  <h3 className="text-white font-black uppercase tracking-wider flex items-center gap-2"><Database className="w-4 h-4 text-primary" /> ПРИНЦИПЫ ЯДРА</h3>
+                  <p>Ядро Nuxus оперирует на базе децентрализованной архитектуры. Все метаданные обрабатываются в режиме реального времени и не подлежат долгосрочному хранению на физических носителях.</p>
                 </section>
               </div>
             </ScrollArea>
