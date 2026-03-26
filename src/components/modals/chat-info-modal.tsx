@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useMemo, useRef, useEffect } from 'react';
@@ -10,7 +11,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { 
-  Crown, Star, Shield, UserCheck, UserPlus2, X, Bell, BellOff, Clock, Edit3, Camera, Save, UserPlus, Trash2
+  Crown, Star, Shield, UserCheck, UserPlus2, X, Bell, BellOff, Clock, Edit3, Camera, Save, UserPlus, Trash2, Gift, Sparkles 
 } from 'lucide-react';
 import { 
   DropdownMenu,
@@ -19,15 +20,16 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator
 } from "@/components/ui/dropdown-menu";
-import { useFirestore, useUser, useDoc, useMemoFirebase } from '@/firebase';
-import { doc, updateDoc, arrayRemove, arrayUnion } from 'firebase/firestore';
+import { useFirestore, useUser, useDoc, useMemoFirebase, useCollection } from '@/firebase';
+import { doc, updateDoc, arrayRemove, arrayUnion, query, collection, where, limit } from 'firebase/firestore';
 import { deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { useToast } from '@/hooks/use-toast';
 import { useAppState } from '@/lib/store';
 import { formatDisplayName, isUserPremium, formatLastSeen, cn, isGlobalAdmin } from '@/lib/utils';
-import type { User, Chat } from '@/lib/types';
+import type { User, Chat, ReceivedGift } from '@/lib/types';
 import { addHours, isAfter, parseISO } from 'date-fns';
 import { AddMemberModal } from './add-member-modal';
+import { GiftModal } from './gift-modal';
 
 export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onOpenChange: (o: boolean) => void, chat: Chat }) {
   const db = useFirestore();
@@ -41,6 +43,7 @@ export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onO
 
   const [isEditing, setIsEditing] = useState(false);
   const [isAddMemberOpen, setIsAddMemberOpen] = useState(false);
+  const [isGiftModalOpen, setIsGiftModalOpen] = useState(false);
   
   const [editForm, setEditForm] = useState({
     name: '',
@@ -55,6 +58,12 @@ export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onO
   
   const otherUserProfileRef = useMemoFirebase(() => (!db || !otherId) ? null : doc(db, 'users', otherId), [db, otherId]);
   const { data: otherUserProfile } = useDoc<User>(otherUserProfileRef);
+
+  const giftsQuery = useMemoFirebase(() => {
+    if (!db || !otherId) return null;
+    return query(collection(db, 'users', otherId, 'receivedGifts'), limit(12));
+  }, [db, otherId]);
+  const { data: gifts } = useCollection<ReceivedGift>(giftsQuery);
 
   const isKernelAdmin = useMemo(() => isGlobalAdmin(currentUserProfile), [currentUserProfile]);
 
@@ -99,7 +108,7 @@ export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onO
           avatarUrl: editForm.avatarUrl,
           isPublic: editForm.isPublic
         });
-        toast({ title: "Чат обновлен" });
+        toast({ title: "Аккаунт обновлен" });
       }
       setIsEditing(false);
     } catch (e: any) {
@@ -196,7 +205,7 @@ export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onO
               <DialogTitle className="text-xl flex items-center justify-center gap-2 text-white font-black italic">
                 {currentDisplayName} {isUserPremium(otherUserProfile) && <Star className="w-4 h-4 text-accent fill-accent" />}
               </DialogTitle>
-              <DialogDescription className="text-xs font-mono opacity-60">
+              <DialogDescription className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">
                 {isPrivate ? formatLastSeen(otherUserProfile?.lastSeen, otherUserProfile?.settings?.privacy?.lastSeenVisibility) : chat.username}
               </DialogDescription>
             </div>
@@ -259,6 +268,16 @@ export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onO
                     </Button>
                   )}
                 </div>
+
+                {isPrivate && otherUserProfile && (
+                  <Button 
+                    onClick={() => setIsGiftModalOpen(true)} 
+                    variant="outline" 
+                    className="w-full h-12 border-white/10 bg-white/5 text-white rounded-xl font-black uppercase italic tracking-widest gap-2 text-[10px]"
+                  >
+                    <Gift className="w-4 h-4 text-primary" /> Подарок
+                  </Button>
+                )}
               </>
             )}
 
@@ -279,15 +298,34 @@ export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onO
                   <Textarea value={editForm.description} onChange={e => setEditForm({...editForm, description: e.target.value})} className="bg-black/20 border-white/5 min-h-[80px] text-xs" />
                 </div>
                 <div className="flex items-center justify-between">
-                  <div className="flex flex-col"><span className="text-11px font-bold text-white">Публичный доступ</span><span className="text-[9px] text-muted-foreground uppercase">Доступен через поиск</span></div>
+                  <div className="flex flex-col"><span className="text-[11px] font-bold text-white">Публичный доступ</span><span className="text-[9px] text-muted-foreground uppercase">Доступен через поиск</span></div>
                   <Switch checked={editForm.isPublic} onCheckedChange={v => setEditForm({...editForm, isPublic: v})} />
+                </div>
+              </div>
+            )}
+
+            {isPrivate && gifts && gifts.length > 0 && (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between px-1">
+                  <h3 className="text-[9px] font-black uppercase tracking-widest text-primary/60 flex items-center gap-2">
+                    <Sparkles className="w-3 h-3" /> Коллекция подарков
+                  </h3>
+                  <span className="text-[9px] font-black text-muted-foreground/40">{gifts.length}</span>
+                </div>
+                <div className="grid grid-cols-3 gap-3">
+                  {gifts.map(gift => (
+                    <div key={gift.id} className="bg-white/5 rounded-2xl border border-white/5 flex flex-col items-center justify-center p-3 hover:bg-white/10 transition-all relative shadow-lg">
+                      <div className="text-3xl mb-1 drop-shadow-2xl">{gift.giftIcon}</div>
+                      <span className="text-[8px] font-black text-primary uppercase tracking-tighter">{gift.price} NX</span>
+                    </div>
+                  ))}
                 </div>
               </div>
             )}
 
             {!isEditing && chat.description && (
               <div className="space-y-1">
-                <h3 className="text-[10px] font-bold uppercase tracking-widest text-primary">О канале</h3>
+                <h3 className="text-[10px] font-bold uppercase tracking-widest text-primary">О сообществе</h3>
                 <p className="text-sm text-white/80 leading-relaxed">{chat.description}</p>
               </div>
             )}
@@ -321,7 +359,7 @@ export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onO
 
             <div className="pt-4 pb-12">
               <Button variant="ghost" className="w-full text-destructive hover:bg-destructive/10 rounded-xl font-bold uppercase text-[10px] tracking-widest gap-2" onClick={handleDeleteNode}>
-                <Trash2 className="w-4 h-4" /> {(isPrivate || isChatAdmin) ? "Удалить узел" : "Отключиться от узла"}
+                <Trash2 className="w-4 h-4" /> {(isPrivate || isChatAdmin) ? "Удалить аккаунт (чат)" : "Отключиться"}
               </Button>
             </div>
           </div>
@@ -335,6 +373,7 @@ export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onO
       chatId={chat.id} 
       currentParticipantIds={chat.participantIds} 
     />
+    <GiftModal open={isGiftModalOpen} onOpenChange={setIsGiftModalOpen} targetUser={otherUserProfile || null} />
     </>
   );
 }

@@ -7,7 +7,7 @@ import { doc, collection, query, orderBy, limit, writeBatch, increment, getDocs,
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Wallet, ArrowUpRight, ArrowDownLeft, Plus, Zap, History, ShieldCheck, Loader2, Search, CheckCircle2, XCircle, Clock, AlertTriangle } from 'lucide-react';
+import { Wallet, ArrowUpRight, ArrowDownLeft, Plus, Zap, History, ShieldCheck, Loader2, Search, CheckCircle2, XCircle, Clock, AlertTriangle, Gift } from 'lucide-react';
 import { cn, formatDisplayName } from '@/lib/utils';
 import type { User, Transaction } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';

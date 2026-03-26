@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -164,12 +165,12 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
         chatId: chat.id,
         senderId: addingBotId,
         senderName: bot?.name || 'Bot',
-        content: `${bot?.name || 'Бот'} подключен к узлу 🛡️. Используйте !help для команд.`,
+        content: `${bot?.name || 'Бот'} подключен к аккаунту 🛡️. Используйте !help для команд.`,
         contentType: 'service',
         sentAt: new Date().toISOString(),
       });
 
-      toast({ title: "Бот добавлен", description: `Узел подключен к ${chat.name}` });
+      toast({ title: "Бот добавлен", description: `Аккаунт подключен к ${chat.name}` });
       setAddingBotId(null);
       onOpenChange(false);
       setCurrentChatId(chat.id);
@@ -236,7 +237,7 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
                               {res.data.id === 'bot_nuxus_manager' && <ShieldCheck className="w-3 h-3 text-primary" />}
                             </span>
                             <span className="text-[10px] text-muted-foreground uppercase font-black truncate">
-                              {res.data.username} • {res.type === 'user' ? 'профиль' : res.type === 'chat' ? 'сообщество' : 'бот'}
+                              {res.data.username} • {res.type === 'user' ? 'аккаунт' : res.type === 'chat' ? 'сообщество' : 'бот'}
                             </span>
                           </div>
                         </div>
