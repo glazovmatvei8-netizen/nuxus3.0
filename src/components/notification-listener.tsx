@@ -11,8 +11,9 @@ import { decryptSignal, isGlobalAdmin } from '@/lib/utils';
 import { isAfter, parseISO, addDays } from 'date-fns';
 
 /**
- * Nuxus Notification & Bot Core v65.6.5
+ * Nuxus Notification & Bot Core v65.7.0
  * Управляет уведомлениями и логикой бота Nuxus Chat Manager.
+ * Оптимизировано для предотвращения лагов и дубликатов.
  */
 export function NotificationListener() {
   const { user } = useUser();
@@ -39,7 +40,6 @@ export function NotificationListener() {
     return () => window.removeEventListener('pointerdown', setupAudio);
   }, []);
 
-  // Основной слушатель команд бота и уведомлений
   useEffect(() => {
     if (!db || !user) return;
 
@@ -56,40 +56,55 @@ export function NotificationListener() {
           const lastTime = chatData.lastMessageAt;
           if (!lastTime) return;
 
-          // Проверка команд бота (слушаем последние сообщения в этом чате)
-          const messagesRef = collection(db, 'chats', chatId, 'messages');
-          const lastMsgQuery = query(messagesRef, orderBy('sentAt', 'desc'), limit(1));
+          // Проверка только свежих сообщений
+          const lastMsgQuery = query(
+            collection(db, 'chats', chatId, 'messages'), 
+            orderBy('sentAt', 'desc'), 
+            limit(1)
+          );
           
           getDocs(lastMsgQuery).then((snap) => {
             if (snap.empty) return;
             const msgDoc = snap.docs[0];
             const msgId = msgDoc.id;
-            
-            if (processedMessageIds.current.has(msgId)) return;
-            processedMessageIds.current.add(msgId);
-
             const msgData = msgDoc.data();
             
-            // Уведомление (если чат не открыт и это не наше сообщение и не старое)
-            const isFresh = Math.abs(Date.now() - new Date(msgData.sentAt).getTime()) < 30000;
-            if (chatId !== currentChatId && !isFirstLoad.current && msgData.senderId !== user.uid && isFresh) {
+            // Защита от дублей и старых сигналов
+            if (processedMessageIds.current.has(msgId)) return;
+            processedMessageIds.current.add(msgId);
+            
+            // Если памяти много, чистим старые ID раз в 1000 записей
+            if (processedMessageIds.current.size > 1000) {
+              processedMessageIds.current.clear();
+            }
+
+            const isFresh = Math.abs(Date.now() - new Date(msgData.sentAt).getTime()) < 15000;
+            if (!isFresh || isFirstLoad.current) return;
+
+            // Уведомление: только если чат НЕ открыт и сообщение НЕ наше
+            if (chatId !== currentChatId && msgData.senderId !== user.uid) {
               if (audioRef.current) {
                 audioRef.current.currentTime = 0;
                 audioRef.current.play().catch(() => {});
               }
-              toast({ title: chatData.name || 'Nuxus Signal', description: 'Новое сообщение' });
+              toast({ 
+                title: chatData.name || 'Nuxus Signal', 
+                description: msgData.senderName ? `${msgData.senderName}: Новое сообщение` : 'Новый сигнал доставлен' 
+              });
             }
 
             // Бот обрабатывает команды
             const content = decryptSignal(msgData.content).trim();
-            if (content.startsWith('!') && isFresh) {
+            if (content.startsWith('!')) {
               handleBotCommand(chatId, chatData, content, msgData.senderId, msgId);
             }
           });
         }
       });
       
-      if (isFirstLoad.current) isFirstLoad.current = false;
+      if (isFirstLoad.current) {
+        setTimeout(() => { isFirstLoad.current = false; }, 2000);
+      }
     });
 
     return () => unsubscribe();
@@ -115,7 +130,7 @@ export function NotificationListener() {
       });
     };
 
-    if (cmd === '!хелп' || cmd === '!help' || cmd === '!помощь') {
+    if (['!хелп', '!help', '!помощь'].includes(cmd)) {
       await sendBotReply("🛡️ Команды:\n!бан @user - Бан\n!кик @user - Кик\n!мут @user - Мут (24ч)\n!анмут @user - Снять мут\n!админ @user - Дать админа\n!статус - Состояние Ядра");
       return;
     }
@@ -123,7 +138,7 @@ export function NotificationListener() {
     if (!isAdmin && cmd.startsWith('!')) {
       const modCmds = ['!бан', '!ban', '!кик', '!kick', '!мут', '!mute', '!админ', '!admin'];
       if (modCmds.some(c => cmd.startsWith(c))) {
-        await sendBotReply("🚫 Недостаточно прав доступа.");
+        await sendBotReply("🚫 Ошибка: Недостаточно прав для управления этим узлом.");
       }
       return;
     }
@@ -134,7 +149,7 @@ export function NotificationListener() {
       const userSnap = await getDocs(userQ);
       
       if (userSnap.empty) {
-        await sendBotReply(`❌ Аккаунт ${targetUsername} не найден.`);
+        await sendBotReply(`❌ Аккаунт ${targetUsername} не найден в базе.`);
         return;
       }
 
@@ -142,7 +157,7 @@ export function NotificationListener() {
       const targetUid = targetUser.id;
 
       if (targetUid === chat.ownerId) {
-        await sendBotReply("🚫 Ошибка: Нельзя применить санкции к Создателю.");
+        await sendBotReply("🚫 Критическая ошибка: Нельзя применить санкции к Создателю.");
         return;
       }
 
@@ -155,7 +170,7 @@ export function NotificationListener() {
             participantIds: arrayRemove(targetUid),
             adminIds: arrayRemove(targetUid)
           });
-          await sendBotReply(`✅ ${targetUser.name} исключен из Ядра.`);
+          await sendBotReply(`✅ ${targetUser.name} исключен из канала.`);
           break;
 
         case '!бан':
@@ -194,7 +209,7 @@ export function NotificationListener() {
           break;
       }
     } else if (cmd === '!статус' || cmd === '!status') {
-      await sendBotReply(`📊 Узел: Стабилен\nСинхронизация: Активна\nШифрование: QES 2.0`);
+      await sendBotReply(`📊 Состояние Ядра: Стабильно\nВерсия: 0.65.8\nШифрование: QES 2.0 Active`);
     }
   };
 

@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
   Send, Info, ChevronLeft, X, Paperclip, Mic, StopCircle, Edit2, Search,
-  Smile, ImageIcon, Video, Trash2, Loader2, UserPlus, AtSign
+  Smile, ImageIcon, Video, Trash2, Loader2, UserPlus, AtSign, ChevronDown
 } from 'lucide-react';
 import { MessageItem } from './message-item';
 import { useToast } from '@/hooks/use-toast';
@@ -78,11 +78,12 @@ export default function ChatArea() {
   const [searchQuery, setSearchQuery] = useState('');
   const [isJoining, setIsJoining] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
+  const [showScrollButton, setShowScrollButton] = useState(false);
+  
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const textInputRef = useRef<HTMLInputElement>(null);
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
   
   const { toast } = useToast();
 
@@ -143,17 +144,9 @@ export default function ChatArea() {
       .filter(([uid, typing]) => typing && uid !== firebaseUser.uid)
       .map(([uid]) => {
         const p = participants.find(p => p.id === uid);
-        return p?.name || 'Кто-то';
+        return p?.name || 'Пользователь';
       });
   }, [chat?.typing, participants, firebaseUser]);
-
-  const getParticipantWord = (n: number) => {
-    const last = n % 10;
-    const last100 = n % 100;
-    if (last === 1 && last100 !== 11) return 'участник';
-    if (last >= 2 && last <= 4 && (last100 < 10 || last100 >= 20)) return 'участника';
-    return 'участников';
-  };
 
   const chatSubtext = useMemo(() => {
     if (typingUsers.length > 0) {
@@ -164,7 +157,7 @@ export default function ChatArea() {
       return formatLastSeen(otherProfile?.lastSeen, otherProfile?.settings?.privacy?.lastSeenVisibility);
     }
     const count = chat?.participantIds?.length || 0;
-    return `${count} ${getParticipantWord(count)}`;
+    return `${count} участников`;
   }, [chat, otherProfile, typingUsers]);
 
   const handleInputChange = (val: string) => {
@@ -192,6 +185,10 @@ export default function ChatArea() {
       messagesEndRef.current.scrollIntoView({ behavior });
     }
   }, []);
+
+  useEffect(() => {
+    scrollToBottom('auto');
+  }, [currentChatId, scrollToBottom]);
 
   const handleJoinChat = async () => {
     if (!currentChatId || !firebaseUser || !db) return;
@@ -254,6 +251,12 @@ export default function ChatArea() {
     setTimeout(() => scrollToBottom('smooth'), 100);
   }, [messageInput, currentChatId, firebaseUser, db, userProfile, replyTo, editingMsg, setLocalDrafts, scrollToBottom, canPost]);
 
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const target = e.currentTarget;
+    const distanceToBottom = target.scrollHeight - target.scrollTop - target.clientHeight;
+    setShowScrollButton(distanceToBottom > 300);
+  };
+
   const chatDisplayName = useMemo(() => {
     if (chat?.type === 'private') {
       const myMeta = chat.metadata?.[firebaseUser?.uid || ''];
@@ -267,7 +270,6 @@ export default function ChatArea() {
 
   return (
     <div className="flex-1 flex flex-col h-full bg-background relative overflow-hidden z-20">
-      {/* Background Layer - Brighter TG-Style */}
       <div 
         className={cn("absolute inset-0 z-0", !customBg && "chat-pattern-bg")}
         style={customBg ? { 
@@ -308,10 +310,19 @@ export default function ChatArea() {
       </header>
 
       <div className="flex-1 relative overflow-hidden flex flex-col">
-        <ScrollArea className="flex-1 w-full relative z-10 scrollbar-hide">
+        <ScrollArea className="flex-1 w-full relative z-10 scrollbar-hide" onScroll={handleScroll}>
           <MessageList messages={messages} userId={firebaseUser?.uid} chatId={currentChatId} onReply={setReplyTo} onEdit={setEditingMsg} onForward={setForwardingMessage} amIPremium={userProfile?.isPremium} isAdmin={isKernelAdmin} isGroup={chat?.type !== 'private'} searchQuery={searchQuery} viewerProfile={userProfile} />
           <div ref={messagesEndRef} className="h-4" />
         </ScrollArea>
+
+        {showScrollButton && (
+          <button 
+            onClick={() => scrollToBottom('smooth')}
+            className="absolute bottom-6 right-6 h-12 w-12 rounded-full bg-black/40 backdrop-blur-3xl border border-white/10 flex items-center justify-center text-primary shadow-2xl z-50 animate-in fade-in zoom-in hover:scale-110 active:scale-90 transition-all"
+          >
+            <ChevronDown className="w-6 h-6" />
+          </button>
+        )}
       </div>
 
       {(!isParticipant && !isKernelAdmin) ? (
@@ -337,7 +348,7 @@ export default function ChatArea() {
               </Popover>
               
               <div className="flex-1 flex items-center bg-white/[0.08] rounded-full border border-white/[0.1] h-11 px-4 relative group transition-all focus-within:bg-white/[0.12] focus-within:border-primary/30">
-                <Input ref={textInputRef} placeholder="Сообщение" className="bg-transparent border-none focus-visible:ring-0 text-white placeholder:text-white/30 font-medium" value={messageInput} onChange={e => handleInputChange(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSendMessage()} />
+                <Input placeholder="Сообщение" className="bg-transparent border-none focus-visible:ring-0 text-white placeholder:text-white/30 font-medium" value={messageInput} onChange={e => handleInputChange(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSendMessage()} />
                 <Button variant="ghost" size="icon" className="text-white/40 hover:text-primary transition-colors"><Smile className="w-5 h-5" /></Button>
               </div>
 
