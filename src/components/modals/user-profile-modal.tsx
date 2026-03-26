@@ -32,7 +32,7 @@ export function UserProfileModal() {
 
   const giftsQuery = useMemoFirebase(() => {
     if (!db || !inspectedUserId) return null;
-    return query(collection(db, 'users', inspectedUserId, 'receivedGifts'), limit(10));
+    return query(collection(db, 'users', inspectedUserId, 'receivedGifts'), limit(20));
   }, [db, inspectedUserId]);
   const { data: gifts } = useCollection<ReceivedGift>(giftsQuery);
 
@@ -167,12 +167,13 @@ export function UserProfileModal() {
                   </h3>
                   <span className="text-[9px] font-black text-muted-foreground/40">{gifts.length}</span>
                 </div>
-                <div className="grid grid-cols-4 gap-2">
+                <div className="grid grid-cols-3 gap-3">
                   {gifts.map(gift => (
-                    <div key={gift.id} className="aspect-square bg-white/5 rounded-xl border border-white/5 flex items-center justify-center text-2xl hover:bg-white/10 transition-colors cursor-help group relative">
-                      {gift.giftIcon}
-                      <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-black/90 border border-white/10 rounded-lg text-[8px] font-black uppercase text-white whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity z-50">
-                        От: {gift.senderName}
+                    <div key={gift.id} className="bg-white/5 rounded-2xl border border-white/5 flex flex-col items-center justify-center p-3 hover:bg-white/10 transition-all cursor-help group relative shadow-lg">
+                      <div className="text-3xl mb-1 group-hover:scale-110 transition-transform">{gift.giftIcon}</div>
+                      <span className="text-[8px] font-black text-primary uppercase tracking-tighter">{gift.price} NX</span>
+                      <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-black/90 border border-white/10 rounded-lg text-[8px] font-black uppercase text-white whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity z-50 shadow-2xl">
+                        {gift.giftName} от: {gift.senderName}
                       </div>
                     </div>
                   ))}

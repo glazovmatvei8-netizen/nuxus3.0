@@ -6,17 +6,25 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from '@/components/ui/button';
 import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { doc, collection, writeBatch, increment, addDoc } from 'firebase/firestore';
-import { Gift, Sparkles, Loader2, Wallet, Zap } from 'lucide-react';
+import { Gift, Sparkles, Loader2, Wallet, Zap, ChevronRight } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import type { User } from '@/lib/types';
 import { cn } from '@/lib/utils';
+import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 
 const PREDEFINED_GIFTS = [
   { id: 'silver_star', name: 'Серебряная звезда', price: 50, icon: '⭐' },
+  { id: 'lightning', name: 'Молния Ядра', price: 100, icon: '⚡' },
+  { id: 'shield', name: 'Щит Защиты', price: 250, icon: '🛡️' },
   { id: 'golden_crown', name: 'Золотая корона', price: 500, icon: '👑' },
+  { id: 'fire', name: 'Пламя Энергии', price: 750, icon: '🔥' },
   { id: 'diamond_ring', name: 'Бриллиант Ядра', price: 1000, icon: '💎' },
+  { id: 'unicorn', name: 'Единорог Удачи', price: 1500, icon: '🦄' },
   { id: 'rocket_signal', name: 'Квантовая ракета', price: 2500, icon: '🚀' },
+  { id: 'saturn', name: 'Планета Nuxus', price: 3500, icon: '🪐' },
   { id: 'premium_orb', name: 'Сфера Nuxus Prime', price: 5000, icon: '🔮' },
+  { id: 'trophy', name: 'Кубок Лидера', price: 10000, icon: '🏆' },
+  { id: 'crystal', name: 'Кристалл Времени', price: 20000, icon: '💎' },
 ];
 
 export function GiftModal({ open, onOpenChange, targetUser }: { open: boolean, onOpenChange: (o: boolean) => void, targetUser: User | null }) {
@@ -73,12 +81,6 @@ export function GiftModal({ open, onOpenChange, targetUser }: { open: boolean, o
 
       await batch.commit();
 
-      // 4. Сервисное сообщение (опционально в личку)
-      try {
-        const chatQ = collection(db, 'chats');
-        // Здесь можно было бы найти чат, но для MVP просто уведомляем
-      } catch (e) {}
-
       toast({ title: "Подарок отправлен!", description: `${gift.name} теперь в коллекции ${targetUser.name}` });
       onOpenChange(false);
     } catch (e: any) {
@@ -111,26 +113,33 @@ export function GiftModal({ open, onOpenChange, targetUser }: { open: boolean, o
             <span className="text-lg font-black italic text-primary">{myProfile?.balance?.toFixed(2) || '0.00'} NX</span>
           </div>
 
-          <div className="grid grid-cols-1 gap-2">
-            {PREDEFINED_GIFTS.map(gift => (
-              <button
-                key={gift.id}
-                onClick={() => handleSendGift(gift)}
-                disabled={isSending}
-                className="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/5 hover:bg-primary/10 hover:border-primary/30 transition-all group"
-              >
-                <div className="flex items-center gap-4">
-                  <div className="text-3xl group-hover:scale-125 transition-transform">{gift.icon}</div>
-                  <div className="flex flex-col text-left">
-                    <span className="text-sm font-bold text-white">{gift.name}</span>
-                    <span className="text-[9px] text-muted-foreground uppercase font-black">Nuxus Collectible</span>
-                  </div>
-                </div>
-                <div className="bg-primary/20 px-4 py-2 rounded-xl border border-primary/20">
-                  <span className="text-xs font-black text-primary">{gift.price} NX</span>
-                </div>
-              </button>
-            ))}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between px-1">
+              <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/60">Выберите предмет (листайте)</span>
+              <ChevronRight className="w-3 h-3 text-primary animate-pulse" />
+            </div>
+            
+            <ScrollArea className="w-full pb-4">
+              <div className="flex gap-3 px-1">
+                {PREDEFINED_GIFTS.map(gift => (
+                  <button
+                    key={gift.id}
+                    onClick={() => handleSendGift(gift)}
+                    disabled={isSending}
+                    className="flex flex-col items-center gap-3 p-4 min-w-[140px] bg-white/5 rounded-3xl border border-white/5 hover:bg-primary/10 hover:border-primary/30 transition-all group shrink-0"
+                  >
+                    <div className="text-5xl group-hover:scale-125 transition-transform duration-500 drop-shadow-2xl">{gift.icon}</div>
+                    <div className="text-center">
+                      <p className="text-[11px] font-bold text-white truncate w-24">{gift.name}</p>
+                      <div className="mt-2 bg-primary/20 px-2 py-1 rounded-lg border border-primary/20">
+                        <span className="text-[10px] font-black text-primary">{gift.price} NX</span>
+                      </div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+              <ScrollBar orientation="horizontal" />
+            </ScrollArea>
           </div>
         </div>
 
