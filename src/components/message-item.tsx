@@ -21,7 +21,7 @@ import {
 import { format } from 'date-fns';
 import { 
   CornerUpLeft, Trash2, Check, CheckCheck, Edit2, Copy, Pin, X, Share2, Play, Smile, Lock, Languages, Loader2, Image as ImageIcon,
-  MessageCircle, Star, Pause, ShieldCheck, Clock, Type, Globe
+  MessageCircle, Star, Pause, ShieldCheck, Clock, Type, Globe, Volume2
 } from 'lucide-react';
 import { cn, decryptSignal, isGlobalAdmin, isUserPremium } from '@/lib/utils';
 import { doc, updateDoc, deleteDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
@@ -30,6 +30,7 @@ import { Button } from './ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { useAppState } from '@/lib/store';
 import { transcribeVoice } from '@/ai/flows/voice-to-text-flow';
+import { synthesizeSpeech } from '@/ai/flows/text-to-speech-flow';
 
 const QUICK_REACTIONS = ['❤️', '👍', '🔥', '😂', '😮', '😢', '💯'];
 
@@ -47,9 +48,10 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
   const [transcribedText, setTranscribedText] = useState<string | null>(null);
   const [translatedText, setTranslatedText] = useState<string | null>(null);
   const [isTranslating, setIsTranslating] = useState(false);
+  const [isSynthesizing, setIsSynthesizing] = useState(false);
   
   const audioInstance = useRef<HTMLAudioElement | null>(null);
-  const videoRef = useRef<HTMLVideoElement>(null);
+  const ttsAudioRef = useRef<HTMLAudioElement | null>(null);
 
   const displayContent = useMemo(() => message.contentType === 'text' ? decryptSignal(message.content) : message.content, [message.content, message.contentType]);
   const formattedTime = useMemo(() => message.sentAt ? format(new Date(message.sentAt), 'HH:mm') : '', [message.sentAt]);
@@ -62,7 +64,10 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
       tempAudio.preload = "metadata";
       tempAudio.onloadedmetadata = () => setDuration(tempAudio.duration);
     }
-    return () => { if (audioInstance.current) { audioInstance.current.pause(); audioInstance.current = null; } };
+    return () => { 
+      if (audioInstance.current) { audioInstance.current.pause(); audioInstance.current = null; } 
+      if (ttsAudioRef.current) { ttsAudioRef.current.pause(); ttsAudioRef.current = null; }
+    };
   }, [message.content, message.contentType]);
 
   const handleReaction = async (emoji: string) => {
@@ -102,6 +107,25 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
       setIsTranslating(false);
       toast({ title: "Сообщение переведено" });
     }, 800);
+  };
+
+  const handleSynthesize = async () => {
+    if (!isPremium) {
+      toast({ title: "Premium функция", description: "Озвучка доступна только Premium пользователям." });
+      return;
+    }
+    setIsSynthesizing(true);
+    try {
+      const { audioDataUri } = await synthesizeSpeech({ text: displayContent });
+      const audio = new Audio(audioDataUri);
+      ttsAudioRef.current = audio;
+      audio.play();
+      toast({ title: "Синтез завершен", description: "Воспроизведение голоса..." });
+    } catch (e) {
+      toast({ title: "Ошибка синтеза", variant: "destructive" });
+    } finally {
+      setIsSynthesizing(false);
+    }
   };
 
   const toggleAudio = (e: React.MouseEvent) => {
@@ -248,9 +272,14 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
               {isMe && <ContextMenuItem onClick={() => onEdit(message)} className="gap-3 py-3 font-black text-[10px] uppercase tracking-[0.2em] rounded-xl transition-all"><Edit2 className="w-4 h-4 text-primary" /> Изменить</ContextMenuItem>}
               <ContextMenuItem onClick={() => onForward(message)} className="gap-3 py-3 font-black text-[10px] uppercase tracking-[0.2em] rounded-xl transition-all"><Share2 className="w-4 h-4 text-primary" /> Переслать</ContextMenuItem>
               {isPremium && message.contentType === 'text' && (
-                <ContextMenuItem onClick={handleTranslate} className="gap-3 py-3 font-black text-[10px] uppercase tracking-[0.2em] rounded-xl transition-all">
-                  {isTranslating ? <Loader2 className="w-4 h-4 animate-spin text-accent" /> : <Globe className="w-4 h-4 text-accent" />} Перевести
-                </ContextMenuItem>
+                <>
+                  <ContextMenuItem onClick={handleTranslate} className="gap-3 py-3 font-black text-[10px] uppercase tracking-[0.2em] rounded-xl transition-all">
+                    {isTranslating ? <Loader2 className="w-4 h-4 animate-spin text-accent" /> : <Globe className="w-4 h-4 text-accent" />} Перевести
+                  </ContextMenuItem>
+                  <ContextMenuItem onClick={handleSynthesize} className="gap-3 py-3 font-black text-[10px] uppercase tracking-[0.2em] rounded-xl transition-all">
+                    {isSynthesizing ? <Loader2 className="w-4 h-4 animate-spin text-primary" /> : <Volume2 className="w-4 h-4 text-primary" />} Озвучить
+                  </ContextMenuItem>
+                </>
               )}
               {message.contentType === 'audio' && <ContextMenuItem onClick={handleTranscribe} className="gap-3 py-3 font-black text-[10px] uppercase tracking-[0.2em] rounded-xl transition-all"><Type className="w-4 h-4 text-accent" /> Расшифровать</ContextMenuItem>}
               <DropdownMenuSeparator className="bg-white/5 mx-2" />

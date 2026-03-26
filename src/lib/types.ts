@@ -135,6 +135,7 @@ export interface UserPrivacy {
   lastSeenVisibility: 'everybody' | 'nobody';
   allowGroupsFrom: 'everybody' | 'contacts' | 'premium' | 'nobody';
   whoCanMessageMe: 'everybody' | 'premium';
+  isGhostMode?: boolean;
 }
 
 export interface UserSettings {

@@ -16,7 +16,7 @@ import {
   LogOut, Palette, Check, Settings2, Camera, Lock, Image as ImageIcon, 
   Paintbrush, Shield, UserCircle, Layout, Smile, FileText, ChevronRight,
   ShieldCheck, Eye, Users2, MessageSquareLock, Upload, Smartphone, Share2, Trophy,
-  Bell, Video, Mic, MonitorSmartphone, Key, Trash2, ShieldAlert, RefreshCw, Save, Zap, Moon, Sun, Monitor, Download, Share, Fingerprint, Sparkles, Wand2, Globe, Star
+  Bell, Video, Mic, MonitorSmartphone, Key, Trash2, ShieldAlert, RefreshCw, Save, Zap, Moon, Sun, Monitor, Download, Share, Fingerprint, Sparkles, Wand2, Globe, Star, Ghost, Volume2
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { signOut } from 'firebase/auth';
@@ -66,7 +66,8 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
       phoneVisibility: 'everybody',
       lastSeenVisibility: 'everybody',
       allowGroupsFrom: 'everybody',
-      whoCanMessageMe: 'everybody'
+      whoCanMessageMe: 'everybody',
+      isGhostMode: false
     }
   });
 
@@ -89,7 +90,8 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
           phoneVisibility: 'everybody',
           lastSeenVisibility: 'everybody',
           allowGroupsFrom: 'everybody',
-          whoCanMessageMe: 'everybody'
+          whoCanMessageMe: 'everybody',
+          isGhostMode: false
         }
       });
     }
@@ -303,6 +305,20 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                 )}
               </div>
 
+              <div className="bg-black/20 p-5 rounded-[2rem] border border-white/5 space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="bg-white/5 p-2 rounded-xl"><Ghost className="w-5 h-5 text-muted-foreground" /></div>
+                    <div className="flex flex-col"><span className="text-xs font-bold text-white uppercase">Режим Призрака</span><span className="text-[8px] text-muted-foreground uppercase font-black">Скрыть онлайн-статус (Premium)</span></div>
+                  </div>
+                  <Switch 
+                    disabled={!isUserPremium(profile)}
+                    checked={form.privacy.isGhostMode} 
+                    onCheckedChange={v => setForm({...form, privacy: {...form.privacy, isGhostMode: v}})} 
+                  />
+                </div>
+              </div>
+
               <div className="space-y-4 px-1">
                 <PrivacySelect label="Кто видит номер" value={form.privacy.phoneVisibility} onChange={v => setForm({...form, privacy: {...form.privacy, phoneVisibility: v}})} icon={Smartphone} />
                 <PrivacySelect label="Последний вход" value={form.privacy.lastSeenVisibility} onChange={v => setForm({...form, privacy: {...form.privacy, lastSeenVisibility: v}})} icon={Eye} />
@@ -325,9 +341,12 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                 </div>
               </div>
 
-              <div className="space-y-3">
+              <div className="space-y-3 pb-10">
+                <PremiumFeature icon={Ghost} label="Режим Призрака" description="Полная невидимость и скрытый онлайн-статус" />
+                <PremiumFeature icon={Volume2} label="AI Voice Synthesis" description="Озвучка текстовых сообщений голосом ИИ" />
+                <PremiumFeature icon={Sparkles} label="Анимированные Рамки" description="Динамическая обводка профиля во всех списках" />
                 <PremiumFeature icon={Wand2} label="ИИ Помощник" description="Черновики ответов и генерация аватаров" />
-                <PremiumFeature icon={Globe} label="AI Переводчик" description="Перевод сообщений в контекстном меню" />
+                <PremiumFeature icon={Globe} label="AI Переводчик" description="Мгновенный перевод сообщений в контекстном меню" />
                 <PremiumFeature icon={Mic} label="Voice-to-Text" description="Расшифровка голосовых в текст" />
                 <PremiumFeature icon={Paintbrush} label="Кастомизация" description="Свои фоны чатов и статус-эмодзи" />
                 <PremiumFeature icon={Palette} label="Премиум Темы" description="Nebula, Cyberpunk и Gold стили" />
