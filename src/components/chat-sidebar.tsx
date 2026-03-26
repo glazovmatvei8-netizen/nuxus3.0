@@ -149,7 +149,7 @@ const ChatListItem = memo(({
       </div>
 
       <div 
-        className={cn("relative z-10 bg-[#050508]/80 backdrop-blur-sm will-change-transform w-full border border-transparent select-none rounded-[2rem]", !isDragging && "transition-transform duration-500 cubic-bezier(0.16, 1, 0.3, 1)")}
+        className={cn("relative z-10 bg-white/[0.03] backdrop-blur-sm will-change-transform w-full border border-transparent select-none rounded-[2rem]", !isDragging && "transition-transform duration-500 cubic-bezier(0.16, 1, 0.3, 1)")}
         style={{ transform: `translateX(${offsetX}px)` }}
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
@@ -297,7 +297,7 @@ export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?:
   }, [chats, activeTab, isArchiveView, currentUserProfile?.pinnedChatIds, user?.uid]);
 
   return (
-    <div className="flex flex-col h-full bg-background/20 backdrop-blur-xl overflow-hidden relative max-w-full md:max-w-none">
+    <div className="flex flex-col h-full bg-transparent overflow-hidden relative max-w-full md:max-w-none">
       {/* Search & Header */}
       <div className="px-6 pt-8 pb-4 shrink-0 bg-transparent z-20 space-y-6">
         <div className="flex flex-col items-center gap-4 w-full">

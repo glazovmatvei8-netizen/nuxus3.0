@@ -56,14 +56,14 @@ export default function ChatMain() {
   }, [incomingCalls, activeCallId, setActiveCallId]);
 
   return (
-    <div className="fixed inset-0 flex flex-col w-full bg-background overflow-hidden h-[100dvh]">
+    <div className="fixed inset-0 flex flex-col w-full bg-transparent overflow-hidden h-[100dvh]">
       <NotificationListener />
       <UpdateNotifier />
       
       <div className="flex-1 flex overflow-hidden w-full relative">
         {/* Desktop Navigation Rail - Enhanced Glass UI */}
-        <div className="hidden md:flex w-[84px] h-full flex-col items-center py-8 bg-black/40 backdrop-blur-3xl border-r border-white/[0.05] shrink-0 z-40 relative">
-          <div className="absolute right-0 top-0 bottom-0 w-px bg-gradient-to-b from-transparent via-primary/30 to-transparent" />
+        <div className="hidden md:flex w-[84px] h-full flex-col items-center py-8 bg-white/[0.03] backdrop-blur-3xl border-r border-white/[0.05] shrink-0 z-40 relative">
+          <div className="absolute right-0 top-0 bottom-0 w-px bg-gradient-to-b from-transparent via-primary/20 to-transparent" />
           
           <div className="mb-12 cursor-pointer active:scale-90 transition-transform relative group" onClick={() => { setActiveView('chats'); setCurrentChatId(null); }}>
             <div className="absolute -inset-2 bg-primary/20 blur-xl opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -93,7 +93,7 @@ export default function ChatMain() {
         </div>
 
         {/* Content Sidebar */}
-        <div className={cn("w-full md:w-[380px] lg:w-[420px] h-full flex-shrink-0 border-r border-white/[0.05] transition-all duration-500 z-30 bg-background/40 backdrop-blur-3xl", (currentChatId && !['profile', 'contacts', 'calls', 'archive', 'music', 'wallet', 'discovery', 'games'].includes(activeView)) ? "hidden md:block" : "block")}>
+        <div className={cn("w-full md:w-[380px] lg:w-[420px] h-full flex-shrink-0 border-r border-white/[0.05] transition-all duration-500 z-30 bg-white/[0.01] backdrop-blur-2xl", (currentChatId && !['profile', 'contacts', 'calls', 'archive', 'music', 'wallet', 'discovery', 'games'].includes(activeView)) ? "hidden md:block" : "block")}>
           {activeView === 'chats' && <ChatSidebar />}
           {activeView === 'contacts' && <ContactsView />}
           {activeView === 'calls' && <CallsView />}
@@ -105,7 +105,7 @@ export default function ChatMain() {
         </div>
         
         {/* Main Viewport */}
-        <div className={cn("flex-1 h-full flex flex-col min-w-0 transition-all duration-500 bg-[#020203] relative z-20 chat-pattern-bg", (!currentChatId || ['profile', 'music', 'wallet', 'games'].includes(activeView)) ? "hidden md:flex" : "flex")}>
+        <div className={cn("flex-1 h-full flex flex-col min-w-0 transition-all duration-500 bg-transparent relative z-20 chat-pattern-bg", (!currentChatId || ['profile', 'music', 'wallet', 'games'].includes(activeView)) ? "hidden md:flex" : "flex")}>
           <ChatArea />
         </div>
       </div>
