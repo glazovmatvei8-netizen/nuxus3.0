@@ -2,29 +2,36 @@
 'use client';
 
 import { firebaseConfig } from '@/firebase/config';
-import { initializeApp, getApps, getApp } from 'firebase/app';
-import { getAuth } from 'firebase/auth';
-import { getFirestore, initializeFirestore, persistentLocalCache, persistentMultipleTabManager } from 'firebase/firestore';
+import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
+import { getAuth, Auth } from 'firebase/auth';
+import { getFirestore, initializeFirestore, persistentLocalCache, persistentMultipleTabManager, Firestore } from 'firebase/firestore';
 
 /**
- * Чистая и надежная инициализация Firebase с поддержкой оффлайн-режима.
+ * Безопасная инициализация Firebase с поддержкой оффлайн-режима.
+ * Предотвращает ошибку "initializeFirestore() has already been called".
  */
 export function initializeFirebase() {
-  const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
+  const app: FirebaseApp = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
   
-  // Инициализация Firestore с оффлайн-кэшированием для скорости и доступа без сети
-  const firestore = initializeFirestore(app, {
-    localCache: persistentLocalCache({
-      tabManager: persistentMultipleTabManager()
-    })
-  });
+  let db: Firestore;
+  try {
+    // Пытаемся инициализировать Firestore с расширенными настройками кэширования
+    db = initializeFirestore(app, {
+      localCache: persistentLocalCache({
+        tabManager: persistentMultipleTabManager()
+      })
+    });
+  } catch (e: any) {
+    // Если Firestore уже инициализирован (например, при HMR), получаем текущий экземпляр
+    db = getFirestore(app);
+  }
 
-  const auth = getAuth(app);
+  const auth: Auth = getAuth(app);
 
   return {
     firebaseApp: app,
     auth: auth,
-    firestore: firestore
+    firestore: db
   };
 }
 

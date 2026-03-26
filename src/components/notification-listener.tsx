@@ -3,7 +3,7 @@
 
 import { useEffect, useRef } from 'react';
 import { useUser, useFirestore, useMemoFirebase, useDoc } from '@/firebase';
-import { collection, query, where, onSnapshot, doc, getDoc, updateDoc, arrayUnion, arrayRemove, addDoc, getDocs, limit } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, doc, getDoc, updateDoc, arrayUnion, arrayRemove, addDoc, getDocs, limit, orderBy } from 'firebase/firestore';
 import { useAppState } from '@/lib/store';
 import { useToast } from '@/hooks/use-toast';
 import type { Chat, User } from '@/lib/types';
@@ -11,7 +11,7 @@ import { decryptSignal, isGlobalAdmin } from '@/lib/utils';
 import { isAfter, parseISO, addDays } from 'date-fns';
 
 /**
- * Nuxus Notification & Bot Core v65.5.0
+ * Nuxus Notification & Bot Core v65.6.0
  * Управляет уведомлениями и логикой бота Nuxus Chat Manager.
  */
 export function NotificationListener() {
@@ -21,7 +21,6 @@ export function NotificationListener() {
   const { toast } = useToast();
   
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  const lastProcessedTimestamps = useRef<Record<string, string>>({});
   const processedMessageIds = useRef<Set<string>>(new Set());
   const isFirstLoad = useRef(true);
 
@@ -40,57 +39,69 @@ export function NotificationListener() {
     return () => window.removeEventListener('pointerdown', setupAudio);
   }, []);
 
-  const chatsQuery = useMemoFirebase(() => {
-    if (!db || !user) return null;
-    return query(collection(db, 'chats'), where('participantIds', 'array-contains', user.uid));
-  }, [db, user]);
-
-  // Глобальный слушатель команд бота во всех чатах
+  // Основной слушатель команд бота и уведомлений
   useEffect(() => {
-    if (!db || !user || !chatsQuery) return;
+    if (!db || !user) return;
 
+    // Слушаем сообщения во всех доступных чатах через глобальный индекс или подписку на чаты
+    const chatsQuery = query(collection(db, 'chats'), where('participantIds', 'array-contains', user.uid));
+    
     const unsubscribe = onSnapshot(chatsQuery, (chatSnapshot) => {
-      chatSnapshot.docs.forEach((chatDoc) => {
-        const chatId = chatDoc.id;
-        const chatData = chatDoc.data() as Chat;
+      chatSnapshot.docChanges().forEach((change) => {
+        const chatId = change.doc.id;
+        const chatData = change.doc.data() as Chat;
 
-        // Для каждого чата слушаем новые сообщения
-        const msgQuery = query(
-          collection(db, 'chats', chatId, 'messages'),
-          where('sentAt', '>', new Date(Date.now() - 30000).toISOString()) // Только свежие сообщения за последние 30 сек
-        );
+        // Если чат обновился (пришло новое сообщение)
+        if (change.type === 'modified' || change.type === 'added') {
+          const lastTime = chatData.lastMessageAt;
+          if (!lastTime) return;
 
-        onSnapshot(msgQuery, async (msgSnap) => {
-          for (const change of msgSnap.docChanges()) {
-            if (change.type === 'added') {
-              const msgId = change.doc.id;
-              if (processedMessageIds.current.has(msgId)) continue;
-              processedMessageIds.current.add(msgId);
-
-              const msgData = change.doc.data();
-              const content = decryptSignal(msgData.content).trim();
-
-              if (content.startsWith('!')) {
-                await handleBotCommand(chatId, chatData, content, msgData.senderId, msgId);
-              }
+          // Уведомление (если чат не открыт и это не наше сообщение)
+          if (chatId !== currentChatId && !isFirstLoad.current && chatData.lastSenderId !== user.uid) {
+            if (audioRef.current) {
+              audioRef.current.currentTime = 0;
+              audioRef.current.play().catch(() => {});
             }
+            toast({ title: chatData.name || 'Nuxus Signal', description: 'Новое сообщение' });
           }
-        });
+
+          // Проверка команд бота (слушаем последние сообщения в этом чате)
+          const messagesRef = collection(db, 'chats', chatId, 'messages');
+          const lastMsgQuery = query(messagesRef, orderBy('sentAt', 'desc'), limit(1));
+          
+          getDocs(lastMsgQuery).then((snap) => {
+            if (snap.empty) return;
+            const msgDoc = snap.docs[0];
+            const msgId = msgDoc.id;
+            
+            if (processedMessageIds.current.has(msgId)) return;
+            processedMessageIds.current.add(msgId);
+
+            const msgData = msgDoc.data();
+            // Игнорируем старые сообщения (более 1 минуты)
+            if (Math.abs(Date.now() - new Date(msgData.sentAt).getTime()) > 60000) return;
+
+            const content = decryptSignal(msgData.content).trim();
+            if (content.startsWith('!')) {
+              handleBotCommand(chatId, chatData, content, msgData.senderId, msgId);
+            }
+          });
+        }
       });
+      
+      if (isFirstLoad.current) isFirstLoad.current = false;
     });
 
     return () => unsubscribe();
-  }, [db, user, chatsQuery]);
+  }, [db, user, currentChatId, profile]);
 
   const handleBotCommand = async (chatId: string, chat: Chat, commandText: string, senderId: string, msgId: string) => {
     if (!db || !user) return;
 
-    // Нормализация команды: удаляем лишние пробелы и переводим в нижний регистр
     const parts = commandText.split(/\s+/);
     const cmd = parts[0].toLowerCase();
     const targetUsername = parts[1];
 
-    // Проверка прав (админ чата или глобальный админ)
     const isAdmin = chat.ownerId === senderId || chat.adminIds?.includes(senderId) || isGlobalAdmin(profile);
     
     const sendBotReply = async (text: string) => {
@@ -105,29 +116,25 @@ export function NotificationListener() {
     };
 
     if (cmd === '!хелп' || cmd === '!help' || cmd === '!помощь') {
-      await sendBotReply("🛡️ Доступные команды:\n!бан @user - Заблокировать\n!кик @user - Исключить\n!мут @user - Заглушить\n!анмут @user - Разглушить\n!админ @user - Назначить админом\n!статус - Состояние узла");
+      await sendBotReply("🛡️ Команды:\n!бан @user - Бан\n!кик @user - Кик\n!мут @user - Мут (24ч)\n!анмут @user - Снять мут\n!админ @user - Дать админа\n!статус - Состояние Ядра");
       return;
     }
 
-    if (!isAdmin) {
-      if (cmd.startsWith('!')) {
-        // Если обычный пользователь пытается использовать команду модерации
-        const modCmds = ['!бан', '!ban', '!кик', '!kick', '!мут', '!mute', '!админ', '!admin'];
-        if (modCmds.some(c => cmd.startsWith(c))) {
-          await sendBotReply("🚫 У вас недостаточно прав для этой команды.");
-        }
+    if (!isAdmin && cmd.startsWith('!')) {
+      const modCmds = ['!бан', '!ban', '!кик', '!kick', '!мут', '!mute', '!админ', '!admin'];
+      if (modCmds.some(c => cmd.startsWith(c))) {
+        await sendBotReply("🚫 Недостаточно прав доступа.");
       }
       return;
     }
 
-    // Поиск целевого пользователя по @username
     if (targetUsername) {
       const cleanUsername = targetUsername.startsWith('@') ? targetUsername.toLowerCase() : '@' + targetUsername.toLowerCase();
       const userQ = query(collection(db, 'users'), where('username', '==', cleanUsername), limit(1));
       const userSnap = await getDocs(userQ);
       
       if (userSnap.empty) {
-        await sendBotReply(`❌ Пользователь ${targetUsername} не найден.`);
+        await sendBotReply(`❌ Аккаунт ${targetUsername} не найден.`);
         return;
       }
 
@@ -135,7 +142,7 @@ export function NotificationListener() {
       const targetUid = targetUser.id;
 
       if (targetUid === chat.ownerId) {
-        await sendBotReply("🚫 Нельзя применить санкции к создателю чата.");
+        await sendBotReply("🚫 Ошибка: Нельзя применить санкции к Создателю.");
         return;
       }
 
@@ -148,7 +155,7 @@ export function NotificationListener() {
             participantIds: arrayRemove(targetUid),
             adminIds: arrayRemove(targetUid)
           });
-          await sendBotReply(`✅ ${targetUser.name} исключен из сообщества.`);
+          await sendBotReply(`✅ ${targetUser.name} исключен из Ядра.`);
           break;
 
         case '!бан':
@@ -183,54 +190,13 @@ export function NotificationListener() {
           await updateDoc(chatRef, { 
             adminIds: arrayUnion(targetUid)
           });
-          await sendBotReply(`⭐ ${targetUser.name} теперь администратор.`);
-          break;
-
-        case '!разжаловать':
-        case '!demote':
-          await updateDoc(chatRef, { 
-            adminIds: arrayRemove(targetUid)
-          });
-          await sendBotReply(`🎖️ ${targetUser.name} больше не администратор.`);
+          await sendBotReply(`⭐ ${targetUser.name} назначен Администратором.`);
           break;
       }
     } else if (cmd === '!статус' || cmd === '!status') {
-      await sendBotReply(`📊 Состояние Ядра: Стабильно\nУчастников: ${chat.participantIds.length}\nШифрование: QES 2.0 Active`);
+      await sendBotReply(`📊 Узел: Стабилен\nСинхронизация: Активна\nШифрование: QES 2.0`);
     }
   };
-
-  // Стандартная логика уведомлений
-  useEffect(() => {
-    if (!db || !user || !chatsQuery || !profile) return;
-
-    const unsubscribe = onSnapshot(chatsQuery, (snapshot) => {
-      snapshot.docChanges().forEach((change) => {
-        const chatData = change.doc.data() as any;
-        const chatId = change.doc.id;
-
-        if (change.type === 'modified') {
-          const lastTime = lastProcessedTimestamps.current[chatId];
-          const newTime = chatData.lastMessageAt;
-
-          if (newTime && newTime !== lastTime) {
-            lastProcessedTimestamps.current[chatId] = newTime;
-            const isSelfMessage = chatData.lastSenderId === user.uid;
-            
-            if (chatId !== currentChatId && !isFirstLoad.current && !isSelfMessage) {
-              if (audioRef.current) {
-                audioRef.current.currentTime = 0;
-                audioRef.current.play().catch(() => {});
-              }
-              toast({ title: chatData.name || 'Nuxus Signal', description: 'Новое сообщение' });
-            }
-          }
-        }
-      });
-      if (isFirstLoad.current) isFirstLoad.current = false;
-    });
-
-    return () => unsubscribe();
-  }, [db, user, chatsQuery, currentChatId, toast, profile]);
 
   return null;
 }
