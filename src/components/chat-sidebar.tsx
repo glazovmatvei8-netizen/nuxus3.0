@@ -72,6 +72,14 @@ const ChatListItem = memo(({
     return decryptSignal(lastMsg.content);
   }, [lastMsg]);
 
+  // Логика префикса: "Вы:", "Имя:" или просто текст
+  const messagePrefix = useMemo(() => {
+    if (!lastMsg) return null;
+    if (lastMsg.senderId === currentUserId) return <span className="text-primary/60 font-black mr-1">Вы:</span>;
+    if (chat.type !== 'private') return <span className="text-primary/60 font-black mr-1">{lastMsg.senderName?.split(' ')[0]}:</span>;
+    return null;
+  }, [lastMsg, currentUserId, chat.type]);
+
   const isEncrypted = lastMsg?.contentType === 'text' && lastMsg?.content?.startsWith('NX_');
 
   const handleTouchStart = (e: React.TouchEvent) => {
@@ -167,17 +175,18 @@ const ChatListItem = memo(({
               </div>
               
               <div className="flex-1 min-w-0 h-full flex flex-col justify-center">
-                <div className="flex items-center justify-between mb-1.5">
+                <div className="flex items-center justify-between mb-1">
                   <span className="font-black text-[17px] truncate flex items-center gap-2 tracking-tight italic text-white/90">
                     {finalDisplayName} 
                     {otherProfile?.isPremium && <Star className="w-3.5 h-3.5 text-accent fill-accent" />}
                     {isPinned && <Pin className="w-3 h-3 text-primary rotate-45" />}
                   </span>
-                  <span className="text-[11px] text-primary/80 font-black tracking-widest tabular-nums">{displayTime}</span>
+                  <span className="text-[11px] text-primary/80 font-black tracking-widest tabular-nums ml-2 shrink-0">{displayTime}</span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <p className="text-[13px] text-muted-foreground/70 truncate flex-1 flex items-center gap-2 font-medium">
-                    {isEncrypted && <Lock className="w-3.5 h-3.5 shrink-0 text-primary/40" />}
+                  <p className="text-[13px] text-muted-foreground/70 truncate flex-1 flex items-center font-medium">
+                    {isEncrypted && <Lock className="w-3.5 h-3.5 shrink-0 text-primary/40 mr-1.5" />}
+                    {messagePrefix}
                     {decryptedPreview}
                   </p>
                 </div>

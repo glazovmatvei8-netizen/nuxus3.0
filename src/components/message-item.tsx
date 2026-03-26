@@ -55,9 +55,7 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
   const formattedTime = message.sentAt ? format(new Date(message.sentAt), 'HH:mm') : '';
 
   const isOfflinePending = useMemo(() => {
-    // Если сообщение отправлено только что, а интернета нет - показываем часики
-    // Firestore автоматически пометит сообщение как 'local' в метаданных, если мы используем snapshots
-    // Для MVP просто проверим разницу во времени и navigator.onLine (упрощенно)
+    // Простая проверка на локальное сообщение при отсутствии сети
     if (!navigator.onLine && isMe && (new Date().getTime() - new Date(message.sentAt).getTime() < 60000)) {
       return true;
     }
