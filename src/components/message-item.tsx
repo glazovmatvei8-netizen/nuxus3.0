@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, memo, useRef, useEffect, useMemo } from 'react';
@@ -28,7 +27,6 @@ import { doc, updateDoc, deleteDoc, arrayUnion, arrayRemove } from 'firebase/fir
 import type { Message, PollOption } from '@/lib/types';
 import { Button } from './ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { transcribeVoice } from '@/ai/flows/voice-to-text-flow';
 import { useAppState } from '@/lib/store';
 
 const QUICK_REACTIONS = ['❤️', '👍', '🔥', '😂', '😮', '😢', '💯'];
@@ -36,13 +34,9 @@ const QUICK_REACTIONS = ['❤️', '👍', '🔥', '😂', '😮', '😢', '💯
 export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForward, isAdmin = false, isGroup = false, onEdit, highlight = false, viewerProfile }: any) => {
   const { user } = useUser();
   const db = useFirestore();
-  const { toast } = useToast();
   const { setInspectedUserId } = useAppState();
   
   const [isPlaying, setIsPlaying] = useState(false);
-  const [isTranscribing, setIsTranscribing] = useState(false);
-  const [transcription, setTranscription] = useState<string | null>(null);
-  
   const [progress, setProgress] = useState(0);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
@@ -50,13 +44,11 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
   const audioInstance = useRef<HTMLAudioElement | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
 
-  const isKernelAdmin = useMemo(() => isGlobalAdmin(viewerProfile), [viewerProfile]);
   const displayContent = useMemo(() => message.contentType === 'text' ? decryptSignal(message.content) : message.content, [message.content, message.contentType]);
-  const formattedTime = message.sentAt ? format(new Date(message.sentAt), 'HH:mm') : '';
+  const formattedTime = useMemo(() => message.sentAt ? format(new Date(message.sentAt), 'HH:mm') : '', [message.sentAt]);
 
   const isOfflinePending = useMemo(() => {
-    // Простая проверка на локальное сообщение при отсутствии сети
-    if (!navigator.onLine && isMe && (new Date().getTime() - new Date(message.sentAt).getTime() < 60000)) {
+    if (typeof navigator !== 'undefined' && !navigator.onLine && isMe && (new Date().getTime() - new Date(message.sentAt).getTime() < 60000)) {
       return true;
     }
     return false;
@@ -111,7 +103,6 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
         onClick={(e) => { e.stopPropagation(); window.open(message.content, '_blank'); }}
       >
         <img src={message.content} alt="Image" className="w-full h-auto object-cover max-h-[450px]" loading="lazy" />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
       </div>
     );
 
@@ -130,7 +121,6 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
     if (message.contentType === 'audio') return (
       <div className="flex items-center gap-4 p-2 min-w-[260px] cursor-pointer group/audio" onClick={toggleAudio}>
         <div className="relative">
-          <div className="absolute -inset-1 bg-primary blur-md opacity-0 group-hover/audio:opacity-40 transition-opacity" />
           <Button size="icon" className="h-12 w-12 rounded-full bg-primary text-white shadow-xl relative z-10">
             {isPlaying ? <Pause className="fill-current" /> : <Play fill="currentColor" className="ml-1" />}
           </Button>
@@ -166,11 +156,13 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
   );
 
   return (
-    <div className={cn("w-full flex mb-4 transition-all duration-500", isMe ? "justify-end pr-2" : "justify-start pl-2", highlight && "scale-105 z-10")}>
+    <div 
+      className={cn("w-full flex mb-4 transition-all duration-300", isMe ? "justify-end pr-2" : "justify-start pl-2", highlight && "scale-105 z-10")}
+      style={{ contentVisibility: 'auto', containIntrinsicSize: '0 80px' }}
+    >
       <div className={cn("flex gap-4 max-w-[92%] items-end", isMe ? "flex-row-reverse" : "flex-row")}>
         {!isMe && (
           <div className="cursor-pointer active:scale-90 transition-transform relative group" onClick={() => setInspectedUserId(message.senderId)}>
-            <div className="absolute inset-0 bg-primary/20 blur-lg rounded-full opacity-0 group-hover:opacity-100 transition-opacity" />
             <UserAvatar userId={message.senderId} className="h-10 w-10 shrink-0 border-2 border-white/5 shadow-lg relative z-10" fallbackName={message.senderName} />
           </div>
         )}
@@ -181,7 +173,7 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
             <ContextMenuTrigger>
               <div className="cursor-pointer active:scale-[0.98] outline-none group/bubble">
                 <div className={cn(
-                  "p-3.5 rounded-[2rem] transition-all duration-500 relative", 
+                  "p-3.5 rounded-[2rem] transition-all duration-300 relative will-change-transform", 
                   isMe ? "message-bubble-me rounded-br-none" : "message-bubble-other rounded-bl-none text-white",
                   highlight && "ring-2 ring-primary shadow-[0_0_25px_rgba(168,85,247,0.5)] scale-105"
                 )}>
@@ -218,7 +210,7 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
             <ContextMenuContent className="w-64 bg-[#0a0a0c]/90 backdrop-blur-3xl border-white/10 rounded-[1.8rem] shadow-2xl p-1.5 animate-in zoom-in-95 duration-200">
               <div className="flex justify-around p-2.5 border-b border-white/5 mb-1.5">
                 {QUICK_REACTIONS.map(emoji => (
-                  <button key={emoji} onClick={() => handleReaction(emoji)} className="text-2xl hover:scale-125 hover:drop-shadow-[0_0_8px_rgba(255,255,255,0.5)] transition-all duration-300">{emoji}</button>
+                  <button key={emoji} onClick={() => handleReaction(emoji)} className="text-2xl hover:scale-125 transition-all duration-300">{emoji}</button>
                 ))}
               </div>
               <ContextMenuItem onClick={() => onReply(message)} className="gap-3 py-3 font-black text-[10px] uppercase tracking-[0.2em] rounded-xl transition-all"><CornerUpLeft className="w-4 h-4 text-primary" /> Ответить</ContextMenuItem>
@@ -226,7 +218,7 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
               <ContextMenuItem onClick={() => onForward(message)} className="gap-3 py-3 font-black text-[10px] uppercase tracking-[0.2em] rounded-xl transition-all"><Share2 className="w-4 h-4 text-primary" /> Переслать</ContextMenuItem>
               <ContextMenuItem onClick={() => onPin(message)} className="gap-3 py-3 font-black text-[10px] uppercase tracking-[0.2em] rounded-xl transition-all"><Pin className="w-4 h-4 text-primary" /> Закрепить</ContextMenuItem>
               <DropdownMenuSeparator className="bg-white/5 mx-2" />
-              {(isMe || isAdmin || isKernelAdmin) && (
+              {(isMe || isAdmin) && (
                 <ContextMenuItem onClick={() => deleteDoc(doc(db!, 'chats', chatId, 'messages', message.id))} className="text-red-500 gap-3 py-3 font-black text-[10px] uppercase tracking-[0.2em] rounded-xl hover:bg-red-500/10 transition-all"><Trash2 className="w-4 h-4" /> Удалить</ContextMenuItem>
               )}
             </ContextMenuContent>

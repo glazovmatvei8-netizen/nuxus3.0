@@ -19,7 +19,78 @@ import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { formatDisplayName, cn, compressImage, encryptSignal, isGlobalAdmin, decryptSignal, formatLastSeen } from '@/lib/utils';
 import type { Message, User as UserType, Chat } from '@/lib/types';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { ScrollArea } from './ui/scroll-area';
+
+// Изолированный компонент ввода для предотвращения перерисовок всего чата
+const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId }: any) => {
+  const [messageInput, setMessageInput] = useState('');
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const { user } = useUser();
+  const db = useFirestore();
+
+  const handleInputChange = (val: string) => {
+    setMessageInput(val);
+    if (user && currentChatId && db) {
+      updateDocumentNonBlocking(doc(db, 'chats', currentChatId), {
+        [`typing.${user.uid}`]: true
+      });
+      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+      typingTimeoutRef.current = setTimeout(() => {
+        updateDocumentNonBlocking(doc(db, 'chats', currentChatId), {
+          [`typing.${user.uid}`]: false
+        });
+      }, 3000);
+    }
+  };
+
+  const handleSend = () => {
+    if (!messageInput.trim()) return;
+    onSendMessage(messageInput, 'text');
+    setMessageInput('');
+  };
+
+  if (!canPost) return null;
+
+  return (
+    <footer className="p-3 pb-6 bg-black/40 backdrop-blur-3xl border-t border-white/10 shrink-0 z-40 relative">
+      <div className="max-w-4xl mx-auto space-y-2 relative">
+        <div className="flex gap-3 items-center">
+          <Popover>
+            <PopoverTrigger asChild><Button variant="ghost" size="icon" className="text-white/60 hover:text-primary"><Paperclip className="w-5 h-5" /></Button></PopoverTrigger>
+            <PopoverContent side="top" align="start" className="w-48 bg-[#1c1c1e]/95 backdrop-blur-3xl border-white/10 rounded-[1.8rem] p-1.5 mb-2 shadow-2xl">
+              <Button variant="ghost" className="w-full justify-start gap-3 rounded-xl h-11 text-[10px] font-black uppercase tracking-widest text-white/80 hover:bg-white/5" onClick={() => fileInputRef.current?.click()}><ImageIcon className="w-4 h-4 text-primary" /> Галерея</Button>
+              <Button variant="ghost" className="w-full justify-start gap-3 rounded-xl h-11 text-[10px] font-black uppercase tracking-widest text-white/80 hover:bg-white/5" onClick={onPollOpen}><AtSign className="w-4 h-4 text-accent" /> Опрос</Button>
+            </PopoverContent>
+          </Popover>
+          
+          <div className="flex-1 flex items-center bg-white/[0.08] rounded-full border border-white/[0.1] h-11 px-4 relative group transition-all focus-within:bg-white/[0.12] focus-within:border-primary/30">
+            <Input 
+              placeholder="Сообщение" 
+              className="bg-transparent border-none focus-visible:ring-0 text-white placeholder:text-white/30 font-medium" 
+              value={messageInput} 
+              onChange={e => handleInputChange(e.target.value)} 
+              onKeyDown={e => e.key === 'Enter' && handleSend()} 
+            />
+            <Button variant="ghost" size="icon" className="text-white/40 hover:text-primary transition-colors"><Smile className="w-5 h-5" /></Button>
+          </div>
+
+          {messageInput.trim() ? (
+            <Button size="icon" className="h-10 w-10 rounded-full bg-primary text-white shadow-xl shadow-primary/40 active:scale-90 transition-all hover:scale-105" onClick={handleSend}>
+              <Send className="w-5 h-5" />
+            </Button>
+          ) : (
+            <div className="flex items-center gap-1">
+              <Button size="icon" variant="ghost" className="h-10 w-10 text-white/60 hover:text-primary transition-colors"><Mic className="w-5 h-5" /></Button>
+              <Button size="icon" variant="ghost" className="h-10 w-10 text-white/60 hover:text-primary transition-colors"><Video className="w-5 h-5" /></Button>
+            </div>
+          )}
+        </div>
+      </div>
+      <input type="file" ref={fileInputRef} hidden accept="image/*,video/*" />
+    </footer>
+  );
+});
+ChatInputBar.displayName = 'ChatInputBar';
 
 const MessageList = memo(({ 
   messages, userId, chatId, onReply, onPin, amIPremium, isAdmin, isGroup, onEdit, onForward, searchQuery, viewerProfile
@@ -66,23 +137,19 @@ MessageList.displayName = 'MessageList';
 export default function ChatArea() {
   const { user: firebaseUser } = useUser();
   const db = useFirestore();
-  const { currentChatId, setCurrentChatId, setForwardingMessage, setLocalDrafts } = useAppState();
+  const { currentChatId, setCurrentChatId, setForwardingMessage } = useAppState();
   
   const [isChatInfoOpen, setIsChatInfoOpen] = useState(false);
   const [isPollModalOpen, setIsPollModalOpen] = useState(false);
   const [replyTo, setReplyTo] = useState<Message | null>(null);
   const [editingMsg, setEditingMsg] = useState<Message | null>(null);
-  const [messageInput, setMessageInput] = useState('');
   const [isSearchMode, setIsSearchMode] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [isJoining, setIsJoining] = useState(false);
-  const [isTyping, setIsTyping] = useState(false);
   const [showScrollButton, setShowScrollButton] = useState(false);
   
-  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const scrollAreaRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
   
   const { toast } = useToast();
 
@@ -94,20 +161,9 @@ export default function ChatArea() {
 
   const isKernelAdmin = useMemo(() => isGlobalAdmin(userProfile), [userProfile]);
 
-  useEffect(() => {
-    if (editingMsg && editingMsg.contentType === 'text') {
-      setMessageInput(decryptSignal(editingMsg.content));
-    }
-  }, [editingMsg]);
-
   const isParticipant = useMemo(() => {
     return chat?.participantIds?.includes(firebaseUser?.uid || '');
   }, [chat, firebaseUser]);
-
-  const isChatAdmin = useMemo(() => {
-    if (!chat || !firebaseUser) return false;
-    return chat.ownerId === firebaseUser.uid || chat.adminIds?.includes(firebaseUser.uid) || isKernelAdmin;
-  }, [chat, firebaseUser, isKernelAdmin]);
 
   const canPost = useMemo(() => {
     if (!chat || !firebaseUser) return false;
@@ -159,26 +215,6 @@ export default function ChatArea() {
     return `${count} участников`;
   }, [chat, otherProfile, typingUsers]);
 
-  const handleInputChange = (val: string) => {
-    setMessageInput(val);
-    
-    if (firebaseUser && currentChatId && db) {
-      if (!isTyping) {
-        setIsTyping(true);
-        updateDocumentNonBlocking(doc(db, 'chats', currentChatId), {
-          [`typing.${firebaseUser.uid}`]: true
-        });
-      }
-      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
-      typingTimeoutRef.current = setTimeout(() => {
-        setIsTyping(false);
-        updateDocumentNonBlocking(doc(db, 'chats', currentChatId), {
-          [`typing.${firebaseUser.uid}`]: false
-        });
-      }, 3000);
-    }
-  };
-
   const scrollToBottom = useCallback((behavior: ScrollBehavior = 'smooth') => {
     if (messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior });
@@ -189,72 +225,34 @@ export default function ChatArea() {
     scrollToBottom('auto');
   }, [currentChatId, scrollToBottom]);
 
-  const handleJoinChat = async () => {
-    if (!currentChatId || !firebaseUser || !db) return;
-    setIsJoining(true);
-    try {
-      await updateDoc(doc(db, 'chats', currentChatId), {
-        participantIds: arrayUnion(firebaseUser.uid)
-      });
-      toast({ title: "Вы вступили в сообщество" });
-    } catch (e: any) {
-      toast({ title: "Ошибка вступления", description: e.message, variant: "destructive" });
-    } finally {
-      setIsJoining(false);
-    }
-  };
-
-  const handleSendMessage = useCallback(async (content_msg: string = messageInput, type_msg: Message['contentType'] = 'text') => {
-    if (!content_msg.trim() && type_msg !== 'video_note' && type_msg !== 'sticker' && type_msg !== 'audio') return;
-    if (!currentChatId || !firebaseUser || !db || !canPost) return;
+  const handleSendMessage = useCallback(async (content_msg: string, type_msg: Message['contentType'] = 'text') => {
+    if (!content_msg.trim() || !currentChatId || !firebaseUser || !db || !canPost) return;
     
-    if (type_msg === 'text') {
-      setIsTyping(false);
-      updateDocumentNonBlocking(doc(db, 'chats', currentChatId), {
-        [`typing.${firebaseUser.uid}`]: false
-      });
-    }
-
-    let finalContent = content_msg;
-    if (type_msg === 'text') finalContent = encryptSignal(content_msg);
-    else if (type_msg === 'image') finalContent = await compressImage(content_msg, 800, 0.4);
-
-    const captureReply = replyTo;
-    const captureEdit = editingMsg;
-
-    if (type_msg === 'text') {
-      setMessageInput('');
-      if (currentChatId) setLocalDrafts(prev => ({ ...prev, [currentChatId]: '' }));
-    }
-    
-    setReplyTo(null); 
-    setEditingMsg(null); 
-
-    if (captureEdit) {
-      updateDocumentNonBlocking(doc(db, 'chats', currentChatId, 'messages', captureEdit.id), { content: finalContent, editedAt: new Date().toISOString() });
-      return;
-    }
+    let finalContent = type_msg === 'text' ? encryptSignal(content_msg) : content_msg;
+    if (type_msg === 'image') finalContent = await compressImage(content_msg, 800, 0.4);
 
     const msgData: Partial<Message> = { 
       chatId: currentChatId, senderId: firebaseUser.uid, senderName: userProfile?.name || 'Nuxus User', 
       content: finalContent, contentType: type_msg, sentAt: new Date().toISOString(), isRead: false
     };
-    if (captureReply) { 
-      msgData.replyToId = captureReply.id; 
-      msgData.replyToContent = captureReply.contentType === 'text' ? captureReply.content : `[${captureReply.contentType}]`; 
+    
+    if (replyTo) { 
+      msgData.replyToId = replyTo.id; 
+      msgData.replyToContent = replyTo.contentType === 'text' ? replyTo.content : `[${replyTo.contentType}]`; 
+      setReplyTo(null);
     }
     
     await addDoc(collection(db, 'chats', currentChatId, 'messages'), msgData);
     updateDocumentNonBlocking(doc(db, 'chats', currentChatId), { lastMessageAt: new Date().toISOString(), lastSenderId: firebaseUser.uid });
     
     setTimeout(() => scrollToBottom('smooth'), 100);
-  }, [messageInput, currentChatId, firebaseUser, db, userProfile, replyTo, editingMsg, setLocalDrafts, scrollToBottom, canPost]);
+  }, [currentChatId, firebaseUser, db, userProfile, replyTo, canPost, scrollToBottom]);
 
-  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+  const handleScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
     const target = e.currentTarget;
     const distanceToBottom = target.scrollHeight - target.scrollTop - target.clientHeight;
     setShowScrollButton(distanceToBottom > 300);
-  };
+  }, []);
 
   const chatDisplayName = useMemo(() => {
     if (chat?.type === 'private') {
@@ -309,10 +307,27 @@ export default function ChatArea() {
       </header>
 
       <div className="flex-1 relative overflow-hidden flex flex-col">
-        <ScrollArea className="flex-1 w-full relative z-10 scrollbar-hide" onScroll={handleScroll}>
-          <MessageList messages={messages} userId={firebaseUser?.uid} chatId={currentChatId} onReply={setReplyTo} onEdit={setEditingMsg} onForward={setForwardingMessage} amIPremium={userProfile?.isPremium} isAdmin={isKernelAdmin} isGroup={chat?.type !== 'private'} searchQuery={searchQuery} viewerProfile={userProfile} />
+        {/* Native scroll for better performance */}
+        <div 
+          ref={scrollContainerRef}
+          className="flex-1 w-full relative z-10 overflow-y-auto scrollbar-hide scroll-smooth" 
+          onScroll={handleScroll}
+        >
+          <MessageList 
+            messages={messages} 
+            userId={firebaseUser?.uid} 
+            chatId={currentChatId} 
+            onReply={setReplyTo} 
+            onEdit={setEditingMsg} 
+            onForward={setForwardingMessage} 
+            amIPremium={userProfile?.isPremium} 
+            isAdmin={isKernelAdmin} 
+            isGroup={chat?.type !== 'private'} 
+            searchQuery={searchQuery} 
+            viewerProfile={userProfile} 
+          />
           <div ref={messagesEndRef} className="h-4" />
-        </ScrollArea>
+        </div>
 
         {showScrollButton && (
           <button 
@@ -326,49 +341,21 @@ export default function ChatArea() {
 
       {(!isParticipant && !isKernelAdmin && chat) ? (
         <div className="p-4 bg-primary/20 backdrop-blur-3xl border-t border-white/10 flex items-center justify-center shrink-0 z-30">
-          <Button onClick={handleJoinChat} disabled={isJoining} className="h-12 px-10 rounded-2xl bg-primary text-white font-black uppercase tracking-widest gap-2 shadow-2xl shadow-primary/40 transition-all hover:scale-105 active:scale-95">
+          <Button onClick={() => setIsJoining(true)} disabled={isJoining} className="h-12 px-10 rounded-2xl bg-primary text-white font-black uppercase tracking-widest gap-2 shadow-2xl shadow-primary/40 transition-all hover:scale-105 active:scale-95">
             {isJoining ? <Loader2 className="animate-spin w-4 h-4" /> : <><UserPlus className="w-5 h-5" /> Вступить в сообщество</>}
           </Button>
         </div>
-      ) : !canPost && chat ? (
-        <div className="p-4 bg-black/40 backdrop-blur-3xl border-t border-white/10 text-center shrink-0 z-30">
-          <p className="text-[10px] font-black text-white/40 uppercase tracking-[0.3em] ml-[0.3em]">Канал в режиме чтения</p>
-        </div>
       ) : (
-        <footer className="p-3 pb-6 bg-black/40 backdrop-blur-3xl border-t border-white/10 shrink-0 z-40 relative">
-          <div className="max-w-4xl mx-auto space-y-2 relative">
-            <div className="flex gap-3 items-center">
-              <Popover>
-                <PopoverTrigger asChild><Button variant="ghost" size="icon" className="text-white/60 hover:text-primary"><Paperclip className="w-5 h-5" /></Button></PopoverTrigger>
-                <PopoverContent side="top" align="start" className="w-48 bg-[#1c1c1e]/95 backdrop-blur-3xl border-white/10 rounded-[1.8rem] p-1.5 mb-2 shadow-2xl">
-                  <Button variant="ghost" className="w-full justify-start gap-3 rounded-xl h-11 text-[10px] font-black uppercase tracking-widest text-white/80 hover:bg-white/5" onClick={() => fileInputRef.current?.click()}><ImageIcon className="w-4 h-4 text-primary" /> Галерея</Button>
-                  <Button variant="ghost" className="w-full justify-start gap-3 rounded-xl h-11 text-[10px] font-black uppercase tracking-widest text-white/80 hover:bg-white/5" onClick={() => setIsPollModalOpen(true)}><AtSign className="w-4 h-4 text-accent" /> Опрос</Button>
-                </PopoverContent>
-              </Popover>
-              
-              <div className="flex-1 flex items-center bg-white/[0.08] rounded-full border border-white/[0.1] h-11 px-4 relative group transition-all focus-within:bg-white/[0.12] focus-within:border-primary/30">
-                <Input placeholder="Сообщение" className="bg-transparent border-none focus-visible:ring-0 text-white placeholder:text-white/30 font-medium" value={messageInput} onChange={e => handleInputChange(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSendMessage()} />
-                <Button variant="ghost" size="icon" className="text-white/40 hover:text-primary transition-colors"><Smile className="w-5 h-5" /></Button>
-              </div>
-
-              {(messageInput.trim() || editingMsg) ? (
-                <Button size="icon" className="h-10 w-10 rounded-full bg-primary text-white shadow-xl shadow-primary/40 active:scale-90 transition-all hover:scale-105" onClick={() => handleSendMessage()}>
-                  <Send className="w-5 h-5" />
-                </Button>
-              ) : (
-                <div className="flex items-center gap-1">
-                  <Button size="icon" variant="ghost" className="h-10 w-10 text-white/60 hover:text-primary transition-colors"><Mic className="w-5 h-5" /></Button>
-                  <Button size="icon" variant="ghost" className="h-10 w-10 text-white/60 hover:text-primary transition-colors"><Video className="w-5 h-5" /></Button>
-                </div>
-              )}
-            </div>
-          </div>
-        </footer>
+        <ChatInputBar 
+          onSendMessage={handleSendMessage} 
+          canPost={canPost} 
+          onPollOpen={() => setIsPollModalOpen(true)}
+          currentChatId={currentChatId}
+        />
       )}
 
       {chat && <ChatInfoModal open={isChatInfoOpen} onOpenChange={setIsChatInfoOpen} chat={chat as any} />}
       {currentChatId && <CreatePollModal open={isPollModalOpen} onOpenChange={setIsPollModalOpen} chatId={currentChatId} />}
-      <input type="file" ref={fileInputRef} hidden accept="image/*,video/*" />
     </div>
   );
 }
