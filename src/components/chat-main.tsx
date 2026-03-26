@@ -61,13 +61,13 @@ export default function ChatMain() {
       <UpdateNotifier />
       
       <div className="flex-1 flex overflow-hidden w-full relative">
-        {/* Desktop Navigation Rail - Photo Matched */}
-        <div className="hidden md:flex w-[84px] h-full flex-col items-center py-8 bg-[#020203] border-r border-white/[0.05] shrink-0 z-40 relative">
-          <div className="absolute right-0 top-0 bottom-0 w-px bg-gradient-to-b from-transparent via-primary/20 to-transparent" />
+        {/* Desktop Navigation Rail - Enhanced Glass UI */}
+        <div className="hidden md:flex w-[84px] h-full flex-col items-center py-8 bg-black/40 backdrop-blur-3xl border-r border-white/[0.05] shrink-0 z-40 relative">
+          <div className="absolute right-0 top-0 bottom-0 w-px bg-gradient-to-b from-transparent via-primary/30 to-transparent" />
           
           <div className="mb-12 cursor-pointer active:scale-90 transition-transform relative group" onClick={() => { setActiveView('chats'); setCurrentChatId(null); }}>
             <div className="absolute -inset-2 bg-primary/20 blur-xl opacity-0 group-hover:opacity-100 transition-opacity" />
-            <div className="w-14 h-14 bg-white/[0.03] rounded-[1.2rem] flex items-center justify-center border border-white/10 shadow-[0_0_20px_rgba(168,85,247,0.1)] relative z-10">
+            <div className="w-14 h-14 bg-white/[0.05] rounded-[1.2rem] flex items-center justify-center border border-white/10 shadow-[0_0_20px_rgba(168,85,247,0.2)] relative z-10">
               <Layers className="w-7 h-7 text-primary" />
             </div>
           </div>
@@ -93,7 +93,7 @@ export default function ChatMain() {
         </div>
 
         {/* Content Sidebar */}
-        <div className={cn("w-full md:w-[380px] lg:w-[420px] h-full flex-shrink-0 border-r border-white/[0.05] transition-all duration-500 z-30 bg-background/80 backdrop-blur-3xl", (currentChatId && !['profile', 'contacts', 'calls', 'archive', 'music', 'wallet', 'discovery', 'games'].includes(activeView)) ? "hidden md:block" : "block")}>
+        <div className={cn("w-full md:w-[380px] lg:w-[420px] h-full flex-shrink-0 border-r border-white/[0.05] transition-all duration-500 z-30 bg-background/40 backdrop-blur-3xl", (currentChatId && !['profile', 'contacts', 'calls', 'archive', 'music', 'wallet', 'discovery', 'games'].includes(activeView)) ? "hidden md:block" : "block")}>
           {activeView === 'chats' && <ChatSidebar />}
           {activeView === 'contacts' && <ContactsView />}
           {activeView === 'calls' && <CallsView />}
@@ -112,9 +112,9 @@ export default function ChatMain() {
 
       <MusicPlayer />
 
-      {/* Bottom Navigation (Mobile) */}
+      {/* Bottom Navigation (Mobile) - Enhanced Glass */}
       {!currentChatId && (
-        <div className="md:hidden fixed bottom-10 left-1/2 -translate-x-1/2 w-[92%] h-[84px] bg-black/60 backdrop-blur-[60px] border border-white/10 rounded-[2.5rem] flex items-center justify-between px-6 z-50 shadow-[0_20px_50px_rgba(0,0,0,0.8)]">
+        <div className="md:hidden fixed bottom-10 left-1/2 -translate-x-1/2 w-[92%] h-[84px] bg-black/40 backdrop-blur-[60px] border border-white/10 rounded-[2.5rem] flex items-center justify-between px-6 z-50 shadow-[0_20px_50px_rgba(0,0,0,0.6)]">
           <div className="flex flex-1 justify-around items-center gap-1">
             <NavButton icon={Phone} label="ЗВОНКИ" active={activeView === 'calls'} onClick={() => setActiveView('calls')} />
             <NavButton icon={Music} label="АУДИО" active={activeView === 'music'} onClick={() => setActiveView('music')} />
@@ -123,7 +123,7 @@ export default function ChatMain() {
             <NavButton icon={Wallet} label="БАНК" active={activeView === 'wallet'} onClick={() => setActiveView('wallet')} />
             <NavButton icon={Settings} label="ПРОФИЛЬ" active={activeView === 'profile'} onClick={() => setActiveView('profile')} isProfile userId={user?.uid} />
           </div>
-          <button onClick={() => setIsSearchOpen(true)} className="ml-2 h-[60px] w-[60px] rounded-full bg-primary/10 flex items-center justify-center shrink-0 border border-primary/20 shadow-[0_0_20px_rgba(168,85,247,0.2)] hover:bg-primary/20 transition-all active:scale-90">
+          <button onClick={() => setIsSearchOpen(true)} className="ml-2 h-[60px] w-[60px] rounded-full bg-primary/15 flex items-center justify-center shrink-0 border border-primary/20 shadow-[0_0_20px_rgba(168,85,247,0.2)] hover:bg-primary/25 transition-all active:scale-90">
             <Search className="w-7 h-7 text-primary" />
           </button>
         </div>
@@ -141,7 +141,7 @@ export default function ChatMain() {
 function RailButton({ icon: Icon, active, onClick, label }: { icon: any, active?: boolean, onClick: () => void, label: string }) {
   return (
     <button onClick={onClick} className={cn("group flex flex-col items-center gap-1.5 transition-all outline-none", active ? "text-primary" : "text-muted-foreground hover:text-white")}>
-      <div className={cn("w-12 h-12 rounded-2xl flex items-center justify-center transition-all relative", active ? "bg-primary/10 shadow-[0_0_15px_rgba(168,85,247,0.15)]" : "group-hover:bg-white/5")}>
+      <div className={cn("w-12 h-12 rounded-2xl flex items-center justify-center transition-all relative", active ? "bg-primary/15 shadow-[0_0_15px_rgba(168,85,247,0.2)]" : "group-hover:bg-white/5")}>
         <Icon className={cn("w-6 h-6 transition-all duration-500", active ? "fill-current scale-110" : "scale-100")} />
         {active && <div className="absolute -left-[43px] top-1/2 -translate-y-1/2 w-1.5 h-6 bg-primary rounded-r-full shadow-[0_0_10px_rgba(168,85,247,0.8)]" />}
       </div>
@@ -157,7 +157,7 @@ function NavButton({ icon: Icon, label, active, badge, onClick, isProfile, userI
       active ? "text-primary" : "text-muted-foreground/60",
       isCenter && "scale-110 -translate-y-2"
     )}>
-      <div className={cn("relative transition-all duration-500", isCenter && "bg-primary/15 p-3 rounded-[1.5rem] border border-primary/20 shadow-[0_0_25px_rgba(168,85,247,0.2)]")}>
+      <div className={cn("relative transition-all duration-500", isCenter && "bg-primary/20 p-3 rounded-[1.5rem] border border-primary/25 shadow-[0_0_25px_rgba(168,85,247,0.25)]")}>
         {isProfile ? (
           <UserAvatar userId={userId} className={cn("h-7 w-7 border-2 transition-all duration-500", active ? "border-primary scale-110 shadow-[0_0_15px_rgba(168,85,247,0.4)]" : "border-transparent opacity-60")} />
         ) : (

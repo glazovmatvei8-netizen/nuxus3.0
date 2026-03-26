@@ -122,6 +122,7 @@ const ChatListItem = memo(({
 
   return (
     <div className="relative overflow-hidden touch-pan-y select-none bg-transparent border-none px-2 py-0.5" style={{ WebkitTouchCallout: 'none' }}>
+      {/* Кнопки действий - Левая сторона */}
       <div className={cn("absolute inset-y-0 left-2 flex h-[calc(100%-4px)] z-0 transition-opacity duration-200 rounded-3xl overflow-hidden", offsetX > 10 ? "opacity-100" : "opacity-0 pointer-events-none")}>
         <button onClick={(e) => { e.stopPropagation(); onMarkUnread(chat.id); resetSwipe(); }} className="w-20 bg-blue-600/80 backdrop-blur-xl flex flex-col items-center justify-center text-white gap-1 active:brightness-125 transition-all">
           <MessageCircle className="w-5 h-5 fill-current" />
@@ -133,21 +134,22 @@ const ChatListItem = memo(({
         </button>
       </div>
 
+      {/* Кнопки действий - Правая сторона */}
       <div className={cn("absolute inset-y-0 right-2 flex h-[calc(100%-4px)] z-0 transition-opacity duration-200 rounded-3xl overflow-hidden", offsetX < -10 ? "opacity-100" : "opacity-0 pointer-events-none")} style={{ width: '160px' }}>
         <div className="flex h-full w-full">
           <button onClick={(e) => { e.stopPropagation(); onArchive(chat.id, !!chat.isArchived); resetSwipe(); }} className="flex-1 bg-orange-600/80 backdrop-blur-xl flex flex-col items-center justify-center text-white gap-1 active:brightness-125 transition-all">
             <Archive className="w-5 h-5 fill-current" />
-            <span className="text-[8px] font-black uppercase tracking-widest">Хранилище</span>
+            <span className="text-[8px] font-black uppercase tracking-widest">Архив</span>
           </button>
           <button onClick={(e) => { e.stopPropagation(); onDelete(chat.id); resetSwipe(); }} className="flex-1 bg-red-600/80 backdrop-blur-xl flex flex-col items-center justify-center text-white gap-1 active:brightness-125 transition-all">
             <Trash2 className="w-5 h-5 fill-current" />
-            <span className="text-[8px] font-black uppercase tracking-widest">Очистить</span>
+            <span className="text-[8px] font-black uppercase tracking-widest">Удалить</span>
           </button>
         </div>
       </div>
 
       <div 
-        className={cn("relative z-10 bg-transparent will-change-transform w-full border-none select-none", !isDragging && "transition-transform duration-500 cubic-bezier(0.16, 1, 0.3, 1)")}
+        className={cn("relative z-10 bg-[#050508]/80 backdrop-blur-sm will-change-transform w-full border border-transparent select-none rounded-[2rem]", !isDragging && "transition-transform duration-500 cubic-bezier(0.16, 1, 0.3, 1)")}
         style={{ transform: `translateX(${offsetX}px)` }}
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
@@ -160,7 +162,7 @@ const ChatListItem = memo(({
               "flex items-center gap-4 px-4 py-4 cursor-pointer transition-all duration-500 border border-transparent group relative w-full h-[92px] select-none rounded-[2rem]", 
               isActive && Math.abs(offsetX) < 5 ? 'bg-primary/15 border-white/10 shadow-[0_0_25px_rgba(168,85,247,0.15)] scale-[0.98]' : 'hover:bg-white/[0.05] active:scale-[0.97]'
             )}>
-              <div className="relative">
+              <div className="relative shrink-0">
                 <UserAvatar userId={otherId} manualAvatarUrl={otherProfile?.avatarUrl || chat.avatarUrl} className="h-[64px] w-[64px] border-2 border-white/10 transition-all duration-500 group-hover:scale-105" fallbackName={finalDisplayName} showOnlineStatus />
                 {isUnread && <div className="absolute -top-1 -right-1 w-4 h-4 bg-primary rounded-full border-2 border-background shadow-[0_0_15px_rgba(168,85,247,0.8)] animate-pulse" />}
               </div>
@@ -295,7 +297,7 @@ export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?:
   }, [chats, activeTab, isArchiveView, currentUserProfile?.pinnedChatIds, user?.uid]);
 
   return (
-    <div className="flex flex-col h-full bg-background/40 backdrop-blur-xl overflow-hidden relative">
+    <div className="flex flex-col h-full bg-background/20 backdrop-blur-xl overflow-hidden relative max-w-full md:max-w-none">
       {/* Search & Header */}
       <div className="px-6 pt-8 pb-4 shrink-0 bg-transparent z-20 space-y-6">
         <div className="flex flex-col items-center gap-4 w-full">
