@@ -72,11 +72,10 @@ const ChatListItem = memo(({
     return decryptSignal(lastMsg.content);
   }, [lastMsg]);
 
-  // Логика префикса: "Вы:", "Имя:" или просто текст
   const messagePrefix = useMemo(() => {
     if (!lastMsg) return null;
-    if (lastMsg.senderId === currentUserId) return <span className="text-primary/60 font-black mr-1">Вы:</span>;
-    if (chat.type !== 'private') return <span className="text-primary/60 font-black mr-1">{lastMsg.senderName?.split(' ')[0]}:</span>;
+    if (lastMsg.senderId === currentUserId) return <span className="text-primary/60 font-black mr-1 shrink-0">Вы:</span>;
+    if (chat.type !== 'private') return <span className="text-primary/60 font-black mr-1 shrink-0">{lastMsg.senderName?.split(' ')[0]}:</span>;
     return null;
   }, [lastMsg, currentUserId, chat.type]);
 
@@ -131,7 +130,7 @@ const ChatListItem = memo(({
 
   return (
     <div className="relative overflow-hidden touch-pan-y select-none bg-transparent border-none px-2 py-0.5" style={{ WebkitTouchCallout: 'none' }}>
-      <div className={cn("absolute inset-y-0 left-2 flex h-[calc(100%-4px)] z-0 transition-opacity duration-200 rounded-3xl overflow-hidden", offsetX > 10 ? "opacity-100" : "opacity-0 pointer-events-none")}>
+      <div className={cn("absolute inset-y-0 left-2 flex h-[calc(100%-4px)] z-0 transition-opacity duration-200 rounded-[2rem] overflow-hidden", offsetX > 10 ? "opacity-100" : "opacity-0 pointer-events-none")}>
         <button onClick={(e) => { e.stopPropagation(); onMarkUnread(chat.id); resetSwipe(); }} className="w-20 bg-blue-600/80 backdrop-blur-xl flex flex-col items-center justify-center text-white gap-1 active:brightness-125 transition-all">
           <MessageCircle className="w-5 h-5 fill-current" />
           <span className="text-[8px] font-black uppercase tracking-widest">Сигнал</span>
@@ -142,7 +141,7 @@ const ChatListItem = memo(({
         </button>
       </div>
 
-      <div className={cn("absolute inset-y-0 right-2 flex h-[calc(100%-4px)] z-0 transition-opacity duration-200 rounded-3xl overflow-hidden", offsetX < -10 ? "opacity-100" : "opacity-0 pointer-events-none")} style={{ width: '160px' }}>
+      <div className={cn("absolute inset-y-0 right-2 flex h-[calc(100%-4px)] z-0 transition-opacity duration-200 rounded-[2rem] overflow-hidden", offsetX < -10 ? "opacity-100" : "opacity-0 pointer-events-none")} style={{ width: '160px' }}>
         <div className="flex h-full w-full">
           <button onClick={(e) => { e.stopPropagation(); onArchive(chat.id, !!chat.isArchived); resetSwipe(); }} className="flex-1 bg-orange-600/80 backdrop-blur-xl flex flex-col items-center justify-center text-white gap-1 active:brightness-125 transition-all">
             <Archive className="w-5 h-5 fill-current" />
@@ -156,7 +155,10 @@ const ChatListItem = memo(({
       </div>
 
       <div 
-        className={cn("relative z-10 bg-white/[0.03] backdrop-blur-sm will-change-transform w-full border border-transparent select-none rounded-[2rem]", !isDragging && "transition-transform duration-500 cubic-bezier(0.16, 1, 0.3, 1)")}
+        className={cn(
+          "relative z-10 bg-white/[0.03] backdrop-blur-md border border-white/[0.05] shadow-sm will-change-transform w-full select-none rounded-[2rem]", 
+          !isDragging && "transition-transform duration-500 cubic-bezier(0.16, 1, 0.3, 1)"
+        )}
         style={{ transform: `translateX(${offsetX}px)` }}
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
@@ -175,20 +177,20 @@ const ChatListItem = memo(({
               </div>
               
               <div className="flex-1 min-w-0 h-full flex flex-col justify-center">
-                <div className="flex items-center justify-between mb-1">
+                <div className="flex items-center justify-between mb-0.5">
                   <span className="font-black text-[17px] truncate flex items-center gap-2 tracking-tight italic text-white/90">
                     {finalDisplayName} 
                     {otherProfile?.isPremium && <Star className="w-3.5 h-3.5 text-accent fill-accent" />}
-                    {isPinned && <Pin className="w-3 h-3 text-primary rotate-45" />}
+                    {isPinned && <Pin className="w-3 h-3 text-primary rotate-45 ml-1" />}
                   </span>
-                  <span className="text-[11px] text-primary/80 font-black tracking-widest tabular-nums ml-2 shrink-0">{displayTime}</span>
                 </div>
-                <div className="flex items-center justify-between">
-                  <p className="text-[13px] text-muted-foreground/70 truncate flex-1 flex items-center font-medium">
+                <div className="flex items-center justify-between gap-2 overflow-hidden">
+                  <p className="text-[13px] text-muted-foreground/70 truncate flex items-center font-medium min-w-0">
                     {isEncrypted && <Lock className="w-3.5 h-3.5 shrink-0 text-primary/40 mr-1.5" />}
                     {messagePrefix}
-                    {decryptedPreview}
+                    <span className="truncate">{decryptedPreview}</span>
                   </p>
+                  <span className="text-[11px] text-primary/60 font-black tracking-widest tabular-nums shrink-0 ml-auto">{displayTime}</span>
                 </div>
               </div>
               
