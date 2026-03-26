@@ -1,11 +1,12 @@
+
 "use client"
 
-import React, { useState, useMemo, memo, useRef } from 'react';
+import React, { useState, useMemo, memo, useRef, useEffect } from 'react';
 import { useAppState } from '@/lib/store';
 import { Button } from '@/components/ui/button';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
-  Plus, SquarePen, Ghost, Search, Star, Pin, PinOff, Archive, Lock, Trash2, MessageCircle
+  Plus, SquarePen, Ghost, Search, Star, Pin, PinOff, Archive, Lock, Trash2, MessageCircle, WifiOff, Loader2
 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { CreateChatModal } from './modals/create-chat-modal';
@@ -122,7 +123,6 @@ const ChatListItem = memo(({
 
   return (
     <div className="relative overflow-hidden touch-pan-y select-none bg-transparent border-none px-2 py-0.5" style={{ WebkitTouchCallout: 'none' }}>
-      {/* Кнопки действий - Левая сторона */}
       <div className={cn("absolute inset-y-0 left-2 flex h-[calc(100%-4px)] z-0 transition-opacity duration-200 rounded-3xl overflow-hidden", offsetX > 10 ? "opacity-100" : "opacity-0 pointer-events-none")}>
         <button onClick={(e) => { e.stopPropagation(); onMarkUnread(chat.id); resetSwipe(); }} className="w-20 bg-blue-600/80 backdrop-blur-xl flex flex-col items-center justify-center text-white gap-1 active:brightness-125 transition-all">
           <MessageCircle className="w-5 h-5 fill-current" />
@@ -134,7 +134,6 @@ const ChatListItem = memo(({
         </button>
       </div>
 
-      {/* Кнопки действий - Правая сторона */}
       <div className={cn("absolute inset-y-0 right-2 flex h-[calc(100%-4px)] z-0 transition-opacity duration-200 rounded-3xl overflow-hidden", offsetX < -10 ? "opacity-100" : "opacity-0 pointer-events-none")} style={{ width: '160px' }}>
         <div className="flex h-full w-full">
           <button onClick={(e) => { e.stopPropagation(); onArchive(chat.id, !!chat.isArchived); resetSwipe(); }} className="flex-1 bg-orange-600/80 backdrop-blur-xl flex flex-col items-center justify-center text-white gap-1 active:brightness-125 transition-all">
@@ -193,17 +192,13 @@ const ChatListItem = memo(({
             <ContextMenuItem onClick={() => onMarkUnread(chat.id)} className="gap-3 py-3 font-black uppercase text-[10px] tracking-[0.2em] rounded-xl hover:bg-primary/10 hover:text-primary transition-all">
               <MessageCircle className="w-4 h-4 text-[#007AFF]" /> {chat.isManualUnread ? 'Пометить прочитанным' : 'Пометить непрочитанным'}
             </ContextMenuItem>
-            
             <ContextMenuItem onClick={() => onPinToggle(chat.id)} className="gap-3 py-3 font-black uppercase text-[10px] tracking-[0.2em] rounded-xl hover:bg-primary/10 hover:text-primary transition-all">
               {isPinned ? <><PinOff className="w-4 h-4 text-green-500" /> Открепить</> : <><Pin className="w-4 h-4 text-green-500" /> Закрепить</>}
             </ContextMenuItem>
-
             <ContextMenuItem onClick={() => onArchive(chat.id, !!chat.isArchived)} className="gap-3 py-3 font-black uppercase text-[10px] tracking-[0.2em] rounded-xl hover:bg-primary/10 hover:text-primary transition-all">
               <Archive className="w-4 h-4 text-orange-500" /> {chat.isArchived ? 'Извлечь из архива' : 'В архив'}
             </ContextMenuItem>
-
             <ContextMenuSeparator className="bg-white/5 mx-2" />
-
             <ContextMenuItem onClick={() => onDelete(chat.id)} className="gap-3 py-3 font-black uppercase text-[10px] tracking-[0.2em] rounded-xl text-red-500 hover:bg-red-500/10 transition-all">
               <Trash2 className="w-4 h-4" /> Удалить диалог
             </ContextMenuItem>
@@ -225,6 +220,19 @@ export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?:
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isEditorModalOpen, setIsEditorModalOpen] = useState(false);
   const [isAdminPanelOpen, setIsAdminPanelOpen] = useState(false);
+  const [isOnline, setIsOnline] = useState(true);
+
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+    setIsOnline(navigator.onLine);
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
 
   const userProfileRef = useMemoFirebase(() => (!db || !user) ? null : doc(db, 'users', user.uid), [db, user]);
   const { data: currentUserProfile } = useDoc<User>(userProfileRef);
@@ -298,15 +306,17 @@ export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?:
 
   return (
     <div className="flex flex-col h-full bg-transparent overflow-hidden relative max-w-full md:max-w-none">
-      {/* Search & Header */}
       <div className="px-6 pt-8 pb-4 shrink-0 bg-transparent z-20 space-y-6">
         <div className="flex flex-col items-center gap-4 w-full">
           <div className="flex items-center justify-between w-full relative">
-            <div className="w-10 h-10" /> {/* Spacer */}
-            <div className="absolute left-1/2 -translate-x-1/2">
+            <div className="w-10 h-10" />
+            <div className="absolute left-1/2 -translate-x-1/2 flex flex-col items-center">
               <h1 onClick={() => isGlobalAdmin(currentUserProfile) && setIsAdminPanelOpen(true)} className={cn("text-2xl font-black italic tracking-tight text-white transition-all flex items-center gap-2", isGlobalAdmin(currentUserProfile) ? "cursor-pointer hover:text-primary hover:drop-shadow-[0_0_15px_rgba(168,85,247,0.6)]" : "cursor-default")}>
                 {isArchiveView ? 'архив 🐱' : 'чаты 🐱'}
               </h1>
+              {!isOnline && (
+                <span className="text-[8px] font-black uppercase tracking-[0.4em] text-primary animate-pulse ml-[0.4em]">соединение...</span>
+              )}
             </div>
             <div className="flex gap-2">
               <Button variant="ghost" size="icon" className="h-10 w-10 rounded-xl bg-white/[0.05] border border-white/5 hover:border-primary/40 transition-all group" onClick={() => setIsCreateModalOpen(true)}>

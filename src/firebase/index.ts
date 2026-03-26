@@ -4,20 +4,22 @@
 import { firebaseConfig } from '@/firebase/config';
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
-import { getFirestore } from 'firebase/firestore';
+import { getFirestore, initializeFirestore, persistentLocalCache, persistentMultipleTabManager } from 'firebase/firestore';
 
 /**
- * Чистая и надежная инициализация Firebase.
- * Использует стандартные синглтоны для предотвращения конфликтов в Next.js.
+ * Чистая и надежная инициализация Firebase с поддержкой оффлайн-режима.
  */
 export function initializeFirebase() {
-  // Инициализируем приложение только если оно еще не создано
   const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
   
-  // getAuth и getFirestore возвращают уже существующие инстансы, если они есть.
-  // Это гарантированно убирает ошибку "already been called with different options".
+  // Инициализация Firestore с оффлайн-кэшированием для скорости и доступа без сети
+  const firestore = initializeFirestore(app, {
+    localCache: persistentLocalCache({
+      tabManager: persistentMultipleTabManager()
+    })
+  });
+
   const auth = getAuth(app);
-  const firestore = getFirestore(app);
 
   return {
     firebaseApp: app,

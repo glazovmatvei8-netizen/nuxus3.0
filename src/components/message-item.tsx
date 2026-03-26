@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, memo, useRef, useEffect, useMemo } from 'react';
@@ -20,7 +21,7 @@ import {
 import { format } from 'date-fns';
 import { 
   CornerUpLeft, Trash2, Check, CheckCheck, Edit2, Copy, Pin, X, Share2, Play, Smile, Lock, Languages, Loader2, Image as ImageIcon,
-  MessageCircle, Star, Pause, ShieldCheck
+  MessageCircle, Star, Pause, ShieldCheck, Clock
 } from 'lucide-react';
 import { cn, decryptSignal, isGlobalAdmin } from '@/lib/utils';
 import { doc, updateDoc, deleteDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
@@ -52,6 +53,16 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
   const isKernelAdmin = useMemo(() => isGlobalAdmin(viewerProfile), [viewerProfile]);
   const displayContent = useMemo(() => message.contentType === 'text' ? decryptSignal(message.content) : message.content, [message.content, message.contentType]);
   const formattedTime = message.sentAt ? format(new Date(message.sentAt), 'HH:mm') : '';
+
+  const isOfflinePending = useMemo(() => {
+    // Если сообщение отправлено только что, а интернета нет - показываем часики
+    // Firestore автоматически пометит сообщение как 'local' в метаданных, если мы используем snapshots
+    // Для MVP просто проверим разницу во времени и navigator.onLine (упрощенно)
+    if (!navigator.onLine && isMe && (new Date().getTime() - new Date(message.sentAt).getTime() < 60000)) {
+      return true;
+    }
+    return false;
+  }, [message.sentAt, isMe]);
 
   const formatDuration = (seconds: number) => {
     if (isNaN(seconds) || seconds === Infinity) return "0:00";
@@ -184,7 +195,13 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
                   {renderContent()}
                   <div className="flex items-center justify-end gap-2 mt-2 opacity-40">
                     <span className="text-[9px] font-black tabular-nums tracking-widest">{formattedTime}</span>
-                    {isMe && (message.isRead ? <CheckCheck className="w-3.5 h-3.5 text-accent" /> : <Check className="w-3.5 h-3.5" />)}
+                    {isMe && (
+                      isOfflinePending ? (
+                        <Clock className="w-3 h-3 text-white/60 animate-pulse" />
+                      ) : (
+                        message.isRead ? <CheckCheck className="w-3.5 h-3.5 text-accent" /> : <Check className="w-3.5 h-3.5" />
+                      )
+                    )}
                   </div>
                 </div>
                 
