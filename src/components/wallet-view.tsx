@@ -7,7 +7,7 @@ import { doc, collection, query, orderBy, limit, writeBatch, increment, getDocs,
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Wallet, ArrowUpRight, ArrowDownLeft, Plus, Zap, History, ShieldCheck, Loader2, Search, CheckCircle2, XCircle, Clock } from 'lucide-react';
+import { Wallet, ArrowUpRight, ArrowDownLeft, Plus, Zap, History, ShieldCheck, Loader2, Search, CheckCircle2, XCircle, Clock, AlertTriangle } from 'lucide-react';
 import { cn, formatDisplayName } from '@/lib/utils';
 import type { User, Transaction } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
@@ -21,6 +21,8 @@ import {
 } from '@/components/ui/dialog';
 import { format } from 'date-fns';
 import { ru } from 'date-fns/locale';
+
+const MAX_TOP_UP_AMOUNT = 10000;
 
 export default function WalletView() {
   const { user } = useUser();
@@ -77,6 +79,11 @@ export default function WalletView() {
   const handleTopUpRequest = async () => {
     const amount = parseFloat(topUpAmount);
     if (isNaN(amount) || amount <= 0 || !db || !user || !profile) return;
+
+    if (amount > MAX_TOP_UP_AMOUNT) {
+      toast({ title: "Лимит превышен", description: `Максимальная сумма пополнения за раз: ${MAX_TOP_UP_AMOUNT} NX`, variant: "destructive" });
+      return;
+    }
 
     setIsProcessing(true);
     try {
@@ -155,6 +162,8 @@ export default function WalletView() {
     }
   };
 
+  const isAmountOverLimit = parseFloat(topUpAmount) > MAX_TOP_UP_AMOUNT;
+
   return (
     <div className="flex flex-col h-full bg-[#0a0a0c] overflow-hidden">
       <div className="px-4 pt-6 pb-4 shrink-0">
@@ -210,11 +219,13 @@ export default function WalletView() {
                       {tx.type === 'deposit' && <Plus className="w-5 h-5" />}
                       {tx.type === 'transfer_in' && <ArrowDownLeft className="w-5 h-5" />}
                       {tx.type === 'transfer_out' && <ArrowUpRight className="w-5 h-5" />}
+                      {tx.type === 'gift_purchase' && <Gift className="w-5 h-5" />}
                     </div>
                     <div className="flex flex-col">
                       <span className="text-sm font-bold text-white">
                         {tx.type === 'deposit' ? 'Пополнение' : 
                          tx.type === 'transfer_in' ? `От ${tx.otherPartyName}` :
+                         tx.type === 'gift_purchase' ? `Подарок для ${tx.otherPartyName}` :
                          `Для ${tx.otherPartyName}`}
                       </span>
                       <span className="text-[9px] text-muted-foreground uppercase font-black">
@@ -252,16 +263,22 @@ export default function WalletView() {
                 type="number" 
                 value={topUpAmount} 
                 onChange={e => setTopUpAmount(e.target.value)}
-                className="bg-white/5 border-white/10 h-16 rounded-2xl text-center text-3xl font-black italic text-primary"
+                className={cn("bg-white/5 border-white/10 h-16 rounded-2xl text-center text-3xl font-black italic text-primary", isAmountOverLimit && "border-red-500/50 text-red-500")}
               />
               <span className="absolute right-4 top-1/2 -translate-y-1/2 font-black text-white/20 italic">NX</span>
             </div>
+            {isAmountOverLimit && (
+              <div className="flex items-center justify-center gap-2 text-red-500">
+                <AlertTriangle className="w-3 h-3" />
+                <span className="text-[8px] font-black uppercase">Максимум: {MAX_TOP_UP_AMOUNT} NX</span>
+              </div>
+            )}
             <p className="text-[9px] text-muted-foreground uppercase font-bold px-4 leading-relaxed">
-              Ваш запрос будет передан Оператору Ядра. После оплаты заявка будет подтверждена вручную.
+              Запрос будет передан Оператору. Лимит Ядра: {MAX_TOP_UP_AMOUNT} NX за одну сессию.
             </p>
           </div>
           <DialogFooter>
-            <Button disabled={isProcessing} onClick={handleTopUpRequest} className="w-full h-14 bg-primary rounded-2xl font-black uppercase italic tracking-widest shadow-xl shadow-primary/20">
+            <Button disabled={isProcessing || isAmountOverLimit} onClick={handleTopUpRequest} className="w-full h-14 bg-primary rounded-2xl font-black uppercase italic tracking-widest shadow-xl shadow-primary/20">
               {isProcessing ? <Loader2 className="animate-spin" /> : <>Отправить запрос <Clock className="w-4 h-4 ml-2" /></>}
             </Button>
           </DialogFooter>
@@ -278,7 +295,7 @@ export default function WalletView() {
           <div className="py-6 space-y-6">
             {!foundUser ? (
               <div className="space-y-3">
-                <Label className="text-[9px] uppercase font-black text-muted-foreground ml-2">Адрес Узла (@username)</Label>
+                <Label className="text-[9px] uppercase font-black text-muted-foreground ml-2">Адрес Аккаунта (@username)</Label>
                 <div className="flex gap-2">
                   <Input 
                     placeholder="@node_id" 

@@ -10,6 +10,17 @@ export interface StickerPack {
   createdAt: string;
 }
 
+export interface ReceivedGift {
+  id: string;
+  senderId: string;
+  senderName: string;
+  giftId: string;
+  giftName: string;
+  giftIcon: string;
+  price: number;
+  receivedAt: string;
+}
+
 export interface PollOption {
   id: string;
   text: string;
@@ -29,7 +40,7 @@ export interface Transaction {
   id: string;
   userId: string;
   amount: number;
-  type: 'deposit' | 'withdrawal' | 'transfer_in' | 'transfer_out';
+  type: 'deposit' | 'withdrawal' | 'transfer_in' | 'transfer_out' | 'gift_purchase';
   status: 'completed' | 'pending' | 'failed';
   otherPartyId?: string;
   otherPartyName?: string;
