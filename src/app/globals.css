@@ -77,7 +77,9 @@
 }
 
 .message-bubble-other {
-  @apply bg-white/[0.08] backdrop-blur-2xl border border-white/[0.12];
+  background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%);
+  @apply backdrop-blur-3xl border border-white/[0.05] shadow-xl;
+  color: white !important;
 }
 
 .chat-pattern-bg {
