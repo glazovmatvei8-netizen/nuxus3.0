@@ -6,7 +6,7 @@ import { useAppState } from '@/lib/store';
 import { Button } from '@/components/ui/button';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
-  Plus, Ghost, Search, Star, Pin, PinOff, Archive, Lock, Trash2, MessageCircle
+  Plus, Ghost, Search, Star, Pin, PinOff, Archive, Lock, Trash2, MessageCircle, Activity
 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { CreateChatModal } from './modals/create-chat-modal';
@@ -298,7 +298,6 @@ export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?:
       return bTime - aTime;
     });
 
-    // Фильтр для Saved Messages: всегда сверху
     const saved = result.find(c => c.id === 'saved_messages');
     let others = result.filter(c => c.id !== 'saved_messages');
 
@@ -323,7 +322,9 @@ export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?:
       <div className="px-6 pt-8 pb-4 shrink-0 bg-transparent z-20 space-y-6">
         <div className="flex flex-col items-center gap-4 w-full">
           <div className="flex items-center justify-between w-full relative">
-            <div className="w-10 h-10" />
+            <div className="w-10 h-10 flex items-center justify-center">
+               <Activity className="w-5 h-5 text-green-500 animate-pulse" />
+            </div>
             <div className="absolute left-1/2 -translate-x-1/2 flex flex-col items-center">
               <h1 onClick={() => isGlobalAdmin(currentUserProfile) && setIsAdminPanelOpen(true)} className={cn("text-2xl font-black italic tracking-tight text-white transition-all flex items-center gap-2", isGlobalAdmin(currentUserProfile) ? "cursor-pointer hover:text-primary hover:drop-shadow-[0_0_15px_rgba(168,85,247,0.6)]" : "cursor-default")}>
                 {isArchiveView ? 'архив 🐱' : 'чаты 🐱'}

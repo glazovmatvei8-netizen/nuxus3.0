@@ -25,7 +25,8 @@ import { chatConversationSummary } from '@/ai/flows/chat-conversation-summary-fl
 import { addMinutes, addHours } from 'date-fns';
 
 const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, isPremium, messages, userProfile }: any) => {
-  const [messageInput, setMessageInput] = useState('');
+  const { localDrafts, setLocalDrafts } = useAppState();
+  const [messageInput, setMessageInput] = useState(localDrafts[currentChatId] || '');
   const [isAiDrafting, setIsAiDrafting] = useState(false);
   const [destructTimer, setDestructTimer] = useState<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -33,8 +34,14 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
   const { user } = useUser();
   const db = useFirestore();
 
+  useEffect(() => {
+    setMessageInput(localDrafts[currentChatId] || '');
+  }, [currentChatId, localDrafts]);
+
   const handleInputChange = (val: string) => {
     setMessageInput(val);
+    setLocalDrafts(prev => ({ ...prev, [currentChatId]: val }));
+    
     if (user && currentChatId && db) {
       updateDocumentNonBlocking(doc(db, 'chats', currentChatId), {
         [`typing.${user.uid}`]: true
@@ -52,6 +59,7 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
     if (!messageInput.trim()) return;
     onSendMessage(messageInput, 'text', destructTimer);
     setMessageInput('');
+    setLocalDrafts(prev => ({ ...prev, [currentChatId]: '' }));
     setDestructTimer(null);
   };
 

@@ -5,6 +5,7 @@ import React, { useState, useMemo } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { 
@@ -15,16 +16,16 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, doc, limit, updateDoc, writeBatch, increment } from 'firebase/firestore';
+import { collection, query, doc, limit, updateDoc, writeBatch, increment, getDocs, addDoc } from 'firebase/firestore';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
   ShieldAlert, Users, Star, Ban, CheckCircle2, ShieldCheck, Radio, 
-  MoreVertical, ShieldOff, Activity, Wallet, Check, Trash2, X, Globe, Fingerprint
+  MoreVertical, ShieldOff, Activity, Wallet, Check, Trash2, X, Globe, Fingerprint, Send, Zap
 } from 'lucide-react';
 import { 
   XAxis, YAxis, ResponsiveContainer, AreaChart, Area, Tooltip
 } from 'recharts';
-import type { User, TopUpRequest } from '@/lib/types';
+import type { User, TopUpRequest, Chat } from '@/lib/types';
 import { formatDisplayName, isUserPremium, cn, isGlobalAdmin } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { addMonths, subDays, isSameDay, format } from 'date-fns';
@@ -38,6 +39,8 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
   
   const [userSearch, setUserSearch] = useState('');
   const [activeTab, setActiveTab] = useState('analytics');
+  const [broadcastText, setBroadcastText] = useState('');
+  const [isBroadcasting, setIsBroadcasting] = useState(false);
   
   const usersQuery = useMemoFirebase(() => (!db ? null : query(collection(db, 'users'), limit(500))), [db]);
   const { data: users } = useCollection<User>(usersQuery);
@@ -102,36 +105,33 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
     }
   };
 
-  const handleApproveRequest = async (req: TopUpRequest) => {
-    if (!db) return;
+  const handleBroadcast = async () => {
+    if (!broadcastText.trim() || !db) return;
+    setIsBroadcasting(true);
     try {
+      const chatsSnap = await getDocs(collection(db, 'chats'));
       const batch = writeBatch(db);
-      const userRef = doc(db, 'users', req.userId);
-      const reqRef = doc(db, 'topUpRequests', req.id);
-      const txRef = doc(collection(db, 'users', req.userId, 'transactions'));
-
-      batch.update(userRef, { balance: increment(req.amount) });
-      batch.update(reqRef, { status: 'approved' });
-      batch.set(txRef, {
-        id: txRef.id,
-        userId: req.userId,
-        amount: req.amount,
-        type: 'deposit',
-        status: 'completed',
-        createdAt: new Date().toISOString()
+      
+      chatsSnap.docs.forEach(chatDoc => {
+        const msgRef = doc(collection(db, 'chats', chatDoc.id, 'messages'));
+        batch.set(msgRef, {
+          chatId: chatDoc.id,
+          senderId: 'system_broadcast',
+          senderName: 'Nuxus Kernel 📡',
+          content: broadcastText.trim(),
+          contentType: 'broadcast',
+          sentAt: new Date().toISOString(),
+        });
       });
 
       await batch.commit();
-      toast({ title: "Пополнение одобрено", description: `Зачислено ${req.amount} NX пользователю ${req.userName}` });
-    } catch (e: any) {
-      toast({ title: "Ошибка одобрения", description: e.message, variant: "destructive" });
+      toast({ title: "Рассылка завершена", description: `Сигнал отправлен в ${chatsSnap.size} чатов` });
+      setBroadcastText('');
+    } catch (e) {
+      toast({ title: "Ошибка рассылки", variant: "destructive" });
+    } finally {
+      setIsBroadcasting(false);
     }
-  };
-
-  const handleRejectRequest = async (reqId: string) => {
-    if (!db) return;
-    await updateDoc(doc(db, 'topUpRequests', reqId), { status: 'rejected' });
-    toast({ title: "Заявка отклонена" });
   };
 
   return (
@@ -243,53 +243,40 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
             </ScrollArea>
           </TabsContent>
 
-          <TabsContent value="finance" className="flex-1 m-0 p-0 overflow-hidden outline-none data-[state=active]:flex flex-col min-h-0">
-            <ScrollArea className="flex-1">
-              <div className="p-6 space-y-4 pb-20">
-                <div className="flex items-center gap-2 px-2 text-primary">
-                  <Wallet className="w-4 h-4" />
-                  <span className="text-[10px] font-black uppercase tracking-[0.2em]">Запросы на пополнение</span>
-                </div>
-                
-                {requests?.filter(r => r.status === 'pending').map(req => (
-                  <div key={req.id} className="p-5 bg-white/5 border border-white/10 rounded-[2rem] space-y-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <UserAvatar userId={req.userId} className="h-10 w-10" fallbackName={req.userName} />
-                        <div className="flex flex-col text-left">
-                          <span className="font-bold text-sm text-white">{req.userName}</span>
-                          <span className="text-[9px] text-muted-foreground uppercase font-black">{format(new Date(req.createdAt), 'dd.MM HH:mm', { locale: ru })}</span>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <span className="text-lg font-black italic text-primary">{req.amount} NX</span>
-                      </div>
-                    </div>
-                    <div className="flex gap-2">
-                      <Button onClick={() => handleApproveRequest(req)} className="flex-1 bg-green-500 hover:bg-green-600 text-white font-black uppercase text-[9px] tracking-widest rounded-xl h-10 gap-2">
-                        <Check className="w-3.5 h-3.5" /> Одобрить
-                      </Button>
-                      <Button onClick={() => handleRejectRequest(req.id)} variant="ghost" className="flex-1 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white font-black uppercase text-[9px] tracking-widest rounded-xl h-10 gap-2">
-                        <X className="w-3.5 h-3.5" /> Отклонить
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-
-                {requests?.filter(r => r.status === 'pending').length === 0 && (
-                  <div className="flex flex-col items-center justify-center py-20 opacity-20 border-2 border-dashed border-white/5 rounded-[2.5rem]">
-                    <ShieldCheck className="w-12 h-12 mb-4" />
-                    <p className="text-[10px] font-black uppercase tracking-widest">Нет активных заявок</p>
-                  </div>
-                )}
-              </div>
-            </ScrollArea>
-          </TabsContent>
-
           <TabsContent value="broadcast" className="flex-1 m-0 p-6 overflow-hidden data-[state=active]:flex flex-col min-h-0">
-             <div className="h-full flex flex-col items-center justify-center opacity-20 border-2 border-dashed border-white/5 rounded-[2.5rem]">
-                <Radio className="w-12 h-12 mb-4" />
-                <p className="text-[10px] font-black uppercase tracking-widest text-center">Маяк в режиме ожидания</p>
+             <div className="space-y-6">
+                <div className="bg-primary/10 p-6 rounded-[2rem] border border-primary/20 space-y-4">
+                  <div className="flex items-center gap-3">
+                    <Radio className="w-6 h-6 text-primary animate-pulse" />
+                    <div className="flex flex-col">
+                      <span className="text-sm font-black uppercase text-white italic">Глобальный Маяк</span>
+                      <span className="text-[9px] font-bold text-primary/60 uppercase">Оповещение всех узлов Ядра</span>
+                    </div>
+                  </div>
+                  <Textarea 
+                    placeholder="Введите системное сообщение..." 
+                    value={broadcastText}
+                    onChange={e => setBroadcastText(e.target.value)}
+                    className="bg-black/40 border-white/10 min-h-[120px] rounded-2xl resize-none text-sm"
+                  />
+                  <Button 
+                    onClick={handleBroadcast}
+                    disabled={isBroadcasting || !broadcastText.trim()}
+                    className="w-full h-12 bg-primary text-white font-black uppercase tracking-widest gap-2 rounded-xl shadow-lg shadow-primary/20"
+                  >
+                    {isBroadcasting ? <Loader2 className="animate-spin w-4 h-4" /> : <><Send className="w-4 h-4" /> Транслировать Сигнал</>}
+                  </Button>
+                </div>
+
+                <div className="p-6 bg-white/5 rounded-[2rem] border border-white/5">
+                  <div className="flex items-center gap-2 mb-4 text-accent">
+                    <Zap className="w-4 h-4" />
+                    <span className="text-[10px] font-black uppercase">Важно</span>
+                  </div>
+                  <p className="text-[10px] text-muted-foreground leading-relaxed uppercase font-bold">
+                    Сообщение Маяка будет доставлено в каждый активный чат системы в виде специального сервисного блока. Используйте эту функцию только для критических обновлений Ядра.
+                  </p>
+                </div>
              </div>
           </TabsContent>
         </Tabs>

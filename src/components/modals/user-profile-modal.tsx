@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { UserAvatar } from '@/components/user-avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { 
-  MessageCircle, Star, Copy, Shield, Calendar, Info, Phone, Video, Gift, Sparkles, ChevronRight
+  MessageCircle, Star, Copy, Shield, Calendar, Info, Phone, Video, Gift, Sparkles, ChevronRight, Smile, Type
 } from 'lucide-react';
 import { useFirestore, useUser, useDoc, useMemoFirebase, useCollection } from '@/firebase';
 import { doc, query, collection, where, limit, getDocs, addDoc } from 'firebase/firestore';
@@ -138,12 +138,22 @@ export function UserProfileModal() {
         </div>
 
         <div className="mt-14 px-6 text-center shrink-0">
-          <h2 className="text-xl font-black text-white flex items-center justify-center gap-2">
-            {formatDisplayName(targetUser?.name)}
+          <div className="flex items-center justify-center gap-2">
+            <h2 className="text-xl font-black text-white italic">
+              {formatDisplayName(targetUser?.name)}
+            </h2>
             {isUserPremium(targetUser) && <Star className="w-4 h-4 text-accent fill-accent" />}
-          </h2>
+            {targetUser?.statusEmoji && <span className="text-xl animate-pulse">{targetUser.statusEmoji}</span>}
+          </div>
           <p className="text-[10px] text-primary font-black uppercase tracking-[0.3em] mt-1">{targetUser?.username}</p>
-          <p className="text-[9px] text-muted-foreground uppercase font-bold mt-1.5 opacity-60">
+          
+          {targetUser?.statusText && (
+            <p className="text-[11px] text-white/60 font-bold uppercase tracking-widest mt-2 px-4 bg-white/5 py-1.5 rounded-full border border-white/5 inline-block mx-auto">
+              {targetUser.statusText}
+            </p>
+          )}
+
+          <p className="text-[9px] text-muted-foreground uppercase font-bold mt-2 opacity-60">
             {formatLastSeen(targetUser?.lastSeen, targetUser?.settings?.privacy?.lastSeenVisibility)}
           </p>
         </div>
@@ -183,7 +193,7 @@ export function UserProfileModal() {
 
             {targetUser?.bio && (
               <div className="space-y-1.5">
-                <h3 className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/60 px-1">О себе</h3>
+                <h3 className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/60 px-1">Био</h3>
                 <div className="bg-white/5 p-3 rounded-2xl border border-white/5">
                   <p className="text-xs text-white/80 leading-relaxed">{targetUser.bio}</p>
                 </div>

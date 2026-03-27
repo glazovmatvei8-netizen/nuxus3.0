@@ -16,7 +16,7 @@ import {
   LogOut, Palette, Check, Settings2, Camera, Lock, Image as ImageIcon, 
   Paintbrush, Shield, UserCircle, Layout, Smile, FileText, ChevronRight,
   ShieldCheck, Eye, Users2, MessageSquareLock, Upload, Smartphone, Share2, Trophy,
-  Bell, Video, Mic, MonitorSmartphone, Key, Trash2, ShieldAlert, RefreshCw, Save, Zap, Moon, Sun, Monitor, Download, Share, Fingerprint, Sparkles, Wand2, Globe, Star, Ghost, Volume2, MessageSquare, Timer, Crown, Music
+  Bell, Video, Mic, MonitorSmartphone, Key, Trash2, ShieldAlert, RefreshCw, Save, Zap, Moon, Sun, Monitor, Download, Share, Fingerprint, Sparkles, Wand2, Globe, Star, Ghost, Volume2, MessageSquare, Timer, Crown, Music, Type
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { signOut } from 'firebase/auth';
@@ -70,6 +70,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
     chatBackgroundFit: 'cover' as 'cover' | 'contain',
     customAppIconUrl: '',
     statusEmoji: '',
+    statusText: '',
     privacy: {
       phoneVisibility: 'everybody',
       lastSeenVisibility: 'everybody',
@@ -95,6 +96,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         chatBackgroundFit: profile.settings?.chatBackgroundFit || 'cover',
         customAppIconUrl: profile.settings?.customAppIconUrl || '',
         statusEmoji: profile.statusEmoji || '',
+        statusText: profile.statusText || '',
         privacy: profile.settings?.privacy || {
           phoneVisibility: 'everybody',
           lastSeenVisibility: 'everybody',
@@ -117,6 +119,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         twoFactorEnabled: form.twoFactorEnabled,
         twoFactorPin: form.twoFactorPin,
         statusEmoji: form.statusEmoji,
+        statusText: form.statusText,
         'settings.appearance': form.appearance,
         'settings.theme': form.theme,
         'settings.bubbleStyle': form.bubbleStyle,
@@ -190,20 +193,28 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                 </div>
                 
                 <div className="space-y-4 w-full text-left">
-                  {isUserPremium(profile) && (
-                    <div className="space-y-2">
-                      <Label className="text-[10px] uppercase font-black text-primary ml-1 flex items-center gap-2">
-                        <Smile className="w-3 h-3" /> Статус-эмодзи (Premium)
-                      </Label>
+                  <div className="grid grid-cols-4 gap-2 items-end">
+                    <div className="space-y-2 col-span-1">
+                      <Label className="text-[10px] uppercase font-black text-muted-foreground ml-1">Значок</Label>
                       <Input 
-                        placeholder="🔥, 💎, 🛡️..." 
+                        placeholder="🔥" 
                         value={form.statusEmoji} 
                         onChange={e => setForm({...form, statusEmoji: e.target.value})} 
-                        className="bg-primary/5 border-primary/20 h-12 rounded-2xl text-center text-xl" 
+                        className="bg-muted/30 border-white/5 h-12 rounded-2xl text-center text-lg" 
                         maxLength={2}
                       />
                     </div>
-                  )}
+                    <div className="space-y-2 col-span-3">
+                      <Label className="text-[10px] uppercase font-black text-muted-foreground ml-1">Текст статуса</Label>
+                      <Input 
+                        placeholder="Чем занимаетесь?" 
+                        value={form.statusText} 
+                        onChange={e => setForm({...form, statusText: e.target.value})} 
+                        className="bg-muted/30 border-white/5 h-12 rounded-2xl" 
+                      />
+                    </div>
+                  </div>
+
                   <div className="space-y-2"><Label className="text-[10px] uppercase font-black text-muted-foreground ml-1">Имя</Label><Input value={form.name} onChange={e => setForm({...form, name: e.target.value})} className="bg-muted/30 border-white/5 h-12 rounded-2xl" /></div>
                   <div className="space-y-2"><Label className="text-[10px] uppercase font-black text-muted-foreground ml-1">Никнейм</Label><div className="relative"><span className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground">@</span><Input value={form.username} onChange={e => setForm({...form, username: e.target.value})} className="bg-muted/30 border-white/5 h-12 rounded-2xl pl-8" /></div></div>
                   <div className="space-y-2"><Label className="text-[10px] uppercase font-black text-muted-foreground ml-1">О себе</Label><Textarea value={form.bio} onChange={e => setForm({...form, bio: e.target.value})} className="bg-muted/30 border-white/5 rounded-2xl resize-none h-24" placeholder="Информация об аккаунте..." /></div>
