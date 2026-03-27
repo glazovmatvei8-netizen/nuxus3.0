@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useEffect } from 'react';
@@ -12,7 +11,7 @@ import WalletView from './wallet-view';
 import GamesView from './games-view';
 import { useAppState } from '@/lib/store';
 import { cn } from '@/lib/utils';
-import { useFirestore, useUser, useCollection, useMemoFirebase, useDoc } from '@/firebase';
+import { useFirestore, useUser, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, query, where, limit, doc } from 'firebase/firestore';
 import { CallOverlay } from './modals/call-overlay';
 import { NotificationListener } from './notification-listener';
@@ -24,8 +23,8 @@ import { LegalModal } from './modals/legal-modal';
 import { UpdateNotifier } from './update-notifier';
 import { MusicPlayer } from './music-player';
 import { UserAvatar } from './user-avatar';
-import type { Call, User as UserType } from '@/lib/types';
-import { Users, Phone, MessageCircle, Settings, Search, Archive, Music, Wallet, Gamepad2, Layers, Star } from 'lucide-react';
+import type { Call } from '@/lib/types';
+import { Phone, MessageCircle, Settings, Search, Archive, Music, Wallet, Gamepad2, Layers } from 'lucide-react';
 
 export default function ChatMain() {
   const { 
@@ -36,9 +35,6 @@ export default function ChatMain() {
   } = useAppState();
   const { user } = useUser();
   const db = useFirestore();
-
-  const userProfileRef = useMemoFirebase(() => (!db || !user) ? null : doc(db, 'users', user.uid), [db, user]);
-  const { data: profile } = useDoc<UserType>(userProfileRef);
 
   const incomingCallsQuery = useMemoFirebase(() => {
     if (!db || !user) return null;
@@ -97,7 +93,7 @@ export default function ChatMain() {
 
         {/* Content Sidebar - Strict Width Constraint */}
         <div className={cn(
-          "w-full md:w-[380px] lg:w-[420px] h-full flex-shrink-0 border-r border-white/[0.05] z-30 bg-white/[0.01] backdrop-blur-2xl relative overflow-hidden", 
+          "w-full md:w-[380px] lg:w-[420px] h-full flex-shrink-0 border-r border-white/[0.05] z-30 bg-white/[0.01] backdrop-blur-2xl relative overflow-hidden min-w-0", 
           (currentChatId && !['profile', 'contacts', 'calls', 'archive', 'music', 'wallet', 'discovery', 'games'].includes(activeView)) ? "hidden md:block" : "block"
         )}>
           <div className="h-full w-full overflow-hidden">
@@ -147,7 +143,7 @@ export default function ChatMain() {
       <GlobalSearchModal open={isSearchOpen} onOpenChange={setIsSearchOpen} />
       <ForwardModal />
       <UserProfileModal />
-      <LegalModal open={isLegalOpen} onOpenChange={setIsLegalOpen} type="privacy" />
+      <LegalModal open={isLegalOpen} onOpenChange={setIsLegalOpen} />
     </div>
   );
 }

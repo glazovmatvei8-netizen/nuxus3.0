@@ -51,6 +51,12 @@
     text-rendering: optimizeLegibility;
     -webkit-font-smoothing: antialiased;
     touch-action: none;
+    max-width: 100vw;
+  }
+  
+  html {
+    max-width: 100vw;
+    overflow-x: hidden !important;
   }
 }
 
@@ -102,9 +108,3 @@
 [data-theme='emerald'] { --primary: 150 100% 50%; --ring: 150 100% 50%; }
 [data-theme='cyberpunk'] { --primary: 320 100% 50%; --accent: 60 100% 50%; }
 [data-theme='nebula'] { --primary: 280 100% 70%; --accent: 180 100% 50%; }
-
-/* Strict horizontal containment */
-html, body {
-  max-width: 100vw;
-  overflow-x: hidden !important;
-}

@@ -1,11 +1,11 @@
 "use client"
 
-import React, { useState, useMemo, memo, useRef, useEffect } from 'react';
+import React, { useState, useMemo, memo, useRef } from 'react';
 import { useAppState } from '@/lib/store';
 import { Button } from '@/components/ui/button';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
-  Plus, SquarePen, Ghost, Search, Star, Pin, PinOff, Archive, Lock, Trash2, MessageCircle, WifiOff, Loader2
+  Plus, Ghost, Search, Star, Pin, PinOff, Archive, Lock, Trash2, MessageCircle
 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { CreateChatModal } from './modals/create-chat-modal';
@@ -237,9 +237,9 @@ export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?:
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isEditorModalOpen, setIsEditorModalOpen] = useState(false);
   const [isAdminPanelOpen, setIsAdminPanelOpen] = useState(false);
-  const [isOnline, setIsOnline] = useState(true);
+  const [isOnline, setIsOnline] = React.useState(true);
 
-  useEffect(() => {
+  React.useEffect(() => {
     const handleOnline = () => setIsOnline(true);
     const handleOffline = () => setIsOnline(false);
     setIsOnline(navigator.onLine);
