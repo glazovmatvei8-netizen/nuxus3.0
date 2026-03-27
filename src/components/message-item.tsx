@@ -18,10 +18,10 @@ import {
   ContextMenuItem,
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
-import { format } from 'date-fns';
+import { format, isAfter, parseISO } from 'date-fns';
 import { 
   CornerUpLeft, Trash2, Check, CheckCheck, Edit2, Copy, Pin, X, Share2, Play, Smile, Lock, Languages, Loader2, Image as ImageIcon,
-  MessageCircle, Star, Pause, ShieldCheck, Clock, Type, Globe, Volume2
+  MessageCircle, Star, Pause, ShieldCheck, Clock, Type, Globe, Volume2, Timer
 } from 'lucide-react';
 import { cn, decryptSignal, isGlobalAdmin, isUserPremium } from '@/lib/utils';
 import { doc, updateDoc, deleteDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
@@ -64,11 +64,23 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
       tempAudio.preload = "metadata";
       tempAudio.onloadedmetadata = () => setDuration(tempAudio.duration);
     }
+    
+    // Auto-delete check
+    if (message.selfDestructAt && db && chatId) {
+      const checkExpiry = () => {
+        if (isAfter(new Date(), parseISO(message.selfDestructAt))) {
+          deleteDoc(doc(db, 'chats', chatId, 'messages', message.id));
+        }
+      };
+      const interval = setInterval(checkExpiry, 10000);
+      return () => clearInterval(interval);
+    }
+
     return () => { 
       if (audioInstance.current) { audioInstance.current.pause(); audioInstance.current = null; } 
       if (ttsAudioRef.current) { ttsAudioRef.current.pause(); ttsAudioRef.current = null; }
     };
-  }, [message.content, message.contentType]);
+  }, [message.content, message.contentType, message.selfDestructAt, db, chatId, message.id]);
 
   const handleReaction = async (emoji: string) => {
     if (!db || !user || !chatId) return;
@@ -143,6 +155,17 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
     else audioInstance.current.pause();
   };
 
+  const bubbleStyle = message.metadata?.bubbleStyle || 'default';
+
+  const bubbleClasses = cn(
+    "p-3.5 rounded-[2rem] transition-all duration-300 relative will-change-transform",
+    isMe ? "message-bubble-me rounded-br-none" : "message-bubble-other rounded-bl-none text-white",
+    highlight && "ring-2 ring-primary shadow-[0_0_25px_rgba(168,85,247,0.5)] scale-105",
+    bubbleStyle === 'neon' && isMe && "bg-gradient-to-tr from-cyan-500 to-purple-500 shadow-[0_0_20px_rgba(6,182,212,0.4)]",
+    bubbleStyle === 'gold' && isMe && "bg-gradient-to-tr from-yellow-400 to-orange-500 shadow-[0_0_20px_rgba(234,179,8,0.4)] text-black",
+    bubbleStyle === 'ocean' && isMe && "bg-gradient-to-tr from-blue-400 to-emerald-400 shadow-[0_0_20px_rgba(59,130,246,0.4)]"
+  );
+
   const renderContent = () => {
     if (message.contentType === 'sticker') return <img src={message.content} alt="Sticker" className="w-44 h-44 object-contain pointer-events-none drop-shadow-2xl" />;
     
@@ -208,10 +231,19 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
-  if (message.contentType === 'service') return (
+  if (message.contentType === 'service' || message.contentType === 'broadcast') return (
     <div className="w-full flex justify-center my-6 animate-in fade-in zoom-in duration-700">
-      <div className="bg-white/[0.03] backdrop-blur-xl px-8 py-2.5 rounded-full border border-white/5 shadow-inner">
-        <p className="text-[10px] text-primary/60 uppercase font-black tracking-[0.4em] ml-[0.4em]">{message.content}</p>
+      <div className={cn(
+        "bg-white/[0.03] backdrop-blur-xl px-8 py-2.5 rounded-full border border-white/5 shadow-inner",
+        message.contentType === 'broadcast' && "border-primary/40 bg-primary/10"
+      )}>
+        <p className={cn(
+          "text-[10px] text-primary/60 uppercase font-black tracking-[0.4em] ml-[0.4em]",
+          message.contentType === 'broadcast' && "text-primary animate-pulse"
+        )}>
+          {message.contentType === 'broadcast' && <Zap className="w-3 h-3 inline mr-2 mb-0.5" />}
+          {message.content}
+        </p>
       </div>
     </div>
   );
@@ -232,12 +264,13 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
           
           <ContextMenu>
             <ContextMenuTrigger>
-              <div className="cursor-pointer active:scale-[0.98] outline-none group/bubble">
-                <div className={cn(
-                  "p-3.5 rounded-[2rem] transition-all duration-300 relative will-change-transform", 
-                  isMe ? "message-bubble-me rounded-br-none" : "message-bubble-other rounded-bl-none text-white",
-                  highlight && "ring-2 ring-primary shadow-[0_0_25px_rgba(168,85,247,0.5)] scale-105"
-                )}>
+              <div className="cursor-pointer active:scale-[0.98] outline-none group/bubble relative">
+                {message.selfDestructAt && (
+                  <div className="absolute -top-6 right-0 flex items-center gap-1 text-primary/60 text-[8px] font-black uppercase tracking-widest">
+                    <Timer className="w-3 h-3 animate-spin" /> Исчезающее
+                  </div>
+                )}
+                <div className={bubbleClasses}>
                   {message.replyToId && (
                     <div className="mb-3 p-2.5 border-l-2 border-accent bg-white/5 rounded-r-2xl opacity-60 text-[11px] truncate max-w-[240px] italic">
                       {decryptSignal(message.replyToContent)}
@@ -245,7 +278,7 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
                   )}
                   {renderContent()}
                   <div className="flex items-center justify-end gap-2 mt-2 opacity-40">
-                    <span className="text-9px] font-black tabular-nums tracking-widest">{formattedTime}</span>
+                    <span className="text-[9px] font-black tabular-nums tracking-widest">{formattedTime}</span>
                     {isMe && (message.isRead ? <CheckCheck className="w-3.5 h-3.5 text-accent" /> : <Check className="w-3.5 h-3.5" />)}
                   </div>
                 </div>

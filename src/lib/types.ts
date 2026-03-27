@@ -60,7 +60,7 @@ export interface Message {
   editedAt?: string;
   isRead?: boolean;
   isSilent?: boolean;
-  selfDestructAt?: string;
+  selfDestructAt?: string | null;
   forwardFrom?: string;
   reactions?: Record<string, string[]>; // emoji -> [uids]
   pollData?: {
@@ -70,7 +70,10 @@ export interface Message {
     isMultiple: boolean;
     closedAt?: string;
   };
-  metadata?: any;
+  metadata?: {
+    bubbleStyle?: 'default' | 'neon' | 'gold' | 'ocean';
+    [key: string]: any;
+  };
 }
 
 export interface Story {
@@ -144,6 +147,7 @@ export interface UserSettings {
   chatBackground: string;
   chatBackgroundFit?: 'cover' | 'contain';
   customAppIconUrl?: string;
+  bubbleStyle?: 'default' | 'neon' | 'gold' | 'ocean';
   messageSize: 'small' | 'medium' | 'large';
   privacy: UserPrivacy;
   statusEmoji?: string;

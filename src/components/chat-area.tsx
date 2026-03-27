@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
   Send, Info, ChevronLeft, X, Paperclip, Mic, StopCircle, Edit2, Search,
-  Smile, ImageIcon, Video, Trash2, Loader2, UserPlus, AtSign, ChevronDown, Wand2, Sparkles, Star
+  Smile, ImageIcon, Video, Trash2, Loader2, UserPlus, AtSign, ChevronDown, Wand2, Sparkles, Star, Timer, Clock
 } from 'lucide-react';
 import { MessageItem } from './message-item';
 import { useToast } from '@/hooks/use-toast';
@@ -22,10 +22,12 @@ import type { Message, User as UserType, Chat } from '@/lib/types';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { suggestMessageDraft } from '@/ai/flows/ai-message-drafting-flow';
 import { chatConversationSummary } from '@/ai/flows/chat-conversation-summary-flow';
+import { addMinutes, addHours } from 'date-fns';
 
-const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, isPremium, messages }: any) => {
+const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, isPremium, messages, userProfile }: any) => {
   const [messageInput, setMessageInput] = useState('');
   const [isAiDrafting, setIsAiDrafting] = useState(false);
+  const [destructTimer, setDestructTimer] = useState<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const { user } = useUser();
@@ -48,8 +50,9 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
 
   const handleSend = () => {
     if (!messageInput.trim()) return;
-    onSendMessage(messageInput, 'text');
+    onSendMessage(messageInput, 'text', destructTimer);
     setMessageInput('');
+    setDestructTimer(null);
   };
 
   const handleAiDraft = async () => {
@@ -80,10 +83,25 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
             <PopoverContent side="top" align="start" className="w-48 bg-[#1c1c1e]/95 backdrop-blur-3xl border-white/10 rounded-[1.8rem] p-1.5 mb-2 shadow-2xl">
               <Button variant="ghost" className="w-full justify-start gap-3 rounded-xl h-11 text-[10px] font-black uppercase tracking-widest text-white/80 hover:bg-white/5" onClick={() => fileInputRef.current?.click()}><ImageIcon className="w-4 h-4 text-primary" /> Галерея</Button>
               <Button variant="ghost" className="w-full justify-start gap-3 rounded-xl h-11 text-[10px] font-black uppercase tracking-widest text-white/80 hover:bg-white/5" onClick={onPollOpen}><AtSign className="w-4 h-4 text-accent" /> Опрос</Button>
+              <div className="h-px bg-white/5 mx-2 my-1" />
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="ghost" className={cn("w-full justify-start gap-3 rounded-xl h-11 text-[10px] font-black uppercase tracking-widest hover:bg-white/5", destructTimer ? "text-primary" : "text-white/80")}>
+                    <Timer className="w-4 h-4" /> Исчезновение
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent side="right" align="end" className="w-40 bg-[#1c1c1e] border-white/10 rounded-2xl p-1 shadow-2xl">
+                  <Button variant="ghost" onClick={() => setDestructTimer(null)} className="w-full justify-start text-[10px] font-bold uppercase h-10 rounded-xl">Выкл</Button>
+                  <Button variant="ghost" onClick={() => setDestructTimer(1)} className="w-full justify-start text-[10px] font-bold uppercase h-10 rounded-xl">1 Минута</Button>
+                  <Button variant="ghost" onClick={() => setDestructTimer(60)} className="w-full justify-start text-[10px] font-bold uppercase h-10 rounded-xl">1 Час</Button>
+                  <Button variant="ghost" onClick={() => setDestructTimer(1440)} className="w-full justify-start text-[10px] font-bold uppercase h-10 rounded-xl">24 Часа</Button>
+                </PopoverContent>
+              </Popover>
             </PopoverContent>
           </Popover>
           
           <div className="flex-1 flex items-center bg-white/[0.08] rounded-full border border-white/[0.1] h-11 px-4 relative group transition-all focus-within:bg-white/[0.12] focus-within:border-primary/30">
+            {destructTimer && <Timer className="w-4 h-4 text-primary mr-2 animate-pulse" />}
             <Input 
               placeholder="Сообщение" 
               className="bg-transparent border-none focus-visible:ring-0 text-white placeholder:text-white/30 font-medium" 
@@ -260,7 +278,7 @@ export default function ChatArea() {
     scrollToBottom('auto');
   }, [currentChatId, scrollToBottom]);
 
-  const handleSendMessage = useCallback(async (content_msg: string, type_msg: Message['contentType'] = 'text') => {
+  const handleSendMessage = useCallback(async (content_msg: string, type_msg: Message['contentType'] = 'text', minutes: number | null = null) => {
     if (!content_msg.trim() || !currentChatId || !firebaseUser || !db || !canPost) return;
     
     let finalContent = type_msg === 'text' ? encryptSignal(content_msg) : content_msg;
@@ -268,8 +286,15 @@ export default function ChatArea() {
 
     const msgData: Partial<Message> = { 
       chatId: currentChatId, senderId: firebaseUser.uid, senderName: userProfile?.name || 'Nuxus User', 
-      content: finalContent, contentType: type_msg, sentAt: new Date().toISOString(), isRead: false
+      content: finalContent, contentType: type_msg, sentAt: new Date().toISOString(), isRead: false,
+      metadata: {
+        bubbleStyle: userProfile?.settings?.bubbleStyle || 'default'
+      }
     };
+
+    if (minutes) {
+      msgData.selfDestructAt = addMinutes(new Date(), minutes).toISOString();
+    }
     
     if (replyTo) { 
       msgData.replyToId = replyTo.id; 
@@ -322,7 +347,7 @@ export default function ChatArea() {
   const bgFit = userProfile?.settings?.chatBackgroundFit || 'cover';
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-background relative overflow-hidden z-20 max-w-full">
+    <div className="flex-1 flex flex-col h-full bg-background relative overflow-hidden z-20 max-w-full min-w-0">
       <div 
         className={cn("absolute inset-0 z-0", !customBg && "chat-pattern-bg")}
         style={customBg ? { 
@@ -376,7 +401,7 @@ export default function ChatArea() {
         )}
       </header>
 
-      <div className="flex-1 relative overflow-hidden flex flex-col">
+      <div className="flex-1 relative overflow-hidden flex flex-col min-w-0">
         <div 
           ref={scrollContainerRef}
           className="flex-1 w-full relative z-10 overflow-y-auto scrollbar-hide scroll-smooth" 
@@ -422,6 +447,7 @@ export default function ChatArea() {
           currentChatId={currentChatId}
           isPremium={isPremium}
           messages={messages}
+          userProfile={userProfile}
         />
       )}
 

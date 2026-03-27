@@ -16,7 +16,7 @@ import {
   LogOut, Palette, Check, Settings2, Camera, Lock, Image as ImageIcon, 
   Paintbrush, Shield, UserCircle, Layout, Smile, FileText, ChevronRight,
   ShieldCheck, Eye, Users2, MessageSquareLock, Upload, Smartphone, Share2, Trophy,
-  Bell, Video, Mic, MonitorSmartphone, Key, Trash2, ShieldAlert, RefreshCw, Save, Zap, Moon, Sun, Monitor, Download, Share, Fingerprint, Sparkles, Wand2, Globe, Star, Ghost, Volume2
+  Bell, Video, Mic, MonitorSmartphone, Key, Trash2, ShieldAlert, RefreshCw, Save, Zap, Moon, Sun, Monitor, Download, Share, Fingerprint, Sparkles, Wand2, Globe, Star, Ghost, Volume2, MessageSquare, Timer, Crown
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { signOut } from 'firebase/auth';
@@ -35,6 +35,13 @@ const THEMES = [
   { id: 'emerald', name: 'Изумруд', color: 'bg-[#22C55E]' },
   { id: 'cyberpunk', name: 'Cyberpunk 2077', color: 'bg-[#FDE047]', premium: true },
   { id: 'nebula', name: 'Nebula Core', color: 'bg-[#D8B4FE]', premium: true },
+];
+
+const BUBBLE_STYLES = [
+  { id: 'default', name: 'Классика', color: 'bg-primary' },
+  { id: 'neon', name: 'Neon Flow', color: 'bg-gradient-to-tr from-cyan-500 to-purple-500', premium: true },
+  { id: 'gold', name: 'Royal Gold', color: 'bg-gradient-to-tr from-yellow-400 to-orange-500', premium: true },
+  { id: 'ocean', name: 'Deep Sea', color: 'bg-gradient-to-tr from-blue-400 to-emerald-400', premium: true },
 ];
 
 export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
@@ -56,6 +63,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
     avatarUrl: '',
     appearance: 'dark' as 'light' | 'dark',
     theme: 'default',
+    bubbleStyle: 'default',
     twoFactorEnabled: false,
     twoFactorPin: '',
     chatBackground: '',
@@ -80,6 +88,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         avatarUrl: profile.avatarUrl || '',
         appearance: profile.settings?.appearance || 'dark',
         theme: profile.settings?.theme || 'default',
+        bubbleStyle: profile.settings?.bubbleStyle || 'default',
         twoFactorEnabled: !!profile.twoFactorEnabled,
         twoFactorPin: profile.twoFactorPin || '',
         chatBackground: profile.settings?.chatBackground || '',
@@ -110,6 +119,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         statusEmoji: form.statusEmoji,
         'settings.appearance': form.appearance,
         'settings.theme': form.theme,
+        'settings.bubbleStyle': form.bubbleStyle,
         'settings.chatBackground': form.chatBackground,
         'settings.chatBackgroundFit': form.chatBackgroundFit,
         'settings.customAppIconUrl': form.customAppIconUrl,
@@ -141,14 +151,14 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md bg-card border-border p-0 overflow-hidden h-[85vh] flex flex-col rounded-[2.5rem] shadow-2xl">
+      <DialogContent className="max-w-md bg-card border-border p-0 overflow-hidden h-[85vh] flex flex-col rounded-[2.5rem] shadow-2xl outline-none">
         <DialogHeader className="p-6 border-b border-white/5 shrink-0">
           <DialogTitle className="flex items-center gap-2 text-xl font-black italic uppercase tracking-tighter text-white">
             <Settings2 className="w-5 h-5 text-primary" /> Параметры Аккаунта
           </DialogTitle>
         </DialogHeader>
         
-        <Tabs value={settingsTab} onValueChange={setSettingsTab} className="flex-1 flex flex-col min-h-0">
+        <Tabs value={settingsTab} onValueChange={setSettingsTab} className="flex-1 flex flex-col min-h-0 overflow-hidden">
           <TabsList className="flex bg-muted/50 p-1 mx-6 mt-4 rounded-2xl shrink-0 overflow-x-auto scrollbar-hide">
             <TabsTrigger value="profile" className="flex-1 text-[9px] uppercase font-bold tracking-widest">Профиль</TabsTrigger>
             <TabsTrigger value="appearance" className="flex-1 text-[9px] uppercase font-bold tracking-widest">Стиль</TabsTrigger>
@@ -156,8 +166,8 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
             <TabsTrigger value="premium" className="flex-1 text-[9px] uppercase font-bold tracking-widest">Premium</TabsTrigger>
           </TabsList>
 
-          <ScrollArea className="flex-1 px-6">
-            <TabsContent value="profile" className="space-y-6 m-0 py-6">
+          <ScrollArea className="flex-1">
+            <TabsContent value="profile" className="space-y-6 m-0 p-6 pb-20">
               <div className="flex flex-col items-center gap-6">
                 <div className="relative group">
                   <UserAvatar userId={user?.uid} manualAvatarUrl={form.avatarUrl} className="h-32 w-32 border-4 border-primary/20 shadow-2xl" fallbackName={form.name} />
@@ -179,7 +189,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                   <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={(e) => { const f = e.target.files?.[0]; if(f) { const r = new FileReader(); r.onloadend = () => setForm({...form, avatarUrl: r.result as string}); r.readAsDataURL(f); } }} />
                 </div>
                 
-                <div className="space-y-4 w-full">
+                <div className="space-y-4 w-full text-left">
                   {isUserPremium(profile) && (
                     <div className="space-y-2">
                       <Label className="text-[10px] uppercase font-black text-primary ml-1 flex items-center gap-2">
@@ -201,7 +211,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
               </div>
             </TabsContent>
 
-            <TabsContent value="appearance" className="space-y-8 m-0 py-6">
+            <TabsContent value="appearance" className="space-y-8 m-0 p-6 pb-20">
               <div className="space-y-4">
                 <Label className="text-[10px] font-black uppercase text-muted-foreground flex items-center gap-2"><Monitor className="w-3 h-3" /> Режим интерфейса</Label>
                 <div className="grid grid-cols-2 gap-2">
@@ -213,6 +223,26 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                   </button>
                 </div>
               </div>
+
+              {isUserPremium(profile) && (
+                <div className="space-y-4 pt-4 border-t border-white/5">
+                  <Label className="text-[10px] font-black uppercase text-primary flex items-center gap-2">
+                    <MessageSquare className="w-3 h-3" /> Стиль пузырей сообщений (Premium)
+                  </Label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {BUBBLE_STYLES.map(style => (
+                      <button 
+                        key={style.id}
+                        onClick={() => setForm({...form, bubbleStyle: style.id})}
+                        className={cn("flex items-center gap-3 p-3 rounded-xl border transition-all", form.bubbleStyle === style.id ? "bg-primary/10 border-primary" : "bg-white/5 border-white/5")}
+                      >
+                        <div className={cn("w-4 h-4 rounded-full", style.color)} />
+                        <span className="text-[10px] font-bold text-white uppercase">{style.name}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {isUserPremium(profile) && (
                 <div className="space-y-4 pt-4 border-t border-white/5">
@@ -281,12 +311,12 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
               </div>
             </TabsContent>
 
-            <TabsContent value="privacy" className="space-y-6 m-0 py-6">
+            <TabsContent value="privacy" className="space-y-6 m-0 p-6 pb-20">
               <div className="bg-primary/5 p-5 rounded-[2rem] border border-primary/10 space-y-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <div className="bg-primary/20 p-2 rounded-xl"><Fingerprint className="w-5 h-5 text-primary" /></div>
-                    <div className="flex flex-col"><span className="text-xs font-bold text-white uppercase italic">Защита 2FA</span><span className="text-[8px] text-muted-foreground uppercase font-black">Двойной барьер доступа</span></div>
+                    <div className="flex flex-col text-left"><span className="text-xs font-bold text-white uppercase italic">Защита 2FA</span><span className="text-[8px] text-muted-foreground uppercase font-black">Двойной барьер доступа</span></div>
                   </div>
                   <Switch checked={form.twoFactorEnabled} onCheckedChange={v => setForm({...form, twoFactorEnabled: v})} />
                 </div>
@@ -309,7 +339,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <div className="bg-white/5 p-2 rounded-xl"><Ghost className="w-5 h-5 text-muted-foreground" /></div>
-                    <div className="flex flex-col"><span className="text-xs font-bold text-white uppercase">Режим Призрака</span><span className="text-[8px] text-muted-foreground uppercase font-black">Скрыть онлайн-статус (Premium)</span></div>
+                    <div className="flex flex-col text-left"><span className="text-xs font-bold text-white uppercase">Режим Призрака</span><span className="text-[8px] text-muted-foreground uppercase font-black">Скрыть онлайн-статус (Premium)</span></div>
                   </div>
                   <Switch 
                     disabled={!isUserPremium(profile)}
@@ -319,7 +349,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                 </div>
               </div>
 
-              <div className="space-y-4 px-1">
+              <div className="space-y-4 px-1 text-left">
                 <PrivacySelect label="Кто видит номер" value={form.privacy.phoneVisibility} onChange={v => setForm({...form, privacy: {...form.privacy, phoneVisibility: v}})} icon={Smartphone} />
                 <PrivacySelect label="Последний вход" value={form.privacy.lastSeenVisibility} onChange={v => setForm({...form, privacy: {...form.privacy, lastSeenVisibility: v}})} icon={Eye} />
                 <PrivacySelect label="Добавление в группы" value={form.privacy.allowGroupsFrom} onChange={v => setForm({...form, privacy: {...form.privacy, allowGroupsFrom: v}})} icon={Users2} />
@@ -327,11 +357,11 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
               </div>
             </TabsContent>
 
-            <TabsContent value="premium" className="space-y-6 m-0 py-6">
+            <TabsContent value="premium" className="space-y-6 m-0 p-6 pb-20">
               <div className="relative group">
                 <div className="absolute -inset-1 bg-gradient-to-tr from-primary to-accent rounded-[2rem] blur-md opacity-40 animate-pulse" />
                 <div className="relative bg-[#0a0a0c] border border-white/10 p-6 rounded-[2rem] text-center overflow-hidden">
-                  <Star className="w-12 h-12 text-accent fill-accent mx-auto mb-4 drop-shadow-[0_0_15px_rgba(250,204,21,0.6)]" />
+                  <Crown className="w-12 h-12 text-accent fill-accent mx-auto mb-4 drop-shadow-[0_0_15px_rgba(250,204,21,0.6)]" />
                   <h3 className="text-xl font-black uppercase italic text-white tracking-tight">Nuxus Premium</h3>
                   <p className="text-[10px] text-muted-foreground uppercase font-black mt-2 leading-relaxed">
                     {isUserPremium(profile) 
@@ -342,14 +372,14 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
               </div>
 
               <div className="space-y-3 pb-10">
+                <PremiumFeature icon={Timer} label="Исчезающие сообщения" description="Устанавливайте таймер на любое сообщение" />
+                <PremiumFeature icon={Paintbrush} label="Кастомные пузыри" description="Уникальные градиенты для ваших сообщений" />
                 <PremiumFeature icon={Sparkles} label="AI Conversation Summary" description="Краткая сводка обсуждения в один клик" />
                 <PremiumFeature icon={Ghost} label="Режим Призрака" description="Полная невидимость и скрытый онлайн-статус" />
                 <PremiumFeature icon={Volume2} label="AI Voice Synthesis" description="Озвучка текстовых сообщений голосом ИИ" />
-                <PremiumFeature icon={Sparkles} label="Анимированные Рамки" description="Динамическая обводка профиля во всех списках" />
+                <PremiumFeature icon={Zap} label="Приоритетный Сигнал" description="Ускоренная передача данных в Ядре" />
                 <PremiumFeature icon={Wand2} label="ИИ Помощник" description="Черновики ответов и генерация аватаров" />
-                <PremiumFeature icon={Globe} label="AI Переводчик" description="Мгновенный перевод сообщений в контекстном меню" />
-                <PremiumFeature icon={Mic} label="Voice-to-Text" description="Расшифровка голосовых в текст" />
-                <PremiumFeature icon={Paintbrush} label="Кастомизация" description="Свои фоны чатов и статус-эмодзи" />
+                <PremiumFeature icon={Globe} label="AI Переводчик" description="Мгновенный перевод сообщений в меню" />
               </div>
 
               {!isUserPremium(profile) && (
