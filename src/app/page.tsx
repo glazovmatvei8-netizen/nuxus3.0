@@ -81,18 +81,31 @@ export default function Home() {
 
   if (isUserLoading || (user && isProfileLoading)) {
     return (
-      <div className="h-[100dvh] w-full flex flex-col items-center justify-center bg-[#020203] text-white">
-        <div className="relative">
-          <div className="absolute inset-0 bg-primary blur-[80px] opacity-20 animate-pulse" />
-          <NuxusLogo size={160} />
+      <div className="h-[100dvh] w-full flex flex-col items-center justify-center bg-[#020203] text-white relative overflow-hidden">
+        {/* Immersive Loading Background */}
+        <div className="absolute inset-0 z-0">
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[150%] h-[150%] bg-[radial-gradient(circle_at_center,rgba(168,85,247,0.15)_0%,transparent_50%)] animate-pulse-glow" />
+          <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-10" />
         </div>
-        <div className="mt-16 flex flex-col items-center gap-6">
-          <div className="relative w-48 h-1 bg-white/5 rounded-full overflow-hidden">
-            <div className="absolute inset-0 bg-primary animate-[scanline_2s_linear_infinite]" />
+
+        <div className="relative z-10 flex flex-col items-center">
+          <div className="relative">
+            <div className="absolute inset-0 bg-primary blur-[100px] opacity-30 animate-pulse" />
+            <NuxusLogo size={180} />
           </div>
-          <p className="text-[10px] font-black uppercase tracking-[0.8em] text-primary/60 animate-pulse ml-[0.8em]">
-            Syncing Neural Uplink
-          </p>
+          <div className="mt-20 flex flex-col items-center gap-8">
+            <div className="relative w-64 h-1 bg-white/5 rounded-full overflow-hidden">
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-primary to-transparent animate-[scanline_2s_linear_infinite]" />
+            </div>
+            <div className="space-y-2 text-center">
+              <p className="text-[11px] font-black uppercase tracking-[1em] text-primary/80 animate-pulse ml-[1em]">
+                Initializing
+              </p>
+              <p className="text-[8px] font-black uppercase tracking-[0.5em] text-white/20 ml-[0.5em]">
+                Quantum Encryption Core v0.65.8
+              </p>
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -118,49 +131,56 @@ export default function Home() {
   if (profile?.twoFactorEnabled && !is2FAVerified) {
     return (
       <div className="h-screen w-full flex items-center justify-center bg-[#020203] relative overflow-hidden px-6">
+        {/* Immersive 2FA Background */}
         <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full max-w-4xl aspect-square bg-primary/10 blur-[180px] rounded-full animate-pulse-glow" />
+          <div className="absolute top-1/4 left-1/4 w-full h-full bg-primary/10 blur-[200px] rounded-full animate-pulse-glow" />
+          <div className="absolute bottom-1/4 right-1/4 w-full h-full bg-accent/5 blur-[200px] rounded-full animate-pulse-glow" style={{ animationDelay: '2s' }} />
+          <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:40px_40px] [mask-image:radial-gradient(ellipse_at_center,black,transparent_80%)]" />
         </div>
         
-        <div className="w-full max-w-sm space-y-12 text-center animate-in fade-in zoom-in duration-1000">
-          <div className="space-y-8">
-            <div className="relative inline-block">
-              <div className="absolute inset-0 bg-primary blur-[60px] opacity-20 animate-pulse" />
-              <div className="bg-white/[0.02] border border-white/10 w-28 h-28 rounded-[3rem] flex items-center justify-center mx-auto relative z-10 shadow-2xl backdrop-blur-[100px]">
-                <Fingerprint className="w-12 h-12 text-primary animate-float" />
+        <div className="w-full max-w-sm space-y-16 text-center relative z-10 animate-in fade-in zoom-in duration-1000">
+          <div className="space-y-10">
+            <div className="relative inline-block group">
+              <div className="absolute -inset-8 bg-primary/20 blur-[80px] opacity-40 animate-pulse group-hover:opacity-60 transition-opacity duration-1000" />
+              <div className="bg-white/[0.03] border border-white/10 w-32 h-32 rounded-[3.5rem] flex items-center justify-center mx-auto relative z-10 shadow-2xl backdrop-blur-[120px] group-hover:scale-110 transition-transform duration-700">
+                <Fingerprint className="w-14 h-14 text-primary animate-float" />
               </div>
             </div>
-            <div className="space-y-3">
-              <h2 className="text-4xl font-black uppercase italic text-white tracking-tighter">Neural Key</h2>
-              <p className="text-[9px] font-black uppercase tracking-[0.6em] text-primary/60 ml-[0.6em]">Biometric Verification Required</p>
+            <div className="space-y-4">
+              <h2 className="text-5xl font-black uppercase italic text-white tracking-tighter drop-shadow-[0_0_20px_rgba(168,85,247,0.5)]">Neural Key</h2>
+              <div className="flex items-center justify-center gap-3">
+                <div className="h-px w-8 bg-primary/30" />
+                <p className="text-[10px] font-black uppercase tracking-[0.8em] text-primary/60 ml-[0.8em]">Biometric Auth</p>
+                <div className="h-px w-8 bg-primary/30" />
+              </div>
             </div>
           </div>
 
-          <div className="space-y-10">
-            <div className="relative group max-w-[300px] mx-auto">
-               <div className="absolute -inset-4 bg-primary/20 blur-3xl opacity-0 group-focus-within:opacity-100 transition-opacity duration-1000" />
+          <div className="space-y-12">
+            <div className="relative group max-w-[320px] mx-auto">
+               <div className="absolute -inset-10 bg-primary/15 blur-[100px] opacity-0 group-focus-within:opacity-100 transition-opacity duration-1000" />
                <Input 
                 type="password" 
                 placeholder="••••••" 
                 maxLength={6} 
                 autoFocus
-                className="bg-white/[0.03] border-white/10 h-20 text-4xl tracking-[0.8em] text-center rounded-[2rem] font-black focus:border-primary/50 transition-all shadow-inner relative z-10 placeholder:text-white/5"
+                className="bg-white/[0.04] border-white/10 h-24 text-5xl tracking-[0.8em] text-center rounded-[2.5rem] font-black focus:border-primary/50 transition-all shadow-[inset_0_0_20px_rgba(0,0,0,0.4)] relative z-10 placeholder:text-white/5 border-2"
                 value={twoFactorInput}
                 onChange={e => setTwoFactorInput(e.target.value.replace(/\D/g, ''))}
                 onKeyDown={e => e.key === 'Enter' && handleVerify2FA()}
               />
             </div>
             
-            <div className="space-y-6 max-w-[300px] mx-auto">
-              <Button onClick={handleVerify2FA} className="w-full h-16 rounded-[1.8rem] bg-primary hover:bg-primary/90 text-white font-black uppercase italic tracking-widest shadow-2xl shadow-primary/40 group active:scale-95 transition-all text-sm relative overflow-hidden">
-                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
-                <span className="flex items-center gap-2">
-                  Unlock Core <ArrowRight className="w-5 h-5 group-hover:translate-x-2 transition-transform" />
+            <div className="space-y-8 max-w-[320px] mx-auto">
+              <Button onClick={handleVerify2FA} className="w-full h-20 rounded-[2.2rem] bg-primary hover:bg-primary/90 text-white font-black uppercase italic tracking-[0.2em] shadow-[0_20px_50px_rgba(168,85,247,0.4)] group active:scale-95 transition-all text-base relative overflow-hidden border border-white/10">
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
+                <span className="flex items-center gap-3 relative z-10">
+                  Unlock Core <ArrowRight className="w-6 h-6 group-hover:translate-x-2 transition-transform" />
                 </span>
               </Button>
               <button 
                 onClick={() => signOut(auth)} 
-                className="w-full text-[9px] font-black uppercase tracking-[0.5em] text-white/20 hover:text-white transition-colors py-2"
+                className="w-full text-[10px] font-black uppercase tracking-[0.6em] text-white/20 hover:text-white transition-all py-4 hover:scale-105 active:scale-95"
               >
                 Abort Uplink (Logout)
               </button>

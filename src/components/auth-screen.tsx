@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, ShieldAlert, Fingerprint, RefreshCcw, Lock, ShieldCheck, ArrowRight, Zap } from 'lucide-react';
+import { Loader2, ShieldAlert, Fingerprint, RefreshCcw, Lock, ShieldCheck, ArrowRight, Zap, Globe } from 'lucide-react';
 import { useAuth, useFirestore } from '@/firebase';
 import { 
   signInWithEmailAndPassword,
@@ -191,38 +191,40 @@ export default function AuthScreen() {
 
   return (
     <div className="min-h-[100dvh] w-full flex flex-col items-center justify-center bg-[#020203] p-4 relative overflow-hidden">
-      {/* Cinematic Background Orbs */}
+      {/* Cinematic Background Orbs and Mesh */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
         <div className="absolute top-[-20%] left-[-10%] w-[100%] h-[100%] bg-primary/10 blur-[200px] rounded-full animate-pulse-glow" />
         <div className="absolute bottom-[-20%] right-[-10%] w-[100%] h-[100%] bg-accent/5 blur-[180px] rounded-full animate-pulse-glow" style={{ animationDelay: '3s' }} />
+        <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/black-thread.png')] opacity-20 mix-blend-overlay" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_0%,rgba(0,0,0,0.4)_100%)]" />
       </div>
 
-      <div className="w-full max-w-[380px] relative z-10 flex flex-col items-center animate-in fade-in zoom-in duration-1000">
-        <div className="mb-8 scale-90 hover:scale-100 transition-transform duration-700">
-          <NuxusLogo size={100} />
+      <div className="w-full max-w-[400px] relative z-10 flex flex-col items-center animate-in fade-in zoom-in duration-1000">
+        <div className="mb-12 scale-90 hover:scale-100 transition-all duration-700 cursor-pointer active:rotate-[360deg]">
+          <NuxusLogo size={120} />
         </div>
 
-        <Card className="w-full border-white/[0.08] bg-white/[0.02] backdrop-blur-[120px] shadow-2xl rounded-[3rem] overflow-hidden relative">
-          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-primary/40 to-transparent" />
+        <Card className="w-full border-white/[0.08] bg-white/[0.02] backdrop-blur-[120px] shadow-[0_30px_100px_rgba(0,0,0,0.8)] rounded-[3.5rem] overflow-hidden relative border-2">
+          <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-transparent via-primary/60 to-transparent animate-pulse" />
           
-          <CardHeader className="text-center pb-2 pt-10 px-8">
-            <CardTitle className="text-3xl font-black tracking-tighter uppercase italic text-white leading-none">
+          <CardHeader className="text-center pb-4 pt-12 px-10">
+            <CardTitle className="text-4xl font-black tracking-tighter uppercase italic text-white leading-none drop-shadow-[0_0_15px_rgba(168,85,247,0.4)]">
               {mode === 'recover' ? 'Restore' : mode === 'setup2fa' ? 'Quantum' : mode === 'login' ? 'Signal' : 'Create'}
             </CardTitle>
-            <CardDescription className="text-primary/80 font-black tracking-[0.5em] uppercase text-[8px] opacity-60 mt-3 ml-[0.5em]">
+            <CardDescription className="text-primary/80 font-black tracking-[0.6em] uppercase text-[9px] opacity-60 mt-4 ml-[0.6em]">
               {mode === 'setup2fa' ? 'Protection Key' : mode === 'recover' ? 'Neural recovery' : 'Neural Access Layer'}
             </CardDescription>
           </CardHeader>
 
-          <CardContent className="px-8 pb-10 pt-6">
+          <CardContent className="px-10 pb-12 pt-8">
             {mode === 'setup2fa' ? (
-              <form onSubmit={handleSetup2FA} className="space-y-8">
-                <div className="flex flex-col items-center gap-4 py-2">
+              <form onSubmit={handleSetup2FA} className="space-y-10">
+                <div className="flex flex-col items-center gap-6 py-4">
                   <div className="relative">
-                    <div className="absolute inset-0 bg-primary blur-3xl opacity-20 animate-pulse" />
-                    <Fingerprint className="w-16 h-16 text-primary animate-float relative z-10" />
+                    <div className="absolute inset-0 bg-primary blur-3xl opacity-30 animate-pulse" />
+                    <Fingerprint className="w-20 h-20 text-primary animate-float relative z-10" />
                   </div>
-                  <p className="text-[9px] text-muted-foreground uppercase font-black tracking-[0.2em] text-center">Установите 6-значный квантовый ключ</p>
+                  <p className="text-[10px] text-muted-foreground uppercase font-black tracking-[0.3em] text-center leading-relaxed">Установите 6-значный<br/>квантовый ключ доступа</p>
                 </div>
                 <Input 
                   type="password" 
@@ -230,65 +232,65 @@ export default function AuthScreen() {
                   maxLength={6} 
                   value={formData.pin2FA} 
                   onChange={e => setFormData({...formData, pin2FA: e.target.value.replace(/\D/g, '')})} 
-                  className="bg-white/5 border-white/10 h-16 rounded-2xl text-center text-3xl tracking-[0.6em] font-black focus:border-primary/50 transition-all shadow-inner" 
+                  className="bg-white/5 border-white/10 h-20 rounded-[2rem] text-center text-4xl tracking-[0.8em] font-black focus:border-primary/50 transition-all shadow-inner border-2" 
                   required 
                 />
-                <Button type="submit" disabled={isLoading} className="w-full h-14 bg-primary text-white rounded-2xl font-black uppercase italic tracking-widest shadow-2xl shadow-primary/30 active:scale-95 transition-all">
-                  {isLoading ? <Loader2 className="animate-spin w-5 h-5" /> : "Активировать Узел"}
+                <Button type="submit" disabled={isLoading} className="w-full h-16 bg-primary text-white rounded-[1.8rem] font-black uppercase italic tracking-widest shadow-2xl shadow-primary/40 active:scale-95 transition-all text-base border border-white/10">
+                  {isLoading ? <Loader2 className="animate-spin w-6 h-6" /> : "Активировать Узел"}
                 </Button>
               </form>
             ) : mode === 'recover' ? (
-              <div className="space-y-8 text-center py-4">
+              <div className="space-y-10 text-center py-6">
                 <div className="relative">
-                  <div className="absolute inset-0 bg-accent blur-3xl opacity-10 animate-pulse" />
-                  <ShieldAlert className="w-16 h-16 text-accent animate-float mx-auto relative z-10" />
+                  <div className="absolute inset-0 bg-accent blur-3xl opacity-20 animate-pulse" />
+                  <ShieldAlert className="w-20 h-20 text-accent animate-float mx-auto relative z-10" />
                 </div>
-                <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60 px-4 leading-relaxed">
+                <p className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground/80 px-6 leading-relaxed">
                   Для восстановления доступа к узлу обратитесь к Владельцу Nuxus Prime через защищенный канал.
                 </p>
-                <Button variant="outline" onClick={() => setMode('login')} className="w-full h-14 rounded-2xl border-white/10 text-[10px] uppercase font-black tracking-[0.3em] hover:bg-white/5 transition-all">Вернуться</Button>
+                <Button variant="outline" onClick={() => setMode('login')} className="w-full h-16 rounded-[1.8rem] border-white/10 text-[11px] uppercase font-black tracking-[0.4em] hover:bg-white/5 transition-all">Вернуться</Button>
               </div>
             ) : (
-              <form onSubmit={handleAuth} className="space-y-5">
+              <form onSubmit={handleAuth} className="space-y-6">
                 {mode === 'register' && (
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label className="text-[8px] uppercase font-black text-primary/60 ml-3 tracking-widest">Имя</Label>
-                      <Input placeholder="Node Name" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="bg-white/5 border-white/10 h-12 rounded-2xl text-xs font-bold" required />
+                      <Label className="text-[9px] uppercase font-black text-primary/60 ml-4 tracking-widest">Имя</Label>
+                      <Input placeholder="Node Name" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="bg-white/5 border-white/10 h-14 rounded-[1.5rem] text-sm font-bold border-2" required />
                     </div>
                     <div className="space-y-2">
-                      <Label className="text-[8px] uppercase font-black text-primary/60 ml-3 tracking-widest">ID</Label>
-                      <Input placeholder="node_id" value={formData.username} onChange={e => setFormData({...formData, username: e.target.value})} className="bg-white/5 border-white/10 h-12 rounded-2xl text-xs font-mono" required />
+                      <Label className="text-[9px] uppercase font-black text-primary/60 ml-4 tracking-widest">ID</Label>
+                      <Input placeholder="node_id" value={formData.username} onChange={e => setFormData({...formData, username: e.target.value})} className="bg-white/5 border-white/10 h-14 rounded-[1.5rem] text-sm font-mono border-2" required />
                     </div>
                   </div>
                 )}
                 <div className="space-y-2">
-                  <Label className="text-[8px] uppercase font-black text-primary/60 ml-3 tracking-widest">Аккаунт / Телефон</Label>
-                  <Input placeholder="+7 (___) ___ __ __" value={formData.identifier} onChange={e => setFormData({...formData, identifier: e.target.value})} className="bg-white/5 border-white/10 h-12 rounded-2xl text-sm font-bold tracking-widest" required />
+                  <Label className="text-[9px] uppercase font-black text-primary/60 ml-4 tracking-widest">Аккаунт / Телефон</Label>
+                  <Input placeholder="+7 (___) ___ __ __" value={formData.identifier} onChange={e => setFormData({...formData, identifier: e.target.value})} className="bg-white/5 border-white/10 h-14 rounded-[1.5rem] text-base font-bold tracking-widest border-2" required />
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-[8px] uppercase font-black text-primary/60 ml-3 tracking-widest">Пароль</Label>
-                  <Input type="password" placeholder="••••••••" value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} className="bg-white/5 border-white/10 h-12 rounded-2xl text-sm tracking-widest" required />
+                  <Label className="text-[9px] uppercase font-black text-primary/60 ml-4 tracking-widest">Пароль</Label>
+                  <Input type="password" placeholder="••••••••" value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} className="bg-white/5 border-white/10 h-14 rounded-[1.5rem] text-base tracking-widest border-2" required />
                 </div>
                 
-                <div className="pt-4">
-                  <Button type="submit" disabled={isLoading} className="w-full h-14 bg-primary text-white rounded-2xl font-black uppercase italic tracking-widest shadow-2xl shadow-primary/30 active:scale-95 transition-all group overflow-hidden relative">
-                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
-                    {isLoading ? <Loader2 className="animate-spin w-5 h-5" /> : (
-                      <span className="flex items-center gap-2">
+                <div className="pt-6">
+                  <Button type="submit" disabled={isLoading} className="w-full h-16 bg-primary text-white rounded-[1.8rem] font-black uppercase italic tracking-widest shadow-2xl shadow-primary/40 active:scale-95 transition-all group overflow-hidden relative border border-white/10 text-base">
+                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
+                    {isLoading ? <Loader2 className="animate-spin w-6 h-6" /> : (
+                      <span className="flex items-center gap-3">
                         {mode === 'login' ? "Вход в Ядро" : "Создать Узел"}
-                        <Zap className="w-4 h-4 fill-current" />
+                        <Zap className="w-5 h-5 fill-current" />
                       </span>
                     )}
                   </Button>
                 </div>
 
-                <div className="mt-8 text-center flex flex-col gap-3">
-                  <button type="button" onClick={() => setMode(mode === 'login' ? 'register' : 'login')} className="text-[8px] text-white/30 hover:text-primary transition-all font-black uppercase tracking-[0.3em]">
+                <div className="mt-10 text-center flex flex-col gap-4">
+                  <button type="button" onClick={() => setMode(mode === 'login' ? 'register' : 'login')} className="text-[9px] text-white/40 hover:text-primary transition-all font-black uppercase tracking-[0.4em] hover:scale-105">
                     {mode === 'login' ? 'НЕТ АККАУНТА? РЕГИСТРАЦИЯ' : 'УЖЕ ЕСТЬ АККАУНТ? ВОЙТИ'}
                   </button>
                   {mode === 'login' && (
-                    <button type="button" onClick={() => setMode('recover')} className="text-[8px] text-white/20 hover:text-accent transition-all font-black uppercase tracking-[0.3em]">
+                    <button type="button" onClick={() => setMode('recover')} className="text-[9px] text-white/20 hover:text-accent transition-all font-black uppercase tracking-[0.4em] hover:scale-105">
                       ВОССТАНОВЛЕНИЕ ДОСТУПА
                     </button>
                   )}
@@ -299,9 +301,9 @@ export default function AuthScreen() {
         </Card>
 
         {/* Legal Links */}
-        <div className="mt-10 flex gap-8 opacity-30">
-          <button onClick={() => setLegalModal({ open: true, type: 'terms' })} className="text-[9px] font-black uppercase tracking-[0.2em] hover:text-primary transition-colors">Условия</button>
-          <button onClick={() => setLegalModal({ open: true, type: 'privacy' })} className="text-[9px] font-black uppercase tracking-[0.2em] hover:text-primary transition-colors">Приватность</button>
+        <div className="mt-12 flex gap-10 opacity-30">
+          <button onClick={() => setLegalModal({ open: true, type: 'terms' })} className="text-[10px] font-black uppercase tracking-[0.3em] hover:text-primary transition-all hover:scale-110">Условия</button>
+          <button onClick={() => setLegalModal({ open: true, type: 'privacy' })} className="text-[10px] font-black uppercase tracking-[0.3em] hover:text-primary transition-all hover:scale-110">Приватность</button>
         </div>
       </div>
       <LegalModal open={legalModal.open} onOpenChange={(o) => setLegalModal({ ...legalModal, open: o })} type={legalModal.type} />
