@@ -1,3 +1,4 @@
+
 "use client"
 
 import { useUser, useFirestore, useDoc, useMemoFirebase, useAuth } from '@/firebase';
@@ -26,6 +27,7 @@ export default function Home() {
   const [mounted, setMounted] = useState(false);
   const [twoFactorInput, setTwoFactorInput] = useState('');
   const [showIosInstaller, setShowIosInstaller] = useState(false);
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
   
   useEffect(() => {
     setMounted(true);
@@ -66,6 +68,13 @@ export default function Home() {
   const { data: profile, isLoading: isProfileLoading } = useDoc<UserType>(userProfileRef);
   const isBanned = isUserActuallyBanned(profile);
 
+  useEffect(() => {
+    if (!isUserLoading && (!user || !isProfileLoading)) {
+      const timer = setTimeout(() => setIsInitialLoad(false), 500);
+      return () => clearTimeout(timer);
+    }
+  }, [isUserLoading, user, isProfileLoading]);
+
   const handleVerify2FA = () => {
     if (twoFactorInput === profile?.twoFactorPin) {
       setIs2FAVerified(true);
@@ -78,10 +87,10 @@ export default function Home() {
 
   if (!mounted) return null;
 
-  if (isUserLoading || (user && isProfileLoading)) {
+  // Показываем лоадер только при начальной загрузке
+  if (isInitialLoad && (isUserLoading || (user && isProfileLoading))) {
     return (
       <div className="h-[100dvh] w-full flex flex-col items-center justify-center bg-[#020203] text-white relative overflow-hidden">
-        {/* Immersive Loading Background */}
         <div className="absolute inset-0 z-0">
           <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_0%_0%,rgba(45,10,85,0.4)_0%,transparent_50%),radial-gradient(circle_at_100%_100%,rgba(10,60,80,0.3)_0%,transparent_50%)]" />
           <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-10" />
@@ -130,7 +139,6 @@ export default function Home() {
   if (profile?.twoFactorEnabled && !is2FAVerified) {
     return (
       <div className="h-screen w-full flex items-center justify-center bg-[#020203] relative overflow-hidden px-6">
-        {/* Immersive 2FA Background */}
         <div className="absolute inset-0 pointer-events-none">
           <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_0%_0%,rgba(45,10,85,0.4)_0%,transparent_50%),radial-gradient(circle_at_100%_100%,rgba(10,60,80,0.3)_0%,transparent_50%)]" />
           <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.01)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.01)_1px,transparent_1px)] bg-[size:40px_40px] [mask-image:radial-gradient(ellipse_at_center,black,transparent_80%)]" />

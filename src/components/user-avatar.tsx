@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useEffect, memo, useMemo } from 'react';
@@ -30,15 +31,15 @@ export const UserAvatar = memo(({ userId, className, fallbackName, fallbackClass
 
   const { data: profile, isLoading } = useDoc<User>(userRef);
 
-  const displayAvatar = useMemo(() => profile?.avatarUrl || manualAvatarUrl, [profile?.avatarUrl, manualAvatarUrl]);
-  const displayName = useMemo(() => formatDisplayName(profile?.name || fallbackName || '??'), [profile?.name, fallbackName]);
+  const displayAvatar = useMemo(() => manualAvatarUrl || profile?.avatarUrl, [profile?.avatarUrl, manualAvatarUrl]);
   
   const initialsSource = useMemo(() => {
     const rawName = profile?.name || fallbackName || '??';
-    return (rawName.toLowerCase() === 'user' || rawName === '??') && profile?.username
-      ? profile.username.replace('@', '')
-      : displayName;
-  }, [profile?.name, fallbackName, profile?.username, displayName]);
+    if (rawName === '??' && profile?.username) return profile.username.replace('@', '');
+    return rawName;
+  }, [profile?.name, fallbackName, profile?.username]);
+
+  const displayName = useMemo(() => formatDisplayName(initialsSource), [initialsSource]);
 
   const premium = useMemo(() => isUserPremium(profile), [profile]);
   const isGhost = useMemo(() => !!profile?.settings?.privacy?.isGhostMode, [profile]);
@@ -64,7 +65,7 @@ export const UserAvatar = memo(({ userId, className, fallbackName, fallbackClass
         premium ? "bg-gradient-to-tr from-primary via-accent to-primary animate-[spin_4s_linear_infinite]" : ""
       )}>
         <Avatar className={cn("shrink-0 relative overflow-hidden bg-background", className)}>
-          {!isLoading && displayAvatar && !imgError ? (
+          {displayAvatar && !imgError ? (
             <Image 
               src={displayAvatar} 
               alt={displayName} 
