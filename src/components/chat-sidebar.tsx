@@ -60,8 +60,13 @@ const ChatListItem = memo(({
   }, [chat, otherProfile, currentUserId]);
 
   const displayTime = useMemo(() => {
-    const date = chat.lastMessageAt ? new Date(chat.lastMessageAt) : new Date(chat.createdAt);
-    try { return format(date, 'HH:mm'); } catch (e) { return ''; }
+    const timeVal = chat.lastMessageAt || chat.createdAt;
+    if (!timeVal) return '';
+    try { 
+      return format(new Date(timeVal), 'HH:mm'); 
+    } catch (e) { 
+      return ''; 
+    }
   }, [chat.lastMessageAt, chat.createdAt]);
 
   const isUnread = (lastMsg && !lastMsg.isRead && lastMsg.senderId !== currentUserId) || chat.isManualUnread;
@@ -130,7 +135,6 @@ const ChatListItem = memo(({
 
   return (
     <div className="relative overflow-hidden touch-pan-y select-none bg-transparent border-none px-2 py-0.5 max-w-full" style={{ WebkitTouchCallout: 'none' }}>
-      {/* Swipe Actions Background */}
       <div className={cn("absolute inset-y-0 left-2 flex h-[calc(100%-4px)] z-0 transition-opacity duration-200 rounded-[2rem] overflow-hidden", offsetX > 10 ? "opacity-100" : "opacity-0 pointer-events-none")}>
         <button onClick={(e) => { e.stopPropagation(); onMarkUnread(chat.id); resetSwipe(); }} className="w-20 bg-blue-600/80 backdrop-blur-xl flex flex-col items-center justify-center text-white gap-1 active:brightness-125 transition-all">
           <MessageCircle className="w-5 h-5 fill-current" />
@@ -178,20 +182,20 @@ const ChatListItem = memo(({
               </div>
               
               <div className="flex-1 min-w-0 h-full flex flex-col justify-center pr-2">
-                <div className="flex items-center justify-between mb-0.5 w-full">
+                <div className="flex items-center justify-between mb-0.5 w-full gap-2">
                   <span className="font-black text-[17px] truncate flex items-center gap-2 tracking-tight italic text-white/90">
                     {finalDisplayName} 
-                    {otherProfile?.isPremium && <Star className="w-3.5 h-3.5 text-accent fill-accent" />}
-                    {isPinned && <Pin className="w-3 h-3 text-primary rotate-45 ml-1" />}
+                    {otherProfile?.isPremium && <Star className="w-3.5 h-3.5 text-accent fill-accent shrink-0" />}
+                    {isPinned && <Pin className="w-3 h-3 text-primary rotate-45 ml-1 shrink-0" />}
                   </span>
+                  <span className="text-[11px] text-primary/60 font-black tracking-widest tabular-nums shrink-0">{displayTime}</span>
                 </div>
-                <div className="flex items-center justify-between gap-2 overflow-hidden w-full">
+                <div className="flex items-center gap-2 overflow-hidden w-full">
                   <p className="text-[13px] text-muted-foreground/70 truncate flex items-center font-medium min-w-0 flex-1">
                     {isEncrypted && <Lock className="w-3.5 h-3.5 shrink-0 text-primary/40 mr-1.5" />}
                     {messagePrefix}
                     <span className="truncate">{decryptedPreview}</span>
                   </p>
-                  <span className="text-[11px] text-primary/60 font-black tracking-widest tabular-nums shrink-0 ml-2">{displayTime}</span>
                 </div>
               </div>
               

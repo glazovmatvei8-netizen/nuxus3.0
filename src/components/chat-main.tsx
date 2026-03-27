@@ -59,7 +59,7 @@ export default function ChatMain() {
   }, [incomingCalls, activeCallId, setActiveCallId]);
 
   return (
-    <div className="fixed inset-0 flex flex-col w-full bg-transparent overflow-hidden h-[100dvh] max-w-full">
+    <div className="fixed inset-0 flex flex-col w-screen bg-transparent overflow-hidden h-[100dvh] max-w-[100vw]">
       <NotificationListener />
       <UpdateNotifier />
       
@@ -100,7 +100,7 @@ export default function ChatMain() {
           "w-full md:w-[380px] lg:w-[420px] h-full flex-shrink-0 border-r border-white/[0.05] z-30 bg-white/[0.01] backdrop-blur-2xl relative overflow-hidden", 
           (currentChatId && !['profile', 'contacts', 'calls', 'archive', 'music', 'wallet', 'discovery', 'games'].includes(activeView)) ? "hidden md:block" : "block"
         )}>
-          <div className="h-full w-full overflow-x-hidden">
+          <div className="h-full w-full overflow-hidden">
             {activeView === 'chats' && <ChatSidebar />}
             {activeView === 'contacts' && <ContactsView />}
             {activeView === 'calls' && <CallsView />}
@@ -114,10 +114,10 @@ export default function ChatMain() {
         
         {/* Main Viewport - Strict Width Constraint */}
         <div className={cn(
-          "flex-1 h-full flex flex-col min-w-0 bg-transparent relative z-20 chat-pattern-bg overflow-hidden", 
+          "flex-1 h-full flex flex-col min-w-0 bg-transparent relative z-20 chat-pattern-bg overflow-hidden max-w-full", 
           (!currentChatId || ['profile', 'music', 'wallet', 'games'].includes(activeView)) ? "hidden md:flex" : "flex"
         )}>
-          <div className="h-full w-full overflow-x-hidden flex flex-col">
+          <div className="h-full w-full overflow-hidden flex flex-col">
             <ChatArea />
           </div>
         </div>

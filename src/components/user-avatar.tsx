@@ -85,7 +85,7 @@ export const UserAvatar = memo(({ userId, className, fallbackName, fallbackClass
 
       {showOnlineStatus && isOnline && !isGhost && (
         <div className="absolute top-0 right-0 z-20 translate-x-[10%] translate-y-[10%]">
-          <div className="h-3 w-3 bg-[#22C55E] rounded-full border-2 border-[#0a0a0c] shadow-[0_0_10px_rgba(34,197,94,0.5)]" />
+          <div className="h-3 w-3 bg-[#A855F7] rounded-full border-2 border-[#0a0a0c] shadow-[0_0_10px_rgba(168,85,247,0.5)]" />
         </div>
       )}
 
