@@ -230,7 +230,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                     <Moon className={cn("w-6 h-6", form.appearance === 'dark' ? "text-primary" : "text-muted-foreground")} /><span className="text-[10px] font-black uppercase tracking-widest">Тёмная</span>
                   </button>
                   <button onClick={() => setForm({...form, appearance: 'light'})} className={cn("flex flex-col items-center gap-2 p-4 rounded-2xl border transition-all", form.appearance === 'light' ? "bg-primary/10 border-primary shadow-[0_0_15px_rgba(168,85,247,0.2)]" : "bg-muted/20 border-white/5")}>
-                    <Sun className={cn("w-6 h-6", form.appearance === 'light' ? "text-primary" : "text-muted-foreground")} /><span className="text-[10px] font-black uppercase tracking-widest">Светлая</span>
+                    <Suspense fallback={<div className="w-6 h-6" />}><Sun className={cn("w-6 h-6", form.appearance === 'light' ? "text-primary" : "text-muted-foreground")} /></Suspense><span className="text-[10px] font-black uppercase tracking-widest">Светлая</span>
                   </button>
                 </div>
               </div>

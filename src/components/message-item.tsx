@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, memo, useRef, useEffect, useMemo } from 'react';
@@ -20,7 +21,7 @@ import {
 import { format, isAfter, parseISO } from 'date-fns';
 import { 
   CornerUpLeft, Trash2, Check, CheckCheck, Edit2, Copy, Pin, X, Share2, Play, Smile, Lock, Languages, Loader2, Image as ImageIcon,
-  MessageCircle, Star, Pause, ShieldCheck, Clock, Type, Globe, Volume2, Timer
+  MessageCircle, Star, Pause, ShieldCheck, Clock, Type, Globe, Volume2, Timer, Zap
 } from 'lucide-react';
 import { cn, decryptSignal, isGlobalAdmin, isUserPremium } from '@/lib/utils';
 import { doc, updateDoc, deleteDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
@@ -64,7 +65,6 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
       tempAudio.onloadedmetadata = () => setDuration(tempAudio.duration);
     }
     
-    // Auto-delete check
     if (message.selfDestructAt && db && chatId) {
       const checkExpiry = () => {
         if (isAfter(new Date(), parseISO(message.selfDestructAt))) {
@@ -112,7 +112,6 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
       return;
     }
     setIsTranslating(true);
-    // Simulate AI Translation
     setTimeout(() => {
       setTranslatedText("Это сообщение было обработано ИИ-слоем Nuxus.");
       setIsTranslating(false);
@@ -157,12 +156,12 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
   const bubbleStyle = message.metadata?.bubbleStyle || 'default';
 
   const bubbleClasses = cn(
-    "p-3.5 rounded-[2rem] transition-all duration-300 relative will-change-transform",
+    "p-3.5 rounded-[2rem] transition-all duration-300 relative shadow-lg overflow-hidden",
     isMe ? "message-bubble-me rounded-br-none" : "message-bubble-other rounded-bl-none text-white",
     highlight && "ring-2 ring-primary shadow-[0_0_25px_rgba(168,85,247,0.5)] scale-105",
-    bubbleStyle === 'neon' && isMe && "bg-gradient-to-tr from-cyan-500 to-purple-500 shadow-[0_0_20px_rgba(6,182,212,0.4)]",
-    bubbleStyle === 'gold' && isMe && "bg-gradient-to-tr from-yellow-400 to-orange-500 shadow-[0_0_20px_rgba(234,179,8,0.4)] text-black",
-    bubbleStyle === 'ocean' && isMe && "bg-gradient-to-tr from-blue-400 to-emerald-400 shadow-[0_0_20px_rgba(59,130,246,0.4)]"
+    bubbleStyle === 'neon' && isMe && "bg-gradient-to-tr from-cyan-500 to-purple-600 shadow-[0_0_20px_rgba(6,182,212,0.5)] border border-cyan-400/30",
+    bubbleStyle === 'gold' && isMe && "bg-gradient-to-tr from-yellow-400 to-orange-600 shadow-[0_0_20px_rgba(234,179,8,0.5)] text-black border border-yellow-300/30",
+    bubbleStyle === 'ocean' && isMe && "bg-gradient-to-tr from-blue-500 to-emerald-500 shadow-[0_0_20px_rgba(59,130,246,0.5)] border border-blue-400/30"
   );
 
   const renderContent = () => {

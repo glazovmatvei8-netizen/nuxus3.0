@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useRef, useEffect, useMemo, useCallback, memo } from 'react';
@@ -155,7 +156,7 @@ const MessageList = memo(({
 }: any) => {
   const sortedMessages = useMemo(() => {
     if (!messages) return [];
-    return [...messages].sort((a, b) => new Date(a.sentAt).getTime() - new Date(b.sentAt).getTime());
+    return [...messages].sort((a, b) => new Date(a.sentAt).getTime() - new Date(b.createdAt).getTime());
   }, [messages]);
   
   const filteredMessages = useMemo(() => {
@@ -433,7 +434,7 @@ export default function ChatArea() {
         {showScrollButton && (
           <button 
             onClick={() => scrollToBottom('smooth')}
-            className="absolute bottom-6 right-6 h-12 w-12 rounded-full bg-black/40 backdrop-blur-3xl border border-white/10 flex items-center justify-center text-primary shadow-2xl z-50 animate-in fade-in zoom-in hover:scale-110 active:scale-90 transition-all"
+            className="absolute bottom-6 right-6 h-12 w-12 rounded-full bg-black/40 backdrop-blur-[120px] border border-white/10 flex items-center justify-center text-primary shadow-2xl z-50 animate-in fade-in zoom-in hover:scale-110 active:scale-90 transition-all"
           >
             <ChevronDown className="w-6 h-6" />
           </button>
