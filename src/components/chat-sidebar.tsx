@@ -115,7 +115,6 @@ const ChatListItem = memo(({
     }
 
     if (isHorizontalSwipe.current) {
-      // Reduced max offset to 120px for better mobile stability
       const newOffset = Math.max(-120, Math.min(120, deltaX));
       setOffsetX(newOffset);
       if (e.cancelable) e.preventDefault();
@@ -183,11 +182,13 @@ const ChatListItem = memo(({
               
               <div className="flex-1 min-w-0 h-full flex flex-col justify-center pr-2">
                 <div className="flex items-center justify-between mb-0.5 w-full gap-2">
-                  <span className="font-black text-[17px] truncate flex items-center gap-2 tracking-tight italic text-white/90">
-                    {finalDisplayName} 
+                  <div className="flex items-center gap-2 min-w-0 flex-1">
+                    <span className="font-black text-[17px] truncate tracking-tight italic text-white/90">
+                      {finalDisplayName}
+                    </span>
                     {otherProfile?.isPremium && <Star className="w-3.5 h-3.5 text-accent fill-accent shrink-0" />}
                     {isPinned && <Pin className="w-3 h-3 text-primary rotate-45 ml-1 shrink-0" />}
-                  </span>
+                  </div>
                   <span className="text-[11px] text-primary/60 font-black tracking-widest tabular-nums shrink-0">{displayTime}</span>
                 </div>
                 <div className="flex items-center gap-2 overflow-hidden w-full">
