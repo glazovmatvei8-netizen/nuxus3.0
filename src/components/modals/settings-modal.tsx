@@ -16,7 +16,7 @@ import {
   LogOut, Palette, Check, Settings2, Camera, Lock, Image as ImageIcon, 
   Paintbrush, Shield, UserCircle, Layout, Smile, FileText, ChevronRight,
   ShieldCheck, Eye, Users2, MessageSquareLock, Upload, Smartphone, Share2, Trophy,
-  Bell, Video, Mic, MonitorSmartphone, Key, Trash2, ShieldAlert, RefreshCw, Save, Zap, Moon, Sun, Monitor, Download, Share, Fingerprint, Sparkles, Wand2, Globe, Star, Ghost, Volume2, MessageSquare, Timer, Crown
+  Bell, Video, Mic, MonitorSmartphone, Key, Trash2, ShieldAlert, RefreshCw, Save, Zap, Moon, Sun, Monitor, Download, Share, Fingerprint, Sparkles, Wand2, Globe, Star, Ghost, Volume2, MessageSquare, Timer, Crown, Music
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { signOut } from 'firebase/auth';
@@ -372,6 +372,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
               </div>
 
               <div className="space-y-3 pb-10">
+                <PremiumFeature icon={Music} label="Neural Soundscapes" description="Фоновый эмбиент Ядра для глубокого погружения" />
                 <PremiumFeature icon={Timer} label="Исчезающие сообщения" description="Устанавливайте таймер на любое сообщение" />
                 <PremiumFeature icon={Paintbrush} label="Кастомные пузыри" description="Уникальные градиенты для ваших сообщений" />
                 <PremiumFeature icon={Sparkles} label="AI Conversation Summary" description="Краткая сводка обсуждения в один клик" />
@@ -379,7 +380,6 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                 <PremiumFeature icon={Volume2} label="AI Voice Synthesis" description="Озвучка текстовых сообщений голосом ИИ" />
                 <PremiumFeature icon={Zap} label="Приоритетный Сигнал" description="Ускоренная передача данных в Ядре" />
                 <PremiumFeature icon={Wand2} label="ИИ Помощник" description="Черновики ответов и генерация аватаров" />
-                <PremiumFeature icon={Globe} label="AI Переводчик" description="Мгновенный перевод сообщений в меню" />
               </div>
 
               {!isUserPremium(profile) && (

@@ -37,15 +37,20 @@
 
 @layer base {
   * { @apply border-border; }
-  body {
+  
+  html, body {
     @apply bg-background text-foreground antialiased;
     background-color: #08080c;
     background-image: 
       radial-gradient(circle at 10% 10%, hsl(var(--primary) / 0.2), transparent 50%),
       radial-gradient(circle at 90% 90%, hsl(var(--accent) / 0.15), transparent 50%),
       linear-gradient(135deg, #0f0f1a 0%, #08080c 100%);
+    
+    /* БЛОКИРОВКА ОБНОВЛЕНИЯ СТРАНИЦЫ ПРИ СВАЙПЕ (PULL-TO-REFRESH) */
     overscroll-behavior: none !important;
-    position: fixed; /* Жесткая фиксация для предотвращения дрейфа */
+    overscroll-behavior-y: none !important;
+    
+    position: fixed; 
     width: 100%;
     height: 100%;
     overflow: hidden;
