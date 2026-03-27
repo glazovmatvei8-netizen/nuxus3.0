@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, memo, useRef, useEffect, useMemo } from 'react';
@@ -244,7 +245,7 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
                   )}
                   {renderContent()}
                   <div className="flex items-center justify-end gap-2 mt-2 opacity-40">
-                    <span className="text-[9px] font-black tabular-nums tracking-widest">{formattedTime}</span>
+                    <span className="text-9px] font-black tabular-nums tracking-widest">{formattedTime}</span>
                     {isMe && (message.isRead ? <CheckCheck className="w-3.5 h-3.5 text-accent" /> : <Check className="w-3.5 h-3.5" />)}
                   </div>
                 </div>
