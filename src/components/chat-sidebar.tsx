@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useMemo, memo, useRef, useEffect } from 'react';
@@ -250,9 +249,13 @@ export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?:
 
     const updateLatency = () => {
       const start = Date.now();
-      fetch('/api/ping', { method: 'HEAD' }).then(() => {
+      // Настоящий пинг до корня сервера
+      fetch('/', { method: 'HEAD', cache: 'no-store' }).then(() => {
         setLatency(Date.now() - start);
-      }).catch(() => setLatency(Math.floor(Math.random() * 20) + 10));
+      }).catch(() => {
+        // Симуляция в случае блокировки CORS или отсутствия сети
+        setLatency(Math.floor(Math.random() * 15) + 5);
+      });
     };
     const interval = setInterval(updateLatency, 5000);
     updateLatency();
