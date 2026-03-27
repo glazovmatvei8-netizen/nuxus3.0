@@ -11,6 +11,10 @@ import type { Story, User } from '@/lib/types';
 import { cn, formatDisplayName } from '@/lib/utils';
 import { StoryViewerModal } from './modals/story-viewer-modal';
 
+/**
+ * Nuxus Moments Bar v2.0
+ * Оптимизированная лента историй в стиле Telegram.
+ */
 export function StoriesBar() {
   const { user } = useUser();
   const db = useFirestore();
@@ -47,35 +51,39 @@ export function StoriesBar() {
 
   return (
     <div className="flex gap-4 p-4 overflow-x-auto scrollbar-hide bg-transparent border-b border-white/5 shrink-0 relative z-20">
-      {/* Кнопка "Моя история" */}
-      <div className="flex flex-col items-center gap-1.5 shrink-0 group cursor-pointer" onClick={() => myStories.length > 0 ? setStoriesToView(myStories) : setIsCreateStoryOpen(true)}>
+      {/* Кнопка "Моя история" (Всегда первая) */}
+      <div 
+        className="flex flex-col items-center gap-1.5 shrink-0 group cursor-pointer" 
+        onClick={() => myStories.length > 0 ? setStoriesToView(myStories) : setIsCreateStoryOpen(true)}
+      >
         <div className={cn(
-          "relative h-[68px] w-[64px] rounded-full p-[2px] transition-all",
+          "relative h-[68px] w-[68px] rounded-full p-[2.5px] transition-all duration-500",
           myStories.length > 0 
-            ? "bg-gradient-to-tr from-[#34C759] via-[#007AFF] to-[#AF52DE] animate-pulse scale-105" 
-            : "bg-white/10 hover:bg-white/20"
+            ? "bg-gradient-to-tr from-[#34C759] via-[#007AFF] to-[#AF52DE] shadow-[0_0_15px_rgba(52,199,89,0.3)] animate-pulse" 
+            : "bg-white/10 group-hover:bg-white/20"
         )}>
           <div className="rounded-full h-full w-full overflow-hidden relative bg-[#0a0a0c] p-[2px]">
             <UserAvatar 
               userId={user?.uid} 
-              className="h-full w-full border-none" 
+              className="h-full w-full border-none scale-110" 
               manualAvatarUrl={profile?.avatarUrl}
               fallbackName={profile?.name || profile?.username || 'Я'}
             />
           </div>
           {myStories.length === 0 && (
-            <div className="absolute bottom-0 right-0 h-5 w-5 bg-primary rounded-full border-2 border-[#0a0a0c] flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
-              <Plus className="w-3 h-3 text-white" />
+            <div className="absolute bottom-0 right-0 h-6 w-6 bg-primary rounded-full border-2 border-[#0a0a0c] flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform z-30">
+              <Plus className="w-4 h-4 text-white" strokeWidth={3} />
             </div>
           )}
         </div>
-        <span className="text-[9px] font-black uppercase text-muted-foreground/60 tracking-[0.2em] truncate w-[64px] text-center">
-          {myStories.length > 0 ? 'Моя' : 'Момент'}
+        <span className="text-[10px] font-black uppercase text-white/80 tracking-[0.1em] truncate w-[68px] text-center italic">
+          {myStories.length > 0 ? 'МОЯ' : 'МОМЕНТ'}
         </span>
       </div>
 
+      {/* Истории других пользователей */}
       {isLoading && !allStories ? (
-        <div className="h-[64px] flex items-center px-4"><Loader2 className="w-5 h-5 animate-spin text-primary/40" /></div>
+        <div className="h-[68px] flex items-center px-4"><Loader2 className="w-5 h-5 animate-spin text-primary/40" /></div>
       ) : (
         otherUserIds.map(uid => (
           <StoryCircle 
@@ -107,9 +115,9 @@ function StoryCircle({ userId, stories, onView, currentUserId }: { userId: strin
   return (
     <div className="flex flex-col items-center gap-1.5 shrink-0 cursor-pointer active:scale-95 transition-transform" onClick={onView}>
       <div className={cn(
-        "h-[68px] w-[64px] rounded-full p-[2px] transition-all",
+        "h-[68px] w-[68px] rounded-full p-[2.5px] transition-all duration-500",
         hasUnviewed 
-          ? "bg-gradient-to-tr from-[#34C759] via-[#007AFF] to-[#AF52DE] scale-105 shadow-[0_0_15px_rgba(52,199,89,0.3)]" 
+          ? "bg-gradient-to-tr from-[#34C759] via-[#007AFF] to-[#AF52DE] scale-105 shadow-[0_0_20px_rgba(0,122,255,0.4)]" 
           : hasStories 
             ? "bg-white/20" 
             : "bg-white/5"
@@ -117,17 +125,17 @@ function StoryCircle({ userId, stories, onView, currentUserId }: { userId: strin
         <div className="rounded-full h-full w-full overflow-hidden bg-[#0a0a0c] p-[2px]">
           <UserAvatar 
             userId={userId} 
-            className="h-full w-full border-none" 
+            className="h-full w-full border-none scale-110" 
             manualAvatarUrl={profile?.avatarUrl}
             fallbackName={profile?.name || profile?.username}
           />
         </div>
       </div>
       <span className={cn(
-        "text-[10px] font-bold truncate w-[64px] text-center transition-colors",
+        "text-[10px] font-bold truncate w-[68px] text-center transition-colors uppercase tracking-tight",
         hasUnviewed ? "text-white" : "text-white/40"
       )}>
-        {formatDisplayName(profile?.name || profile?.username)}
+        {formatDisplayName(profile?.name || profile?.username).split(' ')[0]}
       </span>
     </div>
   );

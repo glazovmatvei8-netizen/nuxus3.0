@@ -5,7 +5,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Dialog, DialogContent, DialogTitle, DialogOverlay, DialogPortal } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { UserAvatar } from '@/components/user-avatar';
-import { X, Eye, Heart, Smile, Loader2 } from 'lucide-react';
+import { X, Eye, Heart, Smile, Loader2, Share2, Send } from 'lucide-react';
 import { useAppState } from '@/lib/store';
 import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { doc, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
@@ -14,6 +14,7 @@ import { cn, formatDisplayName } from '@/lib/utils';
 import { formatDistanceToNow } from 'date-fns';
 import { ru } from 'date-fns/locale';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { useToast } from '@/hooks/use-toast';
 
 const STORY_REACTIONS = ['❤️', '🔥', '😂', '😮', '😢', '💯', '👏'];
 
@@ -21,6 +22,7 @@ export function StoryViewerModal() {
   const { user } = useUser();
   const db = useFirestore();
   const { storiesToView, setStoriesToView } = useAppState();
+  const { toast } = useToast();
   
   const [index, setIndex] = useState(0);
   const [progress, setProgress] = useState(0);
@@ -111,6 +113,26 @@ export function StoryViewerModal() {
     setShowReactions(false);
   };
 
+  const handleShare = async () => {
+    if (!currentStory) return;
+    const shareUrl = `${window.location.origin}/?ref=${currentStory.userId}`;
+    
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: 'Nuxus Moment',
+          text: `Посмотрите момент от ${storyUser?.name || 'пользователя Nuxus'}`,
+          url: shareUrl,
+        });
+      } catch (e) {
+        console.warn("Share failed");
+      }
+    } else {
+      navigator.clipboard.writeText(shareUrl);
+      toast({ title: "Ссылка скопирована", description: "Отправьте её друзьям для входа в Ядро." });
+    }
+  };
+
   if (!storiesToView || !currentStory) return null;
 
   return (
@@ -146,6 +168,7 @@ export function StoryViewerModal() {
                 </div>
               </div>
               <div className="flex items-center gap-2">
+                <Button variant="ghost" size="icon" className="text-white h-10 w-10 rounded-full hover:bg-white/10" onClick={handleShare}><Share2 className="w-5 h-5" /></Button>
                 <Button variant="ghost" size="icon" className="text-white h-10 w-10 rounded-full hover:bg-white/10" onClick={() => setStoriesToView(null)}><X className="w-6 h-6" /></Button>
               </div>
             </div>
@@ -198,35 +221,35 @@ export function StoryViewerModal() {
               </div>
             )}
 
-            {/* Reactions and Viewers Footer */}
+            {/* Footer */}
             <div className="absolute bottom-10 left-0 right-0 z-[2200] flex items-center justify-between px-8">
-              {currentStory.userId === user?.uid ? (
-                <div className="flex items-center gap-2 bg-black/40 backdrop-blur-xl px-6 py-2.5 rounded-full border border-white/10">
-                  <Eye className="w-4 h-4 text-white" />
-                  <span className="text-[10px] font-black text-white uppercase tracking-widest">{currentStory.viewers?.length || 0}</span>
-                </div>
-              ) : (
-                <div className="flex gap-2">
-                  <Popover open={showReactions} onOpenChange={setShowReactions}>
-                    <PopoverTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-12 w-12 rounded-full bg-white/10 backdrop-blur-xl text-white hover:bg-white/20">
-                        <Smile className="w-6 h-6" />
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent side="top" align="start" className="w-auto p-2 bg-black/80 backdrop-blur-3xl border-white/10 rounded-full flex gap-1 mb-4">
-                      {STORY_REACTIONS.map(emoji => (
-                        <button
-                          key={emoji}
-                          onClick={() => handleReaction(emoji)}
-                          className="text-2xl p-2 hover:scale-125 active:scale-90 transition-transform"
-                        >
-                          {emoji}
-                        </button>
-                      ))}
-                    </PopoverContent>
-                  </Popover>
-                </div>
-              )}
+              <div className="flex gap-2">
+                <Popover open={showReactions} onOpenChange={setShowReactions}>
+                  <PopoverTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-12 w-12 rounded-full bg-white/10 backdrop-blur-xl text-white hover:bg-white/20">
+                      <Smile className="w-6 h-6" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent side="top" align="start" className="w-auto p-2 bg-black/80 backdrop-blur-3xl border-white/10 rounded-full flex gap-1 mb-4">
+                    {STORY_REACTIONS.map(emoji => (
+                      <button
+                        key={emoji}
+                        onClick={() => handleReaction(emoji)}
+                        className="text-2xl p-2 hover:scale-125 active:scale-90 transition-transform"
+                      >
+                        {emoji}
+                      </button>
+                    ))}
+                  </PopoverContent>
+                </Popover>
+                
+                {currentStory.userId === user?.uid && (
+                  <div className="flex items-center gap-2 bg-black/40 backdrop-blur-xl px-6 py-2.5 rounded-full border border-white/10">
+                    <Eye className="w-4 h-4 text-white" />
+                    <span className="text-[10px] font-black text-white uppercase tracking-widest">{currentStory.viewers?.length || 0}</span>
+                  </div>
+                )}
+              </div>
 
               {/* Reactions Display */}
               {currentStory.reactions && Object.entries(currentStory.reactions).some(([_, uids]) => uids.length > 0) && (
