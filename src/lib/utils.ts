@@ -37,7 +37,6 @@ export function formatDisplayName(name: string | undefined | null): string {
 export function encryptSignal(text: string): string {
   if (!text) return '';
   try {
-    // Используем короткий префикс NX_ для экономии места и соответствия скриншотам
     const encoded = btoa(encodeURIComponent(text.trim()));
     return `NX_${encoded}`;
   } catch (e) {
@@ -51,7 +50,6 @@ export function encryptSignal(text: string): string {
 export function decryptSignal(content: string | undefined | null): string {
   if (!content || typeof content !== 'string') return content || '';
   
-  // Поддерживаем оба варианта префикса для обратной совместимости
   const prefix = content.startsWith('NX_SECURE_') ? 'NX_SECURE_' : content.startsWith('NX_') ? 'NX_' : null;
   
   if (!prefix) return content;
@@ -60,7 +58,7 @@ export function decryptSignal(content: string | undefined | null): string {
     const raw = content.replace(prefix, '');
     return decodeURIComponent(atob(raw));
   } catch (e) {
-    console.warn("Nuxus Signal: Decryption failed for a packet.");
+    console.warn("Nuxus Signal: Decryption failed.");
     return content;
   }
 }
@@ -105,7 +103,8 @@ export function isUserActuallyBanned(user: User | null | undefined): boolean {
 export function formatLastSeen(
   lastSeenIso: string | undefined | null, 
   visibility: 'everybody' | 'nobody' = 'everybody',
-  isDeleted: boolean = false
+  isDeleted: boolean = false,
+  onlineString: string = 'в сети'
 ): string {
   if (isDeleted || !lastSeenIso) return 'Был(а) давно';
   if (visibility === 'nobody') return 'был(а) недавно';
@@ -113,7 +112,7 @@ export function formatLastSeen(
     const lastSeen = parseISO(lastSeenIso);
     const now = new Date();
     const diffSeconds = Math.max(0, differenceInSeconds(now, lastSeen));
-    if (diffSeconds < 60) return 'в сети';
+    if (diffSeconds < 60) return onlineString;
     return `был(а) ${formatDistanceToNow(lastSeen, { addSuffix: true, locale: ru })}`;
   } catch (e) {
     return 'Был(а) давно';

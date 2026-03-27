@@ -16,7 +16,7 @@ import {
   LogOut, Palette, Check, Settings2, Camera, Lock, Image as ImageIcon, 
   Paintbrush, Shield, UserCircle, Layout, Smile, FileText, ChevronRight,
   ShieldCheck, Eye, Users2, MessageSquareLock, Upload, Smartphone, Share2, Trophy,
-  Bell, Video, Mic, MonitorSmartphone, Key, Trash2, ShieldAlert, RefreshCw, Save, Zap, Moon, Sun, Monitor, Download, Share, Fingerprint, Sparkles, Wand2, Globe, Star, Ghost, Volume2, MessageSquare, Timer, Crown, Music, Type, VideoIcon, Rocket, Diamond
+  Bell, Video, Mic, MonitorSmartphone, Key, Trash2, ShieldAlert, RefreshCw, Save, Zap, Moon, Sun, Monitor, Download, Share, Fingerprint, Sparkles, Wand2, Globe, Star, Ghost, Volume2, MessageSquare, Timer, Crown, Music, Type, VideoIcon, Rocket, Diamond, Languages
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { signOut } from 'firebase/auth';
@@ -77,7 +77,8 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
       allowGroupsFrom: 'everybody',
       whoCanMessageMe: 'everybody',
       isGhostMode: false
-    }
+    },
+    interfaceOverrides: {} as Record<string, string>
   });
 
   useEffect(() => {
@@ -103,7 +104,8 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
           allowGroupsFrom: 'everybody',
           whoCanMessageMe: 'everybody',
           isGhostMode: false
-        }
+        },
+        interfaceOverrides: profile.settings?.interfaceOverrides || {}
       });
     }
   }, [profile, open]);
@@ -126,10 +128,11 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         'settings.chatBackground': form.chatBackground,
         'settings.chatBackgroundFit': form.chatBackgroundFit,
         'settings.customAppIconUrl': form.customAppIconUrl,
-        'settings.privacy': form.privacy
+        'settings.privacy': form.privacy,
+        'settings.interfaceOverrides': form.interfaceOverrides
       });
       onOpenChange(false);
-      toast({ title: "Аккаунт обновлен" });
+      toast({ title: "Ядро обновлено v2.9" });
     } catch (e: any) {
       toast({ title: "Ошибка сохранения", variant: "destructive" });
     }
@@ -152,6 +155,13 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
     }
   };
 
+  const updateOverride = (key: string, val: string) => {
+    setForm({
+      ...form,
+      interfaceOverrides: { ...form.interfaceOverrides, [key]: val }
+    });
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md bg-card border-border p-0 overflow-hidden h-[85vh] flex flex-col rounded-[2.5rem] shadow-2xl outline-none">
@@ -166,6 +176,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
             <TabsTrigger value="profile" className="flex-1 text-[9px] uppercase font-bold tracking-widest">Профиль</TabsTrigger>
             <TabsTrigger value="appearance" className="flex-1 text-[9px] uppercase font-bold tracking-widest">Стиль</TabsTrigger>
             <TabsTrigger value="privacy" className="flex-1 text-[9px] uppercase font-bold tracking-widest">Защита</TabsTrigger>
+            <TabsTrigger value="interface" className="flex-1 text-[9px] uppercase font-bold tracking-widest">Интерфейс</TabsTrigger>
             <TabsTrigger value="premium" className="flex-1 text-[9px] uppercase font-bold tracking-widest">Premium</TabsTrigger>
           </TabsList>
 
@@ -368,6 +379,63 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
               </div>
             </TabsContent>
 
+            <TabsContent value="interface" className="space-y-6 m-0 p-6 pb-20">
+              <div className="p-4 bg-primary/5 rounded-[2rem] border border-primary/10">
+                <div className="flex items-center gap-3 mb-4">
+                  <Languages className="w-5 h-5 text-primary" />
+                  <div className="flex flex-col">
+                    <span className="text-xs font-black uppercase text-white">Custom Signals</span>
+                    <span className="text-[8px] text-muted-foreground uppercase font-bold">Ваш язык — ваши правила</span>
+                  </div>
+                </div>
+                
+                <div className="space-y-4 text-left">
+                  <div className="space-y-1.5">
+                    <Label className="text-[9px] uppercase font-black text-muted-foreground ml-1">Загрузка Ядра (Initializing)</Label>
+                    <Input 
+                      placeholder="Initializing" 
+                      value={form.interfaceOverrides?.['initializing'] || ''} 
+                      onChange={e => updateOverride('initializing', e.target.value)}
+                      className="bg-black/20 border-white/5 h-11 rounded-xl text-xs"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-[9px] uppercase font-black text-muted-foreground ml-1">Статус печати (Typing)</Label>
+                    <Input 
+                      placeholder="печатает" 
+                      value={form.interfaceOverrides?.['chat.typing'] || ''} 
+                      onChange={e => updateOverride('chat.typing', e.target.value)}
+                      className="bg-black/20 border-white/5 h-11 rounded-xl text-xs"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-[9px] uppercase font-black text-muted-foreground ml-1">В сети (Online)</Label>
+                    <Input 
+                      placeholder="в сети" 
+                      value={form.interfaceOverrides?.['online'] || ''} 
+                      onChange={e => updateOverride('online', e.target.value)}
+                      className="bg-black/20 border-white/5 h-11 rounded-xl text-xs"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-[9px] uppercase font-black text-muted-foreground ml-1">Соединение (Connecting)</Label>
+                    <Input 
+                      placeholder="соединение..." 
+                      value={form.interfaceOverrides?.['sidebar.connecting'] || ''} 
+                      onChange={e => updateOverride('sidebar.connecting', e.target.value)}
+                      className="bg-black/20 border-white/5 h-11 rounded-xl text-xs"
+                    />
+                  </div>
+                </div>
+              </div>
+              
+              <div className="p-4 bg-black/20 rounded-[2rem] border border-white/5">
+                <p className="text-[9px] text-muted-foreground leading-relaxed uppercase font-bold text-center">
+                  Переопределите стандартные системные фразы Ядра на свои собственные. Изменения применятся мгновенно после сохранения.
+                </p>
+              </div>
+            </TabsContent>
+
             <TabsContent value="premium" className="space-y-6 m-0 p-6 pb-20">
               <div className="relative group">
                 <div className="absolute -inset-1 bg-gradient-to-tr from-primary to-accent rounded-[2rem] blur-md opacity-40 animate-pulse" />
@@ -383,12 +451,11 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
               </div>
 
               <div className="space-y-3 pb-10">
-                <PremiumFeature icon={VideoIcon} label="AI Video Animate" description="Анимируйте фото в 5-секундные кинематографичные ролики" />
-                <PremiumFeature icon={Rocket} label="Dynamic Profile Aura" description="Пульсирующая энергия вокруг вашего узла в списках" />
-                <PremiumFeature icon={Timer} label="Extended Story Life" description="Храните Моменты до 72 часов вместо суток" />
-                <PremiumFeature icon={Zap} label="Ultra-HQ Signal" description="Удвоенный битрейт для голоса и видеосвязи" />
-                <PremiumFeature icon={Diamond} label="Exclusive Badge System" description="Уникальные значки достижений рядом с вашим именем" />
-                <PremiumFeature icon={Music} label="Neural Soundscapes" description="Фоновый эмбиент Ядра для глубокого погружения" />
+                <PremiumFeature icon={Languages} label="Custom Signal Pack" description="Создайте свой собственный язык интерфейса Ядра" />
+                <PremiumFeature icon={VideoIcon} label="AI Video Animate" description="Анимируйте фото в 5-секундные ролики" />
+                <PremiumFeature icon={Rocket} label="Dynamic Profile Aura" description="Пульсирующая энергия вокруг вашего узла" />
+                <PremiumFeature icon={Timer} label="Extended Story Life" description="Храните Моменты до 72 часов" />
+                <PremiumFeature icon={Zap} label="Ultra-HQ Signal" description="Удвоенный битрейт для связи" />
                 <PremiumFeature icon={Paintbrush} label="Custom Bubbles" description="Уникальные градиенты для ваших сообщений" />
                 <PremiumFeature icon={Sparkles} label="AI Conversation Summary" description="Краткая сводка обсуждения в один клик" />
                 <PremiumFeature icon={Ghost} label="Ghost Mode" description="Полная невидимость и скрытый онлайн-статус" />
@@ -406,7 +473,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
 
           <div className="p-6 border-t border-white/5 bg-muted/20 shrink-0 flex gap-3">
             <Button variant="ghost" className="h-14 w-14 rounded-2xl bg-destructive/10 text-destructive hover:bg-destructive hover:text-white transition-all" onClick={() => signOut(auth)}> <LogOut className="w-6 h-6" /></Button>
-            <Button className="flex-1 h-14 rounded-2xl font-black uppercase tracking-widest bg-primary shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all" onClick={handleSave}><Check className="w-5 h-5 mr-2" /> Применить изменения</Button>
+            <Button className="flex-1 h-14 rounded-2xl font-black uppercase tracking-widest bg-primary shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all" onClick={handleSave}><Check className="w-5 h-5 mr-2" /> Применить v2.9</Button>
           </div>
         </Tabs>
       </DialogContent>
@@ -416,7 +483,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
 
 function PrivacySelect({ label, value, onChange, icon: Icon }: any) {
   return (
-    <div className="flex items-center justify-between py-2">
+    <div className="flex items-center justify-between py-2 text-left">
       <div className="flex items-center gap-3">
         <Icon className="w-4 h-4 text-muted-foreground/60" />
         <span className="text-xs font-bold text-white/80">{label}</span>

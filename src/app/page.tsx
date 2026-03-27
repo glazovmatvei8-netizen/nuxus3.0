@@ -16,6 +16,7 @@ import { useToast } from '@/hooks/use-toast';
 import { isUserActuallyBanned } from '@/lib/utils';
 import { NuxusLogo } from '@/components/nuxus-logo';
 import { IosInstaller } from '@/components/ios-installer';
+import { useTranslations } from '@/hooks/use-translations';
 
 export default function Home() {
   const { user, isUserLoading } = useUser();
@@ -23,6 +24,7 @@ export default function Home() {
   const auth = useAuth();
   const { setCurrentChatId, is2FAVerified, setIs2FAVerified } = useAppState();
   const { toast } = useToast();
+  const { t } = useTranslations();
   
   const [mounted, setMounted] = useState(false);
   const [twoFactorInput, setTwoFactorInput] = useState('');
@@ -68,7 +70,6 @@ export default function Home() {
   const { data: profile, isLoading: isProfileLoading } = useDoc<UserType>(userProfileRef);
   const isBanned = isUserActuallyBanned(profile);
 
-  // Фиксация лоадера: если данные загружены хоть раз, больше не показываем Initialization
   useEffect(() => {
     if (!isUserLoading && (user ? !isProfileLoading : true)) {
       const timer = setTimeout(() => setIsInitialLoad(false), 500);
@@ -88,7 +89,6 @@ export default function Home() {
 
   if (!mounted) return null;
 
-  // Показываем лоадер только при начальной загрузке
   if (isInitialLoad && (isUserLoading || (user && isProfileLoading))) {
     return (
       <div className="h-[100dvh] w-full flex flex-col items-center justify-center bg-[#020203] text-white relative overflow-hidden">
@@ -108,7 +108,7 @@ export default function Home() {
             </div>
             <div className="space-y-2 text-center">
               <p className="text-[11px] font-black uppercase tracking-[1em] text-primary/80 animate-pulse ml-[1em]">
-                Initializing
+                {t('initializing')}
               </p>
               <p className="text-[8px] font-black uppercase tracking-[0.5em] text-white/20 ml-[0.5em]">
                 Quantum Encryption Core v2.9

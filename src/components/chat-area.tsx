@@ -22,6 +22,7 @@ import type { Message, User as UserType, Chat } from '@/lib/types';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { suggestMessageDraft } from '@/ai/flows/ai-message-drafting-flow';
 import { chatConversationSummary } from '@/ai/flows/chat-conversation-summary-flow';
+import { useTranslations } from '@/hooks/use-translations';
 import { addMinutes, addHours } from 'date-fns';
 
 const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, isPremium, messages, userProfile }: any) => {
@@ -197,6 +198,7 @@ export default function ChatArea() {
   const { user: firebaseUser } = useUser();
   const db = useFirestore();
   const { currentChatId, setCurrentChatId, setForwardingMessage } = useAppState();
+  const { t } = useTranslations();
   
   const [isChatInfoOpen, setIsChatInfoOpen] = useState(false);
   const [isPollModalOpen, setIsPollModalOpen] = useState(false);
@@ -266,15 +268,15 @@ export default function ChatArea() {
 
   const chatSubtext = useMemo(() => {
     if (typingUsers.length > 0) {
-      if (typingUsers.length === 1) return `${typingUsers[0]} печатает...`;
+      if (typingUsers.length === 1) return `${typingUsers[0]} ${t('chat.typing')}...`;
       return 'Несколько аккаунтов печатают...';
     }
     if (chat?.type === 'private') {
-      return formatLastSeen(otherProfile?.lastSeen, otherProfile?.settings?.privacy?.lastSeenVisibility);
+      return formatLastSeen(otherProfile?.lastSeen, otherProfile?.settings?.privacy?.lastSeenVisibility, false, t('online'));
     }
     const count = chat?.participantIds?.length || 0;
     return `${count} участников`;
-  }, [chat, otherProfile, typingUsers]);
+  }, [chat, otherProfile, typingUsers, t]);
 
   const scrollToBottom = useCallback((behavior: ScrollBehavior = 'smooth') => {
     if (messagesEndRef.current) {
@@ -372,7 +374,7 @@ export default function ChatArea() {
           {!isSearchMode ? (
             <div className="flex items-center gap-3 cursor-pointer min-w-0" onClick={() => setIsChatInfoOpen(true)}>
               <UserAvatar userId={otherId} manualAvatarUrl={chat?.avatarUrl || otherProfile?.avatarUrl} className="h-10 w-10 border border-white/20" fallbackName={chatDisplayName} showOnlineStatus />
-              <div className="flex flex-col min-w-0">
+              <div className="flex flex-col min-w-0 text-left">
                 <div className="flex items-center gap-1.5">
                   <span className="font-black text-[15px] truncate text-white italic tracking-tight">{chatDisplayName}</span>
                   {otherProfile?.isPremium && <Star className="w-3 h-3 text-accent fill-accent" />}

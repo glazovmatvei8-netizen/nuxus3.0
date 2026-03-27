@@ -161,7 +161,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
 
           <TabsContent value="analytics" className="flex-1 m-0 p-0 overflow-hidden outline-none data-[state=active]:flex flex-col min-h-0">
             <ScrollArea className="flex-1">
-              <div className="px-4 md:px-6 py-4 space-y-6 pb-20">
+              <div className="px-4 md:px-6 py-4 space-y-6 pb-20 text-left">
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                   <StatCard label="Всего аккаунтов" value={stats.total} icon={Users} color="text-white" />
                   <StatCard label="Premium" value={stats.premium} icon={Star} color="text-accent" />
@@ -241,7 +241,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
           </TabsContent>
 
           <TabsContent value="broadcast" className="flex-1 m-0 p-6 overflow-hidden data-[state=active]:flex flex-col min-h-0">
-             <div className="space-y-6">
+             <div className="space-y-6 text-left">
                 <div className="bg-primary/10 p-6 rounded-[2rem] border border-primary/20 space-y-4">
                   <div className="flex items-center gap-3">
                     <Radio className="w-6 h-6 text-primary animate-pulse" />

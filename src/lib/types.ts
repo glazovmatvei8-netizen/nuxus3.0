@@ -154,6 +154,7 @@ export interface UserSettings {
   statusText?: string;
   language?: string;
   stickers?: string[];
+  interfaceOverrides?: Record<string, string>;
 }
 
 export interface User {

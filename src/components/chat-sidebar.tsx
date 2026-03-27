@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useMemo, memo, useRef, useEffect } from 'react';
@@ -18,6 +19,7 @@ import { collection, query, where, doc, limit, orderBy, updateDoc, arrayUnion, a
 import { formatDisplayName, cn, isGlobalAdmin, decryptSignal } from '@/lib/utils';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
+import { useTranslations } from '@/hooks/use-translations';
 import { 
   ContextMenu,
   ContextMenuContent,
@@ -181,7 +183,7 @@ const ChatListItem = memo(({
               </div>
               
               <div className="flex-1 min-w-0 h-full flex flex-col justify-center pr-2">
-                <div className="flex items-center justify-between mb-0.5 w-full gap-2">
+                <div className="flex items-center justify-between mb-0.5 w-full gap-2 text-left">
                   <div className="flex items-center gap-2 min-w-0 flex-1">
                     <span className="font-black text-[17px] truncate tracking-tight italic text-white/90">
                       {finalDisplayName}
@@ -191,7 +193,7 @@ const ChatListItem = memo(({
                   </div>
                   <span className="text-[11px] text-primary/60 font-black tracking-widest tabular-nums shrink-0">{displayTime}</span>
                 </div>
-                <div className="flex items-center gap-2 overflow-hidden w-full">
+                <div className="flex items-center gap-2 overflow-hidden w-full text-left">
                   <p className="text-[13px] text-muted-foreground/70 truncate flex items-center font-medium min-w-0 flex-1">
                     {isEncrypted && <Lock className="w-3.5 h-3.5 shrink-0 text-primary/40 mr-1.5" />}
                     {messagePrefix}
@@ -232,6 +234,7 @@ export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?:
   const db = useFirestore();
   const { currentChatId, setCurrentChatId, setIsSearchOpen, setIsInterceptionRequested } = useAppState();
   const { toast } = useToast();
+  const { t } = useTranslations();
   
   const [activeTab, setActiveTab] = useState('all');
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -348,7 +351,7 @@ export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?:
                 {isArchiveView ? 'архив 🐱' : 'чаты 🐱'}
               </h1>
               {!isOnline && (
-                <span className="text-[8px] font-black uppercase tracking-[0.4em] text-primary animate-pulse ml-[0.4em]">соединение...</span>
+                <span className="text-[8px] font-black uppercase tracking-[0.4em] text-primary animate-pulse ml-[0.4em]">{t('sidebar.connecting')}</span>
               )}
             </div>
             <div className="flex gap-2">
@@ -362,7 +365,7 @@ export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?:
         <div className="relative group">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground/40 group-focus-within:text-primary transition-colors" />
           <input 
-            placeholder="Поиск сообщений..." 
+            placeholder={t('sidebar.search')} 
             className="w-full h-12 bg-white/[0.05] border border-white/[0.1] rounded-[1.2rem] pl-12 text-sm font-bold uppercase tracking-widest placeholder:text-muted-foreground/30 focus:outline-none focus:border-primary/40 focus:ring-1 focus:ring-primary/20 transition-all"
             onClick={() => setIsSearchOpen(true)}
             readOnly
@@ -378,9 +381,9 @@ export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?:
               <div className="px-4 py-4 overflow-x-hidden">
                 <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide">
                   {[
-                    { id: 'all', label: 'ВСЕ' },
-                    { id: 'private', label: 'ЛИЧНЫЕ' },
-                    { id: 'groups', label: 'СООБЩЕСТВА' }
+                    { id: 'all', label: t('sidebar.all').toUpperCase() },
+                    { id: 'private', label: t('sidebar.private').toUpperCase() },
+                    { id: 'groups', label: t('sidebar.groups').toUpperCase() }
                   ].map((tab) => (
                     <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={cn("px-6 py-2 rounded-full text-[10px] font-black uppercase tracking-[0.3em] transition-all whitespace-nowrap border italic", activeTab === tab.id ? "bg-primary text-white border-primary shadow-[0_0_20px_rgba(168,85,247,0.4)]" : "text-muted-foreground/50 border-white/[0.08] hover:text-white hover:bg-white/5")}>
                       {tab.label}
