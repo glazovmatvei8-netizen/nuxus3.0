@@ -297,28 +297,24 @@ export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?:
       return bTime - aTime;
     });
 
-    const seenPrivateUsers = new Set();
-    result = result.filter(c => {
-      if (c.type === 'private') {
-        const otherId = c.participantIds?.find(id => id !== user?.uid);
-        if (otherId) {
-          if (seenPrivateUsers.has(otherId)) return false;
-          seenPrivateUsers.add(otherId);
-        }
-      }
-      return true;
-    });
+    // Фильтр для Saved Messages: всегда сверху
+    const saved = result.find(c => c.id === 'saved_messages');
+    let others = result.filter(c => c.id !== 'saved_messages');
 
-    result.sort((a, b) => {
+    others.sort((a, b) => {
       const aPinned = currentUserProfile?.pinnedChatIds?.includes(a.id) ? 1 : 0;
       const bPinned = currentUserProfile?.pinnedChatIds?.includes(b.id) ? 1 : 0;
       return bPinned - aPinned;
     });
 
-    if (isArchiveView) return result.filter(c => c.isArchived);
-    if (activeTab === 'private') return result.filter(c => c.type === 'private' && !c.isArchived);
-    if (activeTab === 'groups') return result.filter(c => (c.type === 'group' || c.type === 'channel' || c.type === 'saved') && !c.isArchived);
-    return result.filter(c => !c.isArchived);
+    if (saved && !isArchiveView) {
+      others = [saved, ...others];
+    }
+
+    if (isArchiveView) return others.filter(c => c.isArchived);
+    if (activeTab === 'private') return others.filter(c => c.type === 'private' && !c.isArchived);
+    if (activeTab === 'groups') return others.filter(c => (c.type === 'group' || c.type === 'channel') && !c.isArchived);
+    return others.filter(c => !c.isArchived);
   }, [chats, activeTab, isArchiveView, currentUserProfile?.pinnedChatIds, user?.uid]);
 
   return (

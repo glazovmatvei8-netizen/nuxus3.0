@@ -341,6 +341,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
               </div>
 
               <div className="space-y-3 pb-10">
+                <PremiumFeature icon={Sparkles} label="AI Conversation Summary" description="Краткая сводка обсуждения в один клик" />
                 <PremiumFeature icon={Ghost} label="Режим Призрака" description="Полная невидимость и скрытый онлайн-статус" />
                 <PremiumFeature icon={Volume2} label="AI Voice Synthesis" description="Озвучка текстовых сообщений голосом ИИ" />
                 <PremiumFeature icon={Sparkles} label="Анимированные Рамки" description="Динамическая обводка профиля во всех списках" />
@@ -348,7 +349,6 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                 <PremiumFeature icon={Globe} label="AI Переводчик" description="Мгновенный перевод сообщений в контекстном меню" />
                 <PremiumFeature icon={Mic} label="Voice-to-Text" description="Расшифровка голосовых в текст" />
                 <PremiumFeature icon={Paintbrush} label="Кастомизация" description="Свои фоны чатов и статус-эмодзи" />
-                <PremiumFeature icon={Palette} label="Премиум Темы" description="Nebula, Cyberpunk и Gold стили" />
               </div>
 
               {!isUserPremium(profile) && (

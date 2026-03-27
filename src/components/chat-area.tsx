@@ -20,6 +20,7 @@ import { formatDisplayName, cn, compressImage, encryptSignal, isGlobalAdmin, dec
 import type { Message, User as UserType, Chat } from '@/lib/types';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { suggestMessageDraft } from '@/ai/flows/ai-message-drafting-flow';
+import { chatConversationSummary } from '@/ai/flows/chat-conversation-summary-flow';
 
 const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, isPremium, messages }: any) => {
   const [messageInput, setMessageInput] = useState('');
@@ -178,6 +179,7 @@ export default function ChatArea() {
   const [searchQuery, setSearchQuery] = useState('');
   const [isJoining, setIsJoining] = useState(false);
   const [showScrollButton, setShowScrollButton] = useState(false);
+  const [isSummarizing, setIsSummarizing] = useState(false);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -286,6 +288,26 @@ export default function ChatArea() {
     setShowScrollButton(distanceToBottom > 300);
   }, []);
 
+  const handleSummary = async () => {
+    if (!isPremium || !messages || messages.length < 5) {
+      toast({ title: "Недостаточно данных", description: "Нужно хотя бы 5 сообщений для анализа." });
+      return;
+    }
+    setIsSummarizing(true);
+    try {
+      const chatMessages = messages.slice(-20).map(m => ({
+        senderName: m.senderName,
+        text: m.contentType === 'text' ? decryptSignal(m.content) : `[${m.contentType}]`
+      }));
+      const { summary } = await chatConversationSummary({ chatMessages });
+      toast({ title: "AI Summary", description: summary, duration: 10000 });
+    } catch (e) {
+      toast({ title: "Ошибка анализа", variant: "destructive" });
+    } finally {
+      setIsSummarizing(false);
+    }
+  };
+
   const chatDisplayName = useMemo(() => {
     if (chat?.id === 'saved_messages') return 'Избранное';
     if (chat?.type === 'private') {
@@ -336,6 +358,17 @@ export default function ChatArea() {
         </div>
         {!isSearchMode && (
           <div className="flex items-center gap-1">
+            {isPremium && (
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={handleSummary} 
+                disabled={isSummarizing}
+                className={cn("text-primary hover:text-white transition-colors", isSummarizing && "animate-spin")}
+              >
+                <Sparkles className="w-5 h-5" />
+              </Button>
+            )}
             <Button variant="ghost" size="icon" onClick={() => setIsSearchMode(true)} className="text-white/60 hover:text-primary transition-colors"><Search className="w-5 h-5" /></Button>
             <Button variant="ghost" size="icon" onClick={() => setIsChatInfoOpen(true)} className="text-white/60 hover:text-primary transition-colors"><Info className="w-5 h-5" /></Button>
           </div>
