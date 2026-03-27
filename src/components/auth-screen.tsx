@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useEffect } from 'react';
@@ -19,6 +20,7 @@ import { useAppState } from '@/lib/store';
 import { NuxusLogo } from './nuxus-logo';
 import { LegalModal } from './modals/legal-modal';
 import { cn } from '@/lib/utils';
+import { useTranslations } from '@/hooks/use-translations';
 
 type AuthMode = 'login' | 'register' | 'recover' | 'setup2fa' | 'recovering';
 
@@ -29,6 +31,7 @@ export default function AuthScreen() {
   const db = useFirestore();
   const { toast } = useToast();
   const { setIs2FAVerified } = useAppState();
+  const { t } = useTranslations();
   
   const [mode, setMode] = useState<AuthMode>('login');
   const [isLoading, setIsLoading] = useState(false);
@@ -207,10 +210,10 @@ export default function AuthScreen() {
           
           <CardHeader className="text-center pb-2 pt-10 px-8">
             <CardTitle className="text-3xl font-black tracking-tighter uppercase italic text-white leading-none drop-shadow-[0_0_15px_rgba(168,85,247,0.4)]">
-              {mode === 'recover' ? 'Restore' : mode === 'setup2fa' ? 'Quantum' : mode === 'login' ? 'Signal' : 'Create'}
+              {mode === 'recover' ? 'Restore' : mode === 'setup2fa' ? 'Quantum' : mode === 'login' ? t('app.signal') : 'Create'}
             </CardTitle>
             <CardDescription className="text-primary/80 font-black tracking-[0.5em] uppercase text-[8px] opacity-60 mt-3 ml-[0.5em]">
-              {mode === 'setup2fa' ? 'Protection Key' : mode === 'recover' ? 'Neural recovery' : 'Neural Access Layer'}
+              {mode === 'setup2fa' ? 'Protection Key' : mode === 'recover' ? 'Neural recovery' : t('app.kernel') + ' Access Layer'}
             </CardDescription>
           </CardHeader>
 
@@ -244,7 +247,7 @@ export default function AuthScreen() {
                   <ShieldAlert className="w-16 h-16 text-accent animate-float mx-auto relative z-10" />
                 </div>
                 <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/80 px-4 leading-relaxed">
-                  Для восстановления доступа к узлу обратитесь к Владельцу Nuxus Prime через защищенный канал.
+                  Для восстановления доступа к узлу обратитесь к Владельцу {t('app.name')} Prime через защищенный канал.
                 </p>
                 <Button variant="outline" onClick={() => setMode('login')} className="w-full h-14 rounded-[1.5rem] border-white/10 text-[10px] uppercase font-black tracking-[0.3em] hover:bg-white/5 transition-all">Вернуться</Button>
               </div>
@@ -276,7 +279,7 @@ export default function AuthScreen() {
                     <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
                     {isLoading ? <Loader2 className="animate-spin w-5 h-5" /> : (
                       <span className="flex items-center gap-2">
-                        {mode === 'login' ? "Вход в Ядро" : "Создать Узел"}
+                        {mode === 'login' ? `Вход в ${t('app.name')}` : "Создать Узел"}
                         <Zap className="w-4 h-4 fill-current" />
                       </span>
                     )}

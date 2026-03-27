@@ -27,6 +27,7 @@ import { UserAvatar } from './user-avatar';
 import { CreateStoryModal } from './modals/create-story-modal';
 import type { Call } from '@/lib/types';
 import { Phone, MessageCircle, Settings, Search, Archive, Music, Wallet, Gamepad2, Layers } from 'lucide-react';
+import { useTranslations } from '@/hooks/use-translations';
 
 export default function ChatMain() {
   const { 
@@ -37,6 +38,7 @@ export default function ChatMain() {
   } = useAppState();
   const { user } = useUser();
   const db = useFirestore();
+  const { t } = useTranslations();
 
   const incomingCallsQuery = useMemoFirebase(() => {
     if (!db || !user) return null;
@@ -77,7 +79,7 @@ export default function ChatMain() {
             <RailButton icon={Phone} active={activeView === 'calls'} onClick={() => { setActiveView('calls'); setCurrentChatId(null); }} label="ЗВОНКИ" />
             <RailButton icon={Music} active={activeView === 'music'} onClick={() => { setActiveView('music'); setCurrentChatId(null); }} label="МУЗЫКА" />
             <RailButton icon={Gamepad2} active={activeView === 'games'} onClick={() => { setActiveView('games'); setCurrentChatId(null); }} label="ИГРЫ" />
-            <RailButton icon={MessageCircle} active={activeView === 'chats'} onClick={() => { setActiveView('chats'); setCurrentChatId(null); }} label="ЧАТЫ 🐱" />
+            <RailButton icon={MessageCircle} active={activeView === 'chats'} onClick={() => { setActiveView('chats'); setCurrentChatId(null); }} label={t('app.chats').toUpperCase()} />
             <RailButton icon={Wallet} active={activeView === 'wallet'} onClick={() => { setActiveView('wallet'); setCurrentChatId(null); }} label="КОШЕЛЕК" />
             <RailButton icon={Archive} active={activeView === 'archive'} onClick={() => { setActiveView('archive'); setCurrentChatId(null); }} label="АРХИВ" />
           </div>
@@ -130,7 +132,7 @@ export default function ChatMain() {
             <NavButton icon={Phone} label="ЗВОНКИ" active={activeView === 'calls'} onClick={() => setActiveView('calls')} />
             <NavButton icon={Music} label="АУДИО" active={activeView === 'music'} onClick={() => setActiveView('music')} />
             <NavButton icon={Gamepad2} label="ИГРЫ" active={activeView === 'games'} onClick={() => setActiveView('games')} />
-            <NavButton icon={MessageCircle} label="ЧАТЫ 🐱" active={activeView === 'chats'} onClick={() => setActiveView('chats')} isCenter />
+            <NavButton icon={MessageCircle} label={t('app.chats').toUpperCase()} active={activeView === 'chats'} onClick={() => setActiveView('chats')} isCenter />
             <NavButton icon={Wallet} label="БАНК" active={activeView === 'wallet'} onClick={() => setActiveView('wallet')} />
             <NavButton icon={Settings} label="ПРОФИЛЬ" active={activeView === 'profile'} onClick={() => setActiveView('profile')} isProfile userId={user?.uid} />
           </div>

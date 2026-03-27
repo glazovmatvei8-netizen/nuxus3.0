@@ -111,7 +111,7 @@ export default function Home() {
                 {t('initializing')}
               </p>
               <p className="text-[8px] font-black uppercase tracking-[0.5em] text-white/20 ml-[0.5em]">
-                Quantum Encryption Core v2.9
+                {t('app.kernel')} v2.9
               </p>
             </div>
           </div>

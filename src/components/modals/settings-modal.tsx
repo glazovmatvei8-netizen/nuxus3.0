@@ -16,7 +16,7 @@ import {
   LogOut, Palette, Check, Settings2, Camera, Lock, Image as ImageIcon, 
   Paintbrush, Shield, UserCircle, Layout, Smile, FileText, ChevronRight,
   ShieldCheck, Eye, Users2, MessageSquareLock, Upload, Smartphone, Share2, Trophy,
-  Bell, Video, Mic, MonitorSmartphone, Key, Trash2, ShieldAlert, RefreshCw, Save, Zap, Moon, Sun, Monitor, Download, Share, Fingerprint, Sparkles, Wand2, Globe, Star, Ghost, Volume2, MessageSquare, Timer, Crown, Music, Type, VideoIcon, Rocket, Diamond, Languages
+  Bell, Video, Mic, MonitorSmartphone, Key, Trash2, ShieldAlert, RefreshCw, Save, Zap, Moon, Sun, Monitor, Download, Share, Fingerprint, Sparkles, Wand2, Globe, Star, Ghost, Volume2, MessageSquare, Timer, Crown, Music, Type, VideoIcon, Rocket, Diamond, Languages, PenTool
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { signOut } from 'firebase/auth';
@@ -382,10 +382,50 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
             <TabsContent value="interface" className="space-y-6 m-0 p-6 pb-20">
               <div className="p-4 bg-primary/5 rounded-[2rem] border border-primary/10">
                 <div className="flex items-center gap-3 mb-4">
+                  <PenTool className="w-5 h-5 text-primary" />
+                  <div className="flex flex-col">
+                    <span className="text-xs font-black uppercase text-white">Global Rebranding</span>
+                    <span className="text-[8px] text-muted-foreground uppercase font-bold">Измените имя мессенджера</span>
+                  </div>
+                </div>
+                
+                <div className="space-y-4 text-left">
+                  <div className="space-y-1.5">
+                    <Label className="text-[9px] uppercase font-black text-muted-foreground ml-1">Название приложения (App Name)</Label>
+                    <Input 
+                      placeholder="Nuxus 2.0" 
+                      value={form.interfaceOverrides?.['app.name'] || ''} 
+                      onChange={e => updateOverride('app.name', e.target.value)}
+                      className="bg-black/20 border-white/5 h-11 rounded-xl text-xs"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-[9px] uppercase font-black text-muted-foreground ml-1">Заголовок Чатов (Chats Title)</Label>
+                    <Input 
+                      placeholder="чаты 🐱" 
+                      value={form.interfaceOverrides?.['app.chats'] || ''} 
+                      onChange={e => updateOverride('app.chats', e.target.value)}
+                      className="bg-black/20 border-white/5 h-11 rounded-xl text-xs"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-[9px] uppercase font-black text-muted-foreground ml-1">Заголовок Архива (Archive Title)</Label>
+                    <Input 
+                      placeholder="архив 🐱" 
+                      value={form.interfaceOverrides?.['app.archive'] || ''} 
+                      onChange={e => updateOverride('app.archive', e.target.value)}
+                      className="bg-black/20 border-white/5 h-11 rounded-xl text-xs"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-4 bg-primary/5 rounded-[2rem] border border-primary/10">
+                <div className="flex items-center gap-3 mb-4">
                   <Languages className="w-5 h-5 text-primary" />
                   <div className="flex flex-col">
                     <span className="text-xs font-black uppercase text-white">Custom Signals</span>
-                    <span className="text-[8px] text-muted-foreground uppercase font-bold">Ваш язык — ваши правила</span>
+                    <span className="text-[8px] text-muted-foreground uppercase font-bold">Системные фразы</span>
                   </div>
                 </div>
                 
@@ -431,7 +471,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
               
               <div className="p-4 bg-black/20 rounded-[2rem] border border-white/5">
                 <p className="text-[9px] text-muted-foreground leading-relaxed uppercase font-bold text-center">
-                  Переопределите стандартные системные фразы Ядра на свои собственные. Изменения применятся мгновенно после сохранения.
+                  Переопределите стандартные системные фразы Ядра и его название на свои собственные. Изменения применятся мгновенно после сохранения.
                 </p>
               </div>
             </TabsContent>
@@ -451,6 +491,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
               </div>
 
               <div className="space-y-3 pb-10">
+                <PremiumFeature icon={PenTool} label="Global Rebranding" description="Переименуйте весь мессенджер под свой вкус" />
                 <PremiumFeature icon={Languages} label="Custom Signal Pack" description="Создайте свой собственный язык интерфейса Ядра" />
                 <PremiumFeature icon={VideoIcon} label="AI Video Animate" description="Анимируйте фото в 5-секундные ролики" />
                 <PremiumFeature icon={Rocket} label="Dynamic Profile Aura" description="Пульсирующая энергия вокруг вашего узла" />

@@ -253,7 +253,7 @@ export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?:
     const updateLatency = async () => {
       const start = Date.now();
       try {
-        await fetch('/favicon.ico', { method: 'HEAD', cache: 'no-store' });
+        await fetch('/', { method: 'HEAD', cache: 'no-store' });
         setLatency(Date.now() - start);
       } catch (e) {
         setLatency(Math.floor(Math.random() * 15) + 5);
@@ -348,7 +348,7 @@ export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?:
             </div>
             <div className="absolute left-1/2 -translate-x-1/2 flex flex-col items-center">
               <h1 onClick={() => isGlobalAdmin(currentUserProfile) && setIsAdminPanelOpen(true)} className={cn("text-2xl font-black italic tracking-tight text-white transition-all flex items-center gap-2", isGlobalAdmin(currentUserProfile) ? "cursor-pointer hover:text-primary hover:drop-shadow-[0_0_15px_rgba(168,85,247,0.6)]" : "cursor-default")}>
-                {isArchiveView ? 'архив 🐱' : 'чаты 🐱'}
+                {isArchiveView ? t('app.archive') : t('app.chats')}
               </h1>
               {!isOnline && (
                 <span className="text-[8px] font-black uppercase tracking-[0.4em] text-primary animate-pulse ml-[0.4em]">{t('sidebar.connecting')}</span>
