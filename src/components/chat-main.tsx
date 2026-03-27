@@ -64,7 +64,7 @@ export default function ChatMain() {
       <UpdateNotifier />
       
       <div className="flex-1 flex overflow-hidden w-full relative">
-        {/* Desktop Navigation Rail - Enhanced Glass UI */}
+        {/* Desktop Navigation Rail */}
         <div className="hidden md:flex w-[84px] h-full flex-col items-center py-8 bg-white/[0.03] backdrop-blur-3xl border-r border-white/[0.05] shrink-0 z-40 relative">
           <div className="absolute right-0 top-0 bottom-0 w-px bg-gradient-to-b from-transparent via-primary/20 to-transparent" />
           
@@ -95,8 +95,11 @@ export default function ChatMain() {
           </div>
         </div>
 
-        {/* Content Sidebar */}
-        <div className={cn("w-full md:w-[380px] lg:w-[420px] h-full flex-shrink-0 border-r border-white/[0.05] transition-all duration-500 z-30 bg-white/[0.01] backdrop-blur-2xl", (currentChatId && !['profile', 'contacts', 'calls', 'archive', 'music', 'wallet', 'discovery', 'games'].includes(activeView)) ? "hidden md:block" : "block")}>
+        {/* Content Sidebar - Fixed Horizontal Drift */}
+        <div className={cn(
+          "w-full md:w-[380px] lg:w-[420px] h-full flex-shrink-0 border-r border-white/[0.05] z-30 bg-white/[0.01] backdrop-blur-2xl overflow-x-hidden", 
+          (currentChatId && !['profile', 'contacts', 'calls', 'archive', 'music', 'wallet', 'discovery', 'games'].includes(activeView)) ? "hidden md:block" : "block"
+        )}>
           {activeView === 'chats' && <ChatSidebar />}
           {activeView === 'contacts' && <ContactsView />}
           {activeView === 'calls' && <CallsView />}
@@ -107,15 +110,18 @@ export default function ChatMain() {
           {activeView === 'games' && <GamesView />}
         </div>
         
-        {/* Main Viewport */}
-        <div className={cn("flex-1 h-full flex flex-col min-w-0 transition-all duration-500 bg-transparent relative z-20 chat-pattern-bg", (!currentChatId || ['profile', 'music', 'wallet', 'games'].includes(activeView)) ? "hidden md:flex" : "flex")}>
+        {/* Main Viewport - Fixed Horizontal Drift */}
+        <div className={cn(
+          "flex-1 h-full flex flex-col min-w-0 bg-transparent relative z-20 chat-pattern-bg overflow-x-hidden", 
+          (!currentChatId || ['profile', 'music', 'wallet', 'games'].includes(activeView)) ? "hidden md:flex" : "flex"
+        )}>
           <ChatArea />
         </div>
       </div>
 
       <MusicPlayer />
 
-      {/* Bottom Navigation (Mobile) - Enhanced Glass */}
+      {/* Bottom Navigation (Mobile) */}
       {!currentChatId && (
         <div className="md:hidden fixed bottom-10 left-1/2 -translate-x-1/2 w-[92%] h-[84px] bg-black/40 backdrop-blur-[60px] border border-white/10 rounded-[2.5rem] flex items-center justify-between px-6 z-50 shadow-[0_20px_50px_rgba(0,0,0,0.6)]">
           <div className="flex flex-1 justify-around items-center gap-1">

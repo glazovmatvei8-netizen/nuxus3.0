@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useMemo, memo, useRef, useEffect } from 'react';
@@ -85,11 +86,11 @@ const ChatListItem = memo(({
     touchStartY.current = e.touches[0].clientY;
     directionDecided.current = false;
     isHorizontalSwipe.current = false;
-    isVerticalScroll = false;
+    isVerticalScroll.current = false;
   };
 
   const handleTouchMove = (e: React.TouchEvent) => {
-    if (isVerticalScroll) return;
+    if (isVerticalScroll.current) return;
     const currentX = e.touches[0].clientX;
     const currentY = e.touches[0].clientY;
     const deltaX = currentX - touchStartX.current;
@@ -97,7 +98,7 @@ const ChatListItem = memo(({
 
     if (!directionDecided.current) {
       if (Math.abs(deltaY) > Math.abs(deltaX) + 5) {
-        isVerticalScroll = true;
+        isVerticalScroll.current = true;
         directionDecided.current = true;
         setOffsetX(0);
         return;
@@ -382,7 +383,7 @@ export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?:
             ) : (
               <div className="flex flex-col items-center justify-center p-24 opacity-20">
                  <Ghost className="w-16 h-16 mb-6 animate-float" />
-                 <p className="text-[10px] font-black uppercase tracking-[0.5em] text-center ml-[0.5em]">{isArchiveView ? 'АРХИВ ПУСТ' : 'НЕТ ДИАЛОГОВ'}</p>
+                 <p className="text-[10px] font-black uppercase tracking-0.5em text-center ml-0.5em">{isArchiveView ? 'АРХИВ ПУСТ' : 'НЕТ ДИАЛОГОВ'}</p>
               </div>
             )}
           </div>
