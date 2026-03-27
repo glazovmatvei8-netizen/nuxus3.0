@@ -1,7 +1,7 @@
 
 "use client"
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import { UserAvatar } from '@/components/user-avatar';
@@ -15,6 +15,7 @@ import { formatDisplayName, cn, isUserPremium } from '@/lib/utils';
 import type { User } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { QRCodeSVG } from 'qrcode.react';
 
 export default function ProfileView() {
   const { user } = useUser();
@@ -26,10 +27,14 @@ export default function ProfileView() {
   const userProfileRef = useMemoFirebase(() => (!db || !user) ? null : doc(db!, 'users', user.uid), [db, user]);
   const { data: profile } = useDoc<User>(userProfileRef);
 
+  const inviteLink = useMemo(() => {
+    if (typeof window === 'undefined' || !user) return '';
+    return `${window.location.origin}/?ref=${user.uid}`;
+  }, [user]);
+
   const copyRefLink = () => {
-    if (!user) return;
-    const link = `${window.location.origin}/?ref=${user.uid}`;
-    navigator.clipboard.writeText(link);
+    if (!inviteLink) return;
+    navigator.clipboard.writeText(inviteLink);
     toast({ title: "Инвайт-код скопирован!", description: "Отправьте его для расширения Ядра." });
   };
 
@@ -149,9 +154,23 @@ export default function ProfileView() {
           </DialogHeader>
           <div className="py-8 flex justify-center">
             <div className="bg-white p-4 rounded-3xl shadow-[0_0_30px_rgba(168,85,247,0.3)]">
-              <div className="w-48 h-48 bg-[#0a0a0c] flex items-center justify-center relative overflow-hidden">
-                <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-accent/20 opacity-20" />
-                <QrCode className="w-32 h-32 text-primary" strokeWidth={1.5} />
+              <div className="w-48 h-48 bg-white flex items-center justify-center relative overflow-hidden rounded-2xl">
+                {inviteLink && (
+                  <QRCodeSVG 
+                    value={inviteLink} 
+                    size={160}
+                    level="H"
+                    includeMargin={false}
+                    imageSettings={{
+                      src: "https://i.ibb.co/sd2MqGz2/Icon.png",
+                      x: undefined,
+                      y: undefined,
+                      height: 34,
+                      width: 34,
+                      excavate: true,
+                    }}
+                  />
+                )}
               </div>
             </div>
           </div>
