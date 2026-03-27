@@ -11,9 +11,8 @@ import { decryptSignal, isGlobalAdmin } from '@/lib/utils';
 import { isAfter, parseISO, addDays } from 'date-fns';
 
 /**
- * Nuxus Notification & Bot Core v65.7.0
+ * Nuxus Notification & Bot Core v2.9.0
  * Управляет уведомлениями и логикой бота Nuxus Chat Manager.
- * Оптимизировано для предотвращения лагов и дубликатов.
  */
 export function NotificationListener() {
   const { user } = useUser();
@@ -209,7 +208,7 @@ export function NotificationListener() {
           break;
       }
     } else if (cmd === '!статус' || cmd === '!status') {
-      await sendBotReply(`📊 Состояние Ядра: Стабильно\nВерсия: 0.65.8\nШифрование: QES 2.0 Active`);
+      await sendBotReply(`📊 Состояние Ядра: Стабильно\nВерсия: 2.9.0\nШифрование: QES 2.9 Active`);
     }
   };
 

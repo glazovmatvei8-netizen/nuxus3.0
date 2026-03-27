@@ -10,7 +10,7 @@ import { RefreshCw, Clock, Zap, Download, ShieldCheck, Wifi, Loader2, ListChecks
 import { useAppState } from '@/lib/store';
 import { Progress } from './ui/progress';
 
-const CURRENT_VERSION = '0.65.8';
+const CURRENT_VERSION = '2.9.0';
 
 interface SystemConfig {
   version: string;
@@ -19,7 +19,7 @@ interface SystemConfig {
 }
 
 /**
- * ПРОДВИНУТАЯ СИСТЕМА ОБНОВЛЕНИЙ NUXUS v2.0
+ * ПРОДВИНУТАЯ СИСТЕМА ОБНОВЛЕНИЙ NUXUS v2.9
  */
 export function UpdateNotifier() {
   const db = useFirestore();

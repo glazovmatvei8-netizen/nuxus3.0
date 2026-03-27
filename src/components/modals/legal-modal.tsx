@@ -17,7 +17,7 @@ export function LegalModal({ open, onOpenChange, type }: { open: boolean, onOpen
             <ShieldCheck className="w-6 h-6 text-primary" /> База Знаний Ядра
           </DialogTitle>
           <DialogDescription className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">
-            Nuxus Kernel 2.0.65 — Help & Support Center
+            Nuxus Kernel v2.9.0 — Help & Support Center
           </DialogDescription>
         </DialogHeader>
 

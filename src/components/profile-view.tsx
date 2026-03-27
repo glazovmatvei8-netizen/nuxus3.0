@@ -55,7 +55,7 @@ export default function ProfileView() {
             {isPremium && <div className="absolute -inset-1 border border-primary/20 rounded-full animate-ping" />}
           </div>
           <span className="font-bold text-foreground text-[17px] flex items-center gap-1.5 italic">
-            {formatDisplayName(profile?.name)} 
+            {profile?.name ? formatDisplayName(profile.name) : 'Синхронизация...'} 
             {isPremium && <Star className="w-3.5 h-3.5 text-accent fill-accent" />}
           </span>
         </div>
@@ -136,7 +136,7 @@ export default function ProfileView() {
           </div>
 
           <div className="pt-8 flex flex-col items-center gap-3">
-            <p className="text-[11px] text-muted-foreground/20 uppercase font-black tracking-[0.4em]">Nuxus Kernel v2.6.5</p>
+            <p className="text-[11px] text-muted-foreground/20 uppercase font-black tracking-[0.4em]">Nuxus Kernel v2.9</p>
             <div className="flex gap-6 opacity-10">
               <Globe className="w-5 h-5" />
               <Server className="w-5 h-5" />

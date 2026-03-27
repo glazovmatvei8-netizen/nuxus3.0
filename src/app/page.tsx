@@ -68,8 +68,9 @@ export default function Home() {
   const { data: profile, isLoading: isProfileLoading } = useDoc<UserType>(userProfileRef);
   const isBanned = isUserActuallyBanned(profile);
 
+  // Фиксация лоадера: если данные загружены хоть раз, больше не показываем Initialization
   useEffect(() => {
-    if (!isUserLoading && (!user || !isProfileLoading)) {
+    if (!isUserLoading && (user ? !isProfileLoading : true)) {
       const timer = setTimeout(() => setIsInitialLoad(false), 500);
       return () => clearTimeout(timer);
     }
@@ -110,7 +111,7 @@ export default function Home() {
                 Initializing
               </p>
               <p className="text-[8px] font-black uppercase tracking-[0.5em] text-white/20 ml-[0.5em]">
-                Quantum Encryption Core v0.65.8
+                Quantum Encryption Core v2.9
               </p>
             </div>
           </div>
