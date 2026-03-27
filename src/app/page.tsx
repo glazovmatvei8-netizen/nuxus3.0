@@ -112,7 +112,7 @@ export default function Home() {
                 {t('initializing')}
               </p>
               <p className="text-[8px] font-black uppercase tracking-[0.5em] text-white/20 ml-[0.5em]">
-                {t('app.kernel')} v2.9.5
+                {t('app.kernel')} V3.0
               </p>
             </div>
           </div>
