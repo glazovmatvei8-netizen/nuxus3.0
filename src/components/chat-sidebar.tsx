@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useMemo, memo, useRef, useEffect } from 'react';
@@ -116,7 +115,8 @@ const ChatListItem = memo(({
     }
 
     if (isHorizontalSwipe.current) {
-      const newOffset = Math.max(-160, Math.min(160, deltaX));
+      // Reduced max offset to 120px for better mobile stability
+      const newOffset = Math.max(-120, Math.min(120, deltaX));
       setOffsetX(newOffset);
       if (e.cancelable) e.preventDefault();
     }
@@ -125,8 +125,8 @@ const ChatListItem = memo(({
   const handleTouchEnd = () => {
     setIsDragging(false);
     if (!isHorizontalSwipe.current) { setOffsetX(0); return; }
-    if (offsetX > 60) setOffsetX(160);
-    else if (offsetX < -60) setOffsetX(-160);
+    if (offsetX > 60) setOffsetX(120);
+    else if (offsetX < -60) setOffsetX(-120);
     else setOffsetX(0);
     isHorizontalSwipe.current = false;
   };
@@ -136,25 +136,25 @@ const ChatListItem = memo(({
   return (
     <div className="relative overflow-hidden touch-pan-y select-none bg-transparent border-none px-2 py-0.5 max-w-full" style={{ WebkitTouchCallout: 'none' }}>
       <div className={cn("absolute inset-y-0 left-2 flex h-[calc(100%-4px)] z-0 transition-opacity duration-200 rounded-[2rem] overflow-hidden", offsetX > 10 ? "opacity-100" : "opacity-0 pointer-events-none")}>
-        <button onClick={(e) => { e.stopPropagation(); onMarkUnread(chat.id); resetSwipe(); }} className="w-20 bg-blue-600/80 backdrop-blur-xl flex flex-col items-center justify-center text-white gap-1 active:brightness-125 transition-all">
-          <MessageCircle className="w-5 h-5 fill-current" />
-          <span className="text-[8px] font-black uppercase tracking-widest">Сигнал</span>
+        <button onClick={(e) => { e.stopPropagation(); onMarkUnread(chat.id); resetSwipe(); }} className="w-[60px] bg-blue-600/80 backdrop-blur-xl flex flex-col items-center justify-center text-white gap-1 active:brightness-125 transition-all">
+          <MessageCircle className="w-4 h-4 fill-current" />
+          <span className="text-[7px] font-black uppercase tracking-widest">Сигнал</span>
         </button>
-        <button onClick={(e) => { e.stopPropagation(); onPinToggle(chat.id); resetSwipe(); }} className="w-20 bg-green-600/80 backdrop-blur-xl flex flex-col items-center justify-center text-white gap-1 active:brightness-125 transition-all">
-          <Pin className="w-5 h-5 fill-current" />
-          <span className="text-[8px] font-black uppercase tracking-widest">{isPinned ? 'Снять' : 'Закрепить'}</span>
+        <button onClick={(e) => { e.stopPropagation(); onPinToggle(chat.id); resetSwipe(); }} className="w-[60px] bg-green-600/80 backdrop-blur-xl flex flex-col items-center justify-center text-white gap-1 active:brightness-125 transition-all">
+          <Pin className="w-4 h-4 fill-current" />
+          <span className="text-[7px] font-black uppercase tracking-widest">{isPinned ? 'Снять' : 'Закр'}</span>
         </button>
       </div>
 
-      <div className={cn("absolute inset-y-0 right-2 flex h-[calc(100%-4px)] z-0 transition-opacity duration-200 rounded-[2rem] overflow-hidden", offsetX < -10 ? "opacity-100" : "opacity-0 pointer-events-none")} style={{ width: '160px' }}>
+      <div className={cn("absolute inset-y-0 right-2 flex h-[calc(100%-4px)] z-0 transition-opacity duration-200 rounded-[2rem] overflow-hidden", offsetX < -10 ? "opacity-100" : "opacity-0 pointer-events-none")} style={{ width: '120px' }}>
         <div className="flex h-full w-full">
           <button onClick={(e) => { e.stopPropagation(); onArchive(chat.id, !!chat.isArchived); resetSwipe(); }} className="flex-1 bg-orange-600/80 backdrop-blur-xl flex flex-col items-center justify-center text-white gap-1 active:brightness-125 transition-all">
-            <Archive className="w-5 h-5 fill-current" />
-            <span className="text-[8px] font-black uppercase tracking-widest">Архив</span>
+            <Archive className="w-4 h-4 fill-current" />
+            <span className="text-[7px] font-black uppercase tracking-widest">Архив</span>
           </button>
           <button onClick={(e) => { e.stopPropagation(); onDelete(chat.id); resetSwipe(); }} className="flex-1 bg-red-600/80 backdrop-blur-xl flex flex-col items-center justify-center text-white gap-1 active:brightness-125 transition-all">
-            <Trash2 className="w-5 h-5 fill-current" />
-            <span className="text-[8px] font-black uppercase tracking-widest">Удалить</span>
+            <Trash2 className="w-4 h-4 fill-current" />
+            <span className="text-[7px] font-black uppercase tracking-widest">Удал</span>
           </button>
         </div>
       </div>
@@ -354,7 +354,7 @@ export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?:
       </div>
 
       <ScrollArea className="flex-1 scrollbar-hide px-2">
-        <div className="flex flex-col max-w-full">
+        <div className="flex flex-col max-w-full overflow-x-hidden">
           {!isArchiveView && (
             <div className="animate-in fade-in slide-in-from-top-10 duration-1000">
               <StoriesBar />
