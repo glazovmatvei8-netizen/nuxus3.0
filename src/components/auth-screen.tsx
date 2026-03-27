@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, ShieldAlert, Fingerprint, RefreshCcw, Lock, ShieldCheck } from 'lucide-react';
+import { Loader2, ShieldAlert, Fingerprint, RefreshCcw, Lock, ShieldCheck, ArrowRight, Zap } from 'lucide-react';
 import { useAuth, useFirestore } from '@/firebase';
 import { 
   signInWithEmailAndPassword,
@@ -19,6 +19,7 @@ import { doc, setDoc, getDoc, increment, updateDoc } from 'firebase/firestore';
 import { useAppState } from '@/lib/store';
 import { NuxusLogo } from './nuxus-logo';
 import { LegalModal } from './modals/legal-modal';
+import { cn } from '@/lib/utils';
 
 type AuthMode = 'login' | 'register' | 'recover' | 'setup2fa' | 'recovering';
 
@@ -173,85 +174,124 @@ export default function AuthScreen() {
 
   if (mode === 'recovering') {
     return (
-      <div className="h-[100dvh] w-full flex flex-col items-center justify-center bg-[#050505] text-white">
-        <NuxusLogo size={120} />
-        <div className="mt-12 flex flex-col items-center gap-4">
-          <RefreshCcw className="w-6 h-6 text-primary animate-spin" />
-          <p className="text-[10px] font-black uppercase tracking-[0.5em] text-primary/60 animate-pulse">Account Recovery Active...</p>
+      <div className="h-[100dvh] w-full flex flex-col items-center justify-center bg-[#020203] text-white">
+        <div className="relative">
+          <div className="absolute inset-0 bg-primary blur-[80px] opacity-20 animate-pulse" />
+          <NuxusLogo size={160} />
+        </div>
+        <div className="mt-16 flex flex-col items-center gap-6">
+          <div className="relative w-48 h-1 bg-white/5 rounded-full overflow-hidden">
+            <div className="absolute inset-0 bg-primary animate-[scanline_2s_linear_infinite]" />
+          </div>
+          <p className="text-[10px] font-black uppercase tracking-[0.8em] text-primary/60 animate-pulse ml-[0.8em]">Account Recovery Sync...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-[100dvh] w-full flex flex-col items-center justify-center bg-background p-4 relative overflow-hidden">
+    <div className="min-h-[100dvh] w-full flex flex-col items-center justify-center bg-[#020203] p-4 relative overflow-hidden">
+      {/* Cinematic Background Orbs */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
-        <div className="absolute top-[-10%] left-[-10%] w-[80%] h-[80%] bg-primary/20 blur-[180px] rounded-full animate-pulse-glow" />
-        <div className="absolute bottom-[-10%] right-[-10%] w-[70%] h-[70%] bg-accent/10 blur-[150px] rounded-full animate-pulse-glow" style={{ animationDelay: '3s' }} />
+        <div className="absolute top-[-20%] left-[-10%] w-[100%] h-[100%] bg-primary/10 blur-[200px] rounded-full animate-pulse-glow" />
+        <div className="absolute bottom-[-20%] right-[-10%] w-[100%] h-[100%] bg-accent/5 blur-[180px] rounded-full animate-pulse-glow" style={{ animationDelay: '3s' }} />
       </div>
 
-      <div className="w-full max-w-[360px] relative z-10 flex flex-col items-center animate-in fade-in zoom-in duration-700">
-        <div className="mb-2 scale-50 md:scale-75">
-          <NuxusLogo size={60} />
+      <div className="w-full max-w-[380px] relative z-10 flex flex-col items-center animate-in fade-in zoom-in duration-1000">
+        <div className="mb-8 scale-90 hover:scale-100 transition-transform duration-700">
+          <NuxusLogo size={100} />
         </div>
 
-        <Card className="w-full border-white/[0.08] bg-white/[0.03] backdrop-blur-[100px] shadow-2xl rounded-[2rem] overflow-hidden relative">
-          <CardHeader className="text-center pb-1 pt-4 px-6">
-            <CardTitle className="text-xl font-black tracking-tighter uppercase italic text-white leading-none">
+        <Card className="w-full border-white/[0.08] bg-white/[0.02] backdrop-blur-[120px] shadow-2xl rounded-[3rem] overflow-hidden relative">
+          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-primary/40 to-transparent" />
+          
+          <CardHeader className="text-center pb-2 pt-10 px-8">
+            <CardTitle className="text-3xl font-black tracking-tighter uppercase italic text-white leading-none">
               {mode === 'recover' ? 'Restore' : mode === 'setup2fa' ? 'Quantum' : mode === 'login' ? 'Signal' : 'Create'}
             </CardTitle>
-            <CardDescription className="text-primary/80 font-black tracking-[0.4em] uppercase text-[6px] opacity-60 mt-1">
-              {mode === 'setup2fa' ? 'Protection Key' : mode === 'recover' ? 'Neural recovery' : 'Account Access Layer'}
+            <CardDescription className="text-primary/80 font-black tracking-[0.5em] uppercase text-[8px] opacity-60 mt-3 ml-[0.5em]">
+              {mode === 'setup2fa' ? 'Protection Key' : mode === 'recover' ? 'Neural recovery' : 'Neural Access Layer'}
             </CardDescription>
           </CardHeader>
 
-          <CardContent className="px-6 pb-5 pt-2">
+          <CardContent className="px-8 pb-10 pt-6">
             {mode === 'setup2fa' ? (
-              <form onSubmit={handleSetup2FA} className="space-y-4">
-                <div className="flex flex-col items-center gap-2 py-1">
-                  <Fingerprint className="w-10 h-10 text-primary animate-float" />
-                  <p className="text-[7px] text-muted-foreground uppercase font-black tracking-widest text-center">Установите квантовый ключ</p>
+              <form onSubmit={handleSetup2FA} className="space-y-8">
+                <div className="flex flex-col items-center gap-4 py-2">
+                  <div className="relative">
+                    <div className="absolute inset-0 bg-primary blur-3xl opacity-20 animate-pulse" />
+                    <Fingerprint className="w-16 h-16 text-primary animate-float relative z-10" />
+                  </div>
+                  <p className="text-[9px] text-muted-foreground uppercase font-black tracking-[0.2em] text-center">Установите 6-значный квантовый ключ</p>
                 </div>
-                <Input type="password" placeholder="••••••" maxLength={6} value={formData.pin2FA} onChange={e => setFormData({...formData, pin2FA: e.target.value.replace(/\D/g, '')})} className="bg-white/5 border-white/10 h-10 rounded-xl text-center text-lg tracking-[0.5em] font-black" required />
-                <Button type="submit" disabled={isLoading} className="w-full h-10 bg-primary text-white rounded-xl font-black uppercase italic tracking-widest shadow-xl shadow-primary/20 text-[10px]">
-                  {isLoading ? <Loader2 className="animate-spin w-4 h-4" /> : "Активировать"}
+                <Input 
+                  type="password" 
+                  placeholder="••••••" 
+                  maxLength={6} 
+                  value={formData.pin2FA} 
+                  onChange={e => setFormData({...formData, pin2FA: e.target.value.replace(/\D/g, '')})} 
+                  className="bg-white/5 border-white/10 h-16 rounded-2xl text-center text-3xl tracking-[0.6em] font-black focus:border-primary/50 transition-all shadow-inner" 
+                  required 
+                />
+                <Button type="submit" disabled={isLoading} className="w-full h-14 bg-primary text-white rounded-2xl font-black uppercase italic tracking-widest shadow-2xl shadow-primary/30 active:scale-95 transition-all">
+                  {isLoading ? <Loader2 className="animate-spin w-5 h-5" /> : "Активировать Узел"}
                 </Button>
               </form>
             ) : mode === 'recover' ? (
-              <div className="space-y-4 text-center py-2">
-                <ShieldAlert className="w-10 h-10 text-accent animate-pulse mx-auto" />
-                <p className="text-[8px] font-bold uppercase tracking-wider text-muted-foreground/60 px-2 leading-relaxed">Для восстановления обратитесь к Владельцу Nuxus Prime.</p>
-                <Button variant="outline" onClick={() => setMode('login')} className="w-full h-9 rounded-xl border-white/10 text-[7px] uppercase font-black tracking-widest">Назад</Button>
+              <div className="space-y-8 text-center py-4">
+                <div className="relative">
+                  <div className="absolute inset-0 bg-accent blur-3xl opacity-10 animate-pulse" />
+                  <ShieldAlert className="w-16 h-16 text-accent animate-float mx-auto relative z-10" />
+                </div>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60 px-4 leading-relaxed">
+                  Для восстановления доступа к узлу обратитесь к Владельцу Nuxus Prime через защищенный канал.
+                </p>
+                <Button variant="outline" onClick={() => setMode('login')} className="w-full h-14 rounded-2xl border-white/10 text-[10px] uppercase font-black tracking-[0.3em] hover:bg-white/5 transition-all">Вернуться</Button>
               </div>
             ) : (
-              <form onSubmit={handleAuth} className="space-y-3">
+              <form onSubmit={handleAuth} className="space-y-5">
                 {mode === 'register' && (
-                  <div className="grid grid-cols-2 gap-2">
-                    <div className="space-y-1">
-                      <Label className="text-[7px] uppercase font-black text-primary/60 ml-2">Имя</Label>
-                      <Input placeholder="Name" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="bg-white/5 border-white/10 h-8 rounded-xl text-[10px] font-bold" required />
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-2">
+                      <Label className="text-[8px] uppercase font-black text-primary/60 ml-3 tracking-widest">Имя</Label>
+                      <Input placeholder="Node Name" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="bg-white/5 border-white/10 h-12 rounded-2xl text-xs font-bold" required />
                     </div>
-                    <div className="space-y-1">
-                      <Label className="text-[7px] uppercase font-black text-primary/60 ml-2">ID</Label>
-                      <Input placeholder="user" value={formData.username} onChange={e => setFormData({...formData, username: e.target.value})} className="bg-white/5 border-white/10 h-8 rounded-xl text-[10px] font-mono" required />
+                    <div className="space-y-2">
+                      <Label className="text-[8px] uppercase font-black text-primary/60 ml-3 tracking-widest">ID</Label>
+                      <Input placeholder="node_id" value={formData.username} onChange={e => setFormData({...formData, username: e.target.value})} className="bg-white/5 border-white/10 h-12 rounded-2xl text-xs font-mono" required />
                     </div>
                   </div>
                 )}
-                <div className="space-y-1">
-                  <Label className="text-[7px] uppercase font-black text-primary/60 ml-2">Аккаунт / Телефон</Label>
-                  <Input placeholder="+7 (___) ___ __ __" value={formData.identifier} onChange={e => setFormData({...formData, identifier: e.target.value})} className="bg-white/5 border-white/10 h-9 rounded-xl text-xs font-bold tracking-wider" required />
+                <div className="space-y-2">
+                  <Label className="text-[8px] uppercase font-black text-primary/60 ml-3 tracking-widest">Аккаунт / Телефон</Label>
+                  <Input placeholder="+7 (___) ___ __ __" value={formData.identifier} onChange={e => setFormData({...formData, identifier: e.target.value})} className="bg-white/5 border-white/10 h-12 rounded-2xl text-sm font-bold tracking-widest" required />
                 </div>
-                <div className="space-y-1">
-                  <Label className="text-[7px] uppercase font-black text-primary/60 ml-2">Пароль</Label>
-                  <Input type="password" placeholder="••••••••" value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} className="bg-white/5 border-white/10 h-9 rounded-xl text-xs" required />
+                <div className="space-y-2">
+                  <Label className="text-[8px] uppercase font-black text-primary/60 ml-3 tracking-widest">Пароль</Label>
+                  <Input type="password" placeholder="••••••••" value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} className="bg-white/5 border-white/10 h-12 rounded-2xl text-sm tracking-widest" required />
                 </div>
-                <Button type="submit" disabled={isLoading} className="w-full h-10 bg-primary text-white rounded-xl font-black uppercase italic tracking-widest shadow-xl shadow-primary/20 text-[10px]">
-                  {isLoading ? <Loader2 className="animate-spin w-4 h-4" /> : (mode === 'login' ? "Вход в аккаунт" : "Регистрация аккаунта")}
-                </Button>
-                <div className="mt-4 text-center flex flex-col gap-1.5">
-                  <button type="button" onClick={() => setMode(mode === 'login' ? 'register' : 'login')} className="text-[7px] text-white/30 hover:text-primary transition-all font-black uppercase tracking-[0.2em]">
+                
+                <div className="pt-4">
+                  <Button type="submit" disabled={isLoading} className="w-full h-14 bg-primary text-white rounded-2xl font-black uppercase italic tracking-widest shadow-2xl shadow-primary/30 active:scale-95 transition-all group overflow-hidden relative">
+                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
+                    {isLoading ? <Loader2 className="animate-spin w-5 h-5" /> : (
+                      <span className="flex items-center gap-2">
+                        {mode === 'login' ? "Вход в Ядро" : "Создать Узел"}
+                        <Zap className="w-4 h-4 fill-current" />
+                      </span>
+                    )}
+                  </Button>
+                </div>
+
+                <div className="mt-8 text-center flex flex-col gap-3">
+                  <button type="button" onClick={() => setMode(mode === 'login' ? 'register' : 'login')} className="text-[8px] text-white/30 hover:text-primary transition-all font-black uppercase tracking-[0.3em]">
                     {mode === 'login' ? 'НЕТ АККАУНТА? РЕГИСТРАЦИЯ' : 'УЖЕ ЕСТЬ АККАУНТ? ВОЙТИ'}
                   </button>
+                  {mode === 'login' && (
+                    <button type="button" onClick={() => setMode('recover')} className="text-[8px] text-white/20 hover:text-accent transition-all font-black uppercase tracking-[0.3em]">
+                      ВОССТАНОВЛЕНИЕ ДОСТУПА
+                    </button>
+                  )}
                 </div>
               </form>
             )}
@@ -259,9 +299,9 @@ export default function AuthScreen() {
         </Card>
 
         {/* Legal Links */}
-        <div className="mt-6 flex gap-4 opacity-40">
-          <button onClick={() => setLegalModal({ open: true, type: 'terms' })} className="text-[8px] font-black uppercase tracking-widest hover:text-primary transition-colors">Условия</button>
-          <button onClick={() => setLegalModal({ open: true, type: 'privacy' })} className="text-[8px] font-black uppercase tracking-widest hover:text-primary transition-colors">Приватность</button>
+        <div className="mt-10 flex gap-8 opacity-30">
+          <button onClick={() => setLegalModal({ open: true, type: 'terms' })} className="text-[9px] font-black uppercase tracking-[0.2em] hover:text-primary transition-colors">Условия</button>
+          <button onClick={() => setLegalModal({ open: true, type: 'privacy' })} className="text-[9px] font-black uppercase tracking-[0.2em] hover:text-primary transition-colors">Приватность</button>
         </div>
       </div>
       <LegalModal open={legalModal.open} onOpenChange={(o) => setLegalModal({ ...legalModal, open: o })} type={legalModal.type} />
