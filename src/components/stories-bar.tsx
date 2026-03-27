@@ -50,10 +50,12 @@ export function StoriesBar() {
       {/* Кнопка "Моя история" */}
       <div className="flex flex-col items-center gap-1.5 shrink-0 group cursor-pointer" onClick={() => myStories.length > 0 ? setStoriesToView(myStories) : setIsCreateStoryOpen(true)}>
         <div className={cn(
-          "relative h-[64px] w-[64px] rounded-full p-[2px] transition-all",
-          myStories.length > 0 ? "bg-gradient-to-tr from-primary to-accent scale-105" : "bg-white/10 hover:bg-white/20"
+          "relative h-[68px] w-[64px] rounded-full p-[2px] transition-all",
+          myStories.length > 0 
+            ? "bg-gradient-to-tr from-[#34C759] via-[#007AFF] to-[#AF52DE] animate-pulse scale-105" 
+            : "bg-white/10 hover:bg-white/20"
         )}>
-          <div className="rounded-full h-full w-full overflow-hidden relative bg-[#0a0a0c]">
+          <div className="rounded-full h-full w-full overflow-hidden relative bg-[#0a0a0c] p-[2px]">
             <UserAvatar 
               userId={user?.uid} 
               className="h-full w-full border-none" 
@@ -81,6 +83,7 @@ export function StoriesBar() {
             userId={uid} 
             stories={groupedStories[uid]} 
             onView={() => setStoriesToView(groupedStories[uid])} 
+            currentUserId={user?.uid}
           />
         ))
       )}
@@ -89,20 +92,29 @@ export function StoriesBar() {
   );
 }
 
-function StoryCircle({ userId, stories, onView }: { userId: string, stories: Story[], onView: () => void }) {
+function StoryCircle({ userId, stories, onView, currentUserId }: { userId: string, stories: Story[], onView: () => void, currentUserId?: string }) {
   const db = useFirestore();
   const userRef = useMemoFirebase(() => (!db ? null : doc(db, 'users', userId)), [db, userId]);
   const { data: profile } = useDoc<User>(userRef);
+
+  const hasUnviewed = useMemo(() => {
+    if (!stories || !currentUserId) return false;
+    return stories.some(s => !s.viewers?.includes(currentUserId));
+  }, [stories, currentUserId]);
 
   const hasStories = stories && stories.length > 0;
 
   return (
     <div className="flex flex-col items-center gap-1.5 shrink-0 cursor-pointer active:scale-95 transition-transform" onClick={onView}>
       <div className={cn(
-        "h-[64px] w-[64px] rounded-full p-[2px] bg-gradient-to-tr transition-all",
-        hasStories ? "from-primary to-accent" : "from-white/10 to-white/10"
+        "h-[68px] w-[64px] rounded-full p-[2px] transition-all",
+        hasUnviewed 
+          ? "bg-gradient-to-tr from-[#34C759] via-[#007AFF] to-[#AF52DE] scale-105 shadow-[0_0_15px_rgba(52,199,89,0.3)]" 
+          : hasStories 
+            ? "bg-white/20" 
+            : "bg-white/5"
       )}>
-        <div className="rounded-full h-full w-full overflow-hidden bg-[#0a0a0c]">
+        <div className="rounded-full h-full w-full overflow-hidden bg-[#0a0a0c] p-[2px]">
           <UserAvatar 
             userId={userId} 
             className="h-full w-full border-none" 
@@ -111,7 +123,10 @@ function StoryCircle({ userId, stories, onView }: { userId: string, stories: Sto
           />
         </div>
       </div>
-      <span className="text-[10px] font-bold text-white/80 truncate w-[64px] text-center">
+      <span className={cn(
+        "text-[10px] font-bold truncate w-[64px] text-center transition-colors",
+        hasUnviewed ? "text-white" : "text-white/40"
+      )}>
         {formatDisplayName(profile?.name || profile?.username)}
       </span>
     </div>

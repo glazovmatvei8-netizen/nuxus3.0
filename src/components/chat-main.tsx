@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useEffect } from 'react';
@@ -23,6 +24,7 @@ import { LegalModal } from './modals/legal-modal';
 import { UpdateNotifier } from './update-notifier';
 import { MusicPlayer } from './music-player';
 import { UserAvatar } from './user-avatar';
+import { CreateStoryModal } from './modals/create-story-modal';
 import type { Call } from '@/lib/types';
 import { Phone, MessageCircle, Settings, Search, Archive, Music, Wallet, Gamepad2, Layers } from 'lucide-react';
 
@@ -31,7 +33,7 @@ export default function ChatMain() {
     currentChatId, activeCallId, setActiveCallId, 
     activeView, setActiveView, isSettingsOpen, setIsSettingsOpen,
     isSearchOpen, setIsSearchOpen, setCurrentChatId,
-    isLegalOpen, setIsLegalOpen
+    isLegalOpen, setIsLegalOpen, isCreateStoryOpen, setIsCreateStoryOpen
   } = useAppState();
   const { user } = useUser();
   const db = useFirestore();
@@ -144,6 +146,7 @@ export default function ChatMain() {
       <ForwardModal />
       <UserProfileModal />
       <LegalModal open={isLegalOpen} onOpenChange={setIsLegalOpen} />
+      <CreateStoryModal open={isCreateStoryOpen} onOpenChange={setIsCreateStoryOpen} />
     </div>
   );
 }
