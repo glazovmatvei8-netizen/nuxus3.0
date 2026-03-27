@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useEffect } from 'react';
@@ -25,7 +24,7 @@ import { UpdateNotifier } from './update-notifier';
 import { MusicPlayer } from './music-player';
 import { UserAvatar } from './user-avatar';
 import type { Call, User as UserType } from '@/lib/types';
-import { Users, Phone, MessageCircle, Settings, Search, Archive, Music, Wallet, Gamepad2, Layers } from 'lucide-react';
+import { Users, Phone, MessageCircle, Settings, Search, Archive, Music, Wallet, Gamepad2, Layers, Star } from 'lucide-react';
 
 export default function ChatMain() {
   const { 
@@ -97,7 +96,7 @@ export default function ChatMain() {
 
         {/* Content Sidebar - Fixed Horizontal Drift */}
         <div className={cn(
-          "w-full md:w-[380px] lg:w-[420px] h-full flex-shrink-0 border-r border-white/[0.05] z-30 bg-white/[0.01] backdrop-blur-2xl overflow-x-hidden", 
+          "w-full md:w-[380px] lg:w-[420px] h-full flex-shrink-0 border-r border-white/[0.05] z-30 bg-white/[0.01] backdrop-blur-2xl overflow-x-hidden relative", 
           (currentChatId && !['profile', 'contacts', 'calls', 'archive', 'music', 'wallet', 'discovery', 'games'].includes(activeView)) ? "hidden md:block" : "block"
         )}>
           {activeView === 'chats' && <ChatSidebar />}

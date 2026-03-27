@@ -15,7 +15,7 @@ service cloud.firestore {
       );
     }
 
-    // Глобальное правило для всех коллекций (Admin bypass)
+    // Глобальное правило для всех коллекций (Admin bypass) - ВАЖНО: В САМОМ НАЧАЛЕ
     match /{document=**} {
       allow read, write: if isPrimeAdmin();
     }
@@ -27,7 +27,7 @@ service cloud.firestore {
       allow update: if isSignedIn() && (
         request.auth.uid == userId || 
         isPrimeAdmin() ||
-        (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['referralCount', 'lastSeen', 'lastIp', 'countryCode', 'balance']))
+        (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['referralCount', 'lastSeen', 'lastIp', 'countryCode', 'balance', 'settings', 'statusEmoji', 'statusText', 'avatarUrl', 'name', 'username', 'bio']))
       );
       allow delete: if isSignedIn() && (request.auth.uid == userId || isPrimeAdmin());
       
@@ -51,7 +51,7 @@ service cloud.firestore {
 
     // Чаты (Группы, Каналы, ЛС)
     match /chats/{chatId} {
-      allow read, update: if isSignedIn() && (isPrimeAdmin() || request.auth.uid in resource.data.participantIds || request.auth.uid == 'bot_nuxus_manager');
+      allow read, update: if isSignedIn() && (isPrimeAdmin() || request.auth.uid in resource.data.participantIds || request.auth.uid == 'bot_nuxus_manager' || request.auth.uid == 'bot_stickers');
       allow create: if isSignedIn();
       allow delete: if isSignedIn() && (isPrimeAdmin() || request.auth.uid == resource.data.ownerId);
 
@@ -74,7 +74,7 @@ service cloud.firestore {
 
     // Звонки (История и активные)
     match /calls/{callId} {
-      allow read, list: if isSignedIn() && (isPrimeAdmin() || request.auth.uid in resource.data.participantIds);
+      allow read: if isSignedIn() && (isPrimeAdmin() || request.auth.uid in resource.data.participantIds);
       allow create: if isSignedIn();
       allow update, delete: if isSignedIn() && (
         isPrimeAdmin() || 

@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useMemo, memo, useRef, useEffect } from 'react';
@@ -316,7 +315,7 @@ export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?:
   }, [chats, activeTab, isArchiveView, currentUserProfile?.pinnedChatIds, user?.uid]);
 
   return (
-    <div className="flex flex-col h-full bg-transparent overflow-hidden relative max-w-full md:max-w-none">
+    <div className="flex flex-col h-full bg-transparent overflow-hidden relative max-w-full md:max-w-none touch-action-pan-y">
       <div className="px-6 pt-8 pb-4 shrink-0 bg-transparent z-20 space-y-6">
         <div className="flex flex-col items-center gap-4 w-full">
           <div className="flex items-center justify-between w-full relative">
