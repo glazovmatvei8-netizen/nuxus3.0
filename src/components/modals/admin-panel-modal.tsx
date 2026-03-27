@@ -45,9 +45,6 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
   const usersQuery = useMemoFirebase(() => (!db ? null : query(collection(db, 'users'), limit(500))), [db]);
   const { data: users } = useCollection<User>(usersQuery);
 
-  const requestsQuery = useMemoFirebase(() => (!db ? null : query(collection(db, 'topUpRequests'), limit(50))), [db]);
-  const { data: requests } = useCollection<TopUpRequest>(requestsQuery);
-
   const stats = useMemo(() => {
     if (!users) return { total: 0, premium: 0, admins: 0, banned: 0 };
     return {

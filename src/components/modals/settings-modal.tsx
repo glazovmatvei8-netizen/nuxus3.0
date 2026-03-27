@@ -16,7 +16,7 @@ import {
   LogOut, Palette, Check, Settings2, Camera, Lock, Image as ImageIcon, 
   Paintbrush, Shield, UserCircle, Layout, Smile, FileText, ChevronRight,
   ShieldCheck, Eye, Users2, MessageSquareLock, Upload, Smartphone, Share2, Trophy,
-  Bell, Video, Mic, MonitorSmartphone, Key, Trash2, ShieldAlert, RefreshCw, Save, Zap, Moon, Sun, Monitor, Download, Share, Fingerprint, Sparkles, Wand2, Globe, Star, Ghost, Volume2, MessageSquare, Timer, Crown, Music, Type
+  Bell, Video, Mic, MonitorSmartphone, Key, Trash2, ShieldAlert, RefreshCw, Save, Zap, Moon, Sun, Monitor, Download, Share, Fingerprint, Sparkles, Wand2, Globe, Star, Ghost, Volume2, MessageSquare, Timer, Crown, Music, Type, VideoIcon, Rocket, Diamond
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { signOut } from 'firebase/auth';
@@ -383,13 +383,16 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
               </div>
 
               <div className="space-y-3 pb-10">
+                <PremiumFeature icon={VideoIcon} label="AI Video Animate" description="Анимируйте фото в 5-секундные кинематографичные ролики" />
+                <PremiumFeature icon={Rocket} label="Dynamic Profile Aura" description="Пульсирующая энергия вокруг вашего узла в списках" />
+                <PremiumFeature icon={Timer} label="Extended Story Life" description="Храните Моменты до 72 часов вместо суток" />
+                <PremiumFeature icon={Zap} label="Ultra-HQ Signal" description="Удвоенный битрейт для голоса и видеосвязи" />
+                <PremiumFeature icon={Diamond} label="Exclusive Badge System" description="Уникальные значки достижений рядом с вашим именем" />
                 <PremiumFeature icon={Music} label="Neural Soundscapes" description="Фоновый эмбиент Ядра для глубокого погружения" />
-                <PremiumFeature icon={Timer} label="Исчезающие сообщения" description="Устанавливайте таймер на любое сообщение" />
-                <PremiumFeature icon={Paintbrush} label="Кастомные пузыри" description="Уникальные градиенты для ваших сообщений" />
+                <PremiumFeature icon={Paintbrush} label="Custom Bubbles" description="Уникальные градиенты для ваших сообщений" />
                 <PremiumFeature icon={Sparkles} label="AI Conversation Summary" description="Краткая сводка обсуждения в один клик" />
-                <PremiumFeature icon={Ghost} label="Режим Призрака" description="Полная невидимость и скрытый онлайн-статус" />
+                <PremiumFeature icon={Ghost} label="Ghost Mode" description="Полная невидимость и скрытый онлайн-статус" />
                 <PremiumFeature icon={Volume2} label="AI Voice Synthesis" description="Озвучка текстовых сообщений голосом ИИ" />
-                <PremiumFeature icon={Zap} label="Приоритетный Сигнал" description="Ускоренная передача данных в Ядре" />
                 <PremiumFeature icon={Wand2} label="ИИ Помощник" description="Черновики ответов и генерация аватаров" />
               </div>
 
