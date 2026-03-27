@@ -156,10 +156,10 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
   };
 
   const updateOverride = (key: string, val: string) => {
-    setForm({
-      ...form,
-      interfaceOverrides: { ...form.interfaceOverrides, [key]: val }
-    });
+    setForm(prev => ({
+      ...prev,
+      interfaceOverrides: { ...prev.interfaceOverrides, [key]: val }
+    }));
   };
 
   return (
@@ -385,38 +385,19 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                   <PenTool className="w-5 h-5 text-primary" />
                   <div className="flex flex-col">
                     <span className="text-xs font-black uppercase text-white">Global Rebranding</span>
-                    <span className="text-[8px] text-muted-foreground uppercase font-bold">Измените имя мессенджера</span>
+                    <span className="text-[8px] text-muted-foreground uppercase font-bold">Измените весь мессенджер</span>
                   </div>
                 </div>
                 
                 <div className="space-y-4 text-left">
-                  <div className="space-y-1.5">
-                    <Label className="text-[9px] uppercase font-black text-muted-foreground ml-1">Название приложения (App Name)</Label>
-                    <Input 
-                      placeholder="Nuxus 2.0" 
-                      value={form.interfaceOverrides?.['app.name'] || ''} 
-                      onChange={e => updateOverride('app.name', e.target.value)}
-                      className="bg-black/20 border-white/5 h-11 rounded-xl text-xs"
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-[9px] uppercase font-black text-muted-foreground ml-1">Заголовок Чатов (Chats Title)</Label>
-                    <Input 
-                      placeholder="чаты 🐱" 
-                      value={form.interfaceOverrides?.['app.chats'] || ''} 
-                      onChange={e => updateOverride('app.chats', e.target.value)}
-                      className="bg-black/20 border-white/5 h-11 rounded-xl text-xs"
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-[9px] uppercase font-black text-muted-foreground ml-1">Заголовок Архива (Archive Title)</Label>
-                    <Input 
-                      placeholder="архив 🐱" 
-                      value={form.interfaceOverrides?.['app.archive'] || ''} 
-                      onChange={e => updateOverride('app.archive', e.target.value)}
-                      className="bg-black/20 border-white/5 h-11 rounded-xl text-xs"
-                    />
-                  </div>
+                  <OverrideInput label="Имя приложения" keyName="app.name" value={form.interfaceOverrides} onChange={updateOverride} />
+                  <OverrideInput label="Чаты" keyName="app.chats" value={form.interfaceOverrides} onChange={updateOverride} />
+                  <OverrideInput label="Архив" keyName="app.archive" value={form.interfaceOverrides} onChange={updateOverride} />
+                  <OverrideInput label="Звонки" keyName="app.calls" value={form.interfaceOverrides} onChange={updateOverride} />
+                  <OverrideInput label="Музыка" keyName="app.music" value={form.interfaceOverrides} onChange={updateOverride} />
+                  <OverrideInput label="Игры" keyName="app.games" value={form.interfaceOverrides} onChange={updateOverride} />
+                  <OverrideInput label="Кошелек" keyName="app.wallet" value={form.interfaceOverrides} onChange={updateOverride} />
+                  <OverrideInput label="Профиль" keyName="app.profile" value={form.interfaceOverrides} onChange={updateOverride} />
                 </div>
               </div>
 
@@ -430,42 +411,10 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                 </div>
                 
                 <div className="space-y-4 text-left">
-                  <div className="space-y-1.5">
-                    <Label className="text-[9px] uppercase font-black text-muted-foreground ml-1">Загрузка Ядра (Initializing)</Label>
-                    <Input 
-                      placeholder="Initializing" 
-                      value={form.interfaceOverrides?.['initializing'] || ''} 
-                      onChange={e => updateOverride('initializing', e.target.value)}
-                      className="bg-black/20 border-white/5 h-11 rounded-xl text-xs"
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-[9px] uppercase font-black text-muted-foreground ml-1">Статус печати (Typing)</Label>
-                    <Input 
-                      placeholder="печатает" 
-                      value={form.interfaceOverrides?.['chat.typing'] || ''} 
-                      onChange={e => updateOverride('chat.typing', e.target.value)}
-                      className="bg-black/20 border-white/5 h-11 rounded-xl text-xs"
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-[9px] uppercase font-black text-muted-foreground ml-1">В сети (Online)</Label>
-                    <Input 
-                      placeholder="в сети" 
-                      value={form.interfaceOverrides?.['online'] || ''} 
-                      onChange={e => updateOverride('online', e.target.value)}
-                      className="bg-black/20 border-white/5 h-11 rounded-xl text-xs"
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-[9px] uppercase font-black text-muted-foreground ml-1">Соединение (Connecting)</Label>
-                    <Input 
-                      placeholder="соединение..." 
-                      value={form.interfaceOverrides?.['sidebar.connecting'] || ''} 
-                      onChange={e => updateOverride('sidebar.connecting', e.target.value)}
-                      className="bg-black/20 border-white/5 h-11 rounded-xl text-xs"
-                    />
-                  </div>
+                  <OverrideInput label="Загрузка (Initializing)" keyName="initializing" value={form.interfaceOverrides} onChange={updateOverride} />
+                  <OverrideInput label="Статус (Typing)" keyName="chat.typing" value={form.interfaceOverrides} onChange={updateOverride} />
+                  <OverrideInput label="Статус (Online)" keyName="online" value={form.interfaceOverrides} onChange={updateOverride} />
+                  <OverrideInput label="Соединение (Connecting)" keyName="sidebar.connecting" value={form.interfaceOverrides} onChange={updateOverride} />
                 </div>
               </div>
               
@@ -519,6 +468,20 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         </Tabs>
       </DialogContent>
     </Dialog>
+  );
+}
+
+function OverrideInput({ label, keyName, value, onChange }: any) {
+  return (
+    <div className="space-y-1.5">
+      <Label className="text-[9px] uppercase font-black text-muted-foreground ml-1">{label}</Label>
+      <Input 
+        placeholder={label} 
+        value={value?.[keyName] || ''} 
+        onChange={e => onChange(keyName, e.target.value)}
+        className="bg-black/20 border-white/5 h-11 rounded-xl text-xs"
+      />
+    </div>
   );
 }
 

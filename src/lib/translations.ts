@@ -6,7 +6,12 @@ export const translations = {
       kernel: "Nuxus Kernel", 
       signal: "Nuxus Signal",
       chats: "чаты 🐱",
-      archive: "архив 🐱"
+      archive: "архив 🐱",
+      calls: "звонки",
+      music: "музыка",
+      wallet: "кошелек",
+      games: "игры",
+      profile: "профиль"
     },
     sidebar: { 
       all: "Все", 
@@ -69,7 +74,12 @@ export const translations = {
       kernel: "Nuxus Kernel", 
       signal: "Nuxus Signal",
       chats: "chats 🐱",
-      archive: "archive 🐱"
+      archive: "archive 🐱",
+      calls: "calls",
+      music: "music",
+      wallet: "wallet",
+      games: "games",
+      profile: "profile"
     },
     sidebar: { 
       all: "All", 

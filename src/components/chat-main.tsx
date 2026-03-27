@@ -76,12 +76,12 @@ export default function ChatMain() {
           </div>
           
           <div className="flex flex-col gap-8 flex-1 overflow-y-auto scrollbar-hide py-2">
-            <RailButton icon={Phone} active={activeView === 'calls'} onClick={() => { setActiveView('calls'); setCurrentChatId(null); }} label="ЗВОНКИ" />
-            <RailButton icon={Music} active={activeView === 'music'} onClick={() => { setActiveView('music'); setCurrentChatId(null); }} label="МУЗЫКА" />
-            <RailButton icon={Gamepad2} active={activeView === 'games'} onClick={() => { setActiveView('games'); setCurrentChatId(null); }} label="ИГРЫ" />
+            <RailButton icon={Phone} active={activeView === 'calls'} onClick={() => { setActiveView('calls'); setCurrentChatId(null); }} label={t('app.calls').toUpperCase()} />
+            <RailButton icon={Music} active={activeView === 'music'} onClick={() => { setActiveView('music'); setCurrentChatId(null); }} label={t('app.music').toUpperCase()} />
+            <RailButton icon={Gamepad2} active={activeView === 'games'} onClick={() => { setActiveView('games'); setCurrentChatId(null); }} label={t('app.games').toUpperCase()} />
             <RailButton icon={MessageCircle} active={activeView === 'chats'} onClick={() => { setActiveView('chats'); setCurrentChatId(null); }} label={t('app.chats').toUpperCase()} />
-            <RailButton icon={Wallet} active={activeView === 'wallet'} onClick={() => { setActiveView('wallet'); setCurrentChatId(null); }} label="КОШЕЛЕК" />
-            <RailButton icon={Archive} active={activeView === 'archive'} onClick={() => { setActiveView('archive'); setCurrentChatId(null); }} label="АРХИВ" />
+            <RailButton icon={Wallet} active={activeView === 'wallet'} onClick={() => { setActiveView('wallet'); setCurrentChatId(null); }} label={t('app.wallet').toUpperCase()} />
+            <RailButton icon={Archive} active={activeView === 'archive'} onClick={() => { setActiveView('archive'); setCurrentChatId(null); }} label={t('app.archive').toUpperCase()} />
           </div>
 
           <div className="mt-auto flex flex-col gap-8 items-center">
@@ -129,12 +129,12 @@ export default function ChatMain() {
       {!currentChatId && (
         <div className="md:hidden fixed bottom-10 left-1/2 -translate-x-1/2 w-[92%] h-[84px] bg-black/40 backdrop-blur-[60px] border border-white/10 rounded-[2.5rem] flex items-center justify-between px-6 z-50 shadow-[0_20px_50px_rgba(0,0,0,0.6)]">
           <div className="flex flex-1 justify-around items-center gap-1">
-            <NavButton icon={Phone} label="ЗВОНКИ" active={activeView === 'calls'} onClick={() => setActiveView('calls')} />
-            <NavButton icon={Music} label="АУДИО" active={activeView === 'music'} onClick={() => setActiveView('music')} />
-            <NavButton icon={Gamepad2} label="ИГРЫ" active={activeView === 'games'} onClick={() => setActiveView('games')} />
+            <NavButton icon={Phone} label={t('app.calls').toUpperCase()} active={activeView === 'calls'} onClick={() => setActiveView('calls')} />
+            <NavButton icon={Music} label={t('app.music').toUpperCase()} active={activeView === 'music'} onClick={() => setActiveView('music')} />
+            <NavButton icon={Gamepad2} label={t('app.games').toUpperCase()} active={activeView === 'games'} onClick={() => setActiveView('games')} />
             <NavButton icon={MessageCircle} label={t('app.chats').toUpperCase()} active={activeView === 'chats'} onClick={() => setActiveView('chats')} isCenter />
-            <NavButton icon={Wallet} label="БАНК" active={activeView === 'wallet'} onClick={() => setActiveView('wallet')} />
-            <NavButton icon={Settings} label="ПРОФИЛЬ" active={activeView === 'profile'} onClick={() => setActiveView('profile')} isProfile userId={user?.uid} />
+            <NavButton icon={Wallet} label={t('app.wallet').toUpperCase()} active={activeView === 'wallet'} onClick={() => setActiveView('wallet')} />
+            <NavButton icon={Settings} label={t('app.profile').toUpperCase()} active={activeView === 'profile'} onClick={() => setActiveView('profile')} isProfile userId={user?.uid} />
           </div>
           <button onClick={() => setIsSearchOpen(true)} className="ml-2 h-[60px] w-[60px] rounded-full bg-primary/15 flex items-center justify-center shrink-0 border border-primary/20 shadow-[0_0_20px_rgba(168,85,247,0.2)] hover:bg-primary/25 transition-all active:scale-90">
             <Search className="w-7 h-7 text-primary" />
