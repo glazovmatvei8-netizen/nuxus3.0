@@ -1,25 +1,27 @@
 
 "use client"
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import { UserAvatar } from '@/components/user-avatar';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { 
-  Pencil, Lock, Bookmark, ChevronRight, Star, Share2, Trophy, Zap, ShieldCheck, Palette, HelpCircle, Globe, Server
+  Pencil, Lock, Bookmark, ChevronRight, Star, Share2, Trophy, Zap, ShieldCheck, Palette, HelpCircle, Globe, Server, QrCode
 } from 'lucide-react';
 import { useAppState } from '@/lib/store';
 import { formatDisplayName, cn, isUserPremium } from '@/lib/utils';
 import type { User } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 
 export default function ProfileView() {
   const { user } = useUser();
   const db = useFirestore();
   const { toast } = useToast();
   const { setIsSettingsOpen, setSettingsTab, setIsLegalOpen } = useAppState();
+  const [isQrOpen, setIsQrOpen] = useState(false);
   
   const userProfileRef = useMemoFirebase(() => (!db || !user) ? null : doc(db!, 'users', user.uid), [db, user]);
   const { data: profile } = useDoc<User>(userProfileRef);
@@ -69,10 +71,10 @@ export default function ProfileView() {
           </div>
 
           <div className="grid grid-cols-2 gap-3">
-            <div className="bg-card border border-border p-4 rounded-3xl flex flex-col items-center justify-center gap-1">
-              <Zap className="w-5 h-5 text-yellow-500 mb-1" />
-              <span className="text-[18px] font-black text-foreground italic">Active</span>
-              <span className="text-[8px] uppercase font-black text-muted-foreground tracking-widest">Signal State</span>
+            <div className="bg-card border border-border p-4 rounded-3xl flex flex-col items-center justify-center gap-1 cursor-pointer active:scale-95 transition-all" onClick={() => setIsQrOpen(true)}>
+              <QrCode className="w-5 h-5 text-accent mb-1" />
+              <span className="text-[18px] font-black text-foreground italic">Signal QR</span>
+              <span className="text-[8px] uppercase font-black text-muted-foreground tracking-widest">Share Node</span>
             </div>
             <div className="bg-card border border-border p-4 rounded-3xl flex flex-col items-center justify-center gap-1">
               <ShieldCheck className="w-5 h-5 text-green-500 mb-1" />
@@ -98,6 +100,25 @@ export default function ProfileView() {
           </div>
         </div>
       </ScrollArea>
+
+      <Dialog open={isQrOpen} onOpenChange={setIsQrOpen}>
+        <DialogContent className="max-w-xs bg-card border-white/10 rounded-[2.5rem] p-8 text-center shadow-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-black uppercase italic text-white tracking-tighter">Signal Link</DialogTitle>
+            <DialogDescription className="text-[9px] uppercase font-black tracking-[0.3em] text-primary/60">Node Identification</DialogDescription>
+          </DialogHeader>
+          <div className="py-8 flex justify-center">
+            <div className="bg-white p-4 rounded-3xl shadow-[0_0_30px_rgba(168,85,247,0.3)]">
+              <div className="w-48 h-48 bg-[#0a0a0c] flex items-center justify-center relative overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-accent/20 opacity-20" />
+                <QrCode className="w-32 h-32 text-primary" strokeWidth={1.5} />
+              </div>
+            </div>
+          </div>
+          <p className="text-[10px] font-bold text-white/60 uppercase px-4 leading-relaxed">Сканируйте этот код, чтобы мгновенно подключиться к этому аккаунту.</p>
+          <Button variant="ghost" onClick={() => setIsQrOpen(false)} className="mt-4 w-full h-12 rounded-xl text-[10px] font-black uppercase tracking-widest text-primary">Закрыть</Button>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

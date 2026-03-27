@@ -46,9 +46,10 @@
       radial-gradient(circle at 90% 90%, hsl(var(--accent) / 0.15), transparent 50%),
       linear-gradient(135deg, #0f0f1a 0%, #08080c 100%);
     
-    /* БЛОКИРОВКА ОБНОВЛЕНИЯ СТРАНИЦЫ ПРИ СВАЙПЕ (PULL-TO-REFRESH) */
+    /* БЛОКИРОВКА ОБНОВЛЕНИЯ СТРАНИЦЫ И ГОРИЗОНТАЛЬНОГО СДВИГА */
     overscroll-behavior: none !important;
     overscroll-behavior-y: none !important;
+    overscroll-behavior-x: none !important;
     
     position: fixed; 
     width: 100%;

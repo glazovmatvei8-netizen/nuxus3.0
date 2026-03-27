@@ -20,7 +20,7 @@ import { collection, query, doc, limit, updateDoc, writeBatch, increment, getDoc
 import { UserAvatar } from '@/components/user-avatar';
 import { 
   ShieldAlert, Users, Star, Ban, CheckCircle2, ShieldCheck, Radio, 
-  MoreVertical, ShieldOff, Activity, Wallet, Check, Trash2, X, Globe, Fingerprint, Send, Zap
+  MoreVertical, ShieldOff, Activity, Wallet, Check, Trash2, X, Globe, Fingerprint, Send, Zap, Loader2
 } from 'lucide-react';
 import { 
   XAxis, YAxis, ResponsiveContainer, AreaChart, Area, Tooltip
