@@ -6,14 +6,14 @@ import { useAppState } from '@/lib/store';
 import { Button } from '@/components/ui/button';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
-  Plus, Ghost, Search, Star, Pin, PinOff, Archive, Lock, Trash2, MessageCircle, Activity, Wifi
+  Plus, Ghost, Search, Star, Pin, PinOff, Archive, Lock, Trash2, MessageCircle, Activity, Wifi, LayoutGrid, Users, User, Bot
 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { CreateChatModal } from './modals/create-chat-modal';
 import { ChatEditorModal } from './modals/chat-editor-modal';
 import { AdminPanelModal } from './modals/admin-panel-modal';
 import { StoriesBar } from './stories-bar';
-import type { User, Message, Chat } from '@/lib/types';
+import type { User as UserType, Message, Chat } from '@/lib/types';
 import { useFirestore, useUser, useCollection, useDoc, useMemoFirebase } from '@/firebase';
 import { collection, query, where, doc, limit, orderBy, updateDoc, arrayUnion, arrayRemove, deleteDoc } from 'firebase/firestore';
 import { formatDisplayName, cn, isGlobalAdmin, decryptSignal } from '@/lib/utils';
@@ -41,7 +41,7 @@ const ChatListItem = memo(({
   const directionDecided = useRef(false);
 
   const userProfileRef = useMemoFirebase(() => (!db || !otherId) ? null : doc(db, 'users', otherId), [db, otherId]);
-  const { data: otherProfile } = useDoc<User>(userProfileRef);
+  const { data: otherProfile } = useDoc<UserType>(userProfileRef);
 
   const lastMessageQuery = useMemoFirebase(() => {
     if (!db || !chat.id) return null;
@@ -238,7 +238,6 @@ export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?:
   
   const [activeTab, setActiveTab] = useState('all');
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [isEditorModalOpen, setIsEditorModalOpen] = useState(false);
   const [isAdminPanelOpen, setIsAdminPanelOpen] = useState(false);
   const [isOnline, setIsOnline] = React.useState(true);
   const [latency, setLatency] = useState<number>(0);
@@ -270,7 +269,7 @@ export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?:
   }, []);
 
   const userProfileRef = useMemoFirebase(() => (!db || !user) ? null : doc(db, 'users', user.uid), [db, user]);
-  const { data: currentUserProfile } = useDoc<User>(userProfileRef);
+  const { data: currentUserProfile } = useDoc<UserType>(userProfileRef);
 
   const chatsQuery = useMemoFirebase(() => {
     if (!db || !user) return null;
@@ -329,8 +328,11 @@ export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?:
     }
 
     if (isArchiveView) return others.filter(c => c.isArchived);
+    
+    // Quantum Folders Filtering
     if (activeTab === 'private') return others.filter(c => c.type === 'private' && !c.isArchived);
     if (activeTab === 'groups') return others.filter(c => (c.type === 'group' || c.type === 'channel') && !c.isArchived);
+    
     return others.filter(c => !c.isArchived);
   }, [chats, activeTab, isArchiveView, currentUserProfile?.pinnedChatIds, user?.uid]);
 
@@ -381,11 +383,19 @@ export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?:
               <div className="px-4 py-4 overflow-x-hidden">
                 <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide">
                   {[
-                    { id: 'all', label: t('sidebar.all').toUpperCase() },
-                    { id: 'private', label: t('sidebar.private').toUpperCase() },
-                    { id: 'groups', label: t('sidebar.groups').toUpperCase() }
+                    { id: 'all', label: t('sidebar.all').toUpperCase(), icon: LayoutGrid },
+                    { id: 'private', label: 'ЛИЧНЫЕ', icon: User },
+                    { id: 'groups', label: 'ГРУППЫ', icon: Users }
                   ].map((tab) => (
-                    <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={cn("px-6 py-2 rounded-full text-[10px] font-black uppercase tracking-[0.3em] transition-all whitespace-nowrap border italic", activeTab === tab.id ? "bg-primary text-white border-primary shadow-[0_0_20px_rgba(168,85,247,0.4)]" : "text-muted-foreground/50 border-white/[0.08] hover:text-white hover:bg-white/5")}>
+                    <button 
+                      key={tab.id} 
+                      onClick={() => setActiveTab(tab.id)} 
+                      className={cn(
+                        "px-5 py-2 rounded-full text-[9px] font-black uppercase tracking-[0.2em] transition-all whitespace-nowrap border italic flex items-center gap-2", 
+                        activeTab === tab.id ? "bg-primary text-white border-primary shadow-[0_0_20px_rgba(168,85,247,0.4)]" : "text-muted-foreground/50 border-white/[0.08] hover:text-white hover:bg-white/5"
+                      )}
+                    >
+                      <tab.icon className="w-3 h-3" />
                       {tab.label}
                     </button>
                   ))}
@@ -416,7 +426,6 @@ export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?:
       </ScrollArea>
 
       <CreateChatModal open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen} />
-      <ChatEditorModal open={isEditorModalOpen} onOpenChange={setIsEditorModalOpen} />
       <AdminPanelModal open={isAdminPanelOpen} onOpenChange={setIsAdminPanelOpen} />
     </div>
   );

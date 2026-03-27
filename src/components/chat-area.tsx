@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
   Send, Info, ChevronLeft, X, Paperclip, Mic, StopCircle, Edit2, Search,
-  Smile, ImageIcon, Video, Trash2, Loader2, UserPlus, AtSign, ChevronDown, Wand2, Sparkles, Star, Timer, Clock
+  Smile, ImageIcon, Video, Trash2, Loader2, UserPlus, AtSign, ChevronDown, Wand2, Sparkles, Star, Timer, Clock, Palette
 } from 'lucide-react';
 import { MessageItem } from './message-item';
 import { useToast } from '@/hooks/use-toast';
@@ -22,6 +22,7 @@ import type { Message, User as UserType, Chat } from '@/lib/types';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { suggestMessageDraft } from '@/ai/flows/ai-message-drafting-flow';
 import { chatConversationSummary } from '@/ai/flows/chat-conversation-summary-flow';
+import { generateAiImage } from '@/ai/flows/generate-ai-image-flow';
 import { useTranslations } from '@/hooks/use-translations';
 import { addMinutes, addHours } from 'date-fns';
 
@@ -29,11 +30,13 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
   const { localDrafts, setLocalDrafts } = useAppState();
   const [messageInput, setMessageInput] = useState(localDrafts[currentChatId] || '');
   const [isAiDrafting, setIsAiDrafting] = useState(false);
+  const [isGeneratingImg, setIsGeneratingImg] = useState(false);
   const [destructTimer, setDestructTimer] = useState<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const { user } = useUser();
   const db = useFirestore();
+  const { toast } = useToast();
 
   useEffect(() => {
     setMessageInput(localDrafts[currentChatId] || '');
@@ -81,6 +84,24 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
     }
   };
 
+  const handleGenerateImage = async () => {
+    if (!messageInput.trim()) {
+      toast({ title: "Введите запрос", description: "Напишите, что должен нарисовать ИИ." });
+      return;
+    }
+    setIsGeneratingImg(true);
+    try {
+      const { imageUrl } = await generateAiImage({ prompt: messageInput });
+      onSendMessage(imageUrl, 'image', destructTimer);
+      setMessageInput('');
+      toast({ title: "Изображение готово!" });
+    } catch (e) {
+      toast({ title: "Ошибка ИИ", variant: "destructive" });
+    } finally {
+      setIsGeneratingImg(false);
+    }
+  };
+
   if (!canPost) return null;
 
   return (
@@ -91,7 +112,12 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
             <PopoverTrigger asChild><Button variant="ghost" size="icon" className="text-white/60 hover:text-primary"><Paperclip className="w-5 h-5" /></Button></PopoverTrigger>
             <PopoverContent side="top" align="start" className="w-48 bg-[#1c1c1e]/95 backdrop-blur-3xl border-white/10 rounded-[1.8rem] p-1.5 mb-2 shadow-2xl">
               <Button variant="ghost" className="w-full justify-start gap-3 rounded-xl h-11 text-[10px] font-black uppercase tracking-widest text-white/80 hover:bg-white/5" onClick={() => fileInputRef.current?.click()}><ImageIcon className="w-4 h-4 text-primary" /> Галерея</Button>
-              <Button variant="ghost" className="w-full justify-start gap-3 rounded-xl h-11 text-[10px] font-black uppercase tracking-widest text-white/80 hover:bg-white/5" onClick={onPollOpen}><AtSign className="w-4 h-4 text-accent" /> Опрос</Button>
+              {isPremium && (
+                <Button variant="ghost" className="w-full justify-start gap-3 rounded-xl h-11 text-[10px] font-black uppercase tracking-widest text-white/80 hover:bg-white/5" onClick={handleGenerateImage} disabled={isGeneratingImg}>
+                  {isGeneratingImg ? <Loader2 className="w-4 h-4 animate-spin" /> : <Palette className="w-4 h-4 text-accent" />} ИИ Рисование
+                </Button>
+              )}
+              <Button variant="ghost" className="w-full justify-start gap-3 rounded-xl h-11 text-[10px] font-black uppercase tracking-widest text-white/80 hover:bg-white/5" onClick={onPollOpen}><AtSign className="w-4 h-4 text-blue-400" /> Опрос</Button>
               <div className="h-px bg-white/5 mx-2 my-1" />
               <Popover>
                 <PopoverTrigger asChild>
@@ -292,7 +318,7 @@ export default function ChatArea() {
     if (!content_msg.trim() || !currentChatId || !firebaseUser || !db || !canPost) return;
     
     let finalContent = type_msg === 'text' ? encryptSignal(content_msg) : content_msg;
-    if (type_msg === 'image') finalContent = await compressImage(content_msg, 800, 0.4);
+    if (type_msg === 'image' && !content_msg.startsWith('data:')) finalContent = await compressImage(content_msg, 800, 0.4);
 
     const msgData: Partial<Message> = { 
       chatId: currentChatId, senderId: firebaseUser.uid, senderName: userProfile?.name || 'Nuxus User', 
