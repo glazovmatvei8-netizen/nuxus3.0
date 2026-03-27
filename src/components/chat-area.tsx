@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useRef, useEffect, useMemo, useCallback, memo } from 'react';
@@ -142,7 +143,7 @@ const MessageList = memo(({
   }, [sortedMessages, searchQuery]);
 
   return (
-    <div className="flex flex-col gap-3 max-w-4xl mx-auto px-4 md:px-6 py-8 min-h-full touch-pan-y relative z-10">
+    <div className="flex flex-col gap-3 max-w-4xl mx-auto px-4 md:px-6 py-8 min-h-full touch-pan-y relative z-10 overflow-x-hidden">
       {filteredMessages.map((msg: Message) => (
         <MessageItem 
           key={msg.id} 
@@ -231,14 +232,14 @@ export default function ChatArea() {
       .filter(([uid, typing]) => typing && uid !== firebaseUser.uid)
       .map(([uid]) => {
         const p = participants.find(p => p.id === uid);
-        return p?.name || 'Пользователь';
+        return p?.name || 'Аккаунт';
       });
   }, [chat?.typing, participants, firebaseUser]);
 
   const chatSubtext = useMemo(() => {
     if (typingUsers.length > 0) {
       if (typingUsers.length === 1) return `${typingUsers[0]} печатает...`;
-      return 'Несколько человек печатают...';
+      return 'Несколько аккаунтов печатают...';
     }
     if (chat?.type === 'private') {
       return formatLastSeen(otherProfile?.lastSeen, otherProfile?.settings?.privacy?.lastSeenVisibility);
@@ -287,18 +288,19 @@ export default function ChatArea() {
   }, []);
 
   const chatDisplayName = useMemo(() => {
+    if (chat?.id === 'saved_messages') return 'Избранное';
     if (chat?.type === 'private') {
       const myMeta = chat.metadata?.[firebaseUser?.uid || ''];
       return myMeta?.customName || formatDisplayName(otherProfile?.name);
     }
-    return formatDisplayName(chat?.name || 'Чат');
+    return formatDisplayName(chat?.name || 'Аккаунт');
   }, [chat, firebaseUser?.uid, otherProfile]);
 
   const customBg = userProfile?.settings?.chatBackground;
   const bgFit = userProfile?.settings?.chatBackgroundFit || 'cover';
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-background relative overflow-hidden z-20">
+    <div className="flex-1 flex flex-col h-full bg-background relative overflow-hidden z-20 max-w-full">
       <div 
         className={cn("absolute inset-0 z-0", !customBg && "chat-pattern-bg")}
         style={customBg ? { 

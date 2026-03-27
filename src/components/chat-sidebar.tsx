@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useMemo, memo, useRef, useEffect } from 'react';
@@ -49,13 +50,13 @@ const ChatListItem = memo(({
   const lastMsg = lastMessages?.[0];
 
   const finalDisplayName = useMemo(() => {
-    if (chat.type === 'saved') return 'Архив';
+    if (chat.id === 'saved_messages') return 'Избранное';
     if (chat.type === 'private') {
       const myMeta = chat.metadata?.[currentUserId || ''];
       if (myMeta?.customName) return myMeta.customName;
       if (otherProfile?.name) return formatDisplayName(otherProfile.name);
     }
-    return formatDisplayName(chat.name || otherProfile?.name || 'Пользователь');
+    return formatDisplayName(chat.name || otherProfile?.name || 'Аккаунт');
   }, [chat, otherProfile, currentUserId]);
 
   const displayTime = useMemo(() => {
@@ -67,7 +68,7 @@ const ChatListItem = memo(({
 
   const decryptedPreview = useMemo(() => {
     if (!lastMsg) return 'Нет сообщений';
-    if (lastMsg.contentType !== 'text') return `[Пакет: ${lastMsg.contentType.toUpperCase()}]`;
+    if (lastMsg.contentType !== 'text') return `[Сигнал: ${lastMsg.contentType.toUpperCase()}]`;
     return decryptSignal(lastMsg.content);
   }, [lastMsg]);
 
@@ -128,7 +129,8 @@ const ChatListItem = memo(({
   const resetSwipe = () => { setOffsetX(0); setIsDragging(false); };
 
   return (
-    <div className="relative overflow-hidden touch-pan-y select-none bg-transparent border-none px-2 py-0.5" style={{ WebkitTouchCallout: 'none' }}>
+    <div className="relative overflow-hidden touch-pan-y select-none bg-transparent border-none px-2 py-0.5 max-w-full" style={{ WebkitTouchCallout: 'none' }}>
+      {/* Swipe Actions Background */}
       <div className={cn("absolute inset-y-0 left-2 flex h-[calc(100%-4px)] z-0 transition-opacity duration-200 rounded-[2rem] overflow-hidden", offsetX > 10 ? "opacity-100" : "opacity-0 pointer-events-none")}>
         <button onClick={(e) => { e.stopPropagation(); onMarkUnread(chat.id); resetSwipe(); }} className="w-20 bg-blue-600/80 backdrop-blur-xl flex flex-col items-center justify-center text-white gap-1 active:brightness-125 transition-all">
           <MessageCircle className="w-5 h-5 fill-current" />
@@ -167,7 +169,7 @@ const ChatListItem = memo(({
         <ContextMenu>
           <ContextMenuTrigger disabled={Math.abs(offsetX) > 10 || isDragging}>
             <div className={cn(
-              "flex items-center gap-4 px-4 py-4 cursor-pointer transition-all duration-500 border border-transparent group relative w-full h-[92px] select-none rounded-[2rem]", 
+              "flex items-center gap-4 px-4 py-4 cursor-pointer transition-all duration-500 border border-transparent group relative w-full h-[92px] select-none rounded-[2rem] overflow-hidden", 
               isActive && Math.abs(offsetX) < 5 ? 'bg-primary/15 border-white/10 shadow-[0_0_25px_rgba(168,85,247,0.15)] scale-[0.98]' : 'hover:bg-white/[0.05] active:scale-[0.97]'
             )}>
               <div className="relative shrink-0">
@@ -175,8 +177,8 @@ const ChatListItem = memo(({
                 {isUnread && <div className="absolute -top-1 -right-1 w-4 h-4 bg-primary rounded-full border-2 border-background shadow-[0_0_15px_rgba(168,85,247,0.8)] animate-pulse" />}
               </div>
               
-              <div className="flex-1 min-w-0 h-full flex flex-col justify-center">
-                <div className="flex items-center justify-between mb-0.5">
+              <div className="flex-1 min-w-0 h-full flex flex-col justify-center pr-2">
+                <div className="flex items-center justify-between mb-0.5 w-full">
                   <span className="font-black text-[17px] truncate flex items-center gap-2 tracking-tight italic text-white/90">
                     {finalDisplayName} 
                     {otherProfile?.isPremium && <Star className="w-3.5 h-3.5 text-accent fill-accent" />}
@@ -210,7 +212,7 @@ const ChatListItem = memo(({
             </ContextMenuItem>
             <ContextMenuSeparator className="bg-white/5 mx-2" />
             <ContextMenuItem onClick={() => onDelete(chat.id)} className="gap-3 py-3 font-black uppercase text-[10px] tracking-[0.2em] rounded-xl text-red-500 hover:bg-red-500/10 transition-all">
-              <Trash2 className="w-4 h-4" /> Удалить диалог
+              <Trash2 className="w-4 h-4" /> Удалить аккаунт (чат)
             </ContextMenuItem>
           </ContextMenuContent>
         </ContextMenu>
@@ -258,7 +260,7 @@ export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?:
     const isPinned = currentUserProfile?.pinnedChatIds?.includes(chatId);
     await updateDoc(userProfileRef, { pinnedChatIds: isPinned ? arrayRemove(chatId) : arrayUnion(chatId) });
     if (window.navigator && window.navigator.vibrate) window.navigator.vibrate(50);
-    toast({ title: isPinned ? "Диалог откреплен" : "Диалог закреплен" });
+    toast({ title: isPinned ? "Аккаунт откреплен" : "Аккаунт закреплен" });
   };
 
   const handleMarkUnread = async (chatId: string) => {
@@ -276,9 +278,9 @@ export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?:
 
   const handleDelete = async (chatId: string) => {
     if (!db) return;
-    if (confirm('Удалить этот диалог навсегда?')) {
+    if (confirm('Удалить этот аккаунт (чат) навсегда?')) {
       await deleteDoc(doc(db, 'chats', chatId));
-      toast({ title: "Диалог удален" });
+      toast({ title: "Аккаунт удален" });
     }
   };
 
@@ -315,7 +317,7 @@ export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?:
   }, [chats, activeTab, isArchiveView, currentUserProfile?.pinnedChatIds, user?.uid]);
 
   return (
-    <div className="flex flex-col h-full bg-transparent overflow-hidden relative max-w-full md:max-w-none touch-action-pan-y">
+    <div className="flex flex-col h-full bg-transparent overflow-hidden relative max-w-full touch-action-pan-y">
       <div className="px-6 pt-8 pb-4 shrink-0 bg-transparent z-20 space-y-6">
         <div className="flex flex-col items-center gap-4 w-full">
           <div className="flex items-center justify-between w-full relative">
@@ -348,11 +350,11 @@ export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?:
       </div>
 
       <ScrollArea className="flex-1 scrollbar-hide px-2">
-        <div className="flex flex-col">
+        <div className="flex flex-col max-w-full">
           {!isArchiveView && (
             <div className="animate-in fade-in slide-in-from-top-10 duration-1000">
               <StoriesBar />
-              <div className="px-4 py-4">
+              <div className="px-4 py-4 overflow-x-hidden">
                 <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide">
                   {[
                     { id: 'all', label: 'ВСЕ' },
@@ -368,7 +370,7 @@ export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?:
             </div>
           )}
 
-          <div className="pb-40 space-y-1.5">
+          <div className="pb-40 space-y-1.5 overflow-x-hidden">
             {filteredChats.length > 0 ? (
               filteredChats.map(chat => (
                 <ChatListItem 

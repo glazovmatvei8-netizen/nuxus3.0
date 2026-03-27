@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useEffect } from 'react';
@@ -43,7 +44,7 @@ export default function ChatMain() {
     if (!db || !user) return null;
     return query(
       collection(db, 'calls'),
-      where('receiverId', '==', user.uid),
+      where('participantIds', 'array-contains', user.uid),
       where('status', '==', 'calling'),
       limit(1)
     );
@@ -58,11 +59,11 @@ export default function ChatMain() {
   }, [incomingCalls, activeCallId, setActiveCallId]);
 
   return (
-    <div className="fixed inset-0 flex flex-col w-full bg-transparent overflow-hidden h-[100dvh]">
+    <div className="fixed inset-0 flex flex-col w-full bg-transparent overflow-hidden h-[100dvh] max-w-full">
       <NotificationListener />
       <UpdateNotifier />
       
-      <div className="flex-1 flex overflow-hidden w-full relative">
+      <div className="flex-1 flex overflow-hidden w-full relative max-w-full">
         {/* Desktop Navigation Rail */}
         <div className="hidden md:flex w-[84px] h-full flex-col items-center py-8 bg-white/[0.03] backdrop-blur-3xl border-r border-white/[0.05] shrink-0 z-40 relative">
           <div className="absolute right-0 top-0 bottom-0 w-px bg-gradient-to-b from-transparent via-primary/20 to-transparent" />
@@ -94,27 +95,31 @@ export default function ChatMain() {
           </div>
         </div>
 
-        {/* Content Sidebar - Fixed Horizontal Drift */}
+        {/* Content Sidebar - Strict Width Constraint */}
         <div className={cn(
-          "w-full md:w-[380px] lg:w-[420px] h-full flex-shrink-0 border-r border-white/[0.05] z-30 bg-white/[0.01] backdrop-blur-2xl overflow-x-hidden relative", 
+          "w-full md:w-[380px] lg:w-[420px] h-full flex-shrink-0 border-r border-white/[0.05] z-30 bg-white/[0.01] backdrop-blur-2xl relative overflow-hidden", 
           (currentChatId && !['profile', 'contacts', 'calls', 'archive', 'music', 'wallet', 'discovery', 'games'].includes(activeView)) ? "hidden md:block" : "block"
         )}>
-          {activeView === 'chats' && <ChatSidebar />}
-          {activeView === 'contacts' && <ContactsView />}
-          {activeView === 'calls' && <CallsView />}
-          {activeView === 'profile' && <ProfileView />}
-          {activeView === 'archive' && <ChatSidebar isArchiveView />}
-          {activeView === 'music' && <MusicView />}
-          {activeView === 'wallet' && <WalletView />}
-          {activeView === 'games' && <GamesView />}
+          <div className="h-full w-full overflow-x-hidden">
+            {activeView === 'chats' && <ChatSidebar />}
+            {activeView === 'contacts' && <ContactsView />}
+            {activeView === 'calls' && <CallsView />}
+            {activeView === 'profile' && <ProfileView />}
+            {activeView === 'archive' && <ChatSidebar isArchiveView />}
+            {activeView === 'music' && <MusicView />}
+            {activeView === 'wallet' && <WalletView />}
+            {activeView === 'games' && <GamesView />}
+          </div>
         </div>
         
-        {/* Main Viewport - Fixed Horizontal Drift */}
+        {/* Main Viewport - Strict Width Constraint */}
         <div className={cn(
-          "flex-1 h-full flex flex-col min-w-0 bg-transparent relative z-20 chat-pattern-bg overflow-x-hidden", 
+          "flex-1 h-full flex flex-col min-w-0 bg-transparent relative z-20 chat-pattern-bg overflow-hidden", 
           (!currentChatId || ['profile', 'music', 'wallet', 'games'].includes(activeView)) ? "hidden md:flex" : "flex"
         )}>
-          <ChatArea />
+          <div className="h-full w-full overflow-x-hidden flex flex-col">
+            <ChatArea />
+          </div>
         </div>
       </div>
 
