@@ -50,7 +50,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
   const { user } = useUser();
   const { toast } = useToast();
   const { settingsTab, setSettingsTab } = useAppState();
-  fileInputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const userRef = useMemoFirebase(() => (!db || !user) ? null : doc(db!, 'users', user.uid), [db, user]);
   const { data: profile } = useDoc<User>(userRef);
