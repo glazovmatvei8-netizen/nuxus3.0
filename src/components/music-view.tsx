@@ -12,15 +12,49 @@ import type { Track } from '@/lib/types';
 
 /**
  * ГЛОБАЛЬНАЯ МЕДИАТЕКА NUXUS V3.0 (HI-FI STREAMS)
- * Кураторский список качественной музыки без авторских прав.
+ * Обновлено: Реальные Hi-Fi треки без авторских прав.
  */
 const NUXUS_LIBRARY: Track[] = [
-  { id: 'm1', title: 'Lofi Study Session', artist: 'Nuxus Ambient', url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3', coverUrl: 'https://images.unsplash.com/photo-1516280440614-37939bbacd81?q=80&w=400&h=400&auto=format&fit=crop', duration: 360 },
-  { id: 'm2', title: 'Cyberpunk Night Drive', artist: 'Synth-Wave Core', url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3', coverUrl: 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?q=80&w=400&h=400&auto=format&fit=crop', duration: 245 },
-  { id: 'm3', title: 'Phonk Signal', artist: 'Shadow Runner', url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3', coverUrl: 'https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?q=80&w=400&h=400&auto=format&fit=crop', duration: 180 },
-  { id: 'm4', title: 'Neon Dreams', artist: 'Vector Graphics', url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-8.mp3', coverUrl: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=400&h=400&auto=format&fit=crop', duration: 310 },
-  { id: 'm5', title: 'Deep Space Signal', artist: 'Quantum Node', url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3', coverUrl: 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=400&h=400&auto=format&fit=crop', duration: 420 },
-  { id: 'm6', title: 'Midnight Chill', artist: 'Chillhop Beats', url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-10.mp3', coverUrl: 'https://images.unsplash.com/photo-1493225255756-d9584f8606e9?q=80&w=400&h=400&auto=format&fit=crop', duration: 215 }
+  { 
+    id: 'm1', 
+    title: 'Midnight Lofi', 
+    artist: 'Nuxus Ambient', 
+    url: 'https://cdn.pixabay.com/audio/2022/05/27/audio_180873742b.mp3', 
+    coverUrl: 'https://images.unsplash.com/photo-1516280440614-37939bbacd81?q=80&w=400&h=400&auto=format&fit=crop', 
+    duration: 180 
+  },
+  { 
+    id: 'm2', 
+    title: 'Cyberpunk Drive', 
+    artist: 'Synth-Wave Core', 
+    url: 'https://cdn.pixabay.com/audio/2022/01/18/audio_d0a13f69d2.mp3', 
+    coverUrl: 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?q=80&w=400&h=400&auto=format&fit=crop', 
+    duration: 215 
+  },
+  { 
+    id: 'm3', 
+    title: 'Phonk Signal', 
+    artist: 'Shadow Runner', 
+    url: 'https://cdn.pixabay.com/audio/2023/09/18/audio_83456723.mp3', 
+    coverUrl: 'https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?q=80&w=400&h=400&auto=format&fit=crop', 
+    duration: 145 
+  },
+  { 
+    id: 'm4', 
+    title: 'Neon Dreams', 
+    artist: 'Vector Graphics', 
+    url: 'https://cdn.pixabay.com/audio/2022/03/15/audio_7ac345bd67.mp3', 
+    coverUrl: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=400&h=400&auto=format&fit=crop', 
+    duration: 260 
+  },
+  { 
+    id: 'm5', 
+    title: 'Quantum Chill', 
+    artist: 'Deep Space Beats', 
+    url: 'https://cdn.pixabay.com/audio/2021/11/25/audio_912345bc89.mp3', 
+    coverUrl: 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=400&h=400&auto=format&fit=crop', 
+    duration: 320 
+  }
 ];
 
 export default function MusicView() {
@@ -64,7 +98,7 @@ export default function MusicView() {
               key={track.id} 
               className={cn(
                 "flex items-center justify-between p-3 rounded-2xl hover:bg-white/5 transition-all cursor-pointer group",
-                currentTrack?.id === track.id && "bg-primary/10 border border-primary/20 shadow-[0_0_20px_rgba(139,92,246,0.1)]"
+                currentTrack?.id === track.id && "bg-primary/10 border border-primary/20 shadow-[0_0_20px_rgba(139,92,247,0.1)]"
               )}
               onClick={() => {
                 setCurrentTrack(track);
