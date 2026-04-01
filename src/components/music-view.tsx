@@ -6,21 +6,21 @@ import { useAppState } from '@/lib/store';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Search, Music, Play, Plus, MoreVertical, Star, Heart, TrendingUp, Radio, Headphones } from 'lucide-react';
+import { Search, Music, Play, Plus, Star, TrendingUp, Radio, Headphones, Zap } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { Track } from '@/lib/types';
 
 /**
- * ГЛОБАЛЬНАЯ МЕДИАТЕКА NUXUS (HQ STREAMS)
- * Использование прямых аудио-потоков для демо.
+ * ГЛОБАЛЬНАЯ МЕДИАТЕКА NUXUS V3.0 (HI-FI STREAMS)
+ * Кураторский список качественной музыки без авторских прав.
  */
 const NUXUS_LIBRARY: Track[] = [
-  { id: 'm1', title: 'Me Gustas Tu', artist: 'Manu Chao', url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3', coverUrl: 'https://picsum.photos/seed/manu/400/400', duration: 210 },
-  { id: 'm2', title: 'Phonk Signal', artist: 'Ghostface Playa', url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3', coverUrl: 'https://picsum.photos/seed/phonk/400/400', duration: 120 },
-  { id: 'm3', title: 'Blinding Lights', artist: 'The Weeknd', url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-8.mp3', coverUrl: 'https://picsum.photos/seed/weeknd/400/400', duration: 200 },
-  { id: 'm4', title: 'Nuxus Core Beats', artist: 'Shadow-Core', url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3', coverUrl: 'https://picsum.photos/seed/beats/400/400', duration: 145 },
-  { id: 'm5', title: 'Quantum Drift', artist: 'Nuxus Prime', url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3', coverUrl: 'https://picsum.photos/seed/drift/400/400', duration: 220 },
-  { id: 'm6', title: 'Lovely', artist: 'Billie Eilish', url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-15.mp3', coverUrl: 'https://picsum.photos/seed/billie/400/400', duration: 201 }
+  { id: 'm1', title: 'Lofi Study Session', artist: 'Nuxus Ambient', url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3', coverUrl: 'https://images.unsplash.com/photo-1516280440614-37939bbacd81?q=80&w=400&h=400&auto=format&fit=crop', duration: 360 },
+  { id: 'm2', title: 'Cyberpunk Night Drive', artist: 'Synth-Wave Core', url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3', coverUrl: 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?q=80&w=400&h=400&auto=format&fit=crop', duration: 245 },
+  { id: 'm3', title: 'Phonk Signal', artist: 'Shadow Runner', url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3', coverUrl: 'https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?q=80&w=400&h=400&auto=format&fit=crop', duration: 180 },
+  { id: 'm4', title: 'Neon Dreams', artist: 'Vector Graphics', url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-8.mp3', coverUrl: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=400&h=400&auto=format&fit=crop', duration: 310 },
+  { id: 'm5', title: 'Deep Space Signal', artist: 'Quantum Node', url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3', coverUrl: 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=400&h=400&auto=format&fit=crop', duration: 420 },
+  { id: 'm6', title: 'Midnight Chill', artist: 'Chillhop Beats', url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-10.mp3', coverUrl: 'https://images.unsplash.com/photo-1493225255756-d9584f8606e9?q=80&w=400&h=400&auto=format&fit=crop', duration: 215 }
 ];
 
 export default function MusicView() {
@@ -36,13 +36,13 @@ export default function MusicView() {
     <div className="flex flex-col h-full bg-[#0a0a0c] overflow-hidden">
       <div className="px-4 pt-6 pb-2 shrink-0">
         <h1 className="text-[28px] md:text-[32px] font-black text-white tracking-tight mb-6 flex items-center gap-3 italic uppercase">
-          Music <span className="text-[9px] bg-primary/20 text-primary px-2 py-0.5 rounded-full border border-primary/20 not-italic">HQ FLOW</span>
+          Music <span className="text-[9px] bg-primary/20 text-primary px-2 py-0.5 rounded-full border border-primary/20 not-italic">HI-FI FLOW</span>
         </h1>
 
         <div className="relative mb-6">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/60" />
           <Input 
-            placeholder="Треки, артисты, альбомы..." 
+            placeholder="Треки, артисты, плейлисты..." 
             className="pl-10 bg-[#1c1c1e] border-none rounded-2xl h-12 text-[15px] focus:ring-1 focus:ring-primary/40" 
             value={search} 
             onChange={(e) => setSearch(e.target.value)} 
@@ -51,8 +51,8 @@ export default function MusicView() {
 
         <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-4">
           <MusicTab icon={TrendingUp} label="Тренды" active />
-          <MusicTab icon={Star} label="Новинки" />
-          <MusicTab icon={Headphones} label="Подборки" />
+          <MusicTab icon={Zap} label="Энергия" />
+          <MusicTab icon={Headphones} label="Концентрация" />
           <MusicTab icon={Radio} label="Радио" />
         </div>
       </div>

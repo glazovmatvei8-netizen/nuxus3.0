@@ -71,14 +71,14 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
     customAppIconUrl: '',
     statusEmoji: '',
     statusText: '',
-    privacy: {
+    privacy: profile?.settings?.privacy || {
       phoneVisibility: 'everybody',
       lastSeenVisibility: 'everybody',
       allowGroupsFrom: 'everybody',
       whoCanMessageMe: 'everybody',
       isGhostMode: false
     },
-    interfaceOverrides: {} as Record<string, string>
+    interfaceOverrides: profile?.settings?.interfaceOverrides || {}
   });
 
   useEffect(() => {
