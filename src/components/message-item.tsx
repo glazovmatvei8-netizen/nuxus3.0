@@ -21,7 +21,7 @@ import {
 import { format, isAfter, parseISO } from 'date-fns';
 import { 
   CornerUpLeft, Trash2, Check, CheckCheck, Edit2, Copy, Pin, X, Share2, Play, Smile, Lock, Languages, Loader2, Image as ImageIcon,
-  MessageCircle, Star, Pause, ShieldCheck, Clock, Type, Globe, Volume2, Timer, Zap
+  MessageCircle, Star, Pause, ShieldCheck, Clock, Type, Globe, Volume2, Timer, Zap, Maximize2
 } from 'lucide-react';
 import { cn, decryptSignal, isGlobalAdmin, isUserPremium } from '@/lib/utils';
 import { doc, updateDoc, deleteDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
@@ -31,8 +31,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useAppState } from '@/lib/store';
 import { transcribeVoice } from '@/ai/flows/voice-to-text-flow';
 import { synthesizeSpeech } from '@/ai/flows/text-to-speech-flow';
-
-const QUICK_REACTIONS = ['❤️', '👍', '🔥', '😂', '😮', '😢', '💯'];
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 
 export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForward, isAdmin = false, isGroup = false, onEdit, highlight = false, viewerProfile }: any) => {
   const { user } = useUser();
@@ -49,6 +48,7 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
   const [translatedText, setTranslatedText] = useState<string | null>(null);
   const [isTranslating, setIsTranslating] = useState(false);
   const [isSynthesizing, setIsSynthesizing] = useState(false);
+  const [isMediaViewerOpen, setIsMediaViewerOpen] = useState(false);
   
   const audioInstance = useRef<HTMLAudioElement | null>(null);
   const ttsAudioRef = useRef<HTMLAudioElement | null>(null);
@@ -169,10 +169,25 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
     
     if (message.contentType === 'image') return (
       <div 
-        className="relative max-w-[300px] rounded-[1.8rem] overflow-hidden border border-white/10 shadow-2xl bg-black/40 cursor-pointer active:scale-[0.98] transition-all"
-        onClick={(e) => { e.stopPropagation(); window.open(message.content, '_blank'); }}
+        className="relative max-w-[300px] rounded-[1.8rem] overflow-hidden border border-white/10 shadow-2xl bg-black/40 cursor-pointer active:scale-[0.98] transition-all group"
+        onClick={(e) => { e.stopPropagation(); setIsMediaViewerOpen(true); }}
       >
         <img src={message.content} alt="Image" className="w-full h-auto object-cover max-h-[450px]" loading="lazy" />
+        <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+          <Maximize2 className="w-8 h-8 text-white drop-shadow-lg" />
+        </div>
+      </div>
+    );
+
+    if (message.contentType === 'video') return (
+      <div 
+        className="relative max-w-[300px] rounded-[1.8rem] overflow-hidden border border-white/10 shadow-2xl bg-black/40 cursor-pointer active:scale-[0.98] transition-all"
+        onClick={(e) => { e.stopPropagation(); setIsMediaViewerOpen(true); }}
+      >
+        <video src={message.content} className="w-full h-auto max-h-[450px]" autoPlay muted loop playsInline />
+        <div className="absolute top-3 right-3 bg-black/60 backdrop-blur-md p-1.5 rounded-full border border-white/10">
+          <VideoIcon className="w-4 h-4 text-white" />
+        </div>
       </div>
     );
 
@@ -247,6 +262,7 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
   );
 
   return (
+    <>
     <div 
       className={cn("w-full flex mb-4 transition-all duration-300", isMe ? "justify-end pr-2" : "justify-start pl-2", highlight && "scale-105 z-10")}
       style={{ contentVisibility: 'auto', containIntrinsicSize: '0 80px' }}
@@ -322,6 +338,23 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
         </div>
       </div>
     </div>
+
+    <Dialog open={isMediaViewerOpen} onOpenChange={setIsMediaViewerOpen}>
+      <DialogContent className="max-w-4xl w-full h-[90vh] bg-black/95 border-none p-0 overflow-hidden flex flex-col items-center justify-center outline-none">
+        <DialogTitle className="sr-only">Просмотр медиа</DialogTitle>
+        <button onClick={() => setIsMediaViewerOpen(false)} className="absolute top-6 right-6 z-50 h-12 w-12 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-all backdrop-blur-xl border border-white/10 shadow-2xl">
+          <X className="w-6 h-6" />
+        </button>
+        <div className="w-full h-full flex items-center justify-center p-4">
+          {message.contentType === 'video' ? (
+            <video src={message.content} className="max-w-full max-h-full rounded-2xl shadow-2xl" controls autoPlay loop />
+          ) : (
+            <img src={message.content} alt="Media" className="max-w-full max-h-full object-contain rounded-2xl shadow-2xl" />
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
+    </>
   );
 });
 MessageItem.displayName = 'MessageItem';

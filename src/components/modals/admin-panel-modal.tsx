@@ -139,7 +139,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
             <div className="flex items-center gap-2">
               <ShieldAlert className="w-5 h-5 text-primary animate-pulse" /> 
               <DialogTitle className="text-white uppercase italic font-black tracking-tighter text-xs md:text-base select-none">
-                Nuxus Control Panel V3.2
+                Nuxus Control Panel V3.2.1
               </DialogTitle>
             </div>
             <div className="flex items-center gap-1.5 bg-green-500/10 px-3 py-1 rounded-full border border-green-500/20">

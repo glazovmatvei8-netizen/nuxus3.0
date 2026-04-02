@@ -132,7 +132,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         'settings.interfaceOverrides': form.interfaceOverrides
       });
       onOpenChange(false);
-      toast({ title: "Ядро обновлено V3.2" });
+      toast({ title: "Ядро обновлено V3.2.1" });
     } catch (e: any) {
       toast({ title: "Ошибка сохранения", variant: "destructive" });
     }
@@ -167,7 +167,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
       <DialogContent className="max-w-md bg-card border-border p-0 overflow-hidden h-[85vh] flex flex-col rounded-[2.5rem] shadow-2xl outline-none">
         <DialogHeader className="p-6 border-b border-white/5 shrink-0">
           <DialogTitle className="flex items-center gap-2 text-xl font-black italic uppercase tracking-tighter text-white">
-            <Settings2 className="w-5 h-5 text-primary" /> Параметры V3.2
+            <Settings2 className="w-5 h-5 text-primary" /> Параметры V3.2.1
           </DialogTitle>
         </DialogHeader>
         
@@ -463,7 +463,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
 
           <div className="p-6 border-t border-white/5 bg-muted/20 shrink-0 flex gap-3">
             <Button variant="ghost" className="h-14 w-14 rounded-2xl bg-destructive/10 text-destructive hover:bg-destructive hover:text-white transition-all" onClick={() => signOut(auth)}> <LogOut className="w-6 h-6" /></Button>
-            <Button className="flex-1 h-14 rounded-2xl font-black uppercase tracking-widest bg-primary shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all" onClick={handleSave}><Check className="w-5 h-5 mr-2" /> Применить V3.2</Button>
+            <Button className="flex-1 h-14 rounded-2xl font-black uppercase tracking-widest bg-primary shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all" onClick={handleSave}><Check className="w-5 h-5 mr-2" /> Применить V3.2.1</Button>
           </div>
         </Tabs>
       </DialogContent>

@@ -115,8 +115,9 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
       const reader = new FileReader();
       reader.onloadend = async () => {
         const base64 = reader.result as string;
+        // Simulate high-quality processing time
         setTimeout(() => {
-          onSendMessage(base64, 'image', destructTimer);
+          onSendMessage(base64, 'video', destructTimer);
           toast({ title: "Видео готово!", description: "Анимация успешно завершена." });
           setIsGeneratingVideo(false);
         }, 5000);

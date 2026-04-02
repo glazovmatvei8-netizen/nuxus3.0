@@ -71,8 +71,9 @@ export default function Home() {
   const isBanned = isUserActuallyBanned(profile);
 
   useEffect(() => {
+    // Only turn off initial load when we either have no user or we have user AND profile
     if (!isUserLoading && (user ? !isProfileLoading : true)) {
-      const timer = setTimeout(() => setIsInitialLoad(false), 500);
+      const timer = setTimeout(() => setIsInitialLoad(false), 800);
       return () => clearTimeout(timer);
     }
   }, [isUserLoading, user, isProfileLoading]);
@@ -89,6 +90,7 @@ export default function Home() {
 
   if (!mounted) return null;
 
+  // INITIAL LOADER ONLY (First app launch)
   if (isInitialLoad && (isUserLoading || (user && isProfileLoading))) {
     return (
       <div className="h-[100dvh] w-full flex flex-col items-center justify-center bg-[#020203] text-white relative overflow-hidden">
@@ -111,7 +113,7 @@ export default function Home() {
                 {t('initializing')}
               </p>
               <p className="text-[8px] font-black uppercase tracking-[0.5em] text-white/20 ml-[0.5em]">
-                {t('app.kernel')} V3.2
+                {t('app.kernel')} V3.2.1
               </p>
             </div>
           </div>

@@ -35,9 +35,9 @@ export const UserAvatar = memo(({ userId, className, fallbackName, fallbackClass
   
   const initialsSource = useMemo(() => {
     const rawName = profile?.name || fallbackName;
-    if (rawName && rawName !== '??') return rawName;
+    if (rawName && rawName !== 'Пользователь' && rawName !== '??') return rawName;
     if (profile?.username) return profile.username.replace('@', '');
-    return 'N'; // Fallback to Nuxus instead of ??
+    return 'N'; // Глобальный фоллбэк Ядра
   }, [profile?.name, fallbackName, profile?.username]);
 
   const displayName = useMemo(() => formatDisplayName(initialsSource), [initialsSource]);
