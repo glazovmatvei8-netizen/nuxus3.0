@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useRef, useEffect, useMemo, useCallback, memo } from 'react';
@@ -8,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
   Send, Info, ChevronLeft, X, Paperclip, Mic, StopCircle, Edit2, Search,
-  Smile, ImageIcon, Video, Trash2, Loader2, UserPlus, AtSign, ChevronDown, Wand2, Sparkles, Star, Timer, Clock, Palette, VideoIcon
+  Smile, ImageIcon, Video, Trash2, Loader2, UserPlus, AtSign, ChevronDown, Wand2, Sparkles, Star, Timer, Clock, Palette, Video as VideoIcon
 } from 'lucide-react';
 import { MessageItem } from './message-item';
 import { useToast } from '@/hooks/use-toast';
@@ -23,6 +22,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { suggestMessageDraft } from '@/ai/flows/ai-message-drafting-flow';
 import { chatConversationSummary } from '@/ai/flows/chat-conversation-summary-flow';
 import { generateAiImage } from '@/ai/flows/generate-ai-image-flow';
+import { generateAiVideo } from '@/ai/flows/generate-ai-video-flow';
 import { useTranslations } from '@/hooks/use-translations';
 import { addMinutes, addHours } from 'date-fns';
 
@@ -109,22 +109,25 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
     if (!file || !isPremium) return;
     
     setIsGeneratingVideo(true);
-    toast({ title: "Синтез видео запущен", description: "Нейросеть Veo 2.0 анимирует ваше фото..." });
+    toast({ title: "Синтез видео запущен", description: "Нейросеть Veo 2.0 анимирует ваше фото... (это может занять до 1 мин)" });
     
     try {
       const reader = new FileReader();
       reader.onloadend = async () => {
         const base64 = reader.result as string;
-        // Simulate high-quality processing time
-        setTimeout(() => {
-          onSendMessage(base64, 'video', destructTimer);
+        try {
+          const { videoDataUri } = await generateAiVideo({ photoDataUri: base64 });
+          onSendMessage(videoDataUri, 'video', destructTimer);
           toast({ title: "Видео готово!", description: "Анимация успешно завершена." });
+        } catch (err) {
+          toast({ title: "Ошибка синтеза", description: "Модель Veo сейчас перегружена. Попробуйте позже.", variant: "destructive" });
+        } finally {
           setIsGeneratingVideo(false);
-        }, 5000);
+        }
       };
       reader.readAsDataURL(file);
     } catch (e) {
-      toast({ title: "Ошибка синтеза", variant: "destructive" });
+      toast({ title: "Ошибка файла", variant: "destructive" });
       setIsGeneratingVideo(false);
     }
   };
@@ -417,13 +420,15 @@ export default function ChatArea() {
 
   return (
     <div className="flex-1 flex flex-col h-full bg-background relative overflow-hidden z-20 max-w-full min-w-0">
+      {/* BACKGROUND LAYER */}
       <div 
-        className={cn("absolute inset-0 z-0", !customBg && "chat-pattern-bg")}
-        style={customBg ? { 
+        className={cn("absolute inset-0 z-0", (!customBg || customBg.trim() === '') && "chat-pattern-bg")}
+        style={customBg && customBg.trim() !== '' ? { 
           backgroundImage: `url("${customBg}")`, 
           backgroundSize: bgFit, 
           backgroundPosition: 'center',
-          backgroundRepeat: 'no-repeat'
+          backgroundRepeat: 'no-repeat',
+          opacity: 1
         } : {}}
       />
 

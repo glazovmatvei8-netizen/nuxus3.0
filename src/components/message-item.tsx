@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, memo, useRef, useEffect, useMemo } from 'react';
@@ -21,7 +20,7 @@ import {
 import { format, isAfter, parseISO } from 'date-fns';
 import { 
   CornerUpLeft, Trash2, Check, CheckCheck, Edit2, Copy, Pin, X, Share2, Play, Smile, Lock, Languages, Loader2, Image as ImageIcon,
-  MessageCircle, Star, Pause, ShieldCheck, Clock, Type, Globe, Volume2, Timer, Zap, Maximize2
+  MessageCircle, Star, Pause, ShieldCheck, Clock, Type, Globe, Volume2, Timer, Zap, Maximize2, Video as VideoIcon
 } from 'lucide-react';
 import { cn, decryptSignal, isGlobalAdmin, isUserPremium } from '@/lib/utils';
 import { doc, updateDoc, deleteDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
@@ -32,6 +31,8 @@ import { useAppState } from '@/lib/store';
 import { transcribeVoice } from '@/ai/flows/voice-to-text-flow';
 import { synthesizeSpeech } from '@/ai/flows/text-to-speech-flow';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
+
+const QUICK_REACTIONS = ['👍', '❤️', '🔥', '😂', '😮', '😢', '👏'];
 
 export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForward, isAdmin = false, isGroup = false, onEdit, highlight = false, viewerProfile }: any) => {
   const { user } = useUser();
@@ -179,14 +180,17 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
       </div>
     );
 
-    if (message.contentType === 'video') return (
+    if (message.contentType === 'video' || message.contentType === 'ai_video') return (
       <div 
-        className="relative max-w-[300px] rounded-[1.8rem] overflow-hidden border border-white/10 shadow-2xl bg-black/40 cursor-pointer active:scale-[0.98] transition-all"
+        className="relative max-w-[300px] rounded-[1.8rem] overflow-hidden border border-white/10 shadow-2xl bg-black/40 cursor-pointer active:scale-[0.98] transition-all group"
         onClick={(e) => { e.stopPropagation(); setIsMediaViewerOpen(true); }}
       >
         <video src={message.content} className="w-full h-auto max-h-[450px]" autoPlay muted loop playsInline />
         <div className="absolute top-3 right-3 bg-black/60 backdrop-blur-md p-1.5 rounded-full border border-white/10">
           <VideoIcon className="w-4 h-4 text-white" />
+        </div>
+        <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+          <Maximize2 className="w-8 h-8 text-white drop-shadow-lg" />
         </div>
       </div>
     );
@@ -340,13 +344,13 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
     </div>
 
     <Dialog open={isMediaViewerOpen} onOpenChange={setIsMediaViewerOpen}>
-      <DialogContent className="max-w-4xl w-full h-[90vh] bg-black/95 border-none p-0 overflow-hidden flex flex-col items-center justify-center outline-none">
+      <DialogContent className="max-w-4xl w-[95vw] h-[90vh] bg-black/95 border-none p-0 overflow-hidden flex flex-col items-center justify-center outline-none z-[3000] rounded-[2.5rem]">
         <DialogTitle className="sr-only">Просмотр медиа</DialogTitle>
         <button onClick={() => setIsMediaViewerOpen(false)} className="absolute top-6 right-6 z-50 h-12 w-12 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-all backdrop-blur-xl border border-white/10 shadow-2xl">
           <X className="w-6 h-6" />
         </button>
         <div className="w-full h-full flex items-center justify-center p-4">
-          {message.contentType === 'video' ? (
+          {message.contentType === 'video' || message.contentType === 'ai_video' ? (
             <video src={message.content} className="max-w-full max-h-full rounded-2xl shadow-2xl" controls autoPlay loop />
           ) : (
             <img src={message.content} alt="Media" className="max-w-full max-h-full object-contain rounded-2xl shadow-2xl" />
