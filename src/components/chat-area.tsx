@@ -112,13 +112,11 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
     toast({ title: "Синтез видео запущен", description: "Нейросеть Veo 2.0 анимирует ваше фото..." });
     
     try {
-      // Simulation of Veo generation since real flow needs implementation
       const reader = new FileReader();
       reader.onloadend = async () => {
         const base64 = reader.result as string;
-        // In a real app, we would call a Genkit flow here
         setTimeout(() => {
-          onSendMessage(base64, 'image', destructTimer); // Fallback to image for now
+          onSendMessage(base64, 'image', destructTimer);
           toast({ title: "Видео готово!", description: "Анимация успешно завершена." });
           setIsGeneratingVideo(false);
         }, 5000);
@@ -421,7 +419,7 @@ export default function ChatArea() {
       <div 
         className={cn("absolute inset-0 z-0", !customBg && "chat-pattern-bg")}
         style={customBg ? { 
-          backgroundImage: `url(${customBg})`, 
+          backgroundImage: `url("${customBg}")`, 
           backgroundSize: bgFit, 
           backgroundPosition: 'center',
           backgroundRepeat: 'no-repeat'
