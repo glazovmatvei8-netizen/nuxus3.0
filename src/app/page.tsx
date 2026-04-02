@@ -70,7 +70,6 @@ export default function Home() {
   const { data: profile, isLoading: isProfileLoading } = useDoc<UserType>(userProfileRef);
   const isBanned = isUserActuallyBanned(profile);
 
-  // Исправлено: Экран загрузки показывается только при первом входе, а не при каждом обновлении профиля
   useEffect(() => {
     if (!isUserLoading && (user ? !isProfileLoading : true)) {
       const timer = setTimeout(() => setIsInitialLoad(false), 500);
@@ -112,7 +111,7 @@ export default function Home() {
                 {t('initializing')}
               </p>
               <p className="text-[8px] font-black uppercase tracking-[0.5em] text-white/20 ml-[0.5em]">
-                {t('app.kernel')} V3.0
+                {t('app.kernel')} V3.2
               </p>
             </div>
           </div>

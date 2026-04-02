@@ -34,10 +34,10 @@ export const UserAvatar = memo(({ userId, className, fallbackName, fallbackClass
   const displayAvatar = useMemo(() => manualAvatarUrl || profile?.avatarUrl, [profile?.avatarUrl, manualAvatarUrl]);
   
   const initialsSource = useMemo(() => {
-    const rawName = profile?.name || fallbackName || '??';
-    if ((rawName === '??' || !rawName) && profile?.username) return profile.username.replace('@', '');
-    if (rawName === '??' || !rawName) return 'N'; // Fallback to Nuxus instead of ??
-    return rawName;
+    const rawName = profile?.name || fallbackName;
+    if (rawName && rawName !== '??') return rawName;
+    if (profile?.username) return profile.username.replace('@', '');
+    return 'N'; // Fallback to Nuxus instead of ??
   }, [profile?.name, fallbackName, profile?.username]);
 
   const displayName = useMemo(() => formatDisplayName(initialsSource), [initialsSource]);
@@ -63,7 +63,7 @@ export const UserAvatar = memo(({ userId, className, fallbackName, fallbackClass
     <div className="relative inline-block shrink-0 will-change-transform">
       <div className={cn(
         "rounded-full p-[2px] transition-all",
-        premium ? "bg-gradient-to-tr from-primary via-accent to-primary animate-[spin_4s_linear_infinite]" : ""
+        premium ? "bg-gradient-to-tr from-primary via-accent to-primary animate-[spin_4s_linear_infinite] shadow-[0_0_15px_rgba(168,85,247,0.4)]" : ""
       )}>
         <Avatar className={cn("shrink-0 relative overflow-hidden bg-background", className)}>
           {displayAvatar && !imgError ? (

@@ -139,7 +139,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
             <div className="flex items-center gap-2">
               <ShieldAlert className="w-5 h-5 text-primary animate-pulse" /> 
               <DialogTitle className="text-white uppercase italic font-black tracking-tighter text-xs md:text-base select-none">
-                Nuxus Control Panel V3.0
+                Nuxus Control Panel V3.2
               </DialogTitle>
             </div>
             <div className="flex items-center gap-1.5 bg-green-500/10 px-3 py-1 rounded-full border border-green-500/20">
@@ -288,6 +288,16 @@ function StatCard({ label, value, icon: Icon, color }: any) {
       <Icon className={cn("w-4 h-4 mb-1", color)} />
       <span className="text-lg font-black italic text-white tracking-tight">{value}</span>
       <span className="text-[7px] font-black uppercase text-muted-foreground/60 tracking-widest text-center leading-none">{label}</span>
+    </div>
+  );
+}
+
+function Loader2({ className }: any) {
+  return (
+    <div className={cn("animate-spin", className)}>
+      <svg className="w-full h-full" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+      </svg>
     </div>
   );
 }

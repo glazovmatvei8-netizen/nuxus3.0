@@ -1,5 +1,5 @@
 
-export type MessageType = 'text' | 'image' | 'audio' | 'video' | 'video_note' | 'service' | 'gift' | 'payment_request' | 'album' | 'poll' | 'broadcast' | 'sticker' | 'music';
+export type MessageType = 'text' | 'image' | 'audio' | 'video' | 'video_note' | 'service' | 'gift' | 'payment_request' | 'album' | 'poll' | 'broadcast' | 'sticker' | 'music' | 'ai_video';
 
 export interface StickerPack {
   id: string;
@@ -8,6 +8,7 @@ export interface StickerPack {
   iconUrl: string | null;
   stickerUrls: string[];
   createdAt: string;
+  isPublic?: boolean;
 }
 
 export interface ReceivedGift {
@@ -72,6 +73,7 @@ export interface Message {
   };
   metadata?: {
     bubbleStyle?: 'default' | 'neon' | 'gold' | 'ocean';
+    aiModel?: string;
     [key: string]: any;
   };
 }
