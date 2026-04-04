@@ -1,6 +1,6 @@
 'use server';
 /**
- * @fileOverview A Genkit flow for generating AI videos from photo references using Veo 2.0.
+ * @fileOverview A Genkit flow for generating AI videos from photo references using Veo 3.0.
  *
  * - generateAiVideo - A function that animates a static image.
  */
@@ -20,7 +20,7 @@ const GenerateAiVideoOutputSchema = z.object({
 export type GenerateAiVideoOutput = z.infer<typeof GenerateAiVideoOutputSchema>;
 
 /**
- * Animates a photo using Veo 2.0 model.
+ * Animates a photo using Veo 3.0 model.
  */
 export async function generateAiVideo(input: GenerateAiVideoInput): Promise<GenerateAiVideoOutput> {
   return generateAiVideoFlow(input);
@@ -33,18 +33,15 @@ const generateAiVideoFlow = ai.defineFlow(
     outputSchema: GenerateAiVideoOutputSchema,
   },
   async (input) => {
-    // Note: Veo 2.0 generation can take up to a minute.
-    // In a production app, we would use checkOperation, 
-    // but for MVP we use generate with high timeout.
+    // Note: Veo generation can take up to a minute.
     
     let { operation } = await ai.generate({
-      model: googleAI.model('veo-2.0-generate-001'),
+      model: googleAI.model('veo-3.0-generate-preview'),
       prompt: [
-        { text: 'make the subject in the photo move gracefully, cinematic motion, high quality' },
+        { text: 'make the subject in the photo move gracefully, cinematic motion, high quality, realistic' },
         { media: { url: input.photoDataUri } }
       ],
       config: {
-        durationSeconds: 5,
         aspectRatio: '16:9',
       },
     });

@@ -109,7 +109,7 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
     if (!file || !isPremium) return;
     
     setIsGeneratingVideo(true);
-    toast({ title: "Синтез видео запущен", description: "Нейросеть Veo 2.0 анимирует ваше фото... (это может занять до 1 мин)" });
+    toast({ title: "Синтез видео запущен", description: "Нейросеть Veo 3.0 анимирует ваше фото... (это может занять до 1 мин)" });
     
     try {
       const reader = new FileReader();
@@ -422,7 +422,7 @@ export default function ChatArea() {
     <div className="flex-1 flex flex-col h-full bg-background relative overflow-hidden z-20 max-w-full min-w-0">
       {/* BACKGROUND LAYER */}
       <div 
-        className={cn("absolute inset-0 z-0", (!customBg || customBg.trim() === '') && "chat-pattern-bg")}
+        className={cn("absolute inset-0 z-[1]", (!customBg || customBg.trim() === '') && "chat-pattern-bg")}
         style={customBg && customBg.trim() !== '' ? { 
           backgroundImage: `url("${customBg}")`, 
           backgroundSize: bgFit, 
@@ -475,7 +475,7 @@ export default function ChatArea() {
         )}
       </header>
 
-      <div className="flex-1 relative overflow-hidden flex flex-col min-w-0">
+      <div className="flex-1 relative overflow-hidden flex flex-col min-w-0 z-10 bg-transparent">
         <div 
           ref={scrollContainerRef}
           className="flex-1 w-full relative z-10 overflow-y-auto scrollbar-hide scroll-smooth" 
