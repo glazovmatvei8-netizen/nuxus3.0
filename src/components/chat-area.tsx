@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useRef, useEffect, useMemo, useCallback, memo } from 'react';
@@ -69,23 +70,6 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
     setDestructTimer(null);
   };
 
-  const handleAiDraft = async () => {
-    if (!isPremium) return;
-    setIsAiDrafting(true);
-    try {
-      const history = (messages || []).slice(-5).map((m: any) => ({
-        sender: m.senderName,
-        message: m.contentType === 'text' ? decryptSignal(m.content) : `[${m.contentType}]`
-      }));
-      const { draftMessage } = await suggestMessageDraft({ conversationHistory: history, currentUserInput: messageInput });
-      setMessageInput(draftMessage);
-    } catch (e) {
-      console.warn("AI Draft failed");
-    } finally {
-      setIsAiDrafting(false);
-    }
-  };
-
   const handleGenerateImage = async () => {
     if (!messageInput.trim()) {
       toast({ title: "Введите запрос", description: "Напишите, что должен нарисовать ИИ." });
@@ -109,7 +93,7 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
     if (!file || !isPremium) return;
     
     setIsGeneratingVideo(true);
-    toast({ title: "Синтез видео запущен", description: "Нейросеть Veo 3.0 анимирует ваше фото... (это может занять до 1 мин)" });
+    toast({ title: "Синтез видео запущен", description: "Нейросеть Veo анимирует ваше фото... (это может занять до 1 мин)" });
     
     try {
       const reader = new FileReader();
@@ -117,10 +101,13 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
         const base64 = reader.result as string;
         try {
           const { videoDataUri } = await generateAiVideo({ photoDataUri: base64 });
+          if (!videoDataUri || !videoDataUri.startsWith('data:video')) {
+            throw new Error("Signal Lost: Некорректный формат данных.");
+          }
           onSendMessage(videoDataUri, 'video', destructTimer);
           toast({ title: "Видео готово!", description: "Анимация успешно завершена." });
-        } catch (err) {
-          toast({ title: "Ошибка синтеза", description: "Модель Veo сейчас перегружена. Попробуйте позже.", variant: "destructive" });
+        } catch (err: any) {
+          toast({ title: "Ошибка синтеза", description: err.message || "Модель Veo сейчас перегружена. Попробуйте позже.", variant: "destructive" });
         } finally {
           setIsGeneratingVideo(false);
         }
@@ -180,31 +167,13 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
               onKeyDown={e => e.key === 'Enter' && handleSend()} 
             />
             <div className="flex items-center gap-1">
-              {isPremium && (
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
-                  disabled={isAiDrafting}
-                  onClick={handleAiDraft}
-                  className={cn("text-accent hover:bg-accent/10", isAiDrafting && "animate-pulse")}
-                >
-                  <Wand2 className="w-4 h-4" />
-                </Button>
-              )}
               <Button variant="ghost" size="icon" className="text-white/40 hover:text-primary transition-colors"><Smile className="w-5 h-5" /></Button>
             </div>
           </div>
 
-          {messageInput.trim() ? (
-            <Button size="icon" className="h-10 w-10 rounded-full bg-primary text-white shadow-xl shadow-primary/40 active:scale-90 transition-all hover:scale-105" onClick={handleSend}>
-              <Send className="w-5 h-5" />
-            </Button>
-          ) : (
-            <div className="flex items-center gap-1">
-              <Button size="icon" variant="ghost" className="h-10 w-10 text-white/60 hover:text-primary transition-colors"><Mic className="w-5 h-5" /></Button>
-              <Button size="icon" variant="ghost" className="h-10 w-10 text-white/60 hover:text-primary transition-colors"><Video className="w-5 h-5" /></Button>
-            </div>
-          )}
+          <Button size="icon" className="h-10 w-10 rounded-full bg-primary text-white shadow-xl shadow-primary/40 active:scale-90 transition-all hover:scale-105" onClick={handleSend}>
+            <Send className="w-5 h-5" />
+          </Button>
         </div>
       </div>
       <input type="file" ref={fileInputRef} hidden accept="image/*,video/*" />
@@ -265,10 +234,8 @@ export default function ChatArea() {
   const [isChatInfoOpen, setIsChatInfoOpen] = useState(false);
   const [isPollModalOpen, setIsPollModalOpen] = useState(false);
   const [replyTo, setReplyTo] = useState<Message | null>(null);
-  const [editingMsg, setEditingMsg] = useState<Message | null>(null);
   const [isSearchMode, setIsSearchMode] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [isJoining, setIsJoining] = useState(false);
   const [showScrollButton, setShowScrollButton] = useState(false);
   const [isSummarizing, setIsSummarizing] = useState(false);
   
@@ -286,18 +253,6 @@ export default function ChatArea() {
   const isKernelAdmin = useMemo(() => isGlobalAdmin(userProfile), [userProfile]);
   const isPremium = useMemo(() => isUserPremium(userProfile), [userProfile]);
 
-  const isParticipant = useMemo(() => {
-    return chat?.participantIds?.includes(firebaseUser?.uid || '');
-  }, [chat, firebaseUser]);
-
-  const canPost = useMemo(() => {
-    if (!chat || !firebaseUser) return false;
-    if (chat.type === 'channel') {
-      return chat.adminIds?.includes(firebaseUser.uid);
-    }
-    return isParticipant || isKernelAdmin;
-  }, [chat, firebaseUser, isParticipant, isKernelAdmin]);
-
   const otherId = useMemo(() => {
     if (chat?.type === 'private' && firebaseUser) {
       return chat.participantIds.find(id => id !== firebaseUser.uid);
@@ -311,34 +266,13 @@ export default function ChatArea() {
   const messagesQuery = useMemoFirebase(() => (!db || !currentChatId) ? null : query(collection(db, 'chats', currentChatId, 'messages'), orderBy('sentAt', 'asc')), [db, currentChatId]);
   const { data: messages } = useCollection<Message>(messagesQuery);
 
-  const participantIds = useMemo(() => chat?.participantIds || [], [chat?.participantIds]);
-  const participantsQuery = useMemoFirebase(() => {
-    if (!db || participantIds.length === 0) return null;
-    return query(collection(db, 'users'), where('id', 'in', participantIds.slice(0, 30)));
-  }, [db, participantIds]);
-  const { data: participants } = useCollection<UserType>(participantsQuery);
-
-  const typingUsers = useMemo(() => {
-    if (!chat?.typing || !participants || !firebaseUser) return [];
-    return Object.entries(chat.typing)
-      .filter(([uid, typing]) => typing && uid !== firebaseUser.uid)
-      .map(([uid]) => {
-        const p = participants.find(p => p.id === uid);
-        return p?.name || 'Аккаунт';
-      });
-  }, [chat?.typing, participants, firebaseUser]);
-
   const chatSubtext = useMemo(() => {
-    if (typingUsers.length > 0) {
-      if (typingUsers.length === 1) return `${typingUsers[0]} ${t('chat.typing')}...`;
-      return 'Несколько аккаунтов печатают...';
-    }
     if (chat?.type === 'private') {
       return formatLastSeen(otherProfile?.lastSeen, otherProfile?.settings?.privacy?.lastSeenVisibility, false, t('online'));
     }
     const count = chat?.participantIds?.length || 0;
     return `${count} участников`;
-  }, [chat, otherProfile, typingUsers, t]);
+  }, [chat, otherProfile, t]);
 
   const scrollToBottom = useCallback((behavior: ScrollBehavior = 'smooth') => {
     if (messagesEndRef.current) {
@@ -351,7 +285,7 @@ export default function ChatArea() {
   }, [currentChatId, scrollToBottom]);
 
   const handleSendMessage = useCallback(async (content_msg: string, type_msg: Message['contentType'] = 'text', minutes: number | null = null) => {
-    if (!content_msg.trim() || !currentChatId || !firebaseUser || !db || !canPost) return;
+    if (!content_msg.trim() || !currentChatId || !firebaseUser || !db) return;
     
     let finalContent = type_msg === 'text' ? encryptSignal(content_msg) : content_msg;
     if (type_msg === 'image' && !content_msg.startsWith('data:')) finalContent = await compressImage(content_msg, 800, 0.4);
@@ -378,7 +312,7 @@ export default function ChatArea() {
     updateDocumentNonBlocking(doc(db, 'chats', currentChatId), { lastMessageAt: new Date().toISOString(), lastSenderId: firebaseUser.uid });
     
     setTimeout(() => scrollToBottom('smooth'), 100);
-  }, [currentChatId, firebaseUser, db, userProfile, replyTo, canPost, scrollToBottom]);
+  }, [currentChatId, firebaseUser, db, userProfile, replyTo, scrollToBottom]);
 
   const handleScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
     const target = e.currentTarget;
@@ -419,10 +353,10 @@ export default function ChatArea() {
   const bgFit = userProfile?.settings?.chatBackgroundFit || 'cover';
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-background relative overflow-hidden z-20 max-w-full min-w-0">
+    <div className="flex-1 flex flex-col h-full bg-transparent relative overflow-hidden z-20 max-w-full min-w-0">
       {/* BACKGROUND LAYER */}
       <div 
-        className={cn("absolute inset-0 z-[1]", (!customBg || customBg.trim() === '') && "chat-pattern-bg")}
+        className={cn("fixed inset-0 z-[1] pointer-events-none", (!customBg || customBg.trim() === '') && "chat-pattern-bg")}
         style={customBg && customBg.trim() !== '' ? { 
           backgroundImage: `url("${customBg}")`, 
           backgroundSize: bgFit, 
@@ -459,13 +393,7 @@ export default function ChatArea() {
         {!isSearchMode && (
           <div className="flex items-center gap-1">
             {isPremium && (
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                onClick={handleSummary} 
-                disabled={isSummarizing}
-                className={cn("text-primary hover:text-white transition-colors", isSummarizing && "animate-spin")}
-              >
+              <Button variant="ghost" size="icon" onClick={handleSummary} disabled={isSummarizing} className={cn("text-primary hover:text-white transition-colors", isSummarizing && "animate-spin")}>
                 <Sparkles className="w-5 h-5" />
               </Button>
             )}
@@ -476,23 +404,11 @@ export default function ChatArea() {
       </header>
 
       <div className="flex-1 relative overflow-hidden flex flex-col min-w-0 z-10 bg-transparent">
-        <div 
-          ref={scrollContainerRef}
-          className="flex-1 w-full relative z-10 overflow-y-auto scrollbar-hide scroll-smooth" 
-          onScroll={handleScroll}
-        >
+        <div ref={scrollContainerRef} className="flex-1 w-full relative z-10 overflow-y-auto scrollbar-hide scroll-smooth" onScroll={handleScroll}>
           <MessageList 
-            messages={messages} 
-            userId={firebaseUser?.uid} 
-            chatId={currentChatId} 
-            onReply={setReplyTo} 
-            onEdit={setEditingMsg} 
-            onForward={setForwardingMessage} 
-            amIPremium={isPremium} 
-            isAdmin={isKernelAdmin} 
-            isGroup={chat?.type !== 'private'} 
-            searchQuery={searchQuery} 
-            viewerProfile={userProfile} 
+            messages={messages} userId={firebaseUser?.uid} chatId={currentChatId} 
+            onReply={setReplyTo} onForward={setForwardingMessage} amIPremium={isPremium} 
+            isAdmin={isKernelAdmin} isGroup={chat?.type !== 'private'} searchQuery={searchQuery} viewerProfile={userProfile} 
           />
           <div ref={messagesEndRef} className="h-4" />
         </div>
@@ -507,23 +423,11 @@ export default function ChatArea() {
         )}
       </div>
 
-      {(!isParticipant && !isKernelAdmin && chat) ? (
-        <div className="p-4 bg-primary/20 backdrop-blur-3xl border-t border-white/10 flex items-center justify-center shrink-0 z-30">
-          <Button onClick={() => setIsJoining(true)} disabled={isJoining} className="h-12 px-10 rounded-2xl bg-primary text-white font-black uppercase tracking-widest gap-2 shadow-2xl shadow-primary/40 transition-all hover:scale-105 active:scale-95">
-            {isJoining ? <Loader2 className="animate-spin w-4 h-4" /> : <><UserPlus className="w-5 h-5" /> Вступить в сообщество</>}
-          </Button>
-        </div>
-      ) : (
-        <ChatInputBar 
-          onSendMessage={handleSendMessage} 
-          canPost={canPost} 
-          onPollOpen={() => setIsPollModalOpen(true)}
-          currentChatId={currentChatId}
-          isPremium={isPremium}
-          messages={messages}
-          userProfile={userProfile}
-        />
-      )}
+      <ChatInputBar 
+        onSendMessage={handleSendMessage} canPost={true} 
+        onPollOpen={() => setIsPollModalOpen(true)} currentChatId={currentChatId}
+        isPremium={isPremium} messages={messages} userProfile={userProfile}
+      />
 
       {chat && <ChatInfoModal open={isChatInfoOpen} onOpenChange={setIsChatInfoOpen} chat={chat as any} />}
       {currentChatId && <CreatePollModal open={isPollModalOpen} onOpenChange={setIsPollModalOpen} chatId={currentChatId} />}

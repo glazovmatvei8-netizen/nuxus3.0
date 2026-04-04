@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, memo, useRef, useEffect, useMemo } from 'react';
@@ -30,7 +31,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useAppState } from '@/lib/store';
 import { transcribeVoice } from '@/ai/flows/voice-to-text-flow';
 import { synthesizeSpeech } from '@/ai/flows/text-to-speech-flow';
-import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogTitle, DialogPortal, DialogOverlay } from '@/components/ui/dialog';
 
 const QUICK_REACTIONS = ['👍', '❤️', '🔥', '😂', '😮', '😢', '👏'];
 
@@ -55,7 +56,7 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
   const ttsAudioRef = useRef<HTMLAudioElement | null>(null);
 
   const displayContent = useMemo(() => message.contentType === 'text' ? decryptSignal(message.content) : message.content, [message.content, message.contentType]);
-  const formattedTime = useMemo(() => message.sentAt ? format(new Date(message.sentAt), 'HH:mm') : '', [message.sentAt]);
+  const formattedTime = message.sentAt ? format(new Date(message.sentAt), 'HH:mm') : '';
 
   const isPremium = useMemo(() => isUserPremium(viewerProfile), [viewerProfile]);
 
@@ -107,38 +108,6 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
     }
   };
 
-  const handleTranslate = async () => {
-    if (!isPremium) {
-      toast({ title: "Premium функция", description: "Перевод доступен только Premium пользователям." });
-      return;
-    }
-    setIsTranslating(true);
-    setTimeout(() => {
-      setTranslatedText("Это сообщение было обработано ИИ-слоем Nuxus.");
-      setIsTranslating(false);
-      toast({ title: "Сообщение переведено" });
-    }, 800);
-  };
-
-  const handleSynthesize = async () => {
-    if (!isPremium) {
-      toast({ title: "Premium функция", description: "Озвучка доступна только Premium пользователям." });
-      return;
-    }
-    setIsSynthesizing(true);
-    try {
-      const { audioDataUri } = await synthesizeSpeech({ text: displayContent });
-      const audio = new Audio(audioDataUri);
-      ttsAudioRef.current = audio;
-      audio.play();
-      toast({ title: "Синтез завершен", description: "Воспроизведение голоса..." });
-    } catch (e) {
-      toast({ title: "Ошибка синтеза", variant: "destructive" });
-    } finally {
-      setIsSynthesizing(false);
-    }
-  };
-
   const toggleAudio = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (!audioInstance.current) {
@@ -171,7 +140,7 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
     if (message.contentType === 'image') return (
       <div 
         className="relative max-w-[300px] rounded-[1.8rem] overflow-hidden border border-white/10 shadow-2xl bg-black/40 cursor-pointer active:scale-[0.98] transition-all group"
-        onClick={(e) => { e.stopPropagation(); setIsMediaViewerOpen(true); }}
+        onClick={(e) => { e.preventDefault(); e.stopPropagation(); setIsMediaViewerOpen(true); }}
       >
         <img src={message.content} alt="Image" className="w-full h-auto object-cover max-h-[450px]" loading="lazy" />
         <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
@@ -183,7 +152,7 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
     if (message.contentType === 'video' || message.contentType === 'ai_video') return (
       <div 
         className="relative max-w-[300px] rounded-[1.8rem] overflow-hidden border border-white/10 shadow-2xl bg-black/40 cursor-pointer active:scale-[0.98] transition-all group"
-        onClick={(e) => { e.stopPropagation(); setIsMediaViewerOpen(true); }}
+        onClick={(e) => { e.preventDefault(); e.stopPropagation(); setIsMediaViewerOpen(true); }}
       >
         <video src={message.content} className="w-full h-auto max-h-[450px]" autoPlay muted loop playsInline />
         <div className="absolute top-3 right-3 bg-black/60 backdrop-blur-md p-1.5 rounded-full border border-white/10">
@@ -232,11 +201,6 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
       <div className="whitespace-pre-wrap text-[15px] break-words max-w-[320px] leading-[1.6] relative font-medium tracking-tight">
         {displayContent} 
         {message.editedAt && <span className="text-[8px] ml-2 text-primary/40 font-black uppercase tracking-widest">(sync)</span>}
-        {translatedText && (
-          <div className="mt-2 pt-2 border-t border-white/10 text-xs italic text-accent animate-in fade-in slide-in-from-top-1">
-            <Globe className="w-3 h-3 inline mr-1 mb-0.5" /> {translatedText}
-          </div>
-        )}
       </div>
     );
   };
@@ -322,17 +286,6 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
               <ContextMenuItem onClick={() => onReply(message)} className="gap-3 py-3 font-black text-[10px] uppercase tracking-[0.2em] rounded-xl transition-all"><CornerUpLeft className="w-4 h-4 text-primary" /> Ответить</ContextMenuItem>
               {isMe && <ContextMenuItem onClick={() => onEdit(message)} className="gap-3 py-3 font-black text-[10px] uppercase tracking-[0.2em] rounded-xl transition-all"><Edit2 className="w-4 h-4 text-primary" /> Изменить</ContextMenuItem>}
               <ContextMenuItem onClick={() => onForward(message)} className="gap-3 py-3 font-black text-[10px] uppercase tracking-[0.2em] rounded-xl transition-all"><Share2 className="w-4 h-4 text-primary" /> Переслать</ContextMenuItem>
-              {isPremium && message.contentType === 'text' && (
-                <>
-                  <ContextMenuItem onClick={handleTranslate} className="gap-3 py-3 font-black text-[10px] uppercase tracking-[0.2em] rounded-xl transition-all">
-                    {isTranslating ? <Loader2 className="w-4 h-4 animate-spin text-accent" /> : <Globe className="w-4 h-4 text-accent" />} Перевести
-                  </ContextMenuItem>
-                  <ContextMenuItem onClick={handleSynthesize} className="gap-3 py-3 font-black text-[10px] uppercase tracking-[0.2em] rounded-xl transition-all">
-                    {isSynthesizing ? <Loader2 className="w-4 h-4 animate-spin text-primary" /> : <Volume2 className="w-4 h-4 text-primary" />} Озвучить
-                  </ContextMenuItem>
-                </>
-              )}
-              {message.contentType === 'audio' && <ContextMenuItem onClick={handleTranscribe} className="gap-3 py-3 font-black text-[10px] uppercase tracking-[0.2em] rounded-xl transition-all"><Type className="w-4 h-4 text-accent" /> Расшифровать</ContextMenuItem>}
               <DropdownMenuSeparator className="bg-white/5 mx-2" />
               {(isMe || isAdmin) && (
                 <ContextMenuItem onClick={() => deleteDoc(doc(db!, 'chats', chatId, 'messages', message.id))} className="text-red-500 gap-3 py-3 font-black text-[10px] uppercase tracking-[0.2em] rounded-xl hover:bg-red-500/10 transition-all"><Trash2 className="w-4 h-4" /> Удалить</ContextMenuItem>
@@ -344,19 +297,25 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
     </div>
 
     <Dialog open={isMediaViewerOpen} onOpenChange={setIsMediaViewerOpen}>
-      <DialogContent className="max-w-4xl w-[95vw] h-[90vh] bg-black/95 border-none p-0 overflow-hidden flex flex-col items-center justify-center outline-none z-[3000] rounded-[2.5rem]">
-        <DialogTitle className="sr-only">Просмотр медиа</DialogTitle>
-        <button onClick={() => setIsMediaViewerOpen(false)} className="absolute top-6 right-6 z-50 h-12 w-12 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-all backdrop-blur-xl border border-white/10 shadow-2xl">
-          <X className="w-6 h-6" />
-        </button>
-        <div className="w-full h-full flex items-center justify-center p-4">
-          {message.contentType === 'video' || message.contentType === 'ai_video' ? (
-            <video src={message.content} className="max-w-full max-h-full rounded-2xl shadow-2xl" controls autoPlay loop />
-          ) : (
-            <img src={message.content} alt="Media" className="max-w-full max-h-full object-contain rounded-2xl shadow-2xl" />
-          )}
-        </div>
-      </DialogContent>
+      <DialogPortal>
+        <DialogOverlay className="fixed inset-0 bg-black/90 backdrop-blur-2xl z-[3000]" />
+        <DialogContent className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 max-w-4xl w-[95vw] h-[90vh] bg-transparent border-none p-0 overflow-hidden flex flex-col items-center justify-center outline-none z-[3100] rounded-[2.5rem]">
+          <DialogTitle className="sr-only">Просмотр медиа</DialogTitle>
+          <button 
+            onClick={(e) => { e.preventDefault(); setIsMediaViewerOpen(false); }} 
+            className="absolute top-6 right-6 z-[3200] h-12 w-12 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-all backdrop-blur-xl border border-white/10 shadow-2xl"
+          >
+            <X className="w-6 h-6" />
+          </button>
+          <div className="w-full h-full flex items-center justify-center p-4">
+            {message.contentType === 'video' || message.contentType === 'ai_video' ? (
+              <video src={message.content} className="max-w-full max-h-full rounded-2xl shadow-2xl" controls autoPlay loop />
+            ) : (
+              <img src={message.content} alt="Media" className="max-w-full max-h-full object-contain rounded-2xl shadow-2xl" />
+            )}
+          </div>
+        </DialogContent>
+      </DialogPortal>
     </Dialog>
     </>
   );
