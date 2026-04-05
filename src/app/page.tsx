@@ -6,12 +6,12 @@ import { useAppState } from '@/lib/store';
 import AuthScreen from '@/components/auth-screen';
 import ChatMain from '@/components/chat-main';
 import { Loader2, ShieldAlert, Lock, ArrowRight, ShieldCheck, Fingerprint, WifiOff, Globe, ZapOff, Zap } from 'lucide-react';
-import { doc, collection, query, where, limit, getDocs, arrayUnion, updateDoc, getDoc, setDoc } from 'firebase/firestore';
-import type { User as UserType, Chat, StickerPack } from '@/lib/types';
+import { doc, setDoc } from 'firebase/firestore';
+import type { User as UserType } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { signOut } from 'firebase/auth';
-import { useEffect, useState, useTransition } from 'react';
+import { useEffect, useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { isUserActuallyBanned } from '@/lib/utils';
 import { NuxusLogo } from '@/components/nuxus-logo';
@@ -22,7 +22,7 @@ export default function Home() {
   const { user, isUserLoading } = useUser();
   const db = useFirestore();
   const auth = useAuth();
-  const { setCurrentChatId, is2FAVerified, setIs2FAVerified } = useAppState();
+  const { is2FAVerified, setIs2FAVerified } = useAppState();
   const { toast } = useToast();
   const { t } = useTranslations();
   
@@ -71,9 +71,9 @@ export default function Home() {
   const isBanned = isUserActuallyBanned(profile);
 
   useEffect(() => {
-    // Only turn off initial load when we either have no user or we have user AND profile
-    if (!isUserLoading && (user ? !isProfileLoading : true)) {
-      const timer = setTimeout(() => setIsInitialLoad(false), 800);
+    // Robust load sequence to prevent ChunkLoadError timeouts
+    if (!isUserLoading && (!user || !isProfileLoading)) {
+      const timer = setTimeout(() => setIsInitialLoad(false), 500);
       return () => clearTimeout(timer);
     }
   }, [isUserLoading, user, isProfileLoading]);
@@ -90,7 +90,6 @@ export default function Home() {
 
   if (!mounted) return null;
 
-  // INITIAL LOADER ONLY (First app launch)
   if (isInitialLoad && (isUserLoading || (user && isProfileLoading))) {
     return (
       <div className="h-[100dvh] w-full flex flex-col items-center justify-center bg-[#020203] text-white relative overflow-hidden">
