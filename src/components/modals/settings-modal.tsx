@@ -69,6 +69,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
     chatBackground: '',
     chatBackgroundFit: 'cover' as 'cover' | 'contain',
     customAppIconUrl: '',
+    customPrimaryColor: '',
     statusEmoji: '',
     statusText: '',
     privacy: profile?.settings?.privacy || {
@@ -96,6 +97,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         chatBackground: profile.settings?.chatBackground || '',
         chatBackgroundFit: profile.settings?.chatBackgroundFit || 'cover',
         customAppIconUrl: profile.settings?.customAppIconUrl || '',
+        customPrimaryColor: profile.settings?.customPrimaryColor || '',
         statusEmoji: profile.statusEmoji || '',
         statusText: profile.statusText || '',
         privacy: profile.settings?.privacy || {
@@ -128,11 +130,12 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         'settings.chatBackground': form.chatBackground,
         'settings.chatBackgroundFit': form.chatBackgroundFit,
         'settings.customAppIconUrl': form.customAppIconUrl,
+        'settings.customPrimaryColor': form.customPrimaryColor,
         'settings.privacy': form.privacy,
         'settings.interfaceOverrides': form.interfaceOverrides
       });
       onOpenChange(false);
-      toast({ title: "Ядро обновлено V3.2.2" });
+      toast({ title: "Ядро обновлено V3.2.5" });
     } catch (e: any) {
       toast({ title: "Ошибка сохранения", variant: "destructive" });
     }
@@ -167,7 +170,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
       <DialogContent className="max-w-md bg-card border-border p-0 overflow-hidden h-[85vh] flex flex-col rounded-[2.5rem] shadow-2xl outline-none">
         <DialogHeader className="p-6 border-b border-white/5 shrink-0">
           <DialogTitle className="flex items-center gap-2 text-xl font-black italic uppercase tracking-tighter text-white">
-            <Settings2 className="w-5 h-5 text-primary" /> Параметры V3.2.2
+            <Settings2 className="w-5 h-5 text-primary" /> Параметры V3.2.5
           </DialogTitle>
         </DialogHeader>
         
@@ -226,6 +229,16 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                   </button>
                 </div>
               </div>
+
+              {isUserPremium(profile) && (
+                <div className="space-y-4 pt-4 border-t border-white/5">
+                  <Label className="text-[10px] font-black uppercase text-primary flex items-center gap-2"><PenTool className="w-3 h-3" /> Свой цвет Ядра (Hex)</Label>
+                  <div className="flex gap-2">
+                    <Input placeholder="#8B5CF6" value={form.customPrimaryColor} onChange={e => setForm({...form, customPrimaryColor: e.target.value})} className="bg-primary/5 border-primary/20 h-12 rounded-2xl text-center font-mono" maxLength={7} />
+                    <div className="w-12 h-12 rounded-2xl border border-white/10 shadow-lg" style={{ backgroundColor: form.customPrimaryColor || 'hsl(var(--primary))' }} />
+                  </div>
+                </div>
+              )}
 
               {isUserPremium(profile) && (
                 <div className="space-y-4 pt-4 border-t border-white/5">
@@ -322,7 +335,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
 
           <div className="p-6 border-t border-white/5 bg-muted/20 shrink-0 flex gap-3">
             <Button variant="ghost" className="h-14 w-14 rounded-2xl bg-destructive/10 text-destructive hover:bg-destructive hover:text-white transition-all" onClick={() => signOut(auth)}> <LogOut className="w-6 h-6" /></Button>
-            <Button className="flex-1 h-14 rounded-2xl font-black uppercase tracking-widest bg-primary shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all" onClick={handleSave}><Check className="w-5 h-5 mr-2" /> Применить V3.2.2</Button>
+            <Button className="flex-1 h-14 rounded-2xl font-black uppercase tracking-widest bg-primary shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all" onClick={handleSave}><Check className="w-5 h-5 mr-2" /> Применить V3.2.5</Button>
           </div>
         </Tabs>
       </DialogContent>

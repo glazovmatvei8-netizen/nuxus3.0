@@ -93,7 +93,7 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
     if (!file || !isPremium) return;
     
     setIsGeneratingVideo(true);
-    toast({ title: "Синтез видео запущен", description: "Нейросеть Veo анимирует ваше фото... (это может занять до 1 мин)" });
+    toast({ title: "Синтез видео запущен", description: "Нейросеть анимирует ваше фото... (это может занять до 1-2 мин)" });
     
     try {
       const reader = new FileReader();
@@ -101,13 +101,13 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
         const base64 = reader.result as string;
         try {
           const { videoDataUri } = await generateAiVideo({ photoDataUri: base64 });
-          if (!videoDataUri || !videoDataUri.startsWith('data:video')) {
+          if (!videoDataUri) {
             throw new Error("Signal Lost: Некорректный формат данных.");
           }
-          onSendMessage(videoDataUri, 'video', destructTimer);
+          onSendMessage(videoDataUri, 'ai_video', destructTimer);
           toast({ title: "Видео готово!", description: "Анимация успешно завершена." });
         } catch (err: any) {
-          toast({ title: "Ошибка синтеза", description: err.message || "Модель Veo сейчас перегружена. Попробуйте позже.", variant: "destructive" });
+          toast({ title: "Ошибка синтеза", description: err.message || "Сервер временно недоступен. Попробуйте позже.", variant: "destructive" });
         } finally {
           setIsGeneratingVideo(false);
         }
@@ -135,7 +135,7 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
                     {isGeneratingImg ? <Loader2 className="w-4 h-4 animate-spin" /> : <Palette className="w-4 h-4 text-accent" />} ИИ Рисование
                   </Button>
                   <Button variant="ghost" className="w-full justify-start gap-3 rounded-xl h-11 text-[10px] font-black uppercase tracking-widest text-white/80 hover:bg-white/5" onClick={() => videoGenInputRef.current?.click()} disabled={isGeneratingVideo}>
-                    {isGeneratingVideo ? <Loader2 className="w-4 h-4 animate-spin" /> : <VideoIcon className="w-4 h-4 text-purple-400" />} ИИ Видео (Veo)
+                    {isGeneratingVideo ? <Loader2 className="w-4 h-4 animate-spin" /> : <VideoIcon className="w-4 h-4 text-purple-400" />} ИИ Видео
                   </Button>
                 </>
               )}
@@ -202,7 +202,7 @@ const MessageList = memo(({
   }, [sortedMessages, searchQuery]);
 
   return (
-    <div className="flex flex-col gap-3 max-w-4xl mx-auto px-4 md:px-6 py-8 min-h-full touch-pan-y relative z-10 overflow-x-hidden">
+    <div className="flex flex-col gap-3 max-w-4xl mx-auto px-4 md:px-6 py-8 min-h-full touch-pan-y relative z-10 overflow-x-hidden bg-transparent">
       {filteredMessages.map((msg: Message) => (
         <MessageItem 
           key={msg.id} 
@@ -354,9 +354,9 @@ export default function ChatArea() {
 
   return (
     <div className="flex-1 flex flex-col h-full bg-transparent relative overflow-hidden z-20 max-w-full min-w-0">
-      {/* BACKGROUND LAYER */}
+      {/* BACKGROUND LAYER - ENSURED VISIBILITY */}
       <div 
-        className={cn("fixed inset-0 z-[1] pointer-events-none", (!customBg || customBg.trim() === '') && "chat-pattern-bg")}
+        className={cn("absolute inset-0 z-[-1] pointer-events-none transition-opacity duration-1000", (!customBg || customBg.trim() === '') && "chat-pattern-bg")}
         style={customBg && customBg.trim() !== '' ? { 
           backgroundImage: `url("${customBg}")`, 
           backgroundSize: bgFit, 
@@ -404,7 +404,7 @@ export default function ChatArea() {
       </header>
 
       <div className="flex-1 relative overflow-hidden flex flex-col min-w-0 z-10 bg-transparent">
-        <div ref={scrollContainerRef} className="flex-1 w-full relative z-10 overflow-y-auto scrollbar-hide scroll-smooth" onScroll={handleScroll}>
+        <div ref={scrollContainerRef} className="flex-1 w-full relative z-10 overflow-y-auto scrollbar-hide scroll-smooth bg-transparent" onScroll={handleScroll}>
           <MessageList 
             messages={messages} userId={firebaseUser?.uid} chatId={currentChatId} 
             onReply={setReplyTo} onForward={setForwardingMessage} amIPremium={isPremium} 

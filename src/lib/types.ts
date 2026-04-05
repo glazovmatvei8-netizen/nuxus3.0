@@ -74,6 +74,7 @@ export interface Message {
   metadata?: {
     bubbleStyle?: 'default' | 'neon' | 'gold' | 'ocean';
     aiModel?: string;
+    translation?: string;
     [key: string]: any;
   };
 }
@@ -149,6 +150,7 @@ export interface UserSettings {
   chatBackground: string;
   chatBackgroundFit?: 'cover' | 'contain';
   customAppIconUrl?: string;
+  customPrimaryColor?: string;
   bubbleStyle?: 'default' | 'neon' | 'gold' | 'ocean';
   messageSize: 'small' | 'medium' | 'large';
   privacy: UserPrivacy;

@@ -21,7 +21,7 @@ import {
 import { format, isAfter, parseISO } from 'date-fns';
 import { 
   CornerUpLeft, Trash2, Check, CheckCheck, Edit2, Copy, Pin, X, Share2, Play, Smile, Lock, Languages, Loader2, Image as ImageIcon,
-  MessageCircle, Star, Pause, ShieldCheck, Clock, Type, Globe, Volume2, Timer, Zap, Maximize2, Video as VideoIcon
+  MessageCircle, Star, Pause, ShieldCheck, Clock, Type, Globe, Volume2, Timer, Zap, Maximize2, Video as VideoIcon, Sparkles
 } from 'lucide-react';
 import { cn, decryptSignal, isGlobalAdmin, isUserPremium } from '@/lib/utils';
 import { doc, updateDoc, deleteDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
@@ -30,7 +30,7 @@ import { Button } from './ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { useAppState } from '@/lib/store';
 import { transcribeVoice } from '@/ai/flows/voice-to-text-flow';
-import { synthesizeSpeech } from '@/ai/flows/text-to-speech-flow';
+import { translateMessage } from '@/ai/flows/ai-translate-flow';
 import { Dialog, DialogContent, DialogTitle, DialogPortal, DialogOverlay } from '@/components/ui/dialog';
 
 const QUICK_REACTIONS = ['👍', '❤️', '🔥', '😂', '😮', '😢', '👏'];
@@ -47,13 +47,11 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
   const [duration, setDuration] = useState(0);
   const [isTranscribing, setIsTranscribing] = useState(false);
   const [transcribedText, setTranscribedText] = useState<string | null>(null);
-  const [translatedText, setTranslatedText] = useState<string | null>(null);
   const [isTranslating, setIsTranslating] = useState(false);
-  const [isSynthesizing, setIsSynthesizing] = useState(false);
+  const [translatedText, setTranslatedText] = useState<string | null>(message.metadata?.translation || null);
   const [isMediaViewerOpen, setIsMediaViewerOpen] = useState(false);
   
   const audioInstance = useRef<HTMLAudioElement | null>(null);
-  const ttsAudioRef = useRef<HTMLAudioElement | null>(null);
 
   const displayContent = useMemo(() => message.contentType === 'text' ? decryptSignal(message.content) : message.content, [message.content, message.contentType]);
   const formattedTime = message.sentAt ? format(new Date(message.sentAt), 'HH:mm') : '';
@@ -79,7 +77,6 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
 
     return () => { 
       if (audioInstance.current) { audioInstance.current.pause(); audioInstance.current = null; } 
-      if (ttsAudioRef.current) { ttsAudioRef.current.pause(); ttsAudioRef.current = null; }
     };
   }, [message.content, message.contentType, message.selfDestructAt, db, chatId, message.id]);
 
@@ -105,6 +102,26 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
       toast({ title: "Ошибка расшифровки", variant: "destructive" });
     } finally {
       setIsTranscribing(false);
+    }
+  };
+
+  const handleTranslate = async () => {
+    if (!isPremium) {
+      toast({ title: "Premium функция", description: "Перевод доступен только Premium пользователям." });
+      return;
+    }
+    if (message.contentType !== 'text') return;
+    setIsTranslating(true);
+    try {
+      const { translatedText: result } = await translateMessage({ text: displayContent, targetLang: 'Russian' });
+      setTranslatedText(result);
+      if (db && chatId) {
+        updateDoc(doc(db, 'chats', chatId, 'messages', message.id), { 'metadata.translation': result });
+      }
+    } catch (e) {
+      toast({ title: "Ошибка перевода", variant: "destructive" });
+    } finally {
+      setIsTranslating(false);
     }
   };
 
@@ -198,9 +215,19 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
     );
 
     return (
-      <div className="whitespace-pre-wrap text-[15px] break-words max-w-[320px] leading-[1.6] relative font-medium tracking-tight">
-        {displayContent} 
-        {message.editedAt && <span className="text-[8px] ml-2 text-primary/40 font-black uppercase tracking-widest">(sync)</span>}
+      <div className="flex flex-col gap-2">
+        <div className="whitespace-pre-wrap text-[15px] break-words max-w-[320px] leading-[1.6] relative font-medium tracking-tight">
+          {displayContent} 
+          {message.editedAt && <span className="text-[8px] ml-2 text-primary/40 font-black uppercase tracking-widest">(sync)</span>}
+        </div>
+        {translatedText && (
+          <div className="pt-2 border-t border-white/5 text-[13px] text-accent/80 italic font-bold">
+            <div className="flex items-center gap-1 text-[8px] uppercase font-black tracking-widest mb-1 text-accent/40">
+              <Sparkles className="w-2.5 h-2.5" /> AI Translation
+            </div>
+            {translatedText}
+          </div>
+        )}
       </div>
     );
   };
@@ -284,6 +311,11 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
                 ))}
               </div>
               <ContextMenuItem onClick={() => onReply(message)} className="gap-3 py-3 font-black text-[10px] uppercase tracking-[0.2em] rounded-xl transition-all"><CornerUpLeft className="w-4 h-4 text-primary" /> Ответить</ContextMenuItem>
+              {message.contentType === 'text' && (
+                <ContextMenuItem onClick={handleTranslate} disabled={isTranslating} className="gap-3 py-3 font-black text-[10px] uppercase tracking-[0.2em] rounded-xl transition-all">
+                  {isTranslating ? <Loader2 className="w-4 h-4 animate-spin text-accent" /> : <Globe className="w-4 h-4 text-accent" />} Перевести ИИ
+                </ContextMenuItem>
+              )}
               {isMe && <ContextMenuItem onClick={() => onEdit(message)} className="gap-3 py-3 font-black text-[10px] uppercase tracking-[0.2em] rounded-xl transition-all"><Edit2 className="w-4 h-4 text-primary" /> Изменить</ContextMenuItem>}
               <ContextMenuItem onClick={() => onForward(message)} className="gap-3 py-3 font-black text-[10px] uppercase tracking-[0.2em] rounded-xl transition-all"><Share2 className="w-4 h-4 text-primary" /> Переслать</ContextMenuItem>
               <DropdownMenuSeparator className="bg-white/5 mx-2" />
