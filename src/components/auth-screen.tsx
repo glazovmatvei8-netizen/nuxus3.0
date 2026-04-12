@@ -70,13 +70,19 @@ export default function AuthScreen() {
   };
 
   const createProfileRecord = async (uid: string, overrideData?: any) => {
-    const userRef = doc(db!, 'users', uid);
+    if (!db) return;
+    const userRef = doc(db, 'users', uid);
     const snap = await getDoc(userRef);
     
+    // Пытаемся взять имя из formData, если нет override
+    const finalName = overrideData?.name || formData.name || (formData.identifier ? `Node ${formData.identifier.slice(-4)}` : 'Nuxus User');
+    const baseUsername = (formData.username || formData.identifier || 'user').replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+    const finalUsername = overrideData?.username || (formData.username.startsWith('@') ? formData.username.toLowerCase() : '@' + (formData.username || baseUsername + Math.floor(Math.random()*1000)).toLowerCase());
+
     const profileData = {
       id: uid,
-      name: overrideData?.name || formData.name || 'Nuxus User',
-      username: overrideData?.username || (formData.username.startsWith('@') ? formData.username.toLowerCase() : '@' + (formData.username || 'user' + Math.floor(Math.random()*1000)).toLowerCase()),
+      name: finalName,
+      username: finalUsername,
       phone: overrideData?.phone || formData.identifier.replace(/\D/g, ''),
       createdAt: snap.exists() ? snap.data().createdAt : new Date().toISOString(),
       isPremium: snap.exists() ? snap.data().isPremium : (overrideData?.isPremium || false),
@@ -91,7 +97,7 @@ export default function AuthScreen() {
 
     if (!snap.exists() && referralId && referralId !== uid) {
       try { 
-        await updateDoc(doc(db!, 'users', referralId), { referralCount: increment(1) }); 
+        await updateDoc(doc(db, 'users', referralId), { referralCount: increment(1) }); 
       } catch (refErr) {}
     }
     return profileData;
@@ -137,11 +143,9 @@ export default function AuthScreen() {
         const snap = await getDoc(userRef);
         
         if (!snap.exists()) {
-          await createProfileRecord(cred.user.uid, {
-            name: 'Recovered Node',
-            phone: formData.identifier.replace(/\D/g, '')
-          });
-          toast({ title: "Аккаунт восстановлен" });
+          // Если зашли, но профиля нет - создаем его на основе логина
+          await createProfileRecord(cred.user.uid);
+          toast({ title: "Профиль синхронизирован" });
         }
 
         if (snap.exists() && snap.data().twoFactorEnabled) setIs2FAVerified(false);
@@ -185,7 +189,7 @@ export default function AuthScreen() {
           <div className="relative w-48 h-1 bg-white/5 rounded-full overflow-hidden">
             <div className="absolute inset-0 bg-primary animate-[scanline_2s_linear_infinite]" />
           </div>
-          <p className="text-[10px] font-black uppercase tracking-[0.8em] text-primary/60 animate-pulse ml-[0.8em]">Account Recovery Sync...</p>
+          <p className="text-[10px] font-black uppercase tracking-[0.8em] text-primary/60 animate-pulse ml-[0.8em]">Account Sync...</p>
         </div>
       </div>
     );
@@ -193,11 +197,9 @@ export default function AuthScreen() {
 
   return (
     <div className="min-h-[100dvh] w-full flex flex-col items-center justify-center bg-[#020203] p-4 relative overflow-hidden">
-      {/* Cinematic Background Mesh */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
         <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_0%_0%,rgba(45,10,85,0.4)_0%,transparent_50%),radial-gradient(circle_at_100%_100%,rgba(10,60,80,0.3)_0%,transparent_50%)]" />
         <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/black-thread.png')] opacity-10 mix-blend-overlay" />
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_0%,rgba(0,0,0,0.4)_100%)]" />
       </div>
 
       <div className="w-full max-w-[380px] relative z-10 flex flex-col items-center animate-in fade-in zoom-in duration-1000">
@@ -210,10 +212,10 @@ export default function AuthScreen() {
           
           <CardHeader className="text-center pb-2 pt-10 px-8">
             <CardTitle className="text-3xl font-black tracking-tighter uppercase italic text-white leading-none drop-shadow-[0_0_15px_rgba(168,85,247,0.4)]">
-              {mode === 'recover' ? 'Restore' : mode === 'setup2fa' ? 'Quantum' : mode === 'login' ? t('app.signal') : 'Create'}
+              {mode === 'recover' ? 'Restore' : mode === 'setup2fa' ? 'Quantum' : mode === 'login' ? 'V4.0 Access' : 'Create'}
             </CardTitle>
             <CardDescription className="text-primary/80 font-black tracking-[0.5em] uppercase text-[8px] opacity-60 mt-3 ml-[0.5em]">
-              {mode === 'setup2fa' ? 'Protection Key' : mode === 'recover' ? 'Neural recovery' : t('app.kernel') + ' Access Layer'}
+              {mode === 'setup2fa' ? 'Protection Key' : mode === 'recover' ? 'Neural recovery' : 'Nuxus Kernel Entry'}
             </CardDescription>
           </CardHeader>
 
@@ -247,7 +249,7 @@ export default function AuthScreen() {
                   <ShieldAlert className="w-16 h-16 text-accent animate-float mx-auto relative z-10" />
                 </div>
                 <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/80 px-4 leading-relaxed">
-                  Для восстановления доступа к узлу обратитесь к Владельцу {t('app.name')} Prime через защищенный канал.
+                  Для восстановления доступа к узлу обратитесь в поддержку Nuxus.
                 </p>
                 <Button variant="outline" onClick={() => setMode('login')} className="w-full h-14 rounded-[1.5rem] border-white/10 text-[10px] uppercase font-black tracking-[0.3em] hover:bg-white/5 transition-all">Вернуться</Button>
               </div>
@@ -257,16 +259,16 @@ export default function AuthScreen() {
                   <div className="grid grid-cols-2 gap-3">
                     <div className="space-y-1.5">
                       <Label className="text-[8px] uppercase font-black text-primary/60 ml-3 tracking-widest">Имя</Label>
-                      <Input placeholder="Node Name" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="bg-white/5 border-white/10 h-12 rounded-[1.2rem] text-xs font-bold border-2" required />
+                      <Input placeholder="Ваше Имя" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="bg-white/5 border-white/10 h-12 rounded-[1.2rem] text-xs font-bold border-2" required />
                     </div>
                     <div className="space-y-1.5">
                       <Label className="text-[8px] uppercase font-black text-primary/60 ml-3 tracking-widest">ID</Label>
-                      <Input placeholder="node_id" value={formData.username} onChange={e => setFormData({...formData, username: e.target.value})} className="bg-white/5 border-white/10 h-12 rounded-[1.2rem] text-xs font-mono border-2" required />
+                      <Input placeholder="никнейм" value={formData.username} onChange={e => setFormData({...formData, username: e.target.value})} className="bg-white/5 border-white/10 h-12 rounded-[1.2rem] text-xs font-mono border-2" required />
                     </div>
                   </div>
                 )}
                 <div className="space-y-1.5">
-                  <Label className="text-[8px] uppercase font-black text-primary/60 ml-3 tracking-widest">Аккаунт / Телефон</Label>
+                  <Label className="text-[8px] uppercase font-black text-primary/60 ml-3 tracking-widest">Логин / Телефон</Label>
                   <Input placeholder="+7 (___) ___ __ __" value={formData.identifier} onChange={e => setFormData({...formData, identifier: e.target.value})} className="bg-white/5 border-white/10 h-12 rounded-[1.2rem] text-sm font-bold tracking-widest border-2" required />
                 </div>
                 <div className="space-y-1.5">
@@ -279,7 +281,7 @@ export default function AuthScreen() {
                     <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
                     {isLoading ? <Loader2 className="animate-spin w-5 h-5" /> : (
                       <span className="flex items-center gap-2">
-                        {mode === 'login' ? `Вход в ${t('app.name')}` : "Создать Узел"}
+                        {mode === 'login' ? `Вход в Nuxus` : "Создать Узел"}
                         <Zap className="w-4 h-4 fill-current" />
                       </span>
                     )}
@@ -300,12 +302,6 @@ export default function AuthScreen() {
             )}
           </CardContent>
         </Card>
-
-        {/* Legal Links */}
-        <div className="mt-10 flex gap-8 opacity-30">
-          <button onClick={() => setLegalModal({ open: true, type: 'terms' })} className="text-[9px] font-black uppercase tracking-[0.2em] hover:text-primary transition-all hover:scale-110">Условия</button>
-          <button onClick={() => setLegalModal({ open: true, type: 'privacy' })} className="text-[9px] font-black uppercase tracking-[0.2em] hover:text-primary transition-all hover:scale-110">Приватность</button>
-        </div>
       </div>
       <LegalModal open={legalModal.open} onOpenChange={(o) => setLegalModal({ ...legalModal, open: o })} type={legalModal.type} />
     </div>

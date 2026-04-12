@@ -2,7 +2,7 @@
 'use server';
 /**
  * @fileOverview A Genkit flow for generating AI videos using Veo 3.0 model.
- * Enhanced stability and error handling for V3.2.6.
+ * Enhanced stability and error handling for V4.0.
  */
 
 import { ai } from '@/ai/genkit';
