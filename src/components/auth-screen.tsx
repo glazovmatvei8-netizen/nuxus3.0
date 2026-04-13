@@ -22,18 +22,22 @@ import { LegalModal } from './modals/legal-modal';
 import { cn } from '@/lib/utils';
 import { useTranslations } from '@/hooks/use-translations';
 
-type AuthMode = 'login' | 'register' | 'recover' | 'setup2fa' | 'recovering';
+export type AuthMode = 'login' | 'register' | 'recover' | 'setup2fa' | 'recovering';
 
 const MASTER_DOMAIN = '@nuxus.chat';
 
-export default function AuthScreen() {
+interface AuthScreenProps {
+  initialMode?: AuthMode;
+}
+
+export default function AuthScreen({ initialMode = 'login' }: AuthScreenProps) {
   const auth = useAuth();
   const db = useFirestore();
   const { toast } = useToast();
   const { setIs2FAVerified } = useAppState();
   const { t } = useTranslations();
   
-  const [mode, setMode] = useState<AuthMode>('login');
+  const [mode, setMode] = useState<AuthMode>(initialMode);
   const [isLoading, setIsLoading] = useState(false);
   const [referralId, setReferralId] = useState<string | null>(null);
   
@@ -75,15 +79,17 @@ export default function AuthScreen() {
     const snap = await getDoc(userRef);
     
     // Пытаемся взять имя из formData, если нет override
-    const finalName = overrideData?.name || formData.name || (formData.identifier ? `Node ${formData.identifier.slice(-4)}` : 'Nuxus User');
-    const baseUsername = (formData.username || formData.identifier || 'user').replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
-    const finalUsername = overrideData?.username || (formData.username.startsWith('@') ? formData.username.toLowerCase() : '@' + (formData.username || baseUsername + Math.floor(Math.random()*1000)).toLowerCase());
+    const fallbackName = formData.identifier ? `Node ${formData.identifier.slice(-4)}` : `User ${uid.slice(0, 4)}`;
+    const finalName = overrideData?.name || formData.name || (snap.exists() ? snap.data().name : fallbackName);
+    
+    const baseUsername = (formData.username || formData.identifier || `user${uid.slice(0, 3)}`).replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+    const finalUsername = overrideData?.username || (formData.username ? (formData.username.startsWith('@') ? formData.username.toLowerCase() : '@' + formData.username.toLowerCase()) : (snap.exists() ? snap.data().username : `@${baseUsername}`));
 
     const profileData = {
       id: uid,
       name: finalName,
       username: finalUsername,
-      phone: overrideData?.phone || formData.identifier.replace(/\D/g, ''),
+      phone: overrideData?.phone || formData.identifier.replace(/\D/g, '') || (snap.exists() ? snap.data().phone : ''),
       createdAt: snap.exists() ? snap.data().createdAt : new Date().toISOString(),
       isPremium: snap.exists() ? snap.data().isPremium : (overrideData?.isPremium || false),
       premiumUntil: snap.exists() ? snap.data().premiumUntil : (overrideData?.premiumUntil || null),
@@ -143,7 +149,6 @@ export default function AuthScreen() {
         const snap = await getDoc(userRef);
         
         if (!snap.exists()) {
-          // Если зашли, но профиля нет - создаем его на основе логина
           await createProfileRecord(cred.user.uid);
           toast({ title: "Профиль синхронизирован" });
         }

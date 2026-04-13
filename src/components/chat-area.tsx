@@ -188,7 +188,7 @@ const MessageList = memo(({
 }: any) => {
   const sortedMessages = useMemo(() => {
     if (!messages) return [];
-    return [...messages].sort((a, b) => new Date(a.sentAt).getTime() - new Date(b.createdAt).getTime());
+    return [...messages].sort((a, b) => new Date(a.sentAt).getTime() - new Date(b.sentAt).getTime());
   }, [messages]);
   
   const filteredMessages = useMemo(() => {
