@@ -5,19 +5,29 @@ import React from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { FileText, ShieldCheck, Scale, Globe, Lock, ShieldAlert, Cpu, Database, Server, Key, EyeOff, Gavel, Zap, Info, HelpCircle } from 'lucide-react';
+import { ShieldCheck, Scale, Lock, Database, HelpCircle, MessageCircle, Zap, ShieldAlert } from 'lucide-react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { Button } from '@/components/ui/button';
+import { useAppState } from '@/lib/store';
 
-export function LegalModal({ open, onOpenChange, type }: { open: boolean, onOpenChange: (o: boolean) => void, type: 'privacy' | 'terms' }) {
+export function LegalModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void, type?: 'privacy' | 'terms' }) {
+  const { setInspectedUserId } = useAppState();
+
+  const handleContactSupport = () => {
+    // Открываем профиль главного администратора
+    setInspectedUserId('GCvLucN8CjNcdaxPO2vmpZ84hNl1');
+    onOpenChange(false);
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl bg-[#0a0a0c] border-white/10 rounded-[2.5rem] p-0 overflow-hidden shadow-2xl flex flex-col h-[85vh]">
+      <DialogContent className="max-w-2xl bg-[#0a0a0c] border-white/10 rounded-[2.5rem] p-0 overflow-hidden shadow-2xl flex flex-col h-[85vh] outline-none">
         <DialogHeader className="p-6 border-b border-white/5 shrink-0">
           <DialogTitle className="text-xl font-black uppercase italic text-white flex items-center gap-3">
             <ShieldCheck className="w-6 h-6 text-primary" /> База Знаний Ядра
           </DialogTitle>
           <DialogDescription className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">
-            Nuxus Kernel v2.9.0 — Help & Support Center
+            Nuxus Kernel v4.1.2 — Technical Support
           </DialogDescription>
         </DialogHeader>
 
@@ -38,30 +48,38 @@ export function LegalModal({ open, onOpenChange, type }: { open: boolean, onOpen
                 
                 <Accordion type="single" collapsible className="space-y-2">
                   <AccordionItem value="item-1" className="border-white/5 px-4 rounded-2xl bg-white/[0.02]">
-                    <AccordionTrigger className="text-[11px] font-bold uppercase text-white/80 hover:no-underline">Как работает сквозное шифрование (E2EE)?</AccordionTrigger>
+                    <AccordionTrigger className="text-[11px] font-bold uppercase text-white/80 hover:no-underline">Как работает шифрование QES?</AccordionTrigger>
                     <AccordionContent className="text-[10px] text-muted-foreground leading-relaxed">
-                      Все ваши текстовые сообщения шифруются протоколом QES на вашем устройстве. Только получатель имеет ключ для дешифровки пакета. Ядро (сервер) видит только зашифрованный шум.
+                      Все ваши текстовые сообщения шифруются протоколом QES на вашем устройстве. Только получатель имеет ключ для дешифровки. Ядро видит только зашифрованный шум.
                     </AccordionContent>
                   </AccordionItem>
 
                   <AccordionItem value="item-2" className="border-white/5 px-4 rounded-2xl bg-white/[0.02]">
-                    <AccordionTrigger className="text-[11px] font-bold uppercase text-white/80 hover:no-underline">Почему лимит медиа — 100 МБ?</AccordionTrigger>
+                    <AccordionTrigger className="text-[11px] font-bold uppercase text-white/80 hover:no-underline">Как получить статус Premium?</AccordionTrigger>
                     <AccordionContent className="text-[10px] text-muted-foreground leading-relaxed">
-                      Для обеспечения высокой скорости синхронизации и стабильности на мобильных устройствах мы установили лимит в 100 МБ для высококачественных фото и видео (HQ).
+                      Статус Premium открывает доступ к ИИ-видео, кастомным цветам и расшифровке голоса. Для активации обратитесь к Оператору Ядра.
                     </AccordionContent>
                   </AccordionItem>
 
                   <AccordionItem value="item-3" className="border-white/5 px-4 rounded-2xl bg-white/[0.02]">
-                    <AccordionTrigger className="text-[11px] font-bold uppercase text-white/80 hover:no-underline">Как работает реферальная программа?</AccordionTrigger>
+                    <AccordionTrigger className="text-[11px] font-bold uppercase text-white/80 hover:no-underline">Что такое Signal QR?</AccordionTrigger>
                     <AccordionContent className="text-[10px] text-muted-foreground leading-relaxed">
-                      Вы можете скопировать свою уникальную ссылку в профиле. За каждого нового пользователя, активировавшего аккаунт по вашей ссылке, вы получаете бонусные баллы активности в Ядре.
+                      Это ваш персональный идентификатор. При сканировании другим пользователем, он мгновенно попадает в ваш профиль для начала защищенного чата.
                     </AccordionContent>
                   </AccordionItem>
                 </Accordion>
 
-                <div className="p-6 bg-primary/5 rounded-3xl border border-primary/10 mt-8">
-                  <h4 className="text-[10px] font-black uppercase text-primary mb-2">Нужна прямая поддержка?</h4>
-                  <p className="text-[9px] text-muted-foreground uppercase font-bold leading-relaxed">Отправьте сообщение в чат @nuxus_support или обратитесь к Оператору Ядра через тикет-систему.</p>
+                <div className="p-6 bg-primary/10 rounded-3xl border border-primary/20 mt-8 space-y-4">
+                  <div className="space-y-1">
+                    <h4 className="text-[11px] font-black uppercase text-white">Нужна прямая помощь?</h4>
+                    <p className="text-[9px] text-muted-foreground uppercase font-bold leading-relaxed">Нажмите кнопку ниже, чтобы открыть чат с Администратором Ядра.</p>
+                  </div>
+                  <Button 
+                    onClick={handleContactSupport}
+                    className="w-full h-12 bg-primary text-white rounded-xl font-black uppercase tracking-widest gap-2 shadow-lg shadow-primary/20"
+                  >
+                    <MessageCircle className="w-4 h-4" /> Связаться с Оператором
+                  </Button>
                 </div>
               </div>
             </ScrollArea>
@@ -73,24 +91,22 @@ export function LegalModal({ open, onOpenChange, type }: { open: boolean, onOpen
                 <section className="space-y-4">
                   <h3 className="text-white font-black uppercase tracking-wider flex items-center gap-2"><Scale className="w-4 h-4 text-primary" /> УСЛОВИЯ ИСПОЛЬЗОВАНИЯ</h3>
                   <div className="text-[11px] leading-relaxed space-y-2 uppercase font-bold">
-                    <p>1. СОГЛАШЕНИЕ С УСЛОВИЯМИ: ИСПОЛЬЗУЯ NUXUS KERNEL, ВЫ ПОДТВЕРЖДАЕТЕ СВОЕ СОГЛАСИЕ С ДАННЫМИ ПРАВИЛАМИ.</p>
-                    <p>2. ОТВЕТСТВЕННОСТЬ: ПОЛЬЗОВАТЕЛЬ НЕСЕТ ПОЛНУЮ ОТВЕТСТВЕННОСТЬ ЗА ПЕРЕДАВАЕМЫЙ КОНТЕНТ. ЯДРО ОБЕСПЕЧИВАЕТ ТРАНСПОРТНУЮ БЕЗОПАСНОСТЬ.</p>
-                    <p>3. ПРАВИЛА СООБЩЕСТВА: ЗАПРЕЩЕНА ЛЮБАЯ ДЕЯТЕЛЬНОСТЬ, НАРУШАЮЩАЯ ЦЕЛОСТНОСТЬ СИСТЕМЫ ИЛИ ПРАВА ДРУГИХ ПОЛЬЗОВАТЕЛЕЙ.</p>
+                    <p>1. СОГЛАШЕНИЕ: ИСПОЛЬЗУЯ NUXUS, ВЫ ПОДТВЕРЖДАЕТЕ СОГЛАСИЕ С ЦИФРОВЫМ РЕГЛАМЕНТОМ.</p>
+                    <p>2. КОНТЕНТ: ВЫ НЕСЕТЕ ПОЛНУЮ ОТВЕТСТВЕННОСТЬ ЗА ЛЮБОЙ ПЕРЕДАВАЕМЫЙ СИГНАЛ.</p>
+                    <p>3. БЕЗОПАСНОСТЬ: ЗАПРЕЩЕНЫ ЛЮБЫЕ ПОПЫТКИ ВЗЛОМА ИЛИ ДЕСТАБИЛИЗАЦИИ ЯДРА.</p>
                   </div>
                 </section>
 
                 <section className="space-y-4">
-                  <h3 className="text-white font-black uppercase tracking-wider flex items-center gap-2"><Lock className="w-4 h-4 text-primary" /> ПОЛИТИКА КОНФИДЕНЦИАЛЬНОСТИ</h3>
+                  <h3 className="text-white font-black uppercase tracking-wider flex items-center gap-2"><Lock className="w-4 h-4 text-primary" /> КОНФИДЕНЦИАЛЬНОСТЬ</h3>
                   <div className="text-[11px] leading-relaxed space-y-2 uppercase font-bold">
-                    <p>1. МИНИМИЗАЦИЯ ДАННЫХ: МЫ НЕ ХРАНИМ ВАШИ СООБЩЕНИЯ В ОТКРЫТОМ ВИДЕ. ВСЕ ДАННЫЕ ШИФРУЮТСЯ КЛИЕНТСКИМ КЛЮЧОМ.</p>
-                    <p>2. IP-АДРЕСА: ЛОГИ IP-АДРЕСОВ ИСПОЛЬЗУЮТСЯ ТОЛЬКО ДЛЯ ПРЕДОТВРАЩЕНИЯ АТАК И УДАЛЯЮТСЯ ПОСЛЕ ЗАВЕРШЕНИЯ СЕССИИ.</p>
-                    <p>3. ТРЕТЬИ ЛИЦА: ВАШИ ДАННЫЕ НИКОГДА НЕ ПЕРЕДАЮТСЯ РЕКЛАМНЫМ АГЕНТСТВАМ ИЛИ СТОРОННИМ СЕРВИСАМ.</p>
+                    <p>МЫ НЕ СОБИРАЕМ ВАШИ ДАННЫЕ ДЛЯ РЕКЛАМЫ. ВСЯ ИНФОРМАЦИЯ ШИФРУЕТСЯ И ПРИНАДЛЕЖИТ ТОЛЬКО ВАМ.</p>
                   </div>
                 </section>
 
                 <section className="space-y-4">
-                  <h3 className="text-white font-black uppercase tracking-wider flex items-center gap-2"><Database className="w-4 h-4 text-primary" /> ПРИНЦИПЫ ЯДРА</h3>
-                  <p>Ядро Nuxus оперирует на базе децентрализованной архитектуры. Все метаданные обрабатываются в режиме реального времени и не подлежат долгосрочному хранению на физических носителях.</p>
+                  <h3 className="text-white font-black uppercase tracking-wider flex items-center gap-2"><Database className="w-4 h-4 text-primary" /> ДАННЫЕ</h3>
+                  <p className="text-[10px] uppercase font-bold">Логи IP-адресов удаляются автоматически после завершения каждой сессии.</p>
                 </section>
               </div>
             </ScrollArea>
