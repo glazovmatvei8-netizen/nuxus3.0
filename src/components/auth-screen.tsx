@@ -73,17 +73,24 @@ export default function AuthScreen({ initialMode = 'login' }: AuthScreenProps) {
     return `${input.toLowerCase()}${MASTER_DOMAIN}`;
   };
 
+  /**
+   * Исправленная логика создания профиля.
+   * Больше никаких "Recovered Node" и случайных ID.
+   */
   const createProfileRecord = async (uid: string, overrideData?: any) => {
     if (!db) return;
     const userRef = doc(db, 'users', uid);
     const snap = await getDoc(userRef);
     
-    // Пытаемся взять имя из formData, если нет override
-    const fallbackName = formData.identifier ? `Node ${formData.identifier.slice(-4)}` : `User ${uid.slice(0, 4)}`;
-    const finalName = overrideData?.name || formData.name || (snap.exists() ? snap.data().name : fallbackName);
+    // Интеллектуальный выбор имени: из формы -> из старой записи -> из идентификатора
+    const idName = formData.identifier ? `Node ${formData.identifier.slice(-4)}` : `User ${uid.slice(0, 4)}`;
+    const finalName = overrideData?.name || formData.name || (snap.exists() ? snap.data().name : idName);
     
+    // Формирование юзернейма
     const baseUsername = (formData.username || formData.identifier || `user${uid.slice(0, 3)}`).replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
-    const finalUsername = overrideData?.username || (formData.username ? (formData.username.startsWith('@') ? formData.username.toLowerCase() : '@' + formData.username.toLowerCase()) : (snap.exists() ? snap.data().username : `@${baseUsername}`));
+    const finalUsername = overrideData?.username || 
+      (formData.username ? (formData.username.startsWith('@') ? formData.username.toLowerCase() : '@' + formData.username.toLowerCase()) : 
+      (snap.exists() ? snap.data().username : `@${baseUsername}`));
 
     const profileData = {
       id: uid,
@@ -133,11 +140,7 @@ export default function AuthScreen({ initialMode = 'login' }: AuthScreenProps) {
           if (regErr.code === 'auth/email-already-in-use') {
             setMode('recovering');
             const cred = await signInWithEmailAndPassword(auth, virtualEmail, formData.password);
-            const userRef = doc(db!, 'users', cred.user.uid);
-            const snap = await getDoc(userRef);
-            if (!snap.exists()) {
-              await createProfileRecord(cred.user.uid);
-            }
+            await createProfileRecord(cred.user.uid);
             setIs2FAVerified(true);
           } else {
             throw regErr;
@@ -153,7 +156,8 @@ export default function AuthScreen({ initialMode = 'login' }: AuthScreenProps) {
           toast({ title: "Профиль синхронизирован" });
         }
 
-        if (snap.exists() && snap.data().twoFactorEnabled) setIs2FAVerified(false);
+        const currentProfile = (await getDoc(userRef)).data();
+        if (currentProfile?.twoFactorEnabled) setIs2FAVerified(false);
         else setIs2FAVerified(true);
       }
     } catch (err: any) {

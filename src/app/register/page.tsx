@@ -6,6 +6,9 @@ import { useUser } from '@/firebase';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 
+/**
+ * Прямой маршрут для регистрации новых узлов.
+ */
 export default function RegisterPage() {
   const { user, isUserLoading } = useUser();
   const router = useRouter();
