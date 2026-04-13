@@ -22,7 +22,7 @@ export default function Home() {
   const { user, isUserLoading } = useUser();
   const db = useFirestore();
   const auth = useAuth();
-  const { is2FAVerified, setIs2FAVerified } = useAppState();
+  const { is2FAVerified, setIs2FAVerified, setInspectedUserId } = useAppState();
   const { toast } = useToast();
   const { t } = useTranslations();
   
@@ -42,6 +42,19 @@ export default function Home() {
     };
     checkIos();
   }, []);
+
+  // Handle deep links / ref codes for logged in users
+  useEffect(() => {
+    if (user && mounted) {
+      const params = new URLSearchParams(window.location.search);
+      const ref = params.get('ref');
+      if (ref && ref !== user.uid) {
+        setInspectedUserId(ref);
+        // Clear param without reload
+        window.history.replaceState({}, document.title, "/");
+      }
+    }
+  }, [user, mounted, setInspectedUserId]);
 
   useEffect(() => {
     if (!user || !db || !mounted) return;
@@ -71,7 +84,6 @@ export default function Home() {
   const isBanned = isUserActuallyBanned(profile);
 
   useEffect(() => {
-    // Robust load sequence to prevent ChunkLoadError timeouts
     if (!isUserLoading && (!user || !isProfileLoading)) {
       const timer = setTimeout(() => setIsInitialLoad(false), 500);
       return () => clearTimeout(timer);
@@ -112,7 +124,7 @@ export default function Home() {
                 {t('initializing')}
               </p>
               <p className="text-[8px] font-black uppercase tracking-[0.5em] text-white/20 ml-[0.5em]">
-                {t('app.kernel')} V3.2.1
+                {t('app.kernel')} V4.1.0
               </p>
             </div>
           </div>

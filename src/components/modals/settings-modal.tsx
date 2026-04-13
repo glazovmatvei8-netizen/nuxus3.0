@@ -135,7 +135,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         'settings.interfaceOverrides': form.interfaceOverrides
       });
       onOpenChange(false);
-      toast({ title: "Ядро обновлено V4.0.1" });
+      toast({ title: "Ядро обновлено V4.1.0" });
     } catch (e: any) {
       toast({ title: "Ошибка сохранения", variant: "destructive" });
     }
@@ -172,7 +172,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
       <DialogContent className="max-w-md bg-card border-border p-0 overflow-hidden h-[85vh] flex flex-col rounded-[2.5rem] shadow-2xl outline-none">
         <DialogHeader className="p-6 border-b border-white/5 shrink-0">
           <DialogTitle className="flex items-center gap-2 text-xl font-black italic uppercase tracking-tighter text-white">
-            <Settings2 className="w-5 h-5 text-primary" /> Параметры V4.0.1
+            <Settings2 className="w-5 h-5 text-primary" /> Параметры V4.1.0
           </DialogTitle>
         </DialogHeader>
         
@@ -232,40 +232,53 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                 </div>
               </div>
 
-              {isPremium && (
-                <div className="space-y-4 pt-4 border-t border-white/5 animate-in slide-in-from-top-2">
-                  <Label className="text-[10px] font-black uppercase text-primary flex items-center gap-2"><PenTool className="w-3 h-3" /> Свой цвет Ядра (Hex)</Label>
-                  <div className="flex gap-2">
-                    <Input placeholder="#8B5CF6" value={form.customPrimaryColor} onChange={e => setForm({...form, customPrimaryColor: e.target.value})} className="bg-primary/5 border-primary/20 h-12 rounded-2xl text-center font-mono" maxLength={7} />
-                    <div className="w-12 h-12 rounded-2xl border border-white/10 shadow-lg" style={{ backgroundColor: form.customPrimaryColor || 'hsl(var(--primary))' }} />
-                  </div>
+              <div className={cn("space-y-4 pt-4 border-t border-white/5 transition-all duration-500", !isPremium && "opacity-40 grayscale")}>
+                <Label className="text-[10px] font-black uppercase text-primary flex items-center gap-2"><PenTool className="w-3 h-3" /> Свой цвет Ядра (Premium)</Label>
+                <div className="flex gap-2">
+                  <Input 
+                    placeholder="#8B5CF6" 
+                    value={form.customPrimaryColor} 
+                    onChange={e => setForm({...form, customPrimaryColor: e.target.value})} 
+                    className="bg-primary/5 border-primary/20 h-12 rounded-2xl text-center font-mono" 
+                    maxLength={7}
+                    disabled={!isPremium}
+                  />
+                  <div className="w-12 h-12 rounded-2xl border border-white/10 shadow-lg" style={{ backgroundColor: form.customPrimaryColor || 'hsl(var(--primary))' }} />
                 </div>
-              )}
+                {!isPremium && <p className="text-[8px] font-bold uppercase text-primary/60 text-center">Функция требует активный Premium</p>}
+              </div>
 
-              {isPremium && (
-                <div className="space-y-4 pt-4 border-t border-white/5 animate-in slide-in-from-top-2">
-                  <Label className="text-[10px] font-black uppercase text-primary flex items-center gap-2"><MessageSquare className="w-3 h-3" /> Стиль пузырей сообщений</Label>
-                  <div className="grid grid-cols-2 gap-2">
-                    {BUBBLE_STYLES.map(style => (
-                      <button key={style.id} onClick={() => setForm({...form, bubbleStyle: style.id})} className={cn("flex items-center gap-3 p-3 rounded-xl border transition-all", form.bubbleStyle === style.id ? "bg-primary/10 border-primary" : "bg-white/5 border-white/5")}>
-                        <div className={cn("w-4 h-4 rounded-full", style.color)} />
-                        <span className="text-[10px] font-bold text-white uppercase">{style.name}</span>
-                      </button>
-                    ))}
-                  </div>
+              <div className={cn("space-y-4 pt-4 border-t border-white/5 transition-all duration-500", !isPremium && "opacity-40 grayscale")}>
+                <Label className="text-[10px] font-black uppercase text-primary flex items-center gap-2"><MessageSquare className="w-3 h-3" /> Стиль пузырей сообщений</Label>
+                <div className="grid grid-cols-2 gap-2">
+                  {BUBBLE_STYLES.map(style => (
+                    <button 
+                      key={style.id} 
+                      onClick={() => isPremium && setForm({...form, bubbleStyle: style.id})} 
+                      disabled={!isPremium && style.premium}
+                      className={cn("flex items-center gap-3 p-3 rounded-xl border transition-all", form.bubbleStyle === style.id ? "bg-primary/10 border-primary" : "bg-white/5 border-white/5")}
+                    >
+                      <div className={cn("w-4 h-4 rounded-full", style.color)} />
+                      <span className="text-[10px] font-bold text-white uppercase">{style.name}</span>
+                    </button>
+                  ))}
                 </div>
-              )}
+              </div>
 
-              {isPremium && (
-                <div className="space-y-4 pt-4 border-t border-white/5 animate-in slide-in-from-top-2">
-                  <Label className="text-[10px] font-black uppercase text-primary flex items-center gap-2"><ImageIcon className="w-3 h-3" /> Свой фон чата</Label>
-                  <Input placeholder="URL изображения (https://...)" value={form.chatBackground} onChange={e => setForm({...form, chatBackground: e.target.value})} className="bg-primary/5 border-primary/20 h-12 rounded-2xl text-xs" />
-                  <div className="grid grid-cols-2 gap-2">
-                    <button onClick={() => setForm({...form, chatBackgroundFit: 'cover'})} className={cn("h-9 rounded-xl border text-[9px] font-black uppercase", form.chatBackgroundFit === 'cover' ? "bg-primary border-primary text-white" : "bg-white/5 border-white/5 text-muted-foreground")}>Заполнить</button>
-                    <button onClick={() => setForm({...form, chatBackgroundFit: 'contain'})} className={cn("h-9 rounded-xl border text-[9px] font-black uppercase", form.chatBackgroundFit === 'contain' ? "bg-primary border-primary text-white" : "bg-white/5 border-white/5 text-muted-foreground")}>По центру</button>
-                  </div>
+              <div className={cn("space-y-4 pt-4 border-t border-white/5 transition-all duration-500", !isPremium && "opacity-40 grayscale")}>
+                <Label className="text-[10px] font-black uppercase text-primary flex items-center gap-2"><ImageIcon className="w-3 h-3" /> Свой фон чата</Label>
+                <Input 
+                  placeholder="URL изображения (https://...)" 
+                  value={form.chatBackground} 
+                  onChange={e => setForm({...form, chatBackground: e.target.value})} 
+                  className="bg-primary/5 border-primary/20 h-12 rounded-2xl text-xs" 
+                  disabled={!isPremium}
+                />
+                <div className="grid grid-cols-2 gap-2">
+                  <button onClick={() => isPremium && setForm({...form, chatBackgroundFit: 'cover'})} className={cn("h-9 rounded-xl border text-[9px] font-black uppercase", form.chatBackgroundFit === 'cover' ? "bg-primary border-primary text-white" : "bg-white/5 border-white/5 text-muted-foreground")}>Заполнить</button>
+                  <button onClick={() => isPremium && setForm({...form, chatBackgroundFit: 'contain'})} className={cn("h-9 rounded-xl border text-[9px] font-black uppercase", form.chatBackgroundFit === 'contain' ? "bg-primary border-primary text-white" : "bg-white/5 border-white/5 text-muted-foreground")}>По центру</button>
                 </div>
-              )}
+              </div>
 
               <div className="space-y-4 pt-4 border-t border-white/5">
                 <Label className="text-[10px] uppercase font-black text-muted-foreground flex items-center gap-2"><Paintbrush className="w-3 h-3" /> Цветовая схема</Label>
@@ -330,6 +343,15 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                   <Crown className="w-12 h-12 text-accent fill-accent mx-auto mb-4 drop-shadow-[0_0_15px_rgba(168,85,250,0.6)]" />
                   <h3 className="text-xl font-black uppercase italic text-white tracking-tight">Nuxus Premium</h3>
                   <p className="text-[10px] text-muted-foreground uppercase font-black mt-2 leading-relaxed">{isPremium ? `Активен до: ${new Date(profile!.premiumUntil!).toLocaleDateString()}` : 'Откройте полный потенциал Ядра'}</p>
+                  
+                  <div className="mt-8 space-y-3 text-left">
+                    <PremiumFeature icon={Zap} label="AI Video Synthesis" desc="Анимируйте фото с Veo 3.0" />
+                    <PremiumFeature icon={Palette} label="Custom Branding" desc="Свой цвет Ядра и фоны чатов" />
+                    <PremiumFeature icon={Sparkles} label="AI Signal Translation" desc="Мгновенный перевод сообщений" />
+                    <PremiumFeature icon={Ghost} label="Ghost Mode" desc="Скрытие онлайн-статуса" />
+                    <PremiumFeature icon={Diamond} label="Exclusive Badges" desc="Статус Star у профиля" />
+                    <PremiumFeature icon={Type} label="Voice Transcription" desc="Перевод аудио в текст" />
+                  </div>
                 </div>
               </div>
             </TabsContent>
@@ -337,7 +359,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
 
           <div className="p-6 border-t border-white/5 bg-muted/20 shrink-0 flex gap-3">
             <Button variant="ghost" className="h-14 w-14 rounded-2xl bg-destructive/10 text-destructive hover:bg-destructive hover:text-white transition-all" onClick={() => signOut(auth)}> <LogOut className="w-6 h-6" /></Button>
-            <Button className="flex-1 h-14 rounded-2xl font-black uppercase tracking-widest bg-primary shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all" onClick={handleSave}><Check className="w-5 h-5 mr-2" /> Применить V4.0.1</Button>
+            <Button className="flex-1 h-14 rounded-2xl font-black uppercase tracking-widest bg-primary shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all" onClick={handleSave}><Check className="w-5 h-5 mr-2" /> Применить V4.1.0</Button>
           </div>
         </Tabs>
       </DialogContent>
@@ -350,6 +372,20 @@ function OverrideInput({ label, keyName, value, onChange }: any) {
     <div className="space-y-1.5">
       <Label className="text-[9px] uppercase font-black text-muted-foreground ml-1">{label}</Label>
       <Input placeholder={label} value={value?.[keyName] || ''} onChange={e => onChange(keyName, e.target.value)} className="bg-black/20 border-white/5 h-11 rounded-xl text-xs" />
+    </div>
+  );
+}
+
+function PremiumFeature({ icon: Icon, label, desc }: { icon: any, label: string, desc: string }) {
+  return (
+    <div className="flex items-center gap-4 bg-white/5 p-3 rounded-2xl border border-white/5">
+      <div className="bg-primary/20 p-2 rounded-xl">
+        <Icon className="w-4 h-4 text-primary" />
+      </div>
+      <div className="flex flex-col">
+        <span className="text-[11px] font-black text-white uppercase tracking-tight">{label}</span>
+        <span className="text-[9px] text-muted-foreground font-bold uppercase">{desc}</span>
+      </div>
     </div>
   );
 }
