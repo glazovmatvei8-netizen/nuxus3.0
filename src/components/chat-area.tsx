@@ -354,7 +354,7 @@ export default function ChatArea() {
 
   return (
     <div className="flex-1 flex flex-col h-full bg-transparent relative overflow-hidden z-20 max-w-full min-w-0">
-      {/* BACKGROUND LAYER - FIXED VISIBILITY */}
+      {/* BACKGROUND LAYER - FIXED LAYER ORDER */}
       <div 
         className={cn("absolute inset-0 z-[-1] pointer-events-none transition-opacity duration-1000", (!customBg || customBg.trim() === '') && "chat-pattern-bg")}
         style={customBg && customBg.trim() !== '' ? { 
