@@ -52,17 +52,16 @@ export function useCollection<T = any>(
   const [error, setError] = useState<FirestoreError | Error | null>(null);
 
   useEffect(() => {
+    // Reset data on ref change to avoid stale collection content
+    setData(null);
+
     if (!memoizedTargetRefOrQuery) {
-      setData(null);
       setIsLoading(false);
       setError(null);
       return;
     }
 
-    // Only set loading if we don't have data yet to prevent flickering on fast switches
-    if (!data) {
-      setIsLoading(true);
-    }
+    setIsLoading(true);
     setError(null);
 
     const unsubscribe = onSnapshot(

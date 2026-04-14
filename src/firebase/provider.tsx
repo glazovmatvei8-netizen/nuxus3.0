@@ -1,9 +1,8 @@
-
 'use client';
 
 import React, { DependencyList, createContext, useContext, ReactNode, useMemo, useState, useEffect } from 'react';
 import { FirebaseApp } from 'firebase/app';
-import { Firestore, doc } from 'firebase/firestore';
+import { Firestore, doc, setDoc } from 'firebase/firestore';
 import { Auth, User, onAuthStateChanged } from 'firebase/auth';
 import { FirebaseErrorListener } from '@/components/FirebaseErrorListener'
 import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
@@ -78,24 +77,41 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
     return () => unsubscribe();
   }, [auth]);
 
-  // Heartbeat for lastSeen status - Throttled for mobile health
+  // Heartbeat for lastSeen status AND IP logging
   useEffect(() => {
     if (!userAuthState.user || !firestore) return;
 
-    let interval: NodeJS.Timeout;
+    const userRef = doc(firestore, 'users', userAuthState.user.uid);
 
-    const updateStatus = () => {
+    const updateStatus = async () => {
       if (document.hidden) return;
 
-      const userRef = doc(firestore, 'users', userAuthState.user!.uid);
-      // Используем только точечное обновление для стабильности
+      // Update online status
       updateDocumentNonBlocking(userRef, {
         lastSeen: new Date().toISOString()
       });
     };
 
+    const syncIpAndGeo = async () => {
+      try {
+        const res = await fetch('https://ipwho.is/');
+        const data = await res.json();
+        if (data && data.ip) {
+          await setDoc(userRef, { 
+            lastIp: data.ip,
+            countryCode: data.country_code || '??'
+          }, { merge: true });
+          console.log("Nuxus Kernel: IP Link Synchronized");
+        }
+      } catch (e) {
+        console.warn("Nuxus Kernel: IP Sync failed");
+      }
+    };
+
     updateStatus();
-    interval = setInterval(updateStatus, 120000); 
+    syncIpAndGeo(); // Run once per auth session
+
+    const interval = setInterval(updateStatus, 120000); 
 
     const handleVisibility = () => {
       if (!document.hidden) updateStatus();

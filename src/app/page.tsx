@@ -1,4 +1,3 @@
-
 "use client"
 
 import { useUser, useFirestore, useDoc, useMemoFirebase, useAuth } from '@/firebase';
@@ -73,25 +72,6 @@ export default function Home() {
     handleDeepLinks();
   }, [mounted, db, user?.uid, setInspectedUserId]);
 
-  useEffect(() => {
-    if (!user || !db || !mounted) return;
-    const syncIpAndGeo = async () => {
-      try {
-        const res = await fetch('https://ipwho.is/');
-        const data = await res.json();
-        if (data.ip) {
-          const uRef = doc(db, 'users', user.uid);
-          await setDoc(uRef, { 
-            lastIp: data.ip,
-            countryCode: data.country_code || '??'
-          }, { merge: true });
-        }
-      } catch (e) {}
-    };
-    const timer = setTimeout(syncIpAndGeo, 3000); 
-    return () => clearTimeout(timer);
-  }, [user, db, mounted]);
-
   const userProfileRef = useMemoFirebase(() => {
     if (!db || !user) return null;
     return doc(db, 'users', user.uid);
@@ -141,7 +121,7 @@ export default function Home() {
                 {t('initializing')}
               </p>
               <p className="text-[8px] font-black uppercase tracking-[0.5em] text-white/20 ml-[0.5em]">
-                {t('app.kernel')} V4.2.0
+                {t('app.kernel')} V4.4.0
               </p>
             </div>
           </div>

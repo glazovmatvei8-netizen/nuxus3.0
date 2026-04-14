@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, memo, useRef, useEffect, useMemo } from 'react';
@@ -264,7 +263,8 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
       <div className={cn("flex gap-4 max-w-[92%] items-end", isMe ? "flex-row-reverse" : "flex-row")}>
         {!isMe && (
           <div className="cursor-pointer active:scale-90 transition-transform relative group" onClick={() => setInspectedUserId(message.senderId)}>
-            <UserAvatar userId={message.senderId} className="h-10 w-10 shrink-0 border-2 border-white/5 shadow-lg relative z-10" fallbackName={message.senderName} />
+            {/* Added key={message.senderId} to force re-render and prevent stale avatar glitches */}
+            <UserAvatar key={message.senderId} userId={message.senderId} className="h-10 w-10 shrink-0 border-2 border-white/5 shadow-lg relative z-10" fallbackName={message.senderName} />
           </div>
         )}
         <div className={cn("flex flex-col min-w-0 max-w-full", isMe ? "items-end" : "items-start")}>

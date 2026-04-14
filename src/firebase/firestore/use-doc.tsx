@@ -37,16 +37,16 @@ export function useDoc<T = any>(
   const [error, setError] = useState<FirestoreError | Error | null>(null);
 
   useEffect(() => {
+    // Reset data when the reference changes to prevent showing stale data from previous doc
+    setData(null);
+    
     if (!memoizedDocRef) {
-      setData(null);
       setIsLoading(false);
       setError(null);
       return;
     }
 
-    if (!data) {
-      setIsLoading(true);
-    }
+    setIsLoading(true);
     setError(null);
 
     const unsubscribe = onSnapshot(
