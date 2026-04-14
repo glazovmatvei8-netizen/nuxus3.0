@@ -8,6 +8,7 @@ import { useEffect } from 'react';
 
 /**
  * Прямой маршрут для регистрации новых узлов.
+ * Исправлено: гарантированный экспорт для Next.js App Router.
  */
 export default function RegisterPage() {
   const { user, isUserLoading } = useUser();
@@ -15,7 +16,12 @@ export default function RegisterPage() {
 
   useEffect(() => {
     if (user && !isUserLoading) {
-      router.push('/');
+      const target = sessionStorage.getItem('nuxus_pending_target');
+      if (target) {
+        router.push(`/?u=${target}`);
+      } else {
+        router.push('/');
+      }
     }
   }, [user, isUserLoading, router]);
 

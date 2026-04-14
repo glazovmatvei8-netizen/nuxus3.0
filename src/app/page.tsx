@@ -6,12 +6,12 @@ import { useAppState } from '@/lib/store';
 import AuthScreen from '@/components/auth-screen';
 import ChatMain from '@/components/chat-main';
 import { Loader2, ShieldAlert, Lock, ArrowRight, ShieldCheck, Fingerprint, WifiOff, Globe, ZapOff, Zap } from 'lucide-react';
-import { doc, setDoc } from 'firebase/firestore';
+import { doc, setDoc, collection, query, where, getDocs, limit } from 'firebase/firestore';
 import type { User as UserType } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { signOut } from 'firebase/auth';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { isUserActuallyBanned } from '@/lib/utils';
 import { NuxusLogo } from '@/components/nuxus-logo';
@@ -43,18 +43,35 @@ export default function Home() {
     checkIos();
   }, []);
 
-  // Handle deep links / ref codes for logged in users
+  // Neural Link: Обработка параметров u (username) и ref (UID)
   useEffect(() => {
-    if (user && mounted) {
+    if (!mounted || !db) return;
+
+    const handleDeepLinks = async () => {
       const params = new URLSearchParams(window.location.search);
       const ref = params.get('ref');
-      if (ref && ref !== user.uid) {
+      const usernameParam = params.get('u');
+
+      if (ref && ref !== user?.uid) {
         setInspectedUserId(ref);
-        // Clear param without reload
         window.history.replaceState({}, document.title, "/");
+      } else if (usernameParam) {
+        try {
+          const cleanUsername = usernameParam.startsWith('@') ? usernameParam.toLowerCase() : '@' + usernameParam.toLowerCase();
+          const q = query(collection(db, 'users'), where('username', '==', cleanUsername), limit(1));
+          const snap = await getDocs(q);
+          if (!snap.empty && snap.docs[0].id !== user?.uid) {
+            setInspectedUserId(snap.docs[0].id);
+          }
+          window.history.replaceState({}, document.title, "/");
+        } catch (e) {
+          console.warn("Nuxus Neural Link: Failed to resolve username");
+        }
       }
-    }
-  }, [user, mounted, setInspectedUserId]);
+    };
+
+    handleDeepLinks();
+  }, [mounted, db, user?.uid, setInspectedUserId]);
 
   useEffect(() => {
     if (!user || !db || !mounted) return;
@@ -124,7 +141,7 @@ export default function Home() {
                 {t('initializing')}
               </p>
               <p className="text-[8px] font-black uppercase tracking-[0.5em] text-white/20 ml-[0.5em]">
-                {t('app.kernel')} V4.1.0
+                {t('app.kernel')} V4.2.0
               </p>
             </div>
           </div>
