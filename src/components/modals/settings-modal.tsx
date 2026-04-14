@@ -1,7 +1,7 @@
 
 "use client"
 
-import React, { useState, useRef, useEffect, Suspense } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -13,7 +13,7 @@ import { useAuth, useUser, useFirestore, useDoc, useMemoFirebase } from '@/fireb
 import { UserAvatar } from '@/components/user-avatar';
 import { 
   LogOut, Palette, Check, Settings2, Camera, Lock, Image as ImageIcon, 
-  Paintbrush, Shield, Monitor, Fingerprint, Sparkles, Star, Ghost, Type, PenTool, Zap, Diamond, Crown
+  Paintbrush, Shield, Monitor, Fingerprint, Sparkles, Star, Ghost, Type, PenTool, Zap, Diamond, Crown, Sun, Moon, MessageSquare
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { signOut } from 'firebase/auth';
@@ -224,7 +224,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                     <Moon className={cn("w-6 h-6", form.appearance === 'dark' ? "text-primary" : "text-muted-foreground")} /><span className="text-[10px] font-black uppercase tracking-widest">Тёмная</span>
                   </button>
                   <button onClick={() => setForm({...form, appearance: 'light'})} className={cn("flex flex-col items-center gap-2 p-4 rounded-2xl border transition-all", form.appearance === 'light' ? "bg-primary/10 border-primary shadow-[0_0_15px_rgba(168,85,247,0.2)]" : "bg-muted/20 border-white/5")}>
-                    <Suspense fallback={<div className="w-6 h-6" />}><Sun className={cn("w-6 h-6", form.appearance === 'light' ? "text-primary" : "text-muted-foreground")} /></Suspense><span className="text-[10px] font-black uppercase tracking-widest">Светлая</span>
+                    <Sun className={cn("w-6 h-6", form.appearance === 'light' ? "text-primary" : "text-muted-foreground")} /><span className="text-[10px] font-black uppercase tracking-widest">Светлая</span>
                   </button>
                 </div>
               </div>

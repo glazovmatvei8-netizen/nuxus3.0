@@ -7,6 +7,7 @@ import { useEffect } from 'react';
 /**
  * Квантовый Редиректор для коротких ссылок (VK Style).
  * Перехватывает пути вида /username и перенаправляет на главную с параметром поиска.
+ * Исправлено: расширенный список зарезервированных путей для предотвращения конфликтов.
  */
 export default function UsernameRedirect() {
   const router = useRouter();
@@ -17,7 +18,11 @@ export default function UsernameRedirect() {
     if (!username) return;
 
     // Список зарезервированных системных путей, которые не являются юзернеймами
-    const reserved = ['login', 'register', 'api', '_next', 'favicon.ico', 'manifest.json', 'sw.js', 'wallet', 'music', 'games'];
+    const reserved = [
+      'login', 'register', 'api', '_next', 'favicon.ico', 
+      'manifest.json', 'sw.js', 'wallet', 'music', 'games', 
+      'calls', 'profile', 'archive', 'discovery', 'static'
+    ];
     
     if (!reserved.includes(username.toLowerCase())) {
       // Сохраняем цель в sessionStorage для восстановления после логина, если нужно
