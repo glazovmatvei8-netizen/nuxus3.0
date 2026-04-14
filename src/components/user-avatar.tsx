@@ -60,12 +60,12 @@ export const UserAvatar = memo(({ userId, className, fallbackName, fallbackClass
   }, [displayAvatar, userId]);
 
   return (
-    <div className="relative inline-block shrink-0 will-change-transform">
+    <div className={cn("relative inline-flex items-center justify-center shrink-0 will-change-transform", className)}>
       <div className={cn(
-        "rounded-full p-[2px] transition-all",
+        "rounded-full p-[2px] transition-all w-full h-full flex items-center justify-center",
         premium ? "bg-gradient-to-tr from-primary via-accent to-primary animate-[spin_4s_linear_infinite] shadow-[0_0_15px_rgba(168,85,247,0.4)]" : ""
       )}>
-        <Avatar className={cn("shrink-0 relative overflow-hidden bg-background", className)}>
+        <Avatar className={cn("shrink-0 relative overflow-hidden bg-background w-full h-full", !premium && className)}>
           {displayAvatar && !imgError ? (
             <Image 
               src={displayAvatar} 

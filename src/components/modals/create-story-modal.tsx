@@ -1,16 +1,17 @@
 
 "use client"
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useMemo } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Camera, Send, X, Loader2, Zap, FileUp } from 'lucide-react';
-import { useUser, useFirestore } from '@/firebase';
-import { collection, addDoc } from 'firebase/firestore';
+import { Camera, Send, X, Loader2, Zap, FileUp, ShieldAlert } from 'lucide-react';
+import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
+import { collection, addDoc, doc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
-import { compressImage } from '@/lib/utils';
+import { compressImage, isUserPremium } from '@/lib/utils';
 import { addHours } from 'date-fns';
+import type { User } from '@/lib/types';
 
 export function CreateStoryModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const { user } = useUser();
@@ -18,17 +19,26 @@ export function CreateStoryModal({ open, onOpenChange }: { open: boolean, onOpen
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const userRef = useMemoFirebase(() => (!db || !user) ? null : doc(db, 'users', user.uid), [db, user]);
+  const { data: profile } = useDoc<User>(userRef);
+
   const [isLoading, setIsLoading] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
   const [preview, setPreview] = useState<string | null>(null);
   const [type, setType] = useState<'image' | 'video'>('image');
   const [caption, setCaption] = useState('');
 
+  const isPremium = useMemo(() => isUserPremium(profile), [profile]);
+
   const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!isPremium) {
+      toast({ title: "Доступ ограничен", description: "Нужен Premium статус", variant: "destructive" });
+      return;
+    }
+
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Увеличен лимит до 100 МБ для Premium пользователей (симуляция)
     const limit = 100 * 1024 * 1024;
     if (file.size > limit) {
       toast({ title: "Файл слишком большой", description: "Лимит Ядра — 100МБ", variant: "destructive" });
@@ -48,11 +58,15 @@ export function CreateStoryModal({ open, onOpenChange }: { open: boolean, onOpen
   const handleCreate = async () => {
     if (!db || !user || !preview || isPublishing) return;
     
+    if (!isPremium) {
+      toast({ title: "Ошибка прав", description: "Требуется Premium статус", variant: "destructive" });
+      return;
+    }
+
     setIsPublishing(true);
     try {
       let finalContent = preview;
       if (type === 'image') {
-        // Улучшенное сжатие для E2EE мессенджера
         finalContent = await compressImage(preview, 1200, 0.7);
       }
 
@@ -86,12 +100,24 @@ export function CreateStoryModal({ open, onOpenChange }: { open: boolean, onOpen
             <Zap className="w-5 h-5 text-primary" /> Новый Момент
           </DialogTitle>
           <DialogDescription className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">
-            HQ Медиа пакет до 100МБ
+            {isPremium ? 'HQ Медиа пакет до 100МБ' : 'Требуется статус Premium'}
           </DialogDescription>
         </DialogHeader>
 
         <div className="flex-1 relative flex flex-col p-4 items-center justify-center bg-white/[0.02] min-h-0 overflow-y-auto">
-          {(isLoading || isPublishing) && !preview ? (
+          {!isPremium ? (
+            <div className="flex flex-col items-center gap-6 text-center px-8">
+              <div className="w-20 h-20 rounded-[2rem] bg-primary/10 flex items-center justify-center">
+                <ShieldAlert className="w-10 h-10 text-primary" />
+              </div>
+              <div className="space-y-2">
+                <h3 className="text-lg font-black uppercase italic text-white">Доступ заблокирован</h3>
+                <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest leading-relaxed">
+                  Публикация Моментов доступна только узлам с активным Premium статусом.
+                </p>
+              </div>
+            </div>
+          ) : (isLoading || isPublishing) && !preview ? (
             <div className="flex flex-col items-center gap-4">
               <Loader2 className="w-10 h-10 text-primary animate-spin" />
               <p className="text-[10px] font-black uppercase tracking-widest">Шифрование пакета...</p>
@@ -124,11 +150,17 @@ export function CreateStoryModal({ open, onOpenChange }: { open: boolean, onOpen
         </div>
 
         <div className="p-6 pb-10 space-y-4 bg-[#0a0a0c] border-t border-white/5 shrink-0">
-          <Input placeholder="Добавить подпись к моменту..." value={caption} onChange={e => setCaption(e.target.value)} disabled={isPublishing} className="bg-white/5 border-white/5 h-12 rounded-2xl text-center" />
+          <Input 
+            placeholder="Добавить подпись к моменту..." 
+            value={caption} 
+            onChange={e => setCaption(e.target.value)} 
+            disabled={isPublishing || !isPremium} 
+            className="bg-white/5 border-white/5 h-12 rounded-2xl text-center" 
+          />
           <Button 
             className="w-full h-14 bg-primary text-white rounded-2xl font-black uppercase italic tracking-widest shadow-xl shadow-primary/20"
             onClick={handleCreate}
-            disabled={!preview || isPublishing}
+            disabled={!preview || isPublishing || !isPremium}
           >
             {isPublishing ? <Loader2 className="w-5 h-5 animate-spin" /> : <><Send className="w-5 h-5 mr-2" /> Опубликовать</>}
           </Button>

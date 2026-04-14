@@ -8,16 +8,18 @@ import { collection, query, where, orderBy, doc } from 'firebase/firestore';
 import { UserAvatar } from './user-avatar';
 import { Plus, Loader2 } from 'lucide-react';
 import type { Story, User } from '@/lib/types';
-import { cn, formatDisplayName } from '@/lib/utils';
+import { cn, formatDisplayName, isUserPremium } from '@/lib/utils';
 import { StoryViewerModal } from './modals/story-viewer-modal';
+import { useToast } from '@/hooks/use-toast';
 
 /**
- * Nuxus Moments Bar v2.0
- * Оптимизированная лента историй в стиле Telegram.
+ * Nuxus Moments Bar v2.5
+ * Оптимизированная лента историй. Только для Premium.
  */
 export function StoriesBar() {
   const { user } = useUser();
   const db = useFirestore();
+  const { toast } = useToast();
   const { setIsCreateStoryOpen, setStoriesToView } = useAppState();
 
   const userRef = useMemoFirebase(() => (!db || !user) ? null : doc(db, 'users', user.uid), [db, user]);
@@ -49,25 +51,38 @@ export function StoriesBar() {
   const myStories = user ? groupedStories[user.uid] || [] : [];
   const otherUserIds = Object.keys(groupedStories).filter(uid => uid !== user?.uid);
 
+  const handleAddStory = () => {
+    if (!isUserPremium(profile)) {
+      toast({
+        title: "Premium функция",
+        description: "Публикация Моментов доступна только владельцам Premium статуса.",
+        variant: "destructive"
+      });
+      return;
+    }
+    setIsCreateStoryOpen(true);
+  };
+
   return (
     <div className="flex gap-4 p-4 overflow-x-auto scrollbar-hide bg-transparent border-b border-white/5 shrink-0 relative z-20">
       {/* Кнопка "Моя история" (Всегда первая) */}
       <div 
         className="flex flex-col items-center gap-1.5 shrink-0 group cursor-pointer" 
-        onClick={() => myStories.length > 0 ? setStoriesToView(myStories) : setIsCreateStoryOpen(true)}
+        onClick={() => myStories.length > 0 ? setStoriesToView(myStories) : handleAddStory()}
       >
         <div className={cn(
-          "relative h-[68px] w-[68px] rounded-full p-[2.5px] transition-all duration-500",
+          "relative h-[68px] w-[68px] rounded-full p-[2px] transition-all duration-500",
           myStories.length > 0 
             ? "bg-gradient-to-tr from-[#34C759] via-[#007AFF] to-[#AF52DE] shadow-[0_0_15px_rgba(52,199,89,0.3)] animate-pulse" 
             : "bg-white/10 group-hover:bg-white/20"
         )}>
-          <div className="rounded-full h-full w-full overflow-hidden relative bg-[#0a0a0c] p-[2px]">
+          <div className="rounded-full h-full w-full overflow-hidden relative bg-[#0a0a0c] flex items-center justify-center">
             <UserAvatar 
               userId={user?.uid} 
-              className="h-full w-full border-none scale-110" 
+              className="h-full w-full border-none" 
               manualAvatarUrl={profile?.avatarUrl}
               fallbackName={profile?.name || profile?.username || 'Я'}
+              fallbackClassName="text-xl"
             />
           </div>
           {myStories.length === 0 && (
@@ -115,19 +130,20 @@ function StoryCircle({ userId, stories, onView, currentUserId }: { userId: strin
   return (
     <div className="flex flex-col items-center gap-1.5 shrink-0 cursor-pointer active:scale-95 transition-transform" onClick={onView}>
       <div className={cn(
-        "h-[68px] w-[68px] rounded-full p-[2.5px] transition-all duration-500",
+        "h-[68px] w-[68px] rounded-full p-[2px] transition-all duration-500",
         hasUnviewed 
           ? "bg-gradient-to-tr from-[#34C759] via-[#007AFF] to-[#AF52DE] scale-105 shadow-[0_0_20px_rgba(0,122,255,0.4)]" 
           : hasStories 
             ? "bg-white/20" 
             : "bg-white/5"
       )}>
-        <div className="rounded-full h-full w-full overflow-hidden bg-[#0a0a0c] p-[2px]">
+        <div className="rounded-full h-full w-full overflow-hidden bg-[#0a0a0c] flex items-center justify-center">
           <UserAvatar 
             userId={userId} 
-            className="h-full w-full border-none scale-110" 
+            className="h-full w-full border-none" 
             manualAvatarUrl={profile?.avatarUrl}
             fallbackName={profile?.name || profile?.username}
+            fallbackClassName="text-xl"
           />
         </div>
       </div>
