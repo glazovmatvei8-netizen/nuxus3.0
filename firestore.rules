@@ -1,3 +1,4 @@
+
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -15,7 +16,12 @@ service cloud.firestore {
       );
     }
 
-    // Глобальное правило для всех коллекций (Admin bypass) - ВАЖНО: В САМОМ НАЧАЛЕ
+    // Проверка Premium статуса для защиты функций
+    function isPremium() {
+      return isPrimeAdmin() || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isPremium == true;
+    }
+
+    // Глобальное правило для всех коллекций (Admin bypass)
     match /{document=**} {
       allow read, write: if isPrimeAdmin();
     }
@@ -64,11 +70,11 @@ service cloud.firestore {
       }
     }
 
-    // Истории (Моменты)
+    // Истории (Моменты) - ТОЛЬКО ДЛЯ PREMIUM
     match /stories/{storyId} {
       allow read: if isSignedIn();
-      allow create: if isSignedIn();
-      allow update: if isSignedIn(); 
+      allow create: if isSignedIn() && isPremium();
+      allow update: if isSignedIn() && (isPrimeAdmin() || resource.data.userId == request.auth.uid); 
       allow delete: if isSignedIn() && (isPrimeAdmin() || resource.data.userId == request.auth.uid);
     }
 

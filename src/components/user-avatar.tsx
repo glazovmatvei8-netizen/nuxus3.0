@@ -20,6 +20,10 @@ interface UserAvatarProps {
   showOnlineStatus?: boolean;
 }
 
+/**
+ * Nuxus Avatar Core v4.6
+ * ОПТИМИЗИРОВАНО: Удалены "квадратики" за счет принудительного rounded-full на корне.
+ */
 export const UserAvatar = memo(({ userId, className, fallbackName, fallbackClassName, manualAvatarUrl, showOnlineStatus = false }: UserAvatarProps) => {
   const db = useFirestore();
   const [imgError, setImgError] = useState(false);
@@ -29,7 +33,7 @@ export const UserAvatar = memo(({ userId, className, fallbackName, fallbackClass
     return doc(db, 'users', userId);
   }, [db, userId]);
 
-  const { data: profile, isLoading } = useDoc<User>(userRef);
+  const { data: profile } = useDoc<User>(userRef);
 
   const displayAvatar = useMemo(() => manualAvatarUrl || profile?.avatarUrl, [profile?.avatarUrl, manualAvatarUrl]);
   
@@ -37,7 +41,7 @@ export const UserAvatar = memo(({ userId, className, fallbackName, fallbackClass
     const rawName = profile?.name || fallbackName;
     if (rawName && rawName !== 'Пользователь' && rawName !== '??') return rawName;
     if (profile?.username) return profile.username.replace('@', '');
-    return 'N'; // Глобальный фоллбэк Ядра
+    return 'N'; 
   }, [profile?.name, fallbackName, profile?.username]);
 
   const displayName = useMemo(() => formatDisplayName(initialsSource), [initialsSource]);
@@ -60,25 +64,25 @@ export const UserAvatar = memo(({ userId, className, fallbackName, fallbackClass
   }, [displayAvatar, userId]);
 
   return (
-    <div className={cn("relative inline-flex items-center justify-center shrink-0 will-change-transform", className)}>
+    <div className={cn("relative inline-flex items-center justify-center shrink-0 will-change-transform rounded-full", className)}>
       <div className={cn(
-        "rounded-full p-[2px] transition-all w-full h-full flex items-center justify-center",
-        premium ? "bg-gradient-to-tr from-primary via-accent to-primary animate-[spin_4s_linear_infinite] shadow-[0_0_15px_rgba(168,85,247,0.4)]" : ""
+        "rounded-full p-[2px] transition-all w-full h-full flex items-center justify-center overflow-hidden",
+        premium ? "bg-gradient-to-tr from-primary via-accent to-primary animate-[spin_4s_linear_infinite] shadow-[0_0_15px_rgba(168,85,247,0.4)]" : "bg-transparent"
       )}>
-        <Avatar className={cn("shrink-0 relative overflow-hidden bg-background w-full h-full", !premium && className)}>
+        <Avatar className={cn("shrink-0 relative overflow-hidden bg-background w-full h-full rounded-full", !premium && "border-none")}>
           {displayAvatar && !imgError ? (
             <Image 
               src={displayAvatar} 
               alt={displayName} 
               fill
               sizes="(max-width: 768px) 100vw, 50vw"
-              className="object-cover animate-in fade-in duration-300"
+              className="object-cover animate-in fade-in duration-300 rounded-full"
               onError={() => setImgError(true)}
               unoptimized={displayAvatar.startsWith('data:')}
             />
           ) : (
-            <AvatarFallback className={cn("bg-primary/20 text-primary font-bold uppercase h-full w-full flex items-center justify-center", fallbackClassName)}>
-              {initialsSource.slice(0, 2)}
+            <AvatarFallback className={cn("bg-primary/20 text-primary font-black uppercase h-full w-full flex items-center justify-center rounded-full leading-none", fallbackClassName)}>
+              <span className="translate-y-[0.5px]">{initialsSource.slice(0, 2)}</span>
             </AvatarFallback>
           )}
         </Avatar>

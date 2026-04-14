@@ -13,8 +13,9 @@ import { StoryViewerModal } from './modals/story-viewer-modal';
 import { useToast } from '@/hooks/use-toast';
 
 /**
- * Nuxus Moments Bar v2.5
+ * Nuxus Moments Bar v2.6
  * Оптимизированная лента историй. Только для Premium.
+ * ИСПРАВЛЕНО: Квадраты удалены, центровка идеальна.
  */
 export function StoriesBar() {
   const { user } = useUser();
@@ -71,7 +72,7 @@ export function StoriesBar() {
         onClick={() => myStories.length > 0 ? setStoriesToView(myStories) : handleAddStory()}
       >
         <div className={cn(
-          "relative h-[68px] w-[68px] rounded-full p-[2px] transition-all duration-500",
+          "relative h-[68px] w-[68px] rounded-full p-[2px] transition-all duration-500 flex items-center justify-center",
           myStories.length > 0 
             ? "bg-gradient-to-tr from-[#34C759] via-[#007AFF] to-[#AF52DE] shadow-[0_0_15px_rgba(52,199,89,0.3)] animate-pulse" 
             : "bg-white/10 group-hover:bg-white/20"
@@ -79,7 +80,7 @@ export function StoriesBar() {
           <div className="rounded-full h-full w-full overflow-hidden relative bg-[#0a0a0c] flex items-center justify-center">
             <UserAvatar 
               userId={user?.uid} 
-              className="h-full w-full border-none" 
+              className="h-full w-full border-none rounded-full" 
               manualAvatarUrl={profile?.avatarUrl}
               fallbackName={profile?.name || profile?.username || 'Я'}
               fallbackClassName="text-xl"
@@ -130,7 +131,7 @@ function StoryCircle({ userId, stories, onView, currentUserId }: { userId: strin
   return (
     <div className="flex flex-col items-center gap-1.5 shrink-0 cursor-pointer active:scale-95 transition-transform" onClick={onView}>
       <div className={cn(
-        "h-[68px] w-[68px] rounded-full p-[2px] transition-all duration-500",
+        "h-[68px] w-[68px] rounded-full p-[2px] transition-all duration-500 flex items-center justify-center",
         hasUnviewed 
           ? "bg-gradient-to-tr from-[#34C759] via-[#007AFF] to-[#AF52DE] scale-105 shadow-[0_0_20px_rgba(0,122,255,0.4)]" 
           : hasStories 
@@ -140,7 +141,7 @@ function StoryCircle({ userId, stories, onView, currentUserId }: { userId: strin
         <div className="rounded-full h-full w-full overflow-hidden bg-[#0a0a0c] flex items-center justify-center">
           <UserAvatar 
             userId={userId} 
-            className="h-full w-full border-none" 
+            className="h-full w-full border-none rounded-full" 
             manualAvatarUrl={profile?.avatarUrl}
             fallbackName={profile?.name || profile?.username}
             fallbackClassName="text-xl"
