@@ -1,3 +1,4 @@
+
 'use client';
     
 import { useState, useEffect } from 'react';
@@ -26,6 +27,7 @@ export interface UseDocResult<T> {
 
 /**
  * React hook to subscribe to a single Firestore document in real-time.
+ * Fixed: Immediate data reset on reference change to prevent stale ghost data.
  */
 export function useDoc<T = any>(
   memoizedDocRef: DocumentReference<DocumentData> | null | undefined,
@@ -36,10 +38,17 @@ export function useDoc<T = any>(
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<FirestoreError | Error | null>(null);
 
-  useEffect(() => {
-    // Reset data when the reference changes to prevent showing stale data from previous doc
+  // Sync data reset to the current reference to prevent showing old data during render
+  const [prevRefPath, setPrevRefPath] = useState<string | null>(null);
+  const currentPath = memoizedDocRef?.path || null;
+
+  if (currentPath !== prevRefPath) {
+    setPrevRefPath(currentPath);
     setData(null);
-    
+    setIsLoading(!!memoizedDocRef);
+  }
+
+  useEffect(() => {
     if (!memoizedDocRef) {
       setIsLoading(false);
       setError(null);

@@ -70,7 +70,7 @@ service cloud.firestore {
       }
     }
 
-    // Истории (Моменты) - ТОЛЬКО ДЛЯ PREMIUM
+    // Истории (Моменты) - ТОЛЬКО ДЛЯ PREMIUM (Server enforced)
     match /stories/{storyId} {
       allow read: if isSignedIn();
       allow create: if isSignedIn() && isPremium();

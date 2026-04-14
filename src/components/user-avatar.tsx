@@ -22,7 +22,8 @@ interface UserAvatarProps {
 
 /**
  * Nuxus Avatar Core v4.6
- * ОПТИМИЗИРОВАНО: Удалены "квадратики" за счет принудительного rounded-full на корне.
+ * ОПТИМИЗИРОВАНО: Устранены "фантомные" аватары и визуальные квадраты.
+ * Принудительное скругление всех слоев.
  */
 export const UserAvatar = memo(({ userId, className, fallbackName, fallbackClassName, manualAvatarUrl, showOnlineStatus = false }: UserAvatarProps) => {
   const db = useFirestore();
@@ -33,9 +34,19 @@ export const UserAvatar = memo(({ userId, className, fallbackName, fallbackClass
     return doc(db, 'users', userId);
   }, [db, userId]);
 
-  const { data: profile } = useDoc<User>(userRef);
+  const { data: profile, isLoading } = useDoc<User>(userRef);
 
-  const displayAvatar = useMemo(() => manualAvatarUrl || profile?.avatarUrl, [profile?.avatarUrl, manualAvatarUrl]);
+  // Очищаем ошибку при смене пользователя
+  useEffect(() => {
+    setImgError(false);
+  }, [userId, manualAvatarUrl]);
+
+  // displayAvatar будет null, если profile еще не загружен или у пользователя нет авы
+  const displayAvatar = useMemo(() => {
+    if (manualAvatarUrl) return manualAvatarUrl;
+    if (isLoading) return null;
+    return profile?.avatarUrl || null;
+  }, [profile?.avatarUrl, manualAvatarUrl, isLoading]);
   
   const initialsSource = useMemo(() => {
     const rawName = profile?.name || fallbackName;
@@ -59,29 +70,27 @@ export const UserAvatar = memo(({ userId, className, fallbackName, fallbackClass
     }
   }, [profile?.lastSeen, isGhost]);
 
-  useEffect(() => {
-    setImgError(false);
-  }, [displayAvatar, userId]);
-
   return (
-    <div className={cn("relative inline-flex items-center justify-center shrink-0 will-change-transform rounded-full", className)}>
+    <div className={cn("relative inline-flex items-center justify-center shrink-0 will-change-transform rounded-full overflow-hidden", className)}>
       <div className={cn(
-        "rounded-full p-[2px] transition-all w-full h-full flex items-center justify-center overflow-hidden",
+        "rounded-full p-[2.5px] transition-all w-full h-full flex items-center justify-center overflow-hidden",
         premium ? "bg-gradient-to-tr from-primary via-accent to-primary animate-[spin_4s_linear_infinite] shadow-[0_0_15px_rgba(168,85,247,0.4)]" : "bg-transparent"
       )}>
-        <Avatar className={cn("shrink-0 relative overflow-hidden bg-background w-full h-full rounded-full", !premium && "border-none")}>
+        <Avatar className={cn("shrink-0 relative overflow-hidden bg-background w-full h-full rounded-full border-none flex items-center justify-center")}>
           {displayAvatar && !imgError ? (
-            <Image 
-              src={displayAvatar} 
-              alt={displayName} 
-              fill
-              sizes="(max-width: 768px) 100vw, 50vw"
-              className="object-cover animate-in fade-in duration-300 rounded-full"
-              onError={() => setImgError(true)}
-              unoptimized={displayAvatar.startsWith('data:')}
-            />
+            <div className="relative w-full h-full rounded-full overflow-hidden">
+              <Image 
+                src={displayAvatar} 
+                alt={displayName} 
+                fill
+                sizes="128px"
+                className="object-cover animate-in fade-in duration-300 rounded-full"
+                onError={() => setImgError(true)}
+                unoptimized={displayAvatar.startsWith('data:')}
+              />
+            </div>
           ) : (
-            <AvatarFallback className={cn("bg-primary/20 text-primary font-black uppercase h-full w-full flex items-center justify-center rounded-full leading-none", fallbackClassName)}>
+            <AvatarFallback className={cn("bg-primary/20 text-primary font-black uppercase h-full w-full flex items-center justify-center rounded-full leading-none select-none", fallbackClassName)}>
               <span className="translate-y-[0.5px]">{initialsSource.slice(0, 2)}</span>
             </AvatarFallback>
           )}
@@ -89,15 +98,15 @@ export const UserAvatar = memo(({ userId, className, fallbackName, fallbackClass
       </div>
 
       {showOnlineStatus && isOnline && !isGhost && (
-        <div className="absolute top-0 right-0 z-20 translate-x-[10%] translate-y-[10%]">
-          <div className="h-3 w-3 bg-[#A855F7] rounded-full border-2 border-[#0a0a0c] shadow-[0_0_10px_rgba(168,85,247,0.5)]" />
+        <div className="absolute top-[5%] right-[5%] z-20">
+          <div className="h-2.5 w-2.5 bg-[#A855F7] rounded-full border-2 border-[#0a0a0c] shadow-[0_0_10px_rgba(168,85,247,0.5)]" />
         </div>
       )}
 
       {premium && (
-        <div className="absolute bottom-0 right-0 z-30 translate-x-[15%] translate-y-[15%]">
-          <div className="bg-[#0a0a0c] rounded-full p-[1.5px] shadow-sm">
-            <div className="bg-gradient-to-tr from-purple-500 to-accent p-[1.5px] rounded-full shadow-lg border border-white/20">
+        <div className="absolute bottom-0 right-0 z-30 translate-x-[5%] translate-y-[5%]">
+          <div className="bg-[#0a0a0c] rounded-full p-[1px] shadow-sm">
+            <div className="bg-gradient-to-tr from-purple-500 to-accent p-[1.5px] rounded-full shadow-lg border border-white/10">
               <Star className="w-2.5 h-2.5 text-white fill-white" />
             </div>
           </div>
