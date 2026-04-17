@@ -1,13 +1,13 @@
 
 "use client"
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useFirestore, useUser, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, where, limit, getDocs, orderBy } from 'firebase/firestore';
+import { collection, query, where, limit, orderBy } from 'firebase/firestore';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Compass, Search, Zap, Users, Radio, ArrowRight, Star, TrendingUp, Globe, Plus } from 'lucide-react';
+import { Search, Zap, Users, Radio, Star, Globe, Plus } from 'lucide-react';
 import { UserAvatar } from '@/components/user-avatar';
 import { useAppState } from '@/lib/store';
 import { cn, formatDisplayName } from '@/lib/utils';
@@ -17,56 +17,61 @@ const ADMIN_ID = 'GCvLucN8CjNcdaxPO2vmpZ84hNl1';
 
 export default function DiscoveryView() {
   const db = useFirestore();
-  const { user } = useUser();
+  const { user: currentUser } = useUser();
   const { setCurrentChatId, setActiveView, setInspectedUserId } = useAppState();
   
   const [search, setSearch] = useState('');
-  const [publicChats, setPublicChats] = useState<Chat[]>([]);
-  const [topUsers, setTopUsers] = useState<User[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    const fetchData = async () => {
-      if (!db) return;
-      setIsLoading(true);
-      try {
-        // Fetch Public Chats
-        const chatQ = query(collection(db, 'chats'), where('isPublic', '==', true), limit(10));
-        const chatSnap = await getDocs(chatQ);
-        setPublicChats(chatSnap.docs.map(d => ({ id: d.id, ...d.data() } as Chat)));
-
-        // Fetch "Top Nodes" and force Admin to Top 1
-        const userQ = query(collection(db, 'users'), orderBy('referralCount', 'desc'), limit(12));
-        const userSnap = await getDocs(userQ);
-        let usersList = userSnap.docs.map(d => ({ id: d.id, ...d.data() } as User));
-        
-        // Hoist the Admin
-        const adminIndex = usersList.findIndex(u => u.id === ADMIN_ID);
-        if (adminIndex > -1) {
-          const adminObj = usersList.splice(adminIndex, 1)[0];
-          usersList = [adminObj, ...usersList];
-        } else {
-          // If admin was not in top 12, fetch it manually (rare case)
-          // But usually admin should be in the list.
-        }
-
-        setTopUsers(usersList.slice(0, 10));
-      } catch (e) {
-        console.warn("Discovery Engine: Signal Lost");
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    fetchData();
+  // 1. Real-time Public Chats
+  const publicChatsQuery = useMemoFirebase(() => {
+    if (!db) return null;
+    return query(collection(db, 'chats'), where('isPublic', '==', true), limit(20));
   }, [db]);
+  const { data: publicChats } = useCollection<Chat>(publicChatsQuery);
 
-  const filteredChats = publicChats.filter(c => 
+  // 2. Real-time Leaders (Top Nodes)
+  const topUsersQuery = useMemoFirebase(() => {
+    if (!db) return null;
+    return query(collection(db, 'users'), orderBy('referralCount', 'desc'), limit(25));
+  }, [db]);
+  const { data: rawTopUsers } = useCollection<User>(topUsersQuery);
+
+  // 3. Real-time Total Count for Milestone
+  const allUsersQuery = useMemoFirebase(() => {
+    if (!db) return null;
+    return query(collection(db, 'users'), limit(500));
+  }, [db]);
+  const { data: allUsers } = useCollection<User>(allUsersQuery);
+
+  // Leaderboard Logic: Admin ALWAYS at #1
+  const leaderboard = useMemo(() => {
+    if (!rawTopUsers || !allUsers) return [];
+    
+    let list = [...rawTopUsers];
+    
+    // Find admin in raw list or in total users if not in top list
+    const adminData = allUsers.find(u => u.id === ADMIN_ID);
+    
+    if (adminData) {
+      // Remove admin if they exist in list then re-insert at top
+      list = list.filter(u => u.id !== ADMIN_ID);
+      list.unshift(adminData);
+    }
+    
+    return list.slice(0, 10);
+  }, [rawTopUsers, allUsers]);
+
+  const totalNodes = allUsers?.length || 0;
+  const goalPercentage = Math.min(100, (totalNodes / 100) * 100);
+
+  const filteredChats = (publicChats || []).filter(c => 
     c.name?.toLowerCase().includes(search.toLowerCase()) || 
     c.username?.toLowerCase().includes(search.toLowerCase())
   );
 
   return (
     <div className="flex flex-col h-full bg-[#0a0a0c] overflow-hidden max-w-full">
+      {/* Header */}
       <div className="px-6 pt-8 pb-4 shrink-0 space-y-6">
         <div className="flex items-center justify-between">
           <h1 className="text-[28px] md:text-[32px] font-black text-white italic tracking-tighter uppercase flex items-center gap-3">
@@ -97,7 +102,7 @@ export default function DiscoveryView() {
               </h3>
             </div>
             <div className="flex gap-4 overflow-x-auto scrollbar-hide py-2 px-1">
-              {topUsers.map((u, idx) => (
+              {leaderboard.map((u, idx) => (
                 <div 
                   key={u.id} 
                   onClick={() => setInspectedUserId(u.id)}
@@ -105,13 +110,13 @@ export default function DiscoveryView() {
                 >
                   <div className="relative">
                     {u.id === ADMIN_ID && (
-                      <div className="absolute -inset-2 bg-primary/20 blur-md rounded-full animate-pulse z-0" />
+                      <div className="absolute -inset-2 bg-primary/30 blur-md rounded-full animate-pulse z-0" />
                     )}
                     <UserAvatar 
                       userId={u.id} 
                       className={cn(
                         "h-16 w-16 border-2 border-white/5 group-hover:border-primary/40 transition-all relative z-10",
-                        u.id === ADMIN_ID && "border-primary shadow-[0_0_15px_rgba(168,85,247,0.5)]"
+                        u.id === ADMIN_ID && "border-primary shadow-[0_0_20px_rgba(168,85,247,0.6)] scale-105"
                       )} 
                       manualAvatarUrl={u.avatarUrl} 
                     />
@@ -122,15 +127,46 @@ export default function DiscoveryView() {
                     )}
                   </div>
                   <span className={cn(
-                    "text-[10px] font-bold truncate w-16 text-center",
-                    u.id === ADMIN_ID ? "text-primary" : "text-white/80"
+                    "text-[10px] font-black truncate w-16 text-center uppercase tracking-tight",
+                    u.id === ADMIN_ID ? "text-primary italic" : "text-white/80"
                   )}>
-                    {u.id === ADMIN_ID ? 'ADMIN' : formatDisplayName(u.name).split(' ')[0]}
+                    {u.id === ADMIN_ID ? 'PRIME' : formatDisplayName(u.name).split(' ')[0]}
                   </span>
                 </div>
               ))}
             </div>
           </section>
+
+          {/* Activity Milestone Banner (Moved up & Real-time) */}
+          <div className="bg-primary/10 border border-primary/20 p-6 md:p-8 rounded-[2.5rem] text-center space-y-4 relative overflow-hidden shadow-2xl">
+             <div className="absolute top-0 right-0 p-4 opacity-10 rotate-12">
+                <Zap className="w-20 h-20 text-primary" />
+             </div>
+             <Zap className="w-10 h-10 text-primary mx-auto animate-pulse relative z-10" />
+             <div className="space-y-1 relative z-10">
+               <h3 className="text-lg md:text-xl font-black uppercase italic text-white tracking-tighter leading-none">
+                 Nuxus Milestone
+               </h3>
+               <p className="text-[9px] md:text-[10px] font-bold text-primary/60 uppercase tracking-[0.2em]">
+                 Цель: 100 активных узлов
+               </p>
+             </div>
+             <div className="w-full max-w-[280px] mx-auto space-y-3 relative z-10">
+                <div className="h-3 bg-white/5 rounded-full overflow-hidden border border-white/5 p-[1px]">
+                  <div 
+                    className="h-full bg-primary shadow-[0_0_15px_rgba(168,85,247,0.8)] transition-all duration-1000 ease-out rounded-full" 
+                    style={{ width: `${goalPercentage}%` }} 
+                  />
+                </div>
+                <div className="flex justify-between items-center px-1">
+                   <span className="text-[11px] font-black text-white italic">{totalNodes} / 100</span>
+                   <span className="text-[8px] font-black text-primary uppercase tracking-widest animate-pulse">Sync Active</span>
+                </div>
+                <p className="text-[9px] text-muted-foreground uppercase font-black px-2 leading-relaxed">
+                  Приглашайте друзей через <span className="text-primary">Signal QR</span> и расширяйте влияние своего узла!
+                </p>
+             </div>
+          </div>
 
           {/* Communities Section */}
           <section className="space-y-4">
@@ -165,23 +201,6 @@ export default function DiscoveryView() {
               ))}
             </div>
           </section>
-
-          {/* Activity Placeholder */}
-          <div className="bg-primary/10 border border-primary/20 p-6 md:p-8 rounded-[2.5rem] text-center space-y-4 relative overflow-hidden">
-             <Zap className="w-10 h-10 text-primary mx-auto animate-pulse" />
-             <div className="space-y-1">
-               <h3 className="text-base md:text-lg font-black uppercase italic text-white tracking-tighter">Nuxus Milestone</h3>
-               <p className="text-[9px] md:text-[10px] font-bold text-primary/60 uppercase tracking-[0.2em]">Цель: 100 активных узлов</p>
-             </div>
-             <div className="w-full max-w-[240px] mx-auto space-y-3">
-                <div className="h-2.5 bg-white/5 rounded-full overflow-hidden border border-white/5">
-                  <div className="h-full bg-primary shadow-[0_0_15px_rgba(168,85,247,0.6)] transition-all duration-1000" style={{ width: '33%' }} />
-                </div>
-                <p className="text-[8px] md:text-[9px] text-muted-foreground uppercase font-black px-2 leading-relaxed">
-                  Приглашайте друзей через <span className="text-primary">Signal QR</span> и расширяйте влияние своего узла в Ядре!
-                </p>
-             </div>
-          </div>
         </div>
       </ScrollArea>
     </div>
