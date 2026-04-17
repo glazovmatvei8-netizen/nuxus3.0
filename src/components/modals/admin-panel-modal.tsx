@@ -1,6 +1,7 @@
+
 "use client"
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,11 +16,11 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, doc, limit, updateDoc, writeBatch, increment, getDocs, addDoc } from 'firebase/firestore';
+import { collection, query, doc, limit, updateDoc, writeBatch, increment, getDocs, setDoc, deleteDoc } from 'firebase/firestore';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
   ShieldAlert, Users, Star, Ban, CheckCircle2, ShieldCheck, Radio, 
-  MoreVertical, ShieldOff, Activity, Wallet, Check, Trash2, X, Globe, Fingerprint, Send, Zap, Loader2
+  MoreVertical, ShieldOff, Activity, Wallet, Check, Trash2, X, Globe, Fingerprint, Send, Zap, Loader2, AlertTriangle, Play, Square, Flame
 } from 'lucide-react';
 import { 
   XAxis, YAxis, ResponsiveContainer, AreaChart, Area, Tooltip
@@ -40,6 +41,13 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
   const [activeTab, setActiveTab] = useState('analytics');
   const [broadcastText, setBroadcastText] = useState('');
   const [isBroadcasting, setIsBroadcasting] = useState(false);
+
+  // Stress Test States
+  const [isStressTestActive, setIsStressTestActive] = useState(false);
+  const [packetsSent, setPacketsSent] = useState(0);
+  const [packetsFailed, setPacketsFailed] = useState(0);
+  const [attackIntensity, setAttackIntensity] = useState(0);
+  const stressIntervalRef = useRef<NodeJS.Timeout | null>(null);
   
   const usersQuery = useMemoFirebase(() => (!db ? null : query(collection(db, 'users'), limit(500))), [db]);
   const { data: users } = useCollection<User>(usersQuery);
@@ -130,6 +138,50 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
     }
   };
 
+  // Stress Test Logic
+  const startStressTest = () => {
+    if (!db) return;
+    setIsStressTestActive(true);
+    setPacketsSent(0);
+    setPacketsFailed(0);
+    
+    // Высокочастотный цикл запросов
+    stressIntervalRef.current = setInterval(async () => {
+      try {
+        const dummyRef = doc(db, 'system', 'stress_test');
+        // Генерируем "тяжелую" запись для нагрузки
+        await setDoc(dummyRef, {
+          timestamp: new Date().toISOString(),
+          entropy: Math.random().toString(36).substring(7),
+          payload: Array(100).fill("STRESS").join("_")
+        }, { merge: true });
+        
+        setPacketsSent(prev => prev + 1);
+        setAttackIntensity(Math.min(100, Math.floor(Math.random() * 20) + 80));
+      } catch (e) {
+        setPacketsFailed(prev => prev + 1);
+      }
+    }, 50); // Интервал 50мс для имитации DoS
+    
+    toast({ title: "Signal Overload Initiated", description: "Внимание: Нагрузка на Ядро запущена." });
+  };
+
+  const stopStressTest = () => {
+    if (stressIntervalRef.current) {
+      clearInterval(stressIntervalRef.current);
+      stressIntervalRef.current = null;
+    }
+    setIsStressTestActive(false);
+    setAttackIntensity(0);
+    toast({ title: "Test Terminated", description: "Поток сигналов остановлен." });
+  };
+
+  useEffect(() => {
+    return () => {
+      if (stressIntervalRef.current) clearInterval(stressIntervalRef.current);
+    };
+  }, []);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl bg-[#0a0a0c]/90 backdrop-blur-3xl border-primary/30 p-0 overflow-hidden h-[85vh] flex flex-col rounded-[2.5rem] shadow-2xl border outline-none">
@@ -138,7 +190,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
             <div className="flex items-center gap-2">
               <ShieldAlert className="w-5 h-5 text-primary animate-pulse" /> 
               <DialogTitle className="text-white uppercase italic font-black tracking-tighter text-xs md:text-base select-none">
-                Nuxus Control Panel V3.2.1
+                Nuxus Control Panel V4.8
               </DialogTitle>
             </div>
             <div className="flex items-center gap-1.5 bg-green-500/10 px-3 py-1 rounded-full border border-green-500/20">
@@ -150,11 +202,12 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0 overflow-hidden">
           <div className="px-4 md:px-6 pt-3 shrink-0">
-            <TabsList className="grid w-full bg-white/5 p-1 rounded-xl grid-cols-4 gap-1">
-              <TabsTrigger value="analytics" className="rounded-lg text-[8px] uppercase font-black gap-1.5">Аналитика</TabsTrigger>
-              <TabsTrigger value="users" className="rounded-lg text-[8px] uppercase font-black gap-1.5">Аккаунты</TabsTrigger>
-              <TabsTrigger value="finance" className="rounded-lg text-[8px] uppercase font-black gap-1.5">Заявки</TabsTrigger>
-              <TabsTrigger value="broadcast" className="rounded-lg text-[8px] uppercase font-black gap-1.5">Маяк</TabsTrigger>
+            <TabsList className="grid w-full bg-white/5 p-1 rounded-xl grid-cols-5 gap-1">
+              <TabsTrigger value="analytics" className="rounded-lg text-[8px] uppercase font-black">Аналитика</TabsTrigger>
+              <TabsTrigger value="users" className="rounded-lg text-[8px] uppercase font-black">Аккаунты</TabsTrigger>
+              <TabsTrigger value="broadcast" className="rounded-lg text-[8px] uppercase font-black">Маяк</TabsTrigger>
+              <TabsTrigger value="overload" className="rounded-lg text-[8px] uppercase font-black text-red-500">Overload</TabsTrigger>
+              <TabsTrigger value="finance" className="rounded-lg text-[8px] uppercase font-black">Заявки</TabsTrigger>
             </TabsList>
           </div>
 
@@ -263,16 +316,93 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
                     {isBroadcasting ? <Loader2 className="animate-spin w-4 h-4" /> : <><Send className="w-4 h-4" /> Транслировать Сигнал</>}
                   </Button>
                 </div>
+             </div>
+          </TabsContent>
 
-                <div className="p-6 bg-white/5 rounded-[2rem] border border-white/5">
-                  <div className="flex items-center gap-2 mb-4 text-accent">
-                    <Zap className="w-4 h-4" />
-                    <span className="text-[10px] font-black uppercase">Важно</span>
+          <TabsContent value="overload" className="flex-1 m-0 p-6 overflow-hidden data-[state=active]:flex flex-col min-h-0">
+            <div className="space-y-6 text-left">
+              <div className={cn(
+                "p-8 rounded-[2.5rem] border-2 transition-all duration-500 flex flex-col items-center gap-6 relative overflow-hidden",
+                isStressTestActive ? "bg-red-500/10 border-red-500/50 shadow-[0_0_50px_rgba(239,68,68,0.2)]" : "bg-white/5 border-white/10"
+              )}>
+                {isStressTestActive && (
+                  <div className="absolute inset-0 pointer-events-none">
+                    <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_50%_50%,rgba(239,68,68,0.1),transparent_70%)] animate-pulse" />
                   </div>
-                  <p className="text-[10px] text-muted-foreground leading-relaxed uppercase font-bold">
-                    Сообщение Маяка будет доставлено в каждый активный чат системы в виде специального сервисного блока. Используйте эту функцию только для критических обновлений Ядра.
+                )}
+
+                <div className="relative">
+                  <div className={cn(
+                    "w-24 h-24 rounded-full flex items-center justify-center border-4 transition-all duration-300 relative z-10",
+                    isStressTestActive ? "bg-red-500 text-white border-white/20 animate-ping" : "bg-white/5 text-muted-foreground border-white/5"
+                  )}>
+                    <Flame className={cn("w-12 h-12", isStressTestActive && "animate-bounce")} />
+                  </div>
+                </div>
+
+                <div className="text-center space-y-2">
+                  <h3 className="text-2xl font-black uppercase italic tracking-tighter text-white">Signal Overload Test</h3>
+                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
+                    Имитация высокой нагрузки на облачные узлы Ядра
                   </p>
                 </div>
+
+                <div className="grid grid-cols-2 w-full gap-4">
+                  <div className="bg-black/40 p-4 rounded-2xl border border-white/10 text-center">
+                    <span className="text-[8px] font-black uppercase text-muted-foreground block mb-1">Packets Sent</span>
+                    <span className="text-2xl font-black text-primary tabular-nums">{packetsSent}</span>
+                  </div>
+                  <div className="bg-black/40 p-4 rounded-2xl border border-white/10 text-center">
+                    <span className="text-[8px] font-black uppercase text-muted-foreground block mb-1">Signal Drops</span>
+                    <span className="text-2xl font-black text-red-500 tabular-nums">{packetsFailed}</span>
+                  </div>
+                </div>
+
+                <div className="w-full space-y-4">
+                   <div className="flex justify-between items-center px-1">
+                      <span className="text-[9px] font-black uppercase text-white/40">Intensity Level</span>
+                      <span className="text-[9px] font-black uppercase text-primary">{attackIntensity}%</span>
+                   </div>
+                   <div className="h-2 bg-white/5 rounded-full overflow-hidden">
+                      <div 
+                        className={cn("h-full transition-all duration-300", isStressTestActive ? "bg-red-500" : "bg-primary")} 
+                        style={{ width: `${attackIntensity}%` }} 
+                      />
+                   </div>
+                </div>
+
+                <div className="flex w-full gap-3">
+                  {!isStressTestActive ? (
+                    <Button 
+                      onClick={startStressTest}
+                      className="flex-1 h-16 bg-red-600 hover:bg-red-700 text-white font-black uppercase italic tracking-widest gap-3 rounded-2xl shadow-xl shadow-red-500/20"
+                    >
+                      <Play className="w-6 h-6 fill-current" /> Launch Test
+                    </Button>
+                  ) : (
+                    <Button 
+                      onClick={stopStressTest}
+                      className="flex-1 h-16 bg-white text-black font-black uppercase italic tracking-widest gap-3 rounded-2xl hover:bg-white/90"
+                    >
+                      <Square className="w-6 h-6 fill-current" /> Terminate Connection
+                    </Button>
+                  )}
+                </div>
+
+                <div className="flex items-start gap-3 p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-2xl">
+                  <AlertTriangle className="w-5 h-5 text-yellow-500 shrink-0 mt-0.5" />
+                  <p className="text-[9px] text-yellow-500/80 font-bold uppercase leading-relaxed">
+                    Внимание: Данный тест генерирует реальные записи в базе данных. Длительное использование может привести к исчерпанию квот Firebase.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </TabsContent>
+          
+          <TabsContent value="finance" className="flex-1 m-0 p-0 overflow-hidden outline-none data-[state=active]:flex flex-col min-h-0">
+             <div className="p-12 text-center opacity-30">
+               <Wallet className="w-12 h-12 mx-auto mb-4" />
+               <p className="text-[10px] font-black uppercase">Управление транзакциями в разработке</p>
              </div>
           </TabsContent>
         </Tabs>
@@ -287,16 +417,6 @@ function StatCard({ label, value, icon: Icon, color }: any) {
       <Icon className={cn("w-4 h-4 mb-1", color)} />
       <span className="text-lg font-black italic text-white tracking-tight">{value}</span>
       <span className="text-[7px] font-black uppercase text-muted-foreground/60 tracking-widest text-center leading-none">{label}</span>
-    </div>
-  );
-}
-
-function Loader2({ className }: any) {
-  return (
-    <div className={cn("animate-spin", className)}>
-      <svg className="w-full h-full" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M21 12a9 9 0 1 1-6.219-8.56" />
-      </svg>
     </div>
   );
 }
