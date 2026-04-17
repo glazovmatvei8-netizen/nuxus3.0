@@ -42,7 +42,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
   const [broadcastText, setBroadcastText] = useState('');
   const [isBroadcasting, setIsBroadcasting] = useState(false);
 
-  // Stress Test States
+  // EXTREME Stress Test States V5.0
   const [isStressTestActive, setIsStressTestActive] = useState(false);
   const [packetsSent, setPacketsSent] = useState(0);
   const [packetsFailed, setPacketsFailed] = useState(0);
@@ -138,43 +138,49 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
     }
   };
 
-  // EXTREME Stress Test Logic V4.9
+  // TERMINAL V5.0 EVENT HORIZON LOGIC
   const startStressTest = () => {
     if (!db) return;
     setIsStressTestActive(true);
     setPacketsSent(0);
     setPacketsFailed(0);
     
-    // Hyper-frequency request cycle
+    // Hyper-frequency request cycle V5.0
     stressIntervalRef.current = setInterval(async () => {
-      // Отправляем ПАЧКУ запросов за один тик (Множитель x50)
-      const BATCH_SIZE = 50;
-      const promises = [];
-
+      // КРИТИЧЕСКИЙ МНОЖИТЕЛЬ x500
+      const BATCH_SIZE = 500;
+      
       for (let i = 0; i < BATCH_SIZE; i++) {
-        const dummyRef = doc(db, 'system', `stress_${Math.floor(Math.random() * 100)}`);
-        // Генерируем ОЧЕНЬ тяжелый объект для максимальной нагрузки на парсинг и запись
-        const heavyPayload = {
+        // Рандомизируем цели для обхода кэширования
+        const targetId = Math.floor(Math.random() * 1000);
+        const dummyRef = doc(db, 'system_overload', `node_pulse_${targetId}`);
+        
+        // Генерируем МАКСИМАЛЬНО тяжелый payload для перегрузки RAM сервера
+        const massivePayload = {
           timestamp: new Date().toISOString(),
-          entropy: Math.random().toString(36).substring(2) + Math.random().toString(36).substring(2),
-          nodeId: `node_${i}`,
-          vector: Array.from({ length: 200 }).map(() => Math.random()), // Массив данных
-          integrity: "V4.9_SINGULARITY_ACTIVE",
-          status: "OVERLOAD"
+          entropy: Math.random().toString(36).repeat(10), // Длинная строка
+          nodeId: `v5_core_annihilator_${i}`,
+          vector: Array.from({ length: 500 }).map(() => Math.random()), // 500 чисел
+          protocol: "EVENT_HORIZON_ACTIVE",
+          status: "CRITICAL_COLLAPSE",
+          integrity: false,
+          quantum_noise: Array.from({ length: 20 }).map(() => btoa(Math.random().toString()))
         };
         
-        promises.push(
-          setDoc(dummyRef, heavyPayload, { merge: false })
-            .then(() => setPacketsSent(prev => prev + 1))
-            .catch(() => setPacketsFailed(prev => prev + 1))
-        );
+        // Не ждем (non-blocking) для максимального флуда
+        setDoc(dummyRef, massivePayload, { merge: false })
+          .then(() => setPacketsSent(prev => prev + 1))
+          .catch(() => setPacketsFailed(prev => prev + 1));
       }
       
-      // Не ждем завершения всех, чтобы не тормозить цикл, но обновляем UI
-      setAttackIntensity(Math.min(100, 95 + Math.random() * 5));
-    }, 20); // Интервал 20мс + пачка 50 = ~2500 запросов в сек.
+      setAttackIntensity(Math.min(100, 99 + Math.random()));
+    }, 10); // Интервал 10мс (предел JS) + пачка 500 = ~50,000 запросов в сек.
     
-    toast({ title: "SINGULARITY INITIATED", description: "Внимание: Запущена критическая нагрузка x50.", variant: "destructive" });
+    toast({ 
+      title: "EVENT HORIZON ACTIVE", 
+      description: "Ядро переведено в режим терминальной перегрузки x500.", 
+      variant: "destructive" 
+    });
   };
 
   const stopStressTest = () => {
@@ -184,7 +190,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
     }
     setIsStressTestActive(false);
     setAttackIntensity(0);
-    toast({ title: "Test Terminated", description: "Ядро возвращено в штатный режим." });
+    toast({ title: "Signal Stabilized", description: "Протокол V5.0 завершен. Ядро восстанавливается." });
   };
 
   useEffect(() => {
@@ -201,12 +207,12 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
             <div className="flex items-center gap-2">
               <ShieldAlert className="w-5 h-5 text-primary animate-pulse" /> 
               <DialogTitle className="text-white uppercase italic font-black tracking-tighter text-xs md:text-base select-none">
-                Nuxus Control Panel V4.9
+                Nuxus Control Panel V5.0
               </DialogTitle>
             </div>
             <div className="flex items-center gap-1.5 bg-green-500/10 px-3 py-1 rounded-full border border-green-500/20">
               <Activity className="w-2.5 h-2.5 text-green-500 animate-pulse" />
-              <span className="text-[8px] font-black text-green-500 uppercase tracking-widest">Live Sync</span>
+              <span className="text-[8px] font-black text-green-500 uppercase tracking-widest">Global Link</span>
             </div>
           </div>
         </DialogHeader>
@@ -217,7 +223,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
               <TabsTrigger value="analytics" className="rounded-lg text-[8px] uppercase font-black">Аналитика</TabsTrigger>
               <TabsTrigger value="users" className="rounded-lg text-[8px] uppercase font-black">Аккаунты</TabsTrigger>
               <TabsTrigger value="broadcast" className="rounded-lg text-[8px] uppercase font-black">Маяк</TabsTrigger>
-              <TabsTrigger value="overload" className="rounded-lg text-[8px] uppercase font-black text-red-500">Singularity</TabsTrigger>
+              <TabsTrigger value="overload" className="rounded-lg text-[8px] uppercase font-black text-red-500">Event Horizon</TabsTrigger>
               <TabsTrigger value="finance" className="rounded-lg text-[8px] uppercase font-black">Заявки</TabsTrigger>
             </TabsList>
           </div>
@@ -334,27 +340,27 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
             <div className="space-y-6 text-left">
               <div className={cn(
                 "p-8 rounded-[2.5rem] border-2 transition-all duration-500 flex flex-col items-center gap-6 relative overflow-hidden",
-                isStressTestActive ? "bg-red-600/20 border-red-500 shadow-[0_0_80px_rgba(239,68,68,0.4)]" : "bg-white/5 border-white/10"
+                isStressTestActive ? "bg-red-600/20 border-red-500 shadow-[0_0_120px_rgba(239,68,68,0.6)]" : "bg-white/5 border-white/10"
               )}>
                 {isStressTestActive && (
                   <div className="absolute inset-0 pointer-events-none">
-                    <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_50%_50%,rgba(239,68,68,0.2),transparent_70%)] animate-[pulse_0.5s_ease-in-out_infinite]" />
+                    <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_50%_50%,rgba(239,68,68,0.3),transparent_70%)] animate-[pulse_0.1s_ease-in-out_infinite]" />
                   </div>
                 )}
 
                 <div className="relative">
                   <div className={cn(
                     "w-24 h-24 rounded-full flex items-center justify-center border-4 transition-all duration-300 relative z-10",
-                    isStressTestActive ? "bg-red-600 text-white border-white/40 animate-[ping_1s_ease-in-out_infinite]" : "bg-white/5 text-muted-foreground border-white/5"
+                    isStressTestActive ? "bg-red-600 text-white border-white/40 animate-[ping_0.5s_ease-in-out_infinite]" : "bg-white/5 text-muted-foreground border-white/5"
                   )}>
                     <Radiation className={cn("w-12 h-12", isStressTestActive && "animate-spin")} />
                   </div>
                 </div>
 
                 <div className="text-center space-y-2">
-                  <h3 className="text-2xl font-black uppercase italic tracking-tighter text-white">Singularity Protocol</h3>
+                  <h3 className="text-2xl font-black uppercase italic tracking-tighter text-white">Event Horizon Protocol</h3>
                   <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
-                    {isStressTestActive ? "Критическая перегрузка узлов Ядра (x50)" : "Тестирование пределов пропускной способности"}
+                    {isStressTestActive ? "ГИПЕР-ПЕРЕГРУЗКА УЗЛОВ ЯДРА (x500)" : "Тестирование терминальной пропускной способности V5.0"}
                   </p>
                 </div>
 
@@ -371,14 +377,14 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
 
                 <div className="w-full space-y-4">
                    <div className="flex justify-between items-center px-1">
-                      <span className="text-[9px] font-black uppercase text-white/40">Load Intensity</span>
-                      <span className={cn("text-[9px] font-black uppercase", isStressTestActive ? "text-red-500 animate-pulse" : "text-primary")}>
-                        {isStressTestActive ? "CRITICAL LEVEL" : `${attackIntensity}%`}
+                      <span className="text-[9px] font-black uppercase text-white/40">Flood Intensity</span>
+                      <span className={cn("text-[9px] font-black uppercase", isStressTestActive ? "text-red-500 animate-pulse font-black" : "text-primary")}>
+                        {isStressTestActive ? "TERMINAL LEVEL" : `${attackIntensity}%`}
                       </span>
                    </div>
-                   <div className="h-2 bg-white/5 rounded-full overflow-hidden">
+                   <div className="h-3 bg-white/5 rounded-full overflow-hidden">
                       <div 
-                        className={cn("h-full transition-all duration-300", isStressTestActive ? "bg-red-600" : "bg-primary")} 
+                        className={cn("h-full transition-all duration-100 shadow-[0_0_20px_rgba(255,0,0,0.8)]", isStressTestActive ? "bg-red-600" : "bg-primary")} 
                         style={{ width: `${attackIntensity}%` }} 
                       />
                    </div>
@@ -388,16 +394,16 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
                   {!isStressTestActive ? (
                     <Button 
                       onClick={startStressTest}
-                      className="flex-1 h-16 bg-red-600 hover:bg-red-700 text-white font-black uppercase italic tracking-widest gap-3 rounded-2xl shadow-xl shadow-red-500/20"
+                      className="flex-1 h-16 bg-red-600 hover:bg-red-700 text-white font-black uppercase italic tracking-widest gap-3 rounded-2xl shadow-xl shadow-red-500/30 group"
                     >
-                      <Play className="w-6 h-6 fill-current" /> Initialize Overload
+                      <Play className="w-6 h-6 fill-current group-hover:scale-125 transition-transform" /> Initiate Horizon
                     </Button>
                   ) : (
                     <Button 
                       onClick={stopStressTest}
                       className="flex-1 h-16 bg-white text-black font-black uppercase italic tracking-widest gap-3 rounded-2xl hover:bg-white/90"
                     >
-                      <Square className="w-6 h-6 fill-current" /> Terminate Connection
+                      <Square className="w-6 h-6 fill-current" /> Stabilize Node
                     </Button>
                   )}
                 </div>
@@ -405,7 +411,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
                 <div className="flex items-start gap-3 p-4 bg-red-500/10 border border-red-500/20 rounded-2xl">
                   <AlertTriangle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
                   <p className="text-[9px] text-red-500/80 font-bold uppercase leading-relaxed">
-                    ВНИМАНИЕ: Режим Singularity генерирует тысячи реальных запросов в секунду. Это может привести к блокировке аккаунта Firebase или мгновенному исчерпанию лимитов проекта.
+                    ВНИМАНИЕ: Протокол V5.0 создает поток в 50,000 запросов в секунду. Это может привести к мгновенному бану вашего API ключа или полному исчерпанию баланса проекта за минуты.
                   </p>
                 </div>
               </div>
