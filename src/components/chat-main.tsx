@@ -10,6 +10,7 @@ import ProfileView from './profile-view';
 import MusicView from './music-view';
 import WalletView from './wallet-view';
 import GamesView from './games-view';
+import DiscoveryView from './discovery-view';
 import { useAppState } from '@/lib/store';
 import { cn } from '@/lib/utils';
 import { useFirestore, useUser, useCollection, useMemoFirebase } from '@/firebase';
@@ -26,7 +27,7 @@ import { MusicPlayer } from './music-player';
 import { UserAvatar } from './user-avatar';
 import { CreateStoryModal } from './modals/create-story-modal';
 import type { Call } from '@/lib/types';
-import { Phone, MessageCircle, Settings, Search, Archive, Music, Wallet, Gamepad2, Layers } from 'lucide-react';
+import { Phone, MessageCircle, Settings, Search, Archive, Music, Wallet, Gamepad2, Layers, Compass } from 'lucide-react';
 import { useTranslations } from '@/hooks/use-translations';
 
 export default function ChatMain() {
@@ -77,7 +78,7 @@ export default function ChatMain() {
           
           <div className="flex flex-col gap-8 flex-1 overflow-y-auto scrollbar-hide py-2">
             <RailButton icon={Phone} active={activeView === 'calls'} onClick={() => { setActiveView('calls'); setCurrentChatId(null); }} label={t('app.calls').toUpperCase()} />
-            <RailButton icon={Music} active={activeView === 'music'} onClick={() => { setActiveView('music'); setCurrentChatId(null); }} label={t('app.music').toUpperCase()} />
+            <RailButton icon={Compass} active={activeView === 'discovery'} onClick={() => { setActiveView('discovery'); setCurrentChatId(null); }} label="DISCOVERY" />
             <RailButton icon={Gamepad2} active={activeView === 'games'} onClick={() => { setActiveView('games'); setCurrentChatId(null); }} label={t('app.games').toUpperCase()} />
             <RailButton icon={MessageCircle} active={activeView === 'chats'} onClick={() => { setActiveView('chats'); setCurrentChatId(null); }} label={t('app.chats').toUpperCase()} />
             <RailButton icon={Wallet} active={activeView === 'wallet'} onClick={() => { setActiveView('wallet'); setCurrentChatId(null); }} label={t('app.wallet').toUpperCase()} />
@@ -109,13 +110,14 @@ export default function ChatMain() {
             {activeView === 'music' && <MusicView />}
             {activeView === 'wallet' && <WalletView />}
             {activeView === 'games' && <GamesView />}
+            {activeView === 'discovery' && <DiscoveryView />}
           </div>
         </div>
         
         {/* Main Viewport - Strict Width Constraint */}
         <div className={cn(
           "flex-1 h-full flex flex-col min-w-0 bg-transparent relative z-20 chat-pattern-bg overflow-hidden max-w-full", 
-          (!currentChatId || ['profile', 'music', 'wallet', 'games'].includes(activeView)) ? "hidden md:flex" : "flex"
+          (!currentChatId || ['profile', 'music', 'wallet', 'games', 'discovery'].includes(activeView)) ? "hidden md:flex" : "flex"
         )}>
           <div className="h-full w-full overflow-hidden flex flex-col">
             <ChatArea />
@@ -130,7 +132,7 @@ export default function ChatMain() {
         <div className="md:hidden fixed bottom-10 left-1/2 -translate-x-1/2 w-[92%] h-[84px] bg-black/40 backdrop-blur-[60px] border border-white/10 rounded-[2.5rem] flex items-center justify-between px-6 z-50 shadow-[0_20px_50px_rgba(0,0,0,0.6)]">
           <div className="flex flex-1 justify-around items-center gap-1">
             <NavButton icon={Phone} label={t('app.calls').toUpperCase()} active={activeView === 'calls'} onClick={() => setActiveView('calls')} />
-            <NavButton icon={Music} label={t('app.music').toUpperCase()} active={activeView === 'music'} onClick={() => setActiveView('music')} />
+            <NavButton icon={Compass} label="DISCOVERY" active={activeView === 'discovery'} onClick={() => setActiveView('discovery')} />
             <NavButton icon={Gamepad2} label={t('app.games').toUpperCase()} active={activeView === 'games'} onClick={() => setActiveView('games')} />
             <NavButton icon={MessageCircle} label={t('app.chats').toUpperCase()} active={activeView === 'chats'} onClick={() => setActiveView('chats')} isCenter />
             <NavButton icon={Wallet} label={t('app.wallet').toUpperCase()} active={activeView === 'wallet'} onClick={() => setActiveView('wallet')} />

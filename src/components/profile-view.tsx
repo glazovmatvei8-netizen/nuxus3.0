@@ -8,7 +8,7 @@ import { UserAvatar } from '@/components/user-avatar';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { 
-  Pencil, Lock, Bookmark, ChevronRight, Star, Share2, Trophy, Zap, ShieldCheck, Palette, HelpCircle, Globe, Server, QrCode, Crown, Rocket, Sparkles
+  Pencil, Lock, Bookmark, ChevronRight, Star, Share2, Trophy, Zap, ShieldCheck, Palette, HelpCircle, Globe, Server, QrCode, Crown, Rocket, Sparkles, UserPlus
 } from 'lucide-react';
 import { useAppState } from '@/lib/store';
 import { formatDisplayName, cn, isUserPremium } from '@/lib/utils';
@@ -39,6 +39,7 @@ export default function ProfileView() {
   };
 
   const isPremium = isUserPremium(profile);
+  const referralCount = profile?.referralCount || 0;
 
   return (
     <div className="flex flex-col h-full bg-background overflow-hidden relative">
@@ -67,11 +68,30 @@ export default function ProfileView() {
       <ScrollArea className="flex-1 relative z-10">
         <div className="px-4 space-y-4 pb-24">
           
-          {/* Premium Status Section */}
-          <div 
-            className="relative group cursor-pointer"
-            onClick={() => { setSettingsTab('premium'); setIsSettingsOpen(true); }}
-          >
+          {/* Referral Card (Growth Engine) */}
+          <div className="bg-primary/5 border border-primary/20 p-6 rounded-[2.5rem] space-y-4 shadow-xl">
+             <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="bg-primary/20 p-2 rounded-xl"><UserPlus className="w-5 h-5 text-primary" /></div>
+                  <div className="flex flex-col">
+                    <span className="text-[10px] font-black uppercase text-primary tracking-widest">Referral Link</span>
+                    <span className="text-lg font-black text-white italic">Elite Growth</span>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <span className="text-2xl font-black text-white">{referralCount}</span>
+                  <span className="text-[10px] font-bold text-primary/60 uppercase block">Nodes</span>
+                </div>
+             </div>
+             <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
+                <div className="h-full bg-primary shadow-[0_0_10px_rgba(168,85,247,0.5)] transition-all" style={{ width: `${Math.min(100, (referralCount / 10) * 100)}%` }} />
+             </div>
+             <Button onClick={copyRefLink} className="w-full bg-primary/20 border border-primary/30 text-primary h-11 rounded-xl font-black uppercase text-[9px] tracking-[0.2em] hover:bg-primary/30">
+               Копировать Инвайт-код
+             </Button>
+          </div>
+
+          <div className="relative group cursor-pointer" onClick={() => { setSettingsTab('premium'); setIsSettingsOpen(true); }}>
             <div className={cn(
               "absolute -inset-1 bg-gradient-to-tr rounded-[2.5rem] blur-md opacity-20 group-hover:opacity-40 transition-opacity",
               isPremium ? "from-primary to-accent" : "from-white/10 to-white/5"
@@ -104,14 +124,6 @@ export default function ProfileView() {
                   {isPremium ? 'Active' : 'Get Pro'}
                 </Button>
               </div>
-              
-              {isPremium && (
-                <div className="grid grid-cols-3 gap-2 mt-2">
-                  <Badge icon={Sparkles} label="AI Video" />
-                  <Badge icon={Rocket} label="HQ Signal" />
-                  <Badge icon={ShieldCheck} label="Vault" />
-                </div>
-              )}
             </div>
           </div>
 
@@ -136,7 +148,7 @@ export default function ProfileView() {
           </div>
 
           <div className="pt-8 flex flex-col items-center gap-3">
-            <p className="text-[11px] text-muted-foreground/20 uppercase font-black tracking-[0.4em]">Nuxus Kernel v2.9</p>
+            <p className="text-[11px] text-muted-foreground/20 uppercase font-black tracking-[0.4em]">Nuxus Kernel v5.1</p>
             <div className="flex gap-6 opacity-10">
               <Globe className="w-5 h-5" />
               <Server className="w-5 h-5" />
@@ -190,15 +202,6 @@ function SettingsItem({ icon: Icon, label, color, onClick }: any) {
         <span className="text-foreground text-[16px] font-bold italic tracking-tight group-hover:translate-x-1 transition-transform">{label}</span>
       </div>
       <ChevronRight className="w-5 h-5 text-muted-foreground/20 group-hover:text-primary transition-colors" />
-    </div>
-  );
-}
-
-function Badge({ icon: Icon, label }: any) {
-  return (
-    <div className="bg-white/5 px-2 py-1.5 rounded-xl flex items-center justify-center gap-1.5 border border-white/5">
-      <Icon className="w-3 h-3 text-primary" />
-      <span className="text-[8px] font-black uppercase text-white/60 tracking-wider">{label}</span>
     </div>
   );
 }
