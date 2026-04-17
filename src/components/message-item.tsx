@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, memo, useRef, useEffect, useMemo } from 'react';
@@ -152,6 +153,12 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
   const renderContent = () => {
     if (message.contentType === 'sticker') return <img src={message.content} alt="Sticker" className="w-44 h-44 object-contain pointer-events-none drop-shadow-2xl" />;
     
+    if (message.contentType === 'video_note') return (
+      <div className="w-48 h-48 rounded-full overflow-hidden border-2 border-white/20 shadow-2xl bg-black relative group">
+        <video src={message.content} autoPlay muted loop playsInline className="w-full h-full object-cover" />
+      </div>
+    );
+
     if (message.contentType === 'image') return (
       <div 
         className="relative max-w-[300px] rounded-[1.8rem] overflow-hidden border border-white/10 shadow-2xl bg-black/40 cursor-pointer active:scale-[0.98] transition-all group"
@@ -214,7 +221,7 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
 
     return (
       <div className="flex flex-col gap-2">
-        <div className="whitespace-pre-wrap text-[15px] break-words max-w-[320px] leading-[1.6] relative font-medium tracking-tight">
+        <div className="whitespace-pre-wrap text-[15px] break-words max-w-[320px] font-medium tracking-tight">
           {displayContent} 
           {message.editedAt && <span className="text-[8px] ml-2 text-primary/40 font-black uppercase tracking-widest">(sync)</span>}
         </div>
@@ -258,68 +265,45 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
     <>
     <div 
       className={cn("w-full flex mb-4 transition-all duration-300", isMe ? "justify-end pr-2" : "justify-start pl-2", highlight && "scale-105 z-10")}
-      style={{ contentVisibility: 'auto', containIntrinsicSize: '0 80px' }}
     >
       <div className={cn("flex gap-4 max-w-[92%] items-end", isMe ? "flex-row-reverse" : "flex-row")}>
         {!isMe && (
-          <div className="cursor-pointer active:scale-90 transition-transform relative group" onClick={() => setInspectedUserId(message.senderId)}>
-            {/* Added key={message.senderId} to force re-render and prevent stale avatar glitches */}
-            <UserAvatar key={message.senderId} userId={message.senderId} className="h-10 w-10 shrink-0 border-2 border-white/5 shadow-lg relative z-10" fallbackName={message.senderName} />
+          <div className="cursor-pointer active:scale-90 transition-transform" onClick={() => setInspectedUserId(message.senderId)}>
+            <UserAvatar key={message.senderId} userId={message.senderId} className="h-10 w-10 shrink-0 border-2 border-white/5 shadow-lg" fallbackName={message.senderName} />
           </div>
         )}
         <div className={cn("flex flex-col min-w-0 max-w-full", isMe ? "items-end" : "items-start")}>
-          {!isMe && isGroup && <span className="text-[10px] font-black text-primary uppercase tracking-[0.2em] mb-1.5 ml-2 italic drop-shadow-[0_0_5px_rgba(168,85,247,0.3)]">{message.senderName}</span>}
+          {!isMe && isGroup && <span className="text-[10px] font-black text-primary uppercase tracking-[0.2em] mb-1.5 ml-2 italic">{message.senderName}</span>}
           
           <ContextMenu>
             <ContextMenuTrigger>
               <div className="cursor-pointer active:scale-[0.98] outline-none group/bubble relative">
-                {message.selfDestructAt && (
-                  <div className="absolute -top-6 right-0 flex items-center gap-1 text-primary/60 text-[8px] font-black uppercase tracking-widest">
-                    <Timer className="w-3 h-3 animate-spin" /> Исчезающее
-                  </div>
-                )}
-                <div className={bubbleClasses}>
+                <div className={cn(message.contentType !== 'video_note' ? bubbleClasses : "")}>
                   {message.replyToId && (
                     <div className="mb-3 p-2.5 border-l-2 border-accent bg-white/5 rounded-r-2xl opacity-60 text-[11px] truncate max-w-[240px] italic">
                       {decryptSignal(message.replyToContent)}
                     </div>
                   )}
                   {renderContent()}
-                  <div className="flex items-center justify-end gap-2 mt-2 opacity-40">
+                  <div className="flex items-center justify-end gap-2 mt-2 opacity-40 px-1">
                     <span className="text-[9px] font-black tabular-nums tracking-widest">{formattedTime}</span>
                     {isMe && (message.isRead ? <CheckCheck className="w-3.5 h-3.5 text-accent" /> : <Check className="w-3.5 h-3.5" />)}
                   </div>
                 </div>
-                
-                {message.reactions && Object.keys(message.reactions).length > 0 && (
-                  <div className={cn("flex flex-wrap gap-1.5 mt-2", isMe ? "justify-end" : "justify-start")}>
-                    {Object.entries(message.reactions).map(([emoji, uids]) => (uids as string[]).length > 0 && (
-                      <button key={emoji} onClick={(e) => { e.stopPropagation(); handleReaction(emoji); }} className={cn("flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[11px] font-black transition-all", (uids as string[]).includes(user?.uid || '') ? "bg-primary/20 border-primary/40 text-primary shadow-[0_0_10px_rgba(168,85,247,0.2)]" : "bg-white/5 border-white/5 text-muted-foreground")}>
-                        <span>{emoji}</span><span>{(uids as string[]).length}</span>
-                      </button>
-                    ))}
-                  </div>
-                )}
               </div>
             </ContextMenuTrigger>
-            
             <ContextMenuContent className="w-64 bg-[#0a0a0c]/90 backdrop-blur-3xl border-white/10 rounded-[1.8rem] shadow-2xl p-1.5 animate-in zoom-in-95 duration-200">
               <div className="flex justify-around p-2.5 border-b border-white/5 mb-1.5">
                 {QUICK_REACTIONS.map(emoji => (
                   <button key={emoji} onClick={() => handleReaction(emoji)} className="text-2xl hover:scale-125 transition-all duration-300">{emoji}</button>
                 ))}
               </div>
-              <ContextMenuItem onClick={() => onReply(message)} className="gap-3 py-3 font-black text-[10px] uppercase tracking-[0.2em] rounded-xl transition-all"><CornerUpLeft className="w-4 h-4 text-primary" /> Ответить</ContextMenuItem>
-              {message.contentType === 'text' && (
-                <ContextMenuItem onClick={handleTranslate} disabled={isTranslating} className="gap-3 py-3 font-black text-[10px] uppercase tracking-[0.2em] rounded-xl transition-all">
-                  {isTranslating ? <Loader2 className="w-4 h-4 animate-spin text-accent" /> : <Globe className="w-4 h-4 text-accent" />} Перевести ИИ
-                </ContextMenuItem>
-              )}
-              {isMe && <ContextMenuItem onClick={() => onEdit(message)} className="gap-3 py-3 font-black text-[10px] uppercase tracking-[0.2em] rounded-xl transition-all"><Edit2 className="w-4 h-4 text-primary" /> Изменить</ContextMenuItem>}
-              <ContextMenuItem onClick={() => onForward(message)} className="gap-3 py-3 font-black text-[10px] uppercase tracking-[0.2em] rounded-xl transition-all"><Share2 className="w-4 h-4 text-primary" /> Переслать</ContextMenuItem>
+              <ContextMenuItem onClick={() => onReply(message)} className="gap-3 py-3 font-black text-[10px] uppercase tracking-[0.2em] rounded-xl"><CornerUpLeft className="w-4 h-4 text-primary" /> Ответить</ContextMenuItem>
+              {isMe && <ContextMenuItem onClick={() => onEdit(message)} className="gap-3 py-3 font-black text-[10px] uppercase tracking-[0.2em] rounded-xl"><Edit2 className="w-4 h-4 text-primary" /> Изменить</ContextMenuItem>}
+              <ContextMenuItem onClick={() => onForward(message)} className="gap-3 py-3 font-black text-[10px] uppercase tracking-[0.2em] rounded-xl"><Share2 className="w-4 h-4 text-primary" /> Переслать</ContextMenuItem>
               <DropdownMenuSeparator className="bg-white/5 mx-2" />
               {(isMe || isAdmin) && (
-                <ContextMenuItem onClick={() => deleteDoc(doc(db!, 'chats', chatId, 'messages', message.id))} className="text-red-500 gap-3 py-3 font-black text-[10px] uppercase tracking-[0.2em] rounded-xl hover:bg-red-500/10 transition-all"><Trash2 className="w-4 h-4" /> Удалить</ContextMenuItem>
+                <ContextMenuItem onClick={() => deleteDoc(doc(db!, 'chats', chatId, 'messages', message.id))} className="text-red-500 gap-3 py-3 font-black text-[10px] uppercase tracking-[0.2em] rounded-xl hover:bg-red-500/10"><Trash2 className="w-4 h-4" /> Удалить</ContextMenuItem>
               )}
             </ContextMenuContent>
           </ContextMenu>
@@ -333,8 +317,8 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
         <DialogContent className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 max-w-4xl w-[95vw] h-[90vh] bg-transparent border-none p-0 overflow-hidden flex flex-col items-center justify-center outline-none z-[3100] rounded-[2.5rem]">
           <DialogTitle className="sr-only">Просмотр медиа</DialogTitle>
           <button 
-            onClick={(e) => { e.preventDefault(); setIsMediaViewerOpen(false); }} 
-            className="absolute top-6 right-6 z-[3200] h-12 w-12 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-all backdrop-blur-xl border border-white/10 shadow-2xl"
+            onClick={() => setIsMediaViewerOpen(false)} 
+            className="absolute top-6 right-6 z-[3200] h-12 w-12 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-all border border-white/10"
           >
             <X className="w-6 h-6" />
           </button>

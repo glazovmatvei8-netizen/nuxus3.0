@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
   Send, Info, ChevronLeft, X, Paperclip, Mic, StopCircle, Edit2, Search,
-  Smile, ImageIcon, Video, Trash2, Loader2, UserPlus, AtSign, ChevronDown, Wand2, Sparkles, Star, Timer, Clock, Palette, Video as VideoIcon
+  Smile, ImageIcon, Video, Trash2, Loader2, UserPlus, AtSign, ChevronDown, Wand2, Sparkles, Star, Timer, Clock, Palette, Video as VideoIcon, Circle
 } from 'lucide-react';
 import { MessageItem } from './message-item';
 import { useToast } from '@/hooks/use-toast';
@@ -34,9 +34,21 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
   const [isGeneratingImg, setIsGeneratingImg] = useState(false);
   const [isGeneratingVideo, setIsGeneratingVideo] = useState(false);
   const [destructTimer, setDestructTimer] = useState<number | null>(null);
+  
+  // Recording States
+  const [isRecording, setIsRecording] = useState(false);
+  const [recorderMode, setRecorderMode] = useState<'audio' | 'video'>('audio');
+  const [recordingDuration, setRecordingDuration] = useState(0);
+  
   const fileInputRef = useRef<HTMLInputElement>(null);
   const videoGenInputRef = useRef<HTMLInputElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const chunksRef = useRef<Blob[]>([]);
+  const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const videoPreviewRef = useRef<HTMLVideoElement | null>(null);
+
   const { user } = useUser();
   const db = useFirestore();
   const { toast } = useToast();
@@ -70,114 +82,187 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
     setDestructTimer(null);
   };
 
-  const handleGenerateImage = async () => {
-    if (!messageInput.trim()) {
-      toast({ title: "Введите запрос", description: "Напишите, что должен нарисовать ИИ." });
-      return;
-    }
-    setIsGeneratingImg(true);
+  // Recording Logic
+  const startRecording = async () => {
     try {
-      const { imageUrl } = await generateAiImage({ prompt: messageInput });
-      onSendMessage(imageUrl, 'image', destructTimer);
-      setMessageInput('');
-      toast({ title: "Изображение готово!" });
-    } catch (e) {
-      toast({ title: "Ошибка ИИ", variant: "destructive" });
-    } finally {
-      setIsGeneratingImg(false);
+      const constraints = {
+        audio: true,
+        video: recorderMode === 'video' ? { facingMode: 'user', width: 400, height: 400 } : false
+      };
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
+      streamRef.current = stream;
+      
+      if (recorderMode === 'video' && videoPreviewRef.current) {
+        videoPreviewRef.current.srcObject = stream;
+      }
+
+      const recorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = recorder;
+      chunksRef.current = [];
+
+      recorder.ondataavailable = (e) => {
+        if (e.data.size > 0) chunksRef.current.push(e.data);
+      };
+
+      recorder.onstop = async () => {
+        const blob = new Blob(chunksRef.current, { type: recorderMode === 'video' ? 'video/mp4' : 'audio/webm' });
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          const base64 = reader.result as string;
+          onSendMessage(base64, recorderMode === 'video' ? 'video_note' : 'audio', destructTimer);
+        };
+        reader.readAsDataURL(blob);
+        stream.getTracks().forEach(track => track.stop());
+      };
+
+      recorder.start();
+      setIsRecording(true);
+      setRecordingDuration(0);
+      timerIntervalRef.current = setInterval(() => {
+        setRecordingDuration(prev => prev + 1);
+      }, 1000);
+    } catch (err) {
+      toast({ title: "Доступ запрещен", description: "Проверьте разрешения камеры и микрофона", variant: "destructive" });
     }
   };
 
-  const handleVideoAnimate = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file || !isPremium) return;
-    
-    setIsGeneratingVideo(true);
-    toast({ title: "Синтез видео запущен", description: "Нейросеть анимирует ваше фото... (это может занять до 1-2 мин)" });
-    
-    try {
-      const reader = new FileReader();
-      reader.onloadend = async () => {
-        const base64 = reader.result as string;
-        try {
-          const { videoDataUri } = await generateAiVideo({ photoDataUri: base64 });
-          if (!videoDataUri) {
-            throw new Error("Signal Lost: Некорректный формат данных.");
-          }
-          onSendMessage(videoDataUri, 'ai_video', destructTimer);
-          toast({ title: "Видео готово!", description: "Анимация успешно завершена." });
-        } catch (err: any) {
-          toast({ title: "Ошибка синтеза", description: err.message || "Сервер временно недоступен. Попробуйте позже.", variant: "destructive" });
-        } finally {
-          setIsGeneratingVideo(false);
-        }
-      };
-      reader.readAsDataURL(file);
-    } catch (e) {
-      toast({ title: "Ошибка файла", variant: "destructive" });
-      setIsGeneratingVideo(false);
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && isRecording) {
+      mediaRecorderRef.current.stop();
+      setIsRecording(false);
+      if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
     }
+  };
+
+  const cancelRecording = () => {
+    if (mediaRecorderRef.current && isRecording) {
+      mediaRecorderRef.current.onstop = null;
+      mediaRecorderRef.current.stop();
+      streamRef.current?.getTracks().forEach(track => track.stop());
+      setIsRecording(false);
+      if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
+      toast({ title: "Запись отменена" });
+    }
+  };
+
+  const formatDuration = (sec: number) => {
+    const m = Math.floor(sec / 60);
+    const s = sec % 60;
+    return `${m}:${s.toString().padStart(2, '0')}`;
   };
 
   if (!canPost) return null;
 
   return (
     <footer className="p-3 pb-6 bg-black/40 backdrop-blur-3xl border-t border-white/10 shrink-0 z-40 relative">
+      {isRecording && recorderMode === 'video' && (
+        <div className="absolute bottom-24 left-1/2 -translate-x-1/2 w-48 h-48 rounded-full overflow-hidden border-4 border-primary shadow-2xl z-50 bg-black animate-in zoom-in duration-300">
+          <video ref={videoPreviewRef} autoPlay muted playsInline className="w-full h-full object-cover scale-x-[-1]" />
+        </div>
+      )}
+
       <div className="max-w-4xl mx-auto space-y-2 relative">
         <div className="flex gap-3 items-center">
-          <Popover>
-            <PopoverTrigger asChild><Button variant="ghost" size="icon" className="text-white/60 hover:text-primary"><Paperclip className="w-5 h-5" /></Button></PopoverTrigger>
-            <PopoverContent side="top" align="start" className="w-48 bg-[#1c1c1e]/95 backdrop-blur-3xl border-white/10 rounded-[1.8rem] p-1.5 mb-2 shadow-2xl">
-              <Button variant="ghost" className="w-full justify-start gap-3 rounded-xl h-11 text-[10px] font-black uppercase tracking-widest text-white/80 hover:bg-white/5" onClick={() => fileInputRef.current?.click()}><ImageIcon className="w-4 h-4 text-primary" /> Галерея</Button>
-              {isPremium && (
-                <>
-                  <Button variant="ghost" className="w-full justify-start gap-3 rounded-xl h-11 text-[10px] font-black uppercase tracking-widest text-white/80 hover:bg-white/5" onClick={handleGenerateImage} disabled={isGeneratingImg}>
-                    {isGeneratingImg ? <Loader2 className="w-4 h-4 animate-spin" /> : <Palette className="w-4 h-4 text-accent" />} ИИ Рисование
-                  </Button>
-                  <Button variant="ghost" className="w-full justify-start gap-3 rounded-xl h-11 text-[10px] font-black uppercase tracking-widest text-white/80 hover:bg-white/5" onClick={() => videoGenInputRef.current?.click()} disabled={isGeneratingVideo}>
-                    {isGeneratingVideo ? <Loader2 className="w-4 h-4 animate-spin" /> : <VideoIcon className="w-4 h-4 text-purple-400" />} ИИ Видео
-                  </Button>
-                </>
-              )}
-              <Button variant="ghost" className="w-full justify-start gap-3 rounded-xl h-11 text-[10px] font-black uppercase tracking-widest text-white/80 hover:bg-white/5" onClick={onPollOpen}><AtSign className="w-4 h-4 text-blue-400" /> Опрос</Button>
-              <div className="h-px bg-white/5 mx-2 my-1" />
+          {!isRecording ? (
+            <>
               <Popover>
-                <PopoverTrigger asChild>
-                  <Button variant="ghost" className={cn("w-full justify-start gap-3 rounded-xl h-11 text-[10px] font-black uppercase tracking-widest hover:bg-white/5", destructTimer ? "text-primary" : "text-white/80")}>
-                    <Timer className="w-4 h-4" /> Исчезновение
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent side="right" align="end" className="w-40 bg-[#1c1c1e] border-white/10 rounded-2xl p-1 shadow-2xl">
-                  <Button variant="ghost" onClick={() => setDestructTimer(null)} className="w-full justify-start text-[10px] font-bold uppercase h-10 rounded-xl">Выкл</Button>
-                  <Button variant="ghost" onClick={() => setDestructTimer(1)} className="w-full justify-start text-[10px] font-bold uppercase h-10 rounded-xl">1 Минута</Button>
-                  <Button variant="ghost" onClick={() => setDestructTimer(60)} className="w-full justify-start text-[10px] font-bold uppercase h-10 rounded-xl">1 Час</Button>
-                  <Button variant="ghost" onClick={() => setDestructTimer(1440)} className="w-full justify-start text-[10px] font-bold uppercase h-10 rounded-xl">24 Часа</Button>
+                <PopoverTrigger asChild><Button variant="ghost" size="icon" className="text-white/60 hover:text-primary"><Paperclip className="w-5 h-5" /></Button></PopoverTrigger>
+                <PopoverContent side="top" align="start" className="w-48 bg-[#1c1c1e]/95 backdrop-blur-3xl border-white/10 rounded-[1.8rem] p-1.5 mb-2 shadow-2xl">
+                  <Button variant="ghost" className="w-full justify-start gap-3 rounded-xl h-11 text-[10px] font-black uppercase tracking-widest text-white/80 hover:bg-white/5" onClick={() => fileInputRef.current?.click()}><ImageIcon className="w-4 h-4 text-primary" /> Галерея</Button>
+                  {isPremium && (
+                    <>
+                      <Button variant="ghost" className="w-full justify-start gap-3 rounded-xl h-11 text-[10px] font-black uppercase tracking-widest text-white/80 hover:bg-white/5" onClick={async () => {
+                        if (!messageInput.trim()) return;
+                        setIsGeneratingImg(true);
+                        try {
+                          const { imageUrl } = await generateAiImage({ prompt: messageInput });
+                          onSendMessage(imageUrl, 'image', destructTimer);
+                          setMessageInput('');
+                        } catch(e) { toast({title:"Error", variant:"destructive"}); }
+                        finally { setIsGeneratingImg(false); }
+                      }} disabled={isGeneratingImg}>
+                        {isGeneratingImg ? <Loader2 className="w-4 h-4 animate-spin" /> : <Palette className="w-4 h-4 text-accent" />} ИИ Рисование
+                      </Button>
+                      <Button variant="ghost" className="w-full justify-start gap-3 rounded-xl h-11 text-[10px] font-black uppercase tracking-widest text-white/80 hover:bg-white/5" onClick={() => videoGenInputRef.current?.click()} disabled={isGeneratingVideo}>
+                        {isGeneratingVideo ? <Loader2 className="w-4 h-4 animate-spin" /> : <VideoIcon className="w-4 h-4 text-purple-400" />} ИИ Видео
+                      </Button>
+                    </>
+                  )}
+                  <Button variant="ghost" className="w-full justify-start gap-3 rounded-xl h-11 text-[10px] font-black uppercase tracking-widest text-white/80 hover:bg-white/5" onClick={onPollOpen}><AtSign className="w-4 h-4 text-blue-400" /> Опрос</Button>
+                  <div className="h-px bg-white/5 mx-2 my-1" />
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="ghost" className={cn("w-full justify-start gap-3 rounded-xl h-11 text-[10px] font-black uppercase tracking-widest hover:bg-white/5", destructTimer ? "text-primary" : "text-white/80")}>
+                        <Timer className="w-4 h-4" /> Исчезновение
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent side="right" align="end" className="w-40 bg-[#1c1c1e] border-white/10 rounded-2xl p-1 shadow-2xl">
+                      <Button variant="ghost" onClick={() => setDestructTimer(null)} className="w-full justify-start text-[10px] font-bold uppercase h-10 rounded-xl">Выкл</Button>
+                      <Button variant="ghost" onClick={() => setDestructTimer(1)} className="w-full justify-start text-[10px] font-bold uppercase h-10 rounded-xl">1 Минута</Button>
+                      <Button variant="ghost" onClick={() => setDestructTimer(60)} className="w-full justify-start text-[10px] font-bold uppercase h-10 rounded-xl">1 Час</Button>
+                      <Button variant="ghost" onClick={() => setDestructTimer(1440)} className="w-full justify-start text-[10px] font-bold uppercase h-10 rounded-xl">24 Часа</Button>
+                    </PopoverContent>
+                  </Popover>
                 </PopoverContent>
               </Popover>
-            </PopoverContent>
-          </Popover>
-          
-          <div className="flex-1 flex items-center bg-white/[0.08] rounded-full border border-white/[0.1] h-11 px-4 relative group transition-all focus-within:bg-white/[0.12] focus-within:border-primary/30">
-            {destructTimer && <Timer className="w-4 h-4 text-primary mr-2 animate-pulse" />}
-            <Input 
-              placeholder="Сообщение" 
-              className="bg-transparent border-none focus-visible:ring-0 text-white placeholder:text-white/30 font-medium" 
-              value={messageInput} 
-              onChange={e => handleInputChange(e.target.value)} 
-              onKeyDown={e => e.key === 'Enter' && handleSend()} 
-            />
-            <div className="flex items-center gap-1">
-              <Button variant="ghost" size="icon" className="text-white/40 hover:text-primary transition-colors"><Smile className="w-5 h-5" /></Button>
-            </div>
-          </div>
+              
+              <div className="flex-1 flex items-center bg-white/[0.08] rounded-full border border-white/[0.1] h-11 px-4 relative group transition-all focus-within:bg-white/[0.12] focus-within:border-primary/30">
+                {destructTimer && <Timer className="w-4 h-4 text-primary mr-2 animate-pulse" />}
+                <Input 
+                  placeholder="Сообщение" 
+                  className="bg-transparent border-none focus-visible:ring-0 text-white placeholder:text-white/30 font-medium" 
+                  value={messageInput} 
+                  onChange={e => handleInputChange(e.target.value)} 
+                  onKeyDown={e => e.key === 'Enter' && handleSend()} 
+                />
+                <Button variant="ghost" size="icon" className="text-white/40 hover:text-primary transition-colors"><Smile className="w-5 h-5" /></Button>
+              </div>
 
-          <Button size="icon" className="h-10 w-10 rounded-full bg-primary text-white shadow-xl shadow-primary/40 active:scale-90 transition-all hover:scale-105" onClick={handleSend}>
-            <Send className="w-5 h-5" />
-          </Button>
+              {messageInput.trim() ? (
+                <Button size="icon" className="h-11 w-11 rounded-full bg-primary text-white shadow-xl shadow-primary/40 active:scale-90 transition-all" onClick={handleSend}>
+                  <Send className="w-5 h-5" />
+                </Button>
+              ) : (
+                <div className="flex gap-2">
+                  <Button 
+                    size="icon" 
+                    variant="ghost"
+                    className="h-11 w-11 rounded-full text-white/60 hover:text-primary transition-all active:scale-90"
+                    onClick={() => setRecorderMode(recorderMode === 'audio' ? 'video' : 'audio')}
+                  >
+                    {recorderMode === 'audio' ? <VideoIcon className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
+                  </Button>
+                  <Button 
+                    size="icon" 
+                    className="h-11 w-11 rounded-full bg-primary text-white shadow-xl shadow-primary/40 active:scale-90 transition-all animate-in zoom-in duration-300"
+                    onClick={startRecording}
+                  >
+                    {recorderMode === 'audio' ? <Mic className="w-5 h-5" /> : <Circle className="w-5 h-5 fill-current" />}
+                  </Button>
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="flex-1 flex items-center bg-primary/10 border border-primary/20 rounded-full h-11 px-4 gap-4 animate-in slide-in-from-right-4 duration-300">
+              <div className="flex items-center gap-2 text-primary animate-pulse">
+                <div className="w-2 h-2 rounded-full bg-primary" />
+                <span className="text-[10px] font-black uppercase tracking-widest">{recorderMode === 'audio' ? 'REC' : 'LIVE'}</span>
+              </div>
+              <span className="text-sm font-mono font-bold text-white flex-1">{formatDuration(recordingDuration)}</span>
+              <div className="flex gap-1">
+                <Button variant="ghost" size="icon" className="text-white/40 hover:text-destructive transition-colors" onClick={cancelRecording}>
+                  <Trash2 className="w-5 h-5" />
+                </Button>
+                <Button variant="ghost" size="icon" className="text-primary hover:scale-110 transition-transform" onClick={stopRecording}>
+                  <StopCircle className="w-6 h-6 fill-current" />
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
       <input type="file" ref={fileInputRef} hidden accept="image/*,video/*" />
-      <input type="file" ref={videoGenInputRef} hidden accept="image/*" onChange={handleVideoAnimate} />
+      <input type="file" ref={videoGenInputRef} hidden accept="image/*" />
     </footer>
   );
 });
@@ -287,7 +372,7 @@ export default function ChatArea() {
   const handleSendMessage = useCallback(async (content_msg: string, type_msg: Message['contentType'] = 'text', minutes: number | null = null) => {
     if (!content_msg.trim() || !currentChatId || !firebaseUser || !db) return;
     
-    let finalContent = type_msg === 'text' ? encryptSignal(content_msg) : content_msg;
+    let finalContent = (type_msg === 'text' || type_msg === 'reply') ? encryptSignal(content_msg) : content_msg;
     if (type_msg === 'image' && !content_msg.startsWith('data:')) finalContent = await compressImage(content_msg, 800, 0.4);
 
     const msgData: Partial<Message> = { 
@@ -354,7 +439,6 @@ export default function ChatArea() {
 
   return (
     <div className="flex-1 flex flex-col h-full bg-transparent relative overflow-hidden z-20 max-w-full min-w-0">
-      {/* BACKGROUND LAYER - FIXED LAYER ORDER */}
       <div 
         className={cn("absolute inset-0 z-[-1] pointer-events-none transition-opacity duration-1000", (!customBg || customBg.trim() === '') && "chat-pattern-bg")}
         style={customBg && customBg.trim() !== '' ? { 
