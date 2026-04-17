@@ -20,7 +20,7 @@ import { collection, query, doc, limit, updateDoc, writeBatch, increment, getDoc
 import { UserAvatar } from '@/components/user-avatar';
 import { 
   ShieldAlert, Users, Star, Ban, CheckCircle2, ShieldCheck, Radio, 
-  MoreVertical, ShieldOff, Activity, Wallet, Check, Trash2, X, Globe, Fingerprint, Send, Zap, Loader2, AlertTriangle, Play, Square, Flame
+  MoreVertical, ShieldOff, Activity, Wallet, Check, Trash2, X, Globe, Fingerprint, Send, Zap, Loader2, AlertTriangle, Play, Square, Flame, Radiation
 } from 'lucide-react';
 import { 
   XAxis, YAxis, ResponsiveContainer, AreaChart, Area, Tooltip
@@ -138,32 +138,43 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
     }
   };
 
-  // Stress Test Logic
+  // EXTREME Stress Test Logic V4.9
   const startStressTest = () => {
     if (!db) return;
     setIsStressTestActive(true);
     setPacketsSent(0);
     setPacketsFailed(0);
     
-    // Высокочастотный цикл запросов
+    // Hyper-frequency request cycle
     stressIntervalRef.current = setInterval(async () => {
-      try {
-        const dummyRef = doc(db, 'system', 'stress_test');
-        // Генерируем "тяжелую" запись для нагрузки
-        await setDoc(dummyRef, {
+      // Отправляем ПАЧКУ запросов за один тик (Множитель x50)
+      const BATCH_SIZE = 50;
+      const promises = [];
+
+      for (let i = 0; i < BATCH_SIZE; i++) {
+        const dummyRef = doc(db, 'system', `stress_${Math.floor(Math.random() * 100)}`);
+        // Генерируем ОЧЕНЬ тяжелый объект для максимальной нагрузки на парсинг и запись
+        const heavyPayload = {
           timestamp: new Date().toISOString(),
-          entropy: Math.random().toString(36).substring(7),
-          payload: Array(100).fill("STRESS").join("_")
-        }, { merge: true });
+          entropy: Math.random().toString(36).substring(2) + Math.random().toString(36).substring(2),
+          nodeId: `node_${i}`,
+          vector: Array.from({ length: 200 }).map(() => Math.random()), // Массив данных
+          integrity: "V4.9_SINGULARITY_ACTIVE",
+          status: "OVERLOAD"
+        };
         
-        setPacketsSent(prev => prev + 1);
-        setAttackIntensity(Math.min(100, Math.floor(Math.random() * 20) + 80));
-      } catch (e) {
-        setPacketsFailed(prev => prev + 1);
+        promises.push(
+          setDoc(dummyRef, heavyPayload, { merge: false })
+            .then(() => setPacketsSent(prev => prev + 1))
+            .catch(() => setPacketsFailed(prev => prev + 1))
+        );
       }
-    }, 50); // Интервал 50мс для имитации DoS
+      
+      // Не ждем завершения всех, чтобы не тормозить цикл, но обновляем UI
+      setAttackIntensity(Math.min(100, 95 + Math.random() * 5));
+    }, 20); // Интервал 20мс + пачка 50 = ~2500 запросов в сек.
     
-    toast({ title: "Signal Overload Initiated", description: "Внимание: Нагрузка на Ядро запущена." });
+    toast({ title: "SINGULARITY INITIATED", description: "Внимание: Запущена критическая нагрузка x50.", variant: "destructive" });
   };
 
   const stopStressTest = () => {
@@ -173,7 +184,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
     }
     setIsStressTestActive(false);
     setAttackIntensity(0);
-    toast({ title: "Test Terminated", description: "Поток сигналов остановлен." });
+    toast({ title: "Test Terminated", description: "Ядро возвращено в штатный режим." });
   };
 
   useEffect(() => {
@@ -190,7 +201,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
             <div className="flex items-center gap-2">
               <ShieldAlert className="w-5 h-5 text-primary animate-pulse" /> 
               <DialogTitle className="text-white uppercase italic font-black tracking-tighter text-xs md:text-base select-none">
-                Nuxus Control Panel V4.8
+                Nuxus Control Panel V4.9
               </DialogTitle>
             </div>
             <div className="flex items-center gap-1.5 bg-green-500/10 px-3 py-1 rounded-full border border-green-500/20">
@@ -206,7 +217,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
               <TabsTrigger value="analytics" className="rounded-lg text-[8px] uppercase font-black">Аналитика</TabsTrigger>
               <TabsTrigger value="users" className="rounded-lg text-[8px] uppercase font-black">Аккаунты</TabsTrigger>
               <TabsTrigger value="broadcast" className="rounded-lg text-[8px] uppercase font-black">Маяк</TabsTrigger>
-              <TabsTrigger value="overload" className="rounded-lg text-[8px] uppercase font-black text-red-500">Overload</TabsTrigger>
+              <TabsTrigger value="overload" className="rounded-lg text-[8px] uppercase font-black text-red-500">Singularity</TabsTrigger>
               <TabsTrigger value="finance" className="rounded-lg text-[8px] uppercase font-black">Заявки</TabsTrigger>
             </TabsList>
           </div>
@@ -323,49 +334,51 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
             <div className="space-y-6 text-left">
               <div className={cn(
                 "p-8 rounded-[2.5rem] border-2 transition-all duration-500 flex flex-col items-center gap-6 relative overflow-hidden",
-                isStressTestActive ? "bg-red-500/10 border-red-500/50 shadow-[0_0_50px_rgba(239,68,68,0.2)]" : "bg-white/5 border-white/10"
+                isStressTestActive ? "bg-red-600/20 border-red-500 shadow-[0_0_80px_rgba(239,68,68,0.4)]" : "bg-white/5 border-white/10"
               )}>
                 {isStressTestActive && (
                   <div className="absolute inset-0 pointer-events-none">
-                    <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_50%_50%,rgba(239,68,68,0.1),transparent_70%)] animate-pulse" />
+                    <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_50%_50%,rgba(239,68,68,0.2),transparent_70%)] animate-[pulse_0.5s_ease-in-out_infinite]" />
                   </div>
                 )}
 
                 <div className="relative">
                   <div className={cn(
                     "w-24 h-24 rounded-full flex items-center justify-center border-4 transition-all duration-300 relative z-10",
-                    isStressTestActive ? "bg-red-500 text-white border-white/20 animate-ping" : "bg-white/5 text-muted-foreground border-white/5"
+                    isStressTestActive ? "bg-red-600 text-white border-white/40 animate-[ping_1s_ease-in-out_infinite]" : "bg-white/5 text-muted-foreground border-white/5"
                   )}>
-                    <Flame className={cn("w-12 h-12", isStressTestActive && "animate-bounce")} />
+                    <Radiation className={cn("w-12 h-12", isStressTestActive && "animate-spin")} />
                   </div>
                 </div>
 
                 <div className="text-center space-y-2">
-                  <h3 className="text-2xl font-black uppercase italic tracking-tighter text-white">Signal Overload Test</h3>
+                  <h3 className="text-2xl font-black uppercase italic tracking-tighter text-white">Singularity Protocol</h3>
                   <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
-                    Имитация высокой нагрузки на облачные узлы Ядра
+                    {isStressTestActive ? "Критическая перегрузка узлов Ядра (x50)" : "Тестирование пределов пропускной способности"}
                   </p>
                 </div>
 
                 <div className="grid grid-cols-2 w-full gap-4">
-                  <div className="bg-black/40 p-4 rounded-2xl border border-white/10 text-center">
-                    <span className="text-[8px] font-black uppercase text-muted-foreground block mb-1">Packets Sent</span>
-                    <span className="text-2xl font-black text-primary tabular-nums">{packetsSent}</span>
+                  <div className="bg-black/60 p-4 rounded-2xl border border-white/10 text-center">
+                    <span className="text-[8px] font-black uppercase text-muted-foreground block mb-1">Signals Transmitted</span>
+                    <span className="text-3xl font-black text-primary tabular-nums">{packetsSent.toLocaleString()}</span>
                   </div>
-                  <div className="bg-black/40 p-4 rounded-2xl border border-white/10 text-center">
+                  <div className="bg-black/60 p-4 rounded-2xl border border-white/10 text-center">
                     <span className="text-[8px] font-black uppercase text-muted-foreground block mb-1">Signal Drops</span>
-                    <span className="text-2xl font-black text-red-500 tabular-nums">{packetsFailed}</span>
+                    <span className="text-3xl font-black text-red-500 tabular-nums">{packetsFailed.toLocaleString()}</span>
                   </div>
                 </div>
 
                 <div className="w-full space-y-4">
                    <div className="flex justify-between items-center px-1">
-                      <span className="text-[9px] font-black uppercase text-white/40">Intensity Level</span>
-                      <span className="text-[9px] font-black uppercase text-primary">{attackIntensity}%</span>
+                      <span className="text-[9px] font-black uppercase text-white/40">Load Intensity</span>
+                      <span className={cn("text-[9px] font-black uppercase", isStressTestActive ? "text-red-500 animate-pulse" : "text-primary")}>
+                        {isStressTestActive ? "CRITICAL LEVEL" : `${attackIntensity}%`}
+                      </span>
                    </div>
                    <div className="h-2 bg-white/5 rounded-full overflow-hidden">
                       <div 
-                        className={cn("h-full transition-all duration-300", isStressTestActive ? "bg-red-500" : "bg-primary")} 
+                        className={cn("h-full transition-all duration-300", isStressTestActive ? "bg-red-600" : "bg-primary")} 
                         style={{ width: `${attackIntensity}%` }} 
                       />
                    </div>
@@ -377,7 +390,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
                       onClick={startStressTest}
                       className="flex-1 h-16 bg-red-600 hover:bg-red-700 text-white font-black uppercase italic tracking-widest gap-3 rounded-2xl shadow-xl shadow-red-500/20"
                     >
-                      <Play className="w-6 h-6 fill-current" /> Launch Test
+                      <Play className="w-6 h-6 fill-current" /> Initialize Overload
                     </Button>
                   ) : (
                     <Button 
@@ -389,10 +402,10 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
                   )}
                 </div>
 
-                <div className="flex items-start gap-3 p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-2xl">
-                  <AlertTriangle className="w-5 h-5 text-yellow-500 shrink-0 mt-0.5" />
-                  <p className="text-[9px] text-yellow-500/80 font-bold uppercase leading-relaxed">
-                    Внимание: Данный тест генерирует реальные записи в базе данных. Длительное использование может привести к исчерпанию квот Firebase.
+                <div className="flex items-start gap-3 p-4 bg-red-500/10 border border-red-500/20 rounded-2xl">
+                  <AlertTriangle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
+                  <p className="text-[9px] text-red-500/80 font-bold uppercase leading-relaxed">
+                    ВНИМАНИЕ: Режим Singularity генерирует тысячи реальных запросов в секунду. Это может привести к блокировке аккаунта Firebase или мгновенному исчерпанию лимитов проекта.
                   </p>
                 </div>
               </div>
