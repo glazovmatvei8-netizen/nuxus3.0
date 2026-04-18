@@ -36,10 +36,10 @@ export default function DiscoveryView() {
   }, [db]);
   const { data: rawTopUsers } = useCollection<User>(topUsersQuery);
 
-  // 3. Real-time Total Count for Milestone
+  // 3. Real-time Total Count for Milestone (Live Stream)
   const allUsersQuery = useMemoFirebase(() => {
     if (!db) return null;
-    return query(collection(db, 'users'), limit(500));
+    return query(collection(db, 'users'));
   }, [db]);
   const { data: allUsers } = useCollection<User>(allUsersQuery);
 
@@ -56,6 +56,9 @@ export default function DiscoveryView() {
       // Remove admin if they exist in list then re-insert at top
       list = list.filter(u => u.id !== ADMIN_ID);
       list.unshift(adminData);
+    } else {
+        // Just in case admin isn't in the local slice, we still want to show them if we have the profile
+        // but here allUsers handles it.
     }
     
     return list.slice(0, 10);
@@ -92,7 +95,7 @@ export default function DiscoveryView() {
       </div>
 
       <ScrollArea className="flex-1">
-        <div className="space-y-10 pb-40 px-6 max-w-full overflow-hidden">
+        <div className="space-y-8 pb-40 px-6 max-w-full overflow-hidden">
           
           {/* Top Nodes Section */}
           <section className="space-y-4">
@@ -102,7 +105,7 @@ export default function DiscoveryView() {
               </h3>
             </div>
             <div className="flex gap-4 overflow-x-auto scrollbar-hide py-2 px-1">
-              {leaderboard.map((u, idx) => (
+              {leaderboard.map((u) => (
                 <div 
                   key={u.id} 
                   onClick={() => setInspectedUserId(u.id)}
@@ -137,14 +140,14 @@ export default function DiscoveryView() {
             </div>
           </section>
 
-          {/* Activity Milestone Banner (Moved up & Real-time) */}
+          {/* Activity Milestone Banner (Real-time & Fixed Layout) */}
           <div className="bg-primary/10 border border-primary/20 p-6 md:p-8 rounded-[2.5rem] text-center space-y-4 relative overflow-hidden shadow-2xl">
              <div className="absolute top-0 right-0 p-4 opacity-10 rotate-12">
                 <Zap className="w-20 h-20 text-primary" />
              </div>
              <Zap className="w-10 h-10 text-primary mx-auto animate-pulse relative z-10" />
              <div className="space-y-1 relative z-10">
-               <h3 className="text-lg md:text-xl font-black uppercase italic text-white tracking-tighter leading-none">
+               <h3 className="text-xl md:text-2xl font-black uppercase italic text-white tracking-tighter leading-none whitespace-nowrap overflow-hidden">
                  Nuxus Milestone
                </h3>
                <p className="text-[9px] md:text-[10px] font-bold text-primary/60 uppercase tracking-[0.2em]">

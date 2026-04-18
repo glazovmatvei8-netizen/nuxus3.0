@@ -13,6 +13,7 @@ import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   browserLocalPersistence,
+  browserSessionPersistence,
   setPersistence
 } from 'firebase/auth';
 import { doc, setDoc, getDoc, increment, updateDoc } from 'firebase/firestore';
@@ -73,20 +74,14 @@ export default function AuthScreen({ initialMode = 'login' }: AuthScreenProps) {
     return `${input.toLowerCase()}${MASTER_DOMAIN}`;
   };
 
-  /**
-   * Исправленная логика создания профиля.
-   * Больше никаких "Recovered Node" и случайных ID.
-   */
   const createProfileRecord = async (uid: string, overrideData?: any) => {
     if (!db) return;
     const userRef = doc(db, 'users', uid);
     const snap = await getDoc(userRef);
     
-    // Интеллектуальный выбор имени: из формы -> из старой записи -> из идентификатора
     const idName = formData.identifier ? `Node ${formData.identifier.slice(-4)}` : `User ${uid.slice(0, 4)}`;
     const finalName = overrideData?.name || formData.name || (snap.exists() ? snap.data().name : idName);
     
-    // Формирование юзернейма
     const baseUsername = (formData.username || formData.identifier || `user${uid.slice(0, 3)}`).replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
     const finalUsername = overrideData?.username || 
       (formData.username ? (formData.username.startsWith('@') ? formData.username.toLowerCase() : '@' + formData.username.toLowerCase()) : 
@@ -125,7 +120,16 @@ export default function AuthScreen({ initialMode = 'login' }: AuthScreenProps) {
 
     setIsLoading(true);
     try {
-      await setPersistence(auth, browserLocalPersistence);
+      try {
+        await setPersistence(auth, browserLocalPersistence);
+      } catch (storageErr: any) {
+        if (storageErr.code === 'auth/web-storage-unsupported' || storageErr.message?.includes('quota')) {
+          console.warn("Nuxus Auth: Local quota exceeded, falling back to Session Storage");
+          localStorage.clear(); // Пытаемся освободить место
+          await setPersistence(auth, browserSessionPersistence);
+        }
+      }
+
       const virtualEmail = getVirtualEmail(formData.identifier);
       
       if (mode === 'register') {
@@ -153,7 +157,6 @@ export default function AuthScreen({ initialMode = 'login' }: AuthScreenProps) {
         
         if (!snap.exists()) {
           await createProfileRecord(cred.user.uid);
-          toast({ title: "Профиль синхронизирован" });
         }
 
         const currentProfile = (await getDoc(userRef)).data();
@@ -163,6 +166,7 @@ export default function AuthScreen({ initialMode = 'login' }: AuthScreenProps) {
     } catch (err: any) {
       let msg = err.message;
       if (err.code === 'auth/invalid-credential') msg = "Неверный аккаунт или пароль.";
+      if (msg.includes('quota')) msg = "Память браузера переполнена. Очистите кэш или историю.";
       toast({ title: "Ошибка доступа", description: msg, variant: "destructive" });
     } finally {
       setIsLoading(false);
