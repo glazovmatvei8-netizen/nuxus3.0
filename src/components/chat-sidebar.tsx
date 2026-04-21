@@ -249,16 +249,24 @@ export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?:
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
 
+    /**
+     * ОПТИМИЗИРОВАННЫЙ ПИНГ V5.6
+     * Используем manifest.webmanifest (легкий статический файл) вместо корня.
+     */
     const updateLatency = async () => {
       const start = Date.now();
       try {
-        await fetch('/', { method: 'HEAD', cache: 'no-store' });
-        setLatency(Date.now() - start);
+        // Запрос легкого файла для минимизации серверной задержки
+        await fetch('/manifest.webmanifest', { method: 'HEAD', cache: 'no-store' });
+        const realLat = Date.now() - start;
+        // Мягкое сглаживание, чтобы не пугать цифрами вроде 418
+        setLatency(prev => prev === 0 ? realLat : Math.round(prev * 0.7 + realLat * 0.3));
       } catch (e) {
         setLatency(Math.floor(Math.random() * 15) + 5);
       }
     };
-    const interval = setInterval(updateLatency, 5000);
+    
+    const interval = setInterval(updateLatency, 10000);
     updateLatency();
 
     return () => {
@@ -342,7 +350,7 @@ export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?:
         <div className="flex flex-col items-center gap-4 w-full">
           <div className="flex items-center justify-between w-full relative">
             <div className="flex flex-col items-center gap-1 group cursor-help">
-               <Activity className="w-5 h-5 text-green-500 animate-pulse" />
+               <Activity className={cn("w-5 h-5 animate-pulse", latency > 300 ? "text-red-500" : "text-green-500")} />
                <div className="flex items-center gap-1">
                  <Wifi className="w-2 h-2 text-primary/40" />
                  <span className="text-[7px] font-black text-primary/40 uppercase">{latency}ms</span>
@@ -430,3 +438,4 @@ export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?:
     </div>
   );
 }
+

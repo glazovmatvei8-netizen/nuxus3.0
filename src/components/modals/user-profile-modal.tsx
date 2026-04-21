@@ -126,7 +126,7 @@ export function UserProfileModal() {
 
         <div className="absolute inset-0 nuxus-core-glow opacity-20 pointer-events-none" />
         
-        {/* АБСОЛЮТНЫЙ СКРОЛЛ: Теперь ScrollArea охватывает всё окно */}
+        {/* АБСОЛЮТНЫЙ СКРОЛЛ V5.6: ScrollArea охватывает всё окно */}
         <ScrollArea className="h-full w-full">
           <div className="flex flex-col min-h-full pb-20">
             {/* Header / Avatar Section */}

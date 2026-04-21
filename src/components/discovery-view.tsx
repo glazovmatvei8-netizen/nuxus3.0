@@ -89,7 +89,7 @@ export default function DiscoveryView() {
       </div>
 
       <ScrollArea className="flex-1">
-        <div className="space-y-8 pb-40 px-6 max-w-full overflow-hidden">
+        <div className="space-y-8 pb-40 px-6 max-w-full overflow-x-hidden">
           
           {/* Top Nodes Section */}
           <section className="space-y-4">
@@ -134,13 +134,13 @@ export default function DiscoveryView() {
             </div>
           </section>
 
-          {/* Activity Milestone Banner (FIXED RESPONSIVE) */}
-          <div className="bg-primary/10 border border-primary/20 p-6 rounded-[2.5rem] text-center space-y-5 relative overflow-hidden shadow-2xl">
-             <div className="absolute top-0 right-0 p-4 opacity-10 rotate-12">
+          {/* Activity Milestone Banner (FIXED RESPONSIVE V5.6) */}
+          <div className="bg-primary/10 border border-primary/20 p-6 rounded-[2.5rem] text-center space-y-5 relative overflow-hidden shadow-2xl max-w-full">
+             <div className="absolute top-0 right-0 p-4 opacity-10 rotate-12 pointer-events-none">
                 <Zap className="w-20 h-20 text-primary" />
              </div>
              <Zap className="w-10 h-10 text-primary mx-auto animate-pulse relative z-10" />
-             <div className="space-y-1 relative z-10 px-2">
+             <div className="space-y-1 relative z-10 px-2 max-w-full">
                <h3 className="text-xl md:text-2xl font-black uppercase italic text-white tracking-tighter leading-tight break-words">
                  Nuxus Milestone
                </h3>
@@ -200,3 +200,4 @@ export default function DiscoveryView() {
     </div>
   );
 }
+

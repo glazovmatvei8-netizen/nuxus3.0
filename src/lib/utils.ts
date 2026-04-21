@@ -76,24 +76,29 @@ export function isGlobalAdmin(user: User | null | undefined): boolean {
   return !!user.isAdmin;
 }
 
+/**
+ * СТРОГИЙ ПРЕМИУМ АУДИТ V5.6
+ * Проверяет не только флаг, но и дату premiumUntil.
+ */
 export function isUserPremium(user: User | null | undefined): boolean {
   if (!user) return false;
   if (isGlobalAdmin(user)) return true;
   
-  // СТРОГАЯ ПРОВЕРКА ДАТЫ: Флаг isPremium игнорируется, если срок истек
+  // Если флага нет — сразу false
   if (!user.isPremium) return false;
   
+  // Если есть дата окончания — сверяем с текущим временем
   if (user.premiumUntil) {
     try {
       const expiry = new Date(user.premiumUntil);
       const now = new Date();
-      return expiry > now;
+      if (expiry < now) return false;
     } catch (e) {
       return false;
     }
   }
   
-  return !!user.isPremium; // Если даты нет, но флаг стоит (для старых админ-выдач)
+  return true;
 }
 
 export function isUserActuallyBanned(user: User | null | undefined): boolean {
