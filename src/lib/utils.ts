@@ -79,11 +79,15 @@ export function isGlobalAdmin(user: User | null | undefined): boolean {
 export function isUserPremium(user: User | null | undefined): boolean {
   if (!user) return false;
   if (isGlobalAdmin(user)) return true;
-  if (!user.isPremium || !user.premiumUntil) return false;
+  // СТРОГАЯ ПРОВЕРКА: Если флаг есть, но дата истекла — возвращаем false
+  if (!user.isPremium) return false;
+  if (!user.premiumUntil) return true; // Если нет даты окончания, но стоит флаг (редкий случай для старых акков)
+  
   try {
-    return new Date(user.premiumUntil) > new Date();
+    const expiry = new Date(user.premiumUntil);
+    return expiry > new Date();
   } catch (e) {
-    return false;
+    return !!user.isPremium;
   }
 }
 

@@ -48,17 +48,11 @@ export default function DiscoveryView() {
     if (!rawTopUsers || !allUsers) return [];
     
     let list = [...rawTopUsers];
-    
-    // Find admin in raw list or in total users if not in top list
     const adminData = allUsers.find(u => u.id === ADMIN_ID);
     
     if (adminData) {
-      // Remove admin if they exist in list then re-insert at top
       list = list.filter(u => u.id !== ADMIN_ID);
       list.unshift(adminData);
-    } else {
-        // Just in case admin isn't in the local slice, we still want to show them if we have the profile
-        // but here allUsers handles it.
     }
     
     return list.slice(0, 10);
@@ -140,17 +134,17 @@ export default function DiscoveryView() {
             </div>
           </section>
 
-          {/* Activity Milestone Banner (Real-time & Fixed Layout) */}
-          <div className="bg-primary/10 border border-primary/20 p-6 md:p-8 rounded-[2.5rem] text-center space-y-4 relative overflow-hidden shadow-2xl">
+          {/* Activity Milestone Banner (Fixed Responsive Layout) */}
+          <div className="bg-primary/10 border border-primary/20 p-6 md:p-8 rounded-[2.5rem] text-center space-y-5 relative overflow-hidden shadow-2xl">
              <div className="absolute top-0 right-0 p-4 opacity-10 rotate-12">
                 <Zap className="w-20 h-20 text-primary" />
              </div>
              <Zap className="w-10 h-10 text-primary mx-auto animate-pulse relative z-10" />
-             <div className="space-y-1 relative z-10">
-               <h3 className="text-xl md:text-2xl font-black uppercase italic text-white tracking-tighter leading-none whitespace-nowrap overflow-hidden">
+             <div className="space-y-1 relative z-10 px-2">
+               <h3 className="text-xl md:text-2xl font-black uppercase italic text-white tracking-tighter leading-tight">
                  Nuxus Milestone
                </h3>
-               <p className="text-[9px] md:text-[10px] font-bold text-primary/60 uppercase tracking-[0.2em]">
+               <p className="text-[10px] font-bold text-primary/60 uppercase tracking-[0.2em]">
                  Цель: 100 активных узлов
                </p>
              </div>
@@ -165,9 +159,6 @@ export default function DiscoveryView() {
                    <span className="text-[11px] font-black text-white italic">{totalNodes} / 100</span>
                    <span className="text-[8px] font-black text-primary uppercase tracking-widest animate-pulse">Sync Active</span>
                 </div>
-                <p className="text-[9px] text-muted-foreground uppercase font-black px-2 leading-relaxed">
-                  Приглашайте друзей через <span className="text-primary">Signal QR</span> и расширяйте влияние своего узла!
-                </p>
              </div>
           </div>
 
