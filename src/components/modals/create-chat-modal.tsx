@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState } from 'react';
@@ -6,11 +7,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useAppState } from '@/lib/store';
 import { useFirestore, useUser } from '@/firebase';
-import { Users, Radio, MessageSquarePlus, ArrowRight, Loader2, Search } from 'lucide-react';
+import { Users, Radio, MessageSquarePlus, ArrowRight, Loader2, Search, Zap, Globe, Sparkles } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import type { ChatType } from '@/lib/types';
-import { collection, addDoc } from 'firebase/firestore';
+import { collection, addDoc, doc, updateDoc } from 'firebase/firestore';
 import { addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { cn } from '@/lib/utils';
 
 interface CreateChatModalProps {
   open: boolean;
@@ -48,7 +50,7 @@ export function CreateChatModal({ open, onOpenChange }: CreateChatModalProps) {
         ownerId: user.uid,
         createdAt: new Date().toISOString(),
         isPublic: true,
-        metadata: {} // Initialize metadata to prevent bot errors
+        metadata: {} 
       };
 
       const docRef = await addDoc(collection(db, 'chats'), newChatData);
@@ -57,17 +59,17 @@ export function CreateChatModal({ open, onOpenChange }: CreateChatModalProps) {
       addDocumentNonBlocking(messagesCol, {
         chatId: docRef.id,
         senderId: 'system',
-        senderName: 'Nuxus',
-        content: `${type === 'group' ? 'Группа' : 'Канал'} создана!`,
+        senderName: 'Nuxus Kernel',
+        content: `${type === 'group' ? 'Группа' : 'Канал'} успешно инициализирована в Ядре!`,
         contentType: 'service',
         sentAt: new Date().toISOString(),
       });
 
       setCurrentChatId(docRef.id);
       onOpenChange(false);
-      toast({ title: "Успех", description: `${type === 'group' ? 'Группа' : 'Канал'} создана!` });
+      toast({ title: "Узел создан", description: `${type === 'group' ? 'Группа' : 'Канал'} готова к работе` });
     } catch (error: any) {
-      toast({ title: "Ошибка", description: error.message, variant: "destructive" });
+      toast({ title: "Ошибка создания", description: error.message, variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
@@ -75,82 +77,135 @@ export function CreateChatModal({ open, onOpenChange }: CreateChatModalProps) {
 
   return (
     <Dialog open={open} onOpenChange={(val) => { onOpenChange(val); setStep('select'); }}>
-      <DialogContent className="max-w-md p-0 overflow-hidden bg-card/95 backdrop-blur-xl border-border/40">
-        <DialogHeader className="p-6 pb-2">
-          <DialogTitle className="text-xl font-bold flex items-center gap-2">
-            {step === 'select' ? <MessageSquarePlus className="w-5 h-5 text-primary" /> : <ArrowRight className="w-5 h-5 text-primary" />}
-            {step === 'select' ? 'Новое сообщество' : `Создание ${type === 'group' ? 'группы' : 'канала'}`}
-          </DialogTitle>
-          <DialogDescription>
-            {step === 'select' ? 'Выберите тип сообщества или найдите друга' : 'Укажите детали вашего сообщества'}
+      <DialogContent className="max-w-[400px] p-0 overflow-hidden bg-[#0a0a0c]/90 backdrop-blur-[40px] border-white/10 rounded-[3rem] shadow-[0_30px_100px_rgba(0,0,0,0.8)] outline-none">
+        {/* Background Glow */}
+        <div className="absolute inset-0 pointer-events-none overflow-hidden">
+          <div className="absolute -top-24 -left-24 w-48 h-48 bg-primary/20 blur-[80px] rounded-full animate-pulse" />
+          <div className="absolute -bottom-24 -right-24 w-48 h-48 bg-accent/20 blur-[80px] rounded-full animate-pulse" />
+        </div>
+
+        <DialogHeader className="p-8 pb-4 relative z-10">
+          <div className="flex items-center gap-3 mb-2">
+             <div className="bg-primary/20 p-2 rounded-xl border border-primary/20 shadow-[0_0_15px_rgba(168,85,247,0.2)]">
+               <MessageSquarePlus className="w-5 h-5 text-primary" />
+             </div>
+             <DialogTitle className="text-2xl font-black text-white italic tracking-tighter uppercase">
+               {step === 'select' ? 'Новое сообщество' : `Параметры ${type === 'group' ? 'группы' : 'канала'}`}
+             </DialogTitle>
+          </div>
+          <DialogDescription className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 leading-relaxed ml-1">
+            {step === 'select' ? 'Выберите тип узла или найдите существующий' : 'Настройте идентификаторы вашего сообщества'}
           </DialogDescription>
         </DialogHeader>
 
         {step === 'select' ? (
-          <div className="flex flex-col p-6 pt-2 space-y-4">
-            <div className="grid grid-cols-2 gap-3">
-              <Button 
-                variant="outline" 
-                className="rounded-2xl h-24 flex flex-col items-center justify-center gap-2 border-primary/20 hover:bg-primary/10 transition-all group"
+          <div className="p-8 pt-2 space-y-8 relative z-10">
+            <div className="grid grid-cols-2 gap-4">
+              {/* GROUP CARD */}
+              <button 
                 onClick={() => { setType('group'); setStep('details'); }}
+                className="group relative h-40 rounded-[2.2rem] overflow-hidden border border-white/5 bg-white/[0.02] hover:bg-primary/5 hover:border-primary/40 transition-all duration-500 active:scale-95"
               >
-                <div className="bg-primary/10 p-3 rounded-xl group-hover:bg-primary/20 transition-colors">
-                  <Users className="w-6 h-6 text-primary" />
+                <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                <div className="flex flex-col items-center justify-center h-full gap-3 relative z-10">
+                  <div className="w-14 h-14 bg-white/5 rounded-2xl flex items-center justify-center border border-white/10 group-hover:bg-primary/20 group-hover:border-primary/30 transition-all duration-500 group-hover:shadow-[0_0_20px_rgba(168,85,247,0.3)]">
+                    <Users className="w-7 h-7 text-white group-hover:text-primary transition-colors" />
+                  </div>
+                  <div className="text-center">
+                    <span className="text-[11px] font-black tracking-[0.3em] uppercase text-white group-hover:text-primary transition-colors">Группа</span>
+                    <p className="text-[8px] font-bold text-muted-foreground uppercase mt-1 opacity-60">До 200к узлов</p>
+                  </div>
                 </div>
-                <span className="text-[10px] font-black tracking-widest uppercase">Группа</span>
-              </Button>
-              <Button 
-                variant="outline" 
-                className="rounded-2xl h-24 flex flex-col items-center justify-center gap-2 border-accent/20 hover:bg-accent/10 transition-all group"
+              </button>
+
+              {/* CHANNEL CARD */}
+              <button 
                 onClick={() => { setType('channel'); setStep('details'); }}
+                className="group relative h-40 rounded-[2.2rem] overflow-hidden border border-white/5 bg-white/[0.02] hover:bg-accent/5 hover:border-accent/40 transition-all duration-500 active:scale-95"
               >
-                <div className="bg-accent/10 p-3 rounded-xl group-hover:bg-accent/20 transition-colors">
-                  <Radio className="w-6 h-6 text-accent" />
+                <div className="absolute inset-0 bg-gradient-to-br from-accent/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                <div className="flex flex-col items-center justify-center h-full gap-3 relative z-10">
+                  <div className="w-14 h-14 bg-white/5 rounded-2xl flex items-center justify-center border border-white/10 group-hover:bg-accent/20 group-hover:border-accent/30 transition-all duration-500 group-hover:shadow-[0_0_20px_rgba(6,182,212,0.3)]">
+                    <Radio className="w-7 h-7 text-white group-hover:text-accent transition-colors" />
+                  </div>
+                  <div className="text-center">
+                    <span className="text-[11px] font-black tracking-[0.3em] uppercase text-white group-hover:text-accent transition-colors">Канал</span>
+                    <p className="text-[8px] font-bold text-muted-foreground uppercase mt-1 opacity-60">Вещание (1 к ∞)</p>
+                  </div>
                 </div>
-                <span className="text-[10px] font-black tracking-widest uppercase">Канал</span>
-              </Button>
+              </button>
             </div>
 
-            <div className="pt-2">
-              <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-3 text-center">ИЛИ</div>
-              <Button 
-                variant="secondary" 
-                className="w-full h-12 rounded-2xl gap-3 font-black uppercase text-[10px] tracking-[0.2em] shadow-xl shadow-black/20"
+            <div className="space-y-4">
+              <div className="flex items-center gap-4">
+                <div className="h-px flex-1 bg-gradient-to-r from-transparent to-white/10" />
+                <span className="text-[8px] font-black text-muted-foreground/40 uppercase tracking-[0.4em]">или</span>
+                <div className="h-px flex-1 bg-gradient-to-l from-transparent to-white/10" />
+              </div>
+
+              <button 
                 onClick={() => { onOpenChange(false); setIsSearchOpen(true); }}
+                className="w-full h-14 bg-white/[0.03] border border-white/10 rounded-2xl flex items-center justify-center gap-3 group hover:bg-white/[0.06] hover:border-white/20 transition-all active:scale-98 shadow-xl"
               >
-                <Search className="w-4 h-4 text-primary" /> Найти пользователя
-              </Button>
+                <Search className="w-4 h-4 text-primary group-hover:scale-110 transition-transform" />
+                <span className="text-[10px] font-black uppercase tracking-[0.3em] text-white/80">Найти пользователя</span>
+              </button>
             </div>
           </div>
         ) : (
-          <div className="p-6 space-y-6">
+          <div className="p-8 pt-2 space-y-6 relative z-10">
             <div className="flex justify-center mb-4">
-              <div className="w-24 h-24 rounded-[2.5rem] bg-primary/10 border-2 border-dashed border-primary/40 flex items-center justify-center cursor-pointer hover:bg-primary/20 transition-all">
-                {type === 'group' ? <Users className="w-8 h-8 text-primary" /> : <Radio className="w-8 h-8 text-accent" />}
+              <div className={cn(
+                "w-24 h-24 rounded-[2.8rem] flex items-center justify-center border-2 border-dashed transition-all duration-700 shadow-2xl relative group overflow-hidden",
+                type === 'group' ? "bg-primary/5 border-primary/40 shadow-primary/10" : "bg-accent/5 border-accent/40 shadow-accent/10"
+              )}>
+                <div className="absolute inset-0 bg-gradient-to-tr from-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                {type === 'group' ? <Users className="w-10 h-10 text-primary animate-pulse" /> : <Radio className="w-10 h-10 text-accent animate-pulse" />}
               </div>
             </div>
-            <div className="space-y-4">
-              <Input 
-                placeholder={type === 'group' ? 'Название группы' : 'Название канала'} 
-                value={name}
-                onChange={e => setName(e.target.value)}
-                className="h-12 bg-muted/30 border-white/5 rounded-2xl text-lg font-semibold"
-              />
-              <Input 
-                placeholder={`@${type === 'group' ? 'group' : 'channel'}_id`} 
-                value={username}
-                onChange={e => setUsername(e.target.value)}
-                className="h-12 bg-muted/30 border-white/5 rounded-2xl font-mono"
-              />
+            
+            <div className="space-y-4 text-left">
+              <div className="space-y-1.5">
+                <label className="text-[9px] font-black uppercase text-primary/60 ml-2 tracking-widest">Название</label>
+                <Input 
+                  placeholder={type === 'group' ? 'Название группы' : 'Название канала'} 
+                  value={name}
+                  onChange={e => setName(e.target.value)}
+                  className="h-14 bg-white/5 border-white/10 rounded-2xl text-lg font-black italic tracking-tight focus:border-primary/50 transition-all placeholder:text-white/10 border-2"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-[9px] font-black uppercase text-primary/60 ml-2 tracking-widest">Идентификатор узла</label>
+                <div className="relative">
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-primary font-black">@</span>
+                  <Input 
+                    placeholder="unique_id" 
+                    value={username}
+                    onChange={e => setUsername(e.target.value)}
+                    className="h-14 bg-white/5 border-white/10 rounded-2xl pl-9 font-mono text-sm tracking-widest focus:border-primary/50 transition-all placeholder:text-white/10 border-2"
+                  />
+                </div>
+              </div>
             </div>
-            <div className="flex gap-3 pt-4">
-              <Button variant="ghost" className="flex-1 rounded-2xl h-12 font-bold" onClick={() => setStep('select')}>Назад</Button>
+
+            <div className="flex gap-3 pt-6 pb-4">
+              <Button variant="ghost" className="flex-1 rounded-2xl h-14 font-black uppercase text-[10px] tracking-widest text-muted-foreground/60 hover:text-white transition-all" onClick={() => setStep('select')}>
+                Отмена
+              </Button>
               <Button 
-                className="flex-1 rounded-2xl h-12 shadow-lg shadow-primary/20 font-black uppercase tracking-widest bg-primary" 
+                className={cn(
+                  "flex-1 rounded-2xl h-14 shadow-2xl font-black uppercase italic tracking-widest transition-all hover:scale-105 active:scale-95 group relative overflow-hidden",
+                  type === 'group' ? "bg-primary text-white shadow-primary/30" : "bg-accent text-black shadow-accent/30"
+                )} 
                 onClick={createGroupOrChannel}
                 disabled={isLoading}
               >
-                {isLoading ? <Loader2 className="animate-spin" /> : `Создать`}
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
+                {isLoading ? <Loader2 className="animate-spin w-5 h-5" /> : (
+                  <span className="flex items-center gap-2 relative z-10">
+                    Инициализировать <Zap className="w-4 h-4 fill-current" />
+                  </span>
+                )}
               </Button>
             </div>
           </div>
