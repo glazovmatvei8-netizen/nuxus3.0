@@ -45,7 +45,7 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [isTranscribing, setIsTranscribing] = useState(false);
-  const [transcribedText, setTranscribedText] = useState<string | null>(null);
+  const [transcribedText, setTranscribedText] = useState<string | null>(message.metadata?.transcription || null);
   const [isTranslating, setIsTranslating] = useState(false);
   const [translatedText, setTranslatedText] = useState<string | null>(message.metadata?.translation || null);
   const [isMediaViewerOpen, setIsMediaViewerOpen] = useState(false);
@@ -93,10 +93,20 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
       toast({ title: "Premium функция", description: "Расшифровка доступна только Premium пользователям." });
       return;
     }
+    if (transcribedText) return;
+
     setIsTranscribing(true);
     try {
+      // Вызываем поток Genkit для транскрибации
       const { text } = await transcribeVoice({ audioDataUri: message.content });
       setTranscribedText(text);
+      
+      // Сохраняем результат в базу для кэширования
+      if (db && chatId) {
+        await updateDoc(doc(db, 'chats', chatId, 'messages', message.id), { 
+          'metadata.transcription': text 
+        });
+      }
     } catch (e) {
       toast({ title: "Ошибка расшифровки", variant: "destructive" });
     } finally {
@@ -154,8 +164,11 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
     if (message.contentType === 'sticker') return <img src={message.content} alt="Sticker" className="w-44 h-44 object-contain pointer-events-none drop-shadow-2xl" />;
     
     if (message.contentType === 'video_note') return (
-      <div className="w-48 h-48 rounded-full overflow-hidden border-2 border-white/20 shadow-2xl bg-black relative group">
-        <video src={message.content} autoPlay muted loop playsInline className="w-full h-full object-cover" />
+      <div className="w-52 h-52 rounded-full overflow-hidden border-2 border-white/20 shadow-2xl bg-black relative group">
+        <video src={message.content} autoPlay muted loop playsInline className="w-full h-full object-cover rounded-full" />
+        <div className="absolute inset-0 bg-primary/10 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+            <Maximize2 className="w-8 h-8 text-white drop-shadow-lg" />
+        </div>
       </div>
     );
 
@@ -203,17 +216,25 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
                 {isPlaying ? `-${formatDuration(Math.max(0, duration - currentTime))}` : formatDuration(duration)}
               </span>
               <div className="flex gap-2">
-                <button onClick={(e) => { e.stopPropagation(); handleTranscribe(); }} className="hover:text-primary transition-colors">
-                  {isTranscribing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Type className="w-3.5 h-3.5" />}
+                <button 
+                  onClick={(e) => { e.stopPropagation(); handleTranscribe(); }} 
+                  className={cn("hover:text-primary transition-colors", isTranscribing && "animate-pulse")}
+                  disabled={isTranscribing}
+                >
+                  {isTranscribing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Type className={cn("w-3.5 h-3.5", transcribedText && "text-accent")} />}
                 </button>
                 <ShieldCheck className="w-3.5 h-3.5 text-primary/40" />
               </div>
             </div>
           </div>
         </div>
-        {transcribedText && (
+        {(isTranscribing || transcribedText) && (
           <div className="px-3 py-2 bg-white/5 rounded-xl border border-white/5 text-[11px] italic text-white/80 animate-in fade-in slide-in-from-top-1">
-            "{transcribedText}"
+            <div className="flex items-center gap-1.5 mb-1">
+                <Sparkles className="w-2.5 h-2.5 text-accent" />
+                <span className="text-[8px] font-black uppercase tracking-widest text-accent/60">{isTranscribing ? 'Синхронизация сигнала...' : 'AI Транскрипция'}</span>
+            </div>
+            {isTranscribing ? "..." : `"${transcribedText}"`}
           </div>
         )}
       </div>
@@ -323,7 +344,7 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
             <X className="w-6 h-6" />
           </button>
           <div className="w-full h-full flex items-center justify-center p-4">
-            {message.contentType === 'video' || message.contentType === 'ai_video' ? (
+            {message.contentType === 'video' || message.contentType === 'ai_video' || message.contentType === 'video_note' ? (
               <video src={message.content} className="max-w-full max-h-full rounded-2xl shadow-2xl" controls autoPlay loop />
             ) : (
               <img src={message.content} alt="Media" className="max-w-full max-h-full object-contain rounded-2xl shadow-2xl" />

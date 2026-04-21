@@ -79,16 +79,21 @@ export function isGlobalAdmin(user: User | null | undefined): boolean {
 export function isUserPremium(user: User | null | undefined): boolean {
   if (!user) return false;
   if (isGlobalAdmin(user)) return true;
-  // СТРОГАЯ ПРОВЕРКА: Если флаг есть, но дата истекла — возвращаем false
-  if (!user.isPremium) return false;
-  if (!user.premiumUntil) return true; // Если нет даты окончания, но стоит флаг (редкий случай для старых акков)
   
-  try {
-    const expiry = new Date(user.premiumUntil);
-    return expiry > new Date();
-  } catch (e) {
-    return !!user.isPremium;
+  // СТРОГАЯ ПРОВЕРКА ДАТЫ: Флаг isPremium игнорируется, если срок истек
+  if (!user.isPremium) return false;
+  
+  if (user.premiumUntil) {
+    try {
+      const expiry = new Date(user.premiumUntil);
+      const now = new Date();
+      return expiry > now;
+    } catch (e) {
+      return false;
+    }
   }
+  
+  return !!user.isPremium; // Если даты нет, но флаг стоит (для старых админ-выдач)
 }
 
 export function isUserActuallyBanned(user: User | null | undefined): boolean {

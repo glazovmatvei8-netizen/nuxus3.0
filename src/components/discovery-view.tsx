@@ -134,17 +134,17 @@ export default function DiscoveryView() {
             </div>
           </section>
 
-          {/* Activity Milestone Banner (Fixed Responsive Layout) */}
-          <div className="bg-primary/10 border border-primary/20 p-6 md:p-8 rounded-[2.5rem] text-center space-y-5 relative overflow-hidden shadow-2xl">
+          {/* Activity Milestone Banner (FIXED RESPONSIVE) */}
+          <div className="bg-primary/10 border border-primary/20 p-6 rounded-[2.5rem] text-center space-y-5 relative overflow-hidden shadow-2xl">
              <div className="absolute top-0 right-0 p-4 opacity-10 rotate-12">
                 <Zap className="w-20 h-20 text-primary" />
              </div>
              <Zap className="w-10 h-10 text-primary mx-auto animate-pulse relative z-10" />
              <div className="space-y-1 relative z-10 px-2">
-               <h3 className="text-xl md:text-2xl font-black uppercase italic text-white tracking-tighter leading-tight">
+               <h3 className="text-xl md:text-2xl font-black uppercase italic text-white tracking-tighter leading-tight break-words">
                  Nuxus Milestone
                </h3>
-               <p className="text-[10px] font-bold text-primary/60 uppercase tracking-[0.2em]">
+               <p className="text-[10px] font-bold text-primary/60 uppercase tracking-[0.2em] whitespace-normal">
                  Цель: 100 активных узлов
                </p>
              </div>

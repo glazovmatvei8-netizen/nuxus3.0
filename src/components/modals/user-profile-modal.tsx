@@ -126,9 +126,9 @@ export function UserProfileModal() {
 
         <div className="absolute inset-0 nuxus-core-glow opacity-20 pointer-events-none" />
         
-        {/* ВЕСЬ КОНТЕНТ ТЕПЕРЬ СКРОЛЛИТСЯ */}
-        <ScrollArea className="flex-1">
-          <div className="flex flex-col h-full">
+        {/* АБСОЛЮТНЫЙ СКРОЛЛ: Теперь ScrollArea охватывает всё окно */}
+        <ScrollArea className="h-full w-full">
+          <div className="flex flex-col min-h-full pb-20">
             {/* Header / Avatar Section */}
             <div className="relative h-32 bg-gradient-to-b from-primary/20 to-transparent shrink-0">
               <div className="absolute -bottom-12 left-1/2 -translate-x-1/2">
@@ -165,7 +165,7 @@ export function UserProfileModal() {
             </div>
 
             {/* Buttons and Content Section */}
-            <div className="px-6 pt-8 space-y-6 pb-20">
+            <div className="px-6 pt-8 space-y-6">
               <div className="flex gap-2">
                 <Button onClick={handleStartChat} className="flex-1 h-12 bg-primary text-white rounded-2xl font-black uppercase italic tracking-widest gap-2 shadow-xl shadow-primary/20 text-[10px]">
                   <MessageCircle className="w-4 h-4" /> Написать
