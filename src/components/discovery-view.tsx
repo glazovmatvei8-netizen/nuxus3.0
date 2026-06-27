@@ -58,7 +58,7 @@ export default function DiscoveryView() {
 
   return (
     <div className="flex flex-col h-full bg-transparent overflow-hidden max-w-full relative">
-      {/* Background Ambience V7.0 */}
+      {/* Background Ambience V7.5 */}
       <div className="absolute top-0 right-0 w-80 h-80 bg-primary/10 blur-[120px] pointer-events-none -z-10 animate-pulse" />
       <div className="absolute bottom-0 left-0 w-80 h-80 bg-accent/5 blur-[120px] pointer-events-none -z-10" />
       
@@ -89,7 +89,7 @@ export default function DiscoveryView() {
       <ScrollArea className="flex-1 px-1">
         <div className="space-y-14 pb-48 px-7 max-w-full overflow-x-hidden animate-in fade-in slide-in-from-bottom-6 duration-1000">
           
-          {/* Milestone Banner V7.0 */}
+          {/* Milestone Banner V7.5 «Mission Control» */}
           <div className="relative group overflow-hidden rounded-[3.5rem] p-[2px] bg-gradient-to-br from-white/10 via-primary/20 to-transparent">
              <div className="bg-[#05050a]/90 backdrop-blur-3xl p-10 rounded-[3.5rem] text-center space-y-8 relative overflow-hidden shadow-2xl">
                 <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none">
@@ -133,7 +133,7 @@ export default function DiscoveryView() {
              </div>
           </div>
 
-          {/* Leaders Section V7.0 */}
+          {/* Leaders Section V7.5 */}
           <section className="space-y-8">
             <div className="flex items-center justify-between px-2">
               <h3 className="text-[11px] font-black uppercase tracking-[0.5em] text-primary/80 flex items-center gap-3 italic">
@@ -173,7 +173,7 @@ export default function DiscoveryView() {
             </div>
           </section>
 
-          {/* Community Feed V7.0 */}
+          {/* Community Feed V7.5 */}
           <section className="space-y-8">
             <div className="flex items-center justify-between px-2">
               <h3 className="text-[11px] font-black uppercase tracking-[0.5em] text-primary/80 flex items-center gap-3 italic">

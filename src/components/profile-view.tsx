@@ -42,7 +42,7 @@ export default function ProfileView() {
 
   return (
     <div className="flex flex-col h-full bg-transparent overflow-hidden relative">
-      {/* Immersive Header Backdrop V7.0 */}
+      {/* Immersive Header Backdrop V7.5 */}
       <div className="absolute top-0 left-0 right-0 h-80 bg-gradient-to-b from-primary/10 via-primary/5 to-transparent pointer-events-none z-0" />
       <div className="absolute top-[-100px] right-[-100px] w-[300px] h-[300px] bg-primary/10 blur-[100px] animate-pulse" />
 
@@ -84,7 +84,7 @@ export default function ProfileView() {
       <ScrollArea className="flex-1 relative z-10">
         <div className="px-6 space-y-6 pb-40 pt-4 animate-in fade-in slide-in-from-bottom-6 duration-1000">
           
-          {/* Core Level Card V7.0 */}
+          {/* Core Level Card V7.5 */}
           <div className="obsidian-glass p-8 rounded-[3rem] space-y-6 relative overflow-hidden group border-white/10 shadow-2xl">
              <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-1000" />
              <div className="flex items-center justify-between relative z-10">
@@ -124,7 +124,7 @@ export default function ProfileView() {
 
           <div className="grid grid-cols-2 gap-4">
             <ActionCard icon={QrCode} label="Signal QR" sub="IDENTIFY" accent="text-accent" onClick={() => setIsQrOpen(true)} />
-            <ActionCard icon={ShieldCheck} label="QES 7.0" sub="SECURED" accent="text-green-400" />
+            <ActionCard icon={ShieldCheck} label="QES 7.5" sub="SECURED" accent="text-green-400" />
           </div>
 
           <div className="obsidian-glass rounded-[3.5rem] overflow-hidden divide-y divide-white/[0.04] border-white/10 shadow-2xl">
@@ -137,7 +137,7 @@ export default function ProfileView() {
           <div className="py-12 flex flex-col items-center gap-6">
             <div className="flex items-center gap-2 obsidian-glass px-6 py-2 rounded-full border-white/5">
               <div className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" />
-              <p className="text-[10px] text-white/40 uppercase font-black tracking-[0.4em]">Node Synchronized V7.0</p>
+              <p className="text-[10px] text-white/40 uppercase font-black tracking-[0.4em]">Node Synchronized V7.5</p>
             </div>
             <div className="flex gap-10 opacity-10">
               <Globe className="w-6 h-6" />

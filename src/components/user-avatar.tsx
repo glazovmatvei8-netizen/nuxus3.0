@@ -20,7 +20,7 @@ interface UserAvatarProps {
 }
 
 /**
- * Nuxus Avatar Core V7.0 «Obsidian»
+ * Nuxus Avatar Core V7.5 «Obsidian Shield»
  * ОПТИМИЗИРОВАНО: Полная ликвидация «фантомных» данных через жесткую синхронизацию.
  * Тройная защита скругления для безупречного круга.
  */
@@ -28,7 +28,7 @@ export const UserAvatar = memo(({ userId, className, fallbackName, fallbackClass
   const db = useFirestore();
   const [imgError, setImgError] = useState(false);
   
-  // КРИТИЧЕСКИЙ ФИКС V7.0: Моментальный сброс состояния при смене ID
+  // КРИТИЧЕСКИЙ ФИКС V7.5: Моментальный сброс состояния при смене ID
   const [activeId, setActiveId] = useState<string | null | undefined>(userId);
   if (userId !== activeId) {
     setActiveId(userId);
@@ -72,7 +72,7 @@ export const UserAvatar = memo(({ userId, className, fallbackName, fallbackClass
 
   return (
     <div className={cn("relative inline-flex items-center justify-center shrink-0 rounded-full", className)}>
-      {/* Outer Halo V7.0 */}
+      {/* Outer Halo V7.5 */}
       <div className={cn(
         "rounded-full p-[2px] w-full h-full flex items-center justify-center overflow-hidden transition-all duration-1000",
         premium ? "bg-gradient-to-tr from-primary via-accent to-primary animate-[spin_8s_linear_infinite] shadow-[0_0_30px_rgba(168,85,247,0.4)]" : "bg-white/10"

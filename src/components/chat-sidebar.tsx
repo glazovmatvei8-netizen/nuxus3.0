@@ -126,7 +126,7 @@ const ChatListItem = memo(({
 
   return (
     <div className="relative overflow-hidden touch-pan-y select-none px-4 py-1.5 max-w-full">
-      {/* Action Buttons Background V7.0 */}
+      {/* Action Buttons Background V7.5 */}
       <div className={cn("absolute inset-y-1.5 left-4 flex h-[calc(100%-12px)] z-0 transition-opacity duration-300 rounded-[2.5rem] overflow-hidden shadow-2xl", offsetX > 20 ? "opacity-100" : "opacity-0 pointer-events-none")}>
         <button onClick={(e) => { e.stopPropagation(); onMarkUnread(chat.id); resetSwipe(); }} className="w-[70px] bg-blue-500/80 backdrop-blur-2xl flex flex-col items-center justify-center text-white gap-2 active:brightness-125 transition-all">
           <MessageCircle className="w-5 h-5" />
@@ -149,7 +149,7 @@ const ChatListItem = memo(({
         </button>
       </div>
 
-      {/* Main Item V7.0 */}
+      {/* Main Item V7.5 */}
       <div 
         className={cn(
           "relative z-10 obsidian-glass will-change-transform w-full select-none rounded-[2.5rem] transition-all", 

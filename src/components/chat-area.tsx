@@ -395,7 +395,7 @@ export default function ChatArea() {
     }
     
     await addDoc(collection(db, 'chats', currentChatId, 'messages'), msgData);
-    updateDocumentNonBlocking(doc(db, 'chats', currentChatId), { lastMessageAt: new Date().toISOString(), lastSenderId: firebaseUser.uid });
+    updateDoc(doc(db, 'chats', currentChatId), { lastMessageAt: new Date().toISOString(), lastSenderId: firebaseUser.uid });
     
     setTimeout(() => scrollToBottom('smooth'), 100);
   }, [currentChatId, firebaseUser, db, userProfile, replyTo, scrollToBottom]);

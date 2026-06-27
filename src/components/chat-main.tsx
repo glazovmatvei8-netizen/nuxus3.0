@@ -64,7 +64,7 @@ export default function ChatMain() {
       <UpdateNotifier />
       
       <div className="flex-1 flex overflow-hidden w-full relative max-w-full">
-        {/* Desktop Navigation Rail V7.0 */}
+        {/* Desktop Navigation Rail V7.5 */}
         <div className="hidden md:flex w-[96px] h-full flex-col items-center py-10 bg-black/40 backdrop-blur-3xl border-r border-white/[0.05] shrink-0 z-40 relative">
           <div className="absolute right-0 top-0 bottom-0 w-px bg-gradient-to-b from-transparent via-primary/30 to-transparent" />
           
@@ -113,7 +113,7 @@ export default function ChatMain() {
           </div>
         </div>
         
-        {/* Main Viewport V7.0 */}
+        {/* Main Viewport V7.5 */}
         <div className={cn(
           "flex-1 h-full flex flex-col min-w-0 bg-transparent relative z-20 chat-pattern-bg overflow-hidden max-w-full", 
           (!currentChatId || ['profile', 'music', 'wallet', 'games', 'discovery'].includes(activeView)) ? "hidden md:flex" : "flex"
@@ -126,7 +126,7 @@ export default function ChatMain() {
 
       <MusicPlayer />
 
-      {/* Floating Bottom Navigation (Mobile) V7.0 */}
+      {/* Floating Bottom Navigation (Mobile) V7.5 «Event Horizon Dock» */}
       {!currentChatId && (
         <div className="md:hidden fixed bottom-10 left-1/2 -translate-x-1/2 w-[94%] max-w-[450px] z-50">
           <div className="bg-black/40 backdrop-blur-[60px] border border-white/10 rounded-[3rem] h-[88px] flex items-center justify-between px-6 shadow-[0_30px_100px_rgba(0,0,0,0.8)] relative overflow-hidden">
