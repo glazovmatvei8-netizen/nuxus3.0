@@ -20,18 +20,18 @@ interface UserAvatarProps {
 }
 
 /**
- * Nuxus Avatar Core v6.5 (Nova UI)
- * ОПТИМИЗИРОВАНО: Полная ликвидация артефактов и фантомных данных.
- * Использован двойной слой скругления для 100% чистоты круга.
+ * Nuxus Avatar Core V7.0 «Obsidian»
+ * ОПТИМИЗИРОВАНО: Полная ликвидация «фантомных» данных через жесткую синхронизацию.
+ * Тройная защита скругления для безупречного круга.
  */
 export const UserAvatar = memo(({ userId, className, fallbackName, fallbackClassName, manualAvatarUrl, showOnlineStatus = false }: UserAvatarProps) => {
   const db = useFirestore();
   const [imgError, setImgError] = useState(false);
   
-  // КРИТИЧЕСКИЙ ФИКС V6.5: Сброс при смене userId для предотвращения "фантомов"
-  const [currentId, setCurrentId] = useState<string | null | undefined>(userId);
-  if (userId !== currentId) {
-    setCurrentId(userId);
+  // КРИТИЧЕСКИЙ ФИКС V7.0: Моментальный сброс состояния при смене ID
+  const [activeId, setActiveId] = useState<string | null | undefined>(userId);
+  if (userId !== activeId) {
+    setActiveId(userId);
     setImgError(false);
   }
 
@@ -42,18 +42,21 @@ export const UserAvatar = memo(({ userId, className, fallbackName, fallbackClass
 
   const { data: profile, isLoading } = useDoc<User>(userRef);
 
+  // Валидация: отображаем аватар только если профиль соответствует текущему userId
   const displayAvatar = useMemo(() => {
     if (manualAvatarUrl) return manualAvatarUrl;
-    if (isLoading || userId !== profile?.id) return null; // Жесткая привязка к ID
-    return profile?.avatarUrl || null;
-  }, [profile?.avatarUrl, manualAvatarUrl, isLoading, userId, profile?.id]);
+    if (isLoading || !profile || userId !== profile.id) return null;
+    return profile.avatarUrl || null;
+  }, [profile, manualAvatarUrl, isLoading, userId]);
   
   const initialsSource = useMemo(() => {
+    if (userId === 'bot_nuxus_manager') return 'NM';
+    if (userId === 'bot_stickers') return 'SB';
     const rawName = profile?.name || fallbackName;
-    if (rawName && rawName !== 'Пользователь' && rawName !== '??') return rawName;
+    if (rawName && !['User', 'Пользователь', '??'].includes(rawName)) return rawName;
     if (profile?.username) return profile.username.replace('@', '');
     return 'N'; 
-  }, [profile?.name, fallbackName, profile?.username]);
+  }, [profile, fallbackName, userId]);
 
   const displayName = useMemo(() => formatDisplayName(initialsSource), [initialsSource]);
   const premium = useMemo(() => isUserPremium(profile), [profile]);
@@ -64,49 +67,47 @@ export const UserAvatar = memo(({ userId, className, fallbackName, fallbackClass
     try {
       const lastSeen = parseISO(profile.lastSeen);
       return differenceInMinutes(new Date(), lastSeen) < 2;
-    } catch (e) {
-      return false;
-    }
+    } catch (e) { return false; }
   }, [profile?.lastSeen, isGhost]);
 
   return (
     <div className={cn("relative inline-flex items-center justify-center shrink-0 rounded-full", className)}>
-      {/* Premium Outer Glow Ring */}
+      {/* Outer Halo V7.0 */}
       <div className={cn(
-        "rounded-full p-[2px] w-full h-full flex items-center justify-center overflow-hidden transition-all duration-700",
-        premium ? "bg-gradient-to-tr from-primary via-accent to-primary animate-[spin_6s_linear_infinite] shadow-[0_0_20px_rgba(168,85,247,0.3)]" : "bg-white/5"
+        "rounded-full p-[2px] w-full h-full flex items-center justify-center overflow-hidden transition-all duration-1000",
+        premium ? "bg-gradient-to-tr from-primary via-accent to-primary animate-[spin_8s_linear_infinite] shadow-[0_0_30px_rgba(168,85,247,0.4)]" : "bg-white/10"
       )}>
-        <Avatar className="shrink-0 relative overflow-hidden bg-black/40 w-full h-full rounded-full border-none flex items-center justify-center">
-          {displayAvatar && !imgError ? (
+        <Avatar className="shrink-0 relative overflow-hidden bg-black/60 w-full h-full rounded-full border-none flex items-center justify-center shadow-inner">
+          {displayAvatar && !imgError && activeId === userId ? (
             <div className="relative w-full h-full rounded-full overflow-hidden">
               <Image 
                 src={displayAvatar} 
                 alt={displayName} 
                 fill
-                sizes="100px"
-                className="object-cover animate-in fade-in duration-500 rounded-full"
+                sizes="128px"
+                className="object-cover animate-in fade-in duration-700 rounded-full"
                 onError={() => setImgError(true)}
                 unoptimized={displayAvatar.startsWith('data:')}
               />
             </div>
           ) : (
-            <AvatarFallback className={cn("bg-white/[0.03] text-primary font-black uppercase h-full w-full flex items-center justify-center rounded-full select-none italic", fallbackClassName)}>
-              <span className="translate-y-[0.5px]">{initialsSource.slice(0, 2)}</span>
+            <AvatarFallback className={cn("bg-[#1c1c1e] text-primary font-black uppercase h-full w-full flex items-center justify-center rounded-full select-none italic tracking-tighter text-[40%]", fallbackClassName)}>
+              {initialsSource.slice(0, 2)}
             </AvatarFallback>
           )}
         </Avatar>
       </div>
 
       {showOnlineStatus && isOnline && !isGhost && (
-        <div className="absolute top-[5%] right-[5%] z-20">
-          <div className="h-2.5 w-3.5 bg-green-500 rounded-full border-2 border-[#0a0a0c] shadow-[0_0_10px_rgba(34,197,94,0.6)] animate-pulse" />
+        <div className="absolute top-[8%] right-[8%] z-20">
+          <div className="h-3 w-3 bg-green-500 rounded-full border-[2.5px] border-[#0a0a0c] shadow-[0_0_15px_rgba(34,197,94,1)] animate-pulse" />
         </div>
       )}
 
       {premium && (
-        <div className="absolute -bottom-0.5 -right-0.5 z-30">
-          <div className="bg-[#0a0a0c] rounded-full p-[1px] shadow-lg">
-            <div className="bg-gradient-to-tr from-yellow-400 to-orange-500 p-[2px] rounded-full shadow-inner">
+        <div className="absolute -bottom-1 -right-1 z-30 scale-110">
+          <div className="bg-[#020205] rounded-full p-[2px] shadow-2xl">
+            <div className="bg-gradient-to-tr from-yellow-400 to-orange-500 p-[3px] rounded-full shadow-inner border border-white/20">
               <Star className="w-2.5 h-2.5 text-black fill-current" />
             </div>
           </div>

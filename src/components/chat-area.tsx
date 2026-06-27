@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useRef, useEffect, useMemo, useCallback, memo } from 'react';
@@ -35,7 +34,6 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
   const [isGeneratingVideo, setIsGeneratingVideo] = useState(false);
   const [destructTimer, setDestructTimer] = useState<number | null>(null);
   
-  // Recording States
   const [isRecording, setIsRecording] = useState(false);
   const [recorderMode, setRecorderMode] = useState<'audio' | 'video'>('audio');
   const [recordingDuration, setRecordingDuration] = useState(0);
@@ -82,12 +80,11 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
     setDestructTimer(null);
   };
 
-  // Recording Logic
   const startRecording = async () => {
     try {
       const constraints = {
         audio: true,
-        video: recorderMode === 'video' ? { facingMode: 'user', width: 400, height: 400 } : false
+        video: recorderMode === 'video' ? { facingMode: 'user', width: 480, height: 480 } : false
       };
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
       streamRef.current = stream;
@@ -122,7 +119,7 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
         setRecordingDuration(prev => prev + 1);
       }, 1000);
     } catch (err) {
-      toast({ title: "Доступ запрещен", description: "Проверьте разрешения камеры и микрофона", variant: "destructive" });
+      toast({ title: "Signal Access Error", description: "Camera or Microphone permission denied", variant: "destructive" });
     }
   };
 
@@ -141,7 +138,7 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
       streamRef.current?.getTracks().forEach(track => track.stop());
       setIsRecording(false);
       if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
-      toast({ title: "Запись отменена" });
+      toast({ title: "Recording Terminated" });
     }
   };
 
@@ -154,107 +151,108 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
   if (!canPost) return null;
 
   return (
-    <footer className="p-3 pb-6 bg-black/40 backdrop-blur-3xl border-t border-white/10 shrink-0 z-40 relative">
+    <footer className="p-4 pb-8 obsidian-glass border-t border-white/5 shrink-0 z-40 relative">
       {isRecording && recorderMode === 'video' && (
-        <div className="absolute bottom-24 left-1/2 -translate-x-1/2 w-48 h-48 rounded-full overflow-hidden border-4 border-primary shadow-2xl z-50 bg-black animate-in zoom-in duration-300">
+        <div className="absolute bottom-28 left-1/2 -translate-x-1/2 w-56 h-56 rounded-full overflow-hidden border-4 border-primary shadow-[0_0_50px_rgba(168,85,247,0.5)] z-50 bg-black animate-in zoom-in duration-300">
           <video ref={videoPreviewRef} autoPlay muted playsInline className="w-full h-full object-cover scale-x-[-1]" />
+          <div className="absolute inset-0 border-[10px] border-black/40 rounded-full pointer-events-none" />
         </div>
       )}
 
-      <div className="max-w-4xl mx-auto space-y-2 relative">
-        <div className="flex gap-3 items-center">
+      <div className="max-w-4xl mx-auto relative">
+        <div className="flex gap-4 items-center">
           {!isRecording ? (
             <>
               <Popover>
-                <PopoverTrigger asChild><Button variant="ghost" size="icon" className="text-white/60 hover:text-primary"><Paperclip className="w-5 h-5" /></Button></PopoverTrigger>
-                <PopoverContent side="top" align="start" className="w-48 bg-[#1c1c1e]/95 backdrop-blur-3xl border-white/10 rounded-[1.8rem] p-1.5 mb-2 shadow-2xl">
-                  <Button variant="ghost" className="w-full justify-start gap-3 rounded-xl h-11 text-[10px] font-black uppercase tracking-widest text-white/80 hover:bg-white/5" onClick={() => fileInputRef.current?.click()}><ImageIcon className="w-4 h-4 text-primary" /> Галерея</Button>
-                  {isPremium && (
-                    <>
-                      <Button variant="ghost" className="w-full justify-start gap-3 rounded-xl h-11 text-[10px] font-black uppercase tracking-widest text-white/80 hover:bg-white/5" onClick={async () => {
-                        if (!messageInput.trim()) return;
-                        setIsGeneratingImg(true);
-                        try {
-                          const { imageUrl } = await generateAiImage({ prompt: messageInput });
-                          onSendMessage(imageUrl, 'image', destructTimer);
-                          setMessageInput('');
-                        } catch(e) { toast({title:"Error", variant:"destructive"}); }
-                        finally { setIsGeneratingImg(false); }
-                      }} disabled={isGeneratingImg}>
-                        {isGeneratingImg ? <Loader2 className="w-4 h-4 animate-spin" /> : <Palette className="w-4 h-4 text-accent" />} ИИ Рисование
-                      </Button>
-                      <Button variant="ghost" className="w-full justify-start gap-3 rounded-xl h-11 text-[10px] font-black uppercase tracking-widest text-white/80 hover:bg-white/5" onClick={() => videoGenInputRef.current?.click()} disabled={isGeneratingVideo}>
-                        {isGeneratingVideo ? <Loader2 className="w-4 h-4 animate-spin" /> : <VideoIcon className="w-4 h-4 text-purple-400" />} ИИ Видео
-                      </Button>
-                    </>
-                  )}
-                  <Button variant="ghost" className="w-full justify-start gap-3 rounded-xl h-11 text-[10px] font-black uppercase tracking-widest text-white/80 hover:bg-white/5" onClick={onPollOpen}><AtSign className="w-4 h-4 text-blue-400" /> Опрос</Button>
-                  <div className="h-px bg-white/5 mx-2 my-1" />
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button variant="ghost" className={cn("w-full justify-start gap-3 rounded-xl h-11 text-[10px] font-black uppercase tracking-widest hover:bg-white/5", destructTimer ? "text-primary" : "text-white/80")}>
-                        <Timer className="w-4 h-4" /> Исчезновение
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent side="right" align="end" className="w-40 bg-[#1c1c1e] border-white/10 rounded-2xl p-1 shadow-2xl">
-                      <Button variant="ghost" onClick={() => setDestructTimer(null)} className="w-full justify-start text-[10px] font-bold uppercase h-10 rounded-xl">Выкл</Button>
-                      <Button variant="ghost" onClick={() => setDestructTimer(1)} className="w-full justify-start text-[10px] font-bold uppercase h-10 rounded-xl">1 Минута</Button>
-                      <Button variant="ghost" onClick={() => setDestructTimer(60)} className="w-full justify-start text-[10px] font-bold uppercase h-10 rounded-xl">1 Час</Button>
-                      <Button variant="ghost" onClick={() => setDestructTimer(1440)} className="w-full justify-start text-[10px] font-bold uppercase h-10 rounded-xl">24 Часа</Button>
-                    </PopoverContent>
-                  </Popover>
+                <PopoverTrigger asChild><Button variant="ghost" size="icon" className="h-12 w-12 obsidian-glass rounded-2xl text-white/50 hover:text-primary transition-all"><Paperclip className="w-6 h-6" /></Button></PopoverTrigger>
+                <PopoverContent side="top" align="start" className="w-56 obsidian-glass border-white/10 rounded-[2rem] p-2 mb-3 shadow-2xl animate-in slide-in-from-bottom-2 duration-300">
+                  <div className="grid grid-cols-1 gap-1">
+                    <AttachmentItem icon={ImageIcon} label="Gallery" color="text-primary" onClick={() => fileInputRef.current?.click()} />
+                    {isPremium && (
+                      <>
+                        <AttachmentItem icon={Palette} label="AI Canvas" color="text-accent" onClick={async () => {
+                          if (!messageInput.trim()) return;
+                          setIsGeneratingImg(true);
+                          try {
+                            const { imageUrl } = await generateAiImage({ prompt: messageInput });
+                            onSendMessage(imageUrl, 'image', destructTimer);
+                            setMessageInput('');
+                          } finally { setIsGeneratingImg(false); }
+                        }} loading={isGeneratingImg} />
+                      </>
+                    )}
+                    <AttachmentItem icon={AtSign} label="Poll" color="text-blue-400" onClick={onPollOpen} />
+                    <div className="h-px bg-white/5 my-1.5 mx-2" />
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <button className={cn("flex items-center gap-3 w-full p-3 rounded-xl hover:bg-white/5 transition-all text-left", destructTimer ? "text-primary" : "text-white/70")}>
+                          <Timer className="w-4 h-4" /> <span className="text-[10px] font-black uppercase tracking-widest">Destruct</span>
+                        </button>
+                      </PopoverTrigger>
+                      <PopoverContent side="right" className="w-40 obsidian-glass border-white/10 rounded-2xl p-1.5 shadow-2xl">
+                        {[
+                          { l: 'Off', v: null },
+                          { l: '1 Min', v: 1 },
+                          { l: '1 Hour', v: 60 },
+                          { l: '24 Hours', v: 1440 }
+                        ].map(t => (
+                          <button key={t.l} onClick={() => setDestructTimer(t.v)} className="w-full text-left p-2.5 rounded-lg text-[9px] font-black uppercase tracking-widest hover:bg-primary/10 hover:text-primary transition-all">{t.l}</button>
+                        ))}
+                      </PopoverContent>
+                    </Popover>
+                  </div>
                 </PopoverContent>
               </Popover>
               
-              <div className="flex-1 flex items-center bg-white/[0.08] rounded-full border border-white/[0.1] h-11 px-4 relative group transition-all focus-within:bg-white/[0.12] focus-within:border-primary/30">
-                {destructTimer && <Timer className="w-4 h-4 text-primary mr-2 animate-pulse" />}
+              <div className="flex-1 flex items-center bg-white/[0.04] rounded-[1.8rem] border border-white/10 h-14 px-5 relative group transition-all focus-within:bg-white/[0.07] focus-within:border-primary/50 shadow-inner">
+                {destructTimer && <Timer className="w-5 h-5 text-primary mr-3 animate-pulse" />}
                 <Input 
-                  placeholder="Сообщение" 
-                  className="bg-transparent border-none focus-visible:ring-0 text-white placeholder:text-white/30 font-medium" 
+                  placeholder="Neural Signal..." 
+                  className="bg-transparent border-none focus-visible:ring-0 text-white placeholder:text-white/20 font-bold italic tracking-tight" 
                   value={messageInput} 
                   onChange={e => handleInputChange(e.target.value)} 
                   onKeyDown={e => e.key === 'Enter' && handleSend()} 
                 />
-                <Button variant="ghost" size="icon" className="text-white/40 hover:text-primary transition-colors"><Smile className="w-5 h-5" /></Button>
+                <Button variant="ghost" size="icon" className="text-white/20 hover:text-primary transition-all"><Smile className="w-6 h-6" /></Button>
               </div>
 
               {messageInput.trim() ? (
-                <Button size="icon" className="h-11 w-11 rounded-full bg-primary text-white shadow-xl shadow-primary/40 active:scale-90 transition-all" onClick={handleSend}>
-                  <Send className="w-5 h-5" />
+                <Button size="icon" className="h-14 w-14 rounded-full bg-primary text-white shadow-[0_0_30px_rgba(168,85,247,0.4)] active:scale-90 transition-all hover:scale-105" onClick={handleSend}>
+                  <Send className="w-6 h-6" />
                 </Button>
               ) : (
                 <div className="flex gap-2">
                   <Button 
                     size="icon" 
                     variant="ghost"
-                    className="h-11 w-11 rounded-full text-white/60 hover:text-primary transition-all active:scale-90"
+                    className="h-14 w-14 rounded-[1.4rem] obsidian-glass text-white/40 hover:text-primary transition-all active:scale-90"
                     onClick={() => setRecorderMode(recorderMode === 'audio' ? 'video' : 'audio')}
                   >
-                    {recorderMode === 'audio' ? <VideoIcon className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
+                    {recorderMode === 'audio' ? <VideoIcon className="w-6 h-6" /> : <Mic className="w-6 h-6" />}
                   </Button>
                   <Button 
                     size="icon" 
-                    className="h-11 w-11 rounded-full bg-primary text-white shadow-xl shadow-primary/40 active:scale-90 transition-all animate-in zoom-in duration-300"
+                    className="h-14 w-14 rounded-full bg-primary text-white shadow-[0_0_30px_rgba(168,85,247,0.4)] active:scale-90 transition-all animate-in zoom-in duration-300"
                     onClick={startRecording}
                   >
-                    {recorderMode === 'audio' ? <Mic className="w-5 h-5" /> : <Circle className="w-5 h-5 fill-current" />}
+                    {recorderMode === 'audio' ? <Mic className="w-6 h-6" /> : <Circle className="w-6 h-6 fill-current" />}
                   </Button>
                 </div>
               )}
             </>
           ) : (
-            <div className="flex-1 flex items-center bg-primary/10 border border-primary/20 rounded-full h-11 px-4 gap-4 animate-in slide-in-from-right-4 duration-300">
-              <div className="flex items-center gap-2 text-primary animate-pulse">
-                <div className="w-2 h-2 rounded-full bg-primary" />
-                <span className="text-[10px] font-black uppercase tracking-widest">{recorderMode === 'audio' ? 'REC' : 'LIVE'}</span>
+            <div className="flex-1 flex items-center bg-primary/10 border border-primary/20 rounded-[2rem] h-14 px-6 gap-6 animate-in slide-in-from-right-4 duration-500 shadow-[0_0_40px_rgba(168,85,247,0.15)]">
+              <div className="flex items-center gap-3 text-primary animate-pulse">
+                <div className="w-2.5 h-2.5 rounded-full bg-primary shadow-[0_0_10px_rgba(168,85,247,1)]" />
+                <span className="text-[11px] font-black uppercase tracking-[0.3em]">{recorderMode === 'audio' ? 'SYNCING' : 'LIVE'}</span>
               </div>
-              <span className="text-sm font-mono font-bold text-white flex-1">{formatDuration(recordingDuration)}</span>
-              <div className="flex gap-1">
-                <Button variant="ghost" size="icon" className="text-white/40 hover:text-destructive transition-colors" onClick={cancelRecording}>
-                  <Trash2 className="w-5 h-5" />
+              <span className="text-lg font-black italic text-white flex-1 tracking-widest">{formatDuration(recordingDuration)}</span>
+              <div className="flex gap-2">
+                <Button variant="ghost" size="icon" className="h-10 w-10 text-white/30 hover:text-destructive transition-colors" onClick={cancelRecording}>
+                  <Trash2 className="w-6 h-6" />
                 </Button>
-                <Button variant="ghost" size="icon" className="text-primary hover:scale-110 transition-transform" onClick={stopRecording}>
-                  <StopCircle className="w-6 h-6 fill-current" />
+                <Button variant="ghost" size="icon" className="h-12 w-12 text-primary hover:scale-125 transition-transform" onClick={stopRecording}>
+                  <StopCircle className="w-8 h-8 fill-current" />
                 </Button>
               </div>
             </div>
@@ -262,10 +260,19 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
         </div>
       </div>
       <input type="file" ref={fileInputRef} hidden accept="image/*,video/*" />
-      <input type="file" ref={videoGenInputRef} hidden accept="image/*" />
     </footer>
   );
 });
+
+function AttachmentItem({ icon: Icon, label, color, onClick, loading }: any) {
+  return (
+    <button onClick={onClick} className="flex items-center gap-4 w-full p-3.5 rounded-xl hover:bg-white/5 transition-all text-left group">
+      {loading ? <Loader2 className="w-5 h-5 animate-spin text-primary" /> : <Icon className={cn("w-5 h-5 transition-transform group-hover:scale-110", color)} />}
+      <span className="text-[10px] font-black uppercase tracking-widest text-white/80">{label}</span>
+    </button>
+  );
+}
+
 ChatInputBar.displayName = 'ChatInputBar';
 
 const MessageList = memo(({ 
@@ -287,7 +294,7 @@ const MessageList = memo(({
   }, [sortedMessages, searchQuery]);
 
   return (
-    <div className="flex flex-col gap-3 max-w-4xl mx-auto px-4 md:px-6 py-8 min-h-full touch-pan-y relative z-10 overflow-x-hidden bg-transparent">
+    <div className="flex flex-col gap-5 max-w-4xl mx-auto px-5 md:px-8 py-10 min-h-full touch-pan-y relative z-10 overflow-x-hidden bg-transparent">
       {filteredMessages.map((msg: Message) => (
         <MessageItem 
           key={msg.id} 
@@ -355,8 +362,7 @@ export default function ChatArea() {
     if (chat?.type === 'private') {
       return formatLastSeen(otherProfile?.lastSeen, otherProfile?.settings?.privacy?.lastSeenVisibility, false, t('online'));
     }
-    const count = chat?.participantIds?.length || 0;
-    return `${count} участников`;
+    return `${chat?.participantIds?.length || 0} Nodes Connected`;
   }, [chat, otherProfile, t]);
 
   const scrollToBottom = useCallback((behavior: ScrollBehavior = 'smooth') => {
@@ -373,23 +379,18 @@ export default function ChatArea() {
     if (!content_msg.trim() || !currentChatId || !firebaseUser || !db) return;
     
     let finalContent = (type_msg === 'text' || type_msg === 'reply') ? encryptSignal(content_msg) : content_msg;
-    if (type_msg === 'image' && !content_msg.startsWith('data:')) finalContent = await compressImage(content_msg, 800, 0.4);
+    if (type_msg === 'image' && !content_msg.startsWith('data:')) finalContent = await compressImage(content_msg, 1200, 0.6);
 
     const msgData: Partial<Message> = { 
-      chatId: currentChatId, senderId: firebaseUser.uid, senderName: userProfile?.name || 'Nuxus User', 
+      chatId: currentChatId, senderId: firebaseUser.uid, senderName: userProfile?.name || 'Nuxus Agent', 
       content: finalContent, contentType: type_msg, sentAt: new Date().toISOString(), isRead: false,
-      metadata: {
-        bubbleStyle: userProfile?.settings?.bubbleStyle || 'default'
-      }
+      metadata: { bubbleStyle: userProfile?.settings?.bubbleStyle || 'default' }
     };
 
-    if (minutes) {
-      msgData.selfDestructAt = addMinutes(new Date(), minutes).toISOString();
-    }
-    
+    if (minutes) msgData.selfDestructAt = addMinutes(new Date(), minutes).toISOString();
     if (replyTo) { 
       msgData.replyToId = replyTo.id; 
-      msgData.replyToContent = replyTo.contentType === 'text' ? replyTo.content : `[${replyTo.contentType}]`; 
+      msgData.replyToContent = replyTo.contentType === 'text' ? replyTo.content : `[Signal: ${replyTo.contentType.toUpperCase()}]`; 
       setReplyTo(null);
     }
     
@@ -402,43 +403,38 @@ export default function ChatArea() {
   const handleScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
     const target = e.currentTarget;
     const distanceToBottom = target.scrollHeight - target.scrollTop - target.clientHeight;
-    setShowScrollButton(distanceToBottom > 300);
+    setShowScrollButton(distanceToBottom > 400);
   }, []);
 
   const handleSummary = async () => {
-    if (!isPremium || !messages || messages.length < 5) {
-      toast({ title: "Недостаточно данных", description: "Нужно хотя бы 5 сообщений для анализа." });
-      return;
-    }
+    if (!isPremium || !messages || messages.length < 5) return;
     setIsSummarizing(true);
     try {
       const chatMessages = messages.slice(-20).map(m => ({
         senderName: m.senderName,
-        text: m.contentType === 'text' ? decryptSignal(m.content) : `[${m.contentType}]`
+        text: m.contentType === 'text' ? decryptSignal(m.content) : `[Signal: ${m.contentType}]`
       }));
       const { summary } = await chatConversationSummary({ chatMessages });
-      toast({ title: "AI Summary", description: summary, duration: 10000 });
+      toast({ title: "AI Intelligence Output", description: summary, duration: 15000 });
     } catch (e) {
-      toast({ title: "Ошибка анализа", variant: "destructive" });
-    } finally {
-      setIsSummarizing(false);
-    }
+      toast({ title: "Summary Encryption Failed", variant: "destructive" });
+    } finally { setIsSummarizing(false); }
   };
 
   const chatDisplayName = useMemo(() => {
-    if (chat?.id === 'saved_messages') return 'Избранное';
+    if (chat?.id === 'saved_messages') return 'Archive Data';
     if (chat?.type === 'private') {
       const myMeta = chat.metadata?.[firebaseUser?.uid || ''];
       return myMeta?.customName || formatDisplayName(otherProfile?.name);
     }
-    return formatDisplayName(chat?.name || 'Аккаунт');
+    return formatDisplayName(chat?.name || 'Signal Cluster');
   }, [chat, firebaseUser?.uid, otherProfile]);
 
   const customBg = userProfile?.settings?.chatBackground;
   const bgFit = userProfile?.settings?.chatBackgroundFit || 'cover';
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-transparent relative overflow-hidden z-20 max-w-full min-w-0">
+    <div className="flex-1 flex flex-col h-full bg-transparent relative overflow-hidden z-20 max-w-full">
       <div 
         className={cn("absolute inset-0 z-[-1] pointer-events-none transition-opacity duration-1000", (!customBg || customBg.trim() === '') && "chat-pattern-bg")}
         style={customBg && customBg.trim() !== '' ? { 
@@ -446,63 +442,63 @@ export default function ChatArea() {
           backgroundSize: bgFit, 
           backgroundPosition: 'center',
           backgroundRepeat: 'no-repeat',
-          opacity: 1
+          opacity: 0.8
         } : {}}
       />
 
-      <header className="h-16 border-b border-white/10 bg-black/40 backdrop-blur-3xl flex items-center justify-between px-4 shrink-0 z-30">
-        <div className="flex items-center gap-3 flex-1 min-w-0">
-          <Button variant="ghost" size="icon" className="md:hidden rounded-lg text-white/80" onClick={() => setCurrentChatId(null)}><ChevronLeft /></Button>
+      <header className="h-20 border-b border-white/5 obsidian-glass flex items-center justify-between px-6 shrink-0 z-30 shadow-2xl">
+        <div className="flex items-center gap-4 flex-1 min-w-0">
+          <Button variant="ghost" size="icon" className="md:hidden obsidian-glass rounded-xl text-white/70 h-10 w-10" onClick={() => setCurrentChatId(null)}><ChevronLeft /></Button>
           {!isSearchMode ? (
-            <div className="flex items-center gap-3 cursor-pointer min-w-0" onClick={() => setIsChatInfoOpen(true)}>
-              <UserAvatar userId={otherId} manualAvatarUrl={chat?.avatarUrl || otherProfile?.avatarUrl} className="h-10 w-10 border border-white/20" fallbackName={chatDisplayName} showOnlineStatus />
+            <div className="flex items-center gap-4 cursor-pointer min-w-0 group" onClick={() => setIsChatInfoOpen(true)}>
+              <UserAvatar userId={otherId} manualAvatarUrl={chat?.avatarUrl || otherProfile?.avatarUrl} className="h-12 w-12 border-2 border-white/10 group-hover:border-primary/50 transition-all" fallbackName={chatDisplayName} showOnlineStatus />
               <div className="flex flex-col min-w-0 text-left">
-                <div className="flex items-center gap-1.5">
-                  <span className="font-black text-[15px] truncate text-white italic tracking-tight">{chatDisplayName}</span>
-                  {otherProfile?.isPremium && <Star className="w-3 h-3 text-accent fill-accent" />}
+                <div className="flex items-center gap-2">
+                  <span className="font-black text-[18px] truncate text-white italic tracking-tighter uppercase group-hover:text-primary transition-colors">{chatDisplayName}</span>
+                  {otherProfile?.isPremium && <Star className="w-4 h-4 text-accent fill-accent animate-pulse" />}
                 </div>
-                <span className="text-[10px] font-black uppercase tracking-widest text-primary/90 animate-pulse">
+                <span className="text-[9px] font-black uppercase tracking-[0.4em] text-primary/60">
                   {chatSubtext}
                 </span>
               </div>
             </div>
           ) : (
-            <div className="flex-1 flex items-center gap-2 pr-4">
-              <Search className="w-4 h-4 text-primary" />
-              <Input placeholder="Поиск в чате..." className="bg-transparent border-none focus-visible:ring-0 text-sm h-8 text-white" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} autoFocus />
-              <button onClick={() => { setIsSearchMode(false); setSearchQuery(''); }}><X className="w-4 h-4 text-white/40" /></button>
+            <div className="flex-1 flex items-center gap-4 obsidian-glass px-4 rounded-2xl h-12">
+              <Search className="w-5 h-5 text-primary" />
+              <Input placeholder="Scan chat signals..." className="bg-transparent border-none focus-visible:ring-0 text-sm h-10 text-white font-bold" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} autoFocus />
+              <button onClick={() => { setIsSearchMode(false); setSearchQuery(''); }} className="text-white/20 hover:text-white transition-colors"><X className="w-5 h-5" /></button>
             </div>
           )}
         </div>
         {!isSearchMode && (
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-2">
             {isPremium && (
-              <Button variant="ghost" size="icon" onClick={handleSummary} disabled={isSummarizing} className={cn("text-primary hover:text-white transition-colors", isSummarizing && "animate-spin")}>
-                <Sparkles className="w-5 h-5" />
+              <Button variant="ghost" size="icon" onClick={handleSummary} disabled={isSummarizing} className={cn("h-11 w-11 rounded-2xl obsidian-glass text-primary hover:text-white transition-all", isSummarizing && "animate-spin")}>
+                <Sparkles className="w-6 h-6" />
               </Button>
             )}
-            <Button variant="ghost" size="icon" onClick={() => setIsSearchMode(true)} className="text-white/60 hover:text-primary transition-colors"><Search className="w-5 h-5" /></Button>
-            <Button variant="ghost" size="icon" onClick={() => setIsChatInfoOpen(true)} className="text-white/60 hover:text-primary transition-colors"><Info className="w-5 h-5" /></Button>
+            <Button variant="ghost" size="icon" onClick={() => setIsSearchMode(true)} className="h-11 w-11 rounded-2xl obsidian-glass text-white/40 hover:text-primary transition-all"><Search className="w-6 h-6" /></Button>
+            <Button variant="ghost" size="icon" onClick={() => setIsChatInfoOpen(true)} className="h-11 w-11 rounded-2xl obsidian-glass text-white/40 hover:text-primary transition-all"><Info className="w-6 h-6" /></Button>
           </div>
         )}
       </header>
 
       <div className="flex-1 relative overflow-hidden flex flex-col min-w-0 z-10 bg-transparent">
-        <div ref={scrollContainerRef} className="flex-1 w-full relative z-10 overflow-y-auto scrollbar-hide scroll-smooth bg-transparent" onScroll={handleScroll}>
+        <div ref={scrollContainerRef} className="flex-1 w-full relative z-10 overflow-y-auto scrollbar-hide scroll-smooth" onScroll={handleScroll}>
           <MessageList 
             messages={messages} userId={firebaseUser?.uid} chatId={currentChatId} 
             onReply={setReplyTo} onForward={setForwardingMessage} amIPremium={isPremium} 
             isAdmin={isKernelAdmin} isGroup={chat?.type !== 'private'} searchQuery={searchQuery} viewerProfile={userProfile} 
           />
-          <div ref={messagesEndRef} className="h-4" />
+          <div ref={messagesEndRef} className="h-10" />
         </div>
 
         {showScrollButton && (
           <button 
             onClick={() => scrollToBottom('smooth')}
-            className="absolute bottom-6 right-6 h-12 w-12 rounded-full bg-black/40 backdrop-blur-[120px] border border-white/10 flex items-center justify-center text-primary shadow-2xl z-50 animate-in fade-in zoom-in hover:scale-110 active:scale-90 transition-all"
+            className="absolute bottom-10 right-8 h-14 w-14 rounded-[1.6rem] obsidian-glass border-primary/20 flex items-center justify-center text-primary shadow-2xl z-50 animate-in zoom-in hover:scale-110 active:scale-90 transition-all border"
           >
-            <ChevronDown className="w-6 h-6" />
+            <ChevronDown className="w-8 h-8" />
           </button>
         )}
       </div>

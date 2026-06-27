@@ -4,11 +4,11 @@
 
 @layer base {
   :root {
-    --background: 240 20% 3%;
+    --background: 240 25% 2%;
     --foreground: 0 0% 98%;
-    --card: 240 20% 5%;
+    --card: 240 20% 4%;
     --card-foreground: 0 0% 98%;
-    --popover: 240 20% 4%;
+    --popover: 240 25% 3%;
     --popover-foreground: 0 0% 98%;
     --primary: 270 95% 65%;
     --primary-foreground: 0 0% 100%;
@@ -27,7 +27,7 @@
   }
 
   .dark {
-    --background: 240 25% 2%;
+    --background: 240 30% 1.5%;
     --foreground: 0 0% 100%;
     --primary: 275 100% 60%;
     --accent: 190 100% 50%;
@@ -42,11 +42,11 @@
   
   html, body {
     @apply bg-background text-foreground antialiased;
-    background-color: #030306;
+    background-color: #020205;
     background-image: 
-      radial-gradient(circle at 0% 0%, rgba(60, 20, 110, 0.4) 0%, transparent 40%),
-      radial-gradient(circle at 100% 100%, rgba(20, 80, 100, 0.3) 0%, transparent 40%),
-      linear-gradient(180deg, #030306 0%, #050508 100%);
+      radial-gradient(circle at 0% 0%, rgba(70, 20, 130, 0.2) 0%, transparent 40%),
+      radial-gradient(circle at 100% 100%, rgba(20, 100, 120, 0.15) 0%, transparent 40%),
+      linear-gradient(180deg, #020205 0%, #05050a 100%);
     
     overscroll-behavior: none !important;
     position: fixed; 
@@ -62,44 +62,53 @@
   }
 }
 
-@keyframes neural-pulse {
-  0%, 100% { opacity: 0.2; transform: scale(1); filter: blur(50px); }
-  50% { opacity: 0.4; transform: scale(1.1); filter: blur(70px); }
+@keyframes scanline {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+
+@keyframes pulse-glow {
+  0%, 100% { opacity: 0.5; filter: blur(40px); }
+  50% { opacity: 0.8; filter: blur(60px); }
 }
 
 .neural-bg-element {
   @apply absolute rounded-full pointer-events-none;
-  animation: neural-pulse 8s ease-in-out infinite;
+  animation: pulse-glow 8s ease-in-out infinite;
 }
 
-.nuxus-nova-glass {
-  @apply bg-white/[0.01] backdrop-blur-[40px] border border-white/[0.06] shadow-2xl;
+.obsidian-glass {
+  @apply bg-white/[0.02] backdrop-blur-[100px] border border-white/[0.08] shadow-[0_20px_50px_rgba(0,0,0,0.5)];
 }
 
 .message-bubble-me {
-  background: linear-gradient(135deg, hsl(var(--primary)) 0%, #6d28d9 100%);
+  background: linear-gradient(135deg, hsl(var(--primary)) 0%, #7c3aed 100%);
   @apply shadow-[0_8px_30px_-10px_rgba(168,85,247,0.5)] border border-white/10;
   color: white !important;
 }
 
 .message-bubble-other {
-  background: rgba(255, 255, 255, 0.03);
-  @apply backdrop-blur-2xl border border-white/10 shadow-xl;
+  background: rgba(255, 255, 255, 0.04);
+  @apply backdrop-blur-3xl border border-white/10 shadow-xl;
   color: white !important;
 }
 
 .chat-pattern-bg {
   background-color: transparent;
   background-image: 
-    radial-gradient(circle at 50% 50%, rgba(168, 85, 247, 0.05) 0%, transparent 80%),
-    url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M50 50l1-1m-1 1l-1-1m1 1l1 1m-1-1l-1 1' stroke='%23ffffff' stroke-opacity='0.02' stroke-width='1' fill='none'/%3E%3C/svg%3E");
+    radial-gradient(circle at 50% 50%, rgba(168, 85, 247, 0.03) 0%, transparent 80%),
+    url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M30 30l1-1m-1 1l-1-1m1 1l1 1m-1-1l-1 1' stroke='%23ffffff' stroke-opacity='0.02' stroke-width='1' fill='none'/%3E%3C/svg%3E");
 }
 
 .scrollbar-hide::-webkit-scrollbar { display: none; }
 .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
 
-/* Themes */
-[data-theme='ocean'] { --primary: 200 100% 50%; --ring: 200 100% 50%; }
-[data-theme='rainbow'] { --primary: 300 100% 60%; --ring: 300 100% 60%; }
-[data-theme='gold'] { --primary: 45 100% 50%; --ring: 45 100% 50%; }
+/* Custom Themes */
+[data-theme='ocean'] { --primary: 200 100% 50%; }
+[data-theme='gold'] { --primary: 45 100% 50%; }
 [data-theme='cyberpunk'] { --primary: 320 100% 50%; --accent: 60 100% 50%; }
