@@ -64,43 +64,42 @@ export default function ChatMain() {
       <UpdateNotifier />
       
       <div className="flex-1 flex overflow-hidden w-full relative max-w-full">
-        {/* Desktop Navigation Rail V7.5 */}
-        <div className="hidden md:flex w-[96px] h-full flex-col items-center py-10 bg-black/40 backdrop-blur-3xl border-r border-white/[0.05] shrink-0 z-40 relative">
-          <div className="absolute right-0 top-0 bottom-0 w-px bg-gradient-to-b from-transparent via-primary/30 to-transparent" />
+        {/* Desktop Navigation Rail V7.6 (Reduced width) */}
+        <div className="hidden md:flex w-[72px] h-full flex-col items-center py-8 bg-black/40 backdrop-blur-3xl border-r border-white/[0.05] shrink-0 z-40 relative">
+          <div className="absolute right-0 top-0 bottom-0 w-px bg-gradient-to-b from-transparent via-primary/20 to-transparent" />
           
-          <div className="mb-14 cursor-pointer active:scale-90 transition-all relative group" onClick={() => { setActiveView('chats'); setCurrentChatId(null); }}>
-            <div className="absolute -inset-4 bg-primary/20 blur-3xl opacity-0 group-hover:opacity-100 transition-opacity" />
-            <div className="w-16 h-16 bg-white/[0.03] rounded-[1.8rem] flex items-center justify-center border border-white/10 shadow-2xl relative z-10 group-hover:border-primary/50 group-hover:bg-primary/5 transition-all duration-500">
-              <Layers className="w-8 h-8 text-primary" />
+          <div className="mb-10 cursor-pointer active:scale-90 transition-all relative group" onClick={() => { setActiveView('chats'); setCurrentChatId(null); }}>
+            <div className="absolute -inset-4 bg-primary/20 blur-2xl opacity-0 group-hover:opacity-100 transition-opacity" />
+            <div className="w-12 h-12 bg-white/[0.03] rounded-2xl flex items-center justify-center border border-white/10 shadow-xl relative z-10 group-hover:border-primary/50 group-hover:bg-primary/5 transition-all duration-500">
+              <Layers className="w-6 h-6 text-primary" />
             </div>
           </div>
           
-          <div className="flex flex-col gap-10 flex-1 overflow-y-auto scrollbar-hide py-2">
-            <RailButton icon={MessageCircle} active={activeView === 'chats'} onClick={() => { setActiveView('chats'); setCurrentChatId(null); }} label={t('app.chats')} />
+          <div className="flex flex-col gap-6 flex-1 overflow-y-auto scrollbar-hide py-2">
+            <RailButton icon={MessageCircle} active={activeView === 'chats'} onClick={() => { setActiveView('chats'); setCurrentChatId(null); }} label="ЧАТЫ" />
             <RailButton icon={Compass} active={activeView === 'discovery'} onClick={() => { setActiveView('discovery'); setCurrentChatId(null); }} label="HUB" />
-            <RailButton icon={Phone} active={activeView === 'calls'} onClick={() => { setActiveView('calls'); setCurrentChatId(null); }} label={t('app.calls')} />
-            <RailButton icon={Gamepad2} active={activeView === 'games'} onClick={() => { setActiveView('games'); setCurrentChatId(null); }} label={t('app.games')} />
-            <RailButton icon={Wallet} active={activeView === 'wallet'} onClick={() => { setActiveView('wallet'); setCurrentChatId(null); }} label={t('app.wallet')} />
-            <RailButton icon={Archive} active={activeView === 'archive'} onClick={() => { setActiveView('archive'); setCurrentChatId(null); }} label={t('app.archive')} />
+            <RailButton icon={Phone} active={activeView === 'calls'} onClick={() => { setActiveView('calls'); setCurrentChatId(null); }} label="CALLS" />
+            <RailButton icon={Gamepad2} active={activeView === 'games'} onClick={() => { setActiveView('games'); setCurrentChatId(null); }} label="GAMES" />
+            <RailButton icon={Wallet} active={activeView === 'wallet'} onClick={() => { setActiveView('wallet'); setCurrentChatId(null); }} label="WALL" />
+            <RailButton icon={Archive} active={activeView === 'archive'} onClick={() => { setActiveView('archive'); setCurrentChatId(null); }} label="ARCH" />
           </div>
 
-          <div className="mt-auto flex flex-col gap-10 items-center">
-            <button onClick={() => setIsSearchOpen(true)} className="w-14 h-14 rounded-2xl flex items-center justify-center hover:bg-primary/10 transition-all text-muted-foreground hover:text-primary group border border-transparent hover:border-primary/20">
-              <Search className="w-7 h-7 group-hover:scale-110 transition-transform" />
+          <div className="mt-auto flex flex-col gap-6 items-center">
+            <button onClick={() => setIsSearchOpen(true)} className="w-12 h-12 rounded-xl flex items-center justify-center hover:bg-primary/10 transition-all text-muted-foreground hover:text-primary group border border-transparent hover:border-primary/20">
+              <Search className="w-6 h-6 group-hover:scale-110 transition-transform" />
             </button>
-            <button onClick={() => { setActiveView('profile'); setCurrentChatId(null); }} className={cn("relative transition-all duration-500 group p-1.5 rounded-[1.4rem]", activeView === 'profile' ? "bg-primary/15 border border-primary/20 shadow-[0_0_25px_rgba(168,85,247,0.3)]" : "hover:bg-white/5")}>
-              <UserAvatar userId={user?.uid} className={cn("h-12 w-12 border-2 transition-all duration-700", activeView === 'profile' ? "border-primary scale-110" : "border-transparent opacity-60 group-hover:opacity-100")} />
-              {activeView === 'profile' && <div className="absolute -right-[43px] top-1/2 -translate-y-1/2 w-1.5 h-10 bg-primary rounded-l-full shadow-[0_0_20px_rgba(168,85,247,1)]" />}
+            <button onClick={() => { setActiveView('profile'); setCurrentChatId(null); }} className={cn("relative transition-all duration-500 group p-1 rounded-xl", activeView === 'profile' ? "bg-primary/15 border border-primary/20" : "hover:bg-white/5")}>
+              <UserAvatar userId={user?.uid} className={cn("h-10 w-10 border-2 transition-all duration-700", activeView === 'profile' ? "border-primary scale-105" : "border-transparent opacity-60 group-hover:opacity-100")} />
             </button>
           </div>
         </div>
 
-        {/* Sidebar Container */}
+        {/* Sidebar Container V7.6 (Compact Width) */}
         <div className={cn(
-          "w-full md:w-[400px] lg:w-[440px] h-full flex-shrink-0 border-r border-white/[0.05] z-30 bg-black/20 backdrop-blur-2xl relative overflow-hidden min-w-0", 
+          "w-full md:w-[350px] lg:w-[380px] h-full flex-shrink-0 border-r border-white/[0.05] z-30 bg-black/10 backdrop-blur-2xl relative overflow-hidden min-w-0", 
           (currentChatId && !['profile', 'contacts', 'calls', 'archive', 'music', 'wallet', 'discovery', 'games'].includes(activeView)) ? "hidden md:block" : "block"
         )}>
-          <div className="h-full w-full overflow-hidden animate-in fade-in slide-in-from-left-4 duration-500">
+          <div className="h-full w-full overflow-hidden animate-in fade-in slide-in-from-left-2 duration-300">
             {activeView === 'chats' && <ChatSidebar />}
             {activeView === 'contacts' && <ContactsView />}
             {activeView === 'calls' && <CallsView />}
@@ -113,12 +112,12 @@ export default function ChatMain() {
           </div>
         </div>
         
-        {/* Main Viewport V7.5 */}
+        {/* Main Viewport */}
         <div className={cn(
           "flex-1 h-full flex flex-col min-w-0 bg-transparent relative z-20 chat-pattern-bg overflow-hidden max-w-full", 
           (!currentChatId || ['profile', 'music', 'wallet', 'games', 'discovery'].includes(activeView)) ? "hidden md:flex" : "flex"
         )}>
-          <div className="h-full w-full overflow-hidden flex flex-col animate-in fade-in duration-700">
+          <div className="h-full w-full overflow-hidden flex flex-col animate-in fade-in duration-500">
             <ChatArea />
           </div>
         </div>
@@ -126,10 +125,10 @@ export default function ChatMain() {
 
       <MusicPlayer />
 
-      {/* Floating Bottom Navigation (Mobile) V7.5 «Event Horizon Dock» */}
+      {/* Floating Bottom Navigation (Mobile) V7.6 (Compact Height) */}
       {!currentChatId && (
-        <div className="md:hidden fixed bottom-10 left-1/2 -translate-x-1/2 w-[94%] max-w-[450px] z-50">
-          <div className="bg-black/40 backdrop-blur-[60px] border border-white/10 rounded-[3rem] h-[88px] flex items-center justify-between px-6 shadow-[0_30px_100px_rgba(0,0,0,0.8)] relative overflow-hidden">
+        <div className="md:hidden fixed bottom-6 left-1/2 -translate-x-1/2 w-[92%] max-w-[400px] z-50">
+          <div className="bg-black/60 backdrop-blur-[40px] border border-white/10 rounded-[2.5rem] h-[72px] flex items-center justify-between px-6 shadow-2xl relative overflow-hidden">
             <div className="absolute inset-0 bg-gradient-to-b from-white/5 to-transparent pointer-events-none" />
             
             <div className="flex flex-1 justify-around items-center gap-1 z-10">
@@ -137,16 +136,16 @@ export default function ChatMain() {
               <NavButton icon={Phone} label="CALLS" active={activeView === 'calls'} onClick={() => setActiveView('calls')} />
               
               {/* Center Action Button */}
-              <div className="relative -top-2">
-                <div className="absolute -inset-4 bg-primary/20 blur-2xl animate-pulse" />
+              <div className="relative -top-1">
+                <div className="absolute -inset-4 bg-primary/20 blur-xl animate-pulse" />
                 <button 
                   onClick={() => setActiveView('chats')}
                   className={cn(
-                    "h-16 w-16 rounded-[1.8rem] flex items-center justify-center transition-all duration-500 relative z-20 border shadow-2xl",
-                    activeView === 'chats' ? "bg-primary text-white border-primary/50 shadow-primary/30" : "bg-white/5 text-white/40 border-white/10"
+                    "h-14 w-14 rounded-2xl flex items-center justify-center transition-all duration-500 relative z-20 border shadow-xl",
+                    activeView === 'chats' ? "bg-primary text-white border-primary/50" : "bg-white/5 text-white/40 border-white/10"
                   )}
                 >
-                  <MessageCircle className={cn("w-8 h-8", activeView === 'chats' && "fill-current")} />
+                  <MessageCircle className={cn("w-7 h-7", activeView === 'chats' && "fill-current")} />
                 </button>
               </div>
 
@@ -170,30 +169,30 @@ export default function ChatMain() {
 
 function RailButton({ icon: Icon, active, onClick, label }: { icon: any, active?: boolean, onClick: () => void, label: string }) {
   return (
-    <button onClick={onClick} className={cn("group flex flex-col items-center gap-2.5 transition-all outline-none", active ? "text-primary" : "text-muted-foreground hover:text-white")}>
+    <button onClick={onClick} className={cn("group flex flex-col items-center gap-1.5 transition-all outline-none", active ? "text-primary" : "text-muted-foreground hover:text-white")}>
       <div className={cn(
-        "w-14 h-14 rounded-2xl flex items-center justify-center transition-all relative border border-transparent", 
-        active ? "bg-primary/10 border-primary/20 shadow-[0_0_15px_rgba(168,85,247,0.2)]" : "group-hover:bg-white/5"
+        "w-11 h-11 rounded-xl flex items-center justify-center transition-all relative border border-transparent", 
+        active ? "bg-primary/10 border-primary/20 shadow-lg shadow-primary/10" : "group-hover:bg-white/5"
       )}>
-        <Icon className={cn("w-7 h-7 transition-all duration-500", active ? "fill-current scale-110" : "scale-100 group-hover:scale-110")} />
-        {active && <div className="absolute -left-[41px] top-1/2 -translate-y-1/2 w-1.5 h-10 bg-primary rounded-r-full shadow-[0_0_15px_rgba(168,85,247,1)]" />}
+        <Icon className={cn("w-5 h-5 transition-all duration-500", active ? "fill-current scale-110" : "scale-100 group-hover:scale-110")} />
+        {active && <div className="absolute -left-[30px] top-1/2 -translate-y-1/2 w-1 h-8 bg-primary rounded-r-full shadow-[0_0_10px_rgba(168,85,247,1)]" />}
       </div>
-      <span className="text-[8px] font-black uppercase tracking-[0.2em]">{label}</span>
+      <span className="text-[7px] font-black uppercase tracking-widest">{label}</span>
     </button>
   );
 }
 
 function NavButton({ icon: Icon, label, active, onClick, isProfile, userId }: { icon: any, label: string, active?: boolean, onClick: () => void, isProfile?: boolean, userId?: string }) {
   return (
-    <button onClick={onClick} className={cn("flex flex-col items-center gap-1.5 transition-all relative outline-none py-2", active ? "text-primary" : "text-muted-foreground/60")}>
+    <button onClick={onClick} className={cn("flex flex-col items-center gap-1 transition-all relative outline-none py-1", active ? "text-primary" : "text-muted-foreground/60")}>
       <div className="relative transition-all duration-500">
         {isProfile ? (
-          <UserAvatar userId={userId} className={cn("h-7 w-7 border-2 transition-all duration-500", active ? "border-primary scale-110 shadow-lg shadow-primary/20" : "border-transparent opacity-70")} />
+          <UserAvatar userId={userId} className={cn("h-6 w-6 border-2 transition-all duration-500", active ? "border-primary scale-105" : "border-transparent opacity-70")} />
         ) : (
-          <Icon className={cn("w-6 h-6 transition-all duration-500", active ? "fill-current scale-110" : "scale-100")} />
+          <Icon className={cn("w-5 h-5 transition-all duration-500", active ? "fill-current scale-110" : "scale-100")} />
         )}
       </div>
-      <span className={cn("text-[7px] font-black uppercase tracking-[0.2em] transition-all", active && "text-primary")}>{label}</span>
+      <span className={cn("text-[6px] font-black uppercase tracking-widest transition-all", active && "text-primary")}>{label}</span>
     </button>
   );
 }
