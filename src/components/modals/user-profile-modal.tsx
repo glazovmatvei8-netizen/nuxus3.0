@@ -19,9 +19,6 @@ import { format } from 'date-fns';
 import { ru } from 'date-fns/locale';
 import { GiftModal } from './gift-modal';
 
-/**
- * UserProfileModal V8.9 (Absolute Scroll & Import Fix)
- */
 export function UserProfileModal() {
   const db = useFirestore();
   const { user: currentUser } = useUser();
@@ -121,7 +118,6 @@ export function UserProfileModal() {
 
         <ScrollArea className="flex-1 w-full h-full">
           <div className="flex flex-col min-h-full pb-24">
-            {/* Dynamic Header Section */}
             <div className="relative h-48 bg-gradient-to-b from-primary/20 to-transparent flex items-center justify-center pt-10">
               <div className="absolute inset-0 opacity-10 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')]" />
               <UserAvatar 
@@ -170,7 +166,7 @@ export function UserProfileModal() {
                 <div className="space-y-4">
                   <div className="flex items-center justify-between px-1">
                     <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-primary/60 flex items-center gap-2">
-                      <Zap className="w-3.5 h-3.5" /> Artifacts
+                      <Zap className="w-3.5 h-3.5" /> Артефакты
                     </h3>
                     <span className="text-[10px] font-black text-white/20 tabular-nums">{gifts.length}</span>
                   </div>
@@ -187,7 +183,7 @@ export function UserProfileModal() {
 
               {targetUser?.bio && (
                 <div className="space-y-2">
-                  <h3 className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40 px-1">Neural Specification</h3>
+                  <h3 className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40 px-1">Спецификация</h3>
                   <div className="bg-white/[0.02] p-5 rounded-[2rem] border border-white/[0.05] shadow-inner">
                     <p className="text-[13px] text-white/90 leading-relaxed font-medium">{targetUser.bio}</p>
                   </div>
@@ -195,16 +191,16 @@ export function UserProfileModal() {
               )}
 
               <div className="space-y-2">
-                <h3 className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40 px-1">Node Data</h3>
+                <h3 className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40 px-1">Данные узла</h3>
                 <div className="bg-white/[0.02] rounded-[2rem] border border-white/[0.05] overflow-hidden divide-y divide-white/[0.02] shadow-xl">
-                  <InfoRow icon={Calendar} label="Registered" value={registrationDate} />
+                  <InfoRow icon={Calendar} label="Регистрация" value={registrationDate} />
                   <InfoRow 
                     icon={ShieldCheck} 
-                    label="Integrity" 
+                    label="Целостность" 
                     value={hasActivePremium ? "Elite Node" : "Standard"} 
                     color={hasActivePremium ? "text-accent" : "text-white/30"} 
                   />
-                  {targetUser?.countryCode && <InfoRow icon={Globe} label="Sector" value={targetUser.countryCode.toUpperCase()} />}
+                  {targetUser?.countryCode && <InfoRow icon={Globe} label="Сектор" value={targetUser.countryCode.toUpperCase()} />}
                 </div>
               </div>
 
@@ -214,14 +210,14 @@ export function UserProfileModal() {
                   onClick={() => startCall('audio')}
                   className="h-14 rounded-2xl bg-white/[0.02] border border-white/[0.05] text-[10px] font-black uppercase tracking-widest gap-2 hover:bg-primary/10 hover:text-primary transition-all"
                 >
-                  <Phone className="w-4 h-4" /> Audio
+                  <Phone className="w-4 h-4" /> Аудио
                 </Button>
                 <Button 
                   variant="ghost" 
                   onClick={() => startCall('video')}
                   className="h-14 rounded-2xl bg-white/[0.02] border border-white/[0.05] text-[10px] font-black uppercase tracking-widest gap-2 hover:bg-primary/10 hover:text-primary transition-all"
                 >
-                  <Video className="w-4 h-4" /> Video
+                  <Video className="w-4 h-4" /> Видео
                 </Button>
               </div>
               

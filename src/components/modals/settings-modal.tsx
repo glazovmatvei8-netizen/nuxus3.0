@@ -129,15 +129,12 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         'settings.biometricEnabled': form.biometricEnabled
       });
       onOpenChange(false);
-      toast({ title: "Ядро обновлено V10.0" });
+      toast({ title: "Ядро обновлено V11.0" });
     } catch (e: any) {
       toast({ title: "Ошибка сохранения", variant: "destructive" });
     }
   };
 
-  /**
-   * ИСПРАВЛЕННАЯ ПРИВЯЗКА BIOMETRIC (iOS PWA)
-   */
   const handleLinkBiometrics = async () => {
     if (typeof window === 'undefined' || !window.PublicKeyCredential || !user) {
       toast({ title: "Ошибка", description: "Устройство не поддерживает биометрию", variant: "destructive" });
@@ -146,13 +143,10 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
     
     setIsLinkingBiometrics(true);
     try {
-      const isAvailable = await window.PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
-      if (!isAvailable) throw new Error("Не поддерживается платформой");
-
+      // Ослабляем проверку для PWA
       const challenge = new Uint8Array(32);
       window.crypto.getRandomValues(challenge);
 
-      // Используем стабильный UID пользователя как идентификатор
       const encoder = new TextEncoder();
       const userId = encoder.encode(user.uid);
 
@@ -165,9 +159,9 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
             name: user.email || user.uid,
             displayName: profile?.name || "Пользователь Nuxus",
           },
-          pubKeyCredParams: [{ alg: -7, type: "public-key" }],
+          pubKeyCredParams: [{ alg: -7, type: "public-key" }, { alg: -257, type: "public-key" }],
           authenticatorSelection: { 
-            authenticatorAttachment: "platform", // Форсируем FaceID/TouchID
+            authenticatorAttachment: "platform",
             userVerification: "required",
             residentKey: "preferred",
             requireResidentKey: false
@@ -178,7 +172,6 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
 
       const credential = await navigator.credentials.create(options) as any;
       if (credential) {
-        // Сохраняем ID ключа в base64
         const rawId = new Uint8Array(credential.rawId);
         const base64Id = window.btoa(String.fromCharCode(...rawId));
         
@@ -188,7 +181,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
       }
     } catch (e: any) {
       console.error("Nuxus Biometric Error:", e);
-      toast({ title: "Проверка прервана", description: "Связь с Face ID не была установлена.", variant: "destructive" });
+      toast({ title: "Проверка прервана", description: "Связь с Face ID не была установлена. Убедитесь, что на телефоне настроен код-пароль.", variant: "destructive" });
     } finally {
       setIsLinkingBiometrics(false);
     }
@@ -201,7 +194,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
       <DialogContent className="max-w-md bg-[#0a0a0c] border-white/10 p-0 overflow-hidden h-[85vh] flex flex-col rounded-[2.5rem] shadow-2xl outline-none">
         <DialogHeader className="p-6 border-b border-white/5 shrink-0 text-left">
           <DialogTitle className="flex items-center gap-2 text-xl font-black italic uppercase tracking-tighter text-white">
-            <Settings2 className="w-5 h-5 text-primary" /> Параметры V10.0
+            <Settings2 className="w-5 h-5 text-primary" /> Параметры V11.0
           </DialogTitle>
         </DialogHeader>
         
@@ -338,7 +331,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                <div className="p-6 bg-white/5 rounded-[2.5rem] border border-white/10 text-center space-y-4">
                   <Zap className="w-10 h-10 text-primary mx-auto animate-pulse" />
                   <div className="space-y-1">
-                    <h3 className="text-lg font-black uppercase italic text-white">Nuxus Kernel V10.0</h3>
+                    <h3 className="text-lg font-black uppercase italic text-white">Nuxus Kernel V11.0</h3>
                     <p className="text-[9px] text-muted-foreground uppercase font-bold tracking-widest leading-relaxed">
                       Ядро полностью синхронизировано.<br/>Биометрические модули активны.
                     </p>
