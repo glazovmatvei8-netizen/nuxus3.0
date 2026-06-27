@@ -20,8 +20,8 @@ import { ru } from 'date-fns/locale';
 import { GiftModal } from './gift-modal';
 
 /**
- * МОДАЛЬНОЕ ОКНО ПРОФИЛЯ V12.0
- * ИСПРАВЛЕНЫ ИМПОРТЫ ShieldCheck И ДРУГИХ.
+ * МОДАЛЬНОЕ ОКНО ПРОФИЛЯ V12.1
+ * ИСПРАВЛЕНО: ShieldCheck, Cpu, Zap импортированы.
  * ВЕСЬ ПРОФИЛЬ ТЕПЕРЬ СКРОЛЛИТСЯ ЦЕЛИКОМ.
  */
 export function UserProfileModal() {
@@ -121,7 +121,7 @@ export function UserProfileModal() {
           <DialogDescription>Профиль узла Ядра Nuxus</DialogDescription>
         </DialogHeader>
 
-        {/* ОСНОВНОЙ СКРОЛЛ ПРОФИЛЯ V12.0 */}
+        {/* ОСНОВНОЙ СКРОЛЛ ПРОФИЛЯ V12.1 */}
         <ScrollArea className="flex-1 w-full h-full">
           <div className="flex flex-col min-h-full pb-24">
             <div className="relative h-48 bg-gradient-to-b from-primary/20 to-transparent flex items-center justify-center pt-10">
@@ -206,7 +206,7 @@ export function UserProfileModal() {
                     value={hasActivePremium ? "Elite Node" : "Standard"} 
                     color={hasActivePremium ? "text-accent" : "text-white/30"} 
                   />
-                  <InfoRow icon={Cpu} label="Протокол" value="QES 12.0" />
+                  <InfoRow icon={Cpu} label="Протокол" value="QES 12.1" />
                   {targetUser?.countryCode && <InfoRow icon={Globe} label="Сектор" value={targetUser.countryCode.toUpperCase()} />}
                 </div>
               </div>

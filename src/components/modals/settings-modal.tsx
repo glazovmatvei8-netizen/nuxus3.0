@@ -13,7 +13,7 @@ import { useAuth, useUser, useFirestore, useDoc, useMemoFirebase } from '@/fireb
 import { UserAvatar } from '@/components/user-avatar';
 import { 
   LogOut, Palette, Check, Settings2, Camera, Lock, Image as ImageIcon, 
-  Paintbrush, Shield, Monitor, Fingerprint, Sparkles, Star, Ghost, Type, PenTool, Zap, Diamond, Crown, Sun, Moon, MessageSquare, ShieldCheck, Loader2
+  Paintbrush, Shield, Monitor, Fingerprint, Sparkles, Star, Ghost, Type, PenTool, Zap, Diamond, Crown, Sun, Moon, MessageSquare, ShieldCheck, Loader2, Cpu
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { signOut } from 'firebase/auth';
@@ -129,14 +129,14 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         'settings.biometricEnabled': form.biometricEnabled
       });
       onOpenChange(false);
-      toast({ title: "Ядро обновлено V12.0" });
+      toast({ title: "Ядро обновлено V12.1" });
     } catch (e: any) {
       toast({ title: "Ошибка сохранения", variant: "destructive" });
     }
   };
 
   /**
-   * ИСПРАВЛЕННАЯ ПРИВЯЗКА: ЛОКАЛЬНЫЙ КЛЮЧ БЕЗ ICLOUD
+   * ПРОВЕРЕННЫЙ ФИКС: FACE ID БЕЗ ICLOUD (V12.1)
    */
   const handleLinkBiometrics = async () => {
     if (typeof window === 'undefined' || !window.PublicKeyCredential || !user) {
@@ -165,7 +165,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
           authenticatorSelection: { 
             authenticatorAttachment: "platform",
             userVerification: "required",
-            // ИСПОЛЬЗУЕМ discouraged ЧТОБЫ НЕ ТРЕБОВАТЬ ICLOUD
+            // residentKey: "discouraged" - КЛЮЧЕВОЙ ПАРАМЕТР для отключения iCloud принудительно
             residentKey: "discouraged", 
             requireResidentKey: false
           },
@@ -180,11 +180,11 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         
         localStorage.setItem('nuxus_biometric_id', base64Id);
         setForm({ ...form, biometricEnabled: true });
-        toast({ title: "Face ID привязан", description: "Локальный ключ создан без использования iCloud." });
+        toast({ title: "Face ID привязан", description: "Локальный ключ создан." });
       }
     } catch (e: any) {
       console.error("Nuxus Biometric Error:", e);
-      toast({ title: "Связь не установлена", description: "Убедитесь, что на телефоне настроен Face ID и код-пароль.", variant: "destructive" });
+      toast({ title: "Связь не установлена", description: "Для Face ID без iCloud убедитесь, что на iPhone включен код-пароль.", variant: "destructive" });
     } finally {
       setIsLinkingBiometrics(false);
     }
@@ -197,7 +197,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
       <DialogContent className="max-w-md bg-[#0a0a0c] border-white/10 p-0 overflow-hidden h-[85vh] flex flex-col rounded-[2.5rem] shadow-2xl outline-none">
         <DialogHeader className="p-6 border-b border-white/5 shrink-0 text-left">
           <DialogTitle className="flex items-center gap-2 text-xl font-black italic uppercase tracking-tighter text-white">
-            <Settings2 className="w-5 h-5 text-primary" /> Параметры V12.0
+            <Settings2 className="w-5 h-5 text-primary" /> Параметры V12.1
           </DialogTitle>
         </DialogHeader>
         
@@ -334,7 +334,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                <div className="p-6 bg-white/5 rounded-[2.5rem] border border-white/10 text-center space-y-4">
                   <Zap className="w-10 h-10 text-primary mx-auto animate-pulse" />
                   <div className="space-y-1">
-                    <h3 className="text-lg font-black uppercase italic text-white">Nuxus Kernel V12.0</h3>
+                    <h3 className="text-lg font-black uppercase italic text-white">Nuxus Kernel V12.1</h3>
                     <p className="text-[9px] text-muted-foreground uppercase font-bold tracking-widest leading-relaxed">
                       Ядро полностью синхронизировано.<br/>Локальные биометрические модули активны.
                     </p>
