@@ -20,8 +20,7 @@ import { ru } from 'date-fns/locale';
 import { GiftModal } from './gift-modal';
 
 /**
- * UserProfileModal V8.0 (Safe & Smooth)
- * ОПТИМИЗИРОВАНО: Полная прокрутка и исправленные иконки.
+ * UserProfileModal V8.6 (Fixed ShieldCheck & Full Scroll)
  */
 export function UserProfileModal() {
   const db = useFirestore();
