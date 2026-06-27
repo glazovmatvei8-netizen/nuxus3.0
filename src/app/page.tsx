@@ -88,8 +88,7 @@ export default function Home() {
   };
 
   /**
-   * TRUE FACE ID CHALLENGE V8.6
-   * Uses WebAuthn navigator.credentials.get to trigger actual Apple FaceID/TouchID prompt.
+   * TRUE FACE ID CHALLENGE V8.9
    */
   const tryBiometricAuth = async () => {
     if (typeof window === 'undefined' || !window.PublicKeyCredential) return;
@@ -97,21 +96,29 @@ export default function Home() {
 
     setIsBiometricAttempting(true);
     try {
-      const isAvailable = await window.PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
-      if (isAvailable) {
-        // Trigger REAL system FaceID prompt
-        const options: any = {
-          publicKey: {
-            challenge: new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8]), // Secure challenge
-            allowCredentials: [],
-            userVerification: "required",
-            timeout: 60000,
-          }
-        };
-        
-        await navigator.credentials.get(options);
-        
-        // Success means the real FaceID matched the one stored on the device
+      const storedId = localStorage.getItem('nuxus_biometric_id');
+      if (!storedId) {
+        setIsBiometricAttempting(false);
+        return;
+      }
+
+      const challenge = new Uint8Array(32);
+      window.crypto.getRandomValues(challenge);
+
+      const options: any = {
+        publicKey: {
+          challenge,
+          allowCredentials: [{
+            id: Uint8Array.from(atob(storedId), c => c.charCodeAt(0)),
+            type: 'public-key'
+          }],
+          userVerification: "required",
+          timeout: 60000,
+        }
+      };
+      
+      const assertion = await navigator.credentials.get(options);
+      if (assertion) {
         setIs2FAVerified(true);
         toast({ title: "FaceID Verified" });
       }

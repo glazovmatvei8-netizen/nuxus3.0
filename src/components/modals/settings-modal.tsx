@@ -129,15 +129,14 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         'settings.biometricEnabled': form.biometricEnabled
       });
       onOpenChange(false);
-      toast({ title: "Ядро обновлено V8.6" });
+      toast({ title: "Ядро обновлено V8.9" });
     } catch (e: any) {
       toast({ title: "Ошибка сохранения", variant: "destructive" });
     }
   };
 
   /**
-   * TRUE FACE ID REGISTRATION V8.6
-   * Uses WebAuthn navigator.credentials.create to trigger system FaceID setup.
+   * TRUE FACE ID REGISTRATION V8.9 (PWA READY)
    */
   const handleLinkBiometrics = async () => {
     if (typeof window === 'undefined' || !window.PublicKeyCredential) {
@@ -150,10 +149,12 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
       const isAvailable = await window.PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
       if (!isAvailable) throw new Error("Not available");
 
-      // System FaceID / TouchID registration prompt
+      const challenge = new Uint8Array(32);
+      window.crypto.getRandomValues(challenge);
+
       const options: any = {
         publicKey: {
-          challenge: new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]),
+          challenge,
           rp: { name: "Nuxus Kernel", id: window.location.hostname },
           user: {
             id: new Uint8Array([1, 2, 3]),
@@ -166,13 +167,15 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         }
       };
 
-      await navigator.credentials.create(options);
-      
-      // If we reach here, user successfully passed FaceID scan
-      setForm({ ...form, biometricEnabled: true });
-      toast({ title: "Биометрия привязана", description: "Система Apple подтвердила вашу личность." });
+      const credential = await navigator.credentials.create(options) as any;
+      if (credential) {
+        // Сохраняем локальный ID ключа для последующей проверки в PWA
+        localStorage.setItem('nuxus_biometric_id', btoa(String.fromCharCode(...new Uint8Array(credential.rawId))));
+        setForm({ ...form, biometricEnabled: true });
+        toast({ title: "Биометрия привязана", description: "FaceID синхронизирован с вашим узлом." });
+      }
     } catch (e) {
-      toast({ title: "Ошибка связи", description: "Проверка FaceID была прервана или не удалась.", variant: "destructive" });
+      toast({ title: "Ошибка связи", description: "Проверка FaceID была прервана.", variant: "destructive" });
     } finally {
       setIsLinkingBiometrics(false);
     }
@@ -185,7 +188,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
       <DialogContent className="max-w-md bg-[#0a0a0c] border-white/10 p-0 overflow-hidden h-[85vh] flex flex-col rounded-[2.5rem] shadow-2xl outline-none">
         <DialogHeader className="p-6 border-b border-white/5 shrink-0">
           <DialogTitle className="flex items-center gap-2 text-xl font-black italic uppercase tracking-tighter text-white">
-            <Settings2 className="w-5 h-5 text-primary" /> Параметры V8.6
+            <Settings2 className="w-5 h-5 text-primary" /> Параметры V8.9
           </DialogTitle>
         </DialogHeader>
         
@@ -322,7 +325,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                <div className="p-6 bg-white/5 rounded-[2.5rem] border border-white/10 text-center space-y-4">
                   <Zap className="w-10 h-10 text-primary mx-auto animate-pulse" />
                   <div className="space-y-1">
-                    <h3 className="text-lg font-black uppercase italic text-white">Nuxus Kernel V8.6</h3>
+                    <h3 className="text-lg font-black uppercase italic text-white">Nuxus Kernel V8.9</h3>
                     <p className="text-[9px] text-muted-foreground uppercase font-bold tracking-widest leading-relaxed">
                       Ядро полностью синхронизировано.<br/>Биометрические модули активны.
                     </p>

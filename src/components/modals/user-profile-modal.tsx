@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState } from 'react';
@@ -19,7 +20,7 @@ import { ru } from 'date-fns/locale';
 import { GiftModal } from './gift-modal';
 
 /**
- * UserProfileModal V8.7 (Absolute Shield Fix)
+ * UserProfileModal V8.9 (Absolute Scroll & Import Fix)
  */
 export function UserProfileModal() {
   const db = useFirestore();
