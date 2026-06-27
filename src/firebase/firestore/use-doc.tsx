@@ -1,4 +1,3 @@
-
 'use client';
     
 import { useState, useEffect } from 'react';
@@ -27,7 +26,7 @@ export interface UseDocResult<T> {
 
 /**
  * React hook to subscribe to a single Firestore document in real-time.
- * Fixed: Immediate data reset on reference change to prevent stale ghost data.
+ * V6.0: Immediate data reset on reference change to prevent ghost data leak.
  */
 export function useDoc<T = any>(
   memoizedDocRef: DocumentReference<DocumentData> | null | undefined,
@@ -38,13 +37,13 @@ export function useDoc<T = any>(
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<FirestoreError | Error | null>(null);
 
-  // Sync data reset to the current reference to prevent showing old data during render
-  const [prevRefPath, setPrevRefPath] = useState<string | null>(null);
+  // CRITICAL V6.0: Track reference path to force immediate cleanup
+  const [prevPath, setPrevPath] = useState<string | null>(null);
   const currentPath = memoizedDocRef?.path || null;
 
-  if (currentPath !== prevRefPath) {
-    setPrevRefPath(currentPath);
-    setData(null);
+  if (currentPath !== prevPath) {
+    setPrevPath(currentPath);
+    setData(null); // Wipe ghost data instantly
     setIsLoading(!!memoizedDocRef);
   }
 

@@ -1,4 +1,3 @@
-
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
 import { formatDistanceToNow, parseISO, differenceInSeconds } from 'date-fns';
@@ -77,7 +76,7 @@ export function isGlobalAdmin(user: User | null | undefined): boolean {
 }
 
 /**
- * СТРОГИЙ ПРЕМИУМ АУДИТ V5.6
+ * СТРОГИЙ ПРЕМИУМ АУДИТ V6.0
  * Проверяет не только флаг, но и дату premiumUntil.
  */
 export function isUserPremium(user: User | null | undefined): boolean {
