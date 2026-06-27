@@ -20,14 +20,21 @@ interface UserAvatarProps {
 }
 
 /**
- * Nuxus Avatar Core v6.0
- * ОПТИМИЗИРОВАНО: Полное удаление "квадратов" и "фантомных" аватарок.
- * Принудительное скругление всех слоев контейнера.
+ * Nuxus Avatar Core v6.5 (Nova UI)
+ * ОПТИМИЗИРОВАНО: Полная ликвидация артефактов и фантомных данных.
+ * Использован двойной слой скругления для 100% чистоты круга.
  */
 export const UserAvatar = memo(({ userId, className, fallbackName, fallbackClassName, manualAvatarUrl, showOnlineStatus = false }: UserAvatarProps) => {
   const db = useFirestore();
   const [imgError, setImgError] = useState(false);
   
+  // КРИТИЧЕСКИЙ ФИКС V6.5: Сброс при смене userId для предотвращения "фантомов"
+  const [currentId, setCurrentId] = useState<string | null | undefined>(userId);
+  if (userId !== currentId) {
+    setCurrentId(userId);
+    setImgError(false);
+  }
+
   const userRef = useMemoFirebase(() => {
     if (!db || !userId) return null;
     return doc(db, 'users', userId);
@@ -35,16 +42,11 @@ export const UserAvatar = memo(({ userId, className, fallbackName, fallbackClass
 
   const { data: profile, isLoading } = useDoc<User>(userRef);
 
-  // Reset error when user changes to avoid showing fallback for new user with good image
-  useEffect(() => {
-    setImgError(false);
-  }, [userId, manualAvatarUrl]);
-
   const displayAvatar = useMemo(() => {
     if (manualAvatarUrl) return manualAvatarUrl;
-    if (isLoading) return null; // Prevent ghost flicker
+    if (isLoading || userId !== profile?.id) return null; // Жесткая привязка к ID
     return profile?.avatarUrl || null;
-  }, [profile?.avatarUrl, manualAvatarUrl, isLoading]);
+  }, [profile?.avatarUrl, manualAvatarUrl, isLoading, userId, profile?.id]);
   
   const initialsSource = useMemo(() => {
     const rawName = profile?.name || fallbackName;
@@ -54,7 +56,6 @@ export const UserAvatar = memo(({ userId, className, fallbackName, fallbackClass
   }, [profile?.name, fallbackName, profile?.username]);
 
   const displayName = useMemo(() => formatDisplayName(initialsSource), [initialsSource]);
-
   const premium = useMemo(() => isUserPremium(profile), [profile]);
   const isGhost = useMemo(() => !!profile?.settings?.privacy?.isGhostMode, [profile]);
 
@@ -69,44 +70,44 @@ export const UserAvatar = memo(({ userId, className, fallbackName, fallbackClass
   }, [profile?.lastSeen, isGhost]);
 
   return (
-    <div className={cn("relative inline-flex items-center justify-center shrink-0 rounded-full overflow-hidden", className)}>
-      {/* Premium Gradient Ring */}
+    <div className={cn("relative inline-flex items-center justify-center shrink-0 rounded-full", className)}>
+      {/* Premium Outer Glow Ring */}
       <div className={cn(
-        "rounded-full p-[2.5px] transition-all w-full h-full flex items-center justify-center overflow-hidden",
-        premium ? "bg-gradient-to-tr from-primary via-accent to-primary animate-[spin_4s_linear_infinite] shadow-[0_0_20px_rgba(168,85,247,0.4)]" : "bg-transparent"
+        "rounded-full p-[2px] w-full h-full flex items-center justify-center overflow-hidden transition-all duration-700",
+        premium ? "bg-gradient-to-tr from-primary via-accent to-primary animate-[spin_6s_linear_infinite] shadow-[0_0_20px_rgba(168,85,247,0.3)]" : "bg-white/5"
       )}>
-        <Avatar className={cn("shrink-0 relative overflow-hidden bg-muted/20 w-full h-full rounded-full border-none flex items-center justify-center")}>
+        <Avatar className="shrink-0 relative overflow-hidden bg-black/40 w-full h-full rounded-full border-none flex items-center justify-center">
           {displayAvatar && !imgError ? (
             <div className="relative w-full h-full rounded-full overflow-hidden">
               <Image 
                 src={displayAvatar} 
                 alt={displayName} 
                 fill
-                sizes="(max-width: 768px) 100px, 200px"
+                sizes="100px"
                 className="object-cover animate-in fade-in duration-500 rounded-full"
                 onError={() => setImgError(true)}
                 unoptimized={displayAvatar.startsWith('data:')}
               />
             </div>
           ) : (
-            <AvatarFallback className={cn("bg-primary/10 text-primary font-black uppercase h-full w-full flex items-center justify-center rounded-full leading-none select-none", fallbackClassName)}>
-              <span className="translate-y-[0.5px] text-center">{initialsSource.slice(0, 2)}</span>
+            <AvatarFallback className={cn("bg-white/[0.03] text-primary font-black uppercase h-full w-full flex items-center justify-center rounded-full select-none italic", fallbackClassName)}>
+              <span className="translate-y-[0.5px]">{initialsSource.slice(0, 2)}</span>
             </AvatarFallback>
           )}
         </Avatar>
       </div>
 
       {showOnlineStatus && isOnline && !isGhost && (
-        <div className="absolute top-[8%] right-[8%] z-20">
-          <div className="h-3 w-3 bg-[#A855F7] rounded-full border-2 border-[#0a0a0c] shadow-[0_0_12px_rgba(168,85,247,0.8)]" />
+        <div className="absolute top-[5%] right-[5%] z-20">
+          <div className="h-2.5 w-3.5 bg-green-500 rounded-full border-2 border-[#0a0a0c] shadow-[0_0_10px_rgba(34,197,94,0.6)] animate-pulse" />
         </div>
       )}
 
       {premium && (
-        <div className="absolute bottom-0 right-0 z-30 translate-x-[5%] translate-y-[5%]">
-          <div className="bg-[#0a0a0c] rounded-full p-[1.5px] shadow-lg">
-            <div className="bg-gradient-to-tr from-purple-500 to-accent p-[2px] rounded-full shadow-inner border border-white/10">
-              <Star className="w-2.5 h-2.5 text-white fill-white" />
+        <div className="absolute -bottom-0.5 -right-0.5 z-30">
+          <div className="bg-[#0a0a0c] rounded-full p-[1px] shadow-lg">
+            <div className="bg-gradient-to-tr from-yellow-400 to-orange-500 p-[2px] rounded-full shadow-inner">
+              <Star className="w-2.5 h-2.5 text-black fill-current" />
             </div>
           </div>
         </div>

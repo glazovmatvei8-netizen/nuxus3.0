@@ -1,6 +1,6 @@
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
-import { formatDistanceToNow, parseISO, differenceInSeconds } from 'date-fns';
+import { formatDistanceToNow, parseISO, differenceInSeconds, isAfter } from 'date-fns';
 import { ru } from 'date-fns/locale';
 import type { User } from './types';
 
@@ -9,7 +9,7 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 export function formatDisplayName(name: string | undefined | null): string {
-  if (!name) return 'Пользователь';
+  if (!name) return 'User';
   const lower = name.toLowerCase();
   
   if (
@@ -19,11 +19,11 @@ export function formatDisplayName(name: string | undefined | null): string {
     lower.includes('🚫') ||
     lower === 'deleted user'
   ) {
-    return 'Удалённый Аккаунт🚫';
+    return 'Null Node 🚫';
   }
 
   if (lower === 'user' || lower === 'пользователь') {
-    return 'Nuxus User';
+    return 'Nuxus Agent';
   }
 
   return name;
@@ -69,29 +69,23 @@ export function isGlobalAdmin(user: User | null | undefined): boolean {
     'GCvLucN8CjNcdaxPO2vmpZ84hNl1'
   ];
   if (PRIME_ADMINS.includes(user.id)) return true;
-  const adminPhones = ['79997457325', '79513332147', '79508784513'];
-  const cleanPhone = user.phone?.replace(/\D/g, '');
-  if (adminPhones.some(p => cleanPhone?.includes(p))) return true;
   return !!user.isAdmin;
 }
 
 /**
- * СТРОГИЙ ПРЕМИУМ АУДИТ V6.0
- * Проверяет не только флаг, но и дату premiumUntil.
+ * СТРОГИЙ ПРЕМИУМ АУДИТ V6.5
+ * Проверяет не только флаг, но и дату premiumUntil с учетом часовых поясов.
  */
 export function isUserPremium(user: User | null | undefined): boolean {
   if (!user) return false;
   if (isGlobalAdmin(user)) return true;
   
-  // Если флага нет — сразу false
   if (!user.isPremium) return false;
   
-  // Если есть дата окончания — сверяем с текущим временем
   if (user.premiumUntil) {
     try {
-      const expiry = new Date(user.premiumUntil);
-      const now = new Date();
-      if (expiry < now) return false;
+      const expiry = parseISO(user.premiumUntil);
+      return isAfter(expiry, new Date());
     } catch (e) {
       return false;
     }
@@ -104,8 +98,8 @@ export function isUserActuallyBanned(user: User | null | undefined): boolean {
   if (!user || !user.isBanned) return false;
   if (user.bannedUntil) {
     try {
-      const expiry = new Date(user.bannedUntil);
-      return expiry > new Date();
+      const expiry = parseISO(user.bannedUntil);
+      return isAfter(expiry, new Date());
     } catch (e) {
       return true;
     }
@@ -117,18 +111,18 @@ export function formatLastSeen(
   lastSeenIso: string | undefined | null, 
   visibility: 'everybody' | 'nobody' = 'everybody',
   isDeleted: boolean = false,
-  onlineString: string = 'в сети'
+  onlineString: string = 'online'
 ): string {
-  if (isDeleted || !lastSeenIso) return 'Был(а) давно';
-  if (visibility === 'nobody') return 'был(а) недавно';
+  if (isDeleted || !lastSeenIso) return 'Last seen long ago';
+  if (visibility === 'nobody') return 'seen recently';
   try {
     const lastSeen = parseISO(lastSeenIso);
     const now = new Date();
     const diffSeconds = Math.max(0, differenceInSeconds(now, lastSeen));
     if (diffSeconds < 60) return onlineString;
-    return `был(а) ${formatDistanceToNow(lastSeen, { addSuffix: true, locale: ru })}`;
+    return `seen ${formatDistanceToNow(lastSeen, { addSuffix: true, locale: ru })}`;
   } catch (e) {
-    return 'Был(а) давно';
+    return 'Offline';
   }
 }
 

@@ -4,32 +4,32 @@
 
 @layer base {
   :root {
-    --background: 240 15% 4%;
+    --background: 240 20% 3%;
     --foreground: 0 0% 98%;
-    --card: 240 15% 6%;
+    --card: 240 20% 5%;
     --card-foreground: 0 0% 98%;
-    --popover: 240 15% 4%;
+    --popover: 240 20% 4%;
     --popover-foreground: 0 0% 98%;
     --primary: 270 95% 65%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 240 10% 12%;
+    --secondary: 240 10% 10%;
     --secondary-foreground: 0 0% 98%;
-    --muted: 240 10% 10%;
-    --muted-foreground: 240 5% 65%;
+    --muted: 240 10% 8%;
+    --muted-foreground: 240 5% 60%;
     --accent: 180 100% 50%;
     --accent-foreground: 240 10% 4%;
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 98%;
-    --border: 240 10% 15%;
-    --input: 240 10% 15%;
+    --border: 240 10% 12%;
+    --input: 240 10% 12%;
     --ring: 270 95% 65%;
     --radius: 1.5rem;
   }
 
   .dark {
-    --background: 240 20% 2%;
+    --background: 240 25% 2%;
     --foreground: 0 0% 100%;
-    --primary: 270 95% 60%;
+    --primary: 275 100% 60%;
     --accent: 190 100% 50%;
   }
 }
@@ -42,16 +42,13 @@
   
   html, body {
     @apply bg-background text-foreground antialiased;
-    background-color: #050508;
+    background-color: #030306;
     background-image: 
-      radial-gradient(circle at 0% 0%, rgba(45, 10, 85, 0.4) 0%, transparent 50%),
-      radial-gradient(circle at 100% 100%, rgba(10, 60, 80, 0.3) 0%, transparent 50%),
-      linear-gradient(180deg, #050508 0%, #08080c 100%);
+      radial-gradient(circle at 0% 0%, rgba(60, 20, 110, 0.4) 0%, transparent 40%),
+      radial-gradient(circle at 100% 100%, rgba(20, 80, 100, 0.3) 0%, transparent 40%),
+      linear-gradient(180deg, #030306 0%, #050508 100%);
     
     overscroll-behavior: none !important;
-    overscroll-behavior-y: none !important;
-    overscroll-behavior-x: none !important;
-    
     position: fixed; 
     top: 0;
     left: 0;
@@ -61,62 +58,48 @@
     height: 100%;
     overflow: hidden !important;
     text-rendering: optimizeLegibility;
-    -webkit-font-smoothing: antialiased;
     touch-action: none;
-    max-width: 100vw;
-  }
-  
-  html {
-    max-width: 100vw;
-    overflow-x: hidden !important;
   }
 }
 
-@keyframes pulse-glow {
-  0%, 100% { opacity: 0.3; filter: blur(40px); }
-  50% { opacity: 0.5; filter: blur(60px); }
+@keyframes neural-pulse {
+  0%, 100% { opacity: 0.2; transform: scale(1); filter: blur(50px); }
+  50% { opacity: 0.4; transform: scale(1.1); filter: blur(70px); }
 }
 
-@keyframes float {
-  0%, 100% { transform: translateY(0px); }
-  50% { transform: translateY(-10px); }
+.neural-bg-element {
+  @apply absolute rounded-full pointer-events-none;
+  animation: neural-pulse 8s ease-in-out infinite;
 }
 
-@keyframes scanline {
-  0% { transform: translateX(-100%); }
-  100% { transform: translateX(100%); }
-}
-
-.nuxus-glass {
-  @apply bg-white/[0.02] backdrop-blur-3xl border border-white/[0.05] shadow-2xl;
+.nuxus-nova-glass {
+  @apply bg-white/[0.01] backdrop-blur-[40px] border border-white/[0.06] shadow-2xl;
 }
 
 .message-bubble-me {
-  background: linear-gradient(135deg, hsl(var(--primary)) 0%, #7c3aed 100%);
+  background: linear-gradient(135deg, hsl(var(--primary)) 0%, #6d28d9 100%);
+  @apply shadow-[0_8px_30px_-10px_rgba(168,85,247,0.5)] border border-white/10;
   color: white !important;
-  box-shadow: 0 8px 25px -5px hsl(var(--primary) / 0.4);
 }
 
 .message-bubble-other {
-  background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%);
-  @apply backdrop-blur-3xl border border-white/[0.05] shadow-xl;
+  background: rgba(255, 255, 255, 0.03);
+  @apply backdrop-blur-2xl border border-white/10 shadow-xl;
   color: white !important;
 }
 
 .chat-pattern-bg {
   background-color: transparent;
   background-image: 
-    radial-gradient(circle at 50% 50%, rgba(168, 85, 247, 0.08) 0%, transparent 70%),
-    url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M30 30l2-2m-2 2l-2-2m2 2l2 2m-2-2l-2 2' stroke='%23ffffff' stroke-opacity='0.05' stroke-width='1' fill='none'/%3E%3C/svg%3E");
-  transform: translateZ(0);
+    radial-gradient(circle at 50% 50%, rgba(168, 85, 247, 0.05) 0%, transparent 80%),
+    url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M50 50l1-1m-1 1l-1-1m1 1l1 1m-1-1l-1 1' stroke='%23ffffff' stroke-opacity='0.02' stroke-width='1' fill='none'/%3E%3C/svg%3E");
 }
 
 .scrollbar-hide::-webkit-scrollbar { display: none; }
 .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
 
+/* Themes */
 [data-theme='ocean'] { --primary: 200 100% 50%; --ring: 200 100% 50%; }
 [data-theme='rainbow'] { --primary: 300 100% 60%; --ring: 300 100% 60%; }
 [data-theme='gold'] { --primary: 45 100% 50%; --ring: 45 100% 50%; }
-[data-theme='emerald'] { --primary: 150 100% 50%; --ring: 150 100% 50%; }
 [data-theme='cyberpunk'] { --primary: 320 100% 50%; --accent: 60 100% 50%; }
-[data-theme='nebula'] { --primary: 280 100% 70%; --accent: 180 100% 50%; }

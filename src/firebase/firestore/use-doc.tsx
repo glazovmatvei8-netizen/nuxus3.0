@@ -26,7 +26,7 @@ export interface UseDocResult<T> {
 
 /**
  * React hook to subscribe to a single Firestore document in real-time.
- * V6.0: Immediate data reset on reference change to prevent ghost data leak.
+ * V6.5: Force instant data wipe on path change to eliminate "Ghost Data".
  */
 export function useDoc<T = any>(
   memoizedDocRef: DocumentReference<DocumentData> | null | undefined,
@@ -37,7 +37,7 @@ export function useDoc<T = any>(
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<FirestoreError | Error | null>(null);
 
-  // CRITICAL V6.0: Track reference path to force immediate cleanup
+  // CRITICAL V6.5: Immediate data reset on reference change
   const [prevPath, setPrevPath] = useState<string | null>(null);
   const currentPath = memoizedDocRef?.path || null;
 
@@ -45,6 +45,7 @@ export function useDoc<T = any>(
     setPrevPath(currentPath);
     setData(null); // Wipe ghost data instantly
     setIsLoading(!!memoizedDocRef);
+    setError(null);
   }
 
   useEffect(() => {
@@ -55,12 +56,14 @@ export function useDoc<T = any>(
     }
 
     setIsLoading(true);
-    setError(null);
 
     const unsubscribe = onSnapshot(
       memoizedDocRef,
       { includeMetadataChanges: true },
       (snapshot: DocumentSnapshot<DocumentData>) => {
+        // Double check if the current callback matches the current active ref path
+        if (memoizedDocRef.path !== currentPath) return;
+
         if (snapshot.exists()) {
           setData({ ...(snapshot.data() as T), id: snapshot.id });
         } else {
@@ -82,7 +85,7 @@ export function useDoc<T = any>(
     );
 
     return () => unsubscribe();
-  }, [memoizedDocRef]);
+  }, [memoizedDocRef, currentPath]);
 
   return { data, isLoading, error };
 }
