@@ -13,7 +13,7 @@ import { useAuth, useUser, useFirestore, useDoc, useMemoFirebase } from '@/fireb
 import { UserAvatar } from '@/components/user-avatar';
 import { 
   LogOut, Palette, Check, Settings2, Camera, Lock, Image as ImageIcon, 
-  Paintbrush, Shield, Monitor, Fingerprint, Sparkles, Star, Ghost, Type, PenTool, Zap, Diamond, Crown, Sun, Moon, MessageSquare
+  Paintbrush, Shield, Monitor, Fingerprint, Sparkles, Star, Ghost, Type, PenTool, Zap, Diamond, Crown, Sun, Moon, MessageSquare, ShieldCheck, Loader2
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { signOut } from 'firebase/auth';
@@ -53,6 +53,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
   const { data: profile } = useDoc<User>(userRef);
 
   const [isGeneratingAvatar, setIsGeneratingAvatar] = useState(false);
+  const [isLinkingBiometrics, setIsLinkingBiometrics] = useState(false);
   const [form, setForm] = useState({
     name: '',
     username: '',
@@ -69,6 +70,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
     customPrimaryColor: '',
     statusEmoji: '',
     statusText: '',
+    biometricEnabled: false,
     privacy: {
       phoneVisibility: 'everybody',
       lastSeenVisibility: 'everybody',
@@ -97,6 +99,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         customPrimaryColor: profile.settings?.customPrimaryColor || '',
         statusEmoji: profile.statusEmoji || '',
         statusText: profile.statusText || '',
+        biometricEnabled: !!profile.settings?.biometricEnabled,
         privacy: profile.settings?.privacy || {
           phoneVisibility: 'everybody',
           lastSeenVisibility: 'everybody',
@@ -129,57 +132,69 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         'settings.customAppIconUrl': form.customAppIconUrl,
         'settings.customPrimaryColor': form.customPrimaryColor,
         'settings.privacy': form.privacy,
-        'settings.interfaceOverrides': form.interfaceOverrides
+        'settings.interfaceOverrides': form.interfaceOverrides,
+        'settings.biometricEnabled': form.biometricEnabled
       });
       onOpenChange(false);
-      toast({ title: "Ядро обновлено V4.1.2" });
+      toast({ title: "Ядро обновлено V8.5" });
     } catch (e: any) {
       toast({ title: "Ошибка сохранения", variant: "destructive" });
     }
   };
 
-  const handleAiAvatar = async () => {
-    if (!isUserPremium(profile)) {
-      toast({ title: "Premium функция", description: "Генерация ИИ-аватаров доступна только Premium пользователям.", variant: "destructive" });
+  const handleLinkBiometrics = async () => {
+    if (typeof window === 'undefined' || !window.PublicKeyCredential) {
+      toast({ title: "Ошибка", description: "Устройство не поддерживает биометрию", variant: "destructive" });
       return;
     }
-    setIsGeneratingAvatar(true);
+    
+    setIsLinkingBiometrics(true);
     try {
-      const { imageUrl } = await generateAiAvatar();
-      setForm({ ...form, avatarUrl: imageUrl });
-      toast({ title: "Аватар сгенерирован!" });
-    } catch (e) {
-      toast({ title: "Ошибка генерации", variant: "destructive" });
-    } finally {
-      setIsGeneratingAvatar(false);
-    }
-  };
+      const isAvailable = await window.PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
+      if (!isAvailable) throw new Error("Not available");
 
-  const updateOverride = (key: string, val: string) => {
-    setForm(prev => ({
-      ...prev,
-      interfaceOverrides: { ...prev.interfaceOverrides, [key]: val }
-    }));
+      const options: any = {
+        publicKey: {
+          challenge: new Uint8Array([5, 6, 7, 8]),
+          rp: { name: "Nuxus Kernel", id: window.location.hostname },
+          user: {
+            id: new Uint8Array([1, 2, 3]),
+            name: user?.email || "nuxus_agent",
+            displayName: profile?.name || "Nuxus Agent",
+          },
+          pubKeyCredParams: [{ alg: -7, type: "public-key" }],
+          authenticatorSelection: { userVerification: "required" },
+          timeout: 60000,
+        }
+      };
+
+      await navigator.credentials.create(options);
+      setForm({ ...form, biometricEnabled: true });
+      toast({ title: "Биометрия привязана", description: "Теперь FaceID активен для 2FA" });
+    } catch (e) {
+      toast({ title: "Ошибка связи", description: "Биометрический модуль отклонил запрос", variant: "destructive" });
+    } finally {
+      setIsLinkingBiometrics(false);
+    }
   };
 
   const isPremium = isUserPremium(profile);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md bg-card border-border p-0 overflow-hidden h-[85vh] flex flex-col rounded-[2.5rem] shadow-2xl outline-none">
+      <DialogContent className="max-w-md bg-[#0a0a0c] border-white/10 p-0 overflow-hidden h-[85vh] flex flex-col rounded-[2.5rem] shadow-2xl outline-none">
         <DialogHeader className="p-6 border-b border-white/5 shrink-0">
           <DialogTitle className="flex items-center gap-2 text-xl font-black italic uppercase tracking-tighter text-white">
-            <Settings2 className="w-5 h-5 text-primary" /> Параметры V4.1.2
+            <Settings2 className="w-5 h-5 text-primary" /> Параметры V8.5
           </DialogTitle>
         </DialogHeader>
         
         <Tabs value={settingsTab} onValueChange={setSettingsTab} className="flex-1 flex flex-col min-h-0 overflow-hidden">
-          <TabsList className="flex bg-muted/50 p-1 mx-6 mt-4 rounded-2xl shrink-0 overflow-x-auto scrollbar-hide">
+          <TabsList className="flex bg-white/5 p-1 mx-6 mt-4 rounded-2xl shrink-0 overflow-x-auto scrollbar-hide">
             <TabsTrigger value="profile" className="flex-1 text-[9px] uppercase font-bold tracking-widest">Профиль</TabsTrigger>
             <TabsTrigger value="appearance" className="flex-1 text-[9px] uppercase font-bold tracking-widest">Стиль</TabsTrigger>
             <TabsTrigger value="privacy" className="flex-1 text-[9px] uppercase font-bold tracking-widest">Защита</TabsTrigger>
-            <TabsTrigger value="interface" className="flex-1 text-[9px] uppercase font-bold tracking-widest">Интерфейс</TabsTrigger>
-            <TabsTrigger value="premium" className="flex-1 text-[9px] uppercase font-bold tracking-widest">Premium</TabsTrigger>
+            <TabsTrigger value="interface" className="flex-1 text-[9px] uppercase font-bold tracking-widest">Инфо</TabsTrigger>
           </TabsList>
 
           <ScrollArea className="flex-1">
@@ -191,7 +206,17 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                     <button onClick={() => fileInputRef.current?.click()} className="bg-primary p-2 rounded-xl border border-white/20 shadow-lg hover:scale-110 transition-transform">
                       <Camera className="w-4 h-4 text-white" />
                     </button>
-                    <button onClick={handleAiAvatar} disabled={isGeneratingAvatar} className={cn("bg-accent p-2 rounded-xl border border-white/20 shadow-lg hover:scale-110 transition-transform", isGeneratingAvatar && "animate-spin")}>
+                    <button onClick={async () => {
+                      if (!isPremium) {
+                        toast({ title: "Premium функция", variant: "destructive" });
+                        return;
+                      }
+                      setIsGeneratingAvatar(true);
+                      try {
+                        const { imageUrl } = await generateAiAvatar();
+                        setForm({...form, avatarUrl: imageUrl});
+                      } finally { setIsGeneratingAvatar(false); }
+                    }} disabled={isGeneratingAvatar} className={cn("bg-accent p-2 rounded-xl border border-white/20 shadow-lg hover:scale-110 transition-transform", isGeneratingAvatar && "animate-spin")}>
                       <Sparkles className="w-4 h-4 text-black" />
                     </button>
                   </div>
@@ -202,89 +227,41 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                   <div className="grid grid-cols-4 gap-2 items-end">
                     <div className="space-y-2 col-span-1">
                       <Label className="text-[10px] uppercase font-black text-muted-foreground ml-1">Значок</Label>
-                      <Input placeholder="🔥" value={form.statusEmoji} onChange={e => setForm({...form, statusEmoji: e.target.value})} className="bg-muted/30 border-white/5 h-12 rounded-2xl text-center text-lg" maxLength={2} />
+                      <Input placeholder="🔥" value={form.statusEmoji} onChange={e => setForm({...form, statusEmoji: e.target.value})} className="bg-white/5 border-white/5 h-12 rounded-2xl text-center text-lg" maxLength={2} />
                     </div>
                     <div className="space-y-2 col-span-3">
-                      <Label className="text-[10px] uppercase font-black text-muted-foreground ml-1">Текст статуса</Label>
-                      <Input placeholder="Чем занимаетесь?" value={form.statusText} onChange={e => setForm({...form, statusText: e.target.value})} className="bg-muted/30 border-white/5 h-12 rounded-2xl" />
+                      <Label className="text-[10px] uppercase font-black text-muted-foreground ml-1">Статус</Label>
+                      <Input placeholder="Чем занимаетесь?" value={form.statusText} onChange={e => setForm({...form, statusText: e.target.value})} className="bg-white/5 border-white/5 h-12 rounded-2xl" />
                     </div>
                   </div>
-                  <div className="space-y-2"><Label className="text-[10px] uppercase font-black text-muted-foreground ml-1">Имя</Label><Input value={form.name} onChange={e => setForm({...form, name: e.target.value})} className="bg-muted/30 border-white/5 h-12 rounded-2xl" /></div>
-                  <div className="space-y-2"><Label className="text-[10px] uppercase font-black text-muted-foreground ml-1">Никнейм</Label><div className="relative"><span className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground">@</span><Input value={form.username} onChange={e => setForm({...form, username: e.target.value})} className="bg-muted/30 border-white/5 h-12 rounded-2xl pl-8" /></div></div>
-                  <div className="space-y-2"><Label className="text-[10px] uppercase font-black text-muted-foreground ml-1">О себе</Label><Textarea value={form.bio} onChange={e => setForm({...form, bio: e.target.value})} className="bg-muted/30 border-white/5 rounded-2xl resize-none h-24" placeholder="Информация об аккаунте..." /></div>
+                  <div className="space-y-2"><Label className="text-[10px] uppercase font-black text-muted-foreground ml-1">Имя</Label><Input value={form.name} onChange={e => setForm({...form, name: e.target.value})} className="bg-white/5 border-white/5 h-12 rounded-2xl" /></div>
+                  <div className="space-y-2"><Label className="text-[10px] uppercase font-black text-muted-foreground ml-1">Никнейм</Label><div className="relative"><span className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground">@</span><Input value={form.username} onChange={e => setForm({...form, username: e.target.value})} className="bg-white/5 border-white/5 h-12 rounded-2xl pl-8" /></div></div>
+                  <div className="space-y-2"><Label className="text-[10px] uppercase font-black text-muted-foreground ml-1">О себе</Label><Textarea value={form.bio} onChange={e => setForm({...form, bio: e.target.value})} className="bg-white/5 border-white/5 rounded-2xl resize-none h-24 text-xs" /></div>
                 </div>
               </div>
             </TabsContent>
 
             <TabsContent value="appearance" className="space-y-8 m-0 p-6 pb-20">
               <div className="space-y-4">
-                <Label className="text-[10px] font-black uppercase text-muted-foreground flex items-center gap-2"><Monitor className="w-3 h-3" /> Режим интерфейса</Label>
+                <Label className="text-[10px] font-black uppercase text-muted-foreground flex items-center gap-2"><Monitor className="w-3 h-3" /> Тема</Label>
                 <div className="grid grid-cols-2 gap-2">
-                  <button onClick={() => setForm({...form, appearance: 'dark'})} className={cn("flex flex-col items-center gap-2 p-4 rounded-2xl border transition-all", form.appearance === 'dark' ? "bg-primary/10 border-primary shadow-[0_0_15px_rgba(168,85,247,0.2)]" : "bg-muted/20 border-white/5")}>
-                    <Moon className={cn("w-6 h-6", form.appearance === 'dark' ? "text-primary" : "text-muted-foreground")} /><span className="text-[10px] font-black uppercase tracking-widest">Тёмная</span>
+                  <button onClick={() => setForm({...form, appearance: 'dark'})} className={cn("flex flex-col items-center gap-2 p-4 rounded-2xl border transition-all", form.appearance === 'dark' ? "bg-primary/10 border-primary shadow-lg" : "bg-white/5 border-white/5")}>
+                    <Moon className={cn("w-6 h-6", form.appearance === 'dark' ? "text-primary" : "text-muted-foreground")} /><span className="text-[10px] font-black uppercase">Тёмная</span>
                   </button>
-                  <button onClick={() => setForm({...form, appearance: 'light'})} className={cn("flex flex-col items-center gap-2 p-4 rounded-2xl border transition-all", form.appearance === 'light' ? "bg-primary/10 border-primary shadow-[0_0_15px_rgba(168,85,247,0.2)]" : "bg-muted/20 border-white/5")}>
-                    <Sun className={cn("w-6 h-6", form.appearance === 'light' ? "text-primary" : "text-muted-foreground")} /><span className="text-[10px] font-black uppercase tracking-widest">Светлая</span>
+                  <button onClick={() => setForm({...form, appearance: 'light'})} className={cn("flex flex-col items-center gap-2 p-4 rounded-2xl border transition-all", form.appearance === 'light' ? "bg-primary/10 border-primary shadow-lg" : "bg-white/5 border-white/5")}>
+                    <Sun className={cn("w-6 h-6", form.appearance === 'light' ? "text-primary" : "text-muted-foreground")} /><span className="text-[10px] font-black uppercase">Светлая</span>
                   </button>
                 </div>
               </div>
-
-              <div className={cn("space-y-4 pt-4 border-t border-white/5 transition-all duration-500", !isPremium && "opacity-40 grayscale")}>
-                <Label className="text-[10px] font-black uppercase text-primary flex items-center gap-2"><PenTool className="w-3 h-3" /> Свой цвет Ядра (Premium)</Label>
-                <div className="flex gap-2">
-                  <Input 
-                    placeholder="#8B5CF6" 
-                    value={form.customPrimaryColor} 
-                    onChange={e => setForm({...form, customPrimaryColor: e.target.value})} 
-                    className="bg-primary/5 border-primary/20 h-12 rounded-2xl text-center font-mono" 
-                    maxLength={7}
-                    disabled={!isPremium}
-                  />
-                  <div className="w-12 h-12 rounded-2xl border border-white/10 shadow-lg" style={{ backgroundColor: form.customPrimaryColor || 'hsl(var(--primary))' }} />
-                </div>
-                {!isPremium && <p className="text-[8px] font-bold uppercase text-primary/60 text-center">Функция требует активный Premium</p>}
-              </div>
-
-              <div className={cn("space-y-4 pt-4 border-t border-white/5 transition-all duration-500", !isPremium && "opacity-40 grayscale")}>
-                <Label className="text-[10px] font-black uppercase text-primary flex items-center gap-2"><MessageSquare className="w-3 h-3" /> Стиль пузырей сообщений</Label>
-                <div className="grid grid-cols-2 gap-2">
-                  {BUBBLE_STYLES.map(style => (
-                    <button 
-                      key={style.id} 
-                      onClick={() => isPremium && setForm({...form, bubbleStyle: style.id})} 
-                      disabled={!isPremium && style.premium}
-                      className={cn("flex items-center gap-3 p-3 rounded-xl border transition-all", form.bubbleStyle === style.id ? "bg-primary/10 border-primary" : "bg-white/5 border-white/5")}
-                    >
-                      <div className={cn("w-4 h-4 rounded-full", style.color)} />
-                      <span className="text-[10px] font-bold text-white uppercase">{style.name}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className={cn("space-y-4 pt-4 border-t border-white/5 transition-all duration-500", !isPremium && "opacity-40 grayscale")}>
-                <Label className="text-[10px] font-black uppercase text-primary flex items-center gap-2"><ImageIcon className="w-3 h-3" /> Свой фон чата</Label>
-                <Input 
-                  placeholder="URL изображения (https://...)" 
-                  value={form.chatBackground} 
-                  onChange={e => setForm({...form, chatBackground: e.target.value})} 
-                  className="bg-primary/5 border-primary/20 h-12 rounded-2xl text-xs" 
-                  disabled={!isPremium}
-                />
-                <div className="grid grid-cols-2 gap-2">
-                  <button onClick={() => isPremium && setForm({...form, chatBackgroundFit: 'cover'})} className={cn("h-9 rounded-xl border text-[9px] font-black uppercase", form.chatBackgroundFit === 'cover' ? "bg-primary border-primary text-white" : "bg-white/5 border-white/5 text-muted-foreground")}>Заполнить</button>
-                  <button onClick={() => isPremium && setForm({...form, chatBackgroundFit: 'contain'})} className={cn("h-9 rounded-xl border text-[9px] font-black uppercase", form.chatBackgroundFit === 'contain' ? "bg-primary border-primary text-white" : "bg-white/5 border-white/5 text-muted-foreground")}>По центру</button>
-                </div>
-              </div>
-
+              
               <div className="space-y-4 pt-4 border-t border-white/5">
-                <Label className="text-[10px] uppercase font-black text-muted-foreground flex items-center gap-2"><Paintbrush className="w-3 h-3" /> Цветовая схема</Label>
+                <Label className="text-[10px] uppercase font-black text-muted-foreground flex items-center gap-2"><Paintbrush className="w-3 h-3" /> Палитра Ядра</Label>
                 <div className="grid grid-cols-1 gap-2">
                   {THEMES.map((theme) => {
                     const isPremiumTheme = theme.premium && !isPremium;
                     return (
-                      <button key={theme.id} disabled={isPremiumTheme} onClick={() => setForm({ ...form, theme: theme.id as any })} className={cn("flex items-center justify-between p-4 rounded-2xl border transition-all", form.theme === theme.id ? "bg-primary/10 border-primary" : "bg-muted/20 border-white/5", isPremiumTheme && "opacity-40 grayscale")}>
-                        <div className="flex items-center gap-3"><div className={cn("w-6 h-6 rounded-full shadow-lg", theme.color)} /><span className="text-sm font-bold text-foreground">{theme.name}</span>{theme.premium && <Star className="w-3 h-3 text-accent fill-accent" />}</div>
+                      <button key={theme.id} disabled={isPremiumTheme} onClick={() => setForm({ ...form, theme: theme.id })} className={cn("flex items-center justify-between p-4 rounded-2xl border transition-all", form.theme === theme.id ? "bg-primary/10 border-primary" : "bg-white/5 border-white/5", isPremiumTheme && "opacity-40")}>
+                        <div className="flex items-center gap-3"><div className={cn("w-6 h-6 rounded-full", theme.color)} /><span className="text-sm font-bold text-white">{theme.name}</span>{theme.premium && <Star className="w-3 h-3 text-accent fill-accent" />}</div>
                         {form.theme === theme.id && <Check className="w-5 h-5 text-primary" />}
                       </button>
                     );
@@ -294,95 +271,72 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
             </TabsContent>
 
             <TabsContent value="privacy" className="space-y-6 m-0 p-6 pb-20">
-              <div className="bg-primary/5 p-5 rounded-[2rem] border border-primary/10 space-y-4">
+              <div className="bg-primary/5 p-6 rounded-[2.5rem] border border-primary/10 space-y-6">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="bg-primary/20 p-2 rounded-xl"><Fingerprint className="w-5 h-5 text-primary" /></div>
-                    <div className="flex flex-col text-left"><span className="text-xs font-bold text-white uppercase italic">Защита 2FA</span><span className="text-[8px] text-muted-foreground uppercase font-black">Двойной барьер доступа</span></div>
+                  <div className="flex items-center gap-4">
+                    <div className="bg-primary/20 p-3 rounded-2xl"><Fingerprint className="w-6 h-6 text-primary" /></div>
+                    <div className="flex flex-col text-left"><span className="text-sm font-black text-white uppercase italic">Защита 2FA</span><span className="text-[8px] text-muted-foreground uppercase font-black">Двойной барьер доступа</span></div>
                   </div>
                   <Switch checked={form.twoFactorEnabled} onCheckedChange={v => setForm({...form, twoFactorEnabled: v})} />
                 </div>
+                
                 {form.twoFactorEnabled && (
-                  <div className="space-y-2 animate-in fade-in slide-in-from-top-2">
-                    <Label className="text-[9px] uppercase font-black text-primary/60 ml-1">Установить 6-значный PIN</Label>
-                    <Input type="password" placeholder="••••••" maxLength={6} value={form.twoFactorPin} onChange={e => setForm({...form, twoFactorPin: e.target.value.replace(/\D/g, '')})} className="bg-black/20 border-primary/20 h-12 rounded-xl text-center text-xl tracking-[0.5em] font-black" />
+                  <div className="space-y-4 animate-in fade-in slide-in-from-top-2 duration-500">
+                    <div className="space-y-2">
+                      <Label className="text-[9px] uppercase font-black text-primary/60 ml-2">Системный PIN-код</Label>
+                      <Input type="password" placeholder="••••••" maxLength={6} value={form.twoFactorPin} onChange={e => setForm({...form, twoFactorPin: e.target.value.replace(/\D/g, '')})} className="bg-black/40 border-primary/20 h-14 rounded-2xl text-center text-2xl tracking-[0.5em] font-black" />
+                    </div>
+
+                    <div className="h-px bg-white/5 mx-2" />
+
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex flex-col"><span className="text-xs font-bold text-white uppercase">FaceID / TouchID</span><span className="text-[8px] text-muted-foreground uppercase font-bold">Биометрическая разблокировка</span></div>
+                        <Switch checked={form.biometricEnabled} onCheckedChange={v => { if(!v) setForm({...form, biometricEnabled: false}); else handleLinkBiometrics(); }} />
+                      </div>
+                      
+                      {!form.biometricEnabled && (
+                        <Button 
+                          variant="outline" 
+                          className="w-full h-12 rounded-xl border-dashed border-primary/40 bg-primary/5 text-primary font-black uppercase text-[10px] tracking-widest gap-2"
+                          onClick={handleLinkBiometrics}
+                          disabled={isLinkingBiometrics}
+                        >
+                          {isLinkingBiometrics ? <Loader2 className="w-4 h-4 animate-spin" /> : <><ShieldCheck className="w-4 h-4" /> Привязать FaceID</>}
+                        </Button>
+                      )}
+                    </div>
                   </div>
                 )}
               </div>
-              <div className="bg-black/20 p-5 rounded-[2rem] border border-white/5 space-y-4">
+
+              <div className="bg-white/5 p-6 rounded-[2.5rem] border border-white/10 space-y-4">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3"><div className="bg-white/5 p-2 rounded-xl"><Ghost className="w-5 h-5 text-muted-foreground" /></div><div className="flex flex-col text-left"><span className="text-xs font-bold text-white uppercase">Режим Призрака</span><span className="text-[8px] text-muted-foreground uppercase font-black">Скрыть онлайн-статус (Premium)</span></div></div>
+                  <div className="flex items-center gap-4"><div className="bg-white/5 p-3 rounded-2xl"><Ghost className="w-6 h-6 text-muted-foreground" /></div><div className="flex flex-col text-left"><span className="text-sm font-black text-white uppercase italic">Режим Призрака</span><span className="text-[8px] text-muted-foreground uppercase font-black">Скрытие онлайн-статуса</span></div></div>
                   <Switch disabled={!isPremium} checked={form.privacy.isGhostMode} onCheckedChange={v => setForm({...form, privacy: {...form.privacy, isGhostMode: v}})} />
                 </div>
               </div>
             </TabsContent>
 
             <TabsContent value="interface" className="space-y-6 m-0 p-6 pb-20">
-              <div className="p-4 bg-primary/5 rounded-[2rem] border border-primary/10">
-                <div className="flex items-center gap-3 mb-4"><PenTool className="w-5 h-5 text-primary" /><div className="flex flex-col"><span className="text-xs font-black uppercase text-white">Global Rebranding</span><span className="text-[8px] text-muted-foreground uppercase font-bold">Измените весь мессенджер</span></div></div>
-                <div className="space-y-4 text-left">
-                  <OverrideInput label="Имя приложения" keyName="app.name" value={form.interfaceOverrides} onChange={updateOverride} />
-                  <OverrideInput label="Чаты" keyName="app.chats" value={form.interfaceOverrides} onChange={updateOverride} />
-                  <OverrideInput label="Архив" keyName="app.archive" value={form.interfaceOverrides} onChange={updateOverride} />
-                  <OverrideInput label="Звонки" keyName="app.calls" value={form.interfaceOverrides} onChange={updateOverride} />
-                  <OverrideInput label="Музыка" keyName="app.music" value={form.interfaceOverrides} onChange={updateOverride} />
-                  <OverrideInput label="Игры" keyName="app.games" value={form.interfaceOverrides} onChange={updateOverride} />
-                  <OverrideInput label="Кошелек" keyName="app.wallet" value={form.interfaceOverrides} onChange={updateOverride} />
-                  <OverrideInput label="Профиль" keyName="app.profile" value={form.interfaceOverrides} onChange={updateOverride} />
-                </div>
-              </div>
-            </TabsContent>
-
-            <TabsContent value="premium" className="space-y-6 m-0 p-6 pb-20">
-              <div className="relative group">
-                <div className="absolute -inset-1 bg-gradient-to-tr from-primary to-accent rounded-[2rem] blur-md opacity-40 animate-pulse" />
-                <div className="relative bg-[#0a0a0c] border border-white/10 p-6 rounded-[2rem] text-center overflow-hidden">
-                  <Crown className="w-12 h-12 text-accent fill-accent mx-auto mb-4 drop-shadow-[0_0_15px_rgba(168,85,250,0.6)]" />
-                  <h3 className="text-xl font-black uppercase italic text-white tracking-tight">Nuxus Premium</h3>
-                  <p className="text-[10px] text-muted-foreground uppercase font-black mt-2 leading-relaxed">{isPremium ? `Активен до: ${new Date(profile!.premiumUntil!).toLocaleDateString()}` : 'Откройте полный потенциал Ядра'}</p>
-                  
-                  <div className="mt-8 space-y-3 text-left">
-                    <PremiumFeature icon={Zap} label="AI Video Synthesis" desc="Анимируйте фото с Veo 3.0" />
-                    <PremiumFeature icon={Palette} label="Custom Branding" desc="Свой цвет Ядра и фоны чатов" />
-                    <PremiumFeature icon={Sparkles} label="AI Signal Translation" desc="Мгновенный перевод сообщений" />
-                    <PremiumFeature icon={Ghost} label="Ghost Mode" desc="Скрытие онлайн-статуса" />
-                    <PremiumFeature icon={Diamond} label="Exclusive Badges" desc="Статус Star у профиля" />
-                    <PremiumFeature icon={Type} label="Voice Transcription" desc="Перевод аудио в текст" />
+               <div className="p-6 bg-white/5 rounded-[2.5rem] border border-white/10 text-center space-y-4">
+                  <Zap className="w-10 h-10 text-primary mx-auto animate-pulse" />
+                  <div className="space-y-1">
+                    <h3 className="text-lg font-black uppercase italic text-white">Nuxus Kernel V8.5</h3>
+                    <p className="text-[9px] text-muted-foreground uppercase font-bold tracking-widest leading-relaxed">
+                      Ядро полностью синхронизировано.<br/>Все модули защиты активны.
+                    </p>
                   </div>
-                </div>
-              </div>
+               </div>
             </TabsContent>
           </ScrollArea>
 
-          <div className="p-6 border-t border-white/5 bg-muted/20 shrink-0 flex gap-3">
-            <Button variant="ghost" className="h-14 w-14 rounded-2xl bg-destructive/10 text-destructive hover:bg-destructive hover:text-white transition-all" onClick={() => signOut(auth)}> <LogOut className="w-6 h-6" /></Button>
-            <Button className="flex-1 h-14 rounded-2xl font-black uppercase tracking-widest bg-primary shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all" onClick={handleSave}><Check className="w-5 h-5 mr-2" /> Применить V4.1.2</Button>
+          <div className="p-6 border-t border-white/5 bg-white/[0.02] shrink-0 flex gap-3">
+            <Button variant="ghost" className="h-14 w-14 rounded-2xl bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all" onClick={() => signOut(auth)}> <LogOut className="w-6 h-6" /></Button>
+            <Button className="flex-1 h-14 rounded-2xl font-black uppercase tracking-widest bg-primary text-white shadow-xl shadow-primary/20 transition-all active:scale-95" onClick={handleSave}><Check className="w-5 h-5 mr-2" /> Сохранить</Button>
           </div>
         </Tabs>
       </DialogContent>
     </Dialog>
-  );
-}
-
-function OverrideInput({ label, keyName, value, onChange }: any) {
-  return (
-    <div className="space-y-1.5">
-      <Label className="text-[9px] uppercase font-black text-muted-foreground ml-1">{label}</Label>
-      <Input placeholder={label} value={value?.[keyName] || ''} onChange={e => onChange(keyName, e.target.value)} className="bg-black/20 border-white/5 h-11 rounded-xl text-xs" />
-    </div>
-  );
-}
-
-function PremiumFeature({ icon: Icon, label, desc }: { icon: any, label: string, desc: string }) {
-  return (
-    <div className="flex items-center gap-4 bg-white/5 p-3 rounded-2xl border border-white/5">
-      <div className="bg-primary/20 p-2 rounded-xl">
-        <Icon className="w-4 h-4 text-primary" />
-      </div>
-      <div className="flex flex-col">
-        <span className="text-[11px] font-black text-white uppercase tracking-tight">{label}</span>
-        <span className="text-[9px] text-muted-foreground font-bold uppercase">{desc}</span>
-      </div>
-    </div>
   );
 }

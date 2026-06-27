@@ -159,6 +159,7 @@ export interface UserSettings {
   language?: string;
   stickers?: string[];
   interfaceOverrides?: Record<string, string>;
+  biometricEnabled?: boolean;
 }
 
 export interface User {
