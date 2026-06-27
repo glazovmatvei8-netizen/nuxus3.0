@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useRef, useEffect, useMemo, useCallback, memo } from 'react';
@@ -31,7 +32,6 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
   const [messageInput, setMessageInput] = useState(localDrafts[currentChatId] || '');
   const [isAiDrafting, setIsAiDrafting] = useState(false);
   const [isGeneratingImg, setIsGeneratingImg] = useState(false);
-  const [isGeneratingVideo, setIsGeneratingVideo] = useState(false);
   const [destructTimer, setDestructTimer] = useState<number | null>(null);
   
   const [isRecording, setIsRecording] = useState(false);
@@ -151,7 +151,7 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
   if (!canPost) return null;
 
   return (
-    <footer className="p-4 pb-8 obsidian-glass border-t border-white/5 shrink-0 z-40 relative">
+    <footer className="p-4 pt-2 pb-[calc(1rem+env(safe-area-inset-bottom))] obsidian-glass border-t border-white/5 shrink-0 z-40 relative">
       {isRecording && recorderMode === 'video' && (
         <div className="absolute bottom-28 left-1/2 -translate-x-1/2 w-56 h-56 rounded-full overflow-hidden border-4 border-primary shadow-[0_0_50px_rgba(168,85,247,0.5)] z-50 bg-black animate-in zoom-in duration-300">
           <video ref={videoPreviewRef} autoPlay muted playsInline className="w-full h-full object-cover scale-x-[-1]" />
@@ -160,11 +160,11 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
       )}
 
       <div className="max-w-4xl mx-auto relative">
-        <div className="flex gap-4 items-center">
+        <div className="flex gap-2.5 items-center">
           {!isRecording ? (
             <>
               <Popover>
-                <PopoverTrigger asChild><Button variant="ghost" size="icon" className="h-12 w-12 obsidian-glass rounded-2xl text-white/50 hover:text-primary transition-all"><Paperclip className="w-6 h-6" /></Button></PopoverTrigger>
+                <PopoverTrigger asChild><Button variant="ghost" size="icon" className="h-12 w-12 obsidian-glass rounded-2xl text-white/40 hover:text-primary transition-all"><Paperclip className="w-5 h-5" /></Button></PopoverTrigger>
                 <PopoverContent side="top" align="start" className="w-56 obsidian-glass border-white/10 rounded-[2rem] p-2 mb-3 shadow-2xl animate-in slide-in-from-bottom-2 duration-300">
                   <div className="grid grid-cols-1 gap-1">
                     <AttachmentItem icon={ImageIcon} label="Gallery" color="text-primary" onClick={() => fileInputRef.current?.click()} />
@@ -204,55 +204,55 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
                 </PopoverContent>
               </Popover>
               
-              <div className="flex-1 flex items-center bg-white/[0.04] rounded-[1.8rem] border border-white/10 h-14 px-5 relative group transition-all focus-within:bg-white/[0.07] focus-within:border-primary/50 shadow-inner">
-                {destructTimer && <Timer className="w-5 h-5 text-primary mr-3 animate-pulse" />}
+              <div className="flex-1 flex items-center bg-white/[0.04] rounded-[1.8rem] border border-white/10 h-12 px-4 relative group transition-all focus-within:bg-white/[0.07] focus-within:border-primary/50 shadow-inner">
+                {destructTimer && <Timer className="w-4 h-4 text-primary mr-2 animate-pulse" />}
                 <Input 
                   placeholder="Neural Signal..." 
-                  className="bg-transparent border-none focus-visible:ring-0 text-white placeholder:text-white/20 font-bold italic tracking-tight" 
+                  className="bg-transparent border-none focus-visible:ring-0 text-white placeholder:text-white/20 font-bold italic tracking-tight h-full" 
                   value={messageInput} 
                   onChange={e => handleInputChange(e.target.value)} 
                   onKeyDown={e => e.key === 'Enter' && handleSend()} 
                 />
-                <Button variant="ghost" size="icon" className="text-white/20 hover:text-primary transition-all"><Smile className="w-6 h-6" /></Button>
+                <Button variant="ghost" size="icon" className="text-white/20 hover:text-primary transition-all h-8 w-8"><Smile className="w-5 h-5" /></Button>
               </div>
 
               {messageInput.trim() ? (
-                <Button size="icon" className="h-14 w-14 rounded-full bg-primary text-white shadow-[0_0_30px_rgba(168,85,247,0.4)] active:scale-90 transition-all hover:scale-105" onClick={handleSend}>
-                  <Send className="w-6 h-6" />
+                <Button size="icon" className="h-12 w-12 rounded-full bg-primary text-white shadow-[0_0_30px_rgba(168,85,247,0.4)] active:scale-90 transition-all hover:scale-105" onClick={handleSend}>
+                  <Send className="w-5 h-5" />
                 </Button>
               ) : (
-                <div className="flex gap-2">
+                <div className="flex gap-1.5">
                   <Button 
                     size="icon" 
                     variant="ghost"
-                    className="h-14 w-14 rounded-[1.4rem] obsidian-glass text-white/40 hover:text-primary transition-all active:scale-90"
+                    className="h-12 w-12 rounded-[1.4rem] obsidian-glass text-white/30 hover:text-primary transition-all active:scale-90"
                     onClick={() => setRecorderMode(recorderMode === 'audio' ? 'video' : 'audio')}
                   >
-                    {recorderMode === 'audio' ? <VideoIcon className="w-6 h-6" /> : <Mic className="w-6 h-6" />}
+                    {recorderMode === 'audio' ? <VideoIcon className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
                   </Button>
                   <Button 
                     size="icon" 
-                    className="h-14 w-14 rounded-full bg-primary text-white shadow-[0_0_30px_rgba(168,85,247,0.4)] active:scale-90 transition-all animate-in zoom-in duration-300"
+                    className="h-12 w-12 rounded-full bg-primary text-white shadow-[0_0_30px_rgba(168,85,247,0.4)] active:scale-90 transition-all animate-in zoom-in duration-300"
                     onClick={startRecording}
                   >
-                    {recorderMode === 'audio' ? <Mic className="w-6 h-6" /> : <Circle className="w-6 h-6 fill-current" />}
+                    {recorderMode === 'audio' ? <Mic className="w-5 h-5" /> : <Circle className="w-5 h-5 fill-current" />}
                   </Button>
                 </div>
               )}
             </>
           ) : (
-            <div className="flex-1 flex items-center bg-primary/10 border border-primary/20 rounded-[2rem] h-14 px-6 gap-6 animate-in slide-in-from-right-4 duration-500 shadow-[0_0_40px_rgba(168,85,247,0.15)]">
-              <div className="flex items-center gap-3 text-primary animate-pulse">
-                <div className="w-2.5 h-2.5 rounded-full bg-primary shadow-[0_0_10px_rgba(168,85,247,1)]" />
-                <span className="text-[11px] font-black uppercase tracking-[0.3em]">{recorderMode === 'audio' ? 'SYNCING' : 'LIVE'}</span>
+            <div className="flex-1 flex items-center bg-primary/10 border border-primary/20 rounded-[2rem] h-12 px-5 gap-5 animate-in slide-in-from-right-4 duration-500 shadow-[0_0_40px_rgba(168,85,247,0.15)]">
+              <div className="flex items-center gap-2 text-primary animate-pulse">
+                <div className="w-2 h-2 rounded-full bg-primary shadow-[0_0_10px_rgba(168,85,247,1)]" />
+                <span className="text-[9px] font-black uppercase tracking-[0.2em]">{recorderMode === 'audio' ? 'SYNCING' : 'LIVE'}</span>
               </div>
-              <span className="text-lg font-black italic text-white flex-1 tracking-widest">{formatDuration(recordingDuration)}</span>
-              <div className="flex gap-2">
-                <Button variant="ghost" size="icon" className="h-10 w-10 text-white/30 hover:text-destructive transition-colors" onClick={cancelRecording}>
-                  <Trash2 className="w-6 h-6" />
+              <span className="text-base font-black italic text-white flex-1 tracking-widest">{formatDuration(recordingDuration)}</span>
+              <div className="flex gap-1">
+                <Button variant="ghost" size="icon" className="h-8 w-8 text-white/30 hover:text-destructive transition-colors" onClick={cancelRecording}>
+                  <Trash2 className="w-5 h-5" />
                 </Button>
-                <Button variant="ghost" size="icon" className="h-12 w-12 text-primary hover:scale-125 transition-transform" onClick={stopRecording}>
-                  <StopCircle className="w-8 h-8 fill-current" />
+                <Button variant="ghost" size="icon" className="h-10 w-10 text-primary hover:scale-125 transition-transform" onClick={stopRecording}>
+                  <StopCircle className="w-7 h-7 fill-current" />
                 </Button>
               </div>
             </div>
@@ -294,7 +294,7 @@ const MessageList = memo(({
   }, [sortedMessages, searchQuery]);
 
   return (
-    <div className="flex flex-col gap-5 max-w-4xl mx-auto px-5 md:px-8 py-10 min-h-full touch-pan-y relative z-10 overflow-x-hidden bg-transparent">
+    <div className="flex flex-col gap-4 max-w-4xl mx-auto px-4 md:px-8 py-6 min-h-full touch-pan-y relative z-10 overflow-x-hidden bg-transparent">
       {filteredMessages.map((msg: Message) => (
         <MessageItem 
           key={msg.id} 
@@ -446,26 +446,26 @@ export default function ChatArea() {
         } : {}}
       />
 
-      <header className="h-20 border-b border-white/5 obsidian-glass flex items-center justify-between px-6 shrink-0 z-30 shadow-2xl">
-        <div className="flex items-center gap-4 flex-1 min-w-0">
-          <Button variant="ghost" size="icon" className="md:hidden obsidian-glass rounded-xl text-white/70 h-10 w-10" onClick={() => setCurrentChatId(null)}><ChevronLeft /></Button>
+      <header className="h-[calc(4rem+env(safe-area-inset-top))] pt-[env(safe-area-inset-top)] border-b border-white/5 obsidian-glass flex items-center justify-between px-5 shrink-0 z-30 shadow-2xl">
+        <div className="flex items-center gap-3.5 flex-1 min-w-0">
+          <Button variant="ghost" size="icon" className="md:hidden obsidian-glass rounded-xl text-white/50 h-9 w-9" onClick={() => setCurrentChatId(null)}><ChevronLeft className="w-5 h-5" /></Button>
           {!isSearchMode ? (
-            <div className="flex items-center gap-4 cursor-pointer min-w-0 group" onClick={() => setIsChatInfoOpen(true)}>
-              <UserAvatar userId={otherId} manualAvatarUrl={chat?.avatarUrl || otherProfile?.avatarUrl} className="h-12 w-12 border-2 border-white/10 group-hover:border-primary/50 transition-all" fallbackName={chatDisplayName} showOnlineStatus />
+            <div className="flex items-center gap-3.5 cursor-pointer min-w-0 group" onClick={() => setIsChatInfoOpen(true)}>
+              <UserAvatar userId={otherId} manualAvatarUrl={chat?.avatarUrl || otherProfile?.avatarUrl} className="h-10 w-10 border-2 border-white/10 group-hover:border-primary/50 transition-all" fallbackName={chatDisplayName} showOnlineStatus />
               <div className="flex flex-col min-w-0 text-left">
-                <div className="flex items-center gap-2">
-                  <span className="font-black text-[18px] truncate text-white italic tracking-tighter uppercase group-hover:text-primary transition-colors">{chatDisplayName}</span>
-                  {otherProfile?.isPremium && <Star className="w-4 h-4 text-accent fill-accent animate-pulse" />}
+                <div className="flex items-center gap-1.5">
+                  <span className="font-black text-[17px] truncate text-white italic tracking-tighter uppercase group-hover:text-primary transition-colors">{chatDisplayName}</span>
+                  {otherProfile?.isPremium && <Star className="w-3.5 h-3.5 text-accent fill-accent" />}
                 </div>
-                <span className="text-[9px] font-black uppercase tracking-[0.4em] text-primary/60">
+                <span className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground/60 leading-none">
                   {chatSubtext}
                 </span>
               </div>
             </div>
           ) : (
-            <div className="flex-1 flex items-center gap-4 obsidian-glass px-4 rounded-2xl h-12">
-              <Search className="w-5 h-5 text-primary" />
-              <Input placeholder="Scan chat signals..." className="bg-transparent border-none focus-visible:ring-0 text-sm h-10 text-white font-bold" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} autoFocus />
+            <div className="flex-1 flex items-center gap-4 obsidian-glass px-4 rounded-2xl h-11">
+              <Search className="w-4 h-4 text-primary" />
+              <Input placeholder="Scan chat signals..." className="bg-transparent border-none focus-visible:ring-0 text-sm h-full text-white font-bold" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} autoFocus />
               <button onClick={() => { setIsSearchMode(false); setSearchQuery(''); }} className="text-white/20 hover:text-white transition-colors"><X className="w-5 h-5" /></button>
             </div>
           )}
@@ -473,12 +473,12 @@ export default function ChatArea() {
         {!isSearchMode && (
           <div className="flex items-center gap-2">
             {isPremium && (
-              <Button variant="ghost" size="icon" onClick={handleSummary} disabled={isSummarizing} className={cn("h-11 w-11 rounded-2xl obsidian-glass text-primary hover:text-white transition-all", isSummarizing && "animate-spin")}>
-                <Sparkles className="w-6 h-6" />
+              <Button variant="ghost" size="icon" onClick={handleSummary} disabled={isSummarizing} className={cn("h-10 w-10 rounded-xl obsidian-glass text-primary hover:text-white transition-all", isSummarizing && "animate-spin")}>
+                <Sparkles className="w-5 h-5" />
               </Button>
             )}
-            <Button variant="ghost" size="icon" onClick={() => setIsSearchMode(true)} className="h-11 w-11 rounded-2xl obsidian-glass text-white/40 hover:text-primary transition-all"><Search className="w-6 h-6" /></Button>
-            <Button variant="ghost" size="icon" onClick={() => setIsChatInfoOpen(true)} className="h-11 w-11 rounded-2xl obsidian-glass text-white/40 hover:text-primary transition-all"><Info className="w-6 h-6" /></Button>
+            <Button variant="ghost" size="icon" onClick={() => setIsSearchMode(true)} className="h-10 w-10 rounded-xl obsidian-glass text-white/30 hover:text-primary transition-all"><Search className="w-5 h-5" /></Button>
+            <Button variant="ghost" size="icon" onClick={() => setIsChatInfoOpen(true)} className="h-10 w-10 rounded-xl obsidian-glass text-white/30 hover:text-primary transition-all"><Info className="w-5 h-5" /></Button>
           </div>
         )}
       </header>
@@ -490,15 +490,15 @@ export default function ChatArea() {
             onReply={setReplyTo} onForward={setForwardingMessage} amIPremium={isPremium} 
             isAdmin={isKernelAdmin} isGroup={chat?.type !== 'private'} searchQuery={searchQuery} viewerProfile={userProfile} 
           />
-          <div ref={messagesEndRef} className="h-10" />
+          <div ref={messagesEndRef} className="h-6" />
         </div>
 
         {showScrollButton && (
           <button 
             onClick={() => scrollToBottom('smooth')}
-            className="absolute bottom-10 right-8 h-14 w-14 rounded-[1.6rem] obsidian-glass border-primary/20 flex items-center justify-center text-primary shadow-2xl z-50 animate-in zoom-in hover:scale-110 active:scale-90 transition-all border"
+            className="absolute bottom-6 right-6 h-12 w-12 rounded-2xl obsidian-glass border-primary/20 flex items-center justify-center text-primary shadow-2xl z-50 animate-in zoom-in hover:scale-110 active:scale-90 transition-all border"
           >
-            <ChevronDown className="w-8 h-8" />
+            <ChevronDown className="w-6 h-6" />
           </button>
         )}
       </div>

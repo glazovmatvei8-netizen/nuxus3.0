@@ -97,11 +97,8 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
 
     setIsTranscribing(true);
     try {
-      // Вызываем поток Genkit для транскрибации
       const { text } = await transcribeVoice({ audioDataUri: message.content });
       setTranscribedText(text);
-      
-      // Сохраняем результат в базу для кэширования
       if (db && chatId) {
         await updateDoc(doc(db, 'chats', chatId, 'messages', message.id), { 
           'metadata.transcription': text 
@@ -152,7 +149,7 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
   const bubbleStyle = message.metadata?.bubbleStyle || 'default';
 
   const bubbleClasses = cn(
-    "p-3.5 rounded-[2rem] transition-all duration-300 relative shadow-lg overflow-hidden",
+    "p-3 rounded-2xl transition-all duration-300 relative shadow-lg overflow-hidden",
     isMe ? "message-bubble-me rounded-br-none" : "message-bubble-other rounded-bl-none text-white",
     highlight && "ring-2 ring-primary shadow-[0_0_25px_rgba(168,85,247,0.5)] scale-105",
     bubbleStyle === 'neon' && isMe && "bg-gradient-to-tr from-cyan-500 to-purple-600 shadow-[0_0_20px_rgba(6,182,212,0.5)] border border-cyan-400/30",
@@ -174,7 +171,7 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
 
     if (message.contentType === 'image') return (
       <div 
-        className="relative max-w-[300px] rounded-[1.8rem] overflow-hidden border border-white/10 shadow-2xl bg-black/40 cursor-pointer active:scale-[0.98] transition-all group"
+        className="relative max-w-[300px] rounded-2xl overflow-hidden border border-white/10 shadow-2xl bg-black/40 cursor-pointer active:scale-[0.98] transition-all group"
         onClick={(e) => { e.preventDefault(); e.stopPropagation(); setIsMediaViewerOpen(true); }}
       >
         <img src={message.content} alt="Image" className="w-full h-auto object-cover max-h-[450px]" loading="lazy" />
@@ -186,7 +183,7 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
 
     if (message.contentType === 'video' || message.contentType === 'ai_video') return (
       <div 
-        className="relative max-w-[300px] rounded-[1.8rem] overflow-hidden border border-white/10 shadow-2xl bg-black/40 cursor-pointer active:scale-[0.98] transition-all group"
+        className="relative max-w-[300px] rounded-2xl overflow-hidden border border-white/10 shadow-2xl bg-black/40 cursor-pointer active:scale-[0.98] transition-all group"
         onClick={(e) => { e.preventDefault(); e.stopPropagation(); setIsMediaViewerOpen(true); }}
       >
         <video src={message.content} className="w-full h-auto max-h-[450px]" autoPlay muted loop playsInline />
@@ -201,29 +198,28 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
 
     if (message.contentType === 'audio') return (
       <div className="flex flex-col gap-2">
-        <div className="flex items-center gap-4 p-2 min-w-[260px] cursor-pointer group/audio" onClick={toggleAudio}>
+        <div className="flex items-center gap-4 p-1 min-w-[240px] cursor-pointer group/audio" onClick={toggleAudio}>
           <div className="relative">
-            <Button size="icon" className="h-12 w-12 rounded-full bg-primary text-white shadow-xl relative z-10">
-              {isPlaying ? <Pause className="fill-current" /> : <Play fill="currentColor" className="ml-1" />}
+            <Button size="icon" className="h-10 w-10 rounded-full bg-primary text-white shadow-xl relative z-10">
+              {isPlaying ? <Pause className="w-5 h-5 fill-current" /> : <Play className="w-5 h-5 fill-current ml-0.5" />}
             </Button>
           </div>
-          <div className="flex-1 flex flex-col gap-2">
-            <div className="h-1.5 bg-white/10 w-full rounded-full overflow-hidden">
-              <div className="h-full bg-primary transition-all duration-150 shadow-[0_0_10px_rgba(168,85,247,0.8)]" style={{ width: `${progress}%` }} />
+          <div className="flex-1 flex flex-col gap-1.5">
+            <div className="h-1 bg-white/10 w-full rounded-full overflow-hidden">
+              <div className="h-full bg-primary transition-all duration-150" style={{ width: `${progress}%` }} />
             </div>
             <div className="flex justify-between items-center px-0.5">
-              <span className="text-[10px] font-black text-primary/60 tabular-nums uppercase tracking-tighter">
+              <span className="text-[9px] font-black text-white/40 tabular-nums uppercase">
                 {isPlaying ? `-${formatDuration(Math.max(0, duration - currentTime))}` : formatDuration(duration)}
               </span>
               <div className="flex gap-2">
                 <button 
                   onClick={(e) => { e.stopPropagation(); handleTranscribe(); }} 
-                  className={cn("hover:text-primary transition-colors", isTranscribing && "animate-pulse")}
+                  className={cn("text-white/20 hover:text-primary transition-colors", isTranscribing && "animate-pulse")}
                   disabled={isTranscribing}
                 >
-                  {isTranscribing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Type className={cn("w-3.5 h-3.5", transcribedText && "text-accent")} />}
+                  {isTranscribing ? <Loader2 className="w-3 h-3 animate-spin" /> : <Type className={cn("w-3.5 h-3.5", transcribedText && "text-accent")} />}
                 </button>
-                <ShieldCheck className="w-3.5 h-3.5 text-primary/40" />
               </div>
             </div>
           </div>
@@ -232,7 +228,7 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
           <div className="px-3 py-2 bg-white/5 rounded-xl border border-white/5 text-[11px] italic text-white/80 animate-in fade-in slide-in-from-top-1">
             <div className="flex items-center gap-1.5 mb-1">
                 <Sparkles className="w-2.5 h-2.5 text-accent" />
-                <span className="text-[8px] font-black uppercase tracking-widest text-accent/60">{isTranscribing ? 'Синхронизация сигнала...' : 'AI Транскрипция'}</span>
+                <span className="text-[8px] font-black uppercase tracking-widest text-accent/60">{isTranscribing ? 'Decoding Signal...' : 'AI Transcription'}</span>
             </div>
             {isTranscribing ? "..." : `"${transcribedText}"`}
           </div>
@@ -241,13 +237,13 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
     );
 
     return (
-      <div className="flex flex-col gap-2">
-        <div className="whitespace-pre-wrap text-[15px] break-words max-w-[320px] font-medium tracking-tight">
+      <div className="flex flex-col gap-1">
+        <div className="whitespace-pre-wrap text-[15px] break-words max-w-[300px] font-medium tracking-tight">
           {displayContent} 
-          {message.editedAt && <span className="text-[8px] ml-2 text-primary/40 font-black uppercase tracking-widest">(sync)</span>}
+          {message.editedAt && <span className="text-[8px] ml-2 text-primary/40 font-black uppercase tracking-widest">(edited)</span>}
         </div>
         {translatedText && (
-          <div className="pt-2 border-t border-white/5 text-[13px] text-accent/80 italic font-bold">
+          <div className="pt-1.5 border-t border-white/5 text-[13px] text-accent/80 italic font-bold">
             <div className="flex items-center gap-1 text-[8px] uppercase font-black tracking-widest mb-1 text-accent/40">
               <Sparkles className="w-2.5 h-2.5" /> AI Translation
             </div>
@@ -266,16 +262,16 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
   };
 
   if (message.contentType === 'service' || message.contentType === 'broadcast') return (
-    <div className="w-full flex justify-center my-6 animate-in fade-in zoom-in duration-700">
+    <div className="w-full flex justify-center my-4 animate-in fade-in zoom-in duration-700">
       <div className={cn(
-        "bg-white/[0.03] backdrop-blur-xl px-8 py-2.5 rounded-full border border-white/5 shadow-inner",
+        "bg-white/[0.03] backdrop-blur-xl px-6 py-2 rounded-full border border-white/5 shadow-inner",
         message.contentType === 'broadcast' && "border-primary/40 bg-primary/10"
       )}>
         <p className={cn(
-          "text-[10px] text-primary/60 uppercase font-black tracking-[0.4em] ml-[0.4em]",
+          "text-[9px] text-primary/60 uppercase font-black tracking-widest",
           message.contentType === 'broadcast' && "text-primary animate-pulse"
         )}>
-          {message.contentType === 'broadcast' && <Zap className="w-3 h-3 inline mr-2 mb-0.5" />}
+          {message.contentType === 'broadcast' && <Zap className="w-2.5 h-2.5 inline mr-1.5 mb-0.5" />}
           {message.content}
         </p>
       </div>
@@ -285,30 +281,30 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
   return (
     <>
     <div 
-      className={cn("w-full flex mb-4 transition-all duration-300", isMe ? "justify-end pr-2" : "justify-start pl-2", highlight && "scale-105 z-10")}
+      className={cn("w-full flex mb-1.5 transition-all duration-300", isMe ? "justify-end" : "justify-start", highlight && "z-10")}
     >
-      <div className={cn("flex gap-4 max-w-[92%] items-end", isMe ? "flex-row-reverse" : "flex-row")}>
+      <div className={cn("flex gap-2 max-w-[85%] items-end", isMe ? "flex-row-reverse" : "flex-row")}>
         {!isMe && (
-          <div className="cursor-pointer active:scale-90 transition-transform" onClick={() => setInspectedUserId(message.senderId)}>
-            <UserAvatar key={message.senderId} userId={message.senderId} className="h-10 w-10 shrink-0 border-2 border-white/5 shadow-lg" fallbackName={message.senderName} />
+          <div className="cursor-pointer active:scale-90 transition-transform mb-1" onClick={() => setInspectedUserId(message.senderId)}>
+            <UserAvatar key={message.senderId} userId={message.senderId} className="h-8 w-8 shrink-0 border border-white/5 shadow-md" fallbackName={message.senderName} />
           </div>
         )}
         <div className={cn("flex flex-col min-w-0 max-w-full", isMe ? "items-end" : "items-start")}>
-          {!isMe && isGroup && <span className="text-[10px] font-black text-primary uppercase tracking-[0.2em] mb-1.5 ml-2 italic">{message.senderName}</span>}
+          {!isMe && isGroup && <span className="text-[10px] font-bold text-primary uppercase tracking-widest mb-1 ml-1.5 opacity-60">{message.senderName}</span>}
           
           <ContextMenu>
             <ContextMenuTrigger>
               <div className="cursor-pointer active:scale-[0.98] outline-none group/bubble relative">
                 <div className={cn(message.contentType !== 'video_note' ? bubbleClasses : "")}>
                   {message.replyToId && (
-                    <div className="mb-3 p-2.5 border-l-2 border-accent bg-white/5 rounded-r-2xl opacity-60 text-[11px] truncate max-w-[240px] italic">
+                    <div className="mb-2 p-2 border-l-2 border-accent bg-white/5 rounded-r-xl opacity-60 text-[11px] truncate max-w-[200px] italic">
                       {decryptSignal(message.replyToContent)}
                     </div>
                   )}
                   {renderContent()}
-                  <div className="flex items-center justify-end gap-2 mt-2 opacity-40 px-1">
-                    <span className="text-[9px] font-black tabular-nums tracking-widest">{formattedTime}</span>
-                    {isMe && (message.isRead ? <CheckCheck className="w-3.5 h-3.5 text-accent" /> : <Check className="w-3.5 h-3.5" />)}
+                  <div className="flex items-center justify-end gap-1.5 mt-1.5 opacity-40 px-0.5">
+                    <span className="text-[9px] font-bold tabular-nums">{formattedTime}</span>
+                    {isMe && (message.isRead ? <CheckCheck className="w-3 h-3 text-accent" /> : <Check className="w-3 h-3" />)}
                   </div>
                 </div>
               </div>

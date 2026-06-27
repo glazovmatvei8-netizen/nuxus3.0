@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useMemo } from 'react';
@@ -87,20 +88,20 @@ export default function DiscoveryView() {
       <ScrollArea className="flex-1 px-0.5">
         <div className="space-y-10 pb-32 px-6 max-w-full overflow-x-hidden animate-in fade-in duration-700">
           
-          {/* Milestone Banner V7.6 (Compact) */}
-          <div className="relative group overflow-hidden rounded-[2.5rem] p-[1px] bg-gradient-to-br from-white/10 to-transparent">
-             <div className="bg-[#05050a]/95 backdrop-blur-3xl p-6 rounded-[2.5rem] text-center space-y-6 relative overflow-hidden shadow-xl">
+          {/* Milestone Banner V8.0 (Fluid Center) */}
+          <div className="relative overflow-hidden rounded-[2.5rem] p-[1px] bg-gradient-to-br from-white/10 to-transparent">
+             <div className="bg-[#05050a]/95 backdrop-blur-3xl p-6 md:p-8 rounded-[2.5rem] text-center space-y-6 relative overflow-hidden shadow-xl">
                 <div className="relative z-10 flex flex-col items-center gap-4">
                    <div className="bg-primary/10 p-4 rounded-2xl border border-primary/20 shadow-lg animate-pulse">
                      <ShieldCheck className="w-8 h-8 text-primary" />
                    </div>
                    <div className="space-y-1">
-                     <h3 className="text-xl font-black uppercase italic text-white tracking-tighter">Nuxus Milestone</h3>
-                     <p className="text-[8px] font-black text-primary/50 uppercase tracking-widest">100 Nodes Goal</p>
+                     <h3 className="text-xl md:text-2xl font-black uppercase italic text-white tracking-tighter">Nuxus Milestone</h3>
+                     <p className="text-[9px] font-black text-primary/50 uppercase tracking-widest">Global Synchronization Goal</p>
                    </div>
                 </div>
 
-                <div className="w-full max-w-[280px] mx-auto space-y-4 relative z-10">
+                <div className="w-full max-w-[320px] mx-auto space-y-4 relative z-10">
                    <div className="h-3 bg-white/[0.03] rounded-full overflow-hidden border border-white/5 p-[1px]">
                      <div 
                        className="h-full bg-gradient-to-r from-primary to-accent shadow-[0_0_10px_rgba(168,85,247,0.8)] transition-all duration-1500 rounded-full" 
@@ -109,12 +110,12 @@ export default function DiscoveryView() {
                    </div>
                    <div className="flex justify-between items-center px-2">
                       <div className="flex items-baseline gap-1.5">
-                        <span className="text-xl font-black text-white italic">{totalNodes}</span>
-                        <span className="text-[9px] font-black text-white/20">/ 100</span>
+                        <span className="text-2xl font-black text-white italic">{totalNodes}</span>
+                        <span className="text-[10px] font-black text-white/20 uppercase">/ 100 Nodes</span>
                       </div>
                       <div className="flex items-center gap-1.5 bg-green-500/10 px-3 py-1 rounded-full border border-green-500/20">
                          <div className="w-1.5 h-1.5 rounded-full bg-green-500 shadow-lg" />
-                         <span className="text-[7px] font-black text-green-500 uppercase tracking-widest">Stable</span>
+                         <span className="text-[7px] font-black text-green-500 uppercase tracking-widest">Online</span>
                       </div>
                    </div>
                 </div>

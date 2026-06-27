@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState } from 'react';
@@ -6,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { UserAvatar } from '@/components/user-avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { 
-  MessageCircle, Star, Copy, Shield, Calendar, Info, Phone, Video, Gift, Sparkles, ChevronRight, Zap, Globe
+  MessageCircle, Star, Copy, Shield, Calendar, Info, Phone, Video, Gift, Sparkles, ChevronRight, Zap, Globe, ShieldCheck
 } from 'lucide-react';
 import { useFirestore, useUser, useDoc, useMemoFirebase, useCollection } from '@/firebase';
 import { doc, query, collection, where, limit, getDocs, addDoc } from 'firebase/firestore';
@@ -19,8 +20,8 @@ import { ru } from 'date-fns/locale';
 import { GiftModal } from './gift-modal';
 
 /**
- * UserProfileModal V6.5 (Absolute Scroll)
- * ОПТИМИЗИРОВАНО: Весь профиль прокручивается целиком.
+ * UserProfileModal V8.0 (Safe & Smooth)
+ * ОПТИМИЗИРОВАНО: Полная прокрутка и исправленные иконки.
  */
 export function UserProfileModal() {
   const db = useFirestore();
@@ -120,9 +121,9 @@ export function UserProfileModal() {
         </DialogHeader>
 
         <ScrollArea className="flex-1 w-full h-full">
-          <div className="flex flex-col min-h-full pb-20">
+          <div className="flex flex-col min-h-full pb-24">
             {/* Dynamic Header Section */}
-            <div className="relative h-44 bg-gradient-to-b from-primary/20 to-transparent flex items-center justify-center pt-8">
+            <div className="relative h-48 bg-gradient-to-b from-primary/20 to-transparent flex items-center justify-center pt-10">
               <div className="absolute inset-0 opacity-10 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')]" />
               <UserAvatar 
                 userId={inspectedUserId} 
