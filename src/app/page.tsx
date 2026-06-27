@@ -52,7 +52,7 @@ export default function Home() {
   const { data: profile, isLoading: isProfileLoading } = useDoc<UserType>(userProfileRef);
   const isBanned = isUserActuallyBanned(profile);
 
-  // Neural Link: Deep Link Handling
+  // Обработка глубоких ссылок
   useEffect(() => {
     if (!mounted || !db) return;
     const handleDeepLinks = async () => {
@@ -80,7 +80,7 @@ export default function Home() {
   const handleVerify2FA = () => {
     if (twoFactorInput === profile?.twoFactorPin) {
       setIs2FAVerified(true);
-      toast({ title: "Neural Link Established" });
+      toast({ title: "Доступ разрешен", description: "Квантовый канал стабилизирован." });
     } else {
       toast({ title: "Ключ не принят", variant: "destructive" });
       setTwoFactorInput('');
@@ -88,7 +88,7 @@ export default function Home() {
   };
 
   /**
-   * TRUE FACE ID CHALLENGE V8.9
+   * Улучшенная проверка FaceID V9.0
    */
   const tryBiometricAuth = async () => {
     if (typeof window === 'undefined' || !window.PublicKeyCredential) return;
@@ -96,8 +96,8 @@ export default function Home() {
 
     setIsBiometricAttempting(true);
     try {
-      const storedId = localStorage.getItem('nuxus_biometric_id');
-      if (!storedId) {
+      const storedIdBase64 = localStorage.getItem('nuxus_biometric_id');
+      if (!storedIdBase64) {
         setIsBiometricAttempting(false);
         return;
       }
@@ -105,11 +105,18 @@ export default function Home() {
       const challenge = new Uint8Array(32);
       window.crypto.getRandomValues(challenge);
 
+      // Конвертация base64 обратно в Uint8Array
+      const binaryString = window.atob(storedIdBase64);
+      const bytes = new Uint8Array(binaryString.length);
+      for (let i = 0; i < binaryString.length; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+      }
+
       const options: any = {
         publicKey: {
           challenge,
           allowCredentials: [{
-            id: Uint8Array.from(atob(storedId), c => c.charCodeAt(0)),
+            id: bytes,
             type: 'public-key'
           }],
           userVerification: "required",
@@ -120,10 +127,10 @@ export default function Home() {
       const assertion = await navigator.credentials.get(options);
       if (assertion) {
         setIs2FAVerified(true);
-        toast({ title: "FaceID Verified" });
+        toast({ title: "FaceID подтвержден", description: "Личность верифицирована." });
       }
     } catch (e) {
-      console.warn("Nuxus Biometric: Cancelled or Not Supported");
+      console.warn("Nuxus Biometric: Проверка отменена или не удалась.");
     } finally {
       setIsBiometricAttempting(false);
     }
@@ -162,7 +169,7 @@ export default function Home() {
             <div className="relative w-64 h-1 bg-white/5 rounded-full overflow-hidden">
               <div className="absolute inset-0 bg-gradient-to-r from-transparent via-primary to-transparent animate-[scanline_2s_linear_infinite]" />
             </div>
-            <p className="text-[11px] font-black uppercase tracking-[1em] text-primary/80 animate-pulse ml-[1em]">INITIALIZING</p>
+            <p className="text-[11px] font-black uppercase tracking-[1em] text-primary/80 animate-pulse ml-[1em]">СИНХРОНИЗАЦИЯ</p>
           </div>
         </div>
       </div>
@@ -178,8 +185,8 @@ export default function Home() {
         <div className="bg-destructive/10 p-12 rounded-[4rem] mb-8 border border-destructive/20 shadow-[0_0_80px_rgba(239,68,68,0.2)]">
           <ShieldAlert className="w-24 h-24 text-destructive animate-pulse" />
         </div>
-        <h1 className="text-5xl font-black mb-4 text-white uppercase italic tracking-tighter">NODE DISCONNECTED</h1>
-        <Button variant="outline" className="rounded-full border-white/10 h-16 px-12 font-black uppercase tracking-widest text-xs" onClick={() => signOut(auth)}>Terminate Connection</Button>
+        <h1 className="text-5xl font-black mb-4 text-white uppercase italic tracking-tighter">УЗЕЛ ОТКЛЮЧЕН</h1>
+        <Button variant="outline" className="rounded-full border-white/10 h-16 px-12 font-black uppercase tracking-widest text-xs" onClick={() => signOut(auth)}>Завершить сессию</Button>
       </div>
     );
   }
@@ -205,8 +212,8 @@ export default function Home() {
               </div>
             </div>
             <div className="space-y-1">
-              <h2 className="text-3xl font-black uppercase italic text-white tracking-tighter">Secure Link</h2>
-              <p className="text-[10px] font-black uppercase tracking-[0.5em] text-primary/60 ml-[0.5em]">Identity Verification</p>
+              <h2 className="text-3xl font-black uppercase italic text-white tracking-tighter">Защищенный канал</h2>
+              <p className="text-[10px] font-black uppercase tracking-[0.5em] text-primary/60 ml-[0.5em]">Верификация личности</p>
             </div>
           </div>
 
@@ -226,7 +233,7 @@ export default function Home() {
             
             <div className="space-y-4 max-w-[260px] mx-auto">
               <Button onClick={handleVerify2FA} className="w-full h-14 rounded-2xl bg-primary text-white font-black uppercase italic tracking-widest shadow-2xl active:scale-95 transition-all text-sm border border-white/10">
-                Unlock Kernel
+                Разблокировать Ядро
               </Button>
               
               {profile?.settings?.biometricEnabled && (
@@ -244,7 +251,7 @@ export default function Home() {
                 onClick={() => signOut(auth)} 
                 className="w-full text-[9px] font-black uppercase tracking-[0.4em] text-white/20 hover:text-white transition-all py-4"
               >
-                Terminate Session
+                Завершить сессию
               </button>
             </div>
           </div>

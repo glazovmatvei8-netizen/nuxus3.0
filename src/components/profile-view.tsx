@@ -35,7 +35,7 @@ export default function ProfileView() {
   const copyRefLink = () => {
     if (!inviteLink) return;
     navigator.clipboard.writeText(inviteLink);
-    toast({ title: "Link Synchronized", description: "Node ID copied to clipboard." });
+    toast({ title: "Ссылка синхронизирована", description: "Идентификатор узла скопирован." });
   };
 
   const isPremium = isUserPremium(profile);
@@ -62,7 +62,7 @@ export default function ProfileView() {
             />
           </div>
           <span className="font-black text-white text-[17px] flex items-center gap-1.5 italic tracking-tighter uppercase">
-            {profile?.name ? formatDisplayName(profile.name) : 'SYNCING...'} 
+            {profile?.name ? formatDisplayName(profile.name) : 'СИНХРОНИЗАЦИЯ...'} 
             {isPremium && <Star className="w-3.5 h-3.5 text-accent fill-accent" />}
           </span>
         </div>
@@ -79,21 +79,21 @@ export default function ProfileView() {
       <ScrollArea className="flex-1 relative z-10">
         <div className="px-6 space-y-4 pb-32 pt-2 animate-in fade-in duration-700">
           
-          {/* Core Level Card V7.6 (Compact) */}
+          {/* Карточка уровня узла */}
           <div className="obsidian-glass p-6 rounded-[2rem] space-y-5 relative overflow-hidden group border-white/5 shadow-xl">
              <div className="flex items-center justify-between relative z-10">
                 <div className="flex items-center gap-3">
                   <div className="bg-primary/10 p-2.5 rounded-xl border border-primary/10">
                     <Cpu className="w-5 h-5 text-primary" />
                   </div>
-                  <div className="flex flex-col">
-                    <span className="text-[8px] font-black uppercase text-primary/50 tracking-widest leading-none">Kernel Protocol</span>
-                    <span className="text-xl font-black text-white italic mt-1 tracking-tighter">ELITE NODE</span>
+                  <div className="flex flex-col text-left">
+                    <span className="text-[8px] font-black uppercase text-primary/50 tracking-widest leading-none">Протокол Ядра</span>
+                    <span className="text-xl font-black text-white italic mt-1 tracking-tighter">ЭЛИТНЫЙ УЗЕЛ</span>
                   </div>
                 </div>
                 <div className="text-right">
                   <span className="text-2xl font-black text-white italic tabular-nums">{referralCount}</span>
-                  <span className="text-[8px] font-black text-primary/40 uppercase block tracking-widest">Uplinks</span>
+                  <span className="text-[8px] font-black text-primary/40 uppercase block tracking-widest">Связи</span>
                 </div>
              </div>
              
@@ -105,32 +105,32 @@ export default function ProfileView() {
                   />
                </div>
                <div className="flex justify-between items-center px-1">
-                 <span className="text-[7px] font-black text-white/20 uppercase tracking-widest">Growth</span>
+                 <span className="text-[7px] font-black text-white/20 uppercase tracking-widest">Рост</span>
                  <span className="text-[7px] font-black text-primary uppercase tracking-widest">{Math.min(100, (referralCount / 10) * 100)}%</span>
                </div>
              </div>
              
              <Button onClick={copyRefLink} className="w-full h-11 obsidian-glass border-white/5 hover:border-primary/50 text-white rounded-xl font-black uppercase text-[8px] tracking-widest transition-all group">
-               <Zap className="w-3 h-3 mr-2 text-primary" /> Transmit Node ID
+               <Zap className="w-3 h-3 mr-2 text-primary" /> Транслировать ID узла
              </Button>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
-            <ActionCard icon={QrCode} label="Signal QR" sub="IDENTIFY" accent="text-accent" onClick={() => setIsQrOpen(true)} />
-            <ActionCard icon={ShieldCheck} label="QES 7.6" sub="SECURED" accent="text-green-400" />
+            <ActionCard icon={QrCode} label="Signal QR" sub="ИДЕНТИФИКАЦИЯ" accent="text-accent" onClick={() => setIsQrOpen(true)} />
+            <ActionCard icon={ShieldCheck} label="QES 9.0" sub="ЗАЩИЩЕНО" accent="text-green-400" />
           </div>
 
           <div className="obsidian-glass rounded-[2rem] overflow-hidden divide-y divide-white/[0.03] border-white/5 shadow-xl">
-            <ProfileItem icon={Fingerprint} label="Security Core" color="text-primary" onClick={() => { setSettingsTab('privacy'); setIsSettingsOpen(true); }} />
-            <ProfileItem icon={Palette} label="Branding" color="text-white/60" onClick={() => { setSettingsTab('appearance'); setIsSettingsOpen(true); }} />
-            <ProfileItem icon={Bookmark} label="Archive" color="text-white/60" onClick={() => {}} />
-            <ProfileItem icon={HelpCircle} label="Intel" color="text-white/60" onClick={() => setIsLegalOpen(true)} />
+            <ProfileItem icon={Fingerprint} label="Ядро Безопасности" color="text-primary" onClick={() => { setSettingsTab('privacy'); setIsSettingsOpen(true); }} />
+            <ProfileItem icon={Palette} label="Стиль и Брендинг" color="text-white/60" onClick={() => { setSettingsTab('appearance'); setIsSettingsOpen(true); }} />
+            <ProfileItem icon={Bookmark} label="Архив Данных" color="text-white/60" onClick={() => {}} />
+            <ProfileItem icon={HelpCircle} label="Интеллект Ядра" color="text-white/60" onClick={() => setIsLegalOpen(true)} />
           </div>
 
           <div className="py-8 flex flex-col items-center gap-4">
             <div className="flex items-center gap-2 obsidian-glass px-4 py-1.5 rounded-full border-white/5">
               <div className="h-1 w-1 rounded-full bg-green-500 animate-pulse" />
-              <p className="text-[8px] text-white/20 uppercase font-black tracking-widest">Node Synchronized V7.6</p>
+              <p className="text-[8px] text-white/20 uppercase font-black tracking-widest">Узел синхронизирован V9.0</p>
             </div>
             <div className="flex gap-8 opacity-5">
               <Globe className="w-5 h-5" />
@@ -145,7 +145,7 @@ export default function ProfileView() {
         <DialogContent className="max-w-xs obsidian-glass border-white/10 rounded-[2.5rem] p-8 text-center shadow-2xl outline-none">
           <DialogHeader className="mb-4">
             <DialogTitle className="text-xl font-black uppercase italic text-white tracking-tighter">Signal Hash</DialogTitle>
-            <DialogDescription className="text-[8px] uppercase font-black tracking-widest text-primary/60 mt-1">Node Encryption Key</DialogDescription>
+            <DialogDescription className="text-[8px] uppercase font-black tracking-widest text-primary/60 mt-1">Ключ шифрования узла</DialogDescription>
           </DialogHeader>
           <div className="py-4 flex justify-center">
             <div className="bg-white p-5 rounded-[2rem] shadow-xl relative">
@@ -170,8 +170,8 @@ export default function ProfileView() {
               </div>
             </div>
           </div>
-          <p className="text-[9px] font-bold text-white/40 uppercase px-4 leading-relaxed mt-4 tracking-tight">SCAN TO ESTABLISH LINK</p>
-          <Button variant="ghost" onClick={() => setIsQrOpen(false)} className="mt-6 w-full h-12 rounded-xl text-[9px] font-black uppercase tracking-widest text-primary hover:bg-primary/10">Terminate View</Button>
+          <p className="text-[9px] font-bold text-white/40 uppercase px-4 leading-relaxed mt-4 tracking-tight">СКАНИРУЙТЕ ДЛЯ УСТАНОВКИ СВЯЗИ</p>
+          <Button variant="ghost" onClick={() => setIsQrOpen(false)} className="mt-6 w-full h-12 rounded-xl text-[9px] font-black uppercase tracking-widest text-primary hover:bg-primary/10">Закрыть</Button>
         </DialogContent>
       </Dialog>
     </div>

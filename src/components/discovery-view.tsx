@@ -65,9 +65,9 @@ export default function DiscoveryView() {
         <div className="flex items-center justify-between">
           <div className="flex flex-col text-left">
             <h1 className="text-3xl font-black text-white italic tracking-tighter uppercase flex items-center gap-2">
-              Hub <span className="text-[8px] bg-primary/20 text-primary px-2 py-0.5 rounded-full border border-primary/20 tracking-widest font-black">ACTIVE</span>
+              Навигатор <span className="text-[8px] bg-primary/20 text-primary px-2 py-0.5 rounded-full border border-primary/20 tracking-widest font-black">АКТИВЕН</span>
             </h1>
-            <p className="text-[8px] font-black text-white/20 uppercase tracking-[0.4em] ml-1 mt-1">Quantum Navigation</p>
+            <p className="text-[8px] font-black text-white/20 uppercase tracking-[0.4em] ml-1 mt-1">Квантовая навигация</p>
           </div>
           <div className="obsidian-glass p-3 rounded-2xl border-white/5 shadow-xl">
             <Globe className="w-6 h-6 text-primary/60 animate-[spin_20s_linear_infinite]" />
@@ -77,7 +77,7 @@ export default function DiscoveryView() {
         <div className="relative group">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground/30 group-focus-within:text-primary transition-colors" />
           <Input 
-            placeholder="Scan Nodes..." 
+            placeholder="Сканировать узлы..." 
             className="bg-white/[0.02] border-white/[0.05] h-12 rounded-2xl pl-12 text-sm font-bold tracking-tight focus:border-primary/50 transition-all shadow-inner"
             value={search}
             onChange={e => setSearch(e.target.value)}
@@ -88,7 +88,7 @@ export default function DiscoveryView() {
       <ScrollArea className="flex-1 px-0.5">
         <div className="space-y-10 pb-32 px-6 max-w-full overflow-x-hidden animate-in fade-in duration-700">
           
-          {/* Milestone Banner V8.9 (Aadaptive Overflow Fix) */}
+          {/* Цель V9.0 (Адаптивный фикс) */}
           <div className="relative overflow-hidden rounded-[2.5rem] p-[1px] bg-gradient-to-br from-white/10 to-transparent">
              <div className="bg-[#05050a]/95 backdrop-blur-3xl p-6 rounded-[2.5rem] text-center space-y-6 relative overflow-hidden shadow-xl">
                 <div className="relative z-10 flex flex-col items-center gap-4">
@@ -96,8 +96,8 @@ export default function DiscoveryView() {
                      <ShieldCheck className="w-8 h-8 text-primary" />
                    </div>
                    <div className="space-y-1">
-                     <h3 className="text-xl font-black uppercase italic text-white tracking-tighter leading-tight">Nuxus Milestone</h3>
-                     <p className="text-[8px] font-black text-primary/50 uppercase tracking-[0.2em]">Global Synchronization Goal</p>
+                     <h3 className="text-xl font-black uppercase italic text-white tracking-tighter leading-tight">Миссия Nuxus</h3>
+                     <p className="text-[8px] font-black text-primary/50 uppercase tracking-[0.2em]">Цель глобальной синхронизации</p>
                    </div>
                 </div>
 
@@ -111,21 +111,21 @@ export default function DiscoveryView() {
                    <div className="flex justify-between items-center px-1">
                       <div className="flex items-baseline gap-1">
                         <span className="text-xl font-black text-white italic tabular-nums">{totalNodes}</span>
-                        <span className="text-[9px] font-black text-white/20 uppercase">/ 100 Nodes</span>
+                        <span className="text-[9px] font-black text-white/20 uppercase">/ 100 Узлов</span>
                       </div>
                       <div className="flex items-center gap-1.5 bg-green-500/10 px-2 py-0.5 rounded-full border border-green-500/20">
                          <div className="w-1 h-1 rounded-full bg-green-500" />
-                         <span className="text-[7px] font-black text-green-500 uppercase">Live</span>
+                         <span className="text-[7px] font-black text-green-500 uppercase">Живой</span>
                       </div>
                    </div>
                 </div>
              </div>
           </div>
 
-          {/* Leaders Section V8.9 */}
+          {/* Секция лидеров */}
           <section className="space-y-5">
             <h3 className="text-[9px] font-black uppercase tracking-[0.4em] text-primary/60 flex items-center gap-2 px-1">
-              <Sparkles className="w-3 h-3 fill-current" /> Prime Nodes
+              <Sparkles className="w-3 h-3 fill-current" /> Прайм-Узлы
             </h3>
             <div className="flex gap-4 overflow-x-auto scrollbar-hide py-2 px-1 -mx-4">
               {leaderboard.map((u) => (
@@ -149,17 +149,17 @@ export default function DiscoveryView() {
                     "text-[9px] font-black truncate w-16 text-center uppercase tracking-tight italic",
                     u.id === ADMIN_ID ? "text-primary" : "text-white/40 group-hover:text-white"
                   )}>
-                    {u.id === ADMIN_ID ? 'ROOT' : formatDisplayName(u.name).split(' ')[0]}
+                    {u.id === ADMIN_ID ? 'СОЗДАТЕЛЬ' : formatDisplayName(u.name).split(' ')[0]}
                   </span>
                 </div>
               ))}
             </div>
           </section>
 
-          {/* Clusters Feed V8.9 */}
+          {/* Список кластеров */}
           <section className="space-y-5">
             <h3 className="text-[9px] font-black uppercase tracking-[0.4em] text-primary/60 flex items-center gap-2 px-1">
-              <Users className="w-3 h-3" /> Clusters
+              <Users className="w-3 h-3" /> Кластеры
             </h3>
             <div className="grid grid-cols-1 gap-3">
               {filteredChats.map(chat => (
@@ -179,7 +179,7 @@ export default function DiscoveryView() {
                       <span className="font-black text-white text-[15px] truncate italic tracking-tighter uppercase">{chat.name}</span>
                       <div className="flex items-center gap-2">
                         <span className="text-[9px] text-primary font-black uppercase tracking-widest">{chat.username}</span>
-                        <span className="text-[8px] text-white/20 font-bold uppercase">{chat.participantIds?.length || 0} Nodes</span>
+                        <span className="text-[8px] text-white/20 font-bold uppercase">{chat.participantIds?.length || 0} Узлов</span>
                       </div>
                     </div>
                   </div>

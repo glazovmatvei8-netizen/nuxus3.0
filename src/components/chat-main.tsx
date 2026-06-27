@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useEffect } from 'react';
@@ -64,7 +65,7 @@ export default function ChatMain() {
       <UpdateNotifier />
       
       <div className="flex-1 flex overflow-hidden w-full relative max-w-full">
-        {/* Desktop Navigation Rail V7.6 (Reduced width) */}
+        {/* Desktop Navigation Rail V9.0 */}
         <div className="hidden md:flex w-[72px] h-full flex-col items-center py-8 bg-black/40 backdrop-blur-3xl border-r border-white/[0.05] shrink-0 z-40 relative">
           <div className="absolute right-0 top-0 bottom-0 w-px bg-gradient-to-b from-transparent via-primary/20 to-transparent" />
           
@@ -77,11 +78,11 @@ export default function ChatMain() {
           
           <div className="flex flex-col gap-6 flex-1 overflow-y-auto scrollbar-hide py-2">
             <RailButton icon={MessageCircle} active={activeView === 'chats'} onClick={() => { setActiveView('chats'); setCurrentChatId(null); }} label="ЧАТЫ" />
-            <RailButton icon={Compass} active={activeView === 'discovery'} onClick={() => { setActiveView('discovery'); setCurrentChatId(null); }} label="HUB" />
-            <RailButton icon={Phone} active={activeView === 'calls'} onClick={() => { setActiveView('calls'); setCurrentChatId(null); }} label="CALLS" />
-            <RailButton icon={Gamepad2} active={activeView === 'games'} onClick={() => { setActiveView('games'); setCurrentChatId(null); }} label="GAMES" />
-            <RailButton icon={Wallet} active={activeView === 'wallet'} onClick={() => { setActiveView('wallet'); setCurrentChatId(null); }} label="WALL" />
-            <RailButton icon={Archive} active={activeView === 'archive'} onClick={() => { setActiveView('archive'); setCurrentChatId(null); }} label="ARCH" />
+            <RailButton icon={Compass} active={activeView === 'discovery'} onClick={() => { setActiveView('discovery'); setCurrentChatId(null); }} label="ХАБ" />
+            <RailButton icon={Phone} active={activeView === 'calls'} onClick={() => { setActiveView('calls'); setCurrentChatId(null); }} label="ЗВОНКИ" />
+            <RailButton icon={Gamepad2} active={activeView === 'games'} onClick={() => { setActiveView('games'); setCurrentChatId(null); }} label="ИГРЫ" />
+            <RailButton icon={Wallet} active={activeView === 'wallet'} onClick={() => { setActiveView('wallet'); setCurrentChatId(null); }} label="КОШЕЛЕК" />
+            <RailButton icon={Archive} active={activeView === 'archive'} onClick={() => { setActiveView('archive'); setCurrentChatId(null); }} label="АРХИВ" />
           </div>
 
           <div className="mt-auto flex flex-col gap-6 items-center">
@@ -94,7 +95,7 @@ export default function ChatMain() {
           </div>
         </div>
 
-        {/* Sidebar Container V7.6 (Compact Width) */}
+        {/* Sidebar Container V9.0 */}
         <div className={cn(
           "w-full md:w-[350px] lg:w-[380px] h-full flex-shrink-0 border-r border-white/[0.05] z-30 bg-black/10 backdrop-blur-2xl relative overflow-hidden min-w-0", 
           (currentChatId && !['profile', 'contacts', 'calls', 'archive', 'music', 'wallet', 'discovery', 'games'].includes(activeView)) ? "hidden md:block" : "block"
@@ -125,15 +126,15 @@ export default function ChatMain() {
 
       <MusicPlayer />
 
-      {/* Floating Bottom Navigation (Mobile) V7.6 (Compact Height) */}
+      {/* Floating Bottom Navigation (Mobile) V9.0 */}
       {!currentChatId && (
         <div className="md:hidden fixed bottom-6 left-1/2 -translate-x-1/2 w-[92%] max-w-[400px] z-50">
           <div className="bg-black/60 backdrop-blur-[40px] border border-white/10 rounded-[2.5rem] h-[72px] flex items-center justify-between px-6 shadow-2xl relative overflow-hidden">
             <div className="absolute inset-0 bg-gradient-to-b from-white/5 to-transparent pointer-events-none" />
             
             <div className="flex flex-1 justify-around items-center gap-1 z-10">
-              <NavButton icon={Compass} label="HUB" active={activeView === 'discovery'} onClick={() => setActiveView('discovery')} />
-              <NavButton icon={Phone} label="CALLS" active={activeView === 'calls'} onClick={() => setActiveView('calls')} />
+              <NavButton icon={Compass} label="ХАБ" active={activeView === 'discovery'} onClick={() => setActiveView('discovery')} />
+              <NavButton icon={Phone} label="ЗВОНКИ" active={activeView === 'calls'} onClick={() => setActiveView('calls')} />
               
               {/* Center Action Button */}
               <div className="relative -top-1">
@@ -149,8 +150,8 @@ export default function ChatMain() {
                 </button>
               </div>
 
-              <NavButton icon={Wallet} label="WALLET" active={activeView === 'wallet'} onClick={() => setActiveView('wallet')} />
-              <NavButton icon={Settings} label="PROFILE" active={activeView === 'profile'} onClick={() => setActiveView('profile')} isProfile userId={user?.uid} />
+              <NavButton icon={Wallet} label="КОШЕЛЕК" active={activeView === 'wallet'} onClick={() => setActiveView('wallet')} />
+              <NavButton icon={Settings} label="ПРОФИЛЬ" active={activeView === 'profile'} onClick={() => setActiveView('profile')} isProfile userId={user?.uid} />
             </div>
           </div>
         </div>

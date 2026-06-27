@@ -129,14 +129,14 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         'settings.biometricEnabled': form.biometricEnabled
       });
       onOpenChange(false);
-      toast({ title: "Ядро обновлено V8.9" });
+      toast({ title: "Ядро обновлено V9.0" });
     } catch (e: any) {
       toast({ title: "Ошибка сохранения", variant: "destructive" });
     }
   };
 
   /**
-   * TRUE FACE ID REGISTRATION V8.9 (PWA READY)
+   * Исправленная привязка биометрии V9.0
    */
   const handleLinkBiometrics = async () => {
     if (typeof window === 'undefined' || !window.PublicKeyCredential) {
@@ -147,35 +147,45 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
     setIsLinkingBiometrics(true);
     try {
       const isAvailable = await window.PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
-      if (!isAvailable) throw new Error("Not available");
+      if (!isAvailable) throw new Error("Не поддерживается платформой");
 
       const challenge = new Uint8Array(32);
       window.crypto.getRandomValues(challenge);
+
+      const userId = new Uint8Array(16);
+      window.crypto.getRandomValues(userId);
 
       const options: any = {
         publicKey: {
           challenge,
           rp: { name: "Nuxus Kernel", id: window.location.hostname },
           user: {
-            id: new Uint8Array([1, 2, 3]),
+            id: userId,
             name: user?.email || "nuxus_agent",
             displayName: profile?.name || "Nuxus Agent",
           },
           pubKeyCredParams: [{ alg: -7, type: "public-key" }],
-          authenticatorSelection: { userVerification: "required" },
+          authenticatorSelection: { 
+            userVerification: "required",
+            residentKey: "required",
+            requireResidentKey: true
+          },
           timeout: 60000,
         }
       };
 
       const credential = await navigator.credentials.create(options) as any;
       if (credential) {
-        // Сохраняем локальный ID ключа для последующей проверки в PWA
-        localStorage.setItem('nuxus_biometric_id', btoa(String.fromCharCode(...new Uint8Array(credential.rawId))));
+        // Сохраняем ID ключа в base64 для PWA
+        const rawId = new Uint8Array(credential.rawId);
+        const base64Id = window.btoa(String.fromCharCode(...rawId));
+        
+        localStorage.setItem('nuxus_biometric_id', base64Id);
         setForm({ ...form, biometricEnabled: true });
-        toast({ title: "Биометрия привязана", description: "FaceID синхронизирован с вашим узлом." });
+        toast({ title: "FaceID привязан", description: "Личность зафиксирована в локальном узле." });
       }
     } catch (e) {
-      toast({ title: "Ошибка связи", description: "Проверка FaceID была прервана.", variant: "destructive" });
+      toast({ title: "Проверка прервана", description: "Связь с FaceID не была установлена.", variant: "destructive" });
     } finally {
       setIsLinkingBiometrics(false);
     }
@@ -186,9 +196,9 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md bg-[#0a0a0c] border-white/10 p-0 overflow-hidden h-[85vh] flex flex-col rounded-[2.5rem] shadow-2xl outline-none">
-        <DialogHeader className="p-6 border-b border-white/5 shrink-0">
+        <DialogHeader className="p-6 border-b border-white/5 shrink-0 text-left">
           <DialogTitle className="flex items-center gap-2 text-xl font-black italic uppercase tracking-tighter text-white">
-            <Settings2 className="w-5 h-5 text-primary" /> Параметры V8.9
+            <Settings2 className="w-5 h-5 text-primary" /> Параметры V9.0
           </DialogTitle>
         </DialogHeader>
         
@@ -211,7 +221,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                     </button>
                     <button onClick={async () => {
                       if (!isPremium) {
-                        toast({ title: "Premium функция", variant: "destructive" });
+                        toast({ title: "Нужен статус Premium", variant: "destructive" });
                         return;
                       }
                       setIsGeneratingAvatar(true);
@@ -234,7 +244,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                     </div>
                     <div className="space-y-2 col-span-3">
                       <Label className="text-[10px] uppercase font-black text-muted-foreground ml-1">Статус</Label>
-                      <Input placeholder="Чем занимаетесь?" value={form.statusText} onChange={e => setForm({...form, statusText: e.target.value})} className="bg-white/5 border-white/5 h-12 rounded-2xl" />
+                      <Input placeholder="Ваш текущий статус..." value={form.statusText} onChange={e => setForm({...form, statusText: e.target.value})} className="bg-white/5 border-white/5 h-12 rounded-2xl" />
                     </div>
                   </div>
                   <div className="space-y-2"><Label className="text-[10px] uppercase font-black text-muted-foreground ml-1">Имя</Label><Input value={form.name} onChange={e => setForm({...form, name: e.target.value})} className="bg-white/5 border-white/5 h-12 rounded-2xl" /></div>
@@ -252,7 +262,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                     <Moon className={cn("w-6 h-6", form.appearance === 'dark' ? "text-primary" : "text-muted-foreground")} /><span className="text-[10px] font-black uppercase">Тёмная</span>
                   </button>
                   <button onClick={() => setForm({...form, appearance: 'light'})} className={cn("flex flex-col items-center gap-2 p-4 rounded-2xl border transition-all", form.appearance === 'light' ? "bg-primary/10 border-primary shadow-lg" : "bg-white/5 border-white/5")}>
-                    <span className="text-[10px] font-black uppercase">Светлая</span>
+                    <Sun className={cn("w-6 h-6", form.appearance === 'light' ? "text-primary" : "text-muted-foreground")} /><span className="text-[10px] font-black uppercase">Светлая</span>
                   </button>
                 </div>
               </div>
@@ -294,7 +304,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
 
                     <div className="space-y-3">
                       <div className="flex items-center justify-between">
-                        <div className="flex flex-col"><span className="text-xs font-bold text-white uppercase">FaceID / TouchID</span><span className="text-[8px] text-muted-foreground uppercase font-bold">Биометрическая разблокировка</span></div>
+                        <div className="flex flex-col text-left"><span className="text-xs font-bold text-white uppercase">FaceID / TouchID</span><span className="text-[8px] text-muted-foreground uppercase font-bold">Биометрическая разблокировка</span></div>
                         <Switch checked={form.biometricEnabled} onCheckedChange={v => { if(!v) setForm({...form, biometricEnabled: false}); else handleLinkBiometrics(); }} />
                       </div>
                       
@@ -325,7 +335,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                <div className="p-6 bg-white/5 rounded-[2.5rem] border border-white/10 text-center space-y-4">
                   <Zap className="w-10 h-10 text-primary mx-auto animate-pulse" />
                   <div className="space-y-1">
-                    <h3 className="text-lg font-black uppercase italic text-white">Nuxus Kernel V8.9</h3>
+                    <h3 className="text-lg font-black uppercase italic text-white">Nuxus Kernel V9.0</h3>
                     <p className="text-[9px] text-muted-foreground uppercase font-bold tracking-widest leading-relaxed">
                       Ядро полностью синхронизировано.<br/>Биометрические модули активны.
                     </p>

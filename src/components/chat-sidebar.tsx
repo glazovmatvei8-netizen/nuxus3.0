@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useMemo, memo, useRef, useEffect } from 'react';
@@ -125,30 +126,30 @@ const ChatListItem = memo(({
 
   return (
     <div className="relative overflow-hidden touch-pan-y select-none px-3 py-1 max-w-full">
-      {/* Action Buttons Background V7.6 */}
+      {/* Кнопки действий при свайпе */}
       <div className={cn("absolute inset-y-1 left-3 flex h-[calc(100%-8px)] z-0 transition-opacity duration-300 rounded-[1.8rem] overflow-hidden shadow-xl", offsetX > 20 ? "opacity-100" : "opacity-0 pointer-events-none")}>
         <button onClick={(e) => { e.stopPropagation(); onMarkUnread(chat.id); resetSwipe(); }} className="w-[70px] bg-blue-500/80 backdrop-blur-2xl flex flex-col items-center justify-center text-white gap-1 active:brightness-125 transition-all">
           <MessageCircle className="w-4 h-4" />
-          <span className="text-[6px] font-black uppercase tracking-widest">Mark</span>
+          <span className="text-[6px] font-black uppercase tracking-widest">Отм.</span>
         </button>
         <button onClick={(e) => { e.stopPropagation(); onPinToggle(chat.id); resetSwipe(); }} className="w-[70px] bg-green-500/80 backdrop-blur-2xl flex flex-col items-center justify-center text-white gap-1 active:brightness-125 transition-all border-l border-white/5">
           <Pin className="w-4 h-4" />
-          <span className="text-[6px] font-black uppercase tracking-widest">{isPinned ? 'Unpin' : 'Pin'}</span>
+          <span className="text-[6px] font-black uppercase tracking-widest">{isPinned ? 'Откр' : 'Закр'}</span>
         </button>
       </div>
 
       <div className={cn("absolute inset-y-1 right-3 flex h-[calc(100%-8px)] z-0 transition-opacity duration-300 rounded-[1.8rem] overflow-hidden shadow-xl", offsetX < -20 ? "opacity-100" : "opacity-0 pointer-events-none")}>
         <button onClick={(e) => { e.stopPropagation(); onArchive(chat.id, !!chat.isArchived); resetSwipe(); }} className="w-[70px] bg-orange-500/80 backdrop-blur-2xl flex flex-col items-center justify-center text-white gap-1 active:brightness-125 transition-all border-r border-white/5">
           <Archive className="w-4 h-4" />
-          <span className="text-[6px] font-black uppercase tracking-widest">Arch</span>
+          <span className="text-[6px] font-black uppercase tracking-widest">Архив</span>
         </button>
         <button onClick={(e) => { e.stopPropagation(); onDelete(chat.id); resetSwipe(); }} className="w-[70px] bg-red-600/80 backdrop-blur-2xl flex flex-col items-center justify-center text-white gap-1 active:brightness-125 transition-all">
           <Trash2 className="w-4 h-4" />
-          <span className="text-[6px] font-black uppercase tracking-widest">Del</span>
+          <span className="text-[6px] font-black uppercase tracking-widest">Удалить</span>
         </button>
       </div>
 
-      {/* Main Item V7.6 (More compact) */}
+      {/* Основной элемент чата */}
       <div 
         className={cn(
           "relative z-10 obsidian-glass will-change-transform w-full select-none rounded-[1.8rem] transition-all", 
@@ -197,17 +198,17 @@ const ChatListItem = memo(({
           </ContextMenuTrigger>
           <ContextMenuContent className="w-56 obsidian-glass rounded-[1.5rem] p-1 animate-in zoom-in-95 duration-200">
             <ContextMenuItem onClick={() => onMarkUnread(chat.id)} className="gap-2.5 py-2.5 font-black uppercase text-[9px] tracking-wider rounded-xl hover:bg-primary/10">
-              <MessageCircle className="w-4 h-4 text-primary" /> {chat.isManualUnread ? 'Read' : 'Unread'}
+              <MessageCircle className="w-4 h-4 text-primary" /> {chat.isManualUnread ? 'Прочитано' : 'Не прочитано'}
             </ContextMenuItem>
             <ContextMenuItem onClick={() => onPinToggle(chat.id)} className="gap-2.5 py-2.5 font-black uppercase text-[9px] tracking-wider rounded-xl hover:bg-primary/10">
-              {isPinned ? <><PinOff className="w-4 h-4 text-green-400" /> Unpin</> : <><Pin className="w-4 h-4 text-green-400" /> Pin</>}
+              {isPinned ? <><PinOff className="w-4 h-4 text-green-400" /> Открепить</> : <><Pin className="w-4 h-4 text-green-400" /> Закрепить</>}
             </ContextMenuItem>
             <ContextMenuItem onClick={() => onArchive(chat.id, !!chat.isArchived)} className="gap-2.5 py-2.5 font-black uppercase text-[9px] tracking-wider rounded-xl hover:bg-primary/10">
-              <Archive className="w-4 h-4 text-orange-400" /> {chat.isArchived ? 'Restore' : 'Archive'}
+              <Archive className="w-4 h-4 text-orange-400" /> {chat.isArchived ? 'Вернуть' : 'Архивировать'}
             </ContextMenuItem>
             <ContextMenuSeparator className="bg-white/5 mx-2" />
             <ContextMenuItem onClick={() => onDelete(chat.id)} className="gap-2.5 py-2.5 font-black uppercase text-[9px] tracking-wider rounded-xl text-red-500 hover:bg-red-500/10">
-              <Trash2 className="w-4 h-4" /> Destroy Link
+              <Trash2 className="w-4 h-4" /> Удалить диалог
             </ContextMenuItem>
           </ContextMenuContent>
         </ContextMenu>
@@ -272,7 +273,7 @@ export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?:
 
   const handleDelete = async (chatId: string) => {
     if (!db) return;
-    if (confirm('Annihilate this signal?')) {
+    if (confirm('Аннигилировать этот канал связи?')) {
       await deleteDoc(doc(db, 'chats', chatId));
     }
   };
@@ -307,7 +308,7 @@ export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?:
         <div className="flex items-center justify-between w-full relative">
           <div className="flex flex-col items-center gap-1 cursor-help opacity-40 hover:opacity-100 transition-opacity">
              <Activity className={cn("w-4 h-4", latency > 150 ? "text-red-500" : "text-green-500")} />
-             <span className="text-[7px] font-black uppercase">{latency}ms</span>
+             <span className="text-[7px] font-black uppercase">{latency}мс</span>
           </div>
           
           <div className="absolute left-1/2 -translate-x-1/2">
@@ -318,7 +319,7 @@ export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?:
                 isGlobalAdmin(currentUserProfile) ? "cursor-pointer hover:text-primary" : "cursor-default"
               )}
             >
-              {isArchiveView ? 'Archive' : 'Signals'}
+              {isArchiveView ? 'Архив' : 'Сигналы'}
             </h1>
           </div>
 
@@ -330,7 +331,7 @@ export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?:
         <div className="relative group">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/30 group-focus-within:text-primary transition-colors" />
           <input 
-            placeholder={t('sidebar.search')} 
+            placeholder="Сканировать сеть..." 
             className="w-full h-11 bg-white/[0.02] border border-white/5 rounded-2xl pl-11 text-xs font-black uppercase tracking-widest placeholder:text-muted-foreground/20 focus:outline-none focus:border-primary/50 transition-all shadow-inner"
             onClick={() => setIsSearchOpen(true)}
             readOnly
@@ -346,9 +347,9 @@ export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?:
               <div className="px-5 py-4">
                 <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide py-1">
                   {[
-                    { id: 'all', label: 'All', icon: LayoutGrid },
-                    { id: 'private', label: 'Nodes', icon: User },
-                    { id: 'groups', label: 'Groups', icon: Users }
+                    { id: 'all', label: 'Все', icon: LayoutGrid },
+                    { id: 'private', label: 'Узлы', icon: User },
+                    { id: 'groups', label: 'Группы', icon: Users }
                   ].map((tab) => (
                     <button 
                       key={tab.id} 
@@ -381,7 +382,7 @@ export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?:
             ) : (
               <div className="flex flex-col items-center justify-center p-20 opacity-10 space-y-4">
                  <Ghost className="w-16 h-16 animate-float" />
-                 <p className="text-[9px] font-black uppercase tracking-widest text-center">No Signal</p>
+                 <p className="text-[9px] font-black uppercase tracking-widest text-center">Нет сигналов</p>
               </div>
             )}
           </div>
