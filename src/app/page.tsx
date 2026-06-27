@@ -88,7 +88,7 @@ export default function Home() {
   };
 
   /**
-   * Улучшенная проверка FaceID V9.0
+   * ИСПРАВЛЕННАЯ ПРОВЕРКА FACE ID (iOS PWA)
    */
   const tryBiometricAuth = async () => {
     if (typeof window === 'undefined' || !window.PublicKeyCredential) return;
@@ -105,19 +105,16 @@ export default function Home() {
       const challenge = new Uint8Array(32);
       window.crypto.getRandomValues(challenge);
 
-      // Конвертация base64 обратно в Uint8Array
-      const binaryString = window.atob(storedIdBase64);
-      const bytes = new Uint8Array(binaryString.length);
-      for (let i = 0; i < binaryString.length; i++) {
-        bytes[i] = binaryString.charCodeAt(i);
-      }
+      // Корректная конвертация base64 в Uint8Array для WebAuthn
+      const id = Uint8Array.from(atob(storedIdBase64), c => c.charCodeAt(0));
 
       const options: any = {
         publicKey: {
           challenge,
           allowCredentials: [{
-            id: bytes,
-            type: 'public-key'
+            id: id,
+            type: 'public-key',
+            transports: ['internal']
           }],
           userVerification: "required",
           timeout: 60000,
@@ -127,7 +124,7 @@ export default function Home() {
       const assertion = await navigator.credentials.get(options);
       if (assertion) {
         setIs2FAVerified(true);
-        toast({ title: "FaceID подтвержден", description: "Личность верифицирована." });
+        toast({ title: "Face ID подтвержден", description: "Личность верифицирована." });
       }
     } catch (e) {
       console.warn("Nuxus Biometric: Проверка отменена или не удалась.");
@@ -169,7 +166,7 @@ export default function Home() {
             <div className="relative w-64 h-1 bg-white/5 rounded-full overflow-hidden">
               <div className="absolute inset-0 bg-gradient-to-r from-transparent via-primary to-transparent animate-[scanline_2s_linear_infinite]" />
             </div>
-            <p className="text-[11px] font-black uppercase tracking-[1em] text-primary/80 animate-pulse ml-[1em]">СИНХРОНИЗАЦИЯ</p>
+            <p className="text-[11px] font-black uppercase tracking-[1em] text-primary/80 animate-pulse ml-[1em]">ИНИЦИАЛИЗАЦИЯ</p>
           </div>
         </div>
       </div>
@@ -243,7 +240,7 @@ export default function Home() {
                   disabled={isBiometricAttempting}
                   className="w-full h-12 rounded-xl text-primary font-black uppercase text-[10px] tracking-widest gap-2 bg-white/5 border border-white/5 hover:bg-white/10"
                 >
-                  {isBiometricAttempting ? <Loader2 className="w-4 h-4 animate-spin" /> : <><ShieldCheck className="w-4 h-4" /> Использовать FaceID</>}
+                  {isBiometricAttempting ? <Loader2 className="w-4 h-4 animate-spin" /> : <><ShieldCheck className="w-4 h-4" /> Использовать Face ID</>}
                 </Button>
               )}
 

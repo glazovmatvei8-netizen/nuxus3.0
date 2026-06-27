@@ -119,7 +119,7 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
         setRecordingDuration(prev => prev + 1);
       }, 1000);
     } catch (err) {
-      toast({ title: "Signal Access Error", description: "Camera or Microphone permission denied", variant: "destructive" });
+      toast({ title: "Ошибка доступа", description: "Камера или микрофон недоступны", variant: "destructive" });
     }
   };
 
@@ -138,7 +138,7 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
       streamRef.current?.getTracks().forEach(track => track.stop());
       setIsRecording(false);
       if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
-      toast({ title: "Recording Terminated" });
+      toast({ title: "Запись отменена" });
     }
   };
 
@@ -167,10 +167,10 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
                 <PopoverTrigger asChild><Button variant="ghost" size="icon" className="h-12 w-12 obsidian-glass rounded-2xl text-white/40 hover:text-primary transition-all"><Paperclip className="w-5 h-5" /></Button></PopoverTrigger>
                 <PopoverContent side="top" align="start" className="w-56 obsidian-glass border-white/10 rounded-[2rem] p-2 mb-3 shadow-2xl animate-in slide-in-from-bottom-2 duration-300">
                   <div className="grid grid-cols-1 gap-1">
-                    <AttachmentItem icon={ImageIcon} label="Gallery" color="text-primary" onClick={() => fileInputRef.current?.click()} />
+                    <AttachmentItem icon={ImageIcon} label="Галерея" color="text-primary" onClick={() => fileInputRef.current?.click()} />
                     {isPremium && (
                       <>
-                        <AttachmentItem icon={Palette} label="AI Canvas" color="text-accent" onClick={async () => {
+                        <AttachmentItem icon={Palette} label="ИИ Холст" color="text-accent" onClick={async () => {
                           if (!messageInput.trim()) return;
                           setIsGeneratingImg(true);
                           try {
@@ -181,20 +181,20 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
                         }} loading={isGeneratingImg} />
                       </>
                     )}
-                    <AttachmentItem icon={AtSign} label="Poll" color="text-blue-400" onClick={onPollOpen} />
+                    <AttachmentItem icon={AtSign} label="Опрос" color="text-blue-400" onClick={onPollOpen} />
                     <div className="h-px bg-white/5 my-1.5 mx-2" />
                     <Popover>
                       <PopoverTrigger asChild>
                         <button className={cn("flex items-center gap-3 w-full p-3 rounded-xl hover:bg-white/5 transition-all text-left", destructTimer ? "text-primary" : "text-white/70")}>
-                          <Timer className="w-4 h-4" /> <span className="text-[10px] font-black uppercase tracking-widest">Destruct</span>
+                          <Timer className="w-4 h-4" /> <span className="text-[10px] font-black uppercase tracking-widest">Таймер</span>
                         </button>
                       </PopoverTrigger>
                       <PopoverContent side="right" className="w-40 obsidian-glass border-white/10 rounded-2xl p-1.5 shadow-2xl">
                         {[
-                          { l: 'Off', v: null },
-                          { l: '1 Min', v: 1 },
-                          { l: '1 Hour', v: 60 },
-                          { l: '24 Hours', v: 1440 }
+                          { l: 'Выкл', v: null },
+                          { l: '1 Мин', v: 1 },
+                          { l: '1 Час', v: 60 },
+                          { l: '24 Часа', v: 1440 }
                         ].map(t => (
                           <button key={t.l} onClick={() => setDestructTimer(t.v)} className="w-full text-left p-2.5 rounded-lg text-[9px] font-black uppercase tracking-widest hover:bg-primary/10 hover:text-primary transition-all">{t.l}</button>
                         ))}
@@ -207,7 +207,7 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
               <div className="flex-1 flex items-center bg-white/[0.04] rounded-[1.8rem] border border-white/10 h-12 px-4 relative group transition-all focus-within:bg-white/[0.07] focus-within:border-primary/50 shadow-inner">
                 {destructTimer && <Timer className="w-4 h-4 text-primary mr-2 animate-pulse" />}
                 <Input 
-                  placeholder="Neural Signal..." 
+                  placeholder="Сигнал Ядра..." 
                   className="bg-transparent border-none focus-visible:ring-0 text-white placeholder:text-white/20 font-bold italic tracking-tight h-full" 
                   value={messageInput} 
                   onChange={e => handleInputChange(e.target.value)} 
@@ -244,7 +244,7 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
             <div className="flex-1 flex items-center bg-primary/10 border border-primary/20 rounded-[2rem] h-12 px-5 gap-5 animate-in slide-in-from-right-4 duration-500 shadow-[0_0_40px_rgba(168,85,247,0.15)]">
               <div className="flex items-center gap-2 text-primary animate-pulse">
                 <div className="w-2 h-2 rounded-full bg-primary shadow-[0_0_10px_rgba(168,85,247,1)]" />
-                <span className="text-[9px] font-black uppercase tracking-[0.2em]">{recorderMode === 'audio' ? 'SYNCING' : 'LIVE'}</span>
+                <span className="text-[9px] font-black uppercase tracking-[0.2em]">{recorderMode === 'audio' ? 'СИНХРОНИЗАЦИЯ' : 'ПРЯМОЙ ЭФИР'}</span>
               </div>
               <span className="text-base font-black italic text-white flex-1 tracking-widest">{formatDuration(recordingDuration)}</span>
               <div className="flex gap-1">
@@ -362,7 +362,7 @@ export default function ChatArea() {
     if (chat?.type === 'private') {
       return formatLastSeen(otherProfile?.lastSeen, otherProfile?.settings?.privacy?.lastSeenVisibility, false, t('online'));
     }
-    return `${chat?.participantIds?.length || 0} Nodes Connected`;
+    return `${chat?.participantIds?.length || 0} Узлов в сети`;
   }, [chat, otherProfile, t]);
 
   const scrollToBottom = useCallback((behavior: ScrollBehavior = 'smooth') => {
@@ -382,7 +382,7 @@ export default function ChatArea() {
     if (type_msg === 'image' && !content_msg.startsWith('data:')) finalContent = await compressImage(content_msg, 1200, 0.6);
 
     const msgData: Partial<Message> = { 
-      chatId: currentChatId, senderId: firebaseUser.uid, senderName: userProfile?.name || 'Nuxus Agent', 
+      chatId: currentChatId, senderId: firebaseUser.uid, senderName: userProfile?.name || 'Агент Nuxus', 
       content: finalContent, contentType: type_msg, sentAt: new Date().toISOString(), isRead: false,
       metadata: { bubbleStyle: userProfile?.settings?.bubbleStyle || 'default' }
     };
@@ -390,7 +390,7 @@ export default function ChatArea() {
     if (minutes) msgData.selfDestructAt = addMinutes(new Date(), minutes).toISOString();
     if (replyTo) { 
       msgData.replyToId = replyTo.id; 
-      msgData.replyToContent = replyTo.contentType === 'text' ? replyTo.content : `[Signal: ${replyTo.contentType.toUpperCase()}]`; 
+      msgData.replyToContent = replyTo.contentType === 'text' ? replyTo.content : `[Сигнал: ${replyTo.contentType.toUpperCase()}]`; 
       setReplyTo(null);
     }
     
@@ -412,22 +412,22 @@ export default function ChatArea() {
     try {
       const chatMessages = messages.slice(-20).map(m => ({
         senderName: m.senderName,
-        text: m.contentType === 'text' ? decryptSignal(m.content) : `[Signal: ${m.contentType}]`
+        text: m.contentType === 'text' ? decryptSignal(m.content) : `[Сигнал: ${m.contentType}]`
       }));
       const { summary } = await chatConversationSummary({ chatMessages });
-      toast({ title: "AI Intelligence Output", description: summary, duration: 15000 });
+      toast({ title: "ИИ Интеллект", description: summary, duration: 15000 });
     } catch (e) {
-      toast({ title: "Summary Encryption Failed", variant: "destructive" });
+      toast({ title: "Сбой дешифровки", variant: "destructive" });
     } finally { setIsSummarizing(false); }
   };
 
   const chatDisplayName = useMemo(() => {
-    if (chat?.id === 'saved_messages') return 'Archive Data';
+    if (chat?.id === 'saved_messages') return 'Архив Данных';
     if (chat?.type === 'private') {
       const myMeta = chat.metadata?.[firebaseUser?.uid || ''];
       return myMeta?.customName || formatDisplayName(otherProfile?.name);
     }
-    return formatDisplayName(chat?.name || 'Signal Cluster');
+    return formatDisplayName(chat?.name || 'Кластер Сигналов');
   }, [chat, firebaseUser?.uid, otherProfile]);
 
   const customBg = userProfile?.settings?.chatBackground;
@@ -465,7 +465,7 @@ export default function ChatArea() {
           ) : (
             <div className="flex-1 flex items-center gap-4 obsidian-glass px-4 rounded-2xl h-11">
               <Search className="w-4 h-4 text-primary" />
-              <Input placeholder="Scan chat signals..." className="bg-transparent border-none focus-visible:ring-0 text-sm h-full text-white font-bold" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} autoFocus />
+              <Input placeholder="Сканировать сигналы..." className="bg-transparent border-none focus-visible:ring-0 text-sm h-full text-white font-bold" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} autoFocus />
               <button onClick={() => { setIsSearchMode(false); setSearchQuery(''); }} className="text-white/20 hover:text-white transition-colors"><X className="w-5 h-5" /></button>
             </div>
           )}
@@ -496,7 +496,7 @@ export default function ChatArea() {
         {showScrollButton && (
           <button 
             onClick={() => scrollToBottom('smooth')}
-            className="absolute bottom-6 right-6 h-12 w-12 rounded-2xl obsidian-glass border-primary/20 flex items-center justify-center text-primary shadow-2xl z-50 animate-in zoom-in hover:scale-110 active:scale-90 transition-all border"
+            className="absolute bottom-6 right-6 h-12 w-12 rounded-2xl obsidian-glass border-primary/20 flex items-center justify-center text-primary shadow-2xl z-50 animate-in zoom-in hover:scale-110 active:scale-95 transition-all border"
           >
             <ChevronDown className="w-6 h-6" />
           </button>
