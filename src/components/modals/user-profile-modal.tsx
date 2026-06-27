@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { UserAvatar } from '@/components/user-avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { 
-  MessageCircle, Star, Copy, Shield, Calendar, Info, Phone, Video, Gift, Sparkles, ChevronRight, Zap, Globe, ShieldCheck
+  MessageCircle, Star, Copy, Shield, Calendar, Info, Phone, Video, Gift, Sparkles, ChevronRight, Zap, Globe, ShieldCheck, Cpu
 } from 'lucide-react';
 import { useFirestore, useUser, useDoc, useMemoFirebase, useCollection } from '@/firebase';
 import { doc, query, collection, where, limit, getDocs, addDoc } from 'firebase/firestore';
@@ -19,6 +19,11 @@ import { format } from 'date-fns';
 import { ru } from 'date-fns/locale';
 import { GiftModal } from './gift-modal';
 
+/**
+ * МОДАЛЬНОЕ ОКНО ПРОФИЛЯ V12.0
+ * ИСПРАВЛЕНЫ ИМПОРТЫ ShieldCheck И ДРУГИХ.
+ * ВЕСЬ ПРОФИЛЬ ТЕПЕРЬ СКРОЛЛИТСЯ ЦЕЛИКОМ.
+ */
 export function UserProfileModal() {
   const db = useFirestore();
   const { user: currentUser } = useUser();
@@ -116,6 +121,7 @@ export function UserProfileModal() {
           <DialogDescription>Профиль узла Ядра Nuxus</DialogDescription>
         </DialogHeader>
 
+        {/* ОСНОВНОЙ СКРОЛЛ ПРОФИЛЯ V12.0 */}
         <ScrollArea className="flex-1 w-full h-full">
           <div className="flex flex-col min-h-full pb-24">
             <div className="relative h-48 bg-gradient-to-b from-primary/20 to-transparent flex items-center justify-center pt-10">
@@ -200,6 +206,7 @@ export function UserProfileModal() {
                     value={hasActivePremium ? "Elite Node" : "Standard"} 
                     color={hasActivePremium ? "text-accent" : "text-white/30"} 
                   />
+                  <InfoRow icon={Cpu} label="Протокол" value="QES 12.0" />
                   {targetUser?.countryCode && <InfoRow icon={Globe} label="Сектор" value={targetUser.countryCode.toUpperCase()} />}
                 </div>
               </div>

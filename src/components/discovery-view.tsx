@@ -15,6 +15,11 @@ import type { Chat, User } from '@/lib/types';
 
 const ADMIN_ID = 'GCvLucN8CjNcdaxPO2vmpZ84hNl1';
 
+/**
+ * НАВИГАТОР V12.0 «Mission Control»
+ * ИСПРАВЛЕННАЯ ВЕРСТКА: Баннер Milestone полностью адаптивен.
+ * ПОЛНАЯ РУСИФИКАЦИЯ.
+ */
 export default function DiscoveryView() {
   const db = useFirestore();
   const { user: currentUser } = useUser();
@@ -88,16 +93,16 @@ export default function DiscoveryView() {
       <ScrollArea className="flex-1 px-0.5">
         <div className="space-y-10 pb-32 px-6 max-w-full overflow-x-hidden animate-in fade-in duration-700">
           
-          {/* Цель V9.0 (Адаптивный фикс) */}
+          {/* Цель V12.0 (ПОЛНОСТЬЮ АДАПТИВНАЯ ВЕРСТКА) */}
           <div className="relative overflow-hidden rounded-[2.5rem] p-[1px] bg-gradient-to-br from-white/10 to-transparent">
-             <div className="bg-[#05050a]/95 backdrop-blur-3xl p-6 rounded-[2.5rem] text-center space-y-6 relative overflow-hidden shadow-xl">
-                <div className="relative z-10 flex flex-col items-center gap-4">
-                   <div className="bg-primary/10 p-4 rounded-2xl border border-primary/20 shadow-lg animate-pulse">
-                     <ShieldCheck className="w-8 h-8 text-primary" />
+             <div className="bg-[#05050a]/95 backdrop-blur-3xl p-5 sm:p-6 rounded-[2.5rem] text-center space-y-5 relative overflow-hidden shadow-xl">
+                <div className="relative z-10 flex flex-col items-center gap-3">
+                   <div className="bg-primary/10 p-3 rounded-2xl border border-primary/20 shadow-lg animate-pulse">
+                     <ShieldCheck className="w-6 h-6 sm:w-8 sm:h-8 text-primary" />
                    </div>
                    <div className="space-y-1">
-                     <h3 className="text-xl font-black uppercase italic text-white tracking-tighter leading-tight">Миссия Nuxus</h3>
-                     <p className="text-[8px] font-black text-primary/50 uppercase tracking-[0.2em]">Цель глобальной синхронизации</p>
+                     <h3 className="text-lg sm:text-xl font-black uppercase italic text-white tracking-tighter leading-tight">Миссия Nuxus</h3>
+                     <p className="text-[7px] sm:text-[8px] font-black text-primary/50 uppercase tracking-[0.2em]">Цель глобальной синхронизации</p>
                    </div>
                 </div>
 
@@ -110,12 +115,12 @@ export default function DiscoveryView() {
                    </div>
                    <div className="flex justify-between items-center px-1">
                       <div className="flex items-baseline gap-1">
-                        <span className="text-xl font-black text-white italic tabular-nums">{totalNodes}</span>
-                        <span className="text-[9px] font-black text-white/20 uppercase">/ 100 Узлов</span>
+                        <span className="text-lg sm:text-xl font-black text-white italic tabular-nums">{totalNodes}</span>
+                        <span className="text-[7px] sm:text-[9px] font-black text-white/20 uppercase">/ 100 Узлов</span>
                       </div>
                       <div className="flex items-center gap-1.5 bg-green-500/10 px-2 py-0.5 rounded-full border border-green-500/20">
                          <div className="w-1 h-1 rounded-full bg-green-500" />
-                         <span className="text-[7px] font-black text-green-500 uppercase">Живой</span>
+                         <span className="text-[6px] sm:text-[7px] font-black text-green-500 uppercase">Активен</span>
                       </div>
                    </div>
                 </div>

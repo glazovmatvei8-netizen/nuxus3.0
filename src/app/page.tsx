@@ -18,6 +18,11 @@ import { NuxusLogo } from '@/components/nuxus-logo';
 import { IosInstaller } from '@/components/ios-installer';
 import { useTranslations } from '@/hooks/use-translations';
 
+/**
+ * ГЛАВНЫЙ КОНТРОЛЛЕР ЯДРА V12.0
+ * ИСПРАВЛЕННЫЙ ВХОД ЧЕРЕЗ FACE ID (ЛОКАЛЬНЫЙ РЕЖИМ).
+ * ПОЛНАЯ РУСИФИКАЦИЯ ИНТЕРФЕЙСА.
+ */
 export default function Home() {
   const { user, isUserLoading } = useUser();
   const db = useFirestore();
@@ -88,7 +93,7 @@ export default function Home() {
   };
 
   /**
-   * ИСПРАВЛЕННАЯ ПРОВЕРКА FACE ID (iOS PWA)
+   * ИСПРАВЛЕННАЯ ПРОВЕРКА FACE ID (ЛОКАЛЬНЫЙ КЛЮЧ)
    */
   const tryBiometricAuth = async () => {
     if (typeof window === 'undefined' || !window.PublicKeyCredential) return;
@@ -124,10 +129,10 @@ export default function Home() {
       const assertion = await navigator.credentials.get(options);
       if (assertion) {
         setIs2FAVerified(true);
-        toast({ title: "Face ID подтвержден", description: "Личность верифицирована." });
+        toast({ title: "Личность подтверждена", description: "Face ID распознан успешно." });
       }
     } catch (e) {
-      console.warn("Nuxus Biometric: Проверка отменена или не удалась.");
+      console.warn("Nuxus Biometric: Проверка отменена.");
     } finally {
       setIsBiometricAttempting(false);
     }

@@ -7,7 +7,7 @@ import { useEffect } from 'react';
 /**
  * Квантовый Редиректор для коротких ссылок (VK Style).
  * Перехватывает пути вида /username и перенаправляет на главную с параметром поиска.
- * Исправлено: расширенный список зарезервированных путей для предотвращения конфликтов.
+ * ПОЛНАЯ РУСИФИКАЦИЯ.
  */
 export default function UsernameRedirect() {
   const router = useRouter();
@@ -35,7 +35,7 @@ export default function UsernameRedirect() {
     <div className="h-screen w-full bg-[#020203] flex items-center justify-center">
       <div className="flex flex-col items-center gap-4">
         <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin" />
-        <p className="text-[10px] font-black uppercase tracking-[0.5em] text-primary/60">Neural Link Routing...</p>
+        <p className="text-[10px] font-black uppercase tracking-[0.5em] text-primary/60">Маршрутизация узла...</p>
       </div>
     </div>
   );
