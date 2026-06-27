@@ -7,7 +7,7 @@ import { UserAvatar } from '@/components/user-avatar';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { 
-  Pencil, Bookmark, ChevronRight, Star, Share2, Zap, HelpCircle, Globe, Server, QrCode, Fingerprint, Cpu, Shield
+  Pencil, Bookmark, ChevronRight, Star, Share2, Zap, HelpCircle, Globe, Server, QrCode, Fingerprint, Cpu, Shield, ShieldCheck
 } from 'lucide-react';
 import { useAppState } from '@/lib/store';
 import { formatDisplayName, cn, isUserPremium } from '@/lib/utils';

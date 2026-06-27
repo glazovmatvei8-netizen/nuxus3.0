@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState } from 'react';
@@ -20,7 +19,7 @@ import { ru } from 'date-fns/locale';
 import { GiftModal } from './gift-modal';
 
 /**
- * UserProfileModal V8.6 (Fixed ShieldCheck & Full Scroll)
+ * UserProfileModal V8.7 (Absolute Shield Fix)
  */
 export function UserProfileModal() {
   const db = useFirestore();
@@ -199,7 +198,7 @@ export function UserProfileModal() {
                 <div className="bg-white/[0.02] rounded-[2rem] border border-white/[0.05] overflow-hidden divide-y divide-white/[0.02] shadow-xl">
                   <InfoRow icon={Calendar} label="Registered" value={registrationDate} />
                   <InfoRow 
-                    icon={Shield} 
+                    icon={ShieldCheck} 
                     label="Integrity" 
                     value={hasActivePremium ? "Elite Node" : "Standard"} 
                     color={hasActivePremium ? "text-accent" : "text-white/30"} 
