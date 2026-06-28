@@ -24,8 +24,8 @@ import type { User } from '@/lib/types';
 import { generateAiAvatar } from '@/ai/flows/generate-ai-avatar-flow';
 
 /**
- * ПАРАМЕТРЫ V14.0 «Crystal Guard»
- * Оптимизированный вызов Face ID с обработкой ошибок.
+ * ПАРАМЕТРЫ V14.1 «Crystal Guard»
+ * Оптимизированный вызов Face ID без принудительного iCloud.
  */
 export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const auth = useAuth();
@@ -83,7 +83,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         'settings.biometricEnabled': form.biometricEnabled
       });
       onOpenChange(false);
-      toast({ title: "Ядро обновлено V14.0" });
+      toast({ title: "Ядро обновлено V14.1" });
     } catch (e: any) {
       toast({ title: "Ошибка сохранения", variant: "destructive" });
     }
@@ -113,7 +113,8 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
           authenticatorSelection: { 
             authenticatorAttachment: "platform",
             userVerification: "required",
-            residentKey: "discouraged"
+            residentKey: "discouraged", // ПРИНУДИТЕЛЬНО ЛОКАЛЬНО
+            requireResidentKey: false
           },
           attestation: "none",
           timeout: 60000,
@@ -132,7 +133,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
       if (e.name === 'NotAllowedError') {
         toast({ 
           title: "Связь заблокирована", 
-          description: "Установите код-пароль на iPhone и разрешите биометрию в настройках.", 
+          description: "Установите код-пароль на iPhone и разрешите биометрию в настройках Safari.", 
           variant: "destructive" 
         });
       } else {
@@ -168,7 +169,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
       <DialogContent className="max-w-md bg-[#0a0a0c] border-white/10 p-0 overflow-hidden h-[85vh] flex flex-col rounded-[2.5rem] shadow-2xl outline-none">
         <DialogHeader className="p-6 border-b border-white/5 shrink-0 text-left">
           <DialogTitle className="flex items-center gap-2 text-xl font-black italic uppercase tracking-tighter text-white">
-            <Settings2 className="w-5 h-5 text-primary" /> Параметры V14.0
+            <Settings2 className="w-5 h-5 text-primary" /> Параметры V14.1
           </DialogTitle>
         </DialogHeader>
         
@@ -235,7 +236,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                <div className="p-6 bg-white/5 rounded-[2.5rem] border border-white/10 text-center space-y-6">
                   <Zap className="w-10 h-10 text-primary mx-auto animate-pulse" />
                   <div className="space-y-1">
-                    <h3 className="text-lg font-black uppercase italic text-white">Nuxus Kernel V14.0</h3>
+                    <h3 className="text-lg font-black uppercase italic text-white">Nuxus Kernel V14.1</h3>
                     <p className="text-[9px] text-muted-foreground uppercase font-bold tracking-widest leading-relaxed">Система ZIP-архивации активна.</p>
                   </div>
                   <div className="pt-4 border-t border-white/5 space-y-4">

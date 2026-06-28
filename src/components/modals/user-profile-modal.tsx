@@ -20,8 +20,8 @@ import { ru } from 'date-fns/locale';
 import { GiftModal } from './gift-modal';
 
 /**
- * МОДАЛЬНОЕ ОКНО ПРОФИЛЯ V12.2
- * ПОЛНЫЙ СКРОЛЛ ПОЛОТНА. ВСЕ ИМПОРТЫ ГАРАНТИРОВАНЫ.
+ * МОДАЛЬНОЕ ОКНО ПРОФИЛЯ V14.1
+ * Исправлены импорты ShieldCheck и Cpu.
  */
 export function UserProfileModal() {
   const db = useFirestore();
@@ -204,7 +204,7 @@ export function UserProfileModal() {
                     value={hasActivePremium ? "Elite Node" : "Standard"} 
                     color={hasActivePremium ? "text-accent" : "text-white/30"} 
                   />
-                  <InfoRow icon={Cpu} label="Протокол" value="QES 12.2" />
+                  <InfoRow icon={Cpu} label="Протокол" value="QES 14.1" />
                   {targetUser?.countryCode && <InfoRow icon={Globe} label="Сектор" value={targetUser.countryCode.toUpperCase()} />}
                 </div>
               </div>
