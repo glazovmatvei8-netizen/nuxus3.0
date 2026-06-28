@@ -18,9 +18,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { QRCodeSVG } from 'qrcode.react';
 
 /**
- * ГЛАВНЫЙ ЭКРАН ПРОФИЛЯ V12.1 «Nova Shield»
- * ИСПРАВЛЕНО: Все импорты ShieldCheck, Palette, Sparkles подтверждены.
- * ПОЛНАЯ РУСИФИКАЦИЯ.
+ * ГЛАВНЫЙ ЭКРАН ПРОФИЛЯ V12.2
+ * ПОЛНАЯ РУСИФИКАЦИЯ. ВСЕ ИМПОРТЫ ПОДТВЕРЖДЕНЫ.
  */
 export default function ProfileView() {
   const { user } = useUser();
@@ -121,7 +120,7 @@ export default function ProfileView() {
 
           <div className="grid grid-cols-2 gap-3">
             <ActionCard icon={QrCode} label="Signal QR" sub="ИДЕНТИФИКАЦИЯ" accent="text-accent" onClick={() => setIsQrOpen(true)} />
-            <ActionCard icon={ShieldCheck} label="QES 12.1" sub="ЗАЩИЩЕНО" accent="text-green-400" />
+            <ActionCard icon={ShieldCheck} label="QES 12.2" sub="ЗАЩИЩЕНО" accent="text-green-400" />
           </div>
 
           <div className="obsidian-glass rounded-[2rem] overflow-hidden divide-y divide-white/[0.03] border-white/5 shadow-xl">
@@ -134,7 +133,7 @@ export default function ProfileView() {
           <div className="py-8 flex flex-col items-center gap-4">
             <div className="flex items-center gap-2 obsidian-glass px-4 py-1.5 rounded-full border-white/5">
               <div className="h-1 w-1 rounded-full bg-green-500 animate-pulse" />
-              <p className="text-[8px] text-white/20 uppercase font-black tracking-widest">Узел синхронизирован V12.1</p>
+              <p className="text-[8px] text-white/20 uppercase font-black tracking-widest">Узел синхронизирован V12.2</p>
             </div>
             <div className="flex gap-8 opacity-5">
               <Globe className="w-5 h-5" />

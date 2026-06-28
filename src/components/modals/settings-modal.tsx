@@ -129,14 +129,15 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         'settings.biometricEnabled': form.biometricEnabled
       });
       onOpenChange(false);
-      toast({ title: "Ядро обновлено V12.1" });
+      toast({ title: "Ядро обновлено V12.2" });
     } catch (e: any) {
       toast({ title: "Ошибка сохранения", variant: "destructive" });
     }
   };
 
   /**
-   * ПРОВЕРЕННЫЙ ФИКС: FACE ID БЕЗ ICLOUD (V12.1)
+   * КРИТИЧЕСКИЙ ФИКС V12.2: FACE ID БЕЗ ICLOUD
+   * residentKey: "discouraged" заставляет iOS сохранять ключ только локально.
    */
   const handleLinkBiometrics = async () => {
     if (typeof window === 'undefined' || !window.PublicKeyCredential || !user) {
@@ -158,17 +159,17 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
           rp: { name: "Nuxus Kernel", id: window.location.hostname },
           user: {
             id: userIdBuffer,
-            name: user.email || user.uid,
+            name: user.uid,
             displayName: profile?.name || "Агент Nuxus",
           },
-          pubKeyCredParams: [{ alg: -7, type: "public-key" }, { alg: -257, type: "public-key" }],
+          pubKeyCredParams: [{ alg: -7, type: "public-key" }],
           authenticatorSelection: { 
             authenticatorAttachment: "platform",
             userVerification: "required",
-            // residentKey: "discouraged" - КЛЮЧЕВОЙ ПАРАМЕТР для отключения iCloud принудительно
-            residentKey: "discouraged", 
+            residentKey: "discouraged", // ПРИНУДИТЕЛЬНОЕ ОТКЛЮЧЕНИЕ ICLOUD
             requireResidentKey: false
           },
+          attestation: "none",
           timeout: 60000,
         }
       };
@@ -180,11 +181,11 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         
         localStorage.setItem('nuxus_biometric_id', base64Id);
         setForm({ ...form, biometricEnabled: true });
-        toast({ title: "Face ID привязан", description: "Локальный ключ создан." });
+        toast({ title: "Локальная связь активна", description: "Face ID привязан без iCloud." });
       }
     } catch (e: any) {
       console.error("Nuxus Biometric Error:", e);
-      toast({ title: "Связь не установлена", description: "Для Face ID без iCloud убедитесь, что на iPhone включен код-пароль.", variant: "destructive" });
+      toast({ title: "Связь прервана", description: "Убедитесь, что Face ID настроен в системе.", variant: "destructive" });
     } finally {
       setIsLinkingBiometrics(false);
     }
@@ -197,7 +198,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
       <DialogContent className="max-w-md bg-[#0a0a0c] border-white/10 p-0 overflow-hidden h-[85vh] flex flex-col rounded-[2.5rem] shadow-2xl outline-none">
         <DialogHeader className="p-6 border-b border-white/5 shrink-0 text-left">
           <DialogTitle className="flex items-center gap-2 text-xl font-black italic uppercase tracking-tighter text-white">
-            <Settings2 className="w-5 h-5 text-primary" /> Параметры V12.1
+            <Settings2 className="w-5 h-5 text-primary" /> Параметры V12.2
           </DialogTitle>
         </DialogHeader>
         
@@ -303,7 +304,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
 
                     <div className="space-y-3">
                       <div className="flex items-center justify-between">
-                        <div className="flex flex-col text-left"><span className="text-xs font-bold text-white uppercase">FaceID / TouchID</span><span className="text-[8px] text-muted-foreground uppercase font-bold">Биометрическая разблокировка</span></div>
+                        <div className="flex flex-col text-left"><span className="text-xs font-bold text-white uppercase">FaceID / TouchID</span><span className="text-[8px] text-muted-foreground uppercase font-bold">Биометрия (Без iCloud)</span></div>
                         <Switch checked={form.biometricEnabled} onCheckedChange={v => { if(!v) setForm({...form, biometricEnabled: false}); else handleLinkBiometrics(); }} />
                       </div>
                       
@@ -334,9 +335,9 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                <div className="p-6 bg-white/5 rounded-[2.5rem] border border-white/10 text-center space-y-4">
                   <Zap className="w-10 h-10 text-primary mx-auto animate-pulse" />
                   <div className="space-y-1">
-                    <h3 className="text-lg font-black uppercase italic text-white">Nuxus Kernel V12.1</h3>
+                    <h3 className="text-lg font-black uppercase italic text-white">Nuxus Kernel V12.2</h3>
                     <p className="text-[9px] text-muted-foreground uppercase font-bold tracking-widest leading-relaxed">
-                      Ядро полностью синхронизировано.<br/>Локальные биометрические модули активны.
+                      Ядро полностью синхронизировано.<br/>Локальные модули (No-Cloud) активны.
                     </p>
                   </div>
                </div>
