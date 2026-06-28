@@ -13,11 +13,11 @@ import { useAuth, useUser, useFirestore, useDoc, useMemoFirebase } from '@/fireb
 import { UserAvatar } from '@/components/user-avatar';
 import { 
   LogOut, Palette, Check, Settings2, Camera, Lock, Image as ImageIcon, 
-  Paintbrush, Shield, Monitor, Fingerprint, Sparkles, Star, Ghost, Type, PenTool, Zap, Diamond, Crown, Sun, Moon, MessageSquare, ShieldCheck, Loader2, Cpu
+  Paintbrush, Shield, Monitor, Fingerprint, Sparkles, Star, Ghost, Type, PenTool, Zap, Diamond, Crown, Sun, Moon, MessageSquare, ShieldCheck, Loader2, Cpu, Database, Download
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { signOut } from 'firebase/auth';
-import { doc, updateDoc } from 'firebase/firestore';
+import { doc, updateDoc, addDoc, collection } from 'firebase/firestore';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAppState } from '@/lib/store';
 import { cn, isUserPremium } from '@/lib/utils';
@@ -47,6 +47,8 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
 
   const [isGeneratingAvatar, setIsGeneratingAvatar] = useState(false);
   const [isLinkingBiometrics, setIsLinkingBiometrics] = useState(false);
+  const [isRequestingArchive, setIsRequestingArchive] = useState(false);
+  
   const [form, setForm] = useState({
     name: '',
     username: '',
@@ -129,16 +131,12 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         'settings.biometricEnabled': form.biometricEnabled
       });
       onOpenChange(false);
-      toast({ title: "Ядро обновлено V12.2" });
+      toast({ title: "Ядро обновлено V13.0" });
     } catch (e: any) {
       toast({ title: "Ошибка сохранения", variant: "destructive" });
     }
   };
 
-  /**
-   * КРИТИЧЕСКИЙ ФИКС V12.2: FACE ID БЕЗ ICLOUD
-   * residentKey: "discouraged" заставляет iOS сохранять ключ только локально.
-   */
   const handleLinkBiometrics = async () => {
     if (typeof window === 'undefined' || !window.PublicKeyCredential || !user) {
       toast({ title: "Ошибка", description: "Устройство не поддерживает биометрию", variant: "destructive" });
@@ -150,23 +148,24 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
       const challenge = new Uint8Array(32);
       window.crypto.getRandomValues(challenge);
 
-      const encoder = new TextEncoder();
-      const userIdBuffer = encoder.encode(user.uid);
+      // FIX V13: Use random buffer for user.id to avoid iCloud "discoverable" requirement
+      const randomUserId = new Uint8Array(16);
+      window.crypto.getRandomValues(randomUserId);
 
       const options: any = {
         publicKey: {
           challenge,
-          rp: { name: "Nuxus Kernel", id: window.location.hostname },
+          rp: { name: "Nuxus Local", id: window.location.hostname },
           user: {
-            id: userIdBuffer,
-            name: user.uid,
-            displayName: profile?.name || "Агент Nuxus",
+            id: randomUserId,
+            name: `local_${user.uid}`,
+            displayName: "Local Authenticator",
           },
           pubKeyCredParams: [{ alg: -7, type: "public-key" }],
           authenticatorSelection: { 
             authenticatorAttachment: "platform",
             userVerification: "required",
-            residentKey: "discouraged", // ПРИНУДИТЕЛЬНОЕ ОТКЛЮЧЕНИЕ ICLOUD
+            residentKey: "discouraged", // AGGRESSIVE ICLOUD BYPASS
             requireResidentKey: false
           },
           attestation: "none",
@@ -185,9 +184,27 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
       }
     } catch (e: any) {
       console.error("Nuxus Biometric Error:", e);
-      toast({ title: "Связь прервана", description: "Убедитесь, что Face ID настроен в системе.", variant: "destructive" });
+      toast({ title: "Связь прервана", description: "Face ID требует iCloud Keychain или настройки устройства.", variant: "destructive" });
     } finally {
       setIsLinkingBiometrics(false);
+    }
+  };
+
+  const handleRequestArchive = async () => {
+    if (!db || !user || !profile) return;
+    setIsRequestingArchive(true);
+    try {
+      await addDoc(collection(db, 'archiveRequests'), {
+        userId: user.uid,
+        userName: profile.name,
+        status: 'pending',
+        createdAt: new Date().toISOString()
+      });
+      toast({ title: "Запрос отправлен", description: "Ваш архив будет собран администратором Ядра." });
+    } catch (e) {
+      toast({ title: "Ошибка запроса", variant: "destructive" });
+    } finally {
+      setIsRequestingArchive(false);
     }
   };
 
@@ -198,7 +215,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
       <DialogContent className="max-w-md bg-[#0a0a0c] border-white/10 p-0 overflow-hidden h-[85vh] flex flex-col rounded-[2.5rem] shadow-2xl outline-none">
         <DialogHeader className="p-6 border-b border-white/5 shrink-0 text-left">
           <DialogTitle className="flex items-center gap-2 text-xl font-black italic uppercase tracking-tighter text-white">
-            <Settings2 className="w-5 h-5 text-primary" /> Параметры V12.2
+            <Settings2 className="w-5 h-5 text-primary" /> Параметры V13.0
           </DialogTitle>
         </DialogHeader>
         
@@ -254,35 +271,6 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
               </div>
             </TabsContent>
 
-            <TabsContent value="appearance" className="space-y-8 m-0 p-6 pb-20">
-              <div className="space-y-4">
-                <Label className="text-[10px] font-black uppercase text-muted-foreground flex items-center gap-2"><Monitor className="w-3 h-3" /> Тема</Label>
-                <div className="grid grid-cols-2 gap-2">
-                  <button onClick={() => setForm({...form, appearance: 'dark'})} className={cn("flex flex-col items-center gap-2 p-4 rounded-2xl border transition-all", form.appearance === 'dark' ? "bg-primary/10 border-primary shadow-lg" : "bg-white/5 border-white/5")}>
-                    <Moon className={cn("w-6 h-6", form.appearance === 'dark' ? "text-primary" : "text-muted-foreground")} /><span className="text-[10px] font-black uppercase">Тёмная</span>
-                  </button>
-                  <button onClick={() => setForm({...form, appearance: 'light'})} className={cn("flex flex-col items-center gap-2 p-4 rounded-2xl border transition-all", form.appearance === 'light' ? "bg-primary/10 border-primary shadow-lg" : "bg-white/5 border-white/5")}>
-                    <Sun className={cn("w-6 h-6", form.appearance === 'light' ? "text-primary" : "text-muted-foreground")} /><span className="text-[10px] font-black uppercase">Светлая</span>
-                  </button>
-                </div>
-              </div>
-              
-              <div className="space-y-4 pt-4 border-t border-white/5">
-                <Label className="text-[10px] uppercase font-black text-muted-foreground flex items-center gap-2"><Paintbrush className="w-3 h-3" /> Палитра Ядра</Label>
-                <div className="grid grid-cols-1 gap-2">
-                  {THEMES.map((theme) => {
-                    const isPremiumTheme = theme.premium && !isPremium;
-                    return (
-                      <button key={theme.id} disabled={isPremiumTheme} onClick={() => setForm({ ...form, theme: theme.id })} className={cn("flex items-center justify-between p-4 rounded-2xl border transition-all", form.theme === theme.id ? "bg-primary/10 border-primary" : "bg-white/5 border-white/5", isPremiumTheme && "opacity-40")}>
-                        <div className="flex items-center gap-3"><div className={cn("w-6 h-6 rounded-full", theme.color)} /><span className="text-sm font-bold text-white">{theme.name}</span>{theme.premium && <Star className="w-3 h-3 text-accent fill-accent" />}</div>
-                        {form.theme === theme.id && <Check className="w-5 h-5 text-primary" />}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            </TabsContent>
-
             <TabsContent value="privacy" className="space-y-6 m-0 p-6 pb-20">
               <div className="bg-primary/5 p-6 rounded-[2.5rem] border border-primary/10 space-y-6">
                 <div className="flex items-center justify-between">
@@ -322,23 +310,33 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                   </div>
                 )}
               </div>
-
-              <div className="bg-white/5 p-6 rounded-[2.5rem] border border-white/10 space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-4"><div className="bg-white/5 p-3 rounded-2xl"><Ghost className="w-6 h-6 text-muted-foreground" /></div><div className="flex flex-col text-left"><span className="text-sm font-black text-white uppercase italic">Режим Призрака</span><span className="text-[8px] text-muted-foreground uppercase font-black">Скрытие онлайн-статуса</span></div></div>
-                  <Switch disabled={!isPremium} checked={form.privacy.isGhostMode} onCheckedChange={v => setForm({...form, privacy: {...form.privacy, isGhostMode: v}})} />
-                </div>
-              </div>
             </TabsContent>
 
             <TabsContent value="interface" className="space-y-6 m-0 p-6 pb-20">
-               <div className="p-6 bg-white/5 rounded-[2.5rem] border border-white/10 text-center space-y-4">
+               <div className="p-6 bg-white/5 rounded-[2.5rem] border border-white/10 text-center space-y-6">
                   <Zap className="w-10 h-10 text-primary mx-auto animate-pulse" />
                   <div className="space-y-1">
-                    <h3 className="text-lg font-black uppercase italic text-white">Nuxus Kernel V12.2</h3>
+                    <h3 className="text-lg font-black uppercase italic text-white">Nuxus Kernel V13.0</h3>
                     <p className="text-[9px] text-muted-foreground uppercase font-bold tracking-widest leading-relaxed">
-                      Ядро полностью синхронизировано.<br/>Локальные модули (No-Cloud) активны.
+                      Ядро полностью синхронизировано.<br/>Система экспорта данных готова.
                     </p>
+                  </div>
+
+                  <div className="pt-4 border-t border-white/5 space-y-4">
+                     <div className="flex flex-col items-center gap-2">
+                        <Database className="w-6 h-6 text-accent" />
+                        <span className="text-[10px] font-black uppercase text-white">Суверенитет данных</span>
+                     </div>
+                     <p className="text-[8px] text-muted-foreground uppercase font-bold leading-relaxed px-4">
+                        Вы можете запросить полный архив своих данных (переписки, истории, настройки). Администратор соберет и отправит вам пакет.
+                     </p>
+                     <Button 
+                        onClick={handleRequestArchive}
+                        disabled={isRequestingArchive}
+                        className="w-full h-12 bg-white/5 border border-white/10 rounded-xl font-black uppercase text-[9px] tracking-widest gap-2 hover:bg-white/10"
+                     >
+                        {isRequestingArchive ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Download className="w-4 h-4" /> Запросить архив профиля</>}
+                     </Button>
                   </div>
                </div>
             </TabsContent>

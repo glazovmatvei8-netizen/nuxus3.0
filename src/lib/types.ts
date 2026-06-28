@@ -105,6 +105,14 @@ export interface Call {
   endedAt?: string;
 }
 
+export interface ArchiveRequest {
+  id: string;
+  userId: string;
+  userName: string;
+  status: 'pending' | 'collecting' | 'ready' | 'delivered';
+  createdAt: string;
+}
+
 export type ChatType = 'private' | 'group' | 'channel' | 'saved';
 
 export interface Chat {

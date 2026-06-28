@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useEffect, memo, useMemo } from 'react';
@@ -20,15 +21,13 @@ interface UserAvatarProps {
 }
 
 /**
- * Nuxus Avatar Core V7.5 «Obsidian Shield»
- * ОПТИМИЗИРОВАНО: Полная ликвидация «фантомных» данных через жесткую синхронизацию.
- * Тройная защита скругления для безупречного круга.
+ * Nuxus Avatar Core V13.0 «Diamond Shield»
+ * УСИЛЕНИЕ: Огромная звезда Premium в углу аватара.
  */
 export const UserAvatar = memo(({ userId, className, fallbackName, fallbackClassName, manualAvatarUrl, showOnlineStatus = false }: UserAvatarProps) => {
   const db = useFirestore();
   const [imgError, setImgError] = useState(false);
   
-  // КРИТИЧЕСКИЙ ФИКС V7.5: Моментальный сброс состояния при смене ID
   const [activeId, setActiveId] = useState<string | null | undefined>(userId);
   if (userId !== activeId) {
     setActiveId(userId);
@@ -42,7 +41,6 @@ export const UserAvatar = memo(({ userId, className, fallbackName, fallbackClass
 
   const { data: profile, isLoading } = useDoc<User>(userRef);
 
-  // Валидация: отображаем аватар только если профиль соответствует текущему userId
   const displayAvatar = useMemo(() => {
     if (manualAvatarUrl) return manualAvatarUrl;
     if (isLoading || !profile || userId !== profile.id) return null;
@@ -72,7 +70,6 @@ export const UserAvatar = memo(({ userId, className, fallbackName, fallbackClass
 
   return (
     <div className={cn("relative inline-flex items-center justify-center shrink-0 rounded-full", className)}>
-      {/* Outer Halo V7.5 */}
       <div className={cn(
         "rounded-full p-[2px] w-full h-full flex items-center justify-center overflow-hidden transition-all duration-1000",
         premium ? "bg-gradient-to-tr from-primary via-accent to-primary animate-[spin_8s_linear_infinite] shadow-[0_0_30px_rgba(168,85,247,0.4)]" : "bg-white/10"
@@ -105,10 +102,10 @@ export const UserAvatar = memo(({ userId, className, fallbackName, fallbackClass
       )}
 
       {premium && (
-        <div className="absolute -bottom-1 -right-1 z-30 scale-110">
-          <div className="bg-[#020205] rounded-full p-[2px] shadow-2xl">
-            <div className="bg-gradient-to-tr from-yellow-400 to-orange-500 p-[3px] rounded-full shadow-inner border border-white/20">
-              <Star className="w-2.5 h-2.5 text-black fill-current" />
+        <div className="absolute -bottom-2 -right-2 z-30 scale-150 transform hover:rotate-12 transition-transform cursor-help">
+          <div className="bg-[#020205] rounded-full p-[1px] shadow-2xl">
+            <div className="bg-gradient-to-tr from-yellow-300 via-orange-500 to-yellow-600 p-[2.5px] rounded-full shadow-inner border border-white/30">
+              <Star className="w-3.5 h-3.5 text-black fill-current drop-shadow-md" />
             </div>
           </div>
         </div>

@@ -79,13 +79,16 @@ export default function AuthScreen({ initialMode = 'login' }: AuthScreenProps) {
     const userRef = doc(db, 'users', uid);
     const snap = await getDoc(userRef);
     
-    const idName = formData.identifier ? `Node ${formData.identifier.slice(-4)}` : `User ${uid.slice(0, 4)}`;
-    const finalName = overrideData?.name || formData.name || (snap.exists() ? snap.data().name : idName);
+    // FIX V13: Prevent "Node" prefix and phone number as username
+    const finalName = overrideData?.name || formData.name || (snap.exists() ? snap.data().name : `Agent ${uid.slice(0, 4).toUpperCase()}`);
     
-    const baseUsername = (formData.username || formData.identifier || `user${uid.slice(0, 3)}`).replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
-    const finalUsername = overrideData?.username || 
-      (formData.username ? (formData.username.startsWith('@') ? formData.username.toLowerCase() : '@' + formData.username.toLowerCase()) : 
-      (snap.exists() ? snap.data().username : `@${baseUsername}`));
+    // Clean username logic: Prioritize formData.username, never use phone number
+    let finalUsername = overrideData?.username || (snap.exists() ? snap.data().username : null);
+    
+    if (!finalUsername) {
+      const rawUser = (formData.username || `user_${uid.slice(0, 5).toLowerCase()}`).replace(/[^a-zA-Z0-9_]/g, '');
+      finalUsername = rawUser.startsWith('@') ? rawUser.toLowerCase() : '@' + rawUser.toLowerCase();
+    }
 
     const profileData = {
       id: uid,
@@ -124,8 +127,7 @@ export default function AuthScreen({ initialMode = 'login' }: AuthScreenProps) {
         await setPersistence(auth, browserLocalPersistence);
       } catch (storageErr: any) {
         if (storageErr.code === 'auth/web-storage-unsupported' || storageErr.message?.includes('quota')) {
-          console.warn("Nuxus Auth: Local quota exceeded, falling back to Session Storage");
-          localStorage.clear(); // Пытаемся освободить место
+          localStorage.clear();
           await setPersistence(auth, browserSessionPersistence);
         }
       }
@@ -166,7 +168,6 @@ export default function AuthScreen({ initialMode = 'login' }: AuthScreenProps) {
     } catch (err: any) {
       let msg = err.message;
       if (err.code === 'auth/invalid-credential') msg = "Неверный аккаунт или пароль.";
-      if (msg.includes('quota')) msg = "Память браузера переполнена. Очистите кэш или историю.";
       toast({ title: "Ошибка доступа", description: msg, variant: "destructive" });
     } finally {
       setIsLoading(false);
@@ -225,10 +226,10 @@ export default function AuthScreen({ initialMode = 'login' }: AuthScreenProps) {
           
           <CardHeader className="text-center pb-2 pt-10 px-8">
             <CardTitle className="text-3xl font-black tracking-tighter uppercase italic text-white leading-none drop-shadow-[0_0_15px_rgba(168,85,247,0.4)]">
-              {mode === 'recover' ? 'Restore' : mode === 'setup2fa' ? 'Quantum' : mode === 'login' ? 'V4.0 Access' : 'Create'}
+              {mode === 'recover' ? 'Restore' : mode === 'setup2fa' ? 'Quantum' : mode === 'login' ? 'V13.0 Entry' : 'Create'}
             </CardTitle>
             <CardDescription className="text-primary/80 font-black tracking-[0.5em] uppercase text-[8px] opacity-60 mt-3 ml-[0.5em]">
-              {mode === 'setup2fa' ? 'Protection Key' : mode === 'recover' ? 'Neural recovery' : 'Nuxus Kernel Entry'}
+              {mode === 'setup2fa' ? 'Protection Key' : mode === 'recover' ? 'Neural recovery' : 'Nuxus Kernel v13'}
             </CardDescription>
           </CardHeader>
 
