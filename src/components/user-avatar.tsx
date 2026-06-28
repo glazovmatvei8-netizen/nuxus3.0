@@ -1,7 +1,7 @@
 
 "use client"
 
-import React, { useState, useEffect, memo, useMemo } from 'react';
+import React, { useState, memo, useMemo } from 'react';
 import { useDoc, useMemoFirebase, useFirestore } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -21,8 +21,8 @@ interface UserAvatarProps {
 }
 
 /**
- * Nuxus Avatar Core V13.5 «Diamond Shield»
- * УСИЛЕНИЕ: Огромная звезда Premium в углу аватара, подчеркивающая статус.
+ * Nuxus Avatar Core V14.0 «Crystal Guard»
+ * УМЕНЬШЕННЫЙ Premium значок в углу.
  */
 export const UserAvatar = memo(({ userId, className, fallbackName, fallbackClassName, manualAvatarUrl, showOnlineStatus = false }: UserAvatarProps) => {
   const db = useFirestore();
@@ -72,7 +72,7 @@ export const UserAvatar = memo(({ userId, className, fallbackName, fallbackClass
     <div className={cn("relative inline-flex items-center justify-center shrink-0 rounded-full", className)}>
       <div className={cn(
         "rounded-full p-[2px] w-full h-full flex items-center justify-center overflow-hidden transition-all duration-1000",
-        premium ? "bg-gradient-to-tr from-primary via-accent to-primary animate-[spin_8s_linear_infinite] shadow-[0_0_30px_rgba(168,85,247,0.4)]" : "bg-white/10"
+        premium ? "bg-gradient-to-tr from-primary via-accent to-primary animate-[spin_8s_linear_infinite]" : "bg-white/10"
       )}>
         <Avatar className="shrink-0 relative overflow-hidden bg-black/60 w-full h-full rounded-full border-none flex items-center justify-center shadow-inner">
           {displayAvatar && !imgError && activeId === userId ? (
@@ -82,7 +82,7 @@ export const UserAvatar = memo(({ userId, className, fallbackName, fallbackClass
                 alt={displayName} 
                 fill
                 sizes="128px"
-                className="object-cover animate-in fade-in duration-700 rounded-full"
+                className="object-cover rounded-full"
                 onError={() => setImgError(true)}
                 unoptimized={displayAvatar.startsWith('data:')}
               />
@@ -97,15 +97,15 @@ export const UserAvatar = memo(({ userId, className, fallbackName, fallbackClass
 
       {showOnlineStatus && isOnline && !isGhost && (
         <div className="absolute top-[8%] right-[8%] z-20">
-          <div className="h-3 w-3 bg-green-500 rounded-full border-[2.5px] border-[#0a0a0c] shadow-[0_0_15px_rgba(34,197,94,1)] animate-pulse" />
+          <div className="h-3 w-3 bg-green-500 rounded-full border-[2px] border-[#0a0a0c] shadow-[0_0_10px_rgba(34,197,94,1)] animate-pulse" />
         </div>
       )}
 
       {premium && (
-        <div className="absolute -bottom-1 -right-1 z-30 scale-125 transform hover:rotate-12 transition-transform cursor-help">
-          <div className="bg-[#020205] rounded-full p-[1px] shadow-2xl">
-            <div className="bg-gradient-to-tr from-yellow-300 via-orange-500 to-yellow-600 p-[3px] rounded-full shadow-inner border border-white/30">
-              <Star className="w-4 h-4 text-black fill-current drop-shadow-md" />
+        <div className="absolute -bottom-0.5 -right-0.5 z-30 transform hover:scale-110 transition-transform">
+          <div className="bg-[#020205] rounded-full p-[1px] shadow-lg border border-white/20">
+            <div className="bg-gradient-to-tr from-yellow-300 to-orange-500 p-[3px] rounded-full shadow-inner">
+              <Star className="w-3 h-3 text-black fill-current" />
             </div>
           </div>
         </div>
