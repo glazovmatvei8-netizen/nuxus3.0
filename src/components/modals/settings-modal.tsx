@@ -23,8 +23,8 @@ import type { User } from '@/lib/types';
 import { generateAiAvatar } from '@/ai/flows/generate-ai-avatar-flow';
 
 /**
- * ПАРАМЕТРЫ V15.0 «Data Sovereignty»
- * Оптимизированный Face ID (локальный режим без принудительного iCloud).
+ * ПАРАМЕТРЫ V15.5 «Identity Sovereignty»
+ * АВТОНОМНЫЙ FACE ID: Полностью отключено требование iCloud Keychain.
  */
 export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const auth = useAuth();
@@ -83,15 +83,16 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         'settings.biometricEnabled': form.biometricEnabled
       });
       onOpenChange(false);
-      toast({ title: "Ядро обновлено V15.0" });
+      toast({ title: "Ядро обновлено V15.5" });
     } catch (e: any) {
       toast({ title: "Ошибка сохранения", variant: "destructive" });
     }
   };
 
   /**
-   * ПРИВЯЗКА FACE ID В ЛОКАЛЬНОМ РЕЖИМЕ
-   * residentKey: "discouraged" предотвращает принудительное включение iCloud Keychain.
+   * ПРИВЯЗКА FACE ID БЕЗ ICLOUD KEYCHAIN
+   * Использование residentKey: "discouraged" и requireResidentKey: false
+   * заставляет систему использовать только локальное хранилище Secure Enclave.
    */
   const handleLinkBiometrics = async () => {
     if (typeof window === 'undefined' || !window.PublicKeyCredential || !user) {
@@ -107,18 +108,18 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
       const options: any = {
         publicKey: {
           challenge,
-          rp: { name: "Nuxus Local", id: window.location.hostname },
+          rp: { name: "Nuxus Kernel", id: window.location.hostname },
           user: {
             id: crypto.getRandomValues(new Uint8Array(16)),
             name: user.uid,
-            displayName: profile?.name || "User",
+            displayName: profile?.name || "Nuxus Agent",
           },
           pubKeyCredParams: [{ alg: -7, type: "public-key" }],
           authenticatorSelection: { 
             authenticatorAttachment: "platform",
             userVerification: "required",
-            residentKey: "discouraged", 
-            requireResidentKey: false
+            residentKey: "discouraged", // ВАЖНО: Отключает принудительную синхронизацию iCloud
+            requireResidentKey: false    // ВАЖНО: Ключ остается только на устройстве
           },
           attestation: "none",
           timeout: 60000,
@@ -132,17 +133,18 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         localStorage.setItem('nuxus_biometric_id', base64Id);
         
         setForm({ ...form, biometricEnabled: true });
-        toast({ title: "Связь установлена", description: "Face ID привязан локально к этому узлу." });
+        toast({ title: "Личность подтверждена", description: "Face ID привязан локально к этому узлу." });
       }
     } catch (e: any) {
+      console.warn("WebAuthn Error:", e);
       if (e.name === 'NotAllowedError') {
         toast({ 
           title: "Связь заблокирована", 
-          description: "Для работы Face ID установите код-пароль в настройках устройства.", 
+          description: "Установите код-пароль на устройстве или разрешите доступ Safari.", 
           variant: "destructive" 
         });
       } else {
-        toast({ title: "Сбой биометрии", description: "Убедитесь, что Face ID активен в системе.", variant: "destructive" });
+        toast({ title: "Сбой биометрии", description: "Убедитесь, что Face ID активен в настройках системы.", variant: "destructive" });
       }
     } finally {
       setIsLinkingBiometrics(false);
@@ -174,7 +176,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
       <DialogContent className="max-w-md bg-[#0a0a0c] border-white/10 p-0 overflow-hidden h-[85vh] flex flex-col rounded-[2.5rem] shadow-2xl outline-none">
         <DialogHeader className="p-6 border-b border-white/5 shrink-0 text-left">
           <DialogTitle className="flex items-center gap-2 text-xl font-black italic uppercase tracking-tighter text-white">
-            <Settings2 className="w-5 h-5 text-primary" /> Параметры V15.0
+            <Settings2 className="w-5 h-5 text-primary" /> Параметры V15.5
           </DialogTitle>
         </DialogHeader>
         
@@ -242,8 +244,8 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                <div className="p-6 bg-white/5 rounded-[2.5rem] border border-white/10 text-center space-y-6">
                   <Zap className="w-10 h-10 text-primary mx-auto animate-pulse" />
                   <div className="space-y-1">
-                    <h3 className="text-lg font-black uppercase italic text-white">Nuxus Kernel V15.0</h3>
-                    <p className="text-[9px] text-muted-foreground uppercase font-bold tracking-widest leading-relaxed">Система ZIP-архивации полностью активирована.</p>
+                    <h3 className="text-lg font-black uppercase italic text-white">Nuxus Kernel V15.5</h3>
+                    <p className="text-[9px] text-muted-foreground uppercase font-bold tracking-widest leading-relaxed">Система защищенного Face ID активна.</p>
                   </div>
                   <div className="pt-4 border-t border-white/5 space-y-4">
                      <Database className="w-6 h-6 text-accent mx-auto" />

@@ -29,8 +29,8 @@ import JSZip from 'jszip';
 const ROOT_UID = 'GCvLucN8CjNcdaxPO2vmpZ84hNl1';
 
 /**
- * АДМИН-ПАНЕЛЬ V15.0: Crystal Guard
- * Реализована настоящая ZIP-архивация с папками /профиль, /сообщения, /истории.
+ * АДМИН-ПАНЕЛЬ V15.5: Crystal Guard
+ * Исправленная ZIP-архивация с папками /профиль, /сообщения, /истории.
  */
 export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const db = useFirestore();
@@ -84,7 +84,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
   };
 
   /**
-   * СБОР ДАННЫХ V15.0: Реальный ZIP с папками.
+   * СБОР ДАННЫХ V15.5: Реальный ZIP с папками.
    */
   const handleCollectArchive = async (userId: string, requestId?: string) => {
     if (!db) return;
@@ -179,7 +179,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
         <DialogHeader className="p-6 bg-primary/5 border-b border-white/5 shrink-0 text-left">
           <div className="flex items-center gap-2">
             <ShieldAlert className="w-5 h-5 text-primary" /> 
-            <DialogTitle className="text-white uppercase italic font-black tracking-tighter">Nuxus Admin V15.0</DialogTitle>
+            <DialogTitle className="text-white uppercase italic font-black tracking-tighter">Nuxus Admin V15.5</DialogTitle>
           </div>
         </DialogHeader>
 

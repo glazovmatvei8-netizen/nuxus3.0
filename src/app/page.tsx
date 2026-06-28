@@ -1,4 +1,3 @@
-
 "use client"
 
 import { useUser, useFirestore, useDoc, useMemoFirebase, useAuth } from '@/firebase';
@@ -19,9 +18,8 @@ import { IosInstaller } from '@/components/ios-installer';
 import { useTranslations } from '@/hooks/use-translations';
 
 /**
- * ГЛАВНЫЙ КОНТРОЛЛЕР ЯДРА V12.0
- * ИСПРАВЛЕННЫЙ ВХОД ЧЕРЕЗ FACE ID (ЛОКАЛЬНЫЙ РЕЖИМ).
- * ПОЛНАЯ РУСИФИКАЦИЯ ИНТЕРФЕЙСА.
+ * ГЛАВНЫЙ КОНТРОЛЛЕР ЯДРА V15.5
+ * ИСПРАВЛЕННЫЙ ВХОД ЧЕРЕЗ FACE ID (СТРОГО ЛОКАЛЬНЫЙ РЕЖИМ).
  */
 export default function Home() {
   const { user, isUserLoading } = useUser();
@@ -93,7 +91,7 @@ export default function Home() {
   };
 
   /**
-   * ИСПРАВЛЕННАЯ ПРОВЕРКА FACE ID (ЛОКАЛЬНЫЙ КЛЮЧ)
+   * ПРОВЕРКА FACE ID (ЛОКАЛЬНЫЙ РЕЖИМ V15.5)
    */
   const tryBiometricAuth = async () => {
     if (typeof window === 'undefined' || !window.PublicKeyCredential) return;
@@ -110,7 +108,6 @@ export default function Home() {
       const challenge = new Uint8Array(32);
       window.crypto.getRandomValues(challenge);
 
-      // Корректная конвертация base64 в Uint8Array для WebAuthn
       const id = Uint8Array.from(atob(storedIdBase64), c => c.charCodeAt(0));
 
       const options: any = {
@@ -129,10 +126,10 @@ export default function Home() {
       const assertion = await navigator.credentials.get(options);
       if (assertion) {
         setIs2FAVerified(true);
-        toast({ title: "Личность подтверждена", description: "Face ID распознан успешно." });
+        toast({ title: "Личность подтверждена", description: "Face ID распознан локально." });
       }
     } catch (e) {
-      console.warn("Nuxus Biometric: Проверка отменена.");
+      console.warn("Nuxus Biometric: Проверка не удалась.");
     } finally {
       setIsBiometricAttempting(false);
     }
