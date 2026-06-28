@@ -31,8 +31,8 @@ import JSZip from 'jszip';
 const ROOT_UID = 'GCvLucN8CjNcdaxPO2vmpZ84hNl1';
 
 /**
- * АДМИН-ПАНЕЛЬ V14.0 «Crystal Archive»
- * Теперь собирает реальный ZIP-архив с папками.
+ * АДМИН-ПАНЕЛЬ V14.3 «Crystal Archive»
+ * Собирает полноценный ZIP-архив с папками сообщений, историй и профиля.
  */
 export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const db = useFirestore();
@@ -94,23 +94,26 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
       const zip = new JSZip();
       const targetProfile = users?.find(u => u.id === userId);
       
-      // 1. Профиль
-      zip.file("profile/user_profile.json", JSON.stringify(targetProfile || {}, null, 2));
+      // 1. Папка Профиль
+      const profileFolder = zip.folder("профиль");
+      profileFolder?.file("user_profile.json", JSON.stringify(targetProfile || {}, null, 2));
 
-      // 2. Истории
+      // 2. Папка Истории
+      const storiesFolder = zip.folder("истории");
       const storiesSnap = await getDocs(query(collection(db, 'stories'), where('userId', '==', userId)));
       const stories = storiesSnap.docs.map(d => d.data());
-      zip.file("stories/active_stories.json", JSON.stringify(stories, null, 2));
+      storiesFolder?.file("active_stories.json", JSON.stringify(stories, null, 2));
 
-      // 3. Сообщения и Чаты
+      // 3. Папка Сообщения
+      const messagesFolder = zip.folder("сообщения");
       const chatsSnap = await getDocs(query(collection(db, 'chats'), where('participantIds', 'array-contains', userId)));
       for (const chatDoc of chatsSnap.docs) {
         const chatData = chatDoc.data();
-        const msgSnap = await getDocs(query(collection(db, 'chats', chatDoc.id, 'messages'), limit(500)));
+        const msgSnap = await getDocs(query(collection(db, 'chats', chatDoc.id, 'messages'), limit(1000)));
         const messages = msgSnap.docs.map(d => d.data());
         
         const safeName = (chatData.name || chatDoc.id).replace(/[/\\?%*:|"<>]/g, '-');
-        zip.file(`messages/chat_${safeName}.json`, JSON.stringify({ info: chatData, messages }, null, 2));
+        messagesFolder?.file(`${safeName}.json`, JSON.stringify({ info: chatData, messages }, null, 2));
       }
 
       // Генерация ZIP-файла
@@ -127,7 +130,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
         await updateDoc(doc(db, 'archiveRequests', requestId), { status: 'ready' });
       }
 
-      toast({ title: "Архив готов", description: "ZIP-файл успешно скачан." });
+      toast({ title: "Архив готов", description: "ZIP-пакет успешно собран." });
     } catch (e) {
       toast({ title: "Ошибка сборки", variant: "destructive" });
     } finally {
@@ -164,7 +167,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
         <DialogHeader className="p-6 bg-primary/5 border-b border-white/5 shrink-0 text-left">
           <div className="flex items-center gap-2">
             <ShieldAlert className="w-5 h-5 text-primary" /> 
-            <DialogTitle className="text-white uppercase italic font-black tracking-tighter">Nuxus Admin V14.0</DialogTitle>
+            <DialogTitle className="text-white uppercase italic font-black tracking-tighter">Nuxus Admin V14.3</DialogTitle>
           </div>
         </DialogHeader>
 
@@ -233,7 +236,16 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
                         <span className="text-[9px] text-muted-foreground uppercase font-black">{u.username}</span>
                       </div>
                     </div>
-                    <Button variant="ghost" size="icon" className="rounded-xl text-primary/40 hover:text-primary" onClick={() => handleCollectArchive(u.id)}><Database className="w-4 h-4" /></Button>
+                    <div className="flex items-center gap-1">
+                      <Button variant="ghost" size="icon" className="rounded-xl text-primary/40 hover:text-primary" onClick={() => handleCollectArchive(u.id)}><Database className="w-4 h-4" /></Button>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="rounded-xl text-white/20"><MoreVertical className="w-4 h-4" /></Button></DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-48 obsidian-glass rounded-xl">
+                           <DropdownMenuItem onClick={() => handleAction(u.id, u.isBanned ? 'unban' : 'ban')} className={u.isBanned ? "text-green-500" : "text-red-500"}>{u.isBanned ? 'Разбанить' : 'Забанить'}</DropdownMenuItem>
+                           <DropdownMenuItem onClick={() => handleAction(u.id, 'give_premium')}>Выдать Premium (Месяц)</DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
                   </div>
                 ))}
               </div>

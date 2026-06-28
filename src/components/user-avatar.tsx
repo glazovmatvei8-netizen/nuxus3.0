@@ -21,7 +21,7 @@ interface UserAvatarProps {
 }
 
 /**
- * Nuxus Avatar Core V14.2 «Crystal Guard»
+ * Nuxus Avatar Core V14.3 «Crystal Guard»
  * ОПТИМИЗИРОВАНО: Значок Premium стал компактнее и изящнее.
  */
 export const UserAvatar = memo(({ userId, className, fallbackName, fallbackClassName, manualAvatarUrl, showOnlineStatus = false }: UserAvatarProps) => {
@@ -104,8 +104,8 @@ export const UserAvatar = memo(({ userId, className, fallbackName, fallbackClass
       {premium && (
         <div className="absolute -bottom-0.5 -right-0.5 z-30 transform hover:scale-110 transition-transform">
           <div className="bg-[#020205] rounded-full p-[1px] shadow-lg border border-white/20">
-            <div className="bg-gradient-to-tr from-yellow-300 to-orange-500 p-[2.5px] rounded-full shadow-inner flex items-center justify-center">
-              <Star className="w-3 h-3 text-black fill-current" />
+            <div className="bg-gradient-to-tr from-yellow-300 to-orange-500 p-[2px] rounded-full shadow-inner flex items-center justify-center w-5 h-5">
+              <Star className="w-2.5 h-2.5 text-black fill-current" />
             </div>
           </div>
         </div>

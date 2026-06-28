@@ -18,8 +18,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { QRCodeSVG } from 'qrcode.react';
 
 /**
- * ГЛАВНЫЙ ЭКРАН ПРОФИЛЯ V14.1
- * Исправлен импорт QRCodeSVG и добавлены все иконки.
+ * ГЛАВНЫЙ ЭКРАН ПРОФИЛЯ V14.3
+ * Оптимизированный скролл и исправленные иконки.
  */
 export default function ProfileView() {
   const { user } = useUser();
@@ -120,20 +120,20 @@ export default function ProfileView() {
 
           <div className="grid grid-cols-2 gap-3">
             <ActionCard icon={QrCode} label="Signal QR" sub="ИДЕНТИФИКАЦИЯ" accent="text-accent" onClick={() => setIsQrOpen(true)} />
-            <ActionCard icon={ShieldCheck} label="QES 14.1" sub="ЗАЩИЩЕНО" accent="text-green-400" />
+            <ActionCard icon={ShieldCheck} label="QES 14.3" sub="ЗАЩИЩЕНО" accent="text-green-400" />
           </div>
 
           <div className="obsidian-glass rounded-[2rem] overflow-hidden divide-y divide-white/[0.03] border-white/5 shadow-xl">
             <ProfileItem icon={Fingerprint} label="Ядро Безопасности" color="text-primary" onClick={() => { setSettingsTab('privacy'); setIsSettingsOpen(true); }} />
-            <ProfileItem icon={Palette} label="Стиль и Брендинг" color="text-white/60" onClick={() => { setSettingsTab('appearance'); setIsSettingsOpen(true); }} />
-            <ProfileItem icon={Bookmark} label="Архив Данных" color="text-white/60" onClick={() => {}} />
+            <ProfileItem icon={Palette} label="Стиль и Брендинг" color="text-white/60" onClick={() => { setSettingsTab('profile'); setIsSettingsOpen(true); }} />
+            <ProfileItem icon={Bookmark} label="Архив Данных" color="text-white/60" onClick={() => { setSettingsTab('interface'); setIsSettingsOpen(true); }} />
             <ProfileItem icon={HelpCircle} label="Интеллект Ядра" color="text-white/60" onClick={() => setIsLegalOpen(true)} />
           </div>
 
           <div className="py-8 flex flex-col items-center gap-4">
             <div className="flex items-center gap-2 obsidian-glass px-4 py-1.5 rounded-full border-white/5">
               <div className="h-1 w-1 rounded-full bg-green-500 animate-pulse" />
-              <p className="text-[8px] text-white/20 uppercase font-black tracking-widest">Узел синхронизирован V14.1</p>
+              <p className="text-[8px] text-white/20 uppercase font-black tracking-widest">Узел синхронизирован V14.3</p>
             </div>
             <div className="flex gap-8 opacity-5">
               <Globe className="w-5 h-5" />
