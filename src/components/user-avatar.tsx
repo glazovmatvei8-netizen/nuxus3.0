@@ -21,8 +21,8 @@ interface UserAvatarProps {
 }
 
 /**
- * Nuxus Avatar Core V13.0 «Diamond Shield»
- * УСИЛЕНИЕ: Огромная звезда Premium в углу аватара.
+ * Nuxus Avatar Core V13.5 «Diamond Shield»
+ * УСИЛЕНИЕ: Огромная звезда Premium в углу аватара, подчеркивающая статус.
  */
 export const UserAvatar = memo(({ userId, className, fallbackName, fallbackClassName, manualAvatarUrl, showOnlineStatus = false }: UserAvatarProps) => {
   const db = useFirestore();
@@ -102,10 +102,10 @@ export const UserAvatar = memo(({ userId, className, fallbackName, fallbackClass
       )}
 
       {premium && (
-        <div className="absolute -bottom-2 -right-2 z-30 scale-150 transform hover:rotate-12 transition-transform cursor-help">
+        <div className="absolute -bottom-1 -right-1 z-30 scale-125 transform hover:rotate-12 transition-transform cursor-help">
           <div className="bg-[#020205] rounded-full p-[1px] shadow-2xl">
-            <div className="bg-gradient-to-tr from-yellow-300 via-orange-500 to-yellow-600 p-[2.5px] rounded-full shadow-inner border border-white/30">
-              <Star className="w-3.5 h-3.5 text-black fill-current drop-shadow-md" />
+            <div className="bg-gradient-to-tr from-yellow-300 via-orange-500 to-yellow-600 p-[3px] rounded-full shadow-inner border border-white/30">
+              <Star className="w-4 h-4 text-black fill-current drop-shadow-md" />
             </div>
           </div>
         </div>

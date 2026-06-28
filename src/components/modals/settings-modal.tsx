@@ -24,16 +24,10 @@ import { cn, isUserPremium } from '@/lib/utils';
 import type { User } from '@/lib/types';
 import { generateAiAvatar } from '@/ai/flows/generate-ai-avatar-flow';
 
-const THEMES = [
-  { id: 'default', name: 'Nuxus Оригинал', color: 'bg-[#8B5CF6]' },
-  { id: 'ocean', name: 'Океан', color: 'bg-[#0EA5E9]' },
-  { id: 'rainbow', name: 'Радужный', color: 'bg-gradient-to-r from-pink-500 via-yellow-500 to-cyan-500' },
-  { id: 'gold', name: 'Золотой Премиум', color: 'bg-[#EAB308]', premium: true },
-  { id: 'emerald', name: 'Изумруд', color: 'bg-[#22C55E]' },
-  { id: 'cyberpunk', name: 'Киберпанк 2077', color: 'bg-[#FDE047]', premium: true },
-  { id: 'nebula', name: 'Туманность', color: 'bg-[#D8B4FE]', premium: true },
-];
-
+/**
+ * ПАРАМЕТРЫ V13.5 «Absolute Local»
+ * Оптимизированная логика Face ID и запрос структурированного архива.
+ */
 export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const auth = useAuth();
   const db = useFirestore();
@@ -131,7 +125,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         'settings.biometricEnabled': form.biometricEnabled
       });
       onOpenChange(false);
-      toast({ title: "Ядро обновлено V13.0" });
+      toast({ title: "Ядро обновлено V13.5" });
     } catch (e: any) {
       toast({ title: "Ошибка сохранения", variant: "destructive" });
     }
@@ -148,7 +142,6 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
       const challenge = new Uint8Array(32);
       window.crypto.getRandomValues(challenge);
 
-      // FIX V13: Use random buffer for user.id to avoid iCloud "discoverable" requirement
       const randomUserId = new Uint8Array(16);
       window.crypto.getRandomValues(randomUserId);
 
@@ -165,10 +158,10 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
           authenticatorSelection: { 
             authenticatorAttachment: "platform",
             userVerification: "required",
-            residentKey: "discouraged", // AGGRESSIVE ICLOUD BYPASS
+            residentKey: "discouraged", 
             requireResidentKey: false
           },
-          attestation: "none",
+          attestation: "none", // Минимизирует запрос к iCloud
           timeout: 60000,
         }
       };
@@ -180,11 +173,15 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         
         localStorage.setItem('nuxus_biometric_id', base64Id);
         setForm({ ...form, biometricEnabled: true });
-        toast({ title: "Локальная связь активна", description: "Face ID привязан без iCloud." });
+        toast({ title: "Локальная связь активна", description: "Face ID привязан успешно." });
       }
     } catch (e: any) {
       console.error("Nuxus Biometric Error:", e);
-      toast({ title: "Связь прервана", description: "Face ID требует iCloud Keychain или настройки устройства.", variant: "destructive" });
+      toast({ 
+        title: "Связь прервана", 
+        description: "Для работы Face ID без iCloud установите код-пароль на iPhone.", 
+        variant: "destructive" 
+      });
     } finally {
       setIsLinkingBiometrics(false);
     }
@@ -200,7 +197,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         status: 'pending',
         createdAt: new Date().toISOString()
       });
-      toast({ title: "Запрос отправлен", description: "Ваш архив будет собран администратором Ядра." });
+      toast({ title: "Запрос отправлен", description: "Ваш архив (Data Package) будет собран Админом." });
     } catch (e) {
       toast({ title: "Ошибка запроса", variant: "destructive" });
     } finally {
@@ -215,7 +212,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
       <DialogContent className="max-w-md bg-[#0a0a0c] border-white/10 p-0 overflow-hidden h-[85vh] flex flex-col rounded-[2.5rem] shadow-2xl outline-none">
         <DialogHeader className="p-6 border-b border-white/5 shrink-0 text-left">
           <DialogTitle className="flex items-center gap-2 text-xl font-black italic uppercase tracking-tighter text-white">
-            <Settings2 className="w-5 h-5 text-primary" /> Параметры V13.0
+            <Settings2 className="w-5 h-5 text-primary" /> Параметры V13.5
           </DialogTitle>
         </DialogHeader>
         
@@ -257,15 +254,15 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                   <div className="grid grid-cols-4 gap-2 items-end">
                     <div className="space-y-2 col-span-1">
                       <Label className="text-[10px] uppercase font-black text-muted-foreground ml-1">Значок</Label>
-                      <Input placeholder="🔥" value={form.statusEmoji} onChange={e => setForm({...form, statusEmoji: e.target.value})} className="bg-white/5 border-white/5 h-12 rounded-2xl text-center text-lg" maxLength={2} />
+                      <Input placeholder="🔥" value={form.statusEmoji} onChange={e => setForm({...form, statusEmoji: e.target.value})} className="bg-white/5 border-white/10 h-12 rounded-2xl text-center text-lg" maxLength={2} />
                     </div>
                     <div className="space-y-2 col-span-3">
                       <Label className="text-[10px] uppercase font-black text-muted-foreground ml-1">Статус</Label>
-                      <Input placeholder="Ваш текущий статус..." value={form.statusText} onChange={e => setForm({...form, statusText: e.target.value})} className="bg-white/5 border-white/5 h-12 rounded-2xl" />
+                      <Input placeholder="Ваш текущий статус..." value={form.statusText} onChange={e => setForm({...form, statusText: e.target.value})} className="bg-white/5 border-white/10 h-12 rounded-2xl" />
                     </div>
                   </div>
-                  <div className="space-y-2"><Label className="text-[10px] uppercase font-black text-muted-foreground ml-1">Имя</Label><Input value={form.name} onChange={e => setForm({...form, name: e.target.value})} className="bg-white/5 border-white/5 h-12 rounded-2xl" /></div>
-                  <div className="space-y-2"><Label className="text-[10px] uppercase font-black text-muted-foreground ml-1">Никнейм</Label><div className="relative"><span className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground">@</span><Input value={form.username} onChange={e => setForm({...form, username: e.target.value})} className="bg-white/5 border-white/5 h-12 rounded-2xl pl-8" /></div></div>
+                  <div className="space-y-2"><Label className="text-[10px] uppercase font-black text-muted-foreground ml-1">Имя</Label><Input value={form.name} onChange={e => setForm({...form, name: e.target.value})} className="bg-white/5 border-white/10 h-12 rounded-2xl" /></div>
+                  <div className="space-y-2"><Label className="text-[10px] uppercase font-black text-muted-foreground ml-1">Никнейм</Label><div className="relative"><span className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground">@</span><Input value={form.username} onChange={e => setForm({...form, username: e.target.value})} className="bg-white/5 border-white/10 h-12 rounded-2xl pl-8" /></div></div>
                   <div className="space-y-2"><Label className="text-[10px] uppercase font-black text-muted-foreground ml-1">О себе</Label><Textarea value={form.bio} onChange={e => setForm({...form, bio: e.target.value})} className="bg-white/5 border-white/5 rounded-2xl resize-none h-24 text-xs" /></div>
                 </div>
               </div>
@@ -292,7 +289,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
 
                     <div className="space-y-3">
                       <div className="flex items-center justify-between">
-                        <div className="flex flex-col text-left"><span className="text-xs font-bold text-white uppercase">FaceID / TouchID</span><span className="text-[8px] text-muted-foreground uppercase font-bold">Биометрия (Без iCloud)</span></div>
+                        <div className="flex flex-col text-left"><span className="text-xs font-bold text-white uppercase">FaceID / TouchID</span><span className="text-[8px] text-muted-foreground uppercase font-bold">Биометрия (Локально)</span></div>
                         <Switch checked={form.biometricEnabled} onCheckedChange={v => { if(!v) setForm({...form, biometricEnabled: false}); else handleLinkBiometrics(); }} />
                       </div>
                       
@@ -316,9 +313,9 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                <div className="p-6 bg-white/5 rounded-[2.5rem] border border-white/10 text-center space-y-6">
                   <Zap className="w-10 h-10 text-primary mx-auto animate-pulse" />
                   <div className="space-y-1">
-                    <h3 className="text-lg font-black uppercase italic text-white">Nuxus Kernel V13.0</h3>
+                    <h3 className="text-lg font-black uppercase italic text-white">Nuxus Kernel V13.5</h3>
                     <p className="text-[9px] text-muted-foreground uppercase font-bold tracking-widest leading-relaxed">
-                      Ядро полностью синхронизировано.<br/>Система экспорта данных готова.
+                      Ядро полностью синхронизировано.<br/>Система Data Package активна.
                     </p>
                   </div>
 
@@ -328,14 +325,14 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                         <span className="text-[10px] font-black uppercase text-white">Суверенитет данных</span>
                      </div>
                      <p className="text-[8px] text-muted-foreground uppercase font-bold leading-relaxed px-4">
-                        Вы можете запросить полный архив своих данных (переписки, истории, настройки). Администратор соберет и отправит вам пакет.
+                        Запросите структурированный архив профиля (Data Package). Он включает чаты, истории и настройки, разложенные по папкам.
                      </p>
                      <Button 
                         onClick={handleRequestArchive}
                         disabled={isRequestingArchive}
                         className="w-full h-12 bg-white/5 border border-white/10 rounded-xl font-black uppercase text-[9px] tracking-widest gap-2 hover:bg-white/10"
                      >
-                        {isRequestingArchive ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Download className="w-4 h-4" /> Запросить архив профиля</>}
+                        {isRequestingArchive ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Download className="w-4 h-4" /> Запросить Data Package</>}
                      </Button>
                   </div>
                </div>

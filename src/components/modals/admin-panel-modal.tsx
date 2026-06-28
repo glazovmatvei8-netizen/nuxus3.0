@@ -20,11 +20,8 @@ import { collection, query, doc, limit, updateDoc, writeBatch, increment, getDoc
 import { UserAvatar } from '@/components/user-avatar';
 import { 
   ShieldAlert, Users, Star, Ban, CheckCircle2, ShieldCheck, Radio, 
-  MoreVertical, ShieldOff, Activity, Wallet, Check, Trash2, X, Globe, Fingerprint, Send, Zap, Loader2, AlertTriangle, Play, Square, Flame, Radiation, Database, Download, FileText
+  MoreVertical, ShieldOff, Activity, Wallet, Check, Trash2, X, Globe, Fingerprint, Send, Zap, Loader2, AlertTriangle, Play, Square, Flame, Radiation, Database, Download, FileText, Package
 } from 'lucide-react';
-import { 
-  XAxis, YAxis, ResponsiveContainer, AreaChart, Area, Tooltip
-} from 'recharts';
 import type { User, TopUpRequest, Chat, ArchiveRequest, Message, Story } from '@/lib/types';
 import { formatDisplayName, isUserPremium, cn, isGlobalAdmin } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
@@ -33,6 +30,10 @@ import { ru } from 'date-fns/locale';
 
 const ROOT_UID = 'GCvLucN8CjNcdaxPO2vmpZ84hNl1';
 
+/**
+ * АДМИН-ПАНЕЛЬ V13.5 «Crystal Vault»
+ * Теперь собирает архив в структурированный "пакет" данных.
+ */
 export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const db = useFirestore();
   const { toast } = useToast();
@@ -90,33 +91,48 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
     if (!db) return;
     setIsCollectingArchive(userId);
     try {
-      toast({ title: "Сбор данных...", description: "Ядро анализирует сигналы узла." });
+      toast({ title: "Сбор данных...", description: "Создание пакета Crystal Vault." });
       
       const archive: any = {
-        profile: users?.find(u => u.id === userId),
-        messages: [],
-        stories: [],
-        chats: []
+        metadata: {
+          generatedAt: new Date().toISOString(),
+          version: "13.5",
+          ownerId: userId
+        },
+        folders: {
+          profile: {},
+          messages: {},
+          stories: {},
+          wallet: {}
+        }
       };
 
-      // 1. Fetch user stories
-      const storiesSnap = await getDocs(query(collection(db, 'stories'), where('userId', '==', userId)));
-      archive.stories = storiesSnap.docs.map(d => d.data());
+      const targetProfile = users?.find(u => u.id === userId);
+      archive.folders.profile["user_profile.json"] = targetProfile;
 
-      // 2. Fetch chats and recent messages (sampled)
+      // 1. Stories
+      const storiesSnap = await getDocs(query(collection(db, 'stories'), where('userId', '==', userId)));
+      archive.folders.stories["active_stories.json"] = storiesSnap.docs.map(d => d.data());
+
+      // 2. Chats & Messages
       const chatsSnap = await getDocs(query(collection(db, 'chats'), where('participantIds', 'array-contains', userId)));
       for (const chatDoc of chatsSnap.docs) {
-        archive.chats.push(chatDoc.data());
-        const msgSnap = await getDocs(query(collection(db, 'chats', chatDoc.id, 'messages'), limit(50)));
-        archive.messages.push(...msgSnap.docs.map(d => d.data()));
+        const chatData = chatDoc.data();
+        const chatName = chatData.name || chatData.username || chatDoc.id;
+        archive.folders.messages[`chat_${chatDoc.id}.json`] = {
+          info: chatData,
+          signals: []
+        };
+        const msgSnap = await getDocs(query(collection(db, 'chats', chatDoc.id, 'messages'), limit(100)));
+        archive.folders.messages[`chat_${chatDoc.id}.json`].signals = msgSnap.docs.map(d => d.data());
       }
 
-      // Generate File
+      // Generate File (Structured Package)
       const blob = new Blob([JSON.stringify(archive, null, 2)], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `nuxus_archive_${userId}_${format(new Date(), 'yyyyMMdd')}.json`;
+      a.download = `nuxus_archive_${userId}_package.json`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -125,7 +141,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
         await updateDoc(doc(db, 'archiveRequests', requestId), { status: 'ready' });
       }
 
-      toast({ title: "Архив собран", description: "Файл загружен на устройство." });
+      toast({ title: "Архив собран", description: "Структурированный пакет сохранен." });
     } catch (e) {
       toast({ title: "Ошибка сбора", variant: "destructive" });
     } finally {
@@ -164,13 +180,13 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
             <div className="flex items-center gap-2">
               <ShieldAlert className="w-5 h-5 text-primary animate-pulse" /> 
               <DialogTitle className="text-white uppercase italic font-black tracking-tighter text-xs md:text-base select-none">
-                Nuxus Admin V13.0
+                Nuxus Admin V13.5
               </DialogTitle>
             </div>
             {archiveRequests && archiveRequests.length > 0 && (
               <div className="flex items-center gap-1.5 bg-accent/20 px-3 py-1 rounded-full border border-accent/20 animate-pulse">
-                <FileText className="w-2.5 h-2.5 text-accent" />
-                <span className="text-[8px] font-black text-accent uppercase tracking-widest">Запросы: {archiveRequests.length}</span>
+                <Package className="w-2.5 h-2.5 text-accent" />
+                <span className="text-[8px] font-black text-accent uppercase tracking-widest">Архивы: {archiveRequests.length}</span>
               </div>
             )}
           </div>
@@ -190,7 +206,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
             <ScrollArea className="flex-1">
                <div className="p-6 space-y-4">
                   <h3 className="text-[10px] font-black uppercase text-primary mb-4 flex items-center gap-2">
-                    <Database className="w-3 h-3" /> Запросы на экспорт данных
+                    <Database className="w-3 h-3" /> Запросы на экспорт (Crystal Vault)
                   </h3>
                   {archiveRequests && archiveRequests.length > 0 ? (
                     archiveRequests.map(req => (
@@ -207,7 +223,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
                             disabled={isCollectingArchive === req.userId}
                             className="h-10 px-4 bg-primary text-white rounded-xl font-black uppercase text-[9px] tracking-widest gap-2 shadow-lg"
                          >
-                            {isCollectingArchive === req.userId ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <><Download className="w-3.5 h-3.5" /> Собрать архив</>}
+                            {isCollectingArchive === req.userId ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <><Package className="w-3.5 h-3.5" /> Собрать пакет</>}
                          </Button>
                       </div>
                     ))
