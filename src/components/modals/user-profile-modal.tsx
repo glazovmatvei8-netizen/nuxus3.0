@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { UserAvatar } from '@/components/user-avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { 
-  MessageCircle, Star, Copy, Shield, Calendar, Info, Phone, Video, Gift, Sparkles, ChevronRight, Zap, Globe, ShieldCheck, Cpu
+  MessageCircle, Star, Shield, Calendar, Info, Phone, Video, Gift, Sparkles, ChevronRight, Zap, Globe, ShieldCheck, Cpu
 } from 'lucide-react';
 import { useFirestore, useUser, useDoc, useMemoFirebase, useCollection } from '@/firebase';
 import { doc, query, collection, where, limit, getDocs, addDoc } from 'firebase/firestore';
@@ -20,7 +20,7 @@ import { ru } from 'date-fns/locale';
 import { GiftModal } from './gift-modal';
 
 /**
- * МОДАЛЬНОЕ ОКНО ПРОФИЛЯ V14.3
+ * МОДАЛЬНОЕ ОКНО ПРОФИЛЯ V14.8
  * Исправлены импорты ShieldCheck и Cpu.
  */
 export function UserProfileModal() {
@@ -204,7 +204,7 @@ export function UserProfileModal() {
                     value={hasActivePremium ? "Elite Node" : "Standard"} 
                     color={hasActivePremium ? "text-accent" : "text-white/30"} 
                   />
-                  <InfoRow icon={Cpu} label="Протокол" value="QES 14.3" />
+                  <InfoRow icon={Cpu} label="Протокол" value="QES 14.8" />
                   {targetUser?.countryCode && <InfoRow icon={Globe} label="Сектор" value={targetUser.countryCode.toUpperCase()} />}
                 </div>
               </div>

@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, memo, useMemo } from 'react';
@@ -21,8 +20,9 @@ interface UserAvatarProps {
 }
 
 /**
- * Nuxus Avatar Core V14.3 «Crystal Guard»
- * ОПТИМИЗИРОВАНО: Значок Premium стал компактнее и изящнее.
+ * Nuxus Avatar Core V15.0 «Crystal Guard»
+ * Адаптивный размер значка Premium (35% от родителя).
+ * Идеально для меню и маленьких кнопок.
  */
 export const UserAvatar = memo(({ userId, className, fallbackName, fallbackClassName, manualAvatarUrl, showOnlineStatus = false }: UserAvatarProps) => {
   const db = useFirestore();
@@ -101,11 +101,12 @@ export const UserAvatar = memo(({ userId, className, fallbackName, fallbackClass
         </div>
       )}
 
+      {/* Адаптивный индикатор Premium (35% от аватара) */}
       {premium && (
-        <div className="absolute -bottom-0.5 -right-0.5 z-30 transform hover:scale-110 transition-transform">
-          <div className="bg-[#020205] rounded-full p-[1px] shadow-lg border border-white/20">
-            <div className="bg-gradient-to-tr from-yellow-300 to-orange-500 p-[2px] rounded-full shadow-inner flex items-center justify-center w-5 h-5">
-              <Star className="w-2.5 h-2.5 text-black fill-current" />
+        <div className="absolute -bottom-[5%] -right-[5%] z-30 transform hover:scale-110 transition-transform w-[35%] h-[35%] max-w-[32px] max-h-[32px]">
+          <div className="bg-[#020205] rounded-full p-[1px] shadow-lg border border-white/20 w-full h-full">
+            <div className="bg-gradient-to-tr from-yellow-300 to-orange-500 p-[15%] rounded-full shadow-inner flex items-center justify-center w-full h-full">
+              <Star className="w-[85%] h-[85%] text-black fill-current" />
             </div>
           </div>
         </div>

@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useMemo } from 'react';
@@ -13,17 +12,16 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, doc, limit, updateDoc, writeBatch, getDocs, where } from 'firebase/firestore';
+import { collection, query, doc, limit, updateDoc, writeBatch, getDocs, where, orderBy } from 'firebase/firestore';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
-  ShieldAlert, Users, Star, Ban, CheckCircle2, ShieldCheck, 
+  ShieldAlert, Users, Star, Ban, ShieldCheck, 
   MoreVertical, Send, Loader2, Database, Package, FileText
 } from 'lucide-react';
 import type { User, ArchiveRequest } from '@/lib/types';
-import { formatDisplayName, isUserPremium, cn, isGlobalAdmin } from '@/lib/utils';
+import { formatDisplayName, isUserPremium, cn, isGlobalAdmin, decryptSignal } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { addMonths, format } from 'date-fns';
 import JSZip from 'jszip';
@@ -31,8 +29,8 @@ import JSZip from 'jszip';
 const ROOT_UID = 'GCvLucN8CjNcdaxPO2vmpZ84hNl1';
 
 /**
- * АДМИН-ПАНЕЛЬ V14.3 «Crystal Archive»
- * Собирает полноценный ZIP-архив с папками сообщений, историй и профиля.
+ * АДМИН-ПАНЕЛЬ V15.0: Crystal Guard
+ * Реализована настоящая ZIP-архивация с папками /профиль, /сообщения, /истории.
  */
 export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const db = useFirestore();
@@ -85,11 +83,14 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
     }
   };
 
+  /**
+   * СБОР ДАННЫХ V15.0: Реальный ZIP с папками.
+   */
   const handleCollectArchive = async (userId: string, requestId?: string) => {
     if (!db) return;
     setIsCollectingArchive(userId);
     try {
-      toast({ title: "Сбор данных...", description: "Формирование ZIP-архива." });
+      toast({ title: "Сбор данных...", description: "Формирование ZIP-пакета с папками." });
       
       const zip = new JSZip();
       const targetProfile = users?.find(u => u.id === userId);
@@ -101,27 +102,37 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
       // 2. Папка Истории
       const storiesFolder = zip.folder("истории");
       const storiesSnap = await getDocs(query(collection(db, 'stories'), where('userId', '==', userId)));
-      const stories = storiesSnap.docs.map(d => d.data());
+      const stories = storiesSnap.docs.map(d => ({ id: d.id, ...d.data() }));
       storiesFolder?.file("active_stories.json", JSON.stringify(stories, null, 2));
 
       // 3. Папка Сообщения
       const messagesFolder = zip.folder("сообщения");
       const chatsSnap = await getDocs(query(collection(db, 'chats'), where('participantIds', 'array-contains', userId)));
+      
       for (const chatDoc of chatsSnap.docs) {
         const chatData = chatDoc.data();
-        const msgSnap = await getDocs(query(collection(db, 'chats', chatDoc.id, 'messages'), limit(1000)));
-        const messages = msgSnap.docs.map(d => d.data());
+        const msgSnap = await getDocs(query(collection(db, 'chats', chatDoc.id, 'messages'), orderBy('sentAt', 'asc'), limit(5000)));
+        const messages = msgSnap.docs.map(d => {
+          const data = d.data();
+          return { 
+            id: d.id, 
+            ...data,
+            decryptedContent: data.contentType === 'text' ? decryptSignal(data.content) : '[Медиа сигнал]'
+          };
+        });
         
         const safeName = (chatData.name || chatDoc.id).replace(/[/\\?%*:|"<>]/g, '-');
-        messagesFolder?.file(`${safeName}.json`, JSON.stringify({ info: chatData, messages }, null, 2));
+        messagesFolder?.file(`${safeName}.json`, JSON.stringify({ 
+          chat_info: { id: chatDoc.id, type: chatData.type, name: chatData.name, username: chatData.username },
+          messages 
+        }, null, 2));
       }
 
-      // Генерация ZIP-файла
       const content = await zip.generateAsync({ type: "blob" });
       const url = URL.createObjectURL(content);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `nuxus_archive_${userId}.zip`;
+      a.download = `nuxus_archive_${userId}_${Date.now()}.zip`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -130,9 +141,10 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
         await updateDoc(doc(db, 'archiveRequests', requestId), { status: 'ready' });
       }
 
-      toast({ title: "Архив готов", description: "ZIP-пакет успешно собран." });
-    } catch (e) {
-      toast({ title: "Ошибка сборки", variant: "destructive" });
+      toast({ title: "Архив готов", description: "ZIP-пакет успешно собран и скачан." });
+    } catch (e: any) {
+      console.error(e);
+      toast({ title: "Ошибка сборки", description: e.message, variant: "destructive" });
     } finally {
       setIsCollectingArchive(null);
     }
@@ -167,7 +179,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
         <DialogHeader className="p-6 bg-primary/5 border-b border-white/5 shrink-0 text-left">
           <div className="flex items-center gap-2">
             <ShieldAlert className="w-5 h-5 text-primary" /> 
-            <DialogTitle className="text-white uppercase italic font-black tracking-tighter">Nuxus Admin V14.3</DialogTitle>
+            <DialogTitle className="text-white uppercase italic font-black tracking-tighter">Nuxus Admin V15.0</DialogTitle>
           </div>
         </DialogHeader>
 
