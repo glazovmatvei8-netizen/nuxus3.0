@@ -29,8 +29,8 @@ import JSZip from 'jszip';
 const ROOT_UID = 'GCvLucN8CjNcdaxPO2vmpZ84hNl1';
 
 /**
- * АДМИН-ПАНЕЛЬ V16.5: Crystal Guard
- * Исправленная ZIP-архивация: Корректная обработка имен файлов и расшифровка.
+ * АДМИН-ПАНЕЛЬ V17.0: Crystal Master
+ * Исправленная ZIP-архивация: Очистка имен файлов и расшифровка.
  */
 export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const db = useFirestore();
@@ -84,34 +84,29 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
   };
 
   /**
-   * СБОР ДАННЫХ V16.5: Исправлен фикс имен файлов и вложенности.
+   * СБОР ДАННЫХ V17.0: Исправлен фикс имен файлов и структуры.
    */
   const handleCollectArchive = async (userId: string, requestId?: string) => {
     if (!db) return;
     setIsCollectingArchive(userId);
     try {
-      toast({ title: "Сбор данных...", description: "Инициализация JSZip" });
-      
       const zip = new JSZip();
       const targetProfile = users?.find(u => u.id === userId);
       
       // 1. Папка Профиль
-      const profileFolder = zip.folder("профиль");
-      profileFolder?.file("данные_профиля.json", JSON.stringify(targetProfile || {}, null, 2));
+      zip.file("профиль/данные_узла.json", JSON.stringify(targetProfile || {}, null, 2));
 
       // 2. Папка Истории
-      const storiesFolder = zip.folder("истории");
       const storiesSnap = await getDocs(query(collection(db, 'stories'), where('userId', '==', userId)));
       const stories = storiesSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-      storiesFolder?.file("активные_моменты.json", JSON.stringify(stories, null, 2));
+      zip.file("истории/активные_моменты.json", JSON.stringify(stories, null, 2));
 
       // 3. Папка Сообщения (с дешифровкой)
-      const messagesFolder = zip.folder("сообщения");
       const chatsSnap = await getDocs(query(collection(db, 'chats'), where('participantIds', 'array-contains', userId)));
       
       for (const chatDoc of chatsSnap.docs) {
         const chatData = chatDoc.data();
-        const msgSnap = await getDocs(query(collection(db, 'chats', chatDoc.id, 'messages'), orderBy('sentAt', 'asc'), limit(1000)));
+        const msgSnap = await getDocs(query(collection(db, 'chats', chatDoc.id, 'messages'), orderBy('sentAt', 'asc'), limit(500)));
         
         const messages = msgSnap.docs.map(d => {
           const data = d.data();
@@ -122,10 +117,11 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
           };
         });
         
-        // Очистка имени файла от запрещенных символов
-        const safeName = (chatData.name || chatDoc.id).replace(/[/\\?%*:|"<>]/g, '-');
-        messagesFolder?.file(`${safeName}.json`, JSON.stringify({ 
-          чат_инфо: { id: chatDoc.id, тип: chatData.type, имя: chatData.name, юзернейм: chatData.username },
+        // Очистка имени файла
+        const rawName = chatData.name || chatDoc.id;
+        const safeName = rawName.replace(/[/\\?%*:|"<>]/g, '-').trim();
+        zip.file(`сообщения/${safeName}.json`, JSON.stringify({ 
+          чат: { id: chatDoc.id, тип: chatData.type, имя: rawName },
           сообщения: messages 
         }, null, 2));
       }
@@ -143,7 +139,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
         await updateDoc(doc(db, 'archiveRequests', requestId), { status: 'ready' });
       }
 
-      toast({ title: "Архив готов", description: "Данные успешно упакованы." });
+      toast({ title: "Архив готов", description: "Связь установлена, пакет передан." });
     } catch (e: any) {
       console.error(e);
       toast({ title: "Ошибка сборки", description: e.message, variant: "destructive" });
@@ -181,7 +177,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
         <DialogHeader className="p-6 bg-primary/5 border-b border-white/5 shrink-0 text-left">
           <div className="flex items-center gap-2">
             <ShieldAlert className="w-5 h-5 text-primary" /> 
-            <DialogTitle className="text-white uppercase italic font-black tracking-tighter">Nuxus Admin V16.5</DialogTitle>
+            <DialogTitle className="text-white uppercase italic font-black tracking-tighter">Nuxus Admin V17.0</DialogTitle>
           </div>
         </DialogHeader>
 

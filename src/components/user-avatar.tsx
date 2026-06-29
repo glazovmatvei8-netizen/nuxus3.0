@@ -20,9 +20,8 @@ interface UserAvatarProps {
 }
 
 /**
- * Nuxus Avatar Core V15.0 «Crystal Guard»
+ * Nuxus Avatar Core V17.0 «Crystal Master»
  * Адаптивный размер значка Premium (35% от родителя).
- * Идеально для меню и маленьких кнопок.
  */
 export const UserAvatar = memo(({ userId, className, fallbackName, fallbackClassName, manualAvatarUrl, showOnlineStatus = false }: UserAvatarProps) => {
   const db = useFirestore();

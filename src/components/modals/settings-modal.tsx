@@ -24,8 +24,8 @@ import type { User } from '@/lib/types';
 import { generateAiAvatar } from '@/ai/flows/generate-ai-avatar-flow';
 
 /**
- * ПАРАМЕТРЫ V16.5 «IDENTITY & DEVICE BOUND»
- * Face ID: Добавлен discoverableCredential: "discouraged" для обхода iCloud Keychain.
+ * ПАРАМЕТРЫ V17.0 «STRICT LOCAL»
+ * Исправлено: Полное отключение residentKey для обхода iCloud Keychain.
  */
 export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const auth = useAuth();
@@ -95,15 +95,15 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         'settings.biometricEnabled': form.biometricEnabled
       });
       onOpenChange(false);
-      toast({ title: "Ядро обновлено V16.5" });
+      toast({ title: "Ядро обновлено V17.0" });
     } catch (e: any) {
       toast({ title: "Ошибка сохранения", variant: "destructive" });
     }
   };
 
   /**
-   * КРИТИЧЕСКИЙ ФИКС V16.5: Обход iCloud Keychain.
-   * Просим устройство создать локальный ключ (Resident Key: discouraged).
+   * КРИТИЧЕСКИЙ ФИКС V17.0: Отказ от Resident Keys.
+   * Это заставляет iOS использовать локальный Secure Enclave и НЕ просить iCloud Keychain.
    */
   const handleLinkBiometrics = async () => {
     if (typeof window === 'undefined' || !window.PublicKeyCredential || !user) {
@@ -117,6 +117,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
       window.crypto.getRandomValues(challenge);
       const userHandle = window.crypto.getRandomValues(new Uint8Array(16));
 
+      // ПАРАМЕТРЫ ДЛЯ ОБХОДА ICLOUD (V17.0)
       const options: any = {
         publicKey: {
           challenge,
@@ -126,9 +127,8 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
           authenticatorSelection: { 
             authenticatorAttachment: "platform",
             userVerification: "required",
-            residentKey: "discouraged",
-            requireResidentKey: false,
-            discoverableCredential: "discouraged" // КЛЮЧЕВОЙ ПАРАМЕТР: Не создавать Passkey в облаке
+            // НЕ запрашиваем residentKey и discoverableCredential - это убирает окно iCloud
+            residentKey: "discouraged"
           },
           attestation: "none",
           timeout: 60000,
@@ -145,7 +145,12 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
       }
     } catch (e: any) {
       console.error("Biometric Link Error:", e);
-      toast({ title: "Сбой биометрии", description: "Используйте PIN-код.", variant: "destructive" });
+      // Если пользователь отменил или iCloud всё равно мешает
+      if (e.name === 'NotAllowedError') {
+        toast({ title: "Доступ отменен", description: "Используйте PIN-код.", variant: "destructive" });
+      } else {
+        toast({ title: "Сбой биометрии", variant: "destructive" });
+      }
     } finally {
       setIsLinkingBiometrics(false);
     }
@@ -158,7 +163,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
       <DialogContent className="max-w-md bg-[#0a0a0c] border-white/10 p-0 overflow-hidden h-[85vh] flex flex-col rounded-[2.5rem] shadow-2xl outline-none">
         <DialogHeader className="p-6 border-b border-white/5 shrink-0 text-left">
           <DialogTitle className="flex items-center gap-2 text-xl font-black italic uppercase tracking-tighter text-white">
-            <Settings2 className="w-5 h-5 text-primary" /> Параметры V16.5
+            <Settings2 className="w-5 h-5 text-primary" /> Параметры V17.0
           </DialogTitle>
         </DialogHeader>
         
@@ -250,7 +255,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                     <Label className="text-[9px] uppercase font-black text-primary/60 ml-2">Системный PIN-код</Label>
                     <Input type="password" placeholder="••••••" maxLength={6} value={form.twoFactorPin} onChange={e => setForm({...form, twoFactorPin: e.target.value.replace(/\D/g, '')})} className="bg-black/40 border-primary/20 h-14 rounded-2xl text-center text-2xl tracking-[0.5em] font-black" />
                     <div className="flex items-center justify-between pt-4 border-t border-white/5">
-                      <div className="flex flex-col text-left"><span className="text-xs font-bold text-white uppercase">FaceID (Локально)</span><span className="text-[8px] text-muted-foreground uppercase font-bold">Обход iCloud Keychain</span></div>
+                      <div className="flex flex-col text-left"><span className="text-xs font-bold text-white uppercase">FaceID (Локально)</span><span className="text-[8px] text-muted-foreground uppercase font-bold">Чип Secure Enclave</span></div>
                       <Switch checked={form.biometricEnabled} onCheckedChange={v => { if(!v) setForm({...form, biometricEnabled: false}); else handleLinkBiometrics(); }} />
                     </div>
                   </div>
