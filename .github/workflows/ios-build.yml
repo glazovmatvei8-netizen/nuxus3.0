@@ -1,4 +1,3 @@
-
 name: Build iOS IPA
 
 on:
@@ -17,6 +16,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
+          cache: 'npm'
 
       - name: Install Dependencies
         run: npm install
@@ -26,18 +26,18 @@ jobs:
 
       - name: Capacitor Sync
         run: |
-          # Гарантируем наличие папки out для Capacitor
-          mkdir -p out
-          if [ ! -f "out/index.html" ]; then
-            echo "<html><body>Nuxus Bridge</body></html>" > out/index.html
-          fi
-          
-          # Инициализируем iOS если её нет
+          # Автоматически добавляем платформу iOS, если её еще нет в репозитории
           if [ ! -d "ios" ]; then
             npx cap add ios
           fi
           
+          # Переносим собранный Next.js проект в нативную обертку iOS
           npx cap sync ios
+
+      - name: Install CocoaPods Dependencies
+        run: |
+          # Важный шаг: без установки подов нативного проекта Xcode вызовет ошибку сборки
+          cd ios/App && pod install
 
       - name: Build iOS (Xcode)
         run: |
@@ -47,16 +47,18 @@ jobs:
                      -configuration Release \
                      -derivedDataPath build \
                      CODE_SIGNING_ALLOWED=NO \
-                     CODE_SIGNING_REQUIRED=NO
+                     CODE_SIGNING_REQUIRED=NO \
+                     COMPILER_INDEX_STORE_ENABLE=NO
 
       - name: Create IPA
         run: |
           mkdir -p Payload
+          # Копируем скомпилированное приложение в структуру Payload
           cp -r build/Build/Products/Release-iphoneos/App.app Payload/
           zip -r Nuxus.ipa Payload
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: Nuxus-IPA
+          name: Nuxus-Unsigned-IPA
           path: Nuxus.ipa
