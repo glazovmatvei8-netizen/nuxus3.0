@@ -10,7 +10,7 @@ import versions from '@/app/versions.json';
 
 /**
  * АКТУАЛЬНАЯ ВЕРСИЯ УЗЛА V22.8.0
- * Синхронизировано с versions.json для предотвращения цикличных обновлений.
+ * Синхронизировано для предотвращения цикличных обновлений.
  */
 const CURRENT_VERSION = "22.8.0";
 
@@ -29,7 +29,6 @@ export function UpdateNotifier() {
       if (!isUpToDate) {
         const deferred = sessionStorage.getItem('nuxus_deferred_update');
         if (deferred !== versions.latestVersion) {
-          // Показываем окно через 2 секунды после инициализации
           setTimeout(() => {
             setIsManualCheck(false);
             setIsOpen(true);
@@ -57,7 +56,6 @@ export function UpdateNotifier() {
         setUpdateProgress(100);
         clearInterval(interval);
         setTimeout(() => {
-          // Имитируем установку нового билда через перезагрузку
           window.location.reload();
         }, 1200);
       } else {

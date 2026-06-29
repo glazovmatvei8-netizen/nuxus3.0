@@ -1,3 +1,4 @@
+
 "use client"
 
 import { useUser, useFirestore, useDoc, useMemoFirebase, useAuth } from '@/firebase';
@@ -18,8 +19,8 @@ import { IosInstaller } from '@/components/ios-installer';
 import { useTranslations } from '@/hooks/use-translations';
 
 /**
- * ГЛАВНЫЙ КОНТРОЛЛЕР ЯДРА V22.5
- * ФИКС: WebAuthn оптимизирован для работы БЕЗ iCloud (режим Local-Only).
+ * ГЛАВНЫЙ КОНТРОЛЛЕР ЯДРА V22.8
+ * ФИКС Face ID для Safari: Ультра-быстрый вызов без iCloud.
  */
 export default function Home() {
   const { user, isUserLoading } = useUser();
@@ -91,8 +92,8 @@ export default function Home() {
   };
 
   /**
-   * ПРОВЕРКА FACE ID V22.5: РЕЖИМ СТРОГОЙ ЛОКАЛЬНОСТИ
-   * Убраны все параметры, провоцирующие iCloud Keychain.
+   * ПРОВЕРКА FACE ID V22.8: HARDWARE LOCKDOWN
+   * Максимально упрощенный вызов для Safari.
    */
   const tryBiometricAuth = async () => {
     if (typeof window === 'undefined' || !window.PublicKeyCredential) {
@@ -100,26 +101,19 @@ export default function Home() {
       return;
     }
     
-    if (!profile?.settings?.biometricEnabled) {
+    const storedIdBase64 = localStorage.getItem('nuxus_biometric_id');
+    if (!storedIdBase64) {
       toast({ title: "Не настроено", description: "Включите Face ID в настройках Ядра." });
       return;
     }
 
     setIsBiometricAttempting(true);
     try {
-      const storedIdBase64 = localStorage.getItem('nuxus_biometric_id');
-      if (!storedIdBase64) {
-        toast({ title: "Ключ не найден", description: "Привяжите Face ID в настройках.", variant: "destructive" });
-        setIsBiometricAttempting(false);
-        return;
-      }
-
-      const challenge = new Uint8Array(32);
-      window.crypto.getRandomValues(challenge);
-
+      const challenge = crypto.getRandomValues(new Uint8Array(32));
       const id = Uint8Array.from(atob(storedIdBase64), c => c.charCodeAt(0));
 
-      const options: any = {
+      // КРИТИЧЕСКИЙ ФИКС: Убираем любые лишние await до вызова credentials.get
+      const assertion = await navigator.credentials.get({
         publicKey: {
           challenge,
           allowCredentials: [{
@@ -127,22 +121,20 @@ export default function Home() {
             type: 'public-key',
             transports: ['internal']
           }],
-          userVerification: "required", // Принудительно локальный Face ID/Код
-          timeout: 60000,
+          userVerification: "required"
         }
-      };
-      
-      const assertion = await navigator.credentials.get(options);
+      });
+
       if (assertion) {
         setIs2FAVerified(true);
-        toast({ title: "Личность подтверждена", description: "Face ID распознан локально." });
+        toast({ title: "Личность подтверждена", description: "Вход через Hardware ID." });
       }
     } catch (e: any) {
-      console.warn("Nuxus Biometric Auth Fail:", e);
+      console.warn("Nuxus Auth Fail:", e);
       if (e.name === 'NotAllowedError') {
         toast({ 
           title: "Safari: Ожидание", 
-          description: "Нажмите кнопку ещё раз. Доступ разрешен только по физическому клику.", 
+          description: "Нажмите ещё раз. iOS требует прямого физического тапа.", 
           variant: "destructive" 
         });
       } else {

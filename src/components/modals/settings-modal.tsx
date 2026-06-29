@@ -25,8 +25,8 @@ import type { User } from '@/lib/types';
 import { generateAiAvatar } from '@/ai/flows/generate-ai-avatar-flow';
 
 /**
- * ПАРАМЕТРЫ V22.5 «Quantum Link»
- * ФИКС: Ультра-совместимость WebAuthn для Safari БЕЗ iCloud (Hardware-Only).
+ * ПАРАМЕТРЫ V22.8 «Hardware Security»
+ * ФИКС: WebAuthn оптимизирован для Safari (Hardware-Only).
  */
 export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const auth = useAuth();
@@ -96,15 +96,15 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         'settings.biometricEnabled': form.biometricEnabled
       });
       onOpenChange(false);
-      toast({ title: "Ядро обновлено V22.5" });
+      toast({ title: "Ядро обновлено V22.8" });
     } catch (e: any) {
       toast({ title: "Ошибка сохранения", variant: "destructive" });
     }
   };
 
   /**
-   * КРИТИЧЕСКИЙ ФИКС V22.5: АВТОНОМНЫЙ FACE ID
-   * Используется residentKey: "discouraged" для обхода требования iCloud Keychain.
+   * КРИТИЧЕСКИЙ ФИКС V22.8: HARDWARE-ONLY FACE ID
+   * Принудительно отключаем Resident Key для Safari.
    */
   const handleLinkBiometrics = async () => {
     if (typeof window === 'undefined' || !window.PublicKeyCredential || !user) {
@@ -114,11 +114,10 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
     
     setIsLinkingBiometrics(true);
     try {
-      const challenge = new Uint8Array(32);
-      window.crypto.getRandomValues(challenge);
-      const userHandle = window.crypto.getRandomValues(new Uint8Array(16));
+      const challenge = crypto.getRandomValues(new Uint8Array(32));
+      const userHandle = crypto.getRandomValues(new Uint8Array(16));
 
-      const options: any = {
+      const credential = await navigator.credentials.create({
         publicKey: {
           challenge,
           rp: { name: "Nuxus Kernel", id: window.location.hostname },
@@ -127,18 +126,15 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
           authenticatorSelection: { 
             authenticatorAttachment: "platform",
             userVerification: "required",
-            residentKey: "discouraged", // Ключевой параметр для работы БЕЗ iCloud
+            residentKey: "discouraged", // Локальный режим
             requireResidentKey: false
           },
-          attestation: "none",
-          timeout: 60000,
+          attestation: "none"
         }
-      };
+      }) as any;
 
-      const credential = await navigator.credentials.create(options) as any;
       if (credential) {
-        const rawId = new Uint8Array(credential.rawId);
-        const base64Id = window.btoa(String.fromCharCode(...rawId));
+        const base64Id = btoa(String.fromCharCode(...new Uint8Array(credential.rawId)));
         localStorage.setItem('nuxus_biometric_id', base64Id);
         setForm({ ...form, biometricEnabled: true });
         toast({ title: "Face ID привязан локально" });
@@ -147,9 +143,9 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
       console.warn("Nuxus Biometric Link Error:", e);
       setForm({ ...form, biometricEnabled: false });
       if (e.name === 'NotAllowedError') {
-        toast({ title: "Safari: Ожидание", description: "Нажмите на кнопку ещё раз. Доступ разрешен только по клику.", variant: "destructive" });
+        toast({ title: "Safari: Ожидание", description: "Нажмите ещё раз. Доступ разрешен только по физическому клику.", variant: "destructive" });
       } else {
-        toast({ title: "Сбой биометрии", description: "Убедитесь, что Face ID настроен на телефоне.", variant: "destructive" });
+        toast({ title: "Сбой биометрии", description: "Проверьте настройки Face ID в системе.", variant: "destructive" });
       }
     } finally {
       setIsLinkingBiometrics(false);
@@ -163,7 +159,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
       <DialogContent className="max-w-md bg-[#0a0a0c] border-white/10 p-0 overflow-hidden h-[85vh] flex flex-col rounded-[2.5rem] shadow-2xl outline-none">
         <DialogHeader className="p-6 border-b border-white/5 shrink-0 text-left">
           <DialogTitle className="flex items-center gap-2 text-xl font-black italic uppercase tracking-tighter text-white">
-            <Settings2 className="w-5 h-5 text-primary" /> Параметры V22.5
+            <Settings2 className="w-5 h-5 text-primary" /> Параметры V22.8
           </DialogTitle>
         </DialogHeader>
         
