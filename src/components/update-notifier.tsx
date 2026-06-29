@@ -102,16 +102,16 @@ export function UpdateNotifier() {
         </div>
 
         <div className="p-8 space-y-6">
-          <div className="space-y-1">
-            <h3 className="text-2xl font-black uppercase italic tracking-tighter text-white">
+          <DialogHeader className="space-y-1 text-left">
+            <DialogTitle className="text-2xl font-black uppercase italic tracking-tighter text-white">
               {isUpToDate ? 'Система актуальна' : 'Обновление Ядра'}
-            </h3>
-            <div className="flex items-center gap-2 text-[10px] font-bold text-primary uppercase tracking-widest">
+            </DialogTitle>
+            <DialogDescription className="flex items-center gap-2 text-[10px] font-bold text-primary uppercase tracking-widest">
               <span>Версия {versions.latestVersion}</span>
               <span className="opacity-30">•</span>
               <span>{versions.sizeMb} МБ</span>
-            </div>
-          </div>
+            </DialogDescription>
+          </DialogHeader>
 
           {!isUpToDate ? (
             <div className="space-y-3 bg-white/5 p-4 rounded-3xl border border-white/5">
