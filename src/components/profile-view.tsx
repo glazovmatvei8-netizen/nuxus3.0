@@ -17,8 +17,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { QRCodeSVG } from 'qrcode.react';
 
 /**
- * ГЛАВНЫЙ ЭКРАН ПРОФИЛЯ V18.5 «Adaptive Scroll»
- * ФИКС: Аватар и имя теперь полностью внутри ScrollArea и листаются. Лишние звезды удалены.
+ * ГЛАВНЫЙ ЭКРАН ПРОФИЛЯ V19.0 «Hardware Harmony»
+ * ФИКС: Аватар и имя теперь полностью внутри ScrollArea и листаются.
+ * Лишние текстовые звезды удалены, оставлена только золотая на аватаре.
  */
 export default function ProfileView() {
   const { user } = useUser();
@@ -48,7 +49,7 @@ export default function ProfileView() {
     <div className="flex flex-col h-full bg-transparent overflow-hidden relative">
       <div className="absolute top-0 left-0 right-0 h-64 bg-gradient-to-b from-primary/15 to-transparent pointer-events-none z-0" />
 
-      {/* Верхние кнопки управления */}
+      {/* Верхние кнопки управления (Неподвижные) */}
       <div className="px-6 pt-10 pb-4 flex items-center justify-between shrink-0 relative z-20">
         <Button 
           variant="ghost" 
@@ -81,6 +82,7 @@ export default function ProfileView() {
                 <UserAvatar 
                   userId={user?.uid} 
                   className={cn("h-32 w-32 border-4 obsidian-glass transition-all duration-700 shadow-2xl relative z-10", isPremium ? "border-primary/40" : "border-white/5")} 
+                  showOnlineStatus
                 />
              </div>
              <div className="text-center space-y-1">
@@ -128,7 +130,7 @@ export default function ProfileView() {
 
           <div className="grid grid-cols-2 gap-3">
             <ActionCard icon={QrCode} label="Signal QR" sub="ИДЕНТИФИКАЦИЯ" accent="text-accent" onClick={() => setIsQrOpen(true)} />
-            <ActionCard icon={ShieldCheck} label="QES 14.8" sub="ЗАЩИЩЕНО" accent="text-green-400" />
+            <ActionCard icon={ShieldCheck} label="QES 19.0" sub="ЗАЩИЩЕНО" accent="text-green-400" />
           </div>
 
           <div className="obsidian-glass rounded-[2rem] overflow-hidden divide-y divide-white/[0.03] border-white/5 shadow-xl">
@@ -141,7 +143,7 @@ export default function ProfileView() {
           <div className="py-8 flex flex-col items-center gap-4">
             <div className="flex items-center gap-2 obsidian-glass px-4 py-1.5 rounded-full border-white/5">
               <div className="h-1 w-1 rounded-full bg-green-500 animate-pulse" />
-              <p className="text-[8px] text-white/20 uppercase font-black tracking-widest">Узел синхронизирован V18.5</p>
+              <p className="text-[8px] text-white/20 uppercase font-black tracking-widest">Узел синхронизирован V19.0</p>
             </div>
             <div className="flex gap-8 opacity-5">
               <Globe className="w-5 h-5" />

@@ -18,8 +18,9 @@ import { IosInstaller } from '@/components/ios-installer';
 import { useTranslations } from '@/hooks/use-translations';
 
 /**
- * ГЛАВНЫЙ КОНТРОЛЛЕР ЯДРА V18.5
- * ФИКС: NotAllowedError решен через удаление авто-вызова. Face ID только по нажатию кнопки.
+ * ГЛАВНЫЙ КОНТРОЛЛЕР ЯДРА V19.0
+ * ФИКС: NotAllowedError Safari - биометрия ТОЛЬКО по тапу.
+ * Исправлена работа WebAuthn без iCloud Keychain.
  */
 export default function Home() {
   const { user, isUserLoading } = useUser();
@@ -91,16 +92,21 @@ export default function Home() {
   };
 
   /**
-   * ПРОВЕРКА FACE ID V18.5: ТОЛЬКО ПО ТАПУ (Safari Strict)
+   * ПРОВЕРКА FACE ID V19.0: СТРОГО ПО ТАПУ
    */
   const tryBiometricAuth = async () => {
-    if (typeof window === 'undefined' || !window.PublicKeyCredential) return;
+    if (typeof window === 'undefined' || !window.PublicKeyCredential) {
+      toast({ title: "Ошибка устройства", description: "Биометрия не поддерживается.", variant: "destructive" });
+      return;
+    }
+    
     if (!profile?.settings?.biometricEnabled) return;
 
     setIsBiometricAttempting(true);
     try {
       const storedIdBase64 = localStorage.getItem('nuxus_biometric_id');
       if (!storedIdBase64) {
+        toast({ title: "Ключ не найден", description: "Привяжите биометрию в настройках.", variant: "destructive" });
         setIsBiometricAttempting(false);
         return;
       }
@@ -132,12 +138,12 @@ export default function Home() {
       console.warn("Nuxus Biometric Auth Fail:", e);
       if (e.name === 'NotAllowedError') {
         toast({ 
-          title: "Safari: Ошибка доступа", 
-          description: "Нажмите на кнопку 'Использовать Face ID' еще раз.", 
+          title: "Safari: Доступ заблокирован", 
+          description: "Нажмите на кнопку 'Использовать Face ID' еще раз. Не используйте авто-вызов.", 
           variant: "destructive" 
         });
       } else {
-        toast({ title: "Сбой биометрии", variant: "destructive" });
+        toast({ title: "Сбой биометрии", description: "Используйте PIN-код.", variant: "destructive" });
       }
     } finally {
       setIsBiometricAttempting(false);

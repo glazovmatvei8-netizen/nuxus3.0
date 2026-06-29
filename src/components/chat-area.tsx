@@ -451,7 +451,7 @@ export default function ChatArea() {
               <UserAvatar userId={otherId} manualAvatarUrl={chat?.avatarUrl || otherProfile?.avatarUrl} className="h-10 w-10 border-2 border-white/10 group-hover:border-primary/50 transition-all shrink-0" fallbackName={chatDisplayName} showOnlineStatus />
               <div className="flex flex-col min-w-0 text-left flex-1">
                 <div className="flex items-center gap-1.5 min-w-0 w-full">
-                  <span className="font-black text-[17px] truncate text-white italic tracking-tighter uppercase group-hover:text-primary transition-colors">
+                  <span className="font-black text-[17px] truncate text-white italic tracking-tighter uppercase group-hover:text-primary transition-colors block">
                     {chatDisplayName}
                   </span>
                 </div>
@@ -461,10 +461,10 @@ export default function ChatArea() {
               </div>
             </div>
           ) : (
-            <div className="flex-1 flex items-center gap-4 obsidian-glass px-4 rounded-2xl h-11">
-              <Search className="w-4 h-4 text-primary" />
-              <Input placeholder="Сканировать сигналы..." className="bg-transparent border-none focus-visible:ring-0 text-sm h-full text-white font-bold" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} autoFocus />
-              <button onClick={() => { setIsSearchMode(false); setSearchQuery(''); }} className="text-white/20 hover:text-white transition-colors"><X className="w-5 h-5" /></button>
+            <div className="flex-1 flex items-center gap-4 obsidian-glass px-4 rounded-2xl h-11 min-w-0">
+              <Search className="w-4 h-4 text-primary shrink-0" />
+              <Input placeholder="Сканировать сигналы..." className="bg-transparent border-none focus-visible:ring-0 text-sm h-full text-white font-bold flex-1 min-w-0" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} autoFocus />
+              <button onClick={() => { setIsSearchMode(false); setSearchQuery(''); }} className="text-white/20 hover:text-white transition-colors shrink-0"><X className="w-5 h-5" /></button>
             </div>
           )}
         </div>

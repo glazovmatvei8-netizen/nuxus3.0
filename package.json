@@ -74,11 +74,13 @@
     "typescript": "^5"
   },
   "overrides": {
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
     "qrcode.react": {
       "react": "$react"
     },
-    "@types/react": "^19.0.0",
-    "@types/react-dom": "^19.0.0",
     "@radix-ui/react-primitive": "2.1.0",
     "@radix-ui/react-id": "1.1.0",
     "@radix-ui/react-presence": "1.1.1",

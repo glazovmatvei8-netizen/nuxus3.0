@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useRef, useEffect } from 'react';
@@ -25,8 +24,8 @@ import type { User } from '@/lib/types';
 import { generateAiAvatar } from '@/ai/flows/generate-ai-avatar-flow';
 
 /**
- * ПАРАМЕТРЫ V18.0 «Pure Local Authentication»
- * ФИКС: NotAllowedError решается через Device-Bound Credentials.
+ * ПАРАМЕТРЫ V19.0 «Hardware Local Auth»
+ * ФИКС: Убрано требование iCloud Keychain для Face ID.
  */
 export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const auth = useAuth();
@@ -96,15 +95,15 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         'settings.biometricEnabled': form.biometricEnabled
       });
       onOpenChange(false);
-      toast({ title: "Ядро обновлено V18.0" });
+      toast({ title: "Ядро обновлено V19.0" });
     } catch (e: any) {
       toast({ title: "Ошибка сохранения", variant: "destructive" });
     }
   };
 
   /**
-   * КРИТИЧЕСКИЙ ФИКС V18.0: ЛОКАЛЬНЫЙ FACE ID (DEVICE-BOUND)
-   * Мы отключаем residentKey и discoverableCredential, чтобы iOS не лезла в iCloud.
+   * КРИТИЧЕСКИЙ ФИКС V19.0: АВТОНОМНЫЙ FACE ID
+   * Используем residentKey: "discouraged", чтобы iOS не просила iCloud Keychain.
    */
   const handleLinkBiometrics = async () => {
     if (typeof window === 'undefined' || !window.PublicKeyCredential || !user) {
@@ -127,7 +126,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
           authenticatorSelection: { 
             authenticatorAttachment: "platform",
             userVerification: "required",
-            residentKey: "discouraged",
+            residentKey: "discouraged", // Ключевой параметр: не требует iCloud
             requireResidentKey: false
           },
           attestation: "none",
@@ -147,9 +146,9 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
       console.warn("Nuxus Biometric Link Error:", e);
       setForm({ ...form, biometricEnabled: false });
       if (e.name === 'NotAllowedError') {
-        toast({ title: "Доступ ограничен", description: "Safari заблокировал биометрию. Используйте PIN-код.", variant: "destructive" });
+        toast({ title: "Доступ Safari запрещен", description: "Биометрия требует прямого нажатия. Попробуйте еще раз.", variant: "destructive" });
       } else {
-        toast({ title: "Сбой биометрии", variant: "destructive" });
+        toast({ title: "Сбой биометрии", description: "Убедитесь, что Face ID настроен на телефоне.", variant: "destructive" });
       }
     } finally {
       setIsLinkingBiometrics(false);
@@ -163,7 +162,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
       <DialogContent className="max-w-md bg-[#0a0a0c] border-white/10 p-0 overflow-hidden h-[85vh] flex flex-col rounded-[2.5rem] shadow-2xl outline-none">
         <DialogHeader className="p-6 border-b border-white/5 shrink-0 text-left">
           <DialogTitle className="flex items-center gap-2 text-xl font-black italic uppercase tracking-tighter text-white">
-            <Settings2 className="w-5 h-5 text-primary" /> Параметры V18.0
+            <Settings2 className="w-5 h-5 text-primary" /> Параметры V19.0
           </DialogTitle>
         </DialogHeader>
         
