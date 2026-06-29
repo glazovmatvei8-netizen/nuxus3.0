@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useEffect } from 'react';
@@ -73,20 +74,16 @@ export default function AuthScreen({ initialMode = 'login' }: AuthScreenProps) {
     return `${input.toLowerCase()}${MASTER_DOMAIN}`;
   };
 
-  /**
-   * КОРРЕКТНОЕ СОЗДАНИЕ ПРОФИЛЯ V15.8
-   * Имена и ники берутся СТРОГО из полей ввода. Никаких телефонов в никах.
-   */
   const createProfileRecord = async (uid: string, overrideData?: any) => {
     if (!db) return;
     const userRef = doc(db, 'users', uid);
     const snap = await getDoc(userRef);
     
-    // Имя: только из инпута или дефолтное
+    // Имя: приоритет полю ввода
     const inputName = formData.name.trim();
-    const finalName = inputName || overrideData?.name || (snap.exists() ? snap.data().name : `Агент ${uid.slice(0, 4).toUpperCase()}`);
+    const finalName = inputName || overrideData?.name || (snap.exists() ? snap.data().name : `User ${uid.slice(0, 4).toUpperCase()}`);
     
-    // ID: принудительно очищаем от мусора. Никогда не используем телефон.
+    // ID: очистка от мусора
     let inputUsername = formData.username.trim().replace('@', '');
     let finalUsername = inputUsername || overrideData?.username || (snap.exists() ? snap.data().username : null);
     
@@ -94,10 +91,7 @@ export default function AuthScreen({ initialMode = 'login' }: AuthScreenProps) {
       finalUsername = `user_${uid.slice(0, 5).toLowerCase()}`;
     }
 
-    // Валидация ника: только буквы, цифры и подчеркивание
     finalUsername = finalUsername.replace(/[^a-zA-Z0-9_]/g, '').toLowerCase();
-    
-    // Превращаем в @username
     const usernameWithAt = finalUsername.startsWith('@') ? finalUsername : '@' + finalUsername;
 
     const profileData = {
@@ -141,15 +135,18 @@ export default function AuthScreen({ initialMode = 'login' }: AuthScreenProps) {
       return;
     }
 
+    if (mode === 'register' && (!formData.name.trim() || !formData.username.trim())) {
+      toast({ title: "Заполните профиль", description: "Имя и ID обязательны для инициализации.", variant: "destructive" });
+      return;
+    }
+
     setIsLoading(true);
     try {
       try {
         await setPersistence(auth, browserLocalPersistence);
       } catch (storageErr: any) {
-        if (storageErr.code === 'auth/web-storage-unsupported' || storageErr.message?.includes('quota')) {
-          localStorage.clear();
-          await setPersistence(auth, browserSessionPersistence);
-        }
+        localStorage.clear();
+        await setPersistence(auth, browserSessionPersistence);
       }
 
       const virtualEmail = getVirtualEmail(formData.identifier);
@@ -244,7 +241,7 @@ export default function AuthScreen({ initialMode = 'login' }: AuthScreenProps) {
           
           <CardHeader className="text-center pb-2 pt-10 px-8">
             <CardTitle className="text-3xl font-black tracking-tighter uppercase italic text-white leading-none drop-shadow-[0_0_15px_rgba(168,85,247,0.4)]">
-              {mode === 'recover' ? 'Восстановление' : mode === 'setup2fa' ? 'Защита' : mode === 'login' ? 'Вход V15.8' : 'Создание'}
+              {mode === 'recover' ? 'Восстановление' : mode === 'setup2fa' ? 'Защита' : mode === 'login' ? 'Вход V20.0' : 'Создание'}
             </CardTitle>
             <CardDescription className="text-primary/80 font-black tracking-[0.5em] uppercase text-[8px] opacity-60 mt-3 ml-[0.5em]">
               {mode === 'setup2fa' ? 'Квантовый ключ' : mode === 'recover' ? 'Нейронный сброс' : 'Nuxus Kernel 2026'}

@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useRef, useEffect, useMemo, useCallback, memo } from 'react';
@@ -379,7 +380,7 @@ export default function ChatArea() {
     if (type_msg === 'image' && !content_msg.startsWith('data:')) finalContent = await compressImage(content_msg, 1200, 0.6);
 
     const msgData: Partial<Message> = { 
-      chatId: currentChatId, senderId: firebaseUser.uid, senderName: userProfile?.name || 'Агент Nuxus', 
+      chatId: currentChatId, senderId: firebaseUser.uid, senderName: userProfile?.name || 'User', 
       content: finalContent, contentType: type_msg, sentAt: new Date().toISOString(), isRead: false,
       metadata: { bubbleStyle: userProfile?.settings?.bubbleStyle || 'default' }
     };
@@ -447,11 +448,11 @@ export default function ChatArea() {
         <div className="flex items-center gap-3.5 flex-1 min-w-0">
           <Button variant="ghost" size="icon" className="md:hidden obsidian-glass rounded-xl text-white/50 h-9 w-9" onClick={() => setCurrentChatId(null)}><ChevronLeft className="w-5 h-5" /></Button>
           {!isSearchMode ? (
-            <div className="flex items-center gap-3.5 cursor-pointer min-w-0 group flex-1" onClick={() => setIsChatInfoOpen(true)}>
+            <div className="flex items-center gap-3.5 cursor-pointer min-w-0 flex-1 group" onClick={() => setIsChatInfoOpen(true)}>
               <UserAvatar userId={otherId} manualAvatarUrl={chat?.avatarUrl || otherProfile?.avatarUrl} className="h-10 w-10 border-2 border-white/10 group-hover:border-primary/50 transition-all shrink-0" fallbackName={chatDisplayName} showOnlineStatus />
               <div className="flex flex-col min-w-0 text-left flex-1">
                 <div className="flex items-center gap-1.5 min-w-0 w-full">
-                  <span className="font-black text-[17px] truncate text-white italic tracking-tighter uppercase group-hover:text-primary transition-colors block">
+                  <span className="font-black text-[17px] truncate text-white italic tracking-tighter uppercase group-hover:text-primary transition-colors block leading-tight">
                     {chatDisplayName}
                   </span>
                 </div>

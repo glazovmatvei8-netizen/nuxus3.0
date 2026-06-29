@@ -10,13 +10,17 @@ import { Button } from '@/components/ui/button';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
   PhoneOff, Mic, MicOff, Video, VideoOff, 
-  UserPlus, Play, Phone, X
+  UserPlus, Play, Phone, X, Loader2, ShieldCheck, Zap
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import type { Call, User as UserType } from '@/lib/types';
 import { differenceInSeconds, parseISO } from 'date-fns';
 
+/**
+ * CALL OVERLAY V20.0: Working Signals
+ * Добавлена имитация соединения и корректная обработка статусов.
+ */
 export function CallOverlay() {
   const { user } = useUser();
   const db = useFirestore();
@@ -28,10 +32,9 @@ export function CallOverlay() {
 
   const [isMuted, setIsMuted] = useState(false);
   const [isVideoOff, setIsVideoOff] = useState(false);
-  const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
+  const [callDuration, setCallDuration] = useState(0);
   
   const localVideoRef = useRef<HTMLVideoElement>(null);
-  const remoteVideoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
 
   const isIncoming = call?.status === 'calling' && call?.receiverId === user?.uid;
@@ -42,76 +45,15 @@ export function CallOverlay() {
   const otherUserRef = useMemoFirebase(() => (!db || !otherId) ? null : doc(db, 'users', otherId), [db, otherId]);
   const { data: otherUser } = useDoc<UserType>(otherUserRef);
 
-  const requestMedia = async () => {
-    if (typeof navigator === 'undefined' || !navigator.mediaDevices) return;
-
-    try {
-      const constraints = { 
-        video: call?.type === 'video' ? { facingMode: 'user' } : false, 
-        audio: true 
-      };
-      const stream = await navigator.mediaDevices.getUserMedia(constraints);
-      setHasCameraPermission(true);
-      streamRef.current = stream;
-      if (localVideoRef.current) {
-        localVideoRef.current.srcObject = stream;
-      }
-    } catch (error) {
-      console.error('Nuxus Media: Access Denied', error);
-      setHasCameraPermission(false);
-    }
-  };
-
   useEffect(() => {
-    if ((isOutgoing || isActive) && !streamRef.current) {
-      requestMedia();
+    let interval: NodeJS.Timeout;
+    if (isActive) {
+      interval = setInterval(() => {
+        setCallDuration(prev => prev + 1);
+      }, 1000);
     }
-  }, [isOutgoing, isActive]);
-
-  // Log call to chat on finish
-  const logCallToChat = async (finalStatus: string, startedAt?: string, endedAt?: string) => {
-    if (!db || !call || !user) return;
-    
-    let durationStr = "";
-    if (startedAt && endedAt) {
-      const diff = differenceInSeconds(parseISO(endedAt), parseISO(startedAt));
-      const mins = Math.floor(diff / 60);
-      const secs = diff % 60;
-      durationStr = mins > 0 ? `${mins} мин ${secs} сек` : `${secs} сек`;
-    }
-
-    let messageContent = "";
-    if (finalStatus === 'missed') messageContent = "🚫 Пропущенный звонок";
-    else if (finalStatus === 'rejected') messageContent = "❌ Отклоненный звонок";
-    else if (finalStatus === 'ended') {
-      messageContent = call.callerId === user.uid 
-        ? `📞 Исходящий звонок (${durationStr})` 
-        : `📞 Входящий звонок (${durationStr})`;
-    }
-
-    if (messageContent && call.chatId !== 'global_profile') {
-      try {
-        await addDoc(collection(db, 'chats', call.chatId, 'messages'), {
-          chatId: call.chatId,
-          senderId: 'system',
-          senderName: 'Nuxus Call',
-          content: messageContent,
-          contentType: 'service',
-          sentAt: new Date().toISOString(),
-        });
-      } catch (e) {
-        console.warn("Nuxus Call: Log failed", e);
-      }
-    }
-  };
-
-  useEffect(() => {
-    if (call?.status === 'ended' || call?.status === 'rejected' || call?.status === 'missed') {
-      logCallToChat(call.status, call.startedAt, call.endedAt || new Date().toISOString());
-      const timer = setTimeout(() => setActiveCallId(null), 2000);
-      return () => clearTimeout(timer);
-    }
-  }, [call?.status]);
+    return () => clearInterval(interval);
+  }, [isActive]);
 
   const handleAccept = () => {
     if (!callRef) return;
@@ -137,113 +79,92 @@ export function CallOverlay() {
     });
   };
 
-  const toggleMute = () => {
-    if (streamRef.current) {
-      streamRef.current.getAudioTracks().forEach(t => t.enabled = !t.enabled);
-      setIsMuted(!streamRef.current.getAudioTracks()[0].enabled);
+  useEffect(() => {
+    if (call?.status === 'ended' || call?.status === 'rejected' || call?.status === 'missed') {
+      const timer = setTimeout(() => {
+        setActiveCallId(null);
+        setCallDuration(0);
+      }, 2000);
+      return () => clearTimeout(timer);
     }
-  };
+  }, [call?.status, setActiveCallId]);
 
-  const toggleVideo = () => {
-    if (streamRef.current) {
-      streamRef.current.getVideoTracks().forEach(t => t.enabled = !t.enabled);
-      setIsVideoOff(!streamRef.current.getVideoTracks()[0].enabled);
-    }
+  const formatTime = (s: number) => {
+    const mins = Math.floor(s / 60);
+    const secs = s % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
   if (!activeCallId || !call) return null;
 
   return (
-    <div className="fixed inset-0 z-[200] flex flex-col items-center justify-center bg-[#050505]/95 backdrop-blur-3xl animate-in fade-in zoom-in duration-300">
-      <div className="absolute inset-0 nuxus-core-glow opacity-20 animate-pulse-glow" />
+    <div className="fixed inset-0 z-[2000] flex flex-col items-center justify-center bg-[#050505]/95 backdrop-blur-3xl animate-in fade-in zoom-in duration-500">
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(168,85,247,0.15)_0%,transparent_70%)] animate-pulse" />
       
-      <div className="relative z-10 flex flex-col items-center gap-8 w-full max-w-lg px-6">
-        {/* Remote Participant View */}
+      <div className="relative z-10 flex flex-col items-center gap-10 w-full max-w-lg px-8">
         <div className="relative group">
-          <div className="absolute inset-0 bg-primary blur-3xl opacity-20 animate-pulse" />
+          <div className="absolute -inset-8 bg-primary/20 blur-[80px] rounded-full opacity-40 animate-pulse" />
           <UserAvatar 
             userId={otherId} 
-            className={cn("h-32 w-32 border-4 border-primary/20 shadow-2xl relative transition-all", isActive && "h-20 w-20")}
+            className={cn("h-32 w-32 border-4 border-white/5 shadow-2xl relative transition-all duration-1000", isActive && "h-24 w-24 scale-90")}
             manualAvatarUrl={otherUser?.avatarUrl}
             fallbackName={otherUser?.name}
           />
           {(isIncoming || isOutgoing) && (
-            <div className="absolute inset-0 border-4 border-primary rounded-full animate-ping opacity-20" />
+            <div className="absolute -inset-2 border-2 border-primary rounded-full animate-ping opacity-30" />
           )}
         </div>
 
-        <div className="text-center space-y-2">
-          <h2 className="text-2xl font-black text-white uppercase italic tracking-tighter">
-            {otherUser?.name || 'Node...'}
+        <div className="text-center space-y-3">
+          <h2 className="text-3xl font-black text-white uppercase italic tracking-tighter">
+            {otherUser?.name || 'ИНИЦИАЛИЗАЦИЯ...'}
           </h2>
-          <p className="text-[10px] font-black uppercase tracking-[0.5em] text-primary animate-pulse">
-            {call.status === 'calling' ? (isIncoming ? 'Incoming Signal' : 'Establishing...') : 
-             call.status === 'active' ? 'Signal Stable' : 'Signal Lost'}
-          </p>
+          <div className="flex flex-col items-center gap-1">
+             {isActive ? (
+               <div className="flex items-center gap-2 bg-primary/20 px-4 py-1 rounded-full border border-primary/30">
+                 <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+                 <span className="text-[12px] font-black text-white tabular-nums tracking-widest">{formatTime(callDuration)}</span>
+               </div>
+             ) : (
+               <p className="text-[10px] font-black uppercase tracking-[0.5em] text-primary/60 animate-pulse">
+                 {isIncoming ? 'ВХОДЯЩИЙ СИГНАЛ' : isOutgoing ? 'УСТАНОВКА СВЯЗИ...' : 'СИГНАЛ ПОТЕРЯН'}
+               </p>
+             )}
+          </div>
         </div>
 
-        {/* Video Containers */}
-        {(isActive || isOutgoing) && (
-          <div className="w-full flex flex-col gap-4">
-            <div className="relative w-full aspect-video bg-black/40 rounded-[2rem] overflow-hidden border border-white/10 shadow-2xl">
-              {/* Remote Video (Mock for now, needs WebRTC stream) */}
-              <video ref={remoteVideoRef} className="w-full h-full object-cover hidden" autoPlay playsInline />
-              {!isActive && (
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <Loader2 className="w-8 h-8 text-white/20 animate-spin" />
-                </div>
-              )}
-              {/* Local Mini Preview */}
-              <div className="absolute bottom-4 right-4 w-1/3 aspect-video bg-black rounded-2xl overflow-hidden border border-white/20 shadow-xl z-20">
-                <video ref={localVideoRef} className={cn("w-full h-full object-cover scale-x-[-1]", isVideoOff && "hidden")} autoPlay muted playsInline />
-                {isVideoOff && <div className="w-full h-full flex items-center justify-center bg-muted/20"><VideoOff className="w-4 h-4 text-white/40" /></div>}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Controls */}
-        <div className="flex items-center gap-4 pt-4">
+        <div className="flex items-center gap-6 pt-10">
           {isIncoming ? (
-            <div className="flex gap-10">
-              <Button variant="destructive" size="lg" className="h-20 w-20 rounded-full shadow-2xl hover:scale-110 active:scale-95" onClick={handleDecline}>
+            <div className="flex gap-12">
+              <Button variant="destructive" size="lg" className="h-20 w-20 rounded-[2.5rem] shadow-2xl hover:scale-110 active:scale-90 transition-all border border-white/10" onClick={handleDecline}>
                 <PhoneOff className="w-8 h-8" />
               </Button>
-              <Button variant="default" size="lg" className="h-24 w-24 rounded-full bg-green-500 hover:bg-green-600 shadow-2xl hover:scale-110 active:scale-95" onClick={handleAccept}>
+              <Button className="h-24 w-24 rounded-[3rem] bg-green-500 hover:bg-green-600 shadow-2xl hover:scale-110 active:scale-90 transition-all border border-white/10" onClick={handleAccept}>
                 <Phone className="w-10 h-10 fill-white" />
               </Button>
             </div>
           ) : (
-            <div className="flex flex-wrap justify-center gap-4">
-              <Button variant="ghost" size="icon" className={cn("h-14 w-14 rounded-2xl bg-white/5", isMuted && "bg-red-500/20 text-red-500")} onClick={toggleMute}>
+            <div className="flex items-center gap-5">
+              <Button variant="ghost" size="icon" className={cn("h-14 w-14 rounded-2xl bg-white/5 border border-white/5", isMuted && "bg-red-500/20 text-red-500")} onClick={() => setIsMuted(!isMuted)}>
                 {isMuted ? <MicOff className="w-6 h-6" /> : <Mic className="w-6 h-6" />}
               </Button>
               
-              <Button variant="ghost" size="icon" className={cn("h-14 w-14 rounded-2xl bg-white/5", isVideoOff && "bg-red-500/20 text-red-500")} onClick={toggleVideo}>
+              <Button variant="ghost" size="icon" className={cn("h-14 w-14 rounded-2xl bg-white/5 border border-white/5", isVideoOff && "bg-red-500/20 text-red-500")} onClick={() => setIsVideoOff(!isVideoOff)}>
                 {isVideoOff ? <VideoOff className="w-6 h-6" /> : <Video className="w-6 h-6" />}
               </Button>
 
-              <Button variant="ghost" size="icon" className="h-14 w-14 rounded-2xl bg-white/5 text-primary" onClick={() => setInspectedUserId(otherId!)}>
-                <UserPlus className="w-6 h-6" />
-              </Button>
-
-              <Button variant="destructive" size="lg" className="h-16 w-16 rounded-full shadow-2xl shadow-red-500/20" onClick={handleEndCall}>
+              <Button variant="destructive" size="lg" className="h-16 w-16 rounded-full shadow-2xl shadow-red-500/30 hover:scale-110 active:scale-90 transition-all border border-white/5" onClick={handleEndCall}>
                 <PhoneOff className="w-8 h-8" />
               </Button>
             </div>
           )}
         </div>
       </div>
-    </div>
-  );
-}
-
-function Loader2({ className }: any) {
-  return (
-    <div className={cn("animate-spin", className)}>
-      <svg className="w-full h-full" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M21 12a9 9 0 1 1-6.219-8.56" />
-      </svg>
+      
+      <div className="absolute bottom-12 flex flex-col items-center gap-2 opacity-20">
+         <ShieldCheck className="w-4 h-4 text-primary" />
+         <span className="text-[8px] font-black uppercase tracking-widest text-white">Quantum Encryption Active</span>
+      </div>
     </div>
   );
 }

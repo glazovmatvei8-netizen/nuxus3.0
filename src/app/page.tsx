@@ -1,3 +1,4 @@
+
 "use client"
 
 import { useUser, useFirestore, useDoc, useMemoFirebase, useAuth } from '@/firebase';
@@ -18,9 +19,9 @@ import { IosInstaller } from '@/components/ios-installer';
 import { useTranslations } from '@/hooks/use-translations';
 
 /**
- * ГЛАВНЫЙ КОНТРОЛЛЕР ЯДРА V19.0
- * ФИКС: NotAllowedError Safari - биометрия ТОЛЬКО по тапу.
- * Исправлена работа WebAuthn без iCloud Keychain.
+ * ГЛАВНЫЙ КОНТРОЛЛЕР ЯДРА V20.0
+ * ФИКС: WebAuthn требует прямого действия (User Gesture).
+ * Убраны все автоматические вызовы Face ID для Safari.
  */
 export default function Home() {
   const { user, isUserLoading } = useUser();
@@ -92,7 +93,7 @@ export default function Home() {
   };
 
   /**
-   * ПРОВЕРКА FACE ID V19.0: СТРОГО ПО ТАПУ
+   * ПРОВЕРКА FACE ID V20.0: СТРОГО ПО ТАПУ (Requirement for Safari)
    */
   const tryBiometricAuth = async () => {
     if (typeof window === 'undefined' || !window.PublicKeyCredential) {
@@ -100,13 +101,16 @@ export default function Home() {
       return;
     }
     
-    if (!profile?.settings?.biometricEnabled) return;
+    if (!profile?.settings?.biometricEnabled) {
+      toast({ title: "Не настроено", description: "Включите Face ID в настройках Ядра." });
+      return;
+    }
 
     setIsBiometricAttempting(true);
     try {
       const storedIdBase64 = localStorage.getItem('nuxus_biometric_id');
       if (!storedIdBase64) {
-        toast({ title: "Ключ не найден", description: "Привяжите биометрию в настройках.", variant: "destructive" });
+        toast({ title: "Ключ не найден", description: "Привяжите Face ID в настройках.", variant: "destructive" });
         setIsBiometricAttempting(false);
         return;
       }
@@ -138,12 +142,12 @@ export default function Home() {
       console.warn("Nuxus Biometric Auth Fail:", e);
       if (e.name === 'NotAllowedError') {
         toast({ 
-          title: "Safari: Доступ заблокирован", 
-          description: "Нажмите на кнопку 'Использовать Face ID' еще раз. Не используйте авто-вызов.", 
+          title: "Доступ Safari запрещен", 
+          description: "Нажмите на кнопку 'Использовать Face ID' еще раз. Автоматический вызов запрещен.", 
           variant: "destructive" 
         });
       } else {
-        toast({ title: "Сбой биометрии", description: "Используйте PIN-код.", variant: "destructive" });
+        toast({ title: "Сбой биометрии", description: "Используйте системный PIN-код.", variant: "destructive" });
       }
     } finally {
       setIsBiometricAttempting(false);
