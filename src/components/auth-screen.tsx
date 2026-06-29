@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, ShieldAlert, Fingerprint, Lock, ShieldCheck, ArrowRight, Zap, Globe } from 'lucide-react';
+import { Loader2, Fingerprint } from 'lucide-react';
 import { useAuth, useFirestore } from '@/firebase';
 import { 
   signInWithEmailAndPassword,
@@ -19,11 +19,9 @@ import {
 import { doc, setDoc, getDoc, increment, updateDoc } from 'firebase/firestore';
 import { useAppState } from '@/lib/store';
 import { NuxusLogo } from './nuxus-logo';
-import { LegalModal } from './modals/legal-modal';
-import { cn } from '@/lib/utils';
 import { useTranslations } from '@/hooks/use-translations';
 
-export type AuthMode = 'login' | 'register' | 'recover' | 'setup2fa' | 'recovering';
+export type AuthMode = 'login' | 'register' | 'recover' | 'setup2fa';
 
 const MASTER_DOMAIN = '@nuxus.chat';
 
@@ -42,8 +40,6 @@ export default function AuthScreen({ initialMode = 'login' }: AuthScreenProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [referralId, setReferralId] = useState<string | null>(null);
   
-  const [legalModal, setLegalModal] = useState<{ open: boolean, type: 'privacy' | 'terms' }>({ open: false, type: 'privacy' });
-
   const [formData, setFormData] = useState({
     name: '',
     username: '',
@@ -79,8 +75,8 @@ export default function AuthScreen({ initialMode = 'login' }: AuthScreenProps) {
     const userRef = doc(db, 'users', uid);
     const snap = await getDoc(userRef);
     
-    // Имя: ПРИНУДИТЕЛЬНО убираем "Agent"
     const inputName = formData.name.trim();
+    // ПРИНУДИТЕЛЬНО убрано "Agent", заменено на "Node"
     const finalName = inputName || overrideData?.name || (snap.exists() ? snap.data().name : `Node_${uid.slice(0, 4).toUpperCase()}`);
     
     let inputUsername = formData.username.trim().replace('@', '');
@@ -223,7 +219,7 @@ export default function AuthScreen({ initialMode = 'login' }: AuthScreenProps) {
           
           <CardHeader className="text-center pb-2 pt-10 px-8">
             <CardTitle className="text-3xl font-black tracking-tighter uppercase italic text-white leading-none">
-              {mode === 'setup2fa' ? 'Защита' : mode === 'login' ? 'Вход V23.0' : 'Создание'}
+              {mode === 'setup2fa' ? 'Защита' : mode === 'login' ? 'Вход V23.2' : 'Создание'}
             </CardTitle>
             <CardDescription className="text-primary/80 font-black tracking-[0.5em] uppercase text-[8px] opacity-60 mt-3 ml-[0.5em]">
               Hardware Security

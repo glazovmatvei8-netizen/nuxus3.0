@@ -19,7 +19,7 @@ import { IosInstaller } from '@/components/ios-installer';
 import { useTranslations } from '@/hooks/use-translations';
 
 /**
- * ГЛАВНЫЙ КОНТРОЛЛЕР ЯДРА V23.0
+ * ГЛАВНЫЙ КОНТРОЛЛЕР ЯДРА V23.2
  * ФИКС: Мгновенный вызов Face ID для Safari (Zero-Latency Tap).
  */
 export default function Home() {
@@ -40,7 +40,6 @@ export default function Home() {
     const checkIos = () => {
       const isIos = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
       const isStandalone = (window.navigator as any).standalone || window.matchMedia('(display-mode: standalone)').matches;
-      // Если не установлено как приложение (ни PWA, ни Native), показываем инсталлер
       if (isIos && !isStandalone && !localStorage.getItem('ios_installer_dismissed')) {
         setShowIosInstaller(true);
       }
@@ -56,7 +55,6 @@ export default function Home() {
   const { data: profile, isLoading: isProfileLoading } = useDoc<UserType>(userProfileRef);
   const isBanned = isUserActuallyBanned(profile);
 
-  // Обработка глубоких ссылок
   useEffect(() => {
     if (!mounted || !db) return;
     const handleDeepLinks = async () => {
@@ -92,9 +90,11 @@ export default function Home() {
   };
 
   /**
-   * ПРОВЕРКА FACE ID V23.0: МГНОВЕННЫЙ ТАП
+   * ПРОВЕРКА FACE ID V23.2: АБСОЛЮТНО СИНХРОННЫЙ ВЫЗОВ
+   * Убраны любые асинхронные задержки или уведомления перед вызовом.
    */
   const tryBiometricAuth = async () => {
+    // 1. Быстрая проверка поддержки
     if (typeof window === 'undefined' || !window.PublicKeyCredential) {
       toast({ title: "Ошибка устройства", description: "Биометрия не поддерживается.", variant: "destructive" });
       return;
@@ -107,10 +107,11 @@ export default function Home() {
     }
 
     try {
+      // 2. Мгновенный вызов Face ID БЕЗ пауз
       const challenge = crypto.getRandomValues(new Uint8Array(32));
       const id = Uint8Array.from(atob(storedIdBase64), c => c.charCodeAt(0));
 
-      // КРИТИЧЕСКИЙ ФИКС: Вызов ДОЛЖЕН быть синхронным с кликом
+      // КРИТИЧЕСКИЙ ФИКС: navigator.credentials.get вызывается ПЕРВЫМ
       const assertion = await navigator.credentials.get({
         publicKey: {
           challenge,
@@ -129,10 +130,11 @@ export default function Home() {
       }
     } catch (e: any) {
       console.warn("Nuxus Auth Fail:", e);
+      // Ошибки показываем ТОЛЬКО после неудачной попытки
       if (e.name === 'NotAllowedError') {
         toast({ 
           title: "Safari: Ожидание", 
-          description: "Нажмите кнопку ещё раз для активации биометрии.", 
+          description: "Нажмите ещё раз для активации биометрии.", 
           variant: "destructive" 
         });
       } else {

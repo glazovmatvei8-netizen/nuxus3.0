@@ -4,15 +4,15 @@
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { RefreshCw, Zap, Download, ShieldCheck, Wifi, ListChecks, Loader2, CheckCircle2 } from 'lucide-react';
+import { RefreshCw, Zap, Download, ShieldCheck, ListChecks } from 'lucide-react';
 import { Progress } from './ui/progress';
 import versions from '@/app/versions.json';
 
 /**
- * КВАНТОВЫЙ ОБНОВЛЯТОР ЯДРА V23.0
- * Текущая версия: 22.8.0 (чтобы вызвать окно обновления до 22.9.0)
+ * КВАНТОВЫЙ ОБНОВЛЯТОР ЯДРА V23.2
+ * Текущая версия: 22.9.0 (Синхронизировано с versions.json)
  */
-const CURRENT_VERSION = "22.8.0";
+const CURRENT_VERSION = "22.9.0";
 
 export function UpdateNotifier() {
   const [isOpen, setIsOpen] = useState(false);
@@ -20,10 +20,12 @@ export function UpdateNotifier() {
   const [updateProgress, setUpdateProgress] = useState(0);
   const [isManualCheck, setIsManualCheck] = useState(false);
 
+  // Сверяем версию в коде с версией в versions.json
   const isUpToDate = versions.latestVersion === CURRENT_VERSION;
 
   useEffect(() => {
     const checkVersion = () => {
+      // Если версия в конфиге выше текущей и мы еще не откладывали это обновление
       if (!isUpToDate) {
         const deferred = sessionStorage.getItem('nuxus_deferred_update');
         if (deferred !== versions.latestVersion) {
@@ -48,17 +50,19 @@ export function UpdateNotifier() {
     setIsUpdating(true);
     let p = 0;
     const interval = setInterval(() => {
-      p += Math.random() * 15;
+      p += Math.random() * 20;
       if (p >= 100) {
         setUpdateProgress(100);
         clearInterval(interval);
+        // Запоминаем, что обновились
+        localStorage.setItem('nuxus_last_installed_version', versions.latestVersion);
         setTimeout(() => {
           window.location.reload();
-        }, 1200);
+        }, 800);
       } else {
         setUpdateProgress(p);
       }
-    }, 400);
+    }, 300);
   };
 
   const handlePostpone = () => {
@@ -97,20 +101,16 @@ export function UpdateNotifier() {
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogContent className="max-w-[420px] bg-card/95 backdrop-blur-3xl border-primary/20 rounded-[2.8rem] p-0 overflow-hidden shadow-2xl outline-none">
         <div className="relative h-40 bg-gradient-to-br from-primary/20 to-transparent flex items-center justify-center">
-          {isUpToDate && isManualCheck ? (
-            <CheckCircle2 className="w-16 h-16 text-green-500 animate-in zoom-in duration-500" />
-          ) : (
-            <Zap className="w-16 h-16 text-primary animate-pulse" />
-          )}
+          <Zap className="w-16 h-16 text-primary animate-pulse" />
         </div>
 
         <div className="p-8 space-y-6">
           <DialogHeader className="space-y-1 text-left">
             <DialogTitle className="text-2xl font-black uppercase italic tracking-tighter text-white">
-              {isUpToDate && isManualCheck ? 'Ядро актуально' : 'Доступна новая версия'}
+              {isUpToDate ? 'Ядро актуально' : 'Доступна новая версия'}
             </DialogTitle>
             <DialogDescription className="flex items-center gap-2 text-[10px] font-bold text-primary uppercase tracking-widest">
-              <span>{isUpToDate && isManualCheck ? `V ${CURRENT_VERSION}` : `Билд ${versions.latestVersion}`}</span>
+              <span>{isUpToDate ? `V ${CURRENT_VERSION}` : `Билд ${versions.latestVersion}`}</span>
               <span className="opacity-30">•</span>
               <span>{versions.sizeMb} МБ</span>
             </DialogDescription>
@@ -130,12 +130,12 @@ export function UpdateNotifier() {
                 ))}
               </ul>
             </div>
-          ) : isManualCheck ? (
+          ) : (
             <div className="p-6 bg-green-500/5 rounded-3xl border border-green-500/10 text-center">
                <ShieldCheck className="w-8 h-8 text-green-500 mx-auto mb-3" />
                <p className="text-[10px] text-green-500/80 font-black uppercase tracking-widest">Ваш узел синхронизирован с последним патчем QES</p>
             </div>
-          ) : null}
+          )}
 
           <div className="flex flex-col gap-2">
             {!isUpToDate ? (

@@ -2,13 +2,13 @@
 {
   "latestVersion": "22.9.0",
   "qesVersion": "22.9",
-  "build": "Native-Alpha",
+  "build": "Deployment-Alpha",
   "sizeMb": 108,
   "changelog": [
-    "Подготовка к нативной сборке .IPA для iOS",
-    "Профиль: аватар и имя теперь листаются (Scroll-Sync)",
-    "Удалены дублирующие звезды Premium",
-    "Оптимизирован вызов Face ID (Zero-Latency)",
-    "Исправлена ошибка регистрации 'Agent GCVL' -> 'Node_ID'"
+    "Синхронизация версий (Фикс петли обновления)",
+    "Face ID: Нулевая задержка (Zero-Latency Auth)",
+    "Удален префикс 'Agent' из всех модулей",
+    "Профиль: Исправлена центровка Scroll-Harmony",
+    "Оптимизация Capacitor Bridge для iOS"
   ]
 }
