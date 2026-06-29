@@ -18,19 +18,16 @@ export function UpdateNotifier() {
   const [isOpen, setIsOpen] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
   const [updateProgress, setUpdateProgress] = useState(0);
-  const [isManualCheck, setIsManualCheck] = useState(false);
 
   // Сверяем версию в коде с версией в versions.json
   const isUpToDate = versions.latestVersion === CURRENT_VERSION;
 
   useEffect(() => {
     const checkVersion = () => {
-      // Если версия в конфиге выше текущей и мы еще не откладывали это обновление
       if (!isUpToDate) {
-        const deferred = sessionStorage.getItem('nuxus_deferred_update');
-        if (deferred !== versions.latestVersion) {
+        const lastInstalled = localStorage.getItem('nuxus_last_installed_version');
+        if (lastInstalled !== versions.latestVersion) {
           setTimeout(() => {
-            setIsManualCheck(false);
             setIsOpen(true);
           }, 2000);
         }
@@ -39,7 +36,6 @@ export function UpdateNotifier() {
     checkVersion();
 
     const handleManualCheck = () => {
-      setIsManualCheck(true);
       setIsOpen(true);
     };
     window.addEventListener('nuxus_check_updates', handleManualCheck);
@@ -54,7 +50,6 @@ export function UpdateNotifier() {
       if (p >= 100) {
         setUpdateProgress(100);
         clearInterval(interval);
-        // Запоминаем, что обновились
         localStorage.setItem('nuxus_last_installed_version', versions.latestVersion);
         setTimeout(() => {
           window.location.reload();
@@ -66,7 +61,6 @@ export function UpdateNotifier() {
   };
 
   const handlePostpone = () => {
-    sessionStorage.setItem('nuxus_deferred_update', versions.latestVersion);
     setIsOpen(false);
   };
 
@@ -133,7 +127,7 @@ export function UpdateNotifier() {
           ) : (
             <div className="p-6 bg-green-500/5 rounded-3xl border border-green-500/10 text-center">
                <ShieldCheck className="w-8 h-8 text-green-500 mx-auto mb-3" />
-               <p className="text-[10px] text-green-500/80 font-black uppercase tracking-widest">Ваш узел синхронизирован с последним патчем QES</p>
+               <p className="text-[10px] text-green-500/80 font-black uppercase tracking-widest">Ваш узел синхронизирован с патчем QES</p>
             </div>
           )}
 

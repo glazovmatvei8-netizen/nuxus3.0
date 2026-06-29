@@ -1,8 +1,8 @@
+
 {
   "appId": "chat.nuxus.app",
   "appName": "Nuxus",
   "webDir": "out",
-  "bundledWebRuntime": false,
   "server": {
     "url": "https://nuxusmobile.vercel.app",
     "allowNavigation": ["*"]

@@ -1,3 +1,4 @@
+
 name: Build iOS IPA
 
 on:
@@ -25,6 +26,9 @@ jobs:
 
       - name: Capacitor Sync
         run: |
+          if [ ! -d "ios" ]; then
+            npx cap add ios
+          fi
           npx cap sync ios
 
       - name: Build iOS (Xcode)
@@ -43,7 +47,7 @@ jobs:
           cp -r build/Build/Products/Release-iphoneos/App.app Payload/
           zip -r Nuxus.ipa Payload
 
-      - name: Upload Artifact
+      - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
           name: Nuxus-IPA
