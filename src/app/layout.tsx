@@ -12,6 +12,7 @@ import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import Script from 'next/script';
 import { OfflinePlaceholder } from '@/components/offline-placeholder';
+import { BiometricGate } from '@/components/biometric-gate';
 
 const font = Plus_Jakarta_Sans({
   subsets: ['latin'],
@@ -77,7 +78,6 @@ export default function RootLayout({
         <link rel="shortcut icon" href={FINAL_ICON_URL} />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-        {/* VK Bridge Script */}
         <Script src="https://unpkg.com/@vkontakte/vk-bridge/dist/browser.min.js" strategy="beforeInteractive" />
       </head>
       <body 
@@ -91,7 +91,9 @@ export default function RootLayout({
             <ThemeApplier />
             <AppIconApplier />
             <OfflinePlaceholder />
-            {children}
+            <BiometricGate>
+              {children}
+            </BiometricGate>
             <Analytics />
             <SpeedInsights />
             <Toaster />

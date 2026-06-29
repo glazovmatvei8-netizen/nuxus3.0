@@ -1,14 +1,13 @@
 
 {
-  "latestVersion": "23.5.0",
-  "qesVersion": "23.5",
+  "latestVersion": "24.0.0",
+  "qesVersion": "24.0",
   "build": "Production-Stable",
-  "sizeMb": 112,
+  "sizeMb": 115,
   "changelog": [
-    "Build Pipeline: Фикс статического экспорта (generateStaticParams)",
-    "Face ID: Ультра-мгновенный отклик (Zero-Latency Fix)",
-    "Update Core: Исправлен зацикленный показ уведомлений",
-    "Security: Окончательная очистка профилей от префикса 'Agent'",
-    "Capacitor: Оптимизация путей к активам для iOS"
+    "Native Auth: Прямая интеграция с чипом Secure Enclave",
+    "Hardware Gate: Блокировка интерфейса при запуске приложения",
+    "Build Fix: Ликвидация конфликтов слияния в системных файлах",
+    "Sync: Полная синхронизация версий Ядра"
   ]
 }

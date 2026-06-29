@@ -18,7 +18,7 @@ import { NuxusLogo } from '@/components/nuxus-logo';
 import { IosInstaller } from '@/components/ios-installer';
 
 /**
- * ГЛАВНЫЙ КОНТРОЛЛЕР ЯДРА V23.5
+ * ГЛАВНЫЙ КОНТРОЛЛЕР ЯДРА V24.0
  * ФИКС: Абсолютно мгновенный вызов Face ID для Safari (Zero-Latency).
  */
 export default function Home() {
@@ -82,8 +82,7 @@ export default function Home() {
   };
 
   /**
-   * ПРОВЕРКА FACE ID V23.5: МГНОВЕННЫЙ ВЫЗОВ
-   * Вырезаны все задержки, чтобы Safari не блокировал UI поток.
+   * ПРОВЕРКА FACE ID V24.0: МГНОВЕННЫЙ ВЫЗОВ
    */
   const tryBiometricAuth = () => {
     const storedIdBase64 = localStorage.getItem('nuxus_biometric_id');
@@ -93,7 +92,6 @@ export default function Home() {
       const challenge = crypto.getRandomValues(new Uint8Array(32));
       const id = Uint8Array.from(atob(storedIdBase64), c => c.charCodeAt(0));
 
-      // Прямой вызов Promise без await для мгновенного отклика
       navigator.credentials.get({
         publicKey: {
           challenge,

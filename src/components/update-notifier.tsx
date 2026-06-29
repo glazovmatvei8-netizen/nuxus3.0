@@ -9,17 +9,16 @@ import { Progress } from './ui/progress';
 import versions from '@/app/versions.json';
 
 /**
- * КВАНТОВЫЙ ОБНОВЛЯТОР ЯДРА V23.5
- * Синхронизировано: 23.5.0
+ * КВАНТОВЫЙ ОБНОВЛЯТОР ЯДРА V24.0
+ * Синхронизировано: 24.0.0
  */
-const CURRENT_VERSION = "23.5.0";
+const CURRENT_VERSION = "24.0.0";
 
 export function UpdateNotifier() {
   const [isOpen, setIsOpen] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
   const [updateProgress, setUpdateProgress] = useState(0);
 
-  // Сверяем версию в коде с версией в versions.json
   const isUpToDate = versions.latestVersion === CURRENT_VERSION;
 
   useEffect(() => {
