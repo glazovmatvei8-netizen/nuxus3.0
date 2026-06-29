@@ -1,4 +1,3 @@
-
 name: Build iOS IPA
 
 on:
@@ -28,7 +27,6 @@ jobs:
       - name: Build Web Project
         run: |
           npm run build
-          # Проверка наличия папки out для статического экспорта
           if [ ! -d "out" ]; then
             echo "Error: Directory 'out' not found. Ensure output: 'export' is in next.config.ts"
             exit 1
@@ -36,15 +34,10 @@ jobs:
 
       - name: Capacitor Sync & Add
         run: |
-          # Гарантируем наличие папки для Capacitor
           mkdir -p out
-          
-          # Инициализируем iOS если её нет
           if [ ! -d "ios" ]; then
             npx cap add ios
           fi
-          
-          # Копируем веб-активы и синхронизируем плагины
           npx cap sync ios
           npx cap copy ios
 
@@ -52,25 +45,28 @@ jobs:
         run: |
           cd ios/App && pod install
 
-      - name: Build iOS (Xcode)
+      - name: Build iOS Archive
         run: |
           xcodebuild -workspace ios/App/App.xcworkspace \
                      -scheme App \
-                     -sdk iphoneos \
                      -configuration Release \
-                     -derivedDataPath build \
-                     CODE_SIGNING_ALLOWED=NO \
+                     -destination 'generic/platform=iOS' \
+                     -archivePath "ios/App/build/App.xcarchive" \
+                     CODE_SIGN_IDENTITY="" \
                      CODE_SIGNING_REQUIRED=NO \
-                     COMPILER_INDEX_STORE_ENABLE=NO
+                     CODE_SIGNING_ALLOWED=NO \
+                     COMPILER_INDEX_STORE_ENABLE=NO \
+                     archive
 
       - name: Create IPA
         run: |
+          cd ios/App/build
           mkdir -p Payload
-          cp -r build/Build/Products/Release-iphoneos/App.app Payload/
+          cp -r App.xcarchive/Products/Applications/*.app Payload/
           zip -r Nuxus.ipa Payload
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
           name: Nuxus-Unsigned-IPA
-          path: Nuxus.ipa
+          path: ios/App/build/Nuxus.ipa

@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useEffect } from 'react';
@@ -9,10 +8,10 @@ import { Progress } from './ui/progress';
 import versions from '@/app/versions.json';
 
 /**
- * КВАНТОВЫЙ ОБНОВЛЯТОР ЯДРА V24.1.7
- * Синхронизировано: 24.1.7
+ * КВАНТОВЫЙ ОБНОВЛЯТОР ЯДРА V24.1.8
+ * Синхронизировано: 24.1.8
  */
-const CURRENT_VERSION = "24.1.7";
+const CURRENT_VERSION = "24.1.8";
 
 export function UpdateNotifier() {
   const [isOpen, setIsOpen] = useState(false);
