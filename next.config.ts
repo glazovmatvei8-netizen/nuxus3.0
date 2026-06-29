@@ -2,7 +2,7 @@
 import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
-  output: 'export', // КРИТИЧЕСКИЙ ФИКС: Включаем статический экспорт для Capacitor
+  output: 'export', // Включаем статический экспорт для Capacitor
   typescript: {
     ignoreBuildErrors: true,
   },

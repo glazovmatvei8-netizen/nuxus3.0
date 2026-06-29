@@ -6,8 +6,7 @@ import { useEffect } from 'react';
 
 /**
  * Квантовый Редиректор для коротких ссылок (VK Style).
- * Перехватывает пути вида /username и перенаправляет на главную с параметром поиска.
- * ПОЛНАЯ РУСИФИКАЦИЯ.
+ * ИСПРАВЛЕНО: Добавлен generateStaticParams для корректного экспорта.
  */
 export default function UsernameRedirect() {
   const router = useRouter();
@@ -17,7 +16,6 @@ export default function UsernameRedirect() {
   useEffect(() => {
     if (!username) return;
 
-    // Список зарезервированных системных путей, которые не являются юзернеймами
     const reserved = [
       'login', 'register', 'api', '_next', 'favicon.ico', 
       'manifest.json', 'sw.js', 'wallet', 'music', 'games', 
@@ -25,7 +23,6 @@ export default function UsernameRedirect() {
     ];
     
     if (!reserved.includes(username.toLowerCase())) {
-      // Сохраняем цель в sessionStorage для восстановления после логина, если нужно
       sessionStorage.setItem('nuxus_pending_target', username);
       router.push(`/?u=${username}`);
     }
@@ -39,4 +36,9 @@ export default function UsernameRedirect() {
       </div>
     </div>
   );
+}
+
+// КРИТИЧЕСКИЙ ФИКС: Позволяет Next.js экспортировать этот динамический маршрут
+export function generateStaticParams() {
+  return [{ username: 'default' }];
 }

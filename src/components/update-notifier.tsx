@@ -9,10 +9,10 @@ import { Progress } from './ui/progress';
 import versions from '@/app/versions.json';
 
 /**
- * КВАНТОВЫЙ ОБНОВЛЯТОР ЯДРА V23.3
- * Синхронизировано: 22.9.0
+ * КВАНТОВЫЙ ОБНОВЛЯТОР ЯДРА V23.5
+ * Синхронизировано: 23.5.0
  */
-const CURRENT_VERSION = "22.9.0";
+const CURRENT_VERSION = "23.5.0";
 
 export function UpdateNotifier() {
   const [isOpen, setIsOpen] = useState(false);
@@ -24,7 +24,6 @@ export function UpdateNotifier() {
 
   useEffect(() => {
     const checkVersion = () => {
-      // Если версии не совпадают И мы еще не сохранили эту версию в localStorage
       if (!isUpToDate) {
         const lastInstalled = localStorage.getItem('nuxus_last_installed_version');
         if (lastInstalled !== versions.latestVersion) {
@@ -47,7 +46,7 @@ export function UpdateNotifier() {
     setIsUpdating(true);
     let p = 0;
     const interval = setInterval(() => {
-      p += Math.random() * 20;
+      p += Math.random() * 25;
       if (p >= 100) {
         setUpdateProgress(100);
         clearInterval(interval);
@@ -61,32 +60,18 @@ export function UpdateNotifier() {
     }, 300);
   };
 
-  const handlePostpone = () => {
-    setIsOpen(false);
-  };
-
   if (isUpdating) {
     return (
-      <div className="fixed inset-0 z-[10000] bg-[#050505] flex flex-col items-center justify-center p-8 text-center animate-in fade-in duration-500">
+      <div className="fixed inset-0 z-[10000] bg-[#050505] flex flex-col items-center justify-center p-8 text-center">
         <div className="w-full max-sm:max-w-xs space-y-8">
-          <div className="relative inline-block">
-            <div className="absolute inset-0 bg-primary blur-[60px] opacity-30 animate-pulse" />
-            <div className="bg-white/[0.03] border border-white/10 w-24 h-24 rounded-[2rem] flex items-center justify-center mx-auto relative z-10 shadow-2xl">
-              <Download className="w-10 h-10 text-primary animate-bounce" />
-            </div>
+          <div className="bg-white/[0.03] border border-white/10 w-24 h-24 rounded-[2rem] flex items-center justify-center mx-auto shadow-2xl">
+            <Download className="w-10 h-10 text-primary animate-bounce" />
           </div>
-          
           <div className="space-y-2">
-            <h2 className="text-2xl font-black uppercase italic text-white tracking-tighter">Nuxus Kernel Sync</h2>
-            <p className="text-[10px] font-black uppercase tracking-[0.4em] text-primary/60">Обновление QES: {Math.round(updateProgress)}%</p>
+            <h2 className="text-2xl font-black uppercase italic text-white tracking-tighter">Quantum Sync</h2>
+            <p className="text-[10px] font-black uppercase tracking-[0.4em] text-primary/60">Пересборка Ядра: {Math.round(updateProgress)}%</p>
           </div>
-
-          <div className="space-y-4">
-            <Progress value={updateProgress} className="h-2 bg-white/5" />
-            <div className="flex items-center justify-center gap-2 text-[8px] font-black uppercase text-muted-foreground/40 tracking-widest">
-              <ShieldCheck className="w-3 h-3" /> QES Integrity Verified
-            </div>
-          </div>
+          <Progress value={updateProgress} className="h-2 bg-white/5" />
         </div>
       </div>
     );
@@ -111,7 +96,7 @@ export function UpdateNotifier() {
             </DialogDescription>
           </DialogHeader>
 
-          {(!isUpToDate) ? (
+          {!isUpToDate && (
             <div className="space-y-3 bg-white/5 p-4 rounded-3xl border border-white/5">
               <div className="flex items-center gap-2 text-white/40 mb-1">
                 <ListChecks className="w-3.5 h-3.5" />
@@ -125,36 +110,20 @@ export function UpdateNotifier() {
                 ))}
               </ul>
             </div>
-          ) : (
-            <div className="p-6 bg-green-500/5 rounded-3xl border border-green-500/10 text-center">
-               <ShieldCheck className="w-8 h-8 text-green-500 mx-auto mb-3" />
-               <p className="text-[10px] text-green-500/80 font-black uppercase tracking-widest">Ваш узел синхронизирован с патчем QES</p>
-            </div>
           )}
 
           <div className="flex flex-col gap-2">
             {!isUpToDate ? (
               <>
-                <Button 
-                  onClick={handleUpdateAction}
-                  className="h-14 bg-primary text-white rounded-2xl font-black uppercase italic tracking-widest shadow-xl shadow-primary/30 group"
-                >
-                  <RefreshCw className="w-5 h-5 mr-2 group-hover:rotate-180 transition-transform duration-700" />
-                  Обновить сейчас
+                <Button onClick={handleUpdateAction} className="h-14 bg-primary text-white rounded-2xl font-black uppercase italic tracking-widest shadow-xl">
+                  <RefreshCw className="w-5 h-5 mr-2" /> Обновить сейчас
                 </Button>
-                <Button 
-                  variant="ghost" 
-                  onClick={handlePostpone}
-                  className="h-12 text-[10px] font-black uppercase tracking-widest text-muted-foreground/40 hover:text-white rounded-xl"
-                >
+                <Button variant="ghost" onClick={() => setIsOpen(false)} className="h-12 text-[10px] font-black uppercase tracking-widest text-muted-foreground/40">
                   Напомнить позже
                 </Button>
               </>
             ) : (
-              <Button 
-                onClick={() => setIsOpen(false)}
-                className="h-14 bg-white/5 border border-white/10 text-white rounded-2xl font-black uppercase tracking-widest"
-              >
+              <Button onClick={() => setIsOpen(false)} className="h-14 bg-white/5 border border-white/10 text-white rounded-2xl font-black uppercase tracking-widest">
                 Закрыть
               </Button>
             )}

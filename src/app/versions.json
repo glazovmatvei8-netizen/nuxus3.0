@@ -1,14 +1,14 @@
 
 {
-  "latestVersion": "22.9.0",
-  "qesVersion": "22.9",
-  "build": "Deployment-Alpha",
-  "sizeMb": 108,
+  "latestVersion": "23.5.0",
+  "qesVersion": "23.5",
+  "build": "Production-Stable",
+  "sizeMb": 112,
   "changelog": [
-    "Синхронизация версий (Фикс петли обновления)",
-    "Face ID: Нулевая задержка (Zero-Latency Auth)",
-    "Удален префикс 'Agent' из всех модулей",
-    "Профиль: Исправлена центровка Scroll-Harmony",
-    "Оптимизация Capacitor Bridge для iOS"
+    "Build Pipeline: Фикс статического экспорта (generateStaticParams)",
+    "Face ID: Ультра-мгновенный отклик (Zero-Latency Fix)",
+    "Update Core: Исправлен зацикленный показ уведомлений",
+    "Security: Окончательная очистка профилей от префикса 'Agent'",
+    "Capacitor: Оптимизация путей к активам для iOS"
   ]
 }
