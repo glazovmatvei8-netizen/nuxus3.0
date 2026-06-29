@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useMemo } from 'react';
@@ -18,8 +17,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { QRCodeSVG } from 'qrcode.react';
 
 /**
- * ГЛАВНЫЙ ЭКРАН ПРОФИЛЯ V14.8
- * Исправлены все импорты икон и сбалансирован дизайн.
+ * ГЛАВНЫЙ ЭКРАН ПРОФИЛЯ V18.5 «Adaptive Scroll»
+ * ФИКС: Аватар и имя теперь полностью внутри ScrollArea и листаются. Лишние звезды удалены.
  */
 export default function ProfileView() {
   const { user } = useUser();
@@ -47,9 +46,10 @@ export default function ProfileView() {
 
   return (
     <div className="flex flex-col h-full bg-transparent overflow-hidden relative">
-      <div className="absolute top-0 left-0 right-0 h-48 bg-gradient-to-b from-primary/10 to-transparent pointer-events-none z-0" />
+      <div className="absolute top-0 left-0 right-0 h-64 bg-gradient-to-b from-primary/15 to-transparent pointer-events-none z-0" />
 
-      <div className="px-6 pt-10 pb-4 flex items-center justify-between shrink-0 relative z-10">
+      {/* Верхние кнопки управления */}
+      <div className="px-6 pt-10 pb-4 flex items-center justify-between shrink-0 relative z-20">
         <Button 
           variant="ghost" 
           size="icon" 
@@ -58,17 +58,8 @@ export default function ProfileView() {
         >
           <Share2 className="w-5 h-5" />
         </Button>
-        <div className="flex flex-col items-center gap-2">
-          <div className="relative group">
-            <UserAvatar 
-              userId={user?.uid} 
-              className={cn("h-14 w-14 border-2 obsidian-glass transition-all duration-700", isPremium ? "border-primary/40 shadow-lg shadow-primary/10" : "border-white/5")} 
-            />
-          </div>
-          <span className="font-black text-white text-[17px] flex items-center gap-1.5 italic tracking-tighter uppercase">
-            {profile?.name ? formatDisplayName(profile.name) : 'СИНХРОНИЗАЦИЯ...'} 
-            {isPremium && <Star className="w-3.5 h-3.5 text-accent fill-accent" />}
-          </span>
+        <div className="flex flex-col items-center">
+           <span className="text-[8px] font-black uppercase text-primary/40 tracking-[0.5em] ml-[0.5em]">Nuxus Kernel</span>
         </div>
         <Button 
           variant="ghost" 
@@ -83,6 +74,23 @@ export default function ProfileView() {
       <ScrollArea className="flex-1 relative z-10">
         <div className="px-6 space-y-4 pb-32 pt-2 animate-in fade-in duration-700">
           
+          {/* Аватар и имя: ЛИСТАЮТСЯ ВМЕСТЕ С КОНТЕНТОМ */}
+          <div className="flex flex-col items-center gap-4 mb-8 pt-4">
+             <div className="relative group">
+                <div className="absolute -inset-4 bg-primary/20 blur-3xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-1000" />
+                <UserAvatar 
+                  userId={user?.uid} 
+                  className={cn("h-32 w-32 border-4 obsidian-glass transition-all duration-700 shadow-2xl relative z-10", isPremium ? "border-primary/40" : "border-white/5")} 
+                />
+             </div>
+             <div className="text-center space-y-1">
+                <h2 className="text-3xl font-black text-white italic tracking-tighter uppercase leading-tight">
+                  {profile?.name ? formatDisplayName(profile.name) : 'СИНХРОНИЗАЦИЯ...'}
+                </h2>
+                <p className="text-[11px] text-primary/60 font-black uppercase tracking-[0.4em] italic ml-[0.4em]">{profile?.username}</p>
+             </div>
+          </div>
+
           <div className="obsidian-glass p-6 rounded-[2rem] space-y-5 relative overflow-hidden group border-white/5 shadow-xl">
              <div className="flex items-center justify-between relative z-10">
                 <div className="flex items-center gap-3">
@@ -125,15 +133,15 @@ export default function ProfileView() {
 
           <div className="obsidian-glass rounded-[2rem] overflow-hidden divide-y divide-white/[0.03] border-white/5 shadow-xl">
             <ProfileItem icon={Fingerprint} label="Ядро Безопасности" color="text-primary" onClick={() => { setSettingsTab('privacy'); setIsSettingsOpen(true); }} />
-            <ProfileItem icon={Palette} label="Стиль и Брендинг" color="text-white/60" onClick={() => { setSettingsTab('profile'); setIsSettingsOpen(true); }} />
-            <ProfileItem icon={Bookmark} label="Архив Данных" color="text-white/60" onClick={() => { setSettingsTab('interface'); setIsSettingsOpen(true); }} />
+            <ProfileItem icon={Palette} label="Стиль и Брендинг" color="text-white/60" onClick={() => { setSettingsTab('style'); setIsSettingsOpen(true); }} />
+            <ProfileItem icon={Bookmark} label="Архив Данных" color="text-white/60" onClick={() => { setSettingsTab('data'); setIsSettingsOpen(true); }} />
             <ProfileItem icon={HelpCircle} label="Интеллект Ядра" color="text-white/60" onClick={() => setIsLegalOpen(true)} />
           </div>
 
           <div className="py-8 flex flex-col items-center gap-4">
             <div className="flex items-center gap-2 obsidian-glass px-4 py-1.5 rounded-full border-white/5">
               <div className="h-1 w-1 rounded-full bg-green-500 animate-pulse" />
-              <p className="text-[8px] text-white/20 uppercase font-black tracking-widest">Узел синхронизирован V14.8</p>
+              <p className="text-[8px] text-white/20 uppercase font-black tracking-widest">Узел синхронизирован V18.5</p>
             </div>
             <div className="flex gap-8 opacity-5">
               <Globe className="w-5 h-5" />

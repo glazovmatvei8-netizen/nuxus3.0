@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useRef, useEffect } from 'react';
@@ -24,8 +25,8 @@ import type { User } from '@/lib/types';
 import { generateAiAvatar } from '@/ai/flows/generate-ai-avatar-flow';
 
 /**
- * ПАРАМЕТРЫ V17.0 «STRICT LOCAL»
- * Исправлено: Полное отключение residentKey для обхода iCloud Keychain.
+ * ПАРАМЕТРЫ V18.0 «Pure Local Authentication»
+ * ФИКС: NotAllowedError решается через Device-Bound Credentials.
  */
 export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const auth = useAuth();
@@ -95,15 +96,15 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         'settings.biometricEnabled': form.biometricEnabled
       });
       onOpenChange(false);
-      toast({ title: "Ядро обновлено V17.0" });
+      toast({ title: "Ядро обновлено V18.0" });
     } catch (e: any) {
       toast({ title: "Ошибка сохранения", variant: "destructive" });
     }
   };
 
   /**
-   * КРИТИЧЕСКИЙ ФИКС V17.0: Отказ от Resident Keys.
-   * Это заставляет iOS использовать локальный Secure Enclave и НЕ просить iCloud Keychain.
+   * КРИТИЧЕСКИЙ ФИКС V18.0: ЛОКАЛЬНЫЙ FACE ID (DEVICE-BOUND)
+   * Мы отключаем residentKey и discoverableCredential, чтобы iOS не лезла в iCloud.
    */
   const handleLinkBiometrics = async () => {
     if (typeof window === 'undefined' || !window.PublicKeyCredential || !user) {
@@ -117,7 +118,6 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
       window.crypto.getRandomValues(challenge);
       const userHandle = window.crypto.getRandomValues(new Uint8Array(16));
 
-      // ПАРАМЕТРЫ ДЛЯ ОБХОДА ICLOUD (V17.0)
       const options: any = {
         publicKey: {
           challenge,
@@ -127,8 +127,8 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
           authenticatorSelection: { 
             authenticatorAttachment: "platform",
             userVerification: "required",
-            // НЕ запрашиваем residentKey и discoverableCredential - это убирает окно iCloud
-            residentKey: "discouraged"
+            residentKey: "discouraged",
+            requireResidentKey: false
           },
           attestation: "none",
           timeout: 60000,
@@ -141,13 +141,13 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         const base64Id = window.btoa(String.fromCharCode(...rawId));
         localStorage.setItem('nuxus_biometric_id', base64Id);
         setForm({ ...form, biometricEnabled: true });
-        toast({ title: "Локальный Face ID привязан" });
+        toast({ title: "Face ID привязан локально" });
       }
     } catch (e: any) {
-      console.error("Biometric Link Error:", e);
-      // Если пользователь отменил или iCloud всё равно мешает
+      console.warn("Nuxus Biometric Link Error:", e);
+      setForm({ ...form, biometricEnabled: false });
       if (e.name === 'NotAllowedError') {
-        toast({ title: "Доступ отменен", description: "Используйте PIN-код.", variant: "destructive" });
+        toast({ title: "Доступ ограничен", description: "Safari заблокировал биометрию. Используйте PIN-код.", variant: "destructive" });
       } else {
         toast({ title: "Сбой биометрии", variant: "destructive" });
       }
@@ -163,7 +163,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
       <DialogContent className="max-w-md bg-[#0a0a0c] border-white/10 p-0 overflow-hidden h-[85vh] flex flex-col rounded-[2.5rem] shadow-2xl outline-none">
         <DialogHeader className="p-6 border-b border-white/5 shrink-0 text-left">
           <DialogTitle className="flex items-center gap-2 text-xl font-black italic uppercase tracking-tighter text-white">
-            <Settings2 className="w-5 h-5 text-primary" /> Параметры V17.0
+            <Settings2 className="w-5 h-5 text-primary" /> Параметры V18.0
           </DialogTitle>
         </DialogHeader>
         

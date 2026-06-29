@@ -18,8 +18,8 @@ import { IosInstaller } from '@/components/ios-installer';
 import { useTranslations } from '@/hooks/use-translations';
 
 /**
- * ГЛАВНЫЙ КОНТРОЛЛЕР ЯДРА V16.5
- * ИСПРАВЛЕННЫЙ ВХОД ЧЕРЕЗ FACE ID (Локальный режим для обхода iCloud).
+ * ГЛАВНЫЙ КОНТРОЛЛЕР ЯДРА V18.5
+ * ФИКС: NotAllowedError решен через удаление авто-вызова. Face ID только по нажатию кнопки.
  */
 export default function Home() {
   const { user, isUserLoading } = useUser();
@@ -91,7 +91,7 @@ export default function Home() {
   };
 
   /**
-   * ПРОВЕРКА FACE ID V16.5: Локальный режим.
+   * ПРОВЕРКА FACE ID V18.5: ТОЛЬКО ПО ТАПУ (Safari Strict)
    */
   const tryBiometricAuth = async () => {
     if (typeof window === 'undefined' || !window.PublicKeyCredential) return;
@@ -128,22 +128,21 @@ export default function Home() {
         setIs2FAVerified(true);
         toast({ title: "Личность подтверждена", description: "Face ID распознан локально." });
       }
-    } catch (e) {
-      console.warn("Nuxus Biometric Auth: Local Fail.");
-      toast({ title: "Сбой Face ID", description: "Используйте системный PIN-код.", variant: "destructive" });
+    } catch (e: any) {
+      console.warn("Nuxus Biometric Auth Fail:", e);
+      if (e.name === 'NotAllowedError') {
+        toast({ 
+          title: "Safari: Ошибка доступа", 
+          description: "Нажмите на кнопку 'Использовать Face ID' еще раз.", 
+          variant: "destructive" 
+        });
+      } else {
+        toast({ title: "Сбой биометрии", variant: "destructive" });
+      }
     } finally {
       setIsBiometricAttempting(false);
     }
   };
-
-  useEffect(() => {
-    if (profile?.twoFactorEnabled && !is2FAVerified && profile?.settings?.biometricEnabled) {
-      const timer = setTimeout(() => {
-        tryBiometricAuth();
-      }, 1000);
-      return () => clearTimeout(timer);
-    }
-  }, [profile?.twoFactorEnabled, is2FAVerified, profile?.settings?.biometricEnabled]);
 
   useEffect(() => {
     if (!isUserLoading && (!user || !isProfileLoading)) {

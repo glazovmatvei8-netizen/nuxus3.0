@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useRef, useEffect, useMemo, useCallback, memo } from 'react';
@@ -154,7 +153,7 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
     <footer className="p-4 pt-2 pb-[calc(1rem+env(safe-area-inset-bottom))] obsidian-glass border-t border-white/5 shrink-0 z-40 relative">
       {isRecording && recorderMode === 'video' && (
         <div className="absolute bottom-28 left-1/2 -translate-x-1/2 w-56 h-56 rounded-full overflow-hidden border-4 border-primary shadow-[0_0_50px_rgba(168,85,247,0.5)] z-50 bg-black animate-in zoom-in duration-300">
-          <video ref={videoPreviewRef} autoPlay muted playsInline className="w-full h-full object-cover scale-x-[-1]" />
+          <video ref={videoPreviewRef} autoPlay muted loop playsInline className="w-full h-full object-cover scale-x-[-1]" />
           <div className="absolute inset-0 border-[10px] border-black/40 rounded-full pointer-events-none" />
         </div>
       )}
@@ -169,17 +168,15 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
                   <div className="grid grid-cols-1 gap-1">
                     <AttachmentItem icon={ImageIcon} label="Галерея" color="text-primary" onClick={() => fileInputRef.current?.click()} />
                     {isPremium && (
-                      <>
-                        <AttachmentItem icon={Palette} label="ИИ Холст" color="text-accent" onClick={async () => {
-                          if (!messageInput.trim()) return;
-                          setIsGeneratingImg(true);
-                          try {
-                            const { imageUrl } = await generateAiImage({ prompt: messageInput });
-                            onSendMessage(imageUrl, 'image', destructTimer);
-                            setMessageInput('');
-                          } finally { setIsGeneratingImg(false); }
-                        }} loading={isGeneratingImg} />
-                      </>
+                      <AttachmentItem icon={Palette} label="ИИ Холст" color="text-accent" onClick={async () => {
+                        if (!messageInput.trim()) return;
+                        setIsGeneratingImg(true);
+                        try {
+                          const { imageUrl } = await generateAiImage({ prompt: messageInput });
+                          onSendMessage(imageUrl, 'image', destructTimer);
+                          setMessageInput('');
+                        } finally { setIsGeneratingImg(false); }
+                      }} loading={isGeneratingImg} />
                     )}
                     <AttachmentItem icon={AtSign} label="Опрос" color="text-blue-400" onClick={onPollOpen} />
                     <div className="h-px bg-white/5 my-1.5 mx-2" />
@@ -450,14 +447,15 @@ export default function ChatArea() {
         <div className="flex items-center gap-3.5 flex-1 min-w-0">
           <Button variant="ghost" size="icon" className="md:hidden obsidian-glass rounded-xl text-white/50 h-9 w-9" onClick={() => setCurrentChatId(null)}><ChevronLeft className="w-5 h-5" /></Button>
           {!isSearchMode ? (
-            <div className="flex items-center gap-3.5 cursor-pointer min-w-0 group" onClick={() => setIsChatInfoOpen(true)}>
-              <UserAvatar userId={otherId} manualAvatarUrl={chat?.avatarUrl || otherProfile?.avatarUrl} className="h-10 w-10 border-2 border-white/10 group-hover:border-primary/50 transition-all" fallbackName={chatDisplayName} showOnlineStatus />
-              <div className="flex flex-col min-w-0 text-left">
-                <div className="flex items-center gap-1.5">
-                  <span className="font-black text-[17px] truncate text-white italic tracking-tighter uppercase group-hover:text-primary transition-colors">{chatDisplayName}</span>
-                  {otherProfile?.isPremium && <Star className="w-3.5 h-3.5 text-accent fill-accent" />}
+            <div className="flex items-center gap-3.5 cursor-pointer min-w-0 group flex-1" onClick={() => setIsChatInfoOpen(true)}>
+              <UserAvatar userId={otherId} manualAvatarUrl={chat?.avatarUrl || otherProfile?.avatarUrl} className="h-10 w-10 border-2 border-white/10 group-hover:border-primary/50 transition-all shrink-0" fallbackName={chatDisplayName} showOnlineStatus />
+              <div className="flex flex-col min-w-0 text-left flex-1">
+                <div className="flex items-center gap-1.5 min-w-0 w-full">
+                  <span className="font-black text-[17px] truncate text-white italic tracking-tighter uppercase group-hover:text-primary transition-colors">
+                    {chatDisplayName}
+                  </span>
                 </div>
-                <span className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground/60 leading-none">
+                <span className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground/60 leading-none truncate">
                   {chatSubtext}
                 </span>
               </div>
@@ -471,7 +469,7 @@ export default function ChatArea() {
           )}
         </div>
         {!isSearchMode && (
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 shrink-0">
             {isPremium && (
               <Button variant="ghost" size="icon" onClick={handleSummary} disabled={isSummarizing} className={cn("h-10 w-10 rounded-xl obsidian-glass text-primary hover:text-white transition-all", isSummarizing && "animate-spin")}>
                 <Sparkles className="w-5 h-5" />
