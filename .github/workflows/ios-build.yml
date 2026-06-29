@@ -22,6 +22,9 @@ jobs:
       - name: Install Dependencies
         run: npm install
 
+      - name: Fix manifest for static export
+        run: find src/app -name "*manifest*" -exec rm -rf {} + 2>/dev/null || true
+
       - name: Build Web Project
         run: |
           npm run build

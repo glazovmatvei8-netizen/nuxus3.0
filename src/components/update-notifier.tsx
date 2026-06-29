@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useEffect } from 'react';
@@ -9,8 +10,7 @@ import versions from '@/app/versions.json';
 
 /**
  * КВАНТОВЫЙ ОБНОВЛЯТОР ЯДРА V24.1.7
- * CURRENT_VERSION — это версия текущего билда.
- * ФИКС: Ошибка синтаксиса "Merge conflict marker" полностью устранена.
+ * Синхронизировано: 24.1.7
  */
 const CURRENT_VERSION = "24.1.7";
 
@@ -24,15 +24,12 @@ export function UpdateNotifier() {
 
     const checkVersion = () => {
       const lastInstalled = localStorage.getItem('nuxus_last_installed_version');
-      
-      // Сравниваем версию в облаке с текущей
       if (versions.latestVersion !== CURRENT_VERSION && lastInstalled !== versions.latestVersion) {
         setIsOpen(true);
       }
     };
 
     const timer = setTimeout(checkVersion, 3000);
-
     const handleManualCheck = () => setIsOpen(true);
     window.addEventListener('nuxus_check_updates', handleManualCheck);
     
