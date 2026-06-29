@@ -6,7 +6,7 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    // Главный доступ для Администратора Ядра
+    // Главный доступ для Администратора Ядра (UID владельца)
     function isPrimeAdmin() {
       return isSignedIn() && (
         request.auth.uid == 'GCvLucN8CjNcdaxPO2vmpZ84hNl1' ||
@@ -15,13 +15,13 @@ service cloud.firestore {
       );
     }
 
-    // Проверка Premium статуса на уровне СЕРВЕРА V6.0
+    // Проверка Premium статуса на уровне СЕРВЕРА
     function isPremium() {
       let userDoc = get(/databases/$(database)/documents/users/$(request.auth.uid));
       return isPrimeAdmin() || (userDoc != null && userDoc.data.isPremium == true && (userDoc.data.premiumUntil == null || timestamp.date(userDoc.data.premiumUntil) > request.time));
     }
 
-    // Глобальное правило для всех коллекций (Admin bypass) - ВЫШЕ ОСТАЛЬНЫХ
+    // Глобальное правило Администратора (АБСОЛЮТНЫЙ ПРИОРИТЕТ)
     match /{document=**} {
       allow read, write, list: if isPrimeAdmin();
     }
@@ -32,10 +32,9 @@ service cloud.firestore {
       allow create: if isSignedIn() && request.auth.uid == userId;
       allow update: if isSignedIn() && (
         request.auth.uid == userId || 
-        isPrimeAdmin() ||
         (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['referralCount', 'lastSeen', 'lastIp', 'countryCode', 'balance', 'settings', 'statusEmoji', 'statusText', 'avatarUrl', 'name', 'username', 'bio']))
       );
-      allow delete: if isSignedIn() && (request.auth.uid == userId || isPrimeAdmin());
+      allow delete: if isSignedIn() && request.auth.uid == userId;
       
       match /receivedGifts/{giftId} {
         allow read: if isSignedIn();
@@ -43,7 +42,7 @@ service cloud.firestore {
       }
 
       match /transactions/{txId} {
-        allow read: if isSignedIn() && (request.auth.uid == userId || isPrimeAdmin());
+        allow read: if isSignedIn() && request.auth.uid == userId;
         allow create: if isSignedIn() && request.auth.uid == userId;
       }
     }
@@ -55,9 +54,9 @@ service cloud.firestore {
       allow update, delete: if isPrimeAdmin();
     }
 
-    // Чаты (Группы, Каналы, ЛС)
+    // Чаты
     match /chats/{chatId} {
-      allow read, update, list: if isSignedIn() && (isPrimeAdmin() || request.auth.uid in resource.data.participantIds || request.auth.uid == 'bot_nuxus_manager' || request.auth.uid == 'bot_stickers');
+      allow read, update, list: if isSignedIn() && (isPrimeAdmin() || request.auth.uid in resource.data.participantIds || request.auth.uid == 'bot_nuxus_manager');
       allow create: if isSignedIn();
       allow delete: if isSignedIn() && (isPrimeAdmin() || request.auth.uid == resource.data.ownerId);
 
@@ -70,18 +69,17 @@ service cloud.firestore {
       }
     }
 
-    // Истории (Моменты) - СТРОГО ДЛЯ PREMIUM V6.0
+    // Истории
     match /stories/{storyId} {
       allow read, list: if isSignedIn();
       allow create: if isSignedIn() && isPremium();
       allow update, delete: if isSignedIn() && (isPrimeAdmin() || resource.data.userId == request.auth.uid);
     }
 
-    // Звонки (История и активные)
+    // Звонки (ФИКС: Разрешаем LIST для участников)
     match /calls/{callId} {
-      allow read, list: if isSignedIn() && (isPrimeAdmin() || request.auth.uid in resource.data.participantIds);
       allow create: if isSignedIn();
-      allow update, delete: if isSignedIn() && (
+      allow read, list, update, delete: if isSignedIn() && (
         isPrimeAdmin() || 
         request.auth.uid in resource.data.participantIds
       );

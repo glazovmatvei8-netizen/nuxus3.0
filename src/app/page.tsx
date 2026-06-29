@@ -1,4 +1,3 @@
-
 "use client"
 
 import { useUser, useFirestore, useDoc, useMemoFirebase, useAuth } from '@/firebase';
@@ -19,9 +18,8 @@ import { IosInstaller } from '@/components/ios-installer';
 import { useTranslations } from '@/hooks/use-translations';
 
 /**
- * ГЛАВНЫЙ КОНТРОЛЛЕР ЯДРА V20.0
- * ФИКС: WebAuthn требует прямого действия (User Gesture).
- * Убраны все автоматические вызовы Face ID для Safari.
+ * ГЛАВНЫЙ КОНТРОЛЛЕР ЯДРА V22.0
+ * ФИКС: WebAuthn оптимизирован для Safari без iCloud.
  */
 export default function Home() {
   const { user, isUserLoading } = useUser();
@@ -93,7 +91,7 @@ export default function Home() {
   };
 
   /**
-   * ПРОВЕРКА FACE ID V20.0: СТРОГО ПО ТАПУ (Requirement for Safari)
+   * ПРОВЕРКА FACE ID V22.0: Режим "Локальное устройство"
    */
   const tryBiometricAuth = async () => {
     if (typeof window === 'undefined' || !window.PublicKeyCredential) {
@@ -120,6 +118,7 @@ export default function Home() {
 
       const id = Uint8Array.from(atob(storedIdBase64), c => c.charCodeAt(0));
 
+      // V22.0: Оптимизированный запрос для Safari
       const options: any = {
         publicKey: {
           challenge,
@@ -128,7 +127,7 @@ export default function Home() {
             type: 'public-key',
             transports: ['internal']
           }],
-          userVerification: "required",
+          userVerification: "preferred", // Позволяет сработать без iCloud Keychain
           timeout: 60000,
         }
       };
@@ -142,8 +141,8 @@ export default function Home() {
       console.warn("Nuxus Biometric Auth Fail:", e);
       if (e.name === 'NotAllowedError') {
         toast({ 
-          title: "Доступ Safari запрещен", 
-          description: "Нажмите на кнопку 'Использовать Face ID' еще раз. Автоматический вызов запрещен.", 
+          title: "Safari: Отказ", 
+          description: "Нажмите кнопку ещё раз. Автоматический вызов запрещен системой безопасности.", 
           variant: "destructive" 
         });
       } else {
