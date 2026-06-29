@@ -19,8 +19,8 @@ import { IosInstaller } from '@/components/ios-installer';
 import { useTranslations } from '@/hooks/use-translations';
 
 /**
- * ГЛАВНЫЙ КОНТРОЛЛЕР ЯДРА V23.3
- * ФИКС: Абсолютно синхронный Face ID для Safari (Zero-Latency).
+ * ГЛАВНЫЙ КОНТРОЛЛЕР ЯДРА V23.4
+ * ФИКС: Абсолютно прямой вызов Face ID (без async/await) для Safari.
  */
 export default function Home() {
   const { user, isUserLoading } = useUser();
@@ -90,11 +90,10 @@ export default function Home() {
   };
 
   /**
-   * ПРОВЕРКА FACE ID V23.3: АБСОЛЮТНО СИНХРОННЫЙ ВЫЗОВ (Zero Latency)
-   * Убраны вообще все проверки и стейты перед вызовом.
+   * ПРОВЕРКА FACE ID V23.4: ПРЯМОЙ ВЫЗОВ БЕЗ ASYNC
+   * Оптимизировано специально для Safari iOS.
    */
-  const tryBiometricAuth = async () => {
-    // Получаем ID из хранилища мгновенно
+  const tryBiometricAuth = () => {
     const storedIdBase64 = localStorage.getItem('nuxus_biometric_id');
     
     if (!storedIdBase64) {
@@ -103,11 +102,11 @@ export default function Home() {
     }
 
     try {
-      // 1. Мгновенный вызов Face ID - Самое первое действие!
       const challenge = crypto.getRandomValues(new Uint8Array(32));
       const id = Uint8Array.from(atob(storedIdBase64), c => c.charCodeAt(0));
 
-      const assertion = await navigator.credentials.get({
+      // Используем чистый Promise без await, чтобы Safari не блокировал UI поток
+      navigator.credentials.get({
         publicKey: {
           challenge,
           allowCredentials: [{
@@ -117,19 +116,19 @@ export default function Home() {
           }],
           userVerification: "required"
         }
+      }).then((assertion) => {
+        if (assertion) {
+          setIs2FAVerified(true);
+          toast({ title: "Личность подтверждена", description: "Вход через Hardware ID." });
+        }
+      }).catch((e) => {
+        console.warn("Nuxus Auth Reject:", e);
+        if (e.name === 'NotAllowedError') {
+          toast({ title: "Safari: Ожидание", description: "Нажмите ещё раз для активации биометрии.", variant: "destructive" });
+        }
       });
-
-      if (assertion) {
-        setIs2FAVerified(true);
-        toast({ title: "Личность подтверждена", description: "Вход через Hardware ID." });
-      }
-    } catch (e: any) {
-      console.warn("Nuxus Auth Fail:", e);
-      if (e.name === 'NotAllowedError') {
-        toast({ title: "Safari: Ожидание", description: "Нажмите ещё раз для активации биометрии.", variant: "destructive" });
-      } else {
-        toast({ title: "Сбой биометрии", description: "Используйте системный PIN-код.", variant: "destructive" });
-      }
+    } catch (e) {
+      toast({ title: "Сбой биометрии", variant: "destructive" });
     }
   };
 

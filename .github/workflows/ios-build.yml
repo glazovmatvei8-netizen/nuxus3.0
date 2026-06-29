@@ -28,9 +28,6 @@ jobs:
         run: |
           # Гарантируем наличие папки out для Capacitor
           mkdir -p out
-          if [ ! -f "out/index.html" ]; then
-            echo "<html><body>Nuxus Bridge</body></html>" > out/index.html
-          fi
           
           # Инициализируем iOS если её нет
           if [ ! -d "ios" ]; then

@@ -9,7 +9,7 @@ import { Progress } from './ui/progress';
 import versions from '@/app/versions.json';
 
 /**
- * КВАНТОВЫЙ ОБНОВЛЯТОР ЯДРА V23.3
+ * КВАНТОВЫЙ ОБНОВЛЯТОР ЯДРА V23.4
  * Синхронизировано: 22.9.0
  */
 const CURRENT_VERSION = "22.9.0";
