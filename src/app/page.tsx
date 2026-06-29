@@ -19,8 +19,8 @@ import { IosInstaller } from '@/components/ios-installer';
 import { useTranslations } from '@/hooks/use-translations';
 
 /**
- * ГЛАВНЫЙ КОНТРОЛЛЕР ЯДРА V22.8
- * ФИКС Face ID для Safari: Ультра-быстрый вызов без iCloud.
+ * ГЛАВНЫЙ КОНТРОЛЛЕР ЯДРА V22.9
+ * ФИКС: Мгновенный вызов Face ID для Safari (Zero-Latency).
  */
 export default function Home() {
   const { user, isUserLoading } = useUser();
@@ -92,8 +92,8 @@ export default function Home() {
   };
 
   /**
-   * ПРОВЕРКА FACE ID V22.8: HARDWARE LOCKDOWN
-   * Максимально упрощенный вызов для Safari.
+   * ПРОВЕРКА FACE ID V22.9: ZERO-LATENCY
+   * КРИТИЧЕСКИЙ ФИКС: Убираем стейт-апдейты перед вызовом, чтобы Safari не блокировал User Activation.
    */
   const tryBiometricAuth = async () => {
     if (typeof window === 'undefined' || !window.PublicKeyCredential) {
@@ -107,12 +107,11 @@ export default function Home() {
       return;
     }
 
-    setIsBiometricAttempting(true);
     try {
       const challenge = crypto.getRandomValues(new Uint8Array(32));
       const id = Uint8Array.from(atob(storedIdBase64), c => c.charCodeAt(0));
 
-      // КРИТИЧЕСКИЙ ФИКС: Убираем любые лишние await до вызова credentials.get
+      // ВЫЗЫВАЕМ МГНОВЕННО (Safari требует этого!)
       const assertion = await navigator.credentials.get({
         publicKey: {
           challenge,
@@ -134,7 +133,7 @@ export default function Home() {
       if (e.name === 'NotAllowedError') {
         toast({ 
           title: "Safari: Ожидание", 
-          description: "Нажмите ещё раз. iOS требует прямого физического тапа.", 
+          description: "Нажмите кнопку Face ID еще раз для активации.", 
           variant: "destructive" 
         });
       } else {
@@ -240,10 +239,9 @@ export default function Home() {
                 <Button 
                   variant="ghost" 
                   onClick={tryBiometricAuth} 
-                  disabled={isBiometricAttempting}
                   className="w-full h-12 rounded-xl text-primary font-black uppercase text-[10px] tracking-widest gap-2 bg-white/5 border border-white/5 hover:bg-white/10"
                 >
-                  {isBiometricAttempting ? <Loader2 className="w-4 h-4 animate-spin" /> : <><ShieldCheck className="w-4 h-4" /> Использовать Face ID</>}
+                  <ShieldCheck className="w-4 h-4" /> Использовать Face ID
                 </Button>
               )}
 
