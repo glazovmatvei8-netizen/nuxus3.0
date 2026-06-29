@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useEffect } from 'react';
@@ -78,11 +79,10 @@ export default function AuthScreen({ initialMode = 'login' }: AuthScreenProps) {
     const userRef = doc(db, 'users', uid);
     const snap = await getDoc(userRef);
     
-    // Имя: приоритет полю ввода. Убрано слово "Agent".
+    // Имя: ПРИНУДИТЕЛЬНО убираем "Agent"
     const inputName = formData.name.trim();
     const finalName = inputName || overrideData?.name || (snap.exists() ? snap.data().name : `Node_${uid.slice(0, 4).toUpperCase()}`);
     
-    // ID: очистка от мусора
     let inputUsername = formData.username.trim().replace('@', '');
     let finalUsername = inputUsername || overrideData?.username || (snap.exists() ? snap.data().username : null);
     
@@ -207,23 +207,6 @@ export default function AuthScreen({ initialMode = 'login' }: AuthScreenProps) {
     }
   };
 
-  if (mode === 'recovering') {
-    return (
-      <div className="h-[100dvh] w-full flex flex-col items-center justify-center bg-[#020203] text-white">
-        <div className="relative">
-          <div className="absolute inset-0 bg-primary blur-[80px] opacity-20 animate-pulse" />
-          <NuxusLogo size={160} />
-        </div>
-        <div className="mt-16 flex flex-col items-center gap-6">
-          <div className="relative w-48 h-1 bg-white/5 rounded-full overflow-hidden">
-            <div className="absolute inset-0 bg-primary animate-[scanline_2s_linear_infinite]" />
-          </div>
-          <p className="text-[10px] font-black uppercase tracking-[0.8em] text-primary/60 animate-pulse ml-[0.8em]">СИНХРОНИЗАЦИЯ...</p>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-[100dvh] w-full flex flex-col items-center justify-center bg-[#020203] p-4 relative overflow-hidden">
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
@@ -231,7 +214,7 @@ export default function AuthScreen({ initialMode = 'login' }: AuthScreenProps) {
       </div>
 
       <div className="w-full max-w-[380px] relative z-10 flex flex-col items-center animate-in fade-in zoom-in duration-1000">
-        <div className="mb-10 scale-90 hover:scale-100 transition-all duration-700 cursor-pointer active:rotate-[360deg]">
+        <div className="mb-10">
           <NuxusLogo size={100} />
         </div>
 
@@ -239,11 +222,11 @@ export default function AuthScreen({ initialMode = 'login' }: AuthScreenProps) {
           <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-primary/60 to-transparent animate-pulse" />
           
           <CardHeader className="text-center pb-2 pt-10 px-8">
-            <CardTitle className="text-3xl font-black tracking-tighter uppercase italic text-white leading-none drop-shadow-[0_0_15px_rgba(168,85,247,0.4)]">
-              {mode === 'recover' ? 'Восстановление' : mode === 'setup2fa' ? 'Защита' : mode === 'login' ? 'Вход V20.0' : 'Создание'}
+            <CardTitle className="text-3xl font-black tracking-tighter uppercase italic text-white leading-none">
+              {mode === 'setup2fa' ? 'Защита' : mode === 'login' ? 'Вход V23.0' : 'Создание'}
             </CardTitle>
             <CardDescription className="text-primary/80 font-black tracking-[0.5em] uppercase text-[8px] opacity-60 mt-3 ml-[0.5em]">
-              {mode === 'setup2fa' ? 'Квантовый ключ' : mode === 'recover' ? 'Нейронный сброс' : 'Nuxus Kernel 2026'}
+              Hardware Security
             </CardDescription>
           </CardHeader>
 
@@ -251,8 +234,8 @@ export default function AuthScreen({ initialMode = 'login' }: AuthScreenProps) {
             {mode === 'setup2fa' ? (
               <form onSubmit={handleSetup2FA} className="space-y-8">
                 <div className="flex flex-col items-center gap-4 py-2">
-                  <Fingerprint className="w-16 h-16 text-primary animate-float relative z-10" />
-                  <p className="text-[9px] text-muted-foreground uppercase font-black tracking-[0.2em] text-center leading-relaxed">Установите 6-значный<br/>ключ доступа</p>
+                  <Fingerprint className="w-16 h-16 text-primary animate-float" />
+                  <p className="text-[9px] text-muted-foreground uppercase font-black tracking-[0.2em] text-center">Установите 6-значный<br/>ключ доступа</p>
                 </div>
                 <input 
                   type="password" 
@@ -267,33 +250,25 @@ export default function AuthScreen({ initialMode = 'login' }: AuthScreenProps) {
                   {isLoading ? <Loader2 className="animate-spin w-5 h-5" /> : "Активировать Узел"}
                 </Button>
               </form>
-            ) : mode === 'recover' ? (
-              <div className="space-y-8 text-center py-4">
-                <ShieldAlert className="w-16 h-16 text-destructive animate-float mx-auto relative z-10" />
-                <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/80 px-4 leading-relaxed">
-                  Для восстановления доступа обратитесь к Оператору Ядра.
-                </p>
-                <Button variant="outline" onClick={() => setMode('login')} className="w-full h-14 rounded-[1.5rem] border-white/10 text-[10px] uppercase font-black tracking-[0.3em]">Вернуться</Button>
-              </div>
             ) : (
               <form onSubmit={handleAuth} className="space-y-5">
                 {mode === 'register' && (
                   <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-1.5">
+                    <div className="space-y-1.5 text-left">
                       <Label className="text-[8px] uppercase font-black text-primary/60 ml-3 tracking-widest">Имя</Label>
                       <Input placeholder="Имя" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="bg-white/5 border-white/10 h-12 rounded-[1.2rem] text-xs font-bold border-2" required />
                     </div>
-                    <div className="space-y-1.5">
+                    <div className="space-y-1.5 text-left">
                       <Label className="text-[8px] uppercase font-black text-primary/60 ml-3 tracking-widest">ID</Label>
                       <Input placeholder="id" value={formData.username} onChange={e => setFormData({...formData, username: e.target.value})} className="bg-white/5 border-white/10 h-12 rounded-[1.2rem] text-xs font-mono border-2" required />
                     </div>
                   </div>
                 )}
-                <div className="space-y-1.5">
+                <div className="space-y-1.5 text-left">
                   <Label className="text-[8px] uppercase font-black text-primary/60 ml-3 tracking-widest">Логин / Телефон</Label>
                   <Input placeholder="+7 (___) ___ __ __" value={formData.identifier} onChange={e => setFormData({...formData, identifier: e.target.value})} className="bg-white/5 border-white/10 h-12 rounded-[1.2rem] text-sm font-bold tracking-widest border-2" required />
                 </div>
-                <div className="space-y-1.5">
+                <div className="space-y-1.5 text-left">
                   <Label className="text-[8px] uppercase font-black text-primary/60 ml-3 tracking-widest">Пароль</Label>
                   <Input type="password" placeholder="••••••••" value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} className="bg-white/5 border-white/10 h-12 rounded-[1.2rem] text-sm tracking-widest border-2" required />
                 </div>
@@ -314,7 +289,6 @@ export default function AuthScreen({ initialMode = 'login' }: AuthScreenProps) {
           </CardContent>
         </Card>
       </div>
-      <LegalModal open={legalModal.open} onOpenChange={(o) => setLegalModal({ ...legalModal, open: o })} type={legalModal.type} />
     </div>
   );
 }

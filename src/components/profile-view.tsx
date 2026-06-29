@@ -19,8 +19,8 @@ import { QRCodeSVG } from 'qrcode.react';
 import versions from '@/app/versions.json';
 
 /**
- * ГЛАВНЫЙ ЭКРАН ПРОФИЛЯ V22.8 «Origin Sync»
- * ФИКС: Ручная проверка обновлений по клику на QES.
+ * ГЛАВНЫЙ ЭКРАН ПРОФИЛЯ V23.0 «Scroll Harmony»
+ * ФИКС: Аватар и имя теперь листаются. Убраны лишние звезды.
  */
 export default function ProfileView() {
   const { user } = useUser();
@@ -40,13 +40,11 @@ export default function ProfileView() {
   const copyRefLink = () => {
     if (!inviteLink) return;
     navigator.clipboard.writeText(inviteLink);
-    toast({ title: "Ссылка синхронизирована", description: "Идентификатор узла скопирован." });
+    toast({ title: "Ссылка скопирована", description: "Идентификатор узла готов к передаче." });
   };
 
   const handleCheckUpdate = () => {
-    // Триггерим событие для UpdateNotifier
     window.dispatchEvent(new CustomEvent('nuxus_check_updates'));
-    // Убираем тост, так как UpdateNotifier сам покажет окно
   };
 
   const isPremium = isUserPremium(profile);
@@ -54,9 +52,8 @@ export default function ProfileView() {
 
   return (
     <div className="flex flex-col h-full bg-transparent overflow-hidden relative">
-      <div className="absolute top-0 left-0 right-0 h-64 bg-gradient-to-b from-primary/15 to-transparent pointer-events-none z-0" />
-
-      <div className="px-6 pt-10 pb-4 flex items-center justify-between shrink-0 relative z-20">
+      {/* Шапка (Фиксированная) */}
+      <div className="px-6 pt-10 pb-4 flex items-center justify-between shrink-0 relative z-30">
         <Button 
           variant="ghost" 
           size="icon" 
@@ -81,6 +78,7 @@ export default function ProfileView() {
       <ScrollArea className="flex-1 relative z-10">
         <div className="px-6 space-y-4 pb-32 pt-2 animate-in fade-in duration-700">
           
+          {/* Аватар и имя (Теперь листаются) */}
           <div className="flex flex-col items-center gap-4 mb-8 pt-4">
              <div className="relative group">
                 <div className="absolute -inset-4 bg-primary/20 blur-3xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-1000" />
@@ -98,15 +96,16 @@ export default function ProfileView() {
              </div>
           </div>
 
+          {/* Карточка статуса */}
           <div className="obsidian-glass p-6 rounded-[2rem] space-y-5 relative overflow-hidden group border-white/5 shadow-xl">
-             <div className="flex items-center justify-between relative z-10">
+             <div className="flex items-center justify-between relative z-10 text-left">
                 <div className="flex items-center gap-3">
                   <div className="bg-primary/10 p-2.5 rounded-xl border border-primary/10">
                     <Cpu className="w-5 h-5 text-primary" />
                   </div>
-                  <div className="flex flex-col text-left">
+                  <div className="flex flex-col">
                     <span className="text-[8px] font-black uppercase text-primary/50 tracking-widest leading-none">Протокол Ядра</span>
-                    <span className="text-xl font-black text-white italic mt-1 tracking-tighter">ЭЛИТНЫЙ УЗЕЛ</span>
+                    <span className="text-xl font-black text-white italic mt-1 tracking-tighter uppercase">Элитный Узел</span>
                   </div>
                 </div>
                 <div className="text-right">
@@ -121,10 +120,6 @@ export default function ProfileView() {
                     className="h-full bg-gradient-to-r from-primary to-accent shadow-[0_0_10px_rgba(168,85,247,0.8)] transition-all duration-1500" 
                     style={{ width: `${Math.min(100, (referralCount / 10) * 100)}%` }} 
                   />
-               </div>
-               <div className="flex justify-between items-center px-1">
-                 <span className="text-[7px] font-black text-white/20 uppercase tracking-widest">Рост</span>
-                 <span className="text-[7px] font-black text-primary uppercase tracking-widest">{Math.min(100, (referralCount / 10) * 100)}%</span>
                </div>
              </div>
              
@@ -156,11 +151,6 @@ export default function ProfileView() {
               <div className="h-1 w-1 rounded-full bg-green-500 animate-pulse" />
               <p className="text-[8px] text-white/20 uppercase font-black tracking-widest">Узел синхронизирован V{versions.latestVersion}</p>
             </div>
-            <div className="flex gap-8 opacity-5">
-              <Globe className="w-5 h-5" />
-              <Server className="w-5 h-5" />
-              <Shield className="w-5 h-5" />
-            </div>
           </div>
         </div>
       </ScrollArea>
@@ -168,8 +158,8 @@ export default function ProfileView() {
       <Dialog open={isQrOpen} onOpenChange={setIsQrOpen}>
         <DialogContent className="max-w-xs obsidian-glass border-white/10 rounded-[2.5rem] p-8 text-center shadow-2xl outline-none">
           <DialogHeader className="mb-4">
-            <DialogTitle className="text-xl font-black uppercase italic text-white tracking-tighter">Signal Hash</DialogTitle>
-            <DialogDescription className="text-[8px] uppercase font-black tracking-widest text-primary/60 mt-1">Ключ шифрования узла</DialogDescription>
+            <DialogTitle className="text-xl font-black uppercase italic text-white tracking-tighter text-center w-full">Signal Hash</DialogTitle>
+            <DialogDescription className="text-[8px] uppercase font-black tracking-widest text-primary/60 mt-1 text-center w-full">Ключ шифрования узла</DialogDescription>
           </DialogHeader>
           <div className="py-4 flex justify-center">
             <div className="bg-white p-5 rounded-[2rem] shadow-xl relative">
@@ -183,11 +173,7 @@ export default function ProfileView() {
                     includeMargin={false}
                     imageSettings={{
                       src: "https://i.ibb.co/sd2MqGz2/Icon.png",
-                      x: undefined,
-                      y: undefined,
-                      height: 32,
-                      width: 32,
-                      excavate: true,
+                      x: undefined, y: undefined, height: 32, width: 32, excavate: true,
                     }}
                   />
                 )}

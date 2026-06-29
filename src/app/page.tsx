@@ -19,8 +19,8 @@ import { IosInstaller } from '@/components/ios-installer';
 import { useTranslations } from '@/hooks/use-translations';
 
 /**
- * ГЛАВНЫЙ КОНТРОЛЛЕР ЯДРА V22.9
- * ФИКС: Мгновенный вызов Face ID для Safari (Zero-Latency).
+ * ГЛАВНЫЙ КОНТРОЛЛЕР ЯДРА V23.0
+ * ФИКС: Мгновенный вызов Face ID для Safari (Zero-Latency Tap).
  */
 export default function Home() {
   const { user, isUserLoading } = useUser();
@@ -34,13 +34,13 @@ export default function Home() {
   const [twoFactorInput, setTwoFactorInput] = useState('');
   const [showIosInstaller, setShowIosInstaller] = useState(false);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
-  const [isBiometricAttempting, setIsBiometricAttempting] = useState(false);
   
   useEffect(() => {
     setMounted(true);
     const checkIos = () => {
       const isIos = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
       const isStandalone = (window.navigator as any).standalone || window.matchMedia('(display-mode: standalone)').matches;
+      // Если не установлено как приложение (ни PWA, ни Native), показываем инсталлер
       if (isIos && !isStandalone && !localStorage.getItem('ios_installer_dismissed')) {
         setShowIosInstaller(true);
       }
@@ -92,8 +92,7 @@ export default function Home() {
   };
 
   /**
-   * ПРОВЕРКА FACE ID V22.9: ZERO-LATENCY
-   * КРИТИЧЕСКИЙ ФИКС: Убираем стейт-апдейты перед вызовом, чтобы Safari не блокировал User Activation.
+   * ПРОВЕРКА FACE ID V23.0: МГНОВЕННЫЙ ТАП
    */
   const tryBiometricAuth = async () => {
     if (typeof window === 'undefined' || !window.PublicKeyCredential) {
@@ -111,7 +110,7 @@ export default function Home() {
       const challenge = crypto.getRandomValues(new Uint8Array(32));
       const id = Uint8Array.from(atob(storedIdBase64), c => c.charCodeAt(0));
 
-      // ВЫЗЫВАЕМ МГНОВЕННО (Safari требует этого!)
+      // КРИТИЧЕСКИЙ ФИКС: Вызов ДОЛЖЕН быть синхронным с кликом
       const assertion = await navigator.credentials.get({
         publicKey: {
           challenge,
@@ -133,14 +132,12 @@ export default function Home() {
       if (e.name === 'NotAllowedError') {
         toast({ 
           title: "Safari: Ожидание", 
-          description: "Нажмите кнопку Face ID еще раз для активации.", 
+          description: "Нажмите кнопку ещё раз для активации биометрии.", 
           variant: "destructive" 
         });
       } else {
         toast({ title: "Сбой биометрии", description: "Используйте системный PIN-код.", variant: "destructive" });
       }
-    } finally {
-      setIsBiometricAttempting(false);
     }
   };
 
@@ -156,9 +153,6 @@ export default function Home() {
   if (isInitialLoad && (isUserLoading || (user && isProfileLoading))) {
     return (
       <div className="h-[100dvh] w-full flex flex-col items-center justify-center bg-[#020203] text-white relative overflow-hidden">
-        <div className="absolute inset-0 z-0 opacity-20">
-          <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_0%_0%,rgba(45,10,85,0.4)_0%,transparent_50%),radial-gradient(circle_at_100%_100%,rgba(10,60,80,0.3)_0%,transparent_50%)]" />
-        </div>
         <div className="relative z-10 flex flex-col items-center">
           <div className="relative">
             <div className="absolute inset-0 bg-primary blur-[100px] opacity-30 animate-pulse" />
@@ -193,26 +187,17 @@ export default function Home() {
   if (profile?.twoFactorEnabled && !is2FAVerified) {
     return (
       <div className="h-screen w-full flex items-center justify-center bg-[#020203] relative overflow-hidden px-6">
-        <div className="absolute inset-0 pointer-events-none opacity-40">
-          <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_0%_0%,rgba(45,10,85,0.4)_0%,transparent_50%),radial-gradient(circle_at_100%_100%,rgba(10,60,80,0.3)_0%,transparent_50%)]" />
-          <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.01)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.01)_1px,transparent_1px)] bg-[size:40px_40px] [mask-image:radial-gradient(ellipse_at_center,black,transparent_80%)]" />
-        </div>
-        
         <div className="w-full max-w-[340px] space-y-12 text-center relative z-10 animate-in fade-in zoom-in duration-1000">
           <div className="space-y-6">
             <div className="relative inline-block group">
-              <div className="absolute -inset-8 bg-primary/20 blur-[60px] opacity-40 animate-pulse group-hover:opacity-60 transition-opacity" />
+              <div className="absolute -inset-8 bg-primary/20 blur-[60px] opacity-40 animate-pulse" />
               <div className="bg-white/[0.03] border border-white/10 w-24 h-24 rounded-[2.5rem] flex items-center justify-center mx-auto relative z-10 shadow-2xl backdrop-blur-3xl">
-                {profile?.settings?.biometricEnabled ? (
-                  <ShieldCheck className="w-10 h-10 text-primary animate-pulse" />
-                ) : (
-                  <Fingerprint className="w-10 h-10 text-primary animate-float" />
-                )}
+                <Fingerprint className="w-10 h-10 text-primary animate-pulse" />
               </div>
             </div>
             <div className="space-y-1">
-              <h2 className="text-3xl font-black uppercase italic text-white tracking-tighter">Защищенный канал</h2>
-              <p className="text-[10px] font-black uppercase tracking-[0.5em] text-primary/60 ml-[0.5em]">Верификация личности</p>
+              <h2 className="text-3xl font-black uppercase italic text-white tracking-tighter">Защищенный вход</h2>
+              <p className="text-[10px] font-black uppercase tracking-[0.5em] text-primary/60 ml-[0.5em]">Hardware Security</p>
             </div>
           </div>
 
@@ -231,7 +216,7 @@ export default function Home() {
             </div>
             
             <div className="space-y-4 max-w-[260px] mx-auto">
-              <Button onClick={handleVerify2FA} className="w-full h-14 rounded-2xl bg-primary text-white font-black uppercase italic tracking-widest shadow-2xl active:scale-95 transition-all text-sm border border-white/10">
+              <Button onClick={handleVerify2FA} className="w-full h-14 rounded-2xl bg-primary text-white font-black uppercase italic tracking-widest shadow-2xl active:scale-95 transition-all text-sm">
                 Разблокировать Ядро
               </Button>
               
