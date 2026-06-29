@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useEffect } from 'react';
@@ -79,9 +78,9 @@ export default function AuthScreen({ initialMode = 'login' }: AuthScreenProps) {
     const userRef = doc(db, 'users', uid);
     const snap = await getDoc(userRef);
     
-    // Имя: приоритет полю ввода
+    // Имя: приоритет полю ввода. Убрано слово "Agent".
     const inputName = formData.name.trim();
-    const finalName = inputName || overrideData?.name || (snap.exists() ? snap.data().name : `User ${uid.slice(0, 4).toUpperCase()}`);
+    const finalName = inputName || overrideData?.name || (snap.exists() ? snap.data().name : `Node_${uid.slice(0, 4).toUpperCase()}`);
     
     // ID: очистка от мусора
     let inputUsername = formData.username.trim().replace('@', '');

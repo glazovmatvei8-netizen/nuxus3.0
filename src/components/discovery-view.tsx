@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useMemo } from 'react';
@@ -10,15 +9,14 @@ import { Button } from '@/components/ui/button';
 import { Search, Zap, Users, Radio, Star, Globe, Sparkles, Activity, Target, ShieldCheck, ArrowRight } from 'lucide-react';
 import { UserAvatar } from '@/components/user-avatar';
 import { useAppState } from '@/lib/store';
-import { cn, formatDisplayName } from '@/lib/utils';
+import { cn, formatDisplayName, isUserPremium } from '@/lib/utils';
 import type { Chat, User } from '@/lib/types';
 
 const ADMIN_ID = 'GCvLucN8CjNcdaxPO2vmpZ84hNl1';
 
 /**
  * НАВИГАТОР V12.0 «Mission Control»
- * ИСПРАВЛЕННАЯ ВЕРСТКА: Баннер Milestone полностью адаптивен.
- * ПОЛНАЯ РУСИФИКАЦИЯ.
+ * ОБНОВЛЕНО: Только активные Прайм-Узлы.
  */
 export default function DiscoveryView() {
   const db = useFirestore();
@@ -47,10 +45,14 @@ export default function DiscoveryView() {
 
   const leaderboard = useMemo(() => {
     if (!rawTopUsers || !allUsers) return [];
-    let list = [...rawTopUsers];
+    
+    // Фильтруем ТОЛЬКО тех, у кого активный прайм
+    let list = rawTopUsers.filter(u => isUserPremium(u));
+    
     const adminData = allUsers.find(u => u.id === ADMIN_ID);
     list = list.filter(u => u.id !== ADMIN_ID);
     if (adminData) list.unshift(adminData);
+    
     return list.slice(0, 15);
   }, [rawTopUsers, allUsers]);
 
@@ -93,7 +95,7 @@ export default function DiscoveryView() {
       <ScrollArea className="flex-1 px-0.5">
         <div className="space-y-10 pb-32 px-6 max-w-full overflow-x-hidden animate-in fade-in duration-700">
           
-          {/* Цель V12.0 (ПОЛНОСТЬЮ АДАПТИВНАЯ ВЕРСТКА) */}
+          {/* Цель V12.0 */}
           <div className="relative overflow-hidden rounded-[2.5rem] p-[1px] bg-gradient-to-br from-white/10 to-transparent">
              <div className="bg-[#05050a]/95 backdrop-blur-3xl p-5 sm:p-6 rounded-[2.5rem] text-center space-y-5 relative overflow-hidden shadow-xl">
                 <div className="relative z-10 flex flex-col items-center gap-3">
@@ -130,10 +132,10 @@ export default function DiscoveryView() {
           {/* Секция лидеров */}
           <section className="space-y-5">
             <h3 className="text-[9px] font-black uppercase tracking-[0.4em] text-primary/60 flex items-center gap-2 px-1">
-              <Sparkles className="w-3 h-3 fill-current" /> Прайм-Узлы
+              <Sparkles className="w-3 h-3 fill-current" /> Прайм-Узлы (Active)
             </h3>
             <div className="flex gap-4 overflow-x-auto scrollbar-hide py-2 px-1 -mx-4">
-              {leaderboard.map((u) => (
+              {leaderboard.length > 0 ? leaderboard.map((u) => (
                 <div 
                   key={u.id} 
                   onClick={() => setInspectedUserId(u.id)}
@@ -157,7 +159,11 @@ export default function DiscoveryView() {
                     {u.id === ADMIN_ID ? 'СОЗДАТЕЛЬ' : formatDisplayName(u.name).split(' ')[0]}
                   </span>
                 </div>
-              ))}
+              )) : (
+                <div className="flex flex-col items-center justify-center w-full py-4 opacity-20">
+                  <p className="text-[8px] font-black uppercase">Нет активных узлов</p>
+                </div>
+              )}
             </div>
           </section>
 

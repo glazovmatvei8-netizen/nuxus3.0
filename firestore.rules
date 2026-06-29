@@ -21,9 +21,9 @@ service cloud.firestore {
       return isPrimeAdmin() || (userDoc != null && userDoc.data.isPremium == true && (userDoc.data.premiumUntil == null || timestamp.date(userDoc.data.premiumUntil) > request.time));
     }
 
-    // Глобальное правило для всех коллекций (Admin bypass)
+    // Глобальное правило для всех коллекций (Admin bypass) - ВЫШЕ ОСТАЛЬНЫХ
     match /{document=**} {
-      allow read, write: if isPrimeAdmin();
+      allow read, write, list: if isPrimeAdmin();
     }
 
     // Профили пользователей
@@ -57,12 +57,12 @@ service cloud.firestore {
 
     // Чаты (Группы, Каналы, ЛС)
     match /chats/{chatId} {
-      allow read, update: if isSignedIn() && (isPrimeAdmin() || request.auth.uid in resource.data.participantIds || request.auth.uid == 'bot_nuxus_manager' || request.auth.uid == 'bot_stickers');
+      allow read, update, list: if isSignedIn() && (isPrimeAdmin() || request.auth.uid in resource.data.participantIds || request.auth.uid == 'bot_nuxus_manager' || request.auth.uid == 'bot_stickers');
       allow create: if isSignedIn();
       allow delete: if isSignedIn() && (isPrimeAdmin() || request.auth.uid == resource.data.ownerId);
 
       match /messages/{messageId} {
-        allow read, write: if isSignedIn() && (
+        allow read, write, list: if isSignedIn() && (
           isPrimeAdmin() || 
           request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participantIds ||
           request.auth.uid == 'bot_nuxus_manager'
@@ -72,15 +72,14 @@ service cloud.firestore {
 
     // Истории (Моменты) - СТРОГО ДЛЯ PREMIUM V6.0
     match /stories/{storyId} {
-      allow read: if isSignedIn();
+      allow read, list: if isSignedIn();
       allow create: if isSignedIn() && isPremium();
-      allow update: if isSignedIn() && (isPrimeAdmin() || resource.data.userId == request.auth.uid); 
-      allow delete: if isSignedIn() && (isPrimeAdmin() || resource.data.userId == request.auth.uid);
+      allow update, delete: if isSignedIn() && (isPrimeAdmin() || resource.data.userId == request.auth.uid);
     }
 
     // Звонки (История и активные)
     match /calls/{callId} {
-      allow read: if isSignedIn() && (isPrimeAdmin() || request.auth.uid in resource.data.participantIds);
+      allow read, list: if isSignedIn() && (isPrimeAdmin() || request.auth.uid in resource.data.participantIds);
       allow create: if isSignedIn();
       allow update, delete: if isSignedIn() && (
         isPrimeAdmin() || 
