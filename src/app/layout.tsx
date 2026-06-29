@@ -80,7 +80,11 @@ export default function RootLayout({
         {/* VK Bridge Script */}
         <Script src="https://unpkg.com/@vkontakte/vk-bridge/dist/browser.min.js" strategy="beforeInteractive" />
       </head>
-      <body className="font-sans antialiased bg-background text-foreground overflow-hidden h-[100dvh] selection:bg-primary/30" style={{ fontFamily: 'var(--font-jakarta), ui-sans-serif, system-ui, -apple-system, sans-serif' }}>
+      <body 
+        className="font-sans antialiased bg-background text-foreground overflow-hidden h-[100dvh] selection:bg-primary/30" 
+        style={{ fontFamily: 'var(--font-jakarta), ui-sans-serif, system-ui, -apple-system, sans-serif' }}
+        suppressHydrationWarning
+      >
         <FirebaseClientProvider>
           <AppProvider>
             <VkProvider />

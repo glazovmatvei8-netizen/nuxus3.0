@@ -9,6 +9,7 @@ import { ShieldCheck, Scale, Lock, Database, HelpCircle, MessageCircle, Zap, Shi
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Button } from '@/components/ui/button';
 import { useAppState } from '@/lib/store';
+import versions from '@/app/versions.json';
 
 export function LegalModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void, type?: 'privacy' | 'terms' }) {
   const { setInspectedUserId } = useAppState();
@@ -27,7 +28,7 @@ export function LegalModal({ open, onOpenChange }: { open: boolean, onOpenChange
             <ShieldCheck className="w-6 h-6 text-primary" /> База Знаний Ядра
           </DialogTitle>
           <DialogDescription className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">
-            Nuxus Kernel v4.1.2 — Technical Support
+            Nuxus Kernel v{versions.latestVersion} — Technical Support
           </DialogDescription>
         </DialogHeader>
 
@@ -50,7 +51,7 @@ export function LegalModal({ open, onOpenChange }: { open: boolean, onOpenChange
                   <AccordionItem value="item-1" className="border-white/5 px-4 rounded-2xl bg-white/[0.02]">
                     <AccordionTrigger className="text-[11px] font-bold uppercase text-white/80 hover:no-underline">Как работает шифрование QES?</AccordionTrigger>
                     <AccordionContent className="text-[10px] text-muted-foreground leading-relaxed">
-                      Все ваши текстовые сообщения шифруются протоколом QES на вашем устройстве. Только получатель имеет ключ для дешифровки. Ядро видит только зашифрованный шум.
+                      Все ваши текстовые сообщения шифруются актуальным протоколом QES v{versions.qesVersion} на вашем устройстве. Только получатель имеет ключ для дешифровки. Ядро видит только зашифрованный шум.
                     </AccordionContent>
                   </AccordionItem>
 

@@ -13,18 +13,19 @@ import { useFirestore, useUser, useDoc, useMemoFirebase, useCollection } from '@
 import { doc, query, collection, where, limit, getDocs, addDoc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { useAppState } from '@/lib/store';
-import { formatDisplayName, isUserPremium, formatLastSeen, cn } from '@/lib/utils';
+import { formatDisplayName, isUserPremium, formatLastSeen, cn, isGlobalAdmin } from '@/lib/utils';
 import type { User, ReceivedGift } from '@/lib/types';
 import { format } from 'date-fns';
 import { ru } from 'date-fns/locale';
 import { GiftModal } from './gift-modal';
+import versions from '@/app/versions.json';
 
 const ADMIN_ID = 'GCvLucN8CjNcdaxPO2vmpZ84hNl1';
 const ORIGIN_DATE = '2024-01-01T00:00:00Z'; // Дата основания Nuxus
 
 /**
- * МОДАЛЬНОЕ ОКНО ПРОФИЛЯ V22.5
- * ИСПРАВЛЕНО: QES Протокол обновлен до 22.5. Дата регистрации для Создателя исправлена.
+ * МОДАЛЬНОЕ ОКНО ПРОФИЛЯ V22.6
+ * ИСПРАВЛЕНО: Синхронизация версий через versions.json. Исправлена дата для создателя.
  */
 export function UserProfileModal() {
   const db = useFirestore();
@@ -109,12 +110,19 @@ export function UserProfileModal() {
     }
   };
 
+  const registrationDate = useMemo(() => {
+    if (!inspectedUserId) return '';
+    const rawDate = inspectedUserId === ADMIN_ID ? ORIGIN_DATE : (targetUser?.createdAt);
+    if (!rawDate) return '...';
+    try {
+      return format(new Date(rawDate), 'dd.MM.yyyy', { locale: ru });
+    } catch (e) {
+      return '...';
+    }
+  }, [targetUser?.createdAt, inspectedUserId]);
+
   if (!inspectedUserId) return null;
 
-  // ИСПРАВЛЕНИЕ ДАТЫ: Для создателя показываем день основания
-  const rawDate = inspectedUserId === ADMIN_ID ? ORIGIN_DATE : (targetUser?.createdAt || new Date().toISOString());
-  const registrationDate = format(new Date(rawDate), 'dd.MM.yyyy', { locale: ru });
-  
   const hasActivePremium = isUserPremium(targetUser);
 
   return (
@@ -210,7 +218,7 @@ export function UserProfileModal() {
                     value={hasActivePremium ? "Elite Node" : "Standard"} 
                     color={hasActivePremium ? "text-accent" : "text-white/30"} 
                   />
-                  <InfoRow icon={Cpu} label="Протокол" value="QES 22.5" />
+                  <InfoRow icon={Cpu} label="Протокол" value={`QES ${versions.qesVersion}`} />
                   {targetUser?.countryCode && <InfoRow icon={Globe} label="Сектор" value={targetUser.countryCode.toUpperCase()} />}
                 </div>
               </div>
