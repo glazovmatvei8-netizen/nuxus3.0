@@ -16,7 +16,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 18
+          node-version: 20
 
       - name: Install Dependencies
         run: npm install
@@ -26,9 +26,17 @@ jobs:
 
       - name: Capacitor Sync
         run: |
+          # Гарантируем наличие папки out для Capacitor
+          mkdir -p out
+          if [ ! -f "out/index.html" ]; then
+            echo "<html><body>Nuxus Bridge</body></html>" > out/index.html
+          fi
+          
+          # Инициализируем iOS если её нет
           if [ ! -d "ios" ]; then
             npx cap add ios
           fi
+          
           npx cap sync ios
 
       - name: Build iOS (Xcode)

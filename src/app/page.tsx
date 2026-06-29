@@ -19,8 +19,8 @@ import { IosInstaller } from '@/components/ios-installer';
 import { useTranslations } from '@/hooks/use-translations';
 
 /**
- * ГЛАВНЫЙ КОНТРОЛЛЕР ЯДРА V23.2
- * ФИКС: Мгновенный вызов Face ID для Safari (Zero-Latency Tap).
+ * ГЛАВНЫЙ КОНТРОЛЛЕР ЯДРА V23.3
+ * ФИКС: Абсолютно синхронный Face ID для Safari (Zero-Latency).
  */
 export default function Home() {
   const { user, isUserLoading } = useUser();
@@ -90,28 +90,23 @@ export default function Home() {
   };
 
   /**
-   * ПРОВЕРКА FACE ID V23.2: АБСОЛЮТНО СИНХРОННЫЙ ВЫЗОВ
-   * Убраны любые асинхронные задержки или уведомления перед вызовом.
+   * ПРОВЕРКА FACE ID V23.3: АБСОЛЮТНО СИНХРОННЫЙ ВЫЗОВ (Zero Latency)
+   * Убраны вообще все проверки и стейты перед вызовом.
    */
   const tryBiometricAuth = async () => {
-    // 1. Быстрая проверка поддержки
-    if (typeof window === 'undefined' || !window.PublicKeyCredential) {
-      toast({ title: "Ошибка устройства", description: "Биометрия не поддерживается.", variant: "destructive" });
-      return;
-    }
-    
+    // Получаем ID из хранилища мгновенно
     const storedIdBase64 = localStorage.getItem('nuxus_biometric_id');
+    
     if (!storedIdBase64) {
       toast({ title: "Не настроено", description: "Включите Face ID в настройках Ядра." });
       return;
     }
 
     try {
-      // 2. Мгновенный вызов Face ID БЕЗ пауз
+      // 1. Мгновенный вызов Face ID - Самое первое действие!
       const challenge = crypto.getRandomValues(new Uint8Array(32));
       const id = Uint8Array.from(atob(storedIdBase64), c => c.charCodeAt(0));
 
-      // КРИТИЧЕСКИЙ ФИКС: navigator.credentials.get вызывается ПЕРВЫМ
       const assertion = await navigator.credentials.get({
         publicKey: {
           challenge,
@@ -130,13 +125,8 @@ export default function Home() {
       }
     } catch (e: any) {
       console.warn("Nuxus Auth Fail:", e);
-      // Ошибки показываем ТОЛЬКО после неудачной попытки
       if (e.name === 'NotAllowedError') {
-        toast({ 
-          title: "Safari: Ожидание", 
-          description: "Нажмите ещё раз для активации биометрии.", 
-          variant: "destructive" 
-        });
+        toast({ title: "Safari: Ожидание", description: "Нажмите ещё раз для активации биометрии.", variant: "destructive" });
       } else {
         toast({ title: "Сбой биометрии", description: "Используйте системный PIN-код.", variant: "destructive" });
       }

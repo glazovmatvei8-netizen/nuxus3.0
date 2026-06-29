@@ -9,8 +9,8 @@ import { Progress } from './ui/progress';
 import versions from '@/app/versions.json';
 
 /**
- * КВАНТОВЫЙ ОБНОВЛЯТОР ЯДРА V23.2
- * Текущая версия: 22.9.0 (Синхронизировано с versions.json)
+ * КВАНТОВЫЙ ОБНОВЛЯТОР ЯДРА V23.3
+ * Синхронизировано: 22.9.0
  */
 const CURRENT_VERSION = "22.9.0";
 
@@ -24,6 +24,7 @@ export function UpdateNotifier() {
 
   useEffect(() => {
     const checkVersion = () => {
+      // Если версии не совпадают И мы еще не сохранили эту версию в localStorage
       if (!isUpToDate) {
         const lastInstalled = localStorage.getItem('nuxus_last_installed_version');
         if (lastInstalled !== versions.latestVersion) {
