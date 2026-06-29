@@ -7,13 +7,13 @@ import { Button } from '@/components/ui/button';
 import { UserAvatar } from '@/components/user-avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { 
-  MessageCircle, Star, Shield, Calendar, Info, Phone, Video, Gift, Sparkles, ChevronRight, Zap, Globe, ShieldCheck, Cpu
+  MessageCircle, Star, Calendar, Phone, Video, Gift, Zap, Globe, ShieldCheck, Cpu, Sparkles
 } from 'lucide-react';
 import { useFirestore, useUser, useDoc, useMemoFirebase, useCollection } from '@/firebase';
-import { doc, query, collection, where, limit, getDocs, addDoc } from 'firebase/firestore';
+import { doc, query, collection, limit, getDocs, addDoc, where } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { useAppState } from '@/lib/store';
-import { formatDisplayName, isUserPremium, formatLastSeen, cn, isGlobalAdmin } from '@/lib/utils';
+import { formatDisplayName, isUserPremium, formatLastSeen, cn } from '@/lib/utils';
 import type { User, ReceivedGift } from '@/lib/types';
 import { format } from 'date-fns';
 import { ru } from 'date-fns/locale';
@@ -21,11 +21,11 @@ import { GiftModal } from './gift-modal';
 import versions from '@/app/versions.json';
 
 const ADMIN_ID = 'GCvLucN8CjNcdaxPO2vmpZ84hNl1';
-const ORIGIN_DATE = '2024-01-01T00:00:00Z'; // Дата основания Nuxus
+const ORIGIN_DATE = '2024-01-01T00:00:00Z'; 
 
 /**
- * МОДАЛЬНОЕ ОКНО ПРОФИЛЯ V22.6
- * ИСПРАВЛЕНО: Синхронизация версий через versions.json. Исправлена дата для создателя.
+ * МОДАЛЬНОЕ ОКНО ПРОФИЛЯ V22.7
+ * ИСПРАВЛЕНО: Синхронизация версий и Origin Date.
  */
 export function UserProfileModal() {
   const db = useFirestore();

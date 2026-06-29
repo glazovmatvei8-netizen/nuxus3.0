@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useMemo } from 'react';
@@ -15,11 +16,11 @@ import type { User } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { QRCodeSVG } from 'qrcode.react';
+import versions from '@/app/versions.json';
 
 /**
- * ГЛАВНЫЙ ЭКРАН ПРОФИЛЯ V19.0 «Hardware Harmony»
- * ФИКС: Аватар и имя теперь полностью внутри ScrollArea и листаются.
- * Лишние текстовые звезды удалены, оставлена только золотая на аватаре.
+ * ГЛАВНЫЙ ЭКРАН ПРОФИЛЯ V22.7 «Origin Sync»
+ * ФИКС: Ручная проверка обновлений по клику на QES.
  */
 export default function ProfileView() {
   const { user } = useUser();
@@ -42,6 +43,12 @@ export default function ProfileView() {
     toast({ title: "Ссылка синхронизирована", description: "Идентификатор узла скопирован." });
   };
 
+  const handleCheckUpdate = () => {
+    // Триггерим событие для UpdateNotifier
+    window.dispatchEvent(new CustomEvent('nuxus_check_updates'));
+    toast({ title: "Проверка сигналов...", description: "Запрос к серверу обновлений." });
+  };
+
   const isPremium = isUserPremium(profile);
   const referralCount = profile?.referralCount || 0;
 
@@ -49,7 +56,6 @@ export default function ProfileView() {
     <div className="flex flex-col h-full bg-transparent overflow-hidden relative">
       <div className="absolute top-0 left-0 right-0 h-64 bg-gradient-to-b from-primary/15 to-transparent pointer-events-none z-0" />
 
-      {/* Верхние кнопки управления (Неподвижные) */}
       <div className="px-6 pt-10 pb-4 flex items-center justify-between shrink-0 relative z-20">
         <Button 
           variant="ghost" 
@@ -75,7 +81,6 @@ export default function ProfileView() {
       <ScrollArea className="flex-1 relative z-10">
         <div className="px-6 space-y-4 pb-32 pt-2 animate-in fade-in duration-700">
           
-          {/* Аватар и имя: ЛИСТАЮТСЯ ВМЕСТЕ С КОНТЕНТОМ */}
           <div className="flex flex-col items-center gap-4 mb-8 pt-4">
              <div className="relative group">
                 <div className="absolute -inset-4 bg-primary/20 blur-3xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-1000" />
@@ -130,7 +135,13 @@ export default function ProfileView() {
 
           <div className="grid grid-cols-2 gap-3">
             <ActionCard icon={QrCode} label="Signal QR" sub="ИДЕНТИФИКАЦИЯ" accent="text-accent" onClick={() => setIsQrOpen(true)} />
-            <ActionCard icon={ShieldCheck} label="QES 19.0" sub="ЗАЩИЩЕНО" accent="text-green-400" />
+            <ActionCard 
+              icon={ShieldCheck} 
+              label={`QES ${versions.qesVersion}`} 
+              sub="ПРОВЕРИТЬ" 
+              accent="text-green-400" 
+              onClick={handleCheckUpdate} 
+            />
           </div>
 
           <div className="obsidian-glass rounded-[2rem] overflow-hidden divide-y divide-white/[0.03] border-white/5 shadow-xl">
@@ -143,7 +154,7 @@ export default function ProfileView() {
           <div className="py-8 flex flex-col items-center gap-4">
             <div className="flex items-center gap-2 obsidian-glass px-4 py-1.5 rounded-full border-white/5">
               <div className="h-1 w-1 rounded-full bg-green-500 animate-pulse" />
-              <p className="text-[8px] text-white/20 uppercase font-black tracking-widest">Узел синхронизирован V19.0</p>
+              <p className="text-[8px] text-white/20 uppercase font-black tracking-widest">Узел синхронизирован V{versions.latestVersion}</p>
             </div>
             <div className="flex gap-8 opacity-5">
               <Globe className="w-5 h-5" />
