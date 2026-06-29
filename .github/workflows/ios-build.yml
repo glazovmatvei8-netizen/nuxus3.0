@@ -24,16 +24,17 @@ jobs:
       - name: Build Web Project
         run: npm run build
 
-      - name: Capacitor Sync
+      - name: Capacitor Sync & Add
         run: |
           # Гарантируем наличие папки out для Capacitor
           mkdir -p out
           
-          # Инициализируем iOS если её нет
+          # Инициализируем iOS если её нет в репозитории
           if [ ! -d "ios" ]; then
             npx cap add ios
           fi
           
+          # Синхронизируем плагины и веб-активы
           npx cap sync ios
 
       - name: Build iOS (Xcode)
