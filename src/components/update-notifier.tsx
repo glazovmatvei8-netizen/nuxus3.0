@@ -9,10 +9,10 @@ import { Progress } from './ui/progress';
 import versions from '@/app/versions.json';
 
 /**
- * АКТУАЛЬНАЯ ВЕРСИЯ УЗЛА
- * Если эта версия ниже той, что в versions.json, появится окно обновления.
+ * АКТУАЛЬНАЯ ВЕРСИЯ УЗЛА V22.8.0
+ * Синхронизировано с versions.json для предотвращения цикличных обновлений.
  */
-const CURRENT_VERSION = "22.7.0";
+const CURRENT_VERSION = "22.8.0";
 
 export function UpdateNotifier() {
   const [isOpen, setIsOpen] = useState(false);
@@ -20,6 +20,7 @@ export function UpdateNotifier() {
   const [updateProgress, setUpdateProgress] = useState(0);
   const [isManualCheck, setIsManualCheck] = useState(false);
 
+  // Сверяем версию в коде с версией в облачном конфиге
   const isUpToDate = versions.latestVersion === CURRENT_VERSION;
 
   useEffect(() => {
@@ -56,6 +57,7 @@ export function UpdateNotifier() {
         setUpdateProgress(100);
         clearInterval(interval);
         setTimeout(() => {
+          // Имитируем установку нового билда через перезагрузку
           window.location.reload();
         }, 1200);
       } else {
@@ -72,7 +74,7 @@ export function UpdateNotifier() {
   if (isUpdating) {
     return (
       <div className="fixed inset-0 z-[10000] bg-[#050505] flex flex-col items-center justify-center p-8 text-center animate-in fade-in duration-500">
-        <div className="w-full max-w-sm space-y-8">
+        <div className="w-full max-sm:max-w-xs space-y-8">
           <div className="relative inline-block">
             <div className="absolute inset-0 bg-primary blur-[60px] opacity-30 animate-pulse" />
             <div className="bg-white/[0.03] border border-white/10 w-24 h-24 rounded-[2rem] flex items-center justify-center mx-auto relative z-10 shadow-2xl">

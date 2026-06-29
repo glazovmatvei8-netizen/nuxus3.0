@@ -46,7 +46,7 @@ export default function ProfileView() {
   const handleCheckUpdate = () => {
     // Триггерим событие для UpdateNotifier
     window.dispatchEvent(new CustomEvent('nuxus_check_updates'));
-    toast({ title: "Проверка сигналов...", description: "Запрос к серверу обновлений." });
+    // Убираем тост, так как UpdateNotifier сам покажет окно
   };
 
   const isPremium = isUserPremium(profile);
@@ -91,7 +91,7 @@ export default function ProfileView() {
                 />
              </div>
              <div className="text-center space-y-1">
-                <h2 className="text-3xl font-black text-white italic tracking-tighter uppercase leading-tight">
+                <h2 className="text-2xl font-black text-white italic tracking-tighter uppercase leading-tight">
                   {profile?.name ? formatDisplayName(profile.name) : 'СИНХРОНИЗАЦИЯ...'}
                 </h2>
                 <p className="text-[11px] text-primary/60 font-black uppercase tracking-[0.4em] italic ml-[0.4em]">{profile?.username}</p>
