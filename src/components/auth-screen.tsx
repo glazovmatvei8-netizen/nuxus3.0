@@ -74,7 +74,7 @@ export default function AuthScreen({ initialMode = 'login' }: AuthScreenProps) {
   };
 
   /**
-   * КОРРЕКТНОЕ СОЗДАНИЕ ПРОФИЛЯ V15.5
+   * КОРРЕКТНОЕ СОЗДАНИЕ ПРОФИЛЯ V15.8
    * Имена и ники берутся СТРОГО из полей ввода. Никаких телефонов в никах.
    */
   const createProfileRecord = async (uid: string, overrideData?: any) => {
@@ -244,7 +244,7 @@ export default function AuthScreen({ initialMode = 'login' }: AuthScreenProps) {
           
           <CardHeader className="text-center pb-2 pt-10 px-8">
             <CardTitle className="text-3xl font-black tracking-tighter uppercase italic text-white leading-none drop-shadow-[0_0_15px_rgba(168,85,247,0.4)]">
-              {mode === 'recover' ? 'Восстановление' : mode === 'setup2fa' ? 'Защита' : mode === 'login' ? 'Вход V15.5' : 'Создание'}
+              {mode === 'recover' ? 'Восстановление' : mode === 'setup2fa' ? 'Защита' : mode === 'login' ? 'Вход V15.8' : 'Создание'}
             </CardTitle>
             <CardDescription className="text-primary/80 font-black tracking-[0.5em] uppercase text-[8px] opacity-60 mt-3 ml-[0.5em]">
               {mode === 'setup2fa' ? 'Квантовый ключ' : mode === 'recover' ? 'Нейронный сброс' : 'Nuxus Kernel 2026'}
