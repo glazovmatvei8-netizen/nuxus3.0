@@ -10,9 +10,9 @@ import versions from '@/app/versions.json';
 
 /**
  * КВАНТОВЫЙ ОБНОВЛЯТОР ЯДРА V23.4
- * Синхронизировано: 22.9.0
+ * Синхронизировано: 23.4.0
  */
-const CURRENT_VERSION = "22.9.0";
+const CURRENT_VERSION = "23.4.0";
 
 export function UpdateNotifier() {
   const [isOpen, setIsOpen] = useState(false);
@@ -24,7 +24,6 @@ export function UpdateNotifier() {
 
   useEffect(() => {
     const checkVersion = () => {
-      // Если версии не совпадают И мы еще не сохранили эту версию в localStorage
       if (!isUpToDate) {
         const lastInstalled = localStorage.getItem('nuxus_last_installed_version');
         if (lastInstalled !== versions.latestVersion) {
@@ -47,7 +46,7 @@ export function UpdateNotifier() {
     setIsUpdating(true);
     let p = 0;
     const interval = setInterval(() => {
-      p += Math.random() * 20;
+      p += Math.random() * 25;
       if (p >= 100) {
         setUpdateProgress(100);
         clearInterval(interval);
@@ -58,7 +57,7 @@ export function UpdateNotifier() {
       } else {
         setUpdateProgress(p);
       }
-    }, 300);
+    }, 200);
   };
 
   const handlePostpone = () => {
@@ -102,7 +101,7 @@ export function UpdateNotifier() {
         <div className="p-8 space-y-6">
           <DialogHeader className="space-y-1 text-left">
             <DialogTitle className="text-2xl font-black uppercase italic tracking-tighter text-white">
-              {isUpToDate ? 'Ядро актуально' : 'Доступна новая версия'}
+              {isUpToDate ? 'Ядро актуально' : 'Доступно обновление'}
             </DialogTitle>
             <DialogDescription className="flex items-center gap-2 text-[10px] font-bold text-primary uppercase tracking-widest">
               <span>{isUpToDate ? `V ${CURRENT_VERSION}` : `Билд ${versions.latestVersion}`}</span>
@@ -115,7 +114,7 @@ export function UpdateNotifier() {
             <div className="space-y-3 bg-white/5 p-4 rounded-3xl border border-white/5">
               <div className="flex items-center gap-2 text-white/40 mb-1">
                 <ListChecks className="w-3.5 h-3.5" />
-                <span className="text-[9px] font-black uppercase tracking-widest">Что нового:</span>
+                <span className="text-[9px] font-black uppercase tracking-widest">Чейнджлог:</span>
               </div>
               <ul className="space-y-2">
                 {versions.changelog.map((item, idx) => (
@@ -128,7 +127,7 @@ export function UpdateNotifier() {
           ) : (
             <div className="p-6 bg-green-500/5 rounded-3xl border border-green-500/10 text-center">
                <ShieldCheck className="w-8 h-8 text-green-500 mx-auto mb-3" />
-               <p className="text-[10px] text-green-500/80 font-black uppercase tracking-widest">Ваш узел синхронизирован с патчем QES</p>
+               <p className="text-[10px] text-green-500/80 font-black uppercase tracking-widest">Узел синхронизирован с патчем QES</p>
             </div>
           )}
 
@@ -140,7 +139,7 @@ export function UpdateNotifier() {
                   className="h-14 bg-primary text-white rounded-2xl font-black uppercase italic tracking-widest shadow-xl shadow-primary/30 group"
                 >
                   <RefreshCw className="w-5 h-5 mr-2 group-hover:rotate-180 transition-transform duration-700" />
-                  Обновить сейчас
+                  Обновить Ядро
                 </Button>
                 <Button 
                   variant="ghost" 

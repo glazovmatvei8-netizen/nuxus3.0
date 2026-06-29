@@ -1,14 +1,13 @@
 
 {
-  "latestVersion": "22.9.0",
-  "qesVersion": "22.9",
-  "build": "Deployment-Alpha",
-  "sizeMb": 108,
+  "latestVersion": "23.4.0",
+  "qesVersion": "23.4",
+  "build": "Production-Candidate",
+  "sizeMb": 105,
   "changelog": [
-    "Синхронизация версий (Фикс петли обновления)",
-    "Face ID: Нулевая задержка (Zero-Latency Auth)",
-    "Удален префикс 'Agent' из всех модулей",
-    "Профиль: Исправлена центровка Scroll-Harmony",
-    "Оптимизация Capacitor Bridge для iOS"
+    "Face ID: Прямой вызов (Zero-Latency Auth)",
+    "Live-Sync: Обновления теперь доставляются мгновенно без переустановки IPA",
+    "Origin Sync: Исправлена дата регистрации создателя (01.01.2024)",
+    "UI: Аватар и имя в профиле теперь плавно скроллятся"
   ]
 }
