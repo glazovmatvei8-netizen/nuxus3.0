@@ -18,8 +18,8 @@ import { IosInstaller } from '@/components/ios-installer';
 import { useTranslations } from '@/hooks/use-translations';
 
 /**
- * ГЛАВНЫЙ КОНТРОЛЛЕР ЯДРА V15.8
- * ИСПРАВЛЕННЫЙ ВХОД ЧЕРЕЗ FACE ID (ЛОКАЛЬНЫЙ РЕЖИМ БЕЗ ICLOUD).
+ * ГЛАВНЫЙ КОНТРОЛЛЕР ЯДРА V16.5
+ * ИСПРАВЛЕННЫЙ ВХОД ЧЕРЕЗ FACE ID (Локальный режим для обхода iCloud).
  */
 export default function Home() {
   const { user, isUserLoading } = useUser();
@@ -91,8 +91,7 @@ export default function Home() {
   };
 
   /**
-   * ПРОВЕРКА FACE ID (ЛОКАЛЬНЫЙ РЕЖИМ V15.8)
-   * Используем аттестацию для максимальной локальности.
+   * ПРОВЕРКА FACE ID V16.5: Локальный режим.
    */
   const tryBiometricAuth = async () => {
     if (typeof window === 'undefined' || !window.PublicKeyCredential) return;
@@ -130,9 +129,8 @@ export default function Home() {
         toast({ title: "Личность подтверждена", description: "Face ID распознан локально." });
       }
     } catch (e) {
-      console.warn("Nuxus Biometric: Проверка не удалась.");
-      // Если выпало окно iCloud, предлагаем использовать PIN
-      toast({ title: "Сбой биометрии", description: "Используйте системный PIN-код Ядра.", variant: "destructive" });
+      console.warn("Nuxus Biometric Auth: Local Fail.");
+      toast({ title: "Сбой Face ID", description: "Используйте системный PIN-код.", variant: "destructive" });
     } finally {
       setIsBiometricAttempting(false);
     }

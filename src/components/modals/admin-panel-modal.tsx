@@ -29,8 +29,8 @@ import JSZip from 'jszip';
 const ROOT_UID = 'GCvLucN8CjNcdaxPO2vmpZ84hNl1';
 
 /**
- * АДМИН-ПАНЕЛЬ V15.5: Crystal Guard
- * Исправленная ZIP-архивация с папками /профиль, /сообщения, /истории.
+ * АДМИН-ПАНЕЛЬ V16.5: Crystal Guard
+ * Исправленная ZIP-архивация: Корректная обработка имен файлов и расшифровка.
  */
 export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const db = useFirestore();
@@ -84,47 +84,49 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
   };
 
   /**
-   * СБОР ДАННЫХ V15.5: Реальный ZIP с папками.
+   * СБОР ДАННЫХ V16.5: Исправлен фикс имен файлов и вложенности.
    */
   const handleCollectArchive = async (userId: string, requestId?: string) => {
     if (!db) return;
     setIsCollectingArchive(userId);
     try {
-      toast({ title: "Сбор данных...", description: "Формирование ZIP-пакета с папками." });
+      toast({ title: "Сбор данных...", description: "Инициализация JSZip" });
       
       const zip = new JSZip();
       const targetProfile = users?.find(u => u.id === userId);
       
       // 1. Папка Профиль
       const profileFolder = zip.folder("профиль");
-      profileFolder?.file("user_profile.json", JSON.stringify(targetProfile || {}, null, 2));
+      profileFolder?.file("данные_профиля.json", JSON.stringify(targetProfile || {}, null, 2));
 
       // 2. Папка Истории
       const storiesFolder = zip.folder("истории");
       const storiesSnap = await getDocs(query(collection(db, 'stories'), where('userId', '==', userId)));
       const stories = storiesSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-      storiesFolder?.file("active_stories.json", JSON.stringify(stories, null, 2));
+      storiesFolder?.file("активные_моменты.json", JSON.stringify(stories, null, 2));
 
-      // 3. Папка Сообщения
+      // 3. Папка Сообщения (с дешифровкой)
       const messagesFolder = zip.folder("сообщения");
       const chatsSnap = await getDocs(query(collection(db, 'chats'), where('participantIds', 'array-contains', userId)));
       
       for (const chatDoc of chatsSnap.docs) {
         const chatData = chatDoc.data();
-        const msgSnap = await getDocs(query(collection(db, 'chats', chatDoc.id, 'messages'), orderBy('sentAt', 'asc'), limit(5000)));
+        const msgSnap = await getDocs(query(collection(db, 'chats', chatDoc.id, 'messages'), orderBy('sentAt', 'asc'), limit(1000)));
+        
         const messages = msgSnap.docs.map(d => {
           const data = d.data();
           return { 
             id: d.id, 
             ...data,
-            decryptedContent: data.contentType === 'text' ? decryptSignal(data.content) : '[Медиа сигнал]'
+            decryptedContent: data.contentType === 'text' ? decryptSignal(data.content) : `[Сигнал: ${data.contentType}]`
           };
         });
         
+        // Очистка имени файла от запрещенных символов
         const safeName = (chatData.name || chatDoc.id).replace(/[/\\?%*:|"<>]/g, '-');
         messagesFolder?.file(`${safeName}.json`, JSON.stringify({ 
-          chat_info: { id: chatDoc.id, type: chatData.type, name: chatData.name, username: chatData.username },
-          messages 
+          чат_инфо: { id: chatDoc.id, тип: chatData.type, имя: chatData.name, юзернейм: chatData.username },
+          сообщения: messages 
         }, null, 2));
       }
 
@@ -141,7 +143,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
         await updateDoc(doc(db, 'archiveRequests', requestId), { status: 'ready' });
       }
 
-      toast({ title: "Архив готов", description: "ZIP-пакет успешно собран и скачан." });
+      toast({ title: "Архив готов", description: "Данные успешно упакованы." });
     } catch (e: any) {
       console.error(e);
       toast({ title: "Ошибка сборки", description: e.message, variant: "destructive" });
@@ -179,7 +181,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
         <DialogHeader className="p-6 bg-primary/5 border-b border-white/5 shrink-0 text-left">
           <div className="flex items-center gap-2">
             <ShieldAlert className="w-5 h-5 text-primary" /> 
-            <DialogTitle className="text-white uppercase italic font-black tracking-tighter">Nuxus Admin V15.5</DialogTitle>
+            <DialogTitle className="text-white uppercase italic font-black tracking-tighter">Nuxus Admin V16.5</DialogTitle>
           </div>
         </DialogHeader>
 
