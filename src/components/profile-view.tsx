@@ -19,7 +19,7 @@ import { QRCodeSVG } from 'qrcode.react';
 import versions from '@/app/versions.json';
 
 /**
- * ГЛАВНЫЙ ЭКРАН ПРОФИЛЯ V22.7 «Origin Sync»
+ * ГЛАВНЫЙ ЭКРАН ПРОФИЛЯ V22.8 «Origin Sync»
  * ФИКС: Ручная проверка обновлений по клику на QES.
  */
 export default function ProfileView() {
