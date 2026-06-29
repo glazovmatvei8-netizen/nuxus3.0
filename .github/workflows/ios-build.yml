@@ -1,4 +1,3 @@
-
 name: Build iOS IPA
 
 on:
@@ -21,40 +20,36 @@ jobs:
       - name: Install Dependencies
         run: npm install
 
+      - name: Fix manifest for static export
+        run: rm -rf src/app/manifest.webmanifest
+
       - name: Build Web Project
         run: npm run build
 
-      - name: Capacitor Sync & Add
-        run: |
-          # Гарантируем наличие папки out для Capacitor
-          mkdir -p out
-          
-          # Инициализируем iOS если её нет в репозитории
-          if [ ! -d "ios" ]; then
-            npx cap add ios
-          fi
-          
-          # Синхронизируем плагины и веб-активы
-          npx cap sync ios
+      - name: Capacitor Sync
+        run: npx cap sync ios
 
-      - name: Build iOS (Xcode)
+      - name: Build iOS Archive
         run: |
           xcodebuild -workspace ios/App/App.xcworkspace \
                      -scheme App \
-                     -sdk iphoneos \
                      -configuration Release \
-                     -derivedDataPath build \
+                     -destination 'generic/platform=iOS' \
+                     -archivePath "ios/App/build/App.xcarchive" \
+                     CODE_SIGN_IDENTITY="" \
+                     CODE_SIGNING_REQUIRED=NO \
                      CODE_SIGNING_ALLOWED=NO \
-                     CODE_SIGNING_REQUIRED=NO
+                     archive
 
       - name: Create IPA
         run: |
+          cd ios/App/build
           mkdir -p Payload
-          cp -r build/Build/Products/Release-iphoneos/App.app Payload/
+          cp -r App.xcarchive/Products/Applications/*.app Payload/
           zip -r Nuxus.ipa Payload
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
           name: Nuxus-IPA
-          path: Nuxus.ipa
+          path: ios/App/build/Nuxus.ipa
