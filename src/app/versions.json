@@ -1,12 +1,12 @@
 {
-  "latestVersion": "24.1.6",
+  "latestVersion": "24.1.7",
   "qesVersion": "24.1",
   "build": "Stable-Release",
   "sizeMb": 108,
   "changelog": [
-    "Dependency Stabilization: Удалены проблемные пакеты биометрии",
-    "Native Identity: Переход на стандарт WebAuthn (Face ID без задержек)",
-    "Conflict Resolution: Полная очистка кода от маркеров слияния V24",
-    "Build Fix: Устранена ошибка синтаксиса в Update Notifier"
+    "Production Fix: Устранена ошибка сборки manifest.webmanifest",
+    "Static Export: Оптимизированы динамические маршруты для IPA",
+    "Identity Finality: WebAuthn (Face ID) переведен в режим прямого вызова",
+    "Kernel Cleanup: Полная очистка от маркеров слияния"
   ]
 }

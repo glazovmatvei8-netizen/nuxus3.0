@@ -8,11 +8,11 @@ import { Progress } from './ui/progress';
 import versions from '@/app/versions.json';
 
 /**
- * КВАНТОВЫЙ ОБНОВЛЯТОР ЯДРА V24.1.6
+ * КВАНТОВЫЙ ОБНОВЛЯТОР ЯДРА V24.1.7
  * CURRENT_VERSION — это версия текущего билда.
  * ФИКС: Ошибка синтаксиса "Merge conflict marker" полностью устранена.
  */
-const CURRENT_VERSION = "24.1.6";
+const CURRENT_VERSION = "24.1.7";
 
 export function UpdateNotifier() {
   const [isOpen, setIsOpen] = useState(false);

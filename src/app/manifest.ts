@@ -1,5 +1,11 @@
 import { MetadataRoute } from 'next'
 
+/**
+ * КРИТИЧЕСКИЙ ФИКС ДЛЯ СТАТИЧЕСКОГО ЭКСПОРТА (IPA)
+ * Принудительно переводит манифест в статический режим.
+ */
+export const dynamic = 'force-static'
+
 export default function manifest(): MetadataRoute.Manifest {
   /**
    * ИКОНКА ДЛЯ МАНИФЕСТА (v45) - АБСОЛЮТ

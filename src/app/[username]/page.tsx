@@ -1,4 +1,3 @@
-
 "use client"
 
 import { useRouter, useParams } from 'next/navigation';
@@ -6,7 +5,7 @@ import { useEffect } from 'react';
 
 /**
  * Квантовый Редиректор для коротких ссылок (VK Style).
- * ИСПРАВЛЕНО: Добавлен generateStaticParams для корректного экспорта.
+ * ИСПРАВЛЕНО: generateStaticParams для корректного экспорта (Next.js 15).
  */
 export default function UsernameRedirect() {
   const router = useRouter();
@@ -38,7 +37,9 @@ export default function UsernameRedirect() {
   );
 }
 
-// КРИТИЧЕСКИЙ ФИКС: Позволяет Next.js экспортировать этот динамический маршрут
+/**
+ * КРИТИЧЕСКИЙ ФИКС: Позволяет Next.js экспортировать этот динамический маршрут в режиме 'export'.
+ */
 export function generateStaticParams() {
   return [{ username: 'default' }];
 }
