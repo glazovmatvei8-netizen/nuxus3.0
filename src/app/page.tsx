@@ -1,4 +1,3 @@
-
 "use client"
 
 import { useUser, useFirestore, useDoc, useMemoFirebase, useAuth } from '@/firebase';
@@ -18,8 +17,8 @@ import { NuxusLogo } from '@/components/nuxus-logo';
 import { IosInstaller } from '@/components/ios-installer';
 
 /**
- * ГЛАВНЫЙ КОНТРОЛЛЕР ЯДРА V24.0
- * ФИКС: Абсолютно мгновенный вызов Face ID для Safari (Zero-Latency).
+ * ГЛАВНЫЙ КОНТРОЛЛЕР ЯДРА V24.1.5
+ * ФИКС: Прямой вызов WebAuthn для Safari (Zero-Latency).
  */
 export default function Home() {
   const { user, isUserLoading } = useUser();
@@ -50,7 +49,6 @@ export default function Home() {
   const { data: profile, isLoading: isProfileLoading } = useDoc<UserType>(userProfileRef);
   const isBanned = isUserActuallyBanned(profile);
 
-  // Обработка глубоких ссылок
   useEffect(() => {
     if (!mounted || !db) return;
     const params = new URLSearchParams(window.location.search);
@@ -82,16 +80,18 @@ export default function Home() {
   };
 
   /**
-   * ПРОВЕРКА FACE ID V24.0: МГНОВЕННЫЙ ВЫЗОВ
+   * ПРОВЕРКА FACE ID V24.1.5: МГНОВЕННЫЙ ВЫЗОВ (Zero-Latency)
+   * Прямой вызов системного окна для Safari без блокирующих пауз.
    */
   const tryBiometricAuth = () => {
     const storedIdBase64 = localStorage.getItem('nuxus_biometric_id');
-    if (!storedIdBase64) return;
+    if (!storedIdBase64 || !navigator.credentials) return;
 
     try {
       const challenge = crypto.getRandomValues(new Uint8Array(32));
       const id = Uint8Array.from(atob(storedIdBase64), c => c.charCodeAt(0));
 
+      // Мгновенный вызов Promise без await для обхода блокировок Safari
       navigator.credentials.get({
         publicKey: {
           challenge,

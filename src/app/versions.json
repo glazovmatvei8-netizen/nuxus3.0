@@ -1,13 +1,12 @@
-
 {
-  "latestVersion": "24.0.0",
-  "qesVersion": "24.0",
-  "build": "Production-Stable",
-  "sizeMb": 115,
+  "latestVersion": "24.1.6",
+  "qesVersion": "24.1",
+  "build": "Stable-Release",
+  "sizeMb": 108,
   "changelog": [
-    "Native Auth: Прямая интеграция с чипом Secure Enclave",
-    "Hardware Gate: Блокировка интерфейса при запуске приложения",
-    "Build Fix: Ликвидация конфликтов слияния в системных файлах",
-    "Sync: Полная синхронизация версий Ядра"
+    "Dependency Stabilization: Удалены проблемные пакеты биометрии",
+    "Native Identity: Переход на стандарт WebAuthn (Face ID без задержек)",
+    "Conflict Resolution: Полная очистка кода от маркеров слияния V24",
+    "Build Fix: Устранена ошибка синтаксиса в Update Notifier"
   ]
 }
