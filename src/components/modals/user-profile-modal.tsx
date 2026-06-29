@@ -1,7 +1,7 @@
 
 "use client"
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { UserAvatar } from '@/components/user-avatar';
@@ -19,9 +19,12 @@ import { format } from 'date-fns';
 import { ru } from 'date-fns/locale';
 import { GiftModal } from './gift-modal';
 
+const ADMIN_ID = 'GCvLucN8CjNcdaxPO2vmpZ84hNl1';
+const ORIGIN_DATE = '2024-01-01T00:00:00Z'; // Дата основания Nuxus
+
 /**
- * МОДАЛЬНОЕ ОКНО ПРОФИЛЯ V14.8
- * Исправлены импорты ShieldCheck и Cpu.
+ * МОДАЛЬНОЕ ОКНО ПРОФИЛЯ V22.5
+ * ИСПРАВЛЕНО: QES Протокол обновлен до 22.5. Дата регистрации для Создателя исправлена.
  */
 export function UserProfileModal() {
   const db = useFirestore();
@@ -108,7 +111,10 @@ export function UserProfileModal() {
 
   if (!inspectedUserId) return null;
 
-  const registrationDate = targetUser?.createdAt ? format(new Date(targetUser.createdAt), 'dd.MM.yyyy', { locale: ru }) : '...';
+  // ИСПРАВЛЕНИЕ ДАТЫ: Для создателя показываем день основания
+  const rawDate = inspectedUserId === ADMIN_ID ? ORIGIN_DATE : (targetUser?.createdAt || new Date().toISOString());
+  const registrationDate = format(new Date(rawDate), 'dd.MM.yyyy', { locale: ru });
+  
   const hasActivePremium = isUserPremium(targetUser);
 
   return (
@@ -204,7 +210,7 @@ export function UserProfileModal() {
                     value={hasActivePremium ? "Elite Node" : "Standard"} 
                     color={hasActivePremium ? "text-accent" : "text-white/30"} 
                   />
-                  <InfoRow icon={Cpu} label="Протокол" value="QES 14.8" />
+                  <InfoRow icon={Cpu} label="Протокол" value="QES 22.5" />
                   {targetUser?.countryCode && <InfoRow icon={Globe} label="Сектор" value={targetUser.countryCode.toUpperCase()} />}
                 </div>
               </div>

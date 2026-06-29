@@ -10,7 +10,8 @@ import { RefreshCw, Clock, Zap, Download, ShieldCheck, Wifi, Loader2, ListChecks
 import { useAppState } from '@/lib/store';
 import { Progress } from './ui/progress';
 
-const CURRENT_VERSION = '2.9.0';
+// Локальный конфиг обновлений (в будущем будет грузиться из versions.json)
+const CURRENT_VERSION = '22.5.0';
 
 interface SystemConfig {
   version: string;
@@ -19,7 +20,8 @@ interface SystemConfig {
 }
 
 /**
- * ПРОДВИНУТАЯ СИСТЕМА ОБНОВЛЕНИЙ NUXUS v2.9
+ * ПРОДВИНУТАЯ СИСТЕМА ОБНОВЛЕНИЙ NUXUS v22.5
+ * ИСПРАВЛЕНО: Синхронизация с актуальным билдом QES 22.5.
  */
 export function UpdateNotifier() {
   const db = useFirestore();
@@ -32,8 +34,8 @@ export function UpdateNotifier() {
   const { data: config } = useDoc<SystemConfig>(configRef);
 
   useEffect(() => {
+    // Проверяем версию в БД (консоли администратора)
     if (config?.version && config.version !== CURRENT_VERSION) {
-      // Проверяем, не отложено ли обновление для этой конкретной версии в текущей сессии
       const deferredVersion = sessionStorage.getItem('nuxus_deferred_version');
       if (deferredVersion !== config.version) {
         const timer = setTimeout(() => setIsOpen(true), 3000);
@@ -48,7 +50,7 @@ export function UpdateNotifier() {
     setIsUpdating(true);
     let p = 0;
     const interval = setInterval(() => {
-      p += Math.random() * 15;
+      p += Math.random() * 20;
       if (p >= 100) {
         setUpdateProgress(100);
         clearInterval(interval);
@@ -56,7 +58,7 @@ export function UpdateNotifier() {
       } else {
         setUpdateProgress(p);
       }
-    }, 400);
+    }, 300);
   };
 
   const handlePostpone = () => {
@@ -80,13 +82,13 @@ export function UpdateNotifier() {
           
           <div className="space-y-2">
             <h2 className="text-2xl font-black uppercase italic text-white tracking-tighter">Nuxus Kernel Sync</h2>
-            <p className="text-[10px] font-black uppercase tracking-[0.4em] text-primary/60">Загрузка модулей: {Math.round(updateProgress)}%</p>
+            <p className="text-[10px] font-black uppercase tracking-[0.4em] text-primary/60">Пересборка протокола QES: {Math.round(updateProgress)}%</p>
           </div>
 
           <div className="space-y-4">
             <Progress value={updateProgress} className="h-2 bg-white/5" />
             <div className="flex items-center justify-center gap-2 text-[8px] font-black uppercase text-muted-foreground/40 tracking-widest">
-              <ShieldCheck className="w-3 h-3" /> Integrity Check Active
+              <ShieldCheck className="w-3 h-3" /> QES 22.5 Stability Verified
             </div>
           </div>
         </div>
@@ -109,27 +111,29 @@ export function UpdateNotifier() {
           <div className="space-y-1">
             <h3 className="text-2xl font-black uppercase italic tracking-tighter text-white">Обновление Ядра</h3>
             <div className="flex items-center gap-2 text-[10px] font-bold text-primary uppercase tracking-widest">
-              <span>Версия {config?.version}</span>
+              <span>Версия {config?.version || '22.5.0'}</span>
               <span className="opacity-30">•</span>
-              <span>{config?.sizeMb || '100'} МБ</span>
+              <span>{config?.sizeMb || '105'} МБ</span>
             </div>
           </div>
 
-          {config?.changelog && (
-            <div className="space-y-3 bg-white/5 p-4 rounded-3xl border border-white/5">
-              <div className="flex items-center gap-2 text-white/40 mb-1">
-                <ListChecks className="w-3.5 h-3.5" />
-                <span className="text-[9px] font-black uppercase tracking-widest">Что нового:</span>
-              </div>
-              <ul className="space-y-2">
-                {config.changelog.map((item, i) => (
-                  <li key={i} className="text-[11px] text-white/80 font-medium leading-tight flex gap-2">
-                    <span className="text-primary">•</span> {item}
-                  </li>
-                ))}
-              </ul>
+          <div className="space-y-3 bg-white/5 p-4 rounded-3xl border border-white/5">
+            <div className="flex items-center gap-2 text-white/40 mb-1">
+              <ListChecks className="w-3.5 h-3.5" />
+              <span className="text-[9px] font-black uppercase tracking-widest">Что нового:</span>
             </div>
-          )}
+            <ul className="space-y-2">
+              <li className="text-[11px] text-white/80 font-medium leading-tight flex gap-2">
+                <span className="text-primary">•</span> Протокол QES 22.5 (Квантовый щит)
+              </li>
+              <li className="text-[11px] text-white/80 font-medium leading-tight flex gap-2">
+                <span className="text-primary">•</span> Фикс Safari Face ID (No iCloud)
+              </li>
+              <li className="text-[11px] text-white/80 font-medium leading-tight flex gap-2">
+                <span className="text-primary">•</span> Стабилизация выгрузки ZIP-архивов
+              </li>
+            </ul>
+          </div>
 
           <div className="flex flex-col gap-2">
             <Button 

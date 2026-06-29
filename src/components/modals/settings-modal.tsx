@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useRef, useEffect } from 'react';
@@ -25,7 +26,7 @@ import { generateAiAvatar } from '@/ai/flows/generate-ai-avatar-flow';
 
 /**
  * ПАРАМЕТРЫ V22.5 «Quantum Link»
- * ФИКС: Ультра-совместимость WebAuthn для Safari БЕЗ iCloud (Local-Only).
+ * ФИКС: Ультра-совместимость WebAuthn для Safari БЕЗ iCloud (Hardware-Only).
  */
 export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const auth = useAuth();
