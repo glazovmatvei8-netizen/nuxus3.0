@@ -24,8 +24,8 @@ import type { User } from '@/lib/types';
 import { generateAiAvatar } from '@/ai/flows/generate-ai-avatar-flow';
 
 /**
- * ПАРАМЕТРЫ V22.0 «Quantum Link»
- * ФИКС: Ультра-совместимость WebAuthn для Safari без iCloud.
+ * ПАРАМЕТРЫ V22.5 «Quantum Link»
+ * ФИКС: Ультра-совместимость WebAuthn для Safari БЕЗ iCloud (Local-Only).
  */
 export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const auth = useAuth();
@@ -95,15 +95,15 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         'settings.biometricEnabled': form.biometricEnabled
       });
       onOpenChange(false);
-      toast({ title: "Ядро обновлено V22.0" });
+      toast({ title: "Ядро обновлено V22.5" });
     } catch (e: any) {
       toast({ title: "Ошибка сохранения", variant: "destructive" });
     }
   };
 
   /**
-   * КРИТИЧЕСКИЙ ФИКС V22.0: АВТОНОМНЫЙ FACE ID
-   * Убраны все параметры, провоцирующие iCloud Keychain.
+   * КРИТИЧЕСКИЙ ФИКС V22.5: АВТОНОМНЫЙ FACE ID
+   * Используется residentKey: "discouraged" для обхода требования iCloud Keychain.
    */
   const handleLinkBiometrics = async () => {
     if (typeof window === 'undefined' || !window.PublicKeyCredential || !user) {
@@ -125,7 +125,9 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
           pubKeyCredParams: [{ alg: -7, type: "public-key" }],
           authenticatorSelection: { 
             authenticatorAttachment: "platform",
-            userVerification: "required"
+            userVerification: "required",
+            residentKey: "discouraged", // Ключевой параметр для работы БЕЗ iCloud
+            requireResidentKey: false
           },
           attestation: "none",
           timeout: 60000,
@@ -144,7 +146,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
       console.warn("Nuxus Biometric Link Error:", e);
       setForm({ ...form, biometricEnabled: false });
       if (e.name === 'NotAllowedError') {
-        toast({ title: "Safari: Отказ", description: "Нажмите на кнопку ещё раз. Автоматический вызов запрещен.", variant: "destructive" });
+        toast({ title: "Safari: Ожидание", description: "Нажмите на кнопку ещё раз. Доступ разрешен только по клику.", variant: "destructive" });
       } else {
         toast({ title: "Сбой биометрии", description: "Убедитесь, что Face ID настроен на телефоне.", variant: "destructive" });
       }
@@ -160,7 +162,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
       <DialogContent className="max-w-md bg-[#0a0a0c] border-white/10 p-0 overflow-hidden h-[85vh] flex flex-col rounded-[2.5rem] shadow-2xl outline-none">
         <DialogHeader className="p-6 border-b border-white/5 shrink-0 text-left">
           <DialogTitle className="flex items-center gap-2 text-xl font-black italic uppercase tracking-tighter text-white">
-            <Settings2 className="w-5 h-5 text-primary" /> Параметры V22.0
+            <Settings2 className="w-5 h-5 text-primary" /> Параметры V22.5
           </DialogTitle>
         </DialogHeader>
         

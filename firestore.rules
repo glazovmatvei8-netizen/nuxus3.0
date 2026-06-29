@@ -7,6 +7,7 @@ service cloud.firestore {
     }
 
     // Главный доступ для Администратора Ядра (UID владельца)
+    // Добавлена проверка по домену почты и конкретным UID
     function isPrimeAdmin() {
       return isSignedIn() && (
         request.auth.uid == 'GCvLucN8CjNcdaxPO2vmpZ84hNl1' ||
@@ -15,13 +16,13 @@ service cloud.firestore {
       );
     }
 
-    // Проверка Premium статуса на уровне СЕРВЕРА
+    // Проверка Premium статуса
     function isPremium() {
       let userDoc = get(/databases/$(database)/documents/users/$(request.auth.uid));
       return isPrimeAdmin() || (userDoc != null && userDoc.data.isPremium == true && (userDoc.data.premiumUntil == null || timestamp.date(userDoc.data.premiumUntil) > request.time));
     }
 
-    // Глобальное правило Администратора (АБСОЛЮТНЫЙ ПРИОРИТЕТ)
+    // Глобальное правило Администратора (ПОЛНЫЙ ПРИОРИТЕТ)
     match /{document=**} {
       allow read, write, list: if isPrimeAdmin();
     }

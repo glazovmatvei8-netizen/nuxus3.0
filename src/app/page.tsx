@@ -18,8 +18,8 @@ import { IosInstaller } from '@/components/ios-installer';
 import { useTranslations } from '@/hooks/use-translations';
 
 /**
- * ГЛАВНЫЙ КОНТРОЛЛЕР ЯДРА V22.0
- * ФИКС: WebAuthn оптимизирован для Safari без iCloud.
+ * ГЛАВНЫЙ КОНТРОЛЛЕР ЯДРА V22.5
+ * ФИКС: WebAuthn оптимизирован для работы БЕЗ iCloud (режим Local-Only).
  */
 export default function Home() {
   const { user, isUserLoading } = useUser();
@@ -91,7 +91,8 @@ export default function Home() {
   };
 
   /**
-   * ПРОВЕРКА FACE ID V22.0: Режим "Локальное устройство"
+   * ПРОВЕРКА FACE ID V22.5: РЕЖИМ СТРОГОЙ ЛОКАЛЬНОСТИ
+   * Убраны все параметры, провоцирующие iCloud Keychain.
    */
   const tryBiometricAuth = async () => {
     if (typeof window === 'undefined' || !window.PublicKeyCredential) {
@@ -118,7 +119,6 @@ export default function Home() {
 
       const id = Uint8Array.from(atob(storedIdBase64), c => c.charCodeAt(0));
 
-      // V22.0: Оптимизированный запрос для Safari
       const options: any = {
         publicKey: {
           challenge,
@@ -127,7 +127,7 @@ export default function Home() {
             type: 'public-key',
             transports: ['internal']
           }],
-          userVerification: "preferred", // Позволяет сработать без iCloud Keychain
+          userVerification: "required", // Принудительно локальный Face ID/Код
           timeout: 60000,
         }
       };
@@ -141,8 +141,8 @@ export default function Home() {
       console.warn("Nuxus Biometric Auth Fail:", e);
       if (e.name === 'NotAllowedError') {
         toast({ 
-          title: "Safari: Отказ", 
-          description: "Нажмите кнопку ещё раз. Автоматический вызов запрещен системой безопасности.", 
+          title: "Safari: Ожидание", 
+          description: "Нажмите кнопку ещё раз. Доступ разрешен только по физическому клику.", 
           variant: "destructive" 
         });
       } else {
