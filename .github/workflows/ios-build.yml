@@ -1,8 +1,12 @@
-
 name: Build iOS IPA
 
 on:
   workflow_dispatch:
+    inputs:
+      version:
+        description: 'Версия (например 22.9.0) — оставь пустым для авто из versions.json'
+        required: false
+        default: ''
 
 jobs:
   build:
@@ -17,44 +21,67 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
+          cache: 'npm'
+
+      - name: Get Version from versions.json
+        id: version
+        run: |
+          VERSION="${{ github.event.inputs.version }}"
+          if [ -z "$VERSION" ]; then
+            VERSION=$(curl -s "https://raw.githubusercontent.com/glazovmatvei8-netizen/nuxus2.0/main/src/app/versions.json?t=$(date +%s)" | grep -o '"latestVersion": "[^"]*' | cut -d'"' -f4)
+          fi
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "📦 Сборка версии: $VERSION"
 
       - name: Install Dependencies
-        run: npm install
+        run: npm ci
+
+      - name: Install Biometric Plugin
+        run: |
+          npm install @capacitor/local-authentication
+          npx cap sync ios
 
       - name: Build Web Project
         run: npm run build
 
-      - name: Capacitor Sync & Add
+      - name: Capacitor Sync
+        run: npx cap sync ios
+
+      - name: Configure iOS (Face ID + Version)
         run: |
-          # Гарантируем наличие папки out для Capacitor
-          mkdir -p out
+          PLIST="ios/App/App/Info.plist"
           
-          # Инициализируем iOS если её нет в репозитории
-          if [ ! -d "ios" ]; then
-            npx cap add ios
+          # Face ID описание
+          if ! grep -q "NSFaceIDUsageDescription" "$PLIST"; then
+            /usr/libexec/PlistBuddy -c "Add :NSFaceIDUsageDescription string 'Разблокировка Nuxus'" "$PLIST"
           fi
           
-          # Синхронизируем плагины и веб-активы
-          npx cap sync ios
+          # Версия и билд
+          /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString ${{ steps.version.outputs.version }}" "$PLIST"
+          /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $(date +%Y%m%d%H%M)" "$PLIST"
 
-      - name: Build iOS (Xcode)
+      - name: Build iOS Archive
         run: |
           xcodebuild -workspace ios/App/App.xcworkspace \
                      -scheme App \
-                     -sdk iphoneos \
                      -configuration Release \
-                     -derivedDataPath build \
+                     -destination 'generic/platform=iOS' \
+                     -archivePath "$PWD/ios/App/build/App.xcarchive" \
+                     CODE_SIGN_IDENTITY="" \
+                     CODE_SIGNING_REQUIRED=NO \
                      CODE_SIGNING_ALLOWED=NO \
-                     CODE_SIGNING_REQUIRED=NO
+                     archive
 
-      - name: Create IPA
+      - name: Package IPA
         run: |
+          cd ios/App/build
           mkdir -p Payload
-          cp -r build/Build/Products/Release-iphoneos/App.app Payload/
-          zip -r Nuxus.ipa Payload
+          cp -r App.xcarchive/Products/Applications/*.app Payload/
+          zip -r Nuxus-v${{ steps.version.outputs.version }}.ipa Payload
 
-      - name: Upload Artifacts
+      - name: Upload IPA
         uses: actions/upload-artifact@v4
         with:
-          name: Nuxus-IPA
-          path: Nuxus.ipa
+          name: Nuxus-v${{ steps.version.outputs.version }}
+          path: ios/App/build/*.ipa
+          retention-days: 30
