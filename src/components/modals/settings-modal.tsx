@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useRef, useEffect } from 'react';
@@ -168,7 +167,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
             <TabsContent value="profile" className="space-y-8 m-0 p-8 pb-24">
               <div className="flex flex-col items-center gap-8">
                 <div className="relative group">
-                  <div className="absolute -inset-4 bg-primary/20 blur-3xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity" />
+                  <div className="absolute -inset-4 bg-primary/20 blur-3xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-1000" />
                   <UserAvatar userId={user?.uid} manualAvatarUrl={form.avatarUrl} className="h-40 w-40 border-4 border-primary/20 shadow-2xl relative z-10" fallbackName={form.name} />
                   <div className="absolute -bottom-2 -right-2 flex gap-2 z-20">
                     <button onClick={() => fileInputRef.current?.click()} className="bg-primary p-3 rounded-2xl shadow-2xl hover:scale-110 active:scale-90 transition-all"><Camera className="w-5 h-5 text-white" /></button>
