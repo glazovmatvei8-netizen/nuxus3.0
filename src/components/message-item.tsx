@@ -33,6 +33,10 @@ import { Dialog, DialogContent, DialogTitle, DialogPortal, DialogOverlay } from 
 
 const QUICK_REACTIONS = ['👍', '❤️', '🔥', '😂', '😮', '😢', '👏'];
 
+/**
+ * MessageItem V25.1: High Performance & Improved Visibility.
+ * Исправлена прозрачность облачков и баги со стилями.
+ */
 export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForward, isAdmin = false, isGroup = false, onEdit, highlight = false, viewerProfile }: any) => {
   const { user } = useUser();
   const db = useFirestore();
@@ -110,26 +114,6 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
     }
   };
 
-  const handleTranslate = async () => {
-    if (!isPremium) {
-      toast({ title: "Premium функция", description: "Перевод доступен только Premium пользователям." });
-      return;
-    }
-    if (message.contentType !== 'text') return;
-    setIsTranslating(true);
-    try {
-      const { translatedText: result } = await translateMessage({ text: displayContent, targetLang: 'Russian' });
-      setTranslatedText(result);
-      if (db && chatId) {
-        updateDoc(doc(db, 'chats', chatId, 'messages', message.id), { 'metadata.translation': result });
-      }
-    } catch (e) {
-      toast({ title: "Ошибка перевода", variant: "destructive" });
-    } finally {
-      setIsTranslating(false);
-    }
-  };
-
   const toggleAudio = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (!audioInstance.current) {
@@ -149,7 +133,9 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
 
   const bubbleClasses = cn(
     "p-4 rounded-[1.8rem] transition-all duration-300 relative shadow-2xl overflow-hidden group/item",
-    isMe ? "message-bubble-me rounded-br-none" : "message-bubble-other rounded-bl-none text-white",
+    isMe 
+      ? "bg-primary text-white rounded-br-none" 
+      : "bg-white/[0.08] backdrop-blur-md border border-white/5 rounded-bl-none text-white",
     highlight && "ring-4 ring-primary shadow-[0_0_40px_rgba(168,85,247,0.6)] scale-105 z-10",
     bubbleStyle === 'neon' && isMe && "bg-gradient-to-tr from-cyan-500 to-purple-600 shadow-[0_0_20px_rgba(6,182,212,0.5)] border border-cyan-400/30",
     bubbleStyle === 'gold' && isMe && "bg-gradient-to-tr from-yellow-400 to-orange-600 shadow-[0_0_20px_rgba(234,179,8,0.5)] text-black border border-yellow-300/30",
@@ -175,21 +161,6 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
       >
         <img src={message.content} alt="Image" className="w-full h-auto object-cover max-h-[500px]" loading="lazy" />
         <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity backdrop-blur-[2px]">
-          <Maximize2 className="w-10 h-10 text-white drop-shadow-lg" />
-        </div>
-      </div>
-    );
-
-    if (message.contentType === 'video' || message.contentType === 'ai_video') return (
-      <div 
-        className="relative max-w-[340px] rounded-[2rem] overflow-hidden border border-white/10 shadow-2xl bg-black/40 cursor-pointer active:scale-[0.98] transition-all group"
-        onClick={(e) => { e.preventDefault(); e.stopPropagation(); setIsMediaViewerOpen(true); }}
-      >
-        <video src={message.content} className="w-full h-auto max-h-[500px]" autoPlay muted loop playsInline />
-        <div className="absolute top-4 right-4 bg-black/60 backdrop-blur-md p-2 rounded-full border border-white/10">
-          <VideoIcon className="w-5 h-5 text-white" />
-        </div>
-        <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
           <Maximize2 className="w-10 h-10 text-white drop-shadow-lg" />
         </div>
       </div>
@@ -225,11 +196,7 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
         </div>
         {(isTranscribing || transcribedText) && (
           <div className="px-4 py-3 bg-white/5 rounded-2xl border border-white/5 text-[12px] italic text-white/90 animate-in fade-in slide-in-from-top-2">
-            <div className="flex items-center gap-2 mb-2">
-                <Sparkles className="w-3 h-3 text-accent animate-pulse" />
-                <span className="text-[9px] font-black uppercase tracking-[0.2em] text-accent/70">{isTranscribing ? 'DECRYPTING AUDIO...' : 'AI TRANSCRIPTION'}</span>
-            </div>
-            {isTranscribing ? "Сигнал обрабатывается квантовым ядром..." : transcribedText}
+            {isTranscribing ? "Сигнал обрабатывается..." : transcribedText}
           </div>
         )}
       </div>
@@ -239,16 +206,8 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
       <div className="flex flex-col gap-2">
         <div className="whitespace-pre-wrap text-[16px] break-words max-w-[320px] font-semibold tracking-tight leading-relaxed">
           {displayContent} 
-          {message.editedAt && <span className="text-[9px] ml-3 text-primary/30 font-black uppercase tracking-widest italic">(коррекция)</span>}
+          {message.editedAt && <span className="text-[9px] ml-3 text-white/30 font-black uppercase tracking-widest italic">(ред.)</span>}
         </div>
-        {translatedText && (
-          <div className="pt-3 mt-1 border-t border-white/5 text-[14px] text-accent/90 italic font-bold">
-            <div className="flex items-center gap-2 text-[9px] uppercase font-black tracking-[0.2em] mb-1.5 text-accent/50">
-              <Languages className="w-3.5 h-3.5" /> AI Translate
-            </div>
-            {translatedText}
-          </div>
-        )}
       </div>
     );
   };
@@ -270,7 +229,6 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
           "text-[10px] text-primary/60 uppercase font-black tracking-[0.3em]",
           message.contentType === 'broadcast' && "text-primary animate-pulse"
         )}>
-          {message.contentType === 'broadcast' && <Zap className="w-3 h-3 inline mr-2 mb-0.5" />}
           {message.content}
         </p>
       </div>
@@ -279,9 +237,7 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
 
   return (
     <>
-    <div 
-      className={cn("w-full flex mb-2 transition-all duration-500", isMe ? "justify-end" : "justify-start", highlight && "z-10")}
-    >
+    <div className={cn("w-full flex mb-2 transition-all duration-500", isMe ? "justify-end" : "justify-start", highlight && "z-10")}>
       <div className={cn("flex gap-3 max-w-[90%] items-end", isMe ? "flex-row-reverse" : "flex-row")}>
         {!isMe && (
           <div className="cursor-pointer active:scale-90 transition-transform mb-1" onClick={() => setInspectedUserId(message.senderId)}>
@@ -301,7 +257,7 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
                     </div>
                   )}
                   {renderContent()}
-                  <div className="flex items-center justify-end gap-2 mt-2 opacity-30 px-1">
+                  <div className="flex items-center justify-end gap-2 mt-2 opacity-40 px-1">
                     <span className="text-[10px] font-black tabular-nums tracking-widest">{formattedTime}</span>
                     {isMe && (message.isRead ? <CheckCheck className="w-4 h-4 text-accent" /> : <Check className="w-4 h-4" />)}
                   </div>
@@ -332,14 +288,11 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
         <DialogOverlay className="fixed inset-0 bg-black/95 backdrop-blur-3xl z-[3000]" />
         <DialogContent className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 max-w-5xl w-[95vw] h-[90vh] bg-transparent border-none p-0 overflow-hidden flex flex-col items-center justify-center outline-none z-[3100] rounded-[3rem]">
           <DialogTitle className="sr-only">Просмотр сигнала</DialogTitle>
-          <button 
-            onClick={() => setIsMediaViewerOpen(false)} 
-            className="absolute top-8 right-8 z-[3200] h-14 w-14 rounded-full bg-white/5 hover:bg-white/20 flex items-center justify-center text-white transition-all border border-white/10 backdrop-blur-xl shadow-2xl"
-          >
+          <button onClick={() => setIsMediaViewerOpen(false)} className="absolute top-8 right-8 z-[3200] h-14 w-14 rounded-full bg-white/5 hover:bg-white/20 flex items-center justify-center text-white transition-all border border-white/10 backdrop-blur-xl shadow-2xl">
             <X className="w-8 h-8" />
           </button>
           <div className="w-full h-full flex items-center justify-center p-6">
-            {message.contentType === 'video' || message.contentType === 'ai_video' || message.contentType === 'video_note' ? (
+            {message.contentType === 'video' || message.contentType === 'video_note' ? (
               <video src={message.content} className="max-w-full max-h-full rounded-[2.5rem] shadow-[0_0_100px_rgba(0,0,0,1)]" controls autoPlay loop />
             ) : (
               <img src={message.content} alt="Media" className="max-w-full max-h-full object-contain rounded-[2.5rem] shadow-[0_0_100px_rgba(0,0,0,1)]" />

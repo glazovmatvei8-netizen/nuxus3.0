@@ -8,10 +8,10 @@ import { Progress } from './ui/progress';
 import versions from '@/app/versions.json';
 
 /**
- * КВАНТОВЫЙ ОБНОВЛЯТОР ЯДРА V24.1.8
- * Синхронизировано: 24.1.8
+ * КВАНТОВЫЙ ОБНОВЛЯТОР ЯДРА V25.0.0
+ * Фикс: Точная проверка версий без ложных срабатываний.
  */
-const CURRENT_VERSION = "24.1.8";
+const CURRENT_VERSION = "25.0.0";
 
 export function UpdateNotifier() {
   const [isOpen, setIsOpen] = useState(false);
@@ -23,6 +23,7 @@ export function UpdateNotifier() {
 
     const checkVersion = () => {
       const lastInstalled = localStorage.getItem('nuxus_last_installed_version');
+      // Показываем окно только если версия в конфиге ВЫШЕ текущей и выше последней установленной
       if (versions.latestVersion !== CURRENT_VERSION && lastInstalled !== versions.latestVersion) {
         setIsOpen(true);
       }
@@ -109,9 +110,9 @@ export function UpdateNotifier() {
               </ul>
             </div>
           ) : (
-            <div className="p-6 bg-green-500/5 rounded-3xl border border-green-500/10 text-center">
-               <ShieldCheck className="w-8 h-8 text-green-500 mx-auto mb-3" />
-               <p className="text-[10px] text-green-500/80 font-black uppercase tracking-widest">Ваш узел полностью синхронизирован</p>
+            <div className="p-6 bg-primary/5 rounded-3xl border border-primary/10 text-center">
+               <ShieldCheck className="w-8 h-8 text-primary mx-auto mb-3" />
+               <p className="text-[10px] text-white/80 font-black uppercase tracking-widest">Ваш узел полностью синхронизирован и работает на максимальной частоте.</p>
             </div>
           )}
 

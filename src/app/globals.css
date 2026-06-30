@@ -97,3 +97,9 @@
 .animate-pulse-glow {
   animation: pulse-glow 4s ease-in-out infinite;
 }
+
+/* Optimization for long lists */
+.virtual-list-item {
+  content-visibility: auto;
+  contain-intrinsic-size: 1px 100px;
+}
