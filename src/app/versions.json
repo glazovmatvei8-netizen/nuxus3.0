@@ -1,12 +1,14 @@
+
 {
-  "latestVersion": "24.1.8",
-  "qesVersion": "24.1",
-  "build": "Stable-Release",
-  "sizeMb": 108,
+  "latestVersion": "25.0.0",
+  "qesVersion": "25.0",
+  "build": "Stable-Evolution",
+  "sizeMb": 112,
   "changelog": [
-    "Build Finality: Устранена критическая ошибка manifest.webmanifest",
-    "Pipeline Upgrade: Добавлена очистка метаданных перед экспортом",
-    "Conflict Resolution: Полная очистка Ядра от маркеров слияния",
-    "Zero-Latency: Оптимизирован прямой вызов Face ID"
+    "Quantum Interface v3.0: Полностью новый плавающий дизайн",
+    "HEX Customization: Свой цвет Ядра для Premium (#HEX)",
+    "Voice AI: Расшифровка голосовых сообщений через Gemini",
+    "Enhanced Circles: Переключение камеры при записи видео-кружков",
+    "Stability Max: Удалены проблемные зависимости в пайплайне сборки"
   ]
 }

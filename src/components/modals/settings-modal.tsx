@@ -13,7 +13,7 @@ import { useAuth, useUser, useFirestore, useDoc, useMemoFirebase } from '@/fireb
 import { UserAvatar } from '@/components/user-avatar';
 import { 
   LogOut, Settings2, Camera, Lock, Fingerprint, Sparkles, Star, Zap, ShieldCheck, Loader2, Database, Download, Check, Palette, 
-  Monitor, Layout, Type, MessageSquare
+  Monitor, Layout, Type, MessageSquare, Paintbrush
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { signOut } from 'firebase/auth';
@@ -25,8 +25,8 @@ import type { User } from '@/lib/types';
 import { generateAiAvatar } from '@/ai/flows/generate-ai-avatar-flow';
 
 /**
- * ПАРАМЕТРЫ V22.8 «Hardware Security»
- * ФИКС: WebAuthn оптимизирован для Safari (Hardware-Only).
+ * ПАРАМЕТРЫ V25.0 «Quantum Customization»
+ * Добавлена возможность выбора HEX-цвета для Premium пользователей.
  */
 export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const auth = useAuth();
@@ -96,19 +96,15 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         'settings.biometricEnabled': form.biometricEnabled
       });
       onOpenChange(false);
-      toast({ title: "Ядро обновлено V22.8" });
+      toast({ title: "Конфигурация сохранена" });
     } catch (e: any) {
       toast({ title: "Ошибка сохранения", variant: "destructive" });
     }
   };
 
-  /**
-   * КРИТИЧЕСКИЙ ФИКС V22.8: HARDWARE-ONLY FACE ID
-   * Принудительно отключаем Resident Key для Safari.
-   */
   const handleLinkBiometrics = async () => {
     if (typeof window === 'undefined' || !window.PublicKeyCredential || !user) {
-      toast({ title: "Ошибка", description: "Устройство не поддерживает биометрию", variant: "destructive" });
+      toast({ title: "Ошибка", description: "Hardware API недоступен", variant: "destructive" });
       return;
     }
     
@@ -126,7 +122,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
           authenticatorSelection: { 
             authenticatorAttachment: "platform",
             userVerification: "required",
-            residentKey: "discouraged", // Локальный режим
+            residentKey: "discouraged",
             requireResidentKey: false
           },
           attestation: "none"
@@ -137,16 +133,11 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         const base64Id = btoa(String.fromCharCode(...new Uint8Array(credential.rawId)));
         localStorage.setItem('nuxus_biometric_id', base64Id);
         setForm({ ...form, biometricEnabled: true });
-        toast({ title: "Face ID привязан локально" });
+        toast({ title: "Face ID привязан к узлу" });
       }
     } catch (e: any) {
-      console.warn("Nuxus Biometric Link Error:", e);
       setForm({ ...form, biometricEnabled: false });
-      if (e.name === 'NotAllowedError') {
-        toast({ title: "Safari: Ожидание", description: "Нажмите ещё раз. Доступ разрешен только по физическому клику.", variant: "destructive" });
-      } else {
-        toast({ title: "Сбой биометрии", description: "Проверьте настройки Face ID в системе.", variant: "destructive" });
-      }
+      toast({ title: "Сбой биометрии", variant: "destructive" });
     } finally {
       setIsLinkingBiometrics(false);
     }
@@ -156,28 +147,31 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md bg-[#0a0a0c] border-white/10 p-0 overflow-hidden h-[85vh] flex flex-col rounded-[2.5rem] shadow-2xl outline-none">
-        <DialogHeader className="p-6 border-b border-white/5 shrink-0 text-left">
-          <DialogTitle className="flex items-center gap-2 text-xl font-black italic uppercase tracking-tighter text-white">
-            <Settings2 className="w-5 h-5 text-primary" /> Параметры V22.8
+      <DialogContent className="max-w-md bg-[#0a0a0c]/95 backdrop-blur-[60px] border-white/10 p-0 overflow-hidden h-[85vh] flex flex-col rounded-[3rem] shadow-[0_30px_100px_rgba(0,0,0,1)] outline-none">
+        <DialogHeader className="p-8 border-b border-white/5 shrink-0 text-left">
+          <DialogTitle className="flex items-center gap-3 text-2xl font-black italic uppercase tracking-tighter text-white">
+            <Settings2 className="w-7 h-7 text-primary" /> Параметры v3.0
           </DialogTitle>
         </DialogHeader>
         
         <Tabs value={settingsTab} onValueChange={setSettingsTab} className="flex-1 flex flex-col min-h-0 overflow-hidden">
-          <TabsList className="grid grid-cols-4 bg-white/5 p-1 mx-6 mt-4 rounded-2xl shrink-0">
-            <TabsTrigger value="profile" className="text-[8px] uppercase font-bold tracking-widest">Профиль</TabsTrigger>
-            <TabsTrigger value="style" className="text-[8px] uppercase font-bold tracking-widest">Стиль</TabsTrigger>
-            <TabsTrigger value="privacy" className="text-[8px] uppercase font-bold tracking-widest">Защита</TabsTrigger>
-            <TabsTrigger value="data" className="text-[8px] uppercase font-bold tracking-widest">Данные</TabsTrigger>
-          </TabsList>
+          <div className="px-6 mt-4">
+            <TabsList className="grid grid-cols-4 bg-white/5 p-1 rounded-2xl shrink-0 border border-white/5">
+              <TabsTrigger value="profile" className="text-[9px] font-black uppercase tracking-widest data-[state=active]:bg-primary">Узел</TabsTrigger>
+              <TabsTrigger value="style" className="text-[9px] font-black uppercase tracking-widest data-[state=active]:bg-primary">Стиль</TabsTrigger>
+              <TabsTrigger value="privacy" className="text-[9px] font-black uppercase tracking-widest data-[state=active]:bg-primary">Защита</TabsTrigger>
+              <TabsTrigger value="data" className="text-[9px] font-black uppercase tracking-widest data-[state=active]:bg-primary">Ядро</TabsTrigger>
+            </TabsList>
+          </div>
 
           <ScrollArea className="flex-1">
-            <TabsContent value="profile" className="space-y-6 m-0 p-6 pb-20">
-              <div className="flex flex-col items-center gap-6">
-                <div className="relative">
-                  <UserAvatar userId={user?.uid} manualAvatarUrl={form.avatarUrl} className="h-32 w-32 border-4 border-primary/20 shadow-2xl" fallbackName={form.name} />
-                  <div className="absolute -bottom-2 -right-2 flex gap-1">
-                    <button onClick={() => fileInputRef.current?.click()} className="bg-primary p-2 rounded-xl shadow-lg"><Camera className="w-4 h-4 text-white" /></button>
+            <TabsContent value="profile" className="space-y-8 m-0 p-8 pb-24">
+              <div className="flex flex-col items-center gap-8">
+                <div className="relative group">
+                  <div className="absolute -inset-4 bg-primary/20 blur-3xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity" />
+                  <UserAvatar userId={user?.uid} manualAvatarUrl={form.avatarUrl} className="h-40 w-40 border-4 border-primary/20 shadow-2xl relative z-10" fallbackName={form.name} />
+                  <div className="absolute -bottom-2 -right-2 flex gap-2 z-20">
+                    <button onClick={() => fileInputRef.current?.click()} className="bg-primary p-3 rounded-2xl shadow-2xl hover:scale-110 active:scale-90 transition-all"><Camera className="w-5 h-5 text-white" /></button>
                     {isPremium && (
                       <button onClick={async () => {
                         setIsGeneratingAvatar(true);
@@ -185,73 +179,78 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                           const { imageUrl } = await generateAiAvatar();
                           setForm({...form, avatarUrl: imageUrl});
                         } finally { setIsGeneratingAvatar(false); }
-                      }} className={cn("bg-accent p-2 rounded-xl shadow-lg", isGeneratingAvatar && "animate-spin")}><Sparkles className="w-4 h-4 text-black" /></button>
+                      }} className={cn("bg-accent p-3 rounded-2xl shadow-2xl hover:scale-110 active:scale-90 transition-all", isGeneratingAvatar && "animate-spin")}><Sparkles className="w-5 h-5 text-black" /></button>
                     )}
                   </div>
                   <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={(e) => { const f = e.target.files?.[0]; if(f) { const r = new FileReader(); r.onloadend = () => setForm({...form, avatarUrl: r.result as string}); r.readAsDataURL(f); } }} />
                 </div>
                 
-                <div className="space-y-4 w-full text-left">
-                  <div className="space-y-2"><Label className="text-[10px] uppercase font-black ml-1">Имя</Label><Input value={form.name} onChange={e => setForm({...form, name: e.target.value})} className="bg-white/5 border-white/10 h-12 rounded-2xl" /></div>
-                  <div className="space-y-2"><Label className="text-[10px] uppercase font-black ml-1">Никнейм</Label><div className="relative"><span className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground">@</span><Input value={form.username} onChange={e => setForm({...form, username: e.target.value})} className="bg-white/5 border-white/10 h-12 rounded-2xl pl-8" /></div></div>
-                  <div className="space-y-2"><Label className="text-[10px] uppercase font-black ml-1">Био</Label><Textarea value={form.bio} onChange={e => setForm({...form, bio: e.target.value})} className="bg-white/5 border-white/10 rounded-2xl min-h-[80px]" /></div>
+                <div className="space-y-6 w-full text-left">
+                  <div className="space-y-2"><Label className="text-[10px] uppercase font-black ml-2 text-primary/60">Идентификация</Label><Input value={form.name} onChange={e => setForm({...form, name: e.target.value})} className="bg-white/5 border-white/10 h-14 rounded-2xl font-bold text-base" /></div>
+                  <div className="space-y-2"><Label className="text-[10px] uppercase font-black ml-2 text-primary/60">Адрес в сети</Label><div className="relative"><span className="absolute left-5 top-1/2 -translate-y-1/2 text-primary font-black">@</span><Input value={form.username} onChange={e => setForm({...form, username: e.target.value})} className="bg-white/5 border-white/10 h-14 rounded-2xl pl-10 font-mono" /></div></div>
+                  <div className="space-y-2"><Label className="text-[10px] uppercase font-black ml-2 text-primary/60">Спецификация</Label><Textarea value={form.bio} onChange={e => setForm({...form, bio: e.target.value})} className="bg-white/5 border-white/10 rounded-2xl min-h-[100px] font-medium" /></div>
                 </div>
               </div>
             </TabsContent>
 
-            <TabsContent value="style" className="space-y-8 m-0 p-6 pb-20">
-              <div className="space-y-4">
-                <h3 className="text-[10px] font-black uppercase text-primary tracking-[0.2em] flex items-center gap-2"><Monitor className="w-3.5 h-3.5" /> Внешний вид</h3>
-                <div className="grid grid-cols-2 gap-2">
-                  <button onClick={() => setForm({...form, appearance: 'dark'})} className={cn("h-12 rounded-xl border flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-widest transition-all", form.appearance === 'dark' ? "bg-primary text-white border-primary shadow-lg shadow-primary/20" : "bg-white/5 border-white/10 text-white/40")}>Тёмная</button>
-                  <button onClick={() => setForm({...form, appearance: 'light'})} className={cn("h-12 rounded-xl border flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-widest transition-all", form.appearance === 'light' ? "bg-white text-black border-white shadow-lg" : "bg-white/5 border-white/10 text-white/40")}>Светлая</button>
+            <TabsContent value="style" className="space-y-10 m-0 p-8 pb-24">
+              <div className="space-y-6">
+                <h3 className="text-[11px] font-black uppercase text-primary tracking-[0.3em] flex items-center gap-3"><Monitor className="w-5 h-5" /> Визуальная среда</h3>
+                <div className="grid grid-cols-2 gap-3">
+                  <button onClick={() => setForm({...form, appearance: 'dark'})} className={cn("h-14 rounded-2xl border flex items-center justify-center gap-3 text-[11px] font-black uppercase tracking-widest transition-all", form.appearance === 'dark' ? "bg-primary text-white border-primary shadow-xl shadow-primary/20" : "bg-white/5 border-white/10 text-white/40")}>Obsidian</button>
+                  <button onClick={() => setForm({...form, appearance: 'light'})} className={cn("h-14 rounded-2xl border flex items-center justify-center gap-3 text-[11px] font-black uppercase tracking-widest transition-all", form.appearance === 'light' ? "bg-white text-black border-white shadow-xl" : "bg-white/5 border-white/10 text-white/40")}>Crystal</button>
                 </div>
               </div>
 
-              <div className="space-y-4">
-                <h3 className="text-[10px] font-black uppercase text-primary tracking-[0.2em] flex items-center gap-2"><Palette className="w-3.5 h-3.5" /> Цветовая схема</h3>
-                <div className="grid grid-cols-2 gap-2">
-                  {['default', 'ocean', 'gold', 'cyberpunk'].map(t => (
-                    <button key={t} onClick={() => setForm({...form, theme: t})} className={cn("h-10 rounded-xl border text-[9px] font-black uppercase tracking-widest transition-all", form.theme === t ? "bg-primary/20 text-primary border-primary" : "bg-white/5 border-white/10 text-white/40")}>{t}</button>
-                  ))}
+              {isPremium && (
+                <div className="space-y-6 bg-primary/5 p-6 rounded-[2.5rem] border border-primary/10 animate-in zoom-in duration-500">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-[11px] font-black uppercase text-primary tracking-[0.3em] flex items-center gap-3"><Paintbrush className="w-5 h-5" /> HEX Резонанс</h3>
+                    <div className="bg-accent/20 px-2 py-0.5 rounded-full text-[8px] font-black text-accent border border-accent/20">PREMIUM</div>
+                  </div>
+                  <div className="space-y-4">
+                    <p className="text-[9px] text-muted-foreground uppercase font-bold leading-relaxed">Введите HEX-код цвета, чтобы перекрасить интерфейс всего Ядра под себя.</p>
+                    <div className="flex gap-3">
+                       <div className="h-14 w-14 rounded-2xl border border-white/10 shrink-0 shadow-inner" style={{ backgroundColor: form.customPrimaryColor || 'hsl(var(--primary))' }} />
+                       <Input 
+                        placeholder="#A855F7" 
+                        value={form.customPrimaryColor} 
+                        onChange={e => setForm({...form, customPrimaryColor: e.target.value.toUpperCase()})}
+                        className="bg-black/40 border-white/10 h-14 rounded-2xl text-center font-mono text-lg tracking-widest"
+                       />
+                    </div>
+                  </div>
                 </div>
-              </div>
+              )}
 
-              <div className="space-y-4">
-                 <h3 className="text-[10px] font-black uppercase text-primary tracking-[0.2em] flex items-center gap-2"><MessageSquare className="w-3.5 h-3.5" /> Стиль пузырей</h3>
-                 <div className="grid grid-cols-2 gap-2">
+              <div className="space-y-6">
+                <h3 className="text-[11px] font-black uppercase text-primary tracking-[0.3em] flex items-center gap-3"><MessageSquare className="w-5 h-5" /> Контейнеры сигналов</h3>
+                <div className="grid grid-cols-2 gap-3">
                     {['default', 'neon', 'gold', 'ocean'].map(s => (
-                      <button key={s} onClick={() => setForm({...form, bubbleStyle: s})} className={cn("h-10 rounded-xl border text-[9px] font-black uppercase tracking-widest transition-all", form.bubbleStyle === s ? "bg-white/10 text-white border-white/30 shadow-lg" : "bg-white/5 border-white/10 text-white/40")}>{s}</button>
+                      <button key={s} onClick={() => setForm({...form, bubbleStyle: s})} className={cn("h-12 rounded-2xl border text-[10px] font-black uppercase tracking-widest transition-all", form.bubbleStyle === s ? "bg-white/10 text-white border-white/30 shadow-2xl" : "bg-white/5 border-white/10 text-white/40")}>{s}</button>
                     ))}
-                 </div>
-              </div>
-
-              <div className="space-y-4">
-                 <h3 className="text-[10px] font-black uppercase text-primary tracking-[0.2em] flex items-center gap-2"><Type className="w-3.5 h-3.5" /> Размер шрифта</h3>
-                 <div className="flex gap-2">
-                    {['small', 'medium', 'large'].map(sz => (
-                      <button key={sz} onClick={() => setForm({...form, messageSize: sz})} className={cn("flex-1 h-10 rounded-xl border text-[9px] font-black uppercase tracking-widest transition-all", form.messageSize === sz ? "bg-white/10 text-white border-white/30" : "bg-white/5 border-white/10 text-white/40")}>{sz}</button>
-                    ))}
-                 </div>
+                </div>
               </div>
             </TabsContent>
 
-            <TabsContent value="privacy" className="space-y-6 m-0 p-6 pb-20">
-              <div className="bg-primary/5 p-6 rounded-[2.5rem] border border-primary/10 space-y-6">
+            <TabsContent value="privacy" className="space-y-8 m-0 p-8 pb-24">
+              <div className="bg-primary/5 p-8 rounded-[3rem] border border-primary/10 space-y-8 shadow-2xl">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-4">
-                    <div className="bg-primary/20 p-3 rounded-2xl"><Fingerprint className="w-6 h-6 text-primary" /></div>
-                    <div className="flex flex-col text-left"><span className="text-sm font-black text-white uppercase italic">Защита 2FA</span><span className="text-[8px] text-muted-foreground uppercase font-black">Двойной барьер</span></div>
+                  <div className="flex items-center gap-5">
+                    <div className="bg-primary/20 p-4 rounded-2xl shadow-xl"><Fingerprint className="w-8 h-8 text-primary" /></div>
+                    <div className="flex flex-col text-left"><span className="text-lg font-black text-white uppercase italic">Система 2FA</span><span className="text-[9px] text-muted-foreground uppercase font-black tracking-widest">Quantum Barrier</span></div>
                   </div>
                   <Switch checked={form.twoFactorEnabled} onCheckedChange={v => setForm({...form, twoFactorEnabled: v})} />
                 </div>
                 
                 {form.twoFactorEnabled && (
-                  <div className="space-y-4">
-                    <Label className="text-[9px] uppercase font-black text-primary/60 ml-2">Системный PIN-код</Label>
-                    <Input type="password" placeholder="••••••" maxLength={6} value={form.twoFactorPin} onChange={e => setForm({...form, twoFactorPin: e.target.value.replace(/\D/g, '')})} className="bg-black/40 border-primary/20 h-14 rounded-2xl text-center text-2xl tracking-[0.5em] font-black" />
-                    <div className="flex items-center justify-between pt-4 border-t border-white/5">
-                      <div className="flex flex-col text-left"><span className="text-xs font-bold text-white uppercase">FaceID (Локально)</span><span className="text-[8px] text-muted-foreground uppercase font-bold">Чип Secure Enclave</span></div>
+                  <div className="space-y-6 animate-in slide-in-from-top-4 duration-500">
+                    <div className="space-y-2">
+                      <Label className="text-[10px] font-black uppercase text-primary/60 ml-3">Доступ-код Ядра</Label>
+                      <Input type="password" placeholder="••••••" maxLength={6} value={form.twoFactorPin} onChange={e => setForm({...form, twoFactorPin: e.target.value.replace(/\D/g, '')})} className="bg-black/60 border-primary/30 h-16 rounded-2xl text-center text-3xl tracking-[0.6em] font-black" />
+                    </div>
+                    <div className="flex items-center justify-between pt-6 border-t border-white/5">
+                      <div className="flex flex-col text-left"><span className="text-sm font-bold text-white uppercase italic">Hardware ID</span><span className="text-[9px] text-muted-foreground uppercase font-bold tracking-widest">Secure Enclave Link</span></div>
                       <Switch checked={form.biometricEnabled} onCheckedChange={v => { if(!v) setForm({...form, biometricEnabled: false}); else handleLinkBiometrics(); }} />
                     </div>
                   </div>
@@ -259,29 +258,32 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
               </div>
             </TabsContent>
 
-            <TabsContent value="data" className="space-y-6 m-0 p-6 pb-20">
-               <div className="p-6 bg-white/5 rounded-[2.5rem] border border-white/10 text-center space-y-6">
-                  <Database className="w-10 h-10 text-accent mx-auto" />
-                  <div className="space-y-2">
-                    <h3 className="text-lg font-black uppercase italic text-white">Управление данными</h3>
-                    <p className="text-[9px] text-muted-foreground uppercase font-bold tracking-widest leading-relaxed">Запросите полный ZIP-архив вашего узла. Мы подготовим сообщения, профиль и истории в одном пакете.</p>
+            <TabsContent value="data" className="space-y-8 m-0 p-8 pb-24">
+               <div className="p-8 bg-white/5 rounded-[3rem] border border-white/10 text-center space-y-8 shadow-2xl">
+                  <Database className="w-14 h-14 text-accent mx-auto animate-pulse" />
+                  <div className="space-y-3">
+                    <h3 className="text-xl font-black uppercase italic text-white tracking-tighter">Целостность данных</h3>
+                    <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-[0.2em] leading-relaxed">Запросите полный квантовый дамп вашего узла. Мы подготовим сообщения, профиль и коллекцию в ZIP-пакете.</p>
                   </div>
                   <Button onClick={async () => {
                     setIsRequestingArchive(true);
                     try {
                       await addDoc(collection(db!, 'archiveRequests'), { userId: user?.uid, userName: profile?.name, status: 'pending', createdAt: new Date().toISOString() });
-                      toast({ title: "Запрос отправлен" });
+                      toast({ title: "Сигнал отправлен", description: "Ожидайте сборки архива" });
                     } finally { setIsRequestingArchive(false); }
-                  }} disabled={isRequestingArchive} className="w-full h-12 bg-white/5 border border-white/10 rounded-xl font-black uppercase text-[9px] tracking-widest gap-2">
-                    {isRequestingArchive ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Download className="w-4 h-4" /> Запросить ZIP-пакет</>}
+                  }} disabled={isRequestingArchive} className="w-full h-14 bg-white/5 border border-white/10 rounded-2xl font-black uppercase text-[10px] tracking-widest gap-3 hover:bg-white/10 transition-all">
+                    {isRequestingArchive ? <Loader2 className="w-5 h-5 animate-spin" /> : <><Download className="w-5 h-5" /> Сформировать ZIP-пакет</>}
                   </Button>
                </div>
             </TabsContent>
           </ScrollArea>
 
-          <div className="p-6 border-t border-white/5 bg-white/[0.02] shrink-0 flex gap-3">
-            <Button variant="ghost" className="h-14 w-14 rounded-2xl bg-red-500/10 text-red-500" onClick={() => signOut(auth)}><LogOut className="w-6 h-6" /></Button>
-            <Button className="flex-1 h-14 rounded-2xl font-black uppercase tracking-widest bg-primary text-white shadow-xl shadow-primary/30" onClick={handleSave}><Check className="w-5 h-5 mr-2" /> Сохранить</Button>
+          <div className="p-8 border-t border-white/5 bg-white/[0.02] shrink-0 flex gap-4">
+            <Button variant="ghost" className="h-16 w-16 rounded-[1.8rem] bg-red-500/10 text-red-500 hover:bg-red-500/20 transition-all shadow-xl" onClick={() => signOut(auth)}><LogOut className="w-7 h-7" /></Button>
+            <Button className="flex-1 h-16 rounded-[1.8rem] font-black uppercase italic tracking-widest bg-primary text-white shadow-2xl shadow-primary/30 active:scale-95 transition-all group overflow-hidden" onClick={handleSave}>
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
+              <Check className="w-6 h-6 mr-3" /> Сохранить
+            </Button>
           </div>
         </Tabs>
       </DialogContent>

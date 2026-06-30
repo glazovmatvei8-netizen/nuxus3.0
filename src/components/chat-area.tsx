@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
   Send, Info, ChevronLeft, X, Paperclip, Mic, StopCircle, Edit2, Search,
-  Smile, ImageIcon, Video, Trash2, Loader2, UserPlus, AtSign, ChevronDown, Wand2, Sparkles, Star, Timer, Clock, Palette, Video as VideoIcon, Circle
+  Smile, ImageIcon, Video, Trash2, Loader2, UserPlus, AtSign, ChevronDown, Wand2, Sparkles, Star, Timer, Clock, Palette, Video as VideoIcon, Circle, RefreshCcw
 } from 'lucide-react';
 import { MessageItem } from './message-item';
 import { useToast } from '@/hooks/use-toast';
@@ -36,10 +36,10 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
   
   const [isRecording, setIsRecording] = useState(false);
   const [recorderMode, setRecorderMode] = useState<'audio' | 'video'>('audio');
+  const [camMode, setCamMode] = useState<'user' | 'environment'>('user');
   const [recordingDuration, setRecordingDuration] = useState(0);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const videoGenInputRef = useRef<HTMLInputElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -82,9 +82,13 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
 
   const startRecording = async () => {
     try {
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(t => t.stop());
+      }
+
       const constraints = {
         audio: true,
-        video: recorderMode === 'video' ? { facingMode: 'user', width: 480, height: 480 } : false
+        video: recorderMode === 'video' ? { facingMode: camMode, width: 480, height: 480 } : false
       };
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
       streamRef.current = stream;
@@ -119,8 +123,20 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
         setRecordingDuration(prev => prev + 1);
       }, 1000);
     } catch (err) {
-      toast({ title: "Ошибка доступа", description: "Камера или микрофон недоступны", variant: "destructive" });
+      toast({ title: "Ошибка доступа", description: "Проверьте разрешения камеры/микрофона", variant: "destructive" });
     }
+  };
+
+  const toggleCamera = async () => {
+    if (!isRecording || recorderMode !== 'video') {
+      setCamMode(prev => prev === 'user' ? 'environment' : 'user');
+      return;
+    }
+    // Если запись уже идет, нужно перезапустить стрим
+    const newMode = camMode === 'user' ? 'environment' : 'user';
+    setCamMode(newMode);
+    toast({ title: "Камера переключена", description: "Начните новую запись" });
+    stopRecording();
   };
 
   const stopRecording = () => {
@@ -138,7 +154,7 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
       streamRef.current?.getTracks().forEach(track => track.stop());
       setIsRecording(false);
       if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
-      toast({ title: "Запись отменена" });
+      toast({ title: "Запись аннулирована" });
     }
   };
 
@@ -151,25 +167,31 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
   if (!canPost) return null;
 
   return (
-    <footer className="p-4 pt-2 pb-[calc(1rem+env(safe-area-inset-bottom))] obsidian-glass border-t border-white/5 shrink-0 z-40 relative">
+    <footer className="p-4 pt-2 pb-[calc(1.5rem+env(safe-area-inset-bottom))] obsidian-glass border-t border-white/5 shrink-0 z-40 relative">
       {isRecording && recorderMode === 'video' && (
-        <div className="absolute bottom-28 left-1/2 -translate-x-1/2 w-56 h-56 rounded-full overflow-hidden border-4 border-primary shadow-[0_0_50px_rgba(168,85,247,0.5)] z-50 bg-black animate-in zoom-in duration-300">
-          <video ref={videoPreviewRef} autoPlay muted loop playsInline className="w-full h-full object-cover scale-x-[-1]" />
-          <div className="absolute inset-0 border-[10px] border-black/40 rounded-full pointer-events-none" />
+        <div className="absolute bottom-32 left-1/2 -translate-x-1/2 w-64 h-64 rounded-full overflow-hidden border-4 border-primary shadow-[0_0_60px_rgba(168,85,247,0.6)] z-50 bg-black animate-in zoom-in duration-500">
+          <video ref={videoPreviewRef} autoPlay muted loop playsInline className={cn("w-full h-full object-cover", camMode === 'user' && "scale-x-[-1]")} />
+          <div className="absolute inset-0 border-[12px] border-black/40 rounded-full pointer-events-none" />
+          <button 
+            onClick={toggleCamera}
+            className="absolute bottom-6 left-1/2 -translate-x-1/2 bg-white/20 backdrop-blur-md p-3 rounded-full hover:bg-white/30 transition-all border border-white/10"
+          >
+            <RefreshCcw className="w-6 h-6 text-white" />
+          </button>
         </div>
       )}
 
-      <div className="max-w-4xl mx-auto relative">
-        <div className="flex gap-2.5 items-center">
+      <div className="max-w-5xl mx-auto relative">
+        <div className="flex gap-3 items-center">
           {!isRecording ? (
             <>
               <Popover>
-                <PopoverTrigger asChild><Button variant="ghost" size="icon" className="h-12 w-12 obsidian-glass rounded-2xl text-white/40 hover:text-primary transition-all"><Paperclip className="w-5 h-5" /></Button></PopoverTrigger>
-                <PopoverContent side="top" align="start" className="w-56 obsidian-glass border-white/10 rounded-[2rem] p-2 mb-3 shadow-2xl animate-in slide-in-from-bottom-2 duration-300">
+                <PopoverTrigger asChild><Button variant="ghost" size="icon" className="h-14 w-14 obsidian-glass rounded-[1.5rem] text-white/30 hover:text-primary transition-all"><Paperclip className="w-6 h-6" /></Button></PopoverTrigger>
+                <PopoverContent side="top" align="start" className="w-64 obsidian-glass border-white/10 rounded-[2.2rem] p-2 mb-4 shadow-[0_20px_80px_rgba(0,0,0,0.8)] animate-in slide-in-from-bottom-4 duration-500">
                   <div className="grid grid-cols-1 gap-1">
-                    <AttachmentItem icon={ImageIcon} label="Галерея" color="text-primary" onClick={() => fileInputRef.current?.click()} />
+                    <AttachmentItem icon={ImageIcon} label="Медиатека" color="text-primary" onClick={() => fileInputRef.current?.click()} />
                     {isPremium && (
-                      <AttachmentItem icon={Palette} label="ИИ Холст" color="text-accent" onClick={async () => {
+                      <AttachmentItem icon={Palette} label="ИИ Креатив" color="text-accent" onClick={async () => {
                         if (!messageInput.trim()) return;
                         setIsGeneratingImg(true);
                         try {
@@ -179,22 +201,22 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
                         } finally { setIsGeneratingImg(false); }
                       }} loading={isGeneratingImg} />
                     )}
-                    <AttachmentItem icon={AtSign} label="Опрос" color="text-blue-400" onClick={onPollOpen} />
-                    <div className="h-px bg-white/5 my-1.5 mx-2" />
+                    <AttachmentItem icon={AtSign} label="Создать опрос" color="text-blue-400" onClick={onPollOpen} />
+                    <div className="h-px bg-white/5 my-2 mx-3" />
                     <Popover>
                       <PopoverTrigger asChild>
-                        <button className={cn("flex items-center gap-3 w-full p-3 rounded-xl hover:bg-white/5 transition-all text-left", destructTimer ? "text-primary" : "text-white/70")}>
-                          <Timer className="w-4 h-4" /> <span className="text-[10px] font-black uppercase tracking-widest">Таймер</span>
+                        <button className={cn("flex items-center gap-4 w-full p-4 rounded-2xl hover:bg-white/5 transition-all text-left", destructTimer ? "text-primary" : "text-white/70")}>
+                          <Timer className="w-5 h-5" /> <span className="text-[11px] font-black uppercase tracking-[0.2em]">Самоудаление</span>
                         </button>
                       </PopoverTrigger>
-                      <PopoverContent side="right" className="w-40 obsidian-glass border-white/10 rounded-2xl p-1.5 shadow-2xl">
+                      <PopoverContent side="right" className="w-48 obsidian-glass border-white/10 rounded-2xl p-2 shadow-2xl">
                         {[
-                          { l: 'Выкл', v: null },
-                          { l: '1 Мин', v: 1 },
+                          { l: 'Выключено', v: null },
+                          { l: '1 Минута', v: 1 },
                           { l: '1 Час', v: 60 },
                           { l: '24 Часа', v: 1440 }
                         ].map(t => (
-                          <button key={t.l} onClick={() => setDestructTimer(t.v)} className="w-full text-left p-2.5 rounded-lg text-[9px] font-black uppercase tracking-widest hover:bg-primary/10 hover:text-primary transition-all">{t.l}</button>
+                          <button key={t.l} onClick={() => setDestructTimer(t.v)} className="w-full text-left p-3 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-primary/10 hover:text-primary transition-all">{t.l}</button>
                         ))}
                       </PopoverContent>
                     </Popover>
@@ -202,55 +224,55 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
                 </PopoverContent>
               </Popover>
               
-              <div className="flex-1 flex items-center bg-white/[0.04] rounded-[1.8rem] border border-white/10 h-12 px-4 relative group transition-all focus-within:bg-white/[0.07] focus-within:border-primary/50 shadow-inner">
-                {destructTimer && <Timer className="w-4 h-4 text-primary mr-2 animate-pulse" />}
+              <div className="flex-1 flex items-center bg-white/[0.03] rounded-[2rem] border border-white/[0.06] h-14 px-5 relative group transition-all focus-within:bg-white/[0.06] focus-within:border-primary/40 shadow-inner">
+                {destructTimer && <Timer className="w-5 h-5 text-primary mr-3 animate-pulse" />}
                 <Input 
-                  placeholder="Сигнал Ядра..." 
-                  className="bg-transparent border-none focus-visible:ring-0 text-white placeholder:text-white/20 font-bold italic tracking-tight h-full" 
+                  placeholder="Введите сигнал..." 
+                  className="bg-transparent border-none focus-visible:ring-0 text-white placeholder:text-white/10 font-bold italic tracking-tight h-full text-base" 
                   value={messageInput} 
                   onChange={e => handleInputChange(e.target.value)} 
                   onKeyDown={e => e.key === 'Enter' && handleSend()} 
                 />
-                <Button variant="ghost" size="icon" className="text-white/20 hover:text-primary transition-all h-8 w-8"><Smile className="w-5 h-5" /></Button>
+                <Button variant="ghost" size="icon" className="text-white/10 hover:text-primary transition-all h-10 w-10"><Smile className="w-6 h-6" /></Button>
               </div>
 
               {messageInput.trim() ? (
-                <Button size="icon" className="h-12 w-12 rounded-full bg-primary text-white shadow-[0_0_30px_rgba(168,85,247,0.4)] active:scale-90 transition-all hover:scale-105" onClick={handleSend}>
-                  <Send className="w-5 h-5" />
+                <Button size="icon" className="h-14 w-14 rounded-full bg-primary text-white shadow-[0_0_40px_rgba(168,85,247,0.5)] active:scale-90 transition-all hover:scale-105" onClick={handleSend}>
+                  <Send className="w-6 h-6" />
                 </Button>
               ) : (
-                <div className="flex gap-1.5">
+                <div className="flex gap-2">
                   <Button 
                     size="icon" 
                     variant="ghost"
-                    className="h-12 w-12 rounded-[1.4rem] obsidian-glass text-white/30 hover:text-primary transition-all active:scale-90"
+                    className="h-14 w-14 rounded-[1.8rem] obsidian-glass text-white/20 hover:text-primary transition-all active:scale-90"
                     onClick={() => setRecorderMode(recorderMode === 'audio' ? 'video' : 'audio')}
                   >
-                    {recorderMode === 'audio' ? <VideoIcon className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
+                    {recorderMode === 'audio' ? <VideoIcon className="w-6 h-6" /> : <Mic className="w-6 h-6" />}
                   </Button>
                   <Button 
                     size="icon" 
-                    className="h-12 w-12 rounded-full bg-primary text-white shadow-[0_0_30px_rgba(168,85,247,0.4)] active:scale-90 transition-all animate-in zoom-in duration-300"
+                    className="h-14 w-14 rounded-full bg-primary text-white shadow-[0_0_40px_rgba(168,85,247,0.5)] active:scale-90 transition-all animate-in zoom-in duration-500"
                     onClick={startRecording}
                   >
-                    {recorderMode === 'audio' ? <Mic className="w-5 h-5" /> : <Circle className="w-5 h-5 fill-current" />}
+                    {recorderMode === 'audio' ? <Mic className="w-6 h-6" /> : <Circle className="w-6 h-6 fill-current" />}
                   </Button>
                 </div>
               )}
             </>
           ) : (
-            <div className="flex-1 flex items-center bg-primary/10 border border-primary/20 rounded-[2rem] h-12 px-5 gap-5 animate-in slide-in-from-right-4 duration-500 shadow-[0_0_40px_rgba(168,85,247,0.15)]">
-              <div className="flex items-center gap-2 text-primary animate-pulse">
-                <div className="w-2 h-2 rounded-full bg-primary shadow-[0_0_10px_rgba(168,85,247,1)]" />
-                <span className="text-[9px] font-black uppercase tracking-[0.2em]">{recorderMode === 'audio' ? 'СИНХРОНИЗАЦИЯ' : 'ПРЯМОЙ ЭФИР'}</span>
+            <div className="flex-1 flex items-center bg-primary/10 border border-primary/20 rounded-[2.5rem] h-14 px-6 gap-6 animate-in slide-in-from-right-8 duration-700 shadow-[0_0_50px_rgba(168,85,247,0.2)]">
+              <div className="flex items-center gap-3 text-primary animate-pulse">
+                <div className="w-2.5 h-2.5 rounded-full bg-primary shadow-[0_0_15px_rgba(168,85,247,1)]" />
+                <span className="text-[10px] font-black uppercase tracking-[0.3em]">{recorderMode === 'audio' ? 'SYNCING AUDIO' : 'LIVE STREAM'}</span>
               </div>
-              <span className="text-base font-black italic text-white flex-1 tracking-widest">{formatDuration(recordingDuration)}</span>
-              <div className="flex gap-1">
-                <Button variant="ghost" size="icon" className="h-8 w-8 text-white/30 hover:text-destructive transition-colors" onClick={cancelRecording}>
+              <span className="text-xl font-black italic text-white flex-1 tracking-widest tabular-nums">{formatDuration(recordingDuration)}</span>
+              <div className="flex gap-2">
+                <Button variant="ghost" size="icon" className="h-10 w-10 text-white/20 hover:text-destructive transition-all hover:bg-destructive/10 rounded-xl" onClick={cancelRecording}>
                   <Trash2 className="w-5 h-5" />
                 </Button>
-                <Button variant="ghost" size="icon" className="h-10 w-10 text-primary hover:scale-125 transition-transform" onClick={stopRecording}>
-                  <StopCircle className="w-7 h-7 fill-current" />
+                <Button variant="ghost" size="icon" className="h-12 w-12 text-primary hover:scale-125 transition-transform" onClick={stopRecording}>
+                  <StopCircle className="w-8 h-8 fill-current" />
                 </Button>
               </div>
             </div>
@@ -264,9 +286,9 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
 
 function AttachmentItem({ icon: Icon, label, color, onClick, loading }: any) {
   return (
-    <button onClick={onClick} className="flex items-center gap-4 w-full p-3.5 rounded-xl hover:bg-white/5 transition-all text-left group">
-      {loading ? <Loader2 className="w-5 h-5 animate-spin text-primary" /> : <Icon className={cn("w-5 h-5 transition-transform group-hover:scale-110", color)} />}
-      <span className="text-[10px] font-black uppercase tracking-widest text-white/80">{label}</span>
+    <button onClick={onClick} className="flex items-center gap-5 w-full p-4 rounded-2xl hover:bg-white/5 transition-all text-left group">
+      {loading ? <Loader2 className="w-6 h-6 animate-spin text-primary" /> : <Icon className={cn("w-6 h-6 transition-transform group-hover:scale-110", color)} />}
+      <span className="text-[11px] font-black uppercase tracking-[0.2em] text-white/80">{label}</span>
     </button>
   );
 }
@@ -292,7 +314,7 @@ const MessageList = memo(({
   }, [sortedMessages, searchQuery]);
 
   return (
-    <div className="flex flex-col gap-4 max-w-4xl mx-auto px-4 md:px-8 py-6 min-h-full touch-pan-y relative z-10 overflow-x-hidden bg-transparent">
+    <div className="flex flex-col gap-5 max-w-5xl mx-auto px-4 md:px-10 py-8 min-h-full touch-pan-y relative z-10 overflow-x-hidden bg-transparent">
       {filteredMessages.map((msg: Message) => (
         <MessageItem 
           key={msg.id} 
@@ -360,7 +382,7 @@ export default function ChatArea() {
     if (chat?.type === 'private') {
       return formatLastSeen(otherProfile?.lastSeen, otherProfile?.settings?.privacy?.lastSeenVisibility, false, t('online'));
     }
-    return `${chat?.participantIds?.length || 0} Узлов в сети`;
+    return `${chat?.participantIds?.length || 0} Участников`;
   }, [chat, otherProfile, t]);
 
   const scrollToBottom = useCallback((behavior: ScrollBehavior = 'smooth') => {
@@ -401,7 +423,7 @@ export default function ChatArea() {
   const handleScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
     const target = e.currentTarget;
     const distanceToBottom = target.scrollHeight - target.scrollTop - target.clientHeight;
-    setShowScrollButton(distanceToBottom > 400);
+    setShowScrollButton(distanceToBottom > 500);
   }, []);
 
   const handleSummary = async () => {
@@ -413,19 +435,19 @@ export default function ChatArea() {
         text: m.contentType === 'text' ? decryptSignal(m.content) : `[Сигнал: ${m.contentType}]`
       }));
       const { summary } = await chatConversationSummary({ chatMessages });
-      toast({ title: "ИИ Интеллект", description: summary, duration: 15000 });
+      toast({ title: "ИИ Аналитика", description: summary, duration: 15000 });
     } catch (e) {
-      toast({ title: "Сбой дешифровки", variant: "destructive" });
+      toast({ title: "Сбой ИИ", variant: "destructive" });
     } finally { setIsSummarizing(false); }
   };
 
   const chatDisplayName = useMemo(() => {
-    if (chat?.id === 'saved_messages') return 'Архив Данных';
+    if (chat?.id === 'saved_messages') return 'Избранные пакеты';
     if (chat?.type === 'private') {
       const myMeta = chat.metadata?.[firebaseUser?.uid || ''];
       return myMeta?.customName || formatDisplayName(otherProfile?.name);
     }
-    return formatDisplayName(chat?.name || 'Кластер Сигналов');
+    return formatDisplayName(chat?.name || 'Квантовый Канал');
   }, [chat, firebaseUser?.uid, otherProfile]);
 
   const customBg = userProfile?.settings?.chatBackground;
@@ -444,40 +466,40 @@ export default function ChatArea() {
         } : {}}
       />
 
-      <header className="h-[calc(4rem+env(safe-area-inset-top))] pt-[env(safe-area-inset-top)] border-b border-white/5 obsidian-glass flex items-center justify-between px-5 shrink-0 z-30 shadow-2xl">
-        <div className="flex items-center gap-3.5 flex-1 min-w-0">
-          <Button variant="ghost" size="icon" className="md:hidden obsidian-glass rounded-xl text-white/50 h-9 w-9" onClick={() => setCurrentChatId(null)}><ChevronLeft className="w-5 h-5" /></Button>
+      <header className="h-[calc(4.5rem+env(safe-area-inset-top))] pt-[env(safe-area-inset-top)] border-b border-white/5 obsidian-glass flex items-center justify-between px-6 shrink-0 z-30 shadow-2xl">
+        <div className="flex items-center gap-4 flex-1 min-w-0">
+          <Button variant="ghost" size="icon" className="md:hidden obsidian-glass rounded-2xl text-white/50 h-10 w-10" onClick={() => setCurrentChatId(null)}><ChevronLeft className="w-6 h-6" /></Button>
           {!isSearchMode ? (
-            <div className="flex items-center gap-3.5 cursor-pointer min-w-0 flex-1 group" onClick={() => setIsChatInfoOpen(true)}>
-              <UserAvatar userId={otherId} manualAvatarUrl={chat?.avatarUrl || otherProfile?.avatarUrl} className="h-10 w-10 border-2 border-white/10 group-hover:border-primary/50 transition-all shrink-0" fallbackName={chatDisplayName} showOnlineStatus />
+            <div className="flex items-center gap-4 cursor-pointer min-w-0 flex-1 group" onClick={() => setIsChatInfoOpen(true)}>
+              <UserAvatar userId={otherId} manualAvatarUrl={chat?.avatarUrl || otherProfile?.avatarUrl} className="h-12 w-12 border-2 border-white/10 group-hover:border-primary/50 transition-all shrink-0 shadow-lg" fallbackName={chatDisplayName} showOnlineStatus />
               <div className="flex flex-col min-w-0 text-left flex-1">
-                <div className="flex items-center gap-1.5 min-w-0 w-full">
-                  <span className="font-black text-[17px] truncate text-white italic tracking-tighter uppercase group-hover:text-primary transition-colors block leading-tight">
+                <div className="flex items-center gap-2 min-w-0 w-full">
+                  <span className="font-black text-[18px] truncate text-white italic tracking-tighter uppercase group-hover:text-primary transition-colors block leading-tight">
                     {chatDisplayName}
                   </span>
                 </div>
-                <span className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground/60 leading-none truncate">
+                <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary/60 leading-none truncate mt-0.5">
                   {chatSubtext}
                 </span>
               </div>
             </div>
           ) : (
-            <div className="flex-1 flex items-center gap-4 obsidian-glass px-4 rounded-2xl h-11 min-w-0">
-              <Search className="w-4 h-4 text-primary shrink-0" />
-              <Input placeholder="Сканировать сигналы..." className="bg-transparent border-none focus-visible:ring-0 text-sm h-full text-white font-bold flex-1 min-w-0" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} autoFocus />
-              <button onClick={() => { setIsSearchMode(false); setSearchQuery(''); }} className="text-white/20 hover:text-white transition-colors shrink-0"><X className="w-5 h-5" /></button>
+            <div className="flex-1 flex items-center gap-5 obsidian-glass px-5 rounded-[1.5rem] h-12 min-w-0 border-white/10">
+              <Search className="w-5 h-5 text-primary shrink-0" />
+              <Input placeholder="Поиск по сигналам..." className="bg-transparent border-none focus-visible:ring-0 text-base h-full text-white font-bold flex-1 min-w-0" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} autoFocus />
+              <button onClick={() => { setIsSearchMode(false); setSearchQuery(''); }} className="text-white/20 hover:text-white transition-colors shrink-0"><X className="w-6 h-6" /></button>
             </div>
           )}
         </div>
         {!isSearchMode && (
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-3 shrink-0">
             {isPremium && (
-              <Button variant="ghost" size="icon" onClick={handleSummary} disabled={isSummarizing} className={cn("h-10 w-10 rounded-xl obsidian-glass text-primary hover:text-white transition-all", isSummarizing && "animate-spin")}>
+              <Button variant="ghost" size="icon" onClick={handleSummary} disabled={isSummarizing} className={cn("h-11 w-11 rounded-2xl obsidian-glass text-primary hover:text-white transition-all shadow-xl", isSummarizing && "animate-spin")}>
                 <Sparkles className="w-5 h-5" />
               </Button>
             )}
-            <Button variant="ghost" size="icon" onClick={() => setIsSearchMode(true)} className="h-10 w-10 rounded-xl obsidian-glass text-white/30 hover:text-primary transition-all"><Search className="w-5 h-5" /></Button>
-            <Button variant="ghost" size="icon" onClick={() => setIsChatInfoOpen(true)} className="h-10 w-10 rounded-xl obsidian-glass text-white/30 hover:text-primary transition-all"><Info className="w-5 h-5" /></Button>
+            <Button variant="ghost" size="icon" onClick={() => setIsSearchMode(true)} className="h-11 w-11 rounded-2xl obsidian-glass text-white/20 hover:text-primary transition-all"><Search className="w-5 h-5" /></Button>
+            <Button variant="ghost" size="icon" onClick={() => setIsChatInfoOpen(true)} className="h-11 w-11 rounded-2xl obsidian-glass text-white/20 hover:text-primary transition-all"><Info className="w-6 h-6" /></Button>
           </div>
         )}
       </header>
@@ -489,15 +511,15 @@ export default function ChatArea() {
             onReply={setReplyTo} onForward={setForwardingMessage} amIPremium={isPremium} 
             isAdmin={isKernelAdmin} isGroup={chat?.type !== 'private'} searchQuery={searchQuery} viewerProfile={userProfile} 
           />
-          <div ref={messagesEndRef} className="h-6" />
+          <div ref={messagesEndRef} className="h-10" />
         </div>
 
         {showScrollButton && (
           <button 
             onClick={() => scrollToBottom('smooth')}
-            className="absolute bottom-6 right-6 h-12 w-12 rounded-2xl obsidian-glass border-primary/20 flex items-center justify-center text-primary shadow-2xl z-50 animate-in zoom-in hover:scale-110 active:scale-95 transition-all border"
+            className="absolute bottom-10 right-8 h-14 w-14 rounded-full obsidian-glass border-primary/20 flex items-center justify-center text-primary shadow-[0_0_30px_rgba(168,85,247,0.4)] z-50 animate-in zoom-in hover:scale-110 active:scale-90 transition-all border group"
           >
-            <ChevronDown className="w-6 h-6" />
+            <ChevronDown className="w-8 h-8 group-hover:translate-y-0.5 transition-transform" />
           </button>
         )}
       </div>

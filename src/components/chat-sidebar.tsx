@@ -6,7 +6,7 @@ import { useAppState } from '@/lib/store';
 import { Button } from '@/components/ui/button';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
-  Plus, Ghost, Search, Star, Pin, PinOff, Archive, Lock, Trash2, MessageCircle, Activity, LayoutGrid, Users, User, ChevronRight
+  Plus, Ghost, Search, Star, Pin, PinOff, Archive, Lock, Trash2, MessageCircle, Activity, LayoutGrid, Users, User, ChevronRight, Zap
 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { CreateChatModal } from './modals/create-chat-modal';
@@ -49,13 +49,13 @@ const ChatListItem = memo(({
   const lastMsg = lastMessages?.[0];
 
   const finalDisplayName = useMemo(() => {
-    if (chat.id === 'saved_messages') return 'Избранное';
+    if (chat.id === 'saved_messages') return 'Архив Данных';
     if (chat.type === 'private') {
       const myMeta = chat.metadata?.[currentUserId || ''];
       if (myMeta?.customName) return myMeta.customName;
       if (otherProfile?.name) return formatDisplayName(otherProfile.name);
     }
-    return formatDisplayName(chat.name || otherProfile?.name || 'Аккаунт');
+    return formatDisplayName(chat.name || otherProfile?.name || 'Узел');
   }, [chat, otherProfile, currentUserId]);
 
   const displayTime = useMemo(() => {
@@ -125,36 +125,34 @@ const ChatListItem = memo(({
   const resetSwipe = () => { setOffsetX(0); setIsDragging(false); };
 
   return (
-    <div className="relative overflow-hidden touch-pan-y select-none px-3 py-1 max-w-full">
-      {/* Кнопки действий при свайпе */}
-      <div className={cn("absolute inset-y-1 left-3 flex h-[calc(100%-8px)] z-0 transition-opacity duration-300 rounded-[1.8rem] overflow-hidden shadow-xl", offsetX > 20 ? "opacity-100" : "opacity-0 pointer-events-none")}>
-        <button onClick={(e) => { e.stopPropagation(); onMarkUnread(chat.id); resetSwipe(); }} className="w-[70px] bg-blue-500/80 backdrop-blur-2xl flex flex-col items-center justify-center text-white gap-1 active:brightness-125 transition-all">
-          <MessageCircle className="w-4 h-4" />
-          <span className="text-[6px] font-black uppercase tracking-widest">Отм.</span>
+    <div className="relative overflow-hidden touch-pan-y select-none px-4 py-1.5 max-w-full">
+      <div className={cn("absolute inset-y-1.5 left-4 flex h-[calc(100%-12px)] z-0 transition-opacity duration-300 rounded-[2.2rem] overflow-hidden shadow-2xl", offsetX > 20 ? "opacity-100" : "opacity-0 pointer-events-none")}>
+        <button onClick={(e) => { e.stopPropagation(); onMarkUnread(chat.id); resetSwipe(); }} className="w-[70px] bg-blue-500/80 backdrop-blur-3xl flex flex-col items-center justify-center text-white gap-1.5 active:brightness-125 transition-all">
+          <MessageCircle className="w-5 h-5" />
+          <span className="text-[7px] font-black uppercase tracking-widest">ИНФО</span>
         </button>
-        <button onClick={(e) => { e.stopPropagation(); onPinToggle(chat.id); resetSwipe(); }} className="w-[70px] bg-green-500/80 backdrop-blur-2xl flex flex-col items-center justify-center text-white gap-1 active:brightness-125 transition-all border-l border-white/5">
-          <Pin className="w-4 h-4" />
-          <span className="text-[6px] font-black uppercase tracking-widest">{isPinned ? 'Откр' : 'Закр'}</span>
-        </button>
-      </div>
-
-      <div className={cn("absolute inset-y-1 right-3 flex h-[calc(100%-8px)] z-0 transition-opacity duration-300 rounded-[1.8rem] overflow-hidden shadow-xl", offsetX < -20 ? "opacity-100" : "opacity-0 pointer-events-none")}>
-        <button onClick={(e) => { e.stopPropagation(); onArchive(chat.id, !!chat.isArchived); resetSwipe(); }} className="w-[70px] bg-orange-500/80 backdrop-blur-2xl flex flex-col items-center justify-center text-white gap-1 active:brightness-125 transition-all border-r border-white/5">
-          <Archive className="w-4 h-4" />
-          <span className="text-[6px] font-black uppercase tracking-widest">Архив</span>
-        </button>
-        <button onClick={(e) => { e.stopPropagation(); onDelete(chat.id); resetSwipe(); }} className="w-[70px] bg-red-600/80 backdrop-blur-2xl flex flex-col items-center justify-center text-white gap-1 active:brightness-125 transition-all">
-          <Trash2 className="w-4 h-4" />
-          <span className="text-[6px] font-black uppercase tracking-widest">Удалить</span>
+        <button onClick={(e) => { e.stopPropagation(); onPinToggle(chat.id); resetSwipe(); }} className="w-[70px] bg-green-500/80 backdrop-blur-3xl flex flex-col items-center justify-center text-white gap-1.5 active:brightness-125 transition-all border-l border-white/5">
+          <Pin className="w-5 h-5" />
+          <span className="text-[7px] font-black uppercase tracking-widest">{isPinned ? 'ОТКР' : 'ЗАКР'}</span>
         </button>
       </div>
 
-      {/* Основной элемент чата */}
+      <div className={cn("absolute inset-y-1.5 right-4 flex h-[calc(100%-12px)] z-0 transition-opacity duration-300 rounded-[2.2rem] overflow-hidden shadow-2xl", offsetX < -20 ? "opacity-100" : "opacity-0 pointer-events-none")}>
+        <button onClick={(e) => { e.stopPropagation(); onArchive(chat.id, !!chat.isArchived); resetSwipe(); }} className="w-[70px] bg-orange-500/80 backdrop-blur-3xl flex flex-col items-center justify-center text-white gap-1.5 active:brightness-125 transition-all border-r border-white/5">
+          <Archive className="w-5 h-5" />
+          <span className="text-[7px] font-black uppercase tracking-widest">АРХИВ</span>
+        </button>
+        <button onClick={(e) => { e.stopPropagation(); onDelete(chat.id); resetSwipe(); }} className="w-[70px] bg-red-600/80 backdrop-blur-3xl flex flex-col items-center justify-center text-white gap-1.5 active:brightness-125 transition-all">
+          <Trash2 className="w-5 h-5" />
+          <span className="text-[7px] font-black uppercase tracking-widest">УДАЛИТЬ</span>
+        </button>
+      </div>
+
       <div 
         className={cn(
-          "relative z-10 obsidian-glass will-change-transform w-full select-none rounded-[1.8rem] transition-all", 
-          !isDragging && "duration-500 cubic-bezier(0.16, 1, 0.3, 1)",
-          isActive && Math.abs(offsetX) < 10 ? "border-primary/30 bg-primary/5 shadow-primary/10" : "hover:bg-white/[0.03]"
+          "relative z-10 obsidian-glass will-change-transform w-full select-none rounded-[2.2rem] transition-all", 
+          !isDragging && "duration-700 cubic-bezier(0.16, 1, 0.3, 1)",
+          isActive && Math.abs(offsetX) < 10 ? "border-primary/40 bg-primary/10 shadow-[0_0_40px_rgba(168,85,247,0.15)]" : "hover:bg-white/[0.04]"
         )}
         style={{ transform: `translateX(${offsetX}px)` }}
         onTouchStart={handleTouchStart}
@@ -164,51 +162,51 @@ const ChatListItem = memo(({
       >
         <ContextMenu>
           <ContextMenuTrigger disabled={Math.abs(offsetX) > 10 || isDragging}>
-            <div className="flex items-center gap-3.5 px-4 py-3 cursor-pointer relative h-[88px] overflow-hidden">
+            <div className="flex items-center gap-4 px-5 py-4 cursor-pointer relative h-[96px] overflow-hidden">
               <div className="relative shrink-0">
-                <UserAvatar userId={otherId} manualAvatarUrl={otherProfile?.avatarUrl || chat.avatarUrl} className="h-14 w-14 border border-white/10 transition-all duration-500 group-hover:scale-105" fallbackName={finalDisplayName} showOnlineStatus />
-                {isUnread && <div className="absolute -top-0.5 -right-0.5 w-3 h-3 bg-primary rounded-full border-2 border-[#0a0a0c] shadow-[0_0_10px_rgba(168,85,247,1)]" />}
+                <UserAvatar userId={otherId} manualAvatarUrl={otherProfile?.avatarUrl || chat.avatarUrl} className="h-16 w-14 rounded-[1.8rem] border border-white/10 transition-all duration-700 group-hover:scale-105" fallbackName={finalDisplayName} showOnlineStatus />
+                {isUnread && <div className="absolute -top-1 -right-1 w-4 h-4 bg-primary rounded-full border-[3px] border-[#0a0a0c] shadow-[0_0_15px_rgba(168,85,247,1)] animate-pulse" />}
               </div>
               
-              <div className="flex-1 min-w-0 flex flex-col justify-center gap-0.5">
-                <div className="flex items-center justify-between w-full gap-2 text-left">
-                  <div className="flex items-center gap-1.5 min-w-0 flex-1">
-                    <span className="font-black text-[15px] truncate tracking-tight italic text-white uppercase">
+              <div className="flex-1 min-w-0 flex flex-col justify-center gap-1">
+                <div className="flex items-center justify-between w-full gap-3 text-left">
+                  <div className="flex items-center gap-2 min-w-0 flex-1">
+                    <span className="font-black text-[16px] truncate tracking-tight italic text-white uppercase leading-none">
                       {finalDisplayName}
                     </span>
-                    {otherProfile?.isPremium && <Star className="w-3 h-3 text-accent fill-accent shrink-0" />}
-                    {isPinned && <Pin className="w-3 h-3 text-primary rotate-45 shrink-0" />}
+                    {otherProfile?.isPremium && <Star className="w-3.5 h-3.5 text-accent fill-accent shrink-0 animate-pulse" />}
+                    {isPinned && <Pin className="w-3.5 h-3.5 text-primary rotate-45 shrink-0" />}
                   </div>
-                  <span className="text-[9px] text-white/20 font-bold tabular-nums">{displayTime}</span>
+                  <span className="text-[10px] text-white/30 font-black tabular-nums tracking-widest">{displayTime}</span>
                 </div>
-                <div className="flex items-center gap-1.5 w-full text-left">
-                  <p className="text-[13px] text-muted-foreground/50 truncate flex items-center font-medium min-w-0 flex-1">
-                    {isEncrypted && <Lock className="w-3 h-3 shrink-0 text-primary/30 mr-1.5" />}
-                    <span className="truncate italic">{decryptedPreview}</span>
+                <div className="flex items-center gap-2 w-full text-left">
+                  <p className="text-[14px] text-muted-foreground/60 truncate flex items-center font-semibold min-w-0 flex-1 italic">
+                    {isEncrypted && <Lock className="w-3.5 h-3.5 shrink-0 text-primary/30 mr-2" />}
+                    <span className="truncate">{decryptedPreview}</span>
                   </p>
                 </div>
               </div>
               
-              <ChevronRight className="w-3.5 h-3.5 text-white/5 shrink-0" />
+              <div className="absolute right-0 top-1/2 -translate-y-1/2 h-12 w-1.5 bg-primary/10 rounded-l-full group-hover:bg-primary/30 transition-all" />
               
               {isActive && (
-                <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-10 bg-primary rounded-r-full shadow-[0_0_15px_rgba(168,85,247,0.8)]" />
+                <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1.5 h-12 bg-primary rounded-r-full shadow-[0_0_20px_rgba(168,85,247,1)]" />
               )}
             </div>
           </ContextMenuTrigger>
-          <ContextMenuContent className="w-56 obsidian-glass rounded-[1.5rem] p-1 animate-in zoom-in-95 duration-200">
-            <ContextMenuItem onClick={() => onMarkUnread(chat.id)} className="gap-2.5 py-2.5 font-black uppercase text-[9px] tracking-wider rounded-xl hover:bg-primary/10">
-              <MessageCircle className="w-4 h-4 text-primary" /> {chat.isManualUnread ? 'Прочитано' : 'Не прочитано'}
+          <ContextMenuContent className="w-64 bg-[#0a0a0c]/95 backdrop-blur-[60px] border-white/10 rounded-[2rem] p-2 shadow-2xl animate-in zoom-in-95 duration-300">
+            <ContextMenuItem onClick={() => onMarkUnread(chat.id)} className="gap-3 py-3.5 font-black uppercase text-[10px] tracking-widest rounded-xl hover:bg-primary/10 transition-all">
+              <MessageCircle className="w-5 h-5 text-primary" /> {chat.isManualUnread ? 'ПРОЧИТАНО' : 'НЕ ПРОЧИТАНО'}
             </ContextMenuItem>
-            <ContextMenuItem onClick={() => onPinToggle(chat.id)} className="gap-2.5 py-2.5 font-black uppercase text-[9px] tracking-wider rounded-xl hover:bg-primary/10">
-              {isPinned ? <><PinOff className="w-4 h-4 text-green-400" /> Открепить</> : <><Pin className="w-4 h-4 text-green-400" /> Закрепить</>}
+            <ContextMenuItem onClick={() => onPinToggle(chat.id)} className="gap-3 py-3.5 font-black uppercase text-[10px] tracking-widest rounded-xl hover:bg-primary/10 transition-all">
+              {isPinned ? <><PinOff className="w-5 h-5 text-green-400" /> ОТКРЕПИТЬ</> : <><Pin className="w-5 h-5 text-green-400" /> ЗАКРЕПИТЬ</>}
             </ContextMenuItem>
-            <ContextMenuItem onClick={() => onArchive(chat.id, !!chat.isArchived)} className="gap-2.5 py-2.5 font-black uppercase text-[9px] tracking-wider rounded-xl hover:bg-primary/10">
-              <Archive className="w-4 h-4 text-orange-400" /> {chat.isArchived ? 'Вернуть' : 'Архивировать'}
+            <ContextMenuItem onClick={() => onArchive(chat.id, !!chat.isArchived)} className="gap-3 py-3.5 font-black uppercase text-[10px] tracking-widest rounded-xl hover:bg-primary/10 transition-all">
+              <Archive className="w-5 h-5 text-orange-400" /> {chat.isArchived ? 'ВЕРНУТЬ' : 'В АРХИВ'}
             </ContextMenuItem>
-            <ContextMenuSeparator className="bg-white/5 mx-2" />
-            <ContextMenuItem onClick={() => onDelete(chat.id)} className="gap-2.5 py-2.5 font-black uppercase text-[9px] tracking-wider rounded-xl text-red-500 hover:bg-red-500/10">
-              <Trash2 className="w-4 h-4" /> Удалить диалог
+            <ContextMenuSeparator className="bg-white/5 mx-3 my-2" />
+            <ContextMenuItem onClick={() => onDelete(chat.id)} className="gap-3 py-3.5 font-black uppercase text-[10px] tracking-widest rounded-xl text-red-500 hover:bg-red-500/10 transition-all">
+              <Trash2 className="w-5 h-5" /> УДАЛИТЬ УЗЕЛ
             </ContextMenuItem>
           </ContextMenuContent>
         </ContextMenu>
@@ -237,10 +235,10 @@ export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?:
         const realLat = Date.now() - start;
         setLatency(prev => prev === 0 ? realLat : Math.round(prev * 0.7 + realLat * 0.3));
       } catch (e) {
-        setLatency(Math.floor(Math.random() * 20) + 20);
+        setLatency(Math.floor(Math.random() * 30) + 15);
       }
     };
-    const interval = setInterval(updateLatency, 25000);
+    const interval = setInterval(updateLatency, 15000);
     updateLatency();
     return () => clearInterval(interval);
   }, []);
@@ -273,7 +271,7 @@ export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?:
 
   const handleDelete = async (chatId: string) => {
     if (!db) return;
-    if (confirm('Аннигилировать этот канал связи?')) {
+    if (confirm('Аннигилировать этот узел связи?')) {
       await deleteDoc(doc(db, 'chats', chatId));
     }
   };
@@ -304,62 +302,65 @@ export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?:
 
   return (
     <div className="flex flex-col h-full bg-transparent overflow-hidden relative max-w-full">
-      <div className="px-6 pt-10 pb-4 shrink-0 bg-transparent z-20 space-y-6">
+      <div className="px-6 pt-12 pb-6 shrink-0 bg-transparent z-20 space-y-8">
         <div className="flex items-center justify-between w-full relative">
-          <div className="flex flex-col items-center gap-1 cursor-help opacity-40 hover:opacity-100 transition-opacity">
-             <Activity className={cn("w-4 h-4", latency > 150 ? "text-red-500" : "text-green-500")} />
-             <span className="text-[7px] font-black uppercase">{latency}мс</span>
+          <div className="flex flex-col items-center gap-1.5 cursor-help opacity-40 hover:opacity-100 transition-opacity">
+             <Activity className={cn("w-5 h-5", latency > 200 ? "text-red-500" : "text-green-500")} />
+             <span className="text-[8px] font-black uppercase tabular-nums">{latency} MS</span>
           </div>
           
           <div className="absolute left-1/2 -translate-x-1/2">
             <h1 
               onClick={() => isGlobalAdmin(currentUserProfile) && setIsAdminPanelOpen(true)} 
               className={cn(
-                "text-2xl font-black italic tracking-tighter text-white transition-all uppercase flex items-center gap-2", 
-                isGlobalAdmin(currentUserProfile) ? "cursor-pointer hover:text-primary" : "cursor-default"
+                "text-3xl font-black italic tracking-tighter text-white transition-all uppercase flex items-center gap-3", 
+                isGlobalAdmin(currentUserProfile) ? "cursor-pointer hover:text-primary active:scale-95" : "cursor-default"
               )}
             >
               {isArchiveView ? 'Архив' : 'Сигналы'}
             </h1>
           </div>
 
-          <Button variant="ghost" size="icon" className="h-10 w-10 rounded-xl obsidian-glass border-white/5 hover:border-primary/40 transition-all group" onClick={() => setIsCreateModalOpen(true)}>
-            <Plus className="w-5 h-5 group-hover:rotate-90 transition-transform duration-500" />
+          <Button variant="ghost" size="icon" className="h-12 w-12 rounded-2xl obsidian-glass border-white/5 hover:border-primary/40 transition-all group shadow-xl" onClick={() => setIsCreateModalOpen(true)}>
+            <Plus className="w-6 h-6 group-hover:rotate-90 transition-transform duration-700" />
           </Button>
         </div>
 
-        <div className="relative group">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/30 group-focus-within:text-primary transition-colors" />
-          <input 
-            placeholder="Сканировать сеть..." 
-            className="w-full h-11 bg-white/[0.02] border border-white/5 rounded-2xl pl-11 text-xs font-black uppercase tracking-widest placeholder:text-muted-foreground/20 focus:outline-none focus:border-primary/50 transition-all shadow-inner"
-            onClick={() => setIsSearchOpen(true)}
-            readOnly
-          />
+        <div className="relative group px-1">
+          <div className="absolute -inset-1 bg-gradient-to-r from-primary/20 to-accent/20 rounded-2xl blur-lg opacity-0 group-focus-within:opacity-100 transition-opacity" />
+          <div className="relative flex items-center">
+            <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground/30 group-focus-within:text-primary transition-colors" />
+            <input 
+              placeholder="Сканировать пространство..." 
+              className="w-full h-14 bg-white/[0.03] border border-white/5 rounded-2xl pl-12 text-xs font-black uppercase tracking-[0.2em] placeholder:text-muted-foreground/20 focus:outline-none focus:border-primary/40 transition-all shadow-inner"
+              onClick={() => setIsSearchOpen(true)}
+              readOnly
+            />
+          </div>
         </div>
       </div>
 
-      <ScrollArea className="flex-1 px-0.5">
+      <ScrollArea className="flex-1 px-1">
         <div className="flex flex-col max-w-full overflow-x-hidden">
           {!isArchiveView && (
-            <div className="animate-in fade-in slide-in-from-top-2 duration-500">
+            <div className="animate-in fade-in slide-in-from-top-4 duration-700 px-1">
               <StoriesBar />
-              <div className="px-5 py-4">
-                <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide py-1">
+              <div className="px-5 py-6">
+                <div className="flex items-center gap-3 overflow-x-auto scrollbar-hide py-1">
                   {[
-                    { id: 'all', label: 'Все', icon: LayoutGrid },
-                    { id: 'private', label: 'Узлы', icon: User },
-                    { id: 'groups', label: 'Группы', icon: Users }
+                    { id: 'all', label: 'ВСЕ', icon: LayoutGrid },
+                    { id: 'private', label: 'УЗЛЫ', icon: User },
+                    { id: 'groups', label: 'ГРУППЫ', icon: Users }
                   ].map((tab) => (
                     <button 
                       key={tab.id} 
                       onClick={() => setActiveTab(tab.id)} 
                       className={cn(
-                        "px-4 py-2 rounded-xl text-[8px] font-black uppercase tracking-widest transition-all whitespace-nowrap border italic flex items-center gap-1.5", 
-                        activeTab === tab.id ? "bg-primary text-white border-primary shadow-lg shadow-primary/20" : "text-muted-foreground/40 border-white/[0.03] hover:text-white hover:bg-white/5"
+                        "px-6 py-3 rounded-2xl text-[9px] font-black uppercase tracking-widest transition-all whitespace-nowrap border italic flex items-center gap-2.5", 
+                        activeTab === tab.id ? "bg-primary text-white border-primary shadow-[0_10px_30px_rgba(168,85,247,0.3)] scale-105" : "text-muted-foreground/40 border-white/[0.05] hover:text-white hover:bg-white/10"
                       )}
                     >
-                      <tab.icon className="w-3 h-3" />
+                      <tab.icon className="w-3.5 h-3.5" />
                       {tab.label}
                     </button>
                   ))}
@@ -368,7 +369,7 @@ export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?:
             </div>
           )}
 
-          <div className="pb-32 space-y-1 overflow-x-hidden">
+          <div className="pb-40 space-y-2 overflow-x-hidden px-1">
             {filteredChats.length > 0 ? (
               filteredChats.map(chat => (
                 <ChatListItem 
@@ -380,9 +381,9 @@ export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?:
                 />
               ))
             ) : (
-              <div className="flex flex-col items-center justify-center p-20 opacity-10 space-y-4">
-                 <Ghost className="w-16 h-16 animate-float" />
-                 <p className="text-[9px] font-black uppercase tracking-widest text-center">Нет сигналов</p>
+              <div className="flex flex-col items-center justify-center p-24 opacity-10 space-y-6">
+                 <Zap className="w-20 h-20 animate-pulse text-primary" />
+                 <p className="text-[11px] font-black uppercase tracking-[0.4em] text-center">Сигналы не обнаружены</p>
               </div>
             )}
           </div>

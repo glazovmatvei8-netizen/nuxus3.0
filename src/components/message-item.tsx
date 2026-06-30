@@ -20,7 +20,7 @@ import {
 import { format, isAfter, parseISO } from 'date-fns';
 import { 
   CornerUpLeft, Trash2, Check, CheckCheck, Edit2, Copy, Pin, X, Share2, Play, Smile, Lock, Languages, Loader2, Image as ImageIcon,
-  MessageCircle, Star, Pause, ShieldCheck, Clock, Type, Globe, Volume2, Timer, Zap, Maximize2, Video as VideoIcon, Sparkles, PinOff
+  MessageCircle, Star, Pause, ShieldCheck, Clock, Type, Globe, Volume2, Timer, Zap, Maximize2, Video as VideoIcon, Sparkles, PinOff, Wand2
 } from 'lucide-react';
 import { cn, decryptSignal, isGlobalAdmin, isUserPremium } from '@/lib/utils';
 import { doc, updateDoc, deleteDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
@@ -149,103 +149,103 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
   const bubbleStyle = message.metadata?.bubbleStyle || 'default';
 
   const bubbleClasses = cn(
-    "p-3 rounded-2xl transition-all duration-300 relative shadow-lg overflow-hidden",
+    "p-4 rounded-[1.8rem] transition-all duration-300 relative shadow-2xl overflow-hidden group/item",
     isMe ? "message-bubble-me rounded-br-none" : "message-bubble-other rounded-bl-none text-white",
-    highlight && "ring-2 ring-primary shadow-[0_0_25px_rgba(168,85,247,0.5)] scale-105",
+    highlight && "ring-4 ring-primary shadow-[0_0_40px_rgba(168,85,247,0.6)] scale-105 z-10",
     bubbleStyle === 'neon' && isMe && "bg-gradient-to-tr from-cyan-500 to-purple-600 shadow-[0_0_20px_rgba(6,182,212,0.5)] border border-cyan-400/30",
     bubbleStyle === 'gold' && isMe && "bg-gradient-to-tr from-yellow-400 to-orange-600 shadow-[0_0_20px_rgba(234,179,8,0.5)] text-black border border-yellow-300/30",
     bubbleStyle === 'ocean' && isMe && "bg-gradient-to-tr from-blue-500 to-emerald-500 shadow-[0_0_20px_rgba(59,130,246,0.5)] border border-blue-400/30"
   );
 
   const renderContent = () => {
-    if (message.contentType === 'sticker') return <img src={message.content} alt="Sticker" className="w-44 h-44 object-contain pointer-events-none drop-shadow-2xl" />;
+    if (message.contentType === 'sticker') return <img src={message.content} alt="Sticker" className="w-52 h-52 object-contain pointer-events-none drop-shadow-2xl hover:scale-110 transition-transform duration-500" />;
     
     if (message.contentType === 'video_note') return (
-      <div className="w-52 h-52 rounded-full overflow-hidden border-2 border-white/20 shadow-2xl bg-black relative group">
+      <div className="w-64 h-64 rounded-full overflow-hidden border-4 border-white/20 shadow-[0_20px_50px_rgba(0,0,0,0.8)] bg-black relative group cursor-pointer active:scale-95 transition-all">
         <video src={message.content} autoPlay muted loop playsInline className="w-full h-full object-cover rounded-full" />
         <div className="absolute inset-0 bg-primary/10 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-            <Maximize2 className="w-8 h-8 text-white drop-shadow-lg" />
+            <Maximize2 className="w-10 h-10 text-white drop-shadow-lg" />
         </div>
       </div>
     );
 
     if (message.contentType === 'image') return (
       <div 
-        className="relative max-w-[300px] rounded-2xl overflow-hidden border border-white/10 shadow-2xl bg-black/40 cursor-pointer active:scale-[0.98] transition-all group"
+        className="relative max-w-[340px] rounded-[2rem] overflow-hidden border border-white/10 shadow-2xl bg-black/40 cursor-pointer active:scale-[0.98] transition-all group"
         onClick={(e) => { e.preventDefault(); e.stopPropagation(); setIsMediaViewerOpen(true); }}
       >
-        <img src={message.content} alt="Image" className="w-full h-auto object-cover max-h-[450px]" loading="lazy" />
-        <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
-          <Maximize2 className="w-8 h-8 text-white drop-shadow-lg" />
+        <img src={message.content} alt="Image" className="w-full h-auto object-cover max-h-[500px]" loading="lazy" />
+        <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity backdrop-blur-[2px]">
+          <Maximize2 className="w-10 h-10 text-white drop-shadow-lg" />
         </div>
       </div>
     );
 
     if (message.contentType === 'video' || message.contentType === 'ai_video') return (
       <div 
-        className="relative max-w-[300px] rounded-2xl overflow-hidden border border-white/10 shadow-2xl bg-black/40 cursor-pointer active:scale-[0.98] transition-all group"
+        className="relative max-w-[340px] rounded-[2rem] overflow-hidden border border-white/10 shadow-2xl bg-black/40 cursor-pointer active:scale-[0.98] transition-all group"
         onClick={(e) => { e.preventDefault(); e.stopPropagation(); setIsMediaViewerOpen(true); }}
       >
-        <video src={message.content} className="w-full h-auto max-h-[450px]" autoPlay muted loop playsInline />
-        <div className="absolute top-3 right-3 bg-black/60 backdrop-blur-md p-1.5 rounded-full border border-white/10">
-          <VideoIcon className="w-4 h-4 text-white" />
+        <video src={message.content} className="w-full h-auto max-h-[500px]" autoPlay muted loop playsInline />
+        <div className="absolute top-4 right-4 bg-black/60 backdrop-blur-md p-2 rounded-full border border-white/10">
+          <VideoIcon className="w-5 h-5 text-white" />
         </div>
-        <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
-          <Maximize2 className="w-8 h-8 text-white drop-shadow-lg" />
+        <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+          <Maximize2 className="w-10 h-10 text-white drop-shadow-lg" />
         </div>
       </div>
     );
 
     if (message.contentType === 'audio') return (
-      <div className="flex flex-col gap-2">
-        <div className="flex items-center gap-4 p-1 min-w-[240px] cursor-pointer group/audio" onClick={toggleAudio}>
+      <div className="flex flex-col gap-3">
+        <div className="flex items-center gap-5 p-1 min-w-[260px] cursor-pointer" onClick={toggleAudio}>
           <div className="relative">
-            <Button size="icon" className="h-10 w-10 rounded-full bg-primary text-white shadow-xl relative z-10">
-              {isPlaying ? <Pause className="w-5 h-5 fill-current" /> : <Play className="w-5 h-5 fill-current ml-0.5" />}
+            <Button size="icon" className="h-12 w-12 rounded-full bg-white text-black shadow-xl relative z-10 hover:scale-110 active:scale-90 transition-transform">
+              {isPlaying ? <Pause className="w-6 h-6 fill-current" /> : <Play className="w-6 h-6 fill-current ml-1" />}
             </Button>
           </div>
-          <div className="flex-1 flex flex-col gap-1.5">
-            <div className="h-1 bg-white/10 w-full rounded-full overflow-hidden">
-              <div className="h-full bg-primary transition-all duration-150" style={{ width: `${progress}%` }} />
+          <div className="flex-1 flex flex-col gap-2">
+            <div className="h-1.5 bg-white/10 w-full rounded-full overflow-hidden">
+              <div className="h-full bg-primary shadow-[0_0_10px_rgba(168,85,247,1)] transition-all duration-150" style={{ width: `${progress}%` }} />
             </div>
-            <div className="flex justify-between items-center px-0.5">
-              <span className="text-[9px] font-black text-white/40 tabular-nums uppercase">
+            <div className="flex justify-between items-center px-1">
+              <span className="text-[10px] font-black text-white/40 tabular-nums uppercase tracking-widest">
                 {isPlaying ? `-${formatDuration(Math.max(0, duration - currentTime))}` : formatDuration(duration)}
               </span>
-              <div className="flex gap-2">
+              <div className="flex gap-3">
                 <button 
                   onClick={(e) => { e.stopPropagation(); handleTranscribe(); }} 
-                  className={cn("text-white/20 hover:text-primary transition-colors", isTranscribing && "animate-pulse")}
+                  className={cn("text-white/20 hover:text-primary transition-all", isTranscribing && "animate-pulse")}
                   disabled={isTranscribing}
                 >
-                  {isTranscribing ? <Loader2 className="w-3 h-3 animate-spin" /> : <Type className={cn("w-3.5 h-3.5", transcribedText && "text-accent")} />}
+                  {isTranscribing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wand2 className={cn("w-4 h-4", transcribedText && "text-accent")} />}
                 </button>
               </div>
             </div>
           </div>
         </div>
         {(isTranscribing || transcribedText) && (
-          <div className="px-3 py-2 bg-white/5 rounded-xl border border-white/5 text-[11px] italic text-white/80 animate-in fade-in slide-in-from-top-1">
-            <div className="flex items-center gap-1.5 mb-1">
-                <Sparkles className="w-2.5 h-2.5 text-accent" />
-                <span className="text-[8px] font-black uppercase tracking-widest text-accent/60">{isTranscribing ? 'Decoding Signal...' : 'AI Transcription'}</span>
+          <div className="px-4 py-3 bg-white/5 rounded-2xl border border-white/5 text-[12px] italic text-white/90 animate-in fade-in slide-in-from-top-2">
+            <div className="flex items-center gap-2 mb-2">
+                <Sparkles className="w-3 h-3 text-accent animate-pulse" />
+                <span className="text-[9px] font-black uppercase tracking-[0.2em] text-accent/70">{isTranscribing ? 'DECRYPTING AUDIO...' : 'AI TRANSCRIPTION'}</span>
             </div>
-            {isTranscribing ? "..." : `"${transcribedText}"`}
+            {isTranscribing ? "Сигнал обрабатывается квантовым ядром..." : transcribedText}
           </div>
         )}
       </div>
     );
 
     return (
-      <div className="flex flex-col gap-1">
-        <div className="whitespace-pre-wrap text-[15px] break-words max-w-[300px] font-medium tracking-tight">
+      <div className="flex flex-col gap-2">
+        <div className="whitespace-pre-wrap text-[16px] break-words max-w-[320px] font-semibold tracking-tight leading-relaxed">
           {displayContent} 
-          {message.editedAt && <span className="text-[8px] ml-2 text-primary/40 font-black uppercase tracking-widest">(edited)</span>}
+          {message.editedAt && <span className="text-[9px] ml-3 text-primary/30 font-black uppercase tracking-widest italic">(коррекция)</span>}
         </div>
         {translatedText && (
-          <div className="pt-1.5 border-t border-white/5 text-[13px] text-accent/80 italic font-bold">
-            <div className="flex items-center gap-1 text-[8px] uppercase font-black tracking-widest mb-1 text-accent/40">
-              <Sparkles className="w-2.5 h-2.5" /> AI Translation
+          <div className="pt-3 mt-1 border-t border-white/5 text-[14px] text-accent/90 italic font-bold">
+            <div className="flex items-center gap-2 text-[9px] uppercase font-black tracking-[0.2em] mb-1.5 text-accent/50">
+              <Languages className="w-3.5 h-3.5" /> AI Translate
             </div>
             {translatedText}
           </div>
@@ -262,16 +262,16 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
   };
 
   if (message.contentType === 'service' || message.contentType === 'broadcast') return (
-    <div className="w-full flex justify-center my-4 animate-in fade-in zoom-in duration-700">
+    <div className="w-full flex justify-center my-6 animate-in fade-in zoom-in-95 duration-1000">
       <div className={cn(
-        "bg-white/[0.03] backdrop-blur-xl px-6 py-2 rounded-full border border-white/5 shadow-inner",
+        "bg-white/[0.04] backdrop-blur-2xl px-8 py-3 rounded-full border border-white/5 shadow-2xl",
         message.contentType === 'broadcast' && "border-primary/40 bg-primary/10"
       )}>
         <p className={cn(
-          "text-[9px] text-primary/60 uppercase font-black tracking-widest",
+          "text-[10px] text-primary/60 uppercase font-black tracking-[0.3em]",
           message.contentType === 'broadcast' && "text-primary animate-pulse"
         )}>
-          {message.contentType === 'broadcast' && <Zap className="w-2.5 h-2.5 inline mr-1.5 mb-0.5" />}
+          {message.contentType === 'broadcast' && <Zap className="w-3 h-3 inline mr-2 mb-0.5" />}
           {message.content}
         </p>
       </div>
@@ -281,46 +281,46 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
   return (
     <>
     <div 
-      className={cn("w-full flex mb-1.5 transition-all duration-300", isMe ? "justify-end" : "justify-start", highlight && "z-10")}
+      className={cn("w-full flex mb-2 transition-all duration-500", isMe ? "justify-end" : "justify-start", highlight && "z-10")}
     >
-      <div className={cn("flex gap-2 max-w-[85%] items-end", isMe ? "flex-row-reverse" : "flex-row")}>
+      <div className={cn("flex gap-3 max-w-[90%] items-end", isMe ? "flex-row-reverse" : "flex-row")}>
         {!isMe && (
           <div className="cursor-pointer active:scale-90 transition-transform mb-1" onClick={() => setInspectedUserId(message.senderId)}>
-            <UserAvatar key={message.senderId} userId={message.senderId} className="h-8 w-8 shrink-0 border border-white/5 shadow-md" fallbackName={message.senderName} />
+            <UserAvatar key={message.senderId} userId={message.senderId} className="h-10 w-10 shrink-0 border border-white/5 shadow-xl" fallbackName={message.senderName} />
           </div>
         )}
         <div className={cn("flex flex-col min-w-0 max-w-full", isMe ? "items-end" : "items-start")}>
-          {!isMe && isGroup && <span className="text-[10px] font-bold text-primary uppercase tracking-widest mb-1 ml-1.5 opacity-60">{message.senderName}</span>}
+          {!isMe && isGroup && <span className="text-[11px] font-black text-primary uppercase tracking-[0.2em] mb-1.5 ml-2 opacity-60">{message.senderName}</span>}
           
           <ContextMenu>
             <ContextMenuTrigger>
               <div className="cursor-pointer active:scale-[0.98] outline-none group/bubble relative">
                 <div className={cn(message.contentType !== 'video_note' ? bubbleClasses : "")}>
                   {message.replyToId && (
-                    <div className="mb-2 p-2 border-l-2 border-accent bg-white/5 rounded-r-xl opacity-60 text-[11px] truncate max-w-[200px] italic">
+                    <div className="mb-3 p-3 border-l-4 border-accent bg-white/5 rounded-r-2xl opacity-60 text-[12px] truncate max-w-[240px] italic font-bold">
                       {decryptSignal(message.replyToContent)}
                     </div>
                   )}
                   {renderContent()}
-                  <div className="flex items-center justify-end gap-1.5 mt-1.5 opacity-40 px-0.5">
-                    <span className="text-[9px] font-bold tabular-nums">{formattedTime}</span>
-                    {isMe && (message.isRead ? <CheckCheck className="w-3 h-3 text-accent" /> : <Check className="w-3 h-3" />)}
+                  <div className="flex items-center justify-end gap-2 mt-2 opacity-30 px-1">
+                    <span className="text-[10px] font-black tabular-nums tracking-widest">{formattedTime}</span>
+                    {isMe && (message.isRead ? <CheckCheck className="w-4 h-4 text-accent" /> : <Check className="w-4 h-4" />)}
                   </div>
                 </div>
               </div>
             </ContextMenuTrigger>
-            <ContextMenuContent className="w-64 bg-[#0a0a0c]/90 backdrop-blur-3xl border-white/10 rounded-[1.8rem] shadow-2xl p-1.5 animate-in zoom-in-95 duration-200">
-              <div className="flex justify-around p-2.5 border-b border-white/5 mb-1.5">
+            <ContextMenuContent className="w-64 bg-[#0a0a0c]/95 backdrop-blur-[60px] border-white/10 rounded-[2rem] shadow-[0_20px_100px_rgba(0,0,0,1)] p-2 animate-in zoom-in-95 duration-300">
+              <div className="flex justify-around p-3 border-b border-white/5 mb-2">
                 {QUICK_REACTIONS.map(emoji => (
-                  <button key={emoji} onClick={() => handleReaction(emoji)} className="text-2xl hover:scale-125 transition-all duration-300">{emoji}</button>
+                  <button key={emoji} onClick={() => handleReaction(emoji)} className="text-2xl hover:scale-150 transition-all duration-500">{emoji}</button>
                 ))}
               </div>
-              <ContextMenuItem onClick={() => onReply(message)} className="gap-3 py-3 font-black text-[10px] uppercase tracking-[0.2em] rounded-xl"><CornerUpLeft className="w-4 h-4 text-primary" /> Ответить</ContextMenuItem>
-              {isMe && <ContextMenuItem onClick={() => onEdit(message)} className="gap-3 py-3 font-black text-[10px] uppercase tracking-[0.2em] rounded-xl"><Edit2 className="w-4 h-4 text-primary" /> Изменить</ContextMenuItem>}
-              <ContextMenuItem onClick={() => onForward(message)} className="gap-3 py-3 font-black text-[10px] uppercase tracking-[0.2em] rounded-xl"><Share2 className="w-4 h-4 text-primary" /> Переслать</ContextMenuItem>
-              <DropdownMenuSeparator className="bg-white/5 mx-2" />
+              <ContextMenuItem onClick={() => onReply(message)} className="gap-4 py-3.5 font-black text-[11px] uppercase tracking-[0.2em] rounded-xl hover:bg-primary/10 transition-all"><CornerUpLeft className="w-5 h-5 text-primary" /> Ответить</ContextMenuItem>
+              {isMe && <ContextMenuItem onClick={() => onEdit(message)} className="gap-4 py-3.5 font-black text-[11px] uppercase tracking-[0.2em] rounded-xl hover:bg-primary/10 transition-all"><Edit2 className="w-5 h-5 text-primary" /> Исправить</ContextMenuItem>}
+              <ContextMenuItem onClick={() => onForward(message)} className="gap-4 py-3.5 font-black text-[11px] uppercase tracking-[0.2em] rounded-xl hover:bg-primary/10 transition-all"><Share2 className="w-5 h-5 text-primary" /> Резонанс</ContextMenuItem>
+              <DropdownMenuSeparator className="bg-white/5 mx-3 my-2" />
               {(isMe || isAdmin) && (
-                <ContextMenuItem onClick={() => deleteDoc(doc(db!, 'chats', chatId, 'messages', message.id))} className="text-red-500 gap-3 py-3 font-black text-[10px] uppercase tracking-[0.2em] rounded-xl hover:bg-red-500/10"><Trash2 className="w-4 h-4" /> Удалить</ContextMenuItem>
+                <ContextMenuItem onClick={() => deleteDoc(doc(db!, 'chats', chatId, 'messages', message.id))} className="text-red-500 gap-4 py-3.5 font-black text-[11px] uppercase tracking-[0.2em] rounded-xl hover:bg-red-500/10 transition-all"><Trash2 className="w-5 h-5" /> Аннигилировать</ContextMenuItem>
               )}
             </ContextMenuContent>
           </ContextMenu>
@@ -330,20 +330,20 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
 
     <Dialog open={isMediaViewerOpen} onOpenChange={setIsMediaViewerOpen}>
       <DialogPortal>
-        <DialogOverlay className="fixed inset-0 bg-black/90 backdrop-blur-2xl z-[3000]" />
-        <DialogContent className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 max-w-4xl w-[95vw] h-[90vh] bg-transparent border-none p-0 overflow-hidden flex flex-col items-center justify-center outline-none z-[3100] rounded-[2.5rem]">
-          <DialogTitle className="sr-only">Просмотр медиа</DialogTitle>
+        <DialogOverlay className="fixed inset-0 bg-black/95 backdrop-blur-3xl z-[3000]" />
+        <DialogContent className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 max-w-5xl w-[95vw] h-[90vh] bg-transparent border-none p-0 overflow-hidden flex flex-col items-center justify-center outline-none z-[3100] rounded-[3rem]">
+          <DialogTitle className="sr-only">Просмотр сигнала</DialogTitle>
           <button 
             onClick={() => setIsMediaViewerOpen(false)} 
-            className="absolute top-6 right-6 z-[3200] h-12 w-12 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-all border border-white/10"
+            className="absolute top-8 right-8 z-[3200] h-14 w-14 rounded-full bg-white/5 hover:bg-white/20 flex items-center justify-center text-white transition-all border border-white/10 backdrop-blur-xl shadow-2xl"
           >
-            <X className="w-6 h-6" />
+            <X className="w-8 h-8" />
           </button>
-          <div className="w-full h-full flex items-center justify-center p-4">
+          <div className="w-full h-full flex items-center justify-center p-6">
             {message.contentType === 'video' || message.contentType === 'ai_video' || message.contentType === 'video_note' ? (
-              <video src={message.content} className="max-w-full max-h-full rounded-2xl shadow-2xl" controls autoPlay loop />
+              <video src={message.content} className="max-w-full max-h-full rounded-[2.5rem] shadow-[0_0_100px_rgba(0,0,0,1)]" controls autoPlay loop />
             ) : (
-              <img src={message.content} alt="Media" className="max-w-full max-h-full object-contain rounded-2xl shadow-2xl" />
+              <img src={message.content} alt="Media" className="max-w-full max-h-full object-contain rounded-[2.5rem] shadow-[0_0_100px_rgba(0,0,0,1)]" />
             )}
           </div>
         </DialogContent>
