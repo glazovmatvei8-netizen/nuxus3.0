@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useEffect } from 'react';
@@ -29,6 +28,10 @@ interface AuthScreenProps {
   initialMode?: AuthMode;
 }
 
+/**
+ * AUTH SCREEN V25.0.2
+ * ОПТИМИЗИРОВАНО: Снижены визуальные эффекты для ускорения загрузки.
+ */
 export default function AuthScreen({ initialMode = 'login' }: AuthScreenProps) {
   const auth = useAuth();
   const db = useFirestore();
@@ -76,7 +79,6 @@ export default function AuthScreen({ initialMode = 'login' }: AuthScreenProps) {
     const snap = await getDoc(userRef);
     
     const inputName = formData.name.trim();
-    // ПРИНУДИТЕЛЬНО убрано "Agent", заменено на "Node"
     const finalName = inputName || overrideData?.name || (snap.exists() ? snap.data().name : `Node_${uid.slice(0, 4).toUpperCase()}`);
     
     let inputUsername = formData.username.trim().replace('@', '');
@@ -206,22 +208,22 @@ export default function AuthScreen({ initialMode = 'login' }: AuthScreenProps) {
   return (
     <div className="min-h-[100dvh] w-full flex flex-col items-center justify-center bg-[#020203] p-4 relative overflow-hidden">
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
-        <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_0%_0%,rgba(45,10,85,0.4)_0%,transparent_50%),radial-gradient(circle_at_100%_100%,rgba(10,60,80,0.3)_0%,transparent_50%)]" />
+        <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_0%_0%,rgba(45,10,85,0.2)_0%,transparent_50%),radial-gradient(circle_at_100%_100%,rgba(10,60,80,0.15)_0%,transparent_50%)]" />
       </div>
 
-      <div className="w-full max-w-[380px] relative z-10 flex flex-col items-center animate-in fade-in zoom-in duration-1000">
+      <div className="w-full max-w-[380px] relative z-10 flex flex-col items-center animate-in fade-in duration-700">
         <div className="mb-10">
-          <NuxusLogo size={100} />
+          <NuxusLogo size={90} />
         </div>
 
-        <Card className="w-full border-white/[0.08] bg-white/[0.02] backdrop-blur-[120px] shadow-[0_30px_100px_rgba(0,0,0,0.8)] rounded-[3rem] overflow-hidden relative border-2">
-          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-primary/60 to-transparent animate-pulse" />
+        <Card className="w-full border-white/[0.08] bg-white/[0.02] backdrop-blur-[20px] shadow-[0_20px_60px_rgba(0,0,0,0.6)] rounded-[3rem] overflow-hidden relative border-2">
+          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-primary/40 to-transparent animate-pulse" />
           
           <CardHeader className="text-center pb-2 pt-10 px-8">
             <CardTitle className="text-3xl font-black tracking-tighter uppercase italic text-white leading-none">
-              {mode === 'setup2fa' ? 'Защита' : mode === 'login' ? 'Вход V23.2' : 'Создание'}
+              {mode === 'setup2fa' ? 'Защита' : mode === 'login' ? 'Вход V25.0' : 'Создание'}
             </CardTitle>
-            <CardDescription className="text-primary/80 font-black tracking-[0.5em] uppercase text-[8px] opacity-60 mt-3 ml-[0.5em]">
+            <CardDescription className="text-primary/60 font-black tracking-[0.5em] uppercase text-[8px] opacity-60 mt-3 ml-[0.5em]">
               Hardware Security
             </CardDescription>
           </CardHeader>
@@ -230,7 +232,7 @@ export default function AuthScreen({ initialMode = 'login' }: AuthScreenProps) {
             {mode === 'setup2fa' ? (
               <form onSubmit={handleSetup2FA} className="space-y-8">
                 <div className="flex flex-col items-center gap-4 py-2">
-                  <Fingerprint className="w-16 h-16 text-primary animate-float" />
+                  <Fingerprint className="w-16 h-16 text-primary" />
                   <p className="text-[9px] text-muted-foreground uppercase font-black tracking-[0.2em] text-center">Установите 6-значный<br/>ключ доступа</p>
                 </div>
                 <input 
@@ -270,7 +272,7 @@ export default function AuthScreen({ initialMode = 'login' }: AuthScreenProps) {
                 </div>
                 
                 <div className="pt-4">
-                  <Button type="submit" disabled={isLoading} className="w-full h-14 bg-primary text-white rounded-[1.5rem] font-black uppercase italic tracking-widest shadow-xl shadow-primary/30 active:scale-95 transition-all text-sm border border-white/10">
+                  <Button type="submit" disabled={isLoading} className="w-full h-14 bg-primary text-white rounded-[1.5rem] font-black uppercase italic tracking-widest shadow-xl active:scale-95 transition-all text-sm border border-white/10">
                     {isLoading ? <Loader2 className="animate-spin w-5 h-5" /> : (mode === 'login' ? `Войти в Систему` : "Создать Узел")}
                   </Button>
                 </div>

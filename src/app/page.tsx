@@ -17,8 +17,8 @@ import { NuxusLogo } from '@/components/nuxus-logo';
 import { IosInstaller } from '@/components/ios-installer';
 
 /**
- * ГЛАВНЫЙ КОНТРОЛЛЕР ЯДРА V24.1.5
- * ФИКС: Прямой вызов WebAuthn для Safari (Zero-Latency).
+ * ГЛАВНЫЙ КОНТРОЛЛЕР ЯДРА V25.0.2
+ * ОПТИМИЗИРОВАНО: Форсированная загрузка для исключения зависаний.
  */
 export default function Home() {
   const { user, isUserLoading } = useUser();
@@ -34,11 +34,19 @@ export default function Home() {
   
   useEffect(() => {
     setMounted(true);
+    
+    // Безопасный таймер для предотвращения вечной загрузки
+    const forceLoadTimer = setTimeout(() => {
+      setIsInitialLoad(false);
+    }, 4500);
+
     const isIos = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
     const isStandalone = (window.navigator as any).standalone || window.matchMedia('(display-mode: standalone)').matches;
     if (isIos && !isStandalone && !localStorage.getItem('ios_installer_dismissed')) {
       setShowIosInstaller(true);
     }
+
+    return () => clearTimeout(forceLoadTimer);
   }, []);
 
   const userProfileRef = useMemoFirebase(() => {
@@ -79,10 +87,6 @@ export default function Home() {
     }
   };
 
-  /**
-   * ПРОВЕРКА FACE ID V24.1.5: МГНОВЕННЫЙ ВЫЗОВ (Zero-Latency)
-   * Прямой вызов системного окна для Safari без блокирующих пауз.
-   */
   const tryBiometricAuth = () => {
     const storedIdBase64 = localStorage.getItem('nuxus_biometric_id');
     if (!storedIdBase64 || !navigator.credentials) return;
@@ -91,7 +95,6 @@ export default function Home() {
       const challenge = crypto.getRandomValues(new Uint8Array(32));
       const id = Uint8Array.from(atob(storedIdBase64), c => c.charCodeAt(0));
 
-      // Мгновенный вызов Promise без await для обхода блокировок Safari
       navigator.credentials.get({
         publicKey: {
           challenge,
@@ -111,7 +114,7 @@ export default function Home() {
 
   useEffect(() => {
     if (!isUserLoading && (!user || !isProfileLoading)) {
-      const timer = setTimeout(() => setIsInitialLoad(false), 500);
+      const timer = setTimeout(() => setIsInitialLoad(false), 300);
       return () => clearTimeout(timer);
     }
   }, [isUserLoading, user, isProfileLoading]);
@@ -122,12 +125,12 @@ export default function Home() {
     return (
       <div className="h-[100dvh] w-full flex flex-col items-center justify-center bg-[#020203] text-white relative overflow-hidden">
         <div className="relative z-10 flex flex-col items-center">
-          <NuxusLogo size={180} />
-          <div className="mt-20 flex flex-col items-center gap-8">
-            <div className="relative w-64 h-1 bg-white/5 rounded-full overflow-hidden">
-              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-primary to-transparent animate-[scanline_2s_linear_infinite]" />
+          <NuxusLogo size={150} />
+          <div className="mt-16 flex flex-col items-center gap-6">
+            <div className="relative w-48 h-1 bg-white/5 rounded-full overflow-hidden">
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-primary to-transparent animate-[scanline_1.5s_linear_infinite]" />
             </div>
-            <p className="text-[11px] font-black uppercase tracking-[1em] text-primary/80 animate-pulse ml-[1em]">ИНИЦИАЛИЗАЦИЯ</p>
+            <p className="text-[9px] font-black uppercase tracking-[0.8em] text-primary/60 animate-pulse ml-[0.8em]">СИНХРОНИЗАЦИЯ</p>
           </div>
         </div>
       </div>
@@ -140,9 +143,9 @@ export default function Home() {
   if (isBanned) {
     return (
       <div className="h-screen w-full flex flex-col items-center justify-center bg-[#050505] p-6 text-center">
-        <ShieldAlert className="w-24 h-24 text-destructive mb-8 animate-pulse" />
-        <h1 className="text-5xl font-black mb-4 text-white uppercase italic tracking-tighter">УЗЕЛ ОТКЛЮЧЕН</h1>
-        <Button variant="outline" className="rounded-full" onClick={() => signOut(auth)}>Завершить сессию</Button>
+        <ShieldAlert className="w-20 h-20 text-destructive mb-6 animate-pulse" />
+        <h1 className="text-4xl font-black mb-4 text-white uppercase italic tracking-tighter">УЗЕЛ ОТКЛЮЧЕН</h1>
+        <Button variant="outline" className="rounded-full h-12 px-8 uppercase font-bold text-xs" onClick={() => signOut(auth)}>Завершить сессию</Button>
       </div>
     );
   }
