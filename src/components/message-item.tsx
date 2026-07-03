@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, memo, useRef, useEffect, useMemo } from 'react';
@@ -35,8 +34,8 @@ import { Dialog, DialogContent, DialogTitle, DialogPortal, DialogOverlay } from 
 const QUICK_REACTIONS = ['👍', '❤️', '🔥', '😂', '😮', '😢', '👏'];
 
 /**
- * MessageItem V25.5: Full Offline Support.
- * ИСПРАВЛЕНО: Теперь отображает иконку часов для исходящих сигналов в очереди.
+ * MessageItem V25.2: Full Offline Support.
+ * Индикация часов для исходящих сигналов в очереди.
  */
 export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForward, isAdmin = false, isGroup = false, onEdit, highlight = false, viewerProfile }: any) => {
   const { user } = useUser();
@@ -260,7 +259,7 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
                     <span className="text-[10px] font-black tabular-nums tracking-widest">{formattedTime}</span>
                     {isMe && (
                       message.isPending ? (
-                        <Clock className="w-3 h-3 text-primary animate-pulse" />
+                        <Clock className="w-3.5 h-3.5 text-primary animate-pulse" />
                       ) : (
                         message.isRead ? <CheckCheck className="w-4 h-4 text-accent" /> : <Check className="w-4 h-4" />
                       )

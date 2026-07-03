@@ -1,50 +1,47 @@
-const CACHE_NAME = 'nuxus-cache-v1';
-const OFFLINE_URL = '/offline.html';
-
+/**
+ * Nuxus Kernel Service Worker v25.2.0
+ * Обеспечивает работу мессенджера без интернета.
+ */
+const CACHE_NAME = 'nuxus-cache-v25.2.0';
 const ASSETS_TO_CACHE = [
-  OFFLINE_URL,
-  '/globals.css',
-  'https://images.unsplash.com/photo-1614850523296-d8c1af93d400?q=80&w=192&h=192&fit=crop&fm=png'
+  '/',
+  '/manifest.webmanifest',
+  'https://i.ibb.co/sd2MqGz2/Icon.png?v=45'
 ];
 
 self.addEventListener('install', (event) => {
+  self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
       return cache.addAll(ASSETS_TO_CACHE);
     })
   );
-  self.skipWaiting();
 });
 
 self.addEventListener('activate', (event) => {
   event.waitUntil(
-    caches.keys().then((cacheNames) => {
+    caches.keys().then((keys) => {
       return Promise.all(
-        cacheNames.map((cacheName) => {
-          if (cacheName !== CACHE_NAME) {
-            return caches.delete(cacheName);
-          }
-        })
+        keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key))
       );
     })
   );
-  self.clients.claim();
 });
 
 self.addEventListener('fetch', (event) => {
-  if (event.request.mode === 'navigate') {
-    event.respondWith(
-      fetch(event.request).catch(() => {
-        return caches.open(CACHE_NAME).then((cache) => {
-          return cache.match(OFFLINE_URL);
-        });
-      })
-    );
-  } else {
-    event.respondWith(
-      caches.match(event.request).then((response) => {
-        return response || fetch(event.request);
-      })
-    );
+  // Игнорируем запросы к Firebase и внешним API, их кэширует сам SDK
+  if (event.request.url.includes('firestore.googleapis.com') || event.request.url.includes('ipwho.is')) {
+    return;
   }
+
+  event.respondWith(
+    caches.match(event.request).then((response) => {
+      return response || fetch(event.request).catch(() => {
+        // Если совсем нет сети и файла нет в кэше, отдаем главную страницу (Shell)
+        if (event.request.mode === 'navigate') {
+          return caches.match('/');
+        }
+      });
+    })
+  );
 });
