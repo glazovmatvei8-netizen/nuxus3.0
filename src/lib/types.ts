@@ -61,6 +61,7 @@ export interface Message {
   editedAt?: string;
   isRead?: boolean;
   isSilent?: boolean;
+  isPending?: boolean; // NEW: Indicates message is queued locally
   selfDestructAt?: string | null;
   forwardFrom?: string;
   reactions?: Record<string, string[]>; // emoji -> [uids]

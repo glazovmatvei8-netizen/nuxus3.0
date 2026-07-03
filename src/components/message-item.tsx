@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, memo, useRef, useEffect, useMemo } from 'react';
@@ -34,8 +35,8 @@ import { Dialog, DialogContent, DialogTitle, DialogPortal, DialogOverlay } from 
 const QUICK_REACTIONS = ['👍', '❤️', '🔥', '😂', '😮', '😢', '👏'];
 
 /**
- * MessageItem V25.1: High Performance & Improved Visibility.
- * Исправлена прозрачность облачков и баги со стилями.
+ * MessageItem V25.5: Full Offline Support.
+ * Теперь показывает иконку часов, если сигнал находится в очереди на отправку.
  */
 export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForward, isAdmin = false, isGroup = false, onEdit, highlight = false, viewerProfile }: any) => {
   const { user } = useUser();
@@ -259,7 +260,13 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
                   {renderContent()}
                   <div className="flex items-center justify-end gap-2 mt-2 opacity-40 px-1">
                     <span className="text-[10px] font-black tabular-nums tracking-widest">{formattedTime}</span>
-                    {isMe && (message.isRead ? <CheckCheck className="w-4 h-4 text-accent" /> : <Check className="w-4 h-4" />)}
+                    {isMe && (
+                      message.isPending ? (
+                        <Clock className="w-3.5 h-3.5 text-white/40 animate-pulse" />
+                      ) : (
+                        message.isRead ? <CheckCheck className="w-4 h-4 text-accent" /> : <Check className="w-4 h-4" />
+                      )
+                    )}
                   </div>
                 </div>
               </div>

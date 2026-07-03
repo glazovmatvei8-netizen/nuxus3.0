@@ -1,3 +1,4 @@
+
 'use client';
     
 import { useState, useEffect } from 'react';
@@ -12,7 +13,7 @@ import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 
 /** Utility type to add an 'id' field to a given type T. */
-type WithId<T> = T & { id: string };
+type WithId<T> = T & { id: string, isPending?: boolean };
 
 /**
  * Interface for the return value of the useDoc hook.
@@ -26,7 +27,7 @@ export interface UseDocResult<T> {
 
 /**
  * React hook to subscribe to a single Firestore document in real-time.
- * V6.5: Force instant data wipe on path change to eliminate "Ghost Data".
+ * V7.0: Supports offline pending state (isPending).
  */
 export function useDoc<T = any>(
   memoizedDocRef: DocumentReference<DocumentData> | null | undefined,
@@ -37,7 +38,7 @@ export function useDoc<T = any>(
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<FirestoreError | Error | null>(null);
 
-  // CRITICAL V6.5: Immediate data reset on reference change
+  // CRITICAL: Immediate data reset on reference change
   const [prevPath, setPrevPath] = useState<string | null>(null);
   const currentPath = memoizedDocRef?.path || null;
 
@@ -59,13 +60,17 @@ export function useDoc<T = any>(
 
     const unsubscribe = onSnapshot(
       memoizedDocRef,
-      { includeMetadataChanges: true },
+      { includeMetadataChanges: true }, // Listen for metadata sync changes
       (snapshot: DocumentSnapshot<DocumentData>) => {
         // Double check if the current callback matches the current active ref path
         if (memoizedDocRef.path !== currentPath) return;
 
         if (snapshot.exists()) {
-          setData({ ...(snapshot.data() as T), id: snapshot.id });
+          setData({ 
+            ...(snapshot.data() as T), 
+            id: snapshot.id,
+            isPending: snapshot.metadata.hasPendingWrites // Detect if doc is synced
+          });
         } else {
           setData(null);
         }

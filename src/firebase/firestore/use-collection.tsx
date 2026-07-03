@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -13,7 +14,7 @@ import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 
 /** Utility type to add an 'id' field to a given type T. */
-export type WithId<T> = T & { id: string };
+export type WithId<T> = T & { id: string, isPending?: boolean };
 
 /**
  * Interface for the return value of the useCollection hook.
@@ -40,6 +41,7 @@ export interface InternalQuery extends Query<DocumentData> {
 /**
  * React hook to subscribe to a Firestore collection or query in real-time.
  * Handles nullable references/queries.
+ * UPDATED V7.0: Supports offline pending state (isPending).
  */
 export function useCollection<T = any>(
     memoizedTargetRefOrQuery: ((CollectionReference<DocumentData> | Query<DocumentData>) & {__memo?: boolean})  | null | undefined,
@@ -66,11 +68,15 @@ export function useCollection<T = any>(
 
     const unsubscribe = onSnapshot(
       memoizedTargetRefOrQuery,
-      { includeMetadataChanges: true },
+      { includeMetadataChanges: true }, // IMPORTANT: Listen for sync status changes
       (snapshot: QuerySnapshot<DocumentData>) => {
         const results: ResultItemType[] = [];
         for (const doc of snapshot.docs) {
-          results.push({ ...(doc.data() as T), id: doc.id });
+          results.push({ 
+            ...(doc.data() as T), 
+            id: doc.id,
+            isPending: doc.metadata.hasPendingWrites // Detect if doc is queued for sync
+          });
         }
         setData(results);
         setError(null);
