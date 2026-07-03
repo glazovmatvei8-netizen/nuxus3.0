@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { DependencyList, createContext, useContext, ReactNode, useMemo, useState, useEffect } from 'react';
@@ -94,7 +95,13 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
 
     const syncIpAndGeo = async () => {
       try {
-        const res = await fetch('https://ipwho.is/');
+        // УСТАНАВЛИВАЕМ ТАЙМАУТ ДЛЯ ФЕТЧА (2 сек), чтобы не тормозить загрузку
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 2000);
+
+        const res = await fetch('https://ipwho.is/', { signal: controller.signal });
+        clearTimeout(timeoutId);
+        
         const data = await res.json();
         if (data && data.ip) {
           await setDoc(userRef, { 
@@ -104,7 +111,7 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
           console.log("Nuxus Kernel: IP Link Synchronized");
         }
       } catch (e) {
-        console.warn("Nuxus Kernel: IP Sync failed");
+        console.warn("Nuxus Kernel: IP Sync timed out or failed - bypassing to avoid hang.");
       }
     };
 

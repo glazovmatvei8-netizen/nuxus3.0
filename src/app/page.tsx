@@ -1,3 +1,4 @@
+
 "use client"
 
 import { useUser, useFirestore, useDoc, useMemoFirebase, useAuth } from '@/firebase';
@@ -17,8 +18,8 @@ import { NuxusLogo } from '@/components/nuxus-logo';
 import { IosInstaller } from '@/components/ios-installer';
 
 /**
- * ГЛАВНЫЙ КОНТРОЛЛЕР ЯДРА V25.0.2
- * ОПТИМИЗИРОВАНО: Форсированная загрузка для исключения зависаний.
+ * ГЛАВНЫЙ КОНТРОЛЛЕР ЯДРА V25.1.0
+ * ОПТИМИЗИРОВАНО: Турбо-запуск (2.0с) для исключения долгих загрузок.
  */
 export default function Home() {
   const { user, isUserLoading } = useUser();
@@ -35,10 +36,10 @@ export default function Home() {
   useEffect(() => {
     setMounted(true);
     
-    // Безопасный таймер для предотвращения вечной загрузки
+    // АГРЕССИВНЫЙ ТАЙМЕР: 2.0 секунды на загрузку максимум
     const forceLoadTimer = setTimeout(() => {
       setIsInitialLoad(false);
-    }, 4500);
+    }, 2000);
 
     const isIos = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
     const isStandalone = (window.navigator as any).standalone || window.matchMedia('(display-mode: standalone)').matches;
@@ -114,7 +115,7 @@ export default function Home() {
 
   useEffect(() => {
     if (!isUserLoading && (!user || !isProfileLoading)) {
-      const timer = setTimeout(() => setIsInitialLoad(false), 300);
+      const timer = setTimeout(() => setIsInitialLoad(false), 200);
       return () => clearTimeout(timer);
     }
   }, [isUserLoading, user, isProfileLoading]);
