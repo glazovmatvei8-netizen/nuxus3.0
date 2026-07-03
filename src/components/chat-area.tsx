@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useRef, useEffect, useMemo, useCallback, memo } from 'react';
@@ -131,7 +132,6 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
       setCamMode(prev => prev === 'user' ? 'environment' : 'user');
       return;
     }
-    // Если запись уже идет, нужно перезапустить стрим
     const newMode = camMode === 'user' ? 'environment' : 'user';
     setCamMode(newMode);
     toast({ title: "Камера переключена", description: "Начните новую запись" });
@@ -392,7 +392,7 @@ export default function ChatArea() {
 
   useEffect(() => {
     scrollToBottom('auto');
-  }, [currentChatId, scrollToBottom]);
+  }, [currentChatId, messages?.length, scrollToBottom]);
 
   const handleSendMessage = useCallback(async (content_msg: string, type_msg: Message['contentType'] = 'text', minutes: number | null = null) => {
     if (!content_msg.trim() || !currentChatId || !firebaseUser || !db) return;
@@ -400,7 +400,7 @@ export default function ChatArea() {
     let finalContent = (type_msg === 'text' || type_msg === 'reply') ? encryptSignal(content_msg) : content_msg;
     if (type_msg === 'image' && !content_msg.startsWith('data:')) finalContent = await compressImage(content_msg, 1200, 0.6);
 
-    const msgData: Partial<Message> = { 
+    const msgData: any = { 
       chatId: currentChatId, senderId: firebaseUser.uid, senderName: userProfile?.name || 'User', 
       content: finalContent, contentType: type_msg, sentAt: new Date().toISOString(), isRead: false,
       metadata: { bubbleStyle: userProfile?.settings?.bubbleStyle || 'default' }
@@ -413,7 +413,7 @@ export default function ChatArea() {
       setReplyTo(null);
     }
     
-    await addDoc(collection(db, 'chats', currentChatId, 'messages'), msgData);
+    addDoc(collection(db, 'chats', currentChatId, 'messages'), msgData);
     updateDoc(doc(db, 'chats', currentChatId), { lastMessageAt: new Date().toISOString(), lastSenderId: firebaseUser.uid });
     
     setTimeout(() => scrollToBottom('smooth'), 100);

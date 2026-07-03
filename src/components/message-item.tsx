@@ -36,7 +36,7 @@ const QUICK_REACTIONS = ['👍', '❤️', '🔥', '😂', '😮', '😢', '👏
 
 /**
  * MessageItem V25.5: Full Offline Support.
- * Теперь показывает иконку часов, если сигнал находится в очереди на отправку.
+ * ИСПРАВЛЕНО: Теперь отображает иконку часов для исходящих сигналов в очереди.
  */
 export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForward, isAdmin = false, isGroup = false, onEdit, highlight = false, viewerProfile }: any) => {
   const { user } = useUser();
@@ -50,8 +50,6 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
   const [duration, setDuration] = useState(0);
   const [isTranscribing, setIsTranscribing] = useState(false);
   const [transcribedText, setTranscribedText] = useState<string | null>(message.metadata?.transcription || null);
-  const [isTranslating, setIsTranslating] = useState(false);
-  const [translatedText, setTranslatedText] = useState<string | null>(message.metadata?.translation || null);
   const [isMediaViewerOpen, setIsMediaViewerOpen] = useState(false);
   
   const audioInstance = useRef<HTMLAudioElement | null>(null);
@@ -250,7 +248,7 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
           
           <ContextMenu>
             <ContextMenuTrigger>
-              <div className="cursor-pointer active:scale-[0.98] outline-none group/bubble relative">
+              <div className="cursor-pointer outline-none group/bubble relative">
                 <div className={cn(message.contentType !== 'video_note' ? bubbleClasses : "")}>
                   {message.replyToId && (
                     <div className="mb-3 p-3 border-l-4 border-accent bg-white/5 rounded-r-2xl opacity-60 text-[12px] truncate max-w-[240px] italic font-bold">
@@ -262,7 +260,7 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
                     <span className="text-[10px] font-black tabular-nums tracking-widest">{formattedTime}</span>
                     {isMe && (
                       message.isPending ? (
-                        <Clock className="w-3.5 h-3.5 text-white/40 animate-pulse" />
+                        <Clock className="w-3 h-3 text-primary animate-pulse" />
                       ) : (
                         message.isRead ? <CheckCheck className="w-4 h-4 text-accent" /> : <Check className="w-4 h-4" />
                       )

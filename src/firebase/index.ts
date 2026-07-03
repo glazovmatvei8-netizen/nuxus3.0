@@ -8,14 +8,14 @@ import { getFirestore, initializeFirestore, persistentLocalCache, persistentMult
 
 /**
  * Безопасная инициализация Firebase с поддержкой оффлайн-режима.
- * Предотвращает ошибку "initializeFirestore() has already been called".
+ * V25.2.0: Оптимизировано для iOS PWA и автономного чтения.
  */
 export function initializeFirebase() {
   const app: FirebaseApp = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
   
   let db: Firestore;
   try {
-    // Пытаемся инициализировать Firestore с расширенными настройками кэширования
+    // Пытаемся инициализировать Firestore с расширенными настройками кэширования для PWA
     db = initializeFirestore(app, {
       localCache: persistentLocalCache({
         tabManager: persistentMultipleTabManager()
