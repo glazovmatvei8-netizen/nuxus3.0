@@ -22,13 +22,12 @@ import type { Message } from '@/lib/types';
 import { Button } from './ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { useAppState } from '@/lib/store';
-import { translateMessage } from '@/ai/flows/ai-translate-flow';
 import { Dialog, DialogContent, DialogTitle, DialogPortal, DialogOverlay } from '@/components/ui/dialog';
 
 const QUICK_REACTIONS = ['👍', '❤️', '🔥', '😂', '😮', '😢', '👏'];
 
 /**
- * MessageItem V26.3.0: iOS Swipes + Long Press Context + Stable Media.
+ * MessageItem V26.5.0: AI Features Temporarily Disabled.
  */
 export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForward, isAdmin = false, isGroup = false, onEdit, highlight = false, viewerProfile }: any) => {
   const { user } = useUser();
@@ -39,8 +38,6 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
   const [isPlaying, setIsPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
   const [isMediaViewerOpen, setIsMediaViewerOpen] = useState(false);
-  const [isTranslating, setIsTranslating] = useState(false);
-  const [translatedText, setTranslatedText] = useState<string | null>(null);
   
   // Swipe to reply logic
   const [swipeOffset, setSwipeOffset] = useState(0);
@@ -51,9 +48,8 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
   const audioInstance = useRef<HTMLAudioElement | null>(null);
 
   const displayContent = useMemo(() => {
-    if (translatedText) return translatedText;
     return message.contentType === 'text' ? decryptSignal(message.content) : message.content;
-  }, [message.content, message.contentType, translatedText]);
+  }, [message.content, message.contentType]);
 
   const formattedTime = message.sentAt ? format(new Date(message.sentAt), 'HH:mm') : '';
   const isPremium = useMemo(() => isUserPremium(viewerProfile), [viewerProfile]);
@@ -67,21 +63,6 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
     else await updateDoc(msgRef, { [`reactions.${emoji}`]: arrayUnion(user.uid) });
   };
 
-  const handleTranslate = async () => {
-    if (!isPremium || isTranslating) return;
-    const originalText = decryptSignal(message.content);
-    setIsTranslating(true);
-    try {
-      const { translatedText } = await translateMessage({ text: originalText });
-      setTranslatedText(translatedText);
-      if (window.navigator && window.navigator.vibrate) window.navigator.vibrate(10);
-    } catch (e) {
-      toast({ title: "Ошибка ИИ", description: "Сервис перевода недоступен." });
-    } finally {
-      setIsTranslating(false);
-    }
-  };
-
   // iOS-style Swipe to Reply
   const onTouchStart = (e: React.TouchEvent) => {
     touchStartX.current = e.touches[0].clientX;
@@ -93,7 +74,6 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
     const deltaX = touchStartX.current - e.touches[0].clientX;
     const deltaY = Math.abs(touchStartY.current - e.touches[0].clientY);
     
-    // Only allow left swipe
     if (deltaX > 20 && deltaY < 30) {
       isSwiping.current = true;
       const offset = Math.min(deltaX, 80);
@@ -205,11 +185,6 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
         <div className="whitespace-pre-wrap text-[16px] break-words max-w-[320px] font-semibold tracking-tight leading-relaxed">
           {displayContent}
         </div>
-        {translatedText && (
-          <div className="mt-2 pt-2 border-t border-white/10 flex items-center gap-2 text-[10px] font-black uppercase text-accent/60">
-            <Languages className="w-3 h-3" /> Переведено AI
-          </div>
-        )}
       </div>
     );
   };
@@ -229,7 +204,6 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
       onTouchMove={onTouchMove}
       onTouchEnd={onTouchEnd}
     >
-      {/* Swipe Indicator (iOS Style) */}
       <div 
         className="absolute right-[-80px] top-1/2 -translate-y-1/2 flex items-center justify-center transition-opacity"
         style={{ opacity: swipeOffset / 80 }}
@@ -254,7 +228,6 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
               <div className={cn((message.contentType === 'sticker' || message.contentType === 'gift') ? "relative" : bubbleClasses)}>
                 {renderContent()}
                 
-                {/* Reactions Display */}
                 {message.reactions && Object.entries(message.reactions).some(([_, uids]) => uids.length > 0) && (
                   <div className={cn("flex gap-1 mt-2 flex-wrap", isMe ? "justify-end" : "justify-start")}>
                     {Object.entries(message.reactions).map(([emoji, uids]: any) => uids.length > 0 && (
@@ -287,11 +260,6 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
               <ContextMenuItem onClick={() => onReply(message)} className="gap-4 py-3.5 font-black text-[11px] uppercase tracking-widest rounded-xl hover:bg-primary/10 transition-all">
                 <CornerUpLeft className="w-4 h-4 text-primary" /> Ответить
               </ContextMenuItem>
-              {isPremium && message.contentType === 'text' && (
-                <ContextMenuItem onClick={handleTranslate} className="gap-4 py-3.5 font-black text-[11px] uppercase tracking-widest text-accent rounded-xl hover:bg-accent/10 transition-all">
-                  {isTranslating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Languages className="w-4 h-4" />} Перевести AI
-                </ContextMenuItem>
-              )}
               {isMe && <ContextMenuItem onClick={() => onEdit(message)} className="gap-4 py-3.5 font-black text-[11px] uppercase tracking-widest rounded-xl hover:bg-primary/10 transition-all">
                 <Edit2 className="w-4 h-4 text-white/60" /> Исправить
               </ContextMenuItem>}

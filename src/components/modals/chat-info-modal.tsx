@@ -30,8 +30,10 @@ import type { User, Chat, ReceivedGift, Message } from '@/lib/types';
 import { addHours, isAfter, parseISO } from 'date-fns';
 import { AddMemberModal } from './add-member-modal';
 import { GiftModal } from './gift-modal';
-import { chatConversationSummary } from '@/ai/flows/chat-conversation-summary-flow';
 
+/**
+ * ChatInfoModal V26.5.0: AI Summarize Temporarily Disabled.
+ */
 export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onOpenChange: (o: boolean) => void, chat: Chat }) {
   const db = useFirestore();
   const { user } = useUser();
@@ -45,8 +47,6 @@ export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onO
   const [isEditing, setIsEditing] = useState(false);
   const [isAddMemberOpen, setIsAddMemberOpen] = useState(false);
   const [isGiftModalOpen, setIsGiftModalOpen] = useState(false);
-  const [isSummarizing, setIsSummarizing] = useState(false);
-  const [summary, setSummary] = useState<string | null>(null);
   
   const [editForm, setEditForm] = useState({
     name: '',
@@ -62,12 +62,9 @@ export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onO
   const otherUserProfileRef = useMemoFirebase(() => (!db || !otherId) ? null : doc(db, 'users', otherId), [db, otherId]);
   const { data: otherUserProfile } = useDoc<User>(otherUserProfileRef);
 
-  const messagesQuery = useMemoFirebase(() => (!db || !chat.id) ? null : query(collection(db, 'chats', chat.id, 'messages'), orderBy('sentAt', 'desc'), limit(20)), [db, chat.id]);
-  const { data: recentMessages } = useCollection<Message>(messagesQuery);
-
   const giftsQuery = useMemoFirebase(() => {
     if (!db || !otherId) return null;
-    return query(collection(db, 'users', otherId, 'receivedGifts'), limit(12));
+    return query(collection(db, 'users', otherId, 'receivedGifts'), limit(20));
   }, [db, otherId]);
   const { data: gifts } = useCollection<ReceivedGift>(giftsQuery);
 
@@ -88,26 +85,8 @@ export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onO
         avatarUrl: chat.avatarUrl || '',
         isPublic: !!chat.isPublic
       });
-      setSummary(null);
     }
   }, [open, chat, user?.uid, otherUserProfile, isPrivate]);
-
-  const handleSummarize = async () => {
-    if (!isPremium || !recentMessages || isSummarizing) return;
-    setIsSummarizing(true);
-    try {
-      const chatLogs = [...recentMessages].reverse().map(m => ({
-        senderName: m.senderName,
-        text: decryptSignal(m.content)
-      }));
-      const { summary: res } = await chatConversationSummary({ chatMessages: chatLogs });
-      setSummary(res);
-    } catch (e) {
-      toast({ title: "AI Error", variant: "destructive" });
-    } finally {
-      setIsSummarizing(false);
-    }
-  };
 
   const isOwner = user && chat.ownerId === user.uid;
   const isChatAdmin = isOwner || (user && chat.adminIds?.includes(user.uid)) || isKernelAdmin;
@@ -259,16 +238,6 @@ export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onO
                     {isContact ? <UserCheck className="w-4 h-4" /> : <UserPlus2 className="w-4 h-4" />}
                     {isContact ? "В контактах" : "В контакты"}
                   </Button>
-                  
-                  {isPremium && (
-                    <Button 
-                      onClick={handleSummarize} 
-                      disabled={isSummarizing}
-                      className="h-12 w-12 rounded-xl bg-accent/20 border border-accent/30 text-accent hover:bg-accent hover:text-black transition-all"
-                    >
-                      {isSummarizing ? <Loader2 className="w-5 h-5 animate-spin" /> : <FileText className="w-5 h-5" />}
-                    </Button>
-                  )}
                 </div>
 
                 <div className="flex gap-2">
@@ -326,16 +295,6 @@ export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onO
 
         <ScrollArea className="flex-1">
           <div className="p-6 space-y-6">
-            {summary && (
-               <div className="bg-accent/5 border border-accent/20 p-5 rounded-3xl space-y-3 animate-in fade-in zoom-in-95 duration-500">
-                 <div className="flex items-center gap-2 text-accent">
-                   <Sparkles className="w-4 h-4 animate-pulse" />
-                   <span className="text-[10px] font-black uppercase tracking-widest">AI Анализ чата</span>
-                 </div>
-                 <p className="text-sm text-white/90 leading-relaxed font-medium italic">«{summary}»</p>
-               </div>
-            )}
-
             {isEditing && !isPrivate && (
               <div className="space-y-4 bg-white/5 p-4 rounded-2xl border border-white/5">
                 <div className="space-y-2">

@@ -13,7 +13,7 @@ import { useAuth, useUser, useFirestore, useDoc, useMemoFirebase } from '@/fireb
 import { UserAvatar } from '@/components/user-avatar';
 import { 
   LogOut, Settings2, Camera, Lock, Fingerprint, Sparkles, Star, Zap, ShieldCheck, Loader2, Database, Download, Check, Palette, 
-  Monitor, Layout, Type, MessageSquare, Paintbrush, Smile, Bell, Ghost, Image as ImageIcon, Calendar, CheckCircle2
+  Monitor, Layout, Type, MessageSquare, Paintbrush, Smile, Bell, Ghost, ImageIcon, Calendar, CheckCircle2
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { signOut } from 'firebase/auth';
@@ -22,11 +22,13 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAppState } from '@/lib/store';
 import { cn, isUserPremium } from '@/lib/utils';
 import type { User } from '@/lib/types';
-import { generateAiAvatar } from '@/ai/flows/generate-ai-avatar-flow';
 import nuxusVersions from '@/app/versions.json';
 import { format } from 'date-fns';
 import { ru } from 'date-fns/locale';
 
+/**
+ * SettingsModal V26.5.0: AI Avatar Generation Temporarily Disabled.
+ */
 export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const auth = useAuth();
   const db = useFirestore();
@@ -39,7 +41,6 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
   const userRef = useMemoFirebase(() => (!db || !user) ? null : doc(db!, 'users', user.uid), [db, user]);
   const { data: profile } = useDoc<User>(userRef);
 
-  const [isGeneratingAvatar, setIsGeneratingAvatar] = useState(false);
   const [isLinkingBiometrics, setIsLinkingBiometrics] = useState(false);
   const [isRequestingArchive, setIsRequestingArchive] = useState(false);
   
@@ -186,15 +187,6 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                   <UserAvatar userId={user?.uid} manualAvatarUrl={form.avatarUrl} className="h-40 w-40 border-4 border-primary/20 shadow-2xl relative z-10" fallbackName={form.name} />
                   <div className="absolute -bottom-2 -right-2 flex gap-2 z-20">
                     <button onClick={() => fileInputRef.current?.click()} className="bg-primary p-3 rounded-2xl shadow-2xl hover:scale-110 active:scale-90 transition-all"><Camera className="w-5 h-5 text-white" /></button>
-                    {isPremium && (
-                      <button onClick={async () => {
-                        setIsGeneratingAvatar(true);
-                        try {
-                          const { imageUrl } = await generateAiAvatar();
-                          setForm({...form, avatarUrl: imageUrl});
-                        } finally { setIsGeneratingAvatar(false); }
-                      }} className={cn("bg-accent p-3 rounded-2xl shadow-2xl hover:scale-110 active:scale-90 transition-all", isGeneratingAvatar && "animate-spin")}><Sparkles className="w-5 h-5 text-black" /></button>
-                    )}
                   </div>
                   <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={(e) => { const f = e.target.files?.[0]; if(f) { const r = new FileReader(); r.onloadend = () => setForm({...form, avatarUrl: r.result as string}); r.readAsDataURL(f); } }} />
                 </div>
@@ -326,12 +318,10 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                    <div className="space-y-4">
                       <h4 className="text-[9px] font-black uppercase tracking-[0.4em] text-primary ml-2">Разблокированные модули:</h4>
                       <div className="grid grid-cols-1 gap-2">
-                        <PremiumBenefit label="AI Cinema Pro (Veo 2.0)" icon={Zap} active />
                         <PremiumBenefit label="Ghost Mode (Инкогнито)" icon={Ghost} active />
-                        <PremiumBenefit label="AI Переводчик сигналов" icon={Sparkles} active />
-                        <PremiumBenefit label="Магические AI черновики" icon={Palette} active />
                         <PremiumBenefit label="Эксклюзивные 3D стикеры" icon={Smile} active />
                         <PremiumBenefit label="Приоритетная синхронизация" icon={ShieldCheck} active />
+                        <PremiumBenefit label="Кастомные фоны чата" icon={ImageIcon} active />
                       </div>
                    </div>
                  </div>
@@ -349,10 +339,9 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                    <div className="space-y-4 opacity-50">
                       <h4 className="text-[9px] font-black uppercase tracking-[0.4em] text-white/40 ml-2">Что дает статус:</h4>
                       <div className="grid grid-cols-1 gap-2">
-                        <PremiumBenefit label="Создание ИИ-видео в Студии" icon={Zap} />
                         <PremiumBenefit label="Режим Призрака (Скрыть онлайн)" icon={Ghost} />
-                        <PremiumBenefit label="Перевод сообщений через AI" icon={Sparkles} />
-                        <PremiumBenefit label="Кастомные цвета профиля" icon={Palette} />
+                        <PremiumBenefit label="Кастомные цвета и фоны" icon={Palette} />
+                        <PremiumBenefit label="Эксклюзивные 3D артефакты" icon={Zap} />
                       </div>
                    </div>
                  </div>

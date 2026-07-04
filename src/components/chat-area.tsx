@@ -21,19 +21,15 @@ import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { formatDisplayName, cn, compressImage, encryptSignal, isGlobalAdmin, decryptSignal, formatLastSeen, isUserPremium } from '@/lib/utils';
 import type { Message, User as UserType, Chat } from '@/lib/types';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { generateAiImage } from '@/ai/flows/generate-ai-image-flow';
-import { suggestMessageDraft } from '@/ai/flows/ai-message-drafting-flow';
 import { useTranslations } from '@/hooks/use-translations';
 import { addMinutes } from 'date-fns';
 
 /**
- * ChatInputBar V26.3.0: Re-added Reply Logic + Standard Modern Messenger Row.
+ * ChatInputBar V26.5.0: AI Features Temporarily Disabled.
  */
 const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, isPremium, messages, replyTo, onCancelReply }: any) => {
   const { localDrafts, setLocalDrafts } = useAppState();
   const [messageInput, setMessageInput] = useState(localDrafts[currentChatId] || '');
-  const [isAiDrafting, setIsAiDrafting] = useState(false);
-  const [isGeneratingImg, setIsGeneratingImg] = useState(false);
   const [destructTimer, setDestructTimer] = useState<number | null>(null);
   const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
   
@@ -66,26 +62,6 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
   const handleInputChange = (val: string) => {
     setMessageInput(val);
     setLocalDrafts(prev => ({ ...prev, [currentChatId]: val }));
-  };
-
-  const handleAiDraft = async () => {
-    if (!isPremium || isAiDrafting) return;
-    setIsAiDrafting(true);
-    try {
-      const history = (messages || []).slice(-8).map((m: any) => ({
-        sender: m.senderName,
-        message: decryptSignal(m.content)
-      }));
-      const res = await suggestMessageDraft({ 
-        conversationHistory: history, 
-        currentUserInput: messageInput 
-      });
-      if (res && res.draftMessage) handleInputChange(res.draftMessage);
-    } catch (e) {
-      console.error("AI Draft Error");
-    } finally {
-      setIsAiDrafting(false);
-    }
   };
 
   const handleSend = () => {
@@ -141,7 +117,6 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
 
   return (
     <footer className="p-3 pb-[calc(1rem+env(safe-area-inset-bottom))] obsidian-glass border-t border-white/5 shrink-0 z-40 relative flex flex-col gap-2">
-      {/* Reply Preview Header */}
       {replyTo && (
         <div className="bg-white/5 p-3 rounded-2xl flex items-center justify-between border border-white/5 animate-in slide-in-from-bottom-2 duration-300">
           <div className="flex items-center gap-3 min-w-0">
@@ -171,17 +146,6 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
               </PopoverTrigger>
               <PopoverContent side="top" align="start" className="w-64 obsidian-glass border-white/10 rounded-[2rem] p-2 mb-4">
                 <AttachmentItem icon={ImageIcon} label="Медиа" color="text-primary" onClick={() => fileInputRef.current?.click()} />
-                {isPremium && (
-                  <AttachmentItem icon={Palette} label="ИИ Арт" color="text-accent" onClick={async () => {
-                    if (!messageInput.trim()) return;
-                    setIsGeneratingImg(true);
-                    try {
-                      const res = await generateAiImage({ prompt: messageInput });
-                      if (res.imageUrl) onSendMessage(res.imageUrl, 'image', destructTimer);
-                      setMessageInput('');
-                    } finally { setIsGeneratingImg(false); }
-                  }} loading={isGeneratingImg} />
-                )}
                 <AttachmentItem icon={AtSign} label="Опрос" color="text-blue-400" onClick={onPollOpen} />
               </PopoverContent>
             </Popover>
@@ -195,18 +159,6 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
                 onChange={e => handleInputChange(e.target.value)} 
               />
               
-              {isPremium && (
-                 <Button 
-                   variant="ghost" 
-                   size="icon" 
-                   className={cn("text-white/20 hover:text-accent transition-all h-9 w-9 shrink-0 mb-[-2px]", isAiDrafting && "animate-spin text-accent")}
-                   onClick={handleAiDraft}
-                   disabled={isAiDrafting}
-                 >
-                   <Wand2 className="w-5 h-5" />
-                 </Button>
-              )}
-
               <Popover open={isEmojiPickerOpen} onOpenChange={setIsEmojiPickerOpen}>
                  <PopoverTrigger asChild>
                    <Button variant="ghost" size="icon" className="text-white/20 hover:text-primary h-9 w-9 shrink-0 mb-[-2px]"><Smile className="w-6 h-6" /></Button>
@@ -301,6 +253,15 @@ export default function ChatArea() {
   const chatRef = useMemoFirebase(() => (!db || !currentChatId) ? null : doc(db, 'chats', currentChatId), [db, currentChatId]);
   const { data: chat } = useDoc<Chat>(chatRef);
 
+  // IDENTIFICATION FIX: Calculate other participant for header
+  const otherId = useMemo(() => {
+    if (!chat || chat.type !== 'private' || !firebaseUser) return null;
+    return chat.participantIds.find(id => id !== firebaseUser.uid);
+  }, [chat, firebaseUser]);
+
+  const otherUserRef = useMemoFirebase(() => (!db || !otherId) ? null : doc(db, 'users', otherId), [db, otherId]);
+  const { data: otherUser } = useDoc<UserType>(otherUserRef);
+
   const messagesQuery = useMemoFirebase(() => (!db || !currentChatId) ? null : query(collection(db, 'chats', currentChatId, 'messages'), orderBy('sentAt', 'asc')), [db, currentChatId]);
   const { data: messages } = useCollection<Message>(messagesQuery);
 
@@ -335,6 +296,20 @@ export default function ChatArea() {
     updateDoc(doc(db, 'chats', currentChatId), { lastMessageAt: new Date().toISOString() });
   }, [currentChatId, firebaseUser, db, userProfile, replyTo]);
 
+  const headerTitle = useMemo(() => {
+    if (!chat) return 'СИНХРОНИЗАЦИЯ...';
+    if (chat.type === 'private') {
+      const myMeta = chat.metadata?.[firebaseUser?.uid || ''];
+      if (myMeta?.customName) return myMeta.customName;
+      return formatDisplayName(otherUser?.name);
+    }
+    return formatDisplayName(chat.name);
+  }, [chat, otherUser, firebaseUser?.uid]);
+
+  const headerAvatarId = useMemo(() => {
+    return chat?.type === 'private' ? otherId : null;
+  }, [chat?.type, otherId]);
+
   return (
     <div className="flex-1 flex flex-col h-full bg-transparent relative overflow-hidden z-20 max-w-full">
       <header className="h-[calc(4rem+env(safe-area-inset-top))] pt-[env(safe-area-inset-top)] border-b border-white/5 obsidian-glass flex items-center justify-between px-5 shrink-0 z-30 shadow-xl">
@@ -342,10 +317,19 @@ export default function ChatArea() {
           <Button variant="ghost" size="icon" className="md:hidden obsidian-glass rounded-xl text-white/50 h-10 w-10 shrink-0" onClick={() => setCurrentChatId(null)}><ChevronLeft className="w-6 h-6" /></Button>
           {!isSearchMode ? (
             <div className="flex items-center gap-3 cursor-pointer min-w-0 flex-1 group" onClick={() => setIsChatInfoOpen(true)}>
-              <UserAvatar userId={chat?.type === 'private' ? chat.participantIds.find(id => id !== firebaseUser?.uid) : null} manualAvatarUrl={chat?.avatarUrl} className="h-10 w-10 border border-white/10 shrink-0" fallbackName={chat?.name} />
+              <UserAvatar 
+                userId={headerAvatarId} 
+                manualAvatarUrl={chat?.type !== 'private' ? chat?.avatarUrl : otherUser?.avatarUrl} 
+                className="h-10 w-10 border border-white/10 shrink-0" 
+                fallbackName={headerTitle} 
+              />
               <div className="flex flex-col min-w-0 text-left">
-                <span className="font-black text-[16px] truncate text-white italic tracking-tighter uppercase group-hover:text-primary transition-colors leading-tight">{chat?.name}</span>
-                <span className="text-[9px] font-black uppercase tracking-[0.1em] text-primary/40 leading-none truncate mt-0.5">Сигнал активен</span>
+                <span className="font-black text-[16px] truncate text-white italic tracking-tighter uppercase group-hover:text-primary transition-colors leading-tight">
+                  {headerTitle}
+                </span>
+                <span className="text-[9px] font-black uppercase tracking-[0.1em] text-primary/40 leading-none truncate mt-0.5">
+                  {chat?.type === 'private' ? formatLastSeen(otherUser?.lastSeen, otherUser?.settings?.privacy?.lastSeenVisibility) : 'Сигнал активен'}
+                </span>
               </div>
             </div>
           ) : (
@@ -365,7 +349,6 @@ export default function ChatArea() {
       </header>
 
       <div className="flex-1 relative overflow-hidden flex flex-col min-w-0 z-10 bg-transparent">
-        {/* Custom Chat Background Implementation */}
         {userProfile?.settings?.chatBackground && (
           <div 
             className="absolute inset-0 z-0 bg-cover bg-center transition-opacity duration-1000"

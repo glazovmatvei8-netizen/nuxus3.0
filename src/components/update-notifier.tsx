@@ -9,9 +9,9 @@ import { Progress } from './ui/progress';
 import nuxusVersions from '@/app/versions.json';
 
 /**
- * КВАНТОВЫЙ ОБНОВЛЯТОР ЯДРА V26.4.0 (Live-Pulse)
+ * КВАНТОВЫЙ ОБНОВЛЯТОР ЯДРА V26.5.0 (Live-Pulse)
  */
-const CURRENT_VERSION = "26.4.0"; 
+const CURRENT_VERSION = "26.5.0"; 
 
 export function UpdateNotifier() {
   const [isOpen, setIsOpen] = useState(false);
@@ -122,10 +122,10 @@ export function UpdateNotifier() {
           <DialogHeader className="space-y-2 text-left">
             <div className="flex items-center justify-between">
               <DialogTitle className="text-3xl font-black uppercase italic tracking-tighter text-white">Ядро {serverVersion}</DialogTitle>
-              <span className="text-[10px] font-black bg-white/5 border border-white/10 px-3 py-1 rounded-lg text-primary">155 MB</span>
+              <span className="text-[10px] font-black bg-white/5 border border-white/10 px-3 py-1 rounded-lg text-primary">140 MB</span>
             </div>
             <DialogDescription className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em] ml-1">
-              Критическое обновление системных протоколов
+              Оптимизация идентификации и фокуса
             </DialogDescription>
           </DialogHeader>
 
@@ -154,7 +154,7 @@ export function UpdateNotifier() {
               Активировать патч
             </Button>
             <Button variant="ghost" onClick={() => setIsOpen(false)} className="h-12 text-[9px] font-black uppercase tracking-[0.3em] text-muted-foreground/40 hover:text-white transition-all">
-              Игнорировать (временно)
+              Игнорировать
             </Button>
           </div>
         </div>
