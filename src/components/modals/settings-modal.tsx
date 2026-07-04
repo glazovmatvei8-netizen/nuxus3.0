@@ -23,7 +23,7 @@ import { useAppState } from '@/lib/store';
 import { cn, isUserPremium } from '@/lib/utils';
 import type { User } from '@/lib/types';
 import { generateAiAvatar } from '@/ai/flows/generate-ai-avatar-flow';
-import versions from '@/app/versions.json';
+import nuxusVersions from '@/app/versions.json';
 
 export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const auth = useAuth();
@@ -168,7 +168,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
       <DialogContent className="max-w-md bg-[#0a0a0c]/95 backdrop-blur-[60px] border-white/10 p-0 overflow-hidden h-[85vh] flex flex-col rounded-[3rem] shadow-[0_30px_100px_rgba(0,0,0,1)] outline-none">
         <DialogHeader className="p-8 border-b border-white/5 shrink-0 text-left">
           <DialogTitle className="flex items-center gap-3 text-2xl font-black italic uppercase tracking-tighter text-white">
-            <Settings2 className="w-7 h-7 text-primary" /> Параметры v{versions.latestVersion}
+            <Settings2 className="w-7 h-7 text-primary" /> Параметры v{nuxusVersions.latestVersion}
           </DialogTitle>
         </DialogHeader>
         

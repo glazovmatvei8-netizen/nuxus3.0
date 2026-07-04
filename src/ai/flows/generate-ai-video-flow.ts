@@ -2,7 +2,7 @@
 'use server';
 /**
  * @fileOverview A Genkit flow for generating AI videos using Veo 3.0 model.
- * Enhanced stability and error handling for V4.0.
+ * Real cinematic motion synthesis from images or text.
  */
 
 import { ai } from '@/ai/genkit';
@@ -10,7 +10,8 @@ import { z } from 'genkit';
 import { googleAI } from '@genkit-ai/google-genai';
 
 const GenerateAiVideoInputSchema = z.object({
-  photoDataUri: z.string().describe("The source photo data URI to animate."),
+  photoDataUri: z.string().optional().describe("The source photo data URI to animate."),
+  prompt: z.string().optional().describe("Description of the video content."),
 });
 export type GenerateAiVideoInput = z.infer<typeof GenerateAiVideoInputSchema>;
 
@@ -20,8 +21,8 @@ const GenerateAiVideoOutputSchema = z.object({
 export type GenerateAiVideoOutput = z.infer<typeof GenerateAiVideoOutputSchema>;
 
 /**
- * Animates a photo using Veo model.
- * Uses veo-3.0-generate-preview for maximum quality and stability.
+ * Animates a photo or generates video from text using the latest Veo model.
+ * Uses veo-3.0-generate-preview for maximum cinematic quality.
  */
 export async function generateAiVideo(input: GenerateAiVideoInput): Promise<GenerateAiVideoOutput> {
   return generateAiVideoFlow(input);
@@ -35,12 +36,16 @@ const generateAiVideoFlow = ai.defineFlow(
   },
   async (input) => {
     try {
+      const basePrompt = input.prompt || 'cinematic smooth animation, high quality, realistic motion, professional lighting, 4k detail';
+      
+      const promptParts: any[] = [{ text: basePrompt }];
+      if (input.photoDataUri) {
+        promptParts.push({ media: { url: input.photoDataUri } });
+      }
+
       let { operation } = await ai.generate({
         model: googleAI.model('veo-3.0-generate-preview'),
-        prompt: [
-          { text: 'cinematic smooth animation, high quality, realistic motion, subtle movement, 4k detail' },
-          { media: { url: input.photoDataUri } }
-        ],
+        prompt: promptParts,
         config: {
           aspectRatio: '16:9',
           personGeneration: 'allow_all'
@@ -51,9 +56,9 @@ const generateAiVideoFlow = ai.defineFlow(
         throw new Error('Signal lost: Model did not return an operation.');
       }
 
-      // Polling loop with better exit conditions
+      // Polling loop with better exit conditions for high-quality synthesis
       let attempts = 0;
-      const maxAttempts = 40; // 40 * 5s = 200 seconds max
+      const maxAttempts = 50; // 50 * 5s = 250 seconds max
       while (!operation.done && attempts < maxAttempts) {
         await new Promise((resolve) => setTimeout(resolve, 5000));
         operation = await ai.checkOperation(operation);
@@ -65,7 +70,7 @@ const generateAiVideoFlow = ai.defineFlow(
       }
 
       if (!operation.done) {
-        throw new Error('Timeout: Video generation is taking too long. Try again later.');
+        throw new Error('Timeout: Video generation is taking too long. Synthesis aborted.');
       }
 
       const videoPart = operation.output?.message?.content.find((p) => !!p.media);
@@ -78,7 +83,7 @@ const generateAiVideoFlow = ai.defineFlow(
         throw new Error("System error: GOOGLE_API_KEY is missing in environment.");
       }
 
-      // Fetch video and convert to data URI
+      // Fetch video and convert to data URI for immediate playback in the Kernel
       const fetch = (await import('node-fetch')).default;
       const response = await fetch(`${videoPart.media.url}&key=${apiKey}`);
       
@@ -93,7 +98,7 @@ const generateAiVideoFlow = ai.defineFlow(
         videoDataUri: `data:video/mp4;base64,${base64}`,
       };
     } catch (err: any) {
-      console.error("Veo 3.0 Error:", err);
+      console.error("Veo 3.0 Cinema Error:", err);
       throw new Error(err.message || "Unknown error during video synthesis.");
     }
   }
