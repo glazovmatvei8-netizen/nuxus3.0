@@ -34,7 +34,7 @@ import { Dialog, DialogContent, DialogTitle, DialogPortal, DialogOverlay } from 
 const QUICK_REACTIONS = ['👍', '❤️', '🔥', '😂', '😮', '😢', '👏'];
 
 /**
- * MessageItem V25.5.2: Sticker Rendering Fixed.
+ * MessageItem V25.5.3: Sticker Visibility Fixed.
  */
 export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForward, isAdmin = false, isGroup = false, onEdit, highlight = false, viewerProfile }: any) => {
   const { user } = useUser();
@@ -90,12 +90,12 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
   const renderContent = () => {
     if (message.contentType === 'sticker') {
       return (
-        <div className="w-48 h-48 flex items-center justify-center relative">
+        <div className="w-48 h-48 flex items-center justify-center relative min-h-[192px]">
           <img 
             src={message.content} 
             alt="Sticker" 
-            className="max-w-full max-h-full object-contain pointer-events-none drop-shadow-2xl hover:scale-110 transition-transform duration-500 block" 
-            style={{ width: '192px', height: '192px' }}
+            className="max-w-full max-h-full object-contain pointer-events-none drop-shadow-2xl hover:scale-110 transition-transform duration-500 block relative z-10" 
+            style={{ width: '192px', height: '192px', display: 'block' }}
           />
         </div>
       );
@@ -171,7 +171,7 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
             <ContextMenuTrigger>
               <div className={cn(message.contentType === 'sticker' ? "relative" : bubbleClasses)}>
                 {renderContent()}
-                <div className={cn("flex items-center justify-end gap-2 mt-2 opacity-40 px-1", message.contentType === 'sticker' && "absolute bottom-2 right-2 bg-black/40 rounded-full px-2 py-0.5 backdrop-blur-sm")}>
+                <div className={cn("flex items-center justify-end gap-2 mt-2 opacity-40 px-1", message.contentType === 'sticker' && "absolute bottom-2 right-2 bg-black/40 rounded-full px-2 py-0.5 backdrop-blur-sm z-20")}>
                   <span className="text-[10px] font-black tabular-nums tracking-widest">{formattedTime}</span>
                   {isMe && (
                     message.isPending ? <Clock className="w-3.5 h-3.5 text-primary animate-pulse" /> : (message.isRead ? <CheckCheck className="w-4 h-4 text-accent" /> : <Check className="w-4 h-4" />)

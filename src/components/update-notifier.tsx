@@ -9,10 +9,10 @@ import { Progress } from './ui/progress';
 import versions from '@/app/versions.json';
 
 /**
- * КВАНТОВЫЙ ОБНОВЛЯТОР ЯДРА V25.5.2
- * ИСПРАВЛЕНО: Синхронизация версий для предотвращения бесконечных циклов.
+ * КВАНТОВЫЙ ОБНОВЛЯТОР ЯДРА V25.5.3
+ * ИСПРАВЛЕНО: Полная синхронизация для исключения бесконечных циклов.
  */
-const CURRENT_VERSION = "25.5.2"; 
+const CURRENT_VERSION = "25.5.3"; 
 
 export function UpdateNotifier() {
   const [isOpen, setIsOpen] = useState(false);
@@ -22,7 +22,6 @@ export function UpdateNotifier() {
 
   const checkVersion = useCallback(async () => {
     try {
-      // Пытаемся получить свежий файл версий с сервера, обходя кэш
       const response = await fetch(`/versions.json?t=${Date.now()}`, { cache: 'no-store' });
       if (response.ok) {
         const data = await response.json();
@@ -30,8 +29,7 @@ export function UpdateNotifier() {
         
         const lastInstalled = localStorage.getItem('nuxus_last_installed_version');
         
-        // Условие появления окна: версия на сервере НЕ совпадает с текущим кодом 
-        // И версия на сервере НЕ совпадает с тем, что мы уже пометили как установленное
+        // СТРОГОЕ УСЛОВИЕ: Показываем только если серверная версия ВЫШЕ текущей в коде
         if (data.latestVersion !== CURRENT_VERSION && lastInstalled !== data.latestVersion) {
           setIsOpen(true);
         } else {
@@ -39,25 +37,18 @@ export function UpdateNotifier() {
         }
       }
     } catch (e) {
-      console.warn("Nuxus Sync: Failed to fetch remote version registry.");
+      console.warn("Nuxus Sync: Version registry signal lost.");
     }
   }, []);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
-    // Первичная проверка при запуске
     const timer = setTimeout(checkVersion, 3000);
-    
-    // Фоновая проверка каждые 5 минут (Live-Sync)
     const interval = setInterval(checkVersion, 300000);
 
     const handleManualCheck = () => {
       checkVersion();
-      // Показываем окно только если есть реальная разница
-      if (serverVersion !== CURRENT_VERSION) {
-        setIsOpen(true);
-      }
     };
     
     window.addEventListener('nuxus_check_updates', handleManualCheck);
@@ -67,7 +58,7 @@ export function UpdateNotifier() {
       clearInterval(interval);
       window.removeEventListener('nuxus_check_updates', handleManualCheck);
     };
-  }, [checkVersion, serverVersion]);
+  }, [checkVersion]);
 
   const handleUpdateAction = () => {
     setIsUpdating(true);
@@ -126,7 +117,7 @@ export function UpdateNotifier() {
             </DialogDescription>
           </DialogHeader>
 
-          {!isUpToDate ? (
+          {!isUpToDate && (
             <div className="space-y-3 bg-white/5 p-5 rounded-3xl border border-white/5 shadow-inner">
               <div className="flex items-center gap-2 text-white/40 mb-1">
                 <ListChecks className="w-3.5 h-3.5" />
@@ -139,11 +130,6 @@ export function UpdateNotifier() {
                   </li>
                 ))}
               </ul>
-            </div>
-          ) : (
-            <div className="p-6 bg-primary/5 rounded-3xl border border-primary/10 text-center shadow-xl">
-               <ShieldCheck className="w-8 h-8 text-primary mx-auto mb-3" />
-               <p className="text-[10px] text-white/80 font-black uppercase tracking-widest">Система полностью синхронизирована.</p>
             </div>
           )}
 

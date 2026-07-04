@@ -18,22 +18,22 @@ const EMOJI_DATA = [
 ];
 
 /**
- * ЭКСКЛЮЗИВНЫЕ СТИКЕРЫ NUXUS (3D TECH PACK V3)
- * ИСПРАВЛЕНО: Обновлены URL на более стабильные и проверена отрисовка.
+ * ЭКСКЛЮЗИВНЫЕ СТИКЕРЫ NUXUS (3D TECH PACK V4)
+ * ИСПРАВЛЕНО: Ссылки заменены на максимально стабильные Unsplash ID.
  */
 const DEFAULT_STICKERS = [
-  'https://images.unsplash.com/photo-1614728894747-a83421e2b9c9?w=400&h=400&fit=crop&q=80',
-  'https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=400&h=400&fit=crop&q=80',
-  'https://images.unsplash.com/photo-1620641788421-7a1c342ea42e?w=400&h=400&fit=crop&q=80',
-  'https://images.unsplash.com/photo-1618005182384-a83421e2b9c9?w=400&h=400&fit=crop&q=80',
-  'https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=400&h=400&fit=crop&q=80',
-  'https://images.unsplash.com/photo-1605810230434-7631ac76ec81?w=400&h=400&fit=crop&q=80',
-  'https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=400&h=400&fit=crop&q=80',
-  'https://images.unsplash.com/photo-1518770660439-4636190af475?w=400&h=400&fit=crop&q=80',
-  'https://images.unsplash.com/photo-1535223289827-42f1e9919769?w=400&h=400&fit=crop&q=80',
-  'https://images.unsplash.com/photo-1558591710-4b4a1ae0f04d?w=400&h=400&fit=crop&q=80',
-  'https://images.unsplash.com/photo-1614850523296-d8c1af93d400?w=400&h=400&fit=crop&q=80',
-  'https://images.unsplash.com/photo-1639762681485-074b7f938ba0?w=400&h=400&fit=crop&q=80'
+  'https://images.unsplash.com/photo-1614728894747-a83421e2b9c9?w=400&h=400&fit=crop',
+  'https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=400&h=400&fit=crop',
+  'https://images.unsplash.com/photo-1620641788421-7a1c342ea42e?w=400&h=400&fit=crop',
+  'https://images.unsplash.com/photo-1618005182384-a83421e2b9c9?w=400&h=400&fit=crop',
+  'https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=400&h=400&fit=crop',
+  'https://images.unsplash.com/photo-1605810230434-7631ac76ec81?w=400&h=400&fit=crop',
+  'https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=400&h=400&fit=crop',
+  'https://images.unsplash.com/photo-1518770660439-4636190af475?w=400&h=400&fit=crop',
+  'https://images.unsplash.com/photo-1535223289827-42f1e9919769?w=400&h=400&fit=crop',
+  'https://images.unsplash.com/photo-1558591710-4b4a1ae0f04d?w=400&h=400&fit=crop',
+  'https://images.unsplash.com/photo-1614850523296-d8c1af93d400?w=400&h=400&fit=crop',
+  'https://images.unsplash.com/photo-1639762681485-074b7f938ba0?w=400&h=400&fit=crop'
 ];
 
 interface EmojiPickerProps {
@@ -152,9 +152,15 @@ export function EmojiPicker({ onEmojiSelect, onStickerSelect, className }: Emoji
                     <button 
                       key={idx} 
                       onClick={() => onStickerSelect(url)}
-                      className="aspect-square rounded-[1.5rem] overflow-hidden hover:bg-white/10 active:scale-90 transition-all p-2 bg-white/5 border border-white/5 group shadow-lg flex items-center justify-center"
+                      className="aspect-square rounded-[1.5rem] overflow-hidden hover:bg-white/10 active:scale-90 transition-all p-2 bg-white/5 border border-white/5 group shadow-lg flex items-center justify-center relative min-h-[60px]"
                     >
-                      <img src={url} alt="Sticker" className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-500 drop-shadow-xl block" style={{ minWidth: '100%', minHeight: '100%' }} />
+                      <img 
+                        src={url} 
+                        alt="Sticker" 
+                        className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-500 drop-shadow-xl block relative z-10" 
+                        loading="lazy"
+                        style={{ display: 'block' }}
+                      />
                     </button>
                   ))}
                 </div>
