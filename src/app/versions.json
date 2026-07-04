@@ -1,14 +1,12 @@
 
 {
-  "latestVersion": "25.4.0",
+  "latestVersion": "25.4.1",
   "qesVersion": "25.4",
   "build": "Stable-Communication-Elite",
   "sizeMb": 115,
   "changelog": [
-    "Smart Textarea: Удобный многострочный ввод сигналов",
-    "Stickers Hub: Полноценная поддержка стикеров и эмодзи",
-    "Finance Admin: Управление заявками на пополнение в реальном времени",
-    "Wallet Boost: Лимит пополнения увеличен до 500,000 NX",
-    "PWA Push: Оптимизация уведомлений для iOS"
+    "Hotfix: Исправлена ошибка Trash2 в Админ-панели",
+    "PWA Control: Добавлен тумблер уведомлений в настройки",
+    "Security: Оптимизирована проверка разрешений Safari"
   ]
 }

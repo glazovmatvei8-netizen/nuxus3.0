@@ -9,9 +9,9 @@ import { Progress } from './ui/progress';
 import versions from '@/app/versions.json';
 
 /**
- * КВАНТОВЫЙ ОБНОВЛЯТОР ЯДРА V25.4.0
+ * КВАНТОВЫЙ ОБНОВЛЯТОР ЯДРА V25.4.1
  */
-const CURRENT_VERSION = "25.4.0";
+const CURRENT_VERSION = "25.4.1";
 
 export function UpdateNotifier() {
   const [isOpen, setIsOpen] = useState(false);

@@ -13,7 +13,7 @@ import { useAuth, useUser, useFirestore, useDoc, useMemoFirebase } from '@/fireb
 import { UserAvatar } from '@/components/user-avatar';
 import { 
   LogOut, Settings2, Camera, Lock, Fingerprint, Sparkles, Star, Zap, ShieldCheck, Loader2, Database, Download, Check, Palette, 
-  Monitor, Layout, Type, MessageSquare, Paintbrush, Smile
+  Monitor, Layout, Type, MessageSquare, Paintbrush, Smile, Bell
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { signOut } from 'firebase/auth';
@@ -53,7 +53,8 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
     messageSize: 'medium',
     twoFactorEnabled: false,
     twoFactorPin: '',
-    biometricEnabled: false
+    biometricEnabled: false,
+    pwaNotificationsEnabled: false
   });
 
   useEffect(() => {
@@ -72,7 +73,8 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         messageSize: profile.settings?.messageSize || 'medium',
         twoFactorEnabled: !!profile.twoFactorEnabled,
         twoFactorPin: profile.twoFactorPin || '',
-        biometricEnabled: !!profile.settings?.biometricEnabled
+        biometricEnabled: !!profile.settings?.biometricEnabled,
+        pwaNotificationsEnabled: !!profile.settings?.pwaNotificationsEnabled
       });
     }
   }, [profile, open]);
@@ -95,12 +97,33 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         'settings.customPrimaryColor': form.customPrimaryColor,
         'settings.bubbleStyle': form.bubbleStyle,
         'settings.messageSize': form.messageSize,
-        'settings.biometricEnabled': form.biometricEnabled
+        'settings.biometricEnabled': form.biometricEnabled,
+        'settings.pwaNotificationsEnabled': form.pwaNotificationsEnabled
       });
       onOpenChange(false);
       toast({ title: "Конфигурация сохранена" });
     } catch (e: any) {
       toast({ title: "Ошибка сохранения", variant: "destructive" });
+    }
+  };
+
+  const handleTogglePwaNotifications = async (enabled: boolean) => {
+    if (enabled) {
+      if (!('Notification' in window)) {
+        toast({ title: "PWA Error", description: "Уведомления не поддерживаются в этом браузере.", variant: "destructive" });
+        return;
+      }
+
+      const permission = await Notification.requestPermission();
+      if (permission === 'granted') {
+        setForm({ ...form, pwaNotificationsEnabled: true });
+        toast({ title: "Уведомления активны", description: "Теперь вы будете получать сигналы в фоне." });
+      } else {
+        toast({ title: "Доступ отклонен", description: "Разрешите уведомления в настройках iOS/Android.", variant: "destructive" });
+        setForm({ ...form, pwaNotificationsEnabled: false });
+      }
+    } else {
+      setForm({ ...form, pwaNotificationsEnabled: false });
     }
   };
 
@@ -278,6 +301,17 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                     </div>
                   </div>
                 )}
+
+                <div className="flex items-center justify-between pt-4 border-t border-white/5">
+                  <div className="flex items-center gap-4">
+                    <div className="bg-accent/10 p-3 rounded-xl"><Bell className="w-5 h-5 text-accent" /></div>
+                    <div className="flex flex-col text-left">
+                      <span className="text-sm font-bold text-white uppercase italic">Уведомления PWA</span>
+                      <span className="text-[8px] text-muted-foreground uppercase font-bold tracking-widest">Сигналы в фоне</span>
+                    </div>
+                  </div>
+                  <Switch checked={form.pwaNotificationsEnabled} onCheckedChange={handleTogglePwaNotifications} />
+                </div>
               </div>
             </TabsContent>
 

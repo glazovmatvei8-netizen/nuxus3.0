@@ -23,7 +23,7 @@ import { collection, query, doc, limit, updateDoc, writeBatch, getDocs, where, o
 import { UserAvatar } from '@/components/user-avatar';
 import { 
   ShieldAlert, Users, Star, Ban, ShieldCheck, 
-  MoreVertical, Send, Loader2, Database, Package, FileText, UserPlus, ShieldX, CalendarClock, Wallet, Check, X
+  MoreVertical, Send, Loader2, Database, Package, FileText, UserPlus, ShieldX, CalendarClock, Wallet, Check, X, Trash2
 } from 'lucide-react';
 import type { User, TopUpRequest } from '@/lib/types';
 import { formatDisplayName, isUserPremium, cn, isGlobalAdmin } from '@/lib/utils';
