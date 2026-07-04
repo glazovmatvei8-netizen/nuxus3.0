@@ -6,25 +6,22 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from '@/components/ui/button';
 import { RefreshCw, Zap, Download, ShieldCheck, ListChecks, ArrowUpCircle } from 'lucide-react';
 import { Progress } from './ui/progress';
-import versions from '@/app/versions.json';
+import nuxusVersions from '@/app/versions.json';
 
 /**
- * КВАНТОВЫЙ ОБНОВЛЯТОР ЯДРА V26.0.1 (Live-Pulse)
- * ОБНОВЛЕНО: Проверяет версию при каждом фокусе на приложение.
- * Смарт-логика: если пользователь перезагрузил страницу и CURRENT_VERSION совпал — молчит.
+ * КВАНТОВЫЙ ОБНОВЛЯТОР ЯДРА V26.0.2 (Live-Pulse)
  */
-const CURRENT_VERSION = "26.0.1"; 
+const CURRENT_VERSION = "26.0.2"; 
 
 export function UpdateNotifier() {
   const [isOpen, setIsOpen] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
   const [updateProgress, setUpdateProgress] = useState(0);
-  const [serverVersion, setServerVersion] = useState(versions.latestVersion);
-  const [changelog, setChangelog] = useState<string[]>(versions.changelog);
+  const [serverVersion, setServerVersion] = useState(nuxusVersions.latestVersion);
+  const [changelog, setChangelog] = useState<string[]>(nuxusVersions.changelog);
 
   const checkVersion = useCallback(async () => {
     try {
-      // Игнорируем кэш, чтобы всегда видеть свежий JSON
       const response = await fetch(`/versions.json?t=${Date.now()}`, { cache: 'no-store' });
       if (response.ok) {
         const data = await response.json();
@@ -33,16 +30,12 @@ export function UpdateNotifier() {
         
         const lastInstalled = localStorage.getItem('nuxus_last_installed_version');
         
-        // КРИТИЧЕСКАЯ ЛОГИКА:
-        // Если версия в коде (CURRENT_VERSION) УЖЕ совпадает с серверной — значит человек обновился (перезашел).
-        // В этом случае просто обновляем запись в localStorage и НЕ показываем окно.
         if (data.latestVersion === CURRENT_VERSION) {
           localStorage.setItem('nuxus_last_installed_version', data.latestVersion);
           setIsOpen(false);
           return;
         }
 
-        // Если же версия в коде старая, и в памяти нет отметки об игноре этой версии — показываем окно.
         if (data.latestVersion !== CURRENT_VERSION && lastInstalled !== data.latestVersion) {
           setIsOpen(true);
         }
@@ -55,13 +48,9 @@ export function UpdateNotifier() {
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
-    // Первичная проверка через 2 сек после старта
     const timer = setTimeout(checkVersion, 2000);
-    
-    // Поллинг раз в минуту для "живого" ощущения
     const interval = setInterval(checkVersion, 60000);
 
-    // Самая важная часть: проверка при возврате в приложение
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
         checkVersion();
@@ -89,7 +78,6 @@ export function UpdateNotifier() {
         clearInterval(interval);
         localStorage.setItem('nuxus_last_installed_version', serverVersion);
         setTimeout(() => {
-          // Полная перезагрузка для сброса кэша и активации нового кода
           window.location.reload();
         }, 500);
       } else {
@@ -134,7 +122,7 @@ export function UpdateNotifier() {
           <DialogHeader className="space-y-2 text-left">
             <div className="flex items-center justify-between">
               <DialogTitle className="text-3xl font-black uppercase italic tracking-tighter text-white">Ядро {serverVersion}</DialogTitle>
-              <span className="text-[10px] font-black bg-white/5 border border-white/10 px-3 py-1 rounded-lg text-primary">{versions.sizeMb} MB</span>
+              <span className="text-[10px] font-black bg-white/5 border border-white/10 px-3 py-1 rounded-lg text-primary">145 MB</span>
             </div>
             <DialogDescription className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em] ml-1">
               Критическое обновление системных протоколов

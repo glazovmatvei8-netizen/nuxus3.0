@@ -1,8 +1,8 @@
 
 'use server';
 /**
- * @fileOverview A Genkit flow for generating AI videos using Veo 3.0 model.
- * Real cinematic motion synthesis from images or text.
+ * @fileOverview A Genkit flow for generating AI videos using Veo model.
+ * Fixed to use Veo 2.0 for higher availability and stability.
  */
 
 import { ai } from '@/ai/genkit';
@@ -21,8 +21,8 @@ const GenerateAiVideoOutputSchema = z.object({
 export type GenerateAiVideoOutput = z.infer<typeof GenerateAiVideoOutputSchema>;
 
 /**
- * Animates a photo or generates video from text using the latest Veo model.
- * Uses veo-3.0-generate-preview for maximum cinematic quality.
+ * Animates a photo or generates video from text using the Veo 2.0 model.
+ * Switch to veo-2.0-generate-001 for better reliability in current API.
  */
 export async function generateAiVideo(input: GenerateAiVideoInput): Promise<GenerateAiVideoOutput> {
   return generateAiVideoFlow(input);
@@ -43,11 +43,13 @@ const generateAiVideoFlow = ai.defineFlow(
         promptParts.push({ media: { url: input.photoDataUri } });
       }
 
+      // Switching model to VEO 2.0 which is widely available and stable
       let { operation } = await ai.generate({
-        model: googleAI.model('veo-3.0-generate-preview'),
+        model: googleAI.model('veo-2.0-generate-001'),
         prompt: promptParts,
         config: {
           aspectRatio: '16:9',
+          durationSeconds: 5,
           personGeneration: 'allow_all'
         },
       });
@@ -56,9 +58,8 @@ const generateAiVideoFlow = ai.defineFlow(
         throw new Error('Signal lost: Model did not return an operation.');
       }
 
-      // Polling loop with better exit conditions for high-quality synthesis
       let attempts = 0;
-      const maxAttempts = 50; // 50 * 5s = 250 seconds max
+      const maxAttempts = 60; 
       while (!operation.done && attempts < maxAttempts) {
         await new Promise((resolve) => setTimeout(resolve, 5000));
         operation = await ai.checkOperation(operation);
@@ -83,7 +84,6 @@ const generateAiVideoFlow = ai.defineFlow(
         throw new Error("System error: GOOGLE_API_KEY is missing in environment.");
       }
 
-      // Fetch video and convert to data URI for immediate playback in the Kernel
       const fetch = (await import('node-fetch')).default;
       const response = await fetch(`${videoPart.media.url}&key=${apiKey}`);
       
@@ -98,7 +98,7 @@ const generateAiVideoFlow = ai.defineFlow(
         videoDataUri: `data:video/mp4;base64,${base64}`,
       };
     } catch (err: any) {
-      console.error("Veo 3.0 Cinema Error:", err);
+      console.error("Veo 2.0 Cinema Error:", err);
       throw new Error(err.message || "Unknown error during video synthesis.");
     }
   }

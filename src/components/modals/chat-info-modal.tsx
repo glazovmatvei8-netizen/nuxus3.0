@@ -418,7 +418,7 @@ export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onO
       chatId={chat.id} 
       currentParticipantIds={chat.participantIds} 
     />
-    <GiftModal open={isGiftModalOpen} onOpenChange={setIsGiftModalOpen} targetUser={otherUserProfile || null} />
+    <GiftModal open={isGiftModalOpen} onOpenChange={setIsGiftModalOpen} targetUser={otherUserProfile || null} chatId={chat.id} />
     </>
   );
 }

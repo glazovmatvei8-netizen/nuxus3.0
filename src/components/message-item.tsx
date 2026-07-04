@@ -20,7 +20,7 @@ import {
 import { format, isAfter, parseISO } from 'date-fns';
 import { 
   CornerUpLeft, Trash2, Check, CheckCheck, Edit2, Copy, Pin, X, Share2, Play, Smile, Lock, Languages, Loader2, Image as ImageIcon,
-  MessageCircle, Star, Pause, ShieldCheck, Clock, Type, Globe, Volume2, Timer, Zap, Maximize2, Video as VideoIcon, Sparkles, PinOff, Wand2
+  MessageCircle, Star, Pause, ShieldCheck, Clock, Type, Globe, Volume2, Timer, Zap, Maximize2, Video as VideoIcon, Sparkles, PinOff, Wand2, Gift
 } from 'lucide-react';
 import { cn, decryptSignal, isGlobalAdmin, isUserPremium } from '@/lib/utils';
 import { doc, updateDoc, deleteDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
@@ -34,7 +34,7 @@ import { Dialog, DialogContent, DialogTitle, DialogPortal, DialogOverlay } from 
 const QUICK_REACTIONS = ['👍', '❤️', '🔥', '😂', '😮', '😢', '👏'];
 
 /**
- * MessageItem V25.5.3: Sticker Visibility Fixed.
+ * MessageItem V26.0.2: Gift Rendering Added.
  */
 export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForward, isAdmin = false, isGroup = false, onEdit, highlight = false, viewerProfile }: any) => {
   const { user } = useUser();
@@ -88,6 +88,24 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
   );
 
   const renderContent = () => {
+    if (message.contentType === 'gift') {
+      return (
+        <div className="flex flex-col items-center gap-4 py-4 px-8 bg-gradient-to-br from-primary/20 to-accent/20 rounded-[2rem] border border-white/10 shadow-2xl">
+          <div className="text-6xl animate-bounce drop-shadow-[0_0_20px_rgba(255,255,255,0.5)]">
+            {message.metadata?.giftIcon || '🎁'}
+          </div>
+          <div className="text-center space-y-1">
+            <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary">Квантовый Артефакт</p>
+            <p className="text-sm font-black text-white uppercase italic tracking-tighter">{message.metadata?.giftName || 'Подарок'}</p>
+          </div>
+          <div className="flex items-center gap-2 bg-white/5 px-4 py-1 rounded-full border border-white/5">
+             <Sparkles className="w-3 h-3 text-accent animate-pulse" />
+             <span className="text-[9px] font-black text-white uppercase tracking-widest">Received</span>
+          </div>
+        </div>
+      );
+    }
+
     if (message.contentType === 'sticker') {
       return (
         <div className="w-48 h-48 flex items-center justify-center relative min-h-[192px]">
@@ -169,9 +187,9 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
           
           <ContextMenu>
             <ContextMenuTrigger>
-              <div className={cn(message.contentType === 'sticker' ? "relative" : bubbleClasses)}>
+              <div className={cn((message.contentType === 'sticker' || message.contentType === 'gift') ? "relative" : bubbleClasses)}>
                 {renderContent()}
-                <div className={cn("flex items-center justify-end gap-2 mt-2 opacity-40 px-1", message.contentType === 'sticker' && "absolute bottom-2 right-2 bg-black/40 rounded-full px-2 py-0.5 backdrop-blur-sm z-20")}>
+                <div className={cn("flex items-center justify-end gap-2 mt-2 opacity-40 px-1", (message.contentType === 'sticker' || message.contentType === 'gift') && "absolute bottom-2 right-2 bg-black/40 rounded-full px-2 py-0.5 backdrop-blur-sm z-20")}>
                   <span className="text-[10px] font-black tabular-nums tracking-widest">{formattedTime}</span>
                   {isMe && (
                     message.isPending ? <Clock className="w-3.5 h-3.5 text-primary animate-pulse" /> : (message.isRead ? <CheckCheck className="w-4 h-4 text-accent" /> : <Check className="w-4 h-4" />)

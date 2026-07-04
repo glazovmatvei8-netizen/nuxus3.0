@@ -27,7 +27,7 @@ const PREDEFINED_GIFTS = [
   { id: 'crystal', name: 'Кристалл Времени', price: 20000, icon: '💎' },
 ];
 
-export function GiftModal({ open, onOpenChange, targetUser }: { open: boolean, onOpenChange: (o: boolean) => void, targetUser: User | null }) {
+export function GiftModal({ open, onOpenChange, targetUser, chatId }: { open: boolean, onOpenChange: (o: boolean) => void, targetUser: User | null, chatId?: string | null }) {
   const { user } = useUser();
   const db = useFirestore();
   const { toast } = useToast();
@@ -80,6 +80,24 @@ export function GiftModal({ open, onOpenChange, targetUser }: { open: boolean, o
       });
 
       await batch.commit();
+
+      // 4. Отправка сервисного сообщения в чат (если есть chatId)
+      if (chatId) {
+        await addDoc(collection(db, 'chats', chatId, 'messages'), {
+          chatId,
+          senderId: user.uid,
+          senderName: myProfile.name,
+          content: `${myProfile.name} подарил подарок: ${gift.name} ${gift.icon}`,
+          contentType: 'gift',
+          sentAt: new Date().toISOString(),
+          isRead: false,
+          metadata: {
+            giftId: gift.id,
+            giftIcon: gift.icon,
+            giftName: gift.name
+          }
+        });
+      }
 
       toast({ title: "Подарок отправлен!", description: `${gift.name} теперь в коллекции ${targetUser.name}` });
       onOpenChange(false);

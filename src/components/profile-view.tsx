@@ -2,25 +2,25 @@
 "use client"
 
 import React, { useState, useMemo } from 'react';
-import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
-import { doc } from 'firebase/firestore';
+import { useUser, useFirestore, useDoc, useMemoFirebase, useCollection } from '@/firebase';
+import { doc, query, collection, limit } from 'firebase/firestore';
 import { UserAvatar } from '@/components/user-avatar';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { 
-  Pencil, Bookmark, ChevronRight, Star, Share2, Zap, HelpCircle, Globe, Server, QrCode, Fingerprint, Cpu, Shield, ShieldCheck, Palette, Sparkles
+  Pencil, Bookmark, ChevronRight, Star, Share2, Zap, HelpCircle, Globe, Server, QrCode, Fingerprint, Cpu, Shield, ShieldCheck, Palette, Sparkles, Gift
 } from 'lucide-react';
 import { useAppState } from '@/lib/store';
 import { formatDisplayName, cn, isUserPremium } from '@/lib/utils';
-import type { User } from '@/lib/types';
+import type { User, ReceivedGift } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { QRCodeSVG } from 'qrcode.react';
-import versions from '@/app/versions.json';
+import nuxusVersions from '@/app/versions.json';
 
 /**
- * ГЛАВНЫЙ ЭКРАН ПРОФИЛЯ V25.3.1
- * ОБНОВЛЕНО: Статус вынесен в отдельный блок под именем.
+ * ГЛАВНЫЙ ЭКРАН ПРОФИЛЯ V26.0.2
+ * ОБНОВЛЕНО: Добавлен блок "Мои Подарки".
  */
 export default function ProfileView() {
   const { user } = useUser();
@@ -31,6 +31,12 @@ export default function ProfileView() {
   
   const userProfileRef = useMemoFirebase(() => (!db || !user) ? null : doc(db!, 'users', user.uid), [db, user]);
   const { data: profile } = useDoc<User>(userProfileRef);
+
+  const giftsQuery = useMemoFirebase(() => {
+    if (!db || !user) return null;
+    return query(collection(db, 'users', user.uid, 'receivedGifts'), limit(24));
+  }, [db, user]);
+  const { data: gifts } = useCollection<ReceivedGift>(giftsQuery);
 
   const inviteLink = useMemo(() => {
     if (typeof window === 'undefined' || !user) return '';
@@ -107,6 +113,26 @@ export default function ProfileView() {
              )}
           </div>
 
+          {/* КАРТОЧКА ПОДАРКОВ (НОВОЕ) */}
+          {gifts && gifts.length > 0 && (
+             <div className="obsidian-glass p-6 rounded-[2rem] border-white/5 shadow-xl space-y-4">
+                <div className="flex items-center justify-between">
+                   <div className="flex items-center gap-2 text-accent">
+                      <Gift className="w-4 h-4" />
+                      <span className="text-[10px] font-black uppercase tracking-widest">Моя коллекция</span>
+                   </div>
+                   <span className="text-[10px] font-black text-white/20 uppercase tracking-widest">{gifts.length} Артефактов</span>
+                </div>
+                <div className="grid grid-cols-4 gap-3">
+                   {gifts.map(gift => (
+                      <div key={gift.id} className="aspect-square bg-white/5 rounded-2xl border border-white/5 flex items-center justify-center hover:bg-white/10 transition-all group shadow-inner">
+                         <span className="text-3xl group-hover:scale-125 transition-transform duration-500 drop-shadow-xl">{gift.giftIcon}</span>
+                      </div>
+                   ))}
+                </div>
+             </div>
+          )}
+
           {/* Карточка статуса */}
           <div className="obsidian-glass p-6 rounded-[2rem] space-y-5 relative overflow-hidden group border-white/5 shadow-xl">
              <div className="flex items-center justify-between relative z-10 text-left">
@@ -143,7 +169,7 @@ export default function ProfileView() {
             <ActionCard icon={QrCode} label="Signal QR" sub="ИДЕНТИФИКАЦИЯ" accent="text-accent" onClick={() => setIsQrOpen(true)} />
             <ActionCard 
               icon={ShieldCheck} 
-              label={`QES ${versions.qesVersion}`} 
+              label={`QES ${nuxusVersions.qesVersion}`} 
               sub="ПРОВЕРИТЬ" 
               accent="text-green-400" 
               onClick={handleCheckUpdate} 
@@ -160,7 +186,7 @@ export default function ProfileView() {
           <div className="py-8 flex flex-col items-center gap-4">
             <div className="flex items-center gap-2 obsidian-glass px-4 py-1.5 rounded-full border-white/5">
               <div className="h-1 w-1 rounded-full bg-green-500 animate-pulse" />
-              <p className="text-[8px] text-white/20 uppercase font-black tracking-widest">Узел синхронизирован V{versions.latestVersion}</p>
+              <p className="text-[8px] text-white/20 uppercase font-black tracking-widest">Узел синхронизирован V{nuxusVersions.latestVersion}</p>
             </div>
           </div>
         </div>
@@ -168,7 +194,7 @@ export default function ProfileView() {
 
       <Dialog open={isQrOpen} onOpenChange={setIsQrOpen}>
         <DialogContent className="max-w-xs obsidian-glass border-white/10 rounded-[2.5rem] p-8 text-center shadow-2xl outline-none">
-          <DialogHeader className="mb-4">
+          <DialogHeader>
             <DialogTitle className="text-xl font-black uppercase italic text-white tracking-tighter text-center w-full">Signal Hash</DialogTitle>
             <DialogDescription className="text-[8px] uppercase font-black tracking-widest text-primary/60 mt-1 text-center w-full">Ключ шифрования узла</DialogDescription>
           </DialogHeader>
