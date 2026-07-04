@@ -19,7 +19,7 @@ const EMOJI_DATA = [
 
 /**
  * ЭКСКЛЮЗИВНЫЕ СТИКЕРЫ NUXUS (ULTRA PACK V6)
- * ИСПРАВЛЕНО: Сверхстабильные источники изображений через Picsum Seed.
+ * ОБНОВЛЕНО: Cross-Origin Policy для стабильной загрузки.
  */
 const DEFAULT_STICKERS = [
   'https://picsum.photos/seed/nx_st1/400/400',
@@ -139,7 +139,7 @@ export function EmojiPicker({ onEmojiSelect, onStickerSelect, className }: Emoji
                 onClick={() => setActivePackId(pack.id)}
                 className={cn("h-11 min-w-[44px] rounded-xl overflow-hidden border transition-all", activePackId === pack.id ? "border-primary scale-110 shadow-lg" : "border-white/10 opacity-40")}
               >
-                {pack.iconUrl ? <img src={pack.iconUrl} className="w-full h-full object-cover" alt="Pack" /> : <div className="w-full h-full bg-primary/20 flex items-center justify-center text-[10px] text-primary">{pack.name[0]}</div>}
+                {pack.iconUrl ? <img src={pack.iconUrl} className="w-full h-full object-cover" alt="Pack" crossOrigin="anonymous" /> : <div className="w-full h-full bg-primary/20 flex items-center justify-center text-[10px] text-primary">{pack.name[0]}</div>}
               </button>
             ))}
           </div>
@@ -151,14 +151,16 @@ export function EmojiPicker({ onEmojiSelect, onStickerSelect, className }: Emoji
                   <button 
                     key={idx} 
                     onClick={() => { onStickerSelect(url); if (window.navigator && window.navigator.vibrate) window.navigator.vibrate(10); }}
-                    className="aspect-square rounded-[1.5rem] overflow-hidden hover:bg-white/10 active:scale-90 transition-all p-2 bg-white/5 border border-white/5 group shadow-lg flex items-center justify-center relative"
+                    className="aspect-square rounded-[1.5rem] overflow-hidden hover:bg-white/10 active:scale-90 transition-all p-2 bg-white/5 border border-white/5 group shadow-lg flex items-center justify-center relative min-w-[64px] min-h-[64px]"
                   >
                     <img 
                       src={url} 
                       alt="Sticker" 
                       className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-500 drop-shadow-xl block relative z-10" 
-                      style={{ width: '100%', height: '100%', minWidth: '60px' }}
+                      style={{ width: '100%', height: '100%' }}
                       loading="eager"
+                      crossOrigin="anonymous"
+                      referrerPolicy="no-referrer"
                     />
                   </button>
                 ))}

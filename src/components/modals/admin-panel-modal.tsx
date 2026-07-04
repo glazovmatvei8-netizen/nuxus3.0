@@ -23,7 +23,7 @@ import { collection, query, doc, limit, updateDoc, writeBatch, getDocs, where, o
 import { UserAvatar } from '@/components/user-avatar';
 import { 
   ShieldAlert, Users, Star, Ban, ShieldCheck, 
-  MoreVertical, Send, Loader2, Database, Package, FileText, UserPlus, ShieldX, CalendarClock, Wallet, Check, X, Trash2
+  MoreVertical, Send, Loader2, Database, Package, FileText, UserPlus, ShieldX, CalendarClock, Wallet, Check, X, Trash2, Clock
 } from 'lucide-react';
 import type { User, TopUpRequest } from '@/lib/types';
 import { formatDisplayName, isUserPremium, cn, isGlobalAdmin } from '@/lib/utils';
@@ -41,11 +41,27 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
   const [broadcastText, setBroadcastText] = useState('');
   const [isBroadcasting, setIsBroadcasting] = useState(false);
 
+  // Оптимизированный поиск пользователей
   const usersQuery = useMemoFirebase(() => (!db ? null : query(collection(db, 'users'), limit(500))), [db]);
   const { data: users } = useCollection<User>(usersQuery);
 
-  const topUpRequestsQuery = useMemoFirebase(() => (!db ? null : query(collection(db, 'topUpRequests'), where('status', '==', 'pending'), orderBy('createdAt', 'desc'))), [db]);
-  const { data: topUpRequests } = useCollection<TopUpRequest>(topUpRequestsQuery);
+  // ИСПРАВЛЕННЫЙ ЗАПРОС ЗАЯВОК: Убираем orderBy для исключения ошибок отсутствия индексов
+  const topUpRequestsQuery = useMemoFirebase(() => {
+    if (!db) return null;
+    return query(collection(db, 'topUpRequests'), where('status', '==', 'pending'));
+  }, [db]);
+  
+  const { data: rawTopUpRequests, isLoading: isRequestsLoading } = useCollection<TopUpRequest>(topUpRequestsQuery);
+
+  // Локальная сортировка заявок (самые новые сверху)
+  const topUpRequests = useMemo(() => {
+    if (!rawTopUpRequests) return [];
+    return [...rawTopUpRequests].sort((a, b) => {
+      const aTime = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const bTime = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      return bTime - aTime;
+    });
+  }, [rawTopUpRequests]);
 
   const stats = useMemo(() => {
     if (!users) return { total: 0, premium: 0, admins: 0, banned: 0 };
@@ -113,7 +129,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
       });
 
       await batch.commit();
-      toast({ title: "Заявка одобрена", description: `${req.amount} NX начислено ${req.userName}` });
+      toast({ title: "Заявка одобрена", description: `${req.amount} NX начислено ${req.userName || 'пользователю'}` });
     } catch (e: any) {
       toast({ title: "Ошибка одобрения", variant: "destructive" });
     }
@@ -192,7 +208,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
               <div className="p-6 shrink-0"><Input placeholder="Поиск по базе сигналов..." value={userSearch} onChange={e => setUserSearch(e.target.value)} className="bg-white/5 border-white/10 h-14 rounded-2xl pl-6 text-sm" /></div>
               <ScrollArea className="flex-1">
                 <div className="px-6 space-y-2 pb-20">
-                  {users?.filter(u => u.name?.toLowerCase().includes(userSearch.toLowerCase()) || u.usernameLowercase?.includes(userSearch.toLowerCase())).map(u => (
+                  {users?.filter(u => u.name?.toLowerCase().includes(userSearch.toLowerCase()) || u.username?.toLowerCase().includes(userSearch.toLowerCase())).map(u => (
                     <div key={u.id} className="flex items-center justify-between p-4 bg-white/5 rounded-3xl border border-white/5 hover:bg-white/[0.08] transition-all">
                       <div className="flex items-center gap-4 text-left">
                         <UserAvatar userId={u.id} className="h-12 w-12" />
@@ -244,15 +260,23 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
             </TabsContent>
 
             <TabsContent value="requests" className="h-full m-0 p-0 flex flex-col animate-in fade-in duration-500">
-               <ScrollArea className="flex-1">
+               <ScrollArea className="flex-1 min-h-[300px]">
                   <div className="p-8 space-y-3 pb-24">
-                    {topUpRequests && topUpRequests.length > 0 ? topUpRequests.map(req => (
+                    {isRequestsLoading ? (
+                      <div className="flex flex-col items-center justify-center py-20 gap-4 opacity-40">
+                         <Loader2 className="w-10 h-10 animate-spin text-primary" />
+                         <p className="text-[10px] font-black uppercase tracking-widest">Загрузка сигналов...</p>
+                      </div>
+                    ) : topUpRequests.length > 0 ? topUpRequests.map(req => (
                       <div key={req.id} className="flex items-center justify-between p-5 bg-white/5 border border-white/5 rounded-[2.2rem] hover:bg-white/[0.08] transition-all shadow-xl">
                          <div className="flex items-center gap-4 text-left min-w-0 flex-1">
                            <UserAvatar userId={req.userId} className="h-14 w-14 shrink-0 shadow-lg" />
                            <div className="flex flex-col min-w-0">
-                             <span className="font-black text-white text-base truncate uppercase italic tracking-tight">{req.userName}</span>
-                             <span className="text-xl text-primary font-black italic tracking-tighter tabular-nums">{req.amount} NX</span>
+                             <span className="font-black text-white text-base truncate uppercase italic tracking-tight">{req.userName || 'Anonymous Node'}</span>
+                             <div className="flex items-center gap-2">
+                               <span className="text-xl text-primary font-black italic tracking-tighter tabular-nums">{req.amount} NX</span>
+                               <span className="text-[8px] text-white/20 font-black uppercase flex items-center gap-1"><Clock className="w-2.5 h-2.5" /> {req.createdAt ? new Date(req.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '--:--'}</span>
+                             </div>
                            </div>
                          </div>
                          <div className="flex gap-3 shrink-0 ml-4">

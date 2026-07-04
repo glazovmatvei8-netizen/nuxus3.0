@@ -27,7 +27,7 @@ import { Dialog, DialogContent, DialogTitle, DialogPortal, DialogOverlay } from 
 const QUICK_REACTIONS = ['👍', '❤️', '🔥', '😂', '😮', '😢', '👏'];
 
 /**
- * MessageItem V26.5.0: AI Features Temporarily Disabled.
+ * MessageItem V26.5.2: Sticker Vision & Asset Fix.
  */
 export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForward, isAdmin = false, isGroup = false, onEdit, highlight = false, viewerProfile }: any) => {
   const { user } = useUser();
@@ -121,12 +121,14 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
 
     if (message.contentType === 'sticker') {
       return (
-        <div className="w-48 h-48 flex items-center justify-center relative">
+        <div className="w-48 h-48 flex items-center justify-center relative min-w-[128px] min-h-[128px]">
           <img 
             src={message.content} 
             alt="Sticker" 
             className="max-w-full max-h-full object-contain pointer-events-none drop-shadow-2xl hover:scale-110 transition-transform duration-500 block relative z-10" 
             style={{ width: '192px', height: '192px' }}
+            crossOrigin="anonymous"
+            referrerPolicy="no-referrer"
           />
         </div>
       );
