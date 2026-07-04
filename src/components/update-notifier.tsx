@@ -4,58 +4,78 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { RefreshCw, Zap, Download, ShieldCheck, ListChecks } from 'lucide-react';
+import { RefreshCw, Zap, Download, ShieldCheck, ListChecks, ArrowUpCircle } from 'lucide-react';
 import { Progress } from './ui/progress';
 import versions from '@/app/versions.json';
 
 /**
- * КВАНТОВЫЙ ОБНОВЛЯТОР ЯДРА V25.5.5
- * СИНХРОНИЗИРОВАНО: Элитная производительность.
+ * КВАНТОВЫЙ ОБНОВЛЯТОР ЯДРА V26.0.1 (Live-Pulse)
+ * ОБНОВЛЕНО: Проверяет версию при каждом фокусе на приложение.
+ * Смарт-логика: если пользователь перезагрузил страницу и CURRENT_VERSION совпал — молчит.
  */
-const CURRENT_VERSION = "25.5.5"; 
+const CURRENT_VERSION = "26.0.1"; 
 
 export function UpdateNotifier() {
   const [isOpen, setIsOpen] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
   const [updateProgress, setUpdateProgress] = useState(0);
   const [serverVersion, setServerVersion] = useState(versions.latestVersion);
+  const [changelog, setChangelog] = useState<string[]>(versions.changelog);
 
   const checkVersion = useCallback(async () => {
     try {
+      // Игнорируем кэш, чтобы всегда видеть свежий JSON
       const response = await fetch(`/versions.json?t=${Date.now()}`, { cache: 'no-store' });
       if (response.ok) {
         const data = await response.json();
         setServerVersion(data.latestVersion);
+        setChangelog(data.changelog);
         
         const lastInstalled = localStorage.getItem('nuxus_last_installed_version');
         
+        // КРИТИЧЕСКАЯ ЛОГИКА:
+        // Если версия в коде (CURRENT_VERSION) УЖЕ совпадает с серверной — значит человек обновился (перезашел).
+        // В этом случае просто обновляем запись в localStorage и НЕ показываем окно.
+        if (data.latestVersion === CURRENT_VERSION) {
+          localStorage.setItem('nuxus_last_installed_version', data.latestVersion);
+          setIsOpen(false);
+          return;
+        }
+
+        // Если же версия в коде старая, и в памяти нет отметки об игноре этой версии — показываем окно.
         if (data.latestVersion !== CURRENT_VERSION && lastInstalled !== data.latestVersion) {
           setIsOpen(true);
-        } else {
-          setIsOpen(false);
         }
       }
     } catch (e) {
-      console.warn("Nuxus Sync: Version registry signal lost.");
+      console.warn("Nuxus Sync: Signal lost.");
     }
   }, []);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
-    const timer = setTimeout(checkVersion, 3000);
-    const interval = setInterval(checkVersion, 300000);
+    // Первичная проверка через 2 сек после старта
+    const timer = setTimeout(checkVersion, 2000);
+    
+    // Поллинг раз в минуту для "живого" ощущения
+    const interval = setInterval(checkVersion, 60000);
 
-    const handleManualCheck = () => {
-      checkVersion();
+    // Самая важная часть: проверка при возврате в приложение
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        checkVersion();
+      }
     };
     
-    window.addEventListener('nuxus_check_updates', handleManualCheck);
+    window.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('nuxus_check_updates', checkVersion);
     
     return () => {
       clearTimeout(timer);
       clearInterval(interval);
-      window.removeEventListener('nuxus_check_updates', handleManualCheck);
+      window.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('nuxus_check_updates', checkVersion);
     };
   }, [checkVersion]);
 
@@ -63,34 +83,36 @@ export function UpdateNotifier() {
     setIsUpdating(true);
     let p = 0;
     const interval = setInterval(() => {
-      p += Math.random() * 25;
+      p += Math.random() * 20;
       if (p >= 100) {
         setUpdateProgress(100);
         clearInterval(interval);
         localStorage.setItem('nuxus_last_installed_version', serverVersion);
         setTimeout(() => {
+          // Полная перезагрузка для сброса кэша и активации нового кода
           window.location.reload();
         }, 500);
       } else {
         setUpdateProgress(p);
       }
-    }, 120);
+    }, 100);
   };
-
-  const isUpToDate = serverVersion === CURRENT_VERSION;
 
   if (isUpdating) {
     return (
-      <div className="fixed inset-0 z-[10000] bg-[#050505] flex flex-col items-center justify-center p-8 text-center">
-        <div className="w-full max-w-xs space-y-8 animate-in zoom-in duration-500">
-          <div className="bg-white/[0.03] border border-white/10 w-24 h-24 rounded-[2.5rem] flex items-center justify-center mx-auto shadow-2xl">
-            <Download className="w-10 h-10 text-primary animate-bounce" />
+      <div className="fixed inset-0 z-[10000] bg-[#050505] flex flex-col items-center justify-center p-8 text-center animate-in fade-in duration-500">
+        <div className="w-full max-w-xs space-y-10">
+          <div className="bg-primary/10 border border-primary/20 w-28 h-28 rounded-[3rem] flex items-center justify-center mx-auto shadow-2xl relative">
+            <Download className="w-12 h-12 text-primary animate-bounce" />
+            <div className="absolute inset-0 border-2 border-primary/20 rounded-[3rem] animate-ping opacity-20" />
           </div>
-          <div className="space-y-2">
-            <h2 className="text-2xl font-black uppercase italic tracking-tighter">Синхронизация</h2>
-            <p className="text-[10px] font-black uppercase tracking-[0.4em] text-primary/60">Загрузка патча: {Math.round(updateProgress)}%</p>
+          <div className="space-y-3">
+            <h2 className="text-3xl font-black uppercase italic tracking-tighter text-white">Синхронизация</h2>
+            <p className="text-[10px] font-black uppercase tracking-[0.5em] text-primary/60">Загрузка сегмента: {Math.round(updateProgress)}%</p>
           </div>
-          <Progress value={updateProgress} className="h-1.5 bg-white/5" />
+          <div className="relative h-2 w-full bg-white/5 rounded-full overflow-hidden border border-white/5">
+             <div className="h-full bg-primary shadow-[0_0_20px_rgba(168,85,247,0.8)] transition-all duration-300" style={{ width: `${updateProgress}%` }} />
+          </div>
         </div>
       </div>
     );
@@ -98,60 +120,54 @@ export function UpdateNotifier() {
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogContent className="max-w-[420px] bg-[#0a0a0c]/95 backdrop-blur-3xl border-primary/20 rounded-[2.8rem] p-0 overflow-hidden shadow-2xl outline-none">
-        <div className="relative h-40 bg-gradient-to-br from-primary/20 to-transparent flex items-center justify-center">
-          <Zap className="w-16 h-16 text-primary animate-pulse" />
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(168,85,247,0.1)_0%,transparent_70%)]" />
+      <DialogContent className="max-w-[440px] bg-[#0a0a0c]/98 backdrop-blur-3xl border-primary/30 rounded-[3rem] p-0 overflow-hidden shadow-[0_0_100px_rgba(168,85,247,0.3)] outline-none animate-in slide-in-from-bottom-10 duration-700">
+        <div className="relative h-48 bg-gradient-to-br from-primary/30 to-transparent flex flex-col items-center justify-center overflow-hidden">
+          <Zap className="w-20 h-20 text-primary animate-pulse relative z-10" />
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(168,85,247,0.2)_0%,transparent_70%)]" />
+          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-2 bg-black/40 px-4 py-1.5 rounded-full border border-white/10 backdrop-blur-md">
+             <ArrowUpCircle className="w-3.5 h-3.5 text-primary" />
+             <span className="text-[9px] font-black text-white uppercase tracking-widest">Новый сигнал обнаружен</span>
+          </div>
         </div>
 
-        <div className="p-8 space-y-6 relative z-10">
-          <DialogHeader className="space-y-1 text-left">
-            <DialogTitle className="text-2xl font-black uppercase italic tracking-tighter text-white">
-              {isUpToDate ? 'Ядро Актуально' : 'Доступен Патч'}
-            </DialogTitle>
-            <DialogDescription className="flex items-center gap-2 text-[10px] font-bold text-primary uppercase tracking-widest">
-              <span>{isUpToDate ? `V ${serverVersion}` : `Сборка ${serverVersion}`}</span>
-              <span className="opacity-30">•</span>
-              <span>{versions.sizeMb} МБ</span>
+        <div className="p-8 space-y-8 relative z-10">
+          <DialogHeader className="space-y-2 text-left">
+            <div className="flex items-center justify-between">
+              <DialogTitle className="text-3xl font-black uppercase italic tracking-tighter text-white">Ядро {serverVersion}</DialogTitle>
+              <span className="text-[10px] font-black bg-white/5 border border-white/10 px-3 py-1 rounded-lg text-primary">{versions.sizeMb} MB</span>
+            </div>
+            <DialogDescription className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em] ml-1">
+              Критическое обновление системных протоколов
             </DialogDescription>
           </DialogHeader>
 
-          {!isUpToDate && (
-            <div className="space-y-3 bg-white/5 p-5 rounded-3xl border border-white/5 shadow-inner">
-              <div className="flex items-center gap-2 text-white/40 mb-1">
-                <ListChecks className="w-3.5 h-3.5" />
-                <span className="text-[9px] font-black uppercase tracking-widest">Список изменений:</span>
-              </div>
-              <ul className="space-y-2">
-                {versions.changelog.map((item, idx) => (
-                  <li key={idx} className="text-[11px] text-white/80 font-medium leading-tight flex gap-2">
-                    <span className="text-primary">•</span> {item}
-                  </li>
-                ))}
-              </ul>
+          <div className="space-y-4 bg-white/[0.03] p-6 rounded-[2.2rem] border border-white/5 shadow-inner">
+            <div className="flex items-center gap-3 text-white/40 mb-2">
+              <ListChecks className="w-4 h-4 text-primary" />
+              <span className="text-[10px] font-black uppercase tracking-widest">Список модификаций:</span>
             </div>
-          )}
+            <ul className="space-y-3">
+              {changelog.map((item, idx) => (
+                <li key={idx} className="text-[13px] text-white/90 font-medium leading-snug flex gap-3 animate-in fade-in slide-in-from-left-2" style={{ animationDelay: `${idx * 100}ms` }}>
+                  <span className="text-primary mt-1 shrink-0">•</span> 
+                  <span className="tracking-tight">{item}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
 
-          <div className="flex flex-col gap-2">
-            {!isUpToDate ? (
-              <>
-                <Button 
-                  onClick={handleUpdateAction}
-                  className="h-14 bg-primary text-white rounded-2xl font-black uppercase italic tracking-widest shadow-xl shadow-primary/30 group relative overflow-hidden"
-                >
-                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
-                  <RefreshCw className="w-5 h-5 mr-2 group-hover:rotate-180 transition-transform duration-700" />
-                  Принять Сигнал
-                </Button>
-                <Button variant="ghost" onClick={() => setIsOpen(false)} className="h-12 text-[10px] font-black uppercase tracking-widest text-muted-foreground/40 hover:text-white">
-                  Игнорировать
-                </Button>
-              </>
-            ) : (
-              <Button onClick={() => setIsOpen(false)} className="h-14 bg-white/5 border border-white/10 text-white rounded-2xl font-black uppercase tracking-widest hover:bg-white/10 transition-all">
-                Закрыть
-              </Button>
-            )}
+          <div className="flex flex-col gap-3">
+            <Button 
+              onClick={handleUpdateAction}
+              className="h-16 bg-primary text-white rounded-[1.5rem] font-black uppercase italic tracking-widest shadow-2xl shadow-primary/30 group relative overflow-hidden active:scale-95 transition-all text-sm"
+            >
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
+              <RefreshCw className="w-5 h-5 mr-3 group-hover:rotate-180 transition-transform duration-700" />
+              Активировать патч
+            </Button>
+            <Button variant="ghost" onClick={() => setIsOpen(false)} className="h-12 text-[9px] font-black uppercase tracking-[0.3em] text-muted-foreground/40 hover:text-white transition-all">
+              Игнорировать (временно)
+            </Button>
           </div>
         </div>
       </DialogContent>

@@ -21,12 +21,12 @@ import {
   DropdownMenuSeparator
 } from "@/components/ui/dropdown-menu";
 import { useFirestore, useUser, useDoc, useMemoFirebase, useCollection } from '@/firebase';
-import { doc, updateDoc, arrayRemove, arrayUnion, query, collection, where, limit } from 'firebase/firestore';
+import { doc, updateDoc, arrayRemove, arrayUnion, query, collection, where, limit, orderBy } from 'firebase/firestore';
 import { deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { useToast } from '@/hooks/use-toast';
 import { useAppState } from '@/lib/store';
 import { formatDisplayName, isUserPremium, formatLastSeen, cn, isGlobalAdmin, decryptSignal } from '@/lib/utils';
-import type { User, Chat, ReceivedGift } from '@/lib/types';
+import type { User, Chat, ReceivedGift, Message } from '@/lib/types';
 import { addHours, isAfter, parseISO } from 'date-fns';
 import { AddMemberModal } from './add-member-modal';
 import { GiftModal } from './gift-modal';
