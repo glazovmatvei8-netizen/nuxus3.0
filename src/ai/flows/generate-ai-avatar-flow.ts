@@ -2,7 +2,7 @@
 'use server';
 /**
  * @fileOverview A Genkit flow for generating a premium AI avatar for Nuxus users.
- * Updated to Imagen 3 for free-tier compatibility.
+ * Updated to Imagen 3 Fast for maximum stability.
  */
 
 import { ai } from '@/ai/genkit';
@@ -14,7 +14,7 @@ const GenerateAiAvatarOutputSchema = z.object({
 export type GenerateAiAvatarOutput = z.infer<typeof GenerateAiAvatarOutputSchema>;
 
 /**
- * Generates a high-quality, professional 3D avatar using Imagen 3.
+ * Generates a high-quality, professional 3D avatar using Imagen 3 Fast.
  */
 export async function generateAiAvatar(): Promise<GenerateAiAvatarOutput> {
   return generateAiAvatarFlow();
@@ -31,7 +31,7 @@ const generateAiAvatarFlow = ai.defineFlow(
     
     try {
       const { media } = await ai.generate({
-        model: 'googleai/imagen-3',
+        model: 'googleai/imagen-3-fast',
         prompt: prompt,
       });
 
@@ -43,7 +43,8 @@ const generateAiAvatarFlow = ai.defineFlow(
         imageUrl: media.url,
       };
     } catch (e: any) {
-      throw new Error("Avatar synthesis restricted or failed.");
+      console.error("AI Avatar Error:", e);
+      throw new Error("Avatar synthesis restricted or failed. Try again in a moment.");
     }
   }
 );

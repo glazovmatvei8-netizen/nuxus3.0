@@ -27,7 +27,7 @@ import { useTranslations } from '@/hooks/use-translations';
 import { addMinutes } from 'date-fns';
 
 /**
- * ChatInputBar V26.1.2: Strict Layout Priority.
+ * ChatInputBar V26.2.0: Optimized for iPhone Bottom Inset.
  */
 const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, isPremium, messages, userProfile }: any) => {
   const { localDrafts, setLocalDrafts } = useAppState();
@@ -94,6 +94,7 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
     setMessageInput('');
     setLocalDrafts(prev => ({ ...prev, [currentChatId]: '' }));
     setDestructTimer(null);
+    if (window.navigator && window.navigator.vibrate) window.navigator.vibrate(10);
   };
 
   const startRecording = async () => {
@@ -125,6 +126,7 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
       setIsRecording(true);
       setRecordingDuration(0);
       timerIntervalRef.current = setInterval(() => setRecordingDuration(prev => prev + 1), 1000);
+      if (window.navigator && window.navigator.vibrate) window.navigator.vibrate(50);
     } catch (err) {}
   };
 
@@ -133,6 +135,7 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
       mediaRecorderRef.current.stop();
       setIsRecording(false);
       if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
+      if (window.navigator && window.navigator.vibrate) window.navigator.vibrate(30);
     }
   };
 
@@ -149,7 +152,7 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
   if (!canPost) return null;
 
   return (
-    <footer className="p-4 pt-2 pb-[calc(1.5rem+env(safe-area-inset-bottom))] obsidian-glass border-t border-white/5 shrink-0 z-40 relative">
+    <footer className="p-4 pt-2 pb-[calc(1rem+env(safe-area-inset-bottom))] obsidian-glass border-t border-white/5 shrink-0 z-40 relative">
       {isRecording && recorderMode === 'video' && (
         <div className="absolute bottom-32 left-1/2 -translate-x-1/2 w-64 h-64 rounded-full overflow-hidden border-4 border-primary shadow-[0_0_60px_rgba(168,85,247,0.6)] z-50 bg-black animate-in zoom-in duration-500">
           <video ref={videoPreviewRef} autoPlay muted loop playsInline className={cn("w-full h-full object-cover", camMode === 'user' && "scale-x-[-1]")} />
@@ -195,7 +198,7 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
                 {destructTimer && <Timer className="w-5 h-5 text-primary mr-3 mb-2 animate-pulse shrink-0" />}
                 <Textarea 
                   ref={textareaRef}
-                  placeholder="Введите сигнал..." 
+                  placeholder="Сигнал..." 
                   className="bg-transparent border-none focus-visible:ring-0 text-white placeholder:text-white/10 font-bold italic tracking-tight min-h-[40px] max-h-[200px] overflow-y-auto scrollbar-hide py-2 text-base resize-none w-full" 
                   value={messageInput} 
                   onChange={e => handleInputChange(e.target.value)} 
@@ -256,7 +259,7 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
             <div className="flex-1 flex items-center bg-primary/10 border border-primary/20 rounded-[2.5rem] h-14 px-6 gap-6 shadow-xl animate-in slide-in-from-right-8">
               <div className="flex items-center gap-3 text-primary animate-pulse">
                 <div className="w-2.5 h-2.5 rounded-full bg-primary shadow-[0_0_15px_rgba(168,85,247,1)]" />
-                <span className="text-[10px] font-black uppercase tracking-[0.3em]">{recorderMode === 'audio' ? 'SYNCING AUDIO' : 'LIVE STREAM'}</span>
+                <span className="text-[10px] font-black uppercase tracking-[0.3em]">{recorderMode === 'audio' ? 'SYNC AUDIO' : 'LIVE STREAM'}</span>
               </div>
               <span className="text-xl font-black italic text-white flex-1 tracking-widest tabular-nums">
                 {Math.floor(recordingDuration / 60)}:{(recordingDuration % 60).toString().padStart(2, '0')}
@@ -464,7 +467,7 @@ export default function ChatArea() {
           ) : (
             <div className="flex-1 flex items-center gap-5 obsidian-glass px-5 rounded-[1.5rem] h-12 min-w-0 border-white/10">
               <Search className="w-5 h-5 text-primary shrink-0" />
-              <input placeholder="Поиск по сигналам..." className="bg-transparent border-none outline-none text-base h-full text-white font-bold flex-1 min-w-0" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} autoFocus />
+              <input placeholder="Поиск сигналов..." className="bg-transparent border-none outline-none text-base h-full text-white font-bold flex-1 min-w-0" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} autoFocus />
               <button onClick={() => { setIsSearchMode(false); setSearchQuery(''); }} className="text-white/20 hover:text-white transition-colors shrink-0"><X className="w-6 h-6" /></button>
             </div>
           )}

@@ -22,19 +22,19 @@ import {
   CornerUpLeft, Trash2, Check, CheckCheck, Edit2, Copy, Pin, X, Share2, Play, Smile, Lock, Languages, Loader2, Image as ImageIcon,
   MessageCircle, Star, Pause, ShieldCheck, Clock, Type, Globe, Volume2, Timer, Zap, Maximize2, Video as VideoIcon, Sparkles, PinOff, Wand2, Gift
 } from 'lucide-react';
-import { cn, decryptSignal, isGlobalAdmin, isUserPremium } from '@/lib/utils';
+import { cn, decryptSignal, isGlobalAdmin, isUserPremium, encryptSignal } from '@/lib/utils';
 import { doc, updateDoc, deleteDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
 import type { Message } from '@/lib/types';
 import { Button } from './ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { useAppState } from '@/lib/store';
-import { transcribeVoice } from '@/ai/flows/voice-to-text-flow';
+import { translateMessage } from '@/ai/flows/ai-translate-flow';
 import { Dialog, DialogContent, DialogTitle, DialogPortal, DialogOverlay } from '@/components/ui/dialog';
 
 const QUICK_REACTIONS = ['👍', '❤️', '🔥', '😂', '😮', '😢', '👏'];
 
 /**
- * MessageItem V26.1.2: Final Vision & Layout Fix.
+ * MessageItem V26.2.0: Optimized for iPhone + Premium AI Translate.
  */
 export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForward, isAdmin = false, isGroup = false, onEdit, highlight = false, viewerProfile }: any) => {
   const { user } = useUser();
@@ -45,12 +45,17 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
   const [isPlaying, setIsPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
   const [isMediaViewerOpen, setIsMediaViewerOpen] = useState(false);
+  const [isTranslating, setIsTranslating] = useState(false);
+  const [translatedText, setTranslatedText] = useState<string | null>(null);
   
   const audioInstance = useRef<HTMLAudioElement | null>(null);
 
-  const displayContent = useMemo(() => message.contentType === 'text' ? decryptSignal(message.content) : message.content, [message.content, message.contentType]);
-  const formattedTime = message.sentAt ? format(new Date(message.sentAt), 'HH:mm') : '';
+  const displayContent = useMemo(() => {
+    if (translatedText) return translatedText;
+    return message.contentType === 'text' ? decryptSignal(message.content) : message.content;
+  }, [message.content, message.contentType, translatedText]);
 
+  const formattedTime = message.sentAt ? format(new Date(message.sentAt), 'HH:mm') : '';
   const isPremium = useMemo(() => isUserPremium(viewerProfile), [viewerProfile]);
 
   const handleReaction = async (emoji: string) => {
@@ -60,6 +65,34 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
     if (window.navigator && window.navigator.vibrate) window.navigator.vibrate(50);
     if (hasReacted) await updateDoc(msgRef, { [`reactions.${emoji}`]: arrayRemove(user.uid) });
     else await updateDoc(msgRef, { [`reactions.${emoji}`]: arrayUnion(user.uid) });
+  };
+
+  const handleTranslate = async () => {
+    if (!isPremium || isTranslating) return;
+    const originalText = decryptSignal(message.content);
+    setIsTranslating(true);
+    try {
+      const { translatedText } = await translateMessage({ text: originalText });
+      setTranslatedText(translatedText);
+      if (window.navigator && window.navigator.vibrate) window.navigator.vibrate(20);
+    } catch (e) {
+      toast({ title: "Signal Lost", description: "Translation engine unavailable.", variant: "destructive" });
+    } finally {
+      setIsTranslating(false);
+    }
+  };
+
+  const handleDoubleTap = () => {
+    handleReaction('❤️');
+  };
+
+  const lastTap = useRef(0);
+  const onTouchEnd = () => {
+    const now = Date.now();
+    if (now - lastTap.current < 300) {
+      handleDoubleTap();
+    }
+    lastTap.current = now;
   };
 
   const bubbleStyle = message.metadata?.bubbleStyle || 'default';
@@ -101,7 +134,8 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
             src={message.content} 
             alt="Sticker" 
             className="max-w-full max-h-full object-contain pointer-events-none drop-shadow-2xl hover:scale-110 transition-transform duration-500 block relative z-10" 
-            style={{ width: '192px', height: '192px', display: 'block' }}
+            style={{ width: '192px', height: '192px', display: 'block', minWidth: '192px', minHeight: '192px' }}
+            loading="eager"
           />
         </div>
       );
@@ -151,6 +185,11 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
     return (
       <div className="whitespace-pre-wrap text-[16px] break-words max-w-[320px] font-semibold tracking-tight leading-relaxed">
         {displayContent}
+        {translatedText && (
+          <div className="mt-2 pt-2 border-t border-white/10 flex items-center gap-2 text-[10px] font-black uppercase text-accent/60">
+            <Languages className="w-3 h-3" /> Переведено AI
+          </div>
+        )}
       </div>
     );
   };
@@ -170,7 +209,10 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
             <UserAvatar userId={message.senderId} className="h-10 w-10 shrink-0 border border-white/5" fallbackName={message.senderName} />
           </div>
         )}
-        <div className={cn("flex flex-col min-w-0 max-w-full", isMe ? "items-end" : "items-start")}>
+        <div 
+          className={cn("flex flex-col min-w-0 max-w-full", isMe ? "items-end" : "items-start")}
+          onTouchEnd={onTouchEnd}
+        >
           {!isMe && isGroup && <span className="text-[11px] font-black text-primary uppercase tracking-[0.2em] mb-1.5 ml-2 opacity-60">{message.senderName}</span>}
           
           <ContextMenu>
@@ -192,6 +234,11 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
                 ))}
               </div>
               <ContextMenuItem onClick={() => onReply(message)} className="gap-4 py-3 font-black text-[11px] uppercase tracking-widest"><CornerUpLeft className="w-4 h-4" /> Ответить</ContextMenuItem>
+              {isPremium && message.contentType === 'text' && (
+                <ContextMenuItem onClick={handleTranslate} className="gap-4 py-3 font-black text-[11px] uppercase tracking-widest text-accent">
+                  {isTranslating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Languages className="w-4 h-4" />} Перевести
+                </ContextMenuItem>
+              )}
               {isMe && <ContextMenuItem onClick={() => onEdit(message)} className="gap-4 py-3 font-black text-[11px] uppercase tracking-widest"><Edit2 className="w-4 h-4" /> Исправить</ContextMenuItem>}
               <ContextMenuItem onClick={() => onForward(message)} className="gap-4 py-3 font-black text-[11px] uppercase tracking-widest"><Share2 className="w-4 h-4" /> Резонанс</ContextMenuItem>
               <DropdownMenuSeparator className="bg-white/5 mx-2 my-1" />

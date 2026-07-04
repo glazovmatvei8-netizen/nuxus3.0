@@ -2,9 +2,7 @@
 'use server';
 /**
  * @fileOverview A Genkit flow for generating high-quality AI images from text prompts.
- * Updated to Imagen 3 for better accessibility.
- *
- * - generateAiImage - Main function to generate an image.
+ * Updated to Imagen 3 Fast for better accessibility and free-tier support.
  */
 
 import { ai } from '@/ai/genkit';
@@ -21,7 +19,7 @@ const GenerateAiImageOutputSchema = z.object({
 export type GenerateAiImageOutput = z.infer<typeof GenerateAiImageOutputSchema>;
 
 /**
- * Generates a high-quality aesthetic image using Imagen 3.
+ * Generates a high-quality aesthetic image using Imagen 3 Fast.
  */
 export async function generateAiImage(input: GenerateAiImageInput): Promise<GenerateAiImageOutput> {
   return generateAiImageFlow(input);
@@ -34,12 +32,11 @@ const generateAiImageFlow = ai.defineFlow(
     outputSchema: GenerateAiImageOutputSchema,
   },
   async (input) => {
-    // Enhance the prompt for premium aesthetics
     const enhancedPrompt = `A high-quality, aesthetic, professional digital art of: ${input.prompt}. Cinematic lighting, 4k resolution, clean details, masterpiece style.`;
     
     try {
       const { media } = await ai.generate({
-        model: 'googleai/imagen-3',
+        model: 'googleai/imagen-3-fast',
         prompt: enhancedPrompt,
       });
 
@@ -51,8 +48,8 @@ const generateAiImageFlow = ai.defineFlow(
         imageUrl: media.url,
       };
     } catch (err: any) {
-      console.error("Imagen 3 Error:", err);
-      throw new Error(err.message || "Failed to generate image.");
+      console.error("Imagen 3 Fast Error:", err);
+      throw new Error(err.message || "Failed to generate image. Please try again.");
     }
   }
 );

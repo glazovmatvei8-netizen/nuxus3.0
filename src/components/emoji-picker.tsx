@@ -14,26 +14,26 @@ import { useToast } from '@/hooks/use-toast';
 const EMOJI_DATA = [
   { category: 'Популярные', emojis: ['😂', '❤️', '🔥', '👍', '🙏', '😊', '😍', '✨', '😭', '😎', '💀', '🤡', '🤔', '🚀', '💯', '✅'] },
   { category: 'Смайлы', emojis: ['😀', '😃', '😄', '😁', '😆', '😅', '😂', '🤣', '😊', '😇', '🙂', '🙃', '😉', '😌', '😍', '🥰', '😘', '😗', '😙', '😚', '😋', '😛', '😝', '😜', '🤪', '🤨', '🧐', '🤓', '😎', '🤩', '🥳', '😏', '😒', '😞', '😔', '😟', '😕', '🙁', '☹️', '😮', '😯', '😲', '😳', '🥺', '😦', '😧', '😨', '😰', '😥', '😢', '😭', '😱', '😖', '😣', '😞', '😓', '😩', '😫', '🥱', '😤', '😡', '😠', '🤬', '😈', '👿', '💀', '☠️', '💩', '🤡', '👹', '👺', '👻', '👽', '👾', '🤖'] },
-  { category: 'Животные', emojis: ['🐶', '🐱', '🐭', '🐹', '🐰', '🦊', '🐻', '🐼', '🐨', '🐯', '🦁', '🐮', '🐷', '🐸', '🐵', '🐔', '🐧', '🐦', '🐤', '🦆', '🦅', '🦉', '🦇', '🐺', '🐗', '🐴', '🦄', '🐝', '🦋', '🐌', '🐞', '🕷', '🦂', '🐢', '🐍', '🦎', '🦖', '🐙', '🦑', '🦐', '🦀', '🐡', '🐠', '🐟', '🐬', '🐳', '🐋', '🦈', '🐊', '🐅', '🐘', '🦛', '🦒', '🦘'] }
+  { category: 'Природа', emojis: ['🐶', '🐱', '🐭', '🐹', '🐰', '🦊', '🐻', '🐼', '🐨', '🐯', '🦁', '🐮', '🐷', '🐸', '🐵', '🐔', '🐧', '🐦', '🐤', '🦆', '🦅', '🦉', '🦇', '🐺', '🐗', '🐴', '🦄', '🐝', '🦋', '🐌', '🐞', '🕷', '🦂', '🐢', '🐍', '🦎', '🦖', '🐙', '🦑', '🦐', '🦀', '🐡', '🐠', '🐟', '🐬', '🐳', '🐋', '🦈', '🐊', '🐅', '🐘', '🦛', '🦒', '🦘'] }
 ];
 
 /**
- * ЭКСКЛЮЗИВНЫЕ СТИКЕРЫ NUXUS (HQ PACK V5)
- * ИСПРАВЛЕНО: Сверхстабильные источники изображений.
+ * ЭКСКЛЮЗИВНЫЕ СТИКЕРЫ NUXUS (ULTRA PACK V6)
+ * ИСПРАВЛЕНО: Сверхстабильные источники изображений через Picsum Seed.
  */
 const DEFAULT_STICKERS = [
-  'https://picsum.photos/seed/nx1/400/400',
-  'https://picsum.photos/seed/nx2/400/400',
-  'https://picsum.photos/seed/nx3/400/400',
-  'https://picsum.photos/seed/nx4/400/400',
-  'https://picsum.photos/seed/nx5/400/400',
-  'https://picsum.photos/seed/nx6/400/400',
-  'https://picsum.photos/seed/nx7/400/400',
-  'https://picsum.photos/seed/nx8/400/400',
-  'https://picsum.photos/seed/nx9/400/400',
-  'https://picsum.photos/seed/nx10/400/400',
-  'https://picsum.photos/seed/nx11/400/400',
-  'https://picsum.photos/seed/nx12/400/400'
+  'https://picsum.photos/seed/nx_st1/400/400',
+  'https://picsum.photos/seed/nx_st2/400/400',
+  'https://picsum.photos/seed/nx_st3/400/400',
+  'https://picsum.photos/seed/nx_st4/400/400',
+  'https://picsum.photos/seed/nx_st5/400/400',
+  'https://picsum.photos/seed/nx_st6/400/400',
+  'https://picsum.photos/seed/nx_st7/400/400',
+  'https://picsum.photos/seed/nx_st8/400/400',
+  'https://picsum.photos/seed/nx_st9/400/400',
+  'https://picsum.photos/seed/nx_st10/400/400',
+  'https://picsum.photos/seed/nx_st11/400/400',
+  'https://picsum.photos/seed/nx_st12/400/400'
 ];
 
 interface EmojiPickerProps {
@@ -69,6 +69,7 @@ export function EmojiPicker({ onEmojiSelect, onStickerSelect, className }: Emoji
     const newRecent = [emoji, ...recent.filter(e => e !== emoji)].slice(0, 16);
     setRecent(newRecent);
     localStorage.setItem('nuxus_recent_emojis', JSON.stringify(newRecent));
+    if (window.navigator && window.navigator.vibrate) window.navigator.vibrate(5);
   };
 
   const displayedStickers = useMemo(() => {
@@ -149,14 +150,15 @@ export function EmojiPicker({ onEmojiSelect, onStickerSelect, className }: Emoji
                 {displayedStickers.map((url, idx) => (
                   <button 
                     key={idx} 
-                    onClick={() => onStickerSelect(url)}
+                    onClick={() => { onStickerSelect(url); if (window.navigator && window.navigator.vibrate) window.navigator.vibrate(10); }}
                     className="aspect-square rounded-[1.5rem] overflow-hidden hover:bg-white/10 active:scale-90 transition-all p-2 bg-white/5 border border-white/5 group shadow-lg flex items-center justify-center relative"
                   >
                     <img 
                       src={url} 
                       alt="Sticker" 
                       className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-500 drop-shadow-xl block relative z-10" 
-                      loading="lazy"
+                      style={{ width: '100%', height: '100%', minWidth: '60px' }}
+                      loading="eager"
                     />
                   </button>
                 ))}
