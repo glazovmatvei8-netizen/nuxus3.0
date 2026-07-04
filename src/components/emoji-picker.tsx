@@ -18,17 +18,21 @@ const EMOJI_DATA = [
 ];
 
 /**
- * ЭКСКЛЮЗИВНЫЕ СТИКЕРЫ NUXUS (3D TECH PACK)
+ * ЭКСКЛЮЗИВНЫЕ СТИКЕРЫ NUXUS (3D TECH PACK V2)
  */
 const DEFAULT_STICKERS = [
+  'https://images.unsplash.com/photo-1614728894747-a83421e2b9c9?w=400&h=400&fit=crop&q=80', // Астронавт
   'https://images.unsplash.com/photo-1639762681485-074b7f938ba0?w=400&h=400&fit=crop&q=80', // Кристалл
-  'https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=400&h=400&fit=crop&q=80', // React/Node Atom
-  'https://images.unsplash.com/photo-1614728894747-a83421e2b9c9?w=400&h=400&fit=crop&q=80', // Космонавт
-  'https://images.unsplash.com/photo-1620641788421-7a1c342ea42e?w=400&h=400&fit=crop&q=80', // Абстрактная сфера
-  'https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=400&h=400&fit=crop&q=80', // Ретро компьютер
-  'https://images.unsplash.com/photo-1618005182384-a83421e2b9c9?w=400&h=400&fit=crop&q=80', // Киберпанк город
-  'https://images.unsplash.com/photo-1605810230434-7631ac76ec81?w=400&h=400&fit=crop&q=80', // Сигналы/Волны
-  'https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=400&h=400&fit=crop&q=80'  // Земля из космоса
+  'https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=400&h=400&fit=crop&q=80', // Ядро
+  'https://images.unsplash.com/photo-1620641788421-7a1c342ea42e?w=400&h=400&fit=crop&q=80', // Сфера
+  'https://images.unsplash.com/photo-1618005182384-a83421e2b9c9?w=400&h=400&fit=crop&q=80', // Город
+  'https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=400&h=400&fit=crop&q=80', // Процессор
+  'https://images.unsplash.com/photo-1605810230434-7631ac76ec81?w=400&h=400&fit=crop&q=80', // Энергия
+  'https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=400&h=400&fit=crop&q=80', // Планета
+  'https://images.unsplash.com/photo-1518770660439-4636190af475?w=400&h=400&fit=crop&q=80', // Чип
+  'https://images.unsplash.com/photo-1535223289827-42f1e9919769?w=400&h=400&fit=crop&q=80', // VR
+  'https://images.unsplash.com/photo-1558591710-4b4a1ae0f04d?w=400&h=400&fit=crop&q=80', // Абстракция
+  'https://images.unsplash.com/photo-1614850523296-d8c1af93d400?w=400&h=400&fit=crop&q=80'  // Свет
 ];
 
 interface EmojiPickerProps {

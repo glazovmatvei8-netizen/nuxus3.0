@@ -1,13 +1,13 @@
 
 {
-  "latestVersion": "25.5.0",
+  "latestVersion": "25.5.1",
   "qesVersion": "25.5",
-  "build": "Quantum-Sticker-Elite",
-  "sizeMb": 122,
+  "build": "Quantum-Sticker-Elite-v2",
+  "sizeMb": 124,
   "changelog": [
-    "Exclusive: Добавлен первый пак 3D стикеров Nuxus Tech",
-    "Sync: Исправлена ошибка детекции новых патчей Ядра",
-    "UI: Оптимизирована панель выбора медиа-сигналов",
-    "System: Повышена стабильность PWA на iOS 18"
+    "Live-Sync: Добавлена фоновая проверка обновлений каждые 5 минут",
+    "Stickers: Обновлен пак 3D стикеров Nuxus Tech (HQ Renders)",
+    "PWA: Оптимизирована инвалидация кэша для мгновенных патчей",
+    "UI: Улучшена читаемость текста в Админ-панели"
   ]
 }

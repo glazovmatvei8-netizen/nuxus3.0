@@ -1,7 +1,7 @@
 
 "use client"
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { RefreshCw, Zap, Download, ShieldCheck, ListChecks } from 'lucide-react';
@@ -9,57 +9,79 @@ import { Progress } from './ui/progress';
 import versions from '@/app/versions.json';
 
 /**
- * КВАНТОВЫЙ ОБНОВЛЯТОР ЯДРА V25.5.0
- * Оптимизирован для мгновенной доставки патчей.
+ * КВАНТОВЫЙ ОБНОВЛЯТОР ЯДРА V25.5.1
+ * Оптимизирован для фоновой проверки обновлений без перезагрузки страницы.
  */
-const CURRENT_VERSION = "25.4.2"; // Мы ставим версию чуть ниже актуальной в коде, чтобы триггернуть обновление после пуша
+const CURRENT_VERSION = "25.5.0"; 
 
 export function UpdateNotifier() {
   const [isOpen, setIsOpen] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
   const [updateProgress, setUpdateProgress] = useState(0);
+  const [serverVersion, setServerVersion] = useState(versions.latestVersion);
+
+  const checkVersion = useCallback(async () => {
+    try {
+      // Пытаемся получить свежий файл версий с сервера, обходя кэш
+      const response = await fetch(`/versions.json?t=${Date.now()}`, { cache: 'no-store' });
+      if (response.ok) {
+        const data = await response.json();
+        setServerVersion(data.latestVersion);
+        
+        const lastInstalled = localStorage.getItem('nuxus_last_installed_version');
+        
+        // Если версия на сервере новее текущего кода ИЛИ новее последней установленной
+        if (data.latestVersion !== CURRENT_VERSION && lastInstalled !== data.latestVersion) {
+          setIsOpen(true);
+        }
+      }
+    } catch (e) {
+      console.warn("Nuxus Sync: Failed to fetch remote version registry.");
+    }
+  }, []);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
-    const checkVersion = () => {
-      const lastInstalled = localStorage.getItem('nuxus_last_installed_version');
-      // Если версия в конфиге (latest) новее, чем в коде ИЛИ новее, чем последняя установленная
-      if (versions.latestVersion !== CURRENT_VERSION && lastInstalled !== versions.latestVersion) {
-        setIsOpen(true);
-      }
-    };
+    // Первичная проверка при запуске
+    const timer = setTimeout(checkVersion, 3000);
+    
+    // Фоновая проверка каждые 5 минут (Live-Sync)
+    const interval = setInterval(checkVersion, 300000);
 
-    const timer = setTimeout(checkVersion, 2000);
-    const handleManualCheck = () => setIsOpen(true);
+    const handleManualCheck = () => {
+      checkVersion();
+      setIsOpen(true);
+    };
+    
     window.addEventListener('nuxus_check_updates', handleManualCheck);
     
     return () => {
       clearTimeout(timer);
+      clearInterval(interval);
       window.removeEventListener('nuxus_check_updates', handleManualCheck);
     };
-  }, []);
+  }, [checkVersion]);
 
   const handleUpdateAction = () => {
     setIsUpdating(true);
     let p = 0;
     const interval = setInterval(() => {
-      p += Math.random() * 30;
+      p += Math.random() * 25;
       if (p >= 100) {
         setUpdateProgress(100);
         clearInterval(interval);
-        localStorage.setItem('nuxus_last_installed_version', versions.latestVersion);
+        localStorage.setItem('nuxus_last_installed_version', serverVersion);
         setTimeout(() => {
           window.location.reload();
         }, 500);
       } else {
         setUpdateProgress(p);
       }
-    }, 150);
+    }, 120);
   };
 
-  // Проверка для отображения "Актуально" в модальном окне
-  const isUpToDate = versions.latestVersion === localStorage.getItem('nuxus_last_installed_version');
+  const isUpToDate = serverVersion === localStorage.getItem('nuxus_last_installed_version') && serverVersion === CURRENT_VERSION;
 
   if (isUpdating) {
     return (
@@ -70,7 +92,7 @@ export function UpdateNotifier() {
           </div>
           <div className="space-y-2">
             <h2 className="text-2xl font-black uppercase italic tracking-tighter">Синхронизация</h2>
-            <p className="text-[10px] font-black uppercase tracking-[0.4em] text-primary/60">Прогресс: {Math.round(updateProgress)}%</p>
+            <p className="text-[10px] font-black uppercase tracking-[0.4em] text-primary/60">Загрузка патча: {Math.round(updateProgress)}%</p>
           </div>
           <Progress value={updateProgress} className="h-1.5 bg-white/5" />
         </div>
@@ -89,10 +111,10 @@ export function UpdateNotifier() {
         <div className="p-8 space-y-6 relative z-10">
           <DialogHeader className="space-y-1 text-left">
             <DialogTitle className="text-2xl font-black uppercase italic tracking-tighter text-white">
-              {isUpToDate ? 'Ядро Актуально' : 'Новый Сигнал'}
+              {isUpToDate ? 'Ядро Актуально' : 'Доступен Патч'}
             </DialogTitle>
             <DialogDescription className="flex items-center gap-2 text-[10px] font-bold text-primary uppercase tracking-widest">
-              <span>{isUpToDate ? `V ${versions.latestVersion}` : `Билд ${versions.latestVersion}`}</span>
+              <span>{isUpToDate ? `V ${serverVersion}` : `Сборка ${serverVersion}`}</span>
               <span className="opacity-30">•</span>
               <span>{versions.sizeMb} МБ</span>
             </DialogDescription>
@@ -102,7 +124,7 @@ export function UpdateNotifier() {
             <div className="space-y-3 bg-white/5 p-5 rounded-3xl border border-white/5 shadow-inner">
               <div className="flex items-center gap-2 text-white/40 mb-1">
                 <ListChecks className="w-3.5 h-3.5" />
-                <span className="text-[9px] font-black uppercase tracking-widest">Что нового:</span>
+                <span className="text-[9px] font-black uppercase tracking-widest">Список изменений:</span>
               </div>
               <ul className="space-y-2">
                 {versions.changelog.map((item, idx) => (
@@ -115,7 +137,7 @@ export function UpdateNotifier() {
           ) : (
             <div className="p-6 bg-primary/5 rounded-3xl border border-primary/10 text-center shadow-xl">
                <ShieldCheck className="w-8 h-8 text-primary mx-auto mb-3" />
-               <p className="text-[10px] text-white/80 font-black uppercase tracking-widest">Ваш узел полностью синхронизирован.</p>
+               <p className="text-[10px] text-white/80 font-black uppercase tracking-widest">Система полностью синхронизирована.</p>
             </div>
           )}
 
@@ -128,10 +150,10 @@ export function UpdateNotifier() {
                 >
                   <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
                   <RefreshCw className="w-5 h-5 mr-2 group-hover:rotate-180 transition-transform duration-700" />
-                  Принять Патч
+                  Принять Сигнал
                 </Button>
                 <Button variant="ghost" onClick={() => setIsOpen(false)} className="h-12 text-[10px] font-black uppercase tracking-widest text-muted-foreground/40 hover:text-white">
-                  Пропустить
+                  Игнорировать
                 </Button>
               </>
             ) : (
