@@ -8,7 +8,7 @@ import { UserAvatar } from '@/components/user-avatar';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { 
-  Pencil, Bookmark, ChevronRight, Star, Share2, Zap, HelpCircle, Globe, Server, QrCode, Fingerprint, Cpu, Shield, ShieldCheck, Palette
+  Pencil, Bookmark, ChevronRight, Star, Share2, Zap, HelpCircle, Globe, Server, QrCode, Fingerprint, Cpu, Shield, ShieldCheck, Palette, Sparkles
 } from 'lucide-react';
 import { useAppState } from '@/lib/store';
 import { formatDisplayName, cn, isUserPremium } from '@/lib/utils';
@@ -19,8 +19,8 @@ import { QRCodeSVG } from 'qrcode.react';
 import versions from '@/app/versions.json';
 
 /**
- * ГЛАВНЫЙ ЭКРАН ПРОФИЛЯ V23.0 «Scroll Harmony»
- * ФИКС: Аватар и имя теперь листаются. Убраны лишние звезды.
+ * ГЛАВНЫЙ ЭКРАН ПРОФИЛЯ V25.3.1
+ * ОБНОВЛЕНО: Статус вынесен в отдельный блок под именем.
  */
 export default function ProfileView() {
   const { user } = useUser();
@@ -78,8 +78,8 @@ export default function ProfileView() {
       <ScrollArea className="flex-1 relative z-10">
         <div className="px-6 space-y-4 pb-32 pt-2 animate-in fade-in duration-700">
           
-          {/* Аватар и имя (Теперь листаются) */}
-          <div className="flex flex-col items-center gap-4 mb-8 pt-4">
+          {/* Аватар и имя */}
+          <div className="flex flex-col items-center gap-4 mb-4 pt-4">
              <div className="relative group">
                 <div className="absolute -inset-4 bg-primary/20 blur-3xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-1000" />
                 <UserAvatar 
@@ -89,11 +89,22 @@ export default function ProfileView() {
                 />
              </div>
              <div className="text-center space-y-1">
-                <h2 className="text-2xl font-black text-white italic tracking-tighter uppercase leading-tight">
-                  {profile?.name ? formatDisplayName(profile.name) : 'СИНХРОНИЗАЦИЯ...'}
-                </h2>
+                <div className="flex items-center justify-center gap-2">
+                   <h2 className="text-2xl font-black text-white italic tracking-tighter uppercase leading-tight">
+                     {profile?.name ? formatDisplayName(profile.name) : 'СИНХРОНИЗАЦИЯ...'}
+                   </h2>
+                   {profile?.statusEmoji && <span className="text-2xl">{profile.statusEmoji}</span>}
+                </div>
                 <p className="text-[11px] text-primary/60 font-black uppercase tracking-[0.4em] italic ml-[0.4em]">{profile?.username}</p>
              </div>
+
+             {/* Блок статуса (Текст) */}
+             {profile?.statusText && (
+                <div className="mt-2 px-6 py-2.5 bg-white/[0.03] rounded-2xl border border-white/5 inline-flex items-center gap-3 animate-in fade-in zoom-in-95 duration-500 shadow-lg">
+                   <Sparkles className="w-4 h-4 text-accent animate-pulse" />
+                   <span className="text-[11px] font-black text-white/90 uppercase tracking-widest leading-none">{profile.statusText}</span>
+                </div>
+             )}
           </div>
 
           {/* Карточка статуса */}

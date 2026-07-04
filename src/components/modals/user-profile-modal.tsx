@@ -23,6 +23,10 @@ import versions from '@/app/versions.json';
 const ADMIN_ID = 'GCvLucN8CjNcdaxPO2vmpZ84hNl1';
 const ORIGIN_DATE = '2024-01-01T00:00:00Z'; 
 
+/**
+ * МОДАЛ ПРОФИЛЯ V25.3.1
+ * ОБНОВЛЕНО: Статус и эмодзи теперь отображаются в центре внимания профиля.
+ */
 export function UserProfileModal() {
   const db = useFirestore();
   const { user: currentUser } = useUser();
@@ -146,14 +150,20 @@ export function UserProfileModal() {
                 <h2 className="text-2xl font-black text-white italic tracking-tighter uppercase leading-tight">
                   {formatDisplayName(targetUser?.name)}
                 </h2>
-                {(targetUser?.statusEmoji || (inspectedUserId === ADMIN_ID)) && <span className="text-2xl">{targetUser?.statusEmoji || '👑'}</span>}
+                {/* ЭМОДЗИ СТАТУСА (В ПРОФИЛЕ) */}
+                {(targetUser?.statusEmoji || (inspectedUserId === ADMIN_ID)) && (
+                   <span className="text-2xl drop-shadow-[0_0_10px_rgba(255,255,255,0.3)]">
+                     {targetUser?.statusEmoji || '👑'}
+                   </span>
+                )}
               </div>
               <p className="text-[11px] text-primary font-black uppercase tracking-[0.4em] mt-1 opacity-70 italic">{targetUser?.username}</p>
               
+              {/* ТЕКСТ СТАТУСА (В ПРОФИЛЕ) */}
               {targetUser?.statusText && (
-                <div className="mt-3 px-5 py-2 bg-white/5 rounded-2xl border border-white/5 inline-flex items-center gap-2 max-w-full">
-                  <Sparkles className="w-3.5 h-3.5 text-accent shrink-0" />
-                  <p className="text-[11px] text-white/90 font-bold uppercase tracking-widest truncate">{targetUser.statusText}</p>
+                <div className="mt-4 px-6 py-2.5 bg-primary/10 rounded-2xl border border-primary/20 inline-flex items-center gap-3 max-w-full shadow-lg animate-in fade-in slide-in-from-top-2">
+                  <Sparkles className="w-4 h-4 text-accent shrink-0 animate-pulse" />
+                  <p className="text-[11px] text-white font-black uppercase tracking-[0.2em] truncate">{targetUser.statusText}</p>
                 </div>
               )}
 
