@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useMemo } from 'react';
@@ -153,7 +154,7 @@ export default function DiscoveryView() {
                     />
                   </div>
                   <span className={cn(
-                    "text-[9px] font-black truncate w-16 text-center uppercase tracking-tight italic",
+                    "text-[9px] font-black truncate w-16 text-center tracking-tight italic",
                     u.id === ADMIN_ID ? "text-primary" : "text-white/40 group-hover:text-white"
                   )}>
                     {u.id === ADMIN_ID ? 'СОЗДАТЕЛЬ' : formatDisplayName(u.name).split(' ')[0]}
@@ -189,7 +190,7 @@ export default function DiscoveryView() {
                     <div className="flex flex-col min-w-0 gap-0.5">
                       <span className="font-black text-white text-[15px] truncate italic tracking-tighter uppercase">{chat.name}</span>
                       <div className="flex items-center gap-2">
-                        <span className="text-[9px] text-primary font-black uppercase tracking-widest">{chat.username}</span>
+                        <span className="text-[9px] text-primary font-black tracking-widest">{chat.username}</span>
                         <span className="text-[8px] text-white/20 font-bold uppercase">{chat.participantIds?.length || 0} Узлов</span>
                       </div>
                     </div>

@@ -171,7 +171,7 @@ const ChatListItem = memo(({
               <div className="flex-1 min-w-0 flex flex-col justify-center gap-1">
                 <div className="flex items-center justify-between w-full gap-3 text-left">
                   <div className="flex items-center gap-2 min-w-0 flex-1">
-                    <span className="font-black text-[16px] truncate tracking-tight italic text-white uppercase leading-none">
+                    <span className="font-black text-[16px] truncate tracking-tight italic text-white leading-none">
                       {finalDisplayName}
                     </span>
                     {otherProfile?.isPremium && <Star className="w-3.5 h-3.5 text-accent fill-accent shrink-0 animate-pulse" />}

@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useEffect } from 'react';
@@ -15,7 +16,7 @@ import {
   browserSessionPersistence,
   setPersistence
 } from 'firebase/auth';
-import { doc, setDoc, getDoc, increment, updateDoc } from 'firebase/firestore';
+import { doc, setDoc, getDoc, increment, updateDoc, collection, query, where, getDocs, limit } from 'firebase/firestore';
 import { useAppState } from '@/lib/store';
 import { NuxusLogo } from './nuxus-logo';
 import { useTranslations } from '@/hooks/use-translations';
@@ -31,6 +32,7 @@ interface AuthScreenProps {
 /**
  * AUTH SCREEN V25.0.2
  * ОПТИМИЗИРОВАНО: Снижены визуальные эффекты для ускорения загрузки.
+ * ОБНОВЛЕНО: Case-insensitive уникальность никнеймов.
  */
 export default function AuthScreen({ initialMode = 'login' }: AuthScreenProps) {
   const auth = useAuth();
@@ -88,13 +90,15 @@ export default function AuthScreen({ initialMode = 'login' }: AuthScreenProps) {
       finalUsername = `user_${uid.slice(0, 5).toLowerCase()}`;
     }
 
-    finalUsername = finalUsername.replace(/[^a-zA-Z0-9_]/g, '').toLowerCase();
+    // Чистим никнейм, но СОХРАНЯЕМ РЕГИСТР для отображения
+    finalUsername = finalUsername.replace(/[^a-zA-Z0-9_]/g, '');
     const usernameWithAt = finalUsername.startsWith('@') ? finalUsername : '@' + finalUsername;
 
     const profileData = {
       id: uid,
       name: finalName,
       username: usernameWithAt,
+      usernameLowercase: usernameWithAt.toLowerCase(), // Поле для уникальной проверки
       phone: formData.identifier.replace(/\D/g, '') || (snap.exists() ? snap.data().phone : ''),
       createdAt: snap.exists() ? snap.data().createdAt : new Date().toISOString(),
       isPremium: snap.exists() ? snap.data().isPremium : (overrideData?.isPremium || false),
@@ -132,9 +136,29 @@ export default function AuthScreen({ initialMode = 'login' }: AuthScreenProps) {
       return;
     }
 
-    if (mode === 'register' && (!formData.name.trim() || !formData.username.trim())) {
-      toast({ title: "Заполните профиль", description: "Имя и ID обязательны для инициализации.", variant: "destructive" });
-      return;
+    if (mode === 'register') {
+      if (!formData.name.trim() || !formData.username.trim()) {
+        toast({ title: "Заполните профиль", description: "Имя и ID обязательны для инициализации.", variant: "destructive" });
+        return;
+      }
+
+      // ПРОВЕРКА УНИКАЛЬНОСТИ НИКНЕЙМА (Case-insensitive)
+      setIsLoading(true);
+      try {
+        const cleanUsername = formData.username.trim().replace('@', '');
+        const targetSearch = ('@' + cleanUsername).toLowerCase();
+        
+        const q = query(collection(db!, 'users'), where('usernameLowercase', '==', targetSearch), limit(1));
+        const checkSnap = await getDocs(q);
+        
+        if (!checkSnap.empty) {
+          toast({ title: "Никнейм занят", description: "Этот идентификатор уже используется другим узлом.", variant: "destructive" });
+          setIsLoading(false);
+          return;
+        }
+      } catch (e) {
+        console.warn("Nuxus Security: Collision check failed.");
+      }
     }
 
     setIsLoading(true);
@@ -258,7 +282,7 @@ export default function AuthScreen({ initialMode = 'login' }: AuthScreenProps) {
                     </div>
                     <div className="space-y-1.5 text-left">
                       <Label className="text-[8px] uppercase font-black text-primary/60 ml-3 tracking-widest">ID</Label>
-                      <Input placeholder="id" value={formData.username} onChange={e => setFormData({...formData, username: e.target.value})} className="bg-white/5 border-white/10 h-12 rounded-[1.2rem] text-xs font-mono border-2" required />
+                      <Input placeholder="id" value={formData.username} onChange={e => setFormData({...formData, username: e.target.value})} className="bg-white/5 border-white/10 h-12 rounded-[1.2rem] text-xs font-bold border-2" required />
                     </div>
                   </div>
                 )}

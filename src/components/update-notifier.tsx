@@ -9,9 +9,9 @@ import { Progress } from './ui/progress';
 import nuxusVersions from '@/app/versions.json';
 
 /**
- * КВАНТОВЫЙ ОБНОВЛЯТОР ЯДРА V26.5.0 (Live-Pulse)
+ * КВАНТОВЫЙ ОБНОВЛЯТОР ЯДРА V26.5.1 (Live-Pulse)
  */
-const CURRENT_VERSION = "26.5.0"; 
+const CURRENT_VERSION = "26.5.1"; 
 
 export function UpdateNotifier() {
   const [isOpen, setIsOpen] = useState(false);

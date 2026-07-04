@@ -144,6 +144,15 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
     } finally { setIsBroadcasting(false); }
   };
 
+  const premiumOptions = [
+    { label: '1 ДЕНЬ', value: '1d' },
+    { label: '1 МЕСЯЦ', value: '1m' },
+    { label: '3 МЕСЯЦА', value: '3m' },
+    { label: '6 МЕСЯЦЕВ', value: '6m' },
+    { label: '1 ГОД', value: '1y' },
+    { label: '2 ГОДА', value: '2y' },
+  ];
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl bg-[#0a0a0c]/95 backdrop-blur-[40px] border-primary/30 p-0 overflow-hidden h-[85vh] flex flex-col rounded-[2.5rem] shadow-2xl border outline-none">
@@ -183,16 +192,16 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
               <div className="p-6 shrink-0"><Input placeholder="Поиск по базе сигналов..." value={userSearch} onChange={e => setUserSearch(e.target.value)} className="bg-white/5 border-white/10 h-14 rounded-2xl pl-6 text-sm" /></div>
               <ScrollArea className="flex-1">
                 <div className="px-6 space-y-2 pb-20">
-                  {users?.filter(u => u.name?.toLowerCase().includes(userSearch.toLowerCase()) || u.username?.toLowerCase().includes(userSearch.toLowerCase())).map(u => (
+                  {users?.filter(u => u.name?.toLowerCase().includes(userSearch.toLowerCase()) || u.usernameLowercase?.includes(userSearch.toLowerCase())).map(u => (
                     <div key={u.id} className="flex items-center justify-between p-4 bg-white/5 rounded-3xl border border-white/5 hover:bg-white/[0.08] transition-all">
                       <div className="flex items-center gap-4 text-left">
                         <UserAvatar userId={u.id} className="h-12 w-12" />
                         <div className="flex flex-col">
-                          <span className="font-black text-sm text-white flex items-center gap-2 uppercase tracking-tight italic">
+                          <span className="font-black text-sm text-white flex items-center gap-2 italic tracking-tight">
                             {formatDisplayName(u.name)}
                             {isGlobalAdmin(u) && <ShieldCheck className="w-4 h-4 text-primary" />}
                           </span>
-                          <span className="text-[10px] text-muted-foreground uppercase font-black tracking-widest opacity-60">{u.username}</span>
+                          <span className="text-[10px] text-muted-foreground font-black tracking-widest opacity-60">{u.username}</span>
                         </div>
                       </div>
                       <DropdownMenu>
@@ -206,9 +215,11 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
                              <DropdownMenuSubTrigger className="gap-3 font-black uppercase text-[10px] tracking-widest py-3.5 rounded-xl">
                                <Star className="w-5 h-5 text-accent" /> Выдать Premium
                              </DropdownMenuSubTrigger>
-                             <DropdownMenuSubContent className="w-48 obsidian-glass rounded-xl p-1 border-white/10">
-                               {['1d', '1m', '3m', '6m', '1y', '2y'].map(v => (
-                                 <DropdownMenuItem key={v} onClick={() => handleAction(u.id, 'give_premium', v)} className="text-[10px] font-black uppercase tracking-widest py-2.5 px-4">{v.toUpperCase()}</DropdownMenuItem>
+                             <DropdownMenuSubContent className="w-56 obsidian-glass rounded-xl p-2 border-white/20 shadow-2xl bg-black/90">
+                               {premiumOptions.map(opt => (
+                                 <DropdownMenuItem key={opt.value} onClick={() => handleAction(u.id, 'give_premium', opt.value)} className="text-[10px] font-black uppercase tracking-widest py-3 px-4 rounded-lg text-white hover:bg-primary/20 transition-all border border-transparent hover:border-primary/30 mb-1 last:mb-0">
+                                   {opt.label}
+                                 </DropdownMenuItem>
                                ))}
                              </DropdownMenuSubContent>
                            </DropdownMenuSub>
