@@ -2,7 +2,7 @@
 'use server';
 /**
  * @fileOverview A Genkit flow for generating high-quality AI images from text prompts.
- * Uses Imagen 4.0 for premium visual synthesis.
+ * Updated to Imagen 3 for better accessibility.
  *
  * - generateAiImage - Main function to generate an image.
  */
@@ -21,7 +21,7 @@ const GenerateAiImageOutputSchema = z.object({
 export type GenerateAiImageOutput = z.infer<typeof GenerateAiImageOutputSchema>;
 
 /**
- * Generates a high-quality aesthetic image using Imagen 4.0.
+ * Generates a high-quality aesthetic image using Imagen 3.
  */
 export async function generateAiImage(input: GenerateAiImageInput): Promise<GenerateAiImageOutput> {
   return generateAiImageFlow(input);
@@ -37,17 +37,22 @@ const generateAiImageFlow = ai.defineFlow(
     // Enhance the prompt for premium aesthetics
     const enhancedPrompt = `A high-quality, aesthetic, professional digital art of: ${input.prompt}. Cinematic lighting, 4k resolution, clean details, masterpiece style.`;
     
-    const { media } = await ai.generate({
-      model: 'googleai/imagen-4.0-fast-generate-001',
-      prompt: enhancedPrompt,
-    });
+    try {
+      const { media } = await ai.generate({
+        model: 'googleai/imagen-3',
+        prompt: enhancedPrompt,
+      });
 
-    if (!media || !media.url) {
-      throw new Error('Signal lost during image synthesis.');
+      if (!media || !media.url) {
+        throw new Error('Signal lost during image synthesis.');
+      }
+
+      return {
+        imageUrl: media.url,
+      };
+    } catch (err: any) {
+      console.error("Imagen 3 Error:", err);
+      throw new Error(err.message || "Failed to generate image.");
     }
-
-    return {
-      imageUrl: media.url,
-    };
   }
 );

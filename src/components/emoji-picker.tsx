@@ -18,22 +18,22 @@ const EMOJI_DATA = [
 ];
 
 /**
- * ЭКСКЛЮЗИВНЫЕ СТИКЕРЫ NUXUS (3D TECH PACK V4)
- * ИСПРАВЛЕНО: Ссылки заменены на максимально стабильные Unsplash ID.
+ * ЭКСКЛЮЗИВНЫЕ СТИКЕРЫ NUXUS (HQ PACK V5)
+ * ИСПРАВЛЕНО: Сверхстабильные источники изображений.
  */
 const DEFAULT_STICKERS = [
-  'https://images.unsplash.com/photo-1614728894747-a83421e2b9c9?w=400&h=400&fit=crop',
-  'https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=400&h=400&fit=crop',
-  'https://images.unsplash.com/photo-1620641788421-7a1c342ea42e?w=400&h=400&fit=crop',
-  'https://images.unsplash.com/photo-1618005182384-a83421e2b9c9?w=400&h=400&fit=crop',
-  'https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=400&h=400&fit=crop',
-  'https://images.unsplash.com/photo-1605810230434-7631ac76ec81?w=400&h=400&fit=crop',
-  'https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=400&h=400&fit=crop',
-  'https://images.unsplash.com/photo-1518770660439-4636190af475?w=400&h=400&fit=crop',
-  'https://images.unsplash.com/photo-1535223289827-42f1e9919769?w=400&h=400&fit=crop',
-  'https://images.unsplash.com/photo-1558591710-4b4a1ae0f04d?w=400&h=400&fit=crop',
-  'https://images.unsplash.com/photo-1614850523296-d8c1af93d400?w=400&h=400&fit=crop',
-  'https://images.unsplash.com/photo-1639762681485-074b7f938ba0?w=400&h=400&fit=crop'
+  'https://picsum.photos/seed/nx1/400/400',
+  'https://picsum.photos/seed/nx2/400/400',
+  'https://picsum.photos/seed/nx3/400/400',
+  'https://picsum.photos/seed/nx4/400/400',
+  'https://picsum.photos/seed/nx5/400/400',
+  'https://picsum.photos/seed/nx6/400/400',
+  'https://picsum.photos/seed/nx7/400/400',
+  'https://picsum.photos/seed/nx8/400/400',
+  'https://picsum.photos/seed/nx9/400/400',
+  'https://picsum.photos/seed/nx10/400/400',
+  'https://picsum.photos/seed/nx11/400/400',
+  'https://picsum.photos/seed/nx12/400/400'
 ];
 
 interface EmojiPickerProps {
@@ -45,7 +45,6 @@ interface EmojiPickerProps {
 export function EmojiPicker({ onEmojiSelect, onStickerSelect, className }: EmojiPickerProps) {
   const { user } = useUser();
   const db = useFirestore();
-  const { toast } = useToast();
   const [recent, setRecent] = useState<string[]>([]);
   const [activeTab, setActiveTab] = useState('emoji');
   const [activePackId, setActivePackId] = useState<string | 'default'>('default');
@@ -58,7 +57,7 @@ export function EmojiPicker({ onEmojiSelect, onStickerSelect, className }: Emoji
     return query(collection(db, 'stickerPacks'), where('id', 'in', profile.installedStickerPackIds));
   }, [db, profile?.installedStickerPackIds]);
 
-  const { data: stickerPacks, isLoading: isPacksLoading } = useCollection<StickerPack>(packsQuery);
+  const { data: stickerPacks } = useCollection<StickerPack>(packsQuery);
 
   useEffect(() => {
     const saved = localStorage.getItem('nuxus_recent_emojis');
@@ -146,30 +145,22 @@ export function EmojiPicker({ onEmojiSelect, onStickerSelect, className }: Emoji
 
           <ScrollArea className="flex-1">
             <div className="p-5">
-              {displayedStickers.length > 0 ? (
-                <div className="grid grid-cols-4 gap-4">
-                  {displayedStickers.map((url, idx) => (
-                    <button 
-                      key={idx} 
-                      onClick={() => onStickerSelect(url)}
-                      className="aspect-square rounded-[1.5rem] overflow-hidden hover:bg-white/10 active:scale-90 transition-all p-2 bg-white/5 border border-white/5 group shadow-lg flex items-center justify-center relative min-h-[60px]"
-                    >
-                      <img 
-                        src={url} 
-                        alt="Sticker" 
-                        className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-500 drop-shadow-xl block relative z-10" 
-                        loading="lazy"
-                        style={{ display: 'block' }}
-                      />
-                    </button>
-                  ))}
-                </div>
-              ) : (
-                <div className="flex flex-col items-center justify-center py-20 opacity-20 text-center">
-                  <Ghost className="w-16 h-16 mb-4" />
-                  <p className="text-[10px] font-black uppercase tracking-widest">Пакет пуст</p>
-                </div>
-              )}
+              <div className="grid grid-cols-4 gap-4">
+                {displayedStickers.map((url, idx) => (
+                  <button 
+                    key={idx} 
+                    onClick={() => onStickerSelect(url)}
+                    className="aspect-square rounded-[1.5rem] overflow-hidden hover:bg-white/10 active:scale-90 transition-all p-2 bg-white/5 border border-white/5 group shadow-lg flex items-center justify-center relative"
+                  >
+                    <img 
+                      src={url} 
+                      alt="Sticker" 
+                      className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-500 drop-shadow-xl block relative z-10" 
+                      loading="lazy"
+                    />
+                  </button>
+                ))}
+              </div>
             </div>
           </ScrollArea>
         </TabsContent>

@@ -1,9 +1,8 @@
+
 'use server';
 /**
  * @fileOverview A Genkit flow for generating a premium AI avatar for Nuxus users.
- *
- * - generateAiAvatar - A function that handles the avatar generation process.
- * - GenerateAiAvatarOutput - The return type for the function.
+ * Updated to Imagen 3 for free-tier compatibility.
  */
 
 import { ai } from '@/ai/genkit';
@@ -15,7 +14,7 @@ const GenerateAiAvatarOutputSchema = z.object({
 export type GenerateAiAvatarOutput = z.infer<typeof GenerateAiAvatarOutputSchema>;
 
 /**
- * Generates a high-quality, professional 3D avatar using Imagen.
+ * Generates a high-quality, professional 3D avatar using Imagen 3.
  */
 export async function generateAiAvatar(): Promise<GenerateAiAvatarOutput> {
   return generateAiAvatarFlow();
@@ -30,17 +29,21 @@ const generateAiAvatarFlow = ai.defineFlow(
   async () => {
     const prompt = `A premium, high-quality, aesthetic 3D avatar icon for a futuristic messaging app. Abstract geometric shape, vibrant neon gradients of purple and cyan, glowing edges, glassmorphism style, professional studio lighting, 4k resolution, centered composition, isolated on dark background.`;
     
-    const { media } = await ai.generate({
-      model: 'googleai/imagen-4.0-fast-generate-001',
-      prompt: prompt,
-    });
+    try {
+      const { media } = await ai.generate({
+        model: 'googleai/imagen-3',
+        prompt: prompt,
+      });
 
-    if (!media) {
-      throw new Error('Failed to generate avatar');
+      if (!media) {
+        throw new Error('Failed to generate avatar');
+      }
+
+      return {
+        imageUrl: media.url,
+      };
+    } catch (e: any) {
+      throw new Error("Avatar synthesis restricted or failed.");
     }
-
-    return {
-      imageUrl: media.url,
-    };
   }
 );

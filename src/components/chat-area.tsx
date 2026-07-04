@@ -26,6 +26,9 @@ import { suggestMessageDraft } from '@/ai/flows/ai-message-drafting-flow';
 import { useTranslations } from '@/hooks/use-translations';
 import { addMinutes } from 'date-fns';
 
+/**
+ * ChatInputBar V26.1.2: Strict Layout Priority.
+ */
 const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, isPremium, messages, userProfile }: any) => {
   const { localDrafts, setLocalDrafts } = useAppState();
   const [messageInput, setMessageInput] = useState(localDrafts[currentChatId] || '');
@@ -40,7 +43,6 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
   const [recordingDuration, setRecordingDuration] = useState(0);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const chunksRef = useRef<Blob[]>([]);
@@ -99,43 +101,30 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
       if (streamRef.current) {
         streamRef.current.getTracks().forEach(t => t.stop());
       }
-
       const constraints = {
         audio: true,
         video: recorderMode === 'video' ? { facingMode: camMode, width: 480, height: 480 } : false
       };
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
       streamRef.current = stream;
-      
-      if (recorderMode === 'video' && videoPreviewRef.current) {
-        videoPreviewRef.current.srcObject = stream;
-      }
-
+      if (recorderMode === 'video' && videoPreviewRef.current) videoPreviewRef.current.srcObject = stream;
       const recorder = new MediaRecorder(stream);
       mediaRecorderRef.current = recorder;
       chunksRef.current = [];
-
-      recorder.ondataavailable = (e) => {
-        if (e.data.size > 0) chunksRef.current.push(e.data);
-      };
-
+      recorder.ondataavailable = (e) => { if (e.data.size > 0) chunksRef.current.push(e.data); };
       recorder.onstop = async () => {
         const blob = new Blob(chunksRef.current, { type: recorderMode === 'video' ? 'video/mp4' : 'audio/webm' });
         const reader = new FileReader();
         reader.onloadend = () => {
-          const base64 = reader.result as string;
-          onSendMessage(base64, recorderMode === 'video' ? 'video_note' : 'audio', destructTimer);
+          onSendMessage(reader.result as string, recorderMode === 'video' ? 'video_note' : 'audio', destructTimer);
         };
         reader.readAsDataURL(blob);
         stream.getTracks().forEach(track => track.stop());
       };
-
       recorder.start();
       setIsRecording(true);
       setRecordingDuration(0);
-      timerIntervalRef.current = setInterval(() => {
-        setRecordingDuration(prev => prev + 1);
-      }, 1000);
+      timerIntervalRef.current = setInterval(() => setRecordingDuration(prev => prev + 1), 1000);
     } catch (err) {}
   };
 
@@ -164,23 +153,26 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
       {isRecording && recorderMode === 'video' && (
         <div className="absolute bottom-32 left-1/2 -translate-x-1/2 w-64 h-64 rounded-full overflow-hidden border-4 border-primary shadow-[0_0_60px_rgba(168,85,247,0.6)] z-50 bg-black animate-in zoom-in duration-500">
           <video ref={videoPreviewRef} autoPlay muted loop playsInline className={cn("w-full h-full object-cover", camMode === 'user' && "scale-x-[-1]")} />
-          <div className="absolute inset-0 border-[12px] border-black/40 rounded-full pointer-events-none" />
           <button 
             onClick={() => setCamMode(p => p === 'user' ? 'environment' : 'user')}
-            className="absolute bottom-6 left-1/2 -translate-x-1/2 bg-white/20 backdrop-blur-md p-3 rounded-full hover:bg-white/30 transition-all border border-white/10"
+            className="absolute bottom-6 left-1/2 -translate-x-1/2 bg-white/20 backdrop-blur-md p-3 rounded-full border border-white/10"
           >
             <RefreshCcw className="w-6 h-6 text-white" />
           </button>
         </div>
       )}
 
-      <div className="max-w-5xl mx-auto relative">
+      <div className="max-w-5xl mx-auto">
         <div className="flex gap-3 items-end w-full">
           {!isRecording ? (
             <>
               <Popover>
-                <PopoverTrigger asChild><Button variant="ghost" size="icon" className="h-14 w-14 obsidian-glass rounded-[1.5rem] text-white/30 hover:text-primary transition-all mb-0.5 shrink-0"><Paperclip className="w-6 h-6" /></Button></PopoverTrigger>
-                <PopoverContent side="top" align="start" className="w-64 obsidian-glass border-white/10 rounded-[2.2rem] p-2 mb-4 shadow-[0_20px_80px_rgba(0,0,0,0.8)] animate-in slide-in-from-bottom-4 duration-500">
+                <PopoverTrigger asChild>
+                  <Button variant="ghost" size="icon" className="h-14 w-14 obsidian-glass rounded-[1.5rem] text-white/30 hover:text-primary transition-all mb-0.5 shrink-0">
+                    <Paperclip className="w-6 h-6" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent side="top" align="start" className="w-64 obsidian-glass border-white/10 rounded-[2.2rem] p-2 mb-4">
                   <div className="grid grid-cols-1 gap-1">
                     <AttachmentItem icon={ImageIcon} label="Медиатека" color="text-primary" onClick={() => fileInputRef.current?.click()} />
                     {isPremium && (
@@ -195,29 +187,11 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
                       }} loading={isGeneratingImg} />
                     )}
                     <AttachmentItem icon={AtSign} label="Создать опрос" color="text-blue-400" onClick={onPollOpen} />
-                    <div className="h-px bg-white/5 my-2 mx-3" />
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <button className={cn("flex items-center gap-4 w-full p-4 rounded-2xl hover:bg-white/5 transition-all text-left", destructTimer ? "text-primary" : "text-white/70")}>
-                          <Timer className="w-5 h-5" /> <span className="text-[11px] font-black uppercase tracking-[0.2em]">Самоудаление</span>
-                        </button>
-                      </PopoverTrigger>
-                      <PopoverContent side="right" className="w-48 obsidian-glass border-white/10 rounded-2xl p-2 shadow-2xl">
-                        {[
-                          { l: 'Выключено', v: null },
-                          { l: '1 Минута', v: 1 },
-                          { l: '1 Час', v: 60 },
-                          { l: '24 Часа', v: 1440 }
-                        ].map(t => (
-                          <button key={t.l} onClick={() => setDestructTimer(t.v)} className="w-full text-left p-3 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-primary/10 hover:text-primary transition-all">{t.l}</button>
-                        ))}
-                      </PopoverContent>
-                    </Popover>
                   </div>
                 </PopoverContent>
               </Popover>
               
-              <div className="flex-1 flex items-end bg-white/[0.03] rounded-[2rem] border border-white/[0.06] min-h-14 px-5 py-2 relative group transition-all focus-within:bg-white/[0.06] focus-within:border-primary/40 shadow-inner min-w-0">
+              <div className="flex-1 flex items-end bg-white/[0.03] rounded-[2rem] border border-white/[0.06] min-h-14 px-5 py-2 relative focus-within:bg-white/[0.06] focus-within:border-primary/40 shadow-inner min-w-0">
                 {destructTimer && <Timer className="w-5 h-5 text-primary mr-3 mb-2 animate-pulse shrink-0" />}
                 <Textarea 
                   ref={textareaRef}
@@ -225,12 +199,6 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
                   className="bg-transparent border-none focus-visible:ring-0 text-white placeholder:text-white/10 font-bold italic tracking-tight min-h-[40px] max-h-[200px] overflow-y-auto scrollbar-hide py-2 text-base resize-none w-full" 
                   value={messageInput} 
                   onChange={e => handleInputChange(e.target.value)} 
-                  onKeyDown={e => {
-                    if (e.key === 'Enter' && !e.shiftKey) {
-                      e.preventDefault();
-                      handleSend();
-                    }
-                  }} 
                 />
                 
                 {isPremium && (
@@ -261,7 +229,7 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
               </div>
 
               {messageInput.trim() ? (
-                <Button size="icon" className="h-14 w-14 rounded-full bg-primary text-white shadow-[0_0_40px_rgba(168,85,247,0.5)] active:scale-90 transition-all hover:scale-105 mb-0.5 shrink-0" onClick={handleSend}>
+                <Button size="icon" className="h-14 w-14 rounded-full bg-primary text-white shadow-xl mb-0.5 shrink-0 active:scale-90 transition-all" onClick={handleSend}>
                   <Send className="w-6 h-6" />
                 </Button>
               ) : (
@@ -269,14 +237,14 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
                   <Button 
                     size="icon" 
                     variant="ghost"
-                    className="h-14 w-14 rounded-[1.8rem] obsidian-glass text-white/20 hover:text-primary transition-all active:scale-90"
+                    className="h-14 w-14 rounded-[1.8rem] obsidian-glass text-white/20 hover:text-primary transition-all"
                     onClick={() => setRecorderMode(recorderMode === 'audio' ? 'video' : 'audio')}
                   >
                     {recorderMode === 'audio' ? <VideoIcon className="w-6 h-6" /> : <Mic className="w-6 h-6" />}
                   </Button>
                   <Button 
                     size="icon" 
-                    className="h-14 w-14 rounded-full bg-primary text-white shadow-[0_0_40px_rgba(168,85,247,0.5)] active:scale-90 transition-all"
+                    className="h-14 w-14 rounded-full bg-primary text-white shadow-xl active:scale-90 transition-all"
                     onClick={startRecording}
                   >
                     {recorderMode === 'audio' ? <Mic className="w-6 h-6" /> : <Circle className="w-6 h-6 fill-current" />}
@@ -285,7 +253,7 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
               )}
             </>
           ) : (
-            <div className="flex-1 flex items-center bg-primary/10 border border-primary/20 rounded-[2.5rem] h-14 px-6 gap-6 animate-in slide-in-from-right-8 duration-700 shadow-[0_0_50px_rgba(168,85,247,0.2)]">
+            <div className="flex-1 flex items-center bg-primary/10 border border-primary/20 rounded-[2.5rem] h-14 px-6 gap-6 shadow-xl animate-in slide-in-from-right-8">
               <div className="flex items-center gap-3 text-primary animate-pulse">
                 <div className="w-2.5 h-2.5 rounded-full bg-primary shadow-[0_0_15px_rgba(168,85,247,1)]" />
                 <span className="text-[10px] font-black uppercase tracking-[0.3em]">{recorderMode === 'audio' ? 'SYNCING AUDIO' : 'LIVE STREAM'}</span>
@@ -294,7 +262,7 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
                 {Math.floor(recordingDuration / 60)}:{(recordingDuration % 60).toString().padStart(2, '0')}
               </span>
               <div className="flex gap-2">
-                <Button variant="ghost" size="icon" className="h-10 w-10 text-white/20 hover:text-destructive transition-all hover:bg-destructive/10 rounded-xl" onClick={cancelRecording}>
+                <Button variant="ghost" size="icon" className="h-10 w-10 text-white/20 hover:text-destructive rounded-xl" onClick={cancelRecording}>
                   <Trash2 className="w-5 h-5" />
                 </Button>
                 <Button variant="ghost" size="icon" className="h-12 w-12 text-primary hover:scale-125 transition-transform" onClick={stopRecording}>
@@ -478,7 +446,7 @@ export default function ChatArea() {
 
       <header className="h-[calc(4.5rem+env(safe-area-inset-top))] pt-[env(safe-area-inset-top)] border-b border-white/5 obsidian-glass flex items-center justify-between px-6 shrink-0 z-30 shadow-2xl">
         <div className="flex items-center gap-4 flex-1 min-w-0">
-          <Button variant="ghost" size="icon" className="md:hidden obsidian-glass rounded-2xl text-white/50 h-10 w-10" onClick={() => setCurrentChatId(null)}><ChevronLeft className="w-6 h-6" /></Button>
+          <Button variant="ghost" size="icon" className="md:hidden obsidian-glass rounded-2xl text-white/50 h-10 w-10 shrink-0" onClick={() => setCurrentChatId(null)}><ChevronLeft className="w-6 h-6" /></Button>
           {!isSearchMode ? (
             <div className="flex items-center gap-4 cursor-pointer min-w-0 flex-1 group" onClick={() => setIsChatInfoOpen(true)}>
               <UserAvatar userId={otherId} manualAvatarUrl={chat?.avatarUrl || otherProfile?.avatarUrl} className="h-12 w-12 border-2 border-white/10 group-hover:border-primary/50 transition-all shrink-0 shadow-lg" fallbackName={chatDisplayName} showOnlineStatus />

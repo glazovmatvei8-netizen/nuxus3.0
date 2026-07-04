@@ -17,7 +17,7 @@ import {
   ContextMenuItem,
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
-import { format, isAfter, parseISO } from 'date-fns';
+import { format } from 'date-fns';
 import { 
   CornerUpLeft, Trash2, Check, CheckCheck, Edit2, Copy, Pin, X, Share2, Play, Smile, Lock, Languages, Loader2, Image as ImageIcon,
   MessageCircle, Star, Pause, ShieldCheck, Clock, Type, Globe, Volume2, Timer, Zap, Maximize2, Video as VideoIcon, Sparkles, PinOff, Wand2, Gift
@@ -34,7 +34,7 @@ import { Dialog, DialogContent, DialogTitle, DialogPortal, DialogOverlay } from 
 const QUICK_REACTIONS = ['👍', '❤️', '🔥', '😂', '😮', '😢', '👏'];
 
 /**
- * MessageItem V26.1.1: Final Sticker & Depth fix.
+ * MessageItem V26.1.2: Final Vision & Layout Fix.
  */
 export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForward, isAdmin = false, isGroup = false, onEdit, highlight = false, viewerProfile }: any) => {
   const { user } = useUser();
@@ -44,10 +44,6 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
   
   const [isPlaying, setIsPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
-  const [currentTime, setCurrentTime] = useState(0);
-  const [duration, setDuration] = useState(0);
-  const [isTranscribing, setIsTranscribing] = useState(false);
-  const [transcribedText, setTranscribedText] = useState<string | null>(message.metadata?.transcription || null);
   const [isMediaViewerOpen, setIsMediaViewerOpen] = useState(false);
   
   const audioInstance = useRef<HTMLAudioElement | null>(null);
@@ -56,14 +52,6 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
   const formattedTime = message.sentAt ? format(new Date(message.sentAt), 'HH:mm') : '';
 
   const isPremium = useMemo(() => isUserPremium(viewerProfile), [viewerProfile]);
-
-  useEffect(() => {
-    if (message.contentType === 'audio') {
-      const tempAudio = new Audio(message.content);
-      tempAudio.preload = "metadata";
-      tempAudio.onloadedmetadata = () => setDuration(tempAudio.duration);
-    }
-  }, [message.content, message.contentType]);
 
   const handleReaction = async (emoji: string) => {
     if (!db || !user || !chatId) return;
@@ -108,12 +96,12 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
 
     if (message.contentType === 'sticker') {
       return (
-        <div className="w-48 h-48 flex items-center justify-center relative min-h-[192px] group/sticker">
+        <div className="w-48 h-48 flex items-center justify-center relative group/sticker">
           <img 
             src={message.content} 
             alt="Sticker" 
             className="max-w-full max-h-full object-contain pointer-events-none drop-shadow-2xl hover:scale-110 transition-transform duration-500 block relative z-10" 
-            style={{ width: '192px', height: '192px', minHeight: '192px', display: 'block' }}
+            style={{ width: '192px', height: '192px', display: 'block' }}
           />
         </div>
       );
