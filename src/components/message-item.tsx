@@ -5,17 +5,11 @@ import React, { useState, memo, useRef, useEffect, useMemo } from 'react';
 import { useFirestore, useUser } from '@/firebase';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-  DropdownMenuSeparator,
-} from "@/components/ui/dropdown-menu";
-import { 
   ContextMenu,
   ContextMenuContent,
   ContextMenuItem,
   ContextMenuTrigger,
+  ContextMenuSeparator,
 } from "@/components/ui/context-menu";
 import { format } from 'date-fns';
 import { 
@@ -34,7 +28,7 @@ import { Dialog, DialogContent, DialogTitle, DialogPortal, DialogOverlay } from 
 const QUICK_REACTIONS = ['👍', '❤️', '🔥', '😂', '😮', '😢', '👏'];
 
 /**
- * MessageItem V26.2.0: Optimized for iPhone + Premium AI Translate.
+ * MessageItem V26.3.0: iOS Swipes + Long Press Context + Stable Media.
  */
 export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForward, isAdmin = false, isGroup = false, onEdit, highlight = false, viewerProfile }: any) => {
   const { user } = useUser();
@@ -48,6 +42,12 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
   const [isTranslating, setIsTranslating] = useState(false);
   const [translatedText, setTranslatedText] = useState<string | null>(null);
   
+  // Swipe to reply logic
+  const [swipeOffset, setSwipeOffset] = useState(0);
+  const touchStartX = useRef(0);
+  const touchStartY = useRef(0);
+  const isSwiping = useRef(false);
+
   const audioInstance = useRef<HTMLAudioElement | null>(null);
 
   const displayContent = useMemo(() => {
@@ -62,7 +62,7 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
     if (!db || !user || !chatId) return;
     const msgRef = doc(db, 'chats', chatId, 'messages', message.id);
     const hasReacted = message.reactions?.[emoji]?.includes(user.uid);
-    if (window.navigator && window.navigator.vibrate) window.navigator.vibrate(50);
+    if (window.navigator && window.navigator.vibrate) window.navigator.vibrate(20);
     if (hasReacted) await updateDoc(msgRef, { [`reactions.${emoji}`]: arrayRemove(user.uid) });
     else await updateDoc(msgRef, { [`reactions.${emoji}`]: arrayUnion(user.uid) });
   };
@@ -74,25 +74,41 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
     try {
       const { translatedText } = await translateMessage({ text: originalText });
       setTranslatedText(translatedText);
-      if (window.navigator && window.navigator.vibrate) window.navigator.vibrate(20);
+      if (window.navigator && window.navigator.vibrate) window.navigator.vibrate(10);
     } catch (e) {
-      toast({ title: "Signal Lost", description: "Translation engine unavailable.", variant: "destructive" });
+      toast({ title: "Ошибка ИИ", description: "Сервис перевода недоступен." });
     } finally {
       setIsTranslating(false);
     }
   };
 
-  const handleDoubleTap = () => {
-    handleReaction('❤️');
+  // iOS-style Swipe to Reply
+  const onTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX;
+    touchStartY.current = e.touches[0].clientY;
+    isSwiping.current = false;
   };
 
-  const lastTap = useRef(0);
-  const onTouchEnd = () => {
-    const now = Date.now();
-    if (now - lastTap.current < 300) {
-      handleDoubleTap();
+  const onTouchMove = (e: React.TouchEvent) => {
+    const deltaX = touchStartX.current - e.touches[0].clientX;
+    const deltaY = Math.abs(touchStartY.current - e.touches[0].clientY);
+    
+    // Only allow left swipe
+    if (deltaX > 20 && deltaY < 30) {
+      isSwiping.current = true;
+      const offset = Math.min(deltaX, 80);
+      setSwipeOffset(offset);
+      if (e.cancelable) e.preventDefault();
     }
-    lastTap.current = now;
+  };
+
+  const onTouchEnd = () => {
+    if (swipeOffset >= 60) {
+      if (window.navigator && window.navigator.vibrate) window.navigator.vibrate(15);
+      onReply(message);
+    }
+    setSwipeOffset(0);
+    isSwiping.current = false;
   };
 
   const bubbleStyle = message.metadata?.bubbleStyle || 'default';
@@ -119,30 +135,25 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
             <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary">Квантовый Артефакт</p>
             <p className="text-sm font-black text-white uppercase italic tracking-tighter">{message.metadata?.giftName || 'Подарок'}</p>
           </div>
-          <div className="flex items-center gap-2 bg-white/5 px-4 py-1 rounded-full border border-white/5">
-             <Sparkles className="w-3 h-3 text-accent animate-pulse" />
-             <span className="text-[9px] font-black text-white uppercase tracking-widest">Received</span>
-          </div>
         </div>
       );
     }
 
     if (message.contentType === 'sticker') {
       return (
-        <div className="w-48 h-48 flex items-center justify-center relative group/sticker">
+        <div className="w-48 h-48 flex items-center justify-center relative">
           <img 
             src={message.content} 
             alt="Sticker" 
             className="max-w-full max-h-full object-contain pointer-events-none drop-shadow-2xl hover:scale-110 transition-transform duration-500 block relative z-10" 
-            style={{ width: '192px', height: '192px', display: 'block', minWidth: '192px', minHeight: '192px' }}
-            loading="eager"
+            style={{ width: '192px', height: '192px' }}
           />
         </div>
       );
     }
     
     if (message.contentType === 'video_note') return (
-      <div className="w-64 h-64 rounded-full overflow-hidden border-4 border-white/20 shadow-2xl bg-black relative group cursor-pointer">
+      <div className="w-64 h-64 rounded-full overflow-hidden border-4 border-white/20 shadow-2xl bg-black">
         <video src={message.content} autoPlay muted loop playsInline className="w-full h-full object-cover rounded-full" />
       </div>
     );
@@ -169,6 +180,7 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
                 audioInstance.current.onplay = () => setIsPlaying(true);
                 audioInstance.current.onpause = () => setIsPlaying(false);
                 audioInstance.current.onended = () => setIsPlaying(false);
+                audioInstance.current.ontimeupdate = () => setProgress((audioInstance.current!.currentTime / audioInstance.current!.duration) * 100);
               }
               if (audioInstance.current.paused) audioInstance.current.play();
               else audioInstance.current.pause();
@@ -183,8 +195,16 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
     );
 
     return (
-      <div className="whitespace-pre-wrap text-[16px] break-words max-w-[320px] font-semibold tracking-tight leading-relaxed">
-        {displayContent}
+      <div className="space-y-2">
+        {message.replyToId && (
+          <div className="bg-white/5 border-l-2 border-primary/50 p-2 rounded-lg mb-2 text-xs opacity-60 truncate">
+            <span className="font-black text-primary block uppercase text-[8px] mb-1">ОТВЕТ</span>
+            <span className="italic">{decryptSignal(message.replyToContent)}</span>
+          </div>
+        )}
+        <div className="whitespace-pre-wrap text-[16px] break-words max-w-[320px] font-semibold tracking-tight leading-relaxed">
+          {displayContent}
+        </div>
         {translatedText && (
           <div className="mt-2 pt-2 border-t border-white/10 flex items-center gap-2 text-[10px] font-black uppercase text-accent/60">
             <Languages className="w-3 h-3" /> Переведено AI
@@ -202,23 +222,54 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
 
   return (
     <>
-    <div className={cn("w-full flex mb-2 transition-all duration-500", isMe ? "justify-end" : "justify-start", highlight && "z-10")}>
+    <div 
+      className={cn("w-full flex mb-2 transition-transform duration-200 ease-out relative", isMe ? "justify-end" : "justify-start")}
+      style={{ transform: `translateX(${-swipeOffset}px)` }}
+      onTouchStart={onTouchStart}
+      onTouchMove={onTouchMove}
+      onTouchEnd={onTouchEnd}
+    >
+      {/* Swipe Indicator (iOS Style) */}
+      <div 
+        className="absolute right-[-80px] top-1/2 -translate-y-1/2 flex items-center justify-center transition-opacity"
+        style={{ opacity: swipeOffset / 80 }}
+      >
+        <div className="h-12 w-12 rounded-full bg-primary/20 flex items-center justify-center text-primary border border-primary/20 shadow-lg">
+          <CornerUpLeft className="w-6 h-6" />
+        </div>
+      </div>
+
       <div className={cn("flex gap-3 max-w-[90%] items-end", isMe ? "flex-row-reverse" : "flex-row")}>
         {!isMe && (
           <div className="cursor-pointer active:scale-90 transition-transform mb-1" onClick={() => setInspectedUserId(message.senderId)}>
             <UserAvatar userId={message.senderId} className="h-10 w-10 shrink-0 border border-white/5" fallbackName={message.senderName} />
           </div>
         )}
-        <div 
-          className={cn("flex flex-col min-w-0 max-w-full", isMe ? "items-end" : "items-start")}
-          onTouchEnd={onTouchEnd}
-        >
+        
+        <div className={cn("flex flex-col min-w-0 max-w-full", isMe ? "items-end" : "items-start")}>
           {!isMe && isGroup && <span className="text-[11px] font-black text-primary uppercase tracking-[0.2em] mb-1.5 ml-2 opacity-60">{message.senderName}</span>}
           
           <ContextMenu>
             <ContextMenuTrigger>
               <div className={cn((message.contentType === 'sticker' || message.contentType === 'gift') ? "relative" : bubbleClasses)}>
                 {renderContent()}
+                
+                {/* Reactions Display */}
+                {message.reactions && Object.entries(message.reactions).some(([_, uids]) => uids.length > 0) && (
+                  <div className={cn("flex gap-1 mt-2 flex-wrap", isMe ? "justify-end" : "justify-start")}>
+                    {Object.entries(message.reactions).map(([emoji, uids]: any) => uids.length > 0 && (
+                      <button 
+                        key={emoji}
+                        onClick={(e) => { e.stopPropagation(); handleReaction(emoji); }}
+                        className="bg-white/5 backdrop-blur-md rounded-full px-2 py-0.5 border border-white/10 flex items-center gap-1 hover:bg-white/10 transition-all"
+                      >
+                        <span className="text-[11px]">{emoji}</span>
+                        <span className="text-[9px] font-black text-white/60">{uids.length}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+
                 <div className={cn("flex items-center justify-end gap-2 mt-2 opacity-40 px-1", (message.contentType === 'sticker' || message.contentType === 'gift') && "absolute bottom-2 right-2 bg-black/40 rounded-full px-2 py-0.5 backdrop-blur-sm z-20")}>
                   <span className="text-[10px] font-black tabular-nums tracking-widest">{formattedTime}</span>
                   {isMe && (
@@ -227,23 +278,31 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
                 </div>
               </div>
             </ContextMenuTrigger>
-            <ContextMenuContent className="w-64 bg-[#0a0a0c]/95 backdrop-blur-[60px] border-white/10 rounded-[2rem] shadow-2xl p-2">
-              <div className="flex justify-around p-2 border-b border-white/5 mb-2">
+            <ContextMenuContent className="w-64 bg-[#0a0a0c]/95 backdrop-blur-[60px] border-white/10 rounded-[2.2rem] shadow-2xl p-2 animate-in zoom-in-95 duration-200">
+              <div className="flex justify-around p-2 border-b border-white/5 mb-2 gap-1">
                 {QUICK_REACTIONS.map(emoji => (
-                  <button key={emoji} onClick={() => handleReaction(emoji)} className="text-xl hover:scale-150 transition-all">{emoji}</button>
+                  <button key={emoji} onClick={() => handleReaction(emoji)} className="text-2xl hover:scale-150 active:scale-90 transition-all p-1">{emoji}</button>
                 ))}
               </div>
-              <ContextMenuItem onClick={() => onReply(message)} className="gap-4 py-3 font-black text-[11px] uppercase tracking-widest"><CornerUpLeft className="w-4 h-4" /> Ответить</ContextMenuItem>
+              <ContextMenuItem onClick={() => onReply(message)} className="gap-4 py-3.5 font-black text-[11px] uppercase tracking-widest rounded-xl hover:bg-primary/10 transition-all">
+                <CornerUpLeft className="w-4 h-4 text-primary" /> Ответить
+              </ContextMenuItem>
               {isPremium && message.contentType === 'text' && (
-                <ContextMenuItem onClick={handleTranslate} className="gap-4 py-3 font-black text-[11px] uppercase tracking-widest text-accent">
-                  {isTranslating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Languages className="w-4 h-4" />} Перевести
+                <ContextMenuItem onClick={handleTranslate} className="gap-4 py-3.5 font-black text-[11px] uppercase tracking-widest text-accent rounded-xl hover:bg-accent/10 transition-all">
+                  {isTranslating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Languages className="w-4 h-4" />} Перевести AI
                 </ContextMenuItem>
               )}
-              {isMe && <ContextMenuItem onClick={() => onEdit(message)} className="gap-4 py-3 font-black text-[11px] uppercase tracking-widest"><Edit2 className="w-4 h-4" /> Исправить</ContextMenuItem>}
-              <ContextMenuItem onClick={() => onForward(message)} className="gap-4 py-3 font-black text-[11px] uppercase tracking-widest"><Share2 className="w-4 h-4" /> Резонанс</ContextMenuItem>
-              <DropdownMenuSeparator className="bg-white/5 mx-2 my-1" />
+              {isMe && <ContextMenuItem onClick={() => onEdit(message)} className="gap-4 py-3.5 font-black text-[11px] uppercase tracking-widest rounded-xl hover:bg-primary/10 transition-all">
+                <Edit2 className="w-4 h-4 text-white/60" /> Исправить
+              </ContextMenuItem>}
+              <ContextMenuItem onClick={() => onForward(message)} className="gap-4 py-3.5 font-black text-[11px] uppercase tracking-widest rounded-xl hover:bg-primary/10 transition-all">
+                <Share2 className="w-4 h-4 text-white/60" /> Резонанс
+              </ContextMenuItem>
+              <ContextMenuSeparator className="bg-white/5 mx-2 my-1" />
               {(isMe || isAdmin) && (
-                <ContextMenuItem onClick={() => deleteDoc(doc(db!, 'chats', chatId, 'messages', message.id))} className="text-red-500 gap-4 py-3 font-black text-[11px] uppercase tracking-widest"><Trash2 className="w-4 h-4" /> Удалить</ContextMenuItem>
+                <ContextMenuItem onClick={() => deleteDoc(doc(db!, 'chats', chatId, 'messages', message.id))} className="text-red-500 gap-4 py-3.5 font-black text-[11px] uppercase tracking-widest rounded-xl hover:bg-red-500/10 transition-all">
+                  <Trash2 className="w-4 h-4" /> Аннигилировать
+                </ContextMenuItem>
               )}
             </ContextMenuContent>
           </ContextMenu>
@@ -256,9 +315,9 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
         <DialogOverlay className="fixed inset-0 bg-black/95 backdrop-blur-3xl z-[3000]" />
         <DialogContent className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 max-w-5xl w-full h-full bg-transparent border-none p-0 overflow-hidden flex items-center justify-center outline-none z-[3100]">
           <DialogTitle className="sr-only">Просмотр</DialogTitle>
-          <img src={message.content} alt="Media" className="max-w-full max-h-full object-contain" />
-          <button onClick={() => setIsMediaViewerOpen(false)} className="absolute top-8 right-8 h-12 w-12 rounded-full bg-white/10 text-white flex items-center justify-center border border-white/10">
-            <X className="w-6 h-6" />
+          <img src={message.content} alt="Media" className="max-w-full max-h-full object-contain animate-in zoom-in duration-300" />
+          <button onClick={() => setIsMediaViewerOpen(false)} className="absolute top-10 right-10 h-14 w-14 rounded-full bg-white/10 text-white flex items-center justify-center border border-white/10 hover:bg-white/20 transition-all active:scale-90">
+            <X className="w-7 h-7" />
           </button>
         </DialogContent>
       </DialogPortal>

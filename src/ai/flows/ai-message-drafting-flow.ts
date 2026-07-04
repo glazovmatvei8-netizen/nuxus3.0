@@ -1,10 +1,8 @@
+
 'use server';
 /**
- * @fileOverview A Genkit flow for generating AI message drafts based on conversation context.
- *
- * - suggestMessageDraft - A function that suggests a message draft or reply.
- * - SuggestDraftInput - The input type for the suggestMessageDraft function.
- * - SuggestDraftOutput - The return type for the suggestMessageDraft function.
+ * @fileOverview A Genkit flow for generating AI message drafts.
+ * Updated to Genkit 1.x stable API.
  */
 
 import { ai } from '@/ai/genkit';
@@ -13,16 +11,16 @@ import { z } from 'genkit';
 const SuggestDraftInputSchema = z.object({
   conversationHistory: z.array(
     z.object({
-      sender: z.string().describe('The name or identifier of the message sender.'),
-      message: z.string().describe('The content of the message.'),
+      sender: z.string(),
+      message: z.string(),
     })
-  ).describe('A list of recent messages in the conversation to provide context.'),
-  currentUserInput: z.string().describe('The current partial message the user has typed.'),
+  ),
+  currentUserInput: z.string(),
 });
 export type SuggestDraftInput = z.infer<typeof SuggestDraftInputSchema>;
 
 const SuggestDraftOutputSchema = z.object({
-  draftMessage: z.string().describe('The suggested message draft or reply.'),
+  draftMessage: z.string().describe('The suggested message draft.'),
 });
 export type SuggestDraftOutput = z.infer<typeof SuggestDraftOutputSchema>;
 
@@ -34,18 +32,12 @@ const aiMessageDraftingPrompt = ai.definePrompt({
   name: 'aiMessageDraftingPrompt',
   input: { schema: SuggestDraftInputSchema },
   output: { schema: SuggestDraftOutputSchema },
-  prompt: `You are a helpful assistant that suggests message drafts for a chat application.
-Based on the following conversation history and the user's current input, suggest a contextually relevant message draft.
-
-Conversation History:
+  prompt: `Based on history:
 {{#each conversationHistory}}
 {{this.sender}}: {{this.message}}
 {{/each}}
-
-User's current input: {{{currentUserInput}}}
-
-Suggest a draft message that completes or expands on the user's input, or provides a relevant reply to the last message in the conversation.
-Be concise and natural. Only output the suggested message, nothing else.`,
+Current: {{{currentUserInput}}}
+Suggest concise natural reply.`,
 });
 
 const aiMessageDraftingFlow = ai.defineFlow(
@@ -56,6 +48,7 @@ const aiMessageDraftingFlow = ai.defineFlow(
   },
   async (input) => {
     const { output } = await aiMessageDraftingPrompt(input);
-    return output!;
+    if (!output) throw new Error("AI failed to draft message.");
+    return output;
   }
 );

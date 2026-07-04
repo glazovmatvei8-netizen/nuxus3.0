@@ -1,22 +1,21 @@
 
 'use server';
 /**
- * @fileOverview A Genkit flow for translating chat messages using Gemini.
- *
- * - translateMessage - A function that translates text to a target language.
+ * @fileOverview A Genkit flow for translations.
+ * Updated to Genkit 1.x stable API.
  */
 
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
 
 const TranslateMessageInputSchema = z.object({
-  text: z.string().describe('The message text to translate.'),
-  targetLang: z.string().default('Russian').describe('The target language for translation.'),
+  text: z.string(),
+  targetLang: z.string().default('Russian'),
 });
 export type TranslateMessageInput = z.infer<typeof TranslateMessageInputSchema>;
 
 const TranslateMessageOutputSchema = z.object({
-  translatedText: z.string().describe('The translated content.'),
+  translatedText: z.string(),
 });
 export type TranslateMessageOutput = z.infer<typeof TranslateMessageOutputSchema>;
 
@@ -28,13 +27,7 @@ const translatePrompt = ai.definePrompt({
   name: 'translatePrompt',
   input: { schema: TranslateMessageInputSchema },
   output: { schema: TranslateMessageOutputSchema },
-  prompt: `You are a high-precision translation engine. 
-Translate the following text into {{{targetLang}}}. 
-Maintain the original tone, emojis, and formatting. 
-If the text is already in {{{targetLang}}}, return it as is.
-
-Text to translate:
-{{{text}}}`,
+  prompt: `Translate to {{{targetLang}}}: {{{text}}}`,
 });
 
 const aiTranslateFlow = ai.defineFlow(
@@ -45,6 +38,7 @@ const aiTranslateFlow = ai.defineFlow(
   },
   async (input) => {
     const { output } = await translatePrompt(input);
-    return output!;
+    if (!output) throw new Error("AI translation failed.");
+    return output;
   }
 );

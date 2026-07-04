@@ -1,8 +1,8 @@
 
 'use server';
 /**
- * @fileOverview A Genkit flow for generating high-quality AI images from text prompts.
- * Updated to Imagen 3 Fast for better accessibility and free-tier support.
+ * @fileOverview A Genkit flow for generating high-quality AI images.
+ * Updated to Genkit 1.x stable API and stable model.
  */
 
 import { ai } from '@/ai/genkit';
@@ -18,9 +18,6 @@ const GenerateAiImageOutputSchema = z.object({
 });
 export type GenerateAiImageOutput = z.infer<typeof GenerateAiImageOutputSchema>;
 
-/**
- * Generates a high-quality aesthetic image using Imagen 3 Fast.
- */
 export async function generateAiImage(input: GenerateAiImageInput): Promise<GenerateAiImageOutput> {
   return generateAiImageFlow(input);
 }
@@ -32,13 +29,15 @@ const generateAiImageFlow = ai.defineFlow(
     outputSchema: GenerateAiImageOutputSchema,
   },
   async (input) => {
-    const enhancedPrompt = `A high-quality, aesthetic, professional digital art of: ${input.prompt}. Cinematic lighting, 4k resolution, clean details, masterpiece style.`;
+    const enhancedPrompt = `High-quality aesthetic professional digital art: ${input.prompt}. Cinematic lighting, 4k, masterpiece details.`;
     
     try {
-      const { media } = await ai.generate({
+      const response = await ai.generate({
         model: 'googleai/imagen-3-fast',
         prompt: enhancedPrompt,
       });
+
+      const media = response.media;
 
       if (!media || !media.url) {
         throw new Error('Signal lost during image synthesis.');
@@ -48,8 +47,8 @@ const generateAiImageFlow = ai.defineFlow(
         imageUrl: media.url,
       };
     } catch (err: any) {
-      console.error("Imagen 3 Fast Error:", err);
-      throw new Error(err.message || "Failed to generate image. Please try again.");
+      console.error("AI Image Generation Error:", err);
+      throw new Error("Failed to generate image. Please check API quota.");
     }
   }
 );
