@@ -5,7 +5,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
-import { Smile, Sticker, Ghost, Star, Loader2, Trash2 } from 'lucide-react';
+import { Smile, Sticker, Ghost, Star, Loader2, Trash2, Zap } from 'lucide-react';
 import { useUser, useFirestore, useDoc, useMemoFirebase, useCollection } from '@/firebase';
 import { doc, collection, query, where, updateDoc, arrayRemove } from 'firebase/firestore';
 import type { User, StickerPack } from '@/lib/types';
@@ -17,14 +17,18 @@ const EMOJI_DATA = [
   { category: 'Животные', emojis: ['🐶', '🐱', '🐭', '🐹', '🐰', '🦊', '🐻', '🐼', '🐨', '🐯', '🦁', '🐮', '🐷', '🐸', '🐵', '🐔', '🐧', '🐦', '🐤', '🦆', '🦅', '🦉', '🦇', '🐺', '🐗', '🐴', '🦄', '🐝', '🦋', '🐌', '🐞', '🕷', '🦂', '🐢', '🐍', '🦎', '🦖', '🐙', '🦑', '🦐', '🦀', '🐡', '🐠', '🐟', '🐬', '🐳', '🐋', '🦈', '🐊', '🐅', '🐘', '🦛', '🦒', '🦘'] }
 ];
 
-// Дефолтный пак стикеров Nuxus
+/**
+ * ЭКСКЛЮЗИВНЫЕ СТИКЕРЫ NUXUS (3D TECH PACK)
+ */
 const DEFAULT_STICKERS = [
-  'https://cdn.pixabay.com/photo/2021/01/22/01/51/shiba-inu-5938950_1280.png',
-  'https://cdn.pixabay.com/photo/2020/09/20/17/43/cat-5587841_1280.png',
-  'https://cdn.pixabay.com/photo/2020/12/30/14/23/cat-5873539_1280.png',
-  'https://cdn.pixabay.com/photo/2019/11/08/11/56/cat-4611189_1280.png',
-  'https://cdn.pixabay.com/photo/2017/01/23/18/19/cat-2003362_1280.png',
-  'https://cdn.pixabay.com/photo/2016/12/03/17/30/cat-1880193_1280.png'
+  'https://images.unsplash.com/photo-1639762681485-074b7f938ba0?w=400&h=400&fit=crop&q=80', // Кристалл
+  'https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=400&h=400&fit=crop&q=80', // React/Node Atom
+  'https://images.unsplash.com/photo-1614728894747-a83421e2b9c9?w=400&h=400&fit=crop&q=80', // Космонавт
+  'https://images.unsplash.com/photo-1620641788421-7a1c342ea42e?w=400&h=400&fit=crop&q=80', // Абстрактная сфера
+  'https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=400&h=400&fit=crop&q=80', // Ретро компьютер
+  'https://images.unsplash.com/photo-1618005182384-a83421e2b9c9?w=400&h=400&fit=crop&q=80', // Киберпанк город
+  'https://images.unsplash.com/photo-1605810230434-7631ac76ec81?w=400&h=400&fit=crop&q=80', // Сигналы/Волны
+  'https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=400&h=400&fit=crop&q=80'  // Земля из космоса
 ];
 
 interface EmojiPickerProps {
@@ -70,26 +74,28 @@ export function EmojiPicker({ onEmojiSelect, onStickerSelect, className }: Emoji
   }, [activePackId, stickerPacks]);
 
   return (
-    <div className={cn("bg-[#1c1c1e]/90 backdrop-blur-3xl border border-white/10 rounded-[2rem] overflow-hidden shadow-2xl flex flex-col h-[400px]", className)}>
+    <div className={cn("bg-[#1c1c1e]/90 backdrop-blur-3xl border border-white/10 rounded-[2.5rem] overflow-hidden shadow-[0_20px_80px_rgba(0,0,0,0.8)] flex flex-col h-[420px] animate-in slide-in-from-bottom-4 duration-500", className)}>
       <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0">
-        <TabsList className="grid grid-cols-2 h-12 bg-white/5 border-b border-white/5 shrink-0 rounded-none p-0">
-          <TabsTrigger value="emoji" className="h-full rounded-none data-[state=active]:bg-white/10 data-[state=active]:text-primary gap-2 transition-all">
-            <Smile className="w-4 h-4" /> <span className="text-[10px] font-black uppercase tracking-widest">Эмодзи</span>
+        <TabsList className="grid grid-cols-2 h-14 bg-white/5 border-b border-white/5 shrink-0 rounded-none p-1 gap-1">
+          <TabsTrigger value="emoji" className="h-full rounded-2xl data-[state=active]:bg-primary data-[state=active]:text-white gap-2 transition-all font-black uppercase text-[10px] tracking-widest">
+            <Smile className="w-4 h-4" /> Эмодзи
           </TabsTrigger>
-          <TabsTrigger value="stickers" className="h-full rounded-none data-[state=active]:bg-white/10 data-[state=active]:text-primary gap-2 transition-all">
-            <Sticker className="w-4 h-4" /> <span className="text-[10px] font-black uppercase tracking-widest">Стикеры</span>
+          <TabsTrigger value="stickers" className="h-full rounded-2xl data-[state=active]:bg-primary data-[state=active]:text-white gap-2 transition-all font-black uppercase text-[10px] tracking-widest">
+            <Zap className="w-4 h-4" /> Стикеры
           </TabsTrigger>
         </TabsList>
 
         <TabsContent value="emoji" className="flex-1 min-h-0 m-0 outline-none">
           <ScrollArea className="h-full">
-            <div className="p-4 space-y-6">
+            <div className="p-5 space-y-8">
               {recent.length > 0 && (
                 <div>
-                  <h3 className="text-[9px] font-black uppercase text-muted-foreground/40 mb-3 tracking-[0.2em] px-1">Недавние</h3>
-                  <div className="grid grid-cols-8 gap-2">
+                  <h3 className="text-[9px] font-black uppercase text-primary/40 mb-4 tracking-[0.3em] px-1 flex items-center gap-2">
+                    <Star className="w-3 h-3 fill-current" /> Недавние
+                  </h3>
+                  <div className="grid grid-cols-8 gap-3">
                     {recent.map((emoji, i) => (
-                      <button key={`recent-${i}`} onClick={() => handleEmojiClick(emoji)} className="text-2xl hover:scale-125 active:scale-90 transition-transform duration-200">
+                      <button key={`recent-${i}`} onClick={() => handleEmojiClick(emoji)} className="text-3xl hover:scale-125 active:scale-90 transition-transform duration-200">
                         {emoji}
                       </button>
                     ))}
@@ -99,10 +105,10 @@ export function EmojiPicker({ onEmojiSelect, onStickerSelect, className }: Emoji
               
               {EMOJI_DATA.map((cat, i) => (
                 <div key={i}>
-                  <h3 className="text-[9px] font-black uppercase text-muted-foreground/40 mb-3 tracking-[0.2em] px-1">{cat.category}</h3>
-                  <div className="grid grid-cols-8 gap-2">
+                  <h3 className="text-[9px] font-black uppercase text-white/20 mb-4 tracking-[0.3em] px-1">{cat.category}</h3>
+                  <div className="grid grid-cols-8 gap-3">
                     {cat.emojis.map((emoji, j) => (
-                      <button key={j} onClick={() => handleEmojiClick(emoji)} className="text-2xl hover:scale-125 active:scale-90 transition-transform duration-200">
+                      <button key={j} onClick={() => handleEmojiClick(emoji)} className="text-3xl hover:scale-125 active:scale-90 transition-transform duration-200">
                         {emoji}
                       </button>
                     ))}
@@ -114,18 +120,18 @@ export function EmojiPicker({ onEmojiSelect, onStickerSelect, className }: Emoji
         </TabsContent>
 
         <TabsContent value="stickers" className="flex-1 min-h-0 m-0 outline-none flex flex-col">
-          <div className="flex gap-2 p-2 bg-white/5 border-b border-white/5 overflow-x-auto scrollbar-hide shrink-0 items-center">
+          <div className="flex gap-2 p-3 bg-white/5 border-b border-white/5 overflow-x-auto scrollbar-hide shrink-0 items-center">
             <button 
               onClick={() => setActivePackId('default')}
-              className={cn("h-10 min-w-[40px] rounded-xl flex items-center justify-center border transition-all", activePackId === 'default' ? "bg-primary border-primary shadow-lg" : "bg-black/40 border-white/10 opacity-60")}
+              className={cn("h-11 min-w-[44px] rounded-xl flex items-center justify-center border transition-all", activePackId === 'default' ? "bg-primary border-primary shadow-[0_0_15px_rgba(168,85,247,0.4)]" : "bg-black/40 border-white/10 opacity-60")}
             >
-              <Star className="w-4 h-4 text-white" />
+              <Zap className="w-5 h-5 text-white" />
             </button>
             {stickerPacks?.map(pack => (
               <button 
                 key={pack.id} 
                 onClick={() => setActivePackId(pack.id)}
-                className={cn("h-10 min-w-[40px] rounded-xl overflow-hidden border transition-all", activePackId === pack.id ? "border-primary scale-105" : "border-white/10 opacity-60")}
+                className={cn("h-11 min-w-[44px] rounded-xl overflow-hidden border transition-all", activePackId === pack.id ? "border-primary scale-110 shadow-lg" : "border-white/10 opacity-40")}
               >
                 {pack.iconUrl ? <img src={pack.iconUrl} className="w-full h-full object-cover" alt="Pack" /> : <div className="w-full h-full bg-primary/20 flex items-center justify-center text-[10px] text-primary">{pack.name[0]}</div>}
               </button>
@@ -133,23 +139,23 @@ export function EmojiPicker({ onEmojiSelect, onStickerSelect, className }: Emoji
           </div>
 
           <ScrollArea className="flex-1">
-            <div className="p-4">
+            <div className="p-5">
               {displayedStickers.length > 0 ? (
-                <div className="grid grid-cols-4 gap-3">
+                <div className="grid grid-cols-4 gap-4">
                   {displayedStickers.map((url, idx) => (
                     <button 
                       key={idx} 
                       onClick={() => onStickerSelect(url)}
-                      className="aspect-square rounded-xl overflow-hidden hover:bg-white/5 active:scale-90 transition-all p-1"
+                      className="aspect-square rounded-[1.5rem] overflow-hidden hover:bg-white/10 active:scale-90 transition-all p-2 bg-white/5 border border-white/5 group shadow-lg"
                     >
-                      <img src={url} alt="Sticker" className="w-full h-full object-contain" />
+                      <img src={url} alt="Sticker" className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-500 drop-shadow-xl" />
                     </button>
                   ))}
                 </div>
               ) : (
-                <div className="flex flex-col items-center justify-center py-20 opacity-30 text-center">
-                  <Ghost className="w-12 h-12 mb-4" />
-                  <p className="text-[10px] font-black uppercase">Нет стикеров</p>
+                <div className="flex flex-col items-center justify-center py-20 opacity-20 text-center">
+                  <Ghost className="w-16 h-16 mb-4" />
+                  <p className="text-[10px] font-black uppercase tracking-widest">Пакет пуст</p>
                 </div>
               )}
             </div>

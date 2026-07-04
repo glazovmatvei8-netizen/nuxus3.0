@@ -9,9 +9,10 @@ import { Progress } from './ui/progress';
 import versions from '@/app/versions.json';
 
 /**
- * КВАНТОВЫЙ ОБНОВЛЯТОР ЯДРА V25.4.1
+ * КВАНТОВЫЙ ОБНОВЛЯТОР ЯДРА V25.5.0
+ * Оптимизирован для мгновенной доставки патчей.
  */
-const CURRENT_VERSION = "25.4.1";
+const CURRENT_VERSION = "25.4.2"; // Мы ставим версию чуть ниже актуальной в коде, чтобы триггернуть обновление после пуша
 
 export function UpdateNotifier() {
   const [isOpen, setIsOpen] = useState(false);
@@ -23,12 +24,13 @@ export function UpdateNotifier() {
 
     const checkVersion = () => {
       const lastInstalled = localStorage.getItem('nuxus_last_installed_version');
+      // Если версия в конфиге (latest) новее, чем в коде ИЛИ новее, чем последняя установленная
       if (versions.latestVersion !== CURRENT_VERSION && lastInstalled !== versions.latestVersion) {
         setIsOpen(true);
       }
     };
 
-    const timer = setTimeout(checkVersion, 3000);
+    const timer = setTimeout(checkVersion, 2000);
     const handleManualCheck = () => setIsOpen(true);
     window.addEventListener('nuxus_check_updates', handleManualCheck);
     
@@ -42,7 +44,7 @@ export function UpdateNotifier() {
     setIsUpdating(true);
     let p = 0;
     const interval = setInterval(() => {
-      p += Math.random() * 25;
+      p += Math.random() * 30;
       if (p >= 100) {
         setUpdateProgress(100);
         clearInterval(interval);
@@ -56,7 +58,8 @@ export function UpdateNotifier() {
     }, 150);
   };
 
-  const isUpToDate = versions.latestVersion === CURRENT_VERSION;
+  // Проверка для отображения "Актуально" в модальном окне
+  const isUpToDate = versions.latestVersion === localStorage.getItem('nuxus_last_installed_version');
 
   if (isUpdating) {
     return (
@@ -66,8 +69,8 @@ export function UpdateNotifier() {
             <Download className="w-10 h-10 text-primary animate-bounce" />
           </div>
           <div className="space-y-2">
-            <h2 className="text-2xl font-black uppercase italic text-white tracking-tighter">Syncing Core</h2>
-            <p className="text-[10px] font-black uppercase tracking-[0.4em] text-primary/60">Progress: {Math.round(updateProgress)}%</p>
+            <h2 className="text-2xl font-black uppercase italic tracking-tighter">Синхронизация</h2>
+            <p className="text-[10px] font-black uppercase tracking-[0.4em] text-primary/60">Прогресс: {Math.round(updateProgress)}%</p>
           </div>
           <Progress value={updateProgress} className="h-1.5 bg-white/5" />
         </div>
@@ -80,25 +83,26 @@ export function UpdateNotifier() {
       <DialogContent className="max-w-[420px] bg-[#0a0a0c]/95 backdrop-blur-3xl border-primary/20 rounded-[2.8rem] p-0 overflow-hidden shadow-2xl outline-none">
         <div className="relative h-40 bg-gradient-to-br from-primary/20 to-transparent flex items-center justify-center">
           <Zap className="w-16 h-16 text-primary animate-pulse" />
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(168,85,247,0.1)_0%,transparent_70%)]" />
         </div>
 
-        <div className="p-8 space-y-6">
+        <div className="p-8 space-y-6 relative z-10">
           <DialogHeader className="space-y-1 text-left">
             <DialogTitle className="text-2xl font-black uppercase italic tracking-tighter text-white">
               {isUpToDate ? 'Ядро Актуально' : 'Новый Сигнал'}
             </DialogTitle>
             <DialogDescription className="flex items-center gap-2 text-[10px] font-bold text-primary uppercase tracking-widest">
-              <span>{isUpToDate ? `V ${CURRENT_VERSION}` : `Билд ${versions.latestVersion}`}</span>
+              <span>{isUpToDate ? `V ${versions.latestVersion}` : `Билд ${versions.latestVersion}`}</span>
               <span className="opacity-30">•</span>
               <span>{versions.sizeMb} МБ</span>
             </DialogDescription>
           </DialogHeader>
 
           {!isUpToDate ? (
-            <div className="space-y-3 bg-white/5 p-5 rounded-3xl border border-white/5">
+            <div className="space-y-3 bg-white/5 p-5 rounded-3xl border border-white/5 shadow-inner">
               <div className="flex items-center gap-2 text-white/40 mb-1">
                 <ListChecks className="w-3.5 h-3.5" />
-                <span className="text-[9px] font-black uppercase tracking-widest">Изменения:</span>
+                <span className="text-[9px] font-black uppercase tracking-widest">Что нового:</span>
               </div>
               <ul className="space-y-2">
                 {versions.changelog.map((item, idx) => (
@@ -109,9 +113,9 @@ export function UpdateNotifier() {
               </ul>
             </div>
           ) : (
-            <div className="p-6 bg-primary/5 rounded-3xl border border-primary/10 text-center">
+            <div className="p-6 bg-primary/5 rounded-3xl border border-primary/10 text-center shadow-xl">
                <ShieldCheck className="w-8 h-8 text-primary mx-auto mb-3" />
-               <p className="text-[10px] text-white/80 font-black uppercase tracking-widest">Ваш узел полностью синхронизирован и работает на максимальной частоте.</p>
+               <p className="text-[10px] text-white/80 font-black uppercase tracking-widest">Ваш узел полностью синхронизирован.</p>
             </div>
           )}
 
@@ -120,17 +124,18 @@ export function UpdateNotifier() {
               <>
                 <Button 
                   onClick={handleUpdateAction}
-                  className="h-14 bg-primary text-white rounded-2xl font-black uppercase italic tracking-widest shadow-xl shadow-primary/30 group"
+                  className="h-14 bg-primary text-white rounded-2xl font-black uppercase italic tracking-widest shadow-xl shadow-primary/30 group relative overflow-hidden"
                 >
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
                   <RefreshCw className="w-5 h-5 mr-2 group-hover:rotate-180 transition-transform duration-700" />
                   Принять Патч
                 </Button>
-                <Button variant="ghost" onClick={() => setIsOpen(false)} className="h-12 text-[10px] font-black uppercase tracking-widest text-muted-foreground/40">
+                <Button variant="ghost" onClick={() => setIsOpen(false)} className="h-12 text-[10px] font-black uppercase tracking-widest text-muted-foreground/40 hover:text-white">
                   Пропустить
                 </Button>
               </>
             ) : (
-              <Button onClick={() => setIsOpen(false)} className="h-14 bg-white/5 border border-white/10 text-white rounded-2xl font-black uppercase tracking-widest">
+              <Button onClick={() => setIsOpen(false)} className="h-14 bg-white/5 border border-white/10 text-white rounded-2xl font-black uppercase tracking-widest hover:bg-white/10 transition-all">
                 Закрыть
               </Button>
             )}

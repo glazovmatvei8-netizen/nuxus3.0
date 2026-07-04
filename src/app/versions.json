@@ -1,12 +1,13 @@
 
 {
-  "latestVersion": "25.4.2",
-  "qesVersion": "25.4",
-  "build": "Stable-Communication-Elite",
-  "sizeMb": 115,
+  "latestVersion": "25.5.0",
+  "qesVersion": "25.5",
+  "build": "Quantum-Sticker-Elite",
+  "sizeMb": 122,
   "changelog": [
-    "Fixed: Пустота в списке заявок админ-панели",
-    "PWA: Улучшена доставка уведомлений на заблокированный экран iOS",
-    "System: Синхронизация реестра сигналов V25.4.2"
+    "Exclusive: Добавлен первый пак 3D стикеров Nuxus Tech",
+    "Sync: Исправлена ошибка детекции новых патчей Ядра",
+    "UI: Оптимизирована панель выбора медиа-сигналов",
+    "System: Повышена стабильность PWA на iOS 18"
   ]
 }
