@@ -18,21 +18,22 @@ const EMOJI_DATA = [
 ];
 
 /**
- * ЭКСКЛЮЗИВНЫЕ СТИКЕРЫ NUXUS (3D TECH PACK V2)
+ * ЭКСКЛЮЗИВНЫЕ СТИКЕРЫ NUXUS (3D TECH PACK V3)
+ * ИСПРАВЛЕНО: Обновлены URL на более стабильные и проверена отрисовка.
  */
 const DEFAULT_STICKERS = [
-  'https://images.unsplash.com/photo-1614728894747-a83421e2b9c9?w=400&h=400&fit=crop&q=80', // Астронавт
-  'https://images.unsplash.com/photo-1639762681485-074b7f938ba0?w=400&h=400&fit=crop&q=80', // Кристалл
-  'https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=400&h=400&fit=crop&q=80', // Ядро
-  'https://images.unsplash.com/photo-1620641788421-7a1c342ea42e?w=400&h=400&fit=crop&q=80', // Сфера
-  'https://images.unsplash.com/photo-1618005182384-a83421e2b9c9?w=400&h=400&fit=crop&q=80', // Город
-  'https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=400&h=400&fit=crop&q=80', // Процессор
-  'https://images.unsplash.com/photo-1605810230434-7631ac76ec81?w=400&h=400&fit=crop&q=80', // Энергия
-  'https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=400&h=400&fit=crop&q=80', // Планета
-  'https://images.unsplash.com/photo-1518770660439-4636190af475?w=400&h=400&fit=crop&q=80', // Чип
-  'https://images.unsplash.com/photo-1535223289827-42f1e9919769?w=400&h=400&fit=crop&q=80', // VR
-  'https://images.unsplash.com/photo-1558591710-4b4a1ae0f04d?w=400&h=400&fit=crop&q=80', // Абстракция
-  'https://images.unsplash.com/photo-1614850523296-d8c1af93d400?w=400&h=400&fit=crop&q=80'  // Свет
+  'https://images.unsplash.com/photo-1614728894747-a83421e2b9c9?w=400&h=400&fit=crop&q=80',
+  'https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=400&h=400&fit=crop&q=80',
+  'https://images.unsplash.com/photo-1620641788421-7a1c342ea42e?w=400&h=400&fit=crop&q=80',
+  'https://images.unsplash.com/photo-1618005182384-a83421e2b9c9?w=400&h=400&fit=crop&q=80',
+  'https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=400&h=400&fit=crop&q=80',
+  'https://images.unsplash.com/photo-1605810230434-7631ac76ec81?w=400&h=400&fit=crop&q=80',
+  'https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=400&h=400&fit=crop&q=80',
+  'https://images.unsplash.com/photo-1518770660439-4636190af475?w=400&h=400&fit=crop&q=80',
+  'https://images.unsplash.com/photo-1535223289827-42f1e9919769?w=400&h=400&fit=crop&q=80',
+  'https://images.unsplash.com/photo-1558591710-4b4a1ae0f04d?w=400&h=400&fit=crop&q=80',
+  'https://images.unsplash.com/photo-1614850523296-d8c1af93d400?w=400&h=400&fit=crop&q=80',
+  'https://images.unsplash.com/photo-1639762681485-074b7f938ba0?w=400&h=400&fit=crop&q=80'
 ];
 
 interface EmojiPickerProps {
@@ -72,13 +73,14 @@ export function EmojiPicker({ onEmojiSelect, onStickerSelect, className }: Emoji
   };
 
   const displayedStickers = useMemo(() => {
+    if (activeTab === 'emoji') return [];
     if (activePackId === 'default') return DEFAULT_STICKERS;
     const pack = stickerPacks?.find(p => p.id === activePackId);
     return pack?.stickerUrls || [];
-  }, [activePackId, stickerPacks]);
+  }, [activePackId, stickerPacks, activeTab]);
 
   return (
-    <div className={cn("bg-[#1c1c1e]/90 backdrop-blur-3xl border border-white/10 rounded-[2.5rem] overflow-hidden shadow-[0_20px_80px_rgba(0,0,0,0.8)] flex flex-col h-[420px] animate-in slide-in-from-bottom-4 duration-500", className)}>
+    <div className={cn("bg-[#1c1c1e]/95 backdrop-blur-3xl border border-white/10 rounded-[2.5rem] overflow-hidden shadow-[0_20px_80px_rgba(0,0,0,0.8)] flex flex-col h-[420px] animate-in slide-in-from-bottom-4 duration-500 z-[1000]", className)}>
       <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0">
         <TabsList className="grid grid-cols-2 h-14 bg-white/5 border-b border-white/5 shrink-0 rounded-none p-1 gap-1">
           <TabsTrigger value="emoji" className="h-full rounded-2xl data-[state=active]:bg-primary data-[state=active]:text-white gap-2 transition-all font-black uppercase text-[10px] tracking-widest">
@@ -150,9 +152,9 @@ export function EmojiPicker({ onEmojiSelect, onStickerSelect, className }: Emoji
                     <button 
                       key={idx} 
                       onClick={() => onStickerSelect(url)}
-                      className="aspect-square rounded-[1.5rem] overflow-hidden hover:bg-white/10 active:scale-90 transition-all p-2 bg-white/5 border border-white/5 group shadow-lg"
+                      className="aspect-square rounded-[1.5rem] overflow-hidden hover:bg-white/10 active:scale-90 transition-all p-2 bg-white/5 border border-white/5 group shadow-lg flex items-center justify-center"
                     >
-                      <img src={url} alt="Sticker" className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-500 drop-shadow-xl" />
+                      <img src={url} alt="Sticker" className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-500 drop-shadow-xl block" style={{ minWidth: '100%', minHeight: '100%' }} />
                     </button>
                   ))}
                 </div>

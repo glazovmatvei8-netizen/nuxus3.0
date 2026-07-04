@@ -9,10 +9,10 @@ import { Progress } from './ui/progress';
 import versions from '@/app/versions.json';
 
 /**
- * КВАНТОВЫЙ ОБНОВЛЯТОР ЯДРА V25.5.1
- * Оптимизирован для фоновой проверки обновлений без перезагрузки страницы.
+ * КВАНТОВЫЙ ОБНОВЛЯТОР ЯДРА V25.5.2
+ * ИСПРАВЛЕНО: Синхронизация версий для предотвращения бесконечных циклов.
  */
-const CURRENT_VERSION = "25.5.0"; 
+const CURRENT_VERSION = "25.5.2"; 
 
 export function UpdateNotifier() {
   const [isOpen, setIsOpen] = useState(false);
@@ -30,9 +30,12 @@ export function UpdateNotifier() {
         
         const lastInstalled = localStorage.getItem('nuxus_last_installed_version');
         
-        // Если версия на сервере новее текущего кода ИЛИ новее последней установленной
+        // Условие появления окна: версия на сервере НЕ совпадает с текущим кодом 
+        // И версия на сервере НЕ совпадает с тем, что мы уже пометили как установленное
         if (data.latestVersion !== CURRENT_VERSION && lastInstalled !== data.latestVersion) {
           setIsOpen(true);
+        } else {
+          setIsOpen(false);
         }
       }
     } catch (e) {
@@ -51,7 +54,10 @@ export function UpdateNotifier() {
 
     const handleManualCheck = () => {
       checkVersion();
-      setIsOpen(true);
+      // Показываем окно только если есть реальная разница
+      if (serverVersion !== CURRENT_VERSION) {
+        setIsOpen(true);
+      }
     };
     
     window.addEventListener('nuxus_check_updates', handleManualCheck);
@@ -61,7 +67,7 @@ export function UpdateNotifier() {
       clearInterval(interval);
       window.removeEventListener('nuxus_check_updates', handleManualCheck);
     };
-  }, [checkVersion]);
+  }, [checkVersion, serverVersion]);
 
   const handleUpdateAction = () => {
     setIsUpdating(true);
@@ -81,7 +87,7 @@ export function UpdateNotifier() {
     }, 120);
   };
 
-  const isUpToDate = serverVersion === localStorage.getItem('nuxus_last_installed_version') && serverVersion === CURRENT_VERSION;
+  const isUpToDate = serverVersion === CURRENT_VERSION;
 
   if (isUpdating) {
     return (
