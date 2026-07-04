@@ -11,8 +11,8 @@ import { decryptSignal, isGlobalAdmin } from '@/lib/utils';
 import { isAfter, parseISO, addDays } from 'date-fns';
 
 /**
- * Nuxus Notification & Bot Core v2.9.0
- * Управляет уведомлениями и логикой бота Nuxus Chat Manager.
+ * Nuxus Notification & Bot Core v3.0.0
+ * Управляет вложенными (Toast) и системными (Native) уведомлениями.
  */
 export function NotificationListener() {
   const { user } = useUser();
@@ -39,10 +39,34 @@ export function NotificationListener() {
     return () => window.removeEventListener('pointerdown', setupAudio);
   }, []);
 
+  // Функция для системного уведомления (Native-like)
+  const sendSystemNotification = (title: string, body: string, icon: string) => {
+    if (!("Notification" in window) || Notification.permission !== "granted") return;
+
+    try {
+      const n = new Notification(title, {
+        body,
+        icon: icon || 'https://i.ibb.co/sd2MqGz2/Icon.png',
+        badge: 'https://i.ibb.co/sd2MqGz2/Icon.png',
+        silent: false,
+      });
+
+      if (window.navigator && window.navigator.vibrate) {
+        window.navigator.vibrate([100, 50, 100]);
+      }
+
+      n.onclick = () => {
+        window.focus();
+        n.close();
+      };
+    } catch (e) {
+      console.warn("System Notification failed:", e);
+    }
+  };
+
   useEffect(() => {
     if (!db || !user) return;
 
-    // Слушаем сообщения во всех доступных чатах
     const chatsQuery = query(collection(db, 'chats'), where('participantIds', 'array-contains', user.uid));
     
     const unsubscribe = onSnapshot(chatsQuery, (chatSnapshot) => {
@@ -50,12 +74,10 @@ export function NotificationListener() {
         const chatId = change.doc.id;
         const chatData = change.doc.data() as Chat;
 
-        // Если чат обновился (пришло новое сообщение)
         if (change.type === 'modified' || change.type === 'added') {
           const lastTime = chatData.lastMessageAt;
           if (!lastTime) return;
 
-          // Проверка только свежих сообщений
           const lastMsgQuery = query(
             collection(db, 'chats', chatId, 'messages'), 
             orderBy('sentAt', 'desc'), 
@@ -68,31 +90,37 @@ export function NotificationListener() {
             const msgId = msgDoc.id;
             const msgData = msgDoc.data();
             
-            // Защита от дублей и старых сигналов
             if (processedMessageIds.current.has(msgId)) return;
             processedMessageIds.current.add(msgId);
             
-            // Если памяти много, чистим старые ID раз в 1000 записей
-            if (processedMessageIds.current.size > 1000) {
-              processedMessageIds.current.clear();
-            }
+            if (processedMessageIds.current.size > 1000) processedMessageIds.current.clear();
 
-            const isFresh = Math.abs(Date.now() - new Date(msgData.sentAt).getTime()) < 15000;
+            const isFresh = Math.abs(Date.now() - new Date(msgData.sentAt).getTime()) < 20000;
             if (!isFresh || isFirstLoad.current) return;
 
-            // Уведомление: только если чат НЕ открыт и сообщение НЕ наше
+            // Если чат не открыт и отправитель не мы
             if (chatId !== currentChatId && msgData.senderId !== user.uid) {
+              const decryptedContent = decryptSignal(msgData.content).slice(0, 60);
+              const senderName = msgData.senderName || 'Nuxus Agent';
+              const chatName = chatData.name || 'Новый сигнал';
+
+              // 1. Внутренний Toast
+              toast({ 
+                title: chatName, 
+                description: `${senderName}: ${decryptedContent}${decryptedContent.length >= 60 ? '...' : ''}` 
+              });
+
+              // 2. Звук
               if (audioRef.current) {
                 audioRef.current.currentTime = 0;
                 audioRef.current.play().catch(() => {});
               }
-              toast({ 
-                title: chatData.name || 'Nuxus Signal', 
-                description: msgData.senderName ? `${msgData.senderName}: Новое сообщение` : 'Новый сигнал доставлен' 
-              });
+
+              // 3. Системное уведомление (PWA)
+              sendSystemNotification(chatName, `${senderName}: ${decryptedContent}`, chatData.avatarUrl || '');
             }
 
-            // Бот обрабатывает команды
+            // Бот команды
             const content = decryptSignal(msgData.content).trim();
             if (content.startsWith('!')) {
               handleBotCommand(chatId, chatData, content, msgData.senderId, msgId);
@@ -102,7 +130,7 @@ export function NotificationListener() {
       });
       
       if (isFirstLoad.current) {
-        setTimeout(() => { isFirstLoad.current = false; }, 2000);
+        setTimeout(() => { isFirstLoad.current = false; }, 3000);
       }
     });
 
@@ -208,7 +236,7 @@ export function NotificationListener() {
           break;
       }
     } else if (cmd === '!статус' || cmd === '!status') {
-      await sendBotReply(`📊 Состояние Ядра: Стабильно\nВерсия: 2.9.0\nШифрование: QES 2.9 Active`);
+      await sendBotReply(`📊 Состояние Ядра: Стабильно\nВерсия: 3.0.0 Active\nШифрование: QES 25.4 Active`);
     }
   };
 
