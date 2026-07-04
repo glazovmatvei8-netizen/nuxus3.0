@@ -13,7 +13,7 @@ import { useAuth, useUser, useFirestore, useDoc, useMemoFirebase } from '@/fireb
 import { UserAvatar } from '@/components/user-avatar';
 import { 
   LogOut, Settings2, Camera, Lock, Fingerprint, Sparkles, Star, Zap, ShieldCheck, Loader2, Database, Download, Check, Palette, 
-  Monitor, Layout, Type, MessageSquare, Paintbrush, Smile, Bell
+  Monitor, Layout, Type, MessageSquare, Paintbrush, Smile, Bell, Ghost
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { signOut } from 'firebase/auth';
@@ -54,7 +54,8 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
     twoFactorEnabled: false,
     twoFactorPin: '',
     biometricEnabled: false,
-    pwaNotificationsEnabled: false
+    pwaNotificationsEnabled: false,
+    isGhostMode: false
   });
 
   useEffect(() => {
@@ -74,7 +75,8 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         twoFactorEnabled: !!profile.twoFactorEnabled,
         twoFactorPin: profile.twoFactorPin || '',
         biometricEnabled: !!profile.settings?.biometricEnabled,
-        pwaNotificationsEnabled: !!profile.settings?.pwaNotificationsEnabled
+        pwaNotificationsEnabled: !!profile.settings?.pwaNotificationsEnabled,
+        isGhostMode: !!profile.settings?.privacy?.isGhostMode
       });
     }
   }, [profile, open]);
@@ -98,7 +100,8 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         'settings.bubbleStyle': form.bubbleStyle,
         'settings.messageSize': form.messageSize,
         'settings.biometricEnabled': form.biometricEnabled,
-        'settings.pwaNotificationsEnabled': form.pwaNotificationsEnabled
+        'settings.pwaNotificationsEnabled': form.pwaNotificationsEnabled,
+        'settings.privacy.isGhostMode': form.isGhostMode
       });
       onOpenChange(false);
       toast({ title: "Конфигурация сохранена" });
@@ -110,16 +113,15 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
   const handleTogglePwaNotifications = async (enabled: boolean) => {
     if (enabled) {
       if (!('Notification' in window)) {
-        toast({ title: "PWA Error", description: "Уведомления не поддерживаются в этом браузере.", variant: "destructive" });
+        toast({ title: "PWA Error", description: "Уведомления не поддерживаются.", variant: "destructive" });
         return;
       }
-
       const permission = await Notification.requestPermission();
       if (permission === 'granted') {
         setForm({ ...form, pwaNotificationsEnabled: true });
-        toast({ title: "Уведомления активны", description: "Теперь вы будете получать сигналы в фоне." });
+        toast({ title: "Уведомления активны" });
       } else {
-        toast({ title: "Доступ отклонен", description: "Разрешите уведомления в настройках iOS/Android.", variant: "destructive" });
+        toast({ title: "Доступ отклонен", variant: "destructive" });
         setForm({ ...form, pwaNotificationsEnabled: false });
       }
     } else {
@@ -165,7 +167,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
       <DialogContent className="max-w-md bg-[#0a0a0c]/95 backdrop-blur-[60px] border-white/10 p-0 overflow-hidden h-[85vh] flex flex-col rounded-[3rem] shadow-[0_30px_100px_rgba(0,0,0,1)] outline-none">
         <DialogHeader className="p-8 border-b border-white/5 shrink-0 text-left">
           <DialogTitle className="flex items-center gap-3 text-2xl font-black italic uppercase tracking-tighter text-white">
-            <Settings2 className="w-7 h-7 text-primary" /> Параметры v3.1
+            <Settings2 className="w-7 h-7 text-primary" /> Параметры v{versions.latestVersion}
           </DialogTitle>
         </DialogHeader>
         
@@ -281,6 +283,19 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
             </TabsContent>
 
             <TabsContent value="privacy" className="space-y-8 m-0 p-8 pb-24">
+              {isPremium && (
+                <div className="bg-accent/5 p-6 rounded-[2.5rem] border border-accent/20 flex items-center justify-between shadow-lg mb-4">
+                  <div className="flex items-center gap-4 text-left">
+                    <div className="bg-accent/10 p-3 rounded-xl"><Ghost className="w-6 h-6 text-accent" /></div>
+                    <div className="flex flex-col">
+                      <span className="text-sm font-black text-white uppercase italic">Ghost Mode</span>
+                      <span className="text-[8px] text-accent font-black uppercase tracking-widest">Полная невидимость</span>
+                    </div>
+                  </div>
+                  <Switch checked={form.isGhostMode} onCheckedChange={v => setForm({ ...form, isGhostMode: v })} />
+                </div>
+              )}
+
               <div className="bg-primary/5 p-8 rounded-[3rem] border border-primary/10 space-y-8 shadow-2xl">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-5">

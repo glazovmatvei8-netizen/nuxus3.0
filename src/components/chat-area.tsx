@@ -22,6 +22,7 @@ import { formatDisplayName, cn, compressImage, encryptSignal, isGlobalAdmin, dec
 import type { Message, User as UserType, Chat } from '@/lib/types';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { generateAiImage } from '@/ai/flows/generate-ai-image-flow';
+import { suggestMessageDraft } from '@/ai/flows/ai-message-drafting-flow';
 import { useTranslations } from '@/hooks/use-translations';
 import { addMinutes } from 'date-fns';
 
@@ -51,7 +52,6 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
     setMessageInput(localDrafts[currentChatId] || '');
   }, [currentChatId, localDrafts]);
 
-  // Авто-регулировка высоты текстового поля
   useEffect(() => {
     const textarea = textareaRef.current;
     if (textarea) {
@@ -64,10 +64,25 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
   const handleInputChange = (val: string) => {
     setMessageInput(val);
     setLocalDrafts(prev => ({ ...prev, [currentChatId]: val }));
-    
-    if (userProfile?.id && currentChatId) {
-      const db = textareaRef.current?.closest('.chat-container')?.getAttribute('data-db'); // Dummy access
-      // Typing logic remains same
+  };
+
+  const handleAiDraft = async () => {
+    if (!isPremium || isAiDrafting) return;
+    setIsAiDrafting(true);
+    try {
+      const history = (messages || []).slice(-5).map((m: any) => ({
+        sender: m.senderName,
+        message: decryptSignal(m.content)
+      }));
+      const { draftMessage } = await suggestMessageDraft({ 
+        conversationHistory: history, 
+        currentUserInput: messageInput 
+      });
+      if (draftMessage) handleInputChange(draftMessage);
+    } catch (e) {
+      console.error("AI Draft Error");
+    } finally {
+      setIsAiDrafting(false);
     }
   };
 
@@ -121,9 +136,7 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
       timerIntervalRef.current = setInterval(() => {
         setRecordingDuration(prev => prev + 1);
       }, 1000);
-    } catch (err) {
-      // toast moved to higher level if needed
-    }
+    } catch (err) {}
   };
 
   const stopRecording = () => {
@@ -219,6 +232,19 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
                     }
                   }} 
                 />
+                
+                {isPremium && (
+                   <Button 
+                     variant="ghost" 
+                     size="icon" 
+                     className={cn("text-white/10 hover:text-accent transition-all h-10 w-10 shrink-0 mb-1", isAiDrafting && "animate-spin text-accent")}
+                     onClick={handleAiDraft}
+                     disabled={isAiDrafting}
+                   >
+                     <Wand2 className="w-5 h-5" />
+                   </Button>
+                )}
+
                 <Popover open={isEmojiPickerOpen} onOpenChange={setIsEmojiPickerOpen}>
                    <PopoverTrigger asChild>
                      <Button variant="ghost" size="icon" className="text-white/10 hover:text-primary transition-all h-10 w-10 shrink-0 mb-1">

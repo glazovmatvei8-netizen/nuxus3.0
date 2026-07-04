@@ -9,10 +9,10 @@ import { Progress } from './ui/progress';
 import versions from '@/app/versions.json';
 
 /**
- * КВАНТОВЫЙ ОБНОВЛЯТОР ЯДРА V25.5.4
- * СИНХРОНИЗИРОВАНО: Предотвращение ложных срабатываний.
+ * КВАНТОВЫЙ ОБНОВЛЯТОР ЯДРА V25.5.5
+ * СИНХРОНИЗИРОВАНО: Элитная производительность.
  */
-const CURRENT_VERSION = "25.5.4"; 
+const CURRENT_VERSION = "25.5.5"; 
 
 export function UpdateNotifier() {
   const [isOpen, setIsOpen] = useState(false);
@@ -29,7 +29,6 @@ export function UpdateNotifier() {
         
         const lastInstalled = localStorage.getItem('nuxus_last_installed_version');
         
-        // Показываем только если версия на сервере строго НЕ РАВНА текущей
         if (data.latestVersion !== CURRENT_VERSION && lastInstalled !== data.latestVersion) {
           setIsOpen(true);
         } else {

@@ -125,7 +125,7 @@ const ChatListItem = memo(({
   const resetSwipe = () => { setOffsetX(0); setIsDragging(false); };
 
   return (
-    <div className="relative overflow-hidden touch-pan-y select-none px-4 py-1.5 max-w-full">
+    <div className="relative overflow-hidden touch-pan-y select-none px-4 py-1.5 max-w-full virtual-list-item">
       <div className={cn("absolute inset-y-1.5 left-4 flex h-[calc(100%-12px)] z-0 transition-opacity duration-300 rounded-[2.2rem] overflow-hidden shadow-2xl", offsetX > 20 ? "opacity-100" : "opacity-0 pointer-events-none")}>
         <button onClick={(e) => { e.stopPropagation(); onMarkUnread(chat.id); resetSwipe(); }} className="w-[70px] bg-blue-500/80 backdrop-blur-3xl flex flex-col items-center justify-center text-white gap-1.5 active:brightness-125 transition-all">
           <MessageCircle className="w-5 h-5" />
@@ -152,7 +152,7 @@ const ChatListItem = memo(({
         className={cn(
           "relative z-10 obsidian-glass will-change-transform w-full select-none rounded-[2.2rem] transition-all", 
           !isDragging && "duration-700 cubic-bezier(0.16, 1, 0.3, 1)",
-          isActive && Math.abs(offsetX) < 10 ? "border-primary/40 bg-primary/10 shadow-[0_0_40px_rgba(168,85,247,0.15)]" : "hover:bg-white/[0.04]"
+          isActive && Math.abs(offsetX) < 10 ? "border-primary/40 bg-primary/10" : "hover:bg-white/[0.04]"
         )}
         style={{ transform: `translateX(${offsetX}px)` }}
         onTouchStart={handleTouchStart}
