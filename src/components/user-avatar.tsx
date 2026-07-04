@@ -21,8 +21,9 @@ interface UserAvatarProps {
 }
 
 /**
- * USER AVATAR V25.5.4
- * ОПТИМИЗИРОВАНО: Исправлены лаги на ПК. Вращается только фон градиента.
+ * USER AVATAR V26.0.3
+ * ОПТИМИЗИРОВАНО: Исправлен порядок наложения слоев (Z-Index fix).
+ * Теперь анимированный фон гарантированно находится ПОД аватаркой.
  */
 export const UserAvatar = memo(({ userId, className, fallbackName, fallbackClassName, manualAvatarUrl, showOnlineStatus = false }: UserAvatarProps) => {
   const db = useFirestore();
@@ -69,16 +70,16 @@ export const UserAvatar = memo(({ userId, className, fallbackName, fallbackClass
 
   return (
     <div className={cn("relative inline-flex items-center justify-center shrink-0 rounded-full", className)}>
-      {/* ПРЕМИАЛЬНАЯ АНИМИРОВАННАЯ ПОДЛОЖКА (Вращается только она) */}
+      {/* ПРЕМИАЛЬНАЯ АНИМИРОВАННАЯ ПОДЛОЖКА (Z-Index: 0) */}
       {premium && (
-        <div className="absolute inset-0 rounded-full p-[2px] overflow-hidden">
+        <div className="absolute inset-0 rounded-full p-[1px] overflow-hidden z-0">
           <div className="absolute inset-[-100%] bg-gradient-to-tr from-primary via-accent to-primary animate-[spin_8s_linear_infinite] will-change-transform opacity-100" />
         </div>
       )}
 
-      {/* ОСНОВНОЙ КОНТЕЙНЕР АВАТАРА (Не вращается!) */}
+      {/* ОСНОВНОЙ КОНТЕЙНЕР АВАТАРА (Z-Index: 10) */}
       <div className={cn(
-        "rounded-full p-[2px] w-full h-full flex items-center justify-center overflow-hidden transition-all duration-1000 relative z-10",
+        "rounded-full p-[2px] w-full h-full flex items-center justify-center overflow-hidden transition-all duration-1000 relative z-10 bg-[#020205]",
         !premium && "bg-white/10"
       )}>
         <Avatar className="shrink-0 relative overflow-hidden bg-black w-full h-full rounded-full border-none flex items-center justify-center shadow-inner">
