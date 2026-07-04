@@ -175,11 +175,11 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
       )}
 
       <div className="max-w-5xl mx-auto relative">
-        <div className="flex gap-3 items-end">
+        <div className="flex gap-3 items-end w-full">
           {!isRecording ? (
             <>
               <Popover>
-                <PopoverTrigger asChild><Button variant="ghost" size="icon" className="h-14 w-14 obsidian-glass rounded-[1.5rem] text-white/30 hover:text-primary transition-all mb-0.5"><Paperclip className="w-6 h-6" /></Button></PopoverTrigger>
+                <PopoverTrigger asChild><Button variant="ghost" size="icon" className="h-14 w-14 obsidian-glass rounded-[1.5rem] text-white/30 hover:text-primary transition-all mb-0.5 shrink-0"><Paperclip className="w-6 h-6" /></Button></PopoverTrigger>
                 <PopoverContent side="top" align="start" className="w-64 obsidian-glass border-white/10 rounded-[2.2rem] p-2 mb-4 shadow-[0_20px_80px_rgba(0,0,0,0.8)] animate-in slide-in-from-bottom-4 duration-500">
                   <div className="grid grid-cols-1 gap-1">
                     <AttachmentItem icon={ImageIcon} label="Медиатека" color="text-primary" onClick={() => fileInputRef.current?.click()} />
@@ -217,12 +217,12 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
                 </PopoverContent>
               </Popover>
               
-              <div className="flex-1 flex items-end bg-white/[0.03] rounded-[2rem] border border-white/[0.06] min-h-14 px-5 py-2 relative group transition-all focus-within:bg-white/[0.06] focus-within:border-primary/40 shadow-inner">
-                {destructTimer && <Timer className="w-5 h-5 text-primary mr-3 mb-2 animate-pulse" />}
+              <div className="flex-1 flex items-end bg-white/[0.03] rounded-[2rem] border border-white/[0.06] min-h-14 px-5 py-2 relative group transition-all focus-within:bg-white/[0.06] focus-within:border-primary/40 shadow-inner min-w-0">
+                {destructTimer && <Timer className="w-5 h-5 text-primary mr-3 mb-2 animate-pulse shrink-0" />}
                 <Textarea 
                   ref={textareaRef}
                   placeholder="Введите сигнал..." 
-                  className="bg-transparent border-none focus-visible:ring-0 text-white placeholder:text-white/10 font-bold italic tracking-tight min-h-[40px] max-h-[200px] overflow-y-auto scrollbar-hide py-2 text-base resize-none" 
+                  className="bg-transparent border-none focus-visible:ring-0 text-white placeholder:text-white/10 font-bold italic tracking-tight min-h-[40px] max-h-[200px] overflow-y-auto scrollbar-hide py-2 text-base resize-none w-full" 
                   value={messageInput} 
                   onChange={e => handleInputChange(e.target.value)} 
                   onKeyDown={e => {
@@ -261,11 +261,11 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
               </div>
 
               {messageInput.trim() ? (
-                <Button size="icon" className="h-14 w-14 rounded-full bg-primary text-white shadow-[0_0_40px_rgba(168,85,247,0.5)] active:scale-90 transition-all hover:scale-105 mb-0.5" onClick={handleSend}>
+                <Button size="icon" className="h-14 w-14 rounded-full bg-primary text-white shadow-[0_0_40px_rgba(168,85,247,0.5)] active:scale-90 transition-all hover:scale-105 mb-0.5 shrink-0" onClick={handleSend}>
                   <Send className="w-6 h-6" />
                 </Button>
               ) : (
-                <div className="flex gap-2 mb-0.5">
+                <div className="flex gap-2 mb-0.5 shrink-0">
                   <Button 
                     size="icon" 
                     variant="ghost"

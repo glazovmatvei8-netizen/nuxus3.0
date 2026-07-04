@@ -2,7 +2,7 @@
 'use server';
 /**
  * @fileOverview A Genkit flow for generating AI videos using Veo model.
- * Fixed to use Veo 2.0 for higher availability and stability.
+ * Updated V2.1: Robust signal fetching and URL signing.
  */
 
 import { ai } from '@/ai/genkit';
@@ -22,7 +22,6 @@ export type GenerateAiVideoOutput = z.infer<typeof GenerateAiVideoOutputSchema>;
 
 /**
  * Animates a photo or generates video from text using the Veo 2.0 model.
- * Switch to veo-2.0-generate-001 for better reliability in current API.
  */
 export async function generateAiVideo(input: GenerateAiVideoInput): Promise<GenerateAiVideoOutput> {
   return generateAiVideoFlow(input);
@@ -43,7 +42,7 @@ const generateAiVideoFlow = ai.defineFlow(
         promptParts.push({ media: { url: input.photoDataUri } });
       }
 
-      // Switching model to VEO 2.0 which is widely available and stable
+      // VEO 2.0 is the most stable wide-release cinema model
       let { operation } = await ai.generate({
         model: googleAI.model('veo-2.0-generate-001'),
         prompt: promptParts,
@@ -84,8 +83,13 @@ const generateAiVideoFlow = ai.defineFlow(
         throw new Error("System error: GOOGLE_API_KEY is missing in environment.");
       }
 
+      // CRITICAL FIX: Ensure correct parameter joining for API key
+      const videoUrl = videoPart.media.url;
+      const separator = videoUrl.includes('?') ? '&' : '?';
+      const signedUrl = `${videoUrl}${separator}key=${apiKey}`;
+
       const fetch = (await import('node-fetch')).default;
-      const response = await fetch(`${videoPart.media.url}&key=${apiKey}`);
+      const response = await fetch(signedUrl);
       
       if (!response.ok) {
         throw new Error(`Signal error: Failed to fetch generated video (HTTP ${response.status})`);

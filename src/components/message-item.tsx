@@ -34,7 +34,7 @@ import { Dialog, DialogContent, DialogTitle, DialogPortal, DialogOverlay } from 
 const QUICK_REACTIONS = ['👍', '❤️', '🔥', '😂', '😮', '😢', '👏'];
 
 /**
- * MessageItem V26.0.2: Gift Rendering Added.
+ * MessageItem V26.1.1: Final Sticker & Depth fix.
  */
 export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForward, isAdmin = false, isGroup = false, onEdit, highlight = false, viewerProfile }: any) => {
   const { user } = useUser();
@@ -108,12 +108,12 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
 
     if (message.contentType === 'sticker') {
       return (
-        <div className="w-48 h-48 flex items-center justify-center relative min-h-[192px]">
+        <div className="w-48 h-48 flex items-center justify-center relative min-h-[192px] group/sticker">
           <img 
             src={message.content} 
             alt="Sticker" 
             className="max-w-full max-h-full object-contain pointer-events-none drop-shadow-2xl hover:scale-110 transition-transform duration-500 block relative z-10" 
-            style={{ width: '192px', height: '192px', display: 'block' }}
+            style={{ width: '192px', height: '192px', minHeight: '192px', display: 'block' }}
           />
         </div>
       );
