@@ -7,16 +7,20 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useFirestore, useUser, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, where, getDocs, limit, or, and, doc, updateDoc, arrayUnion, addDoc } from 'firebase/firestore';
+import { collection, query, where, getDocs, limit, doc, updateDoc, arrayUnion, addDoc, orderBy } from 'firebase/firestore';
 import { useAppState } from '@/lib/store';
 import { useToast } from '@/hooks/use-toast';
 import { Search, Loader2, ArrowRight, Zap, Globe, Star, Users, User, Bot, ShieldCheck, Plus, Check } from 'lucide-react';
 import { UserAvatar } from '@/components/user-avatar';
-import { cn } from '@/lib/utils';
+import { cn, isUserPremium } from '@/lib/utils';
 import type { Chat } from '@/lib/types';
 
 type SearchFilter = 'all' | 'users' | 'groups' | 'bots';
 
+/**
+ * ГЛОБАЛЬНЫЙ ПОИСК V25.3.2
+ * ИСПРАВЛЕНО: Префиксный поиск (starts-with) для нахождения пользователей по части ника.
+ */
 export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const { user } = useUser();
   const db = useFirestore();
@@ -58,83 +62,92 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
 
   const handleSearch = useCallback(async (val: string) => {
     setSearchQuery(val);
-    if (val.length < 2 || !db) {
+    if (val.trim().length < 2 || !db) {
       setResults([]);
       return;
     }
 
     setIsLoading(true);
     try {
-      const cleanVal = val.toLowerCase().trim();
-      const withoutAt = cleanVal.startsWith('@') ? cleanVal : '@' + cleanVal;
-      const exactUsername = cleanVal.startsWith('@') ? cleanVal : '@' + cleanVal;
+      const input = val.toLowerCase().trim();
+      // Убираем @ для поиска по именам, но сохраняем для поиска по никам
+      const searchTarget = input.startsWith('@') ? input : '@' + input;
+      const nameTarget = input.startsWith('@') ? input.slice(1) : input;
       
       const foundResults: any[] = [];
 
-      // 1. Bots
+      // 1. Bots (Локальный реестр)
       const bots = [
         { type: 'bot' as const, data: { id: 'bot_nuxus_manager', name: 'Nuxus Manager 🛡️', username: '@nuxus_manager', avatarUrl: 'https://i.ibb.co/sd2MqGz2/Icon.png', isPremium: true, isBot: true } },
         { type: 'bot' as const, data: { id: 'bot_stickers', name: 'Sticker Bot 🎨', username: '@stickers', avatarUrl: 'https://i.ibb.co/sd2MqGz2/Icon.png', isBot: true } }
       ];
 
       bots.forEach(bot => {
-        if (bot.data.username.includes(cleanVal) || bot.data.name.toLowerCase().includes(cleanVal)) {
+        if (bot.data.username.includes(input) || bot.data.name.toLowerCase().includes(input)) {
           if (activeFilter === 'all' || activeFilter === 'bots') foundResults.push(bot);
         }
       });
 
-      // 2. Groups and Channels
+      // 2. Users (Диапазонный поиск по нику и имени)
+      if (activeFilter === 'all' || activeFilter === 'users') {
+        // Поиск по USERNAME (Starts With)
+        const userUsernameQ = query(
+          collection(db, 'users'),
+          where('username', '>=', searchTarget),
+          where('username', '<=', searchTarget + '\uf8ff'),
+          limit(10)
+        );
+
+        // Поиск по NAME (Starts With - регистрозависим в Firestore, поэтому ищем как есть)
+        // Но в Nuxus мы стараемся хранить имена красиво, поэтому ищем по префиксу
+        const userNameQ = query(
+          collection(db, 'users'),
+          where('name', '>=', val),
+          where('name', '<=', val + '\uf8ff'),
+          limit(10)
+        );
+
+        const [usernameSnap, nameSnap] = await Promise.all([
+          getDocs(userUsernameQ),
+          getDocs(userNameQ)
+        ]);
+
+        const userMap = new Map();
+
+        usernameSnap.docs.forEach(d => {
+          if (d.id !== user?.uid) userMap.set(d.id, { type: 'user', data: { id: d.id, ...d.data() } });
+        });
+
+        nameSnap.docs.forEach(d => {
+          if (d.id !== user?.uid && !userMap.has(d.id)) {
+            userMap.set(d.id, { type: 'user', data: { id: d.id, ...d.data() } });
+          }
+        });
+
+        foundResults.push(...Array.from(userMap.values()));
+      }
+
+      // 3. Groups and Channels
       if (activeFilter === 'all' || activeFilter === 'groups') {
         const chatQ = query(
           collection(db, 'chats'), 
           where('isPublic', '==', true),
-          limit(15)
+          limit(30)
         );
         const chatSnap = await getDocs(chatQ);
         chatSnap.docs.forEach(d => {
           const data = d.data();
-          const matches = data.username?.toLowerCase().includes(cleanVal) || data.name?.toLowerCase().includes(cleanVal);
-          if (matches && data.type !== 'private') {
+          const matches = data.username?.toLowerCase().includes(input) || 
+                          data.name?.toLowerCase().includes(input);
+          if (matches && data.type !== 'private' && !foundResults.some(r => r.data.id === d.id)) {
             foundResults.push({ type: 'chat', data: { id: d.id, ...data } });
           }
         });
       }
 
-      // 3. Users
-      if (activeFilter === 'all' || activeFilter === 'users') {
-        // Query by EXACT username (fastest)
-        const userQ = query(
-          collection(db, 'users'),
-          where('username', '==', exactUsername),
-          limit(1)
-        );
-        const userSnap = await getDocs(userQ);
-        userSnap.docs.forEach(d => {
-          if (d.id !== user?.uid) {
-            foundResults.push({ type: 'user', data: { id: d.id, ...d.data() } });
-          }
-        });
-
-        // Also search by name prefix if not found
-        if (foundResults.length < 5) {
-          const nameQ = query(
-            collection(db, 'users'),
-            where('name', '>=', val),
-            where('name', '<=', val + '\uf8ff'),
-            limit(10)
-          );
-          const nameSnap = await getDocs(nameQ);
-          nameSnap.docs.forEach(d => {
-            if (d.id !== user?.uid && !foundResults.some(r => r.data.id === d.id)) {
-              foundResults.push({ type: 'user', data: { id: d.id, ...d.data() } });
-            }
-          });
-        }
-      }
-
       setResults(foundResults);
     } catch (e) {
-      console.error("Nuxus Search error", e);
+      console.error("Nuxus Search failure:", e);
     } finally {
       setIsLoading(false);
     }
@@ -160,22 +173,22 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
       const bot = results.find(r => r.data.id === addingBotId)?.data;
       await updateDoc(doc(db, 'chats', chat.id), { participantIds: arrayUnion(addingBotId) });
       await addDoc(collection(db, 'chats', chat.id, 'messages'), {
-        chatId: chat.id, senderId: addingBotId, senderName: bot?.name || 'Bot', content: `${bot?.name} подключен. 🛡️`, contentType: 'service', sentAt: new Date().toISOString()
+        chatId: chat.id, senderId: addingBotId, senderName: bot?.name || 'Bot', content: `${bot?.name} подключен к узлу. 🛡️`, contentType: 'service', sentAt: new Date().toISOString()
       });
-      toast({ title: "Бот добавлен" });
+      toast({ title: "Бот интегрирован" });
       setAddingBotId(null);
       onOpenChange(false);
       setCurrentChatId(chat.id);
       setActiveView('chats');
-    } catch (e) { toast({ title: "Ошибка", variant: "destructive" }); }
+    } catch (e) { toast({ title: "Сбой интеграции", variant: "destructive" }); }
   };
 
   return (
-    <Dialog open={open} onOpenChange={(o) => { onOpenChange(o); if(!o) setAddingBotId(null); }}>
+    <Dialog open={open} onOpenChange={(o) => { onOpenChange(o); if(!o) { setAddingBotId(null); setSearchQuery(''); setResults([]); } }}>
       <DialogContent className="max-w-md bg-card border-white/10 rounded-[2.5rem] p-0 overflow-hidden shadow-2xl h-[80vh] flex flex-col outline-none">
         <DialogHeader className="p-6 pb-0 shrink-0 text-left">
           <DialogTitle className="text-white font-black uppercase italic tracking-tighter text-xl">
-            {addingBotId ? 'Выберите чат для бота' : 'Signal Discovery'}
+            {addingBotId ? 'Выберите кластер' : 'Signal Discovery'}
           </DialogTitle>
         </DialogHeader>
 
@@ -188,23 +201,23 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
                   placeholder="Введите имя или @ник..." 
                   value={searchQuery} 
                   onChange={e => handleSearch(e.target.value)} 
-                  className="bg-white/5 border-white/10 h-14 rounded-2xl pl-12 text-lg focus:border-primary/40 transition-all" 
+                  className="bg-white/5 border-white/10 h-14 rounded-2xl pl-12 text-lg focus:border-primary/40 transition-all font-bold" 
                   autoFocus 
                 />
                 {isLoading && <div className="absolute right-4 top-1/2 -translate-y-1/2"><Loader2 className="w-5 h-5 text-primary animate-spin" /></div>}
               </div>
 
               <div className="flex gap-2 overflow-x-auto scrollbar-hide py-1">
-                <button onClick={() => setActiveFilter('all')} className={cn("flex items-center gap-2 px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all whitespace-nowrap", activeFilter === 'all' ? "bg-primary text-white" : "bg-white/5 text-muted-foreground")}>
+                <button onClick={() => { setActiveFilter('all'); handleSearch(searchQuery); }} className={cn("flex items-center gap-2 px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all whitespace-nowrap", activeFilter === 'all' ? "bg-primary text-white" : "bg-white/5 text-muted-foreground")}>
                   <Globe className="w-3 h-3" /> Все
                 </button>
-                <button onClick={() => setActiveFilter('users')} className={cn("flex items-center gap-2 px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all whitespace-nowrap", activeFilter === 'users' ? "bg-primary text-white" : "bg-white/5 text-muted-foreground")}>
+                <button onClick={() => { setActiveFilter('users'); handleSearch(searchQuery); }} className={cn("flex items-center gap-2 px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all whitespace-nowrap", activeFilter === 'users' ? "bg-primary text-white" : "bg-white/5 text-muted-foreground")}>
                   <User className="w-3 h-3" /> Люди
                 </button>
-                <button onClick={() => setActiveFilter('groups')} className={cn("flex items-center gap-2 px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all whitespace-nowrap", activeFilter === 'groups' ? "bg-primary text-white" : "bg-white/5 text-muted-foreground")}>
+                <button onClick={() => { setActiveFilter('groups'); handleSearch(searchQuery); }} className={cn("flex items-center gap-2 px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all whitespace-nowrap", activeFilter === 'groups' ? "bg-primary text-white" : "bg-white/5 text-muted-foreground")}>
                   <Users className="w-3 h-3" /> Группы
                 </button>
-                <button onClick={() => setActiveFilter('bots')} className={cn("flex items-center gap-2 px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all whitespace-nowrap", activeFilter === 'bots' ? "bg-primary text-white" : "bg-white/5 text-muted-foreground")}>
+                <button onClick={() => { setActiveFilter('bots'); handleSearch(searchQuery); }} className={cn("flex items-center gap-2 px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all whitespace-nowrap", activeFilter === 'bots' ? "bg-primary text-white" : "bg-white/5 text-muted-foreground")}>
                   <Bot className="w-3 h-3" /> Боты
                 </button>
               </div>
@@ -241,7 +254,7 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
                 ) : searchQuery.length >= 2 ? (
                   <div className="flex flex-col items-center justify-center py-20 opacity-20">
                     <Search className="w-12 h-12 mb-4" />
-                    <p className="text-[10px] font-black uppercase tracking-widest text-center">Сигнал не найден</p>
+                    <p className="text-[10px] font-black uppercase tracking-widest text-center">Сигнал не обнаружен</p>
                   </div>
                 ) : trends.length > 0 ? (
                   <div className="space-y-4">
@@ -273,7 +286,7 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
                 adminChats.map(chat => (
                   <div key={chat.id} onClick={() => addBotToChat(chat)} className="flex items-center justify-between p-4 bg-white/5 rounded-[1.8rem] hover:bg-white/10 border border-white/5 cursor-pointer transition-all">
                     <div className="flex items-center gap-4">
-                      <UserAvatar userId={null} manualAvatarUrl={chat.avatarUrl} className="h-10 w-10" fallbackName={chat.name} />
+                      <UserAvatar userId={null} manualAvatarUrl={chat.avatarUrl} className="h-10 w-10 fallback-border" fallbackName={chat.name} />
                       <div className="flex flex-col text-left">
                         <span className="font-bold text-white text-sm">{chat.name}</span>
                         <span className="text-[9px] text-primary uppercase font-black">{chat.type}</span>
@@ -285,7 +298,7 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
               ) : (
                 <div className="text-center py-20 opacity-30">
                   <Users className="w-12 h-12 mx-auto mb-4" />
-                  <p className="text-[10px] font-black uppercase">У вас нет групп для управления</p>
+                  <p className="text-[10px] font-black uppercase">Нет кластеров для управления</p>
                 </div>
               )}
               <Button variant="ghost" onClick={() => setAddingBotId(null)} className="w-full mt-6 h-12 rounded-2xl text-[10px] font-black uppercase tracking-widest">Назад</Button>
