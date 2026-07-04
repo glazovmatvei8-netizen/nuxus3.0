@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useEffect } from 'react';
@@ -8,10 +9,9 @@ import { Progress } from './ui/progress';
 import versions from '@/app/versions.json';
 
 /**
- * КВАНТОВЫЙ ОБНОВЛЯТОР ЯДРА V25.0.0
- * Фикс: Точная проверка версий без ложных срабатываний.
+ * КВАНТОВЫЙ ОБНОВЛЯТОР ЯДРА V25.4.0
  */
-const CURRENT_VERSION = "25.0.0";
+const CURRENT_VERSION = "25.4.0";
 
 export function UpdateNotifier() {
   const [isOpen, setIsOpen] = useState(false);
@@ -23,7 +23,6 @@ export function UpdateNotifier() {
 
     const checkVersion = () => {
       const lastInstalled = localStorage.getItem('nuxus_last_installed_version');
-      // Показываем окно только если версия в конфиге ВЫШЕ текущей и выше последней установленной
       if (versions.latestVersion !== CURRENT_VERSION && lastInstalled !== versions.latestVersion) {
         setIsOpen(true);
       }

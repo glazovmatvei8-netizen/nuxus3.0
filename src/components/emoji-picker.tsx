@@ -12,10 +12,19 @@ import type { User, StickerPack } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 
 const EMOJI_DATA = [
+  { category: 'Популярные', emojis: ['😂', '❤️', '🔥', '👍', '🙏', '😊', '😍', '✨', '😭', '😎', '💀', '🤡', '🤔', '🚀', '💯', '✅'] },
   { category: 'Смайлы', emojis: ['😀', '😃', '😄', '😁', '😆', '😅', '😂', '🤣', '😊', '😇', '🙂', '🙃', '😉', '😌', '😍', '🥰', '😘', '😗', '😙', '😚', '😋', '😛', '😝', '😜', '🤪', '🤨', '🧐', '🤓', '😎', '🤩', '🥳', '😏', '😒', '😞', '😔', '😟', '😕', '🙁', '☹️', '😮', '😯', '😲', '😳', '🥺', '😦', '😧', '😨', '😰', '😥', '😢', '😭', '😱', '😖', '😣', '😞', '😓', '😩', '😫', '🥱', '😤', '😡', '😠', '🤬', '😈', '👿', '💀', '☠️', '💩', '🤡', '👹', '👺', '👻', '👽', '👾', '🤖'] },
-  { category: 'Жесты', emojis: ['👋', '🤚', '🖐', '✋', '🖖', '👌', '🤏', '✌️', '🤞', '🤟', '🤘', '🤙', '👈', '👉', '👆', '🖕', '👇', '☝️', '👍', '👎', '✊', '👊', '🤛', '🤜', '👏', '🙌', '👐', '🤲', '🤝', '🙏', '✍️', '💅', '🤳', '💪', '🦾', '🦵', '🦿', '🦶'] },
-  { category: 'Сердца', emojis: ['❤️', '🧡', '💛', '💚', '💙', '💜', '🖤', '🤍', '🤎', '💔', '❣️', '💕', '💞', '💓', '💗', '💖', '💘', '💝', '💟'] },
-  { category: 'Животные', emojis: ['🐶', '🐱', '🐭', '🐹', '🐰', '🦊', '🐻', '🐼', '🐻‍❄️', '🐨', '🐯', '🦁', '🐮', '🐷', '🐽', '🐸', '🐵', '🙈', '🙉', '🙊', '🐒', '🐔', '🐧', '🐦', '🐤', '🐣', '🐥', '🦆', '🦅', '🦉', '🦇', '🐺', '🐗', '🐴', '🦄', '🐝', '🪱', '🐛', '🦋', '🐌', '🐞', '🐜', '🪰', '🪲', '🪳', '🦟', '🦗', '🕷', '🕸', '🦂', '🐢', '🐍', '🦎', '🦖', '🦕', '🐙', '🦑', '🦐', '🦞', '🦀', '🐡', '🐠', '🐟', '🐬', '🐳', '🐋', '🦈', '🐊', '🐅', '🐆', '🦓', '🦍', '🦧', '🦣', '🐘', '🦛', '🦏', '🐪', '🐫', '🦒', '🦘', '🦬', '🐃', '🐂', '🐄', '🐎', '🐖', '🐏', '🐑', '🦙', '🐐', '🦌', '🐕', '🐩', '🦮', '🐕‍', '🐈', '🐈‍⬛', '🐓', '🦃', '🦚', '🦜', '🦢', '🦩', '🕊', '🐇', '🦝', '🦨', '🦡', '🦦', '🦥', '🐁', '🐀', '🐿', '🦔'] }
+  { category: 'Животные', emojis: ['🐶', '🐱', '🐭', '🐹', '🐰', '🦊', '🐻', '🐼', '🐨', '🐯', '🦁', '🐮', '🐷', '🐸', '🐵', '🐔', '🐧', '🐦', '🐤', '🦆', '🦅', '🦉', '🦇', '🐺', '🐗', '🐴', '🦄', '🐝', '🦋', '🐌', '🐞', '🕷', '🦂', '🐢', '🐍', '🦎', '🦖', '🐙', '🦑', '🦐', '🦀', '🐡', '🐠', '🐟', '🐬', '🐳', '🐋', '🦈', '🐊', '🐅', '🐘', '🦛', '🦒', '🦘'] }
+];
+
+// Дефолтный пак стикеров Nuxus
+const DEFAULT_STICKERS = [
+  'https://cdn.pixabay.com/photo/2021/01/22/01/51/shiba-inu-5938950_1280.png',
+  'https://cdn.pixabay.com/photo/2020/09/20/17/43/cat-5587841_1280.png',
+  'https://cdn.pixabay.com/photo/2020/12/30/14/23/cat-5873539_1280.png',
+  'https://cdn.pixabay.com/photo/2019/11/08/11/56/cat-4611189_1280.png',
+  'https://cdn.pixabay.com/photo/2017/01/23/18/19/cat-2003362_1280.png',
+  'https://cdn.pixabay.com/photo/2016/12/03/17/30/cat-1880193_1280.png'
 ];
 
 interface EmojiPickerProps {
@@ -30,7 +39,7 @@ export function EmojiPicker({ onEmojiSelect, onStickerSelect, className }: Emoji
   const { toast } = useToast();
   const [recent, setRecent] = useState<string[]>([]);
   const [activeTab, setActiveTab] = useState('emoji');
-  const [activePackId, setActivePackId] = useState<string | 'custom'>('custom');
+  const [activePackId, setActivePackId] = useState<string | 'default'>('default');
 
   const userRef = useMemoFirebase(() => (!db || !user) ? null : doc(db, 'users', user.uid), [db, user]);
   const { data: profile } = useDoc<User>(userRef);
@@ -47,50 +56,21 @@ export function EmojiPicker({ onEmojiSelect, onStickerSelect, className }: Emoji
     if (saved) setRecent(JSON.parse(saved));
   }, []);
 
-  useEffect(() => {
-    if (stickerPacks && stickerPacks.length > 0 && activePackId === 'custom' && (!profile?.settings?.stickers || profile.settings.stickers.length === 0)) {
-      setActivePackId(stickerPacks[0].id);
-    }
-  }, [stickerPacks, profile?.settings?.stickers]);
-
   const handleEmojiClick = (emoji: string) => {
     onEmojiSelect(emoji);
-    const newRecent = [emoji, ...recent.filter(e => e !== emoji)].slice(0, 32);
+    const newRecent = [emoji, ...recent.filter(e => e !== emoji)].slice(0, 16);
     setRecent(newRecent);
     localStorage.setItem('nuxus_recent_emojis', JSON.stringify(newRecent));
   };
 
   const displayedStickers = useMemo(() => {
+    if (activePackId === 'default') return DEFAULT_STICKERS;
     const pack = stickerPacks?.find(p => p.id === activePackId);
-    if (pack) return pack.stickerUrls;
-    if (activePackId === 'custom') return profile?.settings?.stickers || [];
-    return [];
-  }, [activePackId, profile?.settings?.stickers, stickerPacks]);
-
-  const activePackName = useMemo(() => {
-    if (activePackId === 'custom') return 'Мои стикеры';
-    return stickerPacks?.find(p => p.id === activePackId)?.name || 'Стикерпак';
+    return pack?.stickerUrls || [];
   }, [activePackId, stickerPacks]);
 
-  const handleDeletePack = async () => {
-    if (!db || !user || activePackId === 'custom') return;
-    if (confirm(`Удалить набор "${activePackName}"?`)) {
-      try {
-        const uRef = doc(db, 'users', user.uid);
-        await updateDoc(uRef, {
-          installedStickerPackIds: arrayRemove(activePackId)
-        });
-        setActivePackId('custom');
-        if (window.navigator && window.navigator.vibrate) window.navigator.vibrate(50);
-        toast({ title: "Пак удален" });
-      } catch (e) {
-        toast({ title: "Ошибка удаления", variant: "destructive" });
-      }
-    }
-  };
-
   return (
-    <div className={cn("bg-[#1c1c1e]/90 backdrop-blur-2xl border border-white/10 rounded-[2rem] overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.5)] flex flex-col h-full", className)}>
+    <div className={cn("bg-[#1c1c1e]/90 backdrop-blur-3xl border border-white/10 rounded-[2rem] overflow-hidden shadow-2xl flex flex-col h-[400px]", className)}>
       <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0">
         <TabsList className="grid grid-cols-2 h-12 bg-white/5 border-b border-white/5 shrink-0 rounded-none p-0">
           <TabsTrigger value="emoji" className="h-full rounded-none data-[state=active]:bg-white/10 data-[state=active]:text-primary gap-2 transition-all">
@@ -136,40 +116,20 @@ export function EmojiPicker({ onEmojiSelect, onStickerSelect, className }: Emoji
         <TabsContent value="stickers" className="flex-1 min-h-0 m-0 outline-none flex flex-col">
           <div className="flex gap-2 p-2 bg-white/5 border-b border-white/5 overflow-x-auto scrollbar-hide shrink-0 items-center">
             <button 
-              onClick={() => setActivePackId('custom')}
-              className={cn("h-10 min-w-[40px] rounded-xl flex items-center justify-center border transition-all", activePackId === 'custom' ? "bg-primary border-primary shadow-lg shadow-primary/20" : "bg-black/40 border-white/10 opacity-60")}
+              onClick={() => setActivePackId('default')}
+              className={cn("h-10 min-w-[40px] rounded-xl flex items-center justify-center border transition-all", activePackId === 'default' ? "bg-primary border-primary shadow-lg" : "bg-black/40 border-white/10 opacity-60")}
             >
-              <Star className={cn("w-4 h-4", activePackId === 'custom' ? "text-white" : "text-muted-foreground")} />
+              <Star className="w-4 h-4 text-white" />
             </button>
-            {isPacksLoading ? (
-              <div className="h-10 w-10 flex items-center justify-center"><Loader2 className="w-4 h-4 animate-spin text-primary" /></div>
-            ) : (
-              stickerPacks?.map(pack => (
-                <button 
-                  key={pack.id} 
-                  onClick={() => setActivePackId(pack.id)}
-                  className={cn("h-10 min-w-[40px] rounded-xl overflow-hidden border transition-all relative group", activePackId === pack.id ? "border-primary scale-105 shadow-lg shadow-primary/20" : "border-white/10 opacity-60")}
-                >
-                  {pack.iconUrl ? (
-                    <img src={pack.iconUrl} className="w-full h-full object-cover" alt={pack.name} />
-                  ) : (
-                    <div className="w-full h-full bg-primary/20 flex items-center justify-center text-[10px] font-bold text-primary">{pack.name[0]}</div>
-                  )}
-                </button>
-              ))
-            )}
-          </div>
-
-          <div className="px-4 py-2 bg-white/5 border-b border-white/5 flex items-center justify-between">
-             <span className="text-[9px] font-black uppercase tracking-widest text-primary/60">{activePackName}</span>
-             {activePackId !== 'custom' && (
-               <button 
-                onClick={handleDeletePack}
-                className="text-white/40 hover:text-red-500 transition-colors p-1"
-               >
-                 <Trash2 className="w-4 h-4" />
-               </button>
-             )}
+            {stickerPacks?.map(pack => (
+              <button 
+                key={pack.id} 
+                onClick={() => setActivePackId(pack.id)}
+                className={cn("h-10 min-w-[40px] rounded-xl overflow-hidden border transition-all", activePackId === pack.id ? "border-primary scale-105" : "border-white/10 opacity-60")}
+              >
+                {pack.iconUrl ? <img src={pack.iconUrl} className="w-full h-full object-cover" alt="Pack" /> : <div className="w-full h-full bg-primary/20 flex items-center justify-center text-[10px] text-primary">{pack.name[0]}</div>}
+              </button>
+            ))}
           </div>
 
           <ScrollArea className="flex-1">
@@ -187,12 +147,9 @@ export function EmojiPicker({ onEmojiSelect, onStickerSelect, className }: Emoji
                   ))}
                 </div>
               ) : (
-                <div className="flex flex-col items-center justify-center py-20 opacity-30 text-center space-y-4">
-                  <Ghost className="w-12 h-12" />
-                  <div className="space-y-1">
-                    <p className="text-[10px] font-black uppercase tracking-widest text-white">Список пуст</p>
-                    <p className="text-[8px] font-bold uppercase tracking-wider text-muted-foreground">Устанавливайте паки<br />через Sticker Bot!</p>
-                  </div>
+                <div className="flex flex-col items-center justify-center py-20 opacity-30 text-center">
+                  <Ghost className="w-12 h-12 mb-4" />
+                  <p className="text-[10px] font-black uppercase">Нет стикеров</p>
                 </div>
               )}
             </div>

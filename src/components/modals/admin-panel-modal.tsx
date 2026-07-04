@@ -19,17 +19,16 @@ import {
   DropdownMenuSubContent
 } from "@/components/ui/dropdown-menu";
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, doc, limit, updateDoc, writeBatch, getDocs, where, orderBy } from 'firebase/firestore';
+import { collection, query, doc, limit, updateDoc, writeBatch, getDocs, where, orderBy, increment, deleteDoc } from 'firebase/firestore';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
   ShieldAlert, Users, Star, Ban, ShieldCheck, 
-  MoreVertical, Send, Loader2, Database, Package, FileText, UserPlus, ShieldX, CalendarClock
+  MoreVertical, Send, Loader2, Database, Package, FileText, UserPlus, ShieldX, CalendarClock, Wallet, Check, X
 } from 'lucide-react';
-import type { User, ArchiveRequest } from '@/lib/types';
-import { formatDisplayName, isUserPremium, cn, isGlobalAdmin, decryptSignal } from '@/lib/utils';
+import type { User, TopUpRequest } from '@/lib/types';
+import { formatDisplayName, isUserPremium, cn, isGlobalAdmin } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
-import { addDays, addMonths, addYears, format } from 'date-fns';
-import JSZip from 'jszip';
+import { addDays, addMonths, addYears } from 'date-fns';
 
 const ROOT_UID = 'GCvLucN8CjNcdaxPO2vmpZ84hNl1';
 
@@ -41,13 +40,12 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
   const [activeTab, setActiveTab] = useState('analytics');
   const [broadcastText, setBroadcastText] = useState('');
   const [isBroadcasting, setIsBroadcasting] = useState(false);
-  const [isCollectingArchive, setIsCollectingArchive] = useState<string | null>(null);
 
   const usersQuery = useMemoFirebase(() => (!db ? null : query(collection(db, 'users'), limit(500))), [db]);
   const { data: users } = useCollection<User>(usersQuery);
 
-  const archiveRequestsQuery = useMemoFirebase(() => (!db ? null : query(collection(db, 'archiveRequests'), where('status', '==', 'pending'))), [db]);
-  const { data: archiveRequests } = useCollection<ArchiveRequest>(archiveRequestsQuery);
+  const topUpRequestsQuery = useMemoFirebase(() => (!db ? null : query(collection(db, 'topUpRequests'), where('status', '==', 'pending'))), [db]);
+  const { data: topUpRequests } = useCollection<TopUpRequest>(topUpRequestsQuery);
 
   const stats = useMemo(() => {
     if (!users) return { total: 0, premium: 0, admins: 0, banned: 0 };
@@ -88,46 +86,43 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
 
     try {
       await updateDoc(userRef, update);
-      toast({ title: "Операция завершена", description: "Данные узла синхронизированы" });
+      toast({ title: "Узел обновлен" });
     } catch (e: any) {
-      toast({ title: "Ошибка выполнения", description: e.message, variant: "destructive" });
+      toast({ title: "Ошибка", description: e.message, variant: "destructive" });
     }
   };
 
-  const handleCollectArchive = async (userId: string, requestId?: string) => {
+  const handleApproveTopUp = async (req: TopUpRequest) => {
     if (!db) return;
-    setIsCollectingArchive(userId);
     try {
-      const zip = new JSZip();
-      const targetProfile = users?.find(u => u.id === userId);
-      zip.file("профиль/данные_узла.json", JSON.stringify(targetProfile || {}, null, 2));
-      const storiesSnap = await getDocs(query(collection(db, 'stories'), where('userId', '==', userId)));
-      const stories = storiesSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-      zip.file("истории/активные_моменты.json", JSON.stringify(stories, null, 2));
-      const chatsSnap = await getDocs(query(collection(db, 'chats'), where('participantIds', 'array-contains', userId)));
-      for (const chatDoc of chatsSnap.docs) {
-        const chatData = chatDoc.data();
-        const msgSnap = await getDocs(query(collection(db, 'chats', chatDoc.id, 'messages'), orderBy('sentAt', 'asc'), limit(500)));
-        const messages = msgSnap.docs.map(d => {
-          const data = d.data();
-          return { id: d.id, ...data, decryptedContent: data.contentType === 'text' ? decryptSignal(data.content) : `[Сигнал: ${data.contentType}]` };
-        });
-        const safeName = (chatData.name || chatDoc.id).replace(/[/\\?%*:|"<>]/g, '-').trim();
-        zip.file(`сообщения/${safeName}.json`, JSON.stringify({ чат: { id: chatDoc.id, тип: chatData.type, имя: chatData.name }, сообщения: messages }, null, 2));
-      }
-      const content = await zip.generateAsync({ type: "blob" });
-      const url = URL.createObjectURL(content);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `nuxus_archive_${userId}_${Date.now()}.zip`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      if (requestId) await updateDoc(doc(db, 'archiveRequests', requestId), { status: 'ready' });
-      toast({ title: "Архив готов" });
+      const batch = writeBatch(db);
+      const userRef = doc(db, 'users', req.userId);
+      const reqRef = doc(db, 'topUpRequests', req.id);
+      const txRef = doc(collection(db, 'users', req.userId, 'transactions'));
+
+      batch.update(userRef, { balance: increment(req.amount) });
+      batch.update(reqRef, { status: 'approved' });
+      batch.set(txRef, {
+        id: txRef.id,
+        userId: req.userId,
+        amount: req.amount,
+        type: 'deposit',
+        status: 'completed',
+        otherPartyName: 'Admin Approval',
+        createdAt: new Date().toISOString()
+      });
+
+      await batch.commit();
+      toast({ title: "Заявка одобрена", description: `${req.amount} NX начислено ${req.userName}` });
     } catch (e: any) {
-      toast({ title: "Ошибка сборки", description: e.message, variant: "destructive" });
-    } finally { setIsCollectingArchive(null); }
+      toast({ title: "Ошибка одобрения", variant: "destructive" });
+    }
+  };
+
+  const handleRejectTopUp = async (reqId: string) => {
+    if (!db) return;
+    await updateDoc(doc(db, 'topUpRequests', reqId), { status: 'rejected' });
+    toast({ title: "Заявка отклонена" });
   };
 
   const handleBroadcast = async () => {
@@ -138,7 +133,10 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
       const batch = writeBatch(db);
       chatsSnap.docs.forEach(chatDoc => {
         const msgRef = doc(collection(db, 'chats', chatDoc.id, 'messages'));
-        batch.set(msgRef, { chatId: chatDoc.id, senderId: 'system_broadcast', senderName: 'Nuxus Kernel 📡', content: broadcastText.trim(), contentType: 'broadcast', sentAt: new Date().toISOString() });
+        batch.set(msgRef, { 
+           chatId: chatDoc.id, senderId: 'system_broadcast', senderName: 'Nuxus Kernel 📡', 
+           content: broadcastText.trim(), contentType: 'broadcast', sentAt: new Date().toISOString() 
+        });
       });
       await batch.commit();
       toast({ title: "Рассылка завершена" });
@@ -161,7 +159,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
             <TabsList className="grid w-full bg-white/5 p-1 rounded-xl grid-cols-4 gap-1">
               <TabsTrigger value="analytics" className="rounded-lg text-[8px] uppercase font-black">Аналитика</TabsTrigger>
               <TabsTrigger value="users" className="rounded-lg text-[8px] uppercase font-black">Узлы</TabsTrigger>
-              <TabsTrigger value="archives" className="rounded-lg text-[8px] uppercase font-black">Архивы</TabsTrigger>
+              <TabsTrigger value="requests" className="rounded-lg text-[8px] uppercase font-black">Заявки ({topUpRequests?.length || 0})</TabsTrigger>
               <TabsTrigger value="broadcast" className="rounded-lg text-[8px] uppercase font-black">Маяк</TabsTrigger>
             </TabsList>
           </div>
@@ -191,69 +189,73 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
                         <span className="text-[9px] text-muted-foreground uppercase font-black">{u.username}</span>
                       </div>
                     </div>
-                    <div className="flex items-center gap-1">
-                      <Button variant="ghost" size="icon" className="rounded-xl text-primary/40 hover:text-primary" onClick={() => handleCollectArchive(u.id)}><Database className="w-4 h-4" /></Button>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="rounded-xl text-white/20"><MoreVertical className="w-4 h-4" /></Button></DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-64 obsidian-glass rounded-2xl p-2 border-white/10">
-                           <DropdownMenuItem onClick={() => handleAction(u.id, u.isAdmin ? 'remove_admin' : 'make_admin')} className="gap-3 font-black uppercase text-[9px] tracking-widest py-3">
-                             {u.isAdmin ? <><ShieldX className="w-4 h-4 text-red-400" /> Снять Админа</> : <><ShieldCheck className="w-4 h-4 text-primary" /> Выдать Админа</>}
-                           </DropdownMenuItem>
-                           
-                           <DropdownMenuSub>
-                             <DropdownMenuSubTrigger className="gap-3 font-black uppercase text-[9px] tracking-widest py-3">
-                               <Star className="w-4 h-4 text-accent" /> Выдать Premium
-                             </DropdownMenuSubTrigger>
-                             <DropdownMenuSubContent className="w-48 obsidian-glass rounded-xl p-1 border-white/10">
-                               <DropdownMenuItem onClick={() => handleAction(u.id, 'give_premium', '1d')} className="text-[9px] font-black uppercase">1 День</DropdownMenuItem>
-                               <DropdownMenuItem onClick={() => handleAction(u.id, 'give_premium', '1m')} className="text-[9px] font-black uppercase">1 Месяц</DropdownMenuItem>
-                               <DropdownMenuItem onClick={() => handleAction(u.id, 'give_premium', '3m')} className="text-[9px] font-black uppercase">3 Месяца</DropdownMenuItem>
-                               <DropdownMenuItem onClick={() => handleAction(u.id, 'give_premium', '6m')} className="text-[9px] font-black uppercase">6 Месяцев</DropdownMenuItem>
-                               <DropdownMenuItem onClick={() => handleAction(u.id, 'give_premium', '1y')} className="text-[9px] font-black uppercase">1 Год</DropdownMenuItem>
-                               <DropdownMenuItem onClick={() => handleAction(u.id, 'give_premium', '2y')} className="text-[9px] font-black uppercase">2 Года</DropdownMenuItem>
-                             </DropdownMenuSubContent>
-                           </DropdownMenuSub>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="rounded-xl text-white/20"><MoreVertical className="w-4 h-4" /></Button></DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-64 obsidian-glass rounded-2xl p-2 border-white/10 shadow-2xl">
+                         <DropdownMenuItem onClick={() => handleAction(u.id, u.isAdmin ? 'remove_admin' : 'make_admin')} className="gap-3 font-black uppercase text-[9px] tracking-widest py-3 rounded-xl">
+                           {u.isAdmin ? <><ShieldX className="w-4 h-4 text-red-400" /> Снять Админа</> : <><ShieldCheck className="w-4 h-4 text-primary" /> Назначить Админа</>}
+                         </DropdownMenuItem>
+                         
+                         <DropdownMenuSub>
+                           <DropdownMenuSubTrigger className="gap-3 font-black uppercase text-[9px] tracking-widest py-3 rounded-xl">
+                             <Star className="w-4 h-4 text-accent" /> Выдать Premium
+                           </DropdownMenuSubTrigger>
+                           <DropdownMenuSubContent className="w-48 obsidian-glass rounded-xl p-1 border-white/10">
+                             {['1d', '1m', '3m', '6m', '1y', '2y'].map(v => (
+                               <DropdownMenuItem key={v} onClick={() => handleAction(u.id, 'give_premium', v)} className="text-[9px] font-black uppercase py-2">{v.toUpperCase()}</DropdownMenuItem>
+                             ))}
+                           </DropdownMenuSubContent>
+                         </DropdownMenuSub>
 
-                           {isUserPremium(u) && (
-                             <DropdownMenuItem onClick={() => handleAction(u.id, 'remove_premium')} className="gap-3 font-black uppercase text-[9px] tracking-widest py-3 text-red-400">
-                               <XCircle className="w-4 h-4" /> Аннулировать Прем
-                             </DropdownMenuItem>
-                           )}
-
-                           <DropdownMenuSeparator className="bg-white/5" />
-                           
-                           <DropdownMenuItem onClick={() => handleAction(u.id, u.isBanned ? 'unban' : 'ban')} className={cn("gap-3 font-black uppercase text-[9px] tracking-widest py-3", u.isBanned ? "text-green-400" : "text-red-500")}>
-                             {u.isBanned ? <><ShieldCheck className="w-4 h-4" /> Разбанить</> : <><Ban className="w-4 h-4" /> Забанить</>}
+                         {isUserPremium(u) && (
+                           <DropdownMenuItem onClick={() => handleAction(u.id, 'remove_premium')} className="gap-3 font-black uppercase text-[9px] tracking-widest py-3 text-red-400 rounded-xl">
+                             <Trash2 className="w-4 h-4" /> Сбросить Премиум
                            </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
+                         )}
+
+                         <DropdownMenuSeparator className="bg-white/5 mx-2 my-1" />
+                         
+                         <DropdownMenuItem onClick={() => handleAction(u.id, u.isBanned ? 'unban' : 'ban')} className={cn("gap-3 font-black uppercase text-[9px] tracking-widest py-3 rounded-xl", u.isBanned ? "text-green-400" : "text-red-500")}>
+                           {u.isBanned ? <><ShieldCheck className="w-4 h-4" /> Разбанить</> : <><Ban className="w-4 h-4" /> Забанить</>}
+                         </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
                 ))}
               </div>
             </ScrollArea>
           </TabsContent>
 
-          <TabsContent value="archives" className="flex-1 m-0 p-0 overflow-hidden data-[state=active]:flex flex-col">
-            <ScrollArea className="flex-1">
-               <div className="p-6 space-y-4">
-                  <h3 className="text-[10px] font-black uppercase text-primary mb-4 flex items-center gap-2"><Database className="w-3 h-3" /> Запросы архивов</h3>
-                  {archiveRequests?.map(req => (
-                    <div key={req.id} className="flex items-center justify-between p-4 bg-white/5 rounded-3xl border border-white/5">
+          <TabsContent value="requests" className="flex-1 m-0 p-0 flex flex-col min-h-0">
+             <ScrollArea className="flex-1">
+                <div className="p-6 space-y-3">
+                  {topUpRequests && topUpRequests.length > 0 ? topUpRequests.map(req => (
+                    <div key={req.id} className="flex items-center justify-between p-4 bg-white/5 border border-white/5 rounded-3xl">
                        <div className="flex items-center gap-3">
-                          <UserAvatar userId={req.userId} className="h-10 w-10" />
-                          <div className="flex flex-col text-left"><span className="font-bold text-sm text-white">{req.userName}</span><span className="text-[9px] text-muted-foreground uppercase font-black">{format(new Date(req.createdAt), 'dd.MM HH:mm')}</span></div>
+                         <UserAvatar userId={req.userId} className="h-10 w-10" />
+                         <div className="flex flex-col text-left">
+                           <span className="font-bold text-white text-sm">{req.userName}</span>
+                           <span className="text-[14px] text-primary font-black italic">{req.amount} NX</span>
+                         </div>
                        </div>
-                       <Button onClick={() => handleCollectArchive(req.userId, req.id)} disabled={isCollectingArchive === req.userId} className="h-10 px-4 bg-primary text-white rounded-xl font-black uppercase text-[9px] tracking-widest gap-2 shadow-lg">{isCollectingArchive === req.userId ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <><Package className="w-3.5 h-3.5" /> Собрать ZIP</>}</Button>
+                       <div className="flex gap-2">
+                         <Button size="icon" onClick={() => handleApproveTopUp(req)} className="h-10 w-10 bg-green-500 hover:bg-green-600 rounded-xl"><Check className="w-5 h-5 text-white" /></Button>
+                         <Button size="icon" onClick={() => handleRejectTopUp(req.id)} variant="destructive" className="h-10 w-10 rounded-xl"><X className="w-5 h-5" /></Button>
+                       </div>
                     </div>
-                  ))}
-               </div>
-            </ScrollArea>
+                  )) : (
+                    <div className="py-20 text-center opacity-20">
+                      <Wallet className="w-12 h-12 mx-auto mb-4" />
+                      <p className="text-[10px] font-black uppercase">Заявок нет</p>
+                    </div>
+                  )}
+                </div>
+             </ScrollArea>
           </TabsContent>
 
           <TabsContent value="broadcast" className="p-6">
              <div className="bg-primary/10 p-6 rounded-[2rem] border border-primary/20 space-y-4">
-                <Textarea placeholder="Введите системное сообщение..." value={broadcastText} onChange={e => setBroadcastText(e.target.value)} className="bg-black/40 border-white/10 min-h-[120px] rounded-2xl" />
+                <Textarea placeholder="Введите системное сообщение..." value={broadcastText} onChange={e => setBroadcastText(e.target.value)} className="bg-black/40 border-white/10 min-h-[120px] rounded-2xl resize-none" />
                 <Button onClick={handleBroadcast} disabled={isBroadcasting || !broadcastText.trim()} className="w-full h-12 bg-primary text-white font-black uppercase tracking-widest gap-2 rounded-xl shadow-lg">{isBroadcasting ? <Loader2 className="animate-spin w-4 h-4" /> : <><Send className="w-4 h-4" /> Транслировать</>}</Button>
              </div>
           </TabsContent>
@@ -267,10 +269,8 @@ function StatCard({ label, value, icon: Icon, color }: any) {
   return (
     <div className="bg-white/5 p-4 rounded-3xl border border-white/5 flex flex-col items-center justify-center gap-1 shadow-xl">
       <Icon className={cn("w-4 h-4 mb-1", color)} />
-      <span className="text-xl font-black italic text-white">{value}</span>
+      <span className="text-xl font-black italic text-white tabular-nums">{value}</span>
       <span className="text-[7px] font-black uppercase text-muted-foreground/60 tracking-widest">{label}</span>
     </div>
   );
 }
-
-const XCircle = ({ className }: { className?: string }) => <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6M9 9l6 6"/></svg>;

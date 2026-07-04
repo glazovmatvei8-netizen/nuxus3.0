@@ -22,7 +22,8 @@ import {
 import { format } from 'date-fns';
 import { ru } from 'date-fns/locale';
 
-const MAX_TOP_UP_AMOUNT = 10000;
+// Увеличенный лимит пополнения: 500,000 NX
+const MAX_TOP_UP_AMOUNT = 500000;
 
 export default function WalletView() {
   const { user } = useUser();
@@ -33,10 +34,7 @@ export default function WalletView() {
   const [isTransferOpen, setIsTransferOpen] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   
-  // States for Top Up
-  const [topUpAmount, setTopUpAmount] = useState('100');
-
-  // States for Transfer
+  const [topUpAmount, setTopUpAmount] = useState('1000');
   const [transferTarget, setTransferTarget] = useState('');
   const [transferAmount, setTransferAmount] = useState('');
   const [foundUser, setFoundUser] = useState<User | null>(null);
@@ -67,10 +65,10 @@ export default function WalletView() {
         setFoundUser({ id: snap.docs[0].id, ...snap.docs[0].data() } as User);
       } else {
         setFoundUser(null);
-        toast({ title: "Пользователь не найден", variant: "destructive" });
+        toast({ title: "Узел не найден", variant: "destructive" });
       }
     } catch (e) {
-      toast({ title: "Ошибка поиска", variant: "destructive" });
+      toast({ title: "Сбой поиска", variant: "destructive" });
     } finally {
       setIsSearchingUser(false);
     }
@@ -81,7 +79,7 @@ export default function WalletView() {
     if (isNaN(amount) || amount <= 0 || !db || !user || !profile) return;
 
     if (amount > MAX_TOP_UP_AMOUNT) {
-      toast({ title: "Лимит превышен", description: `Максимальная сумма пополнения за раз: ${MAX_TOP_UP_AMOUNT} NX`, variant: "destructive" });
+      toast({ title: "Лимит превышен", description: `Максимум: ${MAX_TOP_UP_AMOUNT} NX`, variant: "destructive" });
       return;
     }
 
@@ -96,12 +94,12 @@ export default function WalletView() {
       });
 
       toast({ 
-        title: "Заявка отправлена", 
-        description: `Ожидайте подтверждения пополнения на ${amount} NX администратором.` 
+        title: "Заявка передана", 
+        description: `Администратор рассмотрит запрос на ${amount} NX.` 
       });
       setIsTopUpOpen(false);
     } catch (e) {
-      toast({ title: "Ошибка заявки", variant: "destructive" });
+      toast({ title: "Ошибка системы", variant: "destructive" });
     } finally {
       setIsProcessing(false);
     }
@@ -111,7 +109,7 @@ export default function WalletView() {
     const amount = parseFloat(transferAmount);
     if (!foundUser || isNaN(amount) || amount <= 0 || !db || !user || !profile) return;
     if ((profile.balance || 0) < amount) {
-      toast({ title: "Недостаточно средств", variant: "destructive" });
+      toast({ title: "Недостаточно энергии", variant: "destructive" });
       return;
     }
 
@@ -150,13 +148,13 @@ export default function WalletView() {
       });
 
       await batch.commit();
-      toast({ title: "Перевод выполнен", description: `Отправлено ${amount} NX пользователю ${foundUser.name}` });
+      toast({ title: "Сигнал передан", description: `${amount} NX отправлено ${foundUser.name}` });
       setIsTransferOpen(false);
       setFoundUser(null);
       setTransferTarget('');
       setTransferAmount('');
     } catch (e) {
-      toast({ title: "Ошибка перевода", variant: "destructive" });
+      toast({ title: "Сбой передачи", variant: "destructive" });
     } finally {
       setIsProcessing(false);
     }
@@ -167,22 +165,19 @@ export default function WalletView() {
   return (
     <div className="flex flex-col h-full bg-[#0a0a0c] overflow-hidden">
       <div className="px-4 pt-6 pb-4 shrink-0">
-        <h1 className="text-[32px] font-black text-white tracking-tight mb-6">Кошелек</h1>
+        <h1 className="text-[32px] font-black text-white tracking-tight mb-6">Банк Ядра</h1>
         
         <div className="relative group mb-8">
-          <div className="absolute -inset-1 bg-gradient-to-tr from-primary/40 to-accent/40 rounded-[2.5rem] blur-[8px] opacity-50 group-hover:opacity-100 transition-opacity" />
+          <div className="absolute -inset-1 bg-gradient-to-tr from-primary/40 to-accent/40 rounded-[2.5rem] blur-[8px] opacity-50" />
           <div className="relative bg-[#1c1c1e] border border-white/10 rounded-[2.5rem] p-8 overflow-hidden">
-            <div className="absolute top-0 right-0 p-6 opacity-10">
-              <Wallet className="w-32 h-32" />
-            </div>
-            <p className="text-[10px] font-black uppercase tracking-[0.4em] text-primary/60 mb-2">Premium Balance</p>
+            <p className="text-[10px] font-black uppercase tracking-[0.4em] text-primary/60 mb-2">Node Balance</p>
             <div className="flex items-baseline gap-2">
-              <span className="text-5xl font-black text-white italic tracking-tighter">{profile?.balance?.toFixed(2) || '0.00'}</span>
+              <span className="text-5xl font-black text-white italic tracking-tighter tabular-nums">{profile?.balance?.toFixed(2) || '0.00'}</span>
               <span className="text-xl font-bold text-primary italic">NX</span>
             </div>
             
             <div className="flex gap-3 mt-8">
-              <Button onClick={() => setIsTopUpOpen(true)} className="flex-1 bg-primary text-white rounded-2xl h-12 font-black uppercase text-[10px] tracking-widest gap-2 shadow-xl shadow-primary/20">
+              <Button onClick={() => setIsTopUpOpen(true)} className="flex-1 bg-primary text-white rounded-2xl h-12 font-black uppercase text-[10px] tracking-widest gap-2 shadow-xl">
                 <Plus className="w-4 h-4" /> Пополнить
               </Button>
               <Button onClick={() => setIsTransferOpen(true)} variant="outline" className="flex-1 border-white/10 bg-white/5 rounded-2xl h-12 font-black uppercase text-[10px] tracking-widest gap-2">
@@ -191,60 +186,35 @@ export default function WalletView() {
             </div>
           </div>
         </div>
-
-        <div className="grid grid-cols-2 gap-3 mb-6">
-          <WalletAction icon={ArrowDownLeft} label="История" color="text-blue-500" onClick={() => {}} />
-          <WalletAction icon={ShieldCheck} label="Защита QES" color="text-primary" onClick={() => {}} />
-        </div>
       </div>
 
-      <ScrollArea className="flex-1">
-        <div className="px-4 space-y-4 pb-32">
-          <div className="flex items-center justify-between px-2">
-            <h3 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">Транзакции Ядра</h3>
-            <Zap className="w-3 h-3 text-primary animate-pulse" />
-          </div>
-
+      <ScrollArea className="flex-1 px-4 pb-32">
+        <div className="space-y-4">
+          <h3 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 px-2">Логи транзакций</h3>
           <div className="space-y-1">
             {isTxLoading ? (
               <div className="flex justify-center p-8"><Loader2 className="animate-spin text-primary" /></div>
             ) : transactions && transactions.length > 0 ? (
               transactions.map(tx => (
-                <div key={tx.id} className="flex items-center justify-between p-4 bg-white/5 border border-white/5 rounded-[1.8rem] hover:bg-white/10 transition-all">
-                  <div className="flex items-center gap-4">
-                    <div className={cn(
-                      "w-10 h-10 rounded-2xl flex items-center justify-center",
-                      tx.type === 'deposit' || tx.type === 'transfer_in' ? "bg-green-500/10 text-green-500" : "bg-red-500/10 text-red-500"
-                    )}>
-                      {tx.type === 'deposit' && <Plus className="w-5 h-5" />}
-                      {tx.type === 'transfer_in' && <ArrowDownLeft className="w-5 h-5" />}
-                      {tx.type === 'transfer_out' && <ArrowUpRight className="w-5 h-5" />}
-                      {tx.type === 'gift_purchase' && <Gift className="w-5 h-5" />}
+                <div key={tx.id} className="flex items-center justify-between p-4 bg-white/5 border border-white/5 rounded-[1.8rem]">
+                  <div className="flex items-center gap-4 text-left">
+                    <div className={cn("w-10 h-10 rounded-2xl flex items-center justify-center", tx.amount > 0 ? "bg-green-500/10 text-green-500" : "bg-red-500/10 text-red-500")}>
+                      {tx.amount > 0 ? <ArrowDownLeft className="w-5 h-5" /> : <ArrowUpRight className="w-5 h-5" />}
                     </div>
                     <div className="flex flex-col">
-                      <span className="text-sm font-bold text-white">
-                        {tx.type === 'deposit' ? 'Пополнение' : 
-                         tx.type === 'transfer_in' ? `От ${tx.otherPartyName}` :
-                         tx.type === 'gift_purchase' ? `Подарок для ${tx.otherPartyName}` :
-                         `Для ${tx.otherPartyName}`}
-                      </span>
-                      <span className="text-[9px] text-muted-foreground uppercase font-black">
-                        {format(new Date(tx.createdAt), 'dd MMM, HH:mm', { locale: ru })}
-                      </span>
+                      <span className="text-sm font-bold text-white truncate w-32">{tx.type === 'deposit' ? 'Система' : tx.otherPartyName}</span>
+                      <span className="text-[9px] text-muted-foreground uppercase">{format(new Date(tx.createdAt), 'dd MMM, HH:mm', { locale: ru })}</span>
                     </div>
                   </div>
-                  <span className={cn(
-                    "font-black text-sm italic",
-                    tx.amount > 0 ? "text-green-500" : "text-white"
-                  )}>
+                  <span className={cn("font-black text-sm italic", tx.amount > 0 ? "text-green-500" : "text-white")}>
                     {tx.amount > 0 ? `+${tx.amount}` : tx.amount} NX
                   </span>
                 </div>
               ))
             ) : (
-              <div className="flex flex-col items-center justify-center py-10 opacity-20 border-2 border-dashed border-white/5 rounded-3xl">
-                 <History className="w-10 h-10 mb-2" />
-                 <p className="text-[10px] font-black uppercase tracking-widest">Нет активных сигналов</p>
+              <div className="py-20 text-center opacity-20 border-2 border-dashed border-white/5 rounded-3xl">
+                 <History className="w-10 h-10 mx-auto mb-2" />
+                 <p className="text-[10px] font-black uppercase">История пуста</p>
               </div>
             )}
           </div>
@@ -253,33 +223,19 @@ export default function WalletView() {
 
       <Dialog open={isTopUpOpen} onOpenChange={setIsTopUpOpen}>
         <DialogContent className="max-w-xs bg-card border-white/10 rounded-[2.5rem] p-8 text-center shadow-2xl">
-          <DialogHeader>
-            <DialogTitle className="text-2xl font-black uppercase italic text-white tracking-tighter">Top Up</DialogTitle>
-            <DialogDescription className="text-[9px] uppercase font-black tracking-[0.3em] text-primary/60">Premium Ingestion</DialogDescription>
-          </DialogHeader>
+          <DialogHeader><DialogTitle className="text-2xl font-black uppercase italic text-white">Top Up</DialogTitle></DialogHeader>
           <div className="py-6 space-y-4">
             <div className="relative">
-              <Input 
-                type="number" 
-                value={topUpAmount} 
-                onChange={e => setTopUpAmount(e.target.value)}
-                className={cn("bg-white/5 border-white/10 h-16 rounded-2xl text-center text-3xl font-black italic text-primary", isAmountOverLimit && "border-red-500/50 text-red-500")}
-              />
+              <Input type="number" value={topUpAmount} onChange={e => setTopUpAmount(e.target.value)} className="bg-white/5 border-white/10 h-16 rounded-2xl text-center text-3xl font-black italic text-primary" />
               <span className="absolute right-4 top-1/2 -translate-y-1/2 font-black text-white/20 italic">NX</span>
             </div>
-            {isAmountOverLimit && (
-              <div className="flex items-center justify-center gap-2 text-red-500">
-                <AlertTriangle className="w-3 h-3" />
-                <span className="text-[8px] font-black uppercase">Максимум: {MAX_TOP_UP_AMOUNT} NX</span>
-              </div>
-            )}
-            <p className="text-[9px] text-muted-foreground uppercase font-bold px-4 leading-relaxed">
-              Запрос будет передан Оператору. Лимит Ядра: {MAX_TOP_UP_AMOUNT} NX за одну сессию.
+            <p className="text-[9px] text-muted-foreground uppercase font-bold leading-relaxed">
+              Лимит за сессию: {MAX_TOP_UP_AMOUNT} NX. Запрос будет направлен администратору.
             </p>
           </div>
           <DialogFooter>
-            <Button disabled={isProcessing || isAmountOverLimit} onClick={handleTopUpRequest} className="w-full h-14 bg-primary rounded-2xl font-black uppercase italic tracking-widest shadow-xl shadow-primary/20">
-              {isProcessing ? <Loader2 className="animate-spin" /> : <>Отправить запрос <Clock className="w-4 h-4 ml-2" /></>}
+            <Button disabled={isProcessing || isAmountOverLimit} onClick={handleTopUpRequest} className="w-full h-14 bg-primary rounded-2xl font-black uppercase italic tracking-widest shadow-xl">
+              {isProcessing ? <Loader2 className="animate-spin" /> : "Отправить запрос"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -287,83 +243,36 @@ export default function WalletView() {
 
       <Dialog open={isTransferOpen} onOpenChange={setIsTransferOpen}>
         <DialogContent className="max-w-sm bg-card border-white/10 rounded-[2.5rem] p-8 shadow-2xl">
-          <DialogHeader>
-            <DialogTitle className="text-2xl font-black uppercase italic text-white tracking-tighter text-center">Transfer</DialogTitle>
-            <DialogDescription className="text-[9px] uppercase font-black tracking-[0.3em] text-accent/60 text-center">Signal Redirection</DialogDescription>
-          </DialogHeader>
-          
+          <DialogHeader><DialogTitle className="text-2xl font-black uppercase italic text-white text-center">Transfer</DialogTitle></DialogHeader>
           <div className="py-6 space-y-6">
             {!foundUser ? (
               <div className="space-y-3">
-                <Label className="text-[9px] uppercase font-black text-muted-foreground ml-2">Адрес Аккаунта (@username)</Label>
                 <div className="flex gap-2">
-                  <Input 
-                    placeholder="@node_id" 
-                    value={transferTarget}
-                    onChange={e => setTransferTarget(e.target.value)}
-                    className="bg-white/5 border-white/10 h-12 rounded-xl"
-                  />
-                  <Button size="icon" onClick={handleSearchUser} disabled={isSearchingUser} className="h-12 w-12 rounded-xl shrink-0 bg-accent text-black">
-                    {isSearchingUser ? <Loader2 className="animate-spin" /> : <Search className="w-5 h-5" />}
-                  </Button>
+                  <Input placeholder="@node_id" value={transferTarget} onChange={e => setTransferTarget(e.target.value)} className="bg-white/5 border-white/10 h-12 rounded-xl" />
+                  <Button size="icon" onClick={handleSearchUser} disabled={isSearchingUser} className="h-12 w-12 rounded-xl shrink-0 bg-accent text-black"><Search className="w-5 h-5" /></Button>
                 </div>
               </div>
             ) : (
               <div className="space-y-6">
-                <div className="flex items-center gap-4 bg-white/5 p-4 rounded-2xl border border-accent/20 relative group">
-                  <div className="w-12 h-12 rounded-full bg-accent/10 flex items-center justify-center border border-accent/30 text-accent font-black">
-                    {foundUser.name[0]}
-                  </div>
-                  <div className="flex flex-col">
-                    <span className="font-bold text-white">{foundUser.name}</span>
-                    <span className="text-[10px] text-accent uppercase font-black">{foundUser.username}</span>
-                  </div>
-                  <button onClick={() => setFoundUser(null)} className="absolute -top-2 -right-2 bg-red-500 rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <XCircle className="w-4 h-4 text-white" />
-                  </button>
+                <div className="flex items-center gap-4 bg-white/5 p-4 rounded-2xl border border-accent/20 relative">
+                  <div className="w-12 h-12 rounded-full bg-accent/10 flex items-center justify-center border border-accent/30 text-accent font-black">{foundUser.name[0]}</div>
+                  <div className="flex flex-col text-left"><span className="font-bold text-white">{foundUser.name}</span><span className="text-[10px] text-accent uppercase font-black">{foundUser.username}</span></div>
+                  <button onClick={() => setFoundUser(null)} className="absolute -top-2 -right-2 bg-red-500 rounded-full p-1"><XCircle className="w-4 h-4 text-white" /></button>
                 </div>
-
-                <div className="space-y-3">
-                  <Label className="text-[9px] uppercase font-black text-muted-foreground ml-2">Сумма Перевода</Label>
-                  <div className="relative">
-                    <Input 
-                      type="number" 
-                      value={transferAmount}
-                      onChange={e => setTransferAmount(e.target.value)}
-                      placeholder="0.00"
-                      className="bg-white/5 border-white/10 h-14 rounded-2xl text-center text-2xl font-black italic text-accent"
-                    />
-                    <span className="absolute right-4 top-1/2 -translate-y-1/2 font-black text-white/20 italic">NX</span>
-                  </div>
+                <div className="relative">
+                  <Input type="number" value={transferAmount} onChange={e => setTransferAmount(e.target.value)} placeholder="0.00" className="bg-white/5 border-white/10 h-14 rounded-2xl text-center text-2xl font-black italic text-accent" />
+                  <span className="absolute right-4 top-1/2 -translate-y-1/2 font-black text-white/20 italic">NX</span>
                 </div>
               </div>
             )}
           </div>
-
           <DialogFooter>
-            <Button 
-              disabled={isProcessing || !foundUser || !transferAmount} 
-              onClick={handleTransferAction}
-              className="w-full h-14 bg-accent text-black rounded-2xl font-black uppercase italic tracking-widest shadow-xl shadow-accent/20"
-            >
-              {isProcessing ? <Loader2 className="animate-spin" /> : "Transmit Signal"}
+            <Button disabled={isProcessing || !foundUser || !transferAmount} onClick={handleTransferAction} className="w-full h-14 bg-accent text-black rounded-2xl font-black uppercase italic tracking-widest shadow-xl">
+              {isProcessing ? <Loader2 className="animate-spin" /> : "Передать Сигнал"}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
   );
-}
-
-function WalletAction({ icon: Icon, label, color, onClick }: { icon: any, label: string, color: string, onClick: () => void }) {
-  return (
-    <button onClick={onClick} className="flex items-center justify-center gap-3 p-4 bg-white/5 border border-white/5 rounded-2xl hover:bg-white/10 transition-all group">
-      <Icon className={cn("w-5 h-5", color, "group-hover:scale-110 transition-transform")} />
-      <span className="text-[10px] font-black uppercase tracking-widest text-white">{label}</span>
-    </button>
-  );
-}
-
-function Label({ children, className }: any) {
-  return <label className={cn("block font-medium", className)}>{children}</label>;
 }

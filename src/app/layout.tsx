@@ -43,13 +43,6 @@ export const metadata: Metadata = {
     ],
     shortcut: FINAL_ICON_URL,
     apple: FINAL_ICON_URL,
-  },
-  other: {
-    'msapplication-TileColor': '#0a0a0c',
-    'msapplication-config': 'none',
-    'notification-app-id': 'chat.nuxus.app',
-    'mobile-web-app-capable': 'yes',
-    'format-detection': 'telephone=no'
   }
 };
 
@@ -71,14 +64,9 @@ export default function RootLayout({
     <html lang="ru" className={`dark ${font.variable}`} suppressHydrationWarning>
       <head>
         <link rel="preconnect" href="https://images.unsplash.com" />
-        <link rel="preconnect" href="https://i.ibb.co" />
-        <link rel="preconnect" href="https://ipwho.is" />
         <link rel="icon" href={FINAL_ICON_URL} sizes="any" />
         <link rel="apple-touch-icon" href={FINAL_ICON_URL} />
-        <link rel="shortcut icon" href={FINAL_ICON_URL} />
-        <meta name="apple-mobile-web-app-capable" content="yes" />
-        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-        <Script src="https://unpkg.com/@vkontakte/vk-bridge/dist/browser.min.js" strategy="beforeInteractive" />
+        <meta name="mobile-web-app-capable" content="yes" />
       </head>
       <body 
         className="font-sans antialiased bg-background text-foreground overflow-hidden h-[100dvh] selection:bg-primary/30" 
@@ -106,6 +94,11 @@ export default function RootLayout({
               window.addEventListener('load', function() {
                 navigator.serviceWorker.register('/sw.js').then(function(reg) {
                   console.log('Nuxus Kernel: Active');
+                  
+                  // Запрос уведомлений для PWA
+                  if (Notification.permission !== 'granted') {
+                    Notification.requestPermission();
+                  }
                 }).catch(function(err) {
                   console.log('Nuxus Kernel: SW Fail', err);
                 });

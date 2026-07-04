@@ -1,13 +1,14 @@
+
 {
-  "latestVersion": "25.0.0",
-  "qesVersion": "25.0",
-  "build": "Stable-Evolution-Final",
-  "sizeMb": 112,
+  "latestVersion": "25.4.0",
+  "qesVersion": "25.4",
+  "build": "Stable-Communication-Elite",
+  "sizeMb": 115,
   "changelog": [
-    "Quantum Interface v3.0: Полностью новый плавающий дизайн",
-    "HEX Customization: Свой цвет Ядра для Premium (#HEX)",
-    "Voice AI: Расшифровка голосовых сообщений через Gemini",
-    "Enhanced Circles: Переключение камеры при записи видео-кружков",
-    "Speed Max: Оптимизация рендеринга и скролла"
+    "Smart Textarea: Удобный многострочный ввод сигналов",
+    "Stickers Hub: Полноценная поддержка стикеров и эмодзи",
+    "Finance Admin: Управление заявками на пополнение в реальном времени",
+    "Wallet Boost: Лимит пополнения увеличен до 500,000 NX",
+    "PWA Push: Оптимизация уведомлений для iOS"
   ]
 }
