@@ -156,7 +156,7 @@ export interface UserPrivacy {
 export interface UserSettings {
   theme: string;
   appearance: 'light' | 'dark';
-  chatBackground: string;
+  chatBackground?: string;
   chatBackgroundFit?: 'cover' | 'contain';
   customAppIconUrl?: string;
   customPrimaryColor?: string;
@@ -169,6 +169,7 @@ export interface UserSettings {
   stickers?: string[];
   interfaceOverrides?: Record<string, string>;
   biometricEnabled?: boolean;
+  pwaNotificationsEnabled?: boolean;
 }
 
 export interface User {

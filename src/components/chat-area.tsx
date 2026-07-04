@@ -365,6 +365,17 @@ export default function ChatArea() {
       </header>
 
       <div className="flex-1 relative overflow-hidden flex flex-col min-w-0 z-10 bg-transparent">
+        {/* Custom Chat Background Implementation */}
+        {userProfile?.settings?.chatBackground && (
+          <div 
+            className="absolute inset-0 z-0 bg-cover bg-center transition-opacity duration-1000"
+            style={{ 
+              backgroundImage: `url(${userProfile.settings.chatBackground})`,
+              opacity: 0.4
+            }}
+          />
+        )}
+        
         <div ref={scrollContainerRef} className="flex-1 w-full relative z-10 overflow-y-auto scrollbar-hide scroll-smooth" onScroll={(e) => setShowScrollButton(e.currentTarget.scrollHeight - e.currentTarget.scrollTop - e.currentTarget.clientHeight > 500)}>
           <MessageList 
             messages={messages} userId={firebaseUser?.uid} chatId={currentChatId} 

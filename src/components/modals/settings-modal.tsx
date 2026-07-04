@@ -13,7 +13,7 @@ import { useAuth, useUser, useFirestore, useDoc, useMemoFirebase } from '@/fireb
 import { UserAvatar } from '@/components/user-avatar';
 import { 
   LogOut, Settings2, Camera, Lock, Fingerprint, Sparkles, Star, Zap, ShieldCheck, Loader2, Database, Download, Check, Palette, 
-  Monitor, Layout, Type, MessageSquare, Paintbrush, Smile, Bell, Ghost
+  Monitor, Layout, Type, MessageSquare, Paintbrush, Smile, Bell, Ghost, Image as ImageIcon, Calendar, CheckCircle2
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { signOut } from 'firebase/auth';
@@ -24,6 +24,8 @@ import { cn, isUserPremium } from '@/lib/utils';
 import type { User } from '@/lib/types';
 import { generateAiAvatar } from '@/ai/flows/generate-ai-avatar-flow';
 import nuxusVersions from '@/app/versions.json';
+import { format } from 'date-fns';
+import { ru } from 'date-fns/locale';
 
 export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const auth = useAuth();
@@ -32,6 +34,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
   const { toast } = useToast();
   const { settingsTab, setSettingsTab } = useAppState();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const bgInputRef = useRef<HTMLInputElement>(null);
 
   const userRef = useMemoFirebase(() => (!db || !user) ? null : doc(db!, 'users', user.uid), [db, user]);
   const { data: profile } = useDoc<User>(userRef);
@@ -51,6 +54,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
     theme: 'default',
     customPrimaryColor: '',
     bubbleStyle: 'default',
+    chatBackground: '',
     messageSize: 'medium',
     twoFactorEnabled: false,
     twoFactorPin: '',
@@ -72,6 +76,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         theme: profile.settings?.theme || 'default',
         customPrimaryColor: profile.settings?.customPrimaryColor || '',
         bubbleStyle: profile.settings?.bubbleStyle || 'default',
+        chatBackground: profile.settings?.chatBackground || '',
         messageSize: profile.settings?.messageSize || 'medium',
         twoFactorEnabled: !!profile.twoFactorEnabled,
         twoFactorPin: profile.twoFactorPin || '',
@@ -99,6 +104,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         'settings.theme': form.theme,
         'settings.customPrimaryColor': form.customPrimaryColor,
         'settings.bubbleStyle': form.bubbleStyle,
+        'settings.chatBackground': form.chatBackground,
         'settings.messageSize': form.messageSize,
         'settings.biometricEnabled': form.biometricEnabled,
         'settings.pwaNotificationsEnabled': form.pwaNotificationsEnabled,
@@ -108,25 +114,6 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
       toast({ title: "Конфигурация сохранена" });
     } catch (e: any) {
       toast({ title: "Ошибка сохранения", variant: "destructive" });
-    }
-  };
-
-  const handleTogglePwaNotifications = async (enabled: boolean) => {
-    if (enabled) {
-      if (!('Notification' in window)) {
-        toast({ title: "PWA Error", description: "Уведомления не поддерживаются.", variant: "destructive" });
-        return;
-      }
-      const permission = await Notification.requestPermission();
-      if (permission === 'granted') {
-        setForm({ ...form, pwaNotificationsEnabled: true });
-        toast({ title: "Уведомления активны" });
-      } else {
-        toast({ title: "Доступ отклонен", variant: "destructive" });
-        setForm({ ...form, pwaNotificationsEnabled: false });
-      }
-    } else {
-      setForm({ ...form, pwaNotificationsEnabled: false });
     }
   };
 
@@ -161,6 +148,14 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
     } finally { setIsLinkingBiometrics(false); }
   };
 
+  const handleBgUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onloadend = () => setForm({ ...form, chatBackground: reader.result as string });
+    reader.readAsDataURL(file);
+  };
+
   const isPremium = isUserPremium(profile);
 
   return (
@@ -174,9 +169,10 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         
         <Tabs value={settingsTab} onValueChange={setSettingsTab} className="flex-1 flex flex-col min-h-0 overflow-hidden">
           <div className="px-6 mt-4">
-            <TabsList className="grid grid-cols-4 bg-white/5 p-1 rounded-2xl shrink-0 border border-white/5">
+            <TabsList className="grid grid-cols-5 bg-white/5 p-1 rounded-2xl shrink-0 border border-white/5">
               <TabsTrigger value="profile" className="text-[9px] font-black uppercase tracking-widest data-[state=active]:bg-primary">Узел</TabsTrigger>
               <TabsTrigger value="style" className="text-[9px] font-black uppercase tracking-widest data-[state=active]:bg-primary">Стиль</TabsTrigger>
+              <TabsTrigger value="premium" className="text-[9px] font-black uppercase tracking-widest data-[state=active]:bg-primary"><Star className="w-3 h-3" /></TabsTrigger>
               <TabsTrigger value="privacy" className="text-[9px] font-black uppercase tracking-widest data-[state=active]:bg-primary">Защита</TabsTrigger>
               <TabsTrigger value="data" className="text-[9px] font-black uppercase tracking-widest data-[state=active]:bg-primary">Ядро</TabsTrigger>
             </TabsList>
@@ -259,6 +255,35 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                 </div>
               </div>
 
+              <div className="space-y-6">
+                <h3 className="text-[11px] font-black uppercase text-primary tracking-[0.3em] flex items-center gap-3"><ImageIcon className="w-5 h-5" /> Обои чата</h3>
+                <div className="space-y-4">
+                  <div className="relative aspect-video rounded-3xl overflow-hidden border border-white/10 bg-white/5 group">
+                    {form.chatBackground ? (
+                      <img src={form.chatBackground} className="w-full h-full object-cover opacity-60" alt="Background" />
+                    ) : (
+                      <div className="w-full h-full flex flex-col items-center justify-center gap-3 opacity-20">
+                        <ImageIcon className="w-8 h-8" />
+                        <span className="text-[9px] font-black uppercase">Фон не установлен</span>
+                      </div>
+                    )}
+                    <button 
+                      onClick={() => bgInputRef.current?.click()}
+                      className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <span className="text-[10px] font-black uppercase bg-white text-black px-4 py-2 rounded-xl">Сменить фон</span>
+                    </button>
+                  </div>
+                  <Input 
+                    placeholder="URL изображения фона..." 
+                    value={form.chatBackground} 
+                    onChange={e => setForm({...form, chatBackground: e.target.value})}
+                    className="bg-white/5 border-white/10 h-11 rounded-xl text-xs font-mono"
+                  />
+                  <input type="file" ref={bgInputRef} className="hidden" accept="image/*" onChange={handleBgUpload} />
+                </div>
+              </div>
+
               {isPremium && (
                 <div className="space-y-6 bg-primary/5 p-6 rounded-[2.5rem] border border-primary/10">
                   <div className="flex items-center justify-between">
@@ -281,6 +306,57 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                     ))}
                 </div>
               </div>
+            </TabsContent>
+
+            <TabsContent value="premium" className="space-y-8 m-0 p-8 pb-24">
+               {isPremium ? (
+                 <div className="space-y-8">
+                   <div className="bg-gradient-to-br from-primary/20 via-accent/20 to-primary/10 p-8 rounded-[3rem] border border-primary/20 text-center relative overflow-hidden shadow-2xl">
+                      <div className="absolute top-0 right-0 p-4"><Zap className="w-12 h-12 text-accent/20 rotate-12" /></div>
+                      <Star className="w-16 h-16 text-accent fill-accent mx-auto mb-4 animate-pulse shadow-accent" />
+                      <h3 className="text-2xl font-black italic uppercase tracking-tighter text-white">Elite Node Active</h3>
+                      <div className="mt-6 flex items-center justify-center gap-3 bg-black/40 backdrop-blur-md px-6 py-2 rounded-full border border-white/10 mx-auto w-fit">
+                        <Calendar className="w-4 h-4 text-primary" />
+                        <span className="text-[10px] font-black text-white uppercase tracking-widest">
+                          До: {profile?.premiumUntil ? format(new Date(profile.premiumUntil), 'dd.MM.yyyy', { locale: ru }) : 'Бессрочно'}
+                        </span>
+                      </div>
+                   </div>
+
+                   <div className="space-y-4">
+                      <h4 className="text-[9px] font-black uppercase tracking-[0.4em] text-primary ml-2">Разблокированные модули:</h4>
+                      <div className="grid grid-cols-1 gap-2">
+                        <PremiumBenefit label="AI Cinema Pro (Veo 2.0)" icon={Zap} active />
+                        <PremiumBenefit label="Ghost Mode (Инкогнито)" icon={Ghost} active />
+                        <PremiumBenefit label="AI Переводчик сигналов" icon={Sparkles} active />
+                        <PremiumBenefit label="Магические AI черновики" icon={Palette} active />
+                        <PremiumBenefit label="Эксклюзивные 3D стикеры" icon={Smile} active />
+                        <PremiumBenefit label="Приоритетная синхронизация" icon={ShieldCheck} active />
+                      </div>
+                   </div>
+                 </div>
+               ) : (
+                 <div className="space-y-8">
+                   <div className="bg-white/5 p-8 rounded-[3rem] border border-white/5 text-center space-y-6">
+                     <Star className="w-12 h-12 text-white/10 mx-auto" />
+                     <div className="space-y-2">
+                        <h3 className="text-xl font-black text-white uppercase italic">Nuxus Premium</h3>
+                        <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest leading-relaxed">Разблокируйте полный потенциал Ядра</p>
+                     </div>
+                     <Button className="w-full h-14 bg-white text-black rounded-2xl font-black uppercase italic tracking-widest shadow-xl">Подключить Elite</Button>
+                   </div>
+
+                   <div className="space-y-4 opacity-50">
+                      <h4 className="text-[9px] font-black uppercase tracking-[0.4em] text-white/40 ml-2">Что дает статус:</h4>
+                      <div className="grid grid-cols-1 gap-2">
+                        <PremiumBenefit label="Создание ИИ-видео в Студии" icon={Zap} />
+                        <PremiumBenefit label="Режим Призрака (Скрыть онлайн)" icon={Ghost} />
+                        <PremiumBenefit label="Перевод сообщений через AI" icon={Sparkles} />
+                        <PremiumBenefit label="Кастомные цвета профиля" icon={Palette} />
+                      </div>
+                   </div>
+                 </div>
+               )}
             </TabsContent>
 
             <TabsContent value="privacy" className="space-y-8 m-0 p-8 pb-24">
@@ -326,7 +402,16 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                       <span className="text-[8px] text-muted-foreground uppercase font-bold tracking-widest">Сигналы в фоне</span>
                     </div>
                   </div>
-                  <Switch checked={form.pwaNotificationsEnabled} onCheckedChange={handleTogglePwaNotifications} />
+                  <Switch checked={form.pwaNotificationsEnabled} onCheckedChange={(enabled) => {
+                    if (enabled) {
+                      Notification.requestPermission().then(p => {
+                        if (p === 'granted') setForm({ ...form, pwaNotificationsEnabled: true });
+                        else toast({ title: "Доступ к уведомлениям отклонен", variant: "destructive" });
+                      });
+                    } else {
+                      setForm({ ...form, pwaNotificationsEnabled: false });
+                    }
+                  }} />
                 </div>
               </div>
             </TabsContent>
@@ -360,5 +445,17 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         </Tabs>
       </DialogContent>
     </Dialog>
+  );
+}
+
+function PremiumBenefit({ label, icon: Icon, active }: any) {
+  return (
+    <div className={cn("flex items-center justify-between p-4 rounded-2xl border transition-all", active ? "bg-primary/10 border-primary/20" : "bg-white/5 border-white/5")}>
+      <div className="flex items-center gap-3">
+        <Icon className={cn("w-4 h-4", active ? "text-accent" : "text-white/20")} />
+        <span className={cn("text-[11px] font-bold uppercase", active ? "text-white" : "text-white/40")}>{label}</span>
+      </div>
+      {active && <CheckCircle2 className="w-4 h-4 text-green-500" />}
+    </div>
   );
 }
