@@ -23,10 +23,6 @@ import versions from '@/app/versions.json';
 const ADMIN_ID = 'GCvLucN8CjNcdaxPO2vmpZ84hNl1';
 const ORIGIN_DATE = '2024-01-01T00:00:00Z'; 
 
-/**
- * МОДАЛЬНОЕ ОКНО ПРОФИЛЯ V22.7
- * ИСПРАВЛЕНО: Синхронизация версий и Origin Date.
- */
 export function UserProfileModal() {
   const db = useFirestore();
   const { user: currentUser } = useUser();
@@ -68,7 +64,11 @@ export function UserProfileModal() {
           createdAt: new Date().toISOString(),
           name: targetUser.name,
           username: targetUser.username,
-          avatarUrl: targetUser.avatarUrl || null
+          avatarUrl: targetUser.avatarUrl || null,
+          metadata: {
+             [currentUser.uid]: { name: currentUser.displayName || 'User', username: '?', avatarUrl: null },
+             [targetUser.id]: { name: targetUser.name, username: targetUser.username, avatarUrl: targetUser.avatarUrl }
+          }
         });
         setCurrentChatId(newChat.id);
       }
@@ -105,20 +105,14 @@ export function UserProfileModal() {
     try {
       await navigator.clipboard.writeText(inspectedUserId);
       toast({ title: "ID скопирован" });
-    } catch (err) {
-      toast({ title: "Ошибка копирования", variant: "destructive" });
-    }
+    } catch (err) { toast({ title: "Ошибка", variant: "destructive" }); }
   };
 
   const registrationDate = useMemo(() => {
     if (!inspectedUserId) return '';
     const rawDate = inspectedUserId === ADMIN_ID ? ORIGIN_DATE : (targetUser?.createdAt);
     if (!rawDate) return '...';
-    try {
-      return format(new Date(rawDate), 'dd.MM.yyyy', { locale: ru });
-    } catch (e) {
-      return '...';
-    }
+    try { return format(new Date(rawDate), 'dd.MM.yyyy', { locale: ru }); } catch (e) { return '...'; }
   }, [targetUser?.createdAt, inspectedUserId]);
 
   if (!inspectedUserId) return null;
@@ -137,7 +131,6 @@ export function UserProfileModal() {
         <ScrollArea className="flex-1 w-full h-full">
           <div className="flex flex-col min-h-full pb-24">
             <div className="relative h-48 bg-gradient-to-b from-primary/20 to-transparent flex items-center justify-center pt-10">
-              <div className="absolute inset-0 opacity-10 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')]" />
               <UserAvatar 
                 userId={inspectedUserId} 
                 className="h-32 w-32 border-[6px] border-[#030306] shadow-[0_20px_50px_rgba(0,0,0,0.5)] relative z-10" 
@@ -153,14 +146,14 @@ export function UserProfileModal() {
                 <h2 className="text-2xl font-black text-white italic tracking-tighter uppercase leading-tight">
                   {formatDisplayName(targetUser?.name)}
                 </h2>
-                {targetUser?.statusEmoji && <span className="text-2xl">{targetUser.statusEmoji}</span>}
+                {(targetUser?.statusEmoji || (inspectedUserId === ADMIN_ID)) && <span className="text-2xl">{targetUser?.statusEmoji || '👑'}</span>}
               </div>
               <p className="text-[11px] text-primary font-black uppercase tracking-[0.4em] mt-1 opacity-70 italic">{targetUser?.username}</p>
               
               {targetUser?.statusText && (
-                <div className="mt-3 px-5 py-1.5 bg-white/5 rounded-full border border-white/5 inline-flex items-center gap-2">
-                  <Sparkles className="w-3 h-3 text-accent" />
-                  <p className="text-[10px] text-white/80 font-bold uppercase tracking-widest">{targetUser.statusText}</p>
+                <div className="mt-3 px-5 py-2 bg-white/5 rounded-2xl border border-white/5 inline-flex items-center gap-2 max-w-full">
+                  <Sparkles className="w-3.5 h-3.5 text-accent shrink-0" />
+                  <p className="text-[11px] text-white/90 font-bold uppercase tracking-widest truncate">{targetUser.statusText}</p>
                 </div>
               )}
 
@@ -171,11 +164,10 @@ export function UserProfileModal() {
 
             <div className="px-6 mt-10 space-y-8">
               <div className="flex gap-3">
-                <Button onClick={handleStartChat} className="flex-1 h-14 bg-primary text-white rounded-2xl font-black uppercase italic tracking-widest gap-2 shadow-xl shadow-primary/30 active:scale-95 transition-all group overflow-hidden border border-white/10">
-                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
+                <Button onClick={handleStartChat} className="flex-1 h-14 bg-primary text-white rounded-2xl font-black uppercase italic tracking-widest gap-2 shadow-xl border border-white/10">
                   <MessageCircle className="w-5 h-5" /> Написать
                 </Button>
-                <Button onClick={() => setIsGiftModalOpen(true)} variant="outline" className="flex-1 h-14 border-white/10 bg-white/[0.03] text-white rounded-2xl font-black uppercase italic tracking-widest gap-2 hover:bg-white/10 transition-all">
+                <Button onClick={() => setIsGiftModalOpen(true)} variant="outline" className="flex-1 h-14 border-white/10 bg-white/[0.03] text-white rounded-2xl font-black uppercase italic tracking-widest gap-2">
                   <Gift className="w-5 h-5 text-primary" /> Подарок
                 </Button>
               </div>
@@ -186,13 +178,11 @@ export function UserProfileModal() {
                     <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-primary/60 flex items-center gap-2">
                       <Zap className="w-3.5 h-3.5" /> Артефакты
                     </h3>
-                    <span className="text-[10px] font-black text-white/20 tabular-nums">{gifts.length}</span>
                   </div>
                   <div className="grid grid-cols-4 gap-3">
                     {gifts.map(gift => (
-                      <div key={gift.id} className="aspect-square bg-white/[0.03] rounded-2xl border border-white/5 flex flex-col items-center justify-center hover:bg-white/10 transition-all cursor-help shadow-lg relative group overflow-hidden">
-                        <div className="text-3xl group-hover:scale-125 transition-transform duration-500 drop-shadow-2xl">{gift.giftIcon}</div>
-                        <div className="absolute inset-0 bg-primary/5 opacity-0 group-hover:opacity-100 transition-opacity" />
+                      <div key={gift.id} className="aspect-square bg-white/[0.03] rounded-2xl border border-white/5 flex flex-col items-center justify-center hover:bg-white/10 transition-all shadow-lg">
+                        <div className="text-3xl drop-shadow-2xl">{gift.giftIcon}</div>
                       </div>
                     ))}
                   </div>
@@ -202,7 +192,7 @@ export function UserProfileModal() {
               {targetUser?.bio && (
                 <div className="space-y-2">
                   <h3 className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40 px-1">Спецификация</h3>
-                  <div className="bg-white/[0.02] p-5 rounded-[2rem] border border-white/[0.05] shadow-inner">
+                  <div className="bg-white/[0.02] p-5 rounded-[2rem] border border-white/[0.05]">
                     <p className="text-[13px] text-white/90 leading-relaxed font-medium">{targetUser.bio}</p>
                   </div>
                 </div>
@@ -212,46 +202,22 @@ export function UserProfileModal() {
                 <h3 className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40 px-1">Данные узла</h3>
                 <div className="bg-white/[0.02] rounded-[2rem] border border-white/[0.05] overflow-hidden divide-y divide-white/[0.02] shadow-xl">
                   <InfoRow icon={Calendar} label="Регистрация" value={registrationDate} />
-                  <InfoRow 
-                    icon={ShieldCheck} 
-                    label="Целостность" 
-                    value={hasActivePremium ? "Elite Node" : "Standard"} 
-                    color={hasActivePremium ? "text-accent" : "text-white/30"} 
-                  />
+                  <InfoRow icon={ShieldCheck} label="Целостность" value={hasActivePremium ? "Elite Node" : "Standard"} color={hasActivePremium ? "text-accent" : "text-white/30"} />
                   <InfoRow icon={Cpu} label="Протокол" value={`QES ${versions.qesVersion}`} />
-                  {targetUser?.countryCode && <InfoRow icon={Globe} label="Сектор" value={targetUser.countryCode.toUpperCase()} />}
+                  {targetUser?.isAdmin && <InfoRow icon={ShieldCheck} label="Роль" value="Administrator" color="text-primary" />}
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-3 pb-4">
-                <Button 
-                  variant="ghost" 
-                  onClick={() => startCall('audio')}
-                  className="h-14 rounded-2xl bg-white/[0.02] border border-white/[0.05] text-[10px] font-black uppercase tracking-widest gap-2 hover:bg-primary/10 hover:text-primary transition-all"
-                >
-                  <Phone className="w-4 h-4" /> Аудио
-                </Button>
-                <Button 
-                  variant="ghost" 
-                  onClick={() => startCall('video')}
-                  className="h-14 rounded-2xl bg-white/[0.02] border border-white/[0.05] text-[10px] font-black uppercase tracking-widest gap-2 hover:bg-primary/10 hover:text-primary transition-all"
-                >
-                  <Video className="w-4 h-4" /> Видео
-                </Button>
+                <Button variant="ghost" onClick={() => startCall('audio')} className="h-14 rounded-2xl bg-white/[0.02] border border-white/[0.05] text-[10px] font-black uppercase tracking-widest gap-2 hover:bg-primary/10 hover:text-primary transition-all"><Phone className="w-4 h-4" /> Аудио</Button>
+                <Button variant="ghost" onClick={() => startCall('video')} className="h-14 rounded-2xl bg-white/[0.02] border border-white/[0.05] text-[10px] font-black uppercase tracking-widest gap-2 hover:bg-primary/10 hover:text-primary transition-all"><Video className="w-4 h-4" /> Видео</Button>
               </div>
-              
-              <button 
-                className="w-full text-[8px] font-black uppercase tracking-[0.5em] text-white/10 hover:text-white/40 h-10 transition-colors" 
-                onClick={copyId}
-              >
-                UID: {inspectedUserId}
-              </button>
+              <button className="w-full text-[8px] font-black uppercase tracking-[0.5em] text-white/10 hover:text-white/40 h-10" onClick={copyId}>UID: {inspectedUserId}</button>
             </div>
           </div>
         </ScrollArea>
       </DialogContent>
     </Dialog>
-
     <GiftModal open={isGiftModalOpen} onOpenChange={setIsGiftModalOpen} targetUser={targetUser || null} />
     </>
   );

@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useRef, useEffect } from 'react';
@@ -12,7 +13,7 @@ import { useAuth, useUser, useFirestore, useDoc, useMemoFirebase } from '@/fireb
 import { UserAvatar } from '@/components/user-avatar';
 import { 
   LogOut, Settings2, Camera, Lock, Fingerprint, Sparkles, Star, Zap, ShieldCheck, Loader2, Database, Download, Check, Palette, 
-  Monitor, Layout, Type, MessageSquare, Paintbrush
+  Monitor, Layout, Type, MessageSquare, Paintbrush, Smile
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { signOut } from 'firebase/auth';
@@ -23,10 +24,6 @@ import { cn, isUserPremium } from '@/lib/utils';
 import type { User } from '@/lib/types';
 import { generateAiAvatar } from '@/ai/flows/generate-ai-avatar-flow';
 
-/**
- * ПАРАМЕТРЫ V25.0 «Quantum Customization»
- * Добавлена возможность выбора HEX-цвета для Premium пользователей.
- */
 export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const auth = useAuth();
   const db = useFirestore();
@@ -46,6 +43,8 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
     name: '',
     username: '',
     bio: '',
+    statusEmoji: '',
+    statusText: '',
     avatarUrl: '',
     appearance: 'dark' as 'light' | 'dark',
     theme: 'default',
@@ -63,6 +62,8 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         name: profile.name || '',
         username: (profile.username || '').replace('@', ''),
         bio: profile.bio || '',
+        statusEmoji: profile.statusEmoji || '',
+        statusText: profile.statusText || '',
         avatarUrl: profile.avatarUrl || '',
         appearance: profile.settings?.appearance || 'dark',
         theme: profile.settings?.theme || 'default',
@@ -84,6 +85,8 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         name: form.name.trim(),
         username: '@' + cleanUsername,
         bio: form.bio.trim(),
+        statusEmoji: form.statusEmoji.trim(),
+        statusText: form.statusText.trim(),
         avatarUrl: form.avatarUrl,
         twoFactorEnabled: form.twoFactorEnabled,
         twoFactorPin: form.twoFactorPin,
@@ -106,28 +109,20 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
       toast({ title: "Ошибка", description: "Hardware API недоступен", variant: "destructive" });
       return;
     }
-    
     setIsLinkingBiometrics(true);
     try {
       const challenge = crypto.getRandomValues(new Uint8Array(32));
       const userHandle = crypto.getRandomValues(new Uint8Array(16));
-
       const credential = await navigator.credentials.create({
         publicKey: {
           challenge,
           rp: { name: "Nuxus Kernel", id: window.location.hostname },
           user: { id: userHandle, name: user.uid, displayName: profile?.name || "Node" },
           pubKeyCredParams: [{ alg: -7, type: "public-key" }],
-          authenticatorSelection: { 
-            authenticatorAttachment: "platform",
-            userVerification: "required",
-            residentKey: "discouraged",
-            requireResidentKey: false
-          },
+          authenticatorSelection: { authenticatorAttachment: "platform", userVerification: "required", residentKey: "discouraged", requireResidentKey: false },
           attestation: "none"
         }
       }) as any;
-
       if (credential) {
         const base64Id = btoa(String.fromCharCode(...new Uint8Array(credential.rawId)));
         localStorage.setItem('nuxus_biometric_id', base64Id);
@@ -137,9 +132,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
     } catch (e: any) {
       setForm({ ...form, biometricEnabled: false });
       toast({ title: "Сбой биометрии", variant: "destructive" });
-    } finally {
-      setIsLinkingBiometrics(false);
-    }
+    } finally { setIsLinkingBiometrics(false); }
   };
 
   const isPremium = isUserPremium(profile);
@@ -149,7 +142,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
       <DialogContent className="max-w-md bg-[#0a0a0c]/95 backdrop-blur-[60px] border-white/10 p-0 overflow-hidden h-[85vh] flex flex-col rounded-[3rem] shadow-[0_30px_100px_rgba(0,0,0,1)] outline-none">
         <DialogHeader className="p-8 border-b border-white/5 shrink-0 text-left">
           <DialogTitle className="flex items-center gap-3 text-2xl font-black italic uppercase tracking-tighter text-white">
-            <Settings2 className="w-7 h-7 text-primary" /> Параметры v3.0
+            <Settings2 className="w-7 h-7 text-primary" /> Параметры v3.1
           </DialogTitle>
         </DialogHeader>
         
@@ -185,9 +178,48 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                 </div>
                 
                 <div className="space-y-6 w-full text-left">
-                  <div className="space-y-2"><Label className="text-[10px] uppercase font-black ml-2 text-primary/60">Идентификация</Label><Input value={form.name} onChange={e => setForm({...form, name: e.target.value})} className="bg-white/5 border-white/10 h-14 rounded-2xl font-bold text-base" /></div>
-                  <div className="space-y-2"><Label className="text-[10px] uppercase font-black ml-2 text-primary/60">Адрес в сети</Label><div className="relative"><span className="absolute left-5 top-1/2 -translate-y-1/2 text-primary font-black">@</span><Input value={form.username} onChange={e => setForm({...form, username: e.target.value})} className="bg-white/5 border-white/10 h-14 rounded-2xl pl-10 font-mono" /></div></div>
-                  <div className="space-y-2"><Label className="text-[10px] uppercase font-black ml-2 text-primary/60">Спецификация</Label><Textarea value={form.bio} onChange={e => setForm({...form, bio: e.target.value})} className="bg-white/5 border-white/10 rounded-2xl min-h-[100px] font-medium" /></div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label className="text-[10px] uppercase font-black ml-2 text-primary/60">Идентификация</Label>
+                      <Input value={form.name} onChange={e => setForm({...form, name: e.target.value})} className="bg-white/5 border-white/10 h-12 rounded-xl font-bold text-sm" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-[10px] uppercase font-black ml-2 text-primary/60">Никнейм</Label>
+                      <div className="relative">
+                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-primary font-black text-xs">@</span>
+                        <Input value={form.username} onChange={e => setForm({...form, username: e.target.value})} className="bg-white/5 border-white/10 h-12 rounded-xl pl-8 font-mono text-xs" />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-primary/5 p-4 rounded-2xl border border-primary/10 space-y-4">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Smile className="w-3.5 h-3.5 text-primary" />
+                      <span className="text-[9px] font-black uppercase text-primary tracking-widest">Текущий Статус</span>
+                    </div>
+                    <div className="flex gap-3">
+                      <div className="w-14">
+                        <Input 
+                          placeholder="🏠" 
+                          maxLength={2} 
+                          value={form.statusEmoji} 
+                          onChange={e => setForm({...form, statusEmoji: e.target.value})} 
+                          className="bg-black/40 border-white/10 h-12 rounded-xl text-center text-xl" 
+                        />
+                      </div>
+                      <Input 
+                        placeholder="Чем занимаетесь?" 
+                        value={form.statusText} 
+                        onChange={e => setForm({...form, statusText: e.target.value})} 
+                        className="bg-black/40 border-white/10 h-12 rounded-xl text-xs font-bold" 
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label className="text-[10px] uppercase font-black ml-2 text-primary/60">Спецификация (О себе)</Label>
+                    <Textarea value={form.bio} onChange={e => setForm({...form, bio: e.target.value})} className="bg-white/5 border-white/10 rounded-2xl min-h-[80px] font-medium text-xs leading-relaxed" />
+                  </div>
                 </div>
               </div>
             </TabsContent>
@@ -202,21 +234,14 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
               </div>
 
               {isPremium && (
-                <div className="space-y-6 bg-primary/5 p-6 rounded-[2.5rem] border border-primary/10 animate-in zoom-in duration-500">
+                <div className="space-y-6 bg-primary/5 p-6 rounded-[2.5rem] border border-primary/10">
                   <div className="flex items-center justify-between">
                     <h3 className="text-[11px] font-black uppercase text-primary tracking-[0.3em] flex items-center gap-3"><Paintbrush className="w-5 h-5" /> HEX Резонанс</h3>
-                    <div className="bg-accent/20 px-2 py-0.5 rounded-full text-[8px] font-black text-accent border border-accent/20">PREMIUM</div>
                   </div>
                   <div className="space-y-4">
-                    <p className="text-[9px] text-muted-foreground uppercase font-bold leading-relaxed">Введите HEX-код цвета, чтобы перекрасить интерфейс всего Ядра под себя.</p>
                     <div className="flex gap-3">
                        <div className="h-14 w-14 rounded-2xl border border-white/10 shrink-0 shadow-inner" style={{ backgroundColor: form.customPrimaryColor || 'hsl(var(--primary))' }} />
-                       <Input 
-                        placeholder="#A855F7" 
-                        value={form.customPrimaryColor} 
-                        onChange={e => setForm({...form, customPrimaryColor: e.target.value.toUpperCase()})}
-                        className="bg-black/40 border-white/10 h-14 rounded-2xl text-center font-mono text-lg tracking-widest"
-                       />
+                       <Input placeholder="#A855F7" value={form.customPrimaryColor} onChange={e => setForm({...form, customPrimaryColor: e.target.value.toUpperCase()})} className="bg-black/40 border-white/10 h-14 rounded-2xl text-center font-mono text-lg tracking-widest" />
                     </div>
                   </div>
                 </div>
@@ -241,11 +266,10 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                   </div>
                   <Switch checked={form.twoFactorEnabled} onCheckedChange={v => setForm({...form, twoFactorEnabled: v})} />
                 </div>
-                
                 {form.twoFactorEnabled && (
-                  <div className="space-y-6 animate-in slide-in-from-top-4 duration-500">
+                  <div className="space-y-6">
                     <div className="space-y-2">
-                      <Label className="text-[10px] font-black uppercase text-primary/60 ml-3">Доступ-код Ядра</Label>
+                      <Label className="text-[10px] uppercase font-black text-primary/60 ml-3">Доступ-код Ядра</Label>
                       <Input type="password" placeholder="••••••" maxLength={6} value={form.twoFactorPin} onChange={e => setForm({...form, twoFactorPin: e.target.value.replace(/\D/g, '')})} className="bg-black/60 border-primary/30 h-16 rounded-2xl text-center text-3xl tracking-[0.6em] font-black" />
                     </div>
                     <div className="flex items-center justify-between pt-6 border-t border-white/5">
@@ -262,16 +286,16 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                   <Database className="w-14 h-14 text-accent mx-auto animate-pulse" />
                   <div className="space-y-3">
                     <h3 className="text-xl font-black uppercase italic text-white tracking-tighter">Целостность данных</h3>
-                    <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-[0.2em] leading-relaxed">Запросите полный квантовый дамп вашего узла. Мы подготовим сообщения, профиль и коллекцию в ZIP-пакете.</p>
+                    <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-[0.2em] leading-relaxed">Запросите полный квантовый дамп вашего узла.</p>
                   </div>
                   <Button onClick={async () => {
                     setIsRequestingArchive(true);
                     try {
                       await addDoc(collection(db!, 'archiveRequests'), { userId: user?.uid, userName: profile?.name, status: 'pending', createdAt: new Date().toISOString() });
-                      toast({ title: "Сигнал отправлен", description: "Ожидайте сборки архива" });
+                      toast({ title: "Сигнал отправлен" });
                     } finally { setIsRequestingArchive(false); }
                   }} disabled={isRequestingArchive} className="w-full h-14 bg-white/5 border border-white/10 rounded-2xl font-black uppercase text-[10px] tracking-widest gap-3 hover:bg-white/10 transition-all">
-                    {isRequestingArchive ? <Loader2 className="w-5 h-5 animate-spin" /> : <><Download className="w-5 h-5" /> Сформировать ZIP-пакет</>}
+                    {isRequestingArchive ? <Loader2 className="w-5 h-5 animate-spin" /> : <><Download className="w-5 h-5" /> Сформировать ZIP</>}
                   </Button>
                </div>
             </TabsContent>
@@ -280,7 +304,6 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
           <div className="p-8 border-t border-white/5 bg-white/[0.02] shrink-0 flex gap-4">
             <Button variant="ghost" className="h-16 w-16 rounded-[1.8rem] bg-red-500/10 text-red-500 hover:bg-red-500/20 transition-all shadow-xl" onClick={() => signOut(auth)}><LogOut className="w-7 h-7" /></Button>
             <Button className="flex-1 h-16 rounded-[1.8rem] font-black uppercase italic tracking-widest bg-primary text-white shadow-2xl shadow-primary/30 active:scale-95 transition-all group overflow-hidden" onClick={handleSave}>
-              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
               <Check className="w-6 h-6 mr-3" /> Сохранить
             </Button>
           </div>

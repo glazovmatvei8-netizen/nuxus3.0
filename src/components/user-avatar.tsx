@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, memo, useMemo } from 'react';
@@ -19,10 +20,6 @@ interface UserAvatarProps {
   showOnlineStatus?: boolean;
 }
 
-/**
- * Nuxus Avatar Core V17.0 «Crystal Master»
- * Адаптивный размер значка Premium (35% от родителя).
- */
 export const UserAvatar = memo(({ userId, className, fallbackName, fallbackClassName, manualAvatarUrl, showOnlineStatus = false }: UserAvatarProps) => {
   const db = useFirestore();
   const [imgError, setImgError] = useState(false);
@@ -55,7 +52,6 @@ export const UserAvatar = memo(({ userId, className, fallbackName, fallbackClass
     return 'N'; 
   }, [profile, fallbackName, userId]);
 
-  const displayName = useMemo(() => formatDisplayName(initialsSource), [initialsSource]);
   const premium = useMemo(() => isUserPremium(profile), [profile]);
   const isGhost = useMemo(() => !!profile?.settings?.privacy?.isGhostMode, [profile]);
 
@@ -78,7 +74,7 @@ export const UserAvatar = memo(({ userId, className, fallbackName, fallbackClass
             <div className="relative w-full h-full rounded-full overflow-hidden">
               <Image 
                 src={displayAvatar} 
-                alt={displayName} 
+                alt={initialsSource} 
                 fill
                 sizes="128px"
                 className="object-cover rounded-full"
@@ -100,12 +96,21 @@ export const UserAvatar = memo(({ userId, className, fallbackName, fallbackClass
         </div>
       )}
 
-      {/* Адаптивный индикатор Premium (35% от аватара) */}
+      {profile?.statusEmoji && !premium && (
+        <div className="absolute -bottom-1 -right-1 z-30 bg-[#0a0a0c] rounded-full p-0.5 border border-white/10 text-[10px]">
+          {profile.statusEmoji}
+        </div>
+      )}
+
       {premium && (
         <div className="absolute -bottom-[5%] -right-[5%] z-30 transform hover:scale-110 transition-transform w-[35%] h-[35%] max-w-[32px] max-h-[32px]">
           <div className="bg-[#020205] rounded-full p-[1px] shadow-lg border border-white/20 w-full h-full">
             <div className="bg-gradient-to-tr from-yellow-300 to-orange-500 p-[15%] rounded-full shadow-inner flex items-center justify-center w-full h-full">
-              <Star className="w-[85%] h-[85%] text-black fill-current" />
+              {profile?.statusEmoji ? (
+                <span className="text-[120%] leading-none">{profile.statusEmoji}</span>
+              ) : (
+                <Star className="w-[85%] h-[85%] text-black fill-current" />
+              )}
             </div>
           </div>
         </div>

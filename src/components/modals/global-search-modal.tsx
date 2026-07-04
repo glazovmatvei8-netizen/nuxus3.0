@@ -30,7 +30,6 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
   const [isLoading, setIsLoading] = useState(false);
   const [addingBotId, setAddingBotId] = useState<string | null>(null);
 
-  // Load all chats where I am an admin to allow adding bots
   const myAdminChatsQuery = useMemoFirebase(() => {
     if (!db || !user) return null;
     return query(collection(db, 'chats'), where('participantIds', 'array-contains', user.uid));
@@ -67,14 +66,14 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
     setIsLoading(true);
     try {
       const cleanVal = val.toLowerCase().trim();
-      const withAt = cleanVal.startsWith('@') ? cleanVal : '@' + cleanVal;
-      const withoutAt = cleanVal.replace('@', '');
+      const withoutAt = cleanVal.startsWith('@') ? cleanVal : '@' + cleanVal;
+      const exactUsername = cleanVal.startsWith('@') ? cleanVal : '@' + cleanVal;
       
       const foundResults: any[] = [];
 
       // 1. Bots
       const bots = [
-        { type: 'bot' as const, data: { id: 'bot_nuxus_manager', name: 'Nuxus Chat Manager 🛡️', username: '@nuxus_manager', avatarUrl: 'https://i.ibb.co/sd2MqGz2/Icon.png', isPremium: true, isBot: true } },
+        { type: 'bot' as const, data: { id: 'bot_nuxus_manager', name: 'Nuxus Manager 🛡️', username: '@nuxus_manager', avatarUrl: 'https://i.ibb.co/sd2MqGz2/Icon.png', isPremium: true, isBot: true } },
         { type: 'bot' as const, data: { id: 'bot_stickers', name: 'Sticker Bot 🎨', username: '@stickers', avatarUrl: 'https://i.ibb.co/sd2MqGz2/Icon.png', isBot: true } }
       ];
 
@@ -88,21 +87,14 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
       if (activeFilter === 'all' || activeFilter === 'groups') {
         const chatQ = query(
           collection(db, 'chats'), 
-          and(
-            where('isPublic', '==', true),
-            or(
-              where('username', '==', withAt),
-              where('username', '==', withoutAt),
-              where('name', '>=', val),
-              where('name', '<=', val + '\uf8ff')
-            )
-          ),
+          where('isPublic', '==', true),
           limit(15)
         );
         const chatSnap = await getDocs(chatQ);
         chatSnap.docs.forEach(d => {
           const data = d.data();
-          if (data.type !== 'private') {
+          const matches = data.username?.toLowerCase().includes(cleanVal) || data.name?.toLowerCase().includes(cleanVal);
+          if (matches && data.type !== 'private') {
             foundResults.push({ type: 'chat', data: { id: d.id, ...data } });
           }
         });
@@ -110,29 +102,39 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
 
       // 3. Users
       if (activeFilter === 'all' || activeFilter === 'users') {
+        // Query by EXACT username (fastest)
         const userQ = query(
           collection(db, 'users'),
-          or(
-            where('username', '==', withAt),
-            where('username', '==', withoutAt),
-            where('name', '>=', val),
-            where('name', '<=', val + '\uf8ff')
-          ),
-          limit(20)
+          where('username', '==', exactUsername),
+          limit(1)
         );
-        
         const userSnap = await getDocs(userQ);
         userSnap.docs.forEach(d => {
-          const data = d.data();
-          if (d.id !== user?.uid && !foundResults.some(r => r.data.id === d.id)) {
-            foundResults.push({ type: 'user', data: { id: d.id, ...data } });
+          if (d.id !== user?.uid) {
+            foundResults.push({ type: 'user', data: { id: d.id, ...d.data() } });
           }
         });
+
+        // Also search by name prefix if not found
+        if (foundResults.length < 5) {
+          const nameQ = query(
+            collection(db, 'users'),
+            where('name', '>=', val),
+            where('name', '<=', val + '\uf8ff'),
+            limit(10)
+          );
+          const nameSnap = await getDocs(nameQ);
+          nameSnap.docs.forEach(d => {
+            if (d.id !== user?.uid && !foundResults.some(r => r.data.id === d.id)) {
+              foundResults.push({ type: 'user', data: { id: d.id, ...d.data() } });
+            }
+          });
+        }
       }
 
       setResults(foundResults);
     } catch (e) {
-      console.error("Nuxus Search: Signal error", e);
+      console.error("Nuxus Search error", e);
     } finally {
       setIsLoading(false);
     }
@@ -156,28 +158,16 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
     if (!db || !addingBotId) return;
     try {
       const bot = results.find(r => r.data.id === addingBotId)?.data;
-      const chatRef = doc(db, 'chats', chat.id);
-      await updateDoc(chatRef, {
-        participantIds: arrayUnion(addingBotId)
-      });
-
+      await updateDoc(doc(db, 'chats', chat.id), { participantIds: arrayUnion(addingBotId) });
       await addDoc(collection(db, 'chats', chat.id, 'messages'), {
-        chatId: chat.id,
-        senderId: addingBotId,
-        senderName: bot?.name || 'Bot',
-        content: `${bot?.name || 'Бот'} подключен к аккаунту 🛡️. Используйте !help для команд.`,
-        contentType: 'service',
-        sentAt: new Date().toISOString(),
+        chatId: chat.id, senderId: addingBotId, senderName: bot?.name || 'Bot', content: `${bot?.name} подключен. 🛡️`, contentType: 'service', sentAt: new Date().toISOString()
       });
-
-      toast({ title: "Бот добавлен", description: `Аккаунт подключен к ${chat.name}` });
+      toast({ title: "Бот добавлен" });
       setAddingBotId(null);
       onOpenChange(false);
       setCurrentChatId(chat.id);
       setActiveView('chats');
-    } catch (e) {
-      toast({ title: "Ошибка", description: "Недостаточно прав", variant: "destructive" });
-    }
+    } catch (e) { toast({ title: "Ошибка", variant: "destructive" }); }
   };
 
   return (
@@ -195,7 +185,7 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
               <div className="relative group">
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground/40 group-focus-within:text-primary transition-colors" />
                 <Input 
-                  placeholder="Поиск по @username..." 
+                  placeholder="Введите имя или @ник..." 
                   value={searchQuery} 
                   onChange={e => handleSearch(e.target.value)} 
                   className="bg-white/5 border-white/10 h-14 rounded-2xl pl-12 text-lg focus:border-primary/40 transition-all" 
@@ -222,9 +212,7 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
 
             <ScrollArea className="flex-1">
               <div className="p-4 pt-0">
-                {isLoading ? (
-                  <div className="flex justify-center p-12"><Loader2 className="animate-spin text-primary" /></div>
-                ) : results.length > 0 ? (
+                {results.length > 0 ? (
                   <div className="space-y-2">
                     {results.map((res, idx) => (
                       <div key={idx} onClick={() => res.type !== 'bot' && handleSelectResult(res)} className="flex items-center justify-between p-4 bg-white/5 rounded-[1.8rem] hover:bg-white/10 cursor-pointer border border-white/5 transition-all group">
@@ -233,8 +221,7 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
                           <div className="flex flex-col text-left min-w-0">
                             <span className="font-bold text-white flex items-center gap-2 truncate">
                               {res.data.name} 
-                              {res.data.isPremium && <Star className="w-3 h-3 text-accent fill-accent" />}
-                              {res.data.id === 'bot_nuxus_manager' && <ShieldCheck className="w-3 h-3 text-primary" />}
+                              {isUserPremium(res.data) && <Star className="w-3 h-3 text-accent fill-accent" />}
                             </span>
                             <span className="text-[10px] text-muted-foreground uppercase font-black truncate">
                               {res.data.username} • {res.type === 'user' ? 'аккаунт' : res.type === 'chat' ? 'сообщество' : 'бот'}
@@ -242,11 +229,7 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
                           </div>
                         </div>
                         {res.type === 'bot' ? (
-                          <Button 
-                            size="sm" 
-                            className="h-9 px-4 rounded-xl bg-primary text-white font-black uppercase text-[9px] tracking-widest gap-2 shadow-lg shadow-primary/20"
-                            onClick={(e) => { e.stopPropagation(); handleSelectResult(res); }}
-                          >
+                          <Button size="sm" className="h-9 px-4 rounded-xl bg-primary text-white font-black uppercase text-[9px] tracking-widest gap-2 shadow-lg shadow-primary/20" onClick={(e) => { e.stopPropagation(); handleSelectResult(res); }}>
                             <Plus className="w-3.5 h-3.5" /> Добавить
                           </Button>
                         ) : (
@@ -284,9 +267,8 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
             </ScrollArea>
           </>
         ) : (
-          <ScrollArea className="flex-1">
-            <div className="p-6 pt-2 space-y-3">
-              <p className="text-[10px] text-muted-foreground uppercase font-black tracking-widest mb-4 px-2">Выберите сообщество для добавления бота:</p>
+          <ScrollArea className="flex-1 p-6 pt-2">
+            <div className="space-y-3">
               {adminChats.length > 0 ? (
                 adminChats.map(chat => (
                   <div key={chat.id} onClick={() => addBotToChat(chat)} className="flex items-center justify-between p-4 bg-white/5 rounded-[1.8rem] hover:bg-white/10 border border-white/5 cursor-pointer transition-all">

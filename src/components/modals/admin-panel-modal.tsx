@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useMemo } from 'react';
@@ -12,26 +13,26 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubTrigger,
+  DropdownMenuSubContent
 } from "@/components/ui/dropdown-menu";
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, query, doc, limit, updateDoc, writeBatch, getDocs, where, orderBy } from 'firebase/firestore';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
   ShieldAlert, Users, Star, Ban, ShieldCheck, 
-  MoreVertical, Send, Loader2, Database, Package, FileText
+  MoreVertical, Send, Loader2, Database, Package, FileText, UserPlus, ShieldX, CalendarClock
 } from 'lucide-react';
 import type { User, ArchiveRequest } from '@/lib/types';
 import { formatDisplayName, isUserPremium, cn, isGlobalAdmin, decryptSignal } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
-import { addMonths, format } from 'date-fns';
+import { addDays, addMonths, addYears, format } from 'date-fns';
 import JSZip from 'jszip';
 
 const ROOT_UID = 'GCvLucN8CjNcdaxPO2vmpZ84hNl1';
 
-/**
- * АДМИН-ПАНЕЛЬ V17.0: Crystal Master
- * Исправленная ZIP-архивация: Очистка имен файлов и расшифровка.
- */
 export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const db = useFirestore();
   const { toast } = useToast();
@@ -60,72 +61,60 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
 
   const handleAction = async (targetId: string, action: string, value?: any) => {
     if (!db) return;
-    if (targetId === ROOT_UID && action === 'ban') {
+    if (targetId === ROOT_UID && (action === 'ban' || action === 'remove_admin')) {
       toast({ title: "Ошибка", description: "Владелец неприкосновенен", variant: "destructive" });
       return;
     }
     const userRef = doc(db, 'users', targetId);
     let update: any = {};
+    
     switch(action) {
       case 'ban': update = { isBanned: true }; break;
       case 'unban': update = { isBanned: false }; break;
+      case 'make_admin': update = { isAdmin: true }; break;
+      case 'remove_admin': update = { isAdmin: false }; break;
       case 'give_premium': 
-        const expiry = addMonths(new Date(), value || 1);
+        let expiry = new Date();
+        if (value === '1d') expiry = addDays(new Date(), 1);
+        else if (value === '1m') expiry = addMonths(new Date(), 1);
+        else if (value === '3m') expiry = addMonths(new Date(), 3);
+        else if (value === '6m') expiry = addMonths(new Date(), 6);
+        else if (value === '1y') expiry = addYears(new Date(), 1);
+        else if (value === '2y') expiry = addYears(new Date(), 2);
         update = { isPremium: true, premiumUntil: expiry.toISOString() };
         break;
       case 'remove_premium': update = { isPremium: false, premiumUntil: null }; break;
     }
+
     try {
       await updateDoc(userRef, update);
-      toast({ title: "Операция завершена" });
+      toast({ title: "Операция завершена", description: "Данные узла синхронизированы" });
     } catch (e: any) {
       toast({ title: "Ошибка выполнения", description: e.message, variant: "destructive" });
     }
   };
 
-  /**
-   * СБОР ДАННЫХ V17.0: Исправлен фикс имен файлов и структуры.
-   */
   const handleCollectArchive = async (userId: string, requestId?: string) => {
     if (!db) return;
     setIsCollectingArchive(userId);
     try {
       const zip = new JSZip();
       const targetProfile = users?.find(u => u.id === userId);
-      
-      // 1. Папка Профиль
       zip.file("профиль/данные_узла.json", JSON.stringify(targetProfile || {}, null, 2));
-
-      // 2. Папка Истории
       const storiesSnap = await getDocs(query(collection(db, 'stories'), where('userId', '==', userId)));
       const stories = storiesSnap.docs.map(d => ({ id: d.id, ...d.data() }));
       zip.file("истории/активные_моменты.json", JSON.stringify(stories, null, 2));
-
-      // 3. Папка Сообщения (с дешифровкой)
       const chatsSnap = await getDocs(query(collection(db, 'chats'), where('participantIds', 'array-contains', userId)));
-      
       for (const chatDoc of chatsSnap.docs) {
         const chatData = chatDoc.data();
         const msgSnap = await getDocs(query(collection(db, 'chats', chatDoc.id, 'messages'), orderBy('sentAt', 'asc'), limit(500)));
-        
         const messages = msgSnap.docs.map(d => {
           const data = d.data();
-          return { 
-            id: d.id, 
-            ...data,
-            decryptedContent: data.contentType === 'text' ? decryptSignal(data.content) : `[Сигнал: ${data.contentType}]`
-          };
+          return { id: d.id, ...data, decryptedContent: data.contentType === 'text' ? decryptSignal(data.content) : `[Сигнал: ${data.contentType}]` };
         });
-        
-        // Очистка имени файла
-        const rawName = chatData.name || chatDoc.id;
-        const safeName = rawName.replace(/[/\\?%*:|"<>]/g, '-').trim();
-        zip.file(`сообщения/${safeName}.json`, JSON.stringify({ 
-          чат: { id: chatDoc.id, тип: chatData.type, имя: rawName },
-          сообщения: messages 
-        }, null, 2));
+        const safeName = (chatData.name || chatDoc.id).replace(/[/\\?%*:|"<>]/g, '-').trim();
+        zip.file(`сообщения/${safeName}.json`, JSON.stringify({ чат: { id: chatDoc.id, тип: chatData.type, имя: chatData.name }, сообщения: messages }, null, 2));
       }
-
       const content = await zip.generateAsync({ type: "blob" });
       const url = URL.createObjectURL(content);
       const a = document.createElement('a');
@@ -134,18 +123,11 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
-      
-      if (requestId) {
-        await updateDoc(doc(db, 'archiveRequests', requestId), { status: 'ready' });
-      }
-
-      toast({ title: "Архив готов", description: "Связь установлена, пакет передан." });
+      if (requestId) await updateDoc(doc(db, 'archiveRequests', requestId), { status: 'ready' });
+      toast({ title: "Архив готов" });
     } catch (e: any) {
-      console.error(e);
       toast({ title: "Ошибка сборки", description: e.message, variant: "destructive" });
-    } finally {
-      setIsCollectingArchive(null);
-    }
+    } finally { setIsCollectingArchive(null); }
   };
 
   const handleBroadcast = async () => {
@@ -156,14 +138,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
       const batch = writeBatch(db);
       chatsSnap.docs.forEach(chatDoc => {
         const msgRef = doc(collection(db, 'chats', chatDoc.id, 'messages'));
-        batch.set(msgRef, {
-          chatId: chatDoc.id,
-          senderId: 'system_broadcast',
-          senderName: 'Nuxus Kernel 📡',
-          content: broadcastText.trim(),
-          contentType: 'broadcast',
-          sentAt: new Date().toISOString(),
-        });
+        batch.set(msgRef, { chatId: chatDoc.id, senderId: 'system_broadcast', senderName: 'Nuxus Kernel 📡', content: broadcastText.trim(), contentType: 'broadcast', sentAt: new Date().toISOString() });
       });
       await batch.commit();
       toast({ title: "Рассылка завершена" });
@@ -177,7 +152,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
         <DialogHeader className="p-6 bg-primary/5 border-b border-white/5 shrink-0 text-left">
           <div className="flex items-center gap-2">
             <ShieldAlert className="w-5 h-5 text-primary" /> 
-            <DialogTitle className="text-white uppercase italic font-black tracking-tighter">Nuxus Admin V17.0</DialogTitle>
+            <DialogTitle className="text-white uppercase italic font-black tracking-tighter">Nuxus Admin Control</DialogTitle>
           </div>
         </DialogHeader>
 
@@ -190,39 +165,6 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
               <TabsTrigger value="broadcast" className="rounded-lg text-[8px] uppercase font-black">Маяк</TabsTrigger>
             </TabsList>
           </div>
-
-          <TabsContent value="archives" className="flex-1 m-0 p-0 overflow-hidden data-[state=active]:flex flex-col min-h-0">
-            <ScrollArea className="flex-1">
-               <div className="p-6 space-y-4">
-                  <h3 className="text-[10px] font-black uppercase text-primary mb-4 flex items-center gap-2"><Database className="w-3 h-3" /> Запросы ZIP-архивов</h3>
-                  {archiveRequests && archiveRequests.length > 0 ? (
-                    archiveRequests.map(req => (
-                      <div key={req.id} className="flex items-center justify-between p-4 bg-white/5 rounded-3xl border border-white/5">
-                         <div className="flex items-center gap-3">
-                            <UserAvatar userId={req.userId} className="h-10 w-10" />
-                            <div className="flex flex-col text-left">
-                               <span className="font-bold text-sm text-white">{req.userName}</span>
-                               <span className="text-[9px] text-muted-foreground uppercase font-black">{format(new Date(req.createdAt), 'dd.MM HH:mm')}</span>
-                            </div>
-                         </div>
-                         <Button 
-                            onClick={() => handleCollectArchive(req.userId, req.id)}
-                            disabled={isCollectingArchive === req.userId}
-                            className="h-10 px-4 bg-primary text-white rounded-xl font-black uppercase text-[9px] tracking-widest gap-2 shadow-lg"
-                         >
-                            {isCollectingArchive === req.userId ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <><Package className="w-3.5 h-3.5" /> Собрать ZIP</>}
-                         </Button>
-                      </div>
-                    ))
-                  ) : (
-                    <div className="text-center py-20 opacity-20">
-                       <FileText className="w-12 h-12 mx-auto mb-4" />
-                       <p className="text-[10px] font-black uppercase">Нет активных запросов</p>
-                    </div>
-                  )}
-               </div>
-            </ScrollArea>
-          </TabsContent>
 
           <TabsContent value="analytics" className="flex-1 m-0 p-6 space-y-6">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -237,12 +179,15 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
             <div className="p-4 px-6 shrink-0"><Input placeholder="Поиск по базе..." value={userSearch} onChange={e => setUserSearch(e.target.value)} className="bg-white/5 border-white/10 h-12 rounded-2xl" /></div>
             <ScrollArea className="flex-1">
               <div className="px-6 space-y-2 pb-20">
-                {users?.filter(u => u.name?.toLowerCase().includes(userSearch.toLowerCase())).map(u => (
+                {users?.filter(u => u.name?.toLowerCase().includes(userSearch.toLowerCase()) || u.username?.toLowerCase().includes(userSearch.toLowerCase())).map(u => (
                   <div key={u.id} className="flex items-center justify-between p-4 bg-white/5 rounded-3xl border border-white/5">
                     <div className="flex items-center gap-3 text-left">
                       <UserAvatar userId={u.id} className="h-10 w-10" />
                       <div className="flex flex-col">
-                        <span className="font-bold text-xs text-white">{formatDisplayName(u.name)}</span>
+                        <span className="font-bold text-xs text-white flex items-center gap-1">
+                          {formatDisplayName(u.name)}
+                          {isGlobalAdmin(u) && <ShieldCheck className="w-3 h-3 text-primary" />}
+                        </span>
                         <span className="text-[9px] text-muted-foreground uppercase font-black">{u.username}</span>
                       </div>
                     </div>
@@ -250,9 +195,36 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
                       <Button variant="ghost" size="icon" className="rounded-xl text-primary/40 hover:text-primary" onClick={() => handleCollectArchive(u.id)}><Database className="w-4 h-4" /></Button>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="rounded-xl text-white/20"><MoreVertical className="w-4 h-4" /></Button></DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-48 obsidian-glass rounded-xl">
-                           <DropdownMenuItem onClick={() => handleAction(u.id, u.isBanned ? 'unban' : 'ban')} className={u.isBanned ? "text-green-500" : "text-red-500"}>{u.isBanned ? 'Разбанить' : 'Забанить'}</DropdownMenuItem>
-                           <DropdownMenuItem onClick={() => handleAction(u.id, 'give_premium')}>Выдать Premium (Месяц)</DropdownMenuItem>
+                        <DropdownMenuContent align="end" className="w-64 obsidian-glass rounded-2xl p-2 border-white/10">
+                           <DropdownMenuItem onClick={() => handleAction(u.id, u.isAdmin ? 'remove_admin' : 'make_admin')} className="gap-3 font-black uppercase text-[9px] tracking-widest py-3">
+                             {u.isAdmin ? <><ShieldX className="w-4 h-4 text-red-400" /> Снять Админа</> : <><ShieldCheck className="w-4 h-4 text-primary" /> Выдать Админа</>}
+                           </DropdownMenuItem>
+                           
+                           <DropdownMenuSub>
+                             <DropdownMenuSubTrigger className="gap-3 font-black uppercase text-[9px] tracking-widest py-3">
+                               <Star className="w-4 h-4 text-accent" /> Выдать Premium
+                             </DropdownMenuSubTrigger>
+                             <DropdownMenuSubContent className="w-48 obsidian-glass rounded-xl p-1 border-white/10">
+                               <DropdownMenuItem onClick={() => handleAction(u.id, 'give_premium', '1d')} className="text-[9px] font-black uppercase">1 День</DropdownMenuItem>
+                               <DropdownMenuItem onClick={() => handleAction(u.id, 'give_premium', '1m')} className="text-[9px] font-black uppercase">1 Месяц</DropdownMenuItem>
+                               <DropdownMenuItem onClick={() => handleAction(u.id, 'give_premium', '3m')} className="text-[9px] font-black uppercase">3 Месяца</DropdownMenuItem>
+                               <DropdownMenuItem onClick={() => handleAction(u.id, 'give_premium', '6m')} className="text-[9px] font-black uppercase">6 Месяцев</DropdownMenuItem>
+                               <DropdownMenuItem onClick={() => handleAction(u.id, 'give_premium', '1y')} className="text-[9px] font-black uppercase">1 Год</DropdownMenuItem>
+                               <DropdownMenuItem onClick={() => handleAction(u.id, 'give_premium', '2y')} className="text-[9px] font-black uppercase">2 Года</DropdownMenuItem>
+                             </DropdownMenuSubContent>
+                           </DropdownMenuSub>
+
+                           {isUserPremium(u) && (
+                             <DropdownMenuItem onClick={() => handleAction(u.id, 'remove_premium')} className="gap-3 font-black uppercase text-[9px] tracking-widest py-3 text-red-400">
+                               <XCircle className="w-4 h-4" /> Аннулировать Прем
+                             </DropdownMenuItem>
+                           )}
+
+                           <DropdownMenuSeparator className="bg-white/5" />
+                           
+                           <DropdownMenuItem onClick={() => handleAction(u.id, u.isBanned ? 'unban' : 'ban')} className={cn("gap-3 font-black uppercase text-[9px] tracking-widest py-3", u.isBanned ? "text-green-400" : "text-red-500")}>
+                             {u.isBanned ? <><ShieldCheck className="w-4 h-4" /> Разбанить</> : <><Ban className="w-4 h-4" /> Забанить</>}
+                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </div>
@@ -262,12 +234,27 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
             </ScrollArea>
           </TabsContent>
 
+          <TabsContent value="archives" className="flex-1 m-0 p-0 overflow-hidden data-[state=active]:flex flex-col">
+            <ScrollArea className="flex-1">
+               <div className="p-6 space-y-4">
+                  <h3 className="text-[10px] font-black uppercase text-primary mb-4 flex items-center gap-2"><Database className="w-3 h-3" /> Запросы архивов</h3>
+                  {archiveRequests?.map(req => (
+                    <div key={req.id} className="flex items-center justify-between p-4 bg-white/5 rounded-3xl border border-white/5">
+                       <div className="flex items-center gap-3">
+                          <UserAvatar userId={req.userId} className="h-10 w-10" />
+                          <div className="flex flex-col text-left"><span className="font-bold text-sm text-white">{req.userName}</span><span className="text-[9px] text-muted-foreground uppercase font-black">{format(new Date(req.createdAt), 'dd.MM HH:mm')}</span></div>
+                       </div>
+                       <Button onClick={() => handleCollectArchive(req.userId, req.id)} disabled={isCollectingArchive === req.userId} className="h-10 px-4 bg-primary text-white rounded-xl font-black uppercase text-[9px] tracking-widest gap-2 shadow-lg">{isCollectingArchive === req.userId ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <><Package className="w-3.5 h-3.5" /> Собрать ZIP</>}</Button>
+                    </div>
+                  ))}
+               </div>
+            </ScrollArea>
+          </TabsContent>
+
           <TabsContent value="broadcast" className="p-6">
              <div className="bg-primary/10 p-6 rounded-[2rem] border border-primary/20 space-y-4">
                 <Textarea placeholder="Введите системное сообщение..." value={broadcastText} onChange={e => setBroadcastText(e.target.value)} className="bg-black/40 border-white/10 min-h-[120px] rounded-2xl" />
-                <Button onClick={handleBroadcast} disabled={isBroadcasting || !broadcastText.trim()} className="w-full h-12 bg-primary text-white font-black uppercase tracking-widest gap-2 rounded-xl shadow-lg">
-                  {isBroadcasting ? <Loader2 className="animate-spin w-4 h-4" /> : <><Send className="w-4 h-4" /> Транслировать</>}
-                </Button>
+                <Button onClick={handleBroadcast} disabled={isBroadcasting || !broadcastText.trim()} className="w-full h-12 bg-primary text-white font-black uppercase tracking-widest gap-2 rounded-xl shadow-lg">{isBroadcasting ? <Loader2 className="animate-spin w-4 h-4" /> : <><Send className="w-4 h-4" /> Транслировать</>}</Button>
              </div>
           </TabsContent>
         </Tabs>
@@ -285,3 +272,5 @@ function StatCard({ label, value, icon: Icon, color }: any) {
     </div>
   );
 }
+
+const XCircle = ({ className }: { className?: string }) => <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6M9 9l6 6"/></svg>;
