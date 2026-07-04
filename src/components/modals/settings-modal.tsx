@@ -23,6 +23,7 @@ import { useAppState } from '@/lib/store';
 import { cn, isUserPremium } from '@/lib/utils';
 import type { User } from '@/lib/types';
 import { generateAiAvatar } from '@/ai/flows/generate-ai-avatar-flow';
+import versions from '@/app/versions.json';
 
 export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const auth = useAuth();

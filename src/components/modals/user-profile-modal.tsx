@@ -10,7 +10,7 @@ import {
   MessageCircle, Star, Calendar, Phone, Video, Gift, Zap, Globe, ShieldCheck, Cpu, Sparkles
 } from 'lucide-react';
 import { useFirestore, useUser, useDoc, useMemoFirebase, useCollection } from '@/firebase';
-import { doc, query, collection, limit, getDocs, addDoc, where } from 'firebase/firestore';
+import { doc, query, collection, limit, getDocs, addDoc, where, orderBy } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { useAppState } from '@/lib/store';
 import { formatDisplayName, isUserPremium, formatLastSeen, cn } from '@/lib/utils';
