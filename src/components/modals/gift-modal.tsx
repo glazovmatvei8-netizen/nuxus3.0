@@ -12,22 +12,23 @@ import type { User } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 
+// ЦЕНЫ СКОРРЕКТИРОВАНЫ (V28.3.0)
 const PREDEFINED_GIFTS = [
-  { id: 'silver_star', name: 'Серебряная звезда', price: 50, icon: '⭐' },
-  { id: 'lightning', name: 'Молния Ядра', price: 100, icon: '⚡' },
-  { id: 'shield', name: 'Щит Защиты', price: 250, icon: '🛡️' },
-  { id: 'golden_crown', name: 'Золотая корона', price: 500, icon: '👑' },
-  { id: 'fire', name: 'Пламя Энергии', price: 750, icon: '🔥' },
-  { id: 'diamond_ring', name: 'Бриллиант Ядра', price: 1000, icon: '💎' },
-  { id: 'unicorn', name: 'Единорог Удачи', price: 1500, icon: '🦄' },
-  { id: 'rocket_signal', name: 'Квантовая ракета', price: 2500, icon: '🚀' },
-  { id: 'saturn', name: 'Планета Nuxus', price: 3500, icon: '🪐' },
-  { id: 'premium_orb', name: 'Сфера Nuxus Prime', price: 5000, icon: '🔮' },
-  { id: 'trophy', name: 'Кубок Лидера', price: 10000, icon: '🏆' },
-  { id: 'nft_genesis', name: 'Nuxus Genesis NFT', price: 50000, icon: '🖼️', isNft: true },
-  { id: 'nft_dragon', name: 'Quantum Dragon', price: 150000, icon: '🐉', isNft: true },
-  { id: 'nft_citadel', name: 'Galactic Citadel', price: 500000, icon: '🏰', isNft: true },
-  { id: 'nft_singularity', name: 'Omega Singularity', price: 1000000, icon: '🌑', isNft: true },
+  { id: 'silver_star', name: 'Серебряная звезда', price: 40, icon: '⭐' },
+  { id: 'lightning', name: 'Молния Ядра', price: 80, icon: '⚡' },
+  { id: 'shield', name: 'Щит Защиты', price: 200, icon: '🛡️' },
+  { id: 'golden_crown', name: 'Золотая корона', price: 400, icon: '👑' },
+  { id: 'fire', name: 'Пламя Энергии', price: 600, icon: '🔥' },
+  { id: 'diamond_ring', name: 'Бриллиант Ядра', price: 800, icon: '💎' },
+  { id: 'unicorn', name: 'Единорог Удачи', price: 1200, icon: '🦄' },
+  { id: 'rocket_signal', name: 'Квантовая ракета', price: 2000, icon: '🚀' },
+  { id: 'saturn', name: 'Планета Nuxus', price: 3000, icon: '🪐' },
+  { id: 'premium_orb', name: 'Сфера Nuxus Prime', price: 4500, icon: '🔮' },
+  { id: 'trophy', name: 'Кубок Лидера', price: 9000, icon: '🏆' },
+  { id: 'nft_genesis', name: 'Nuxus Genesis NFT', price: 45000, icon: '🖼️', isNft: true },
+  { id: 'nft_dragon', name: 'Quantum Dragon', price: 140000, icon: '🐉', isNft: true },
+  { id: 'nft_citadel', name: 'Galactic Citadel', price: 480000, icon: '🏰', isNft: true },
+  { id: 'nft_singularity', name: 'Omega Singularity', price: 950000, icon: '🌑', isNft: true },
 ];
 
 export function GiftModal({ open, onOpenChange, targetUser, chatId }: { open: boolean, onOpenChange: (o: boolean) => void, targetUser: User | null, chatId?: string | null }) {

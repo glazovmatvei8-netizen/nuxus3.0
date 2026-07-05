@@ -8,7 +8,7 @@ import { UserAvatar } from '@/components/user-avatar';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { 
-  Pencil, Bookmark, ChevronRight, Star, Share2, Zap, HelpCircle, Globe, Server, QrCode, Fingerprint, Cpu, Shield, ShieldCheck, Palette, Sparkles, Gift, Trash2, Clock, Gem, ArrowRightLeft
+  Pencil, Bookmark, ChevronRight, Star, Share2, Zap, HelpCircle, Globe, Server, QrCode, Fingerprint, Cpu, Shield, ShieldCheck, Palette, Sparkles, Gift, Trash2, Clock, Gem, ArrowRightLeft, Loader2
 } from 'lucide-react';
 import { useAppState } from '@/lib/store';
 import { formatDisplayName, cn, isUserPremium } from '@/lib/utils';
@@ -19,6 +19,7 @@ import { QRCodeSVG } from 'qrcode.react';
 import nuxusVersions from '@/app/versions.json';
 import { differenceInDays, parseISO, format } from 'date-fns';
 import { ru } from 'date-fns/locale';
+import { TradeModal } from './modals/trade-modal';
 
 export default function ProfileView() {
   const { user } = useUser();
@@ -29,6 +30,7 @@ export default function ProfileView() {
   const [isQrOpen, setIsQrOpen] = useState(false);
   const [selectedGift, setSelectedGift] = useState<ReceivedGift | null>(null);
   const [isSelling, setIsSelling] = useState(false);
+  const [isTradeOpen, setIsTradeOpen] = useState(false);
   
   const userProfileRef = useMemoFirebase(() => (!db || !user) ? null : doc(db!, 'users', user.uid), [db, user]);
   const { data: profile } = useDoc<User>(userProfileRef);
@@ -56,11 +58,6 @@ export default function ProfileView() {
     setIsSelling(true);
     try {
       const batch = writeBatch(db);
-      const now = new Date();
-      const receivedDate = parseISO(selectedGift.receivedAt);
-      const daysDiff = differenceInDays(now, receivedDate);
-      
-      // Логика: если прошло < 14 дней, теряем 35%. После 14 дней условия те же по запросу пользователя.
       const refundRate = 0.65;
       const refundAmount = Math.floor(selectedGift.price * refundRate);
       
@@ -234,9 +231,9 @@ export default function ProfileView() {
                      <span className="text-[10px] font-bold text-white">{format(parseISO(selectedGift.receivedAt), 'dd MMM yyyy', { locale: ru })}</span>
                    </div>
                    <div className="flex justify-between items-center">
-                     <span className="text-[9px] font-black uppercase text-white/40">Статус выкупа:</span>
+                     <span className="text-[9px] font-black uppercase text-white/40">Срок владения:</span>
                      <span className={cn("text-[9px] font-black uppercase", differenceInDays(new Date(), parseISO(selectedGift.receivedAt)) < 14 ? "text-green-400" : "text-primary")}>
-                       {differenceInDays(new Date(), parseISO(selectedGift.receivedAt)) < 14 ? 'Активен (14д)' : 'Постоянный'}
+                       {differenceInDays(new Date(), parseISO(selectedGift.receivedAt))} дней
                      </span>
                    </div>
                 </div>
@@ -250,13 +247,17 @@ export default function ProfileView() {
                 >
                   {isSelling ? <Loader2 className="w-5 h-5 animate-spin" /> : <><Gem className="w-4 h-4" /> Продать за {Math.floor(selectedGift.price * 0.65)} NX</>}
                 </Button>
-                <Button variant="ghost" className="w-full h-12 rounded-xl text-[10px] font-black uppercase tracking-widest gap-2 opacity-40">
-                  <ArrowRightLeft className="w-4 h-4" /> Обмен (Soon)
+                <Button 
+                  onClick={() => setIsTradeOpen(true)}
+                  variant="outline" 
+                  className="w-full h-14 border-white/10 bg-white/5 text-white rounded-2xl font-black uppercase italic tracking-widest gap-2 shadow-lg"
+                >
+                  <ArrowRightLeft className="w-4 h-4 text-accent" /> Передать артефакт
                 </Button>
               </div>
 
               <p className="text-[7px] font-bold text-white/20 uppercase mt-6 leading-relaxed">
-                ПРИ ПРОДАЖЕ УДЕРЖИВАЕТСЯ 35% ЭНЕРГИИ ЯДРА. ВЫКУП ДОСТУПЕН В ЛЮБОЕ ВРЕМЯ.
+                ПРИ ПРОДАЖЕ УДЕРЖИВАЕТСЯ 35% ЭНЕРГИИ ЯДРА. ПЕРЕДАЧА ДРУГИМ УЗЛАМ БЕСПЛАТНА.
               </p>
             </>
           )}
@@ -292,6 +293,8 @@ export default function ProfileView() {
           <Button variant="ghost" onClick={() => setIsQrOpen(false)} className="mt-6 w-full h-12 rounded-xl text-[9px] font-black uppercase tracking-widest text-primary hover:bg-primary/10">Закрыть</Button>
         </DialogContent>
       </Dialog>
+
+      <TradeModal open={isTradeOpen} onOpenChange={setIsTradeOpen} gift={selectedGift} />
     </div>
   );
 }
