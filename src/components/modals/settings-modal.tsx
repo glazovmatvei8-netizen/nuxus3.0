@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { signOut } from 'firebase/auth';
-import { doc, updateDoc, addDoc, collection } from 'firebase/firestore';
+import { doc, updateDoc, addDoc, collection, query, where, getDocs, limit } from 'firebase/firestore';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAppState } from '@/lib/store';
 import { cn, isUserPremium } from '@/lib/utils';
@@ -26,9 +26,6 @@ import nuxusVersions from '@/app/versions.json';
 import { format } from 'date-fns';
 import { ru } from 'date-fns/locale';
 
-/**
- * SettingsModal V26.5.0: AI Avatar Generation Temporarily Disabled.
- */
 export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const auth = useAuth();
   const db = useFirestore();
@@ -43,6 +40,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
 
   const [isLinkingBiometrics, setIsLinkingBiometrics] = useState(false);
   const [isRequestingArchive, setIsRequestingArchive] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   
   const [form, setForm] = useState({
     name: '',
@@ -89,12 +87,27 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
   }, [profile, open]);
 
   const handleSave = async () => {
-    if (!db || !user) return;
+    if (!db || !user || !profile) return;
+    setIsSaving(true);
     try {
-      const cleanUsername = form.username.trim().replace('@', '').toLowerCase();
+      const originalUsername = form.username.trim().replace('@', '');
+      const usernameWithAt = '@' + originalUsername;
+      const targetLowercase = usernameWithAt.toLowerCase();
+
+      if (targetLowercase !== profile.usernameLowercase) {
+        const q = query(collection(db!, 'users'), where('usernameLowercase', '==', targetLowercase), limit(1));
+        const checkSnap = await getDocs(q);
+        if (!checkSnap.empty) {
+          toast({ title: "ID занят", description: "Этот никнейм уже используется другим узлом.", variant: "destructive" });
+          setIsSaving(false);
+          return;
+        }
+      }
+
       await updateDoc(doc(db!, 'users', user.uid), {
         name: form.name.trim(),
-        username: '@' + cleanUsername,
+        username: usernameWithAt,
+        usernameLowercase: targetLowercase,
         bio: form.bio.trim(),
         statusEmoji: form.statusEmoji.trim(),
         statusText: form.statusText.trim(),
@@ -115,6 +128,8 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
       toast({ title: "Конфигурация сохранена" });
     } catch (e: any) {
       toast({ title: "Ошибка сохранения", variant: "destructive" });
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -201,7 +216,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                       <Label className="text-[10px] uppercase font-black ml-2 text-primary/60">Никнейм</Label>
                       <div className="relative">
                         <span className="absolute left-4 top-1/2 -translate-y-1/2 text-primary font-black text-xs">@</span>
-                        <Input value={form.username} onChange={e => setForm({...form, username: e.target.value})} className="bg-white/5 border-white/10 h-12 rounded-xl pl-8 font-mono text-xs" />
+                        <Input value={form.username} onChange={e => setForm({...form, username: e.target.value})} className="bg-white/5 border-white/10 h-12 rounded-xl pl-8 font-bold text-xs" />
                       </div>
                     </div>
                   </div>
@@ -427,8 +442,8 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
 
           <div className="p-8 border-t border-white/5 bg-white/[0.02] shrink-0 flex gap-4">
             <Button variant="ghost" className="h-16 w-16 rounded-[1.8rem] bg-red-500/10 text-red-500 hover:bg-red-500/20 transition-all shadow-xl" onClick={() => signOut(auth)}><LogOut className="w-7 h-7" /></Button>
-            <Button className="flex-1 h-16 rounded-[1.8rem] font-black uppercase italic tracking-widest bg-primary text-white shadow-2xl shadow-primary/30 active:scale-95 transition-all group overflow-hidden" onClick={handleSave}>
-              <Check className="w-6 h-6 mr-3" /> Сохранить
+            <Button disabled={isSaving} className="flex-1 h-16 rounded-[1.8rem] font-black uppercase italic tracking-widest bg-primary text-white shadow-2xl shadow-primary/30 active:scale-95 transition-all group overflow-hidden" onClick={handleSave}>
+              {isSaving ? <Loader2 className="animate-spin w-6 h-6" /> : <><Check className="w-6 h-6 mr-3" /> Сохранить</>}
             </Button>
           </div>
         </Tabs>
