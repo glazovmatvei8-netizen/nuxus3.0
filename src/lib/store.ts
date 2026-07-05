@@ -4,7 +4,7 @@
 import React, { createContext, useContext, useState } from 'react';
 import type { Message, Story, Track } from './types';
 
-export type MainView = 'chats' | 'contacts' | 'calls' | 'profile' | 'archive' | 'music' | 'wallet' | 'discovery' | 'games' | 'ai_studio';
+export type MainView = 'chats' | 'contacts' | 'calls' | 'profile' | 'archive' | 'music' | 'wallet' | 'discovery' | 'games';
 
 interface AppState {
   currentChatId: string | null;
