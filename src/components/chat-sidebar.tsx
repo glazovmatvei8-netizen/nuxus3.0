@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useMemo, memo, useRef, useEffect } from 'react';
@@ -15,7 +14,7 @@ import { StoriesBar } from './stories-bar';
 import type { User as UserType, Message, Chat } from '@/lib/types';
 import { useFirestore, useUser, useCollection, useDoc, useMemoFirebase } from '@/firebase';
 import { collection, query, where, doc, limit, orderBy, updateDoc, arrayUnion, arrayRemove, deleteDoc } from 'firebase/firestore';
-import { formatDisplayName, cn, isGlobalAdmin, decryptSignal } from '@/lib/utils';
+import { formatDisplayName, cn, isGlobalAdmin, decryptSignal, isUserPremium } from '@/lib/utils';
 import { format } from 'date-fns';
 import { useTranslations } from '@/hooks/use-translations';
 import { 
@@ -69,6 +68,7 @@ const ChatListItem = memo(({
   }, [chat.lastMessageAt, chat.createdAt]);
 
   const isUnread = (lastMsg && !lastMsg.isRead && lastMsg.senderId !== currentUserId) || chat.isManualUnread;
+  const isPremium = useMemo(() => isUserPremium(otherProfile), [otherProfile]);
 
   const decryptedPreview = useMemo(() => {
     if (!lastMsg) return 'Сигнал отсутствует';
@@ -164,7 +164,7 @@ const ChatListItem = memo(({
           <ContextMenuTrigger disabled={Math.abs(offsetX) > 10 || isDragging}>
             <div className="flex items-center gap-4 px-5 py-4 cursor-pointer relative h-[96px] overflow-hidden">
               <div className="relative shrink-0">
-                <UserAvatar userId={otherId} manualAvatarUrl={otherProfile?.avatarUrl || chat.avatarUrl} className="h-16 w-14 rounded-[1.8rem] border border-white/10 transition-all duration-700 group-hover:scale-105" fallbackName={finalDisplayName} showOnlineStatus />
+                <UserAvatar userId={otherId} manualAvatarUrl={chat.type !== 'private' ? chat.avatarUrl : otherProfile?.avatarUrl} className="h-16 w-14 rounded-[1.8rem] border border-white/10 transition-all duration-700 group-hover:scale-105" fallbackName={finalDisplayName} showOnlineStatus />
                 {isUnread && <div className="absolute -top-1 -right-1 w-4 h-4 bg-primary rounded-full border-[3px] border-[#0a0a0c] shadow-[0_0_15px_rgba(168,85,247,1)] animate-pulse" />}
               </div>
               
@@ -174,7 +174,7 @@ const ChatListItem = memo(({
                     <span className="font-black text-[16px] truncate tracking-tight italic text-white leading-none">
                       {finalDisplayName}
                     </span>
-                    {otherProfile?.isPremium && <Star className="w-3.5 h-3.5 text-accent fill-accent shrink-0 animate-pulse" />}
+                    {isPremium && <Star className="w-3.5 h-3.5 text-accent fill-accent shrink-0 animate-pulse" />}
                     {isPinned && <Pin className="w-3.5 h-3.5 text-primary rotate-45 shrink-0" />}
                   </div>
                   <span className="text-[10px] text-white/30 font-black tabular-nums tracking-widest">{displayTime}</span>
@@ -220,7 +220,6 @@ export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?:
   const { user } = useUser();
   const db = useFirestore();
   const { currentChatId, setCurrentChatId, setIsSearchOpen, setIsInterceptionRequested } = useAppState();
-  const { t } = useTranslations();
   
   const [activeTab, setActiveTab] = useState('all');
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);

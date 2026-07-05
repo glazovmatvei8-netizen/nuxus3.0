@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, memo, useRef, useEffect, useMemo } from 'react';
@@ -27,7 +26,7 @@ import { Dialog, DialogContent, DialogTitle, DialogPortal, DialogOverlay } from 
 const QUICK_REACTIONS = ['👍', '❤️', '🔥', '😂', '😮', '😢', '👏'];
 
 /**
- * MessageItem V26.5.2: Sticker Vision & Asset Fix.
+ * MessageItem V26.9.0: Status & Depth Fix.
  */
 export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForward, isAdmin = false, isGroup = false, onEdit, highlight = false, viewerProfile }: any) => {
   const { user } = useUser();
@@ -248,7 +247,15 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
                 <div className={cn("flex items-center justify-end gap-2 mt-2 opacity-40 px-1", (message.contentType === 'sticker' || message.contentType === 'gift') && "absolute bottom-2 right-2 bg-black/40 rounded-full px-2 py-0.5 backdrop-blur-sm z-20")}>
                   <span className="text-[10px] font-black tabular-nums tracking-widest">{formattedTime}</span>
                   {isMe && (
-                    message.isPending ? <Clock className="w-3.5 h-3.5 text-primary animate-pulse" /> : (message.isRead ? <CheckCheck className="w-4 h-4 text-accent" /> : <Check className="w-4 h-4" />)
+                    message.isPending ? (
+                      <Clock className="w-3.5 h-3.5 text-primary animate-pulse" />
+                    ) : (
+                      message.isRead ? (
+                        <CheckCheck className="w-4 h-4 text-accent" />
+                      ) : (
+                        <Check className="w-4 h-4" />
+                      )
+                    )
                   )}
                 </div>
               </div>

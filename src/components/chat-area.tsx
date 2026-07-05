@@ -14,14 +14,13 @@ import { ChatInfoModal } from './modals/chat-info-modal';
 import { CreatePollModal } from './modals/create-poll-modal';
 import { EmojiPicker } from './emoji-picker';
 import { useFirestore, useUser, useCollection, useDoc, useMemoFirebase } from '@/firebase';
-import { collection, query, orderBy, doc, addDoc, updateDoc } from 'firebase/firestore';
+import { collection, query, orderBy, doc, addDoc, updateDoc, where, getDocs, writeBatch } from 'firebase/firestore';
 import { formatDisplayName, cn, compressImage, encryptSignal, isGlobalAdmin, decryptSignal, formatLastSeen, isUserPremium } from '@/lib/utils';
 import type { Message, User as UserType, Chat } from '@/lib/types';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { addMinutes } from 'date-fns';
 
 /**
- * ChatInputBar V26.8.0: Pure Communication (No AI).
+ * ChatInputBar V26.9.0: Pure Communication.
  */
 const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, isPremium, replyTo, onCancelReply }: any) => {
   const { localDrafts, setLocalDrafts } = useAppState();
@@ -265,6 +264,22 @@ export default function ChatArea() {
   }, []);
 
   useEffect(() => { scrollToBottom('auto'); }, [currentChatId, messages?.length, scrollToBottom]);
+
+  // СИСТЕМА ПРОЧТЕНИЯ (2 ГАЛОЧКИ)
+  useEffect(() => {
+    if (!db || !currentChatId || !firebaseUser || !messages) return;
+
+    const unreadMessages = messages.filter(m => m.senderId !== firebaseUser.uid && !m.isRead);
+    if (unreadMessages.length === 0) return;
+
+    const batch = writeBatch(db);
+    unreadMessages.forEach(msg => {
+      const msgRef = doc(db, 'chats', currentChatId, 'messages', msg.id);
+      batch.update(msgRef, { isRead: true });
+    });
+
+    batch.commit().catch(e => console.warn("Nuxus Sync: Read Receipt error"));
+  }, [db, currentChatId, firebaseUser, messages]);
 
   const handleSendMessage = useCallback(async (content_msg: string, type_msg: Message['contentType'] = 'text') => {
     if (!content_msg.trim() || !currentChatId || !firebaseUser || !db) return;

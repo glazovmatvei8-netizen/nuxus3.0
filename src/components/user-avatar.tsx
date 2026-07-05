@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, memo, useMemo } from 'react';
@@ -21,9 +20,8 @@ interface UserAvatarProps {
 }
 
 /**
- * USER AVATAR V26.0.3
- * ОПТИМИЗИРОВАНО: Исправлен порядок наложения слоев (Z-Index fix).
- * Теперь анимированный фон гарантированно находится ПОД аватаркой.
+ * USER AVATAR V26.9.0
+ * ОПТИМИЗИРОВАНО: Исправлен порядок наложения и LCP производительность.
  */
 export const UserAvatar = memo(({ userId, className, fallbackName, fallbackClassName, manualAvatarUrl, showOnlineStatus = false }: UserAvatarProps) => {
   const db = useFirestore();
@@ -89,10 +87,11 @@ export const UserAvatar = memo(({ userId, className, fallbackName, fallbackClass
                 src={displayAvatar} 
                 alt={initialsSource} 
                 fill
-                sizes="128px"
+                sizes="(max-width: 768px) 64px, 128px"
                 className="object-cover rounded-full"
                 onError={() => setImgError(true)}
                 unoptimized={displayAvatar.startsWith('data:')}
+                priority={userId === 'bot_nuxus_manager' || premium}
               />
             </div>
           ) : (
