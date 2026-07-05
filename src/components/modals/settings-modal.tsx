@@ -12,7 +12,7 @@ import { useAuth, useUser, useFirestore, useDoc, useMemoFirebase } from '@/fireb
 import { UserAvatar } from '@/components/user-avatar';
 import { 
   LogOut, Settings2, Camera, Lock, Fingerprint, Star, Zap, ShieldCheck, Loader2, Database, Download, Check, Palette, 
-  Monitor, MessageSquare, Paintbrush, Smile, Bell, Ghost, ImageIcon, Calendar, CheckCircle2
+  Monitor, MessageSquare, Paintbrush, Smile, Bell, Ghost, ImageIcon, Calendar, CheckCircle2, Layout, AppWindow
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { signOut } from 'firebase/auth';
@@ -26,7 +26,7 @@ import { format } from 'date-fns';
 import { ru } from 'date-fns/locale';
 
 /**
- * SettingsModal V26.8.0: Pure Communication (No AI).
+ * SettingsModal V27.0.0: Elite Icons & Styles.
  */
 export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const auth = useAuth();
@@ -54,6 +54,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
     appearance: 'dark' as 'light' | 'dark',
     theme: 'default',
     customPrimaryColor: '',
+    customAppIconUrl: '',
     bubbleStyle: 'default',
     chatBackground: '',
     messageSize: 'medium',
@@ -76,6 +77,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         appearance: profile.settings?.appearance || 'dark',
         theme: profile.settings?.theme || 'default',
         customPrimaryColor: profile.settings?.customPrimaryColor || '',
+        customAppIconUrl: profile.settings?.customAppIconUrl || 'https://i.ibb.co/sd2MqGz2/Icon.png',
         bubbleStyle: profile.settings?.bubbleStyle || 'default',
         chatBackground: profile.settings?.chatBackground || '',
         messageSize: profile.settings?.messageSize || 'medium',
@@ -119,6 +121,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         'settings.appearance': form.appearance,
         'settings.theme': form.theme,
         'settings.customPrimaryColor': form.customPrimaryColor,
+        'settings.customAppIconUrl': form.customAppIconUrl,
         'settings.bubbleStyle': form.bubbleStyle,
         'settings.chatBackground': form.chatBackground,
         'settings.messageSize': form.messageSize,
@@ -135,46 +138,15 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
     }
   };
 
-  const handleLinkBiometrics = async () => {
-    if (typeof window === 'undefined' || !window.PublicKeyCredential || !user) {
-      toast({ title: "Ошибка", description: "Hardware API недоступен", variant: "destructive" });
-      return;
-    }
-    setIsLinkingBiometrics(true);
-    try {
-      const challenge = crypto.getRandomValues(new Uint8Array(32));
-      const userHandle = crypto.getRandomValues(new Uint8Array(16));
-      const credential = await navigator.credentials.create({
-        publicKey: {
-          challenge,
-          rp: { name: "Nuxus Kernel", id: window.location.hostname },
-          user: { id: userHandle, name: user.uid, displayName: profile?.name || "Node" },
-          pubKeyCredParams: [{ alg: -7, type: "public-key" }],
-          authenticatorSelection: { authenticatorAttachment: "platform", userVerification: "required", residentKey: "discouraged", requireResidentKey: false },
-          attestation: "none"
-        }
-      }) as any;
-      if (credential) {
-        const base64Id = btoa(String.fromCharCode(...new Uint8Array(credential.rawId)));
-        localStorage.setItem('nuxus_biometric_id', base64Id);
-        setForm({ ...form, biometricEnabled: true });
-        toast({ title: "Face ID привязан к узлу" });
-      }
-    } catch (e: any) {
-      setForm({ ...form, biometricEnabled: false });
-      toast({ title: "Сбой биометрии", variant: "destructive" });
-    } finally { setIsLinkingBiometrics(false); }
-  };
-
-  const handleBgUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onloadend = () => setForm({ ...form, chatBackground: reader.result as string });
-    reader.readAsDataURL(file);
-  };
-
   const isPremium = isUserPremium(profile);
+
+  const APP_ICONS = [
+    { id: 'classic', label: 'Classic', url: 'https://i.ibb.co/sd2MqGz2/Icon.png' },
+    { id: 'obsidian', label: 'Obsidian', url: 'https://i.ibb.co/680C8T1M/Obsidian-Icon.png' },
+    { id: 'gold', label: 'Gold', url: 'https://i.ibb.co/9kz77LwF/Gold-Icon.png' },
+    { id: 'neon', label: 'Neon', url: 'https://i.ibb.co/M4p0Z6f3/Neon-Icon.png' },
+    { id: 'crystal', label: 'Crystal', url: 'https://i.ibb.co/v4rN3Z2X/Crystal-Icon.png' },
+  ];
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -264,6 +236,26 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                 </div>
               </div>
 
+              {isPremium && (
+                <div className="space-y-6 bg-primary/5 p-6 rounded-[2.5rem] border border-primary/10">
+                  <h3 className="text-[11px] font-black uppercase text-primary tracking-[0.3em] flex items-center gap-3"><AppWindow className="w-5 h-5" /> Иконка Приложения</h3>
+                  <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-2">
+                    {APP_ICONS.map(icon => (
+                      <button
+                        key={icon.id}
+                        onClick={() => setForm({...form, customAppIconUrl: icon.url})}
+                        className={cn(
+                          "h-16 min-w-[64px] rounded-2xl border-2 transition-all p-1.5",
+                          form.customAppIconUrl === icon.url ? "border-primary bg-primary/10" : "border-white/5 bg-black/20"
+                        )}
+                      >
+                        <img src={icon.url} className="w-full h-full object-contain rounded-lg" alt={icon.label} />
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               <div className="space-y-6">
                 <h3 className="text-[11px] font-black uppercase text-primary tracking-[0.3em] flex items-center gap-3"><ImageIcon className="w-5 h-5" /> Обои чата</h3>
                 <div className="space-y-4">
@@ -293,25 +285,20 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                 </div>
               </div>
 
-              {isPremium && (
-                <div className="space-y-6 bg-primary/5 p-6 rounded-[2.5rem] border border-primary/10">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-[11px] font-black uppercase text-primary tracking-[0.3em] flex items-center gap-3"><Paintbrush className="w-5 h-5" /> HEX Резонанс</h3>
-                  </div>
-                  <div className="space-y-4">
-                    <div className="flex gap-3">
-                       <div className="h-14 w-14 rounded-2xl border border-white/10 shrink-0 shadow-inner" style={{ backgroundColor: form.customPrimaryColor || 'hsl(var(--primary))' }} />
-                       <Input placeholder="#A855F7" value={form.customPrimaryColor} onChange={e => setForm({...form, customPrimaryColor: e.target.value.toUpperCase()})} className="bg-black/40 border-white/10 h-14 rounded-2xl text-center font-mono text-lg tracking-widest" />
-                    </div>
-                  </div>
-                </div>
-              )}
-
               <div className="space-y-6">
                 <h3 className="text-[11px] font-black uppercase text-primary tracking-[0.3em] flex items-center gap-3"><MessageSquare className="w-5 h-5" /> Контейнеры сигналов</h3>
                 <div className="grid grid-cols-2 gap-3">
-                    {['default', 'neon', 'gold', 'ocean'].map(s => (
-                      <button key={s} onClick={() => setForm({...form, bubbleStyle: s})} className={cn("h-12 rounded-2xl border text-[10px] font-black uppercase tracking-widest transition-all", form.bubbleStyle === s ? "bg-white/10 text-white border-white/30 shadow-2xl" : "bg-white/5 border-white/10 text-white/40")}>{s}</button>
+                    {['default', 'neon', 'gold', 'ocean', 'cyberpunk', 'glass'].map(s => (
+                      <button 
+                        key={s} 
+                        onClick={() => setForm({...form, bubbleStyle: s})} 
+                        className={cn(
+                          "h-12 rounded-2xl border text-[10px] font-black uppercase tracking-widest transition-all", 
+                          form.bubbleStyle === s ? "bg-white/10 text-white border-white/30 shadow-2xl" : "bg-white/5 border-white/10 text-white/40"
+                        )}
+                      >
+                        {s}
+                      </button>
                     ))}
                 </div>
               </div>
@@ -335,10 +322,11 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                    <div className="space-y-4">
                       <h4 className="text-[9px] font-black uppercase tracking-[0.4em] text-primary ml-2">Разблокированные модули:</h4>
                       <div className="grid grid-cols-1 gap-2">
+                        <PremiumBenefit label="Transcription (Голос в Текст)" icon={FileText} active />
+                        <PremiumBenefit label="Custom App Icons (Иконки)" icon={AppWindow} active />
                         <PremiumBenefit label="Ghost Mode (Инкогнито)" icon={Ghost} active />
-                        <PremiumBenefit label="Эксклюзивные 3D стикеры" icon={Smile} active />
+                        <PremiumBenefit label="Elite AI Studio (Veo 2.0)" icon={Zap} active />
                         <PremiumBenefit label="Приоритетная синхронизация" icon={ShieldCheck} active />
-                        <PremiumBenefit label="Кастомные фоны чата" icon={ImageIcon} active />
                       </div>
                    </div>
                  </div>
@@ -356,8 +344,8 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                    <div className="space-y-4 opacity-50">
                       <h4 className="text-[9px] font-black uppercase tracking-[0.4em] text-white/40 ml-2">Что дает статус:</h4>
                       <div className="grid grid-cols-1 gap-2">
-                        <PremiumBenefit label="Режим Призрака (Скрыть онлайн)" icon={Ghost} />
-                        <PremiumBenefit label="Кастомные цвета и фоны" icon={Palette} />
+                        <PremiumBenefit label="Голос в Текст" icon={FileText} />
+                        <PremiumBenefit label="Смена иконок приложения" icon={AppWindow} />
                         <PremiumBenefit label="Эксклюзивные 3D артефакты" icon={Zap} />
                       </div>
                    </div>
@@ -392,10 +380,6 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                     <div className="space-y-2">
                       <Label className="text-[10px] uppercase font-black text-primary/60 ml-3">Доступ-код Ядра</Label>
                       <Input type="password" placeholder="••••••" maxLength={6} value={form.twoFactorPin} onChange={e => setForm({...form, twoFactorPin: e.target.value.replace(/\D/g, '')})} className="bg-black/60 border-primary/30 h-16 rounded-2xl text-center text-3xl tracking-[0.6em] font-black" />
-                    </div>
-                    <div className="flex items-center justify-between pt-6 border-t border-white/5">
-                      <div className="flex flex-col text-left"><span className="text-sm font-bold text-white uppercase italic">Hardware ID</span><span className="text-[9px] text-muted-foreground uppercase font-bold tracking-widest">Secure Enclave Link</span></div>
-                      <Switch checked={form.biometricEnabled} onCheckedChange={v => { if(!v) setForm({...form, biometricEnabled: false}); else handleLinkBiometrics(); }} />
                     </div>
                   </div>
                 )}

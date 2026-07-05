@@ -13,7 +13,7 @@ import {
 import { format } from 'date-fns';
 import { 
   CornerUpLeft, Trash2, Check, CheckCheck, Edit2, Copy, Pin, X, Share2, Play, Smile, Lock, Languages, Loader2, Image as ImageIcon,
-  MessageCircle, Star, Pause, ShieldCheck, Clock, Type, Globe, Volume2, Timer, Zap, Maximize2, Video as VideoIcon, Sparkles, PinOff, Wand2, Gift
+  MessageCircle, Star, Pause, ShieldCheck, Clock, Type, Globe, Volume2, Timer, Zap, Maximize2, Video as VideoIcon, Sparkles, PinOff, Wand2, Gift, FileText
 } from 'lucide-react';
 import { cn, decryptSignal, isGlobalAdmin, isUserPremium, encryptSignal } from '@/lib/utils';
 import { doc, updateDoc, deleteDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
@@ -22,11 +22,12 @@ import { Button } from './ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { useAppState } from '@/lib/store';
 import { Dialog, DialogContent, DialogTitle, DialogPortal, DialogOverlay } from '@/components/ui/dialog';
+import { transcribeVoice } from '@/ai/flows/voice-to-text-flow';
 
 const QUICK_REACTIONS = ['👍', '❤️', '🔥', '😂', '😮', '😢', '👏'];
 
 /**
- * MessageItem V26.9.0: Status & Depth Fix.
+ * MessageItem V27.0.0: Elite Voice Transcription & Styles.
  */
 export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForward, isAdmin = false, isGroup = false, onEdit, highlight = false, viewerProfile }: any) => {
   const { user } = useUser();
@@ -37,8 +38,9 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
   const [isPlaying, setIsPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
   const [isMediaViewerOpen, setIsMediaViewerOpen] = useState(false);
+  const [isTranscribing, setIsTranscribing] = useState(false);
+  const [transcription, setTranscription] = useState<string | null>(message.metadata?.transcription || null);
   
-  // Swipe to reply logic
   const [swipeOffset, setSwipeOffset] = useState(0);
   const touchStartX = useRef(0);
   const touchStartY = useRef(0);
@@ -53,6 +55,29 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
   const formattedTime = message.sentAt ? format(new Date(message.sentAt), 'HH:mm') : '';
   const isPremium = useMemo(() => isUserPremium(viewerProfile), [viewerProfile]);
 
+  const handleTranscribe = async () => {
+    if (!isPremium) {
+      toast({ title: "Elite Only", description: "Расшифровка доступна только Premium-узлам.", variant: "destructive" });
+      return;
+    }
+    if (transcription || isTranscribing) return;
+
+    setIsTranscribing(true);
+    try {
+      const { text } = await transcribeVoice({ audioDataUri: message.content });
+      setTranscription(text);
+      if (db && chatId) {
+        await updateDoc(doc(db, 'chats', chatId, 'messages', message.id), {
+          'metadata.transcription': text
+        });
+      }
+    } catch (e: any) {
+      toast({ title: "Сбой ИИ", description: "Не удалось распознать сигнал.", variant: "destructive" });
+    } finally {
+      setIsTranscribing(false);
+    }
+  };
+
   const handleReaction = async (emoji: string) => {
     if (!db || !user || !chatId) return;
     const msgRef = doc(db, 'chats', chatId, 'messages', message.id);
@@ -62,7 +87,6 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
     else await updateDoc(msgRef, { [`reactions.${emoji}`]: arrayUnion(user.uid) });
   };
 
-  // iOS-style Swipe to Reply
   const onTouchStart = (e: React.TouchEvent) => {
     touchStartX.current = e.touches[0].clientX;
     touchStartY.current = e.touches[0].clientY;
@@ -100,7 +124,9 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
     highlight && "ring-4 ring-primary shadow-[0_0_40px_rgba(168,85,247,0.6)] scale-105 z-10",
     bubbleStyle === 'neon' && isMe && "bg-gradient-to-tr from-cyan-500 to-purple-600 border border-cyan-400/30",
     bubbleStyle === 'gold' && isMe && "bg-gradient-to-tr from-yellow-400 to-orange-600 text-black border border-yellow-300/30",
-    bubbleStyle === 'ocean' && isMe && "bg-gradient-to-tr from-blue-500 to-emerald-500 border border-blue-400/30"
+    bubbleStyle === 'ocean' && isMe && "bg-gradient-to-tr from-blue-500 to-emerald-500 border border-blue-400/30",
+    bubbleStyle === 'cyberpunk' && isMe && "bg-black border-2 border-primary shadow-[0_0_15px_rgba(168,85,247,0.5)]",
+    bubbleStyle === 'glass' && isMe && "bg-white/10 backdrop-blur-xl border border-white/20 text-white shadow-inner"
   );
 
   const renderContent = () => {
@@ -165,13 +191,29 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
               }
               if (audioInstance.current.paused) audioInstance.current.play();
               else audioInstance.current.pause();
-           }} className="h-10 w-10 rounded-full bg-white text-black shrink-0">
+           }} className="h-10 w-10 rounded-full bg-white text-black shrink-0 shadow-lg">
              {isPlaying ? <Pause className="w-5 h-5 fill-current" /> : <Play className="w-5 h-5 fill-current ml-0.5" />}
            </Button>
-           <div className="flex-1 h-1 bg-white/10 rounded-full overflow-hidden">
-             <div className="h-full bg-primary" style={{ width: `${progress}%` }} />
+           <div className="flex-1 h-1.5 bg-white/10 rounded-full overflow-hidden">
+             <div className="h-full bg-primary shadow-[0_0_10px_rgba(168,85,247,1)] transition-all" style={{ width: `${progress}%` }} />
            </div>
+           {isPremium && (
+             <Button variant="ghost" size="icon" onClick={handleTranscribe} disabled={isTranscribing} className="h-8 w-8 text-white/40 hover:text-primary">
+               {isTranscribing ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileText className="w-4 h-4" />}
+             </Button>
+           )}
         </div>
+        {(transcription || isTranscribing) && (
+          <div className="bg-black/20 p-3 rounded-2xl border border-white/5 animate-in fade-in slide-in-from-top-1">
+            <div className="flex items-center gap-2 mb-1.5 opacity-40">
+              <Sparkles className="w-3 h-3 text-primary" />
+              <span className="text-[8px] font-black uppercase tracking-widest">Elite Transcription</span>
+            </div>
+            <p className="text-[13px] font-medium leading-snug italic text-white/80">
+              {isTranscribing ? 'Распознавание сигнала...' : transcription}
+            </p>
+          </div>
+        )}
       </div>
     );
 

@@ -1,12 +1,13 @@
 {
-  "latestVersion": "26.9.0",
-  "qesVersion": "26.9",
-  "build": "Build-Stability-V4",
-  "sizeMb": 96,
+  "latestVersion": "27.0.0",
+  "qesVersion": "27.0",
+  "build": "Elite-Expansion-V1",
+  "sizeMb": 102,
   "changelog": [
-    "Core: Реализована система статусов прочтения (две галочки)",
-    "Identity: Исправлено отображение аватаров собеседников в списке",
-    "Security: Исправлена проверка срока действия Premium (авто-удаление звезды)",
-    "Performance: Оптимизация рендеринга и LCP для высокого балла Lighthouse"
+    "Premium: Расшифровка голосовых сообщений в текст (AI Transcription)",
+    "Premium: Кастомные иконки приложения на выбор (Obsidian, Gold, Neon)",
+    "Premium: Возвращение стабильной AI Cinema Studio (Veo 2.0)",
+    "Style: Новые темы оформления 'Cyberpunk' и 'Crystal Glass'",
+    "Core: Оптимизация Ghost Mode для скрытия статуса печати"
   ]
 }
