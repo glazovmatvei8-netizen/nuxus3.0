@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useRef } from 'react';
@@ -19,8 +18,8 @@ import { generateAiVideo } from '@/ai/flows/generate-ai-video-flow';
 import { generateAiImage } from '@/ai/flows/generate-ai-image-flow';
 
 /**
- * NUXUS AI CINEMA STUDIO V1.0
- * Позволяет генерировать видео через Veo 3.0 и изображения через Imagen 4.
+ * NUXUS AI CINEMA STUDIO V1.1 (Optimized Quotas)
+ * Позволяет генерировать видео через Veo 2.0 и изображения через Imagen 3 Fast.
  */
 export default function AiStudioView() {
   const { user } = useUser();
@@ -65,22 +64,21 @@ export default function AiStudioView() {
 
     try {
       if (activeTab === 'video') {
-        if (!photoPreview) {
-          toast({ title: "Нужно фото", description: "Veo 3.0 требует опорное изображение для анимации.", variant: "destructive" });
-          setIsGenerating(false);
-          return;
-        }
-        addLog("Синхронизация с узлами Veo 3.0...");
-        const { videoDataUri } = await generateAiVideo({ photoDataUri: photoPreview });
+        addLog("Синхронизация с узлами Veo 2.0...");
+        const { videoDataUri } = await generateAiVideo({ 
+          photoDataUri: photoPreview || undefined,
+          prompt: prompt || undefined
+        });
         setResultUrl(videoDataUri);
         addLog("Видео-сигнал стабилизирован.");
       } else {
-        addLog("Рендеринг через Imagen 4.0...");
+        addLog("Рендеринг через Imagen 3 Fast...");
         const { imageUrl } = await generateAiImage({ prompt: prompt });
         setResultUrl(imageUrl);
         addLog("Визуальный код сформирован.");
       }
     } catch (e: any) {
+      addLog("КРИТИЧЕСКИЙ СБОЙ СИНТЕЗА");
       toast({ title: "Сбой синтеза", description: e.message, variant: "destructive" });
     } finally {
       setIsGenerating(false);
@@ -93,11 +91,11 @@ export default function AiStudioView() {
       
       <div className="px-6 pt-10 pb-6 shrink-0 space-y-8">
         <div className="flex items-center justify-between">
-          <div className="flex flex-col">
+          <div className="flex flex-col text-left">
             <h1 className="text-3xl font-black text-white italic tracking-tighter uppercase flex items-center gap-3">
               AI Cinema <span className="text-[8px] bg-accent/20 text-accent px-2 py-0.5 rounded-full border border-accent/20 tracking-widest font-black">STUDIO</span>
             </h1>
-            <p className="text-[8px] font-black text-white/20 uppercase tracking-[0.4em] ml-1 mt-1">Quantum Synthesis Hub</p>
+            <p className="text-[8px] font-black text-white/20 uppercase tracking-[0.4em] ml-1 mt-1">Quantum Synthesis Hub v1.1</p>
           </div>
           <div className="bg-white/5 p-3 rounded-2xl border border-white/10 shadow-xl">
              <MovieIcon className="w-6 h-6 text-primary animate-pulse" />
@@ -106,13 +104,13 @@ export default function AiStudioView() {
 
         <div className="flex gap-2 bg-white/5 p-1 rounded-2xl border border-white/5 shadow-inner">
            <button 
-             onClick={() => setActiveTab('video')} 
+             onClick={() => { setActiveTab('video'); setResultUrl(null); }} 
              className={cn("flex-1 h-12 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all", activeTab === 'video' ? "bg-primary text-white shadow-lg" : "text-white/40 hover:bg-white/5")}
            >
              Video Engine
            </button>
            <button 
-             onClick={() => setActiveTab('image')} 
+             onClick={() => { setActiveTab('image'); setResultUrl(null); }} 
              className={cn("flex-1 h-12 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all", activeTab === 'image' ? "bg-primary text-white shadow-lg" : "text-white/40 hover:bg-white/5")}
            >
              Visual Render
@@ -127,7 +125,7 @@ export default function AiStudioView() {
                <div className="space-y-4">
                   <div className="flex items-center gap-2 mb-2">
                     <ImageIcon className="w-4 h-4 text-primary" />
-                    <span className="text-[10px] font-black uppercase text-primary/60 tracking-widest">Опорное изображение</span>
+                    <span className="text-[10px] font-black uppercase text-primary/60 tracking-widest text-left">Опорное изображение (Опционально)</span>
                   </div>
                   {photoPreview ? (
                     <div className="relative aspect-video rounded-2xl overflow-hidden border border-white/10 group shadow-xl">
@@ -211,7 +209,7 @@ export default function AiStudioView() {
                            <img src={resultUrl} className="w-full h-auto object-cover" alt="Result" />
                          )}
                          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                           <a href={resultUrl} download="nuxus_ai_cinema.mp4" className="bg-white text-black p-4 rounded-2xl font-black uppercase text-[10px] tracking-widest flex items-center gap-2 hover:scale-110 active:scale-95 transition-all">
+                           <a href={resultUrl} download={activeTab === 'video' ? "nuxus_ai_cinema.mp4" : "nuxus_ai_art.jpg"} className="bg-white text-black p-4 rounded-2xl font-black uppercase text-[10px] tracking-widest flex items-center gap-2 hover:scale-110 active:scale-95 transition-all">
                              <Download className="w-4 h-4" /> Сохранить в Ядро
                            </a>
                          </div>

@@ -1,8 +1,7 @@
-
 'use server';
 /**
  * @fileOverview A Genkit flow for generating high-quality AI images.
- * Updated to Genkit 1.x stable API and stable model.
+ * Optimized for Free Tier quotas using Imagen 3 Fast.
  */
 
 import { ai } from '@/ai/genkit';
@@ -18,6 +17,10 @@ const GenerateAiImageOutputSchema = z.object({
 });
 export type GenerateAiImageOutput = z.infer<typeof GenerateAiImageOutputSchema>;
 
+/**
+ * Synthesizes a high-quality aesthetic image.
+ * Uses imagen-3-fast for maximum availability on free quotas.
+ */
 export async function generateAiImage(input: GenerateAiImageInput): Promise<GenerateAiImageOutput> {
   return generateAiImageFlow(input);
 }
@@ -29,7 +32,7 @@ const generateAiImageFlow = ai.defineFlow(
     outputSchema: GenerateAiImageOutputSchema,
   },
   async (input) => {
-    const enhancedPrompt = `High-quality aesthetic professional digital art: ${input.prompt}. Cinematic lighting, 4k, masterpiece details.`;
+    const enhancedPrompt = `High-quality professional digital art: ${input.prompt}. Cinematic lighting, 4k, masterpiece details, aesthetic composition.`;
     
     try {
       const response = await ai.generate({
@@ -40,7 +43,7 @@ const generateAiImageFlow = ai.defineFlow(
       const media = response.media;
 
       if (!media || !media.url) {
-        throw new Error('Signal lost during image synthesis.');
+        throw new Error('Signal lost during image synthesis. The AI nodes are busy.');
       }
 
       return {
@@ -48,7 +51,10 @@ const generateAiImageFlow = ai.defineFlow(
       };
     } catch (err: any) {
       console.error("AI Image Generation Error:", err);
-      throw new Error("Failed to generate image. Please check API quota.");
+      if (err.message?.includes('429') || err.message?.includes('quota')) {
+        throw new Error("Квота ИИ исчерпана. Пожалуйста, подождите 60 секунд перед следующим сигналом.");
+      }
+      throw new Error(`Ошибка синтеза: ${err.message || 'Unknown signal error'}`);
     }
   }
 );
