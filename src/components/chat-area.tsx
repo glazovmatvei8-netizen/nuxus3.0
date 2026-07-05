@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useRef, useEffect, useMemo, useCallback, memo } from 'react';
@@ -8,29 +7,25 @@ import { Textarea } from '@/components/ui/textarea';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
   Send, Info, ChevronLeft, X, Paperclip, Mic, StopCircle, Edit2, Search,
-  Smile, ImageIcon, Video, Trash2, Loader2, UserPlus, AtSign, ChevronDown, Wand2, Sparkles, Star, Timer, Clock, Palette, Video as VideoIcon, Circle, RefreshCcw, CornerUpLeft
+  Smile, ImageIcon, Trash2, AtSign, RefreshCcw, CornerUpLeft, Circle, Video as VideoIcon
 } from 'lucide-react';
 import { MessageItem } from './message-item';
-import { useToast } from '@/hooks/use-toast';
 import { ChatInfoModal } from './modals/chat-info-modal';
 import { CreatePollModal } from './modals/create-poll-modal';
 import { EmojiPicker } from './emoji-picker';
 import { useFirestore, useUser, useCollection, useDoc, useMemoFirebase } from '@/firebase';
-import { collection, query, orderBy, doc, addDoc, updateDoc, arrayUnion, where, getDocs, arrayRemove, limit } from 'firebase/firestore';
-import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { collection, query, orderBy, doc, addDoc, updateDoc } from 'firebase/firestore';
 import { formatDisplayName, cn, compressImage, encryptSignal, isGlobalAdmin, decryptSignal, formatLastSeen, isUserPremium } from '@/lib/utils';
 import type { Message, User as UserType, Chat } from '@/lib/types';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { useTranslations } from '@/hooks/use-translations';
 import { addMinutes } from 'date-fns';
 
 /**
- * ChatInputBar V26.5.0: AI Features Temporarily Disabled.
+ * ChatInputBar V26.8.0: Pure Communication (No AI).
  */
-const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, isPremium, messages, replyTo, onCancelReply }: any) => {
+const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, isPremium, replyTo, onCancelReply }: any) => {
   const { localDrafts, setLocalDrafts } = useAppState();
   const [messageInput, setMessageInput] = useState(localDrafts[currentChatId] || '');
-  const [destructTimer, setDestructTimer] = useState<number | null>(null);
   const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
   
   const [isRecording, setIsRecording] = useState(false);
@@ -66,10 +61,9 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
 
   const handleSend = () => {
     if (!messageInput.trim()) return;
-    onSendMessage(messageInput, 'text', destructTimer);
+    onSendMessage(messageInput, 'text', null);
     setMessageInput('');
     setLocalDrafts(prev => ({ ...prev, [currentChatId]: '' }));
-    setDestructTimer(null);
     if (window.navigator && window.navigator.vibrate) window.navigator.vibrate(10);
   };
 
@@ -91,7 +85,7 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
         const blob = new Blob(chunksRef.current, { type: recorderMode === 'video' ? 'video/mp4' : 'audio/webm' });
         const reader = new FileReader();
         reader.onloadend = () => {
-          onSendMessage(reader.result as string, recorderMode === 'video' ? 'video_note' : 'audio', destructTimer);
+          onSendMessage(reader.result as string, recorderMode === 'video' ? 'video_note' : 'audio', null);
         };
         reader.readAsDataURL(blob);
         stream.getTracks().forEach(track => track.stop());
@@ -164,7 +158,7 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
                    <Button variant="ghost" size="icon" className="text-white/20 hover:text-primary h-9 w-9 shrink-0 mb-[-2px]"><Smile className="w-6 h-6" /></Button>
                  </PopoverTrigger>
                  <PopoverContent side="top" className="p-0 border-none bg-transparent w-[320px] mb-4">
-                   <EmojiPicker onEmojiSelect={(e) => handleInputChange(messageInput + e)} onStickerSelect={(url) => { onSendMessage(url, 'sticker', destructTimer); setIsEmojiPickerOpen(false); }} />
+                   <EmojiPicker onEmojiSelect={(e) => handleInputChange(messageInput + e)} onStickerSelect={(url) => { onSendMessage(url, 'sticker', null); setIsEmojiPickerOpen(false); }} />
                  </PopoverContent>
               </Popover>
             </div>
@@ -196,10 +190,10 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
   );
 });
 
-function AttachmentItem({ icon: Icon, label, color, onClick, loading }: any) {
+function AttachmentItem({ icon: Icon, label, color, onClick }: any) {
   return (
     <button onClick={onClick} className="flex items-center gap-4 w-full p-3.5 rounded-xl hover:bg-white/5 transition-all text-left group">
-      {loading ? <Loader2 className="w-5 h-5 animate-spin text-primary" /> : <Icon className={cn("w-5 h-5", color)} />}
+      <Icon className={cn("w-5 h-5", color)} />
       <span className="text-[10px] font-black uppercase tracking-widest text-white/80">{label}</span>
     </button>
   );
@@ -253,7 +247,6 @@ export default function ChatArea() {
   const chatRef = useMemoFirebase(() => (!db || !currentChatId) ? null : doc(db, 'chats', currentChatId), [db, currentChatId]);
   const { data: chat } = useDoc<Chat>(chatRef);
 
-  // IDENTIFICATION FIX: Calculate other participant for header
   const otherId = useMemo(() => {
     if (!chat || chat.type !== 'private' || !firebaseUser) return null;
     return chat.participantIds.find(id => id !== firebaseUser.uid);
@@ -273,7 +266,7 @@ export default function ChatArea() {
 
   useEffect(() => { scrollToBottom('auto'); }, [currentChatId, messages?.length, scrollToBottom]);
 
-  const handleSendMessage = useCallback(async (content_msg: string, type_msg: Message['contentType'] = 'text', minutes: number | null = null) => {
+  const handleSendMessage = useCallback(async (content_msg: string, type_msg: Message['contentType'] = 'text') => {
     if (!content_msg.trim() || !currentChatId || !firebaseUser || !db) return;
     
     let finalContent = (type_msg === 'text' || type_msg === 'reply') ? encryptSignal(content_msg) : content_msg;
@@ -285,7 +278,6 @@ export default function ChatArea() {
       metadata: { bubbleStyle: userProfile?.settings?.bubbleStyle || 'default' }
     };
 
-    if (minutes) msgData.selfDestructAt = addMinutes(new Date(), minutes).toISOString();
     if (replyTo) { 
       msgData.replyToId = replyTo.id; 
       msgData.replyToContent = replyTo.contentType === 'text' ? replyTo.content : `[Сигнал: ${replyTo.contentType.toUpperCase()}]`; 
@@ -372,7 +364,7 @@ export default function ChatArea() {
       <ChatInputBar 
         onSendMessage={handleSendMessage} canPost={true} 
         onPollOpen={() => setIsPollModalOpen(true)} currentChatId={currentChatId}
-        isPremium={isPremium} messages={messages} replyTo={replyTo} onCancelReply={() => setReplyTo(null)}
+        isPremium={isPremium} replyTo={replyTo} onCancelReply={() => setReplyTo(null)}
       />
 
       {chat && <ChatInfoModal open={isChatInfoOpen} onOpenChange={setIsChatInfoOpen} chat={chat as any} />}

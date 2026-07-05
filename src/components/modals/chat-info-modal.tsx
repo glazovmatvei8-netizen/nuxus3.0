@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useMemo, useRef, useEffect } from 'react';
@@ -11,7 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { 
-  Crown, Star, Shield, UserCheck, UserPlus2, X, Bell, BellOff, Clock, Edit3, Camera, Save, UserPlus, Trash2, Gift, Sparkles, FileText, Loader2 
+  Star, Crown, Shield, UserCheck, UserPlus2, X, Bell, BellOff, Clock, Edit3, Camera, Save, UserPlus, Trash2, Gift, Sparkles
 } from 'lucide-react';
 import { 
   DropdownMenu,
@@ -21,18 +20,18 @@ import {
   DropdownMenuSeparator
 } from "@/components/ui/dropdown-menu";
 import { useFirestore, useUser, useDoc, useMemoFirebase, useCollection } from '@/firebase';
-import { doc, updateDoc, arrayRemove, arrayUnion, query, collection, where, limit, orderBy } from 'firebase/firestore';
+import { doc, updateDoc, arrayRemove, arrayUnion, query, collection, limit } from 'firebase/firestore';
 import { deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { useToast } from '@/hooks/use-toast';
 import { useAppState } from '@/lib/store';
-import { formatDisplayName, isUserPremium, formatLastSeen, cn, isGlobalAdmin, decryptSignal } from '@/lib/utils';
-import type { User, Chat, ReceivedGift, Message } from '@/lib/types';
+import { formatDisplayName, isUserPremium, formatLastSeen, cn, isGlobalAdmin } from '@/lib/utils';
+import type { User, Chat, ReceivedGift } from '@/lib/types';
 import { addHours, isAfter, parseISO } from 'date-fns';
 import { AddMemberModal } from './add-member-modal';
 import { GiftModal } from './gift-modal';
 
 /**
- * ChatInfoModal V26.5.0: AI Summarize Temporarily Disabled.
+ * ChatInfoModal V26.8.0: Pure Communication (No AI).
  */
 export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onOpenChange: (o: boolean) => void, chat: Chat }) {
   const db = useFirestore();
@@ -69,7 +68,6 @@ export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onO
   const { data: gifts } = useCollection<ReceivedGift>(giftsQuery);
 
   const isKernelAdmin = useMemo(() => isGlobalAdmin(currentUserProfile), [currentUserProfile]);
-  const isPremium = useMemo(() => isUserPremium(currentUserProfile), [currentUserProfile]);
 
   useEffect(() => {
     if (open) {
