@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useMemo, memo, useRef, useEffect } from 'react';
@@ -5,7 +6,7 @@ import { useAppState } from '@/lib/store';
 import { Button } from '@/components/ui/button';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
-  Plus, Ghost, Search, Star, Pin, PinOff, Archive, Lock, Trash2, MessageCircle, Activity, LayoutGrid, Users, User, ChevronRight, Zap
+  Plus, Ghost, Search, Star, Pin, PinOff, Archive, Lock, Trash2, MessageCircle, Activity, LayoutGrid, Users, User, ChevronRight, Zap, Bookmark, Shield
 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { CreateChatModal } from './modals/create-chat-modal';
@@ -13,7 +14,7 @@ import { AdminPanelModal } from './modals/admin-panel-modal';
 import { StoriesBar } from './stories-bar';
 import type { User as UserType, Message, Chat } from '@/lib/types';
 import { useFirestore, useUser, useCollection, useDoc, useMemoFirebase } from '@/firebase';
-import { collection, query, where, doc, limit, orderBy, updateDoc, arrayUnion, arrayRemove, deleteDoc } from 'firebase/firestore';
+import { collection, query, where, doc, limit, orderBy, updateDoc, arrayUnion, arrayRemove, deleteDoc, setDoc, getDoc } from 'firebase/firestore';
 import { formatDisplayName, cn, isGlobalAdmin, decryptSignal, isUserPremium } from '@/lib/utils';
 import { format } from 'date-fns';
 import { useTranslations } from '@/hooks/use-translations';
@@ -47,15 +48,17 @@ const ChatListItem = memo(({
   const { data: lastMessages } = useCollection<Message>(lastMessageQuery);
   const lastMsg = lastMessages?.[0];
 
+  const isSavedMessages = chat.id.startsWith('saved_');
+
   const finalDisplayName = useMemo(() => {
-    if (chat.id === 'saved_messages') return 'Архив Данных';
+    if (isSavedMessages) return 'Архив Данных';
     if (chat.type === 'private') {
       const myMeta = chat.metadata?.[currentUserId || ''];
       if (myMeta?.customName) return myMeta.customName;
       if (otherProfile?.name) return formatDisplayName(otherProfile.name);
     }
     return formatDisplayName(chat.name || otherProfile?.name || 'Узел');
-  }, [chat, otherProfile, currentUserId]);
+  }, [chat, otherProfile, currentUserId, isSavedMessages]);
 
   const displayTime = useMemo(() => {
     const timeVal = chat.lastMessageAt || chat.createdAt;
@@ -71,10 +74,10 @@ const ChatListItem = memo(({
   const isPremium = useMemo(() => isUserPremium(otherProfile), [otherProfile]);
 
   const decryptedPreview = useMemo(() => {
-    if (!lastMsg) return 'Сигнал отсутствует';
+    if (!lastMsg) return isSavedMessages ? 'Ваше личное хранилище' : 'Сигнал отсутствует';
     if (lastMsg.contentType !== 'text') return `[Медиа: ${lastMsg.contentType.toUpperCase()}]`;
     return decryptSignal(lastMsg.content);
-  }, [lastMsg]);
+  }, [lastMsg, isSavedMessages]);
 
   const isEncrypted = lastMsg?.contentType === 'text' && lastMsg?.content?.startsWith('NX_');
 
@@ -164,7 +167,13 @@ const ChatListItem = memo(({
           <ContextMenuTrigger disabled={Math.abs(offsetX) > 10 || isDragging}>
             <div className="flex items-center gap-4 px-5 py-4 cursor-pointer relative h-[96px] overflow-hidden">
               <div className="relative shrink-0">
-                <UserAvatar userId={otherId} manualAvatarUrl={chat.type !== 'private' ? chat.avatarUrl : otherProfile?.avatarUrl} className="h-16 w-14 rounded-[1.8rem] border border-white/10 transition-all duration-700 group-hover:scale-105" fallbackName={finalDisplayName} showOnlineStatus />
+                {isSavedMessages ? (
+                  <div className="h-16 w-14 rounded-[1.8rem] bg-primary/20 border border-primary/30 flex items-center justify-center text-primary shadow-lg shadow-primary/10">
+                    <Shield className="w-7 h-7 fill-current" />
+                  </div>
+                ) : (
+                  <UserAvatar userId={otherId} manualAvatarUrl={chat.type !== 'private' ? chat.avatarUrl : otherProfile?.avatarUrl} className="h-16 w-14 rounded-[1.8rem] border border-white/10 transition-all duration-700 group-hover:scale-105" fallbackName={finalDisplayName} showOnlineStatus />
+                )}
                 {isUnread && <div className="absolute -top-1 -right-1 w-4 h-4 bg-primary rounded-full border-[3px] border-[#0a0a0c] shadow-[0_0_15px_rgba(168,85,247,1)] animate-pulse" />}
               </div>
               
@@ -174,7 +183,7 @@ const ChatListItem = memo(({
                     <span className="font-black text-[16px] truncate tracking-tight italic text-white leading-none">
                       {finalDisplayName}
                     </span>
-                    {isPremium && <Star className="w-3.5 h-3.5 text-accent fill-accent shrink-0 animate-pulse" />}
+                    {isPremium && !isSavedMessages && <Star className="w-3.5 h-3.5 text-accent fill-accent shrink-0 animate-pulse" />}
                     {isPinned && <Pin className="w-3.5 h-3.5 text-primary rotate-45 shrink-0" />}
                   </div>
                   <span className="text-[10px] text-white/30 font-black tabular-nums tracking-widest">{displayTime}</span>
@@ -195,15 +204,19 @@ const ChatListItem = memo(({
             </div>
           </ContextMenuTrigger>
           <ContextMenuContent className="w-64 bg-[#0a0a0c]/95 backdrop-blur-[60px] border-white/10 rounded-[2rem] p-2 shadow-2xl animate-in zoom-in-95 duration-300">
-            <ContextMenuItem onClick={() => onMarkUnread(chat.id)} className="gap-3 py-3.5 font-black uppercase text-[10px] tracking-widest rounded-xl hover:bg-primary/10 transition-all">
-              <MessageCircle className="w-5 h-5 text-primary" /> {chat.isManualUnread ? 'ПРОЧИТАНО' : 'НЕ ПРОЧИТАНО'}
-            </ContextMenuItem>
+            {!isSavedMessages && (
+              <ContextMenuItem onClick={() => onMarkUnread(chat.id)} className="gap-3 py-3.5 font-black uppercase text-[10px] tracking-widest rounded-xl hover:bg-primary/10 transition-all">
+                <MessageCircle className="w-5 h-5 text-primary" /> {chat.isManualUnread ? 'ПРОЧИТАНО' : 'НЕ ПРОЧИТАНО'}
+              </ContextMenuItem>
+            )}
             <ContextMenuItem onClick={() => onPinToggle(chat.id)} className="gap-3 py-3.5 font-black uppercase text-[10px] tracking-widest rounded-xl hover:bg-primary/10 transition-all">
               {isPinned ? <><PinOff className="w-5 h-5 text-green-400" /> ОТКРЕПИТЬ</> : <><Pin className="w-5 h-5 text-green-400" /> ЗАКРЕПИТЬ</>}
             </ContextMenuItem>
-            <ContextMenuItem onClick={() => onArchive(chat.id, !!chat.isArchived)} className="gap-3 py-3.5 font-black uppercase text-[10px] tracking-widest rounded-xl hover:bg-primary/10 transition-all">
-              <Archive className="w-5 h-5 text-orange-400" /> {chat.isArchived ? 'ВЕРНУТЬ' : 'В АРХИВ'}
-            </ContextMenuItem>
+            {!isSavedMessages && (
+              <ContextMenuItem onClick={() => onArchive(chat.id, !!chat.isArchived)} className="gap-3 py-3.5 font-black uppercase text-[10px] tracking-widest rounded-xl hover:bg-primary/10 transition-all">
+                <Archive className="w-5 h-5 text-orange-400" /> {chat.isArchived ? 'ВЕРНУТЬ' : 'В АРХИВ'}
+              </ContextMenuItem>
+            )}
             <ContextMenuSeparator className="bg-white/5 mx-3 my-2" />
             <ContextMenuItem onClick={() => onDelete(chat.id)} className="gap-3 py-3.5 font-black uppercase text-[10px] tracking-widest rounded-xl text-red-500 hover:bg-red-500/10 transition-all">
               <Trash2 className="w-5 h-5" /> УДАЛИТЬ УЗЕЛ
@@ -275,6 +288,28 @@ export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?:
     }
   };
 
+  const handleOpenSaved = async () => {
+    if (!db || !user) return;
+    const savedId = `saved_${user.uid}`;
+    const savedRef = doc(db, 'chats', savedId);
+    const snap = await getDoc(savedRef);
+    
+    if (!snap.exists()) {
+      await setDoc(savedRef, {
+        id: savedId,
+        type: 'saved',
+        name: 'Архив Данных',
+        username: '@saved',
+        ownerId: user.uid,
+        participantIds: [user.uid],
+        adminIds: [user.uid],
+        createdAt: new Date().toISOString(),
+        isPublic: false
+      });
+    }
+    setCurrentChatId(savedId);
+  };
+
   const filteredChats = useMemo(() => {
     if (!chats) return [];
     let result = [...chats].sort((a, b) => {
@@ -283,8 +318,8 @@ export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?:
       return bTime - aTime;
     });
 
-    const saved = result.find(c => c.id === 'saved_messages');
-    let others = result.filter(c => c.id !== 'saved_messages');
+    let saved = result.find(c => c.type === 'saved');
+    let others = result.filter(c => c.type !== 'saved');
 
     others.sort((a, b) => {
       const aPinned = currentUserProfile?.pinnedChatIds?.includes(a.id) ? 1 : 0;
@@ -344,6 +379,27 @@ export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?:
           {!isArchiveView && (
             <div className="animate-in fade-in slide-in-from-top-4 duration-700 px-1">
               <StoriesBar />
+              
+              {/* SAVED MESSAGES SHORTCUT */}
+              <div className="px-5 pt-6">
+                <button 
+                  onClick={handleOpenSaved}
+                  className={cn(
+                    "w-full p-4 obsidian-glass rounded-[2rem] border border-primary/20 flex items-center gap-4 hover:bg-primary/5 transition-all group shadow-xl",
+                    currentChatId?.startsWith('saved_') && "bg-primary/10 border-primary/40 ring-1 ring-primary/20"
+                  )}
+                >
+                  <div className="h-12 w-12 rounded-2xl bg-primary/20 flex items-center justify-center text-primary group-hover:scale-110 transition-transform shadow-lg">
+                    <Shield className="w-6 h-6 fill-current" />
+                  </div>
+                  <div className="flex flex-col text-left">
+                    <span className="font-black text-sm text-white italic uppercase tracking-tighter">Архив Данных</span>
+                    <span className="text-[9px] font-black text-primary/60 uppercase tracking-widest">Личный терминал</span>
+                  </div>
+                  <ChevronRight className="w-4 h-4 ml-auto text-primary/20" />
+                </button>
+              </div>
+
               <div className="px-5 py-6">
                 <div className="flex items-center gap-3 overflow-x-auto scrollbar-hide py-1">
                   {[

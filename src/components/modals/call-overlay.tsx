@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
-import { doc, collection, addDoc } from 'firebase/firestore';
+import { doc, collection, addDoc, onSnapshot } from 'firebase/firestore';
 import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { useAppState } from '@/lib/store';
 import { Button } from '@/components/ui/button';
@@ -18,76 +18,90 @@ import type { Call, User as UserType } from '@/lib/types';
 import { differenceInSeconds, parseISO } from 'date-fns';
 
 /**
- * CALL OVERLAY V20.0: Working Signals
- * Добавлена имитация соединения и корректная обработка статусов.
+ * CALL OVERLAY V28.1.0: Functional Signals
+ * Исправлена логика входящих вызовов и управления сессией.
  */
 export function CallOverlay() {
   const { user } = useUser();
   const db = useFirestore();
-  const { activeCallId, setActiveCallId, setInspectedUserId } = useAppState();
+  const { activeCallId, setActiveCallId } = useAppState();
   const { toast } = useToast();
 
-  const callRef = useMemoFirebase(() => (!db || !activeCallId) ? null : doc(db, 'calls', activeCallId), [db, activeCallId]);
-  const { data: call } = useDoc<Call>(callRef);
-
+  const [callData, setCallData] = useState<Call | null>(null);
   const [isMuted, setIsMuted] = useState(false);
   const [isVideoOff, setIsVideoOff] = useState(false);
   const [callDuration, setCallDuration] = useState(0);
   
-  const localVideoRef = useRef<HTMLVideoElement>(null);
-  const streamRef = useRef<MediaStream | null>(null);
+  useEffect(() => {
+    if (!db || !activeCallId) {
+      setCallData(null);
+      return;
+    }
 
-  const isIncoming = call?.status === 'calling' && call?.receiverId === user?.uid;
-  const isOutgoing = call?.status === 'calling' && call?.callerId === user?.uid;
-  const isActive = call?.status === 'active';
+    const unsubscribe = onSnapshot(doc(db, 'calls', activeCallId), (snap) => {
+      if (snap.exists()) {
+        setCallData({ id: snap.id, ...snap.data() } as Call);
+      } else {
+        setActiveCallId(null);
+      }
+    });
 
-  const otherId = call?.callerId === user?.uid ? call?.receiverId : call?.callerId;
-  const otherUserRef = useMemoFirebase(() => (!db || !otherId) ? null : doc(db, 'users', otherId), [db, otherId]);
-  const { data: otherUser } = useDoc<UserType>(otherUserRef);
+    return () => unsubscribe();
+  }, [db, activeCallId, setActiveCallId]);
 
   useEffect(() => {
     let interval: NodeJS.Timeout;
-    if (isActive) {
+    if (callData?.status === 'active') {
       interval = setInterval(() => {
         setCallDuration(prev => prev + 1);
       }, 1000);
     }
     return () => clearInterval(interval);
-  }, [isActive]);
+  }, [callData?.status]);
+
+  const isIncoming = callData?.status === 'calling' && callData?.receiverId === user?.uid;
+  const isOutgoing = callData?.status === 'calling' && callData?.callerId === user?.uid;
+  const isActive = callData?.status === 'active';
+
+  const otherId = callData?.callerId === user?.uid ? callData?.receiverId : callData?.callerId;
+  const otherUserRef = useMemoFirebase(() => (!db || !otherId) ? null : doc(db, 'users', otherId), [db, otherId]);
+  const { data: otherUser } = useDoc<UserType>(otherUserRef);
 
   const handleAccept = () => {
-    if (!callRef) return;
-    updateDocumentNonBlocking(callRef, { 
+    if (!db || !activeCallId) return;
+    updateDocumentNonBlocking(doc(db, 'calls', activeCallId), { 
       status: 'active',
       startedAt: new Date().toISOString()
     });
   };
 
   const handleDecline = () => {
-    if (!callRef) return;
-    updateDocumentNonBlocking(callRef, { 
+    if (!db || !activeCallId) return;
+    updateDocumentNonBlocking(doc(db, 'calls', activeCallId), { 
       status: 'rejected',
       endedAt: new Date().toISOString()
     });
+    setActiveCallId(null);
   };
 
   const handleEndCall = () => {
-    if (!callRef) return;
-    updateDocumentNonBlocking(callRef, { 
+    if (!db || !activeCallId) return;
+    updateDocumentNonBlocking(doc(db, 'calls', activeCallId), { 
       status: 'ended',
       endedAt: new Date().toISOString()
     });
+    setActiveCallId(null);
   };
 
   useEffect(() => {
-    if (call?.status === 'ended' || call?.status === 'rejected' || call?.status === 'missed') {
+    if (callData?.status === 'ended' || callData?.status === 'rejected' || callData?.status === 'missed') {
       const timer = setTimeout(() => {
         setActiveCallId(null);
         setCallDuration(0);
       }, 2000);
       return () => clearTimeout(timer);
     }
-  }, [call?.status, setActiveCallId]);
+  }, [callData?.status, setActiveCallId]);
 
   const formatTime = (s: number) => {
     const mins = Math.floor(s / 60);
@@ -95,7 +109,7 @@ export function CallOverlay() {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
-  if (!activeCallId || !call) return null;
+  if (!activeCallId || !callData) return null;
 
   return (
     <div className="fixed inset-0 z-[2000] flex flex-col items-center justify-center bg-[#050505]/95 backdrop-blur-3xl animate-in fade-in zoom-in duration-500">

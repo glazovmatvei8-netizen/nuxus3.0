@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useRef, useEffect, useMemo, useCallback, memo } from 'react';
@@ -7,7 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
   Send, Info, ChevronLeft, X, Paperclip, Mic, StopCircle, Edit2, Search,
-  Smile, ImageIcon, Trash2, AtSign, RefreshCcw, CornerUpLeft, Circle, Video as VideoIcon
+  Smile, ImageIcon, Trash2, AtSign, RefreshCcw, CornerUpLeft, Circle, Video as VideoIcon, Phone, Shield
 } from 'lucide-react';
 import { MessageItem } from './message-item';
 import { ChatInfoModal } from './modals/chat-info-modal';
@@ -18,9 +19,10 @@ import { collection, query, orderBy, doc, addDoc, updateDoc, where, getDocs, wri
 import { formatDisplayName, cn, compressImage, encryptSignal, isGlobalAdmin, decryptSignal, formatLastSeen, isUserPremium } from '@/lib/utils';
 import type { Message, User as UserType, Chat } from '@/lib/types';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { useToast } from '@/hooks/use-toast';
 
 /**
- * ChatInputBar V26.9.0: Pure Communication.
+ * ChatInputBar V28.1.0: Pure Communication.
  */
 const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, isPremium, replyTo, onCancelReply }: any) => {
   const { localDrafts, setLocalDrafts } = useAppState();
@@ -81,7 +83,7 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
       chunksRef.current = [];
       recorder.ondataavailable = (e) => { if (e.data.size > 0) chunksRef.current.push(e.data); };
       recorder.onstop = async () => {
-        const blob = new Blob(chunksRef.current, { type: recorderMode === 'video' ? 'video/mp4' : 'audio/webm' });
+        const blob = new Blob(chunksRef.current, { type: recorderMode === 'video' ? 'video_note' : 'audio', lastModified: Date.now() });
         const reader = new FileReader();
         reader.onloadend = () => {
           onSendMessage(reader.result as string, recorderMode === 'video' ? 'video_note' : 'audio', null);
@@ -228,7 +230,8 @@ MessageList.displayName = 'MessageList';
 export default function ChatArea() {
   const { user: firebaseUser } = useUser();
   const db = useFirestore();
-  const { currentChatId, setCurrentChatId, setForwardingMessage } = useAppState();
+  const { currentChatId, setCurrentChatId, setForwardingMessage, setActiveCallId } = useAppState();
+  const { toast } = useToast();
   
   const [isChatInfoOpen, setIsChatInfoOpen] = useState(false);
   const [isPollModalOpen, setIsPollModalOpen] = useState(false);
@@ -245,6 +248,8 @@ export default function ChatArea() {
 
   const chatRef = useMemoFirebase(() => (!db || !currentChatId) ? null : doc(db, 'chats', currentChatId), [db, currentChatId]);
   const { data: chat } = useDoc<Chat>(chatRef);
+
+  const isSavedMessages = currentChatId?.startsWith('saved_');
 
   const otherId = useMemo(() => {
     if (!chat || chat.type !== 'private' || !firebaseUser) return null;
@@ -303,7 +308,27 @@ export default function ChatArea() {
     updateDoc(doc(db, 'chats', currentChatId), { lastMessageAt: new Date().toISOString() });
   }, [currentChatId, firebaseUser, db, userProfile, replyTo]);
 
+  const startCallAction = async (type: 'audio' | 'video') => {
+    if (!db || !firebaseUser || !otherId || !currentChatId) return;
+    try {
+      const callData = {
+        callerId: firebaseUser.uid,
+        receiverId: otherId,
+        participantIds: [firebaseUser.uid, otherId],
+        chatId: currentChatId,
+        type: type,
+        status: 'calling',
+        createdAt: new Date().toISOString()
+      };
+      const callRef = await addDoc(collection(db, 'calls'), callData);
+      setActiveCallId(callRef.id);
+    } catch (e) {
+      toast({ title: "Сбой вызова", variant: "destructive" });
+    }
+  };
+
   const headerTitle = useMemo(() => {
+    if (isSavedMessages) return 'Архив Данных';
     if (!chat) return 'СИНХРОНИЗАЦИЯ...';
     if (chat.type === 'private') {
       const myMeta = chat.metadata?.[firebaseUser?.uid || ''];
@@ -311,7 +336,7 @@ export default function ChatArea() {
       return formatDisplayName(otherUser?.name);
     }
     return formatDisplayName(chat.name);
-  }, [chat, otherUser, firebaseUser?.uid]);
+  }, [chat, otherUser, firebaseUser?.uid, isSavedMessages]);
 
   const headerAvatarId = useMemo(() => {
     return chat?.type === 'private' ? otherId : null;
@@ -324,18 +349,24 @@ export default function ChatArea() {
           <Button variant="ghost" size="icon" className="md:hidden obsidian-glass rounded-xl text-white/50 h-10 w-10 shrink-0" onClick={() => setCurrentChatId(null)}><ChevronLeft className="w-6 h-6" /></Button>
           {!isSearchMode ? (
             <div className="flex items-center gap-3 cursor-pointer min-w-0 flex-1 group" onClick={() => setIsChatInfoOpen(true)}>
-              <UserAvatar 
-                userId={headerAvatarId} 
-                manualAvatarUrl={chat?.type !== 'private' ? chat?.avatarUrl : otherUser?.avatarUrl} 
-                className="h-10 w-10 border border-white/10 shrink-0" 
-                fallbackName={headerTitle} 
-              />
+              {isSavedMessages ? (
+                <div className="h-10 w-10 rounded-xl bg-primary/20 border border-primary/30 flex items-center justify-center text-primary shadow-lg shadow-primary/10">
+                  <Shield className="w-5 h-5 fill-current" />
+                </div>
+              ) : (
+                <UserAvatar 
+                  userId={headerAvatarId} 
+                  manualAvatarUrl={chat?.type !== 'private' ? chat?.avatarUrl : otherUser?.avatarUrl} 
+                  className="h-10 w-10 border border-white/10 shrink-0" 
+                  fallbackName={headerTitle} 
+                />
+              )}
               <div className="flex flex-col min-w-0 text-left">
                 <span className="font-black text-[16px] truncate text-white italic tracking-tighter uppercase group-hover:text-primary transition-colors leading-tight">
                   {headerTitle}
                 </span>
                 <span className="text-[9px] font-black uppercase tracking-[0.1em] text-primary/40 leading-none truncate mt-0.5">
-                  {chat?.type === 'private' ? formatLastSeen(otherUser?.lastSeen, otherUser?.settings?.privacy?.lastSeenVisibility) : 'Сигнал активен'}
+                  {isSavedMessages ? 'Ваш терминал' : chat?.type === 'private' ? formatLastSeen(otherUser?.lastSeen, otherUser?.settings?.privacy?.lastSeenVisibility) : 'Сигнал активен'}
                 </span>
               </div>
             </div>
@@ -349,6 +380,12 @@ export default function ChatArea() {
         </div>
         {!isSearchMode && (
           <div className="flex items-center gap-2 shrink-0">
+            {chat?.type === 'private' && !isSavedMessages && (
+              <>
+                <Button variant="ghost" size="icon" onClick={() => startCallAction('audio')} className="h-10 w-10 rounded-xl obsidian-glass text-white/20 hover:text-primary"><Phone className="w-5 h-5" /></Button>
+                <Button variant="ghost" size="icon" onClick={() => startCallAction('video')} className="h-10 w-10 rounded-xl obsidian-glass text-white/20 hover:text-primary"><VideoIcon className="w-5 h-5" /></Button>
+              </>
+            )}
             <Button variant="ghost" size="icon" onClick={() => setIsSearchMode(true)} className="h-10 w-10 rounded-xl obsidian-glass text-white/20"><Search className="w-5 h-5" /></Button>
             <Button variant="ghost" size="icon" onClick={() => setIsChatInfoOpen(true)} className="h-10 w-10 rounded-xl obsidian-glass text-white/20"><Info className="w-6 h-6" /></Button>
           </div>
