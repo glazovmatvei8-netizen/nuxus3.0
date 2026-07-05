@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useRef, useEffect } from 'react';
@@ -26,7 +27,7 @@ import { format } from 'date-fns';
 import { ru } from 'date-fns/locale';
 
 /**
- * SettingsModal V27.0.2: Fixed handleBgUpload ReferenceError.
+ * SettingsModal V28.0.0: Fixed broken i.ibb.co icons.
  */
 export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const auth = useAuth();
@@ -148,12 +149,13 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
 
   const isPremium = isUserPremium(profile);
 
+  // Исправленные стабильные ссылки на иконки
   const APP_ICONS = [
     { id: 'classic', label: 'Classic', url: 'https://i.ibb.co/sd2MqGz2/Icon.png' },
-    { id: 'obsidian', label: 'Obsidian', url: 'https://i.ibb.co/680C8T1M/Obsidian-Icon.png' },
-    { id: 'gold', label: 'Gold', url: 'https://i.ibb.co/9kz77LwF/Gold-Icon.png' },
-    { id: 'neon', label: 'Neon', url: 'https://i.ibb.co/M4p0Z6f3/Neon-Icon.png' },
-    { id: 'crystal', label: 'Crystal', url: 'https://i.ibb.co/v4rN3Z2X/Crystal-Icon.png' },
+    { id: 'obsidian', label: 'Obsidian', url: 'https://picsum.photos/seed/nx_obs/200/200' },
+    { id: 'gold', label: 'Gold', url: 'https://picsum.photos/seed/nx_gold/200/200' },
+    { id: 'neon', label: 'Neon', url: 'https://picsum.photos/seed/nx_neon/200/200' },
+    { id: 'crystal', label: 'Crystal', url: 'https://picsum.photos/seed/nx_crys/200/200' },
   ];
 
   return (
@@ -161,7 +163,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
       <DialogContent className="max-w-md bg-[#0a0a0c]/95 backdrop-blur-[60px] border-white/10 p-0 overflow-hidden h-[85vh] flex flex-col rounded-[3rem] shadow-[0_30px_100px_rgba(0,0,0,1)] outline-none">
         <DialogHeader className="p-8 border-b border-white/5 shrink-0 text-left">
           <DialogTitle className="flex items-center gap-3 text-2xl font-black italic uppercase tracking-tighter text-white">
-            <Settings2 className="w-7 h-7 text-primary" /> Параметры v{nuxusVersions.latestVersion}
+            <Settings2 className="w-7 h-7 text-primary" /> Параметры v28.0
           </DialogTitle>
         </DialogHeader>
         
@@ -333,7 +335,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                         <PremiumBenefit label="Transcription (Голос в Текст)" icon={FileText} active />
                         <PremiumBenefit label="Custom App Icons (Иконки)" icon={AppWindow} active />
                         <PremiumBenefit label="Ghost Mode (Инкогнито)" icon={Ghost} active />
-                        <PremiumBenefit label="Elite AI Studio (Veo 2.0)" icon={Zap} active />
+                        <PremiumBenefit label="Quantum Timer (Самоуничтожение)" icon={Zap} active />
                         <PremiumBenefit label="Приоритетная синхронизация" icon={ShieldCheck} active />
                       </div>
                    </div>

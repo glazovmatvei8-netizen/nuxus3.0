@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useEffect, useMemo } from 'react';
@@ -10,7 +11,6 @@ import MusicView from './music-view';
 import WalletView from './wallet-view';
 import GamesView from './games-view';
 import DiscoveryView from './discovery-view';
-import AiStudioView from './ai-studio-view';
 import { useAppState } from '@/lib/store';
 import { cn, isUserPremium } from '@/lib/utils';
 import { useFirestore, useUser, useCollection, useMemoFirebase, useDoc } from '@/firebase';
@@ -27,7 +27,7 @@ import { MusicPlayer } from './music-player';
 import { UserAvatar } from './user-avatar';
 import { CreateStoryModal } from './modals/create-story-modal';
 import type { Call, User as UserType } from '@/lib/types';
-import { Phone, MessageCircle, Settings, Search, Archive, Music, Wallet, Gamepad2, Layers, Compass, Plus, Sparkles, Film } from 'lucide-react';
+import { Phone, MessageCircle, Settings, Search, Archive, Music, Wallet, Gamepad2, Layers, Compass, Plus, Sparkles, ShieldCheck } from 'lucide-react';
 import { useTranslations } from '@/hooks/use-translations';
 
 export default function ChatMain() {
@@ -81,7 +81,6 @@ export default function ChatMain() {
           <div className="flex flex-col gap-8 flex-1 overflow-y-auto scrollbar-hide py-2">
             <RailButton icon={MessageCircle} active={activeView === 'chats'} onClick={() => { setActiveView('chats'); setCurrentChatId(null); }} label="СЕТЬ" />
             <RailButton icon={Compass} active={activeView === 'discovery'} onClick={() => { setActiveView('discovery'); setCurrentChatId(null); }} label="ХАБ" />
-            {isPremium && <RailButton icon={Film} active={activeView === 'ai_studio'} onClick={() => { setActiveView('ai_studio'); setCurrentChatId(null); }} label="КИНО" />}
             <RailButton icon={Phone} active={activeView === 'calls'} onClick={() => { setActiveView('calls'); setCurrentChatId(null); }} label="ЗВОНКИ" />
             <RailButton icon={Gamepad2} active={activeView === 'games'} onClick={() => { setActiveView('games'); setCurrentChatId(null); }} label="ИГРЫ" />
             <RailButton icon={Wallet} active={activeView === 'wallet'} onClick={() => { setActiveView('wallet'); setCurrentChatId(null); }} label="БАНК" />
@@ -98,7 +97,7 @@ export default function ChatMain() {
         {/* Sidebar Container V12.0 (Elite Panel) */}
         <div className={cn(
           "w-full md:w-[380px] lg:w-[420px] h-full flex-shrink-0 z-30 bg-black/5 backdrop-blur-3xl relative overflow-hidden min-w-0 transition-all duration-500", 
-          (currentChatId && !['profile', 'contacts', 'calls', 'archive', 'music', 'wallet', 'discovery', 'games', 'ai_studio'].includes(activeView)) ? "hidden md:block" : "block"
+          (currentChatId && !['profile', 'contacts', 'calls', 'archive', 'music', 'wallet', 'discovery', 'games'].includes(activeView)) ? "hidden md:block" : "block"
         )}>
           <div className="h-full w-full overflow-hidden animate-in fade-in slide-in-from-left-4 duration-700">
             {activeView === 'chats' && <ChatSidebar />}
@@ -110,14 +109,13 @@ export default function ChatMain() {
             {activeView === 'wallet' && <WalletView />}
             {activeView === 'games' && <GamesView />}
             {activeView === 'discovery' && <DiscoveryView />}
-            {activeView === 'ai_studio' && <AiStudioView />}
           </div>
         </div>
         
         {/* Main Viewport V12.0 (Elite Area) */}
         <div className={cn(
           "flex-1 h-full flex flex-col min-w-0 bg-transparent relative z-20 chat-pattern-bg overflow-hidden max-w-full transition-all duration-700 md:ml-4 my-2 md:my-4 md:mr-4 md:rounded-[3rem] md:border md:border-white/5 md:shadow-2xl", 
-          (!currentChatId || ['profile', 'music', 'wallet', 'games', 'discovery', 'ai_studio'].includes(activeView)) ? "hidden md:flex" : "flex"
+          (!currentChatId || ['profile', 'music', 'wallet', 'games', 'discovery'].includes(activeView)) ? "hidden md:flex" : "flex"
         )}>
           <div className="h-full w-full overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-1000">
             <ChatArea />
@@ -147,11 +145,7 @@ export default function ChatMain() {
               </button>
             </div>
 
-            {isPremium ? (
-              <NavButton icon={Film} label="КИНО" active={activeView === 'ai_studio'} onClick={() => setActiveView('ai_studio')} />
-            ) : (
-              <NavButton icon={Wallet} label="БАНК" active={activeView === 'wallet'} onClick={() => setActiveView('wallet')} />
-            )}
+            <NavButton icon={Wallet} label="БАНК" active={activeView === 'wallet'} onClick={() => setActiveView('wallet')} />
             <NavButton icon={Settings} label="УЗЕЛ" active={activeView === 'profile'} onClick={() => setActiveView('profile')} isProfile userId={user?.uid} />
           </div>
         </div>
