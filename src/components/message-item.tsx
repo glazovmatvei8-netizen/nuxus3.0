@@ -27,7 +27,7 @@ import { transcribeVoice } from '@/ai/flows/voice-to-text-flow';
 const QUICK_REACTIONS = ['👍', '❤️', '🔥', '😂', '😮', '😢', '👏'];
 
 /**
- * MessageItem V27.0.0: Elite Voice Transcription & Styles.
+ * MessageItem V27.0.1: Correct AI STT & Swipe Reply Hint.
  */
 export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForward, isAdmin = false, isGroup = false, onEdit, highlight = false, viewerProfile }: any) => {
   const { user } = useUser();
@@ -64,7 +64,8 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
 
     setIsTranscribing(true);
     try {
-      const { text } = await transcribeVoice({ audioDataUri: message.content });
+      const result = await transcribeVoice({ audioDataUri: message.content });
+      const text = result.text;
       setTranscription(text);
       if (db && chatId) {
         await updateDoc(doc(db, 'chats', chatId, 'messages', message.id), {
@@ -97,7 +98,8 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
     const deltaX = touchStartX.current - e.touches[0].clientX;
     const deltaY = Math.abs(touchStartY.current - e.touches[0].clientY);
     
-    if (deltaX > 20 && deltaY < 30) {
+    // Свайп влево для ответа
+    if (deltaX > 10 && deltaY < 40) {
       isSwiping.current = true;
       const offset = Math.min(deltaX, 80);
       setSwipeOffset(offset);
@@ -247,11 +249,15 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
       onTouchMove={onTouchMove}
       onTouchEnd={onTouchEnd}
     >
+      {/* Swipe Reply Hint */}
       <div 
-        className="absolute right-[-80px] top-1/2 -translate-y-1/2 flex items-center justify-center transition-opacity"
-        style={{ opacity: swipeOffset / 80 }}
+        className="absolute right-[-80px] top-1/2 -translate-y-1/2 flex items-center justify-center transition-all duration-300"
+        style={{ 
+          opacity: swipeOffset / 80,
+          transform: `scale(${0.5 + (swipeOffset / 80) * 0.5})`
+        }}
       >
-        <div className="h-12 w-12 rounded-full bg-primary/20 flex items-center justify-center text-primary border border-primary/20 shadow-lg">
+        <div className="h-12 w-12 rounded-full bg-primary/20 flex items-center justify-center text-primary border border-primary/20 shadow-[0_0_20px_rgba(168,85,247,0.4)]">
           <CornerUpLeft className="w-6 h-6" />
         </div>
       </div>
