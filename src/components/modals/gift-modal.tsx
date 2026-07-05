@@ -6,7 +6,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from '@/components/ui/button';
 import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { doc, collection, writeBatch, increment, addDoc } from 'firebase/firestore';
-import { Gift, Sparkles, Loader2, Wallet, Zap, ChevronRight } from 'lucide-react';
+import { Gift, Sparkles, Loader2, Wallet, Zap, ChevronRight, Gem } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import type { User } from '@/lib/types';
 import { cn } from '@/lib/utils';
@@ -24,7 +24,10 @@ const PREDEFINED_GIFTS = [
   { id: 'saturn', name: 'Планета Nuxus', price: 3500, icon: '🪐' },
   { id: 'premium_orb', name: 'Сфера Nuxus Prime', price: 5000, icon: '🔮' },
   { id: 'trophy', name: 'Кубок Лидера', price: 10000, icon: '🏆' },
-  { id: 'crystal', name: 'Кристалл Времени', price: 20000, icon: '💎' },
+  { id: 'nft_genesis', name: 'Nuxus Genesis NFT', price: 50000, icon: '🖼️', isNft: true },
+  { id: 'nft_dragon', name: 'Quantum Dragon', price: 150000, icon: '🐉', isNft: true },
+  { id: 'nft_citadel', name: 'Galactic Citadel', price: 500000, icon: '🏰', isNft: true },
+  { id: 'nft_singularity', name: 'Omega Singularity', price: 1000000, icon: '🌑', isNft: true },
 ];
 
 export function GiftModal({ open, onOpenChange, targetUser, chatId }: { open: boolean, onOpenChange: (o: boolean) => void, targetUser: User | null, chatId?: string | null }) {
@@ -52,10 +55,8 @@ export function GiftModal({ open, onOpenChange, targetUser, chatId }: { open: bo
       const giftRef = doc(collection(db, 'users', targetUser.id, 'receivedGifts'));
       const txRef = doc(collection(db, 'users', user.uid, 'transactions'));
 
-      // 1. Списание баланса
       batch.update(senderRef, { balance: increment(-gift.price) });
 
-      // 2. Добавление подарка получателю
       batch.set(giftRef, {
         id: giftRef.id,
         senderId: user.uid,
@@ -64,10 +65,10 @@ export function GiftModal({ open, onOpenChange, targetUser, chatId }: { open: bo
         giftName: gift.name,
         giftIcon: gift.icon,
         price: gift.price,
+        isNft: !!(gift as any).isNft,
         receivedAt: new Date().toISOString()
       });
 
-      // 3. Запись транзакции
       batch.set(txRef, {
         id: txRef.id,
         userId: user.uid,
@@ -81,7 +82,6 @@ export function GiftModal({ open, onOpenChange, targetUser, chatId }: { open: bo
 
       await batch.commit();
 
-      // 4. Отправка сервисного сообщения в чат (если есть chatId)
       if (chatId) {
         await addDoc(collection(db, 'chats', chatId, 'messages'), {
           chatId,
@@ -94,7 +94,8 @@ export function GiftModal({ open, onOpenChange, targetUser, chatId }: { open: bo
           metadata: {
             giftId: gift.id,
             giftIcon: gift.icon,
-            giftName: gift.name
+            giftName: gift.name,
+            isNft: !!(gift as any).isNft
           }
         });
       }
@@ -144,13 +145,26 @@ export function GiftModal({ open, onOpenChange, targetUser, chatId }: { open: bo
                     key={gift.id}
                     onClick={() => handleSendGift(gift)}
                     disabled={isSending}
-                    className="flex flex-col items-center gap-3 p-4 min-w-[140px] bg-white/5 rounded-3xl border border-white/5 hover:bg-primary/10 hover:border-primary/30 transition-all group shrink-0"
+                    className={cn(
+                      "flex flex-col items-center gap-3 p-4 min-w-[140px] bg-white/5 rounded-3xl border border-white/5 hover:bg-primary/10 hover:border-primary/30 transition-all group shrink-0",
+                      (gift as any).isNft && "border-accent/40 bg-accent/5 hover:bg-accent/10"
+                    )}
                   >
-                    <div className="text-5xl group-hover:scale-125 transition-transform duration-500 drop-shadow-2xl">{gift.icon}</div>
+                    <div className="relative">
+                      <div className="text-5xl group-hover:scale-125 transition-transform duration-500 drop-shadow-2xl">{gift.icon}</div>
+                      {(gift as any).isNft && (
+                        <div className="absolute -top-2 -right-2 bg-accent text-black p-1 rounded-lg">
+                          <Gem className="w-3 h-3" />
+                        </div>
+                      )}
+                    </div>
                     <div className="text-center">
                       <p className="text-[11px] font-bold text-white truncate w-24">{gift.name}</p>
-                      <div className="mt-2 bg-primary/20 px-2 py-1 rounded-lg border border-primary/20">
-                        <span className="text-[10px] font-black text-primary">{gift.price} NX</span>
+                      <div className={cn(
+                        "mt-2 px-2 py-1 rounded-lg border",
+                        (gift as any).isNft ? "bg-accent/20 border-accent/20" : "bg-primary/20 border-primary/20"
+                      )}>
+                        <span className={cn("text-[10px] font-black", (gift as any).isNft ? "text-accent" : "text-primary")}>{gift.price} NX</span>
                       </div>
                     </div>
                   </button>
