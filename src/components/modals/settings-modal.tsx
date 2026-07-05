@@ -12,7 +12,7 @@ import { useAuth, useUser, useFirestore, useDoc, useMemoFirebase } from '@/fireb
 import { UserAvatar } from '@/components/user-avatar';
 import { 
   LogOut, Settings2, Camera, Lock, Fingerprint, Star, Zap, ShieldCheck, Loader2, Database, Download, Check, Palette, 
-  Monitor, MessageSquare, Paintbrush, Smile, Bell, Ghost, ImageIcon, Calendar, CheckCircle2, Layout, AppWindow
+  Monitor, MessageSquare, Paintbrush, Smile, Bell, Ghost, ImageIcon, Calendar, CheckCircle2, Layout, AppWindow, FileText
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { signOut } from 'firebase/auth';
@@ -26,7 +26,7 @@ import { format } from 'date-fns';
 import { ru } from 'date-fns/locale';
 
 /**
- * SettingsModal V27.0.0: Elite Icons & Styles.
+ * SettingsModal V27.0.2: Fixed handleBgUpload ReferenceError.
  */
 export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const auth = useAuth();
@@ -89,6 +89,14 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
       });
     }
   }, [profile, open]);
+
+  const handleBgUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onloadend = () => setForm({ ...form, chatBackground: reader.result as string });
+    reader.readAsDataURL(file);
+  };
 
   const handleSave = async () => {
     if (!db || !user || !profile) return;

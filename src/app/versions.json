@@ -1,13 +1,13 @@
 {
-  "latestVersion": "27.0.1",
+  "latestVersion": "27.0.2",
   "qesVersion": "27.0",
-  "build": "AI-Core-Rebuild-V1",
+  "build": "AI-Core-Rebuild-V1-Fix",
   "sizeMb": 105,
   "changelog": [
+    "Hotfix: Исправлена ошибка handleBgUpload в настройках",
     "AI: Полная переработка логики Voice-to-Text для Premium узлов",
     "AI: Исправлена стабильность Студии Кино и генерации изображений",
     "iOS: Улучшен визуальный отклик при свайпе для быстрого ответа",
-    "Core: Оптимизация обработки аудио-сигналов на iPhone",
-    "Premium: Стабильная работа AI Transcription на Gemini 1.5 Flash"
+    "Core: Оптимизация обработки аудио-сигналов на iPhone"
   ]
 }
