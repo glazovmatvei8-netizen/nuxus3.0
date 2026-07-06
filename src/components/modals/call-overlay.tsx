@@ -17,8 +17,7 @@ import { useToast } from '@/hooks/use-toast';
 import type { Call, User as UserType } from '@/lib/types';
 
 /**
- * CALL OVERLAY V28.4.0: Elite Visionary UI
- * Исправлены медиа-потоки и полностью обновлен дизайн.
+ * CALL OVERLAY V28.4.3: Hybrid Camera Switching (True Flip) & No Mirroring.
  */
 export function CallOverlay() {
   const { user } = useUser();
@@ -29,11 +28,11 @@ export function CallOverlay() {
   const [callData, setCallData] = useState<Call | null>(null);
   const [isMuted, setIsMuted] = useState(false);
   const [isVideoOff, setIsVideoOff] = useState(false);
+  const [camMode, setCamMode] = useState<'user' | 'environment'>('user');
   const [callDuration, setCallDuration] = useState(0);
   const [localStream, setLocalStream] = useState<MediaStream | null>(null);
   
   const localVideoRef = useRef<HTMLVideoElement | null>(null);
-  const remoteVideoRef = useRef<HTMLVideoElement | null>(null);
 
   useEffect(() => {
     if (!db || !activeCallId) {
@@ -47,7 +46,7 @@ export function CallOverlay() {
         const data = { id: snap.id, ...snap.data() } as Call;
         setCallData(data);
         if (data.status === 'active' || data.status === 'calling') {
-          initLocalMedia(data.type === 'video');
+          initLocalMedia(data.type === 'video', camMode);
         }
       } else {
         setActiveCallId(null);
@@ -61,15 +60,21 @@ export function CallOverlay() {
     };
   }, [db, activeCallId, setActiveCallId]);
 
-  const initLocalMedia = async (withVideo: boolean) => {
-    if (localStream) return;
+  const initLocalMedia = async (withVideo: boolean, mode: 'user' | 'environment') => {
     try {
+      // Очищаем старый поток перед переключением
+      if (localStream) {
+        localStream.getTracks().forEach(t => t.stop());
+      }
+      
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: true,
-        video: withVideo ? { facingMode: 'user', width: 720, height: 1280 } : false
+        video: withVideo ? { facingMode: mode, width: 720, height: 1280 } : false
       });
       setLocalStream(stream);
-      if (localVideoRef.current) localVideoRef.current.srcObject = stream;
+      if (localVideoRef.current) {
+        localVideoRef.current.srcObject = stream;
+      }
     } catch (e) {
       console.warn("Nuxus Call: Media access denied", e);
       toast({ title: "Ошибка доступа", description: "Разрешите камеру и микрофон", variant: "destructive" });
@@ -81,6 +86,15 @@ export function CallOverlay() {
       localStream.getTracks().forEach(t => t.stop());
       setLocalStream(null);
     }
+  };
+
+  const handleFlipCamera = () => {
+    const newMode = camMode === 'user' ? 'environment' : 'user';
+    setCamMode(newMode);
+    if (callData?.type === 'video') {
+      initLocalMedia(true, newMode);
+    }
+    if (window.navigator && window.navigator.vibrate) window.navigator.vibrate(25);
   };
 
   useEffect(() => {
@@ -139,7 +153,7 @@ export function CallOverlay() {
       if (videoTrack) videoTrack.enabled = isVideoOff;
       setIsVideoOff(!isVideoOff);
     } else if (isVideoOff) {
-      initLocalMedia(true);
+      initLocalMedia(true, camMode);
       setIsVideoOff(false);
     }
   };
@@ -173,7 +187,7 @@ export function CallOverlay() {
              autoPlay 
              muted 
              playsInline 
-             className="w-full h-full object-cover opacity-40 blur-[2px] scale-x-[-1]" 
+             className="w-full h-full object-cover opacity-40 blur-[2px]" 
            />
         ) : (
           <div className="w-full h-full bg-[radial-gradient(circle_at_50%_50%,rgba(168,85,247,0.1)_0%,transparent_70%)]" />
@@ -231,8 +245,14 @@ export function CallOverlay() {
                autoPlay 
                muted 
                playsInline 
-               className="w-full h-full object-cover scale-x-[-1]" 
+               className="w-full h-full object-cover" 
              />
+             <button 
+               onClick={handleFlipCamera}
+               className="absolute bottom-3 right-3 bg-white/10 backdrop-blur-md p-2 rounded-lg border border-white/10"
+             >
+               <RefreshCcw className="w-4 h-4 text-white" />
+             </button>
           </div>
         )}
 

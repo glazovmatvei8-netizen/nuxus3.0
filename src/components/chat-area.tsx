@@ -22,7 +22,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { useToast } from '@/hooks/use-toast';
 
 /**
- * ChatInputBar V28.4.0: Fixed Video Notes & Refined Controls.
+ * ChatInputBar V28.4.3: Hybrid Camera Switching & No Mirroring.
  */
 const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, isPremium, replyTo, onCancelReply }: any) => {
   const { localDrafts, setLocalDrafts } = useAppState();
@@ -46,12 +46,39 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
     setMessageInput(localDrafts[currentChatId] || '');
   }, [currentChatId, localDrafts]);
 
-  // Спец-эффект прикрепления потока к превью
+  // Смена камеры в реальном времени при записи
+  const switchCamera = async () => {
+    const newMode = camMode === 'user' ? 'environment' : 'user';
+    setCamMode(newMode);
+    
+    if (isRecording && recorderMode === 'video') {
+      try {
+        // Останавливаем текущие видеотреки
+        streamRef.current?.getVideoTracks().forEach(track => track.stop());
+        
+        const newStream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: newMode, width: { ideal: 480 }, height: { ideal: 480 }, aspectRatio: 1 }
+        });
+        
+        const newVideoTrack = newStream.getVideoTracks()[0];
+        streamRef.current?.addTrack(newVideoTrack);
+        
+        if (videoPreviewRef.current) {
+          videoPreviewRef.current.srcObject = streamRef.current || null;
+        }
+        
+        if (window.navigator && window.navigator.vibrate) window.navigator.vibrate(20);
+      } catch (e) {
+        console.error("Camera switch error:", e);
+      }
+    }
+  };
+
   useEffect(() => {
     if (isRecording && recorderMode === 'video' && videoPreviewRef.current && streamRef.current) {
       videoPreviewRef.current.srcObject = streamRef.current;
     }
-  }, [isRecording, recorderMode, camMode]);
+  }, [isRecording, recorderMode]);
 
   useEffect(() => {
     const textarea = textareaRef.current;
@@ -159,10 +186,10 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
             autoPlay 
             muted 
             playsInline 
-            className={cn("w-full h-full object-cover", camMode === 'user' && "scale-x-[-1]")} 
+            className="w-full h-full object-cover" 
           />
           <button 
-            onClick={() => setCamMode(p => p === 'user' ? 'environment' : 'user')} 
+            onClick={switchCamera} 
             className="absolute bottom-6 left-1/2 -translate-x-1/2 bg-white/20 backdrop-blur-md p-3 rounded-full border border-white/10 active:scale-90 transition-transform"
           >
             <RefreshCcw className="w-6 h-6 text-white" />

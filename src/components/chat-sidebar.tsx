@@ -129,33 +129,35 @@ const ChatListItem = memo(({
 
   return (
     <div className="relative overflow-hidden touch-pan-y select-none px-4 py-1.5 max-w-full virtual-list-item">
-      <div className={cn("absolute inset-y-1.5 left-4 flex h-[calc(100%-12px)] z-0 transition-opacity duration-300 rounded-[2.2rem] overflow-hidden shadow-2xl", offsetX > 20 ? "opacity-100" : "opacity-0 pointer-events-none")}>
-        <button onClick={(e) => { e.stopPropagation(); onMarkUnread(chat.id); resetSwipe(); }} className="w-[70px] bg-blue-500/80 backdrop-blur-3xl flex flex-col items-center justify-center text-white gap-1.5 active:brightness-125 transition-all">
+      {/* Buttons Behind (Improved z-index and opacity) */}
+      <div className={cn("absolute inset-y-1.5 left-4 flex h-[calc(100%-12px)] z-0 transition-opacity duration-300 rounded-[2.2rem] overflow-hidden", offsetX > 20 ? "opacity-100" : "opacity-0 pointer-events-none")}>
+        <button onClick={(e) => { e.stopPropagation(); onMarkUnread(chat.id); resetSwipe(); }} className="w-[70px] bg-blue-600 flex flex-col items-center justify-center text-white gap-1.5 active:brightness-125 transition-all">
           <MessageCircle className="w-5 h-5" />
           <span className="text-[7px] font-black uppercase tracking-widest">ИНФО</span>
         </button>
-        <button onClick={(e) => { e.stopPropagation(); onPinToggle(chat.id); resetSwipe(); }} className="w-[70px] bg-green-500/80 backdrop-blur-3xl flex flex-col items-center justify-center text-white gap-1.5 active:brightness-125 transition-all border-l border-white/5">
+        <button onClick={(e) => { e.stopPropagation(); onPinToggle(chat.id); resetSwipe(); }} className="w-[70px] bg-green-600 flex flex-col items-center justify-center text-white gap-1.5 active:brightness-125 transition-all border-l border-white/10">
           <Pin className="w-5 h-5" />
           <span className="text-[7px] font-black uppercase tracking-widest">{isPinned ? 'ОТКР' : 'ЗАКР'}</span>
         </button>
       </div>
 
-      <div className={cn("absolute inset-y-1.5 right-4 flex h-[calc(100%-12px)] z-0 transition-opacity duration-300 rounded-[2.2rem] overflow-hidden shadow-2xl", offsetX < -20 ? "opacity-100" : "opacity-0 pointer-events-none")}>
-        <button onClick={(e) => { e.stopPropagation(); onArchive(chat.id, !!chat.isArchived); resetSwipe(); }} className="w-[70px] bg-orange-500/80 backdrop-blur-3xl flex flex-col items-center justify-center text-white gap-1.5 active:brightness-125 transition-all border-r border-white/5">
+      <div className={cn("absolute inset-y-1.5 right-4 flex h-[calc(100%-12px)] z-0 transition-opacity duration-300 rounded-[2.2rem] overflow-hidden", offsetX < -20 ? "opacity-100" : "opacity-0 pointer-events-none")}>
+        <button onClick={(e) => { e.stopPropagation(); onArchive(chat.id, !!chat.isArchived); resetSwipe(); }} className="w-[70px] bg-orange-600 flex flex-col items-center justify-center text-white gap-1.5 active:brightness-125 transition-all border-r border-white/10">
           <Archive className="w-5 h-5" />
           <span className="text-[7px] font-black uppercase tracking-widest">АРХИВ</span>
         </button>
-        <button onClick={(e) => { e.stopPropagation(); onDelete(chat.id); resetSwipe(); }} className="w-[70px] bg-red-600/80 backdrop-blur-3xl flex flex-col items-center justify-center text-white gap-1.5 active:brightness-125 transition-all">
+        <button onClick={(e) => { e.stopPropagation(); onDelete(chat.id); resetSwipe(); }} className="w-[70px] bg-red-700 flex flex-col items-center justify-center text-white gap-1.5 active:brightness-125 transition-all">
           <Trash2 className="w-5 h-5" />
           <span className="text-[7px] font-black uppercase tracking-widest">УДАЛИТЬ</span>
         </button>
       </div>
 
+      {/* Main Container (Increased Opacity to prevent see-through) */}
       <div 
         className={cn(
-          "relative z-10 obsidian-glass will-change-transform w-full select-none rounded-[2.2rem] transition-all", 
+          "relative z-10 obsidian-glass will-change-transform w-full select-none rounded-[2.2rem] transition-all bg-[#0a0a0c] border border-white/5", 
           !isDragging && "duration-700 cubic-bezier(0.16, 1, 0.3, 1)",
-          isActive && Math.abs(offsetX) < 10 ? "border-primary/40 bg-primary/10" : "hover:bg-white/[0.04]"
+          isActive && Math.abs(offsetX) < 10 ? "border-primary/40 bg-primary/10 shadow-[0_0_30px_rgba(168,85,247,0.1)]" : "hover:bg-white/[0.04]"
         )}
         style={{ transform: `translateX(${offsetX}px)` }}
         onTouchStart={handleTouchStart}
@@ -380,7 +382,6 @@ export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?:
             <div className="animate-in fade-in slide-in-from-top-4 duration-700 px-1">
               <StoriesBar />
               
-              {/* SAVED MESSAGES SHORTCUT */}
               <div className="px-5 pt-6">
                 <button 
                   onClick={handleOpenSaved}

@@ -31,7 +31,7 @@ import { transcribeVoice } from '@/ai/flows/voice-to-text-flow';
 const QUICK_REACTIONS = ['👍', '❤️', '🔥', '😂', '😮', '😢', '👏'];
 
 /**
- * MessageItem V28.0.0: Voice Transcription and Self-Destruct.
+ * MessageItem V28.4.3: Interactive Video Notes (Telegram Style).
  */
 export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForward, isAdmin = false, isGroup = false, onEdit, highlight = false, viewerProfile }: any) => {
   const { user } = useUser();
@@ -45,6 +45,7 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
   const [isTranscribing, setIsTranscribing] = useState(false);
   const [transcription, setTranscription] = useState<string | null>(message.metadata?.transcription || null);
   
+  const [isNoteExpanded, setIsNoteExpanded] = useState(false);
   const [swipeOffset, setSwipeOffset] = useState(0);
   const touchStartX = useRef(0);
   const touchStartY = useRef(0);
@@ -59,7 +60,6 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
   const formattedTime = message.sentAt ? format(new Date(message.sentAt), 'HH:mm') : '';
   const isPremium = useMemo(() => isUserPremium(viewerProfile), [viewerProfile]);
 
-  // Самоуничтожение (если установлено)
   useEffect(() => {
     if (message.selfDestructAt && db && chatId) {
       const expiry = parseISO(message.selfDestructAt);
@@ -91,15 +91,6 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
     } finally {
       setIsTranscribing(false);
     }
-  };
-
-  const handleSetSelfDestruct = async (seconds: number) => {
-    if (!db || !chatId) return;
-    const expiry = new Date(Date.now() + seconds * 1000).toISOString();
-    await updateDoc(doc(db, 'chats', chatId, 'messages', message.id), {
-      selfDestructAt: expiry
-    });
-    toast({ title: `Таймер установлен на ${seconds}с` });
   };
 
   const handleReaction = async (emoji: string) => {
@@ -170,8 +161,22 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
       );
     }
     if (message.contentType === 'video_note') return (
-      <div className="w-64 h-64 rounded-full overflow-hidden border-4 border-white/20 shadow-2xl bg-black">
-        <video src={message.content} autoPlay muted loop playsInline className="w-full h-full object-cover rounded-full" />
+      <div 
+        onClick={() => setIsNoteExpanded(!isNoteExpanded)}
+        className={cn(
+          "rounded-full overflow-hidden border-4 border-white/20 shadow-2xl bg-black transition-all duration-500 cursor-pointer relative",
+          isNoteExpanded ? "w-[300px] h-[300px] sm:w-[340px] sm:h-[340px]" : "w-44 h-44"
+        )}
+      >
+        <video 
+          src={message.content} 
+          autoPlay 
+          muted={!isNoteExpanded} 
+          loop 
+          playsInline 
+          className="w-full h-full object-cover" 
+        />
+        {!isNoteExpanded && <div className="absolute inset-0 flex items-center justify-center bg-black/20 group-hover:bg-transparent transition-all"><Volume2 className="w-5 h-5 text-white/60 opacity-0 group-hover:opacity-100" /></div>}
       </div>
     );
     if (message.contentType === 'image') return (
