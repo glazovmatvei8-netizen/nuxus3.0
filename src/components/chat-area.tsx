@@ -22,7 +22,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { useToast } from '@/hooks/use-toast';
 
 /**
- * ChatInputBar V28.1.0: Pure Communication.
+ * ChatInputBar V28.4.0: Fixed Video Notes & Refined Controls.
  */
 const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, isPremium, replyTo, onCancelReply }: any) => {
   const { localDrafts, setLocalDrafts } = useAppState();
@@ -45,6 +45,13 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
   useEffect(() => {
     setMessageInput(localDrafts[currentChatId] || '');
   }, [currentChatId, localDrafts]);
+
+  // Спец-эффект прикрепления потока к превью
+  useEffect(() => {
+    if (isRecording && recorderMode === 'video' && videoPreviewRef.current && streamRef.current) {
+      videoPreviewRef.current.srcObject = streamRef.current;
+    }
+  }, [isRecording, recorderMode, camMode]);
 
   useEffect(() => {
     const textarea = textareaRef.current;
@@ -71,19 +78,35 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
   const startRecording = async () => {
     try {
       if (streamRef.current) streamRef.current.getTracks().forEach(t => t.stop());
+      
       const constraints = {
         audio: true,
-        video: recorderMode === 'video' ? { facingMode: camMode, width: 480, height: 480 } : false
+        video: recorderMode === 'video' ? { 
+          facingMode: camMode, 
+          width: { ideal: 480 }, 
+          height: { ideal: 480 },
+          aspectRatio: 1
+        } : false
       };
+
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
       streamRef.current = stream;
-      if (recorderMode === 'video' && videoPreviewRef.current) videoPreviewRef.current.srcObject = stream;
-      const recorder = new MediaRecorder(stream);
+      
+      const recorder = new MediaRecorder(stream, {
+        mimeType: recorderMode === 'video' ? 'video/webm;codecs=vp8,opus' : 'audio/webm'
+      });
+      
       mediaRecorderRef.current = recorder;
       chunksRef.current = [];
-      recorder.ondataavailable = (e) => { if (e.data.size > 0) chunksRef.current.push(e.data); };
+
+      recorder.ondataavailable = (e) => { 
+        if (e.data.size > 0) chunksRef.current.push(e.data); 
+      };
+
       recorder.onstop = async () => {
-        const blob = new Blob(chunksRef.current, { type: recorderMode === 'video' ? 'video_note' : 'audio', lastModified: Date.now() });
+        const blob = new Blob(chunksRef.current, { 
+          type: recorderMode === 'video' ? 'video/webm' : 'audio/webm' 
+        });
         const reader = new FileReader();
         reader.onloadend = () => {
           onSendMessage(reader.result as string, recorderMode === 'video' ? 'video_note' : 'audio', null);
@@ -91,12 +114,16 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
         reader.readAsDataURL(blob);
         stream.getTracks().forEach(track => track.stop());
       };
+
       recorder.start();
       setIsRecording(true);
       setRecordingDuration(0);
       timerIntervalRef.current = setInterval(() => setRecordingDuration(prev => prev + 1), 1000);
+      
       if (window.navigator && window.navigator.vibrate) window.navigator.vibrate(50);
-    } catch (err) {}
+    } catch (err) {
+      console.error("Recording error:", err);
+    }
   };
 
   const stopRecording = () => {
@@ -127,8 +154,19 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
 
       {isRecording && recorderMode === 'video' && (
         <div className="absolute bottom-32 left-1/2 -translate-x-1/2 w-64 h-64 rounded-full overflow-hidden border-4 border-primary shadow-[0_0_60px_rgba(168,85,247,0.6)] z-50 bg-black animate-in zoom-in duration-500">
-          <video ref={videoPreviewRef} autoPlay muted loop playsInline className={cn("w-full h-full object-cover", camMode === 'user' && "scale-x-[-1]")} />
-          <button onClick={() => setCamMode(p => p === 'user' ? 'environment' : 'user')} className="absolute bottom-6 left-1/2 -translate-x-1/2 bg-white/20 backdrop-blur-md p-3 rounded-full border border-white/10"><RefreshCcw className="w-6 h-6 text-white" /></button>
+          <video 
+            ref={videoPreviewRef} 
+            autoPlay 
+            muted 
+            playsInline 
+            className={cn("w-full h-full object-cover", camMode === 'user' && "scale-x-[-1]")} 
+          />
+          <button 
+            onClick={() => setCamMode(p => p === 'user' ? 'environment' : 'user')} 
+            className="absolute bottom-6 left-1/2 -translate-x-1/2 bg-white/20 backdrop-blur-md p-3 rounded-full border border-white/10 active:scale-90 transition-transform"
+          >
+            <RefreshCcw className="w-6 h-6 text-white" />
+          </button>
         </div>
       )}
 

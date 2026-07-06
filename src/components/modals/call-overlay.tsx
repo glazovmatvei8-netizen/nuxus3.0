@@ -3,23 +3,22 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
-import { doc, collection, addDoc, onSnapshot } from 'firebase/firestore';
+import { doc, onSnapshot } from 'firebase/firestore';
 import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { useAppState } from '@/lib/store';
 import { Button } from '@/components/ui/button';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
   PhoneOff, Mic, MicOff, Video, VideoOff, 
-  UserPlus, Play, Phone, X, Loader2, ShieldCheck, Zap
+  Phone, X, Loader2, ShieldCheck, Zap, Maximize2, Minimize2, RefreshCcw
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import type { Call, User as UserType } from '@/lib/types';
-import { differenceInSeconds, parseISO } from 'date-fns';
 
 /**
- * CALL OVERLAY V28.1.0: Functional Signals
- * Исправлена логика входящих вызовов и управления сессией.
+ * CALL OVERLAY V28.4.0: Elite Visionary UI
+ * Исправлены медиа-потоки и полностью обновлен дизайн.
  */
 export function CallOverlay() {
   const { user } = useUser();
@@ -31,30 +30,63 @@ export function CallOverlay() {
   const [isMuted, setIsMuted] = useState(false);
   const [isVideoOff, setIsVideoOff] = useState(false);
   const [callDuration, setCallDuration] = useState(0);
+  const [localStream, setLocalStream] = useState<MediaStream | null>(null);
   
+  const localVideoRef = useRef<HTMLVideoElement | null>(null);
+  const remoteVideoRef = useRef<HTMLVideoElement | null>(null);
+
   useEffect(() => {
     if (!db || !activeCallId) {
       setCallData(null);
+      stopLocalStream();
       return;
     }
 
     const unsubscribe = onSnapshot(doc(db, 'calls', activeCallId), (snap) => {
       if (snap.exists()) {
-        setCallData({ id: snap.id, ...snap.data() } as Call);
+        const data = { id: snap.id, ...snap.data() } as Call;
+        setCallData(data);
+        if (data.status === 'active' || data.status === 'calling') {
+          initLocalMedia(data.type === 'video');
+        }
       } else {
         setActiveCallId(null);
+        stopLocalStream();
       }
     });
 
-    return () => unsubscribe();
+    return () => {
+      unsubscribe();
+      stopLocalStream();
+    };
   }, [db, activeCallId, setActiveCallId]);
+
+  const initLocalMedia = async (withVideo: boolean) => {
+    if (localStream) return;
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: true,
+        video: withVideo ? { facingMode: 'user', width: 720, height: 1280 } : false
+      });
+      setLocalStream(stream);
+      if (localVideoRef.current) localVideoRef.current.srcObject = stream;
+    } catch (e) {
+      console.warn("Nuxus Call: Media access denied", e);
+      toast({ title: "Ошибка доступа", description: "Разрешите камеру и микрофон", variant: "destructive" });
+    }
+  };
+
+  const stopLocalStream = () => {
+    if (localStream) {
+      localStream.getTracks().forEach(t => t.stop());
+      setLocalStream(null);
+    }
+  };
 
   useEffect(() => {
     let interval: NodeJS.Timeout;
     if (callData?.status === 'active') {
-      interval = setInterval(() => {
-        setCallDuration(prev => prev + 1);
-      }, 1000);
+      interval = setInterval(() => setCallDuration(prev => prev + 1), 1000);
     }
     return () => clearInterval(interval);
   }, [callData?.status]);
@@ -93,11 +125,31 @@ export function CallOverlay() {
     setActiveCallId(null);
   };
 
+  const toggleMute = () => {
+    if (localStream) {
+      const audioTrack = localStream.getAudioTracks()[0];
+      if (audioTrack) audioTrack.enabled = isMuted;
+      setIsMuted(!isMuted);
+    }
+  };
+
+  const toggleVideo = () => {
+    if (localStream) {
+      const videoTrack = localStream.getVideoTracks()[0];
+      if (videoTrack) videoTrack.enabled = isVideoOff;
+      setIsVideoOff(!isVideoOff);
+    } else if (isVideoOff) {
+      initLocalMedia(true);
+      setIsVideoOff(false);
+    }
+  };
+
   useEffect(() => {
     if (callData?.status === 'ended' || callData?.status === 'rejected' || callData?.status === 'missed') {
       const timer = setTimeout(() => {
         setActiveCallId(null);
         setCallDuration(0);
+        stopLocalStream();
       }, 2000);
       return () => clearTimeout(timer);
     }
@@ -112,72 +164,134 @@ export function CallOverlay() {
   if (!activeCallId || !callData) return null;
 
   return (
-    <div className="fixed inset-0 z-[2000] flex flex-col items-center justify-center bg-[#050505]/95 backdrop-blur-3xl animate-in fade-in zoom-in duration-500">
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(168,85,247,0.15)_0%,transparent_70%)] animate-pulse" />
+    <div className="fixed inset-0 z-[5000] flex flex-col bg-[#020205] overflow-hidden animate-in fade-in duration-700">
+      {/* Background Video Layer */}
+      <div className="absolute inset-0 z-0">
+        {!isVideoOff && isActive && localStream ? (
+           <video 
+             ref={localVideoRef} 
+             autoPlay 
+             muted 
+             playsInline 
+             className="w-full h-full object-cover opacity-40 blur-[2px] scale-x-[-1]" 
+           />
+        ) : (
+          <div className="w-full h-full bg-[radial-gradient(circle_at_50%_50%,rgba(168,85,247,0.1)_0%,transparent_70%)]" />
+        )}
+        <div className="absolute inset-0 bg-black/60" />
+      </div>
       
-      <div className="relative z-10 flex flex-col items-center gap-10 w-full max-w-lg px-8">
-        <div className="relative group">
-          <div className="absolute -inset-8 bg-primary/20 blur-[80px] rounded-full opacity-40 animate-pulse" />
-          <UserAvatar 
-            userId={otherId} 
-            className={cn("h-32 w-32 border-4 border-white/5 shadow-2xl relative transition-all duration-1000", isActive && "h-24 w-24 scale-90")}
-            manualAvatarUrl={otherUser?.avatarUrl}
-            fallbackName={otherUser?.name}
-          />
-          {(isIncoming || isOutgoing) && (
-            <div className="absolute -inset-2 border-2 border-primary rounded-full animate-ping opacity-30" />
-          )}
+      {/* Content Container */}
+      <div className="relative z-10 flex-1 flex flex-col items-center justify-between py-20 px-8">
+        
+        {/* Header Stats */}
+        <div className="flex flex-col items-center gap-4 animate-in slide-in-from-top-4 duration-1000">
+           <div className="bg-white/5 backdrop-blur-xl border border-white/10 px-6 py-2 rounded-full flex items-center gap-3 shadow-2xl">
+             <div className={cn("w-1.5 h-1.5 rounded-full bg-primary", isActive && "animate-pulse")} />
+             <span className="text-[11px] font-black text-white uppercase tracking-[0.3em] tabular-nums">
+               {isActive ? formatTime(callDuration) : (isIncoming ? 'Входящий сигнал' : 'Соединение')}
+             </span>
+           </div>
+           <ShieldCheck className="w-4 h-4 text-primary/40" />
         </div>
 
-        <div className="text-center space-y-3">
-          <h2 className="text-3xl font-black text-white uppercase italic tracking-tighter">
-            {otherUser?.name || 'ИНИЦИАЛИЗАЦИЯ...'}
-          </h2>
-          <div className="flex flex-col items-center gap-1">
-             {isActive ? (
-               <div className="flex items-center gap-2 bg-primary/20 px-4 py-1 rounded-full border border-primary/30">
-                 <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
-                 <span className="text-[12px] font-black text-white tabular-nums tracking-widest">{formatTime(callDuration)}</span>
-               </div>
-             ) : (
-               <p className="text-[10px] font-black uppercase tracking-[0.5em] text-primary/60 animate-pulse">
-                 {isIncoming ? 'ВХОДЯЩИЙ СИГНАЛ' : isOutgoing ? 'УСТАНОВКА СВЯЗИ...' : 'СИГНАЛ ПОТЕРЯН'}
-               </p>
-             )}
+        {/* Main Identity */}
+        <div className="flex flex-col items-center gap-12 w-full max-w-sm">
+          <div className="relative">
+            <div className="absolute -inset-16 bg-primary/20 blur-[100px] rounded-full animate-pulse" />
+            <UserAvatar 
+              userId={otherId} 
+              className={cn(
+                "h-40 w-40 border-[6px] border-white/5 shadow-[0_30px_80px_rgba(0,0,0,0.8)] relative transition-all duration-1000",
+                isActive ? "scale-90 opacity-60" : "scale-100"
+              )}
+              manualAvatarUrl={otherUser?.avatarUrl}
+              fallbackName={otherUser?.name}
+            />
+            {(isIncoming || isOutgoing) && (
+              <div className="absolute -inset-4 border-2 border-primary rounded-full animate-ping opacity-20" />
+            )}
+          </div>
+
+          <div className="text-center space-y-2">
+            <h2 className="text-4xl font-black text-white uppercase italic tracking-tighter drop-shadow-2xl">
+              {otherUser?.name || 'SYNC...'}
+            </h2>
+            <p className="text-[10px] font-black uppercase tracking-[0.5em] text-primary/60">
+              {otherUser?.username || '@node'}
+            </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-6 pt-10">
+        {/* Floating Local Mini-Video */}
+        {isActive && !isVideoOff && (
+          <div className="absolute right-6 top-32 w-28 h-48 rounded-2xl overflow-hidden border-2 border-white/20 shadow-2xl z-20 bg-black animate-in zoom-in duration-500">
+             <video 
+               ref={localVideoRef} 
+               autoPlay 
+               muted 
+               playsInline 
+               className="w-full h-full object-cover scale-x-[-1]" 
+             />
+          </div>
+        )}
+
+        {/* Control Panel */}
+        <div className="w-full max-w-md bg-white/[0.03] backdrop-blur-3xl border border-white/10 rounded-[3.5rem] p-6 shadow-[0_20px_60px_rgba(0,0,0,0.5)] flex items-center justify-between gap-4 animate-in slide-in-from-bottom-8 duration-700">
           {isIncoming ? (
-            <div className="flex gap-12">
-              <Button variant="destructive" size="lg" className="h-20 w-20 rounded-[2.5rem] shadow-2xl hover:scale-110 active:scale-90 transition-all border border-white/10" onClick={handleDecline}>
-                <PhoneOff className="w-8 h-8" />
+            <div className="flex w-full gap-4">
+              <Button 
+                variant="destructive" 
+                className="flex-1 h-16 rounded-[2.2rem] shadow-2xl hover:scale-105 active:scale-90 transition-all border border-white/10" 
+                onClick={handleDecline}
+              >
+                <PhoneOff className="w-7 h-7" />
               </Button>
-              <Button className="h-24 w-24 rounded-[3rem] bg-green-500 hover:bg-green-600 shadow-2xl hover:scale-110 active:scale-90 transition-all border border-white/10" onClick={handleAccept}>
-                <Phone className="w-10 h-10 fill-white" />
+              <Button 
+                className="flex-1 h-16 rounded-[2.2rem] bg-green-500 hover:bg-green-600 shadow-2xl hover:scale-105 active:scale-90 transition-all border border-white/10" 
+                onClick={handleAccept}
+              >
+                <Phone className="w-7 h-7 fill-white" />
               </Button>
             </div>
           ) : (
-            <div className="flex items-center gap-5">
-              <Button variant="ghost" size="icon" className={cn("h-14 w-14 rounded-2xl bg-white/5 border border-white/5", isMuted && "bg-red-500/20 text-red-500")} onClick={() => setIsMuted(!isMuted)}>
-                {isMuted ? <MicOff className="w-6 h-6" /> : <Mic className="w-6 h-6" />}
-              </Button>
-              
-              <Button variant="ghost" size="icon" className={cn("h-14 w-14 rounded-2xl bg-white/5 border border-white/5", isVideoOff && "bg-red-500/20 text-red-500")} onClick={() => setIsVideoOff(!isVideoOff)}>
-                {isVideoOff ? <VideoOff className="w-6 h-6" /> : <Video className="w-6 h-6" />}
-              </Button>
+            <>
+              <div className="flex gap-3">
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className={cn("h-16 w-16 rounded-[2rem] obsidian-glass border border-white/5", isMuted && "bg-red-500/20 text-red-500 border-red-500/40")} 
+                  onClick={toggleMute}
+                >
+                  {isMuted ? <MicOff className="w-6 h-6" /> : <Mic className="w-6 h-6" />}
+                </Button>
+                
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className={cn("h-16 w-16 rounded-[2rem] obsidian-glass border border-white/5", isVideoOff && "bg-red-500/20 text-red-500 border-red-500/40")} 
+                  onClick={toggleVideo}
+                >
+                  {isVideoOff ? <VideoOff className="w-6 h-6" /> : <Video className="w-6 h-6" />}
+                </Button>
+              </div>
 
-              <Button variant="destructive" size="lg" className="h-16 w-16 rounded-full shadow-2xl shadow-red-500/30 hover:scale-110 active:scale-90 transition-all border border-white/5" onClick={handleEndCall}>
-                <PhoneOff className="w-8 h-8" />
+              <Button 
+                variant="destructive" 
+                className="h-16 w-32 rounded-[2.2rem] shadow-2xl shadow-red-500/20 hover:scale-105 active:scale-90 transition-all border border-white/10" 
+                onClick={handleEndCall}
+              >
+                <PhoneOff className="w-7 h-7" />
               </Button>
-            </div>
+            </>
           )}
         </div>
+
       </div>
-      
-      <div className="absolute bottom-12 flex flex-col items-center gap-2 opacity-20">
-         <ShieldCheck className="w-4 h-4 text-primary" />
-         <span className="text-[8px] font-black uppercase tracking-widest text-white">Quantum Encryption Active</span>
+
+      {/* Footer Branding */}
+      <div className="absolute bottom-10 left-0 right-0 flex justify-center opacity-10 pointer-events-none">
+        <span className="text-[8px] font-black uppercase tracking-[1em] text-white">Nuxus Kernel V28.4</span>
       </div>
     </div>
   );
