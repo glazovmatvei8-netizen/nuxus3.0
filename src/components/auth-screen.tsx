@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, MessageSquare, Phone, ChevronRight, UserPlus, Lock, Eye, EyeOff, ShieldCheck } from 'lucide-react';
+import { Loader2, MessageSquare, Phone, ChevronRight, UserPlus, Lock, Eye, EyeOff, ShieldCheck, Info } from 'lucide-react';
 import { useAuth, useFirestore } from '@/firebase';
 import { 
   RecaptchaVerifier, 
@@ -23,8 +23,8 @@ import { NuxusLogo } from './nuxus-logo';
 export type AuthStep = 'phone' | 'verify' | 'cloud_password' | 'profile' | 'setup2fa';
 
 /**
- * AUTH SCREEN V32.5.0 «STABLE SIGNAL»
- * ОБНОВЛЕНО: Инструкции для тестовых номеров (обход Billing) и фикс слоев.
+ * AUTH SCREEN V32.5.1 «STABLE SIGNAL»
+ * ОБНОВЛЕНО: Подсказки для кодов тестовых номеров.
  */
 export default function AuthScreen({ initialMode }: { initialMode?: any }) {
   const auth = useAuth();
@@ -108,13 +108,13 @@ export default function AuthScreen({ initialMode }: { initialMode?: any }) {
       if (err.code === 'auth/billing-not-enabled') {
         toast({ 
           title: "Ограничение тарифа", 
-          description: "Для реальных СМС нужен тариф Blaze. Используйте 'Тестовые номера' из консоли Firebase.", 
+          description: "Используйте Тестовый номер и код из консоли Firebase.", 
           variant: "destructive" 
         });
       } else {
         toast({ 
           title: "Ошибка сети", 
-          description: "Сбой отправки сигнала. Проверьте номер или лимиты проекта.", 
+          description: "Сбой отправки сигнала. Проверьте номер.", 
           variant: "destructive" 
         });
       }
@@ -272,7 +272,7 @@ export default function AuthScreen({ initialMode }: { initialMode?: any }) {
               {step === 'phone' ? 'Вход в Ядро' : step === 'verify' ? 'Код доступа' : step === 'cloud_password' ? 'Мастер-пароль' : step === 'profile' ? 'Регистрация' : 'Защита'}
             </CardTitle>
             <CardDescription className="text-primary/60 font-black tracking-[0.5em] uppercase text-[8px] opacity-60 mt-3 ml-[0.5em]">
-              {isNewUser ? 'New Node Identity' : 'Quantum Protocol v32.5'}
+              {isNewUser ? 'New Node Identity' : 'Quantum Protocol v32.5.1'}
             </CardDescription>
           </CardHeader>
 
@@ -314,7 +314,12 @@ export default function AuthScreen({ initialMode }: { initialMode?: any }) {
                   <div className="bg-primary/10 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto border border-primary/20 shadow-lg">
                     <MessageSquare className="w-8 h-8 text-primary animate-pulse" />
                   </div>
-                  <p className="text-[9px] text-white/40 uppercase font-black tracking-[0.2em]">Введите код из сообщения</p>
+                  <div className="space-y-1">
+                    <p className="text-[9px] text-white/40 uppercase font-black tracking-[0.2em]">Введите код из сообщения</p>
+                    <div className="flex items-center justify-center gap-1 text-[7px] text-primary/40 uppercase font-bold tracking-tighter">
+                      <Info className="w-2.5 h-2.5" /> Для тестовых номеров используйте код из консоли
+                    </div>
+                  </div>
                 </div>
                 <Input 
                   placeholder="••••••" 
@@ -424,3 +429,4 @@ export default function AuthScreen({ initialMode }: { initialMode?: any }) {
     </div>
   );
 }
+

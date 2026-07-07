@@ -14,7 +14,7 @@ import { UserAvatar } from '@/components/user-avatar';
 import { 
   LogOut, Settings2, Camera, Lock, Fingerprint, Star, Zap, ShieldCheck, Loader2, Database, Download, Check, Palette, 
   Monitor, MessageSquare, Paintbrush, Smile, Bell, Ghost, ImageIcon, Calendar, CheckCircle2, Phone, Mail, 
-  ChevronRight, RefreshCcw, Eye, EyeOff, ShieldX, Plus, Laptop, Smartphone
+  ChevronRight, RefreshCcw, Eye, EyeOff, ShieldX, Plus, Laptop, Smartphone, Info
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { 
@@ -35,8 +35,8 @@ import { format } from 'date-fns';
 import { ru } from 'date-fns/locale';
 
 /**
- * SETTINGS MODAL V32.5.0 «SIGNAL INTEGRITY»
- * ИСПРАВЛЕНО: Терминология почты, обработка ошибок сессии и тестовых номеров.
+ * SETTINGS MODAL V32.5.1 «SIGNAL INTEGRITY»
+ * ИСПРАВЛЕНО: Подсказки для кодов тестовых номеров и подтверждение почты.
  */
 export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const auth = useAuth();
@@ -76,10 +76,11 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
     phone: '', email: '',
     appearance: 'dark' as 'light' | 'dark', theme: 'default', customPrimaryColor: '',
     customAppIconUrl: '', bubbleStyle: 'default', chatBackground: '', messageSize: 'medium',
-    twoFactorEnabled: false, twoFactorPin: '', cloudPasswordEnabled: false, cloudPassword: '',
+    twoFactorEnabled: false, twoFactorPin: false as any, cloudPasswordEnabled: false, cloudPassword: '',
     biometricEnabled: false, pwaNotificationsEnabled: false, isGhostMode: false
   });
 
+  // Re-sync form state when profile or modal opens
   useEffect(() => {
     if (profile && open) {
       setForm({
@@ -99,7 +100,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         chatBackground: profile.settings?.chatBackground || '',
         messageSize: profile.settings?.messageSize || 'medium',
         twoFactorEnabled: !!profile.twoFactorEnabled,
-        twoFactorPin: profile.twoFactorPin || '',
+        twoFactorPin: profile.twoFactorPin as any || '',
         cloudPasswordEnabled: !!profile.cloudPasswordEnabled,
         cloudPassword: profile.cloudPassword || '',
         biometricEnabled: !!profile.settings?.biometricEnabled,
@@ -140,9 +141,9 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
       if (e.code === 'auth/requires-recent-login') {
         toast({ title: "Сессия устарела", description: "Требуется перезайти в Ядро.", variant: "destructive" });
       } else if (e.code === 'auth/billing-not-enabled') {
-        toast({ title: "Ошибка тарифа", description: "Для реальных СМС нужен тариф Blaze. Добавьте номер в 'Тестовые' в консоли Firebase.", variant: "destructive" });
+        toast({ title: "Ошибка тарифа", description: "Используйте Тестовый номер и код из консоли Firebase.", variant: "destructive" });
       } else {
-        toast({ title: "Сбой сигнала", description: "Попробуйте позже или используйте тестовый номер.", variant: "destructive" });
+        toast({ title: "Сбой сигнала", description: "Попробуйте позже.", variant: "destructive" });
       }
     } finally {
       setIsVerifyingPhone(false);
@@ -171,7 +172,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
     setIsVerifyingEmail(true);
     try {
       await verifyBeforeUpdateEmail(auth.currentUser, form.email.trim());
-      toast({ title: "Письмо отправлено", description: "Проверьте почту для подтверждения основной почты Ядра." });
+      toast({ title: "Письмо отправлено", description: "Проверьте почту (и папку Спам) для подтверждения основной почты." });
     } catch (e: any) {
       if (e.code === 'auth/requires-recent-login') {
         toast({ title: "Нужен перезаход", description: "Для безопасности требуется свежая авторизация.", variant: "destructive" });
@@ -266,6 +267,8 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
       });
       onOpenChange(false);
       toast({ title: "Ядро обновлено" });
+    } catch (e: any) {
+      toast({ title: "Ошибка", variant: "destructive" });
     } finally { setIsSaving(false); }
   };
 
@@ -297,7 +300,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         <DialogHeader className="p-8 border-b border-white/5 shrink-0 text-left relative overflow-hidden">
           <div className="absolute inset-0 bg-gradient-to-r from-primary/10 to-transparent pointer-events-none" />
           <DialogTitle className="flex items-center gap-3 text-2xl font-black italic uppercase tracking-tighter text-white relative z-10">
-            <Settings2 className="w-7 h-7 text-primary" /> Параметры v32.5
+            <Settings2 className="w-7 h-7 text-primary" /> Параметры v{nuxusVersions.latestVersion}
           </DialogTitle>
         </DialogHeader>
         
@@ -355,6 +358,11 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                            </div>
                          )}
                       </div>
+                      {phoneStep === 'code' && (
+                        <p className="text-[7px] text-primary/60 uppercase font-bold ml-2 mt-1 flex items-center gap-1">
+                          <Info className="w-2.5 h-2.5" /> Используйте код из консоли (для тестов)
+                        </p>
+                      )}
                     </div>
 
                     <div className="space-y-1.5">
@@ -366,6 +374,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                         </div>
                         <Button onClick={handleSendEmailVerification} disabled={isVerifyingEmail || !form.email} className="h-11 rounded-xl px-4 bg-white/5 border border-white/10 text-[9px] font-black uppercase hover:bg-primary/20">Привязать</Button>
                       </div>
+                      <p className="text-[7px] text-white/30 uppercase font-bold ml-2 mt-1">Проверьте папку «Спам» после нажатия</p>
                     </div>
                   </div>
 
@@ -426,7 +435,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                 </div>
                 {form.twoFactorEnabled && (
                   <div className="space-y-6">
-                    <Input type="password" placeholder="••••••" maxLength={6} value={form.twoFactorPin} onChange={e => setForm({...form, twoFactorPin: e.target.value.replace(/\D/g, '')})} className="bg-black/60 border-primary/30 h-16 rounded-2xl text-center text-3xl tracking-[0.6em] font-black" />
+                    <Input type="password" placeholder="••••••" maxLength={6} value={form.twoFactorPin as any} onChange={e => setForm({...form, twoFactorPin: e.target.value.replace(/\D/g, '')})} className="bg-black/60 border-primary/30 h-16 rounded-2xl text-center text-3xl tracking-[0.6em] font-black" />
                     <div className="flex items-center justify-between pt-6 border-t border-white/5">
                       <div className="flex flex-col text-left"><span className="text-sm font-bold text-white uppercase italic">Hardware ID</span><span className="text-[9px] text-muted-foreground uppercase font-bold tracking-widest">Face ID / Biometrics</span></div>
                       <Switch checked={form.biometricEnabled} onCheckedChange={v => { if(!v) setForm({...form, biometricEnabled: false}); else handleLinkBiometrics(); }} />
@@ -511,3 +520,4 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
     </Dialog>
   );
 }
+
