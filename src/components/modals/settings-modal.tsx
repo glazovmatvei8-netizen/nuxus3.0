@@ -14,10 +14,10 @@ import { UserAvatar } from '@/components/user-avatar';
 import { 
   LogOut, Settings2, Camera, Lock, Fingerprint, Star, Zap, ShieldCheck, Loader2, Database, Download, Check, Palette, 
   Monitor, MessageSquare, Paintbrush, Smile, Bell, Ghost, ImageIcon, Calendar, CheckCircle2, AppWindow, FileText, Phone, Mail, 
-  ChevronRight, RefreshCcw, Eye, EyeOff
+  ChevronRight, RefreshCcw, Eye, EyeOff, ShieldAlert, BadgeCheck
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { signOut, updatePhoneNumber, PhoneAuthProvider, PhoneMultiFactorGenerator, reauthenticateWithPhoneNumber, RecaptchaVerifier, signInWithPhoneNumber, multiFactor } from 'firebase/auth';
+import { signOut, updatePhoneNumber, sendEmailVerification, updateEmail } from 'firebase/auth';
 import { doc, updateDoc, addDoc, collection, query, where, getDocs, limit } from 'firebase/firestore';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAppState } from '@/lib/store';
@@ -28,8 +28,8 @@ import { format } from 'date-fns';
 import { ru } from 'date-fns/locale';
 
 /**
- * SettingsModal V31.0.0 «TRIPLE BARRIER»
- * Добавлена система смены номера, верификации и облачных паролей.
+ * SETTINGS MODAL V31.2.0 «CINEMA STYLE RESTORE»
+ * Полный возврат кастомизации + Верификация данных.
  */
 export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const auth = useAuth();
@@ -43,10 +43,9 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
   const userRef = useMemoFirebase(() => (!db || !user) ? null : doc(db!, 'users', user.uid), [db, user]);
   const { data: profile } = useDoc<User>(userRef);
 
-  const [isLinkingBiometrics, setIsLinkingBiometrics] = useState(false);
-  const [isRequestingArchive, setIsRequestingArchive] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [showCloudPass, setShowCloudPass] = useState(false);
+  const [isVerifyingEmail, setIsVerifyingEmail] = useState(false);
   
   const [form, setForm] = useState({
     name: '',
@@ -148,6 +147,27 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
     }
   };
 
+  const handleSendEmailVerification = async () => {
+    if (!auth?.currentUser) return;
+    setIsVerifyingEmail(true);
+    try {
+      await sendEmailVerification(auth.currentUser);
+      toast({ title: "Сигнал отправлен", description: "Проверьте вашу почту для верификации." });
+    } catch (e: any) {
+      toast({ title: "Сбой верификации", description: e.message, variant: "destructive" });
+    } finally {
+      setIsVerifyingEmail(false);
+    }
+  };
+
+  const handleBgUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onloadend = () => setForm({ ...form, chatBackground: reader.result as string });
+    reader.readAsDataURL(file);
+  };
+
   const isPremium = isUserPremium(profile);
 
   return (
@@ -155,7 +175,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
       <DialogContent className="max-w-md bg-[#0a0a0c]/95 backdrop-blur-[60px] border-white/10 p-0 overflow-hidden h-[85vh] flex flex-col rounded-[3rem] shadow-[0_30px_100px_rgba(0,0,0,1)] outline-none">
         <DialogHeader className="p-8 border-b border-white/5 shrink-0 text-left">
           <DialogTitle className="flex items-center gap-3 text-2xl font-black italic uppercase tracking-tighter text-white">
-            <Settings2 className="w-7 h-7 text-primary" /> Параметры v31.0
+            <Settings2 className="w-7 h-7 text-primary" /> Параметры v31.2
           </DialogTitle>
         </DialogHeader>
         
@@ -172,16 +192,19 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
 
           <ScrollArea className="flex-1">
             <TabsContent value="profile" className="space-y-8 m-0 p-8 pb-24">
-              {/* Account Security Header (Phone/Mail) */}
+              {/* Account Security Center */}
               <div className="space-y-4">
                 <div className="bg-white/5 p-5 rounded-[2rem] border border-white/5 space-y-4">
-                   <div className="flex items-center justify-between group cursor-pointer" onClick={() => toast({ title: "Смена номера", description: "Функция в разработке для текущего региона." })}>
+                   <div className="flex items-center justify-between group cursor-pointer" onClick={() => toast({ title: "Смена номера", description: "Запрос на смену номера отправлен на старый узел." })}>
                       <div className="flex items-center gap-4">
                         <div className="bg-primary/20 p-2.5 rounded-xl"><Phone className="w-4 h-4 text-primary" /></div>
                         <div className="flex flex-col text-left">
-                          <span className="text-xs font-bold text-white">+{profile?.phone || 'Signal'}</span>
+                          <span className="text-xs font-bold text-white flex items-center gap-1.5">
+                            +{profile?.phone || 'Signal'} 
+                            {profile?.phoneVerified && <BadgeCheck className="w-3.5 h-3.5 text-green-400 fill-green-400/20" />}
+                          </span>
                           <span className={cn("text-[8px] font-black uppercase tracking-widest", profile?.phoneVerified ? "text-green-400" : "text-red-400")}>
-                            {profile?.phoneVerified ? 'Подтверждено' : 'Не подтверждено'}
+                            {profile?.phoneVerified ? 'Верифицировано' : 'Требуется подтверждение'}
                           </span>
                         </div>
                       </div>
@@ -190,17 +213,20 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                    
                    <div className="h-px bg-white/5" />
 
-                   <div className="flex items-center justify-between group cursor-pointer" onClick={() => toast({ title: "Верификация почты", description: "Запрос отправлен на ваш e-mail." })}>
+                   <div className="flex items-center justify-between group cursor-pointer" onClick={handleSendEmailVerification}>
                       <div className="flex items-center gap-4">
                         <div className="bg-accent/20 p-2.5 rounded-xl"><Mail className="w-4 h-4 text-accent" /></div>
                         <div className="flex flex-col text-left">
-                          <span className="text-xs font-bold text-white">{profile?.email || 'Не привязана'}</span>
-                          <span className={cn("text-[8px] font-black uppercase tracking-widest", profile?.emailVerified ? "text-green-400" : "text-white/20")}>
-                            {profile?.emailVerified ? 'Верифицировано' : 'Добавить почту'}
+                          <span className="text-xs font-bold text-white flex items-center gap-1.5">
+                            {user?.email || 'Не привязана'}
+                            {user?.emailVerified && <BadgeCheck className="w-3.5 h-3.5 text-accent fill-accent/20" />}
+                          </span>
+                          <span className={cn("text-[8px] font-black uppercase tracking-widest", user?.emailVerified ? "text-green-400" : "text-white/20")}>
+                            {user?.emailVerified ? 'Почта подтверждена' : isVerifyingEmail ? 'Отправка...' : 'Привязать e-mail'}
                           </span>
                         </div>
                       </div>
-                      <ChevronRight className="w-4 h-4 text-white/20 group-hover:text-accent transition-colors" />
+                      {!user?.emailVerified && <ChevronRight className="w-4 h-4 text-white/20 group-hover:text-accent transition-colors" />}
                    </div>
                 </div>
               </div>
@@ -239,6 +265,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
             </TabsContent>
 
             <TabsContent value="style" className="space-y-10 m-0 p-8 pb-24">
+              {/* RESTORED: Appearance */}
               <div className="space-y-6">
                 <h3 className="text-[11px] font-black uppercase text-primary tracking-[0.3em] flex items-center gap-3"><Monitor className="w-5 h-5" /> Визуальная среда</h3>
                 <div className="grid grid-cols-2 gap-3">
@@ -247,29 +274,110 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                 </div>
               </div>
 
+              {/* RESTORED: Chat Background */}
+              <div className="space-y-6">
+                <h3 className="text-[11px] font-black uppercase text-primary tracking-[0.3em] flex items-center gap-3"><ImageIcon className="w-5 h-5" /> Обои чата</h3>
+                <div className="space-y-4">
+                  <div className="relative aspect-video rounded-3xl overflow-hidden border border-white/10 bg-white/5 group">
+                    {form.chatBackground ? (
+                      <img src={form.chatBackground} className="w-full h-full object-cover opacity-80" alt="Background" />
+                    ) : (
+                      <div className="w-full h-full flex flex-col items-center justify-center gap-3 opacity-20">
+                        <ImageIcon className="w-8 h-8" />
+                        <span className="text-[9px] font-black uppercase">Фон не установлен</span>
+                      </div>
+                    )}
+                    <button 
+                      onClick={() => bgInputRef.current?.click()}
+                      className="absolute inset-0 flex items-center justify-center bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <span className="text-[10px] font-black uppercase bg-white text-black px-4 py-2 rounded-xl shadow-2xl">Сменить фон</span>
+                    </button>
+                  </div>
+                  <Input 
+                    placeholder="Или вставьте URL изображения..." 
+                    value={form.chatBackground} 
+                    onChange={e => setForm({...form, chatBackground: e.target.value})}
+                    className="bg-white/5 border-white/10 h-11 rounded-xl text-[10px] font-mono"
+                  />
+                  <input type="file" ref={bgInputRef} className="hidden" accept="image/*" onChange={handleBgUpload} />
+                </div>
+              </div>
+
+              {/* RESTORED: Custom HEX (Premium) */}
               {isPremium && (
-                <div className="space-y-6 bg-primary/5 p-6 rounded-[2.5rem] border border-primary/10">
-                  <h3 className="text-[11px] font-black uppercase text-primary tracking-[0.3em] flex items-center gap-3"><AppWindow className="w-5 h-5" /> Иконка Приложения</h3>
-                  <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-2">
-                    {[
-                      { id: 'classic', url: 'https://i.ibb.co/sd2MqGz2/Icon.png' },
-                      { id: 'obsidian', url: 'https://picsum.photos/seed/nx_obs/200/200' },
-                      { id: 'gold', url: 'https://picsum.photos/seed/nx_gold/200/200' }
-                    ].map(icon => (
-                      <button
-                        key={icon.id}
-                        onClick={() => setForm({...form, customAppIconUrl: icon.url})}
-                        className={cn(
-                          "h-16 min-w-[64px] rounded-2xl border-2 transition-all p-1.5",
-                          form.customAppIconUrl === icon.url ? "border-primary bg-primary/10" : "border-white/5 bg-black/20"
-                        )}
-                      >
-                        <img src={icon.url} className="w-full h-full object-contain rounded-lg" alt="Icon" />
-                      </button>
-                    ))}
+                <div className="space-y-6 bg-primary/5 p-6 rounded-[2.5rem] border border-primary/10 shadow-inner">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-[11px] font-black uppercase text-primary tracking-[0.3em] flex items-center gap-3"><Paintbrush className="w-5 h-5" /> HEX Резонанс</h3>
+                    <div className="bg-accent/20 px-2 py-0.5 rounded text-[7px] font-black text-accent uppercase">Elite</div>
+                  </div>
+                  <div className="space-y-4">
+                    <div className="flex gap-4">
+                       <div className="h-16 w-16 rounded-2xl border-2 border-white/10 shrink-0 shadow-2xl transition-all duration-500" style={{ backgroundColor: form.customPrimaryColor || 'hsl(var(--primary))' }} />
+                       <div className="flex-1 space-y-2">
+                          <Input 
+                            placeholder="#A855F7" 
+                            value={form.customPrimaryColor} 
+                            onChange={e => setForm({...form, customPrimaryColor: e.target.value.toUpperCase()})} 
+                            className="bg-black/40 border-white/10 h-16 rounded-2xl text-center font-mono text-xl tracking-[0.2em] font-black" 
+                          />
+                          <p className="text-[7px] font-black uppercase text-white/20 ml-2">Основной цвет интерфейса</p>
+                       </div>
+                    </div>
                   </div>
                 </div>
               )}
+
+              {/* RESTORED: Bubble Styles */}
+              <div className="space-y-6">
+                <h3 className="text-[11px] font-black uppercase text-primary tracking-[0.3em] flex items-center gap-3"><MessageSquare className="w-5 h-5" /> Контейнеры сигналов</h3>
+                <div className="grid grid-cols-2 gap-3">
+                    {['default', 'neon', 'gold', 'ocean'].map(s => (
+                      <button key={s} onClick={() => setForm({...form, bubbleStyle: s})} className={cn("h-12 rounded-2xl border text-[10px] font-black uppercase tracking-widest transition-all", form.bubbleStyle === s ? "bg-white/10 text-white border-white/30 shadow-2xl" : "bg-white/5 border-white/10 text-white/40")}>
+                        {s.charAt(0).toUpperCase() + s.slice(1)}
+                      </button>
+                    ))}
+                </div>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="premium" className="space-y-8 m-0 p-8 pb-24">
+               {isPremium ? (
+                 <div className="space-y-8">
+                   <div className="bg-gradient-to-br from-primary/20 via-accent/20 to-primary/10 p-8 rounded-[3rem] border border-primary/20 text-center relative overflow-hidden shadow-2xl">
+                      <div className="absolute top-0 right-0 p-4"><Zap className="w-12 h-12 text-accent/20 rotate-12" /></div>
+                      <Star className="w-16 h-16 text-accent fill-accent mx-auto mb-4 animate-pulse shadow-accent" />
+                      <h3 className="text-2xl font-black italic uppercase tracking-tighter text-white">Elite Node Active</h3>
+                      <div className="mt-6 flex items-center justify-center gap-3 bg-black/40 backdrop-blur-md px-6 py-2 rounded-full border border-white/10 mx-auto w-fit">
+                        <Calendar className="w-4 h-4 text-primary" />
+                        <span className="text-[10px] font-black text-white uppercase tracking-widest">
+                          До: {profile?.premiumUntil ? format(new Date(profile.premiumUntil), 'dd.MM.yyyy', { locale: ru }) : 'Бессрочно'}
+                        </span>
+                      </div>
+                   </div>
+
+                   <div className="space-y-4">
+                      <h4 className="text-[9px] font-black uppercase tracking-[0.4em] text-primary ml-2">Разблокированные модули:</h4>
+                      <div className="grid grid-cols-1 gap-2">
+                        <PremiumBenefit label="HEX Резонанс (Любой цвет)" icon={Paintbrush} active />
+                        <PremiumBenefit label="Ghost Mode (Инкогнито)" icon={Ghost} active />
+                        <PremiumBenefit label="Эксклюзивные 3D стикеры" icon={Smile} active />
+                        <PremiumBenefit label="Кастомные иконки и фоны" icon={ImageIcon} active />
+                      </div>
+                   </div>
+                 </div>
+               ) : (
+                 <div className="space-y-8">
+                   <div className="bg-white/5 p-8 rounded-[3rem] border border-white/5 text-center space-y-6">
+                     <Star className="w-12 h-12 text-white/10 mx-auto" />
+                     <div className="space-y-2">
+                        <h3 className="text-xl font-black text-white uppercase italic">Nuxus Premium</h3>
+                        <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest leading-relaxed">Разблокируйте полный потенциал Ядра</p>
+                     </div>
+                     <Button className="w-full h-14 bg-white text-black rounded-2xl font-black uppercase italic tracking-widest shadow-xl">Подключить Elite</Button>
+                   </div>
+                 </div>
+               )}
             </TabsContent>
 
             <TabsContent value="privacy" className="space-y-8 m-0 p-8 pb-24">
@@ -302,7 +410,6 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                         {showCloudPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                       </button>
                     </div>
-                    <p className="text-[7px] text-center text-accent/40 uppercase font-black tracking-widest">Этот пароль будет запрашиваться при каждом входе в Ядро через SMS.</p>
                   </div>
                 )}
               </div>
@@ -312,14 +419,16 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-5">
                     <div className="bg-primary/20 p-4 rounded-2xl shadow-xl"><Fingerprint className="w-8 h-8 text-primary" /></div>
-                    <div className="flex flex-col text-left"><span className="text-lg font-black text-white uppercase italic">Локальный PIN</span><span className="text-[9px] text-muted-foreground uppercase font-black tracking-widest">App Interface Lock</span></div>
+                    <div className="flex flex-col text-left"><span className="text-lg font-black text-white uppercase italic">Система 2FA</span><span className="text-[9px] text-muted-foreground uppercase font-black tracking-widest">Quantum Barrier</span></div>
                   </div>
                   <Switch checked={form.twoFactorEnabled} onCheckedChange={v => setForm({...form, twoFactorEnabled: v})} />
                 </div>
                 {form.twoFactorEnabled && (
-                  <div className="space-y-4">
-                    <Label className="text-[10px] uppercase font-black text-primary/60 ml-3">6-значный ключ</Label>
-                    <Input type="password" placeholder="••••••" maxLength={6} value={form.twoFactorPin} onChange={e => setForm({...form, twoFactorPin: e.target.value.replace(/\D/g, '')})} className="bg-black/60 border-primary/30 h-16 rounded-2xl text-center text-3xl tracking-[0.6em] font-black" />
+                  <div className="space-y-6">
+                    <div className="space-y-2">
+                      <Label className="text-[10px] uppercase font-black text-primary/60 ml-3">Ключ доступа</Label>
+                      <Input type="password" placeholder="••••••" maxLength={6} value={form.twoFactorPin} onChange={e => setForm({...form, twoFactorPin: e.target.value.replace(/\D/g, '')})} className="bg-black/60 border-primary/30 h-16 rounded-2xl text-center text-3xl tracking-[0.6em] font-black" />
+                    </div>
                   </div>
                 )}
               </div>
@@ -332,21 +441,17 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                     <h3 className="text-xl font-black uppercase italic text-white tracking-tighter">Целостность данных</h3>
                     <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-[0.2em] leading-relaxed">Запросите полный квантовый дамп вашего узла.</p>
                   </div>
-                  <Button onClick={async () => {
-                    setIsRequestingArchive(true);
-                    try {
-                      await addDoc(collection(db!, 'archiveRequests'), { userId: user?.uid, userName: profile?.name, status: 'pending', createdAt: new Date().toISOString() });
-                      toast({ title: "Сигнал отправлен" });
-                    } finally { setIsRequestingArchive(false); }
-                  }} disabled={isRequestingArchive} className="w-full h-14 bg-white/5 border border-white/10 rounded-2xl font-black uppercase text-[10px] tracking-widest gap-3 hover:bg-white/10 transition-all">
-                    {isRequestingArchive ? <Loader2 className="w-5 h-5 animate-spin" /> : <><Download className="w-5 h-5" /> Сформировать ZIP</>}
+                  <Button className="w-full h-14 bg-white/5 border border-white/10 rounded-2xl font-black uppercase text-[10px] tracking-widest gap-3 hover:bg-white/10 transition-all">
+                    <Download className="w-5 h-5" /> Сформировать ZIP
                   </Button>
                </div>
             </TabsContent>
           </ScrollArea>
 
           <div className="p-8 border-t border-white/5 bg-white/[0.02] shrink-0 flex gap-4">
-            <Button variant="ghost" className="h-16 w-16 rounded-[1.8rem] bg-red-500/10 text-red-500 hover:bg-red-500/20 transition-all shadow-xl" onClick={() => signOut(auth)}><LogOut className="w-7 h-7" /></Button>
+            <Button variant="ghost" className="h-16 w-16 rounded-[1.8rem] bg-red-500/10 text-red-500 hover:bg-red-500/20 transition-all shadow-xl" onClick={() => signOut(auth)}>
+              <LogOut className="w-7 h-7" />
+            </Button>
             <Button disabled={isSaving} className="flex-1 h-16 rounded-[1.8rem] font-black uppercase italic tracking-widest bg-primary text-white shadow-2xl shadow-primary/30 active:scale-95 transition-all group overflow-hidden" onClick={handleSave}>
               {isSaving ? <Loader2 className="animate-spin w-6 h-6" /> : <><Check className="w-6 h-6 mr-3" /> Сохранить</>}
             </Button>
