@@ -24,8 +24,8 @@ import { cn } from '@/lib/utils';
 export type AuthStep = 'phone' | 'verify' | 'cloud_password' | 'profile' | 'setup2fa';
 
 /**
- * AUTH SCREEN V31.4.0 «SILENT SHIELD»
- * Полностью невидимая защита. Прямая отправка сигналов.
+ * AUTH SCREEN V32.3.0 «SILENT SIGNAL»
+ * Рекапча полностью вырезана из UI. Прямая отправка SMS.
  */
 export default function AuthScreen({ initialMode }: { initialMode?: any }) {
   const auth = useAuth();
@@ -40,7 +40,6 @@ export default function AuthScreen({ initialMode }: { initialMode?: any }) {
   const [cloudPasswordInput, setCloudPasswordInput] = useState('');
   const [showCloudPass, setShowCloudPassword] = useState(false);
   const [confirmationResult, setConfirmationResult] = useState<ConfirmationResult | null>(null);
-  const [referralId, setReferralId] = useState<string | null>(null);
   const [registeredUid, setRegisteredUid] = useState<string | null>(null);
   const [userDocCache, setUserDocCache] = useState<any>(null);
   
@@ -53,11 +52,6 @@ export default function AuthScreen({ initialMode }: { initialMode?: any }) {
   const recaptchaVerifier = useRef<RecaptchaVerifier | null>(null);
 
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const params = new URLSearchParams(window.location.search);
-      const ref = params.get('ref');
-      if (ref) setReferralId(ref);
-    }
     return () => {
       if (recaptchaVerifier.current) {
         recaptchaVerifier.current.clear();
@@ -65,19 +59,18 @@ export default function AuthScreen({ initialMode }: { initialMode?: any }) {
     };
   }, []);
 
-  const initRecaptcha = () => {
+  const initSilentVerifier = () => {
     if (typeof window !== 'undefined' && auth) {
       if (recaptchaVerifier.current) {
         recaptchaVerifier.current.clear();
       }
       try {
-        recaptchaVerifier.current = new RecaptchaVerifier(auth, 'auth-recaptcha-container', {
-          size: 'invisible',
-          callback: () => { console.log("Nuxus Security: Silent Handshake"); }
+        // Контейнер скрыт через CSS и вынесен за экран
+        recaptchaVerifier.current = new RecaptchaVerifier(auth, 'silent-auth-container', {
+          size: 'invisible'
         });
         return recaptchaVerifier.current;
       } catch (e) {
-        console.warn("Nuxus Auth: Recaptcha Init Error");
         return null;
       }
     }
@@ -86,15 +79,12 @@ export default function AuthScreen({ initialMode }: { initialMode?: any }) {
 
   const handleSendCode = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!phoneNumber.trim() || phoneNumber.length < 10) {
-      toast({ title: "Неверный формат", description: "Введите полный номер телефона.", variant: "destructive" });
-      return;
-    }
+    if (!phoneNumber.trim()) return;
 
     setIsLoading(true);
     try {
-      const verifier = initRecaptcha();
-      if (!verifier) throw new Error("Security Engine failure");
+      const verifier = initSilentVerifier();
+      if (!verifier) throw new Error("Signal init fail");
 
       const finalPhone = phoneNumber.startsWith('+') ? phoneNumber : '+' + phoneNumber;
       const result = await signInWithPhoneNumber(auth!, finalPhone, verifier);
@@ -103,7 +93,7 @@ export default function AuthScreen({ initialMode }: { initialMode?: any }) {
       toast({ title: "Сигнал отправлен", description: "SMS-код летит на ваш узел." });
     } catch (err: any) {
       console.error(err);
-      toast({ title: "Ошибка сети", description: "Сбой отправки SMS. Попробуйте еще раз.", variant: "destructive" });
+      toast({ title: "Ошибка сети", description: "Сбой отправки SMS. Повторите попытку.", variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
@@ -163,10 +153,7 @@ export default function AuthScreen({ initialMode }: { initialMode?: any }) {
 
   const handleCreateProfile = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!profileForm.name.trim() || !profileForm.username.trim()) {
-      toast({ title: "Заполните данные", variant: "destructive" });
-      return;
-    }
+    if (!profileForm.name.trim() || !profileForm.username.trim()) return;
 
     setIsLoading(true);
     try {
@@ -195,7 +182,6 @@ export default function AuthScreen({ initialMode }: { initialMode?: any }) {
         createdAt: new Date().toISOString(),
         isPremium: false,
         referralCount: 0,
-        invitedBy: referralId || null,
         balance: 0,
         settings: {
           theme: 'default',
@@ -205,11 +191,6 @@ export default function AuthScreen({ initialMode }: { initialMode?: any }) {
       };
 
       await setDoc(doc(db!, 'users', uid), profileData, { merge: true });
-
-      if (referralId && referralId !== uid) {
-        try { await updateDoc(doc(db!, 'users', referralId), { referralCount: increment(1) }); } catch (e) {}
-      }
-
       setStep('setup2fa');
     } catch (err: any) {
       toast({ title: "Ошибка регистрации", variant: "destructive" });
@@ -242,8 +223,8 @@ export default function AuthScreen({ initialMode }: { initialMode?: any }) {
 
   return (
     <div className="min-h-[100dvh] w-full flex flex-col items-center justify-center bg-[#020203] p-4 relative overflow-hidden">
-      {/* GLOBAL HIDDEN RECAPTCHA */}
-      <div id="auth-recaptcha-container" className="fixed top-0 left-0 opacity-0 pointer-events-none -z-[1000]"></div>
+      {/* ABSOLUTELY SILENT CONTAINER */}
+      <div id="silent-auth-container" className="fixed -left-[10000px] opacity-0 pointer-events-none"></div>
       
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
         <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_0%_0%,rgba(120,50,255,0.15)_0%,transparent_50%),radial-gradient(circle_at_100%_100%,rgba(10,182,212,0.1)_0%,transparent_50%)]" />
@@ -262,7 +243,7 @@ export default function AuthScreen({ initialMode }: { initialMode?: any }) {
               {step === 'phone' ? 'Вход в Ядро' : step === 'verify' ? 'Код доступа' : step === 'cloud_password' ? 'Облачный пароль' : step === 'profile' ? 'Профиль' : 'Защита'}
             </CardTitle>
             <CardDescription className="text-primary/60 font-black tracking-[0.5em] uppercase text-[8px] opacity-60 mt-3 ml-[0.5em]">
-              {step === 'cloud_password' ? 'Security Level 2' : 'Quantum Protocol v31.4'}
+              Quantum Protocol v32.3
             </CardDescription>
           </CardHeader>
 

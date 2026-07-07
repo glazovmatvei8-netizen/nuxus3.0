@@ -56,6 +56,13 @@
   }
 }
 
+/* NUCLEAR RECAPTCHA HIDE */
+.grecaptcha-badge { 
+  visibility: hidden !important; 
+  opacity: 0 !important; 
+  pointer-events: none !important; 
+}
+
 .obsidian-glass {
   @apply bg-white/[0.03] backdrop-blur-[20px] border border-white/[0.05] shadow-[0_10px_40px_rgba(0,0,0,0.5)];
 }

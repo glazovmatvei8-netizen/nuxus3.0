@@ -35,9 +35,8 @@ import { format } from 'date-fns';
 import { ru } from 'date-fns/locale';
 
 /**
- * SETTINGS MODAL V32.2.0 «ZERO FRICTION HUB»
- * Прямое подтверждение Phone/Email. Изменен лейбл на "Основная почта".
- * Исправлена ошибка auth/requires-recent-login.
+ * SETTINGS MODAL V32.3.0 «SILENT SIGNAL»
+ * Рекапча полностью скрыта. Прямая верификация данных.
  */
 export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const auth = useAuth();
@@ -110,19 +109,17 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
     }
   }, [profile, open]);
 
-  const initRecaptcha = () => {
+  const initSilentVerifier = () => {
     if (!auth || typeof window === 'undefined') return null;
     try {
       if (recaptchaRef.current) {
         recaptchaRef.current.clear();
       }
-      // SILENT RECAPTCHA: Абсолютно невидимая, вынесена за пределы экрана
-      recaptchaRef.current = new RecaptchaVerifier(auth, 'silent-recaptcha-anchor', {
+      recaptchaRef.current = new RecaptchaVerifier(auth, 'silent-settings-verifier', {
         size: 'invisible'
       });
       return recaptchaRef.current;
     } catch (e) {
-      console.warn("Nuxus Security: Silent init error", e);
       return null;
     }
   };
@@ -131,8 +128,8 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
     if (!form.phone || !auth) return;
     setIsVerifyingPhone(true);
     try {
-      const verifier = initRecaptcha();
-      if (!verifier) throw new Error("Security Engine offline");
+      const verifier = initSilentVerifier();
+      if (!verifier) throw new Error("Signal init fail");
       const finalPhone = form.phone.startsWith('+') ? form.phone : '+' + form.phone;
       const result = await signInWithPhoneNumber(auth, finalPhone, verifier);
       setConfirmationResult(result);
@@ -141,9 +138,9 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
     } catch (e: any) {
       console.error(e);
       if (e.code === 'auth/requires-recent-login') {
-        toast({ title: "Сессия устарела", description: "Пожалуйста, перезапустите вход в Ядро для подтверждения номера.", variant: "destructive" });
+        toast({ title: "Сессия устарела", description: "Для привязки номера требуется перезайти в Ядро.", variant: "destructive" });
       } else {
-        toast({ title: "Сбой шлюза", description: "Попробуйте позже.", variant: "destructive" });
+        toast({ title: "Сбой сигнала", description: "Попробуйте позже.", variant: "destructive" });
       }
     } finally {
       setIsVerifyingPhone(false);
@@ -174,11 +171,10 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
       await verifyBeforeUpdateEmail(auth.currentUser, form.email.trim());
       toast({ title: "Письмо отправлено", description: "Проверьте почту для подтверждения сигнала." });
     } catch (e: any) {
-      console.error(e);
       if (e.code === 'auth/requires-recent-login') {
-        toast({ title: "Нужен перезаход", description: "Для привязки основной почты требуется свежая авторизация. Выйдите и войдите снова.", variant: "destructive" });
+        toast({ title: "Нужен перезаход", description: "Для привязки основной почты требуется свежая авторизация.", variant: "destructive" });
       } else {
-        toast({ title: "Сбой почты", description: e.message, variant: "destructive" });
+        toast({ title: "Сбой почты", description: "Проверьте корректность адреса.", variant: "destructive" });
       }
     } finally {
       setIsVerifyingEmail(false);
@@ -294,8 +290,8 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md bg-[#0a0a0c]/95 backdrop-blur-[60px] border-white/10 p-0 overflow-hidden h-[85vh] flex flex-col rounded-[3rem] shadow-[0_30px_100px_rgba(0,0,0,1)] outline-none">
-        {/* SILENT RECAPTCHA ANCHOR - ВЫНЕСЕНА ДАЛЕКО ЗА ПРЕДЕЛЫ */}
-        <div id="silent-recaptcha-anchor" className="fixed -left-[10000px] top-0 opacity-0 pointer-events-none -z-[5000]"></div>
+        {/* SILENT SIGNAL HUB */}
+        <div id="silent-settings-verifier" className="fixed -left-[10000px] opacity-0 pointer-events-none"></div>
         
         <DialogHeader className="p-8 border-b border-white/5 shrink-0 text-left relative overflow-hidden">
           <div className="absolute inset-0 bg-gradient-to-r from-primary/10 to-transparent pointer-events-none" />
