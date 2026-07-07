@@ -22,7 +22,7 @@ import type { Message, User as UserType, Chat } from '@/lib/types';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { useToast } from '@/hooks/use-toast';
 
-// Shapes for Video Notes V28.7.4
+// Shapes for Video Notes V28.8.0
 const VIDEO_SHAPES = [
   { id: 'circle', icon: Circle, label: 'Круг', clip: 'circle(50% at 50% 50%)' },
   { id: 'square', icon: Square, label: 'Квадрат', clip: 'inset(0% rounded 15%)' },
@@ -32,22 +32,16 @@ const VIDEO_SHAPES = [
 ];
 
 /**
- * ChatInputBar V28.7.4: Cinema Studio UI.
- * Optimized for iPhone 14 Screen / Safe Areas.
+ * ChatInputBar V28.8.0: Trigger for Pro Recorder.
  */
-const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, isPremium, replyTo, onCancelReply }: any) => {
+const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, isPremium, replyTo, onCancelReply, onOpenProRecorder }: any) => {
   const { localDrafts, setLocalDrafts } = useAppState();
   const [messageInput, setMessageInput] = useState(localDrafts[currentChatId] || '');
   const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
   
   const [isRecording, setIsRecording] = useState(false);
   const [recorderMode, setRecorderMode] = useState<'audio' | 'video'>('audio');
-  const [camMode, setCamMode] = useState<'user' | 'environment'>('user');
   const [recordingDuration, setRecordingDuration] = useState(0);
-  
-  const [selectedShape, setSelectedShape] = useState('circle');
-  const [isProRecorderOpen, setIsProRecorderOpen] = useState(false);
-  const longPressTimer = useRef<NodeJS.Timeout | null>(null);
   const isActuallyRecording = useRef(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -55,58 +49,11 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
   const streamRef = useRef<MediaStream | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
-  const videoPreviewRef = useRef<HTMLVideoElement | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     setMessageInput(localDrafts[currentChatId] || '');
   }, [currentChatId, localDrafts]);
-
-  useEffect(() => {
-    if (isRecording && recordingDuration >= 100) {
-      stopRecording();
-    }
-  }, [isRecording, recordingDuration]);
-
-  const switchCamera = async () => {
-    if (isRecording) return; 
-
-    const newMode = camMode === 'user' ? 'environment' : 'user';
-    setCamMode(newMode);
-    
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach(t => t.stop());
-      streamRef.current = null;
-    }
-
-    try {
-      const constraints = {
-        video: { facingMode: newMode, width: { ideal: 480 }, height: { ideal: 480 }, aspectRatio: 1 },
-        audio: true
-      };
-      const newStream = await navigator.mediaDevices.getUserMedia(constraints);
-      streamRef.current = newStream;
-      if (videoPreviewRef.current) {
-        videoPreviewRef.current.srcObject = newStream;
-      }
-    } catch (e) { console.error("Nuxus Flip Fail", e); }
-  };
-
-  useEffect(() => {
-    if (isProRecorderOpen && recorderMode === 'video' && !isRecording) {
-       navigator.mediaDevices.getUserMedia({ video: { facingMode: camMode, width: 480, height: 480 }, audio: true })
-        .then(s => {
-          streamRef.current = s;
-          if(videoPreviewRef.current) videoPreviewRef.current.srcObject = s;
-        });
-    }
-    return () => {
-      if (!isProRecorderOpen && !isRecording && streamRef.current) {
-        streamRef.current.getTracks().forEach(t => t.stop());
-        streamRef.current = null;
-      }
-    };
-  }, [isProRecorderOpen, recorderMode, camMode, isRecording]);
 
   const handleInputChange = (val: string) => {
     setMessageInput(val);
@@ -120,35 +67,23 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
     setLocalDrafts(prev => ({ ...prev, [currentChatId]: '' }));
   };
 
-  const startRecording = async () => {
+  const startAudioRecording = async () => {
     try {
-      if (!streamRef.current) {
-        const constraints = {
-          audio: true,
-          video: recorderMode === 'video' ? { facingMode: camMode, width: 480, height: 480, aspectRatio: 1 } : false
-        };
-        streamRef.current = await navigator.mediaDevices.getUserMedia(constraints);
-      }
-      
-      const recorderOptions: any = {
-        mimeType: 'video/webm;codecs=vp8,opus'
-      };
-      
-      const recorder = new MediaRecorder(streamRef.current, { ...recorderOptions, videoBitsPerSecond: 80000 });
+      streamRef.current = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const recorder = new MediaRecorder(streamRef.current);
       mediaRecorderRef.current = recorder;
       chunksRef.current = [];
       
       recorder.ondataavailable = (e) => { if (e.data.size > 0) chunksRef.current.push(e.data); };
-      recorder.onstop = async () => {
-        const blob = new Blob(chunksRef.current, { type: 'video/webm' });
+      recorder.onstop = () => {
+        const blob = new Blob(chunksRef.current, { type: 'audio/webm' });
         const reader = new FileReader();
         reader.onloadend = () => {
           if (chunksRef.current.length > 0) {
-            onSendMessage(reader.result as string, recorderMode === 'video' ? 'video_note' : 'audio', { shape: selectedShape });
+            onSendMessage(reader.result as string, 'audio', null);
           }
         };
         reader.readAsDataURL(blob);
-        setIsProRecorderOpen(false);
         setIsRecording(false);
         isActuallyRecording.current = false;
       };
@@ -162,35 +97,27 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
     } catch (err) { console.error(err); }
   };
 
-  const stopRecording = () => {
+  const stopAudioRecording = () => {
     if (mediaRecorderRef.current && isActuallyRecording.current) {
       mediaRecorderRef.current.stop();
       if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
+      if (streamRef.current) streamRef.current.getTracks().forEach(t => t.stop());
     }
   };
 
   const handlePointerDown = (e: React.PointerEvent) => {
     if (recorderMode === 'audio') {
-      startRecording();
+      startAudioRecording();
       return;
     }
-    longPressTimer.current = setTimeout(() => {
-      startRecording();
-      longPressTimer.current = null;
-    }, 400);
+    // For video mode, short click opens Pro Recorder, handled by onClick below
   };
 
   const handlePointerUp = (e: React.PointerEvent) => {
-    if (longPressTimer.current) {
-      clearTimeout(longPressTimer.current);
-      longPressTimer.current = null;
-      if (recorderMode === 'video') setIsProRecorderOpen(true);
-    } else if (isActuallyRecording.current) {
-      stopRecording();
+    if (recorderMode === 'audio' && isActuallyRecording.current) {
+      stopAudioRecording();
     }
   };
-
-  const currentShapeObj = VIDEO_SHAPES.find(s => s.id === selectedShape) || VIDEO_SHAPES[0];
 
   if (!canPost) return null;
 
@@ -206,104 +133,6 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
             </div>
           </div>
           <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full" onClick={onCancelReply}><X className="w-4 h-4" /></Button>
-        </div>
-      )}
-
-      {/* PRO VIDEO RECORDER OVERLAY V28.7.4 - TRUE FULLSCREEN IPHONE OPTIMIZED */}
-      {isProRecorderOpen && (
-        <div className="fixed inset-0 z-[5000] bg-black/90 backdrop-blur-[50px] w-screen h-[100dvh] flex flex-col items-center justify-between animate-in fade-in duration-500 overflow-hidden">
-           {/* Top Header - Safe Area Top */}
-           <div className="w-full flex items-center justify-end px-6 pt-[env(safe-area-inset-top,40px)] z-[5100]">
-              <button 
-                onClick={() => { setIsProRecorderOpen(false); if(streamRef.current) streamRef.current.getTracks().forEach(t=>t.stop()); }} 
-                className="w-12 h-12 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 transition-all border border-white/10 shadow-2xl active:scale-90"
-              >
-                <X className="w-7 h-7 text-white" />
-              </button>
-           </div>
-
-           {/* Central Preview - Large and Prominent */}
-           <div className="relative w-[340px] h-[340px] sm:w-[380px] sm:h-[380px] bg-black rounded-full overflow-hidden shadow-[0_0_120px_rgba(168,85,247,0.4)] border-4 border-white/10 flex items-center justify-center">
-              <video 
-                ref={videoPreviewRef} 
-                autoPlay 
-                muted 
-                playsInline 
-                className="w-full h-full object-cover" 
-                style={{ clipPath: currentShapeObj.clip }} 
-              />
-              {isRecording && (
-                <div className="absolute top-10 left-1/2 -translate-x-1/2 bg-red-500/90 px-6 py-2 rounded-full flex items-center gap-3 shadow-2xl z-[5200]">
-                   <div className="w-3 h-3 rounded-full bg-white animate-pulse" />
-                   <span className="text-white text-lg font-black tabular-nums tracking-widest">
-                     {Math.floor(recordingDuration / 60).toString().padStart(2, '0')}:{(recordingDuration % 60).toString().padStart(2, '0')}
-                   </span>
-                </div>
-              )}
-           </div>
-
-           {/* Control Panel - Safe Area Bottom */}
-           <div className="w-full px-8 pb-[calc(2.5rem+env(safe-area-inset-bottom))] flex flex-col gap-10 z-[5100]">
-              
-              {/* Shape Selector Bar */}
-              {!isRecording && (
-                <div className="flex gap-4 overflow-x-auto scrollbar-hide w-full justify-center py-5 bg-white/5 rounded-[3rem] border border-white/5 shadow-2xl backdrop-blur-md">
-                  {VIDEO_SHAPES.map(shape => (
-                    <button 
-                      key={shape.id} 
-                      onClick={() => { setSelectedShape(shape.id); if(window.navigator.vibrate) window.navigator.vibrate(10); }} 
-                      className={cn(
-                        "flex flex-col items-center gap-2 p-4 rounded-2xl transition-all", 
-                        selectedShape === shape.id ? "bg-primary text-white scale-110 shadow-xl" : "bg-transparent text-white/30 hover:text-white/60"
-                      )}
-                    >
-                      <shape.icon className="w-7 h-7" />
-                    </button>
-                  ))}
-                </div>
-              )}
-
-              {/* Functional Controls Row: Flip - Record - Branding */}
-              <div className="flex items-center justify-center w-full relative h-32">
-                
-                {/* Branding - Bottom Left (Telegram Style) */}
-                <div className="absolute left-0 bottom-2 text-left pointer-events-none opacity-50">
-                   <span className="text-white font-black text-2xl italic uppercase tracking-tighter block leading-none">NUXUS CIRCLE</span>
-                   <span className="text-[9px] text-primary font-black uppercase tracking-[0.4em] mt-2 block ml-1">PRO STUDIO V28.7</span>
-                </div>
-
-                {/* Flip Camera - Left of Center */}
-                <div className="absolute right-[65%] sm:right-[60%]">
-                   {!isRecording && (
-                     <button onClick={switchCamera} className="w-16 h-16 rounded-3xl bg-white/10 flex items-center justify-center border border-white/10 active:scale-90 transition-transform shadow-xl hover:bg-white/20">
-                       <RefreshCcw className="w-8 h-8 text-white" />
-                     </button>
-                   )}
-                </div>
-
-                {/* Record Button - Absolute Center */}
-                <button 
-                  onClick={() => isRecording ? stopRecording() : startRecording()}
-                  className={cn(
-                    "w-28 h-28 rounded-full flex items-center justify-center transition-all shadow-[0_0_60px_rgba(0,122,255,0.4)] relative border-[6px]",
-                    isRecording ? "bg-red-500 border-white/40 scale-110 shadow-[0_0_80px_rgba(239,68,68,0.5)]" : "bg-[#007AFF] border-white/20 active:scale-95 hover:brightness-110"
-                  )}
-                >
-                  {isRecording ? (
-                    <StopCircle className="w-14 h-14 text-white fill-white" />
-                  ) : (
-                    <div className="w-12 h-12 rounded-full bg-white shadow-lg" />
-                  )}
-                </button>
-              </div>
-           </div>
-        </div>
-      )}
-
-      {/* QUICK RECORDING VIEW */}
-      {isRecording && !isProRecorderOpen && (
-        <div className="absolute bottom-32 left-1/2 -translate-x-1/2 w-64 h-64 rounded-full overflow-hidden border-4 border-primary shadow-[0_0_80px_rgba(168,85,247,0.7)] z-50 bg-black animate-in zoom-in duration-500">
-          <video ref={videoPreviewRef} autoPlay muted playsInline className="w-full h-full object-cover" style={{ clipPath: currentShapeObj.clip }} />
         </div>
       )}
 
@@ -346,15 +175,13 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
                   {recorderMode === 'audio' ? <VideoIcon className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
                 </Button>
                 <button 
-                  className={cn(
-                    "h-11 w-11 rounded-2xl flex items-center justify-center transition-all shadow-xl active:scale-90",
-                    isProRecorderOpen ? "bg-accent text-black" : "bg-primary text-white"
-                  )}
+                  className="h-11 w-11 rounded-2xl flex items-center justify-center transition-all shadow-xl active:scale-90 bg-primary text-white"
                   onPointerDown={handlePointerDown}
                   onPointerUp={handlePointerUp}
+                  onClick={() => recorderMode === 'video' && onOpenProRecorder()}
                   onContextMenu={(e) => e.preventDefault()}
                 >
-                  {recorderMode === 'audio' ? <Mic className="w-5 h-5" /> : (isProRecorderOpen ? <currentShapeObj.icon className="w-5 h-5" /> : <Circle className="w-5 h-5 fill-current" />)}
+                  {recorderMode === 'audio' ? <Mic className="w-5 h-5" /> : <Circle className="w-5 h-5 fill-current" />}
                 </button>
               </div>
             )}
@@ -362,11 +189,11 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
         ) : (
           <div className="flex-1 flex items-center bg-primary/10 border border-primary/20 rounded-2xl h-11 px-4 gap-4 animate-in slide-in-from-right-8">
             <div className="flex items-center gap-2 text-primary animate-pulse"><div className="w-2 h-2 rounded-full bg-primary shadow-lg" /><span className="text-[10px] font-black uppercase tracking-widest">LIVE</span></div>
-            <span className={cn("text-lg font-black italic flex-1 tabular-nums text-white", recordingDuration >= 80 && "text-red-500")}>
+            <span className="text-lg font-black italic flex-1 tabular-nums text-white">
               {Math.floor(recordingDuration / 60).toString().padStart(2, '0')}:{(recordingDuration % 60).toString().padStart(2, '0')}
             </span>
-            <Button variant="ghost" size="icon" className="h-8 w-8 text-white/40" onClick={() => { if(mediaRecorderRef.current) mediaRecorderRef.current.onstop = null; stopRecording(); setIsRecording(false); }}><Trash2 className="w-4 h-4" /></Button>
-            <Button variant="ghost" size="icon" className="h-10 w-10 text-primary" onPointerDown={stopRecording}><StopCircle className="w-7 h-7 fill-current" /></Button>
+            <Button variant="ghost" size="icon" className="h-8 w-8 text-white/40" onClick={() => { if(mediaRecorderRef.current) mediaRecorderRef.current.onstop = null; stopAudioRecording(); setIsRecording(false); }}><Trash2 className="w-4 h-4" /></Button>
+            <Button variant="ghost" size="icon" className="h-10 w-10 text-primary" onPointerDown={stopAudioRecording}><StopCircle className="w-7 h-7 fill-current" /></Button>
           </div>
         )}
       </div>
@@ -391,7 +218,7 @@ const MessageList = memo(({
 }: any) => {
   const sortedMessages = useMemo(() => {
     if (!messages) return [];
-    return [...messages].sort((a, b) => new Date(a.sentAt).getTime() - new Date(b.sentAt).getTime());
+    return [...messages].sort((a, b) => new Date(a.sentAt).getTime() - new Date(b.createdAt).getTime());
   }, [messages]);
   
   return (
@@ -422,7 +249,20 @@ export default function ChatArea() {
   const [replyTo, setReplyTo] = useState<Message | null>(null);
   const [isSearchMode, setIsSearchMode] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+
+  // Pro Recorder State
+  const [isProRecorderOpen, setIsProRecorderOpen] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
+  const [camMode, setCamMode] = useState<'user' | 'environment'>('user');
+  const [selectedShape, setSelectedShape] = useState('circle');
+  const [recordingDuration, setRecordingDuration] = useState(0);
   
+  const videoPreviewRef = useRef<HTMLVideoElement | null>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const chunksRef = useRef<Blob[]>([]);
+  const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   
@@ -453,23 +293,11 @@ export default function ChatArea() {
 
   useEffect(() => { scrollToBottom('auto'); }, [currentChatId, messages?.length, scrollToBottom]);
 
-  useEffect(() => {
-    if (!db || !currentChatId || !firebaseUser || !messages) return;
-    const unreadMessages = messages.filter(m => m.senderId !== firebaseUser.uid && !m.isRead);
-    if (unreadMessages.length === 0) return;
-    const batch = writeBatch(db);
-    unreadMessages.forEach(msg => {
-      const msgRef = doc(db, 'chats', currentChatId, 'messages', msg.id);
-      batch.update(msgRef, { isRead: true });
-    });
-    batch.commit().catch(e => console.warn("Nuxus Sync: Read Receipt error"));
-  }, [db, currentChatId, firebaseUser, messages]);
-
   const handleSendMessage = useCallback(async (content_msg: string, type_msg: Message['contentType'] = 'text', meta: any = null) => {
     if (!content_msg.trim() || !currentChatId || !firebaseUser || !db) return;
     
     if (content_msg.length > 1040000) {
-      toast({ title: "Файл слишком велик", description: "Превышен системный лимит 1МБ. Попробуйте записать видео короче.", variant: "destructive" });
+      toast({ title: "Файл слишком велик", description: "Превышен системный лимит 1МБ.", variant: "destructive" });
       return;
     }
 
@@ -488,36 +316,79 @@ export default function ChatArea() {
       setReplyTo(null);
     }
     
-    addDoc(collection(db, 'chats', currentChatId, 'messages'), msgData).catch(err => {
-      toast({ title: "Сбой буфера", description: "Сообщение слишком тяжелое для этого чата.", variant: "destructive" });
-    });
+    addDoc(collection(db, 'chats', currentChatId, 'messages'), msgData);
     updateDoc(doc(db, 'chats', currentChatId), { lastMessageAt: new Date().toISOString() });
   }, [currentChatId, firebaseUser, db, userProfile, replyTo, toast]);
 
-  const handleStartCall = async (type: 'audio' | 'video') => {
-    if (!db || !firebaseUser || !otherId) return;
-    const callRef = await addDoc(collection(db, 'calls'), {
-      callerId: firebaseUser.uid,
-      receiverId: otherId,
-      participantIds: [firebaseUser.uid, otherId],
-      chatId: currentChatId,
-      type,
-      status: 'calling',
-      createdAt: new Date().toISOString()
-    });
-    setActiveCallId(callRef.id);
+  // PRO RECORDER LOGIC V28.8.0
+  const startProRecording = async () => {
+    try {
+      if (!streamRef.current) return;
+      const recorder = new MediaRecorder(streamRef.current, { mimeType: 'video/webm;codecs=vp8,opus', videoBitsPerSecond: 80000 });
+      mediaRecorderRef.current = recorder;
+      chunksRef.current = [];
+      
+      recorder.ondataavailable = (e) => { if (e.data.size > 0) chunksRef.current.push(e.data); };
+      recorder.onstop = () => {
+        const blob = new Blob(chunksRef.current, { type: 'video/webm' });
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          if (chunksRef.current.length > 0) {
+            handleSendMessage(reader.result as string, 'video_note', { shape: selectedShape });
+          }
+        };
+        reader.readAsDataURL(blob);
+        closeProRecorder();
+      };
+
+      recorder.start();
+      setIsRecording(true);
+      setRecordingDuration(0);
+      timerIntervalRef.current = setInterval(() => setRecordingDuration(prev => prev + 1), 1000);
+      if (window.navigator && window.navigator.vibrate) window.navigator.vibrate(50);
+    } catch (e) { console.error(e); }
   };
 
-  const headerTitle = useMemo(() => {
-    if (isSavedMessages) return 'Архив Данных';
-    if (!chat) return 'СИНХРОНИЗАЦИЯ...';
-    if (chat.type === 'private') {
-      const myMeta = chat.metadata?.[firebaseUser?.uid || ''];
-      if (myMeta?.customName) return myMeta.customName;
-      return formatDisplayName(otherUser?.name);
+  const stopProRecording = () => {
+    if (mediaRecorderRef.current && isRecording) {
+      mediaRecorderRef.current.stop();
+      if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
     }
-    return formatDisplayName(chat.name);
-  }, [chat, otherUser, firebaseUser?.uid, isSavedMessages]);
+  };
+
+  const closeProRecorder = () => {
+    setIsProRecorderOpen(false);
+    setIsRecording(false);
+    if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(t => t.stop());
+      streamRef.current = null;
+    }
+  };
+
+  const switchCamera = async () => {
+    if (isRecording) return; 
+    const newMode = camMode === 'user' ? 'environment' : 'user';
+    setCamMode(newMode);
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(t => t.stop());
+    }
+    const s = await navigator.mediaDevices.getUserMedia({ video: { facingMode: newMode, width: 480, height: 480 }, audio: true });
+    streamRef.current = s;
+    if (videoPreviewRef.current) videoPreviewRef.current.srcObject = s;
+  };
+
+  useEffect(() => {
+    if (isProRecorderOpen) {
+      navigator.mediaDevices.getUserMedia({ video: { facingMode: camMode, width: 480, height: 480 }, audio: true })
+        .then(s => {
+          streamRef.current = s;
+          if(videoPreviewRef.current) videoPreviewRef.current.srcObject = s;
+        });
+    }
+  }, [isProRecorderOpen, camMode]);
+
+  const currentShapeObj = VIDEO_SHAPES.find(s => s.id === selectedShape) || VIDEO_SHAPES[0];
 
   return (
     <div className="flex-1 flex flex-col h-full bg-transparent relative overflow-hidden z-20 max-w-full">
@@ -527,30 +398,76 @@ export default function ChatArea() {
         </div>
       )}
       
+      {/* PRO RECORDER FULLSCREEN OVERLAY V28.8.0 */}
+      {isProRecorderOpen && (
+        <div className="fixed inset-0 z-[5000] bg-black/90 backdrop-blur-[50px] w-screen h-[100dvh] flex flex-col items-center justify-between animate-in fade-in duration-500 overflow-hidden">
+           <div className="w-full flex items-center justify-end px-6 pt-[env(safe-area-inset-top,40px)] z-[5100]">
+              <button onClick={closeProRecorder} className="w-12 h-12 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 transition-all border border-white/10 shadow-2xl active:scale-90">
+                <X className="w-7 h-7 text-white" />
+              </button>
+           </div>
+
+           <div className="relative w-[320px] h-[320px] sm:w-[380px] sm:h-[380px] bg-black rounded-full overflow-hidden shadow-[0_0_120px_rgba(168,85,247,0.4)] border-4 border-white/10 flex items-center justify-center">
+              <video ref={videoPreviewRef} autoPlay muted playsInline className="w-full h-full object-cover" style={{ clipPath: currentShapeObj.clip }} />
+              {isRecording && (
+                <div className="absolute top-10 left-1/2 -translate-x-1/2 bg-red-500/90 px-6 py-2 rounded-full flex items-center gap-3 shadow-2xl z-[5200]">
+                   <div className="w-3 h-3 rounded-full bg-white animate-pulse" />
+                   <span className="text-white text-lg font-black tabular-nums tracking-widest">{Math.floor(recordingDuration / 60).toString().padStart(2, '0')}:{(recordingDuration % 60).toString().padStart(2, '0')}</span>
+                </div>
+              )}
+           </div>
+
+           <div className="w-full px-8 pb-[calc(2.5rem+env(safe-area-inset-bottom))] flex flex-col gap-8 z-[5100]">
+              {!isRecording && (
+                <div className="flex gap-3 overflow-x-auto scrollbar-hide w-full justify-center py-4 bg-white/5 rounded-[3rem] border border-white/5 shadow-2xl backdrop-blur-md">
+                  {VIDEO_SHAPES.map(shape => (
+                    <button key={shape.id} onClick={() => setSelectedShape(shape.id)} className={cn("flex flex-col items-center gap-2 p-3 rounded-2xl transition-all", selectedShape === shape.id ? "bg-primary text-white scale-110 shadow-xl" : "bg-transparent text-white/30")}>
+                      <shape.icon className="w-6 h-6" />
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              <div className="flex items-center justify-center w-full relative h-28">
+                <div className="absolute left-0 bottom-2 opacity-50">
+                   <span className="text-white font-black text-xl italic uppercase tracking-tighter block leading-none">NUXUS CIRCLE</span>
+                   <span className="text-[8px] text-primary font-black uppercase tracking-[0.4em] mt-2 block ml-1">PRO STUDIO V28.8</span>
+                </div>
+
+                <div className="absolute right-[65%]">
+                   {!isRecording && (
+                     <button onClick={switchCamera} className="w-14 h-14 rounded-2xl bg-white/10 flex items-center justify-center border border-white/10 active:scale-90 transition-all shadow-xl hover:bg-white/20">
+                       <RefreshCcw className="w-7 h-7 text-white" />
+                     </button>
+                   )}
+                </div>
+
+                <button 
+                  onClick={() => isRecording ? stopProRecording() : startProRecording()}
+                  className={cn("w-24 h-24 rounded-full flex items-center justify-center transition-all shadow-2xl relative border-4", isRecording ? "bg-red-500 border-white/40 scale-110" : "bg-primary border-white/20 active:scale-95")}
+                >
+                  {isRecording ? <StopCircle className="w-12 h-12 text-white fill-white" /> : <div className="w-10 h-10 rounded-full bg-white shadow-lg" />}
+                </button>
+              </div>
+           </div>
+        </div>
+      )}
+
       <header className="h-[calc(4rem+env(safe-area-inset-top))] pt-[env(safe-area-inset-top)] border-b border-white/5 obsidian-glass flex items-center justify-between px-5 shrink-0 z-30 shadow-xl">
         <div className="flex items-center gap-3 flex-1 min-w-0">
           <Button variant="ghost" size="icon" className="md:hidden obsidian-glass rounded-xl text-white/50 h-10 w-10 shrink-0" onClick={() => setCurrentChatId(null)}><ChevronLeft className="w-6 h-6" /></Button>
           {!isSearchMode ? (
             <div className="flex items-center gap-3 cursor-pointer min-w-0 flex-1 group" onClick={() => setIsChatInfoOpen(true)}>
               {isSavedMessages ? (
-                <div className="h-10 w-10 rounded-xl bg-primary/20 border border-primary/30 flex items-center justify-center text-primary shadow-lg shadow-primary/10">
+                <div className="h-10 w-10 rounded-xl bg-primary/20 border border-primary/30 flex items-center justify-center text-primary">
                   <Shield className="w-5 h-5 fill-current" />
                 </div>
               ) : (
-                <UserAvatar 
-                  userId={chat?.type === 'private' ? otherId : null} 
-                  manualAvatarUrl={chat?.type !== 'private' ? chat?.avatarUrl : otherUser?.avatarUrl} 
-                  className="h-10 w-10 border border-white/10 shrink-0" 
-                  fallbackName={headerTitle} 
-                />
+                <UserAvatar userId={chat?.type === 'private' ? otherId : null} manualAvatarUrl={chat?.type !== 'private' ? chat?.avatarUrl : otherUser?.avatarUrl} className="h-10 w-10 border border-white/10 shrink-0" fallbackName="Node" />
               )}
               <div className="flex flex-col min-w-0 text-left">
-                <span className="font-black text-[16px] truncate text-white italic tracking-tighter uppercase group-hover:text-primary transition-colors leading-tight">
-                  {headerTitle}
-                </span>
-                <span className="text-[9px] font-black uppercase tracking-[0.1em] text-primary/40 leading-none truncate mt-0.5">
-                  {isSavedMessages ? 'Ваш терминал' : chat?.type === 'private' ? formatLastSeen(otherUser?.lastSeen, otherUser?.settings?.privacy?.lastSeenVisibility) : 'Сигнал активен'}
-                </span>
+                <span className="font-black text-[16px] truncate text-white italic tracking-tighter uppercase group-hover:text-primary transition-colors leading-tight">{isSavedMessages ? 'Архив Данных' : formatDisplayName(chat?.name)}</span>
+                <span className="text-[9px] font-black uppercase tracking-[0.1em] text-primary/40 leading-none truncate mt-0.5">{isSavedMessages ? 'Ваш терминал' : chat?.type === 'private' ? formatLastSeen(otherUser?.lastSeen) : 'Сигнал активен'}</span>
               </div>
             </div>
           ) : (
@@ -561,35 +478,19 @@ export default function ChatArea() {
             </div>
           )}
         </div>
-        {!isSearchMode && (
-          <div className="flex items-center gap-2 shrink-0">
-            {!isSavedMessages && chat?.type === 'private' && (
-              <>
-                <Button variant="ghost" size="icon" onClick={() => handleStartCall('audio')} className="h-10 w-10 rounded-xl obsidian-glass text-white/40 hover:text-primary transition-colors"><Phone className="w-5 h-5" /></Button>
-                <Button variant="ghost" size="icon" onClick={() => handleStartCall('video')} className="h-10 w-10 rounded-xl obsidian-glass text-white/40 hover:text-primary transition-colors"><VideoIcon className="w-5 h-5" /></Button>
-              </>
-            )}
-            <Button variant="ghost" size="icon" onClick={() => setIsSearchMode(true)} className="h-10 w-10 rounded-xl obsidian-glass text-white/20"><Search className="w-5 h-5" /></Button>
-            <Button variant="ghost" size="icon" className="h-10 w-10 rounded-xl obsidian-glass text-white/20" onClick={() => setIsChatInfoOpen(true)}><Info className="w-6 h-6" /></Button>
-          </div>
-        )}
       </header>
 
       <div className="flex-1 relative overflow-hidden flex flex-col min-w-0 z-10 bg-transparent">
         <div ref={scrollContainerRef} className="flex-1 w-full relative z-10 overflow-y-auto scrollbar-hide scroll-smooth">
-          <MessageList 
-            messages={messages} userId={firebaseUser?.uid} chatId={currentChatId} 
-            onReply={setReplyTo} onForward={setForwardingMessage} amIPremium={isPremium} 
-            isAdmin={isGlobalAdmin(userProfile)} isGroup={chat?.type !== 'private'} searchQuery={searchQuery} viewerProfile={userProfile} 
-          />
+          <MessageList messages={messages} userId={firebaseUser?.uid} chatId={currentChatId} onReply={setReplyTo} onForward={setForwardingMessage} amIPremium={isPremium} isAdmin={isGlobalAdmin(userProfile)} isGroup={chat?.type !== 'private'} searchQuery={searchQuery} viewerProfile={userProfile} />
           <div ref={messagesEndRef} className="h-4" />
         </div>
       </div>
 
       <ChatInputBar 
-        onSendMessage={handleSendMessage} canPost={true} 
-        onPollOpen={() => setIsPollModalOpen(true)} currentChatId={currentChatId}
-        isPremium={isPremium} replyTo={replyTo} onCancelReply={() => setReplyTo(null)}
+        onSendMessage={handleSendMessage} canPost={true} onPollOpen={() => setIsPollModalOpen(true)} 
+        currentChatId={currentChatId} isPremium={isPremium} replyTo={replyTo} onCancelReply={() => setReplyTo(null)}
+        onOpenProRecorder={() => setIsProRecorderOpen(true)}
       />
 
       {chat && <ChatInfoModal open={isChatInfoOpen} onOpenChange={setIsChatInfoOpen} chat={chat as any} />}

@@ -10,28 +10,19 @@ import {
   ContextMenuItem,
   ContextMenuTrigger,
   ContextMenuSeparator,
-  ContextMenuSub,
-  ContextMenuSubTrigger,
-  ContextMenuSubContent
 } from "@/components/ui/context-menu";
-import { format, isAfter, parseISO } from 'date-fns';
+import { format } from 'date-fns';
 import { 
-  CornerUpLeft, Trash2, Check, CheckCheck, Edit2, Copy, Pin, X, Share2, Play, Smile, Lock, Loader2, Image as ImageIcon,
-  MessageCircle, Star, Pause, ShieldCheck, Clock, Volume2, Timer, Zap, Maximize2, Video as VideoIcon, Sparkles, PinOff, Wand2, Gift, FileText,
-  Heart, Square, Triangle, Ghost
+  CornerUpLeft, Trash2, Check, CheckCheck, Play, Pause, Volume2, Share2, FileText, Heart, Square, Triangle, Ghost, Circle
 } from 'lucide-react';
-import { cn, decryptSignal, isGlobalAdmin, isUserPremium, encryptSignal } from '@/lib/utils';
-import { doc, updateDoc, deleteDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
+import { cn, decryptSignal, isUserPremium } from '@/lib/utils';
+import { doc, updateDoc, deleteDoc } from 'firebase/firestore';
 import type { Message } from '@/lib/types';
 import { Button } from './ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { useAppState } from '@/lib/store';
-import { Dialog, DialogContent, DialogTitle, DialogPortal, DialogOverlay } from '@/components/ui/dialog';
 import { transcribeVoice } from '@/ai/flows/voice-to-text-flow';
 
-const QUICK_REACTIONS = ['👍', '❤️', '🔥', '😂', '😮', '😢', '👏'];
-
-// Clip Paths for Display V28.6.2
 const SHAPE_CLIPS: Record<string, string> = {
   circle: 'circle(50% at 50% 50%)',
   square: 'inset(0% rounded 20%)',
@@ -40,11 +31,7 @@ const SHAPE_CLIPS: Record<string, string> = {
   poop: 'polygon(50% 0%, 63% 13%, 53% 25%, 80% 38%, 85% 61%, 69% 68%, 94% 82%, 100% 100%, 0% 100%, 6% 82%, 31% 68%, 15% 61%, 20% 38%, 47% 25%, 37% 13%)'
 };
 
-/**
- * MessageItem V28.6.2: Quality Optimized & Interactive Playback.
- * Added "Click Outside" to collapse video notes.
- */
-export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForward, isAdmin = false, isGroup = false, onEdit, highlight = false, viewerProfile }: any) => {
+export const MessageItem = memo(({ message, isMe, chatId, onReply, onForward, isAdmin = false, isGroup = false, highlight = false, viewerProfile }: any) => {
   const { user } = useUser();
   const db = useFirestore();
   const { setInspectedUserId } = useAppState();
@@ -52,15 +39,9 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
   
   const [isPlaying, setIsPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
-  const [isMediaViewerOpen, setIsMediaViewerOpen] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
   const [transcription, setTranscription] = useState<string | null>(message.metadata?.transcription || null);
-  
   const [isNoteExpanded, setIsNoteExpanded] = useState(false);
-  const [swipeOffset, setSwipeOffset] = useState(0);
-  const touchStartX = useRef(0);
-  const touchStartY = useRef(0);
-  const isSwiping = useRef(false);
 
   const audioInstance = useRef<HTMLAudioElement | null>(null);
 
@@ -88,21 +69,11 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
     finally { setIsTranscribing(false); }
   };
 
-  const bubbleClasses = cn(
-    "p-4 rounded-[1.8rem] transition-all duration-300 relative shadow-2xl overflow-hidden group/item",
-    isMe ? "bg-primary text-white rounded-br-none" : "bg-white/[0.08] backdrop-blur-md border border-white/5 rounded-bl-none text-white",
-    highlight && "ring-4 ring-primary shadow-[0_0_40px_rgba(168,85,247,0.6)] scale-105 z-10"
-  );
-
   const renderContent = () => {
     if (message.contentType === 'video_note') return (
-      <>
-        {/* Full-screen backdrop to catch clicks when expanded */}
+      <div className="relative">
         {isNoteExpanded && (
-          <div 
-            className="fixed inset-0 z-[45] bg-black/20" 
-            onClick={(e) => { e.stopPropagation(); setIsNoteExpanded(false); }}
-          />
+          <div className="fixed inset-0 z-[45] bg-black/40 backdrop-blur-sm" onClick={(e) => { e.stopPropagation(); setIsNoteExpanded(false); }} />
         )}
         <div 
           onClick={(e) => { e.stopPropagation(); setIsNoteExpanded(!isNoteExpanded); }}
@@ -123,10 +94,10 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
           />
           {!isNoteExpanded && <div className="absolute inset-0 flex items-center justify-center bg-black/20 group-hover:bg-transparent transition-all"><Volume2 className="w-5 h-5 text-white/60 opacity-0 group-hover:opacity-100" /></div>}
         </div>
-      </>
+      </div>
     );
     if (message.contentType === 'image') return (
-      <div className="relative max-w-[340px] rounded-[2rem] overflow-hidden border border-white/10 shadow-2xl bg-black/40 cursor-pointer group" onClick={() => setIsMediaViewerOpen(true)}>
+      <div className="relative max-w-[340px] rounded-[2rem] overflow-hidden border border-white/10 shadow-2xl bg-black/40">
         <img src={message.content} alt="Image" className="w-full h-auto object-cover max-h-[500px]" />
       </div>
     );
@@ -151,6 +122,7 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
       </div>
     );
     if (message.contentType === 'sticker') return <img src={message.content} alt="Sticker" className="w-48 h-48 object-contain drop-shadow-2xl" />;
+    
     return (
       <div className="space-y-2">
         {message.replyToId && (
@@ -162,6 +134,12 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
       </div>
     );
   };
+
+  const bubbleClasses = cn(
+    "p-4 rounded-[1.8rem] transition-all duration-300 relative shadow-2xl overflow-hidden group/item",
+    isMe ? "bg-primary text-white rounded-br-none" : "bg-white/[0.08] backdrop-blur-md border border-white/5 rounded-bl-none text-white",
+    highlight && "ring-4 ring-primary shadow-[0_0_40px_rgba(168,85,247,0.6)] scale-105 z-10"
+  );
 
   if (message.contentType === 'service') return (
     <div className="w-full flex justify-center my-4 opacity-40">
