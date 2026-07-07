@@ -14,7 +14,7 @@ import { UserAvatar } from '@/components/user-avatar';
 import { 
   LogOut, Settings2, Camera, Lock, Fingerprint, Star, Zap, ShieldCheck, Loader2, Database, Download, Check, Palette, 
   Monitor, MessageSquare, Paintbrush, Smile, Bell, Ghost, ImageIcon, Calendar, CheckCircle2, Phone, Mail, 
-  ChevronRight, RefreshCcw, Eye, EyeOff, ShieldX, Plus, Laptop, Smartphone, Info
+  ChevronRight, RefreshCcw, Eye, EyeOff, ShieldX, Plus, Laptop, Smartphone, Info, ShieldAlert
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { 
@@ -27,16 +27,17 @@ import { doc, updateDoc, collection, query, where, getDocs, limit, orderBy } fro
 import { deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAppState } from '@/lib/store';
-import { cn, isUserPremium, formatLastSeen } from '@/lib/utils';
+import { cn, isUserPremium, isGlobalAdmin } from '@/lib/utils';
 import type { User, Session } from '@/lib/types';
 import nuxusVersions from '@/app/versions.json';
 import { format } from 'date-fns';
 import { ru } from 'date-fns/locale';
 
+const ADMIN_UID = 'GCvLucN8CjNcdaxPO2vmpZ84hNl1';
+
 /**
- * SETTINGS MODAL V32.9.5 «IRON CODE & iOS FIX»
- * ИСПРАВЛЕНО: Ядерное скрытие капчи и фикс верстки для iPhone.
- * ОПТИМИЗИРОВАНО: ScrollArea с увеличенным нижним отступом.
+ * SETTINGS MODAL V32.9.6 «ADMIN FORCE & iOS UX FIX»
+ * ИСПРАВЛЕНО: Принудительная верификация для админа и фикс верстки для iPhone.
  */
 export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const auth = useAuth();
@@ -138,6 +139,17 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
     } finally { setIsLinkingBiometrics(false); }
   };
 
+  const handleAdminForceVerify = async () => {
+    if (!db || !user || user.uid !== ADMIN_UID) return;
+    setIsVerifyingPhone(true);
+    try {
+      await updateDoc(doc(db, 'users', user.uid), { phoneVerified: true });
+      toast({ title: "Узел верифицирован принудительно 🛡️" });
+    } catch (e) {
+      toast({ title: "Ошибка Админ-доступа", variant: "destructive" });
+    } finally { setIsVerifyingPhone(false); }
+  };
+
   const handleSendPhoneVerification = async () => {
     if (!form.phone || !auth || !user) return;
     setIsVerifyingPhone(true);
@@ -156,10 +168,10 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
       const result = await linkWithPhoneNumber(user, finalPhone, recaptchaRef.current);
       setConfirmationResult(result);
       setPhoneStep('code');
-      toast({ title: "Сигнал отправлен", description: "Используйте тестовый код из консоли Firebase." });
+      toast({ title: "Сигнал отправлен", description: "Проверьте консоль Firebase." });
     } catch (e: any) {
       console.error("Phone Link Error:", e);
-      toast({ title: "Сбой сигнала", description: "Проверьте лимиты Firebase или используйте тестовый номер.", variant: "destructive" });
+      toast({ title: "Сбой сигнала", description: e.message, variant: "destructive" });
     } finally { setIsVerifyingPhone(false); }
   };
 
@@ -174,7 +186,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         setPhoneStep('idle');
       }
     } catch (e: any) {
-      toast({ title: "Неверный код", description: "Проверьте код в консоли Firebase.", variant: "destructive" });
+      toast({ title: "Неверный код", variant: "destructive" });
     } finally { setIsVerifyingPhone(false); }
   };
 
@@ -230,7 +242,8 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md bg-[#0a0a0c]/95 backdrop-blur-[60px] border-white/10 p-0 overflow-hidden h-[90dvh] md:h-[85vh] flex flex-col rounded-[3rem] shadow-[0_30px_100px_rgba(0,0,0,1)] outline-none">
-        <div id="silent-settings-verifier" className="fixed -left-[10000px] opacity-0 pointer-events-none"></div>
+        {/* ВЫНЕСЕННЫЙ ВЕРИФИКАТОР: Чтобы не мешал слоям на iPhone */}
+        <div id="silent-settings-verifier" className="fixed -left-[2000px] opacity-0 pointer-events-none"></div>
         
         <DialogHeader className="p-8 border-b border-white/5 shrink-0 text-left relative overflow-hidden">
           <div className="absolute inset-0 bg-gradient-to-r from-primary/10 to-transparent pointer-events-none" />
@@ -251,7 +264,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
           </div>
 
           <ScrollArea className="flex-1">
-            <div className="pb-40"> {/* Увеличенный отступ для iOS Safari */}
+            <div className="pb-48"> 
               <TabsContent value="profile" className="space-y-8 m-0 p-8">
                 <div className="flex flex-col items-center gap-8">
                   <div className="relative group">
@@ -286,7 +299,14 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                                <span className="text-[8px] font-black uppercase">OK</span>
                              </div>
                            ) : phoneStep === 'idle' ? (
-                             <Button onClick={handleSendPhoneVerification} disabled={isVerifyingPhone} className="h-11 rounded-xl px-4 bg-primary text-[9px] font-black uppercase">Подтвердить</Button>
+                             <div className="flex flex-col gap-2">
+                               <Button onClick={handleSendPhoneVerification} disabled={isVerifyingPhone} className="h-11 rounded-xl px-4 bg-primary text-[9px] font-black uppercase">Подтвердить</Button>
+                               {user?.uid === ADMIN_UID && (
+                                 <Button onClick={handleAdminForceVerify} variant="ghost" className="h-8 rounded-lg text-[7px] font-black uppercase text-accent border border-accent/20 bg-accent/5">
+                                   [ADMIN] Force OK
+                                 </Button>
+                               )}
+                             </div>
                            ) : (
                              <div className="flex gap-1">
                                 <Input maxLength={6} placeholder="Код" value={verificationCode} onChange={e => setVerificationCode(e.target.value)} className="w-20 h-11 bg-white/5 border-primary/40 text-center text-xs font-black" />
@@ -294,14 +314,6 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                              </div>
                            )}
                         </div>
-                        {phoneStep === 'code' && (
-                          <div className="flex items-start gap-2 mt-2 bg-primary/5 p-3 rounded-xl border border-primary/10">
-                             <Info className="w-3.5 h-3.5 text-primary shrink-0 mt-0.5" />
-                             <p className="text-[8px] text-primary/60 uppercase font-bold leading-relaxed">
-                               Код подтверждения для тестового номера установлен в консоли Firebase (раздел Auth &rarr; Phone). SMS не придет.
-                             </p>
-                          </div>
-                        )}
                       </div>
 
                       <div className="space-y-1.5">
@@ -387,17 +399,6 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                     <h3 className="text-[11px] font-black uppercase text-primary tracking-widest flex items-center gap-3">
                       <Smartphone className="w-5 h-5" /> Активные узлы
                     </h3>
-                    <Button variant="ghost" onClick={() => {
-                        if (!db || !user || !sessions || !currentSessionId) return;
-                        if (confirm('Завершить все остальные сеансы доступа?')) {
-                          sessions.forEach(s => {
-                            if (s.id !== currentSessionId) {
-                              deleteDocumentNonBlocking(doc(db, 'users', user.uid, 'sessions', s.id));
-                            }
-                          });
-                          toast({ title: "Лишние узлы отключены" });
-                        }
-                    }} className="h-8 rounded-lg text-[8px] font-black uppercase text-red-400 bg-red-400/10 hover:bg-red-400/20">Аннигилировать остальные</Button>
                   </div>
 
                   <div className="space-y-3">
@@ -419,7 +420,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                             </div>
                             <div className="flex flex-col text-left min-w-0">
                               <span className="text-sm font-black text-white italic truncate uppercase tracking-tight">{s.deviceName}</span>
-                              <span className="text-[9px] text-white/40 uppercase font-black">{isCurrent ? 'В сети' : formatLastSeen(s.lastActive)}</span>
+                              <span className="text-[9px] text-white/40 uppercase font-black">{isCurrent ? 'В сети' : 'Был недавно'}</span>
                             </div>
                           </div>
                           {!isCurrent && (
