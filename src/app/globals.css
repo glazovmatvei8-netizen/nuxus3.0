@@ -56,11 +56,12 @@
   }
 }
 
-/* NUCLEAR RECAPTCHA HIDE */
+/* NUCLEAR RECAPTCHA HIDE - Принудительное скрытие капчи */
 .grecaptcha-badge { 
   visibility: hidden !important; 
   opacity: 0 !important; 
   pointer-events: none !important; 
+  display: none !important;
 }
 
 .obsidian-glass {
