@@ -13,8 +13,8 @@ import { useAuth, useUser, useFirestore, useDoc, useMemoFirebase, useCollection 
 import { UserAvatar } from '@/components/user-avatar';
 import { 
   LogOut, Settings2, Camera, Lock, Fingerprint, Star, Zap, ShieldCheck, Loader2, Database, Download, Check, Palette, 
-  Monitor, MessageSquare, Paintbrush, Smile, Bell, Ghost, ImageIcon, Calendar, CheckCircle2, AppWindow, FileText, Phone, Mail, 
-  ChevronRight, RefreshCcw, Eye, EyeOff, ShieldAlert, BadgeCheck, X, Laptop, Smartphone, Globe, Trash2, ShieldX, Plus
+  Monitor, MessageSquare, Paintbrush, Smile, Bell, Ghost, ImageIcon, Calendar, CheckCircle2, Phone, Mail, 
+  ChevronRight, RefreshCcw, Eye, EyeOff, ShieldX, Plus, Laptop, Smartphone
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { 
@@ -22,8 +22,7 @@ import {
   RecaptchaVerifier, 
   signInWithPhoneNumber, 
   ConfirmationResult,
-  verifyBeforeUpdateEmail,
-  sendEmailVerification
+  verifyBeforeUpdateEmail
 } from 'firebase/auth';
 import { doc, updateDoc, collection, query, where, getDocs, limit, orderBy } from 'firebase/firestore';
 import { deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
@@ -37,7 +36,7 @@ import { ru } from 'date-fns/locale';
 
 /**
  * SETTINGS MODAL V32.1.0 «FULL INTEGRITY HUB»
- * Восстановлена верификация Phone/Email. Исправлены ReferenceErrors.
+ * Прямое подтверждение Phone/Email без видимой капчи. Исправлены ReferenceErrors.
  */
 export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const auth = useAuth();
@@ -112,15 +111,16 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
   }, [profile, open]);
 
   const initRecaptcha = () => {
-    if (!auth || !open) return null;
+    if (!auth || typeof window === 'undefined') return null;
     try {
       if (recaptchaRef.current) recaptchaRef.current.clear();
-      recaptchaRef.current = new RecaptchaVerifier(auth, 'settings-recaptcha-container', {
+      // SILENT RECAPTCHA: Zero friction
+      recaptchaRef.current = new RecaptchaVerifier(auth, 'silent-recaptcha-anchor', {
         size: 'invisible'
       });
       return recaptchaRef.current;
     } catch (e) {
-      console.warn("Recaptcha Init Error", e);
+      console.warn("Nuxus Security: Silent init error", e);
       return null;
     }
   };
@@ -130,14 +130,14 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
     setIsVerifyingPhone(true);
     try {
       const verifier = initRecaptcha();
-      if (!verifier) throw new Error("Security module error");
+      if (!verifier) throw new Error("Security Engine offline");
       const finalPhone = form.phone.startsWith('+') ? form.phone : '+' + form.phone;
       const result = await signInWithPhoneNumber(auth, finalPhone, verifier);
       setConfirmationResult(result);
       setPhoneStep('code');
-      toast({ title: "Сигнал отправлен", description: "SMS-код летит на ваш узел." });
+      toast({ title: "Сигнал отправлен", description: "SMS летит на ваш узел." });
     } catch (e: any) {
-      toast({ title: "Сбой сети", description: e.message, variant: "destructive" });
+      toast({ title: "Сбой шлюза", description: "Попробуйте позже.", variant: "destructive" });
     } finally {
       setIsVerifyingPhone(false);
     }
@@ -150,7 +150,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
       await confirmationResult.confirm(verificationCode);
       if (user) {
         await updateDoc(doc(db!, 'users', user.uid), { phoneVerified: true });
-        toast({ title: "Узел подтвержден", description: "Ваш номер телефона верифицирован." });
+        toast({ title: "Номер подтвержден 🛡️" });
         setPhoneStep('idle');
       }
     } catch (e) {
@@ -164,11 +164,10 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
     if (!form.email || !auth?.currentUser) return;
     setIsVerifyingEmail(true);
     try {
-      // Использование нового метода для безопасности
-      await verifyBeforeUpdateEmail(auth.currentUser, form.email);
-      toast({ title: "Письмо отправлено", description: "Проверьте почту для завершения привязки." });
+      await verifyBeforeUpdateEmail(auth.currentUser, form.email.trim());
+      toast({ title: "Письмо отправлено", description: "Проверьте почту для подтверждения сигнала." });
     } catch (e: any) {
-      toast({ title: "Ошибка почты", description: e.message, variant: "destructive" });
+      toast({ title: "Сбой почты", description: e.message, variant: "destructive" });
     } finally {
       setIsVerifyingEmail(false);
     }
@@ -184,7 +183,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
 
   const handleLinkBiometrics = async () => {
     if (typeof window === 'undefined' || !window.PublicKeyCredential || !user) {
-      toast({ title: "Ошибка", description: "Hardware API недоступен", variant: "destructive" });
+      toast({ title: "Hardware Error", description: "Биометрия недоступна", variant: "destructive" });
       return;
     }
     setIsLinkingBiometrics(true);
@@ -205,7 +204,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         const base64Id = btoa(String.fromCharCode(...new Uint8Array(credential.rawId)));
         localStorage.setItem('nuxus_biometric_id', base64Id);
         setForm({ ...form, biometricEnabled: true });
-        toast({ title: "Face ID привязан к узлу" });
+        toast({ title: "Face ID синхронизирован" });
       }
     } catch (e: any) {
       setForm({ ...form, biometricEnabled: false });
@@ -239,8 +238,8 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         statusEmoji: form.statusEmoji.trim(),
         statusText: form.statusText.trim(),
         avatarUrl: form.avatarUrl,
-        email: form.email.trim(),
         phone: form.phone.trim(),
+        email: form.email.trim(),
         twoFactorEnabled: form.twoFactorEnabled,
         twoFactorPin: form.twoFactorPin,
         cloudPasswordEnabled: form.cloudPasswordEnabled,
@@ -256,14 +255,14 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         'settings.privacy.isGhostMode': form.isGhostMode
       });
       onOpenChange(false);
-      toast({ title: "Конфигурация сохранена" });
+      toast({ title: "Ядро обновлено" });
     } finally { setIsSaving(false); }
   };
 
   const handleTerminateSession = (sid: string) => {
     if (!db || !user) return;
     deleteDocumentNonBlocking(doc(db, 'users', user.uid, 'sessions', sid));
-    toast({ title: "Сессия завершена" });
+    toast({ title: "Узел отключен" });
   };
 
   const handleTerminateAllOther = () => {
@@ -274,7 +273,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
           deleteDocumentNonBlocking(doc(db, 'users', user.uid, 'sessions', s.id));
         }
       });
-      toast({ title: "Все узлы отключены" });
+      toast({ title: "Лишние узлы аннигилированы" });
     }
   };
 
@@ -283,12 +282,13 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md bg-[#0a0a0c]/95 backdrop-blur-[60px] border-white/10 p-0 overflow-hidden h-[85vh] flex flex-col rounded-[3rem] shadow-[0_30px_100px_rgba(0,0,0,1)] outline-none">
-        <div id="settings-recaptcha-container" className="hidden"></div>
+        {/* SILENT RECAPTCHA ANCHOR */}
+        <div id="silent-recaptcha-anchor" className="fixed top-0 left-0 w-0 h-0 opacity-0 pointer-events-none -z-[5000]"></div>
         
         <DialogHeader className="p-8 border-b border-white/5 shrink-0 text-left relative overflow-hidden">
           <div className="absolute inset-0 bg-gradient-to-r from-primary/10 to-transparent pointer-events-none" />
           <DialogTitle className="flex items-center gap-3 text-2xl font-black italic uppercase tracking-tighter text-white relative z-10">
-            <Settings2 className="w-7 h-7 text-primary" /> Настройки
+            <Settings2 className="w-7 h-7 text-primary" /> Параметры
           </DialogTitle>
         </DialogHeader>
         
@@ -299,12 +299,11 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
               <TabsTrigger value="style" className="text-[9px] font-black uppercase tracking-widest data-[state=active]:bg-primary">Стиль</TabsTrigger>
               <TabsTrigger value="premium" className="text-[9px] font-black uppercase tracking-widest data-[state=active]:bg-primary"><Star className="w-3 h-3" /></TabsTrigger>
               <TabsTrigger value="privacy" className="text-[9px] font-black uppercase tracking-widest data-[state=active]:bg-primary">Защита</TabsTrigger>
-              <TabsTrigger value="data" className="text-[9px] font-black uppercase tracking-widest data-[state=active]:bg-primary">Сессии</TabsTrigger>
+              <TabsTrigger value="data" className="text-[9px] font-black uppercase tracking-widest data-[state=active]:bg-primary">Ядро</TabsTrigger>
             </TabsList>
           </div>
 
           <ScrollArea className="flex-1">
-            {/* TAB: PROFILE */}
             <TabsContent value="profile" className="space-y-8 m-0 p-8 pb-24">
               <div className="flex flex-col items-center gap-8">
                 <div className="relative group">
@@ -316,19 +315,18 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                 <div className="space-y-6 w-full text-left">
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-1.5">
-                      <Label className="text-[10px] uppercase font-black text-primary/60 ml-2">Имя</Label>
+                      <Label className="text-[10px] font-black uppercase text-primary/60 ml-2">Оператор</Label>
                       <Input value={form.name} onChange={e => setForm({...form, name: e.target.value})} className="bg-white/5 border-white/10 h-11 rounded-xl font-bold" />
                     </div>
                     <div className="space-y-1.5">
-                      <Label className="text-[10px] uppercase font-black text-primary/60 ml-2">ID</Label>
+                      <Label className="text-[10px] font-black uppercase text-primary/60 ml-2">ID Узла</Label>
                       <Input value={form.username} onChange={e => setForm({...form, username: e.target.value})} className="bg-white/5 border-white/10 h-11 rounded-xl font-bold" />
                     </div>
                   </div>
 
-                  {/* VERIFICATION CENTER */}
                   <div className="space-y-4 pt-2">
                     <div className="space-y-1.5">
-                      <Label className="text-[10px] uppercase font-black text-primary/60 ml-2">Телефон</Label>
+                      <Label className="text-[10px] font-black uppercase text-primary/60 ml-2">Мобильный узел</Label>
                       <div className="flex gap-2">
                          <div className="relative flex-1">
                             <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/20" />
@@ -336,7 +334,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                          </div>
                          {profile?.phoneVerified ? (
                            <div className="h-11 px-3 bg-green-500/10 border border-green-500/20 rounded-xl flex items-center gap-2 text-green-500">
-                             <CheckCircle2 className="w-4 h-4" />
+                             <ShieldCheck className="w-4 h-4" />
                              <span className="text-[8px] font-black uppercase">OK</span>
                            </div>
                          ) : phoneStep === 'idle' ? (
@@ -351,7 +349,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                     </div>
 
                     <div className="space-y-1.5">
-                      <Label className="text-[10px] uppercase font-black text-primary/60 ml-2">Почта</Label>
+                      <Label className="text-[10px] font-black uppercase text-primary/60 ml-2">Резервная почта</Label>
                       <div className="flex gap-2">
                         <div className="relative flex-1">
                            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/20" />
@@ -365,22 +363,21 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                   <div className="bg-primary/5 p-4 rounded-2xl border border-primary/10 space-y-4">
                     <div className="flex items-center gap-2 mb-1"><Smile className="w-3.5 h-3.5 text-primary" /><span className="text-[9px] font-black uppercase text-primary">Статус</span></div>
                     <div className="flex gap-3">
-                      <div className="w-14"><Input placeholder="🔥" value={form.statusEmoji} onChange={e => setForm({...form, statusEmoji: e.target.value})} className="bg-black/40 border-white/10 h-11 rounded-xl text-center text-lg" /></div>
-                      <Input placeholder="Напишите что-то..." value={form.statusText} onChange={e => setForm({...form, statusText: e.target.value})} className="bg-black/40 border-white/10 h-11 rounded-xl text-xs font-bold" />
+                      <div className="w-14"><Input placeholder="🏠" value={form.statusEmoji} onChange={e => setForm({...form, statusEmoji: e.target.value})} className="bg-black/40 border-white/10 h-11 rounded-xl text-center text-lg" /></div>
+                      <Input placeholder="Ваш статус в Ядре..." value={form.statusText} onChange={e => setForm({...form, statusText: e.target.value})} className="bg-black/40 border-white/10 h-11 rounded-xl text-xs font-bold" />
                     </div>
                   </div>
 
                   <div className="space-y-2">
-                    <Label className="text-[10px] uppercase font-black text-primary/60 ml-2">Био</Label>
-                    <Textarea value={form.bio} onChange={e => setForm({...form, bio: e.target.value})} className="bg-white/5 border-white/10 rounded-xl min-h-[80px] text-xs" />
+                    <Label className="text-[10px] font-black uppercase text-primary/60 ml-2">Спецификация (Био)</Label>
+                    <Textarea value={form.bio} onChange={e => setForm({...form, bio: e.target.value})} className="bg-white/5 border-white/10 rounded-xl min-h-[80px] text-xs leading-relaxed" />
                   </div>
                 </div>
               </div>
             </TabsContent>
 
-            {/* TAB: STYLE */}
             <TabsContent value="style" className="space-y-10 m-0 p-8 pb-24">
-               <div className="space-y-6">
+              <div className="space-y-6">
                 <h3 className="text-[11px] font-black uppercase text-primary tracking-[0.3em] flex items-center gap-3"><Monitor className="w-5 h-5" /> Визуальная среда</h3>
                 <div className="grid grid-cols-2 gap-3">
                   <button onClick={() => setForm({...form, appearance: 'dark'})} className={cn("h-14 rounded-2xl border flex items-center justify-center gap-3 text-[11px] font-black uppercase tracking-widest transition-all", form.appearance === 'dark' ? "bg-primary text-white border-primary shadow-xl" : "bg-white/5 border-white/10 text-white/40")}>Obsidian</button>
@@ -399,21 +396,52 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
               )}
 
               <div className="space-y-6">
-                <h3 className="text-[11px] font-black uppercase text-primary tracking-widest flex items-center gap-3"><ImageIcon className="w-5 h-5" /> Фон чата</h3>
+                <h3 className="text-[11px] font-black uppercase text-primary tracking-widest flex items-center gap-3"><ImageIcon className="w-5 h-5" /> Обои чата</h3>
                 <div 
-                  className="w-full aspect-video rounded-[2rem] border border-white/10 bg-white/5 flex items-center justify-center relative overflow-hidden group cursor-pointer"
+                  className="w-full aspect-video rounded-[2.2rem] border border-white/10 bg-white/5 flex items-center justify-center relative overflow-hidden group cursor-pointer"
                   onClick={() => bgInputRef.current?.click()}
                 >
-                   {form.chatBackground ? <img src={form.chatBackground} className="w-full h-full object-cover" alt="Chat Background" /> : <Plus className="w-10 h-10 text-white/20" />}
+                   {form.chatBackground ? <img src={form.chatBackground} className="w-full h-full object-cover" alt="Chat Background" /> : <Plus className="w-10 h-10 text-white/10" />}
                    <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                     <span className="text-[10px] font-black uppercase text-white bg-primary px-4 py-2 rounded-xl">Выбрать фото</span>
+                     <span className="text-[10px] font-black uppercase bg-primary text-white px-4 py-2 rounded-xl">Выбрать фото</span>
                    </div>
                    <input type="file" ref={bgInputRef} className="hidden" accept="image/*" onChange={handleBgUpload} />
                 </div>
               </div>
             </TabsContent>
 
-            {/* TAB: SESSIONS */}
+            <TabsContent value="privacy" className="space-y-8 m-0 p-8 pb-24">
+              <div className="bg-primary/5 p-8 rounded-[3rem] border border-primary/10 space-y-8 shadow-2xl">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-5"><div className="bg-primary/20 p-4 rounded-2xl shadow-xl"><Fingerprint className="w-8 h-8 text-primary" /></div><div className="flex flex-col text-left"><span className="text-lg font-black text-white uppercase italic">Система 2FA</span><span className="text-[9px] text-muted-foreground uppercase font-black tracking-widest">Quantum Barrier</span></div></div><Switch checked={form.twoFactorEnabled} onCheckedChange={v => setForm({...form, twoFactorEnabled: v})} />
+                </div>
+                {form.twoFactorEnabled && (
+                  <div className="space-y-6">
+                    <Input type="password" placeholder="••••••" maxLength={6} value={form.twoFactorPin} onChange={e => setForm({...form, twoFactorPin: e.target.value.replace(/\D/g, '')})} className="bg-black/60 border-primary/30 h-16 rounded-2xl text-center text-3xl tracking-[0.6em] font-black" />
+                    <div className="flex items-center justify-between pt-6 border-t border-white/5">
+                      <div className="flex flex-col text-left"><span className="text-sm font-bold text-white uppercase italic">Hardware ID</span><span className="text-[9px] text-muted-foreground uppercase font-bold tracking-widest">Face ID / Biometrics</span></div>
+                      <Switch checked={form.biometricEnabled} onCheckedChange={v => { if(!v) setForm({...form, biometricEnabled: false}); else handleLinkBiometrics(); }} />
+                    </div>
+                  </div>
+                )}
+              </div>
+              
+              <div className="bg-accent/5 p-8 rounded-[3rem] border border-accent/20 space-y-8 shadow-2xl">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-5"><div className="bg-accent/20 p-4 rounded-2xl shadow-xl"><Lock className="w-8 h-8 text-accent" /></div><div className="flex flex-col text-left"><span className="text-lg font-black text-white uppercase italic">Облачный пароль</span><span className="text-[9px] text-accent/60 uppercase font-black tracking-widest">Master Password</span></div></div>
+                  <Switch checked={form.cloudPasswordEnabled} onCheckedChange={v => setForm({...form, cloudPasswordEnabled: v})} />
+                </div>
+                {form.cloudPasswordEnabled && (
+                  <div className="relative">
+                    <Input type={showCloudPass ? "text" : "password"} placeholder="Мастер-код" value={form.cloudPassword} onChange={e => setForm({...form, cloudPassword: e.target.value})} className="bg-black/60 border-accent/30 h-14 rounded-2xl text-center font-bold pr-12" />
+                    <button type="button" onClick={() => setShowCloudPass(!showCloudPass)} className="absolute right-4 top-1/2 -translate-y-1/2 text-white/20 hover:text-white">
+                      {showCloudPass ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                    </button>
+                  </div>
+                )}
+              </div>
+            </TabsContent>
+
             <TabsContent value="data" className="space-y-6 m-0 p-8 pb-24">
               <div className="space-y-4">
                 <div className="flex items-center justify-between px-2">
@@ -441,11 +469,9 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                              {s.deviceName?.includes("PC") || s.deviceName?.includes("macOS") ? <Laptop className={cn("w-6 h-6", isCurrent ? "text-primary" : "text-white/20")} /> : <Smartphone className={cn("w-6 h-6", isCurrent ? "text-primary" : "text-white/20")} />}
                           </div>
                           <div className="flex flex-col text-left min-w-0">
-                            <span className="text-sm font-black text-white italic truncate uppercase tracking-tight">{s.deviceName} {isCurrent && <span className="text-[7px] bg-primary text-white px-2 py-0.5 rounded-full not-italic tracking-widest ml-2">THIS NODE</span>}</span>
+                            <span className="text-sm font-black text-white italic truncate uppercase tracking-tight">{s.deviceName}</span>
                             <div className="flex items-center gap-2 mt-1">
                               <span className="text-[9px] font-bold text-white/40 uppercase tracking-widest">{s.browser} • {s.ip}</span>
-                              <div className="w-1 h-1 rounded-full bg-white/10" />
-                              <span className="text-[8px] font-black text-primary/60 uppercase">{s.countryCode}</span>
                             </div>
                             <span className="text-[8px] text-muted-foreground/60 uppercase font-black mt-1">
                               {isCurrent ? <span className="text-green-500">В сети</span> : formatLastSeen(s.lastActive)}
@@ -463,38 +489,6 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                 </div>
               </div>
             </TabsContent>
-
-            {/* TAB: PRIVACY */}
-            <TabsContent value="privacy" className="space-y-8 m-0 p-8 pb-24">
-               <div className="bg-primary/5 p-8 rounded-[3rem] border border-primary/10 space-y-8 shadow-2xl">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-5"><div className="bg-primary/20 p-4 rounded-2xl shadow-xl"><Fingerprint className="w-8 h-8 text-primary" /></div><div className="flex flex-col text-left"><span className="text-lg font-black text-white uppercase italic">Система 2FA</span><span className="text-[9px] text-muted-foreground uppercase font-black tracking-widest">Quantum Barrier</span></div></div><Switch checked={form.twoFactorEnabled} onCheckedChange={v => setForm({...form, twoFactorEnabled: v})} />
-                </div>
-                {form.twoFactorEnabled && <Input type="password" placeholder="••••••" maxLength={6} value={form.twoFactorPin} onChange={e => setForm({...form, twoFactorPin: e.target.value.replace(/\D/g, '')})} className="bg-black/60 border-primary/30 h-16 rounded-2xl text-center text-3xl tracking-[0.6em] font-black" />}
-                
-                {form.twoFactorEnabled && (
-                  <div className="flex items-center justify-between pt-6 border-t border-white/5">
-                    <div className="flex flex-col text-left"><span className="text-sm font-bold text-white uppercase italic">Hardware ID</span><span className="text-[9px] text-muted-foreground uppercase font-bold tracking-widest">Face ID / Biometrics</span></div>
-                    <Switch checked={form.biometricEnabled} onCheckedChange={v => { if(!v) setForm({...form, biometricEnabled: false}); else handleLinkBiometrics(); }} />
-                  </div>
-                )}
-              </div>
-              
-              <div className="bg-accent/5 p-8 rounded-[3rem] border border-accent/20 space-y-8 shadow-2xl">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-5"><div className="bg-accent/20 p-4 rounded-2xl shadow-xl"><Lock className="w-8 h-8 text-accent" /></div><div className="flex flex-col text-left"><span className="text-lg font-black text-white uppercase italic">Облачный пароль</span><span className="text-[9px] text-accent/60 uppercase font-black tracking-widest">Master Password</span></div></div>
-                  <Switch checked={form.cloudPasswordEnabled} onCheckedChange={v => setForm({...form, cloudPasswordEnabled: v})} />
-                </div>
-                {form.cloudPasswordEnabled && (
-                  <div className="relative">
-                    <Input type={showCloudPass ? "text" : "password"} placeholder="Мастер-код" value={form.cloudPassword} onChange={e => setForm({...form, cloudPassword: e.target.value})} className="bg-black/60 border-accent/30 h-14 rounded-2xl text-center font-bold pr-12" />
-                    <button type="button" onClick={() => setShowCloudPass(!showCloudPass)} className="absolute right-4 top-1/2 -translate-y-1/2 text-white/20 hover:text-white">
-                      {showCloudPass ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                    </button>
-                  </div>
-                )}
-              </div>
-            </TabsContent>
           </ScrollArea>
 
           <div className="p-8 border-t border-white/5 bg-white/[0.02] shrink-0 flex gap-4">
@@ -506,5 +500,17 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         </Tabs>
       </DialogContent>
     </Dialog>
+  );
+}
+
+function PremiumBenefit({ label, icon: Icon, active }: any) {
+  return (
+    <div className={cn("flex items-center justify-between p-4 rounded-2xl border transition-all", active ? "bg-primary/10 border-primary/20" : "bg-white/5 border-white/5")}>
+      <div className="flex items-center gap-3">
+        <Icon className={cn("w-4 h-4", active ? "text-accent" : "text-white/20")} />
+        <span className={cn("text-[11px] font-bold uppercase", active ? "text-white" : "text-white/40")}>{label}</span>
+      </div>
+      {active && <CheckCircle2 className="w-4 h-4 text-green-500" />}
+    </div>
   );
 }
