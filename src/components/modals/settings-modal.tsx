@@ -35,8 +35,8 @@ import { format } from 'date-fns';
 import { ru } from 'date-fns/locale';
 
 /**
- * SETTINGS MODAL V32.3.0 «SILENT SIGNAL»
- * Рекапча полностью скрыта. Прямая верификация данных.
+ * SETTINGS MODAL V32.4.0 «STABLE HANDSHAKE»
+ * ИСПРАВЛЕНО: Обработка ошибок сессии, Plus импорт, логика фонов.
  */
 export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const auth = useAuth();
@@ -138,7 +138,9 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
     } catch (e: any) {
       console.error(e);
       if (e.code === 'auth/requires-recent-login') {
-        toast({ title: "Сессия устарела", description: "Для привязки номера требуется перезайти в Ядро.", variant: "destructive" });
+        toast({ title: "Сессия устарела", description: "Требуется перезайти в Ядро.", variant: "destructive" });
+      } else if (e.code === 'auth/billing-not-enabled') {
+        toast({ title: "Ошибка тарифа", description: "Для реальных SMS требуется план Blaze.", variant: "destructive" });
       } else {
         toast({ title: "Сбой сигнала", description: "Попробуйте позже.", variant: "destructive" });
       }
@@ -169,12 +171,12 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
     setIsVerifyingEmail(true);
     try {
       await verifyBeforeUpdateEmail(auth.currentUser, form.email.trim());
-      toast({ title: "Письмо отправлено", description: "Проверьте почту для подтверждения сигнала." });
+      toast({ title: "Письмо отправлено", description: "Проверьте почту." });
     } catch (e: any) {
       if (e.code === 'auth/requires-recent-login') {
-        toast({ title: "Нужен перезаход", description: "Для привязки основной почты требуется свежая авторизация.", variant: "destructive" });
+        toast({ title: "Нужен перезаход", description: "Для безопасности требуется свежая авторизация.", variant: "destructive" });
       } else {
-        toast({ title: "Сбой почты", description: "Проверьте корректность адреса.", variant: "destructive" });
+        toast({ title: "Сбой почты", description: "Проверьте адрес.", variant: "destructive" });
       }
     } finally {
       setIsVerifyingEmail(false);

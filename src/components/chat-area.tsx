@@ -9,7 +9,7 @@ import { UserAvatar } from '@/components/user-avatar';
 import { 
   Send, ChevronLeft, X, Paperclip, Mic, StopCircle, 
   Smile, ImageIcon, Trash2, AtSign, RefreshCcw, CornerUpLeft, Circle, Video as VideoIcon, Shield,
-  Heart, Square, Triangle, Ghost, Pause, Play
+  Heart, Square, Triangle, Ghost, Pause, Play, Search
 } from 'lucide-react';
 import { MessageItem } from './message-item';
 import { ChatInfoModal } from './modals/chat-info-modal';
@@ -407,9 +407,10 @@ export default function ChatArea() {
     } catch (e) { toast({ title: "Ошибка камеры", variant: "destructive" }); }
   };
 
+  const currentShapeObj = VIDEO_SHAPES.find(s => s.id === selectedShape);
+
   return (
     <div className="flex-1 flex flex-col h-full bg-transparent relative overflow-hidden z-20 max-w-full">
-      {/* RESTORED: Chat Background Rendering */}
       {userProfile?.settings?.chatBackground && (
         <div className="absolute inset-0 z-0 pointer-events-none">
           <img src={userProfile.settings.chatBackground} className="w-full h-full object-cover opacity-100" alt="BG" />

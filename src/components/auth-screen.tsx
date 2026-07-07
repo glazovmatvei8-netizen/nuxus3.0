@@ -23,8 +23,8 @@ import { NuxusLogo } from './nuxus-logo';
 export type AuthStep = 'phone' | 'verify' | 'cloud_password' | 'profile' | 'setup2fa';
 
 /**
- * AUTH SCREEN V32.3.1 «STABLE SIGNAL»
- * ИСПРАВЛЕНО: Интерактивные ссылки регламента, фикс отправки SMS и прозрачная регистрация.
+ * AUTH SCREEN V32.4.0 «STABLE SIGNAL»
+ * ИСПРАВЛЕНО: Обработка ошибки Billing, интерактивные ссылки, фикс слоев.
  */
 export default function AuthScreen({ initialMode }: { initialMode?: any }) {
   const auth = useAuth();
@@ -51,7 +51,6 @@ export default function AuthScreen({ initialMode }: { initialMode?: any }) {
 
   const recaptchaVerifier = useRef<RecaptchaVerifier | null>(null);
 
-  // Очистка при размонтировании
   useEffect(() => {
     return () => {
       if (recaptchaVerifier.current) {
@@ -64,7 +63,6 @@ export default function AuthScreen({ initialMode }: { initialMode?: any }) {
   const initSilentVerifier = () => {
     if (typeof window !== 'undefined' && auth) {
       try {
-        // Всегда создаем новый экземпляр для чистого сигнала
         if (recaptchaVerifier.current) {
           recaptchaVerifier.current.clear();
         }
@@ -73,9 +71,6 @@ export default function AuthScreen({ initialMode }: { initialMode?: any }) {
           size: 'invisible',
           callback: () => {
             console.log("Nuxus Security: Verification passed");
-          },
-          'expired-callback': () => {
-            toast({ title: "Сигнал истек", description: "Попробуйте отправить код снова.", variant: "destructive" });
           }
         });
         
@@ -98,7 +93,6 @@ export default function AuthScreen({ initialMode }: { initialMode?: any }) {
       const verifier = initSilentVerifier();
       if (!verifier) throw new Error("Security module fail");
 
-      // Форматирование номера (E.164)
       let finalPhone = phoneNumber.trim().replace(/\s/g, '');
       if (!finalPhone.startsWith('+')) {
         finalPhone = '+' + finalPhone;
@@ -110,12 +104,22 @@ export default function AuthScreen({ initialMode }: { initialMode?: any }) {
       toast({ title: "Сигнал отправлен", description: "SMS-код летит на ваш узел." });
     } catch (err: any) {
       console.error("Auth Error:", err);
-      toast({ 
-        title: "Ошибка сети", 
-        description: "Сбой отправки SMS. Проверьте номер или попробуйте позже.", 
-        variant: "destructive" 
-      });
-      // Сброс верификатора при ошибке
+      
+      // ОБРАБОТКА ОШИБКИ БИЛЛИНГА
+      if (err.code === 'auth/billing-not-enabled') {
+        toast({ 
+          title: "Требуется подписка Blaze", 
+          description: "Для реальных SMS включите Billing в Firebase Console или используйте тестовые номера.", 
+          variant: "destructive" 
+        });
+      } else {
+        toast({ 
+          title: "Ошибка сети", 
+          description: "Сбой отправки SMS. Проверьте номер или лимиты проекта.", 
+          variant: "destructive" 
+        });
+      }
+
       if (recaptchaVerifier.current) {
         recaptchaVerifier.current.clear();
         recaptchaVerifier.current = null;
@@ -250,7 +254,6 @@ export default function AuthScreen({ initialMode }: { initialMode?: any }) {
 
   return (
     <div className="min-h-[100dvh] w-full flex flex-col items-center justify-center bg-[#020203] p-4 relative overflow-hidden">
-      {/* Hidden container for Recaptcha with fix for interaction */}
       <div id="silent-auth-container" className="fixed -top-[1000px] left-0 opacity-0 pointer-events-none z-[-1]"></div>
       
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
@@ -270,7 +273,7 @@ export default function AuthScreen({ initialMode }: { initialMode?: any }) {
               {step === 'phone' ? 'Вход в Ядро' : step === 'verify' ? 'Код доступа' : step === 'cloud_password' ? 'Мастер-пароль' : step === 'profile' ? 'Регистрация' : 'Защита'}
             </CardTitle>
             <CardDescription className="text-primary/60 font-black tracking-[0.5em] uppercase text-[8px] opacity-60 mt-3 ml-[0.5em]">
-              {isNewUser ? 'New Node Identity' : 'Quantum Protocol v32.3'}
+              {isNewUser ? 'New Node Identity' : 'Quantum Protocol v32.4'}
             </CardDescription>
           </CardHeader>
 
@@ -294,13 +297,12 @@ export default function AuthScreen({ initialMode }: { initialMode?: any }) {
                   {isLoading ? <Loader2 className="animate-spin w-6 h-6" /> : <span className="flex items-center gap-2">Получить сигнал <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" /></span>}
                 </Button>
                 
-                {/* INTERACTIVE LEGAL LINKS */}
-                <div className="text-center px-2">
+                <div className="text-center px-2 relative z-50">
                    <p className="text-[8px] text-white/30 uppercase font-bold tracking-widest leading-relaxed">
                      Входя на платформу, вы принимаете{' '}
-                     <button type="button" onClick={() => setIsLegalOpen(true)} className="text-primary/60 hover:text-primary transition-colors underline decoration-primary/20 underline-offset-2">Цифровой регламент</button>
+                     <button type="button" onClick={() => setIsLegalOpen(true)} className="text-primary/60 hover:text-primary transition-colors underline decoration-primary/20 underline-offset-2 pointer-events-auto">Цифровой регламент</button>
                      {' '}и{' '}
-                     <button type="button" onClick={() => setIsLegalOpen(true)} className="text-primary/60 hover:text-primary transition-colors underline decoration-primary/20 underline-offset-2">Политику безопасности</button>
+                     <button type="button" onClick={() => setIsLegalOpen(true)} className="text-primary/60 hover:text-primary transition-colors underline decoration-primary/20 underline-offset-2 pointer-events-auto">Политику безопасности</button>
                      {' '}Ядра.
                    </p>
                 </div>
