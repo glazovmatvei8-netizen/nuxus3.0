@@ -22,7 +22,7 @@ import type { Message, User as UserType, Chat } from '@/lib/types';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { useToast } from '@/hooks/use-toast';
 
-// Shapes for Video Notes V28.6.0
+// Shapes for Video Notes V28.6.1
 const VIDEO_SHAPES = [
   { id: 'circle', icon: Circle, label: 'Круг', clip: 'circle(50% at 50% 50%)' },
   { id: 'square', icon: Square, label: 'Квадрат', clip: 'inset(0% rounded 20%)' },
@@ -32,8 +32,8 @@ const VIDEO_SHAPES = [
 ];
 
 /**
- * ChatInputBar V28.6.0: Extended Buffer (3 min, 45kbps).
- * Improved seamless camera switching.
+ * ChatInputBar V28.6.1: Optimized Flip & Fixed State Race Conditions.
+ * Extended Buffer (3 min, 45kbps).
  */
 const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, isPremium, replyTo, onCancelReply }: any) => {
   const { localDrafts, setLocalDrafts } = useAppState();
@@ -62,7 +62,7 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
     setMessageInput(localDrafts[currentChatId] || '');
   }, [currentChatId, localDrafts]);
 
-  // EXTENDED AUTO-STOP PROTECTION (Max 180 seconds / 3 minutes)
+  // AUTO-STOP PROTECTION (180 seconds / 3 minutes)
   useEffect(() => {
     if (isRecording && recordingDuration >= 180) {
       stopRecording();
@@ -73,14 +73,16 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
     const newMode = camMode === 'user' ? 'environment' : 'user';
     setCamMode(newMode);
     
-    if (isRecording && recorderMode === 'video' && streamRef.current) {
+    if (streamRef.current) {
       try {
-        const newStream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: newMode, width: { ideal: 360 }, height: { ideal: 360 }, aspectRatio: 1 }
-        });
-        
-        const oldTrack = streamRef.current.getVideoTracks()[0];
+        const constraints = {
+          video: { facingMode: newMode, width: { ideal: 360 }, height: { ideal: 360 }, aspectRatio: 1 },
+          audio: true
+        };
+
+        const newStream = await navigator.mediaDevices.getUserMedia(constraints);
         const newTrack = newStream.getVideoTracks()[0];
+        const oldTrack = streamRef.current.getVideoTracks()[0];
         
         if (oldTrack) {
           streamRef.current.removeTrack(oldTrack);
@@ -89,10 +91,13 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
         
         streamRef.current.addTrack(newTrack);
         
+        // CRITICAL: Refresh srcObject for preview and recorder link
         if (videoPreviewRef.current) {
+          videoPreviewRef.current.srcObject = null;
           videoPreviewRef.current.srcObject = streamRef.current;
+          videoPreviewRef.current.play().catch(() => {});
         }
-      } catch (e) { console.error("Camera switch failed", e); }
+      } catch (e) { console.error("Nuxus Flip Fail", e); }
     }
   };
 
@@ -126,7 +131,6 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
       streamRef.current = stream;
       
-      // CRITICAL: 45kbps bitRate for 3 minutes within 1MB Firestore limit
       const recorderOptions: any = {
         mimeType: recorderMode === 'video' ? 'video/webm;codecs=vp8,opus' : 'audio/webm'
       };
@@ -151,6 +155,7 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
 
       recorder.start();
       setIsRecording(true);
+      setIsShapeSelectorOpen(false); // Close selector when recording starts
       setRecordingDuration(0);
       timerIntervalRef.current = setInterval(() => setRecordingDuration(prev => prev + 1), 1000);
       isActuallyRecording.current = true;
@@ -163,7 +168,10 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
       mediaRecorderRef.current.stop();
       setIsRecording(false);
       isActuallyRecording.current = false;
-      if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
+      if (timerIntervalRef.current) {
+        clearInterval(timerIntervalRef.current);
+        timerIntervalRef.current = null;
+      }
     }
   };
 
@@ -182,14 +190,18 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
     if (longPressTimer.current) {
       clearTimeout(longPressTimer.current);
       longPressTimer.current = null;
+      // It was a short tap - open/toggle shape selector
       setIsShapeSelectorOpen(!isShapeSelectorOpen);
       if (!isShapeSelectorOpen) {
         navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: 360, height: 360 } })
-          .then(s => { streamRef.current = s; if(videoPreviewRef.current) videoPreviewRef.current.srcObject = s; });
+          .then(s => { 
+            streamRef.current = s; 
+            if(videoPreviewRef.current) videoPreviewRef.current.srcObject = s; 
+          });
       } else {
         if(streamRef.current) streamRef.current.getTracks().forEach(t => t.stop());
       }
-    } else {
+    } else if (isActuallyRecording.current) {
       stopRecording();
     }
   };
@@ -421,7 +433,7 @@ export default function ChatArea() {
   const handleSendMessage = useCallback(async (content_msg: string, type_msg: Message['contentType'] = 'text', meta: any = null) => {
     if (!content_msg.trim() || !currentChatId || !firebaseUser || !db) return;
     
-    // SAFETY CHECK: Firestore Document Limit is 1MB (1,048,576 bytes)
+    // SAFETY CHECK: Firestore Document Limit is 1MB
     if (content_msg.length > 1040000) {
       toast({ title: "Файл слишком велик", description: "Превышен системный лимит 1МБ. Запись была укорочена или сжата.", variant: "destructive" });
       return;
@@ -461,7 +473,7 @@ export default function ChatArea() {
 
   return (
     <div className="flex-1 flex flex-col h-full bg-transparent relative overflow-hidden z-20 max-w-full">
-      {/* Dynamic Chat Background V28.6.0 */}
+      {/* Dynamic Chat Background V28.6.1 */}
       {userProfile?.settings?.chatBackground && (
         <div className="absolute inset-0 z-0 pointer-events-none">
           <img src={userProfile.settings.chatBackground} className="w-full h-full object-cover opacity-60 brightness-110" alt="BG" />

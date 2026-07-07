@@ -31,7 +31,7 @@ import { transcribeVoice } from '@/ai/flows/voice-to-text-flow';
 
 const QUICK_REACTIONS = ['👍', '❤️', '🔥', '😂', '😮', '😢', '👏'];
 
-// Clip Paths for Display V28.6.0
+// Clip Paths for Display V28.6.1
 const SHAPE_CLIPS: Record<string, string> = {
   circle: 'circle(50% at 50% 50%)',
   square: 'inset(0% rounded 20%)',
@@ -41,7 +41,7 @@ const SHAPE_CLIPS: Record<string, string> = {
 };
 
 /**
- * MessageItem V28.6.0: Fixed Black Screen & Background Brightness.
+ * MessageItem V28.6.1: Optimized video playback for iOS/Safari.
  */
 export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForward, isAdmin = false, isGroup = false, onEdit, highlight = false, viewerProfile }: any) => {
   const { user } = useUser();
