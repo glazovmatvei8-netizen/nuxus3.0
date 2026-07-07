@@ -243,7 +243,7 @@ export default function ChatArea() {
   const [isSearchMode, setIsSearchMode] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Pro Recorder State V29.4.0
+  // Pro Recorder State V29.4.1 (Quantum Switch Fix)
   const [isProRecorderOpen, setIsProRecorderOpen] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
@@ -291,10 +291,11 @@ export default function ChatArea() {
     if (!content_msg.trim() || !currentChatId || !firebaseUser || !db) return;
     
     const currentSize = content_msg.length;
+    // Лимит Firestore ~1MB (Base64 добавляет 33% веса, поэтому проверяем на честный лимит)
     if (currentSize > 1048500) {
       toast({ 
         title: "Критическое превышение лимита", 
-        description: `Файл весит ${(currentSize / 1024 / 1024).toFixed(2)}МБ. Максимум Ядра — 1МБ.`, 
+        description: `Видео слишком тяжелое для Ядра (${(currentSize / 1024 / 1024).toFixed(2)}МБ). Сократите длительность.`, 
         variant: "destructive" 
       });
       return;
@@ -319,12 +320,13 @@ export default function ChatArea() {
     updateDoc(doc(db, 'chats', currentChatId), { lastMessageAt: new Date().toISOString() });
   }, [currentChatId, firebaseUser, db, userProfile, replyTo, toast]);
 
-  // PRO RECORDER LOGIC V29.4.0 (480p Fidelity & Pause)
+  // PRO RECORDER LOGIC V29.4.1 (Quantum Stability & 480p 1MB Optimization)
   const startProRecording = async () => {
     try {
       if (!streamRef.current) {
+        // Оптимизация: 480p при 18 FPS для снижения веса под лимит 1МБ
         streamRef.current = await navigator.mediaDevices.getUserMedia({ 
-          video: { facingMode: camMode, width: 480, height: 480, frameRate: 24 }, 
+          video: { facingMode: camMode, width: 480, height: 480, frameRate: 18 }, 
           audio: true 
         });
         if (videoPreviewRef.current) videoPreviewRef.current.srcObject = streamRef.current;
@@ -332,7 +334,7 @@ export default function ChatArea() {
       
       const recorder = new MediaRecorder(streamRef.current, { 
         mimeType: 'video/webm;codecs=vp8,opus', 
-        videoBitsPerSecond: 64000, 
+        videoBitsPerSecond: 82000, // Честные 82kbps позволяют уместить ~80 секунд в 1МБ Base64
         audioBitsPerSecond: 16000
       });
       
@@ -352,7 +354,7 @@ export default function ChatArea() {
         closeProRecorder();
       };
 
-      recorder.start(1000); // Collect chunks every second for stability
+      recorder.start(500); 
       setIsRecording(true);
       setIsPaused(false);
       setRecordingDuration(0);
@@ -369,7 +371,7 @@ export default function ChatArea() {
   };
 
   const stopProRecording = () => {
-    if (mediaRecorderRef.current && isRecording) {
+    if (mediaRecorderRef.current && (isRecording || isPaused)) {
       mediaRecorderRef.current.stop();
       if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
     }
@@ -409,32 +411,40 @@ export default function ChatArea() {
     setCamMode(newMode);
     
     try {
-      // V29.4.0: HQ 480p Constraints
+      const wasRecording = isRecording;
+      const wasPaused = isPaused;
+
+      // Системная пауза для переключения
+      if (wasRecording && !wasPaused) {
+        mediaRecorderRef.current?.pause();
+      }
+
       const newStream = await navigator.mediaDevices.getUserMedia({ 
-        video: { facingMode: newMode, width: 480, height: 480, frameRate: 24 }, 
+        video: { facingMode: newMode, width: 480, height: 480, frameRate: 18 }, 
         audio: true 
       });
 
-      if (isRecording && streamRef.current) {
-        // Pause to avoid sync issues
-        const wasPaused = isPaused;
-        if (!wasPaused) mediaRecorderRef.current?.pause();
-
-        const oldVideoTrack = streamRef.current.getVideoTracks()[0];
+      if (streamRef.current) {
+        const videoTrack = streamRef.current.getVideoTracks()[0];
         const newVideoTrack = newStream.getVideoTracks()[0];
         
-        // Use track replacement if recorder is active
-        streamRef.current.removeTrack(oldVideoTrack);
+        // Подмена трека без разрыва потока
+        streamRef.current.removeTrack(videoTrack);
+        videoTrack.stop();
         streamRef.current.addTrack(newVideoTrack);
-        oldVideoTrack.stop();
-
-        if (!wasPaused) mediaRecorderRef.current?.resume();
       } else {
-        if (streamRef.current) streamRef.current.getTracks().forEach(t => t.stop());
         streamRef.current = newStream;
       }
       
       if (videoPreviewRef.current) videoPreviewRef.current.srcObject = streamRef.current;
+      
+      // Возвращаем в активное состояние
+      if (wasRecording && !wasPaused) {
+        setTimeout(() => {
+          mediaRecorderRef.current?.resume();
+        }, 100);
+      }
+
       if (window.navigator && window.navigator.vibrate) window.navigator.vibrate(25);
     } catch (e) {
       toast({ title: "Ошибка камеры", variant: "destructive" });
@@ -443,7 +453,7 @@ export default function ChatArea() {
 
   useEffect(() => {
     if (isProRecorderOpen && !streamRef.current) {
-      navigator.mediaDevices.getUserMedia({ video: { facingMode: camMode, width: 480, height: 480, frameRate: 24 }, audio: true })
+      navigator.mediaDevices.getUserMedia({ video: { facingMode: camMode, width: 480, height: 480, frameRate: 18 }, audio: true })
         .then(s => {
           streamRef.current = s;
           if(videoPreviewRef.current) videoPreviewRef.current.srcObject = s;
@@ -466,7 +476,7 @@ export default function ChatArea() {
            <div className="w-full flex items-center justify-between px-6 pt-[calc(env(safe-area-inset-top,20px)+20px)] z-[5100]">
               <div className="flex flex-col text-left">
                  <span className="text-white font-black text-xl italic uppercase tracking-tighter block leading-none">NUXUS CIRCLE</span>
-                 <span className="text-[8px] text-primary font-black uppercase tracking-[0.4em] mt-2 block ml-1">PRO STUDIO V29.4.0 (480p HQ)</span>
+                 <span className="text-[8px] text-primary font-black uppercase tracking-[0.4em] mt-2 block ml-1">PRO STUDIO V29.4.1 (Stability Patch)</span>
               </div>
               <button onClick={closeProRecorder} className="w-12 h-12 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 transition-all border border-white/10 shadow-2xl active:scale-90">
                 <X className="w-7 h-7 text-white" />
@@ -475,7 +485,7 @@ export default function ChatArea() {
 
            <div className="relative w-[320px] h-[320px] sm:w-[420px] sm:h-[420px] bg-black rounded-full overflow-hidden shadow-[0_0_120px_rgba(168,85,247,0.5)] border-4 border-white/10 flex items-center justify-center">
               <video ref={videoPreviewRef} autoPlay muted playsInline className="w-full h-full object-cover" style={{ clipPath: currentShapeObj.clip }} />
-              {isRecording && (
+              {(isRecording || isPaused) && (
                 <div className="absolute top-10 left-1/2 -translate-x-1/2 bg-red-500/90 px-6 py-2 rounded-full flex items-center gap-3 shadow-2xl z-[5200]">
                    <div className={cn("w-3 h-3 rounded-full bg-white", !isPaused && "animate-pulse")} />
                    <span className={cn("text-white text-lg font-black tabular-nums tracking-widest", isPaused && "opacity-50")}>
@@ -486,7 +496,7 @@ export default function ChatArea() {
            </div>
 
            <div className="w-full px-8 pb-[calc(4rem+env(safe-area-inset-bottom))] flex flex-col gap-8 z-[5100]">
-              {!isRecording && (
+              {!isRecording && !isPaused && (
                 <div className="flex gap-3 overflow-x-auto scrollbar-hide w-full justify-center py-4 bg-white/5 rounded-[3rem] border border-white/5 shadow-2xl backdrop-blur-md">
                   {VIDEO_SHAPES.map(shape => (
                     <button key={shape.id} onClick={() => setSelectedShape(shape.id)} className={cn("flex flex-col items-center gap-2 p-3 rounded-2xl transition-all", selectedShape === shape.id ? "bg-primary text-white scale-110 shadow-xl" : "bg-transparent text-white/30")}>
@@ -497,12 +507,12 @@ export default function ChatArea() {
               )}
 
               <div className="flex items-center justify-center w-full relative h-28">
-                <div className="absolute left-[15%] flex gap-4">
+                <div className="absolute left-[10%] flex gap-4">
                    <button onClick={switchCamera} className="w-14 h-14 rounded-2xl bg-white/10 flex items-center justify-center border border-white/10 active:scale-90 transition-all shadow-xl hover:bg-white/20">
                      <RefreshCcw className="w-7 h-7 text-white" />
                    </button>
                    
-                   {isRecording && (
+                   {(isRecording || isPaused) && (
                      <button onClick={togglePauseRecording} className={cn("w-14 h-14 rounded-2xl flex items-center justify-center border transition-all shadow-xl", isPaused ? "bg-accent text-black border-accent" : "bg-white/10 text-white border-white/10")}>
                        {isPaused ? <Play className="w-7 h-7 fill-current" /> : <Pause className="w-7 h-7 fill-current" />}
                      </button>
@@ -510,10 +520,10 @@ export default function ChatArea() {
                 </div>
 
                 <button 
-                  onClick={() => isRecording ? stopProRecording() : startProRecording()}
-                  className={cn("w-24 h-24 rounded-full flex items-center justify-center transition-all shadow-2xl relative border-4", isRecording ? "bg-red-500 border-white/40 scale-110" : "bg-primary border-white/20 active:scale-95")}
+                  onClick={() => (isRecording || isPaused) ? stopProRecording() : startProRecording()}
+                  className={cn("w-24 h-24 rounded-full flex items-center justify-center transition-all shadow-2xl relative border-4", (isRecording || isPaused) ? "bg-red-500 border-white/40 scale-110" : "bg-primary border-white/20 active:scale-95")}
                 >
-                  {isRecording ? <StopCircle className="w-12 h-12 text-white fill-white" /> : <div className="w-10 h-10 rounded-full bg-white shadow-lg" />}
+                  {(isRecording || isPaused) ? <StopCircle className="w-12 h-12 text-white fill-white" /> : <div className="w-10 h-10 rounded-full bg-white shadow-lg" />}
                 </button>
               </div>
            </div>
