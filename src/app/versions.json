@@ -1,13 +1,13 @@
 
 {
-  "latestVersion": "31.3.2",
-  "qesVersion": "31.3",
-  "build": "Silent-Shield-Invisible",
-  "sizeMb": 108,
+  "latestVersion": "32.3.0",
+  "qesVersion": "32.3",
+  "build": "Silent-Signal-Legal",
+  "sizeMb": 109,
   "changelog": [
-    "Security: Капча переведена в невидимый (Silent) режим",
-    "UX: Убрана необходимость ручного клика при верификации",
-    "Core: Исправлена ошибка 'сбоя сети' при отправке SMS",
-    "Email: Стабилизирован процесс привязки через verifyBeforeUpdateEmail"
+    "Auth: Исправлена ошибка отправки SMS через Silent Verifier",
+    "Registration: Восстановлен процесс инициализации новых профилей",
+    "Legal: Добавлены уведомления о политике конфиденциальности",
+    "Security: Оптимизирована привязка основной почты (verifyBeforeUpdateEmail)"
   ]
 }

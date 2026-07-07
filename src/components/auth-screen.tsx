@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Fingerprint, MessageSquare, Phone, ChevronRight, UserPlus, Lock, ShieldCheck, Eye, EyeOff } from 'lucide-react';
+import { Loader2, MessageSquare, Phone, ChevronRight, UserPlus, Lock, Eye, EyeOff } from 'lucide-react';
 import { useAuth, useFirestore } from '@/firebase';
 import { 
   RecaptchaVerifier, 
@@ -16,16 +16,15 @@ import {
   browserLocalPersistence,
   setPersistence
 } from 'firebase/auth';
-import { doc, setDoc, getDoc, increment, updateDoc, collection, query, where, getDocs, limit } from 'firebase/firestore';
+import { doc, setDoc, getDoc, updateDoc, collection, query, where, getDocs, limit } from 'firebase/firestore';
 import { useAppState } from '@/lib/store';
 import { NuxusLogo } from './nuxus-logo';
-import { cn } from '@/lib/utils';
 
 export type AuthStep = 'phone' | 'verify' | 'cloud_password' | 'profile' | 'setup2fa';
 
 /**
  * AUTH SCREEN V32.3.0 «SILENT SIGNAL»
- * Рекапча полностью вырезана из UI. Прямая отправка SMS.
+ * Исправлено: Гарантированная отправка SMS и процесс регистрации.
  */
 export default function AuthScreen({ initialMode }: { initialMode?: any }) {
   const auth = useAuth();
@@ -65,12 +64,12 @@ export default function AuthScreen({ initialMode }: { initialMode?: any }) {
         recaptchaVerifier.current.clear();
       }
       try {
-        // Контейнер скрыт через CSS и вынесен за экран
         recaptchaVerifier.current = new RecaptchaVerifier(auth, 'silent-auth-container', {
           size: 'invisible'
         });
         return recaptchaVerifier.current;
       } catch (e) {
+        console.error("Verifier Init Error:", e);
         return null;
       }
     }
@@ -93,7 +92,7 @@ export default function AuthScreen({ initialMode }: { initialMode?: any }) {
       toast({ title: "Сигнал отправлен", description: "SMS-код летит на ваш узел." });
     } catch (err: any) {
       console.error(err);
-      toast({ title: "Ошибка сети", description: "Сбой отправки SMS. Повторите попытку.", variant: "destructive" });
+      toast({ title: "Ошибка сети", description: "Сбой отправки SMS. Проверьте номер или попробуйте позже.", variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
@@ -186,7 +185,7 @@ export default function AuthScreen({ initialMode }: { initialMode?: any }) {
         settings: {
           theme: 'default',
           appearance: 'dark',
-          privacy: { phoneVisibility: 'nobody', lastSeenVisibility: 'everybody' }
+          privacy: { phoneVisibility: 'nobody', lastSeenVisibility: 'everybody', allowGroupsFrom: 'everybody' }
         }
       };
 
@@ -223,7 +222,6 @@ export default function AuthScreen({ initialMode }: { initialMode?: any }) {
 
   return (
     <div className="min-h-[100dvh] w-full flex flex-col items-center justify-center bg-[#020203] p-4 relative overflow-hidden">
-      {/* ABSOLUTELY SILENT CONTAINER */}
       <div id="silent-auth-container" className="fixed -left-[10000px] opacity-0 pointer-events-none"></div>
       
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
@@ -266,7 +264,11 @@ export default function AuthScreen({ initialMode }: { initialMode?: any }) {
                 <Button type="submit" disabled={isLoading} className="w-full h-16 bg-primary text-white rounded-2xl font-black uppercase italic tracking-widest shadow-2xl active:scale-95 transition-all text-sm group">
                   {isLoading ? <Loader2 className="animate-spin w-6 h-6" /> : <span className="flex items-center gap-2">Получить сигнал <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" /></span>}
                 </Button>
-                <p className="text-[7px] text-center text-white/20 uppercase font-bold tracking-widest px-4">Входя на платформу, вы принимаете цифровой регламент Ядра.</p>
+                <div className="text-center space-y-2">
+                   <p className="text-[7px] text-white/20 uppercase font-bold tracking-widest px-4 leading-relaxed">
+                     Входя на платформу, вы принимаете <span className="text-primary/40">Цифровой регламент</span> и <span className="text-primary/40">Политику безопасности</span> Ядра.
+                   </p>
+                </div>
               </form>
             )}
 
@@ -340,8 +342,11 @@ export default function AuthScreen({ initialMode }: { initialMode?: any }) {
                   </div>
                 </div>
                 <Button type="submit" disabled={isLoading} className="w-full h-16 bg-primary text-white rounded-2xl font-black uppercase italic tracking-widest shadow-2xl active:scale-95 transition-all">
-                  {isLoading ? <Loader2 className="animate-spin w-6 h-6" /> : <span className="flex items-center gap-2"><UserPlus className="w-5 h-5" /> Создать узел</span>}
+                  {isLoading ? <Loader2 className="animate-spin w-6 h-6" /> : <span className="flex items-center gap-2">Инициализировать узел</span>}
                 </Button>
+                <p className="text-[7px] text-center text-white/20 uppercase font-bold tracking-widest px-4 leading-relaxed">
+                  Нажимая кнопку, вы подтверждаете создание нового узла в децентрализованной сети Nuxus.
+                </p>
               </form>
             )}
 
@@ -349,11 +354,11 @@ export default function AuthScreen({ initialMode }: { initialMode?: any }) {
               <form onSubmit={handleSetup2FA} className="space-y-8 animate-in slide-in-from-right-4 duration-500">
                 <div className="flex flex-col items-center gap-4 py-2 text-center">
                   <div className="bg-accent/10 p-4 rounded-2xl border border-accent/20">
-                    <Fingerprint className="w-12 h-12 text-accent" />
+                    <Lock className="w-12 h-12 text-accent" />
                   </div>
                   <div className="space-y-1">
                     <p className="text-[10px] text-white font-black uppercase tracking-[0.2em]">Локальный ключ доступа</p>
-                    <p className="text-[7px] text-white/20 font-bold uppercase tracking-[0.1em]">Дополнительный барьер защиты</p>
+                    <p className="text-[7px] text-white/20 font-bold uppercase tracking-[0.1em]">Дополнительный барьер защиты интерфейса</p>
                   </div>
                 </div>
                 <Input 
@@ -366,7 +371,7 @@ export default function AuthScreen({ initialMode }: { initialMode?: any }) {
                 />
                 <div className="space-y-3">
                   <Button type="submit" disabled={isLoading} className="w-full h-16 bg-accent text-black rounded-2xl font-black uppercase italic tracking-widest shadow-2xl active:scale-95 transition-all text-sm">
-                    {isLoading ? <Loader2 className="animate-spin w-6 h-6" /> : "Активировать Защиту"}
+                    {isLoading ? <Loader2 className="animate-spin w-5 h-5" /> : "Активировать Защиту"}
                   </Button>
                   <button type="button" onClick={() => setIs2FAVerified(true)} className="w-full py-2 text-[8px] font-black uppercase text-white/20 hover:text-white tracking-[0.3em] transition-colors italic">Пропустить (не рекомендуется)</button>
                 </div>
@@ -383,3 +388,4 @@ export default function AuthScreen({ initialMode }: { initialMode?: any }) {
     </div>
   );
 }
+

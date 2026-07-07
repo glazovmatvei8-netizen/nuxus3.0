@@ -290,7 +290,6 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md bg-[#0a0a0c]/95 backdrop-blur-[60px] border-white/10 p-0 overflow-hidden h-[85vh] flex flex-col rounded-[3rem] shadow-[0_30px_100px_rgba(0,0,0,1)] outline-none">
-        {/* SILENT SIGNAL HUB */}
         <div id="silent-settings-verifier" className="fixed -left-[10000px] opacity-0 pointer-events-none"></div>
         
         <DialogHeader className="p-8 border-b border-white/5 shrink-0 text-left relative overflow-hidden">
@@ -508,17 +507,5 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         </Tabs>
       </DialogContent>
     </Dialog>
-  );
-}
-
-function PremiumBenefit({ label, icon: Icon, active }: any) {
-  return (
-    <div className={cn("flex items-center justify-between p-4 rounded-2xl border transition-all", active ? "bg-primary/10 border-primary/20" : "bg-white/5 border-white/5")}>
-      <div className="flex items-center gap-3">
-        <Icon className={cn("w-4 h-4", active ? "text-accent" : "text-white/20")} />
-        <span className={cn("text-[11px] font-bold uppercase", active ? "text-white" : "text-white/40")}>{label}</span>
-      </div>
-      {active && <CheckCircle2 className="w-4 h-4 text-green-500" />}
-    </div>
   );
 }
