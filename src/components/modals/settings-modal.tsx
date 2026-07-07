@@ -17,8 +17,13 @@ import {
   ChevronRight, RefreshCcw, Eye, EyeOff, ShieldAlert, BadgeCheck, X
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { signOut, updatePhoneNumber, sendEmailVerification, updateEmail, PhoneAuthProvider, PhoneMultiFactorGenerator, RecaptchaVerifier, signInWithPhoneNumber, PhoneAuthCredential } from 'firebase/auth';
-import { doc, updateDoc, addDoc, collection, query, where, getDocs, limit } from 'firebase/firestore';
+import { 
+  signOut, 
+  verifyBeforeUpdateEmail,
+  RecaptchaVerifier, 
+  signInWithPhoneNumber 
+} from 'firebase/auth';
+import { doc, updateDoc, collection, query, where, getDocs, limit } from 'firebase/firestore';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAppState } from '@/lib/store';
 import { cn, isUserPremium } from '@/lib/utils';
@@ -28,8 +33,8 @@ import { format } from 'date-fns';
 import { ru } from 'date-fns/locale';
 
 /**
- * SETTINGS MODAL V31.3.0 «VERIFICATION SUPREMACY»
- * Полный цикл верификации данных: Phone SMS & Real Email linking.
+ * SETTINGS MODAL V31.3.1 «SECURITY HANDSHAKE»
+ * Исправлено: переход на verifyBeforeUpdateEmail и стабилизация SMS-шлюза.
  */
 export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const auth = useAuth();
@@ -51,10 +56,11 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
   const [emailInput, setEmailInput] = useState('');
   
   const [phoneStep, setPhoneStep] = useState<'idle' | 'verify_current' | 'new_number' | 'verify_new'>('idle');
-  const [newPhone, setNewNumber] = useState('');
   const [smsCode, setSmsCode] = useState('');
   const [confirmationResult, setConfirmationResult] = useState<any>(null);
   const [isPhoneLoading, setIsPhoneLoading] = useState(false);
+
+  const recaptchaVerifier = useRef<RecaptchaVerifier | null>(null);
 
   const [form, setForm] = useState({
     name: '',
@@ -160,40 +166,71 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
     }
   };
 
+  /**
+   * КРИТИЧЕСКИЙ ФИКС: Использование verifyBeforeUpdateEmail для обхода ошибки (auth/operation-not-allowed)
+   */
   const handleUpdateEmail = async () => {
     if (!auth?.currentUser || !emailInput.trim()) return;
     setIsVerifyingEmail(true);
     try {
-      await updateEmail(auth.currentUser, emailInput.trim());
-      await sendEmailVerification(auth.currentUser);
-      toast({ title: "Почта обновлена", description: "Сигнал подтверждения отправлен на новый адрес." });
+      // Firebase требует верификации перед сменой
+      await verifyBeforeUpdateEmail(auth.currentUser, emailInput.trim());
+      toast({ 
+        title: "Запрос отправлен", 
+        description: "Проверьте новую почту. Ссылка для подтверждения уже там." 
+      });
     } catch (e: any) {
-      toast({ title: "Ошибка", description: e.message, variant: "destructive" });
+      console.error("Email Verification Error:", e);
+      toast({ 
+        title: "Сбой верификации", 
+        description: e.message || "Убедитесь, что адрес корректен.", 
+        variant: "destructive" 
+      });
     } finally {
       setIsVerifyingEmail(false);
     }
   };
 
-  const initRecaptcha = (containerId: string) => {
+  const initRecaptcha = () => {
     if (!auth) return null;
+    if (recaptchaVerifier.current) {
+        recaptchaVerifier.current.clear();
+        recaptchaVerifier.current = null;
+    }
     try {
-      return new RecaptchaVerifier(auth, containerId, { size: 'invisible' });
-    } catch (e) { return null; }
+      recaptchaVerifier.current = new RecaptchaVerifier(auth, 'settings-recaptcha-container', { 
+        size: 'invisible' 
+      });
+      return recaptchaVerifier.current;
+    } catch (e) { 
+        console.error("Recaptcha Init Error:", e);
+        return null; 
+    }
   };
 
   const startPhoneVerification = async () => {
     if (!auth || !profile?.phone) return;
     setIsPhoneLoading(true);
     try {
-      const verifier = initRecaptcha('phone-recaptcha');
-      if (!verifier) throw new Error("Recaptcha failed");
+      const verifier = initRecaptcha();
+      if (!verifier) throw new Error("Security Engine not ready");
+      
       const phone = profile.phone.startsWith('+') ? profile.phone : '+' + profile.phone;
       const result = await signInWithPhoneNumber(auth, phone, verifier);
       setConfirmationResult(result);
       setPhoneStep('verify_current');
       toast({ title: "SMS отправлено", description: "Подтвердите владение узлом." });
     } catch (e: any) {
-      toast({ title: "Сбой сети", description: "Попробуйте позже.", variant: "destructive" });
+      console.error("Phone Verification Error:", e);
+      toast({ 
+        title: "Сбой сети", 
+        description: "Не удалось отправить SMS. Попробуйте через 60 секунд или проверьте номер.", 
+        variant: "destructive" 
+      });
+      if (recaptchaVerifier.current) {
+          recaptchaVerifier.current.clear();
+          recaptchaVerifier.current = null;
+      }
     } finally {
       setIsPhoneLoading(false);
     }
@@ -204,7 +241,6 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
     setIsPhoneLoading(true);
     try {
       await confirmationResult.confirm(smsCode);
-      // Если просто подтверждаем текущий
       await updateDoc(doc(db!, 'users', user!.uid), { phoneVerified: true });
       toast({ title: "Узел верифицирован" });
       setPhoneStep('idle');
@@ -229,11 +265,12 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md bg-[#0a0a0c]/95 backdrop-blur-[60px] border-white/10 p-0 overflow-hidden h-[85vh] flex flex-col rounded-[3rem] shadow-[0_30px_100px_rgba(0,0,0,1)] outline-none">
-        <div id="phone-recaptcha" className="hidden"></div>
+        {/* КРИТИЧЕСКИЙ КОНТЕЙНЕР RECAPTCHA */}
+        <div id="settings-recaptcha-container" className="hidden"></div>
         
         <DialogHeader className="p-8 border-b border-white/5 shrink-0 text-left">
           <DialogTitle className="flex items-center gap-3 text-2xl font-black italic uppercase tracking-tighter text-white">
-            <Settings2 className="w-7 h-7 text-primary" /> Параметры v31.3
+            <Settings2 className="w-7 h-7 text-primary" /> Параметры v31.3.1
           </DialogTitle>
         </DialogHeader>
         
