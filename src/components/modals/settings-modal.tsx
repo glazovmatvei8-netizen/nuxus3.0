@@ -14,14 +14,11 @@ import { UserAvatar } from '@/components/user-avatar';
 import { 
   LogOut, Settings2, Camera, Lock, Fingerprint, Star, Zap, ShieldCheck, Loader2, Database, Download, Check, Palette, 
   Monitor, MessageSquare, Paintbrush, Smile, Bell, Ghost, ImageIcon, Calendar, CheckCircle2, AppWindow, FileText, Phone, Mail, 
-  ChevronRight, RefreshCcw, Eye, EyeOff, ShieldAlert, BadgeCheck, X, Laptop, Smartphone, Globe, Trash2, ShieldX
+  ChevronRight, RefreshCcw, Eye, EyeOff, ShieldAlert, BadgeCheck, X, Laptop, Smartphone, Globe, Trash2, ShieldX, Plus
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { 
   signOut, 
-  verifyBeforeUpdateEmail,
-  RecaptchaVerifier, 
-  signInWithPhoneNumber 
 } from 'firebase/auth';
 import { doc, updateDoc, collection, query, where, getDocs, limit, orderBy } from 'firebase/firestore';
 import { deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
@@ -34,8 +31,8 @@ import { format } from 'date-fns';
 import { ru } from 'date-fns/locale';
 
 /**
- * SETTINGS MODAL V32.0.0 «SESSION MASTERY»
- * Добавлена полноценная система управления сессиями и устройствами.
+ * SETTINGS MODAL V32.1.0 «SESSION & STYLE FIX»
+ * Исправлены ошибки ReferenceError (Plus, handleBgUpload, handleLinkBiometrics).
  */
 export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const auth = useAuth();
@@ -59,8 +56,8 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
   const currentSessionId = typeof window !== 'undefined' ? localStorage.getItem('nuxus_session_id') : null;
 
   const [isSaving, setIsSaving] = useState(false);
+  const [isLinkingBiometrics, setIsLinkingBiometrics] = useState(false);
   const [showCloudPass, setShowCloudPass] = useState(false);
-  const [isPhoneLoading, setIsPhoneLoading] = useState(false);
 
   const [form, setForm] = useState({
     name: '', username: '', bio: '', statusEmoji: '', statusText: '', avatarUrl: '',
@@ -96,6 +93,45 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
       });
     }
   }, [profile, open]);
+
+  const handleBgUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onloadend = () => setForm({ ...form, chatBackground: reader.result as string });
+    reader.readAsDataURL(file);
+  };
+
+  const handleLinkBiometrics = async () => {
+    if (typeof window === 'undefined' || !window.PublicKeyCredential || !user) {
+      toast({ title: "Ошибка", description: "Hardware API недоступен", variant: "destructive" });
+      return;
+    }
+    setIsLinkingBiometrics(true);
+    try {
+      const challenge = crypto.getRandomValues(new Uint8Array(32));
+      const userHandle = crypto.getRandomValues(new Uint8Array(16));
+      const credential = await navigator.credentials.create({
+        publicKey: {
+          challenge,
+          rp: { name: "Nuxus Kernel", id: window.location.hostname },
+          user: { id: userHandle, name: user.uid, displayName: profile?.name || "Node" },
+          pubKeyCredParams: [{ alg: -7, type: "public-key" }],
+          authenticatorSelection: { authenticatorAttachment: "platform", userVerification: "required", residentKey: "discouraged", requireResidentKey: false },
+          attestation: "none"
+        }
+      }) as any;
+      if (credential) {
+        const base64Id = btoa(String.fromCharCode(...new Uint8Array(credential.rawId)));
+        localStorage.setItem('nuxus_biometric_id', base64Id);
+        setForm({ ...form, biometricEnabled: true });
+        toast({ title: "Face ID привязан к узлу" });
+      }
+    } catch (e: any) {
+      setForm({ ...form, biometricEnabled: false });
+      toast({ title: "Сбой биометрии", variant: "destructive" });
+    } finally { setIsLinkingBiometrics(false); }
+  };
 
   const handleSave = async () => {
     if (!db || !user || !profile) return;
@@ -246,11 +282,11 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                   className="w-full aspect-video rounded-[2rem] border border-white/10 bg-white/5 flex items-center justify-center relative overflow-hidden group cursor-pointer"
                   onClick={() => bgInputRef.current?.click()}
                 >
-                   {form.chatBackground ? <img src={form.chatBackground} className="w-full h-full object-cover" /> : <Plus className="w-10 h-10 text-white/20" />}
+                   {form.chatBackground ? <img src={form.chatBackground} className="w-full h-full object-cover" alt="Chat Background" /> : <Plus className="w-10 h-10 text-white/20" />}
                    <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                      <span className="text-[10px] font-black uppercase text-white bg-primary px-4 py-2 rounded-xl">Выбрать фото</span>
                    </div>
-                   <input type="file" ref={bgInputRef} className="hidden" accept="image/*" onChange={(e) => { const f = e.target.files?.[0]; if(f) { const r = new FileReader(); r.onloadend = () => setForm({...form, chatBackground: r.result as string}); r.readAsDataURL(f); } }} />
+                   <input type="file" ref={bgInputRef} className="hidden" accept="image/*" onChange={handleBgUpload} />
                 </div>
               </div>
             </TabsContent>
@@ -319,6 +355,14 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                   <div className="flex items-center gap-5"><div className="bg-primary/20 p-4 rounded-2xl shadow-xl"><Fingerprint className="w-8 h-8 text-primary" /></div><div className="flex flex-col text-left"><span className="text-lg font-black text-white uppercase italic">Система 2FA</span><span className="text-[9px] text-muted-foreground uppercase font-black tracking-widest">Quantum Barrier</span></div></div><Switch checked={form.twoFactorEnabled} onCheckedChange={v => setForm({...form, twoFactorEnabled: v})} />
                 </div>
                 {form.twoFactorEnabled && <Input type="password" placeholder="••••••" maxLength={6} value={form.twoFactorPin} onChange={e => setForm({...form, twoFactorPin: e.target.value.replace(/\D/g, '')})} className="bg-black/60 border-primary/30 h-16 rounded-2xl text-center text-3xl tracking-[0.6em] font-black" />}
+                
+                {form.twoFactorEnabled && (
+                  <div className="flex items-center justify-between pt-6 border-t border-white/5">
+                    <div className="flex flex-col text-left"><span className="text-sm font-bold text-white uppercase italic">Hardware ID</span><span className="text-[9px] text-muted-foreground uppercase font-bold tracking-widest">Face ID / Biometrics</span></div>
+                    <Switch checked={form.biometricEnabled} onCheckedChange={v => { if(!v) setForm({...form, biometricEnabled: false}); else handleLinkBiometrics(); }} />
+                    {isLinkingBiometrics && <Loader2 className="w-4 h-4 animate-spin text-primary" />}
+                  </div>
+                )}
               </div>
               
               <div className="bg-accent/5 p-8 rounded-[3rem] border border-accent/20 space-y-8 shadow-2xl">
@@ -326,7 +370,14 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                   <div className="flex items-center gap-5"><div className="bg-accent/20 p-4 rounded-2xl shadow-xl"><Lock className="w-8 h-8 text-accent" /></div><div className="flex flex-col text-left"><span className="text-lg font-black text-white uppercase italic">Облачный пароль</span><span className="text-[9px] text-accent/60 uppercase font-black tracking-widest">Master Password</span></div></div>
                   <Switch checked={form.cloudPasswordEnabled} onCheckedChange={v => setForm({...form, cloudPasswordEnabled: v})} />
                 </div>
-                {form.cloudPasswordEnabled && <Input type={showCloudPass ? "text" : "password"} placeholder="Мастер-код" value={form.cloudPassword} onChange={e => setForm({...form, cloudPassword: e.target.value})} className="bg-black/60 border-accent/30 h-14 rounded-2xl text-center font-bold" />}
+                {form.cloudPasswordEnabled && (
+                  <div className="relative">
+                    <Input type={showCloudPass ? "text" : "password"} placeholder="Мастер-код" value={form.cloudPassword} onChange={e => setForm({...form, cloudPassword: e.target.value})} className="bg-black/60 border-accent/30 h-14 rounded-2xl text-center font-bold pr-12" />
+                    <button type="button" onClick={() => setShowCloudPass(!showCloudPass)} className="absolute right-4 top-1/2 -translate-y-1/2 text-white/20 hover:text-white">
+                      {showCloudPass ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                    </button>
+                  </div>
+                )}
               </div>
             </TabsContent>
           </ScrollArea>
@@ -340,5 +391,23 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         </Tabs>
       </DialogContent>
     </Dialog>
+  );
+}
+
+function StatCard({ label, value, icon: Icon, color, sub }: any) {
+  return (
+    <div className="bg-white/[0.03] p-6 rounded-[2.5rem] border border-white/5 flex flex-col items-center justify-center gap-3 shadow-xl hover:bg-white/[0.07] transition-all group relative overflow-hidden">
+      <div className="absolute top-0 right-0 p-3 opacity-[0.02] group-hover:opacity-[0.05] transition-opacity"><Icon className="w-16 h-16" /></div>
+      <div className={cn("p-4 rounded-2xl bg-black/40 border border-white/5 group-hover:scale-110 transition-transform shadow-lg", color)}>
+        <Icon className="w-7 h-7" />
+      </div>
+      <div className="text-center relative z-10">
+        <span className="text-3xl font-black italic text-white tabular-nums block tracking-tighter leading-none">{value}</span>
+        <div className="mt-2 space-y-0.5">
+           <span className="text-[9px] font-black uppercase text-muted-foreground/40 tracking-[0.3em] block">{label}</span>
+           <span className="text-[7px] font-black uppercase text-primary/30 tracking-[0.2em] block italic">{sub}</span>
+        </div>
+      </div>
+    </div>
   );
 }
