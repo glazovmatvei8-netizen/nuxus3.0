@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, MessageSquare, Phone, ChevronRight, UserPlus, Lock, Eye, EyeOff } from 'lucide-react';
+import { Loader2, MessageSquare, Phone, ChevronRight, UserPlus, Lock, Eye, EyeOff, ShieldCheck } from 'lucide-react';
 import { useAuth, useFirestore } from '@/firebase';
 import { 
   RecaptchaVerifier, 
@@ -23,14 +23,14 @@ import { NuxusLogo } from './nuxus-logo';
 export type AuthStep = 'phone' | 'verify' | 'cloud_password' | 'profile' | 'setup2fa';
 
 /**
- * AUTH SCREEN V32.3.0 «SILENT SIGNAL»
- * Исправлено: Гарантированная отправка SMS и процесс регистрации.
+ * AUTH SCREEN V32.3.1 «STABLE SIGNAL»
+ * ИСПРАВЛЕНО: Интерактивные ссылки регламента, фикс отправки SMS и прозрачная регистрация.
  */
 export default function AuthScreen({ initialMode }: { initialMode?: any }) {
   const auth = useAuth();
   const db = useFirestore();
   const { toast } = useToast();
-  const { setIs2FAVerified } = useAppState();
+  const { setIs2FAVerified, setIsLegalOpen } = useAppState();
   
   const [step, setStep] = useState<AuthStep>('phone');
   const [isLoading, setIsLoading] = useState(false);
@@ -41,6 +41,7 @@ export default function AuthScreen({ initialMode }: { initialMode?: any }) {
   const [confirmationResult, setConfirmationResult] = useState<ConfirmationResult | null>(null);
   const [registeredUid, setRegisteredUid] = useState<string | null>(null);
   const [userDocCache, setUserDocCache] = useState<any>(null);
+  const [isNewUser, setIsNewUser] = useState(false);
   
   const [profileForm, setProfileForm] = useState({
     name: '',
@@ -50,24 +51,36 @@ export default function AuthScreen({ initialMode }: { initialMode?: any }) {
 
   const recaptchaVerifier = useRef<RecaptchaVerifier | null>(null);
 
+  // Очистка при размонтировании
   useEffect(() => {
     return () => {
       if (recaptchaVerifier.current) {
         recaptchaVerifier.current.clear();
+        recaptchaVerifier.current = null;
       }
     };
   }, []);
 
   const initSilentVerifier = () => {
     if (typeof window !== 'undefined' && auth) {
-      if (recaptchaVerifier.current) {
-        recaptchaVerifier.current.clear();
-      }
       try {
-        recaptchaVerifier.current = new RecaptchaVerifier(auth, 'silent-auth-container', {
-          size: 'invisible'
+        // Всегда создаем новый экземпляр для чистого сигнала
+        if (recaptchaVerifier.current) {
+          recaptchaVerifier.current.clear();
+        }
+        
+        const verifier = new RecaptchaVerifier(auth, 'silent-auth-container', {
+          size: 'invisible',
+          callback: () => {
+            console.log("Nuxus Security: Verification passed");
+          },
+          'expired-callback': () => {
+            toast({ title: "Сигнал истек", description: "Попробуйте отправить код снова.", variant: "destructive" });
+          }
         });
-        return recaptchaVerifier.current;
+        
+        recaptchaVerifier.current = verifier;
+        return verifier;
       } catch (e) {
         console.error("Verifier Init Error:", e);
         return null;
@@ -78,21 +91,35 @@ export default function AuthScreen({ initialMode }: { initialMode?: any }) {
 
   const handleSendCode = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!phoneNumber.trim()) return;
+    if (!phoneNumber.trim() || !auth) return;
 
     setIsLoading(true);
     try {
       const verifier = initSilentVerifier();
-      if (!verifier) throw new Error("Signal init fail");
+      if (!verifier) throw new Error("Security module fail");
 
-      const finalPhone = phoneNumber.startsWith('+') ? phoneNumber : '+' + phoneNumber;
-      const result = await signInWithPhoneNumber(auth!, finalPhone, verifier);
+      // Форматирование номера (E.164)
+      let finalPhone = phoneNumber.trim().replace(/\s/g, '');
+      if (!finalPhone.startsWith('+')) {
+        finalPhone = '+' + finalPhone;
+      }
+
+      const result = await signInWithPhoneNumber(auth, finalPhone, verifier);
       setConfirmationResult(result);
       setStep('verify');
       toast({ title: "Сигнал отправлен", description: "SMS-код летит на ваш узел." });
     } catch (err: any) {
-      console.error(err);
-      toast({ title: "Ошибка сети", description: "Сбой отправки SMS. Проверьте номер или попробуйте позже.", variant: "destructive" });
+      console.error("Auth Error:", err);
+      toast({ 
+        title: "Ошибка сети", 
+        description: "Сбой отправки SMS. Проверьте номер или попробуйте позже.", 
+        variant: "destructive" 
+      });
+      // Сброс верификатора при ошибке
+      if (recaptchaVerifier.current) {
+        recaptchaVerifier.current.clear();
+        recaptchaVerifier.current = null;
+      }
     } finally {
       setIsLoading(false);
     }
@@ -100,18 +127,19 @@ export default function AuthScreen({ initialMode }: { initialMode?: any }) {
 
   const handleVerifyCode = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!confirmationResult || !verificationCode) return;
+    if (!confirmationResult || !verificationCode || !auth || !db) return;
 
     setIsLoading(true);
     try {
-      await setPersistence(auth!, browserLocalPersistence);
+      await setPersistence(auth, browserLocalPersistence);
       const userCredential = await confirmationResult.confirm(verificationCode);
       const uid = userCredential.user.uid;
       
-      const userRef = doc(db!, 'users', uid);
+      const userRef = doc(db, 'users', uid);
       const snap = await getDoc(userRef);
 
       if (!snap.exists()) {
+        setIsNewUser(true);
         setRegisteredUid(uid);
         setStep('profile');
       } else {
@@ -152,14 +180,14 @@ export default function AuthScreen({ initialMode }: { initialMode?: any }) {
 
   const handleCreateProfile = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!profileForm.name.trim() || !profileForm.username.trim()) return;
+    if (!profileForm.name.trim() || !profileForm.username.trim() || !db) return;
 
     setIsLoading(true);
     try {
       const cleanUsername = profileForm.username.trim().replace('@', '');
       const targetSearch = ('@' + cleanUsername).toLowerCase();
       
-      const q = query(collection(db!, 'users'), where('usernameLowercase', '==', targetSearch), limit(1));
+      const q = query(collection(db, 'users'), where('usernameLowercase', '==', targetSearch), limit(1));
       const checkSnap = await getDocs(q);
       
       if (!checkSnap.empty) {
@@ -189,7 +217,7 @@ export default function AuthScreen({ initialMode }: { initialMode?: any }) {
         }
       };
 
-      await setDoc(doc(db!, 'users', uid), profileData, { merge: true });
+      await setDoc(doc(db, 'users', uid), profileData, { merge: true });
       setStep('setup2fa');
     } catch (err: any) {
       toast({ title: "Ошибка регистрации", variant: "destructive" });
@@ -201,14 +229,14 @@ export default function AuthScreen({ initialMode }: { initialMode?: any }) {
   const handleSetup2FA = async (e: React.FormEvent) => {
     e.preventDefault();
     const uid = registeredUid || auth?.currentUser?.uid;
-    if (!uid || !profileForm.pin2FA) {
+    if (!uid || !profileForm.pin2FA || !db) {
       setIs2FAVerified(true);
       return;
     }
 
     setIsLoading(true);
     try {
-      await updateDoc(doc(db!, 'users', uid), {
+      await updateDoc(doc(db, 'users', uid), {
         twoFactorEnabled: true,
         twoFactorPin: profileForm.pin2FA
       });
@@ -222,7 +250,8 @@ export default function AuthScreen({ initialMode }: { initialMode?: any }) {
 
   return (
     <div className="min-h-[100dvh] w-full flex flex-col items-center justify-center bg-[#020203] p-4 relative overflow-hidden">
-      <div id="silent-auth-container" className="fixed -left-[10000px] opacity-0 pointer-events-none"></div>
+      {/* Hidden container for Recaptcha with fix for interaction */}
+      <div id="silent-auth-container" className="fixed -top-[1000px] left-0 opacity-0 pointer-events-none z-[-1]"></div>
       
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
         <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_0%_0%,rgba(120,50,255,0.15)_0%,transparent_50%),radial-gradient(circle_at_100%_100%,rgba(10,182,212,0.1)_0%,transparent_50%)]" />
@@ -238,10 +267,10 @@ export default function AuthScreen({ initialMode }: { initialMode?: any }) {
           
           <CardHeader className="text-center pb-2 pt-10 px-8">
             <CardTitle className="text-3xl font-black tracking-tighter uppercase italic text-white leading-none">
-              {step === 'phone' ? 'Вход в Ядро' : step === 'verify' ? 'Код доступа' : step === 'cloud_password' ? 'Облачный пароль' : step === 'profile' ? 'Профиль' : 'Защита'}
+              {step === 'phone' ? 'Вход в Ядро' : step === 'verify' ? 'Код доступа' : step === 'cloud_password' ? 'Мастер-пароль' : step === 'profile' ? 'Регистрация' : 'Защита'}
             </CardTitle>
             <CardDescription className="text-primary/60 font-black tracking-[0.5em] uppercase text-[8px] opacity-60 mt-3 ml-[0.5em]">
-              Quantum Protocol v32.3
+              {isNewUser ? 'New Node Identity' : 'Quantum Protocol v32.3'}
             </CardDescription>
           </CardHeader>
 
@@ -264,9 +293,15 @@ export default function AuthScreen({ initialMode }: { initialMode?: any }) {
                 <Button type="submit" disabled={isLoading} className="w-full h-16 bg-primary text-white rounded-2xl font-black uppercase italic tracking-widest shadow-2xl active:scale-95 transition-all text-sm group">
                   {isLoading ? <Loader2 className="animate-spin w-6 h-6" /> : <span className="flex items-center gap-2">Получить сигнал <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" /></span>}
                 </Button>
-                <div className="text-center space-y-2">
-                   <p className="text-[7px] text-white/20 uppercase font-bold tracking-widest px-4 leading-relaxed">
-                     Входя на платформу, вы принимаете <span className="text-primary/40">Цифровой регламент</span> и <span className="text-primary/40">Политику безопасности</span> Ядра.
+                
+                {/* INTERACTIVE LEGAL LINKS */}
+                <div className="text-center px-2">
+                   <p className="text-[8px] text-white/30 uppercase font-bold tracking-widest leading-relaxed">
+                     Входя на платформу, вы принимаете{' '}
+                     <button type="button" onClick={() => setIsLegalOpen(true)} className="text-primary/60 hover:text-primary transition-colors underline decoration-primary/20 underline-offset-2">Цифровой регламент</button>
+                     {' '}и{' '}
+                     <button type="button" onClick={() => setIsLegalOpen(true)} className="text-primary/60 hover:text-primary transition-colors underline decoration-primary/20 underline-offset-2">Политику безопасности</button>
+                     {' '}Ядра.
                    </p>
                 </div>
               </form>
@@ -293,7 +328,7 @@ export default function AuthScreen({ initialMode }: { initialMode?: any }) {
                   <Button type="submit" disabled={isLoading} className="w-full h-16 bg-primary text-white rounded-2xl font-black uppercase italic tracking-widest shadow-2xl active:scale-95 transition-all">
                     {isLoading ? <Loader2 className="animate-spin w-6 h-6" /> : "Подтвердить"}
                   </Button>
-                  <button type="button" onClick={() => setStep('phone')} className="w-full py-2 text-[8px] font-black uppercase text-white/20 hover:text-white tracking-[0.3em] transition-colors">Сменить номер</button>
+                  <button type="button" onClick={() => { setStep('phone'); setVerificationCode(''); }} className="w-full py-2 text-[8px] font-black uppercase text-white/20 hover:text-white tracking-[0.3em] transition-colors">Сменить номер</button>
                 </div>
               </form>
             )}
@@ -331,7 +366,7 @@ export default function AuthScreen({ initialMode }: { initialMode?: any }) {
                 <div className="grid grid-cols-1 gap-4">
                   <div className="space-y-1.5 text-left">
                     <Label className="text-[8px] uppercase font-black text-primary/60 ml-4 tracking-widest">Имя оператора</Label>
-                    <Input placeholder="Имя" value={profileForm.name} onChange={e => setProfileForm({...profileForm, name: e.target.value})} className="bg-white/5 border-white/10 h-14 rounded-2xl text-sm font-bold border-2" required />
+                    <Input placeholder="Ваше имя" value={profileForm.name} onChange={e => setProfileForm({...profileForm, name: e.target.value})} className="bg-white/5 border-white/10 h-14 rounded-2xl text-sm font-bold border-2" required />
                   </div>
                   <div className="space-y-1.5 text-left">
                     <Label className="text-[8px] uppercase font-black text-primary/60 ml-4 tracking-widest">Цифровой ID (@никнейм)</Label>
@@ -342,7 +377,7 @@ export default function AuthScreen({ initialMode }: { initialMode?: any }) {
                   </div>
                 </div>
                 <Button type="submit" disabled={isLoading} className="w-full h-16 bg-primary text-white rounded-2xl font-black uppercase italic tracking-widest shadow-2xl active:scale-95 transition-all">
-                  {isLoading ? <Loader2 className="animate-spin w-6 h-6" /> : <span className="flex items-center gap-2">Инициализировать узел</span>}
+                  {isLoading ? <Loader2 className="animate-spin w-6 h-6" /> : <span className="flex items-center gap-2">Инициализировать узел <ShieldCheck className="w-5 h-5" /></span>}
                 </Button>
                 <p className="text-[7px] text-center text-white/20 uppercase font-bold tracking-widest px-4 leading-relaxed">
                   Нажимая кнопку, вы подтверждаете создание нового узла в децентрализованной сети Nuxus.
@@ -388,4 +423,3 @@ export default function AuthScreen({ initialMode }: { initialMode?: any }) {
     </div>
   );
 }
-
