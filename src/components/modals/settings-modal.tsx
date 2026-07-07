@@ -14,10 +14,10 @@ import { UserAvatar } from '@/components/user-avatar';
 import { 
   LogOut, Settings2, Camera, Lock, Fingerprint, Star, Zap, ShieldCheck, Loader2, Database, Download, Check, Palette, 
   Monitor, MessageSquare, Paintbrush, Smile, Bell, Ghost, ImageIcon, Calendar, CheckCircle2, AppWindow, FileText, Phone, Mail, 
-  ChevronRight, RefreshCcw, Eye, EyeOff, ShieldAlert, BadgeCheck
+  ChevronRight, RefreshCcw, Eye, EyeOff, ShieldAlert, BadgeCheck, X
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { signOut, updatePhoneNumber, sendEmailVerification, updateEmail } from 'firebase/auth';
+import { signOut, updatePhoneNumber, sendEmailVerification, updateEmail, PhoneAuthProvider, PhoneMultiFactorGenerator, RecaptchaVerifier, signInWithPhoneNumber, PhoneAuthCredential } from 'firebase/auth';
 import { doc, updateDoc, addDoc, collection, query, where, getDocs, limit } from 'firebase/firestore';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAppState } from '@/lib/store';
@@ -28,8 +28,8 @@ import { format } from 'date-fns';
 import { ru } from 'date-fns/locale';
 
 /**
- * SETTINGS MODAL V31.2.0 «CINEMA STYLE RESTORE»
- * Полный возврат кастомизации + Верификация данных.
+ * SETTINGS MODAL V31.3.0 «VERIFICATION SUPREMACY»
+ * Полный цикл верификации данных: Phone SMS & Real Email linking.
  */
 export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const auth = useAuth();
@@ -45,8 +45,17 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
 
   const [isSaving, setIsSaving] = useState(false);
   const [showCloudPass, setShowCloudPass] = useState(false);
-  const [isVerifyingEmail, setIsVerifyingEmail] = useState(false);
   
+  // Verification states
+  const [isVerifyingEmail, setIsVerifyingEmail] = useState(false);
+  const [emailInput, setEmailInput] = useState('');
+  
+  const [phoneStep, setPhoneStep] = useState<'idle' | 'verify_current' | 'new_number' | 'verify_new'>('idle');
+  const [newPhone, setNewNumber] = useState('');
+  const [smsCode, setSmsCode] = useState('');
+  const [confirmationResult, setConfirmationResult] = useState<any>(null);
+  const [isPhoneLoading, setIsPhoneLoading] = useState(false);
+
   const [form, setForm] = useState({
     name: '',
     username: '',
@@ -94,8 +103,11 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         pwaNotificationsEnabled: !!profile.settings?.pwaNotificationsEnabled,
         isGhostMode: !!profile.settings?.privacy?.isGhostMode
       });
+      
+      const currentEmail = user?.email || '';
+      setEmailInput(currentEmail.includes('@nuxus.chat') ? '' : currentEmail);
     }
-  }, [profile, open]);
+  }, [profile, open, user]);
 
   const handleSave = async () => {
     if (!db || !user || !profile) return;
@@ -138,6 +150,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         'settings.pwaNotificationsEnabled': form.pwaNotificationsEnabled,
         'settings.privacy.isGhostMode': form.isGhostMode
       });
+      
       onOpenChange(false);
       toast({ title: "Конфигурация сохранена" });
     } catch (e: any) {
@@ -147,16 +160,59 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
     }
   };
 
-  const handleSendEmailVerification = async () => {
-    if (!auth?.currentUser) return;
+  const handleUpdateEmail = async () => {
+    if (!auth?.currentUser || !emailInput.trim()) return;
     setIsVerifyingEmail(true);
     try {
+      await updateEmail(auth.currentUser, emailInput.trim());
       await sendEmailVerification(auth.currentUser);
-      toast({ title: "Сигнал отправлен", description: "Проверьте вашу почту для верификации." });
+      toast({ title: "Почта обновлена", description: "Сигнал подтверждения отправлен на новый адрес." });
     } catch (e: any) {
-      toast({ title: "Сбой верификации", description: e.message, variant: "destructive" });
+      toast({ title: "Ошибка", description: e.message, variant: "destructive" });
     } finally {
       setIsVerifyingEmail(false);
+    }
+  };
+
+  const initRecaptcha = (containerId: string) => {
+    if (!auth) return null;
+    try {
+      return new RecaptchaVerifier(auth, containerId, { size: 'invisible' });
+    } catch (e) { return null; }
+  };
+
+  const startPhoneVerification = async () => {
+    if (!auth || !profile?.phone) return;
+    setIsPhoneLoading(true);
+    try {
+      const verifier = initRecaptcha('phone-recaptcha');
+      if (!verifier) throw new Error("Recaptcha failed");
+      const phone = profile.phone.startsWith('+') ? profile.phone : '+' + profile.phone;
+      const result = await signInWithPhoneNumber(auth, phone, verifier);
+      setConfirmationResult(result);
+      setPhoneStep('verify_current');
+      toast({ title: "SMS отправлено", description: "Подтвердите владение узлом." });
+    } catch (e: any) {
+      toast({ title: "Сбой сети", description: "Попробуйте позже.", variant: "destructive" });
+    } finally {
+      setIsPhoneLoading(false);
+    }
+  };
+
+  const confirmCurrentPhone = async () => {
+    if (!confirmationResult || !smsCode) return;
+    setIsPhoneLoading(true);
+    try {
+      await confirmationResult.confirm(smsCode);
+      // Если просто подтверждаем текущий
+      await updateDoc(doc(db!, 'users', user!.uid), { phoneVerified: true });
+      toast({ title: "Узел верифицирован" });
+      setPhoneStep('idle');
+      setSmsCode('');
+    } catch (e) {
+      toast({ title: "Неверный код", variant: "destructive" });
+    } finally {
+      setIsPhoneLoading(false);
     }
   };
 
@@ -173,9 +229,11 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md bg-[#0a0a0c]/95 backdrop-blur-[60px] border-white/10 p-0 overflow-hidden h-[85vh] flex flex-col rounded-[3rem] shadow-[0_30px_100px_rgba(0,0,0,1)] outline-none">
+        <div id="phone-recaptcha" className="hidden"></div>
+        
         <DialogHeader className="p-8 border-b border-white/5 shrink-0 text-left">
           <DialogTitle className="flex items-center gap-3 text-2xl font-black italic uppercase tracking-tighter text-white">
-            <Settings2 className="w-7 h-7 text-primary" /> Параметры v31.2
+            <Settings2 className="w-7 h-7 text-primary" /> Параметры v31.3
           </DialogTitle>
         </DialogHeader>
         
@@ -195,38 +253,65 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
               {/* Account Security Center */}
               <div className="space-y-4">
                 <div className="bg-white/5 p-5 rounded-[2rem] border border-white/5 space-y-4">
-                   <div className="flex items-center justify-between group cursor-pointer" onClick={() => toast({ title: "Смена номера", description: "Запрос на смену номера отправлен на старый узел." })}>
-                      <div className="flex items-center gap-4">
-                        <div className="bg-primary/20 p-2.5 rounded-xl"><Phone className="w-4 h-4 text-primary" /></div>
-                        <div className="flex flex-col text-left">
-                          <span className="text-xs font-bold text-white flex items-center gap-1.5">
-                            +{profile?.phone || 'Signal'} 
-                            {profile?.phoneVerified && <BadgeCheck className="w-3.5 h-3.5 text-green-400 fill-green-400/20" />}
-                          </span>
-                          <span className={cn("text-[8px] font-black uppercase tracking-widest", profile?.phoneVerified ? "text-green-400" : "text-red-400")}>
-                            {profile?.phoneVerified ? 'Верифицировано' : 'Требуется подтверждение'}
-                          </span>
+                   <div className="flex flex-col gap-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-4">
+                          <div className="bg-primary/20 p-2.5 rounded-xl"><Phone className="w-4 h-4 text-primary" /></div>
+                          <div className="flex flex-col text-left">
+                            <span className="text-xs font-bold text-white">+{profile?.phone || 'Signal'}</span>
+                            <span className={cn("text-[8px] font-black uppercase tracking-widest", profile?.phoneVerified ? "text-green-400" : "text-red-400")}>
+                              {profile?.phoneVerified ? 'Верифицировано' : 'Требуется подтверждение'}
+                            </span>
+                          </div>
                         </div>
+                        {!profile?.phoneVerified && phoneStep === 'idle' && (
+                          <Button size="sm" onClick={startPhoneVerification} disabled={isPhoneLoading} className="h-8 rounded-xl text-[8px] font-black uppercase tracking-widest bg-primary/20 text-primary hover:bg-primary/40">Подтвердить</Button>
+                        )}
+                        {profile?.phoneVerified && (
+                           <div className="bg-green-500/20 p-1.5 rounded-lg border border-green-500/20"><BadgeCheck className="w-3.5 h-3.5 text-green-400" /></div>
+                        )}
                       </div>
-                      <ChevronRight className="w-4 h-4 text-white/20 group-hover:text-primary transition-colors" />
+
+                      {phoneStep === 'verify_current' && (
+                        <div className="space-y-3 pt-2 animate-in slide-in-from-top-2">
+                           <div className="relative">
+                             <Input 
+                               placeholder="Код из SMS" 
+                               value={smsCode} 
+                               onChange={e => setSmsCode(e.target.value.replace(/\D/g, ''))} 
+                               className="bg-black/40 border-primary/30 h-11 rounded-xl text-center font-black tracking-[0.5em] text-lg" 
+                               maxLength={6}
+                             />
+                             <button onClick={() => setPhoneStep('idle')} className="absolute -right-2 -top-2 bg-white/10 rounded-full p-1"><X className="w-3 h-3" /></button>
+                           </div>
+                           <Button onClick={confirmCurrentPhone} disabled={isPhoneLoading} className="w-full h-10 bg-primary text-white rounded-xl text-[9px] font-black uppercase">Верифицировать узел</Button>
+                        </div>
+                      )}
                    </div>
                    
                    <div className="h-px bg-white/5" />
 
-                   <div className="flex items-center justify-between group cursor-pointer" onClick={handleSendEmailVerification}>
+                   <div className="flex flex-col gap-4">
                       <div className="flex items-center gap-4">
                         <div className="bg-accent/20 p-2.5 rounded-xl"><Mail className="w-4 h-4 text-accent" /></div>
-                        <div className="flex flex-col text-left">
-                          <span className="text-xs font-bold text-white flex items-center gap-1.5">
-                            {user?.email || 'Не привязана'}
-                            {user?.emailVerified && <BadgeCheck className="w-3.5 h-3.5 text-accent fill-accent/20" />}
-                          </span>
+                        <div className="flex-1 flex flex-col text-left">
+                          <Input 
+                            placeholder="Ваш e-mail" 
+                            value={emailInput} 
+                            onChange={e => setEmailInput(e.target.value)}
+                            className="bg-transparent border-none p-0 h-6 text-xs font-bold text-white focus-visible:ring-0 placeholder:text-white/10"
+                          />
                           <span className={cn("text-[8px] font-black uppercase tracking-widest", user?.emailVerified ? "text-green-400" : "text-white/20")}>
-                            {user?.emailVerified ? 'Почта подтверждена' : isVerifyingEmail ? 'Отправка...' : 'Привязать e-mail'}
+                            {user?.emailVerified ? 'Почта подтверждена' : 'Введите и подтвердите адрес'}
                           </span>
                         </div>
+                        {emailInput !== (user?.email || '') && emailInput.length > 5 && (
+                          <Button size="sm" onClick={handleUpdateEmail} disabled={isVerifyingEmail} className="h-8 rounded-xl text-[8px] font-black uppercase bg-accent text-black hover:bg-accent/80">Привязать</Button>
+                        )}
+                        {user?.emailVerified && (
+                           <div className="bg-accent/20 p-1.5 rounded-lg border border-accent/20"><BadgeCheck className="w-3.5 h-3.5 text-accent" /></div>
+                        )}
                       </div>
-                      {!user?.emailVerified && <ChevronRight className="w-4 h-4 text-white/20 group-hover:text-accent transition-colors" />}
                    </div>
                 </div>
               </div>
@@ -256,6 +341,30 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                     </div>
                   </div>
 
+                  <div className="bg-primary/5 p-4 rounded-2xl border border-primary/10 space-y-4">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Smile className="w-3.5 h-3.5 text-primary" />
+                      <span className="text-[9px] font-black uppercase text-primary tracking-widest">Персональный Статус</span>
+                    </div>
+                    <div className="flex gap-3">
+                      <div className="w-14">
+                        <Input 
+                          placeholder="🏠" 
+                          maxLength={2} 
+                          value={form.statusEmoji} 
+                          onChange={e => setForm({...form, statusEmoji: e.target.value})} 
+                          className="bg-black/40 border-white/10 h-12 rounded-xl text-center text-xl" 
+                        />
+                      </div>
+                      <Input 
+                        placeholder="Напишите о важном..." 
+                        value={form.statusText} 
+                        onChange={e => setForm({...form, statusText: e.target.value})} 
+                        className="bg-black/40 border-white/10 h-12 rounded-xl text-xs font-bold" 
+                      />
+                    </div>
+                  </div>
+
                   <div className="space-y-2">
                     <Label className="text-[10px] uppercase font-black ml-2 text-primary/60">Спецификация (О себе)</Label>
                     <Textarea value={form.bio} onChange={e => setForm({...form, bio: e.target.value})} className="bg-white/5 border-white/10 rounded-2xl min-h-[80px] font-medium text-xs leading-relaxed" />
@@ -265,7 +374,6 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
             </TabsContent>
 
             <TabsContent value="style" className="space-y-10 m-0 p-8 pb-24">
-              {/* RESTORED: Appearance */}
               <div className="space-y-6">
                 <h3 className="text-[11px] font-black uppercase text-primary tracking-[0.3em] flex items-center gap-3"><Monitor className="w-5 h-5" /> Визуальная среда</h3>
                 <div className="grid grid-cols-2 gap-3">
@@ -274,7 +382,6 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                 </div>
               </div>
 
-              {/* RESTORED: Chat Background */}
               <div className="space-y-6">
                 <h3 className="text-[11px] font-black uppercase text-primary tracking-[0.3em] flex items-center gap-3"><ImageIcon className="w-5 h-5" /> Обои чата</h3>
                 <div className="space-y-4">
@@ -304,7 +411,6 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                 </div>
               </div>
 
-              {/* RESTORED: Custom HEX (Premium) */}
               {isPremium && (
                 <div className="space-y-6 bg-primary/5 p-6 rounded-[2.5rem] border border-primary/10 shadow-inner">
                   <div className="flex items-center justify-between">
@@ -328,7 +434,6 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                 </div>
               )}
 
-              {/* RESTORED: Bubble Styles */}
               <div className="space-y-6">
                 <h3 className="text-[11px] font-black uppercase text-primary tracking-[0.3em] flex items-center gap-3"><MessageSquare className="w-5 h-5" /> Контейнеры сигналов</h3>
                 <div className="grid grid-cols-2 gap-3">
