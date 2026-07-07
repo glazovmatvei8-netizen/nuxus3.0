@@ -5,7 +5,7 @@ import { useUser, useFirestore, useDoc, useMemoFirebase, useAuth } from '@/fireb
 import { useAppState } from '@/lib/store';
 import AuthScreen from '@/components/auth-screen';
 import ChatMain from '@/components/chat-main';
-import { ShieldAlert, Fingerprint, ShieldCheck } from 'lucide-react';
+import { ShieldAlert, Fingerprint, ShieldCheck, Loader2 } from 'lucide-react';
 import { doc, collection, query, where, getDocs, limit } from 'firebase/firestore';
 import type { User as UserType } from '@/lib/types';
 import { Button } from '@/components/ui/button';
@@ -18,8 +18,9 @@ import { NuxusLogo } from '@/components/nuxus-logo';
 import { IosInstaller } from '@/components/ios-installer';
 
 /**
- * ГЛАВНЫЙ КОНТРОЛЛЕР ЯДРА V30.0.1
- * ОБНОВЛЕНО: Поддержка SMS-авторизации и биометрической разблокировки.
+ * ГЛАВНЫЙ КОНТРОЛЛЕР ЯДРА V32.8.0 «STEEL CURTAIN»
+ * ИСПРАВЛЕНО: Устранена уязвимость обхода 2FA при долгой загрузке.
+ * ВНЕДРЕНО: Строгая проверка профиля перед допуском в систему.
  */
 export default function Home() {
   const { user, isUserLoading } = useUser();
@@ -31,23 +32,16 @@ export default function Home() {
   const [mounted, setMounted] = useState(false);
   const [twoFactorInput, setTwoFactorInput] = useState('');
   const [showIosInstaller, setShowIosInstaller] = useState(false);
-  const [isInitialLoad, setIsInitialLoad] = useState(true);
+  const [isVerifying, setIsVerifying] = useState(false);
   
   useEffect(() => {
     setMounted(true);
     
-    // АГРЕССИВНЫЙ ТАЙМЕР: 2.0 секунды на загрузку максимум
-    const forceLoadTimer = setTimeout(() => {
-      setIsInitialLoad(false);
-    }, 2000);
-
     const isIos = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
     const isStandalone = (window.navigator as any).standalone || window.matchMedia('(display-mode: standalone)').matches;
     if (isIos && !isStandalone && !localStorage.getItem('ios_installer_dismissed')) {
       setShowIosInstaller(true);
     }
-
-    return () => clearTimeout(forceLoadTimer);
   }, []);
 
   const userProfileRef = useMemoFirebase(() => {
@@ -56,6 +50,8 @@ export default function Home() {
   }, [db, user]);
 
   const { data: profile, isLoading: isProfileLoading } = useDoc<UserType>(userProfileRef);
+  
+  // Условие бана
   const isBanned = isUserActuallyBanned(profile);
 
   useEffect(() => {
@@ -92,6 +88,7 @@ export default function Home() {
     const storedIdBase64 = localStorage.getItem('nuxus_biometric_id');
     if (!storedIdBase64 || !navigator.credentials) return;
 
+    setIsVerifying(true);
     try {
       const challenge = crypto.getRandomValues(new Uint8Array(32));
       const id = Uint8Array.from(atob(storedIdBase64), c => c.charCodeAt(0));
@@ -109,20 +106,17 @@ export default function Home() {
         }
       }).catch((e) => {
         console.warn("Nuxus Auth Reject:", e);
-      });
-    } catch (e) {}
-  };
-
-  useEffect(() => {
-    if (!isUserLoading && (!user || !isProfileLoading)) {
-      const timer = setTimeout(() => setIsInitialLoad(false), 200);
-      return () => clearTimeout(timer);
+      }).finally(() => setIsVerifying(false));
+    } catch (e) {
+      setIsVerifying(false);
     }
-  }, [isUserLoading, user, isProfileLoading]);
+  };
 
   if (!mounted) return null;
 
-  if (isInitialLoad && (isUserLoading || (user && isProfileLoading))) {
+  // СТРОГАЯ ЗАГРУЗКА: Пока мы не знаем всё о пользователе, мы не пускаем его дальше заставки.
+  // Это предотвращает "прыжок" в ChatMain до того, как сработает условие 2FA.
+  if (isUserLoading || (user && isProfileLoading)) {
     return (
       <div className="h-[100dvh] w-full flex flex-col items-center justify-center bg-[#020203] text-white relative overflow-hidden">
         <div className="relative z-10 flex flex-col items-center">
@@ -131,7 +125,7 @@ export default function Home() {
             <div className="relative w-48 h-1 bg-white/5 rounded-full overflow-hidden">
               <div className="absolute inset-0 bg-gradient-to-r from-transparent via-primary to-transparent animate-[scanline_1.5s_linear_infinite]" />
             </div>
-            <p className="text-[9px] font-black uppercase tracking-[0.8em] text-primary/60 animate-pulse ml-[0.8em]">СИНХРОНИЗАЦИЯ</p>
+            <p className="text-[9px] font-black uppercase tracking-[0.8em] text-primary/60 animate-pulse ml-[0.8em]">ЗАГРУЗКА ЯДРА</p>
           </div>
         </div>
       </div>
@@ -139,8 +133,11 @@ export default function Home() {
   }
 
   if (showIosInstaller) return <IosInstaller onDismiss={() => setShowIosInstaller(false)} />;
+  
+  // Если не авторизован - экран входа
   if (!user) return <AuthScreen />;
 
+  // Если забанен - экран блокировки
   if (isBanned) {
     return (
       <div className="h-screen w-full flex flex-col items-center justify-center bg-[#050505] p-6 text-center">
@@ -151,6 +148,8 @@ export default function Home() {
     );
   }
 
+  // ОБЛАЧНЫЙ ПАРОЛЬ (2FA): Показываем, если включен и не пройден. 
+  // Теперь это условие гарантированно срабатывает, так как профиль уже загружен.
   if (profile?.twoFactorEnabled && !is2FAVerified) {
     return (
       <div className="h-screen w-full flex items-center justify-center bg-[#020203] relative px-6">
@@ -159,23 +158,28 @@ export default function Home() {
             <Fingerprint className="w-10 h-10 text-primary animate-pulse" />
           </div>
           <div className="space-y-8">
+            <div className="space-y-2">
+              <h2 className="text-xl font-black text-white uppercase italic tracking-widest">Облачный пароль</h2>
+              <p className="text-[10px] text-primary/40 font-bold uppercase tracking-widest">Введите код доступа к узлу</p>
+            </div>
             <Input 
               type="password" 
               placeholder="••••••" 
               maxLength={6} 
               autoFocus
-              className="bg-white/[0.04] border-white/10 h-16 text-3xl tracking-[0.6em] text-center rounded-2xl font-black"
+              className="bg-white/[0.04] border-white/10 h-16 text-3xl tracking-[0.6em] text-center rounded-2xl font-black focus:border-primary/40 transition-all"
               value={twoFactorInput}
               onChange={e => setTwoFactorInput(e.target.value.replace(/\D/g, ''))}
               onKeyDown={e => e.key === 'Enter' && handleVerify2FA()}
             />
             <div className="space-y-4">
-              <Button onClick={handleVerify2FA} className="w-full h-14 rounded-2xl bg-primary text-white font-black uppercase italic tracking-widest">
-                Разблокировать Ядро
+              <Button onClick={handleVerify2FA} className="w-full h-14 rounded-2xl bg-primary text-white font-black uppercase italic tracking-widest shadow-2xl shadow-primary/30">
+                Разблокировать
               </Button>
               {profile?.settings?.biometricEnabled && (
-                <Button variant="ghost" onClick={tryBiometricAuth} className="w-full h-12 rounded-xl text-primary font-black uppercase text-[10px] tracking-widest gap-2 bg-white/5">
-                  <ShieldCheck className="w-4 h-4" /> Использовать Face ID
+                <Button variant="ghost" onClick={tryBiometricAuth} disabled={isVerifying} className="w-full h-12 rounded-xl text-primary font-black uppercase text-[10px] tracking-widest gap-2 bg-white/5">
+                  {isVerifying ? <Loader2 className="w-4 h-4 animate-spin" /> : <ShieldCheck className="w-4 h-4" />} 
+                  Face ID / Touch ID
                 </Button>
               )}
             </div>
@@ -185,5 +189,6 @@ export default function Home() {
     );
   }
 
+  // Только если все проверки пройдены - пускаем в чаты
   return <ChatMain />;
 }
