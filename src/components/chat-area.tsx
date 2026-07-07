@@ -22,7 +22,7 @@ import type { Message, User as UserType, Chat } from '@/lib/types';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { useToast } from '@/hooks/use-toast';
 
-// Shapes for Video Notes V29.3.0 (Fixed Squircle)
+// Shapes for Video Notes V29.3.1 (Pro Squircle)
 const VIDEO_SHAPES = [
   { id: 'circle', icon: Circle, label: 'Круг', clip: 'circle(50% at 50% 50%)' },
   { id: 'square', icon: Square, label: 'Квадрат', clip: 'inset(0% rounded 25%)' },
@@ -32,7 +32,7 @@ const VIDEO_SHAPES = [
 ];
 
 /**
- * ChatInputBar V29.3.0: High-fidelity audio recording (Opus).
+ * ChatInputBar V29.3.1: Stable Audio Fix (Mime-Type Optimization)
  */
 const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, isPremium, replyTo, onCancelReply, onOpenProRecorder }: any) => {
   const { localDrafts, setLocalDrafts } = useAppState();
@@ -70,7 +70,6 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
   const startAudioRecording = async () => {
     try {
       streamRef.current = await navigator.mediaDevices.getUserMedia({ audio: true });
-      // V29.3.0: Forced Opus for maximum compatibility
       const recorder = new MediaRecorder(streamRef.current, { mimeType: 'audio/webm;codecs=opus' });
       mediaRecorderRef.current = recorder;
       chunksRef.current = [];
@@ -296,11 +295,12 @@ export default function ChatArea() {
   const handleSendMessage = useCallback(async (content_msg: string, type_msg: Message['contentType'] = 'text', meta: any = null) => {
     if (!content_msg.trim() || !currentChatId || !firebaseUser || !db) return;
     
-    // V29.3.0: Limit verification
-    if (content_msg.length > 1048000) {
+    // V29.3.1: Critical Limit Security (1,048,500 bytes max for Firestore)
+    const currentSize = content_msg.length;
+    if (currentSize > 1048500) {
       toast({ 
-        title: "Превышен системный лимит", 
-        description: "Файл весит более 1МБ. Сообщение аннигилировано.", 
+        title: "Критическое превышение лимита", 
+        description: `Файл весит ${(currentSize / 1024 / 1024).toFixed(2)}МБ. Максимум Ядра — 1МБ. Сообщение аннигилировано.`, 
         variant: "destructive" 
       });
       return;
@@ -325,15 +325,18 @@ export default function ChatArea() {
     updateDoc(doc(db, 'chats', currentChatId), { lastMessageAt: new Date().toISOString() });
   }, [currentChatId, firebaseUser, db, userProfile, replyTo, toast]);
 
-  // PRO RECORDER LOGIC V29.3.0 (Quantum Compression + Live Flip)
+  // PRO RECORDER LOGIC V29.3.1 (Extreme Compression for 3-Min Fit)
   const startProRecording = async () => {
     try {
       if (!streamRef.current) return;
-      // V29.3.0: Ultra-low bitrate for 3-minute fit
+      
+      // V29.3.1: ULTRA-LOW BITRATE & LOW FPS (Fits 180s in 1MB)
       const recorder = new MediaRecorder(streamRef.current, { 
         mimeType: 'video/webm;codecs=vp8,opus', 
-        videoBitsPerSecond: 35000 
+        videoBitsPerSecond: 24000, // 24kbps
+        audioBitsPerSecond: 8000   // 8kbps (Voice only)
       });
+      
       mediaRecorderRef.current = recorder;
       chunksRef.current = [];
       
@@ -356,7 +359,7 @@ export default function ChatArea() {
       
       timerIntervalRef.current = setInterval(() => {
         setRecordingDuration(prev => {
-          if (prev >= 180) { // 3 Minutes limit
+          if (prev >= 180) { // 3 Minutes Absolute Limit
             stopProRecording();
             return 180;
           }
@@ -386,27 +389,25 @@ export default function ChatArea() {
     }
   };
 
-  // V29.3.0: Seamless camera flip during recording
+  // V29.3.1: Live Cam Switch with Strict Resolution (240x240)
   const switchCamera = async () => {
     const newMode = camMode === 'user' ? 'environment' : 'user';
     setCamMode(newMode);
     
     try {
+      // V29.3.1: Force 240p for better compression
       const s = await navigator.mediaDevices.getUserMedia({ 
-        video: { facingMode: newMode, width: 360, height: 360 }, 
+        video: { facingMode: newMode, width: 240, height: 240, frameRate: 15 }, 
         audio: true 
       });
 
       if (isRecording && streamRef.current) {
-        // Replace tracks in the active stream object used by MediaRecorder
         const oldVideoTrack = streamRef.current.getVideoTracks()[0];
         const newVideoTrack = s.getVideoTracks()[0];
-        
         streamRef.current.removeTrack(oldVideoTrack);
         streamRef.current.addTrack(newVideoTrack);
         oldVideoTrack.stop();
         
-        // Audio track stays same or replaced
         const oldAudioTrack = streamRef.current.getAudioTracks()[0];
         const newAudioTrack = s.getAudioTracks()[0];
         streamRef.current.removeTrack(oldAudioTrack);
@@ -426,7 +427,7 @@ export default function ChatArea() {
 
   useEffect(() => {
     if (isProRecorderOpen && !streamRef.current) {
-      navigator.mediaDevices.getUserMedia({ video: { facingMode: camMode, width: 360, height: 360 }, audio: true })
+      navigator.mediaDevices.getUserMedia({ video: { facingMode: camMode, width: 240, height: 240, frameRate: 15 }, audio: true })
         .then(s => {
           streamRef.current = s;
           if(videoPreviewRef.current) videoPreviewRef.current.srcObject = s;
@@ -438,28 +439,24 @@ export default function ChatArea() {
 
   return (
     <div className="flex-1 flex flex-col h-full bg-transparent relative overflow-hidden z-20 max-w-full">
-      {/* Background Brightness V29.3.0 (Pure Vision) */}
       {userProfile?.settings?.chatBackground && (
         <div className="absolute inset-0 z-0 pointer-events-none">
           <img src={userProfile.settings.chatBackground} className="w-full h-full object-cover opacity-100 brightness-100" alt="BG" />
         </div>
       )}
       
-      {/* PRO RECORDER V29.3.0 (Cinema Fidelity) */}
       {isProRecorderOpen && (
         <div className="fixed inset-0 z-[5000] bg-black/90 backdrop-blur-[50px] w-screen h-[100dvh] flex flex-col items-center justify-between animate-in fade-in duration-500 overflow-hidden">
-           {/* Top Info Bar */}
            <div className="w-full flex items-center justify-between px-6 pt-[calc(env(safe-area-inset-top,20px)+20px)] z-[5100]">
               <div className="flex flex-col text-left">
                  <span className="text-white font-black text-xl italic uppercase tracking-tighter block leading-none">NUXUS CIRCLE</span>
-                 <span className="text-[8px] text-primary font-black uppercase tracking-[0.4em] mt-2 block ml-1">PRO STUDIO V29.3</span>
+                 <span className="text-[8px] text-primary font-black uppercase tracking-[0.4em] mt-2 block ml-1">PRO STUDIO V29.3.1 (HQ COMPRESSION)</span>
               </div>
               <button onClick={closeProRecorder} className="w-12 h-12 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 transition-all border border-white/10 shadow-2xl active:scale-90">
                 <X className="w-7 h-7 text-white" />
               </button>
            </div>
 
-           {/* Video Preview Center */}
            <div className="relative w-[320px] h-[320px] sm:w-[380px] sm:h-[380px] bg-black rounded-full overflow-hidden shadow-[0_0_120px_rgba(168,85,247,0.4)] border-4 border-white/10 flex items-center justify-center">
               <video ref={videoPreviewRef} autoPlay muted playsInline className="w-full h-full object-cover" style={{ clipPath: currentShapeObj.clip }} />
               {isRecording && (
@@ -472,7 +469,6 @@ export default function ChatArea() {
               )}
            </div>
 
-           {/* Controls Bottom Panel */}
            <div className="w-full px-8 pb-[calc(2.5rem+env(safe-area-inset-bottom))] flex flex-col gap-8 z-[5100]">
               {!isRecording && (
                 <div className="flex gap-3 overflow-x-auto scrollbar-hide w-full justify-center py-4 bg-white/5 rounded-[3rem] border border-white/5 shadow-2xl backdrop-blur-md">
