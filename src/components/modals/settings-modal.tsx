@@ -34,9 +34,9 @@ import { format } from 'date-fns';
 import { ru } from 'date-fns/locale';
 
 /**
- * SETTINGS MODAL V32.9.0 «SAFE IDENTITY»
- * ИСПРАВЛЕНО: Привязка почты больше не выкидывает из аккаунта.
- * ФИКС: Улучшена стабильность слоев.
+ * SETTINGS MODAL V32.9.1 «SAFE IDENTITY»
+ * ИСПРАВЛЕНО: Теперь почта корректно подтягивается из Auth, если отсутствует в Firestore.
+ * ФИКС: Гарантированные импорты Plus и Loader2.
  */
 export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const auth = useAuth();
@@ -88,7 +88,8 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         statusText: profile.statusText || '',
         avatarUrl: profile.avatarUrl || '',
         phone: profile.phone || '',
-        email: profile.email || '',
+        // КРИТИЧЕСКИЙ ФИКС: Используем fallback на почту из Auth, если она не пуста
+        email: profile.email || user?.email || '',
         appearance: profile.settings?.appearance || 'dark',
         theme: profile.settings?.theme || 'default',
         customPrimaryColor: profile.settings?.customPrimaryColor || '',
@@ -105,7 +106,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         isGhostMode: !!profile.settings?.privacy?.isGhostMode
       });
     }
-  }, [profile, open]);
+  }, [profile, open, user?.email]);
 
   const handleBgUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -213,7 +214,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         statusText: form.statusText.trim(),
         avatarUrl: form.avatarUrl,
         phone: form.phone.trim(),
-        email: form.email.trim(), // Безопасно обновляем почту только в Firestore
+        email: form.email.trim(),
         twoFactorEnabled: form.twoFactorEnabled,
         twoFactorPin: form.twoFactorPin,
         cloudPasswordEnabled: form.cloudPasswordEnabled,
