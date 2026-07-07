@@ -24,8 +24,8 @@ import { cn } from '@/lib/utils';
 export type AuthStep = 'phone' | 'verify' | 'cloud_password' | 'profile' | 'setup2fa';
 
 /**
- * AUTH SCREEN V31.0.0 «TRIPLE BARRIER»
- * Поддержка SMS -> Облачный пароль -> Настройка профиля.
+ * AUTH SCREEN V31.4.0 «SILENT SHIELD»
+ * Полностью невидимая защита. Прямая отправка сигналов.
  */
 export default function AuthScreen({ initialMode }: { initialMode?: any }) {
   const auth = useAuth();
@@ -50,7 +50,6 @@ export default function AuthScreen({ initialMode }: { initialMode?: any }) {
     pin2FA: ''
   });
 
-  const recaptchaRef = useRef<HTMLDivElement>(null);
   const recaptchaVerifier = useRef<RecaptchaVerifier | null>(null);
 
   useEffect(() => {
@@ -59,19 +58,30 @@ export default function AuthScreen({ initialMode }: { initialMode?: any }) {
       const ref = params.get('ref');
       if (ref) setReferralId(ref);
     }
+    return () => {
+      if (recaptchaVerifier.current) {
+        recaptchaVerifier.current.clear();
+      }
+    };
   }, []);
 
   const initRecaptcha = () => {
-    if (!recaptchaVerifier.current && typeof window !== 'undefined' && auth) {
+    if (typeof window !== 'undefined' && auth) {
+      if (recaptchaVerifier.current) {
+        recaptchaVerifier.current.clear();
+      }
       try {
-        recaptchaVerifier.current = new RecaptchaVerifier(auth, 'recaptcha-container', {
+        recaptchaVerifier.current = new RecaptchaVerifier(auth, 'auth-recaptcha-container', {
           size: 'invisible',
-          callback: () => { console.log("Nuxus Security: Recaptcha Solved"); }
+          callback: () => { console.log("Nuxus Security: Silent Handshake"); }
         });
+        return recaptchaVerifier.current;
       } catch (e) {
         console.warn("Nuxus Auth: Recaptcha Init Error");
+        return null;
       }
     }
+    return null;
   };
 
   const handleSendCode = async (e: React.FormEvent) => {
@@ -83,21 +93,17 @@ export default function AuthScreen({ initialMode }: { initialMode?: any }) {
 
     setIsLoading(true);
     try {
-      initRecaptcha();
-      const appVerifier = recaptchaVerifier.current;
-      if (!appVerifier) throw new Error("Security Engine not ready");
+      const verifier = initRecaptcha();
+      if (!verifier) throw new Error("Security Engine failure");
 
       const finalPhone = phoneNumber.startsWith('+') ? phoneNumber : '+' + phoneNumber;
-      const result = await signInWithPhoneNumber(auth!, finalPhone, appVerifier);
+      const result = await signInWithPhoneNumber(auth!, finalPhone, verifier);
       setConfirmationResult(result);
       setStep('verify');
       toast({ title: "Сигнал отправлен", description: "SMS-код летит на ваш узел." });
     } catch (err: any) {
-      toast({ title: "Ошибка отправки", description: "Проверьте номер или попробуйте позже.", variant: "destructive" });
-      if (recaptchaVerifier.current) {
-        recaptchaVerifier.current.clear();
-        recaptchaVerifier.current = null;
-      }
+      console.error(err);
+      toast({ title: "Ошибка сети", description: "Сбой отправки SMS. Попробуйте еще раз.", variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
@@ -236,7 +242,8 @@ export default function AuthScreen({ initialMode }: { initialMode?: any }) {
 
   return (
     <div className="min-h-[100dvh] w-full flex flex-col items-center justify-center bg-[#020203] p-4 relative overflow-hidden">
-      <div id="recaptcha-container" className="hidden"></div>
+      {/* GLOBAL HIDDEN RECAPTCHA */}
+      <div id="auth-recaptcha-container" className="fixed top-0 left-0 opacity-0 pointer-events-none -z-[1000]"></div>
       
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
         <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_0%_0%,rgba(120,50,255,0.15)_0%,transparent_50%),radial-gradient(circle_at_100%_100%,rgba(10,182,212,0.1)_0%,transparent_50%)]" />
@@ -255,7 +262,7 @@ export default function AuthScreen({ initialMode }: { initialMode?: any }) {
               {step === 'phone' ? 'Вход в Ядро' : step === 'verify' ? 'Код доступа' : step === 'cloud_password' ? 'Облачный пароль' : step === 'profile' ? 'Профиль' : 'Защита'}
             </CardTitle>
             <CardDescription className="text-primary/60 font-black tracking-[0.5em] uppercase text-[8px] opacity-60 mt-3 ml-[0.5em]">
-              {step === 'cloud_password' ? 'Security Level 2' : 'Quantum Protocol v31.0'}
+              {step === 'cloud_password' ? 'Security Level 2' : 'Quantum Protocol v31.4'}
             </CardDescription>
           </CardHeader>
 
