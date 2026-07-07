@@ -21,6 +21,24 @@
       },
       "required": ["id", "name", "username", "phone", "createdAt"]
     },
+    "Session": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Session",
+      "type": "object",
+      "description": "Represents an active device session.",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "deviceName": { "type": "string" },
+        "browser": { "type": "string" },
+        "ip": { "type": "string" },
+        "countryCode": { "type": "string" },
+        "lastActive": { "type": "string", "format": "date-time" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "userAgent": { "type": "string" }
+      },
+      "required": ["id", "userId", "deviceName", "lastActive", "createdAt"]
+    },
     "ReceivedGift": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "ReceivedGift",
@@ -70,21 +88,6 @@
       },
       "required": ["id", "userId", "amount", "status", "createdAt"]
     },
-    "StickerPack": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "StickerPack",
-      "type": "object",
-      "description": "A collection of stickers created by a user.",
-      "properties": {
-        "id": { "type": "string" },
-        "ownerId": { "type": "string" },
-        "name": { "type": "string" },
-        "iconUrl": { "type": "string" },
-        "stickerUrls": { "type": "array", "items": { "type": "string" } },
-        "createdAt": { "type": "string", "format": "date-time" }
-      },
-      "required": ["id", "ownerId", "name", "stickerUrls", "createdAt"]
-    },
     "Chat": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Chat",
@@ -113,33 +116,20 @@
         "sentAt": { "type": "string", "format": "date-time" }
       },
       "required": ["id", "chatId", "senderId", "content", "contentType", "sentAt"]
-    },
-    "Story": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Story",
-      "type": "object",
-      "description": "Represents a short-lived user story.",
-      "properties": {
-        "id": { "type": "string" },
-        "userId": { "type": "string" },
-        "content": { "type": "string" },
-        "contentType": { "type": "string", "enum": ["image", "video"] },
-        "caption": { "type": "string" },
-        "createdAt": { "type": "string", "format": "date-time" },
-        "expiresAt": { "type": "string", "format": "date-time" },
-        "viewers": { "type": "array", "items": { "type": "string" } }
-      },
-      "required": ["id", "userId", "content", "contentType", "createdAt", "expiresAt"]
     }
   },
   "auth": {
-    "providers": ["password", "anonymous"]
+    "providers": ["phone"]
   },
   "firestore": {
     "structure": [
       {
         "path": "/users/{userId}",
         "definition": { "entityName": "UserProfile", "schema": { "$ref": "#/backend/entities/UserProfile" }, "description": "Stores user profiles." }
+      },
+      {
+        "path": "/users/{userId}/sessions/{sessionId}",
+        "definition": { "entityName": "Session", "schema": { "$ref": "#/backend/entities/Session" }, "description": "Stores active user sessions." }
       },
       {
         "path": "/users/{userId}/receivedGifts/{giftId}",
@@ -154,20 +144,12 @@
         "definition": { "entityName": "TopUpRequest", "schema": { "$ref": "#/backend/entities/TopUpRequest" }, "description": "Stores manual top-up requests." }
       },
       {
-        "path": "/stickerPacks/{packId}",
-        "definition": { "entityName": "StickerPack", "schema": { "$ref": "#/backend/entities/StickerPack" }, "description": "Stores sticker pack metadata." }
-      },
-      {
         "path": "/chats/{chatId}",
         "definition": { "entityName": "Chat", "schema": { "$ref": "#/backend/entities/Chat" }, "description": "Stores chat metadata." }
       },
       {
         "path": "/chats/{chatId}/messages/{messageId}",
         "definition": { "entityName": "Message", "schema": { "$ref": "#/backend/entities/Message" }, "description": "Stores chat messages." }
-      },
-      {
-        "path": "/stories/{storyId}",
-        "definition": { "entityName": "Story", "schema": { "$ref": "#/backend/entities/Story" }, "description": "Stores user stories." }
       }
     ]
   }

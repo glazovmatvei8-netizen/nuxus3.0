@@ -3,10 +3,10 @@
 
 import React, { DependencyList, createContext, useContext, ReactNode, useMemo, useState, useEffect } from 'react';
 import { FirebaseApp } from 'firebase/app';
-import { Firestore, doc, setDoc } from 'firebase/firestore';
-import { Auth, User, onAuthStateChanged } from 'firebase/auth';
+import { Firestore, doc, setDoc, collection, onSnapshot } from 'firebase/firestore';
+import { Auth, User, onAuthStateChanged, signOut } from 'firebase/auth';
 import { FirebaseErrorListener } from '@/components/FirebaseErrorListener'
-import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { updateDocumentNonBlocking, setDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 interface FirebaseProviderProps {
   children: ReactNode;
@@ -78,59 +78,115 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
     return () => unsubscribe();
   }, [auth]);
 
-  // Heartbeat for lastSeen status AND IP logging
+  // Session & Heartbeat Core v32.0
   useEffect(() => {
     if (!userAuthState.user || !firestore) return;
 
-    const userRef = doc(firestore, 'users', userAuthState.user.uid);
+    const uid = userAuthState.user.uid;
+    const userRef = doc(firestore, 'users', uid);
+    
+    // Generate or retrieve persistent Session ID for this browser/device
+    let sessionId = localStorage.getItem('nuxus_session_id');
+    if (!sessionId) {
+      sessionId = Math.random().toString(36).substring(2, 15);
+      localStorage.setItem('nuxus_session_id', sessionId);
+    }
+
+    const sessionRef = doc(firestore, 'users', uid, 'sessions', sessionId);
+
+    // Get basic device info
+    const getDeviceName = () => {
+      const ua = navigator.userAgent;
+      if (/android/i.test(ua)) return "Android Device";
+      if (/iPad|iPhone|iPod/.test(ua)) return "iOS Device";
+      if (/Windows/i.test(ua)) return "Windows PC";
+      if (/Mac/i.test(ua)) return "macOS Node";
+      return "Quantum Node";
+    };
+
+    const getBrowserName = () => {
+      const ua = navigator.userAgent;
+      if (ua.includes("Firefox")) return "Firefox";
+      if (ua.includes("Chrome")) return "Chrome";
+      if (ua.includes("Safari")) return "Safari";
+      return "Nuxus Kernel";
+    };
 
     const updateStatus = async () => {
       if (document.hidden) return;
-
-      // Update online status
-      updateDocumentNonBlocking(userRef, {
-        lastSeen: new Date().toISOString()
-      });
+      const now = new Date().toISOString();
+      
+      // Update global user status
+      updateDocumentNonBlocking(userRef, { lastSeen: now });
+      
+      // Update specific session heartbeat
+      updateDocumentNonBlocking(sessionRef, { lastActive: now });
     };
 
-    const syncIpAndGeo = async () => {
+    const initSession = async () => {
       try {
-        // УСТАНАВЛИВАЕМ ТАЙМАУТ ДЛЯ ФЕТЧА (2 сек), чтобы не тормозить загрузку
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 2000);
-
+        const timeoutId = setTimeout(() => controller.abort(), 3000);
         const res = await fetch('https://ipwho.is/', { signal: controller.signal });
         clearTimeout(timeoutId);
+        const geo = await res.json();
         
-        const data = await res.json();
-        if (data && data.ip) {
-          await setDoc(userRef, { 
-            lastIp: data.ip,
-            countryCode: data.country_code || '??'
-          }, { merge: true });
-          console.log("Nuxus Kernel: IP Link Synchronized");
-        }
+        const sessionData = {
+          id: sessionId,
+          userId: uid,
+          deviceName: getDeviceName(),
+          browser: getBrowserName(),
+          ip: geo.ip || '?.?.?.?',
+          countryCode: geo.country_code || '??',
+          lastActive: new Date().toISOString(),
+          createdAt: new Date().toISOString(),
+          userAgent: navigator.userAgent
+        };
+
+        setDocumentNonBlocking(sessionRef, sessionData, { merge: true });
+        
+        // Also update user profile IP
+        updateDocumentNonBlocking(userRef, { 
+          lastIp: geo.ip,
+          countryCode: geo.country_code || '??'
+        });
       } catch (e) {
-        console.warn("Nuxus Kernel: IP Sync timed out or failed - bypassing to avoid hang.");
+        // Fallback session without geo
+        setDocumentNonBlocking(sessionRef, {
+          id: sessionId,
+          userId: uid,
+          deviceName: getDeviceName(),
+          browser: getBrowserName(),
+          lastActive: new Date().toISOString(),
+          createdAt: new Date().toISOString()
+        }, { merge: true });
       }
     };
 
+    // Monitor this session existence (remote termination)
+    const unsubscribeSession = onSnapshot(sessionRef, (snap) => {
+      if (!snap.exists() && userAuthState.user) {
+        // Session was terminated remotely
+        signOut(auth).then(() => {
+          localStorage.removeItem('nuxus_session_id');
+          window.location.reload();
+        });
+      }
+    });
+
+    initSession();
     updateStatus();
-    syncIpAndGeo(); // Run once per auth session
+    const interval = setInterval(updateStatus, 60000); 
 
-    const interval = setInterval(updateStatus, 120000); 
-
-    const handleVisibility = () => {
-      if (!document.hidden) updateStatus();
-    };
-    
+    const handleVisibility = () => { if (!document.hidden) updateStatus(); };
     document.addEventListener('visibilitychange', handleVisibility);
 
     return () => {
       clearInterval(interval);
       document.removeEventListener('visibilitychange', handleVisibility);
+      unsubscribeSession();
     };
-  }, [userAuthState.user?.uid, firestore]);
+  }, [userAuthState.user?.uid, firestore, auth]);
 
   const contextValue = useMemo((): FirebaseContextState => {
     const servicesAvailable = !!(firebaseApp && firestore && auth);

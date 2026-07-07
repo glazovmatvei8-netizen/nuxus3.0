@@ -1,6 +1,18 @@
 
 export type MessageType = 'text' | 'image' | 'audio' | 'video' | 'video_note' | 'service' | 'gift' | 'payment_request' | 'album' | 'poll' | 'broadcast' | 'sticker' | 'music' | 'ai_video';
 
+export interface Session {
+  id: string;
+  userId: string;
+  deviceName: string;
+  browser: string;
+  ip: string;
+  countryCode: string;
+  lastActive: string;
+  createdAt: string;
+  userAgent: string;
+}
+
 export interface StickerPack {
   id: string;
   ownerId: string;
@@ -20,6 +32,7 @@ export interface ReceivedGift {
   giftIcon: string;
   price: number;
   receivedAt: string;
+  isNft?: boolean;
 }
 
 export interface TopUpRequest {
@@ -34,7 +47,7 @@ export interface TopUpRequest {
 export interface PollOption {
   id: string;
   text: string;
-  votes: string[]; // Array of UIDs
+  votes: string[]; 
 }
 
 export interface Track {
@@ -73,7 +86,7 @@ export interface Message {
   isPending?: boolean;
   selfDestructAt?: string | null;
   forwardFrom?: string;
-  reactions?: Record<string, string[]>; // emoji -> [uids]
+  reactions?: Record<string, string[]>;
   pollData?: {
     question: string;
     options: PollOption[];
@@ -99,7 +112,7 @@ export interface Story {
   createdAt: string;
   expiresAt: string;
   viewers: string[];
-  reactions?: Record<string, string[]>; // emoji -> [uids]
+  reactions?: Record<string, string[]>;
 }
 
 export interface Call {
@@ -114,14 +127,6 @@ export interface Call {
   createdAt: string;
   startedAt?: string;
   endedAt?: string;
-}
-
-export interface ArchiveRequest {
-  id: string;
-  userId: string;
-  userName: string;
-  status: 'pending' | 'collecting' | 'ready' | 'delivered';
-  createdAt: string;
 }
 
 export type ChatType = 'private' | 'group' | 'channel' | 'saved';
