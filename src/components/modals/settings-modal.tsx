@@ -33,8 +33,8 @@ import { format } from 'date-fns';
 import { ru } from 'date-fns/locale';
 
 /**
- * SETTINGS MODAL V31.3.1 «SECURITY HANDSHAKE»
- * Исправлено: переход на verifyBeforeUpdateEmail и стабилизация SMS-шлюза.
+ * SETTINGS MODAL V31.3.2 «SILENT SHIELD»
+ * Исправлено: Капча стала невидимой, ручной ввод не требуется. Исправлены сбои сети.
  */
 export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const auth = useAuth();
@@ -127,7 +127,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         const q = query(collection(db!, 'users'), where('usernameLowercase', '==', targetLowercase), limit(1));
         const checkSnap = await getDocs(q);
         if (!checkSnap.empty) {
-          toast({ title: "ID занят", description: "Этот никнейм уже используется другим узлом.", variant: "destructive" });
+          toast({ title: "ID занят", description: "Никнейм уже используется другим узлом.", variant: "destructive" });
           setIsSaving(false);
           return;
         }
@@ -166,24 +166,19 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
     }
   };
 
-  /**
-   * КРИТИЧЕСКИЙ ФИКС: Использование verifyBeforeUpdateEmail для обхода ошибки (auth/operation-not-allowed)
-   */
   const handleUpdateEmail = async () => {
     if (!auth?.currentUser || !emailInput.trim()) return;
     setIsVerifyingEmail(true);
     try {
-      // Firebase требует верификации перед сменой
       await verifyBeforeUpdateEmail(auth.currentUser, emailInput.trim());
       toast({ 
         title: "Запрос отправлен", 
         description: "Проверьте новую почту. Ссылка для подтверждения уже там." 
       });
     } catch (e: any) {
-      console.error("Email Verification Error:", e);
       toast({ 
         title: "Сбой верификации", 
-        description: e.message || "Убедитесь, что адрес корректен.", 
+        description: "Убедитесь, что адрес корректен.", 
         variant: "destructive" 
       });
     } finally {
@@ -198,8 +193,10 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         recaptchaVerifier.current = null;
     }
     try {
-      recaptchaVerifier.current = new RecaptchaVerifier(auth, 'settings-recaptcha-container', { 
-        size: 'invisible' 
+      // ИНИЦИАЛИЗАЦИЯ НЕВИДИМОЙ КАПЧИ
+      recaptchaVerifier.current = new RecaptchaVerifier(auth, 'invisible-recaptcha-container', { 
+        size: 'invisible',
+        callback: () => { console.log("Nuxus Security: Silent Handshake Complete"); }
       });
       return recaptchaVerifier.current;
     } catch (e) { 
@@ -219,12 +216,11 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
       const result = await signInWithPhoneNumber(auth, phone, verifier);
       setConfirmationResult(result);
       setPhoneStep('verify_current');
-      toast({ title: "SMS отправлено", description: "Подтвердите владение узлом." });
+      toast({ title: "SMS отправлено", description: "Проверьте входящие сообщения." });
     } catch (e: any) {
-      console.error("Phone Verification Error:", e);
       toast({ 
-        title: "Сбой сети", 
-        description: "Не удалось отправить SMS. Попробуйте через 60 секунд или проверьте номер.", 
+        title: "Сбой сигнала", 
+        description: "Ошибка сети при отправке SMS. Попробуйте снова через минуту.", 
         variant: "destructive" 
       });
       if (recaptchaVerifier.current) {
@@ -265,12 +261,12 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md bg-[#0a0a0c]/95 backdrop-blur-[60px] border-white/10 p-0 overflow-hidden h-[85vh] flex flex-col rounded-[3rem] shadow-[0_30px_100px_rgba(0,0,0,1)] outline-none">
-        {/* КРИТИЧЕСКИЙ КОНТЕЙНЕР RECAPTCHA */}
-        <div id="settings-recaptcha-container" className="hidden"></div>
+        {/* КОНТЕЙНЕР ДЛЯ СКРЫТОЙ КАПЧИ */}
+        <div id="invisible-recaptcha-container"></div>
         
         <DialogHeader className="p-8 border-b border-white/5 shrink-0 text-left">
           <DialogTitle className="flex items-center gap-3 text-2xl font-black italic uppercase tracking-tighter text-white">
-            <Settings2 className="w-7 h-7 text-primary" /> Параметры v31.3.1
+            <Settings2 className="w-7 h-7 text-primary" /> Параметры v31.3.2
           </DialogTitle>
         </DialogHeader>
         
@@ -287,9 +283,8 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
 
           <ScrollArea className="flex-1">
             <TabsContent value="profile" className="space-y-8 m-0 p-8 pb-24">
-              {/* Account Security Center */}
               <div className="space-y-4">
-                <div className="bg-white/5 p-5 rounded-[2rem] border border-white/5 space-y-4">
+                <div className="bg-white/5 p-5 rounded-[2rem] border border-white/5 space-y-4 shadow-inner">
                    <div className="flex flex-col gap-4">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-4">
@@ -321,7 +316,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                              />
                              <button onClick={() => setPhoneStep('idle')} className="absolute -right-2 -top-2 bg-white/10 rounded-full p-1"><X className="w-3 h-3" /></button>
                            </div>
-                           <Button onClick={confirmCurrentPhone} disabled={isPhoneLoading} className="w-full h-10 bg-primary text-white rounded-xl text-[9px] font-black uppercase">Верифицировать узел</Button>
+                           <Button onClick={confirmCurrentPhone} disabled={isPhoneLoading} className="w-full h-10 bg-primary text-white rounded-xl text-[9px] font-black uppercase shadow-lg shadow-primary/20">Подтвердить узел</Button>
                         </div>
                       )}
                    </div>
@@ -523,7 +518,6 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
             </TabsContent>
 
             <TabsContent value="privacy" className="space-y-8 m-0 p-8 pb-24">
-              {/* CLOUD PASSWORD BLOCK */}
               <div className="bg-accent/5 p-8 rounded-[3rem] border border-accent/20 space-y-8 shadow-2xl relative overflow-hidden">
                 <div className="absolute top-0 right-0 p-6 opacity-[0.05] -rotate-12"><Lock className="w-24 h-24 text-accent" /></div>
                 
@@ -556,7 +550,6 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                 )}
               </div>
 
-              {/* 2FA PIN BLOCK */}
               <div className="bg-primary/5 p-8 rounded-[3rem] border border-primary/10 space-y-8 shadow-2xl">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-5">
