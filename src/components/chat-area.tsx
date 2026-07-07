@@ -22,17 +22,17 @@ import type { Message, User as UserType, Chat } from '@/lib/types';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { useToast } from '@/hooks/use-toast';
 
-// Shapes for Video Notes
+// Shapes for Video Notes V28.5.1 (Fixed scaling and geometry)
 const VIDEO_SHAPES = [
   { id: 'circle', icon: Circle, label: 'Круг', clip: 'circle(50% at 50% 50%)' },
   { id: 'square', icon: Square, label: 'Квадрат', clip: 'inset(0% rounded 20%)' },
-  { id: 'heart', icon: Heart, label: 'Сердце', clip: "path('M50,15 C65,0 95,0 95,35 C95,65 50,95 50,95 C50,95 5,65 5,35 C5,0 35,0 50,15 Z')" },
+  { id: 'heart', icon: Heart, label: 'Сердце', clip: 'polygon(50% 15%, 80% 0%, 100% 20%, 100% 50%, 50% 100%, 0% 50%, 0% 20%, 20% 0%)' },
   { id: 'triangle', icon: Triangle, label: 'Треугольник', clip: 'polygon(50% 0%, 0% 100%, 100% 100%)' },
-  { id: 'poop', icon: Ghost, label: 'Какашка', clip: 'polygon(50% 0%, 80% 20%, 100% 50%, 80% 90%, 50% 100%, 20% 90%, 0% 50%, 20% 20%)' }
+  { id: 'poop', icon: Ghost, label: 'Какашка', clip: 'polygon(50% 0%, 63% 13%, 53% 25%, 80% 38%, 85% 61%, 69% 68%, 94% 82%, 100% 100%, 0% 100%, 6% 82%, 31% 68%, 15% 61%, 20% 38%, 47% 25%, 37% 13%)' }
 ];
 
 /**
- * ChatInputBar V28.5.0: Shape-Shifting Video Notes (Hold to Record, Tap to Select).
+ * ChatInputBar V28.5.1: Shape-Shifting Video Notes (Corrected Geometry).
  */
 const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, isPremium, replyTo, onCancelReply }: any) => {
   const { localDrafts, setLocalDrafts } = useAppState();
@@ -525,4 +525,3 @@ export default function ChatArea() {
     </div>
   );
 }
-

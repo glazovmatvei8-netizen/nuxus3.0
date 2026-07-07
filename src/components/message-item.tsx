@@ -31,17 +31,17 @@ import { transcribeVoice } from '@/ai/flows/voice-to-text-flow';
 
 const QUICK_REACTIONS = ['👍', '❤️', '🔥', '😂', '😮', '😢', '👏'];
 
-// Clip Paths for Display
+// Clip Paths for Display V28.5.1 (Fixed scaling and geometry)
 const SHAPE_CLIPS: Record<string, string> = {
   circle: 'circle(50% at 50% 50%)',
   square: 'inset(0% rounded 20%)',
-  heart: "path('M50,15 C65,0 95,0 95,35 C95,65 50,95 50,95 C50,95 5,65 5,35 C5,0 35,0 50,15 Z')",
+  heart: 'polygon(50% 15%, 80% 0%, 100% 20%, 100% 50%, 50% 100%, 0% 50%, 0% 20%, 20% 0%)',
   triangle: 'polygon(50% 0%, 0% 100%, 100% 100%)',
-  poop: 'polygon(50% 0%, 80% 20%, 100% 50%, 80% 90%, 50% 100%, 20% 90%, 0% 50%, 20% 20%)'
+  poop: 'polygon(50% 0%, 63% 13%, 53% 25%, 80% 38%, 85% 61%, 69% 68%, 94% 82%, 100% 100%, 0% 100%, 6% 82%, 31% 68%, 15% 61%, 20% 38%, 47% 25%, 37% 13%)'
 };
 
 /**
- * MessageItem V28.5.0: Shape-Shifting Video Notes Support.
+ * MessageItem V28.5.1: Corrected Shape-Shifting geometry.
  */
 export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForward, isAdmin = false, isGroup = false, onEdit, highlight = false, viewerProfile }: any) => {
   const { user } = useUser();
