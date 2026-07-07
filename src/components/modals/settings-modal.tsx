@@ -35,8 +35,9 @@ import { format } from 'date-fns';
 import { ru } from 'date-fns/locale';
 
 /**
- * SETTINGS MODAL V32.1.0 «FULL INTEGRITY HUB»
- * Прямое подтверждение Phone/Email без видимой капчи. Исправлены ReferenceErrors.
+ * SETTINGS MODAL V32.2.0 «ZERO FRICTION HUB»
+ * Прямое подтверждение Phone/Email. Изменен лейбл на "Основная почта".
+ * Исправлена ошибка auth/requires-recent-login.
  */
 export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const auth = useAuth();
@@ -52,7 +53,6 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
   const userRef = useMemoFirebase(() => (!db || !user) ? null : doc(db!, 'users', user.uid), [db, user]);
   const { data: profile } = useDoc<User>(userRef);
 
-  // Sessions Logic
   const sessionsQuery = useMemoFirebase(() => {
     if (!db || !user) return null;
     return query(collection(db, 'users', user.uid, 'sessions'), orderBy('lastActive', 'desc'));
@@ -113,8 +113,10 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
   const initRecaptcha = () => {
     if (!auth || typeof window === 'undefined') return null;
     try {
-      if (recaptchaRef.current) recaptchaRef.current.clear();
-      // SILENT RECAPTCHA: Zero friction
+      if (recaptchaRef.current) {
+        recaptchaRef.current.clear();
+      }
+      // SILENT RECAPTCHA: Абсолютно невидимая, вынесена за пределы экрана
       recaptchaRef.current = new RecaptchaVerifier(auth, 'silent-recaptcha-anchor', {
         size: 'invisible'
       });
@@ -137,7 +139,12 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
       setPhoneStep('code');
       toast({ title: "Сигнал отправлен", description: "SMS летит на ваш узел." });
     } catch (e: any) {
-      toast({ title: "Сбой шлюза", description: "Попробуйте позже.", variant: "destructive" });
+      console.error(e);
+      if (e.code === 'auth/requires-recent-login') {
+        toast({ title: "Сессия устарела", description: "Пожалуйста, перезапустите вход в Ядро для подтверждения номера.", variant: "destructive" });
+      } else {
+        toast({ title: "Сбой шлюза", description: "Попробуйте позже.", variant: "destructive" });
+      }
     } finally {
       setIsVerifyingPhone(false);
     }
@@ -167,7 +174,12 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
       await verifyBeforeUpdateEmail(auth.currentUser, form.email.trim());
       toast({ title: "Письмо отправлено", description: "Проверьте почту для подтверждения сигнала." });
     } catch (e: any) {
-      toast({ title: "Сбой почты", description: e.message, variant: "destructive" });
+      console.error(e);
+      if (e.code === 'auth/requires-recent-login') {
+        toast({ title: "Нужен перезаход", description: "Для привязки основной почты требуется свежая авторизация. Выйдите и войдите снова.", variant: "destructive" });
+      } else {
+        toast({ title: "Сбой почты", description: e.message, variant: "destructive" });
+      }
     } finally {
       setIsVerifyingEmail(false);
     }
@@ -282,8 +294,8 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md bg-[#0a0a0c]/95 backdrop-blur-[60px] border-white/10 p-0 overflow-hidden h-[85vh] flex flex-col rounded-[3rem] shadow-[0_30px_100px_rgba(0,0,0,1)] outline-none">
-        {/* SILENT RECAPTCHA ANCHOR */}
-        <div id="silent-recaptcha-anchor" className="fixed top-0 left-0 w-0 h-0 opacity-0 pointer-events-none -z-[5000]"></div>
+        {/* SILENT RECAPTCHA ANCHOR - ВЫНЕСЕНА ДАЛЕКО ЗА ПРЕДЕЛЫ */}
+        <div id="silent-recaptcha-anchor" className="fixed -left-[10000px] top-0 opacity-0 pointer-events-none -z-[5000]"></div>
         
         <DialogHeader className="p-8 border-b border-white/5 shrink-0 text-left relative overflow-hidden">
           <div className="absolute inset-0 bg-gradient-to-r from-primary/10 to-transparent pointer-events-none" />
@@ -349,7 +361,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                     </div>
 
                     <div className="space-y-1.5">
-                      <Label className="text-[10px] font-black uppercase text-primary/60 ml-2">Резервная почта</Label>
+                      <Label className="text-[10px] font-black uppercase text-primary/60 ml-2">Основная почта</Label>
                       <div className="flex gap-2">
                         <div className="relative flex-1">
                            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/20" />
