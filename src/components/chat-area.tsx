@@ -22,7 +22,7 @@ import type { Message, User as UserType, Chat } from '@/lib/types';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { useToast } from '@/hooks/use-toast';
 
-// Shapes for Video Notes V28.6.1
+// Shapes for Video Notes V28.6.2
 const VIDEO_SHAPES = [
   { id: 'circle', icon: Circle, label: 'Круг', clip: 'circle(50% at 50% 50%)' },
   { id: 'square', icon: Square, label: 'Квадрат', clip: 'inset(0% rounded 20%)' },
@@ -32,8 +32,7 @@ const VIDEO_SHAPES = [
 ];
 
 /**
- * ChatInputBar V28.6.1: Optimized Flip & Fixed State Race Conditions.
- * Extended Buffer (3 min, 45kbps).
+ * ChatInputBar V28.6.2: Quality Optimized (80kbps / 100s).
  */
 const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, isPremium, replyTo, onCancelReply }: any) => {
   const { localDrafts, setLocalDrafts } = useAppState();
@@ -62,9 +61,9 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
     setMessageInput(localDrafts[currentChatId] || '');
   }, [currentChatId, localDrafts]);
 
-  // AUTO-STOP PROTECTION (180 seconds / 3 minutes)
+  // AUTO-STOP PROTECTION (100 seconds for 80kbps quality)
   useEffect(() => {
-    if (isRecording && recordingDuration >= 180) {
+    if (isRecording && recordingDuration >= 100) {
       stopRecording();
     }
   }, [isRecording, recordingDuration]);
@@ -76,7 +75,7 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
     if (streamRef.current) {
       try {
         const constraints = {
-          video: { facingMode: newMode, width: { ideal: 360 }, height: { ideal: 360 }, aspectRatio: 1 },
+          video: { facingMode: newMode, width: { ideal: 480 }, height: { ideal: 480 }, aspectRatio: 1 },
           audio: true
         };
 
@@ -91,7 +90,6 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
         
         streamRef.current.addTrack(newTrack);
         
-        // CRITICAL: Refresh srcObject for preview and recorder link
         if (videoPreviewRef.current) {
           videoPreviewRef.current.srcObject = null;
           videoPreviewRef.current.srcObject = streamRef.current;
@@ -125,7 +123,7 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
       
       const constraints = {
         audio: true,
-        video: recorderMode === 'video' ? { facingMode: camMode, width: 360, height: 360, aspectRatio: 1 } : false
+        video: recorderMode === 'video' ? { facingMode: camMode, width: 480, height: 480, aspectRatio: 1 } : false
       };
 
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
@@ -134,8 +132,10 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
       const recorderOptions: any = {
         mimeType: recorderMode === 'video' ? 'video/webm;codecs=vp8,opus' : 'audio/webm'
       };
+      
+      // QUALITY BALANCE: 80kbps allows ~100s in 1MB
       if (recorderMode === 'video') {
-        recorderOptions.videoBitsPerSecond = 45000; 
+        recorderOptions.videoBitsPerSecond = 80000; 
       }
 
       const recorder = new MediaRecorder(stream, recorderOptions);
@@ -155,7 +155,7 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
 
       recorder.start();
       setIsRecording(true);
-      setIsShapeSelectorOpen(false); // Close selector when recording starts
+      setIsShapeSelectorOpen(false);
       setRecordingDuration(0);
       timerIntervalRef.current = setInterval(() => setRecordingDuration(prev => prev + 1), 1000);
       isActuallyRecording.current = true;
@@ -190,10 +190,9 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
     if (longPressTimer.current) {
       clearTimeout(longPressTimer.current);
       longPressTimer.current = null;
-      // It was a short tap - open/toggle shape selector
       setIsShapeSelectorOpen(!isShapeSelectorOpen);
       if (!isShapeSelectorOpen) {
-        navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: 360, height: 360 } })
+        navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: 480, height: 480 } })
           .then(s => { 
             streamRef.current = s; 
             if(videoPreviewRef.current) videoPreviewRef.current.srcObject = s; 
@@ -327,7 +326,7 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
         ) : (
           <div className="flex-1 flex items-center bg-primary/10 border border-primary/20 rounded-2xl h-11 px-4 gap-4 animate-in slide-in-from-right-8">
             <div className="flex items-center gap-2 text-primary animate-pulse"><div className="w-2 h-2 rounded-full bg-primary shadow-lg" /><span className="text-[10px] font-black uppercase tracking-widest">LIVE</span></div>
-            <span className={cn("text-lg font-black italic flex-1 tabular-nums", recordingDuration >= 160 ? "text-red-500" : "text-white")}>
+            <span className={cn("text-lg font-black italic flex-1 tabular-nums", recordingDuration >= 80 ? "text-red-500" : "text-white")}>
               {Math.floor(recordingDuration / 60).toString().padStart(2, '0')}:{(recordingDuration % 60).toString().padStart(2, '0')}
             </span>
             <Button variant="ghost" size="icon" className="h-8 w-8 text-white/40" onClick={() => { if(mediaRecorderRef.current) mediaRecorderRef.current.onstop = null; stopRecording(); }}><Trash2 className="w-4 h-4" /></Button>
@@ -435,7 +434,7 @@ export default function ChatArea() {
     
     // SAFETY CHECK: Firestore Document Limit is 1MB
     if (content_msg.length > 1040000) {
-      toast({ title: "Файл слишком велик", description: "Превышен системный лимит 1МБ. Запись была укорочена или сжата.", variant: "destructive" });
+      toast({ title: "Файл слишком велик", description: "Превышен системный лимит 1МБ. Попробуйте записать видео короче.", variant: "destructive" });
       return;
     }
 
@@ -473,7 +472,6 @@ export default function ChatArea() {
 
   return (
     <div className="flex-1 flex flex-col h-full bg-transparent relative overflow-hidden z-20 max-w-full">
-      {/* Dynamic Chat Background V28.6.1 */}
       {userProfile?.settings?.chatBackground && (
         <div className="absolute inset-0 z-0 pointer-events-none">
           <img src={userProfile.settings.chatBackground} className="w-full h-full object-cover opacity-60 brightness-110" alt="BG" />
@@ -544,3 +542,4 @@ export default function ChatArea() {
     </div>
   );
 }
+

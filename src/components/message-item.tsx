@@ -31,7 +31,7 @@ import { transcribeVoice } from '@/ai/flows/voice-to-text-flow';
 
 const QUICK_REACTIONS = ['👍', '❤️', '🔥', '😂', '😮', '😢', '👏'];
 
-// Clip Paths for Display V28.6.1
+// Clip Paths for Display V28.6.2
 const SHAPE_CLIPS: Record<string, string> = {
   circle: 'circle(50% at 50% 50%)',
   square: 'inset(0% rounded 20%)',
@@ -41,7 +41,8 @@ const SHAPE_CLIPS: Record<string, string> = {
 };
 
 /**
- * MessageItem V28.6.1: Optimized video playback for iOS/Safari.
+ * MessageItem V28.6.2: Quality Optimized & Interactive Playback.
+ * Added "Click Outside" to collapse video notes.
  */
 export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForward, isAdmin = false, isGroup = false, onEdit, highlight = false, viewerProfile }: any) => {
   const { user } = useUser();
@@ -95,25 +96,34 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onPin, onForw
 
   const renderContent = () => {
     if (message.contentType === 'video_note') return (
-      <div 
-        onClick={() => setIsNoteExpanded(!isNoteExpanded)}
-        className={cn(
-          "overflow-hidden border-4 border-white/20 shadow-2xl bg-black transition-all duration-500 cursor-pointer relative",
-          isNoteExpanded ? "w-[300px] h-[300px] sm:w-[340px] sm:h-[340px]" : "w-44 h-44"
+      <>
+        {/* Full-screen backdrop to catch clicks when expanded */}
+        {isNoteExpanded && (
+          <div 
+            className="fixed inset-0 z-[45] bg-black/20" 
+            onClick={(e) => { e.stopPropagation(); setIsNoteExpanded(false); }}
+          />
         )}
-        style={{ clipPath: SHAPE_CLIPS[message.metadata?.shape] || SHAPE_CLIPS.circle }}
-      >
-        <video 
-          src={message.content} 
-          autoPlay 
-          muted={!isNoteExpanded} 
-          loop 
-          playsInline 
-          preload="metadata"
-          className="w-full h-full object-cover" 
-        />
-        {!isNoteExpanded && <div className="absolute inset-0 flex items-center justify-center bg-black/20 group-hover:bg-transparent transition-all"><Volume2 className="w-5 h-5 text-white/60 opacity-0 group-hover:opacity-100" /></div>}
-      </div>
+        <div 
+          onClick={(e) => { e.stopPropagation(); setIsNoteExpanded(!isNoteExpanded); }}
+          className={cn(
+            "overflow-hidden border-4 border-white/20 shadow-2xl bg-black transition-all duration-500 cursor-pointer relative",
+            isNoteExpanded ? "w-[300px] h-[300px] sm:w-[340px] sm:h-[340px] z-50 scale-105" : "w-44 h-44 z-10"
+          )}
+          style={{ clipPath: SHAPE_CLIPS[message.metadata?.shape] || SHAPE_CLIPS.circle }}
+        >
+          <video 
+            src={message.content} 
+            autoPlay 
+            muted={!isNoteExpanded} 
+            loop 
+            playsInline 
+            preload="metadata"
+            className="w-full h-full object-cover" 
+          />
+          {!isNoteExpanded && <div className="absolute inset-0 flex items-center justify-center bg-black/20 group-hover:bg-transparent transition-all"><Volume2 className="w-5 h-5 text-white/60 opacity-0 group-hover:opacity-100" /></div>}
+        </div>
+      </>
     );
     if (message.contentType === 'image') return (
       <div className="relative max-w-[340px] rounded-[2rem] overflow-hidden border border-white/10 shadow-2xl bg-black/40 cursor-pointer group" onClick={() => setIsMediaViewerOpen(true)}>
