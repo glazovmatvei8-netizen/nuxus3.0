@@ -25,7 +25,7 @@ import { transcribeVoice } from '@/ai/flows/voice-to-text-flow';
 
 const SHAPE_CLIPS: Record<string, string> = {
   circle: 'circle(50% at 50% 50%)',
-  square: 'inset(0% rounded 20%)',
+  square: 'inset(0% rounded 25%)',
   heart: 'polygon(50% 15%, 80% 0%, 100% 20%, 100% 50%, 50% 100%, 0% 50%, 0% 20%, 20% 0%)',
   triangle: 'polygon(50% 0%, 0% 100%, 100% 100%)',
   poop: 'polygon(50% 0%, 63% 13%, 53% 25%, 80% 38%, 85% 61%, 69% 68%, 94% 82%, 100% 100%, 0% 100%, 6% 82%, 31% 68%, 15% 61%, 20% 38%, 47% 25%, 37% 13%)'
@@ -52,12 +52,18 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onForward, is
   const formattedTime = message.sentAt ? format(new Date(message.sentAt), 'HH:mm') : '';
   const isPremium = useMemo(() => isUserPremium(viewerProfile), [viewerProfile]);
 
-  // AUTO-TRANSCRIBE V29.0
+  // V29.3.0: Better Audio Handling
   useEffect(() => {
     if (message.contentType === 'audio' && isPremium && !transcription && !isMe) {
-       // Automatic "stealth" transcription for Premium users
        handleTranscribe(true);
     }
+    
+    return () => {
+      if (audioInstance.current) {
+        audioInstance.current.pause();
+        audioInstance.current = null;
+      }
+    };
   }, [message.contentType]);
 
   const handleTranscribe = async (silent = false) => {
@@ -83,6 +89,32 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onForward, is
     if (!transcription) return;
     navigator.clipboard.writeText(transcription);
     toast({ title: "Текст скопирован" });
+  };
+
+  const handleAudioToggle = () => {
+    if (!audioInstance.current) {
+      audioInstance.current = new Audio(message.content);
+      audioInstance.current.onplay = () => setIsPlaying(true);
+      audioInstance.current.onpause = () => setIsPlaying(false);
+      audioInstance.current.ontimeupdate = () => {
+        if (audioInstance.current) {
+          setProgress((audioInstance.current.currentTime / audioInstance.current.duration) * 100);
+        }
+      };
+      audioInstance.current.onended = () => {
+        setIsPlaying(false);
+        setProgress(0);
+      };
+    }
+
+    if (audioInstance.current.paused) {
+      audioInstance.current.play().catch(e => {
+        console.warn("Nuxus Audio: Play blocked", e);
+        toast({ title: "Ошибка воспроизведения", variant: "destructive" });
+      });
+    } else {
+      audioInstance.current.pause();
+    }
   };
 
   const renderContent = () => {
@@ -120,19 +152,11 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onForward, is
     if (message.contentType === 'audio') return (
       <div className="flex flex-col gap-3 min-w-[240px]">
         <div className="flex items-center gap-4">
-           <Button size="icon" onClick={() => {
-              if (!audioInstance.current) {
-                audioInstance.current = new Audio(message.content);
-                audioInstance.current.onplay = () => setIsPlaying(true);
-                audioInstance.current.onpause = () => setIsPlaying(false);
-                audioInstance.current.ontimeupdate = () => setProgress((audioInstance.current!.currentTime / audioInstance.current!.duration) * 100);
-              }
-              audioInstance.current.paused ? audioInstance.current.play() : audioInstance.current.pause();
-           }} className="h-10 w-10 rounded-full bg-white text-black shrink-0 shadow-lg">
+           <Button size="icon" onClick={handleAudioToggle} className="h-10 w-10 rounded-full bg-white text-black shrink-0 shadow-lg active:scale-90 transition-transform">
              {isPlaying ? <Pause className="w-5 h-5 fill-current" /> : <Play className="w-5 h-5 fill-current ml-0.5" />}
            </Button>
            <div className="flex-1 h-1.5 bg-white/10 rounded-full overflow-hidden relative">
-             <div className="h-full bg-primary shadow-[0_0_10px_rgba(168,85,247,1)] transition-all" style={{ width: `${progress}%` }} />
+             <div className="h-full bg-primary shadow-[0_0_10px_rgba(168,85,247,1)] transition-all duration-300" style={{ width: `${progress}%` }} />
            </div>
         </div>
         {transcription ? (

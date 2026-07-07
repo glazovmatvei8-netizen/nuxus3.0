@@ -22,17 +22,17 @@ import type { Message, User as UserType, Chat } from '@/lib/types';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { useToast } from '@/hooks/use-toast';
 
-// Shapes for Video Notes V28.9.0
+// Shapes for Video Notes V29.3.0 (Fixed Squircle)
 const VIDEO_SHAPES = [
   { id: 'circle', icon: Circle, label: 'Круг', clip: 'circle(50% at 50% 50%)' },
-  { id: 'square', icon: Square, label: 'Квадрат', clip: 'inset(0% rounded 15%)' },
+  { id: 'square', icon: Square, label: 'Квадрат', clip: 'inset(0% rounded 25%)' },
   { id: 'heart', icon: Heart, label: 'Сердце', clip: 'polygon(50% 15%, 80% 0%, 100% 20%, 100% 50%, 50% 100%, 0% 50%, 0% 20%, 20% 0%)' },
   { id: 'triangle', icon: Triangle, label: 'Треугольник', clip: 'polygon(50% 0%, 0% 100%, 100% 100%)' },
   { id: 'poop', icon: Ghost, label: 'Какашка', clip: 'polygon(50% 0%, 63% 13%, 53% 25%, 80% 38%, 85% 61%, 69% 68%, 94% 82%, 100% 100%, 0% 100%, 6% 82%, 31% 68%, 15% 61%, 20% 38%, 47% 25%, 37% 13%)' }
 ];
 
 /**
- * ChatInputBar V28.9.0: Trigger for Pro Recorder.
+ * ChatInputBar V29.3.0: High-fidelity audio recording (Opus).
  */
 const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, isPremium, replyTo, onCancelReply, onOpenProRecorder }: any) => {
   const { localDrafts, setLocalDrafts } = useAppState();
@@ -70,13 +70,14 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
   const startAudioRecording = async () => {
     try {
       streamRef.current = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const recorder = new MediaRecorder(streamRef.current);
+      // V29.3.0: Forced Opus for maximum compatibility
+      const recorder = new MediaRecorder(streamRef.current, { mimeType: 'audio/webm;codecs=opus' });
       mediaRecorderRef.current = recorder;
       chunksRef.current = [];
       
       recorder.ondataavailable = (e) => { if (e.data.size > 0) chunksRef.current.push(e.data); };
       recorder.onstop = () => {
-        const blob = new Blob(chunksRef.current, { type: 'audio/webm' });
+        const blob = new Blob(chunksRef.current, { type: 'audio/webm;codecs=opus' });
         const reader = new FileReader();
         reader.onloadend = () => {
           if (chunksRef.current.length > 0) {
@@ -295,11 +296,11 @@ export default function ChatArea() {
   const handleSendMessage = useCallback(async (content_msg: string, type_msg: Message['contentType'] = 'text', meta: any = null) => {
     if (!content_msg.trim() || !currentChatId || !firebaseUser || !db) return;
     
-    // ПРОВЕРКА ЛИМИТА FIRESTORE (1МБ)
+    // V29.3.0: Limit verification
     if (content_msg.length > 1048000) {
       toast({ 
         title: "Превышен системный лимит", 
-        description: "Файл весит более 1МБ. Сообщение аннигилировано для стабильности Ядра.", 
+        description: "Файл весит более 1МБ. Сообщение аннигилировано.", 
         variant: "destructive" 
       });
       return;
@@ -324,11 +325,11 @@ export default function ChatArea() {
     updateDoc(doc(db, 'chats', currentChatId), { lastMessageAt: new Date().toISOString() });
   }, [currentChatId, firebaseUser, db, userProfile, replyTo, toast]);
 
-  // PRO RECORDER LOGIC V29.2.1 (3-Min Buffer Optimization)
+  // PRO RECORDER LOGIC V29.3.0 (Quantum Compression + Live Flip)
   const startProRecording = async () => {
     try {
       if (!streamRef.current) return;
-      // ОПТИМИЗИРОВАНО: 35 kbps — единственный способ уместить 180 сек в 1 МБ Base64.
+      // V29.3.0: Ultra-low bitrate for 3-minute fit
       const recorder = new MediaRecorder(streamRef.current, { 
         mimeType: 'video/webm;codecs=vp8,opus', 
         videoBitsPerSecond: 35000 
@@ -353,10 +354,9 @@ export default function ChatArea() {
       setIsRecording(true);
       setRecordingDuration(0);
       
-      // AUTO-STOP & TIMER LOGIC
       timerIntervalRef.current = setInterval(() => {
         setRecordingDuration(prev => {
-          if (prev >= 180) { // 3 МИНУТЫ ЛИМИТ
+          if (prev >= 180) { // 3 Minutes limit
             stopProRecording();
             return 180;
           }
@@ -386,52 +386,80 @@ export default function ChatArea() {
     }
   };
 
+  // V29.3.0: Seamless camera flip during recording
   const switchCamera = async () => {
-    if (isRecording) return; 
     const newMode = camMode === 'user' ? 'environment' : 'user';
     setCamMode(newMode);
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach(t => t.stop());
+    
+    try {
+      const s = await navigator.mediaDevices.getUserMedia({ 
+        video: { facingMode: newMode, width: 360, height: 360 }, 
+        audio: true 
+      });
+
+      if (isRecording && streamRef.current) {
+        // Replace tracks in the active stream object used by MediaRecorder
+        const oldVideoTrack = streamRef.current.getVideoTracks()[0];
+        const newVideoTrack = s.getVideoTracks()[0];
+        
+        streamRef.current.removeTrack(oldVideoTrack);
+        streamRef.current.addTrack(newVideoTrack);
+        oldVideoTrack.stop();
+        
+        // Audio track stays same or replaced
+        const oldAudioTrack = streamRef.current.getAudioTracks()[0];
+        const newAudioTrack = s.getAudioTracks()[0];
+        streamRef.current.removeTrack(oldAudioTrack);
+        streamRef.current.addTrack(newAudioTrack);
+        oldAudioTrack.stop();
+      } else {
+        if (streamRef.current) streamRef.current.getTracks().forEach(t => t.stop());
+        streamRef.current = s;
+      }
+      
+      if (videoPreviewRef.current) videoPreviewRef.current.srcObject = streamRef.current;
+      if (window.navigator && window.navigator.vibrate) window.navigator.vibrate(25);
+    } catch (e) {
+      toast({ title: "Ошибка камеры", variant: "destructive" });
     }
-    const s = await navigator.mediaDevices.getUserMedia({ video: { facingMode: newMode, width: 360, height: 360 }, audio: true });
-    streamRef.current = s;
-    if (videoPreviewRef.current) videoPreviewRef.current.srcObject = s;
   };
 
   useEffect(() => {
-    if (isProRecorderOpen) {
+    if (isProRecorderOpen && !streamRef.current) {
       navigator.mediaDevices.getUserMedia({ video: { facingMode: camMode, width: 360, height: 360 }, audio: true })
         .then(s => {
           streamRef.current = s;
           if(videoPreviewRef.current) videoPreviewRef.current.srcObject = s;
         });
     }
-  }, [isProRecorderOpen, camMode]);
+  }, [isProRecorderOpen, camMode, toast]);
 
   const currentShapeObj = VIDEO_SHAPES.find(s => s.id === selectedShape) || VIDEO_SHAPES[0];
 
   return (
     <div className="flex-1 flex flex-col h-full bg-transparent relative overflow-hidden z-20 max-w-full">
+      {/* Background Brightness V29.3.0 (Pure Vision) */}
       {userProfile?.settings?.chatBackground && (
         <div className="absolute inset-0 z-0 pointer-events-none">
           <img src={userProfile.settings.chatBackground} className="w-full h-full object-cover opacity-100 brightness-100" alt="BG" />
         </div>
       )}
       
-      {/* PRO RECORDER FULLSCREEN OVERLAY V28.9.0 */}
+      {/* PRO RECORDER V29.3.0 (Cinema Fidelity) */}
       {isProRecorderOpen && (
         <div className="fixed inset-0 z-[5000] bg-black/90 backdrop-blur-[50px] w-screen h-[100dvh] flex flex-col items-center justify-between animate-in fade-in duration-500 overflow-hidden">
-           {/* HEADER: BRANDING (LEFT) & CLOSE (RIGHT) */}
+           {/* Top Info Bar */}
            <div className="w-full flex items-center justify-between px-6 pt-[calc(env(safe-area-inset-top,20px)+20px)] z-[5100]">
               <div className="flex flex-col text-left">
                  <span className="text-white font-black text-xl italic uppercase tracking-tighter block leading-none">NUXUS CIRCLE</span>
-                 <span className="text-[8px] text-primary font-black uppercase tracking-[0.4em] mt-2 block ml-1">PRO STUDIO V29.2</span>
+                 <span className="text-[8px] text-primary font-black uppercase tracking-[0.4em] mt-2 block ml-1">PRO STUDIO V29.3</span>
               </div>
               <button onClick={closeProRecorder} className="w-12 h-12 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 transition-all border border-white/10 shadow-2xl active:scale-90">
                 <X className="w-7 h-7 text-white" />
               </button>
            </div>
 
+           {/* Video Preview Center */}
            <div className="relative w-[320px] h-[320px] sm:w-[380px] sm:h-[380px] bg-black rounded-full overflow-hidden shadow-[0_0_120px_rgba(168,85,247,0.4)] border-4 border-white/10 flex items-center justify-center">
               <video ref={videoPreviewRef} autoPlay muted playsInline className="w-full h-full object-cover" style={{ clipPath: currentShapeObj.clip }} />
               {isRecording && (
@@ -444,6 +472,7 @@ export default function ChatArea() {
               )}
            </div>
 
+           {/* Controls Bottom Panel */}
            <div className="w-full px-8 pb-[calc(2.5rem+env(safe-area-inset-bottom))] flex flex-col gap-8 z-[5100]">
               {!isRecording && (
                 <div className="flex gap-3 overflow-x-auto scrollbar-hide w-full justify-center py-4 bg-white/5 rounded-[3rem] border border-white/5 shadow-2xl backdrop-blur-md">
@@ -456,12 +485,10 @@ export default function ChatArea() {
               )}
 
               <div className="flex items-center justify-center w-full relative h-28">
-                <div className="absolute right-[65%]">
-                   {!isRecording && (
-                     <button onClick={switchCamera} className="w-14 h-14 rounded-2xl bg-white/10 flex items-center justify-center border border-white/10 active:scale-90 transition-all shadow-xl hover:bg-white/20">
-                       <RefreshCcw className="w-7 h-7 text-white" />
-                     </button>
-                   )}
+                <div className="absolute left-[20%]">
+                   <button onClick={switchCamera} className="w-14 h-14 rounded-2xl bg-white/10 flex items-center justify-center border border-white/10 active:scale-90 transition-all shadow-xl hover:bg-white/20">
+                     <RefreshCcw className="w-7 h-7 text-white" />
+                   </button>
                 </div>
 
                 <button 
