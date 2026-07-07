@@ -35,8 +35,8 @@ import { format } from 'date-fns';
 import { ru } from 'date-fns/locale';
 
 /**
- * SETTINGS MODAL V32.6.0 «SIGNAL INTEGRITY»
- * ИСПРАВЛЕНО: Полное устранение ReferenceError и поддержка Основной почты.
+ * SETTINGS MODAL V32.7.0 «SIGNAL INTEGRITY»
+ * ИСПРАВЛЕНО: Полное устранение ReferenceError, поддержка Основной почты и фикс Plus.
  */
 export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const auth = useAuth();
@@ -62,7 +62,6 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
 
   const [isSaving, setIsSaving] = useState(false);
   const [isLinkingBiometrics, setIsLinkingBiometrics] = useState(false);
-  const [showCloudPass, setShowCloudPass] = useState(false);
 
   // Verification State
   const [isVerifyingPhone, setIsVerifyingPhone] = useState(false);
@@ -109,77 +108,6 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
     }
   }, [profile, open]);
 
-  const initSilentVerifier = () => {
-    if (!auth || typeof window === 'undefined') return null;
-    try {
-      if (recaptchaRef.current) {
-        recaptchaRef.current.clear();
-      }
-      recaptchaRef.current = new RecaptchaVerifier(auth, 'silent-settings-verifier', {
-        size: 'invisible'
-      });
-      return recaptchaRef.current;
-    } catch (e) {
-      return null;
-    }
-  };
-
-  const handleSendPhoneVerification = async () => {
-    if (!form.phone || !auth) return;
-    setIsVerifyingPhone(true);
-    try {
-      const verifier = initSilentVerifier();
-      if (!verifier) throw new Error("Signal init fail");
-      const finalPhone = form.phone.startsWith('+') ? form.phone : '+' + form.phone;
-      const result = await signInWithPhoneNumber(auth, finalPhone, verifier);
-      setConfirmationResult(result);
-      setPhoneStep('code');
-      toast({ title: "Сигнал отправлен", description: "SMS летит на ваш узел." });
-    } catch (e: any) {
-      if (e.code === 'auth/requires-recent-login') {
-        toast({ title: "Нужен перезаход", description: "Требуется свежая авторизация.", variant: "destructive" });
-      } else {
-        toast({ title: "Сбой сигнала", description: "Для СМС нужен тариф Blaze или тестовый номер.", variant: "destructive" });
-      }
-    } finally {
-      setIsVerifyingPhone(false);
-    }
-  };
-
-  const handleVerifyPhoneCode = async () => {
-    if (!confirmationResult || !verificationCode) return;
-    setIsVerifyingPhone(true);
-    try {
-      await confirmationResult.confirm(verificationCode);
-      if (user) {
-        await updateDoc(doc(db!, 'users', user.uid), { phoneVerified: true });
-        toast({ title: "Номер подтвержден 🛡️" });
-        setPhoneStep('idle');
-      }
-    } catch (e) {
-      toast({ title: "Неверный код", variant: "destructive" });
-    } finally {
-      setIsVerifyingPhone(false);
-    }
-  };
-
-  const handleSendEmailVerification = async () => {
-    if (!form.email || !auth?.currentUser) return;
-    setIsVerifyingEmail(true);
-    try {
-      await verifyBeforeUpdateEmail(auth.currentUser, form.email.trim());
-      toast({ title: "Письмо отправлено", description: "Проверьте почту (и папку Спам) для подтверждения." });
-    } catch (e: any) {
-      if (e.code === 'auth/requires-recent-login') {
-        toast({ title: "Нужен перезаход", description: "Требуется свежая авторизация.", variant: "destructive" });
-      } else {
-        toast({ title: "Сбой почты", variant: "destructive" });
-      }
-    } finally {
-      setIsVerifyingEmail(false);
-    }
-  };
-
   const handleBgUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -217,6 +145,69 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
       setForm({ ...form, biometricEnabled: false });
       toast({ title: "Сбой биометрии", variant: "destructive" });
     } finally { setIsLinkingBiometrics(false); }
+  };
+
+  const initSilentVerifier = () => {
+    if (!auth || typeof window === 'undefined') return null;
+    try {
+      if (recaptchaRef.current) {
+        recaptchaRef.current.clear();
+      }
+      recaptchaRef.current = new RecaptchaVerifier(auth, 'silent-settings-verifier', {
+        size: 'invisible'
+      });
+      return recaptchaRef.current;
+    } catch (e) {
+      return null;
+    }
+  };
+
+  const handleSendPhoneVerification = async () => {
+    if (!form.phone || !auth) return;
+    setIsVerifyingPhone(true);
+    try {
+      const verifier = initSilentVerifier();
+      if (!verifier) throw new Error("Signal init fail");
+      const finalPhone = form.phone.startsWith('+') ? form.phone : '+' + form.phone;
+      const result = await signInWithPhoneNumber(auth, finalPhone, verifier);
+      setConfirmationResult(result);
+      setPhoneStep('code');
+      toast({ title: "Сигнал отправлен", description: "SMS летит на ваш узел." });
+    } catch (e: any) {
+      toast({ title: "Сбой сигнала", description: "Для СМС нужен тариф Blaze.", variant: "destructive" });
+    } finally {
+      setIsVerifyingPhone(false);
+    }
+  };
+
+  const handleVerifyPhoneCode = async () => {
+    if (!confirmationResult || !verificationCode) return;
+    setIsVerifyingPhone(true);
+    try {
+      await confirmationResult.confirm(verificationCode);
+      if (user) {
+        await updateDoc(doc(db!, 'users', user.uid), { phoneVerified: true });
+        toast({ title: "Номер подтвержден 🛡️" });
+        setPhoneStep('idle');
+      }
+    } catch (e) {
+      toast({ title: "Неверный код", variant: "destructive" });
+    } finally {
+      setIsVerifyingPhone(false);
+    }
+  };
+
+  const handleSendEmailVerification = async () => {
+    if (!form.email || !auth?.currentUser) return;
+    setIsVerifyingEmail(true);
+    try {
+      await verifyBeforeUpdateEmail(auth.currentUser, form.email.trim());
+      toast({ title: "Письмо отправлено", description: "Проверьте почту для подтверждения." });
+    } catch (e: any) {
+      toast({ title: "Сбой почты", variant: "destructive" });
+    } finally {
+      setIsVerifyingEmail(false);
+    }
   };
 
   const handleSave = async () => {
