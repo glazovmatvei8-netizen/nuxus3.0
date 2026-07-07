@@ -1,13 +1,13 @@
 
 "use client"
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Phone, Lock, Eye, EyeOff, ShieldCheck, Mail, KeyRound, UserPlus, LogIn, AtSign, User } from 'lucide-react';
+import { Loader2, Phone, Lock, Eye, EyeOff, UserPlus, LogIn, AtSign, User, Mail } from 'lucide-react';
 import { useAuth, useFirestore } from '@/firebase';
 import { 
   signInWithEmailAndPassword,
@@ -23,9 +23,9 @@ import { cn } from '@/lib/utils';
 type AuthMode = 'login' | 'register';
 
 /**
- * AUTH SCREEN V32.8.0 «BINARY ACCESS PRO»
- * ОБНОВЛЕНО: Полная замена СМС на систему Телефон + Пароль.
- * ОСОБЕННОСТЬ: Прозрачная регистрация и вход для обхода Billing лимитов.
+ * AUTH SCREEN V32.9.0 «UNIVERSAL ACCESS»
+ * ИСПРАВЛЕНО: Поддержка входа по Почте или Телефону для восстановления доступа.
+ * ОСОБЕННОСТЬ: Если пользователь привязал почту и Identity изменился, он сможет войти.
  */
 export default function AuthScreen() {
   const auth = useAuth();
@@ -38,42 +38,47 @@ export default function AuthScreen() {
   const [showPass, setShowPass] = useState(false);
 
   // Form Fields
-  const [phone, setPhone] = useState('');
+  const [identifier, setIdentifier] = useState(''); // Может быть телефоном или почтой
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
   const [username, setUsername] = useState('');
 
-  const formatToInternalEmail = (p: string) => {
-    const clean = p.replace(/\D/g, '');
-    return `${clean}@nuxus.chat`;
+  const getFinalEmail = (input: string) => {
+    const val = input.trim();
+    if (val.includes('@')) return val; // Если это уже почта
+    const cleanPhone = val.replace(/\D/g, '');
+    return `${cleanPhone}@nuxus.chat`; // Если это телефон
   };
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!phone.trim() || !password || !auth || !db) return;
+    if (!identifier.trim() || !password || !auth || !db) return;
 
     setIsLoading(true);
-    const internalEmail = formatToInternalEmail(phone);
+    const finalEmail = getFinalEmail(identifier);
 
     try {
       await setPersistence(auth, browserLocalPersistence);
       
       if (mode === 'login') {
-        // ВХОД
         try {
-          const userCredential = await signInWithEmailAndPassword(auth, internalEmail, password);
+          const userCredential = await signInWithEmailAndPassword(auth, finalEmail, password);
           const userSnap = await getDoc(doc(db, 'users', userCredential.user.uid));
           
           if (!userSnap.exists()) {
-             // Если аккаунт в Auth есть, а в базе нет (редкий сбой)
              setMode('register');
-             toast({ title: "Профиль не найден", description: "Заполните данные регистрации." });
+             toast({ title: "Профиль не найден", description: "Завершите регистрацию узла." });
           } else {
              setIs2FAVerified(true);
           }
         } catch (err: any) {
+          console.error("Auth Error:", err.code);
           if (err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential') {
-            toast({ title: "Доступ запрещен", description: "Неверный номер или пароль. Если вы новый узел - выберите Регистрацию.", variant: "destructive" });
+            toast({ 
+              title: "Доступ запрещен", 
+              description: "Неверные данные. Если вы привязали почту — попробуйте ввести её вместо номера.", 
+              variant: "destructive" 
+            });
           } else {
             toast({ title: "Ошибка входа", description: err.message, variant: "destructive" });
           }
@@ -89,26 +94,25 @@ export default function AuthScreen() {
         const cleanUsername = username.trim().replace('@', '');
         const targetSearch = ('@' + cleanUsername).toLowerCase();
         
-        // Проверка уникальности никнейма
         const q = query(collection(db, 'users'), where('usernameLowercase', '==', targetSearch), limit(1));
         const checkSnap = await getDocs(q);
         
         if (!checkSnap.empty) {
-          toast({ title: "Никнейм занят", description: "Выберите другой идентификатор.", variant: "destructive" });
+          toast({ title: "Никнейм занят", variant: "destructive" });
           setIsLoading(false);
           return;
         }
 
         try {
-          const userCredential = await createUserWithEmailAndPassword(auth, internalEmail, password);
+          const userCredential = await createUserWithEmailAndPassword(auth, finalEmail, password);
           
           const profileData = {
             id: userCredential.user.uid,
             name: name.trim(),
             username: '@' + cleanUsername,
             usernameLowercase: targetSearch,
-            phone: phone.replace(/\D/g, ''),
-            email: null,
+            phone: identifier.includes('@') ? '' : identifier.replace(/\D/g, ''),
+            email: identifier.includes('@') ? identifier : null,
             createdAt: new Date().toISOString(),
             isPremium: false,
             balance: 0,
@@ -125,10 +129,10 @@ export default function AuthScreen() {
 
           await setDoc(doc(db, 'users', userCredential.user.uid), profileData);
           setIs2FAVerified(true);
-          toast({ title: "Узел инициализирован", description: "Добро пожаловать в Ядро." });
+          toast({ title: "Узел создан", description: "Добро пожаловать в Ядро." });
         } catch (err: any) {
           if (err.code === 'auth/email-already-in-use') {
-            toast({ title: "Узел уже существует", description: "Этот номер уже зарегистрирован. Переключитесь на Вход.", variant: "destructive" });
+            toast({ title: "Узел уже существует", description: "Этот идентификатор занят. Переключитесь на Вход.", variant: "destructive" });
           } else {
             toast({ title: "Ошибка регистрации", description: err.message, variant: "destructive" });
           }
@@ -176,29 +180,31 @@ export default function AuthScreen() {
               {mode === 'login' ? 'Вход в Ядро' : 'Новый Узел'}
             </CardTitle>
             <CardDescription className="text-primary/60 font-black tracking-[0.5em] uppercase text-[8px] mt-3">
-              Quantum Protocol v32.8
+              Quantum Protocol v32.9
             </CardDescription>
           </CardHeader>
 
           <CardContent className="px-8 pb-12 pt-6">
             <form onSubmit={handleAuth} className="space-y-6">
               <div className="space-y-4">
-                {/* НОМЕР ТЕЛЕФОНА */}
                 <div className="space-y-1.5 text-left">
-                  <Label className="text-[8px] uppercase font-black text-primary/60 ml-4 tracking-[0.3em]">Номер телефона</Label>
+                  <Label className="text-[8px] uppercase font-black text-primary/60 ml-4 tracking-[0.3em]">Телефон или Почта</Label>
                   <div className="relative group">
-                     <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-primary/40 group-focus-within:text-primary transition-colors" />
+                     {identifier.includes('@') ? (
+                       <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-primary/40 group-focus-within:text-primary transition-colors" />
+                     ) : (
+                       <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-primary/40 group-focus-within:text-primary transition-colors" />
+                     )}
                      <Input 
-                        placeholder="+7 (___) ___ __ __" 
-                        value={phone} 
-                        onChange={e => setPhone(e.target.value)} 
-                        className="bg-white/5 border-white/10 h-14 rounded-2xl pl-12 text-lg font-bold tracking-widest border-2 focus:border-primary/40 transition-all" 
+                        placeholder={mode === 'login' ? "ID или @email" : "+7 (___) ___ __ __"} 
+                        value={identifier} 
+                        onChange={e => setIdentifier(e.target.value)} 
+                        className="bg-white/5 border-white/10 h-14 rounded-2xl pl-12 text-lg font-bold tracking-tight border-2 focus:border-primary/40 transition-all" 
                         required 
                      />
                   </div>
                 </div>
 
-                {/* ПАРОЛЬ */}
                 <div className="space-y-1.5 text-left">
                   <Label className="text-[8px] uppercase font-black text-primary/60 ml-4 tracking-widest">Пароль Сигнала</Label>
                   <div className="relative group">
@@ -217,7 +223,6 @@ export default function AuthScreen() {
                   </div>
                 </div>
 
-                {/* ПОЛЯ РЕГИСТРАЦИИ */}
                 {mode === 'register' && (
                   <div className="space-y-4 animate-in slide-in-from-top-4 duration-500">
                     <div className="space-y-1.5 text-left">

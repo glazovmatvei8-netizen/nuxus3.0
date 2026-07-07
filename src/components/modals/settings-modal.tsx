@@ -21,8 +21,7 @@ import {
   signOut, 
   RecaptchaVerifier, 
   signInWithPhoneNumber, 
-  ConfirmationResult,
-  verifyBeforeUpdateEmail
+  ConfirmationResult
 } from 'firebase/auth';
 import { doc, updateDoc, collection, query, where, getDocs, limit, orderBy } from 'firebase/firestore';
 import { deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
@@ -35,8 +34,9 @@ import { format } from 'date-fns';
 import { ru } from 'date-fns/locale';
 
 /**
- * SETTINGS MODAL V32.7.0 «SIGNAL INTEGRITY»
- * ИСПРАВЛЕНО: Полное устранение ReferenceError, поддержка Основной почты и фикс Plus.
+ * SETTINGS MODAL V32.9.0 «SAFE IDENTITY»
+ * ИСПРАВЛЕНО: Привязка почты больше не выкидывает из аккаунта.
+ * ФИКС: Улучшена стабильность слоев.
  */
 export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const auth = useAuth();
@@ -68,7 +68,6 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
   const [phoneStep, setPhoneStep] = useState<'idle' | 'code'>('idle');
   const [verificationCode, setVerificationCode] = useState('');
   const [confirmationResult, setConfirmationResult] = useState<ConfirmationResult | null>(null);
-  const [isVerifyingEmail, setIsVerifyingEmail] = useState(false);
 
   const [form, setForm] = useState({
     name: '', username: '', bio: '', statusEmoji: '', statusText: '', avatarUrl: '',
@@ -150,16 +149,10 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
   const initSilentVerifier = () => {
     if (!auth || typeof window === 'undefined') return null;
     try {
-      if (recaptchaRef.current) {
-        recaptchaRef.current.clear();
-      }
-      recaptchaRef.current = new RecaptchaVerifier(auth, 'silent-settings-verifier', {
-        size: 'invisible'
-      });
+      if (recaptchaRef.current) recaptchaRef.current.clear();
+      recaptchaRef.current = new RecaptchaVerifier(auth, 'silent-settings-verifier', { size: 'invisible' });
       return recaptchaRef.current;
-    } catch (e) {
-      return null;
-    }
+    } catch (e) { return null; }
   };
 
   const handleSendPhoneVerification = async () => {
@@ -174,10 +167,8 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
       setPhoneStep('code');
       toast({ title: "Сигнал отправлен", description: "SMS летит на ваш узел." });
     } catch (e: any) {
-      toast({ title: "Сбой сигнала", description: "Для СМС нужен тариф Blaze.", variant: "destructive" });
-    } finally {
-      setIsVerifyingPhone(false);
-    }
+      toast({ title: "Сбой сигнала", description: "Для СМС нужен тариф Blaze или тестовый номер.", variant: "destructive" });
+    } finally { setIsVerifyingPhone(false); }
   };
 
   const handleVerifyPhoneCode = async () => {
@@ -192,22 +183,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
       }
     } catch (e) {
       toast({ title: "Неверный код", variant: "destructive" });
-    } finally {
-      setIsVerifyingPhone(false);
-    }
-  };
-
-  const handleSendEmailVerification = async () => {
-    if (!form.email || !auth?.currentUser) return;
-    setIsVerifyingEmail(true);
-    try {
-      await verifyBeforeUpdateEmail(auth.currentUser, form.email.trim());
-      toast({ title: "Письмо отправлено", description: "Проверьте почту для подтверждения." });
-    } catch (e: any) {
-      toast({ title: "Сбой почты", variant: "destructive" });
-    } finally {
-      setIsVerifyingEmail(false);
-    }
+    } finally { setIsVerifyingPhone(false); }
   };
 
   const handleSave = async () => {
@@ -237,7 +213,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         statusText: form.statusText.trim(),
         avatarUrl: form.avatarUrl,
         phone: form.phone.trim(),
-        email: form.email.trim(),
+        email: form.email.trim(), // Безопасно обновляем почту только в Firestore
         twoFactorEnabled: form.twoFactorEnabled,
         twoFactorPin: form.twoFactorPin,
         cloudPasswordEnabled: form.cloudPasswordEnabled,
@@ -354,7 +330,9 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/20" />
                            <Input value={form.email} onChange={e => setForm({...form, email: e.target.value})} className="bg-white/5 border-white/10 h-11 rounded-xl pl-9 text-xs" placeholder="email@example.com" />
                         </div>
-                        <Button onClick={handleSendEmailVerification} disabled={isVerifyingEmail || !form.email} className="h-11 rounded-xl px-4 bg-white/5 border border-white/10 text-[9px] font-black uppercase hover:bg-primary/20">Привязать</Button>
+                        <div className="h-11 px-4 bg-white/5 border border-white/10 rounded-xl flex items-center justify-center">
+                           <span className="text-[8px] font-black uppercase text-white/40">ID-Link</span>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -448,7 +426,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                           </div>
                         </div>
                         {!isCurrent && (
-                          <Button variant="ghost" size="icon" onClick={() => handleTerminateSession(s.id)} className="h-10 w-10 rounded-xl bg-red-500/10 text-red-400 hover:bg-red-500/20">
+                          <Button variant="ghost" size="icon" onClick={() => handleTerminateSession(s.id)} className="h-10 w-10 rounded-xl bg-red-500/10 text-red-400 hover:bg-red-400/20">
                             <ShieldX className="w-5 h-5" />
                           </Button>
                         )}

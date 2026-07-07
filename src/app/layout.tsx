@@ -94,11 +94,6 @@ export default function RootLayout({
               window.addEventListener('load', function() {
                 navigator.serviceWorker.register('/sw.js').then(function(reg) {
                   console.log('Nuxus Kernel: Active');
-                  
-                  // Запрос уведомлений для PWA
-                  if (Notification.permission !== 'granted') {
-                    Notification.requestPermission();
-                  }
                 }).catch(function(err) {
                   console.log('Nuxus Kernel: SW Fail', err);
                 });
