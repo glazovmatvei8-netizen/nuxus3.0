@@ -22,7 +22,7 @@ import type { Message, User as UserType, Chat } from '@/lib/types';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { useToast } from '@/hooks/use-toast';
 
-// Shapes for Video Notes V28.7.2
+// Shapes for Video Notes V28.7.3
 const VIDEO_SHAPES = [
   { id: 'circle', icon: Circle, label: 'Круг', clip: 'circle(50% at 50% 50%)' },
   { id: 'square', icon: Square, label: 'Квадрат', clip: 'inset(0% rounded 15%)' },
@@ -32,7 +32,8 @@ const VIDEO_SHAPES = [
 ];
 
 /**
- * ChatInputBar V28.7.2: Fullscreen UI matched to reference screenshot.
+ * ChatInputBar V28.7.3: Absolute UI matching user photo.
+ * Lifted controls to be visible on all devices.
  */
 const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, isPremium, replyTo, onCancelReply }: any) => {
   const { localDrafts, setLocalDrafts } = useAppState();
@@ -206,26 +207,21 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
         </div>
       )}
 
-      {/* PRO VIDEO RECORDER OVERLAY V28.7.2 - FULLSCREEN PER REFERENCE */}
+      {/* PRO VIDEO RECORDER OVERLAY V28.7.3 - ULTIMATE FULLSCREEN */}
       {isProRecorderOpen && (
-        <div className="fixed inset-0 z-[2000] bg-black/80 backdrop-blur-2xl flex flex-col items-center justify-center animate-in fade-in duration-500">
+        <div className="fixed inset-0 z-[2000] bg-black/80 backdrop-blur-[40px] flex flex-col items-center justify-center animate-in fade-in duration-500">
            {/* Top Right: Close Button */}
-           <div className="absolute top-10 right-6 z-[2100]">
+           <div className="absolute top-[env(safe-area-inset-top,40px)] right-6 z-[2100]">
               <button 
                 onClick={() => setIsProRecorderOpen(false)} 
-                className="w-14 h-14 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 transition-all border border-white/10 shadow-2xl"
+                className="w-12 h-12 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 transition-all border border-white/10 shadow-2xl active:scale-90"
               >
-                <X className="w-8 h-8 text-white" />
+                <X className="w-7 h-7 text-white" />
               </button>
            </div>
 
-           {/* Header Info */}
-           <div className="absolute top-20 left-0 right-0 px-8 text-center">
-              <p className="text-[10px] font-black text-white/40 uppercase tracking-[0.5em] animate-pulse">НАЖМИТЕ ДЛЯ ЗАПИСИ</p>
-           </div>
-
-           {/* Central Preview - Perfect Circle/Shape */}
-           <div className="relative w-full max-w-[340px] aspect-square bg-black rounded-full overflow-hidden shadow-[0_0_100px_rgba(168,85,247,0.4)] border border-white/10">
+           {/* Central Preview - Perfect Shape */}
+           <div className="relative w-full max-w-[340px] aspect-square bg-black rounded-full overflow-hidden shadow-[0_0_120px_rgba(168,85,247,0.3)] border-4 border-white/10">
               <video ref={videoPreviewRef} autoPlay muted playsInline className="w-full h-full object-cover" style={{ clipPath: currentShapeObj.clip }} />
               {isRecording && (
                 <div className="absolute top-10 left-1/2 -translate-x-1/2 bg-red-500/90 px-5 py-2 rounded-full flex items-center gap-2 shadow-2xl">
@@ -237,14 +233,21 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
               )}
            </div>
 
-           {/* Bottom Interface - Layout exactly from User Request */}
-           <div className="absolute bottom-12 left-0 right-0 px-8 flex flex-col gap-12">
+           {/* Control Panel - Lifted Higher per user request */}
+           <div className="absolute bottom-[calc(4rem+env(safe-area-inset-bottom))] left-0 right-0 px-8 flex flex-col gap-10">
               
               {/* Shape Selector Bar */}
               {!isRecording && (
-                <div className="flex gap-4 overflow-x-auto scrollbar-hide w-full justify-center py-5 bg-white/5 rounded-[3rem] border border-white/5 shadow-inner">
+                <div className="flex gap-4 overflow-x-auto scrollbar-hide w-full justify-center py-5 bg-white/5 rounded-[3rem] border border-white/5 shadow-2xl backdrop-blur-md">
                   {VIDEO_SHAPES.map(shape => (
-                    <button key={shape.id} onClick={() => setSelectedShape(shape.id)} className={cn("flex flex-col items-center gap-2 p-4 rounded-2xl transition-all", selectedShape === shape.id ? "bg-primary text-white scale-110 shadow-2xl" : "bg-transparent text-white/30")}>
+                    <button 
+                      key={shape.id} 
+                      onClick={() => { setSelectedShape(shape.id); if(window.navigator.vibrate) window.navigator.vibrate(10); }} 
+                      className={cn(
+                        "flex flex-col items-center gap-2 p-4 rounded-2xl transition-all", 
+                        selectedShape === shape.id ? "bg-primary text-white scale-110 shadow-xl" : "bg-transparent text-white/30 hover:text-white/60"
+                      )}
+                    >
                       <shape.icon className="w-7 h-7" />
                     </button>
                   ))}
@@ -252,12 +255,12 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
               )}
 
               {/* Functional Controls Row: Flip - Record - Branding */}
-              <div className="flex items-center justify-center w-full relative h-32">
+              <div className="flex items-center justify-center w-full relative h-28">
                 
                 {/* Left of Record: Flip Camera */}
                 <div className="absolute left-[15%]">
                    {!isRecording && (
-                     <button onClick={switchCamera} className="w-16 h-16 rounded-3xl bg-white/10 flex items-center justify-center border border-white/10 active:scale-90 transition-transform shadow-xl">
+                     <button onClick={switchCamera} className="w-16 h-16 rounded-3xl bg-white/10 flex items-center justify-center border border-white/10 active:scale-90 transition-transform shadow-xl hover:bg-white/20">
                        <RefreshCcw className="w-7 h-7 text-white" />
                      </button>
                    )}
@@ -267,24 +270,24 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
                 <button 
                   onClick={() => isRecording ? stopRecording() : startRecording()}
                   className={cn(
-                    "w-28 h-28 rounded-full flex items-center justify-center transition-all shadow-[0_0_60px_rgba(0,122,255,0.5)] relative border-4",
-                    isRecording ? "bg-red-500 border-white/40 scale-110" : "bg-[#007AFF] border-white/20 active:scale-95"
+                    "w-28 h-28 rounded-full flex items-center justify-center transition-all shadow-[0_0_60px_rgba(0,122,255,0.4)] relative border-4",
+                    isRecording ? "bg-red-500 border-white/40 scale-110" : "bg-[#007AFF] border-white/20 active:scale-95 hover:brightness-110"
                   )}
                 >
                   {isRecording ? <StopCircle className="w-12 h-12 text-white fill-white" /> : <div className="w-10 h-10 rounded-full bg-white" />}
                 </button>
 
-                {/* Left Bottom Branding (matching photo) */}
-                <div className="absolute left-0 -bottom-2 text-left pointer-events-none opacity-40">
-                   <span className="text-white font-black text-xl italic uppercase tracking-tighter block leading-none">NUXUS CIRCLE</span>
-                   <span className="text-[8px] text-primary font-black uppercase tracking-[0.4em] mt-1 block">PRO STUDIO V28.7</span>
+                {/* Left Bottom Branding (matching user photo) */}
+                <div className="absolute left-0 -bottom-8 text-left pointer-events-none opacity-40">
+                   <span className="text-white font-black text-2xl italic uppercase tracking-tighter block leading-none">NUXUS CIRCLE</span>
+                   <span className="text-[8px] text-primary font-black uppercase tracking-[0.4em] mt-1.5 block ml-1">PRO STUDIO V28.7</span>
                 </div>
               </div>
            </div>
         </div>
       )}
 
-      {/* QUICK RECORDING VIEW (Overlay during small recording) */}
+      {/* QUICK RECORDING VIEW */}
       {isRecording && !isProRecorderOpen && (
         <div className="absolute bottom-32 left-1/2 -translate-x-1/2 w-64 h-64 rounded-full overflow-hidden border-4 border-primary shadow-[0_0_80px_rgba(168,85,247,0.7)] z-50 bg-black animate-in zoom-in duration-500">
           <video ref={videoPreviewRef} autoPlay muted playsInline className="w-full h-full object-cover" style={{ clipPath: currentShapeObj.clip }} />
