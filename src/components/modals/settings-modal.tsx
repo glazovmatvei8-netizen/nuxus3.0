@@ -35,8 +35,8 @@ import { format } from 'date-fns';
 import { ru } from 'date-fns/locale';
 
 /**
- * SETTINGS MODAL V32.4.0 «STABLE HANDSHAKE»
- * ИСПРАВЛЕНО: Обработка ошибок сессии, Plus импорт, логика фонов.
+ * SETTINGS MODAL V32.5.0 «SIGNAL INTEGRITY»
+ * ИСПРАВЛЕНО: Терминология почты, обработка ошибок сессии и тестовых номеров.
  */
 export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const auth = useAuth();
@@ -140,9 +140,9 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
       if (e.code === 'auth/requires-recent-login') {
         toast({ title: "Сессия устарела", description: "Требуется перезайти в Ядро.", variant: "destructive" });
       } else if (e.code === 'auth/billing-not-enabled') {
-        toast({ title: "Ошибка тарифа", description: "Для реальных SMS требуется план Blaze.", variant: "destructive" });
+        toast({ title: "Ошибка тарифа", description: "Для реальных СМС нужен тариф Blaze. Добавьте номер в 'Тестовые' в консоли Firebase.", variant: "destructive" });
       } else {
-        toast({ title: "Сбой сигнала", description: "Попробуйте позже.", variant: "destructive" });
+        toast({ title: "Сбой сигнала", description: "Попробуйте позже или используйте тестовый номер.", variant: "destructive" });
       }
     } finally {
       setIsVerifyingPhone(false);
@@ -171,12 +171,12 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
     setIsVerifyingEmail(true);
     try {
       await verifyBeforeUpdateEmail(auth.currentUser, form.email.trim());
-      toast({ title: "Письмо отправлено", description: "Проверьте почту." });
+      toast({ title: "Письмо отправлено", description: "Проверьте почту для подтверждения основной почты Ядра." });
     } catch (e: any) {
       if (e.code === 'auth/requires-recent-login') {
         toast({ title: "Нужен перезаход", description: "Для безопасности требуется свежая авторизация.", variant: "destructive" });
       } else {
-        toast({ title: "Сбой почты", description: "Проверьте адрес.", variant: "destructive" });
+        toast({ title: "Сбой почты", description: "Проверьте адрес или попробуйте позже.", variant: "destructive" });
       }
     } finally {
       setIsVerifyingEmail(false);
@@ -193,7 +193,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
 
   const handleLinkBiometrics = async () => {
     if (typeof window === 'undefined' || !window.PublicKeyCredential || !user) {
-      toast({ title: "Hardware Error", description: "Биометрия недоступна", variant: "destructive" });
+      toast({ title: "Hardware Error", description: "Биометрия недоступна на этом устройстве", variant: "destructive" });
       return;
     }
     setIsLinkingBiometrics(true);
@@ -297,7 +297,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         <DialogHeader className="p-8 border-b border-white/5 shrink-0 text-left relative overflow-hidden">
           <div className="absolute inset-0 bg-gradient-to-r from-primary/10 to-transparent pointer-events-none" />
           <DialogTitle className="flex items-center gap-3 text-2xl font-black italic uppercase tracking-tighter text-white relative z-10">
-            <Settings2 className="w-7 h-7 text-primary" /> Параметры
+            <Settings2 className="w-7 h-7 text-primary" /> Параметры v32.5
           </DialogTitle>
         </DialogHeader>
         

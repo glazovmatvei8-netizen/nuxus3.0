@@ -23,8 +23,8 @@ import { NuxusLogo } from './nuxus-logo';
 export type AuthStep = 'phone' | 'verify' | 'cloud_password' | 'profile' | 'setup2fa';
 
 /**
- * AUTH SCREEN V32.4.0 «STABLE SIGNAL»
- * ИСПРАВЛЕНО: Обработка ошибки Billing, интерактивные ссылки, фикс слоев.
+ * AUTH SCREEN V32.5.0 «STABLE SIGNAL»
+ * ОБНОВЛЕНО: Инструкции для тестовых номеров (обход Billing) и фикс слоев.
  */
 export default function AuthScreen({ initialMode }: { initialMode?: any }) {
   const auth = useAuth();
@@ -105,17 +105,16 @@ export default function AuthScreen({ initialMode }: { initialMode?: any }) {
     } catch (err: any) {
       console.error("Auth Error:", err);
       
-      // ОБРАБОТКА ОШИБКИ БИЛЛИНГА
       if (err.code === 'auth/billing-not-enabled') {
         toast({ 
-          title: "Требуется подписка Blaze", 
-          description: "Для реальных SMS включите Billing в Firebase Console или используйте тестовые номера.", 
+          title: "Ограничение тарифа", 
+          description: "Для реальных СМС нужен тариф Blaze. Используйте 'Тестовые номера' из консоли Firebase.", 
           variant: "destructive" 
         });
       } else {
         toast({ 
           title: "Ошибка сети", 
-          description: "Сбой отправки SMS. Проверьте номер или лимиты проекта.", 
+          description: "Сбой отправки сигнала. Проверьте номер или лимиты проекта.", 
           variant: "destructive" 
         });
       }
@@ -273,7 +272,7 @@ export default function AuthScreen({ initialMode }: { initialMode?: any }) {
               {step === 'phone' ? 'Вход в Ядро' : step === 'verify' ? 'Код доступа' : step === 'cloud_password' ? 'Мастер-пароль' : step === 'profile' ? 'Регистрация' : 'Защита'}
             </CardTitle>
             <CardDescription className="text-primary/60 font-black tracking-[0.5em] uppercase text-[8px] opacity-60 mt-3 ml-[0.5em]">
-              {isNewUser ? 'New Node Identity' : 'Quantum Protocol v32.4'}
+              {isNewUser ? 'New Node Identity' : 'Quantum Protocol v32.5'}
             </CardDescription>
           </CardHeader>
 
@@ -300,9 +299,9 @@ export default function AuthScreen({ initialMode }: { initialMode?: any }) {
                 <div className="text-center px-2 relative z-50">
                    <p className="text-[8px] text-white/30 uppercase font-bold tracking-widest leading-relaxed">
                      Входя на платформу, вы принимаете{' '}
-                     <button type="button" onClick={() => setIsLegalOpen(true)} className="text-primary/60 hover:text-primary transition-colors underline decoration-primary/20 underline-offset-2 pointer-events-auto">Цифровой регламент</button>
+                     <button type="button" onClick={() => setIsLegalOpen(true)} className="text-primary/60 hover:text-primary transition-colors underline decoration-primary/20 underline-offset-2 relative z-[60] cursor-pointer">Цифровой регламент</button>
                      {' '}и{' '}
-                     <button type="button" onClick={() => setIsLegalOpen(true)} className="text-primary/60 hover:text-primary transition-colors underline decoration-primary/20 underline-offset-2 pointer-events-auto">Политику безопасности</button>
+                     <button type="button" onClick={() => setIsLegalOpen(true)} className="text-primary/60 hover:text-primary transition-colors underline decoration-primary/20 underline-offset-2 relative z-[60] cursor-pointer">Политику безопасности</button>
                      {' '}Ядра.
                    </p>
                 </div>

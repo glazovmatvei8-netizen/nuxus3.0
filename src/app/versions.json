@@ -1,13 +1,14 @@
 
 {
-  "latestVersion": "32.3.0",
-  "qesVersion": "32.3",
-  "build": "Silent-Signal-Legal",
-  "sizeMb": 109,
+  "latestVersion": "32.5.0",
+  "qesVersion": "32.5",
+  "build": "Signal-Debug-Final",
+  "sizeMb": 112,
   "changelog": [
-    "Auth: Исправлена ошибка отправки SMS через Silent Verifier",
-    "Registration: Восстановлен процесс инициализации новых профилей",
-    "Legal: Добавлены уведомления о политике конфиденциальности",
-    "Security: Оптимизирована привязка основной почты (verifyBeforeUpdateEmail)"
+    "Auth: Добавлены инструкции по использованию тестовых номеров для обхода Billing",
+    "Profile: Термин 'Резервная почта' заменен на 'Основная почта'",
+    "Security: Улучшена обработка ошибки 'requires-recent-login' при верификации",
+    "UI: Исправлена кликабельность юридических ссылок на мобильных устройствах",
+    "Fix: Полное устранение ReferenceError во всех модулях настроек"
   ]
 }
