@@ -35,8 +35,8 @@ import { format } from 'date-fns';
 import { ru } from 'date-fns/locale';
 
 /**
- * SETTINGS MODAL V32.5.1 «SIGNAL INTEGRITY»
- * ИСПРАВЛЕНО: Подсказки для кодов тестовых номеров и подтверждение почты.
+ * SETTINGS MODAL V32.6.0 «SIGNAL INTEGRITY»
+ * ИСПРАВЛЕНО: Полное устранение ReferenceError и поддержка Основной почты.
  */
 export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const auth = useAuth();
@@ -76,11 +76,10 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
     phone: '', email: '',
     appearance: 'dark' as 'light' | 'dark', theme: 'default', customPrimaryColor: '',
     customAppIconUrl: '', bubbleStyle: 'default', chatBackground: '', messageSize: 'medium',
-    twoFactorEnabled: false, twoFactorPin: false as any, cloudPasswordEnabled: false, cloudPassword: '',
+    twoFactorEnabled: false, twoFactorPin: '' as any, cloudPasswordEnabled: false, cloudPassword: '',
     biometricEnabled: false, pwaNotificationsEnabled: false, isGhostMode: false
   });
 
-  // Re-sync form state when profile or modal opens
   useEffect(() => {
     if (profile && open) {
       setForm({
@@ -137,13 +136,10 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
       setPhoneStep('code');
       toast({ title: "Сигнал отправлен", description: "SMS летит на ваш узел." });
     } catch (e: any) {
-      console.error(e);
       if (e.code === 'auth/requires-recent-login') {
-        toast({ title: "Сессия устарела", description: "Требуется перезайти в Ядро.", variant: "destructive" });
-      } else if (e.code === 'auth/billing-not-enabled') {
-        toast({ title: "Ошибка тарифа", description: "Используйте Тестовый номер и код из консоли Firebase.", variant: "destructive" });
+        toast({ title: "Нужен перезаход", description: "Требуется свежая авторизация.", variant: "destructive" });
       } else {
-        toast({ title: "Сбой сигнала", description: "Попробуйте позже.", variant: "destructive" });
+        toast({ title: "Сбой сигнала", description: "Для СМС нужен тариф Blaze или тестовый номер.", variant: "destructive" });
       }
     } finally {
       setIsVerifyingPhone(false);
@@ -172,12 +168,12 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
     setIsVerifyingEmail(true);
     try {
       await verifyBeforeUpdateEmail(auth.currentUser, form.email.trim());
-      toast({ title: "Письмо отправлено", description: "Проверьте почту (и папку Спам) для подтверждения основной почты." });
+      toast({ title: "Письмо отправлено", description: "Проверьте почту (и папку Спам) для подтверждения." });
     } catch (e: any) {
       if (e.code === 'auth/requires-recent-login') {
-        toast({ title: "Нужен перезаход", description: "Для безопасности требуется свежая авторизация.", variant: "destructive" });
+        toast({ title: "Нужен перезаход", description: "Требуется свежая авторизация.", variant: "destructive" });
       } else {
-        toast({ title: "Сбой почты", description: "Проверьте адрес или попробуйте позже.", variant: "destructive" });
+        toast({ title: "Сбой почты", variant: "destructive" });
       }
     } finally {
       setIsVerifyingEmail(false);
@@ -194,7 +190,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
 
   const handleLinkBiometrics = async () => {
     if (typeof window === 'undefined' || !window.PublicKeyCredential || !user) {
-      toast({ title: "Hardware Error", description: "Биометрия недоступна на этом устройстве", variant: "destructive" });
+      toast({ title: "Hardware Error", description: "Биометрия недоступна", variant: "destructive" });
       return;
     }
     setIsLinkingBiometrics(true);
@@ -268,7 +264,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
       onOpenChange(false);
       toast({ title: "Ядро обновлено" });
     } catch (e: any) {
-      toast({ title: "Ошибка", variant: "destructive" });
+      toast({ title: "Ошибка сохранения", variant: "destructive" });
     } finally { setIsSaving(false); }
   };
 
@@ -286,7 +282,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
           deleteDocumentNonBlocking(doc(db, 'users', user.uid, 'sessions', s.id));
         }
       });
-      toast({ title: "Лишние узлы аннигилированы" });
+      toast({ title: "Лишние узлы отключены" });
     }
   };
 
@@ -358,11 +354,6 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                            </div>
                          )}
                       </div>
-                      {phoneStep === 'code' && (
-                        <p className="text-[7px] text-primary/60 uppercase font-bold ml-2 mt-1 flex items-center gap-1">
-                          <Info className="w-2.5 h-2.5" /> Используйте код из консоли (для тестов)
-                        </p>
-                      )}
                     </div>
 
                     <div className="space-y-1.5">
@@ -374,7 +365,6 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                         </div>
                         <Button onClick={handleSendEmailVerification} disabled={isVerifyingEmail || !form.email} className="h-11 rounded-xl px-4 bg-white/5 border border-white/10 text-[9px] font-black uppercase hover:bg-primary/20">Привязать</Button>
                       </div>
-                      <p className="text-[7px] text-white/30 uppercase font-bold ml-2 mt-1">Проверьте папку «Спам» после нажатия</p>
                     </div>
                   </div>
 
@@ -402,16 +392,6 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                   <button onClick={() => setForm({...form, appearance: 'light'})} className={cn("h-14 rounded-2xl border flex items-center justify-center gap-3 text-[11px] font-black uppercase tracking-widest transition-all", form.appearance === 'light' ? "bg-white text-black border-white shadow-xl" : "bg-white/5 border-white/10 text-white/40")}>Crystal</button>
                 </div>
               </div>
-
-              {isPremium && (
-                <div className="bg-primary/5 p-6 rounded-[2.5rem] border border-primary/10 space-y-6">
-                   <h3 className="text-[11px] font-black uppercase text-primary tracking-widest flex items-center gap-3"><Paintbrush className="w-5 h-5" /> HEX Резонанс</h3>
-                   <div className="flex gap-4">
-                      <div className="h-16 w-16 rounded-2xl border-2 border-white/10 shrink-0" style={{ backgroundColor: form.customPrimaryColor || 'hsl(var(--primary))' }} />
-                      <Input placeholder="#A855F7" value={form.customPrimaryColor} onChange={e => setForm({...form, customPrimaryColor: e.target.value.toUpperCase()})} className="bg-black/40 border-white/10 h-16 rounded-2xl text-center font-mono text-xl font-black" />
-                   </div>
-                </div>
-              )}
 
               <div className="space-y-6">
                 <h3 className="text-[11px] font-black uppercase text-primary tracking-widest flex items-center gap-3"><ImageIcon className="w-5 h-5" /> Обои чата</h3>
@@ -443,21 +423,6 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                   </div>
                 )}
               </div>
-              
-              <div className="bg-accent/5 p-8 rounded-[3rem] border border-accent/20 space-y-8 shadow-2xl">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-5"><div className="bg-accent/20 p-4 rounded-2xl shadow-xl"><Lock className="w-8 h-8 text-accent" /></div><div className="flex flex-col text-left"><span className="text-lg font-black text-white uppercase italic">Облачный пароль</span><span className="text-[9px] text-accent/60 uppercase font-black tracking-widest">Master Password</span></div></div>
-                  <Switch checked={form.cloudPasswordEnabled} onCheckedChange={v => setForm({...form, cloudPasswordEnabled: v})} />
-                </div>
-                {form.cloudPasswordEnabled && (
-                  <div className="relative">
-                    <Input type={showCloudPass ? "text" : "password"} placeholder="Мастер-код" value={form.cloudPassword} onChange={e => setForm({...form, cloudPassword: e.target.value})} className="bg-black/60 border-accent/30 h-14 rounded-2xl text-center font-bold pr-12" />
-                    <button type="button" onClick={() => setShowCloudPass(!showCloudPass)} className="absolute right-4 top-1/2 -translate-y-1/2 text-white/20 hover:text-white">
-                      {showCloudPass ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                    </button>
-                  </div>
-                )}
-              </div>
             </TabsContent>
 
             <TabsContent value="data" className="space-y-6 m-0 p-8 pb-24">
@@ -484,16 +449,11 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                             "w-12 h-12 rounded-2xl flex items-center justify-center shadow-inner",
                             isCurrent ? "bg-primary/20" : "bg-white/5"
                           )}>
-                             {s.deviceName?.includes("PC") || s.deviceName?.includes("macOS") ? <Laptop className={cn("w-6 h-6", isCurrent ? "text-primary" : "text-white/20")} /> : <Smartphone className={cn("w-6 h-6", isCurrent ? "text-primary" : "text-white/20")} />}
+                             {s.deviceName?.includes("PC") ? <Laptop className={cn("w-6 h-6", isCurrent ? "text-primary" : "text-white/20")} /> : <Smartphone className={cn("w-6 h-6", isCurrent ? "text-primary" : "text-white/20")} />}
                           </div>
                           <div className="flex flex-col text-left min-w-0">
                             <span className="text-sm font-black text-white italic truncate uppercase tracking-tight">{s.deviceName}</span>
-                            <div className="flex items-center gap-2 mt-1">
-                              <span className="text-[9px] font-bold text-white/40 uppercase tracking-widest">{s.browser} • {s.ip}</span>
-                            </div>
-                            <span className="text-[8px] text-muted-foreground/60 uppercase font-black mt-1">
-                              {isCurrent ? <span className="text-green-500">В сети</span> : formatLastSeen(s.lastActive)}
-                            </span>
+                            <span className="text-[9px] text-white/40 uppercase font-black">{isCurrent ? 'В сети' : formatLastSeen(s.lastActive)}</span>
                           </div>
                         </div>
                         {!isCurrent && (
@@ -510,7 +470,9 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
           </ScrollArea>
 
           <div className="p-8 border-t border-white/5 bg-white/[0.02] shrink-0 flex gap-4">
-            <Button variant="ghost" className="h-16 w-16 rounded-[1.8rem] bg-red-500/10 text-red-500 hover:bg-red-500/20 shadow-xl" onClick={() => signOut(auth)}><LogOut className="w-7 h-7" /></Button>
+            <Button variant="ghost" className="h-16 w-16 rounded-[1.8rem] bg-red-500/10 text-red-500 hover:bg-red-500/20 shadow-xl" onClick={() => signOut(auth)}>
+              <LogOut className="w-7 h-7" />
+            </Button>
             <Button disabled={isSaving} className="flex-1 h-16 rounded-[1.8rem] font-black uppercase italic tracking-widest bg-primary text-white shadow-2xl active:scale-95 transition-all" onClick={handleSave}>
               {isSaving ? <Loader2 className="animate-spin w-6 h-6" /> : <><Check className="w-6 h-6 mr-3" /> Сохранить</>}
             </Button>
@@ -520,4 +482,3 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
     </Dialog>
   );
 }
-
