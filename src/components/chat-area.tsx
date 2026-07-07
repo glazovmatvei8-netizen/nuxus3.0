@@ -22,7 +22,7 @@ import type { Message, User as UserType, Chat } from '@/lib/types';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { useToast } from '@/hooks/use-toast';
 
-// Shapes for Video Notes V28.8.0
+// Shapes for Video Notes V28.9.0
 const VIDEO_SHAPES = [
   { id: 'circle', icon: Circle, label: 'Круг', clip: 'circle(50% at 50% 50%)' },
   { id: 'square', icon: Square, label: 'Квадрат', clip: 'inset(0% rounded 15%)' },
@@ -32,7 +32,7 @@ const VIDEO_SHAPES = [
 ];
 
 /**
- * ChatInputBar V28.8.0: Trigger for Pro Recorder.
+ * ChatInputBar V28.9.0: Trigger for Pro Recorder.
  */
 const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, isPremium, replyTo, onCancelReply, onOpenProRecorder }: any) => {
   const { localDrafts, setLocalDrafts } = useAppState();
@@ -110,7 +110,6 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
       startAudioRecording();
       return;
     }
-    // For video mode, short click opens Pro Recorder, handled by onClick below
   };
 
   const handlePointerUp = (e: React.PointerEvent) => {
@@ -320,7 +319,7 @@ export default function ChatArea() {
     updateDoc(doc(db, 'chats', currentChatId), { lastMessageAt: new Date().toISOString() });
   }, [currentChatId, firebaseUser, db, userProfile, replyTo, toast]);
 
-  // PRO RECORDER LOGIC V28.8.0
+  // PRO RECORDER LOGIC V28.9.0
   const startProRecording = async () => {
     try {
       if (!streamRef.current) return;
@@ -398,10 +397,15 @@ export default function ChatArea() {
         </div>
       )}
       
-      {/* PRO RECORDER FULLSCREEN OVERLAY V28.8.0 */}
+      {/* PRO RECORDER FULLSCREEN OVERLAY V28.9.0 */}
       {isProRecorderOpen && (
         <div className="fixed inset-0 z-[5000] bg-black/90 backdrop-blur-[50px] w-screen h-[100dvh] flex flex-col items-center justify-between animate-in fade-in duration-500 overflow-hidden">
-           <div className="w-full flex items-center justify-end px-6 pt-[env(safe-area-inset-top,40px)] z-[5100]">
+           {/* HEADER: BRANDING (LEFT) & CLOSE (RIGHT) */}
+           <div className="w-full flex items-center justify-between px-6 pt-[calc(env(safe-area-inset-top,20px)+20px)] z-[5100]">
+              <div className="flex flex-col text-left">
+                 <span className="text-white font-black text-xl italic uppercase tracking-tighter block leading-none">NUXUS CIRCLE</span>
+                 <span className="text-[8px] text-primary font-black uppercase tracking-[0.4em] mt-2 block ml-1">PRO STUDIO V28.9</span>
+              </div>
               <button onClick={closeProRecorder} className="w-12 h-12 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 transition-all border border-white/10 shadow-2xl active:scale-90">
                 <X className="w-7 h-7 text-white" />
               </button>
@@ -429,11 +433,6 @@ export default function ChatArea() {
               )}
 
               <div className="flex items-center justify-center w-full relative h-28">
-                <div className="absolute left-0 bottom-2 opacity-50">
-                   <span className="text-white font-black text-xl italic uppercase tracking-tighter block leading-none">NUXUS CIRCLE</span>
-                   <span className="text-[8px] text-primary font-black uppercase tracking-[0.4em] mt-2 block ml-1">PRO STUDIO V28.8</span>
-                </div>
-
                 <div className="absolute right-[65%]">
                    {!isRecording && (
                      <button onClick={switchCamera} className="w-14 h-14 rounded-2xl bg-white/10 flex items-center justify-center border border-white/10 active:scale-90 transition-all shadow-xl hover:bg-white/20">

@@ -5,7 +5,7 @@ import React, { useState } from 'react';
 import { useAppState } from '@/lib/store';
 import { Button } from '@/components/ui/button';
 import { UserAvatar } from '@/components/user-avatar';
-import { Phone, Link, Info, PhoneOff, Loader2, ArrowUpRight, ArrowDownLeft } from 'lucide-react';
+import { Phone, Link, Info, PhoneOff, Loader2, ArrowUpRight, ArrowDownLeft, ShieldCheck, Zap, Activity } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useFirestore, useUser, useCollection, useMemoFirebase, useDoc } from '@/firebase';
 import { collection, query, where, orderBy, limit, doc } from 'firebase/firestore';
@@ -13,12 +13,15 @@ import { formatDisplayName, cn } from '@/lib/utils';
 import type { Call, User } from '@/lib/types';
 import { format } from 'date-fns';
 
+/**
+ * CALL CENTER V28.9.0 «MISSION CONTROL»
+ * Полный редизайн в стиле Cinema Fidelity.
+ */
 export default function CallsView() {
   const { user } = useUser();
   const db = useFirestore();
   const [activeTab, setActiveTab] = useState<'all' | 'missed'>('all');
 
-  // История звонков: только те, где участвует текущий пользователь
   const callsQuery = useMemoFirebase(() => {
     if (!db || !user) return null;
     return query(
@@ -38,68 +41,74 @@ export default function CallsView() {
   }, [calls, activeTab]);
 
   return (
-    <div className="flex flex-col h-full bg-[#0a0a0c] overflow-hidden">
-      {/* Header */}
-      <div className="px-4 pt-6 pb-2 shrink-0">
-        <h1 className="text-[32px] font-black text-white tracking-tight mb-6">Звонки</h1>
+    <div className="flex flex-col h-full bg-[#0a0a0c] overflow-hidden relative">
+      <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 blur-[120px] pointer-events-none -z-10" />
+      
+      {/* HEADER V28.9.0 */}
+      <div className="px-6 pt-10 pb-6 shrink-0 space-y-8">
+        <div className="flex items-center justify-between">
+          <div className="flex flex-col text-left">
+            <h1 className="text-3xl font-black text-white italic tracking-tighter uppercase flex items-center gap-3">
+              Центр <span className="text-[8px] bg-primary/20 text-primary px-2 py-0.5 rounded-full border border-primary/20 tracking-widest font-black">CALL CENTER</span>
+            </h1>
+            <p className="text-[8px] font-black text-white/20 uppercase tracking-[0.4em] ml-1 mt-1">Quantum Encryption Signal</p>
+          </div>
+          <div className="obsidian-glass p-3 rounded-2xl border-white/5 shadow-xl">
+             <Activity className="w-6 h-6 text-primary animate-pulse" />
+          </div>
+        </div>
         
-        {/* Action Buttons */}
-        <div className="space-y-6 mb-8">
-          <button className="flex items-center gap-4 group w-full text-left">
-            <div className="h-6 w-6 flex items-center justify-center">
-              <Phone className="w-6 h-6 text-[#007AFF]" />
-            </div>
-            <span className="text-[#007AFF] text-[17px] font-medium group-active:opacity-60 transition-opacity">Позвонить контакту</span>
-          </button>
-          
-          <button className="flex items-center gap-4 group w-full text-left">
-            <div className="h-6 w-6 flex items-center justify-center">
-              <Link className="w-6 h-6 text-[#007AFF]" />
-            </div>
-            <span className="text-[#007AFF] text-[17px] font-medium group-active:opacity-60 transition-opacity">Создать ссылку на звонок</span>
-          </button>
+        {/* Action Grid */}
+        <div className="grid grid-cols-2 gap-4">
+           <button className="flex flex-col items-center gap-3 p-6 obsidian-glass rounded-[2.2rem] border-white/5 hover:bg-primary/5 hover:border-primary/40 transition-all group shadow-2xl active:scale-95">
+              <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center border border-primary/20 group-hover:bg-primary/20 transition-all">
+                <Phone className="w-6 h-6 text-primary" />
+              </div>
+              <span className="text-[10px] font-black uppercase text-white tracking-widest italic">Позвонить</span>
+           </button>
+           
+           <button className="flex flex-col items-center gap-3 p-6 obsidian-glass rounded-[2.2rem] border-white/5 hover:bg-accent/5 hover:border-accent/40 transition-all group shadow-2xl active:scale-95">
+              <div className="w-12 h-12 rounded-2xl bg-accent/10 flex items-center justify-center border border-accent/20 group-hover:bg-accent/20 transition-all">
+                <Link className="w-6 h-6 text-accent" />
+              </div>
+              <span className="text-[10px] font-black uppercase text-white tracking-widest italic">Ссылка</span>
+           </button>
         </div>
 
-        {/* Tabs */}
-        <div className="flex gap-6 mb-4">
-          <button 
-            onClick={() => setActiveTab('all')}
-            className={cn(
-              "pb-2 text-[17px] font-bold transition-all relative",
-              activeTab === 'all' ? "text-white" : "text-muted-foreground/60"
-            )}
-          >
-            Все
-            {activeTab === 'all' && <div className="absolute bottom-0 left-0 right-0 h-[3px] bg-[#007AFF] rounded-t-full" />}
-          </button>
-          <button 
-            onClick={() => setActiveTab('missed')}
-            className={cn(
-              "pb-2 text-[17px] font-bold transition-all relative",
-              activeTab === 'missed' ? "text-[#FF3B30]" : "text-muted-foreground/60"
-            )}
-          >
-            Пропущенные
-            {activeTab === 'missed' && <div className="absolute bottom-0 left-0 right-0 h-[3px] bg-[#FF3B30] rounded-t-full" />}
-          </button>
+        {/* Tabs V28.9.0 */}
+        <div className="flex gap-2 bg-white/5 p-1 rounded-2xl border border-white/5 shadow-inner">
+           <button 
+             onClick={() => setActiveTab('all')} 
+             className={cn("flex-1 h-11 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all", activeTab === 'all' ? "bg-primary text-white shadow-lg" : "text-white/40 hover:bg-white/5")}
+           >
+             Все вызовы
+           </button>
+           <button 
+             onClick={() => setActiveTab('missed')} 
+             className={cn("flex-1 h-11 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all", activeTab === 'missed' ? "bg-red-500 text-white shadow-lg" : "text-white/40 hover:bg-white/5")}
+           >
+             Пропущенные
+           </button>
         </div>
       </div>
 
-      <ScrollArea className="flex-1">
-        <div className="px-4 space-y-0.5 pb-32">
+      <ScrollArea className="flex-1 px-1">
+        <div className="px-5 space-y-3 pb-40 animate-in fade-in duration-700">
           {isLoading ? (
-            <div className="flex flex-col items-center justify-center p-12 gap-3 opacity-50">
-              <Loader2 className="w-6 h-6 animate-spin text-primary" />
-              <p className="text-[10px] font-black uppercase tracking-widest">Neural Syncing...</p>
+            <div className="flex flex-col items-center justify-center p-20 gap-4 opacity-40">
+              <Loader2 className="w-10 h-10 animate-spin text-primary" />
+              <p className="text-[10px] font-black uppercase tracking-widest">Синхронизация истории...</p>
             </div>
           ) : filteredCalls.length > 0 ? (
             filteredCalls.map(call => (
               <CallItem key={call.id} call={call} currentUserId={user?.uid} />
             ))
           ) : (
-            <div className="flex flex-col items-center justify-center p-12 text-center opacity-40">
-              <Phone className="w-12 h-12 mb-4" />
-              <p className="text-sm font-bold uppercase tracking-widest">Нет звонков</p>
+            <div className="flex flex-col items-center justify-center p-20 text-center space-y-6 opacity-20">
+              <div className="w-24 h-24 rounded-full border-2 border-dashed border-white/20 flex items-center justify-center animate-pulse">
+                <PhoneOff className="w-10 h-10" />
+              </div>
+              <p className="text-[11px] font-black uppercase tracking-[0.5em]">Журнал пуст</p>
             </div>
           )}
         </div>
@@ -110,7 +119,6 @@ export default function CallsView() {
 
 function CallItem({ call, currentUserId }: { call: Call, currentUserId?: string }) {
   const db = useFirestore();
-  // Для истории показываем второго участника
   const otherId = call.callerId === currentUserId ? call.receiverId : call.callerId;
   const userRef = useMemoFirebase(() => (!db ? null : doc(db, 'users', otherId)), [db, otherId]);
   const { data: otherUser } = useDoc<User>(userRef);
@@ -121,42 +129,48 @@ function CallItem({ call, currentUserId }: { call: Call, currentUserId?: string 
 
   const displayDate = React.useMemo(() => {
     try {
-      return format(new Date(call.createdAt), 'dd.MM HH:mm');
+      return format(new Date(call.createdAt), 'dd MMM HH:mm');
     } catch (e) {
-      return '';
+      return 'Недавно';
     }
   }, [call.createdAt]);
 
   return (
-    <div className="flex items-center justify-between py-2.5 group active:bg-white/[0.05] transition-all">
-      <div className="flex items-center gap-3 flex-1 min-w-0">
-        <UserAvatar userId={otherId} className="h-[52px] w-[52px]" manualAvatarUrl={otherUser?.avatarUrl} fallbackName={otherUser?.name} />
-        <div className="flex flex-col min-w-0">
-          <span className={cn("font-bold text-[17px] truncate", isMissed ? "text-[#FF3B30]" : "text-white")}>
-            {formatDisplayName(otherUser?.name)}
-          </span>
-          <div className="flex items-center gap-1 text-[14px] text-muted-foreground/60 font-medium">
-            {isOutgoing ? (
-              <ArrowUpRight className="w-3.5 h-3.5" />
-            ) : (
-              <ArrowDownLeft className="w-3.5 h-3.5" />
-            )}
-            <span>{isOutgoing ? 'Исходящий' : 'Входящий'}</span>
-            <span className="mx-1">•</span>
-            <span>{displayDate}</span>
+    <div className="p-4 obsidian-glass rounded-3xl border-white/5 hover:bg-white/[0.04] transition-all group relative overflow-hidden shadow-lg">
+      <div className="flex items-center justify-between relative z-10">
+        <div className="flex items-center gap-4 flex-1 min-w-0">
+          <div className="relative">
+            <UserAvatar userId={otherId} className="h-14 w-14 border border-white/10" manualAvatarUrl={otherUser?.avatarUrl} fallbackName={otherUser?.name} />
+            <div className={cn(
+              "absolute -bottom-1 -right-1 p-1.5 rounded-lg border-2 border-[#0a0a0c] shadow-lg",
+              isMissed ? "bg-red-500" : "bg-primary"
+            )}>
+              {isOutgoing ? <ArrowUpRight className="w-2.5 h-2.5 text-white" /> : <ArrowDownLeft className="w-2.5 h-2.5 text-white" />}
+            </div>
           </div>
+          
+          <div className="flex flex-col min-w-0 text-left">
+            <span className={cn("font-black text-base truncate italic tracking-tight uppercase", isMissed ? "text-red-400" : "text-white")}>
+              {formatDisplayName(otherUser?.name)}
+            </span>
+            <div className="flex items-center gap-2 mt-0.5">
+               <span className="text-[9px] font-black uppercase text-white/30 tracking-widest">{displayDate}</span>
+               <div className="w-1 h-1 rounded-full bg-white/10" />
+               <span className="text-[8px] font-black uppercase text-primary/60 tracking-widest">{isOutgoing ? 'Исходящий' : 'Входящий'}</span>
+            </div>
+          </div>
+        </div>
+        
+        <div className="flex items-center gap-2">
+           <Button variant="ghost" size="icon" className="h-10 w-10 rounded-2xl bg-white/5 border border-white/5 hover:bg-primary/20 hover:text-primary transition-all shadow-xl group-hover:scale-105 active:scale-90">
+             <Phone className="w-5 h-5" />
+           </Button>
         </div>
       </div>
       
-      <div className="flex items-center gap-3 shrink-0">
-        {isMissed || isRejected ? (
-          <PhoneOff className="w-5 h-5 text-muted-foreground/40" />
-        ) : (
-          <Phone className="w-5 h-5 text-muted-foreground/40" />
-        )}
-        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full text-muted-foreground/40 p-0 hover:bg-transparent">
-          <Info className="w-6 h-6" />
-        </Button>
+      {/* Background decoration */}
+      <div className="absolute top-0 right-0 p-4 opacity-[0.02] -z-0">
+         <ShieldCheck className="w-16 h-16" />
       </div>
     </div>
   );
