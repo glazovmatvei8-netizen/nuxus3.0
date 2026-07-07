@@ -22,17 +22,17 @@ import type { Message, User as UserType, Chat } from '@/lib/types';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { useToast } from '@/hooks/use-toast';
 
-// Shapes for Video Notes V28.7.0
+// Shapes for Video Notes V28.7.1
 const VIDEO_SHAPES = [
   { id: 'circle', icon: Circle, label: 'Круг', clip: 'circle(50% at 50% 50%)' },
-  { id: 'square', icon: Square, label: 'Квадрат', clip: 'inset(5% rounded 20%)' },
+  { id: 'square', icon: Square, label: 'Квадрат', clip: 'inset(0% rounded 15%)' },
   { id: 'heart', icon: Heart, label: 'Сердце', clip: 'polygon(50% 15%, 80% 0%, 100% 20%, 100% 50%, 50% 100%, 0% 50%, 0% 20%, 20% 0%)' },
   { id: 'triangle', icon: Triangle, label: 'Треугольник', clip: 'polygon(50% 0%, 0% 100%, 100% 100%)' },
   { id: 'poop', icon: Ghost, label: 'Какашка', clip: 'polygon(50% 0%, 63% 13%, 53% 25%, 80% 38%, 85% 61%, 69% 68%, 94% 82%, 100% 100%, 0% 100%, 6% 82%, 31% 68%, 15% 61%, 20% 38%, 47% 25%, 37% 13%)' }
 ];
 
 /**
- * ChatInputBar V28.7.0: Pro Recorder Interface & Seamless Camera.
+ * ChatInputBar V28.7.1: UI Matched to Reference Screenshot.
  */
 const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, isPremium, replyTo, onCancelReply }: any) => {
   const { localDrafts, setLocalDrafts } = useAppState();
@@ -61,7 +61,6 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
     setMessageInput(localDrafts[currentChatId] || '');
   }, [currentChatId, localDrafts]);
 
-  // AUTO-STOP PROTECTION (100 seconds for 80kbps quality)
   useEffect(() => {
     if (isRecording && recordingDuration >= 100) {
       stopRecording();
@@ -69,44 +68,42 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
   }, [isRecording, recordingDuration]);
 
   const switchCamera = async () => {
+    if (isRecording) return; // Prevent flip while recording to avoid stream break
+
     const newMode = camMode === 'user' ? 'environment' : 'user';
     setCamMode(newMode);
     
-    // Stop all current tracks first
     if (streamRef.current) {
       streamRef.current.getTracks().forEach(t => t.stop());
       streamRef.current = null;
     }
 
-    if (videoPreviewRef.current) {
-      videoPreviewRef.current.srcObject = null;
-    }
-
     try {
       const constraints = {
-        video: { facingMode: newMode, width: { ideal: 480 }, height: { ideal: 480 }, aspectRatio: 1 },
+        video: { facingMode: newMode, width: 480, height: 480, aspectRatio: 1 },
         audio: true
       };
-
       const newStream = await navigator.mediaDevices.getUserMedia(constraints);
       streamRef.current = newStream;
-      
-      if (videoPreviewRef.current) {
-        videoPreviewRef.current.srcObject = newStream;
-        videoPreviewRef.current.play().catch(() => {});
-      }
+      if (videoPreviewRef.current) videoPreviewRef.current.srcObject = newStream;
     } catch (e) { console.error("Nuxus Flip Fail", e); }
   };
 
   useEffect(() => {
-    if ((isRecording || isProRecorderOpen) && recorderMode === 'video' && videoPreviewRef.current && !videoPreviewRef.current.srcObject) {
+    if (isProRecorderOpen && recorderMode === 'video' && !isRecording) {
        navigator.mediaDevices.getUserMedia({ video: { facingMode: camMode, width: 480, height: 480 }, audio: true })
         .then(s => {
           streamRef.current = s;
           if(videoPreviewRef.current) videoPreviewRef.current.srcObject = s;
         });
     }
-  }, [isRecording, isProRecorderOpen, recorderMode, camMode]);
+    return () => {
+      if (!isProRecorderOpen && !isRecording && streamRef.current) {
+        streamRef.current.getTracks().forEach(t => t.stop());
+        streamRef.current = null;
+      }
+    };
+  }, [isProRecorderOpen, recorderMode, camMode, isRecording]);
 
   const handleInputChange = (val: string) => {
     setMessageInput(val);
@@ -131,31 +128,26 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
       }
       
       const recorderOptions: any = {
-        mimeType: recorderMode === 'video' ? 'video/webm;codecs=vp8,opus' : 'audio/webm'
+        mimeType: 'video/webm;codecs=vp8,opus'
       };
       
-      if (recorderMode === 'video') {
-        recorderOptions.videoBitsPerSecond = 80000; 
-      }
-
-      const recorder = new MediaRecorder(streamRef.current, recorderOptions);
-      
+      const recorder = new MediaRecorder(streamRef.current, { ...recorderOptions, videoBitsPerSecond: 80000 });
       mediaRecorderRef.current = recorder;
       chunksRef.current = [];
+      
       recorder.ondataavailable = (e) => { if (e.data.size > 0) chunksRef.current.push(e.data); };
       recorder.onstop = async () => {
-        const blob = new Blob(chunksRef.current, { type: recorderMode === 'video' ? 'video/webm' : 'audio/webm' });
+        const blob = new Blob(chunksRef.current, { type: 'video/webm' });
         const reader = new FileReader();
         reader.onloadend = () => {
-          onSendMessage(reader.result as string, recorderMode === 'video' ? 'video_note' : 'audio', { shape: selectedShape });
+          if (chunksRef.current.length > 0) {
+            onSendMessage(reader.result as string, recorderMode === 'video' ? 'video_note' : 'audio', { shape: selectedShape });
+          }
         };
         reader.readAsDataURL(blob);
-        
-        if (streamRef.current) {
-          streamRef.current.getTracks().forEach(track => track.stop());
-          streamRef.current = null;
-        }
         setIsProRecorderOpen(false);
+        setIsRecording(false);
+        isActuallyRecording.current = false;
       };
 
       recorder.start();
@@ -170,12 +162,7 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
   const stopRecording = () => {
     if (mediaRecorderRef.current && isActuallyRecording.current) {
       mediaRecorderRef.current.stop();
-      setIsRecording(false);
-      isActuallyRecording.current = false;
-      if (timerIntervalRef.current) {
-        clearInterval(timerIntervalRef.current);
-        timerIntervalRef.current = null;
-      }
+      if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
     }
   };
 
@@ -194,10 +181,7 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
     if (longPressTimer.current) {
       clearTimeout(longPressTimer.current);
       longPressTimer.current = null;
-      // Open Pro UI on short tap
-      if (recorderMode === 'video') {
-        setIsProRecorderOpen(true);
-      }
+      if (recorderMode === 'video') setIsProRecorderOpen(true);
     } else if (isActuallyRecording.current) {
       stopRecording();
     }
@@ -222,103 +206,90 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
         </div>
       )}
 
-      {/* PRO VIDEO RECORDER OVERLAY (Full Screen Mode) V28.7.0 */}
+      {/* PRO VIDEO RECORDER OVERLAY V28.7.1 - MATCHED TO SCREENSHOT */}
       {isProRecorderOpen && (
-        <div className="fixed inset-0 z-[1000] bg-black/90 backdrop-blur-3xl flex flex-col items-center justify-center p-6 animate-in fade-in duration-500">
-           {/* Top Header */}
-           <div className="absolute top-10 left-0 right-0 px-8 flex items-center justify-between z-10">
-              <div className="flex flex-col">
-                <span className="text-white font-black text-xl italic uppercase tracking-tighter">Nuxus Circle</span>
-                <span className="text-[9px] text-primary font-black uppercase tracking-[0.4em]">Pro Studio v28.7</span>
-              </div>
-              <button 
-                onClick={() => { 
-                  setIsProRecorderOpen(false); 
-                  if(streamRef.current) streamRef.current.getTracks().forEach(t => t.stop());
-                  streamRef.current = null;
-                }} 
-                className="w-12 h-12 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 transition-all border border-white/10"
-              >
-                <X className="w-6 h-6 text-white" />
-              </button>
+        <div className="fixed inset-0 z-[2000] bg-[#05050a]/98 backdrop-blur-3xl flex flex-col items-center justify-center animate-in fade-in duration-500">
+           {/* Header Info */}
+           <div className="absolute top-12 left-0 right-0 px-8 text-center">
+              <p className="text-[10px] font-black text-white/20 uppercase tracking-[0.5em] animate-pulse">НАЖМИТЕ ДЛЯ ЗАПИСИ</p>
            </div>
 
-           {/* Central Preview */}
-           <div className="relative w-full max-w-[340px] aspect-square bg-black/40 rounded-[3rem] overflow-hidden shadow-[0_0_100px_rgba(168,85,247,0.2)] border border-white/5 flex items-center justify-center">
-              <video 
-                ref={videoPreviewRef} 
-                autoPlay muted playsInline 
-                className="w-full h-full object-cover" 
-                style={{ clipPath: currentShapeObj.clip }}
-              />
+           {/* Central Preview - Perfect Circle/Shape */}
+           <div className="relative w-full max-w-[320px] aspect-square bg-black rounded-full overflow-hidden shadow-[0_0_80px_rgba(168,85,247,0.3)] border border-white/10">
+              <video ref={videoPreviewRef} autoPlay muted playsInline className="w-full h-full object-cover" style={{ clipPath: currentShapeObj.clip }} />
               {isRecording && (
-                <div className="absolute top-6 left-1/2 -translate-x-1/2 bg-red-500 px-4 py-1.5 rounded-full flex items-center gap-2 shadow-xl animate-pulse">
-                   <div className="w-2 h-2 rounded-full bg-white" />
-                   <span className="text-white text-sm font-black tabular-nums">
+                <div className="absolute top-8 left-1/2 -translate-x-1/2 bg-red-500/90 px-4 py-1.5 rounded-full flex items-center gap-2 shadow-2xl">
+                   <div className="w-2 h-2 rounded-full bg-white animate-pulse" />
+                   <span className="text-white text-xs font-black tabular-nums tracking-widest">
                      {Math.floor(recordingDuration / 60).toString().padStart(2, '0')}:{(recordingDuration % 60).toString().padStart(2, '0')}
                    </span>
                 </div>
               )}
            </div>
 
-           {/* Controls Container */}
-           <div className="absolute bottom-16 left-0 right-0 px-10 space-y-12">
-              {/* Shape Selector */}
-              <div className="flex gap-4 overflow-x-auto scrollbar-hide w-full justify-center py-4 bg-white/5 rounded-[2.5rem] border border-white/5 backdrop-blur-md">
-                {VIDEO_SHAPES.map(shape => (
-                  <button 
-                    key={shape.id} 
-                    onClick={() => setSelectedShape(shape.id)}
-                    className={cn(
-                      "flex flex-col items-center gap-2 p-3.5 rounded-2xl transition-all border shrink-0",
-                      selectedShape === shape.id ? "bg-primary border-primary shadow-lg scale-110" : "bg-transparent border-transparent text-white/40"
-                    )}
-                  >
-                    <shape.icon className="w-6 h-6" />
-                  </button>
-                ))}
-              </div>
-
-              {/* Bottom Row */}
-              <div className="flex items-center justify-between">
-                 <button 
-                   onClick={switchCamera} 
-                   className="w-16 h-16 rounded-[1.8rem] bg-white/5 flex items-center justify-center border border-white/10 active:scale-90 transition-transform"
-                 >
-                   <RefreshCcw className="w-8 h-8 text-white" />
-                 </button>
-
-                 <div className="text-center">
-                    <p className="text-[10px] font-black text-white/20 uppercase tracking-[0.3em] mb-4">Нажмите для записи</p>
-                    <button 
-                      onClick={() => isRecording ? stopRecording() : startRecording()}
-                      className={cn(
-                        "w-24 h-24 rounded-full flex items-center justify-center transition-all shadow-[0_0_50px_rgba(0,122,255,0.4)] relative border-4",
-                        isRecording ? "bg-red-500 border-white/20 scale-110" : "bg-[#007AFF] border-white/10 active:scale-90"
-                      )}
-                    >
-                      {isRecording ? <StopCircle className="w-10 h-10 text-white fill-white" /> : <div className="w-8 h-8 rounded-full bg-white" />}
-                      {isRecording && <div className="absolute -inset-4 border-4 border-red-500/20 rounded-full animate-ping" />}
+           {/* Bottom Interface - Layout from Screenshot */}
+           <div className="absolute bottom-10 left-0 right-0 px-8 flex flex-col gap-10">
+              
+              {/* Shape Selector Bar */}
+              {!isRecording && (
+                <div className="flex gap-4 overflow-x-auto scrollbar-hide w-full justify-center py-4 bg-white/5 rounded-[2.5rem] border border-white/5">
+                  {VIDEO_SHAPES.map(shape => (
+                    <button key={shape.id} onClick={() => setSelectedShape(shape.id)} className={cn("flex flex-col items-center gap-2 p-3.5 rounded-2xl transition-all", selectedShape === shape.id ? "bg-primary text-white scale-110 shadow-lg" : "bg-transparent text-white/40")}>
+                      <shape.icon className="w-6 h-6" />
                     </button>
-                 </div>
+                  ))}
+                </div>
+              )}
 
-                 <div className="w-16" /> {/* Spacer */}
+              {/* Functional Controls Row */}
+              <div className="flex items-end justify-between w-full h-24 relative">
+                
+                {/* Left: Flip + Branding */}
+                <div className="flex flex-col gap-4 items-start">
+                   {!isRecording && (
+                     <button onClick={switchCamera} className="w-14 h-14 rounded-2xl bg-white/5 flex items-center justify-center border border-white/10 active:scale-90 transition-transform">
+                       <RefreshCcw className="w-6 h-6 text-white" />
+                     </button>
+                   )}
+                   <div className="text-left">
+                     <span className="text-white font-black text-xl italic uppercase tracking-tighter block leading-none">NUXUS CIRCLE</span>
+                     <span className="text-[8px] text-primary font-black uppercase tracking-[0.4em] mt-1 block">PRO STUDIO V28.7</span>
+                   </div>
+                </div>
+
+                {/* Center: Record Button */}
+                <div className="absolute left-1/2 bottom-0 -translate-x-1/2">
+                   <button 
+                     onClick={() => isRecording ? stopRecording() : startRecording()}
+                     className={cn(
+                       "w-24 h-24 rounded-full flex items-center justify-center transition-all shadow-[0_0_50px_rgba(0,122,255,0.4)] relative border-4",
+                       isRecording ? "bg-red-500 border-white/40 scale-110" : "bg-[#007AFF] border-white/20 active:scale-90"
+                     )}
+                   >
+                     {isRecording ? <StopCircle className="w-10 h-10 text-white fill-white" /> : <div className="w-8 h-8 rounded-full bg-white" />}
+                   </button>
+                </div>
+
+                {/* Right: Close Button */}
+                <div className="flex items-center justify-center">
+                  {!isRecording && (
+                    <button 
+                      onClick={() => setIsProRecorderOpen(false)} 
+                      className="w-14 h-14 rounded-full bg-white/5 flex items-center justify-center hover:bg-white/20 transition-all border border-white/10"
+                    >
+                      <X className="w-6 h-6 text-white" />
+                    </button>
+                  )}
+                </div>
               </div>
            </div>
         </div>
       )}
 
-      {/* QUICK RECORD UI (Hidden if Pro Recorder is open) */}
-      {!isProRecorderOpen && isRecording && recorderMode === 'video' && (
+      {/* QUICK RECORDING VIEW */}
+      {isRecording && !isProRecorderOpen && (
         <div className="absolute bottom-32 left-1/2 -translate-x-1/2 w-64 h-64 rounded-full overflow-hidden border-4 border-primary shadow-[0_0_60px_rgba(168,85,247,0.6)] z-50 bg-black animate-in zoom-in duration-500">
-          <video 
-            ref={videoPreviewRef} 
-            autoPlay 
-            muted 
-            playsInline 
-            className="w-full h-full object-cover" 
-            style={{ clipPath: currentShapeObj.clip }}
-          />
+          <video ref={videoPreviewRef} autoPlay muted playsInline className="w-full h-full object-cover" style={{ clipPath: currentShapeObj.clip }} />
         </div>
       )}
 
@@ -377,15 +348,11 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
         ) : (
           <div className="flex-1 flex items-center bg-primary/10 border border-primary/20 rounded-2xl h-11 px-4 gap-4 animate-in slide-in-from-right-8">
             <div className="flex items-center gap-2 text-primary animate-pulse"><div className="w-2 h-2 rounded-full bg-primary shadow-lg" /><span className="text-[10px] font-black uppercase tracking-widest">LIVE</span></div>
-            <span className={cn("text-lg font-black italic flex-1 tabular-nums", recordingDuration >= 80 ? "text-red-500" : "text-white")}>
+            <span className={cn("text-lg font-black italic flex-1 tabular-nums text-white", recordingDuration >= 80 && "text-red-500")}>
               {Math.floor(recordingDuration / 60).toString().padStart(2, '0')}:{(recordingDuration % 60).toString().padStart(2, '0')}
             </span>
-            {!isProRecorderOpen && (
-              <>
-                <Button variant="ghost" size="icon" className="h-8 w-8 text-white/40" onClick={() => { if(mediaRecorderRef.current) mediaRecorderRef.current.onstop = null; stopRecording(); }}><Trash2 className="w-4 h-4" /></Button>
-                <Button variant="ghost" size="icon" className="h-10 w-10 text-primary" onPointerDown={stopRecording}><StopCircle className="w-7 h-7 fill-current" /></Button>
-              </>
-            )}
+            <Button variant="ghost" size="icon" className="h-8 w-8 text-white/40" onClick={() => { if(mediaRecorderRef.current) mediaRecorderRef.current.onstop = null; stopRecording(); setIsRecording(false); }}><Trash2 className="w-4 h-4" /></Button>
+            <Button variant="ghost" size="icon" className="h-10 w-10 text-primary" onPointerDown={stopRecording}><StopCircle className="w-7 h-7 fill-current" /></Button>
           </div>
         )}
       </div>
@@ -487,7 +454,6 @@ export default function ChatArea() {
   const handleSendMessage = useCallback(async (content_msg: string, type_msg: Message['contentType'] = 'text', meta: any = null) => {
     if (!content_msg.trim() || !currentChatId || !firebaseUser || !db) return;
     
-    // SAFETY CHECK: Firestore Document Limit is 1MB
     if (content_msg.length > 1040000) {
       toast({ title: "Файл слишком велик", description: "Превышен системный лимит 1МБ. Попробуйте записать видео короче.", variant: "destructive" });
       return;
@@ -617,4 +583,3 @@ export default function ChatArea() {
     </div>
   );
 }
-
