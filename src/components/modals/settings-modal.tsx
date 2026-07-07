@@ -20,7 +20,6 @@ import { useToast } from '@/hooks/use-toast';
 import { 
   signOut, 
   RecaptchaVerifier, 
-  signInWithPhoneNumber, 
   linkWithPhoneNumber,
   ConfirmationResult
 } from 'firebase/auth';
@@ -35,9 +34,9 @@ import { format } from 'date-fns';
 import { ru } from 'date-fns/locale';
 
 /**
- * SETTINGS MODAL V32.9.2 «ULTIMATE INTEGRITY»
- * ИСПРАВЛЕНО: Верификация тестовых номеров на тарифе Spark.
- * ФИКС: Все ReferenceError (Plus, handleBgUpload) устранены.
+ * SETTINGS MODAL V32.9.4 «IRON CODE»
+ * ИСПРАВЛЕНО: JSX Syntax Error (-> replaced with &rarr;).
+ * ИСПРАВЛЕНО: Гарантированные импорты Plus и Loader2.
  */
 export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const auth = useAuth();
@@ -151,14 +150,9 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
     if (!form.phone || !auth || !user) return;
     setIsVerifyingPhone(true);
     try {
-      // Очищаем старый верификатор
       if (recaptchaRef.current) {
         recaptchaRef.current.clear();
       }
-
-      // Создаем тихий верификатор в скрытом контейнере
-      const container = document.getElementById('silent-settings-verifier');
-      if (!container) throw new Error("Контейнер верификации не найден");
 
       recaptchaRef.current = new RecaptchaVerifier(auth, 'silent-settings-verifier', {
         size: 'invisible',
@@ -167,22 +161,13 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
 
       const finalPhone = form.phone.startsWith('+') ? form.phone : '+' + form.phone;
       
-      // Используем linkWithPhoneNumber для привязки к текущему аккаунту
       const result = await linkWithPhoneNumber(user, finalPhone, recaptchaRef.current);
       setConfirmationResult(result);
       setPhoneStep('code');
-      toast({ title: "Сигнал отправлен", description: "Если номер тестовый — используйте код из консоли." });
+      toast({ title: "Сигнал отправлен", description: "Используйте тестовый код, если номер добавлен в консоль." });
     } catch (e: any) {
       console.error("Phone Link Error:", e);
-      if (e.code === 'auth/billing-not-enabled') {
-        toast({ 
-          title: "Ошибка Биллинга", 
-          description: "Для реальных SMS нужен тариф Blaze. Используйте ТЕСТОВЫЙ номер из консоли Firebase.", 
-          variant: "destructive" 
-        });
-      } else {
-        toast({ title: "Сбой сигнала", description: e.message, variant: "destructive" });
-      }
+      toast({ title: "Сбой сигнала", description: e.message, variant: "destructive" });
     } finally { setIsVerifyingPhone(false); }
   };
 
@@ -197,7 +182,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         setPhoneStep('idle');
       }
     } catch (e: any) {
-      toast({ title: "Неверный код", description: e.message, variant: "destructive" });
+      toast({ title: "Неверный код", description: "Проверьте код в консоли Firebase.", variant: "destructive" });
     } finally { setIsVerifyingPhone(false); }
   };
 
@@ -336,6 +321,14 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                            </div>
                          )}
                       </div>
+                      {phoneStep === 'code' && (
+                        <div className="flex items-start gap-2 mt-2 bg-primary/5 p-3 rounded-xl border border-primary/10">
+                           <Info className="w-3.5 h-3.5 text-primary shrink-0 mt-0.5" />
+                           <p className="text-[8px] text-primary/60 uppercase font-bold leading-relaxed">
+                             Код подтверждения для тестового номера установлен в консоли Firebase (раздел Auth &rarr; Phone). SMS не придет.
+                           </p>
+                        </div>
+                      )}
                     </div>
 
                     <div className="space-y-1.5">

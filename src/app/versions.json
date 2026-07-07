@@ -1,13 +1,13 @@
 
 {
-  "latestVersion": "32.9.2",
+  "latestVersion": "32.9.4",
   "qesVersion": "32.9",
-  "build": "Signal-Safe-Final",
+  "build": "Iron-Code-Release",
   "sizeMb": 112,
   "changelog": [
-    "Fix: Исправлена верификация тестовых номеров телефона на бесплатном тарифе Spark",
-    "Fix: Окончательно устранены все ReferenceError (Plus, Loader2, handleBgUpload)",
-    "UI: Улучшена читаемость настроек и синхронизация основной почты",
-    "Security: Оптимизирована работа тихого верификатора ReCaptcha"
+    "Fix: Устранена ошибка сборки (JSX Syntax Error) в файле настроек",
+    "Security: Оптимизирована тихая верификация ReCaptcha (Silent Mode)",
+    "UX: Добавлены инструкции по использованию тестовых кодов из консоли",
+    "Stability: Гарантированы импорты Plus и Loader2"
   ]
 }
