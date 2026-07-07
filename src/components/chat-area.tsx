@@ -32,7 +32,7 @@ const VIDEO_SHAPES = [
 ];
 
 /**
- * ChatInputBar V28.5.1: Shape-Shifting Video Notes (Corrected Geometry).
+ * ChatInputBar V28.5.2: Buffer Protection (Max 45s, 360p, 200kbps).
  */
 const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, isPremium, replyTo, onCancelReply }: any) => {
   const { localDrafts, setLocalDrafts } = useAppState();
@@ -62,6 +62,13 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
     setMessageInput(localDrafts[currentChatId] || '');
   }, [currentChatId, localDrafts]);
 
+  // AUTO-STOP PROTECTION (Max 45 seconds to stay under 1MB Firestore limit)
+  useEffect(() => {
+    if (isRecording && recordingDuration >= 45) {
+      stopRecording();
+    }
+  }, [isRecording, recordingDuration]);
+
   const switchCamera = async () => {
     const newMode = camMode === 'user' ? 'environment' : 'user';
     setCamMode(newMode);
@@ -70,7 +77,7 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
       try {
         streamRef.current?.getVideoTracks().forEach(track => track.stop());
         const newStream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: newMode, width: { ideal: 480 }, height: { ideal: 480 }, aspectRatio: 1 }
+          video: { facingMode: newMode, width: { ideal: 360 }, height: { ideal: 360 }, aspectRatio: 1 }
         });
         const newVideoTrack = newStream.getVideoTracks()[0];
         streamRef.current?.addTrack(newVideoTrack);
@@ -101,17 +108,24 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
     try {
       if (streamRef.current) streamRef.current.getTracks().forEach(t => t.stop());
       
+      // OPTIMIZED CONSTRAINTS: 360p is enough for circular crop and saves data
       const constraints = {
         audio: true,
-        video: recorderMode === 'video' ? { facingMode: camMode, width: 480, height: 480, aspectRatio: 1 } : false
+        video: recorderMode === 'video' ? { facingMode: camMode, width: 360, height: 360, aspectRatio: 1 } : false
       };
 
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
       streamRef.current = stream;
       
-      const recorder = new MediaRecorder(stream, {
+      // OPTIMIZED BITRATE: 200kbps (approx 1MB per 40 seconds)
+      const recorderOptions: any = {
         mimeType: recorderMode === 'video' ? 'video/webm;codecs=vp8,opus' : 'audio/webm'
-      });
+      };
+      if (recorderMode === 'video') {
+        recorderOptions.videoBitsPerSecond = 200000; 
+      }
+
+      const recorder = new MediaRecorder(stream, recorderOptions);
       
       mediaRecorderRef.current = recorder;
       chunksRef.current = [];
@@ -164,7 +178,7 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
       setIsShapeSelectorOpen(!isShapeSelectorOpen);
       if (!isShapeSelectorOpen) {
         // Init camera for preview
-        navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: 480, height: 480 } })
+        navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: 360, height: 360 } })
           .then(s => { streamRef.current = s; if(videoPreviewRef.current) videoPreviewRef.current.srcObject = s; });
       } else {
         if(streamRef.current) streamRef.current.getTracks().forEach(t => t.stop());
@@ -299,7 +313,9 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
         ) : (
           <div className="flex-1 flex items-center bg-primary/10 border border-primary/20 rounded-2xl h-11 px-4 gap-4 animate-in slide-in-from-right-8">
             <div className="flex items-center gap-2 text-primary animate-pulse"><div className="w-2 h-2 rounded-full bg-primary shadow-lg" /><span className="text-[10px] font-black uppercase tracking-widest">LIVE</span></div>
-            <span className="text-lg font-black italic text-white flex-1 tabular-nums">{Math.floor(recordingDuration / 60)}:{(recordingDuration % 60).toString().padStart(2, '0')}</span>
+            <span className={cn("text-lg font-black italic flex-1 tabular-nums", recordingDuration >= 40 ? "text-red-500" : "text-white")}>
+              {Math.floor(recordingDuration / 60)}:{(recordingDuration % 60).toString().padStart(2, '0')}
+            </span>
             <Button variant="ghost" size="icon" className="h-8 w-8 text-white/40" onClick={() => { if(mediaRecorderRef.current) mediaRecorderRef.current.onstop = null; stopRecording(); }}><Trash2 className="w-4 h-4" /></Button>
             <Button variant="ghost" size="icon" className="h-10 w-10 text-primary" onPointerDown={stopRecording}><StopCircle className="w-7 h-7 fill-current" /></Button>
           </div>
@@ -357,7 +373,6 @@ export default function ChatArea() {
   const [replyTo, setReplyTo] = useState<Message | null>(null);
   const [isSearchMode, setIsSearchMode] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [showScrollButton, setShowScrollButton] = useState(false);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -404,6 +419,12 @@ export default function ChatArea() {
   const handleSendMessage = useCallback(async (content_msg: string, type_msg: Message['contentType'] = 'text', meta: any = null) => {
     if (!content_msg.trim() || !currentChatId || !firebaseUser || !db) return;
     
+    // SAFETY CHECK: Prevent UI-crashing document overflow
+    if (content_msg.length > 1000000) {
+      toast({ title: "Файл слишком велик", description: "Превышен лимит 1МБ. Попробуйте записать короче.", variant: "destructive" });
+      return;
+    }
+
     let finalContent = (type_msg === 'text' || type_msg === 'reply') ? encryptSignal(content_msg) : content_msg;
     if (type_msg === 'image' && !content_msg.startsWith('data:')) finalContent = await compressImage(content_msg, 1200, 0.6);
 
@@ -419,9 +440,13 @@ export default function ChatArea() {
       setReplyTo(null);
     }
     
-    addDoc(collection(db, 'chats', currentChatId, 'messages'), msgData);
+    addDoc(collection(db, 'chats', currentChatId, 'messages'), msgData).catch(err => {
+      if (err.message?.includes('longer than 1048487 bytes')) {
+        toast({ title: "Сбой буфера", description: "Сообщение слишком тяжелое для этого чата.", variant: "destructive" });
+      }
+    });
     updateDoc(doc(db, 'chats', currentChatId), { lastMessageAt: new Date().toISOString() });
-  }, [currentChatId, firebaseUser, db, userProfile, replyTo]);
+  }, [currentChatId, firebaseUser, db, userProfile, replyTo, toast]);
 
   const startCallAction = async (type: 'audio' | 'video') => {
     if (!db || !firebaseUser || !otherId || !currentChatId) return;
