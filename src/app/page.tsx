@@ -18,8 +18,8 @@ import { NuxusLogo } from '@/components/nuxus-logo';
 import { IosInstaller } from '@/components/ios-installer';
 
 /**
- * ГЛАВНЫЙ КОНТРОЛЛЕР ЯДРА V25.1.0
- * ОПТИМИЗИРОВАНО: Турбо-запуск (2.0с) для исключения долгих загрузок.
+ * ГЛАВНЫЙ КОНТРОЛЛЕР ЯДРА V30.0.1
+ * ОБНОВЛЕНО: Поддержка SMS-авторизации и биометрической разблокировки.
  */
 export default function Home() {
   const { user, isUserLoading } = useUser();
