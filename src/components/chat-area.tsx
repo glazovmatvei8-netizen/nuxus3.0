@@ -22,7 +22,7 @@ import type { Message, User as UserType, Chat } from '@/lib/types';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { useToast } from '@/hooks/use-toast';
 
-// Shapes for Video Notes V28.7.3
+// Shapes for Video Notes V28.7.4
 const VIDEO_SHAPES = [
   { id: 'circle', icon: Circle, label: 'Круг', clip: 'circle(50% at 50% 50%)' },
   { id: 'square', icon: Square, label: 'Квадрат', clip: 'inset(0% rounded 15%)' },
@@ -32,8 +32,8 @@ const VIDEO_SHAPES = [
 ];
 
 /**
- * ChatInputBar V28.7.3: Absolute UI matching user photo.
- * Lifted controls to be visible on all devices.
+ * ChatInputBar V28.7.4: Cinema Studio UI.
+ * Optimized for iPhone 14 Screen / Safe Areas.
  */
 const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, isPremium, replyTo, onCancelReply }: any) => {
   const { localDrafts, setLocalDrafts } = useAppState();
@@ -81,12 +81,14 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
 
     try {
       const constraints = {
-        video: { facingMode: newMode, width: 480, height: 480, aspectRatio: 1 },
+        video: { facingMode: newMode, width: { ideal: 480 }, height: { ideal: 480 }, aspectRatio: 1 },
         audio: true
       };
       const newStream = await navigator.mediaDevices.getUserMedia(constraints);
       streamRef.current = newStream;
-      if (videoPreviewRef.current) videoPreviewRef.current.srcObject = newStream;
+      if (videoPreviewRef.current) {
+        videoPreviewRef.current.srcObject = newStream;
+      }
     } catch (e) { console.error("Nuxus Flip Fail", e); }
   };
 
@@ -207,34 +209,41 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
         </div>
       )}
 
-      {/* PRO VIDEO RECORDER OVERLAY V28.7.3 - ULTIMATE FULLSCREEN */}
+      {/* PRO VIDEO RECORDER OVERLAY V28.7.4 - TRUE FULLSCREEN IPHONE OPTIMIZED */}
       {isProRecorderOpen && (
-        <div className="fixed inset-0 z-[2000] bg-black/80 backdrop-blur-[40px] flex flex-col items-center justify-center animate-in fade-in duration-500">
-           {/* Top Right: Close Button */}
-           <div className="absolute top-[env(safe-area-inset-top,40px)] right-6 z-[2100]">
+        <div className="fixed inset-0 z-[5000] bg-black/90 backdrop-blur-[50px] w-screen h-[100dvh] flex flex-col items-center justify-between animate-in fade-in duration-500 overflow-hidden">
+           {/* Top Header - Safe Area Top */}
+           <div className="w-full flex items-center justify-end px-6 pt-[env(safe-area-inset-top,40px)] z-[5100]">
               <button 
-                onClick={() => setIsProRecorderOpen(false)} 
+                onClick={() => { setIsProRecorderOpen(false); if(streamRef.current) streamRef.current.getTracks().forEach(t=>t.stop()); }} 
                 className="w-12 h-12 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 transition-all border border-white/10 shadow-2xl active:scale-90"
               >
                 <X className="w-7 h-7 text-white" />
               </button>
            </div>
 
-           {/* Central Preview - Perfect Shape */}
-           <div className="relative w-full max-w-[340px] aspect-square bg-black rounded-full overflow-hidden shadow-[0_0_120px_rgba(168,85,247,0.3)] border-4 border-white/10">
-              <video ref={videoPreviewRef} autoPlay muted playsInline className="w-full h-full object-cover" style={{ clipPath: currentShapeObj.clip }} />
+           {/* Central Preview - Large and Prominent */}
+           <div className="relative w-[340px] h-[340px] sm:w-[380px] sm:h-[380px] bg-black rounded-full overflow-hidden shadow-[0_0_120px_rgba(168,85,247,0.4)] border-4 border-white/10 flex items-center justify-center">
+              <video 
+                ref={videoPreviewRef} 
+                autoPlay 
+                muted 
+                playsInline 
+                className="w-full h-full object-cover" 
+                style={{ clipPath: currentShapeObj.clip }} 
+              />
               {isRecording && (
-                <div className="absolute top-10 left-1/2 -translate-x-1/2 bg-red-500/90 px-5 py-2 rounded-full flex items-center gap-2 shadow-2xl">
-                   <div className="w-2.5 h-2.5 rounded-full bg-white animate-pulse" />
-                   <span className="text-white text-sm font-black tabular-nums tracking-widest">
+                <div className="absolute top-10 left-1/2 -translate-x-1/2 bg-red-500/90 px-6 py-2 rounded-full flex items-center gap-3 shadow-2xl z-[5200]">
+                   <div className="w-3 h-3 rounded-full bg-white animate-pulse" />
+                   <span className="text-white text-lg font-black tabular-nums tracking-widest">
                      {Math.floor(recordingDuration / 60).toString().padStart(2, '0')}:{(recordingDuration % 60).toString().padStart(2, '0')}
                    </span>
                 </div>
               )}
            </div>
 
-           {/* Control Panel - Lifted Higher per user request */}
-           <div className="absolute bottom-[calc(4rem+env(safe-area-inset-bottom))] left-0 right-0 px-8 flex flex-col gap-10">
+           {/* Control Panel - Safe Area Bottom */}
+           <div className="w-full px-8 pb-[calc(2.5rem+env(safe-area-inset-bottom))] flex flex-col gap-10 z-[5100]">
               
               {/* Shape Selector Bar */}
               {!isRecording && (
@@ -255,33 +264,37 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
               )}
 
               {/* Functional Controls Row: Flip - Record - Branding */}
-              <div className="flex items-center justify-center w-full relative h-28">
+              <div className="flex items-center justify-center w-full relative h-32">
                 
-                {/* Left of Record: Flip Camera */}
-                <div className="absolute left-[15%]">
+                {/* Branding - Bottom Left (Telegram Style) */}
+                <div className="absolute left-0 bottom-2 text-left pointer-events-none opacity-50">
+                   <span className="text-white font-black text-2xl italic uppercase tracking-tighter block leading-none">NUXUS CIRCLE</span>
+                   <span className="text-[9px] text-primary font-black uppercase tracking-[0.4em] mt-2 block ml-1">PRO STUDIO V28.7</span>
+                </div>
+
+                {/* Flip Camera - Left of Center */}
+                <div className="absolute right-[65%] sm:right-[60%]">
                    {!isRecording && (
                      <button onClick={switchCamera} className="w-16 h-16 rounded-3xl bg-white/10 flex items-center justify-center border border-white/10 active:scale-90 transition-transform shadow-xl hover:bg-white/20">
-                       <RefreshCcw className="w-7 h-7 text-white" />
+                       <RefreshCcw className="w-8 h-8 text-white" />
                      </button>
                    )}
                 </div>
 
-                {/* Center: Big Record Button */}
+                {/* Record Button - Absolute Center */}
                 <button 
                   onClick={() => isRecording ? stopRecording() : startRecording()}
                   className={cn(
-                    "w-28 h-28 rounded-full flex items-center justify-center transition-all shadow-[0_0_60px_rgba(0,122,255,0.4)] relative border-4",
-                    isRecording ? "bg-red-500 border-white/40 scale-110" : "bg-[#007AFF] border-white/20 active:scale-95 hover:brightness-110"
+                    "w-28 h-28 rounded-full flex items-center justify-center transition-all shadow-[0_0_60px_rgba(0,122,255,0.4)] relative border-[6px]",
+                    isRecording ? "bg-red-500 border-white/40 scale-110 shadow-[0_0_80px_rgba(239,68,68,0.5)]" : "bg-[#007AFF] border-white/20 active:scale-95 hover:brightness-110"
                   )}
                 >
-                  {isRecording ? <StopCircle className="w-12 h-12 text-white fill-white" /> : <div className="w-10 h-10 rounded-full bg-white" />}
+                  {isRecording ? (
+                    <StopCircle className="w-14 h-14 text-white fill-white" />
+                  ) : (
+                    <div className="w-12 h-12 rounded-full bg-white shadow-lg" />
+                  )}
                 </button>
-
-                {/* Left Bottom Branding (matching user photo) */}
-                <div className="absolute left-0 -bottom-8 text-left pointer-events-none opacity-40">
-                   <span className="text-white font-black text-2xl italic uppercase tracking-tighter block leading-none">NUXUS CIRCLE</span>
-                   <span className="text-[8px] text-primary font-black uppercase tracking-[0.4em] mt-1.5 block ml-1">PRO STUDIO V28.7</span>
-                </div>
               </div>
            </div>
         </div>
