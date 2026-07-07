@@ -19,6 +19,11 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { 
   signOut, 
+  RecaptchaVerifier, 
+  signInWithPhoneNumber, 
+  ConfirmationResult,
+  verifyBeforeUpdateEmail,
+  sendEmailVerification
 } from 'firebase/auth';
 import { doc, updateDoc, collection, query, where, getDocs, limit, orderBy } from 'firebase/firestore';
 import { deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
@@ -31,8 +36,8 @@ import { format } from 'date-fns';
 import { ru } from 'date-fns/locale';
 
 /**
- * SETTINGS MODAL V32.1.0 «SESSION & STYLE FIX»
- * Исправлены ошибки ReferenceError (Plus, handleBgUpload, handleLinkBiometrics).
+ * SETTINGS MODAL V32.1.0 «FULL INTEGRITY HUB»
+ * Восстановлена верификация Phone/Email. Исправлены ReferenceErrors.
  */
 export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const auth = useAuth();
@@ -40,8 +45,10 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
   const { user } = useUser();
   const { toast } = useToast();
   const { settingsTab, setSettingsTab } = useAppState();
+  
   const fileInputRef = useRef<HTMLInputElement>(null);
   const bgInputRef = useRef<HTMLInputElement>(null);
+  const recaptchaRef = useRef<RecaptchaVerifier | null>(null);
 
   const userRef = useMemoFirebase(() => (!db || !user) ? null : doc(db!, 'users', user.uid), [db, user]);
   const { data: profile } = useDoc<User>(userRef);
@@ -59,8 +66,16 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
   const [isLinkingBiometrics, setIsLinkingBiometrics] = useState(false);
   const [showCloudPass, setShowCloudPass] = useState(false);
 
+  // Verification State
+  const [isVerifyingPhone, setIsVerifyingPhone] = useState(false);
+  const [phoneStep, setPhoneStep] = useState<'idle' | 'code'>('idle');
+  const [verificationCode, setVerificationCode] = useState('');
+  const [confirmationResult, setConfirmationResult] = useState<ConfirmationResult | null>(null);
+  const [isVerifyingEmail, setIsVerifyingEmail] = useState(false);
+
   const [form, setForm] = useState({
     name: '', username: '', bio: '', statusEmoji: '', statusText: '', avatarUrl: '',
+    phone: '', email: '',
     appearance: 'dark' as 'light' | 'dark', theme: 'default', customPrimaryColor: '',
     customAppIconUrl: '', bubbleStyle: 'default', chatBackground: '', messageSize: 'medium',
     twoFactorEnabled: false, twoFactorPin: '', cloudPasswordEnabled: false, cloudPassword: '',
@@ -76,6 +91,8 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         statusEmoji: profile.statusEmoji || '',
         statusText: profile.statusText || '',
         avatarUrl: profile.avatarUrl || '',
+        phone: profile.phone || '',
+        email: profile.email || '',
         appearance: profile.settings?.appearance || 'dark',
         theme: profile.settings?.theme || 'default',
         customPrimaryColor: profile.settings?.customPrimaryColor || '',
@@ -93,6 +110,69 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
       });
     }
   }, [profile, open]);
+
+  const initRecaptcha = () => {
+    if (!auth || !open) return null;
+    try {
+      if (recaptchaRef.current) recaptchaRef.current.clear();
+      recaptchaRef.current = new RecaptchaVerifier(auth, 'settings-recaptcha-container', {
+        size: 'invisible'
+      });
+      return recaptchaRef.current;
+    } catch (e) {
+      console.warn("Recaptcha Init Error", e);
+      return null;
+    }
+  };
+
+  const handleSendPhoneVerification = async () => {
+    if (!form.phone || !auth) return;
+    setIsVerifyingPhone(true);
+    try {
+      const verifier = initRecaptcha();
+      if (!verifier) throw new Error("Security module error");
+      const finalPhone = form.phone.startsWith('+') ? form.phone : '+' + form.phone;
+      const result = await signInWithPhoneNumber(auth, finalPhone, verifier);
+      setConfirmationResult(result);
+      setPhoneStep('code');
+      toast({ title: "Сигнал отправлен", description: "SMS-код летит на ваш узел." });
+    } catch (e: any) {
+      toast({ title: "Сбой сети", description: e.message, variant: "destructive" });
+    } finally {
+      setIsVerifyingPhone(false);
+    }
+  };
+
+  const handleVerifyPhoneCode = async () => {
+    if (!confirmationResult || !verificationCode) return;
+    setIsVerifyingPhone(true);
+    try {
+      await confirmationResult.confirm(verificationCode);
+      if (user) {
+        await updateDoc(doc(db!, 'users', user.uid), { phoneVerified: true });
+        toast({ title: "Узел подтвержден", description: "Ваш номер телефона верифицирован." });
+        setPhoneStep('idle');
+      }
+    } catch (e) {
+      toast({ title: "Неверный код", variant: "destructive" });
+    } finally {
+      setIsVerifyingPhone(false);
+    }
+  };
+
+  const handleSendEmailVerification = async () => {
+    if (!form.email || !auth?.currentUser) return;
+    setIsVerifyingEmail(true);
+    try {
+      // Использование нового метода для безопасности
+      await verifyBeforeUpdateEmail(auth.currentUser, form.email);
+      toast({ title: "Письмо отправлено", description: "Проверьте почту для завершения привязки." });
+    } catch (e: any) {
+      toast({ title: "Ошибка почты", description: e.message, variant: "destructive" });
+    } finally {
+      setIsVerifyingEmail(false);
+    }
+  };
 
   const handleBgUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -159,6 +239,8 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         statusEmoji: form.statusEmoji.trim(),
         statusText: form.statusText.trim(),
         avatarUrl: form.avatarUrl,
+        email: form.email.trim(),
+        phone: form.phone.trim(),
         twoFactorEnabled: form.twoFactorEnabled,
         twoFactorPin: form.twoFactorPin,
         cloudPasswordEnabled: form.cloudPasswordEnabled,
@@ -201,6 +283,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md bg-[#0a0a0c]/95 backdrop-blur-[60px] border-white/10 p-0 overflow-hidden h-[85vh] flex flex-col rounded-[3rem] shadow-[0_30px_100px_rgba(0,0,0,1)] outline-none">
+        <div id="settings-recaptcha-container" className="hidden"></div>
         
         <DialogHeader className="p-8 border-b border-white/5 shrink-0 text-left relative overflow-hidden">
           <div className="absolute inset-0 bg-gradient-to-r from-primary/10 to-transparent pointer-events-none" />
@@ -225,32 +308,71 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
             <TabsContent value="profile" className="space-y-8 m-0 p-8 pb-24">
               <div className="flex flex-col items-center gap-8">
                 <div className="relative group">
-                  <UserAvatar userId={user?.uid} manualAvatarUrl={form.avatarUrl} className="h-40 w-40 border-4 border-primary/20 shadow-2xl relative z-10" fallbackName={form.name} />
-                  <button onClick={() => fileInputRef.current?.click()} className="absolute -bottom-2 -right-2 bg-primary p-3 rounded-2xl shadow-2xl z-20 active:scale-90 transition-all"><Camera className="w-5 h-5 text-white" /></button>
+                  <UserAvatar userId={user?.uid} manualAvatarUrl={form.avatarUrl} className="h-32 w-32 border-4 border-primary/20 shadow-2xl relative z-10" fallbackName={form.name} />
+                  <button onClick={() => fileInputRef.current?.click()} className="absolute -bottom-2 -right-2 bg-primary p-2.5 rounded-2xl shadow-2xl z-20 active:scale-90 transition-all"><Camera className="w-4 h-4 text-white" /></button>
                   <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={(e) => { const f = e.target.files?.[0]; if(f) { const r = new FileReader(); r.onloadend = () => setForm({...form, avatarUrl: r.result as string}); r.readAsDataURL(f); } }} />
                 </div>
                 
                 <div className="space-y-6 w-full text-left">
                   <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
+                    <div className="space-y-1.5">
                       <Label className="text-[10px] uppercase font-black text-primary/60 ml-2">Имя</Label>
-                      <Input value={form.name} onChange={e => setForm({...form, name: e.target.value})} className="bg-white/5 border-white/10 h-12 rounded-xl font-bold" />
+                      <Input value={form.name} onChange={e => setForm({...form, name: e.target.value})} className="bg-white/5 border-white/10 h-11 rounded-xl font-bold" />
                     </div>
-                    <div className="space-y-2">
+                    <div className="space-y-1.5">
                       <Label className="text-[10px] uppercase font-black text-primary/60 ml-2">ID</Label>
-                      <Input value={form.username} onChange={e => setForm({...form, username: e.target.value})} className="bg-white/5 border-white/10 h-12 rounded-xl font-bold" />
+                      <Input value={form.username} onChange={e => setForm({...form, username: e.target.value})} className="bg-white/5 border-white/10 h-11 rounded-xl font-bold" />
                     </div>
                   </div>
-                  <div className="bg-primary/5 p-4 rounded-2xl border border-primary/10 space-y-4 shadow-inner">
+
+                  {/* VERIFICATION CENTER */}
+                  <div className="space-y-4 pt-2">
+                    <div className="space-y-1.5">
+                      <Label className="text-[10px] uppercase font-black text-primary/60 ml-2">Телефон</Label>
+                      <div className="flex gap-2">
+                         <div className="relative flex-1">
+                            <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/20" />
+                            <Input value={form.phone} onChange={e => setForm({...form, phone: e.target.value})} className="bg-white/5 border-white/10 h-11 rounded-xl pl-9 text-xs" placeholder="+7..." />
+                         </div>
+                         {profile?.phoneVerified ? (
+                           <div className="h-11 px-3 bg-green-500/10 border border-green-500/20 rounded-xl flex items-center gap-2 text-green-500">
+                             <CheckCircle2 className="w-4 h-4" />
+                             <span className="text-[8px] font-black uppercase">OK</span>
+                           </div>
+                         ) : phoneStep === 'idle' ? (
+                           <Button onClick={handleSendPhoneVerification} disabled={isVerifyingPhone} className="h-11 rounded-xl px-4 bg-primary text-[9px] font-black uppercase">Подтвердить</Button>
+                         ) : (
+                           <div className="flex gap-1">
+                              <Input maxLength={6} placeholder="Код" value={verificationCode} onChange={e => setVerificationCode(e.target.value)} className="w-20 h-11 bg-white/5 border-primary/40 text-center text-xs font-black" />
+                              <Button onClick={handleVerifyPhoneCode} className="h-11 px-3 bg-accent text-black rounded-xl"><Check className="w-4 h-4" /></Button>
+                           </div>
+                         )}
+                      </div>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <Label className="text-[10px] uppercase font-black text-primary/60 ml-2">Почта</Label>
+                      <div className="flex gap-2">
+                        <div className="relative flex-1">
+                           <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/20" />
+                           <Input value={form.email} onChange={e => setForm({...form, email: e.target.value})} className="bg-white/5 border-white/10 h-11 rounded-xl pl-9 text-xs" placeholder="email@example.com" />
+                        </div>
+                        <Button onClick={handleSendEmailVerification} disabled={isVerifyingEmail || !form.email} className="h-11 rounded-xl px-4 bg-white/5 border border-white/10 text-[9px] font-black uppercase hover:bg-primary/20">Привязать</Button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-primary/5 p-4 rounded-2xl border border-primary/10 space-y-4">
                     <div className="flex items-center gap-2 mb-1"><Smile className="w-3.5 h-3.5 text-primary" /><span className="text-[9px] font-black uppercase text-primary">Статус</span></div>
                     <div className="flex gap-3">
-                      <div className="w-14"><Input placeholder="🔥" value={form.statusEmoji} onChange={e => setForm({...form, statusEmoji: e.target.value})} className="bg-black/40 border-white/10 h-12 rounded-xl text-center text-xl" /></div>
-                      <Input placeholder="Напишите что-то..." value={form.statusText} onChange={e => setForm({...form, statusText: e.target.value})} className="bg-black/40 border-white/10 h-12 rounded-xl text-xs font-bold" />
+                      <div className="w-14"><Input placeholder="🔥" value={form.statusEmoji} onChange={e => setForm({...form, statusEmoji: e.target.value})} className="bg-black/40 border-white/10 h-11 rounded-xl text-center text-lg" /></div>
+                      <Input placeholder="Напишите что-то..." value={form.statusText} onChange={e => setForm({...form, statusText: e.target.value})} className="bg-black/40 border-white/10 h-11 rounded-xl text-xs font-bold" />
                     </div>
                   </div>
+
                   <div className="space-y-2">
                     <Label className="text-[10px] uppercase font-black text-primary/60 ml-2">Био</Label>
-                    <Textarea value={form.bio} onChange={e => setForm({...form, bio: e.target.value})} className="bg-white/5 border-white/10 rounded-2xl min-h-[80px]" />
+                    <Textarea value={form.bio} onChange={e => setForm({...form, bio: e.target.value})} className="bg-white/5 border-white/10 rounded-xl min-h-[80px] text-xs" />
                   </div>
                 </div>
               </div>
@@ -291,7 +413,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
               </div>
             </TabsContent>
 
-            {/* TAB: SESSIONS (DATA) */}
+            {/* TAB: SESSIONS */}
             <TabsContent value="data" className="space-y-6 m-0 p-8 pb-24">
               <div className="space-y-4">
                 <div className="flex items-center justify-between px-2">
@@ -340,12 +462,6 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                   })}
                 </div>
               </div>
-
-              <div className="p-8 bg-white/5 rounded-[3rem] border border-white/10 text-center space-y-4 shadow-2xl mt-10">
-                  <Database className="w-10 h-10 text-accent mx-auto animate-pulse" />
-                  <h3 className="text-lg font-black uppercase italic text-white">Резервный дамп</h3>
-                  <Button className="w-full h-12 bg-white/5 border border-white/10 rounded-2xl font-black uppercase text-[10px] tracking-widest gap-3"><Download className="w-4 h-4" /> Сформировать ZIP</Button>
-              </div>
             </TabsContent>
 
             {/* TAB: PRIVACY */}
@@ -360,7 +476,6 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                   <div className="flex items-center justify-between pt-6 border-t border-white/5">
                     <div className="flex flex-col text-left"><span className="text-sm font-bold text-white uppercase italic">Hardware ID</span><span className="text-[9px] text-muted-foreground uppercase font-bold tracking-widest">Face ID / Biometrics</span></div>
                     <Switch checked={form.biometricEnabled} onCheckedChange={v => { if(!v) setForm({...form, biometricEnabled: false}); else handleLinkBiometrics(); }} />
-                    {isLinkingBiometrics && <Loader2 className="w-4 h-4 animate-spin text-primary" />}
                   </div>
                 )}
               </div>
@@ -391,23 +506,5 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         </Tabs>
       </DialogContent>
     </Dialog>
-  );
-}
-
-function StatCard({ label, value, icon: Icon, color, sub }: any) {
-  return (
-    <div className="bg-white/[0.03] p-6 rounded-[2.5rem] border border-white/5 flex flex-col items-center justify-center gap-3 shadow-xl hover:bg-white/[0.07] transition-all group relative overflow-hidden">
-      <div className="absolute top-0 right-0 p-3 opacity-[0.02] group-hover:opacity-[0.05] transition-opacity"><Icon className="w-16 h-16" /></div>
-      <div className={cn("p-4 rounded-2xl bg-black/40 border border-white/5 group-hover:scale-110 transition-transform shadow-lg", color)}>
-        <Icon className="w-7 h-7" />
-      </div>
-      <div className="text-center relative z-10">
-        <span className="text-3xl font-black italic text-white tabular-nums block tracking-tighter leading-none">{value}</span>
-        <div className="mt-2 space-y-0.5">
-           <span className="text-[9px] font-black uppercase text-muted-foreground/40 tracking-[0.3em] block">{label}</span>
-           <span className="text-[7px] font-black uppercase text-primary/30 tracking-[0.2em] block italic">{sub}</span>
-        </div>
-      </div>
-    </div>
   );
 }
