@@ -295,8 +295,13 @@ export default function ChatArea() {
   const handleSendMessage = useCallback(async (content_msg: string, type_msg: Message['contentType'] = 'text', meta: any = null) => {
     if (!content_msg.trim() || !currentChatId || !firebaseUser || !db) return;
     
-    if (content_msg.length > 1040000) {
-      toast({ title: "Файл слишком велик", description: "Превышен системный лимит 1МБ.", variant: "destructive" });
+    // ПРОВЕРКА ЛИМИТА FIRESTORE (1МБ)
+    if (content_msg.length > 1048000) {
+      toast({ 
+        title: "Превышен системный лимит", 
+        description: "Файл весит более 1МБ. Сообщение аннигилировано для стабильности Ядра.", 
+        variant: "destructive" 
+      });
       return;
     }
 
@@ -319,11 +324,15 @@ export default function ChatArea() {
     updateDoc(doc(db, 'chats', currentChatId), { lastMessageAt: new Date().toISOString() });
   }, [currentChatId, firebaseUser, db, userProfile, replyTo, toast]);
 
-  // PRO RECORDER LOGIC V28.9.0
+  // PRO RECORDER LOGIC V29.2.1 (3-Min Buffer Optimization)
   const startProRecording = async () => {
     try {
       if (!streamRef.current) return;
-      const recorder = new MediaRecorder(streamRef.current, { mimeType: 'video/webm;codecs=vp8,opus', videoBitsPerSecond: 80000 });
+      // ОПТИМИЗИРОВАНО: 35 kbps — единственный способ уместить 180 сек в 1 МБ Base64.
+      const recorder = new MediaRecorder(streamRef.current, { 
+        mimeType: 'video/webm;codecs=vp8,opus', 
+        videoBitsPerSecond: 35000 
+      });
       mediaRecorderRef.current = recorder;
       chunksRef.current = [];
       
@@ -343,7 +352,18 @@ export default function ChatArea() {
       recorder.start();
       setIsRecording(true);
       setRecordingDuration(0);
-      timerIntervalRef.current = setInterval(() => setRecordingDuration(prev => prev + 1), 1000);
+      
+      // AUTO-STOP & TIMER LOGIC
+      timerIntervalRef.current = setInterval(() => {
+        setRecordingDuration(prev => {
+          if (prev >= 180) { // 3 МИНУТЫ ЛИМИТ
+            stopProRecording();
+            return 180;
+          }
+          return prev + 1;
+        });
+      }, 1000);
+
       if (window.navigator && window.navigator.vibrate) window.navigator.vibrate(50);
     } catch (e) { console.error(e); }
   };
@@ -358,6 +378,7 @@ export default function ChatArea() {
   const closeProRecorder = () => {
     setIsProRecorderOpen(false);
     setIsRecording(false);
+    setRecordingDuration(0);
     if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
     if (streamRef.current) {
       streamRef.current.getTracks().forEach(t => t.stop());
@@ -372,14 +393,14 @@ export default function ChatArea() {
     if (streamRef.current) {
       streamRef.current.getTracks().forEach(t => t.stop());
     }
-    const s = await navigator.mediaDevices.getUserMedia({ video: { facingMode: newMode, width: 480, height: 480 }, audio: true });
+    const s = await navigator.mediaDevices.getUserMedia({ video: { facingMode: newMode, width: 360, height: 360 }, audio: true });
     streamRef.current = s;
     if (videoPreviewRef.current) videoPreviewRef.current.srcObject = s;
   };
 
   useEffect(() => {
     if (isProRecorderOpen) {
-      navigator.mediaDevices.getUserMedia({ video: { facingMode: camMode, width: 480, height: 480 }, audio: true })
+      navigator.mediaDevices.getUserMedia({ video: { facingMode: camMode, width: 360, height: 360 }, audio: true })
         .then(s => {
           streamRef.current = s;
           if(videoPreviewRef.current) videoPreviewRef.current.srcObject = s;
@@ -404,7 +425,7 @@ export default function ChatArea() {
            <div className="w-full flex items-center justify-between px-6 pt-[calc(env(safe-area-inset-top,20px)+20px)] z-[5100]">
               <div className="flex flex-col text-left">
                  <span className="text-white font-black text-xl italic uppercase tracking-tighter block leading-none">NUXUS CIRCLE</span>
-                 <span className="text-[8px] text-primary font-black uppercase tracking-[0.4em] mt-2 block ml-1">PRO STUDIO V28.9</span>
+                 <span className="text-[8px] text-primary font-black uppercase tracking-[0.4em] mt-2 block ml-1">PRO STUDIO V29.2</span>
               </div>
               <button onClick={closeProRecorder} className="w-12 h-12 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 transition-all border border-white/10 shadow-2xl active:scale-90">
                 <X className="w-7 h-7 text-white" />
@@ -416,7 +437,9 @@ export default function ChatArea() {
               {isRecording && (
                 <div className="absolute top-10 left-1/2 -translate-x-1/2 bg-red-500/90 px-6 py-2 rounded-full flex items-center gap-3 shadow-2xl z-[5200]">
                    <div className="w-3 h-3 rounded-full bg-white animate-pulse" />
-                   <span className="text-white text-lg font-black tabular-nums tracking-widest">{Math.floor(recordingDuration / 60).toString().padStart(2, '0')}:{(recordingDuration % 60).toString().padStart(2, '0')}</span>
+                   <span className={cn("text-white text-lg font-black tabular-nums tracking-widest", recordingDuration > 170 && "animate-bounce")}>
+                     {Math.floor(recordingDuration / 60).toString().padStart(2, '0')}:{(recordingDuration % 60).toString().padStart(2, '0')}
+                   </span>
                 </div>
               )}
            </div>
