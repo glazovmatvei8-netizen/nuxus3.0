@@ -8,7 +8,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
   Send, Info, ChevronLeft, X, Paperclip, Mic, StopCircle, Edit2, Search,
-  Smile, ImageIcon, Trash2, AtSign, RefreshCcw, CornerUpLeft, Circle, Video as VideoIcon, Phone, Shield
+  Smile, ImageIcon, Trash2, AtSign, RefreshCcw, CornerUpLeft, Circle, Video as VideoIcon, Phone, Shield,
+  Heart, Square, Triangle, Ghost
 } from 'lucide-react';
 import { MessageItem } from './message-item';
 import { ChatInfoModal } from './modals/chat-info-modal';
@@ -21,8 +22,17 @@ import type { Message, User as UserType, Chat } from '@/lib/types';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { useToast } from '@/hooks/use-toast';
 
+// Shapes for Video Notes
+const VIDEO_SHAPES = [
+  { id: 'circle', icon: Circle, label: 'Круг', clip: 'circle(50% at 50% 50%)' },
+  { id: 'square', icon: Square, label: 'Квадрат', clip: 'inset(0% rounded 20%)' },
+  { id: 'heart', icon: Heart, label: 'Сердце', clip: "path('M50,15 C65,0 95,0 95,35 C95,65 50,95 50,95 C50,95 5,65 5,35 C5,0 35,0 50,15 Z')" },
+  { id: 'triangle', icon: Triangle, label: 'Треугольник', clip: 'polygon(50% 0%, 0% 100%, 100% 100%)' },
+  { id: 'poop', icon: Ghost, label: 'Какашка', clip: 'polygon(50% 0%, 80% 20%, 100% 50%, 80% 90%, 50% 100%, 20% 90%, 0% 50%, 20% 20%)' }
+];
+
 /**
- * ChatInputBar V28.4.3: Hybrid Camera Switching & No Mirroring.
+ * ChatInputBar V28.5.0: Shape-Shifting Video Notes (Hold to Record, Tap to Select).
  */
 const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, isPremium, replyTo, onCancelReply }: any) => {
   const { localDrafts, setLocalDrafts } = useAppState();
@@ -34,6 +44,12 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
   const [camMode, setCamMode] = useState<'user' | 'environment'>('user');
   const [recordingDuration, setRecordingDuration] = useState(0);
   
+  // Shape-shifting state
+  const [selectedShape, setSelectedShape] = useState('circle');
+  const [isShapeSelectorOpen, setIsShapeSelectorOpen] = useState(false);
+  const longPressTimer = useRef<NodeJS.Timeout | null>(null);
+  const isActuallyRecording = useRef(false);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -46,48 +62,28 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
     setMessageInput(localDrafts[currentChatId] || '');
   }, [currentChatId, localDrafts]);
 
-  // Смена камеры в реальном времени при записи
   const switchCamera = async () => {
     const newMode = camMode === 'user' ? 'environment' : 'user';
     setCamMode(newMode);
     
     if (isRecording && recorderMode === 'video') {
       try {
-        // Останавливаем текущие видеотреки
         streamRef.current?.getVideoTracks().forEach(track => track.stop());
-        
         const newStream = await navigator.mediaDevices.getUserMedia({
           video: { facingMode: newMode, width: { ideal: 480 }, height: { ideal: 480 }, aspectRatio: 1 }
         });
-        
         const newVideoTrack = newStream.getVideoTracks()[0];
         streamRef.current?.addTrack(newVideoTrack);
-        
-        if (videoPreviewRef.current) {
-          videoPreviewRef.current.srcObject = streamRef.current || null;
-        }
-        
-        if (window.navigator && window.navigator.vibrate) window.navigator.vibrate(20);
-      } catch (e) {
-        console.error("Camera switch error:", e);
-      }
+        if (videoPreviewRef.current) videoPreviewRef.current.srcObject = streamRef.current || null;
+      } catch (e) { console.error(e); }
     }
   };
 
   useEffect(() => {
-    if (isRecording && recorderMode === 'video' && videoPreviewRef.current && streamRef.current) {
+    if ((isRecording || isShapeSelectorOpen) && recorderMode === 'video' && videoPreviewRef.current && streamRef.current) {
       videoPreviewRef.current.srcObject = streamRef.current;
     }
-  }, [isRecording, recorderMode]);
-
-  useEffect(() => {
-    const textarea = textareaRef.current;
-    if (textarea) {
-      textarea.style.height = '44px';
-      const scrollHeight = textarea.scrollHeight;
-      textarea.style.height = Math.min(Math.max(scrollHeight, 44), 200) + 'px';
-    }
-  }, [messageInput]);
+  }, [isRecording, isShapeSelectorOpen, recorderMode]);
 
   const handleInputChange = (val: string) => {
     setMessageInput(val);
@@ -99,7 +95,6 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
     onSendMessage(messageInput, 'text', null);
     setMessageInput('');
     setLocalDrafts(prev => ({ ...prev, [currentChatId]: '' }));
-    if (window.navigator && window.navigator.vibrate) window.navigator.vibrate(10);
   };
 
   const startRecording = async () => {
@@ -108,12 +103,7 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
       
       const constraints = {
         audio: true,
-        video: recorderMode === 'video' ? { 
-          facingMode: camMode, 
-          width: { ideal: 480 }, 
-          height: { ideal: 480 },
-          aspectRatio: 1
-        } : false
+        video: recorderMode === 'video' ? { facingMode: camMode, width: 480, height: 480, aspectRatio: 1 } : false
       };
 
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
@@ -125,18 +115,12 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
       
       mediaRecorderRef.current = recorder;
       chunksRef.current = [];
-
-      recorder.ondataavailable = (e) => { 
-        if (e.data.size > 0) chunksRef.current.push(e.data); 
-      };
-
+      recorder.ondataavailable = (e) => { if (e.data.size > 0) chunksRef.current.push(e.data); };
       recorder.onstop = async () => {
-        const blob = new Blob(chunksRef.current, { 
-          type: recorderMode === 'video' ? 'video/webm' : 'audio/webm' 
-        });
+        const blob = new Blob(chunksRef.current, { type: recorderMode === 'video' ? 'video/webm' : 'audio/webm' });
         const reader = new FileReader();
         reader.onloadend = () => {
-          onSendMessage(reader.result as string, recorderMode === 'video' ? 'video_note' : 'audio', null);
+          onSendMessage(reader.result as string, recorderMode === 'video' ? 'video_note' : 'audio', { shape: selectedShape });
         };
         reader.readAsDataURL(blob);
         stream.getTracks().forEach(track => track.stop());
@@ -146,23 +130,54 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
       setIsRecording(true);
       setRecordingDuration(0);
       timerIntervalRef.current = setInterval(() => setRecordingDuration(prev => prev + 1), 1000);
-      
+      isActuallyRecording.current = true;
       if (window.navigator && window.navigator.vibrate) window.navigator.vibrate(50);
-    } catch (err) {
-      console.error("Recording error:", err);
-    }
+    } catch (err) { console.error(err); }
   };
 
   const stopRecording = () => {
-    if (mediaRecorderRef.current && isRecording) {
+    if (mediaRecorderRef.current && isActuallyRecording.current) {
       mediaRecorderRef.current.stop();
       setIsRecording(false);
+      isActuallyRecording.current = false;
       if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
-      if (window.navigator && window.navigator.vibrate) window.navigator.vibrate(30);
+    }
+  };
+
+  // Logic for Long Press vs Click
+  const handlePointerDown = (e: React.PointerEvent) => {
+    if (recorderMode === 'audio') {
+      startRecording();
+      return;
+    }
+    longPressTimer.current = setTimeout(() => {
+      startRecording();
+      longPressTimer.current = null;
+    }, 300);
+  };
+
+  const handlePointerUp = (e: React.PointerEvent) => {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+      // It was a short tap
+      setIsShapeSelectorOpen(!isShapeSelectorOpen);
+      if (!isShapeSelectorOpen) {
+        // Init camera for preview
+        navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: 480, height: 480 } })
+          .then(s => { streamRef.current = s; if(videoPreviewRef.current) videoPreviewRef.current.srcObject = s; });
+      } else {
+        if(streamRef.current) streamRef.current.getTracks().forEach(t => t.stop());
+      }
+    } else {
+      // It was a long press, stop recording
+      stopRecording();
     }
   };
 
   if (!canPost) return null;
+
+  const currentShapeObj = VIDEO_SHAPES.find(s => s.id === selectedShape) || VIDEO_SHAPES[0];
 
   return (
     <footer className="p-3 pb-[calc(1rem+env(safe-area-inset-bottom))] obsidian-glass border-t border-white/5 shrink-0 z-40 relative flex flex-col gap-2">
@@ -179,6 +194,37 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
         </div>
       )}
 
+      {/* Shape Selector & Live Preview */}
+      {isShapeSelectorOpen && !isRecording && (
+        <div className="absolute bottom-24 left-1/2 -translate-x-1/2 w-[90%] max-w-[400px] obsidian-glass rounded-[2.5rem] border border-white/10 p-6 flex flex-col items-center gap-6 animate-in slide-in-from-bottom-4 duration-500 z-50">
+          <div className="relative w-48 h-48 bg-black/40 rounded-3xl overflow-hidden shadow-2xl border border-white/5">
+            <video 
+              ref={videoPreviewRef} 
+              autoPlay muted playsInline 
+              className="w-full h-full object-cover" 
+              style={{ clipPath: currentShapeObj.clip }}
+            />
+            <div className="absolute inset-0 border border-white/10 pointer-events-none" style={{ clipPath: currentShapeObj.clip }} />
+          </div>
+          <div className="flex gap-3 overflow-x-auto scrollbar-hide w-full justify-center py-2">
+            {VIDEO_SHAPES.map(shape => (
+              <button 
+                key={shape.id} 
+                onClick={() => setSelectedShape(shape.id)}
+                className={cn(
+                  "flex flex-col items-center gap-2 p-3 rounded-2xl transition-all border shrink-0",
+                  selectedShape === shape.id ? "bg-primary border-primary shadow-lg scale-110" : "bg-white/5 border-white/10 text-white/40"
+                )}
+              >
+                <shape.icon className="w-5 h-5" />
+                <span className="text-[7px] font-black uppercase tracking-widest">{shape.label}</span>
+              </button>
+            ))}
+          </div>
+          <p className="text-[8px] font-black uppercase text-primary/60 tracking-[0.2em]">Выбери форму и зажми кнопку записи</p>
+        </div>
+      )}
+
       {isRecording && recorderMode === 'video' && (
         <div className="absolute bottom-32 left-1/2 -translate-x-1/2 w-64 h-64 rounded-full overflow-hidden border-4 border-primary shadow-[0_0_60px_rgba(168,85,247,0.6)] z-50 bg-black animate-in zoom-in duration-500">
           <video 
@@ -187,6 +233,7 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
             muted 
             playsInline 
             className="w-full h-full object-cover" 
+            style={{ clipPath: currentShapeObj.clip }}
           />
           <button 
             onClick={switchCamera} 
@@ -218,7 +265,6 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
                 value={messageInput} 
                 onChange={e => handleInputChange(e.target.value)} 
               />
-              
               <Popover open={isEmojiPickerOpen} onOpenChange={setIsEmojiPickerOpen}>
                  <PopoverTrigger asChild>
                    <Button variant="ghost" size="icon" className="text-white/20 hover:text-primary h-9 w-9 shrink-0 mb-[-2px]"><Smile className="w-6 h-6" /></Button>
@@ -233,12 +279,20 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
               <Button size="icon" className="h-11 w-11 rounded-2xl bg-primary text-white shadow-xl mb-0.5 shrink-0 active:scale-90 transition-all" onClick={handleSend}><Send className="w-5 h-5" /></Button>
             ) : (
               <div className="flex gap-1 mb-0.5 shrink-0">
-                <Button size="icon" variant="ghost" className="h-11 w-11 rounded-2xl bg-white/5 text-white/30" onClick={() => setRecorderMode(recorderMode === 'audio' ? 'video' : 'audio')}>
+                <Button size="icon" variant="ghost" className="h-11 w-11 rounded-2xl bg-white/5 text-white/30" onClick={() => { setRecorderMode(recorderMode === 'audio' ? 'video' : 'audio'); setIsShapeSelectorOpen(false); }}>
                   {recorderMode === 'audio' ? <VideoIcon className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
                 </Button>
-                <Button size="icon" className="h-11 w-11 rounded-2xl bg-primary text-white shadow-xl" onClick={startRecording}>
-                  {recorderMode === 'audio' ? <Mic className="w-5 h-5" /> : <Circle className="w-5 h-5 fill-current" />}
-                </Button>
+                <button 
+                  className={cn(
+                    "h-11 w-11 rounded-2xl flex items-center justify-center transition-all shadow-xl active:scale-90",
+                    isShapeSelectorOpen ? "bg-accent text-black" : "bg-primary text-white"
+                  )}
+                  onPointerDown={handlePointerDown}
+                  onPointerUp={handlePointerUp}
+                  onContextMenu={(e) => e.preventDefault()}
+                >
+                  {recorderMode === 'audio' ? <Mic className="w-5 h-5" /> : (isShapeSelectorOpen ? <currentShapeObj.icon className="w-5 h-5" /> : <Circle className="w-5 h-5 fill-current" />)}
+                </button>
               </div>
             )}
           </>
@@ -247,7 +301,7 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
             <div className="flex items-center gap-2 text-primary animate-pulse"><div className="w-2 h-2 rounded-full bg-primary shadow-lg" /><span className="text-[10px] font-black uppercase tracking-widest">LIVE</span></div>
             <span className="text-lg font-black italic text-white flex-1 tabular-nums">{Math.floor(recordingDuration / 60)}:{(recordingDuration % 60).toString().padStart(2, '0')}</span>
             <Button variant="ghost" size="icon" className="h-8 w-8 text-white/40" onClick={() => { if(mediaRecorderRef.current) mediaRecorderRef.current.onstop = null; stopRecording(); }}><Trash2 className="w-4 h-4" /></Button>
-            <Button variant="ghost" size="icon" className="h-10 w-10 text-primary" onClick={stopRecording}><StopCircle className="w-7 h-7 fill-current" /></Button>
+            <Button variant="ghost" size="icon" className="h-10 w-10 text-primary" onPointerDown={stopRecording}><StopCircle className="w-7 h-7 fill-current" /></Button>
           </div>
         )}
       </div>
@@ -335,23 +389,19 @@ export default function ChatArea() {
 
   useEffect(() => { scrollToBottom('auto'); }, [currentChatId, messages?.length, scrollToBottom]);
 
-  // СИСТЕМА ПРОЧТЕНИЯ (2 ГАЛОЧКИ)
   useEffect(() => {
     if (!db || !currentChatId || !firebaseUser || !messages) return;
-
     const unreadMessages = messages.filter(m => m.senderId !== firebaseUser.uid && !m.isRead);
     if (unreadMessages.length === 0) return;
-
     const batch = writeBatch(db);
     unreadMessages.forEach(msg => {
       const msgRef = doc(db, 'chats', currentChatId, 'messages', msg.id);
       batch.update(msgRef, { isRead: true });
     });
-
     batch.commit().catch(e => console.warn("Nuxus Sync: Read Receipt error"));
   }, [db, currentChatId, firebaseUser, messages]);
 
-  const handleSendMessage = useCallback(async (content_msg: string, type_msg: Message['contentType'] = 'text') => {
+  const handleSendMessage = useCallback(async (content_msg: string, type_msg: Message['contentType'] = 'text', meta: any = null) => {
     if (!content_msg.trim() || !currentChatId || !firebaseUser || !db) return;
     
     let finalContent = (type_msg === 'text' || type_msg === 'reply') ? encryptSignal(content_msg) : content_msg;
@@ -360,7 +410,7 @@ export default function ChatArea() {
     const msgData: any = { 
       chatId: currentChatId, senderId: firebaseUser.uid, senderName: userProfile?.name || 'User', 
       content: finalContent, contentType: type_msg, sentAt: new Date().toISOString(), isRead: false,
-      metadata: { bubbleStyle: userProfile?.settings?.bubbleStyle || 'default' }
+      metadata: { bubbleStyle: userProfile?.settings?.bubbleStyle || 'default', ...meta }
     };
 
     if (replyTo) { 
@@ -403,10 +453,6 @@ export default function ChatArea() {
     return formatDisplayName(chat.name);
   }, [chat, otherUser, firebaseUser?.uid, isSavedMessages]);
 
-  const headerAvatarId = useMemo(() => {
-    return chat?.type === 'private' ? otherId : null;
-  }, [chat?.type, otherId]);
-
   return (
     <div className="flex-1 flex flex-col h-full bg-transparent relative overflow-hidden z-20 max-w-full">
       <header className="h-[calc(4rem+env(safe-area-inset-top))] pt-[env(safe-area-inset-top)] border-b border-white/5 obsidian-glass flex items-center justify-between px-5 shrink-0 z-30 shadow-xl">
@@ -420,7 +466,7 @@ export default function ChatArea() {
                 </div>
               ) : (
                 <UserAvatar 
-                  userId={headerAvatarId} 
+                  userId={chat?.type === 'private' ? otherId : null} 
                   manualAvatarUrl={chat?.type !== 'private' ? chat?.avatarUrl : otherUser?.avatarUrl} 
                   className="h-10 w-10 border border-white/10 shrink-0" 
                   fallbackName={headerTitle} 
@@ -458,17 +504,7 @@ export default function ChatArea() {
       </header>
 
       <div className="flex-1 relative overflow-hidden flex flex-col min-w-0 z-10 bg-transparent">
-        {userProfile?.settings?.chatBackground && (
-          <div 
-            className="absolute inset-0 z-0 bg-cover bg-center transition-opacity duration-1000"
-            style={{ 
-              backgroundImage: `url(${userProfile.settings.chatBackground})`,
-              opacity: 0.4
-            }}
-          />
-        )}
-        
-        <div ref={scrollContainerRef} className="flex-1 w-full relative z-10 overflow-y-auto scrollbar-hide scroll-smooth" onScroll={(e) => setShowScrollButton(e.currentTarget.scrollHeight - e.currentTarget.scrollTop - e.currentTarget.clientHeight > 500)}>
+        <div ref={scrollContainerRef} className="flex-1 w-full relative z-10 overflow-y-auto scrollbar-hide scroll-smooth">
           <MessageList 
             messages={messages} userId={firebaseUser?.uid} chatId={currentChatId} 
             onReply={setReplyTo} onForward={setForwardingMessage} amIPremium={isPremium} 
@@ -489,3 +525,4 @@ export default function ChatArea() {
     </div>
   );
 }
+
