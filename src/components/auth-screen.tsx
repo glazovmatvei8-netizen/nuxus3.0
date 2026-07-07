@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Fingerprint, MessageSquare, Phone, ChevronRight, UserPlus, Check } from 'lucide-react';
+import { Loader2, Fingerprint, MessageSquare, Phone, ChevronRight, UserPlus, Lock, ShieldCheck, Eye, EyeOff } from 'lucide-react';
 import { useAuth, useFirestore } from '@/firebase';
 import { 
   RecaptchaVerifier, 
@@ -19,30 +19,30 @@ import {
 import { doc, setDoc, getDoc, increment, updateDoc, collection, query, where, getDocs, limit } from 'firebase/firestore';
 import { useAppState } from '@/lib/store';
 import { NuxusLogo } from './nuxus-logo';
-import { useTranslations } from '@/hooks/use-translations';
 import { cn } from '@/lib/utils';
 
-export type AuthStep = 'phone' | 'verify' | 'profile' | 'setup2fa';
+export type AuthStep = 'phone' | 'verify' | 'cloud_password' | 'profile' | 'setup2fa';
 
 /**
- * AUTH SCREEN V30.0.0 «QUANTUM SMS»
- * ПЕРЕХОД: С паролей на SMS-подтверждение через Firebase Phone Auth.
- * ОПТИМИЗИРОВАНО: Автоматическое определение регистрации/входа.
+ * AUTH SCREEN V31.0.0 «TRIPLE BARRIER»
+ * Поддержка SMS -> Облачный пароль -> Настройка профиля.
  */
 export default function AuthScreen({ initialMode }: { initialMode?: any }) {
   const auth = useAuth();
   const db = useFirestore();
   const { toast } = useToast();
   const { setIs2FAVerified } = useAppState();
-  const { t } = useTranslations();
   
   const [step, setStep] = useState<AuthStep>('phone');
   const [isLoading, setIsLoading] = useState(false);
   const [phoneNumber, setPhoneNumber] = useState('');
   const [verificationCode, setVerificationCode] = useState('');
+  const [cloudPasswordInput, setCloudPasswordInput] = useState('');
+  const [showCloudPass, setShowCloudPassword] = useState(false);
   const [confirmationResult, setConfirmationResult] = useState<ConfirmationResult | null>(null);
   const [referralId, setReferralId] = useState<string | null>(null);
   const [registeredUid, setRegisteredUid] = useState<string | null>(null);
+  const [userDocCache, setUserDocCache] = useState<any>(null);
   
   const [profileForm, setProfileForm] = useState({
     name: '',
@@ -61,9 +61,8 @@ export default function AuthScreen({ initialMode }: { initialMode?: any }) {
     }
   }, []);
 
-  // Инициализация Recaptcha
   const initRecaptcha = () => {
-    if (!recaptchaVerifier.current && recaptchaRef.current && auth) {
+    if (!recaptchaVerifier.current && typeof window !== 'undefined' && auth) {
       try {
         recaptchaVerifier.current = new RecaptchaVerifier(auth, 'recaptcha-container', {
           size: 'invisible',
@@ -88,17 +87,13 @@ export default function AuthScreen({ initialMode }: { initialMode?: any }) {
       const appVerifier = recaptchaVerifier.current;
       if (!appVerifier) throw new Error("Security Engine not ready");
 
-      // Форматируем номер для Firebase (должен начинаться с +)
       const finalPhone = phoneNumber.startsWith('+') ? phoneNumber : '+' + phoneNumber;
-      
       const result = await signInWithPhoneNumber(auth!, finalPhone, appVerifier);
       setConfirmationResult(result);
       setStep('verify');
       toast({ title: "Сигнал отправлен", description: "SMS-код летит на ваш узел." });
     } catch (err: any) {
-      console.error(err);
       toast({ title: "Ошибка отправки", description: "Проверьте номер или попробуйте позже.", variant: "destructive" });
-      // Сброс рекапчи при ошибке
       if (recaptchaVerifier.current) {
         recaptchaVerifier.current.clear();
         recaptchaVerifier.current = null;
@@ -118,7 +113,6 @@ export default function AuthScreen({ initialMode }: { initialMode?: any }) {
       const userCredential = await confirmationResult.confirm(verificationCode);
       const uid = userCredential.user.uid;
       
-      // Проверяем, есть ли уже профиль
       const userRef = doc(db!, 'users', uid);
       const snap = await getDoc(userRef);
 
@@ -127,7 +121,10 @@ export default function AuthScreen({ initialMode }: { initialMode?: any }) {
         setStep('profile');
       } else {
         const data = snap.data();
-        if (data.twoFactorEnabled) {
+        setUserDocCache(data);
+        if (data.cloudPasswordEnabled) {
+          setStep('cloud_password');
+        } else if (data.twoFactorEnabled) {
           setRegisteredUid(uid);
           setStep('setup2fa');
         } else {
@@ -135,9 +132,26 @@ export default function AuthScreen({ initialMode }: { initialMode?: any }) {
         }
       }
     } catch (err: any) {
-      toast({ title: "Неверный код", description: "Проверьте цифры из SMS.", variant: "destructive" });
+      toast({ title: "Неверный код", variant: "destructive" });
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleVerifyCloudPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!userDocCache) return;
+
+    if (cloudPasswordInput === userDocCache.cloudPassword) {
+      if (userDocCache.twoFactorEnabled) {
+        setRegisteredUid(userDocCache.id);
+        setStep('setup2fa');
+      } else {
+        setIs2FAVerified(true);
+      }
+    } else {
+      toast({ title: "Пароль не принят", variant: "destructive" });
+      setCloudPasswordInput('');
     }
   };
 
@@ -153,7 +167,6 @@ export default function AuthScreen({ initialMode }: { initialMode?: any }) {
       const cleanUsername = profileForm.username.trim().replace('@', '');
       const targetSearch = ('@' + cleanUsername).toLowerCase();
       
-      // Проверка уникальности ника
       const q = query(collection(db!, 'users'), where('usernameLowercase', '==', targetSearch), limit(1));
       const checkSnap = await getDocs(q);
       
@@ -172,6 +185,7 @@ export default function AuthScreen({ initialMode }: { initialMode?: any }) {
         username: '@' + cleanUsername,
         usernameLowercase: targetSearch,
         phone: phoneNumber.replace(/\D/g, ''),
+        phoneVerified: true,
         createdAt: new Date().toISOString(),
         isPremium: false,
         referralCount: 0,
@@ -192,7 +206,7 @@ export default function AuthScreen({ initialMode }: { initialMode?: any }) {
 
       setStep('setup2fa');
     } catch (err: any) {
-      toast({ title: "Ошибка регистрации", description: err.message, variant: "destructive" });
+      toast({ title: "Ошибка регистрации", variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
@@ -213,7 +227,6 @@ export default function AuthScreen({ initialMode }: { initialMode?: any }) {
         twoFactorPin: profileForm.pin2FA
       });
       setIs2FAVerified(true);
-      toast({ title: "Защита активирована" });
     } catch (e) {
       setIs2FAVerified(true);
     } finally {
@@ -239,10 +252,10 @@ export default function AuthScreen({ initialMode }: { initialMode?: any }) {
           
           <CardHeader className="text-center pb-2 pt-10 px-8">
             <CardTitle className="text-3xl font-black tracking-tighter uppercase italic text-white leading-none">
-              {step === 'phone' ? 'Вход в Ядро' : step === 'verify' ? 'Код доступа' : step === 'profile' ? 'Профиль' : 'Защита'}
+              {step === 'phone' ? 'Вход в Ядро' : step === 'verify' ? 'Код доступа' : step === 'cloud_password' ? 'Облачный пароль' : step === 'profile' ? 'Профиль' : 'Защита'}
             </CardTitle>
             <CardDescription className="text-primary/60 font-black tracking-[0.5em] uppercase text-[8px] opacity-60 mt-3 ml-[0.5em]">
-              {step === 'verify' ? 'Verification Signal' : 'Quantum Protocol v30.0'}
+              {step === 'cloud_password' ? 'Security Level 2' : 'Quantum Protocol v31.0'}
             </CardDescription>
           </CardHeader>
 
@@ -292,6 +305,34 @@ export default function AuthScreen({ initialMode }: { initialMode?: any }) {
                   </Button>
                   <button type="button" onClick={() => setStep('phone')} className="w-full py-2 text-[8px] font-black uppercase text-white/20 hover:text-white tracking-[0.3em] transition-colors">Сменить номер</button>
                 </div>
+              </form>
+            )}
+
+            {step === 'cloud_password' && (
+              <form onSubmit={handleVerifyCloudPassword} className="space-y-8 animate-in slide-in-from-right-4 duration-500">
+                <div className="space-y-4 text-center">
+                  <div className="bg-accent/10 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto border border-accent/20 shadow-lg">
+                    <Lock className="w-8 h-8 text-accent animate-pulse" />
+                  </div>
+                  <p className="text-[9px] text-white/40 uppercase font-black tracking-[0.2em]">Требуется мастер-пароль</p>
+                </div>
+                <div className="relative">
+                  <Input 
+                    type={showCloudPass ? "text" : "password"}
+                    placeholder="Ваш пароль" 
+                    value={cloudPasswordInput} 
+                    onChange={e => setCloudPasswordInput(e.target.value)} 
+                    className="bg-white/5 border-white/10 h-16 rounded-2xl text-center text-xl font-bold focus:border-accent/50 transition-all border-2 outline-none pr-12" 
+                    required 
+                    autoFocus
+                  />
+                  <button type="button" onClick={() => setShowCloudPassword(!showCloudPass)} className="absolute right-4 top-1/2 -translate-y-1/2 text-white/20 hover:text-white">
+                    {showCloudPass ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  </button>
+                </div>
+                <Button type="submit" className="w-full h-16 bg-accent text-black rounded-2xl font-black uppercase italic tracking-widest shadow-2xl active:scale-95 transition-all">
+                  Разблокировать
+                </Button>
               </form>
             )}
 

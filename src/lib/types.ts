@@ -180,13 +180,18 @@ export interface UserSettings {
   interfaceOverrides?: Record<string, string>;
   biometricEnabled?: boolean;
   pwaNotificationsEnabled?: boolean;
+  cloudPasswordEnabled?: boolean;
 }
 
 export interface User {
   id: string;
   phone: string;
+  phoneVerified?: boolean;
+  email?: string;
+  emailVerified?: boolean;
   name: string;
   username: string;
+  usernameLowercase?: string;
   bio?: string;
   avatarUrl: string | null;
   lastSeen?: string;
@@ -202,6 +207,8 @@ export interface User {
   premiumUntil?: string | null;
   twoFactorEnabled?: boolean;
   twoFactorPin?: string;
+  cloudPassword?: string;
+  cloudPasswordEnabled?: boolean;
   statusEmoji?: string;
   statusText?: string;
   referralCount?: number;
