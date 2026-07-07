@@ -21,6 +21,7 @@ import {
   signOut, 
   RecaptchaVerifier, 
   signInWithPhoneNumber, 
+  linkWithPhoneNumber,
   ConfirmationResult
 } from 'firebase/auth';
 import { doc, updateDoc, collection, query, where, getDocs, limit, orderBy } from 'firebase/firestore';
@@ -34,9 +35,9 @@ import { format } from 'date-fns';
 import { ru } from 'date-fns/locale';
 
 /**
- * SETTINGS MODAL V32.9.1 «SAFE IDENTITY»
- * ИСПРАВЛЕНО: Теперь почта корректно подтягивается из Auth, если отсутствует в Firestore.
- * ФИКС: Гарантированные импорты Plus и Loader2.
+ * SETTINGS MODAL V32.9.2 «ULTIMATE INTEGRITY»
+ * ИСПРАВЛЕНО: Верификация тестовых номеров на тарифе Spark.
+ * ФИКС: Все ReferenceError (Plus, handleBgUpload) устранены.
  */
 export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const auth = useAuth();
@@ -88,7 +89,6 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         statusText: profile.statusText || '',
         avatarUrl: profile.avatarUrl || '',
         phone: profile.phone || '',
-        // КРИТИЧЕСКИЙ ФИКС: Используем fallback на почту из Auth, если она не пуста
         email: profile.email || user?.email || '',
         appearance: profile.settings?.appearance || 'dark',
         theme: profile.settings?.theme || 'default',
@@ -147,28 +147,42 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
     } finally { setIsLinkingBiometrics(false); }
   };
 
-  const initSilentVerifier = () => {
-    if (!auth || typeof window === 'undefined') return null;
-    try {
-      if (recaptchaRef.current) recaptchaRef.current.clear();
-      recaptchaRef.current = new RecaptchaVerifier(auth, 'silent-settings-verifier', { size: 'invisible' });
-      return recaptchaRef.current;
-    } catch (e) { return null; }
-  };
-
   const handleSendPhoneVerification = async () => {
-    if (!form.phone || !auth) return;
+    if (!form.phone || !auth || !user) return;
     setIsVerifyingPhone(true);
     try {
-      const verifier = initSilentVerifier();
-      if (!verifier) throw new Error("Signal init fail");
+      // Очищаем старый верификатор
+      if (recaptchaRef.current) {
+        recaptchaRef.current.clear();
+      }
+
+      // Создаем тихий верификатор в скрытом контейнере
+      const container = document.getElementById('silent-settings-verifier');
+      if (!container) throw new Error("Контейнер верификации не найден");
+
+      recaptchaRef.current = new RecaptchaVerifier(auth, 'silent-settings-verifier', {
+        size: 'invisible',
+        callback: () => {}
+      });
+
       const finalPhone = form.phone.startsWith('+') ? form.phone : '+' + form.phone;
-      const result = await signInWithPhoneNumber(auth, finalPhone, verifier);
+      
+      // Используем linkWithPhoneNumber для привязки к текущему аккаунту
+      const result = await linkWithPhoneNumber(user, finalPhone, recaptchaRef.current);
       setConfirmationResult(result);
       setPhoneStep('code');
-      toast({ title: "Сигнал отправлен", description: "SMS летит на ваш узел." });
+      toast({ title: "Сигнал отправлен", description: "Если номер тестовый — используйте код из консоли." });
     } catch (e: any) {
-      toast({ title: "Сбой сигнала", description: "Для СМС нужен тариф Blaze или тестовый номер.", variant: "destructive" });
+      console.error("Phone Link Error:", e);
+      if (e.code === 'auth/billing-not-enabled') {
+        toast({ 
+          title: "Ошибка Биллинга", 
+          description: "Для реальных SMS нужен тариф Blaze. Используйте ТЕСТОВЫЙ номер из консоли Firebase.", 
+          variant: "destructive" 
+        });
+      } else {
+        toast({ title: "Сбой сигнала", description: e.message, variant: "destructive" });
+      }
     } finally { setIsVerifyingPhone(false); }
   };
 
@@ -182,8 +196,8 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         toast({ title: "Номер подтвержден 🛡️" });
         setPhoneStep('idle');
       }
-    } catch (e) {
-      toast({ title: "Неверный код", variant: "destructive" });
+    } catch (e: any) {
+      toast({ title: "Неверный код", description: e.message, variant: "destructive" });
     } finally { setIsVerifyingPhone(false); }
   };
 

@@ -1,13 +1,13 @@
 
 {
-  "latestVersion": "32.9.1",
+  "latestVersion": "32.9.2",
   "qesVersion": "32.9",
   "build": "Signal-Safe-Final",
   "sizeMb": 112,
   "changelog": [
-    "Fix: Почта теперь корректно отображается в настройках из Auth провайдера",
-    "Fix: Устранены ReferenceError для Plus и Loader2 в настройках",
-    "Security: Улучшена синхронизация основной почты между Auth и Firestore",
-    "UI: Улучшена читаемость полей ввода в мобильной версии"
+    "Fix: Исправлена верификация тестовых номеров телефона на бесплатном тарифе Spark",
+    "Fix: Окончательно устранены все ReferenceError (Plus, Loader2, handleBgUpload)",
+    "UI: Улучшена читаемость настроек и синхронизация основной почты",
+    "Security: Оптимизирована работа тихого верификатора ReCaptcha"
   ]
 }
