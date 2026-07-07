@@ -22,6 +22,15 @@ export interface ReceivedGift {
   receivedAt: string;
 }
 
+export interface TopUpRequest {
+  id: string;
+  userId: string;
+  userName: string;
+  amount: number;
+  status: 'pending' | 'approved' | 'rejected';
+  createdAt: string;
+}
+
 export interface PollOption {
   id: string;
   text: string;
@@ -61,7 +70,7 @@ export interface Message {
   editedAt?: string;
   isRead?: boolean;
   isSilent?: boolean;
-  isPending?: boolean; // NEW: Indicates message is queued locally
+  isPending?: boolean;
   selfDestructAt?: string | null;
   forwardFrom?: string;
   reactions?: Record<string, string[]>; // emoji -> [uids]
@@ -76,6 +85,7 @@ export interface Message {
     bubbleStyle?: 'default' | 'neon' | 'gold' | 'ocean';
     aiModel?: string;
     translation?: string;
+    transcription?: string;
     [key: string]: any;
   };
 }
@@ -97,7 +107,7 @@ export interface Call {
   callerId: string;
   callerName?: string;
   receiverId: string;
-  participantIds: string[]; // For privacy filtering
+  participantIds: string[]; 
   chatId: string;
   type: 'audio' | 'video';
   status: 'calling' | 'active' | 'ended' | 'rejected' | 'missed';

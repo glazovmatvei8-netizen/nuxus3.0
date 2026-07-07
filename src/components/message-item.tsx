@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/context-menu";
 import { format } from 'date-fns';
 import { 
-  CornerUpLeft, Trash2, Check, CheckCheck, Play, Pause, Volume2, Share2, FileText, Heart, Square, Triangle, Ghost, Circle
+  CornerUpLeft, Trash2, Check, CheckCheck, Play, Pause, Volume2, Share2, FileText, Heart, Square, Triangle, Ghost, Circle, Copy, Loader2
 } from 'lucide-react';
 import { cn, decryptSignal, isUserPremium } from '@/lib/utils';
 import { doc, updateDoc, deleteDoc } from 'firebase/firestore';
@@ -52,9 +52,17 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onForward, is
   const formattedTime = message.sentAt ? format(new Date(message.sentAt), 'HH:mm') : '';
   const isPremium = useMemo(() => isUserPremium(viewerProfile), [viewerProfile]);
 
-  const handleTranscribe = async () => {
+  // AUTO-TRANSCRIBE V29.0
+  useEffect(() => {
+    if (message.contentType === 'audio' && isPremium && !transcription && !isMe) {
+       // Automatic "stealth" transcription for Premium users
+       handleTranscribe(true);
+    }
+  }, [message.contentType]);
+
+  const handleTranscribe = async (silent = false) => {
     if (!isPremium) {
-      toast({ title: "Elite Only", description: "Расшифровка доступна только Premium-узлам.", variant: "destructive" });
+      if (!silent) toast({ title: "Elite Only", description: "Расшифровка доступна только Premium-узлам.", variant: "destructive" });
       return;
     }
     if (transcription || isTranscribing) return;
@@ -65,8 +73,16 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onForward, is
       if (db && chatId) {
         await updateDoc(doc(db, 'chats', chatId, 'messages', message.id), { 'metadata.transcription': result.text });
       }
-    } catch (e: any) { toast({ title: "Сбой ИИ", variant: "destructive" }); }
+    } catch (e: any) { 
+      if (!silent) toast({ title: "Сбой нейросети", variant: "destructive" }); 
+    }
     finally { setIsTranscribing(false); }
+  };
+
+  const handleCopyTranscription = () => {
+    if (!transcription) return;
+    navigator.clipboard.writeText(transcription);
+    toast({ title: "Текст скопирован" });
   };
 
   const renderContent = () => {
@@ -112,13 +128,26 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onForward, is
                 audioInstance.current.ontimeupdate = () => setProgress((audioInstance.current!.currentTime / audioInstance.current!.duration) * 100);
               }
               audioInstance.current.paused ? audioInstance.current.play() : audioInstance.current.pause();
-           }} className="h-10 w-10 rounded-full bg-white text-black shrink-0">
+           }} className="h-10 w-10 rounded-full bg-white text-black shrink-0 shadow-lg">
              {isPlaying ? <Pause className="w-5 h-5 fill-current" /> : <Play className="w-5 h-5 fill-current ml-0.5" />}
            </Button>
-           <div className="flex-1 h-1.5 bg-white/10 rounded-full overflow-hidden">
+           <div className="flex-1 h-1.5 bg-white/10 rounded-full overflow-hidden relative">
              <div className="h-full bg-primary shadow-[0_0_10px_rgba(168,85,247,1)] transition-all" style={{ width: `${progress}%` }} />
            </div>
         </div>
+        {transcription ? (
+           <div className="bg-white/5 p-3 rounded-2xl border border-white/5 space-y-2 animate-in fade-in zoom-in-95 duration-500">
+              <p className="text-[12px] text-white/80 leading-relaxed font-medium tracking-tight">{transcription}</p>
+              <button onClick={handleCopyTranscription} className="flex items-center gap-2 text-[8px] font-black uppercase text-primary/60 hover:text-primary transition-colors">
+                <Copy className="w-3 h-3" /> Копировать текст
+              </button>
+           </div>
+        ) : isTranscribing && (
+           <div className="flex items-center gap-3 px-2 py-1 opacity-40">
+             <Loader2 className="w-3 h-3 animate-spin text-primary" />
+             <span className="text-[9px] font-black uppercase tracking-widest">Neural Link Active...</span>
+           </div>
+        )}
       </div>
     );
     if (message.contentType === 'sticker') return <img src={message.content} alt="Sticker" className="w-48 h-48 object-contain drop-shadow-2xl" />;
@@ -141,9 +170,9 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onForward, is
     highlight && "ring-4 ring-primary shadow-[0_0_40px_rgba(168,85,247,0.6)] scale-105 z-10"
   );
 
-  if (message.contentType === 'service') return (
+  if (message.contentType === 'service' || message.contentType === 'broadcast') return (
     <div className="w-full flex justify-center my-4 opacity-40">
-      <div className="bg-white/5 px-6 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest">{message.content}</div>
+      <div className="bg-white/5 px-6 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border border-white/5 shadow-inner">{message.content}</div>
     </div>
   );
 
@@ -169,7 +198,9 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onForward, is
             </ContextMenuTrigger>
             <ContextMenuContent className="w-64 bg-[#0a0a0c]/95 backdrop-blur-[60px] border-white/10 rounded-[2.2rem] shadow-2xl p-2">
               <ContextMenuItem onClick={() => onReply(message)} className="gap-4 py-3.5 font-black text-[11px] uppercase tracking-widest rounded-xl hover:bg-primary/10 transition-all"><CornerUpLeft className="w-4 h-4 text-primary" /> Ответить</ContextMenuItem>
-              {message.contentType === 'audio' && <ContextMenuItem onClick={handleTranscribe} className="gap-4 py-3.5 font-black text-[11px] uppercase tracking-widest rounded-xl hover:bg-primary/10 transition-all"><FileText className="w-4 h-4" /> Расшифровать</ContextMenuItem>}
+              {message.contentType === 'audio' && !transcription && (
+                <ContextMenuItem onClick={() => handleTranscribe()} className="gap-4 py-3.5 font-black text-[11px] uppercase tracking-widest rounded-xl hover:bg-primary/10 transition-all"><FileText className="w-4 h-4 text-primary" /> Расшифровать</ContextMenuItem>
+              )}
               <ContextMenuItem onClick={() => onForward(message)} className="gap-4 py-3.5 font-black text-[11px] uppercase tracking-widest rounded-xl hover:bg-primary/10 transition-all"><Share2 className="w-4 h-4" /> Резонанс</ContextMenuItem>
               <ContextMenuSeparator className="bg-white/5 mx-2 my-1" />
               {(isMe || isAdmin) && (<ContextMenuItem onClick={() => deleteDoc(doc(db!, 'chats', chatId, 'messages', message.id))} className="text-red-500 gap-4 py-3.5 font-black text-[11px] uppercase tracking-widest rounded-xl hover:bg-red-500/10 transition-all"><Trash2 className="w-4 h-4" /> Аннигилировать</ContextMenuItem>)}

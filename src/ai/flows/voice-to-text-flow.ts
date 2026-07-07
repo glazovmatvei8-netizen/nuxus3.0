@@ -1,11 +1,8 @@
+
 'use server';
 /**
  * @fileOverview A Genkit flow for transcribing voice messages to text.
- * Uses Gemini 1.5 Flash for high-speed multi-language audio processing.
- *
- * - transcribeVoice - A function that handles the transcription process.
- * - VoiceToTextInput - The input type for the function.
- * - VoiceToTextOutput - The return type for the function.
+ * Optimized for high-speed multi-language processing.
  */
 
 import { ai } from '@/ai/genkit';
@@ -15,7 +12,7 @@ const VoiceToTextInputSchema = z.object({
   audioDataUri: z
     .string()
     .describe(
-      "An audio recording, as a data URI that must include a MIME type and use Base64 encoding. Expected format: 'data:<mimetype>;base64,<encoded_data>'."
+      "An audio recording, as a data URI that must include a MIME type and use Base64 encoding."
     ),
 });
 export type VoiceToTextInput = z.infer<typeof VoiceToTextInputSchema>;
@@ -27,6 +24,7 @@ export type VoiceToTextOutput = z.infer<typeof VoiceToTextOutputSchema>;
 
 /**
  * Transcribes voice messages precisely using AI.
+ * Guaranteed to return [Звук не распознан] on fail.
  */
 export async function transcribeVoice(input: VoiceToTextInput): Promise<VoiceToTextOutput> {
   return voiceToTextFlow(input);
@@ -36,10 +34,14 @@ const voiceToTextPrompt = ai.definePrompt({
   name: 'voiceToTextPrompt',
   input: { schema: VoiceToTextInputSchema },
   output: { schema: VoiceToTextOutputSchema },
-  prompt: `You are an expert transcription engine for the Nuxus messaging app.
-Your task is to transcribe the following audio recording exactly as it is spoken.
-If the audio is silent or contains only noise, return "[Звук не распознан]".
-Audio: {{media url=audioDataUri}}`,
+  prompt: `You are an integrated neural module of the Nuxus communication system. 
+Transcribe this signal with 100% fidelity. 
+- Ignore background hum or static.
+- Return only the text spoken.
+- If audio is silent, return "[Звук не распознан]".
+- Preserve the emotional tone and punctuation.
+
+Audio Signal: {{media url=audioDataUri}}`,
 });
 
 const voiceToTextFlow = ai.defineFlow(
@@ -49,10 +51,13 @@ const voiceToTextFlow = ai.defineFlow(
     outputSchema: VoiceToTextOutputSchema,
   },
   async (input) => {
-    const { output } = await voiceToTextPrompt(input);
-    if (!output) {
-      throw new Error('AI failed to transcribe the signal.');
+    try {
+      const { output } = await voiceToTextPrompt(input);
+      if (!output) throw new Error('Empty signal');
+      return output;
+    } catch (e) {
+      console.warn("Nuxus Neural: Transcription node timeout.");
+      return { text: "[Звук не распознан]" };
     }
-    return output;
   }
 );

@@ -23,7 +23,7 @@ import { collection, query, doc, limit, updateDoc, writeBatch, getDocs, where, o
 import { UserAvatar } from '@/components/user-avatar';
 import { 
   ShieldAlert, Users, Star, Ban, ShieldCheck, 
-  MoreVertical, Send, Loader2, Database, Package, FileText, UserPlus, ShieldX, CalendarClock, Wallet, Check, X, Trash2, Clock
+  MoreVertical, Send, Loader2, Database, Package, FileText, UserPlus, ShieldX, CalendarClock, Wallet, Check, X, Trash2, Clock, History
 } from 'lucide-react';
 import type { User, TopUpRequest } from '@/lib/types';
 import { formatDisplayName, isUserPremium, cn, isGlobalAdmin } from '@/lib/utils';
@@ -38,22 +38,25 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
   
   const [userSearch, setUserSearch] = useState('');
   const [activeTab, setActiveTab] = useState('analytics');
+  const [requestFilter, setRequestFilter] = useState<'pending' | 'all'>('pending');
   const [broadcastText, setBroadcastText] = useState('');
   const [isBroadcasting, setIsBroadcasting] = useState(false);
 
-  // Оптимизированный поиск пользователей
-  const usersQuery = useMemoFirebase(() => (!db ? null : query(collection(db, 'users'), limit(500))), [db]);
+  // Users List
+  const usersQuery = useMemoFirebase(() => (!db ? null : query(collection(db, 'users'), limit(1000))), [db]);
   const { data: users } = useCollection<User>(usersQuery);
 
-  // ИСПРАВЛЕННЫЙ ЗАПРОС ЗАЯВОК: Убираем orderBy для исключения ошибок отсутствия индексов
+  // Top-Up Requests List
   const topUpRequestsQuery = useMemoFirebase(() => {
     if (!db) return null;
-    return query(collection(db, 'topUpRequests'), where('status', '==', 'pending'));
-  }, [db]);
+    if (requestFilter === 'pending') {
+      return query(collection(db, 'topUpRequests'), where('status', '==', 'pending'));
+    }
+    return query(collection(db, 'topUpRequests'), limit(50));
+  }, [db, requestFilter]);
   
   const { data: rawTopUpRequests, isLoading: isRequestsLoading } = useCollection<TopUpRequest>(topUpRequestsQuery);
 
-  // Локальная сортировка заявок (самые новые сверху)
   const topUpRequests = useMemo(() => {
     if (!rawTopUpRequests) return [];
     return [...rawTopUpRequests].sort((a, b) => {
@@ -94,7 +97,6 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
         else if (value === '3m') expiry = addMonths(new Date(), 3);
         else if (value === '6m') expiry = addMonths(new Date(), 6);
         else if (value === '1y') expiry = addYears(new Date(), 1);
-        else if (value === '2y') expiry = addYears(new Date(), 2);
         update = { isPremium: true, premiumUntil: expiry.toISOString() };
         break;
       case 'remove_premium': update = { isPremium: false, premiumUntil: null }; break;
@@ -124,12 +126,12 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
         amount: req.amount,
         type: 'deposit',
         status: 'completed',
-        otherPartyName: 'Admin Approval',
+        otherPartyName: 'Nuxus Kernel Approval',
         createdAt: new Date().toISOString()
       });
 
       await batch.commit();
-      toast({ title: "Заявка одобрена", description: `${req.amount} NX начислено ${req.userName || 'пользователю'}` });
+      toast({ title: "Заявка одобрена", description: `${req.amount} NX начислено.` });
     } catch (e: any) {
       toast({ title: "Ошибка одобрения", variant: "destructive" });
     }
@@ -160,26 +162,23 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
     } finally { setIsBroadcasting(false); }
   };
 
-  const premiumOptions = [
-    { label: '1 ДЕНЬ', value: '1d' },
-    { label: '1 МЕСЯЦ', value: '1m' },
-    { label: '3 МЕСЯЦА', value: '3m' },
-    { label: '6 МЕСЯЦЕВ', value: '6m' },
-    { label: '1 ГОД', value: '1y' },
-    { label: '2 ГОДА', value: '2y' },
-  ];
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl bg-[#0a0a0c]/95 backdrop-blur-[40px] border-primary/30 p-0 overflow-hidden h-[85vh] flex flex-col rounded-[2.5rem] shadow-2xl border outline-none">
         <DialogHeader className="p-8 pb-4 shrink-0 text-left border-b border-white/5">
-          <div className="flex items-center gap-3">
-            <div className="bg-primary/20 p-2.5 rounded-xl border border-primary/20">
-              <ShieldAlert className="w-6 h-6 text-primary" />
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="bg-primary/20 p-2.5 rounded-xl border border-primary/20">
+                <ShieldAlert className="w-6 h-6 text-primary" />
+              </div>
+              <div>
+                <DialogTitle className="text-white uppercase italic font-black tracking-tighter text-xl">Mission Control</DialogTitle>
+                <p className="text-[9px] font-black uppercase tracking-[0.4em] text-primary/40 mt-0.5">Terminal Access v29.0</p>
+              </div>
             </div>
-            <div>
-              <DialogTitle className="text-white uppercase italic font-black tracking-tighter text-xl">Nuxus Admin Control</DialogTitle>
-              <p className="text-[9px] font-black uppercase tracking-[0.4em] text-primary/40 mt-0.5">Terminal Access v25.4.2</p>
+            <div className="flex items-center gap-2">
+               <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse shadow-[0_0_10px_rgba(34,197,94,1)]" />
+               <span className="text-[8px] font-black uppercase text-white/40 tracking-widest">Core Status: Stable</span>
             </div>
           </div>
         </DialogHeader>
@@ -187,9 +186,9 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0">
           <div className="px-8 pt-6 shrink-0">
             <TabsList className="grid w-full bg-white/5 p-1.5 rounded-[1.4rem] grid-cols-4 gap-1 border border-white/5 shadow-inner">
-              <TabsTrigger value="analytics" className="rounded-xl text-[9px] font-black uppercase tracking-widest data-[state=active]:bg-primary">Аналитика</TabsTrigger>
+              <TabsTrigger value="analytics" className="rounded-xl text-[9px] font-black uppercase tracking-widest data-[state=active]:bg-primary">Сводка</TabsTrigger>
               <TabsTrigger value="users" className="rounded-xl text-[9px] font-black uppercase tracking-widest data-[state=active]:bg-primary">Узлы</TabsTrigger>
-              <TabsTrigger value="requests" className="rounded-xl text-[9px] font-black uppercase tracking-widest data-[state=active]:bg-primary">Заявки ({topUpRequests?.length || 0})</TabsTrigger>
+              <TabsTrigger value="requests" className="rounded-xl text-[9px] font-black uppercase tracking-widest data-[state=active]:bg-primary">Заявки ({topUpRequests.filter(r => r.status === 'pending').length})</TabsTrigger>
               <TabsTrigger value="broadcast" className="rounded-xl text-[9px] font-black uppercase tracking-widest data-[state=active]:bg-primary">Маяк</TabsTrigger>
             </TabsList>
           </div>
@@ -226,28 +225,10 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
                            <DropdownMenuItem onClick={() => handleAction(u.id, u.isAdmin ? 'remove_admin' : 'make_admin')} className="gap-3 font-black uppercase text-[10px] tracking-widest py-3.5 rounded-xl">
                              {u.isAdmin ? <><ShieldX className="w-5 h-5 text-red-400" /> Снять Админа</> : <><ShieldCheck className="w-5 h-5 text-primary" /> Назначить Админа</>}
                            </DropdownMenuItem>
-                           
-                           <DropdownMenuSub>
-                             <DropdownMenuSubTrigger className="gap-3 font-black uppercase text-[10px] tracking-widest py-3.5 rounded-xl">
-                               <Star className="w-5 h-5 text-accent" /> Выдать Premium
-                             </DropdownMenuSubTrigger>
-                             <DropdownMenuSubContent className="w-56 obsidian-glass rounded-xl p-2 border-white/20 shadow-2xl bg-black/90">
-                               {premiumOptions.map(opt => (
-                                 <DropdownMenuItem key={opt.value} onClick={() => handleAction(u.id, 'give_premium', opt.value)} className="text-[10px] font-black uppercase tracking-widest py-3 px-4 rounded-lg text-white hover:bg-primary/20 transition-all border border-transparent hover:border-primary/30 mb-1 last:mb-0">
-                                   {opt.label}
-                                 </DropdownMenuItem>
-                               ))}
-                             </DropdownMenuSubContent>
-                           </DropdownMenuSub>
-
-                           {isUserPremium(u) && (
-                             <DropdownMenuItem onClick={() => handleAction(u.id, 'remove_premium')} className="gap-3 font-black uppercase text-[10px] tracking-widest py-3.5 text-red-400 rounded-xl">
-                               <Trash2 className="w-5 h-5" /> Сбросить Премиум
-                             </DropdownMenuItem>
-                           )}
-
+                           <DropdownMenuItem onClick={() => handleAction(u.id, 'give_premium', '1y')} className="gap-3 font-black uppercase text-[10px] tracking-widest py-3.5 rounded-xl text-accent">
+                             <Star className="w-5 h-5 fill-accent" /> Выдать Premium (1г)
+                           </DropdownMenuItem>
                            <DropdownMenuSeparator className="bg-white/5 mx-2 my-1" />
-                           
                            <DropdownMenuItem onClick={() => handleAction(u.id, u.isBanned ? 'unban' : 'ban')} className={cn("gap-3 font-black uppercase text-[10px] tracking-widest py-3.5 rounded-xl", u.isBanned ? "text-green-400" : "text-red-500")}>
                              {u.isBanned ? <><ShieldCheck className="w-5 h-5" /> Разбанить</> : <><Ban className="w-5 h-5" /> Забанить</>}
                            </DropdownMenuItem>
@@ -260,39 +241,47 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
             </TabsContent>
 
             <TabsContent value="requests" className="h-full m-0 p-0 flex flex-col animate-in fade-in duration-500">
-               <ScrollArea className="flex-1 min-h-[300px]">
-                  <div className="p-8 space-y-3 pb-24">
+               <div className="px-6 pt-4 shrink-0 flex gap-2">
+                 <button onClick={() => setRequestFilter('pending')} className={cn("px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest border transition-all", requestFilter === 'pending' ? "bg-primary border-primary" : "bg-white/5 border-white/5 text-white/40")}>Новые</button>
+                 <button onClick={() => setRequestFilter('all')} className={cn("px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest border transition-all", requestFilter === 'all' ? "bg-primary border-primary" : "bg-white/5 border-white/5 text-white/40")}>История</button>
+               </div>
+               <ScrollArea className="flex-1">
+                  <div className="p-6 space-y-3 pb-24">
                     {isRequestsLoading ? (
                       <div className="flex flex-col items-center justify-center py-20 gap-4 opacity-40">
                          <Loader2 className="w-10 h-10 animate-spin text-primary" />
-                         <p className="text-[10px] font-black uppercase tracking-widest">Загрузка сигналов...</p>
+                         <p className="text-[10px] font-black uppercase tracking-widest">Загрузка данных...</p>
                       </div>
                     ) : topUpRequests.length > 0 ? topUpRequests.map(req => (
                       <div key={req.id} className="flex items-center justify-between p-5 bg-white/5 border border-white/5 rounded-[2.2rem] hover:bg-white/[0.08] transition-all shadow-xl">
                          <div className="flex items-center gap-4 text-left min-w-0 flex-1">
                            <UserAvatar userId={req.userId} className="h-14 w-14 shrink-0 shadow-lg" />
                            <div className="flex flex-col min-w-0">
-                             <span className="font-black text-white text-base truncate uppercase italic tracking-tight">{req.userName || 'Anonymous Node'}</span>
+                             <span className="font-black text-white text-base truncate uppercase italic tracking-tight">{req.userName || 'Unknown Node'}</span>
                              <div className="flex items-center gap-2">
                                <span className="text-xl text-primary font-black italic tracking-tighter tabular-nums">{req.amount} NX</span>
                                <span className="text-[8px] text-white/20 font-black uppercase flex items-center gap-1"><Clock className="w-2.5 h-2.5" /> {req.createdAt ? new Date(req.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '--:--'}</span>
                              </div>
                            </div>
                          </div>
-                         <div className="flex gap-3 shrink-0 ml-4">
-                           <Button size="icon" onClick={() => handleApproveTopUp(req)} className="h-14 w-14 bg-green-500 hover:bg-green-600 rounded-2xl shadow-lg shadow-green-500/20 active:scale-90 transition-transform">
-                             <Check className="w-7 h-7 text-white" />
-                           </Button>
-                           <Button size="icon" onClick={() => handleRejectTopUp(req.id)} variant="destructive" className="h-14 w-14 rounded-2xl shadow-lg shadow-red-500/20 active:scale-90 transition-transform">
-                             <X className="w-7 h-7 text-white" />
-                           </Button>
-                         </div>
+                         {req.status === 'pending' ? (
+                           <div className="flex gap-3 shrink-0 ml-4">
+                             <Button size="icon" onClick={() => handleApproveTopUp(req)} className="h-14 w-14 bg-green-500 hover:bg-green-600 rounded-2xl shadow-lg active:scale-90 transition-transform">
+                               <Check className="w-7 h-7 text-white" />
+                             </Button>
+                             <Button size="icon" onClick={() => handleRejectTopUp(req.id)} variant="destructive" className="h-14 w-14 rounded-2xl shadow-lg active:scale-90 transition-transform">
+                               <X className="w-7 h-7 text-white" />
+                             </Button>
+                           </div>
+                         ) : (
+                           <div className={cn("px-4 py-2 rounded-xl text-[8px] font-black uppercase tracking-widest border", req.status === 'approved' ? "text-green-500 border-green-500/20 bg-green-500/10" : "text-red-500 border-red-500/20 bg-red-500/10")}>
+                             {req.status}
+                           </div>
+                         )}
                       </div>
                     )) : (
                       <div className="py-32 text-center opacity-20 flex flex-col items-center gap-6">
-                        <div className="w-24 h-24 bg-white/5 rounded-full flex items-center justify-center border border-white/10">
-                          <Wallet className="w-12 h-12" />
-                        </div>
+                        <Wallet className="w-16 h-16 text-white/20" />
                         <p className="text-[12px] font-black uppercase tracking-[0.5em]">Заявок не обнаружено</p>
                       </div>
                     )}
