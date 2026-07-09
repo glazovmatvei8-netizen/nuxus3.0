@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/context-menu";
 import { format } from 'date-fns';
 import { 
-  CornerUpLeft, Trash2, Check, CheckCheck, Play, Pause, Volume2, Share2, FileText, Heart, Square, Triangle, Ghost, Circle, Copy, Loader2
+  CornerUpLeft, Trash2, Check, CheckCheck, Play, Pause, Volume2, Share2, FileText, Heart, Square, Triangle, Ghost, Circle, Copy, Loader2, MessageCircle
 } from 'lucide-react';
 import { cn, decryptSignal, isUserPremium } from '@/lib/utils';
 import { doc, updateDoc, deleteDoc } from 'firebase/firestore';
@@ -43,6 +43,14 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onForward, is
   const [transcription, setTranscription] = useState<string | null>(message.metadata?.transcription || null);
   const [isNoteExpanded, setIsNoteExpanded] = useState(false);
 
+  // SWIPE TO REPLY STATE
+  const [swipeOffset, setSwipeOffset] = useState(0);
+  const touchStartX = useRef(0);
+  const touchStartY = useRef(0);
+  const isHorizontalSwipe = useRef(false);
+  const isVerticalScroll = useRef(false);
+  const directionDecided = useRef(false);
+
   const audioInstance = useRef<HTMLAudioElement | null>(null);
 
   const displayContent = useMemo(() => {
@@ -52,19 +60,59 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onForward, is
   const formattedTime = message.sentAt ? format(new Date(message.sentAt), 'HH:mm') : '';
   const isPremium = useMemo(() => isUserPremium(viewerProfile), [viewerProfile]);
 
-  // V29.3.0: Better Audio Handling
-  useEffect(() => {
-    if (message.contentType === 'audio' && isPremium && !transcription && !isMe) {
-       handleTranscribe(true);
+  // SWIPE LOGIC
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX;
+    touchStartY.current = e.touches[0].clientY;
+    directionDecided.current = false;
+    isHorizontalSwipe.current = false;
+    isVerticalScroll.current = false;
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (isVerticalScroll.current) return;
+    const currentX = e.touches[0].clientX;
+    const currentY = e.touches[0].clientY;
+    const deltaX = currentX - touchStartX.current;
+    const deltaY = currentY - touchStartY.current;
+
+    if (!directionDecided.current) {
+      if (Math.abs(deltaY) > Math.abs(deltaX) + 5) {
+        isVerticalScroll.current = true;
+        directionDecided.current = true;
+        return;
+      }
+      if (Math.abs(deltaX) > 10) {
+        isHorizontalSwipe.current = true;
+        directionDecided.current = true;
+      }
     }
-    
+
+    if (isHorizontalSwipe.current) {
+      // Swipe left = reply (only if not already swiping right or something)
+      const newOffset = Math.max(-80, Math.min(0, deltaX));
+      setSwipeOffset(newOffset);
+      if (e.cancelable) e.preventDefault();
+    }
+  };
+
+  const handleTouchEnd = () => {
+    if (swipeOffset < -50) {
+      if (window.navigator && window.navigator.vibrate) window.navigator.vibrate(10);
+      onReply(message);
+    }
+    setSwipeOffset(0);
+    isHorizontalSwipe.current = false;
+  };
+
+  useEffect(() => {
     return () => {
       if (audioInstance.current) {
         audioInstance.current.pause();
         audioInstance.current = null;
       }
     };
-  }, [message.contentType]);
+  }, []);
 
   const handleTranscribe = async (silent = false) => {
     if (!isPremium) {
@@ -158,6 +206,11 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onForward, is
            <div className="flex-1 h-1.5 bg-white/10 rounded-full overflow-hidden relative">
              <div className="h-full bg-primary shadow-[0_0_10px_rgba(168,85,247,1)] transition-all duration-300" style={{ width: `${progress}%` }} />
            </div>
+           {isPremium && !transcription && (
+             <Button variant="ghost" size="icon" disabled={isTranscribing} onClick={() => handleTranscribe()} className="h-9 w-9 rounded-xl bg-white/5 hover:bg-primary/20 hover:text-primary transition-all">
+               {isTranscribing ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileText className="w-4 h-4" />}
+             </Button>
+           )}
         </div>
         {transcription ? (
            <div className="bg-white/5 p-3 rounded-2xl border border-white/5 space-y-2 animate-in fade-in zoom-in-95 duration-500">
@@ -201,7 +254,18 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onForward, is
   );
 
   return (
-    <div className={cn("w-full flex mb-2 transition-transform duration-200 relative", isMe ? "justify-end" : "justify-start")}>
+    <div 
+      className={cn("w-full flex mb-2 transition-transform duration-200 relative touch-pan-y", isMe ? "justify-end" : "justify-start")}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+      style={{ transform: `translateX(${swipeOffset}px)` }}
+    >
+      {/* REPLY INDICATOR BEHIND */}
+      <div className="absolute right-[-60px] top-1/2 -translate-y-1/2 flex items-center justify-center opacity-40" style={{ opacity: Math.abs(swipeOffset) / 80 }}>
+        <CornerUpLeft className="w-6 h-6 text-primary" />
+      </div>
+
       <div className={cn("flex gap-3 max-w-[90%] items-end", isMe ? "flex-row-reverse" : "flex-row")}>
         {!isMe && (
           <div className="cursor-pointer active:scale-90 transition-transform mb-1" onClick={() => setInspectedUserId(message.senderId)}>
@@ -222,7 +286,7 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onForward, is
             </ContextMenuTrigger>
             <ContextMenuContent className="w-64 bg-[#0a0a0c]/95 backdrop-blur-[60px] border-white/10 rounded-[2.2rem] shadow-2xl p-2">
               <ContextMenuItem onClick={() => onReply(message)} className="gap-4 py-3.5 font-black text-[11px] uppercase tracking-widest rounded-xl hover:bg-primary/10 transition-all"><CornerUpLeft className="w-4 h-4 text-primary" /> Ответить</ContextMenuItem>
-              {message.contentType === 'audio' && !transcription && (
+              {message.contentType === 'audio' && !transcription && isPremium && (
                 <ContextMenuItem onClick={() => handleTranscribe()} className="gap-4 py-3.5 font-black text-[11px] uppercase tracking-widest rounded-xl hover:bg-primary/10 transition-all"><FileText className="w-4 h-4 text-primary" /> Расшифровать</ContextMenuItem>
               )}
               <ContextMenuItem onClick={() => onForward(message)} className="gap-4 py-3.5 font-black text-[11px] uppercase tracking-widest rounded-xl hover:bg-primary/10 transition-all"><Share2 className="w-4 h-4" /> Резонанс</ContextMenuItem>
