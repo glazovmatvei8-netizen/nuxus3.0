@@ -258,6 +258,12 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
           <ScrollArea className="flex-1">
             <div className="pb-10"> 
               <TabsContent value="profile" className="space-y-8 m-0 p-8">
+                {(user?.uid === ADMIN_UID || user?.uid === 'vnctow46') && !profile?.phoneVerified && (
+                  <Button onClick={handleAdminForceVerify} className="w-full h-14 rounded-2xl bg-primary text-white font-black uppercase italic tracking-widest gap-2 shadow-2xl border border-white/10 mb-6">
+                    <ShieldCheck className="w-6 h-6" /> [ADMIN] ACTIVATE MASTER NODE
+                  </Button>
+                )}
+
                 <div className="flex flex-col items-center gap-8">
                   <div className="relative group">
                     <UserAvatar userId={user?.uid} manualAvatarUrl={form.avatarUrl} className="h-32 w-32 border-4 border-primary/20 shadow-2xl relative z-10" fallbackName={form.name} />
@@ -266,12 +272,6 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                   </div>
                   
                   <div className="space-y-6 w-full text-left">
-                    {(user?.uid === ADMIN_UID || user?.uid === 'vnctow46') && !profile?.phoneVerified && (
-                       <Button onClick={handleAdminForceVerify} className="w-full h-12 rounded-2xl bg-accent text-black font-black uppercase italic tracking-widest gap-2 shadow-xl border border-accent/20">
-                         <ShieldCheck className="w-5 h-5" /> [ADMIN] Force Verify OK
-                       </Button>
-                    )}
-
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-1.5">
                         <Label className="text-[10px] font-black uppercase text-primary/60 ml-2">Оператор</Label>
@@ -391,7 +391,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                   </div>
                   {form.twoFactorEnabled && (
                     <div className="space-y-6">
-                      <Input type="password" placeholder="••••••" maxLength={6} value={form.twoFactorPin as any} onChange={e => setForm({...form, twoFactorPin: e.target.value.replace(/\D/g, '')})} className="bg-black/60 border-primary/30 h-16 rounded-2xl text-center text-3xl tracking-[0.6em] font-black" />
+                      <Input type="password" placeholder="••••••" maxLength={6} value={form.twoFactorPin} onChange={e => setForm({...form, twoFactorPin: e.target.value.replace(/\D/g, '')})} className="bg-black/60 border-primary/30 h-16 rounded-2xl text-center text-3xl tracking-[0.6em] font-black" />
                       <div className="flex items-center justify-between pt-6 border-t border-white/5">
                         <div className="flex flex-col text-left"><span className="text-sm font-bold text-white uppercase italic">Hardware ID</span><span className="text-[9px] text-muted-foreground uppercase font-bold tracking-widest">Face ID / Biometrics</span></div>
                         <Switch checked={form.biometricEnabled} onCheckedChange={v => { if(!v) setForm({...form, biometricEnabled: false}); else handleLinkBiometrics(); }} />
@@ -449,7 +449,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
             </div>
           </ScrollArea>
 
-          <div className="p-8 border-t border-white/5 bg-[#0a0a0c] shrink-0 flex gap-4 z-50">
+          <div className="p-8 border-t border-white/5 bg-[#0a0a0c] shrink-0 flex gap-4 z-[100] pb-[calc(1.5rem+env(safe-area-inset-bottom))]">
             <Button variant="ghost" className="h-16 w-16 rounded-[1.8rem] bg-red-500/10 text-red-500 hover:bg-red-500/20 shadow-xl" onClick={() => signOut(auth)}>
               <LogOut className="w-7 h-7" />
             </Button>
@@ -460,5 +460,17 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         </Tabs>
       </DialogContent>
     </Dialog>
+  );
+}
+
+function PremiumBenefit({ label, icon: Icon, active }: any) {
+  return (
+    <div className={cn("flex items-center justify-between p-4 rounded-2xl border transition-all", active ? "bg-primary/10 border-primary/20" : "bg-white/5 border-white/5")}>
+      <div className="flex items-center gap-3">
+        <Icon className={cn("w-4 h-4", active ? "text-accent" : "text-white/20")} />
+        <span className={cn("text-[11px] font-bold uppercase", active ? "text-white" : "text-white/40")}>{label}</span>
+      </div>
+      {active && <CheckCircle2 className="w-4 h-4 text-green-500" />}
+    </div>
   );
 }

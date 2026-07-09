@@ -64,24 +64,33 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
   };
 
   const startAudioRecording = async () => {
+    if (isActuallyRecording.current) return;
     try {
+      chunksRef.current = [];
       streamRef.current = await navigator.mediaDevices.getUserMedia({ audio: true });
       const recorder = new MediaRecorder(streamRef.current, { mimeType: 'audio/webm;codecs=opus' });
       mediaRecorderRef.current = recorder;
-      chunksRef.current = [];
       
-      recorder.ondataavailable = (e) => { if (e.data.size > 0) chunksRef.current.push(e.data); };
+      recorder.ondataavailable = (e) => { 
+        if (e.data && e.data.size > 0) {
+          chunksRef.current.push(e.data);
+        }
+      };
+
       recorder.onstop = () => {
-        const blob = new Blob(chunksRef.current, { type: 'audio/webm;codecs=opus' });
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          if (chunksRef.current.length > 0) {
-            onSendMessage(reader.result as string, 'audio', null);
-          }
-        };
-        reader.readAsDataURL(blob);
+        if (chunksRef.current.length > 0 && isActuallyRecording.current) {
+          const blob = new Blob(chunksRef.current, { type: 'audio/webm;codecs=opus' });
+          const reader = new FileReader();
+          reader.onloadend = () => {
+            if (reader.result) {
+              onSendMessage(reader.result as string, 'audio', null);
+            }
+          };
+          reader.readAsDataURL(blob);
+        }
         setIsRecording(false);
         isActuallyRecording.current = false;
+        chunksRef.current = [];
       };
 
       recorder.start();
@@ -89,14 +98,25 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
       setRecordingDuration(0);
       timerIntervalRef.current = setInterval(() => setRecordingDuration(prev => prev + 1), 1000);
       isActuallyRecording.current = true;
-    } catch (err) { console.error(err); }
+    } catch (err) { 
+      console.error("Recording error:", err);
+      isActuallyRecording.current = false;
+    }
   };
 
   const stopAudioRecording = () => {
     if (mediaRecorderRef.current && isActuallyRecording.current) {
-      mediaRecorderRef.current.stop();
+      if (mediaRecorderRef.current.state !== 'inactive') {
+        mediaRecorderRef.current.stop();
+      }
       if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
-      if (streamRef.current) streamRef.current.getTracks().forEach(t => t.stop());
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(t => t.stop());
+      }
+    } else {
+      // Safety reset
+      setIsRecording(false);
+      isActuallyRecording.current = false;
     }
   };
 
@@ -184,7 +204,7 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
             <span className="text-lg font-black italic flex-1 tabular-nums text-white">
               {Math.floor(recordingDuration / 60).toString().padStart(2, '0')}:{(recordingDuration % 60).toString().padStart(2, '0')}
             </span>
-            <Button variant="ghost" size="icon" className="h-8 w-8 text-white/40" onClick={() => { if(mediaRecorderRef.current) mediaRecorderRef.current.onstop = null; stopAudioRecording(); setIsRecording(false); }}><Trash2 className="w-4 h-4" /></Button>
+            <Button variant="ghost" size="icon" className="h-8 w-8 text-white/40" onClick={() => { if(mediaRecorderRef.current) mediaRecorderRef.current.onstop = null; stopAudioRecording(); setIsRecording(false); isActuallyRecording.current = false; }}><Trash2 className="w-4 h-4" /></Button>
             <Button variant="ghost" size="icon" className="h-10 w-10 text-primary" onPointerDown={stopAudioRecording}><StopCircle className="w-7 h-7 fill-current" /></Button>
           </div>
         )}
@@ -287,7 +307,7 @@ export default function ChatArea() {
   useEffect(() => { scrollToBottom('auto'); }, [currentChatId, messages?.length, scrollToBottom]);
 
   const handleSendMessage = useCallback(async (content_msg: string, type_msg: Message['contentType'] = 'text', meta: any = null) => {
-    if (!content_msg.trim() || !currentChatId || !firebaseUser || !db) return;
+    if (!content_msg || !currentChatId || !firebaseUser || !db) return;
     
     let finalContent = (type_msg === 'text' || type_msg === 'reply') ? encryptSignal(content_msg) : content_msg;
     if (type_msg === 'image' && !content_msg.startsWith('data:')) finalContent = await compressImage(content_msg, 1200, 0.6);
@@ -329,14 +349,16 @@ export default function ChatArea() {
       
       recorder.ondataavailable = (e) => { if (e.data.size > 0) chunksRef.current.push(e.data); };
       recorder.onstop = () => {
-        const blob = new Blob(chunksRef.current, { type: 'video/webm' });
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          if (chunksRef.current.length > 0) {
-            handleSendMessage(reader.result as string, 'video_note', { shape: selectedShape });
-          }
-        };
-        reader.readAsDataURL(blob);
+        if (chunksRef.current.length > 0) {
+          const blob = new Blob(chunksRef.current, { type: 'video/webm' });
+          const reader = new FileReader();
+          reader.onloadend = () => {
+            if (chunksRef.current.length > 0 && reader.result) {
+              handleSendMessage(reader.result as string, 'video_note', { shape: selectedShape });
+            }
+          };
+          reader.readAsDataURL(blob);
+        }
         closeProRecorder();
       };
 
