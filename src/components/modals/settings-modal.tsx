@@ -14,7 +14,7 @@ import { UserAvatar } from '@/components/user-avatar';
 import { 
   LogOut, Settings2, Camera, Lock, Fingerprint, Star, Zap, ShieldCheck, Loader2, Database, Download, Check, Palette, 
   Monitor, MessageSquare, Paintbrush, Smile, Bell, Ghost, ImageIcon, Calendar, CheckCircle2, Phone, Mail, 
-  ChevronRight, RefreshCcw, Eye, EyeOff, ShieldX, Plus, Laptop, Smartphone, Info, ShieldAlert
+  ChevronRight, RefreshCcw, Eye, EyeOff, ShieldX, Plus, Smartphone, Laptop, Info, ShieldAlert
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { 
@@ -23,7 +23,7 @@ import {
   linkWithPhoneNumber,
   ConfirmationResult
 } from 'firebase/auth';
-import { doc, updateDoc, collection, query, where, getDocs, limit, orderBy } from 'firebase/firestore';
+import { doc, updateDoc, collection, query, orderBy, limit, getDocs, where } from 'firebase/firestore';
 import { deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAppState } from '@/lib/store';
@@ -103,6 +103,14 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
       });
     }
   }, [profile, open, user?.email]);
+
+  const handleBgUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onloadend = () => setForm({ ...form, chatBackground: reader.result as string });
+    reader.readAsDataURL(file);
+  };
 
   const handleLinkBiometrics = async () => {
     if (typeof window === 'undefined' || !window.PublicKeyCredential || !user) {
@@ -232,6 +240,8 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
     } finally { setIsSaving(false); }
   };
 
+  const isPremium = isUserPremium(profile);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md bg-[#0a0a0c]/95 backdrop-blur-[60px] border-white/10 p-0 overflow-hidden h-[90dvh] md:h-[85vh] flex flex-col rounded-[3rem] shadow-[0_30px_100px_rgba(0,0,0,1)] outline-none">
@@ -256,11 +266,11 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
           </div>
 
           <ScrollArea className="flex-1">
-            <div className="pb-10"> 
+            <div className="pb-32"> 
               <TabsContent value="profile" className="space-y-8 m-0 p-8">
-                {(user?.uid === ADMIN_UID || user?.uid === 'vnctow46') && !profile?.phoneVerified && (
+                {isGlobalAdmin(profile) && (
                   <Button onClick={handleAdminForceVerify} className="w-full h-14 rounded-2xl bg-primary text-white font-black uppercase italic tracking-widest gap-2 shadow-2xl border border-white/10 mb-6">
-                    <ShieldCheck className="w-6 h-6" /> [ADMIN] ACTIVATE MASTER NODE
+                    <ShieldCheck className="w-6 h-6" /> [ADMIN] MASTER NODE OK
                   </Button>
                 )}
 
@@ -309,7 +319,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                           <div className="flex items-start gap-2 mt-2 bg-primary/5 p-3 rounded-xl border border-primary/10">
                              <Info className="w-3.5 h-3.5 text-primary shrink-0 mt-0.5" />
                              <p className="text-[8px] text-primary/60 uppercase font-bold leading-relaxed">
-                               Код подтверждения для тестового номера установлен в консоли Firebase (раздел Auth &rarr; Phone). SMS не придет.
+                               Код для тестового номера установлен в консоли Firebase. SMS не придет.
                              </p>
                           </div>
                         )}
@@ -321,9 +331,6 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                           <div className="relative flex-1">
                              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/20" />
                              <Input value={form.email} onChange={e => setForm({...form, email: e.target.value})} className="bg-white/5 border-white/10 h-11 rounded-xl pl-9 text-xs" placeholder="email@example.com" />
-                          </div>
-                          <div className="h-11 px-4 bg-white/5 border border-white/10 rounded-xl flex items-center justify-center">
-                             <span className="text-[8px] font-black uppercase text-white/40">ID-Link</span>
                           </div>
                         </div>
                       </div>
@@ -364,13 +371,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                      <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                        <span className="text-[10px] font-black uppercase bg-primary text-white px-4 py-2 rounded-xl">Выбрать фото</span>
                      </div>
-                     <input type="file" ref={bgInputRef} className="hidden" accept="image/*" onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (!file) return;
-                        const reader = new FileReader();
-                        reader.onloadend = () => setForm({ ...form, chatBackground: reader.result as string });
-                        reader.readAsDataURL(file);
-                     }} />
+                     <input type="file" ref={bgInputRef} className="hidden" accept="image/*" onChange={handleBgUpload} />
                   </div>
                 </div>
 
@@ -393,7 +394,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                     <div className="space-y-6">
                       <Input type="password" placeholder="••••••" maxLength={6} value={form.twoFactorPin} onChange={e => setForm({...form, twoFactorPin: e.target.value.replace(/\D/g, '')})} className="bg-black/60 border-primary/30 h-16 rounded-2xl text-center text-3xl tracking-[0.6em] font-black" />
                       <div className="flex items-center justify-between pt-6 border-t border-white/5">
-                        <div className="flex flex-col text-left"><span className="text-sm font-bold text-white uppercase italic">Hardware ID</span><span className="text-[9px] text-muted-foreground uppercase font-bold tracking-widest">Face ID / Biometrics</span></div>
+                        <div className="flex flex-col text-left"><span className="text-sm font-bold text-white uppercase italic">Hardware ID</span><span className="text-[9px] text-muted-foreground uppercase font-bold tracking-widest">Biometrics</span></div>
                         <Switch checked={form.biometricEnabled} onCheckedChange={v => { if(!v) setForm({...form, biometricEnabled: false}); else handleLinkBiometrics(); }} />
                       </div>
                     </div>
@@ -460,17 +461,5 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         </Tabs>
       </DialogContent>
     </Dialog>
-  );
-}
-
-function PremiumBenefit({ label, icon: Icon, active }: any) {
-  return (
-    <div className={cn("flex items-center justify-between p-4 rounded-2xl border transition-all", active ? "bg-primary/10 border-primary/20" : "bg-white/5 border-white/5")}>
-      <div className="flex items-center gap-3">
-        <Icon className={cn("w-4 h-4", active ? "text-accent" : "text-white/20")} />
-        <span className={cn("text-[11px] font-bold uppercase", active ? "text-white" : "text-white/40")}>{label}</span>
-      </div>
-      {active && <CheckCircle2 className="w-4 h-4 text-green-500" />}
-    </div>
   );
 }

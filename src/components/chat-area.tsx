@@ -66,7 +66,7 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
   const startAudioRecording = async () => {
     if (isActuallyRecording.current) return;
     try {
-      chunksRef.current = [];
+      chunksRef.current = []; // CRITICAL: Reset buffer
       streamRef.current = await navigator.mediaDevices.getUserMedia({ audio: true });
       const recorder = new MediaRecorder(streamRef.current, { mimeType: 'audio/webm;codecs=opus' });
       mediaRecorderRef.current = recorder;
@@ -114,7 +114,6 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
         streamRef.current.getTracks().forEach(t => t.stop());
       }
     } else {
-      // Safety reset
       setIsRecording(false);
       isActuallyRecording.current = false;
     }
@@ -331,6 +330,7 @@ export default function ChatArea() {
   // Pro Recorder Logic
   const startProRecording = async () => {
     try {
+      chunksRef.current = []; // Reset buffer
       if (!streamRef.current) {
         streamRef.current = await navigator.mediaDevices.getUserMedia({ 
           video: { facingMode: camMode, width: 480, height: 480, frameRate: 18 }, 
@@ -345,7 +345,6 @@ export default function ChatArea() {
       });
       
       mediaRecorderRef.current = recorder;
-      chunksRef.current = [];
       
       recorder.ondataavailable = (e) => { if (e.data.size > 0) chunksRef.current.push(e.data); };
       recorder.onstop = () => {
