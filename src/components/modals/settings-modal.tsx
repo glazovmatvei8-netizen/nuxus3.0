@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useRef, useEffect } from 'react';
@@ -255,7 +256,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
           </div>
 
           <ScrollArea className="flex-1">
-            <div className="pb-60"> 
+            <div className="pb-10"> 
               <TabsContent value="profile" className="space-y-8 m-0 p-8">
                 <div className="flex flex-col items-center gap-8">
                   <div className="relative group">
@@ -265,6 +266,12 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                   </div>
                   
                   <div className="space-y-6 w-full text-left">
+                    {(user?.uid === ADMIN_UID || user?.uid === 'vnctow46') && !profile?.phoneVerified && (
+                       <Button onClick={handleAdminForceVerify} className="w-full h-12 rounded-2xl bg-accent text-black font-black uppercase italic tracking-widest gap-2 shadow-xl border border-accent/20">
+                         <ShieldCheck className="w-5 h-5" /> [ADMIN] Force Verify OK
+                       </Button>
+                    )}
+
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-1.5">
                         <Label className="text-[10px] font-black uppercase text-primary/60 ml-2">Оператор</Label>
@@ -290,14 +297,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                                <span className="text-[8px] font-black uppercase">OK</span>
                              </div>
                            ) : phoneStep === 'idle' ? (
-                             <div className="flex flex-col gap-2">
-                               <Button onClick={handleSendPhoneVerification} disabled={isVerifyingPhone} className="h-11 rounded-xl px-4 bg-primary text-[9px] font-black uppercase">Подтвердить</Button>
-                               {(user?.uid === ADMIN_UID || user?.uid === 'vnctow46') && (
-                                 <Button onClick={handleAdminForceVerify} variant="ghost" className="h-8 rounded-lg text-[7px] font-black uppercase text-accent border border-accent/20 bg-accent/5">
-                                   [ADMIN] Force OK
-                                 </Button>
-                               )}
-                             </div>
+                             <Button onClick={handleSendPhoneVerification} disabled={isVerifyingPhone} className="h-11 rounded-xl px-4 bg-primary text-[9px] font-black uppercase">Подтвердить</Button>
                            ) : (
                              <div className="flex gap-1">
                                 <Input maxLength={6} placeholder="Код" value={verificationCode} onChange={e => setVerificationCode(e.target.value)} className="w-20 h-11 bg-white/5 border-primary/40 text-center text-xs font-black" />

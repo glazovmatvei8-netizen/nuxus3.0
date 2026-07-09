@@ -407,7 +407,7 @@ export default function ChatArea() {
     } catch (e) { toast({ title: "Ошибка камеры", variant: "destructive" }); }
   };
 
-  const currentShapeObj = VIDEO_SHAPES.find(s => s.id === selectedShape);
+  const currentShapeObj = VIDEO_SHAPES.find(s => s.id === selectedShape) || VIDEO_SHAPES[0];
 
   return (
     <div className="flex-1 flex flex-col h-full bg-transparent relative overflow-hidden z-20 max-w-full">

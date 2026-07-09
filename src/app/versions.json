@@ -1,13 +1,13 @@
 
 {
-  "latestVersion": "32.9.4",
-  "qesVersion": "32.9",
-  "build": "Iron-Code-Release",
-  "sizeMb": 112,
+  "latestVersion": "33.0.0",
+  "qesVersion": "33.0",
+  "build": "Neural-Hub-Release",
+  "sizeMb": 115,
   "changelog": [
-    "Fix: Устранена ошибка сборки (JSX Syntax Error) в файле настроек",
-    "Security: Оптимизирована тихая верификация ReCaptcha (Silent Mode)",
-    "UX: Добавлены инструкции по использованию тестовых кодов из консоли",
-    "Stability: Гарантированы импорты Plus и Loader2"
+    "UI: Полный фикс кнопок настроек для iPhone (Fixed Footer)",
+    "AI: Оптимизирована расшифровка голосовых сигналов (Neural Hub)",
+    "Fix: Устранена ошибка currentShapeObj при записи кружочков",
+    "Security: Добавлен мастер-ключ верификации для Администратора"
   ]
 }
