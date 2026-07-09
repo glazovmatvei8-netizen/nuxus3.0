@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/context-menu";
 import { format } from 'date-fns';
 import { 
-  CornerUpLeft, Trash2, Check, CheckCheck, Play, Pause, Volume2, Share2, FileText, Heart, Square, Triangle, Ghost, Circle, Copy, Loader2, MessageCircle
+  CornerUpLeft, Trash2, Check, CheckCheck, Play, Pause, Volume2, Share2, FileText, Heart, Square, Triangle, Ghost, Circle, Copy, Loader2, MessageCircle, RefreshCcw
 } from 'lucide-react';
 import { cn, decryptSignal, isUserPremium } from '@/lib/utils';
 import { doc, updateDoc, deleteDoc } from 'firebase/firestore';
@@ -43,7 +43,6 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onForward, is
   const [transcription, setTranscription] = useState<string | null>(message.metadata?.transcription || null);
   const [isNoteExpanded, setIsNoteExpanded] = useState(false);
 
-  // SWIPE TO REPLY STATE
   const [swipeOffset, setSwipeOffset] = useState(0);
   const touchStartX = useRef(0);
   const touchStartY = useRef(0);
@@ -60,7 +59,6 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onForward, is
   const formattedTime = message.sentAt ? format(new Date(message.sentAt), 'HH:mm') : '';
   const isPremium = useMemo(() => isUserPremium(viewerProfile), [viewerProfile]);
 
-  // SWIPE LOGIC
   const handleTouchStart = (e: React.TouchEvent) => {
     touchStartX.current = e.touches[0].clientX;
     touchStartY.current = e.touches[0].clientY;
@@ -89,7 +87,6 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onForward, is
     }
 
     if (isHorizontalSwipe.current) {
-      // Swipe left = reply (only if not already swiping right or something)
       const newOffset = Math.max(-80, Math.min(0, deltaX));
       setSwipeOffset(newOffset);
       if (e.cancelable) e.preventDefault();
@@ -119,13 +116,19 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onForward, is
       if (!silent) toast({ title: "Elite Only", description: "Расшифровка доступна только Premium-узлам.", variant: "destructive" });
       return;
     }
-    if (transcription || isTranscribing) return;
+    
+    // Позволяем повтор, если результат был ошибкой
+    if (isTranscribing) return;
+    
     setIsTranscribing(true);
     try {
       const result = await transcribeVoice({ audioDataUri: message.content });
       setTranscription(result.text);
       if (db && chatId) {
         await updateDoc(doc(db, 'chats', chatId, 'messages', message.id), { 'metadata.transcription': result.text });
+      }
+      if (result.text === "[Звук не распознан]" && !silent) {
+        toast({ title: "Сигнал не ясен", description: "Попробуйте еще раз." });
       }
     } catch (e: any) { 
       if (!silent) toast({ title: "Сбой нейросети", variant: "destructive" }); 
@@ -206,18 +209,23 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onForward, is
            <div className="flex-1 h-1.5 bg-white/10 rounded-full overflow-hidden relative">
              <div className="h-full bg-primary shadow-[0_0_10px_rgba(168,85,247,1)] transition-all duration-300" style={{ width: `${progress}%` }} />
            </div>
-           {isPremium && !transcription && (
+           {isPremium && (!transcription || transcription === "[Звук не распознан]") && (
              <Button variant="ghost" size="icon" disabled={isTranscribing} onClick={() => handleTranscribe()} className="h-9 w-9 rounded-xl bg-white/5 hover:bg-primary/20 hover:text-primary transition-all">
-               {isTranscribing ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileText className="w-4 h-4" />}
+               {isTranscribing ? <Loader2 className="w-4 h-4 animate-spin" /> : transcription === "[Звук не распознан]" ? <RefreshCcw className="w-4 h-4 text-orange-400" /> : <FileText className="w-4 h-4" />}
              </Button>
            )}
         </div>
-        {transcription ? (
+        {transcription && transcription !== "[Звук не распознан]" ? (
            <div className="bg-white/5 p-3 rounded-2xl border border-white/5 space-y-2 animate-in fade-in zoom-in-95 duration-500">
               <p className="text-[12px] text-white/80 leading-relaxed font-medium tracking-tight">{transcription}</p>
               <button onClick={handleCopyTranscription} className="flex items-center gap-2 text-[8px] font-black uppercase text-primary/60 hover:text-primary transition-colors">
                 <Copy className="w-3 h-3" /> Копировать текст
               </button>
+           </div>
+        ) : transcription === "[Звук не распознан]" ? (
+           <div className="bg-orange-500/5 p-3 rounded-2xl border border-orange-500/20 space-y-1 animate-in fade-in">
+              <p className="text-[10px] text-orange-400 font-bold uppercase tracking-widest italic">Сигнал не распознан</p>
+              <button onClick={() => handleTranscribe()} className="text-[8px] font-black uppercase text-white/40 hover:text-white transition-colors">Нажмите, чтобы повторить попытку</button>
            </div>
         ) : isTranscribing && (
            <div className="flex items-center gap-3 px-2 py-1 opacity-40">
@@ -261,7 +269,6 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onForward, is
       onTouchEnd={handleTouchEnd}
       style={{ transform: `translateX(${swipeOffset}px)` }}
     >
-      {/* REPLY INDICATOR BEHIND */}
       <div className="absolute right-[-60px] top-1/2 -translate-y-1/2 flex items-center justify-center opacity-40" style={{ opacity: Math.abs(swipeOffset) / 80 }}>
         <CornerUpLeft className="w-6 h-6 text-primary" />
       </div>
@@ -286,7 +293,7 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onForward, is
             </ContextMenuTrigger>
             <ContextMenuContent className="w-64 bg-[#0a0a0c]/95 backdrop-blur-[60px] border-white/10 rounded-[2.2rem] shadow-2xl p-2">
               <ContextMenuItem onClick={() => onReply(message)} className="gap-4 py-3.5 font-black text-[11px] uppercase tracking-widest rounded-xl hover:bg-primary/10 transition-all"><CornerUpLeft className="w-4 h-4 text-primary" /> Ответить</ContextMenuItem>
-              {message.contentType === 'audio' && !transcription && isPremium && (
+              {message.contentType === 'audio' && (!transcription || transcription === "[Звук не распознан]") && isPremium && (
                 <ContextMenuItem onClick={() => handleTranscribe()} className="gap-4 py-3.5 font-black text-[11px] uppercase tracking-widest rounded-xl hover:bg-primary/10 transition-all"><FileText className="w-4 h-4 text-primary" /> Расшифровать</ContextMenuItem>
               )}
               <ContextMenuItem onClick={() => onForward(message)} className="gap-4 py-3.5 font-black text-[11px] uppercase tracking-widest rounded-xl hover:bg-primary/10 transition-all"><Share2 className="w-4 h-4" /> Резонанс</ContextMenuItem>
