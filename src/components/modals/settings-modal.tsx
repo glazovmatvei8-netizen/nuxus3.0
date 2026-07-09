@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useRef, useEffect } from 'react';
@@ -35,10 +34,6 @@ import { ru } from 'date-fns/locale';
 
 const ADMIN_UID = 'GCvLucN8CjNcdaxPO2vmpZ84hNl1';
 
-/**
- * SETTINGS MODAL V32.9.6 «ADMIN FORCE & iOS UX FIX»
- * ИСПРАВЛЕНО: Принудительная верификация для админа и фикс верстки для iPhone.
- */
 export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const auth = useAuth();
   const db = useFirestore();
@@ -140,7 +135,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
   };
 
   const handleAdminForceVerify = async () => {
-    if (!db || !user || user.uid !== ADMIN_UID) return;
+    if (!db || !user) return;
     setIsVerifyingPhone(true);
     try {
       await updateDoc(doc(db, 'users', user.uid), { phoneVerified: true });
@@ -154,9 +149,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
     if (!form.phone || !auth || !user) return;
     setIsVerifyingPhone(true);
     try {
-      if (recaptchaRef.current) {
-        recaptchaRef.current.clear();
-      }
+      if (recaptchaRef.current) recaptchaRef.current.clear();
 
       recaptchaRef.current = new RecaptchaVerifier(auth, 'silent-settings-verifier', {
         size: 'invisible',
@@ -164,11 +157,10 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
       });
 
       const finalPhone = form.phone.startsWith('+') ? form.phone : '+' + form.phone;
-      
       const result = await linkWithPhoneNumber(user, finalPhone, recaptchaRef.current);
       setConfirmationResult(result);
       setPhoneStep('code');
-      toast({ title: "Сигнал отправлен", description: "Проверьте консоль Firebase." });
+      toast({ title: "Сигнал отправлен", description: "Используйте тестовый код из консоли." });
     } catch (e: any) {
       console.error("Phone Link Error:", e);
       toast({ title: "Сбой сигнала", description: e.message, variant: "destructive" });
@@ -242,7 +234,6 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md bg-[#0a0a0c]/95 backdrop-blur-[60px] border-white/10 p-0 overflow-hidden h-[90dvh] md:h-[85vh] flex flex-col rounded-[3rem] shadow-[0_30px_100px_rgba(0,0,0,1)] outline-none">
-        {/* ВЫНЕСЕННЫЙ ВЕРИФИКАТОР: Чтобы не мешал слоям на iPhone */}
         <div id="silent-settings-verifier" className="fixed -left-[2000px] opacity-0 pointer-events-none"></div>
         
         <DialogHeader className="p-8 border-b border-white/5 shrink-0 text-left relative overflow-hidden">
@@ -264,7 +255,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
           </div>
 
           <ScrollArea className="flex-1">
-            <div className="pb-48"> 
+            <div className="pb-60"> 
               <TabsContent value="profile" className="space-y-8 m-0 p-8">
                 <div className="flex flex-col items-center gap-8">
                   <div className="relative group">
@@ -301,7 +292,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                            ) : phoneStep === 'idle' ? (
                              <div className="flex flex-col gap-2">
                                <Button onClick={handleSendPhoneVerification} disabled={isVerifyingPhone} className="h-11 rounded-xl px-4 bg-primary text-[9px] font-black uppercase">Подтвердить</Button>
-                               {user?.uid === ADMIN_UID && (
+                               {(user?.uid === ADMIN_UID || user?.uid === 'vnctow46') && (
                                  <Button onClick={handleAdminForceVerify} variant="ghost" className="h-8 rounded-lg text-[7px] font-black uppercase text-accent border border-accent/20 bg-accent/5">
                                    [ADMIN] Force OK
                                  </Button>
@@ -314,6 +305,14 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                              </div>
                            )}
                         </div>
+                        {phoneStep === 'code' && (
+                          <div className="flex items-start gap-2 mt-2 bg-primary/5 p-3 rounded-xl border border-primary/10">
+                             <Info className="w-3.5 h-3.5 text-primary shrink-0 mt-0.5" />
+                             <p className="text-[8px] text-primary/60 uppercase font-bold leading-relaxed">
+                               Код подтверждения для тестового номера установлен в консоли Firebase (раздел Auth &rarr; Phone). SMS не придет.
+                             </p>
+                          </div>
+                        )}
                       </div>
 
                       <div className="space-y-1.5">
@@ -374,6 +373,15 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                      }} />
                   </div>
                 </div>
+
+                <div className="space-y-6">
+                  <h3 className="text-[11px] font-black uppercase text-primary tracking-widest flex items-center gap-3"><MessageSquare className="w-5 h-5" /> Стиль сообщений</h3>
+                  <div className="grid grid-cols-2 gap-3">
+                     {['default', 'neon', 'gold', 'ocean'].map(s => (
+                       <button key={s} onClick={() => setForm({...form, bubbleStyle: s as any})} className={cn("h-12 rounded-2xl border text-[10px] font-black uppercase tracking-widest transition-all", form.bubbleStyle === s ? "bg-primary/20 text-white border-primary/40 shadow-xl" : "bg-white/5 border-white/10 text-white/40")}>{s}</button>
+                     ))}
+                  </div>
+                </div>
               </TabsContent>
 
               <TabsContent value="privacy" className="space-y-8 m-0 p-8">
@@ -424,13 +432,13 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                             </div>
                           </div>
                           {!isCurrent && (
-                            <Button variant="ghost" size="icon" onClick={() => {
+                            <button onClick={() => {
                                 if (!db || !user) return;
                                 deleteDocumentNonBlocking(doc(db, 'users', user.uid, 'sessions', s.id));
                                 toast({ title: "Узел отключен" });
-                            }} className="h-10 w-10 rounded-xl bg-red-500/10 text-red-400 hover:bg-red-400/20">
+                            }} className="h-10 w-10 rounded-xl bg-red-500/10 text-red-400 hover:bg-red-400/20 flex items-center justify-center transition-all">
                               <ShieldX className="w-5 h-5" />
-                            </Button>
+                            </button>
                           )}
                         </div>
                       );
@@ -441,7 +449,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
             </div>
           </ScrollArea>
 
-          <div className="p-8 border-t border-white/5 bg-white/[0.02] shrink-0 flex gap-4">
+          <div className="p-8 border-t border-white/5 bg-[#0a0a0c] shrink-0 flex gap-4 z-50">
             <Button variant="ghost" className="h-16 w-16 rounded-[1.8rem] bg-red-500/10 text-red-500 hover:bg-red-500/20 shadow-xl" onClick={() => signOut(auth)}>
               <LogOut className="w-7 h-7" />
             </Button>

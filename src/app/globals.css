@@ -1,4 +1,3 @@
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -56,12 +55,19 @@
   }
 }
 
-/* NUCLEAR RECAPTCHA HIDE - Принудительное скрытие капчи и ее слоев */
+/* NUCLEAR RECAPTCHA HIDE - Полная блокировка интерфейса капчи */
 .grecaptcha-badge { 
   visibility: hidden !important; 
   opacity: 0 !important; 
   pointer-events: none !important; 
   display: none !important;
+}
+
+div[style*="z-index: 2000000000"] {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
 }
 
 iframe[src*="recaptcha"] {
