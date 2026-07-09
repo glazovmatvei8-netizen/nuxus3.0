@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useRef, useEffect, useMemo, useCallback, memo } from 'react';
@@ -78,8 +77,9 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
       };
 
       recorder.onstop = () => {
-        if (chunksRef.current.length > 0 && isActuallyRecording.current) {
-          const blob = new Blob(chunksRef.current, { type: 'audio/webm;codecs=opus' });
+        const capturedChunks = [...chunksRef.current];
+        if (capturedChunks.length > 0 && isActuallyRecording.current) {
+          const blob = new Blob(capturedChunks, { type: 'audio/webm;codecs=opus' });
           const reader = new FileReader();
           reader.onloadend = () => {
             if (reader.result) {
@@ -93,7 +93,7 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
         chunksRef.current = [];
       };
 
-      recorder.start();
+      recorder.start(200); // Collect data every 200ms for responsiveness
       setIsRecording(true);
       setRecordingDuration(0);
       timerIntervalRef.current = setInterval(() => setRecordingDuration(prev => prev + 1), 1000);
