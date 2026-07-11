@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useRef, useEffect, useMemo, useCallback, memo } from 'react';
@@ -65,7 +66,8 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
   const startAudioRecording = async () => {
     if (isActuallyRecording.current) return;
     try {
-      chunksRef.current = []; // CRITICAL: Reset buffer
+      // ПРИНУДИТЕЛЬНЫЙ СБРОС БУФЕРА
+      chunksRef.current = []; 
       streamRef.current = await navigator.mediaDevices.getUserMedia({ audio: true });
       const recorder = new MediaRecorder(streamRef.current, { mimeType: 'audio/webm;codecs=opus' });
       mediaRecorderRef.current = recorder;
@@ -78,7 +80,7 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
 
       recorder.onstop = () => {
         const capturedChunks = [...chunksRef.current];
-        if (capturedChunks.length > 0 && isActuallyRecording.current) {
+        if (capturedChunks.length > 0 && isActuallyRecording.current && recordingDuration >= 1) {
           const blob = new Blob(capturedChunks, { type: 'audio/webm;codecs=opus' });
           const reader = new FileReader();
           reader.onloadend = () => {
@@ -93,7 +95,8 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
         chunksRef.current = [];
       };
 
-      recorder.start(200); // Collect data every 200ms for responsiveness
+      // Собираем данные каждые 200мс для максимальной чувствительности
+      recorder.start(200); 
       setIsRecording(true);
       setRecordingDuration(0);
       timerIntervalRef.current = setInterval(() => setRecordingDuration(prev => prev + 1), 1000);
@@ -330,7 +333,7 @@ export default function ChatArea() {
   // Pro Recorder Logic
   const startProRecording = async () => {
     try {
-      chunksRef.current = []; // Reset buffer
+      chunksRef.current = []; 
       if (!streamRef.current) {
         streamRef.current = await navigator.mediaDevices.getUserMedia({ 
           video: { facingMode: camMode, width: 480, height: 480, frameRate: 18 }, 

@@ -23,7 +23,7 @@ import {
   linkWithPhoneNumber,
   ConfirmationResult
 } from 'firebase/auth';
-import { doc, updateDoc, collection, query, orderBy, limit, getDocs, where } from 'firebase/firestore';
+import { doc, updateDoc, collection, query, orderBy, limit, getDocs, where, addDoc } from 'firebase/firestore';
 import { deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAppState } from '@/lib/store';
@@ -32,8 +32,6 @@ import type { User, Session } from '@/lib/types';
 import nuxusVersions from '@/app/versions.json';
 import { format } from 'date-fns';
 import { ru } from 'date-fns/locale';
-
-const ADMIN_UID = 'GCvLucN8CjNcdaxPO2vmpZ84hNl1';
 
 export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const auth = useAuth();
@@ -59,6 +57,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
 
   const [isSaving, setIsSaving] = useState(false);
   const [isLinkingBiometrics, setIsLinkingBiometrics] = useState(false);
+  const [isRequestingArchive, setIsRequestingArchive] = useState(false);
 
   // Verification State
   const [isVerifyingPhone, setIsVerifyingPhone] = useState(false);
@@ -319,7 +318,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                           <div className="flex items-start gap-2 mt-2 bg-primary/5 p-3 rounded-xl border border-primary/10">
                              <Info className="w-3.5 h-3.5 text-primary shrink-0 mt-0.5" />
                              <p className="text-[8px] text-primary/60 uppercase font-bold leading-relaxed">
-                               Код для тестового номера установлен в консоли Firebase. SMS не придет.
+                               Код подтверждения для тестового номера установлен в консоли Firebase (раздел Auth &rarr; Phone). SMS не придет.
                              </p>
                           </div>
                         )}
@@ -376,7 +375,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                 </div>
 
                 <div className="space-y-6">
-                  <h3 className="text-[11px] font-black uppercase text-primary tracking-widest flex items-center gap-3"><MessageSquare className="w-5 h-5" /> Стиль сообщений</h3>
+                  <h3 className="text-[11px] font-black uppercase text-primary tracking-widest flex items-center gap-3"><MessageSquare className="w-5 h-5" /> Контейнеры сигналов</h3>
                   <div className="grid grid-cols-2 gap-3">
                      {['default', 'neon', 'gold', 'ocean'].map(s => (
                        <button key={s} onClick={() => setForm({...form, bubbleStyle: s as any})} className={cn("h-12 rounded-2xl border text-[10px] font-black uppercase tracking-widest transition-all", form.bubbleStyle === s ? "bg-primary/20 text-white border-primary/40 shadow-xl" : "bg-white/5 border-white/10 text-white/40")}>{s}</button>
@@ -446,6 +445,23 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                     })}
                   </div>
                 </div>
+
+                <div className="p-8 bg-white/5 rounded-[3rem] border border-white/10 text-center space-y-8 shadow-2xl mt-8">
+                  <Database className="w-14 h-14 text-accent mx-auto animate-pulse" />
+                  <div className="space-y-3">
+                    <h3 className="text-xl font-black uppercase italic text-white tracking-tighter">Целостность данных</h3>
+                    <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-[0.2em] leading-relaxed">Запросите полный квантовый дамп вашего узла.</p>
+                  </div>
+                  <Button onClick={async () => {
+                    setIsRequestingArchive(true);
+                    try {
+                      await addDoc(collection(db!, 'archiveRequests'), { userId: user?.uid, userName: profile?.name, status: 'pending', createdAt: new Date().toISOString() });
+                      toast({ title: "Сигнал отправлен" });
+                    } finally { setIsRequestingArchive(false); }
+                  }} disabled={isRequestingArchive} className="w-full h-14 bg-white/5 border border-white/10 rounded-2xl font-black uppercase text-[10px] tracking-widest gap-3 hover:bg-white/10 transition-all">
+                    {isRequestingArchive ? <Loader2 className="w-5 h-5 animate-spin" /> : <><Download className="w-5 h-5" /> Сформировать ZIP</>}
+                  </Button>
+               </div>
               </TabsContent>
             </div>
           </ScrollArea>
