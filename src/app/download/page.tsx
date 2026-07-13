@@ -1,3 +1,4 @@
+
 "use client"
 
 import React from 'react';
@@ -8,14 +9,14 @@ import Link from 'next/link';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
 /**
- * NUXUS DOWNLOAD HUB V1.2
- * Исправлено: Удален лишний крестик, починена прокрутка и отзывчивость кнопок.
+ * NUXUS DOWNLOAD HUB V35.4.0
+ * ОБНОВЛЕНО: Добавлена прямая ссылка на установку APK.
  */
 export default function DownloadPage() {
   const handleDownload = (e: React.MouseEvent) => {
     e.preventDefault();
-    // Ждем прямую ссылку от пользователя
-    alert("Инициализация загрузки APK... (Ожидание прямой ссылки от Оператора)");
+    // Прямая ссылка на APK файл
+    window.location.href = "https://disk.yandex.ru/d/FeUr1YAAUMuiLA";
   };
 
   return (
@@ -24,7 +25,7 @@ export default function DownloadPage() {
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(168,85,247,0.1)_0%,transparent_70%)] pointer-events-none" />
       <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-primary/5 blur-[120px] rounded-full pointer-events-none" />
       
-      {/* Top Header - Fixed Layer */}
+      {/* Top Header */}
       <div className="w-full flex justify-between items-center p-8 relative z-[100] shrink-0">
         <Link href="/">
            <button className="h-12 w-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center hover:bg-white/10 active:scale-90 transition-all shadow-xl backdrop-blur-xl">
@@ -33,15 +34,14 @@ export default function DownloadPage() {
         </Link>
         <div className="flex flex-col items-end pointer-events-none">
            <span className="text-[8px] font-black uppercase tracking-[0.4em] text-primary">Nuxus Kernel</span>
-           <span className="text-[10px] font-bold text-white/20 uppercase">v33.2.2</span>
+           <span className="text-[10px] font-bold text-white/20 uppercase">v35.4.0</span>
         </div>
       </div>
 
-      {/* Main Content - Scrollable Area */}
+      {/* Main Content */}
       <ScrollArea className="flex-1 w-full relative z-10">
         <div className="flex flex-col items-center justify-start gap-12 p-8 pt-4 pb-40 w-full max-w-lg mx-auto text-center">
           
-          {/* Header Brand */}
           <div className="space-y-6 animate-in fade-in zoom-in-95 duration-1000 pointer-events-none">
              <div className="flex justify-center">
                 <NuxusLogo size={160} />
@@ -50,14 +50,12 @@ export default function DownloadPage() {
              <p className="text-[10px] font-black uppercase tracking-[0.4em] text-primary/60 italic">Ядро следит за вашей безопасностью</p>
           </div>
 
-          {/* Clean Features Grid */}
           <div className="grid grid-cols-1 gap-4 w-full">
              <FeatureItem icon={ShieldCheck} title="QES Encryption" desc="Сквозное квантовое шифрование сигналов" />
              <FeatureItem icon={Zap} title="Direct Core Link" desc="Прямая связь с узлами без посредников" />
              <FeatureItem icon={Smartphone} title="Native UI" desc="100% плавность и поддержка Face ID" />
           </div>
 
-          {/* Action Area */}
           <div className="w-full space-y-6 pt-4">
             <Button 
               onClick={handleDownload}
@@ -67,10 +65,9 @@ export default function DownloadPage() {
               <Download className="w-6 h-6 mr-3 animate-bounce" /> Скачать APK
             </Button>
             
-            <p className="text-[9px] font-black text-white/30 uppercase tracking-[0.3em] pointer-events-none">Версия клиента: Alpha-Pulse 33.2</p>
+            <p className="text-[9px] font-black text-white/30 uppercase tracking-[0.3em] pointer-events-none">Версия клиента: Pulse 35.4</p>
           </div>
 
-          {/* Legal Footer Info */}
           <div className="pt-10 space-y-4 opacity-30 pointer-events-none">
              <div className="flex items-center justify-center gap-6">
                 <ShieldCheck className="w-4 h-4" />

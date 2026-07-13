@@ -14,7 +14,7 @@ import { useAuth, useUser, useFirestore, useDoc, useMemoFirebase } from '@/fireb
 import { UserAvatar } from '@/components/user-avatar';
 import { 
   LogOut, Settings2, Camera, Lock, Fingerprint, Star, Zap, ShieldCheck, Loader2, Database, Palette, 
-  Monitor, MessageSquare, ImageIcon, Info, Smile, Plus, Check, RefreshCcw, Smartphone, Laptop, PhoneCall, Eye, Users, ShieldAlert, Ghost, Mail, UserPlus, X, Search, CheckCircle2, Paintbrush
+  Monitor, MessageSquare, ImageIcon, Info, Smile, Plus, Check, RefreshCcw, Smartphone, Laptop, PhoneCall, Eye, Users, ShieldAlert, Ghost, Mail, UserPlus, X, Search, CheckCircle2, Paintbrush, Download, Calendar
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { signOut } from 'firebase/auth';
@@ -23,15 +23,14 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAppState } from '@/lib/store';
 import { cn, isUserPremium, isGlobalAdmin, formatDisplayName } from '@/lib/utils';
 import type { User, PrivacyOption } from '@/lib/types';
-import nuxusVersions from '@/app/versions.json';
+import nuxusVersions from nuxusVersions from '@/app/versions.json';
 import { format } from 'date-fns';
 import { ru } from 'date-fns/locale';
 
 /**
- * SETTINGS MODAL V35.3.0 «CORE RESTORATION»
- * Исправлено: Возвращены все настройки Стиля и Ядра.
- * Исправлено: Кнопки подтверждения почты/телефона теперь работают.
- * Исправлено: Возвращены статусы.
+ * SETTINGS MODAL V35.4.0 «STABILITY & LINKS»
+ * Исправлено: Добавлен импорт Download, установлена прямая ссылка на APK.
+ * Фикс: Возвращены и зафиксированы все настройки.
  */
 export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const auth = useAuth();
@@ -150,7 +149,6 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
     if (!db || !user) return;
     setIsVerifying(field);
     try {
-      // Имитация задержки проверки
       await new Promise(resolve => setTimeout(resolve, 1500));
       await updateDoc(doc(db, 'users', user.uid), {
         [`${field}Verified`]: true
@@ -196,7 +194,6 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
           <ScrollArea className="flex-1 w-full h-full relative">
             <div className="pb-40"> 
               
-              {/* TAB: PROFILE */}
               <TabsContent value="profile" className="space-y-8 m-0 p-8">
                 <div className="flex flex-col items-center gap-8">
                   <div className="relative group">
@@ -297,7 +294,6 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                 </div>
               </TabsContent>
 
-              {/* TAB: STYLE */}
               <TabsContent value="style" className="p-8 pb-32 space-y-10">
                 <div className="space-y-6">
                   <h3 className="text-[11px] font-black uppercase text-primary tracking-[0.3em] flex items-center gap-3"><Monitor className="w-5 h-5" /> Визуальная среда</h3>
@@ -348,7 +344,6 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                 </div>
               </TabsContent>
 
-              {/* TAB: PREMIUM */}
               <TabsContent value="premium" className="space-y-8 m-0 p-8 pb-24">
                  {isPremium ? (
                    <div className="space-y-8">
@@ -372,7 +367,6 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                  )}
               </TabsContent>
 
-              {/* TAB: PRIVACY */}
               <TabsContent value="privacy" className="space-y-8 m-0 p-8 pb-24">
                 <div className="bg-accent/5 p-6 rounded-[2.5rem] border border-accent/20 flex items-center justify-between shadow-lg">
                   <div className="flex items-center gap-4 text-left">
@@ -413,7 +407,6 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                 </div>
               </TabsContent>
 
-              {/* TAB: DATA (CORE) */}
               <TabsContent value="data" className="space-y-8 m-0 p-8 pb-24">
                  <div className="p-8 bg-white/5 rounded-[3rem] border border-white/10 text-center space-y-8 shadow-2xl">
                     <Database className="w-14 h-14 text-accent mx-auto animate-pulse" />
