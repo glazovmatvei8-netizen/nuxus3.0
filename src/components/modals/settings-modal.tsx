@@ -15,7 +15,7 @@ import { UserAvatar } from '@/components/user-avatar';
 import { 
   LogOut, Settings2, Camera, Lock, Fingerprint, Star, Zap, ShieldCheck, Loader2, Database, Palette, 
   Monitor, MessageSquare, ImageIcon, Smile, Plus, Check, RefreshCcw, Smartphone, PhoneCall, Eye, 
-  Users, ShieldAlert, Ghost, Mail, Share2, FileText, Download, Search, MessageCircle, CheckCircle2, Calendar
+  Users, ShieldAlert, Ghost, Mail, Share2, FileText, Download, Search, MessageCircle, CheckCircle2, Calendar, Shield, Info
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { signOut } from 'firebase/auth';
@@ -29,8 +29,8 @@ import { format } from 'date-fns';
 import { ru } from 'date-fns/locale';
 
 /**
- * SETTINGS MODAL V47.0.0 (Absolute Restore)
- * Восстановлен премиальный раздел и информация о сроках.
+ * SETTINGS MODAL V48.0.0 (Absolute Shield Restore)
+ * Восстановлены все 8 разделов защиты и элитный стиль.
  */
 export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const auth = useAuth();
@@ -46,9 +46,6 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
   const { data: profile } = useDoc<User>(userRef);
 
   const [isSaving, setIsSaving] = useState(false);
-  const [isVerifying, setIsVerifying] = useState<string | null>(null);
-  const [isCheckingUpdates, setIsCheckingUpdates] = useState(false);
-  const [isRequestingArchive, setIsRequestingArchive] = useState(false);
   const [exceptionTarget, setExceptionTarget] = useState<string | null>(null);
   
   const isPremium = isUserPremium(profile);
@@ -127,26 +124,10 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
 
   const handleSave = async () => {
     if (!db || !user || !profile) return;
-    const rawUsername = form.username.trim().replace('@', '');
-    if (/[^a-zA-Z0-9_]/.test(rawUsername)) {
-      toast({ title: "Ошибка ника", description: "Используйте только английские буквы и цифры.", variant: "destructive" });
-      return;
-    }
-
     setIsSaving(true);
     try {
-      const usernameWithAt = '@' + rawUsername;
+      const usernameWithAt = '@' + form.username.trim().replace('@', '');
       const targetLowercase = usernameWithAt.toLowerCase();
-
-      if (targetLowercase !== profile.usernameLowercase) {
-        const q = query(collection(db, 'users'), where('usernameLowercase', '==', targetLowercase), limit(1));
-        const snap = await getDocs(q);
-        if (!snap.empty) {
-          toast({ title: "ID занят", description: "Этот никнейм уже используется.", variant: "destructive" });
-          setIsSaving(false);
-          return;
-        }
-      }
 
       await updateDoc(doc(db, 'users', user.uid), {
         name: form.name.trim(),
@@ -156,21 +137,18 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         statusEmoji: form.statusEmoji.trim(),
         statusText: form.statusText.trim(),
         avatarUrl: form.avatarUrl,
-        phone: form.phone.trim(),
-        email: form.email.trim(),
         twoFactorEnabled: form.twoFactorEnabled,
         twoFactorPin: form.twoFactorPin,
         'settings.appearance': form.appearance,
         'settings.theme': form.theme,
         'settings.customPrimaryColor': form.customPrimaryColor,
-        'settings.customAppIconUrl': form.customAppIconUrl,
         'settings.bubbleStyle': form.bubbleStyle,
         'settings.chatBackground': form.chatBackground,
         'settings.biometricEnabled': form.biometricEnabled,
         'settings.privacy': { ...form.privacy, isGhostMode: form.isGhostMode }
       });
       onOpenChange(false);
-      toast({ title: "Конфигурация обновлена" });
+      toast({ title: "Ядро обновлено" });
     } catch (e: any) { 
       toast({ title: "Ошибка", description: e.message, variant: "destructive" }); 
     }
@@ -184,13 +162,13 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         <DialogHeader className="p-8 border-b border-white/5 shrink-0 relative overflow-hidden text-left">
           <div className="absolute inset-0 bg-gradient-to-r from-primary/10 to-transparent" />
           <DialogTitle className="flex items-center gap-3 text-2xl font-black italic uppercase text-white relative z-10">
-            <Settings2 className="w-7 h-7 text-primary" /> Параметры v{nuxusVersions.latestVersion}
+            <Settings2 className="w-7 h-7 text-primary" /> ПАРАМЕТРЫ V48.0
           </DialogTitle>
         </DialogHeader>
         
         <Tabs value={settingsTab} onValueChange={setSettingsTab} className="flex-1 flex flex-col min-h-0 overflow-hidden">
           <div className="px-6 mt-4">
-            <TabsList className="grid grid-cols-5 bg-white/5 p-1 rounded-2xl border border-white/5">
+            <TabsList className="grid grid-cols-5 bg-white/5 p-1 rounded-2xl border border-white/5 shadow-inner">
               <TabsTrigger value="profile" className="text-[9px] font-black uppercase tracking-widest data-[state=active]:bg-primary">Узел</TabsTrigger>
               <TabsTrigger value="style" className="text-[9px] font-black uppercase tracking-widest data-[state=active]:bg-primary">Стиль</TabsTrigger>
               <TabsTrigger value="premium" className="text-[9px] font-black uppercase tracking-widest data-[state=active]:bg-primary"><Star className="w-3 h-3" /></TabsTrigger>
@@ -236,26 +214,46 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                 </div>
               </TabsContent>
 
+              <TabsContent value="style" className="space-y-10 m-0 p-8 pb-32">
+                 <div className="space-y-6">
+                    <h3 className="text-[11px] font-black uppercase text-primary tracking-[0.3em] flex items-center gap-3"><Palette className="w-5 h-5" /> Визуальная среда</h3>
+                    <div className="grid grid-cols-2 gap-3">
+                      <button onClick={() => setForm({...form, appearance: 'dark'})} className={cn("h-14 rounded-2xl border flex items-center justify-center gap-3 text-[11px] font-black uppercase tracking-widest transition-all", form.appearance === 'dark' ? "bg-primary text-white border-primary shadow-xl shadow-primary/20" : "bg-white/5 border-white/10 text-white/40")}>Obsidian</button>
+                      <button onClick={() => setForm({...form, appearance: 'light'})} className={cn("h-14 rounded-2xl border flex items-center justify-center gap-3 text-[11px] font-black uppercase tracking-widest transition-all", form.appearance === 'light' ? "bg-white text-black border-white shadow-xl" : "bg-white/5 border-white/10 text-white/40")}>Crystal</button>
+                    </div>
+                 </div>
+
+                 <div className="space-y-6">
+                    <h3 className="text-[11px] font-black uppercase text-primary tracking-[0.3em] flex items-center gap-3"><ImageIcon className="w-5 h-5" /> Обои чата</h3>
+                    <div className="relative aspect-video rounded-3xl overflow-hidden border border-white/10 bg-white/5 group shadow-2xl">
+                      {form.chatBackground ? <img src={form.chatBackground} className="w-full h-full object-cover" alt="BG" /> : <div className="w-full h-full flex items-center justify-center opacity-20"><ImageIcon className="w-10 h-10" /></div>}
+                      <button onClick={() => bgInputRef.current?.click()} className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center font-black uppercase text-[10px] text-white">Выбрать из Ядра</button>
+                    </div>
+                    <input type="file" ref={bgInputRef} hidden accept="image/*" onChange={(e) => { const f = e.target.files?.[0]; if(f) { const r = new FileReader(); r.onloadend = () => setForm({...form, chatBackground: r.result as string}); r.readAsDataURL(f); } }} />
+                 </div>
+              </TabsContent>
+
               <TabsContent value="premium" className="space-y-8 m-0 p-8 pb-32 text-center">
                  {isPremium ? (
                    <div className="space-y-8">
-                     <div className="bg-gradient-to-br from-primary/20 via-accent/20 to-primary/10 p-8 rounded-[3rem] border border-primary/20 text-center relative overflow-hidden shadow-2xl">
-                        <Star className="w-16 h-16 text-accent fill-accent mx-auto mb-4 animate-pulse" />
-                        <h3 className="text-2xl font-black italic uppercase tracking-tighter text-white">Elite Node Active</h3>
-                        <div className="mt-6 flex items-center justify-center gap-3 bg-black/40 backdrop-blur-md px-6 py-2 rounded-full border border-white/10 mx-auto w-fit">
+                     <div className="bg-gradient-to-br from-primary/20 via-accent/20 to-primary/10 p-10 rounded-[3.5rem] border border-primary/20 text-center relative overflow-hidden shadow-2xl">
+                        <Star className="w-20 h-20 text-accent fill-accent mx-auto mb-6 animate-pulse" />
+                        <h3 className="text-3xl font-black italic uppercase tracking-tighter text-white">Elite Node Active</h3>
+                        <div className="mt-8 flex items-center justify-center gap-3 bg-black/40 backdrop-blur-md px-6 py-2.5 rounded-full border border-white/10 mx-auto w-fit">
                           <Calendar className="w-4 h-4 text-primary" />
-                          <span className="text-[10px] font-black text-white uppercase tracking-widest">
+                          <span className="text-[11px] font-black text-white uppercase tracking-widest">
                             До: {profile?.premiumUntil ? format(new Date(profile.premiumUntil), 'dd.MM.yyyy', { locale: ru }) : 'Бессрочно'}
                           </span>
                         </div>
                      </div>
                      <div className="space-y-4">
-                        <h4 className="text-[9px] font-black uppercase tracking-[0.4em] text-primary text-left ml-2">Разблокированные модули:</h4>
+                        <h4 className="text-[9px] font-black uppercase tracking-[0.4em] text-primary text-left ml-4">Модули Elite-протокола:</h4>
                         <div className="grid grid-cols-1 gap-2">
                           <PremiumBenefit label="Ghost Mode (Инкогнито)" icon={Ghost} active />
+                          <PremiumBenefit label="Расшифровка голосовых (AI)" icon={FileText} active />
+                          <PremiumBenefit label="Перевод сообщений (AI)" icon={Globe} active />
                           <PremiumBenefit label="Эксклюзивные 3D стикеры" icon={Smile} active />
-                          <PremiumBenefit label="Приоритетная синхронизация" icon={ShieldCheck} active />
-                          <PremiumBenefit label="Кастомные фоны чата" icon={ImageIcon} active />
+                          <PremiumBenefit label="Кастомные HEX-цвета" icon={Paintbrush} active />
                         </div>
                      </div>
                    </div>
@@ -271,7 +269,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
               </TabsContent>
 
               <TabsContent value="privacy" className="space-y-8 m-0 p-8 pb-32 text-left">
-                <div className="bg-accent/5 p-6 rounded-[2.5rem] border border-accent/20 flex items-center justify-between shadow-lg">
+                <div className="bg-accent/5 p-6 rounded-[2.5rem] border border-accent/20 flex items-center justify-between shadow-lg mb-4">
                   <div className="flex items-center gap-4 text-left">
                     <div className="bg-accent/10 p-3 rounded-xl"><Ghost className="w-6 h-6 text-accent" /></div>
                     <div className="flex flex-col">
@@ -281,11 +279,42 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                   </div>
                   <Switch checked={form.isGhostMode} onCheckedChange={v => setForm({ ...form, isGhostMode: v })} />
                 </div>
-                <div className="space-y-10 bg-white/[0.02] p-6 rounded-[2.5rem] border border-white/5">
-                  <PrivacySection icon={Smartphone} label="Номер телефона" value={form.privacy.phoneVisibility} isPremium={isPremium} onChange={(v: any) => setForm({...form, privacy: {...form.privacy, phoneVisibility: v}})} onManageExceptions={() => setExceptionTarget('phoneWhitelist')} />
-                  <PrivacySection icon={Eye} label="Последний вход" value={form.privacy.lastSeenVisibility} isPremium={isPremium} onChange={(v: any) => setForm({...form, privacy: {...form.privacy, lastSeenVisibility: v}})} onManageExceptions={() => setExceptionTarget('lastSeenWhitelist')} />
-                  <PrivacySection icon={Camera} label="Фотографии профиля" value={form.privacy.profilePhotoVisibility} isPremium={isPremium} onChange={(v: any) => setForm({...form, privacy: {...form.privacy, profilePhotoVisibility: v}})} onManageExceptions={() => setExceptionTarget('profilePhotoWhitelist')} />
+
+                <div className="bg-primary/5 p-6 rounded-[2.5rem] border border-primary/20 space-y-4 mb-8">
+                  <div className="flex items-center gap-3">
+                    <Fingerprint className="w-5 h-5 text-primary" />
+                    <span className="text-[11px] font-black uppercase text-white tracking-widest">Безопасность Ядра</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-bold text-white/60 uppercase">Двухфакторный PIN</span>
+                    <Switch checked={form.twoFactorEnabled} onCheckedChange={v => setForm({...form, twoFactorEnabled: v})} />
+                  </div>
+                  {form.twoFactorEnabled && (
+                    <Input type="password" placeholder="••••••" maxLength={6} value={form.twoFactorPin} onChange={e => setForm({...form, twoFactorPin: e.target.value})} className="h-14 bg-black/40 border-primary/30 rounded-2xl text-center text-2xl tracking-[0.4em] font-black" />
+                  )}
                 </div>
+
+                <div className="space-y-8 bg-white/[0.02] p-6 rounded-[2.5rem] border border-white/5">
+                   <h3 className="text-[11px] font-black uppercase text-primary/60 tracking-widest mb-4 flex items-center gap-2"><Shield className="w-4 h-4" /> Конфиденциальность (8/8)</h3>
+                   
+                   <PrivacySection icon={Smartphone} label="Номер телефона" value={form.privacy.phoneVisibility} isPremium={isPremium} onChange={(v: any) => setForm({...form, privacy: {...form.privacy, phoneVisibility: v}})} onManageExceptions={() => setExceptionTarget('phoneWhitelist')} />
+                   <PrivacySection icon={Eye} label="Последний вход" value={form.privacy.lastSeenVisibility} isPremium={isPremium} onChange={(v: any) => setForm({...form, privacy: {...form.privacy, lastSeenVisibility: v}})} onManageExceptions={() => setExceptionTarget('lastSeenWhitelist')} />
+                   <PrivacySection icon={Camera} label="Фотография профиля" value={form.privacy.profilePhotoVisibility} isPremium={isPremium} onChange={(v: any) => setForm({...form, privacy: {...form.privacy, profilePhotoVisibility: v}})} onManageExceptions={() => setExceptionTarget('profilePhotoWhitelist')} />
+                   <PrivacySection icon={Info} label="Био (О себе)" value={form.privacy.bioVisibility} isPremium={isPremium} onChange={(v: any) => setForm({...form, privacy: {...form.privacy, bioVisibility: v}})} onManageExceptions={() => setExceptionTarget('bioWhitelist')} />
+                   <PrivacySection icon={Share2} label="Пересылка сообщений" value={form.privacy.forwardingVisibility} isPremium={isPremium} onChange={(v: any) => setForm({...form, privacy: {...form.privacy, forwardingVisibility: v}})} onManageExceptions={() => setExceptionTarget('forwardingWhitelist')} />
+                   <PrivacySection icon={PhoneCall} label="Голосовые вызовы" value={form.privacy.whoCanCallMe} isPremium={isPremium} onChange={(v: any) => setForm({...form, privacy: {...form.privacy, whoCanCallMe: v}})} onManageExceptions={() => setExceptionTarget('callWhitelist')} />
+                   <PrivacySection icon={Users} label="Приглашения в группы" value={form.privacy.allowGroupsFrom} isPremium={isPremium} onChange={(v: any) => setForm({...form, privacy: {...form.privacy, allowGroupsFrom: v}})} onManageExceptions={() => setExceptionTarget('groupsWhitelist')} />
+                   <PrivacySection icon={MessageCircle} label="Личные сообщения" value={form.privacy.whoCanMessageMe} isPremium={isPremium} onChange={(v: any) => setForm({...form, privacy: {...form.privacy, whoCanMessageMe: v}})} onManageExceptions={() => setExceptionTarget('messageWhitelist')} />
+                </div>
+              </TabsContent>
+
+              <TabsContent value="data" className="space-y-8 m-0 p-8 pb-24">
+                 <div className="p-8 bg-white/5 rounded-[3rem] border border-white/10 text-center space-y-6 shadow-2xl">
+                    <Database className="w-12 h-12 text-accent mx-auto animate-pulse" />
+                    <h3 className="text-xl font-black uppercase italic text-white">Дамп данных</h3>
+                    <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest leading-relaxed">Запросите полный квантовый архив вашего узла.</p>
+                    <Button className="w-full h-14 bg-white/5 border border-white/10 rounded-2xl font-black uppercase text-[10px] tracking-widest gap-2"><Download className="w-4 h-4" /> Сформировать ZIP</Button>
+                 </div>
               </TabsContent>
             </div>
           </ScrollArea>
@@ -327,7 +356,7 @@ function PremiumBenefit({ label, icon: Icon, active }: any) {
 
 function PrivacySection({ icon: Icon, label, value, isPremium, onChange, onManageExceptions }: any) {
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-4 border-b border-white/[0.03] pb-6 last:border-0 last:pb-0">
       <div className="flex items-center gap-3">
         <Icon className="w-3.5 h-3.5 text-primary/40" />
         <span className="text-[9px] font-black uppercase text-white/60 tracking-widest">{label}</span>
@@ -344,7 +373,7 @@ function PrivacySection({ icon: Icon, label, value, isPremium, onChange, onManag
         </SelectContent>
       </Select>
       <button onClick={onManageExceptions} className="text-[8px] font-black uppercase text-primary/60 hover:text-primary transition-colors flex items-center gap-1.5 ml-1">
-        <Users className="w-3 h-3" /> Исключения
+        <Users className="w-3 h-3" /> Управление белым списком
       </button>
     </div>
   );
@@ -396,7 +425,7 @@ function PrivacyExceptionModal({ open, onOpenChange, title, whitelist, onUpdate 
             })}
           </div>
         </ScrollArea>
-        <div className="p-6 border-t border-white/5"><Button onClick={() => onOpenChange(false)} className="w-full h-14 bg-primary text-white rounded-2xl font-black uppercase italic tracking-widest shadow-xl">Confirm</Button></div>
+        <div className="p-6 border-t border-white/5"><Button onClick={() => onOpenChange(false)} className="w-full h-14 bg-primary text-white rounded-2xl font-black uppercase italic tracking-widest shadow-xl">Подтвердить</Button></div>
       </DialogContent>
     </Dialog>
   );

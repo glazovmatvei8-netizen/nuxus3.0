@@ -8,9 +8,9 @@ import { RefreshCw, Zap, Download, ArrowUpCircle, Loader2 } from 'lucide-react';
 import nuxusVersions from '@/app/versions.json';
 
 /**
- * КВАНТОВЫЙ ОБНОВЛЯТОР ЯДРА V47.0.0 (Absolute Restore)
+ * КВАНТОВЫЙ ОБНОВЛЯТОР ЯДРА V48.0.0 (Restore Shield Protocol)
  */
-const CURRENT_VERSION = "47.0.0"; 
+const CURRENT_VERSION = "48.0.0"; 
 
 export function UpdateNotifier() {
   const [isOpen, setIsOpen] = useState(false);
@@ -110,7 +110,7 @@ export function UpdateNotifier() {
               <span className="text-[10px] font-black bg-white/5 border border-white/10 px-3 py-1 rounded-lg text-primary">Stable</span>
             </div>
             <DialogDescription className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em]">
-              Restore Protocol & UI Integration
+              Shield Restoration & Identity Protocol
             </DialogDescription>
           </DialogHeader>
 

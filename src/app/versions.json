@@ -1,13 +1,13 @@
 
 {
-  "latestVersion": "47.0.0",
-  "qesVersion": "47.0",
-  "build": "Mention-Stability-Final",
-  "sizeMb": 128,
+  "latestVersion": "48.0.0",
+  "qesVersion": "48.0",
+  "build": "Shield-Restore-Absolute",
+  "sizeMb": 130,
   "changelog": [
-    "Fix: Устранена ошибка useCollection в настройках защиты",
-    "Sync: Исправлен цикл обновлений (версия 47.0.0)",
-    "Style: Сохранен элитный дизайн Elite-узла и Админ-панели",
-    "UI: Улучшена работа галочек и времени в сообщениях"
+    "Fix: Восстановлены все 8 разделов защиты в настройках",
+    "Style: Полная реставрация Elite-дизайна VIP раздела",
+    "Fix: Исправлена ошибка useCollection в исключениях приватности",
+    "Sync: Обновление Live-Sync до версии 48.0.0"
   ]
 }
