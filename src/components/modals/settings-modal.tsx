@@ -23,14 +23,14 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAppState } from '@/lib/store';
 import { cn, isUserPremium, isGlobalAdmin, formatDisplayName } from '@/lib/utils';
 import type { User, PrivacyOption } from '@/lib/types';
-import nuxusVersions from nuxusVersions from '@/app/versions.json';
+import nuxusVersions from '@/app/versions.json';
 import { format } from 'date-fns';
 import { ru } from 'date-fns/locale';
 
 /**
- * SETTINGS MODAL V35.4.0 «STABILITY & LINKS»
- * Исправлено: Добавлен импорт Download, установлена прямая ссылка на APK.
- * Фикс: Возвращены и зафиксированы все настройки.
+ * SETTINGS MODAL V35.4.1 «STABILITY FIXED»
+ * Исправлено: Синтаксическая ошибка импорта nuxusVersions.
+ * Сохранено: Все функции подтверждения, стиля, защиты и ядра.
  */
 export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const auth = useAuth();
@@ -441,7 +441,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
       onOpenChange={() => setExceptionTarget(null)} 
       title={exceptionTarget === 'phoneWhitelist' ? 'Видимость номера' : exceptionTarget === 'lastSeenWhitelist' ? 'Время захода' : 'Исключения'}
       whitelist={form.privacy[exceptionTarget as keyof typeof form.privacy] as string[] || []}
-      onUpdate={(newList) => setForm({ ...form, privacy: { ...form.privacy, [exceptionTarget!]: newList } })}
+      onUpdate={(newList: string[]) => setForm({ ...form, privacy: { ...form.privacy, [exceptionTarget!]: newList } })}
     />
     </>
   );
