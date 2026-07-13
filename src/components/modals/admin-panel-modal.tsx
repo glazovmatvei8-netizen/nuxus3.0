@@ -5,7 +5,6 @@ import React, { useState, useMemo } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { 
@@ -13,17 +12,16 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-  DropdownMenuSeparator,
   DropdownMenuSub,
   DropdownMenuSubTrigger,
   DropdownMenuSubContent,
 } from "@/components/ui/dropdown-menu";
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, doc, limit, updateDoc, writeBatch, getDocs, where, orderBy, increment } from 'firebase/firestore';
+import { collection, query, doc, limit, updateDoc, writeBatch, where, orderBy, increment } from 'firebase/firestore';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
   ShieldAlert, Users, Star, Ban, ShieldCheck, 
-  MoreVertical, Send, Loader2, Database, Zap, Wallet, Check, X, Clock, Activity, Target, ShieldX, CalendarDays
+  MoreVertical, Check, Activity
 } from 'lucide-react';
 import type { User, TopUpRequest } from '@/lib/types';
 import { formatDisplayName, isUserPremium, cn, isGlobalAdmin } from '@/lib/utils';
@@ -32,6 +30,9 @@ import { addMonths, addYears } from 'date-fns';
 
 const ROOT_UID = 'GCvLucN8CjNcdaxPO2vmpZ84hNl1';
 
+/**
+ * ADMIN PANEL MODAL V46.0.0 (Absolute Restore)
+ */
 export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const db = useFirestore();
   const { toast } = useToast();
@@ -39,8 +40,6 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
   const [userSearch, setUserSearch] = useState('');
   const [activeTab, setActiveTab] = useState('analytics');
   const [requestFilter, setRequestFilter] = useState<'pending' | 'all'>('pending');
-  const [broadcastText, setBroadcastText] = useState('');
-  const [isBroadcasting, setIsBroadcasting] = useState(false);
 
   const usersQuery = useMemoFirebase(() => (!db ? null : query(collection(db, 'users'), limit(1000))), [db]);
   const { data: users } = useCollection<User>(usersQuery);
@@ -53,7 +52,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
     return query(collection(db, 'topUpRequests'), orderBy('createdAt', 'desc'), limit(200));
   }, [db, requestFilter]);
   
-  const { data: rawTopUpRequests, isLoading: isRequestsLoading } = useCollection<TopUpRequest>(topUpRequestsQuery);
+  const { data: rawTopUpRequests } = useCollection<TopUpRequest>(topUpRequestsQuery);
 
   const stats = useMemo(() => {
     if (!users) return { total: 0, premium: 0, admins: 0, banned: 0 };
@@ -83,7 +82,6 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
         let expiry = new Date();
         if (value === '1m') expiry = addMonths(new Date(), 1);
         else if (value === '3m') expiry = addMonths(new Date(), 3);
-        else if (value === '6m') expiry = addMonths(new Date(), 6);
         else if (value === '1y') expiry = addYears(new Date(), 1);
         update = { isPremium: true, premiumUntil: expiry.toISOString() };
         break;
@@ -94,7 +92,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
 
     try {
       await updateDoc(userRef, update);
-      toast({ title: "Успешно" });
+      toast({ title: "Конфигурация узла обновлена" });
     } catch (e: any) {
       toast({ title: "Ошибка", description: e.message, variant: "destructive" });
     }
@@ -112,13 +110,13 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
       batch.update(reqRef, { status: 'approved' });
       batch.set(txRef, {
         id: txRef.id, userId: req.userId, amount: req.amount,
-        type: 'deposit', status: 'completed', otherPartyName: 'Пополнение 🛡️',
+        type: 'deposit', status: 'completed', otherPartyName: 'Система 🛡️',
         createdAt: new Date().toISOString()
       });
 
       await batch.commit();
-      toast({ title: "Одобрено" });
-    } catch (e) { toast({ title: "Ошибка" }); }
+      toast({ title: "Заявка одобрена" });
+    } catch (e) { toast({ title: "Сбой синхронизации" }); }
   };
 
   return (
@@ -135,39 +133,37 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0 overflow-hidden">
           <div className="px-8 pt-6 shrink-0">
-            <TabsList className="grid w-full bg-white/5 p-1.5 rounded-[1.6rem] grid-cols-4 gap-1.5 border border-white/5">
+            <TabsList className="grid w-full bg-white/5 p-1.5 rounded-[1.6rem] grid-cols-3 gap-1.5 border border-white/5">
               <TabsTrigger value="analytics" className="rounded-xl text-[10px] font-black uppercase">Сводка</TabsTrigger>
               <TabsTrigger value="users" className="rounded-xl text-[10px] font-black uppercase">Узлы</TabsTrigger>
               <TabsTrigger value="requests" className="rounded-xl text-[10px] font-black uppercase">Заявки</TabsTrigger>
-              <TabsTrigger value="broadcast" className="rounded-xl text-[10px] font-black uppercase">Маяк</TabsTrigger>
             </TabsList>
           </div>
 
           <div className="flex-1 min-h-0 relative mt-4 overflow-hidden">
             <TabsContent value="analytics" className="h-full m-0 p-8 space-y-8 overflow-y-auto">
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                <StatCard label="Всего" value={stats.total} icon={Users} color="text-white" />
-                <StatCard label="Premium" value={stats.premium} icon={Star} color="text-accent" />
+                <StatCard label="Всего узлов" value={stats.total} icon={Users} color="text-white" />
+                <StatCard label="Elite-узлы" value={stats.premium} icon={Star} color="text-accent" />
                 <StatCard label="Админы" value={stats.admins} icon={ShieldCheck} color="text-primary" />
                 <StatCard label="Баны" value={stats.banned} icon={Ban} color="text-red-500" />
               </div>
             </TabsContent>
 
             <TabsContent value="users" className="h-full m-0 flex flex-col overflow-hidden">
-              <div className="px-8 pb-4"><Input placeholder="Поиск..." value={userSearch} onChange={e => setUserSearch(e.target.value)} className="bg-white/5 h-12 rounded-xl" /></div>
+              <div className="px-8 pb-4"><Input placeholder="Поиск в базе..." value={userSearch} onChange={e => setUserSearch(e.target.value)} className="bg-white/5 h-12 rounded-xl" /></div>
               <ScrollArea className="flex-1"><div className="px-8 space-y-2 pb-20">{users?.filter(u => u.name?.toLowerCase().includes(userSearch.toLowerCase())).map(u => (
                 <div key={u.id} className="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/5">
                   <div className="flex items-center gap-4">
                     <UserAvatar userId={u.id} className="h-10 w-10" />
-                    <div className="flex flex-col"><span className="font-bold text-white text-sm">{u.name}</span><span className="text-[10px] text-primary/60">{u.username}</span></div>
+                    <div className="flex flex-col text-left"><span className="font-bold text-white text-sm">{u.name}</span><span className="text-[10px] text-primary/60">{u.username}</span></div>
                   </div>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild><Button variant="ghost" size="icon"><MoreVertical className="w-5 h-5" /></Button></DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="bg-[#0a0a0c] border-white/10 rounded-2xl p-2 w-56">
                       <DropdownMenuItem onClick={() => handleAction(u.id, u.isAdmin ? 'remove_admin' : 'make_admin')}>{u.isAdmin ? 'Снять админа' : 'Дать админа'}</DropdownMenuItem>
-                      <DropdownMenuSub><DropdownMenuSubTrigger>Выдать Premium</DropdownMenuSubTrigger><DropdownMenuSubContent className="bg-[#0a0a0c] p-2">
-                        <DropdownMenuItem onClick={() => handleAction(u.id, 'give_premium', '1m')}>1 мес</DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleAction(u.id, 'give_premium', '3m')}>3 мес</DropdownMenuItem>
+                      <DropdownMenuSub><DropdownMenuSubTrigger>Выдать Elite</DropdownMenuSubTrigger><DropdownMenuSubContent className="bg-[#0a0a0c] p-2">
+                        <DropdownMenuItem onClick={() => handleAction(u.id, 'give_premium', '1m')}>1 месяц</DropdownMenuItem>
                         <DropdownMenuItem onClick={() => handleAction(u.id, 'give_premium', '1y')}>1 год</DropdownMenuItem>
                       </DropdownMenuSubContent></DropdownMenuSub>
                       <DropdownMenuItem onClick={() => handleAction(u.id, u.isBanned ? 'unban' : 'ban')} className="text-red-500">{u.isBanned ? 'Разбанить' : 'Забанить'}</DropdownMenuItem>
@@ -190,7 +186,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
                       </div>
                       {req.status === 'pending' ? (
                         <div className="flex gap-2"><Button onClick={() => handleApproveTopUp(req)} className="bg-green-500 h-10 px-4 rounded-xl"><Check className="w-4 h-4" /></Button></div>
-                      ) : <span className="text-[10px] font-black uppercase opacity-40">{req.status}</span>}
+                      ) : <span className="text-[10px] font-black uppercase opacity-40 italic">{req.status}</span>}
                    </div>
                  ))}
                </div></ScrollArea>

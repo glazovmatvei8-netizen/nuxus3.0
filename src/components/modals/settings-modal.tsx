@@ -10,12 +10,12 @@ import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useAuth, useUser, useFirestore, useDoc, useMemoFirebase, useCollection } from '@/firebase';
+import { useAuth, useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
   LogOut, Settings2, Camera, Lock, Fingerprint, Star, Zap, ShieldCheck, Loader2, Database, Palette, 
   Monitor, MessageSquare, ImageIcon, Smile, Plus, Check, RefreshCcw, Smartphone, PhoneCall, Eye, 
-  Users, ShieldAlert, Ghost, Mail, Share2, FileText, Download, Search, MessageCircle
+  Users, ShieldAlert, Ghost, Mail, Share2, FileText, Download, Search, MessageCircle, CheckCircle2, Calendar
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { signOut } from 'firebase/auth';
@@ -29,8 +29,8 @@ import { format } from 'date-fns';
 import { ru } from 'date-fns/locale';
 
 /**
- * SETTINGS MODAL V42.0.0
- * Окончательный фикс импортов и системы сохранения приватности.
+ * SETTINGS MODAL V46.0.0 (Absolute Restore)
+ * Восстановлен премиальный раздел и информация о сроках.
  */
 export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const auth = useAuth();
@@ -177,26 +177,6 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
     finally { setIsSaving(false); }
   };
 
-  const handleVerifyField = async (field: 'email' | 'phone') => {
-    if (!db || !user) return;
-    setIsVerifying(field);
-    try {
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      await updateDoc(doc(db, 'users', user.uid), { [`${field}Verified`]: true });
-      toast({ title: "Верификация успешна" });
-    } catch (e) {
-      toast({ title: "Сбой", variant: "destructive" });
-    } finally { setIsVerifying(null); }
-  };
-
-  const handleBgUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onloadend = () => setForm({ ...form, chatBackground: reader.result as string });
-    reader.readAsDataURL(file);
-  };
-
   return (
     <>
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -219,7 +199,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
             </TabsList>
           </div>
 
-          <ScrollArea className="flex-1 w-full h-full relative">
+          <ScrollArea className="flex-1">
             <div className="pb-40"> 
               <TabsContent value="profile" className="space-y-8 m-0 p-8">
                 <div className="flex flex-col items-center gap-8">
@@ -228,115 +208,72 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                     <button onClick={() => fileInputRef.current?.click()} className="absolute -bottom-2 -right-2 bg-primary p-2.5 rounded-2xl shadow-2xl hover:scale-110 transition-all z-20"><Camera className="w-4 h-4 text-white" /></button>
                     <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={(e) => { const f = e.target.files?.[0]; if(f) { const r = new FileReader(); r.onloadend = () => setForm({...form, avatarUrl: r.result as string}); r.readAsDataURL(f); } }} />
                   </div>
-                  
                   <div className="space-y-6 w-full text-left">
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-1.5">
-                        <Label className="text-[10px] font-black uppercase text-primary/60 ml-2">Имя</Label>
+                        <Label className="text-[10px] font-black uppercase text-primary/60 ml-2">Идентификация</Label>
                         <Input value={form.name} onChange={e => setForm({...form, name: e.target.value})} className="bg-white/5 border-white/10 h-11 rounded-xl" />
                       </div>
                       <div className="space-y-1.5">
-                        <Label className="text-[10px] font-black uppercase text-primary/60 ml-2">ID (English Only)</Label>
+                        <Label className="text-[10px] font-black uppercase text-primary/60 ml-2">Никнейм</Label>
                         <div className="relative">
                           <span className="absolute left-3 top-1/2 -translate-y-1/2 text-primary font-black text-xs">@</span>
                           <Input value={form.username} onChange={e => setForm({...form, username: e.target.value.replace(/[^a-zA-Z0-9_@]/g, '')})} className="bg-white/5 border-white/10 h-11 rounded-xl pl-7" />
                         </div>
                       </div>
                     </div>
-
                     <div className="bg-primary/5 p-4 rounded-2xl border border-primary/10 space-y-4">
                       <div className="flex items-center gap-2 mb-1">
                         <Smile className="w-3.5 h-3.5 text-primary" />
                         <span className="text-[9px] font-black uppercase text-primary tracking-widest">Текущий Статус</span>
                       </div>
                       <div className="flex gap-3">
-                        <div className="w-14">
-                          <Input placeholder="🏠" maxLength={2} value={form.statusEmoji} onChange={e => setForm({...form, statusEmoji: e.target.value})} className="bg-black/40 border-white/10 h-12 rounded-xl text-center text-xl" />
-                        </div>
+                        <div className="w-14"><Input placeholder="🏠" maxLength={2} value={form.statusEmoji} onChange={e => setForm({...form, statusEmoji: e.target.value})} className="bg-black/40 border-white/10 h-12 rounded-xl text-center text-xl" /></div>
                         <Input placeholder="Чем занимаетесь?" value={form.statusText} onChange={e => setForm({...form, statusText: e.target.value})} className="bg-black/40 border-white/10 h-12 rounded-xl text-xs font-bold" />
                       </div>
                     </div>
-
-                    <div className="space-y-4 pt-4 border-t border-white/5">
-                       <h3 className="text-[9px] font-black uppercase tracking-[0.3em] text-primary/60 px-1">Данные связи</h3>
-                       <div className="space-y-4">
-                          <div className="space-y-2">
-                             <Label className="text-[10px] font-black uppercase text-primary/60 ml-2">Номер телефона</Label>
-                             <div className="flex gap-2">
-                                <div className="relative flex-1 group">
-                                   <Smartphone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/20 group-focus-within:text-primary transition-colors" />
-                                   <Input value={form.phone} onChange={e => setForm({...form, phone: e.target.value})} className="bg-white/5 border-white/10 h-11 rounded-xl pl-10" placeholder="+7 (___) ___ __ __" />
-                                </div>
-                                {profile?.phoneVerified ? (
-                                   <div className="bg-green-500/10 text-green-500 h-11 px-4 flex items-center rounded-xl border border-green-500/20"><Check className="w-5 h-5 stroke-[3]" /></div>
-                                ) : (
-                                   <Button onClick={() => handleVerifyField('phone')} disabled={isVerifying === 'phone'} variant="ghost" className="h-11 rounded-xl bg-primary/10 text-primary text-[10px] font-black uppercase tracking-widest px-4 border border-primary/20">{isVerifying === 'phone' ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Подтвердить'}</Button>
-                                )}
-                             </div>
-                          </div>
-                          <div className="space-y-2">
-                             <Label className="text-[10px] font-black uppercase text-primary/60 ml-2">Электронная почта</Label>
-                             <div className="flex gap-2">
-                                <div className="relative flex-1 group">
-                                   <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/20 group-focus-within:text-primary transition-colors" />
-                                   <Input value={form.email} onChange={e => setForm({...form, email: e.target.value})} className="bg-white/5 border-white/10 h-11 rounded-xl pl-10" placeholder="node@nuxus.chat" />
-                                </div>
-                                {profile?.emailVerified ? (
-                                   <div className="bg-green-500/10 text-green-500 h-11 px-4 flex items-center rounded-xl border border-green-500/20"><Check className="w-5 h-5 stroke-[3]" /></div>
-                                ) : (
-                                   <Button onClick={() => handleVerifyField('email')} disabled={isVerifying === 'email'} variant="ghost" className="h-11 rounded-xl bg-primary/10 text-primary text-[10px] font-black uppercase tracking-widest px-4 border border-primary/20">{isVerifying === 'email' ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Подтвердить'}</Button>
-                                )}
-                             </div>
-                          </div>
-                       </div>
-                    </div>
                   </div>
                 </div>
               </TabsContent>
 
-              <TabsContent value="style" className="p-8 pb-32 space-y-10 text-left">
-                <div className="space-y-6">
-                  <h3 className="text-[11px] font-black uppercase text-primary tracking-[0.3em] flex items-center gap-3"><Monitor className="w-5 h-5" /> Визуальная среда</h3>
-                  <div className="grid grid-cols-2 gap-3">
-                    <button onClick={() => setForm({...form, appearance: 'dark'})} className={cn("h-14 rounded-2xl border text-[11px] font-black uppercase transition-all", form.appearance === 'dark' ? "bg-primary text-white border-primary shadow-xl" : "bg-white/5 border-white/10 text-white/40")}>Obsidian</button>
-                    <button onClick={() => setForm({...form, appearance: 'light'})} className={cn("h-14 rounded-2xl border text-[11px] font-black uppercase transition-all", form.appearance === 'light' ? "bg-white text-black border-white shadow-xl" : "bg-white/5 border-white/10 text-white/40")}>Crystal</button>
-                  </div>
-                </div>
-
-                <div className="space-y-6">
-                  <h3 className="text-[11px] font-black uppercase text-primary tracking-[0.3em] flex items-center gap-3"><ImageIcon className="w-5 h-5" /> Обои чата</h3>
-                  <div className="space-y-4">
-                    <div className="relative aspect-video rounded-3xl overflow-hidden border border-white/10 bg-white/5 group">
-                      {form.chatBackground ? (
-                        <img src={form.chatBackground} className="w-full h-full object-cover" alt="Background" />
-                      ) : (
-                        <div className="w-full h-full flex flex-col items-center justify-center gap-3 opacity-20">
-                          <ImageIcon className="w-8 h-8" />
-                          <span className="text-[9px] font-black uppercase">Фон не установлен</span>
+              <TabsContent value="premium" className="space-y-8 m-0 p-8 pb-32 text-center">
+                 {isPremium ? (
+                   <div className="space-y-8">
+                     <div className="bg-gradient-to-br from-primary/20 via-accent/20 to-primary/10 p-8 rounded-[3rem] border border-primary/20 text-center relative overflow-hidden shadow-2xl">
+                        <Star className="w-16 h-16 text-accent fill-accent mx-auto mb-4 animate-pulse" />
+                        <h3 className="text-2xl font-black italic uppercase tracking-tighter text-white">Elite Node Active</h3>
+                        <div className="mt-6 flex items-center justify-center gap-3 bg-black/40 backdrop-blur-md px-6 py-2 rounded-full border border-white/10 mx-auto w-fit">
+                          <Calendar className="w-4 h-4 text-primary" />
+                          <span className="text-[10px] font-black text-white uppercase tracking-widest">
+                            До: {profile?.premiumUntil ? format(new Date(profile.premiumUntil), 'dd.MM.yyyy', { locale: ru }) : 'Бессрочно'}
+                          </span>
                         </div>
-                      )}
-                      <button onClick={() => bgInputRef.current?.click()} className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <span className="text-[10px] font-black uppercase bg-white text-black px-4 py-2 rounded-xl">Сменить фон</span>
-                      </button>
-                    </div>
-                    <input type="file" ref={bgInputRef} className="hidden" accept="image/*" onChange={handleBgUpload} />
-                  </div>
-                </div>
-
-                <div className="space-y-6">
-                  <h3 className="text-[11px] font-black uppercase text-primary tracking-[0.3em] flex items-center gap-3"><MessageSquare className="w-5 h-5" /> Контейнеры сигналов</h3>
-                  <div className="grid grid-cols-2 gap-3">
-                      {['default', 'neon', 'gold', 'ocean'].map(s => (
-                        <button key={s} onClick={() => setForm({...form, bubbleStyle: s})} className={cn("h-12 rounded-2xl border text-[10px] font-black uppercase tracking-widest transition-all", form.bubbleStyle === s ? "bg-white/10 text-white border-white/30" : "bg-white/5 border-white/10 text-white/40")}>{s}</button>
-                      ))}
-                  </div>
-                </div>
+                     </div>
+                     <div className="space-y-4">
+                        <h4 className="text-[9px] font-black uppercase tracking-[0.4em] text-primary text-left ml-2">Разблокированные модули:</h4>
+                        <div className="grid grid-cols-1 gap-2">
+                          <PremiumBenefit label="Ghost Mode (Инкогнито)" icon={Ghost} active />
+                          <PremiumBenefit label="Эксклюзивные 3D стикеры" icon={Smile} active />
+                          <PremiumBenefit label="Приоритетная синхронизация" icon={ShieldCheck} active />
+                          <PremiumBenefit label="Кастомные фоны чата" icon={ImageIcon} active />
+                        </div>
+                     </div>
+                   </div>
+                 ) : (
+                   <div className="space-y-8">
+                     <div className="bg-white/5 p-8 rounded-[3rem] border border-white/5 text-center space-y-6">
+                       <Star className="w-12 h-12 text-white/10 mx-auto" />
+                       <h3 className="text-xl font-black text-white uppercase italic">Nuxus Premium</h3>
+                       <Button className="w-full h-14 bg-white text-black rounded-2xl font-black uppercase italic tracking-widest shadow-xl">Подключить Elite</Button>
+                     </div>
+                   </div>
+                 )}
               </TabsContent>
 
-              <TabsContent value="privacy" className="space-y-8 m-0 p-8 pb-24 text-left">
+              <TabsContent value="privacy" className="space-y-8 m-0 p-8 pb-32 text-left">
                 <div className="bg-accent/5 p-6 rounded-[2.5rem] border border-accent/20 flex items-center justify-between shadow-lg">
                   <div className="flex items-center gap-4 text-left">
-                    <div className="bg-accent/10 p-3 rounded-xl shadow-inner"><Ghost className="w-6 h-6 text-accent" /></div>
+                    <div className="bg-accent/10 p-3 rounded-xl"><Ghost className="w-6 h-6 text-accent" /></div>
                     <div className="flex flex-col">
                       <span className="text-sm font-black text-white uppercase italic">Ghost Mode</span>
                       <span className="text-[8px] text-accent font-black uppercase tracking-widest">Полная невидимость</span>
@@ -344,37 +281,16 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                   </div>
                   <Switch checked={form.isGhostMode} onCheckedChange={v => setForm({ ...form, isGhostMode: v })} />
                 </div>
-
                 <div className="space-y-10 bg-white/[0.02] p-6 rounded-[2.5rem] border border-white/5">
                   <PrivacySection icon={Smartphone} label="Номер телефона" value={form.privacy.phoneVisibility} isPremium={isPremium} onChange={(v: any) => setForm({...form, privacy: {...form.privacy, phoneVisibility: v}})} onManageExceptions={() => setExceptionTarget('phoneWhitelist')} />
                   <PrivacySection icon={Eye} label="Последний вход" value={form.privacy.lastSeenVisibility} isPremium={isPremium} onChange={(v: any) => setForm({...form, privacy: {...form.privacy, lastSeenVisibility: v}})} onManageExceptions={() => setExceptionTarget('lastSeenWhitelist')} />
                   <PrivacySection icon={Camera} label="Фотографии профиля" value={form.privacy.profilePhotoVisibility} isPremium={isPremium} onChange={(v: any) => setForm({...form, privacy: {...form.privacy, profilePhotoVisibility: v}})} onManageExceptions={() => setExceptionTarget('profilePhotoWhitelist')} />
-                  <PrivacySection icon={Share2} label="Пересылка" value={form.privacy.forwardingVisibility} isPremium={isPremium} onChange={(v: any) => setForm({...form, privacy: {...form.privacy, forwardingVisibility: v}})} onManageExceptions={() => setExceptionTarget('forwardingWhitelist')} />
-                  <PrivacySection icon={FileText} label="Био" value={form.privacy.bioVisibility} isPremium={isPremium} onChange={(v: any) => setForm({...form, privacy: {...form.privacy, bioVisibility: v}})} onManageExceptions={() => setExceptionTarget('bioWhitelist')} />
-                  <PrivacySection icon={PhoneCall} label="Звонки" value={form.privacy.whoCanCallMe} isPremium={isPremium} onChange={(v: any) => setForm({...form, privacy: {...form.privacy, whoCanCallMe: v}})} onManageExceptions={() => setExceptionTarget('callWhitelist')} />
-                  <PrivacySection icon={Users} label="Группы" value={form.privacy.allowGroupsFrom} isPremium={isPremium} onChange={(v: any) => setForm({...form, privacy: {...form.privacy, allowGroupsFrom: v}})} onManageExceptions={() => setExceptionTarget('groupsWhitelist')} />
-                  <PrivacySection icon={MessageCircle} label="Сообщения" value={form.privacy.whoCanMessageMe} isPremium={isPremium} onChange={(v: any) => setForm({...form, privacy: {...form.privacy, whoCanMessageMe: v}})} onManageExceptions={() => setExceptionTarget('messageWhitelist')} />
                 </div>
-              </TabsContent>
-
-              <TabsContent value="data" className="space-y-8 m-0 p-8 pb-24 text-left">
-                 <div className="p-8 bg-white/5 rounded-[3rem] border border-white/10 text-center space-y-8 shadow-2xl">
-                    <Database className="w-14 h-14 text-accent mx-auto animate-pulse" />
-                    <h3 className="text-xl font-black uppercase italic text-white tracking-tighter">Целостность данных</h3>
-                    <div className="grid grid-cols-1 gap-3">
-                       <Button onClick={() => { setIsCheckingUpdates(true); setTimeout(() => { setIsCheckingUpdates(false); toast({ title: "У вас последняя версия" }); }, 2000); }} disabled={isCheckingUpdates} className="w-full h-14 bg-primary/10 border border-primary/20 text-primary rounded-2xl font-black uppercase text-[10px] tracking-widest gap-3">
-                          {isCheckingUpdates ? <Loader2 className="w-4 h-4 animate-spin" /> : <><RefreshCcw className="w-5 h-5" /> Проверить патчи</>}
-                       </Button>
-                       <Button onClick={() => { setIsRequestingArchive(true); setTimeout(() => { setIsRequestingArchive(false); toast({ title: "Дамп сформирован" }); }, 1500); }} disabled={isRequestingArchive} className="w-full h-14 bg-white/5 border border-white/10 rounded-2xl font-black uppercase text-[10px] tracking-widest gap-3">
-                          {isRequestingArchive ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Download className="w-5 h-5" /> Сформировать ZIP</>}
-                       </Button>
-                    </div>
-                 </div>
               </TabsContent>
             </div>
           </ScrollArea>
 
-          <div className="p-8 border-t border-white/5 bg-[#0a0a0c] shrink-0 flex gap-4 z-[100] pb-[calc(1.5rem+env(safe-area-inset-bottom))] relative">
+          <div className="p-8 border-t border-white/5 bg-[#0a0a0c] shrink-0 flex gap-4 z-[100] pb-[calc(1.5rem+env(safe-area-inset-bottom))]">
             <Button variant="ghost" className="h-16 w-16 rounded-[1.8rem] bg-red-500/10 text-red-500" onClick={() => signOut(auth)}>
               <LogOut className="w-7 h-7" />
             </Button>
@@ -389,11 +305,23 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
     <PrivacyExceptionModal 
       open={!!exceptionTarget} 
       onOpenChange={() => setExceptionTarget(null)} 
-      title={exceptionTarget || 'Исключения'}
+      title="Исключения"
       whitelist={form.privacy[exceptionTarget as keyof typeof form.privacy] as string[] || []}
       onUpdate={(newList: string[]) => setForm(prev => ({ ...prev, privacy: { ...prev.privacy, [exceptionTarget as string]: newList } }))}
     />
     </>
+  );
+}
+
+function PremiumBenefit({ label, icon: Icon, active }: any) {
+  return (
+    <div className={cn("flex items-center justify-between p-4 rounded-2xl border transition-all", active ? "bg-primary/10 border-primary/20" : "bg-white/5 border-white/5")}>
+      <div className="flex items-center gap-3">
+        <Icon className={cn("w-4 h-4", active ? "text-accent" : "text-white/20")} />
+        <span className={cn("text-[11px] font-bold uppercase", active ? "text-white" : "text-white/40")}>{label}</span>
+      </div>
+      {active && <CheckCircle2 className="w-4 h-4 text-green-500" />}
+    </div>
   );
 }
 
@@ -416,7 +344,7 @@ function PrivacySection({ icon: Icon, label, value, isPremium, onChange, onManag
         </SelectContent>
       </Select>
       <button onClick={onManageExceptions} className="text-[8px] font-black uppercase text-primary/60 hover:text-primary transition-colors flex items-center gap-1.5 ml-1">
-        <Users className="w-3 h-3" /> Настроить исключения
+        <Users className="w-3 h-3" /> Исключения
       </button>
     </div>
   );
@@ -435,33 +363,26 @@ function PrivacyExceptionModal({ open, onOpenChange, title, whitelist, onUpdate 
     return (u.name?.toLowerCase().includes(searchVal) || u.username?.toLowerCase().includes(searchVal)) && u.id !== user?.uid;
   });
 
-  const toggleUser = (uid: string) => {
-    const next = whitelist.includes(uid) ? whitelist.filter((id: string) => id !== uid) : [...whitelist, uid];
-    onUpdate(next);
-  };
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-sm bg-[#0a0a0c]/98 backdrop-blur-[60px] border-white/10 rounded-[2.5rem] p-0 h-[75vh] flex flex-col outline-none shadow-2xl">
         <DialogHeader className="p-8 pb-4 shrink-0 border-b border-white/5 text-left">
           <DialogTitle className="text-xl font-black uppercase italic text-white flex items-center gap-3">
-            <ShieldAlert className="w-6 h-6 text-primary" /> Исключения
+            <ShieldAlert className="w-6 h-6 text-primary" /> {title}
           </DialogTitle>
         </DialogHeader>
-        
         <div className="px-6 py-4 shrink-0">
           <div className="relative group">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/20 group-focus-within:text-primary transition-colors" />
             <Input placeholder="Поиск узлов..." value={search} onChange={e => setSearch(e.target.value)} className="bg-white/5 border-white/10 h-11 rounded-xl pl-9 text-xs" />
           </div>
         </div>
-
         <ScrollArea className="flex-1 px-4">
           <div className="p-2 space-y-2 pb-10">
             {filteredUsers.map(u => {
               const isSelected = whitelist.includes(u.id);
               return (
-                <div key={u.id} onClick={() => toggleUser(u.id)} className={cn("flex items-center justify-between p-3.5 rounded-2xl border transition-all cursor-pointer", isSelected ? "bg-primary/10 border-primary/30" : "bg-white/[0.02] border-white/5 hover:bg-white/5")}>
+                <div key={u.id} onClick={() => onUpdate(isSelected ? whitelist.filter((id: string) => id !== u.id) : [...whitelist, u.id])} className={cn("flex items-center justify-between p-3.5 rounded-2xl border transition-all cursor-pointer", isSelected ? "bg-primary/10 border-primary/30" : "bg-white/[0.02] border-white/5")}>
                   <div className="flex items-center gap-3 min-w-0">
                     <UserAvatar userId={u.id} className="h-10 w-10" manualAvatarUrl={u.avatarUrl} />
                     <div className="flex flex-col text-left min-w-0">
@@ -469,20 +390,13 @@ function PrivacyExceptionModal({ open, onOpenChange, title, whitelist, onUpdate 
                       <span className="text-[9px] text-muted-foreground uppercase font-black">{u.username}</span>
                     </div>
                   </div>
-                  <div className={cn("w-8 h-8 rounded-xl flex items-center justify-center transition-all shadow-lg", isSelected ? "bg-primary text-white" : "bg-white/5 text-white/20")}>
-                    {isSelected ? <Check className="w-4 h-4 stroke-[3]" /> : <Plus className="w-4 h-4" />}
-                  </div>
+                  {isSelected && <Check className="w-4 h-4 text-primary" />}
                 </div>
               );
             })}
           </div>
         </ScrollArea>
-
-        <div className="p-6 border-t border-white/5">
-           <Button onClick={() => onOpenChange(false)} className="w-full h-14 bg-primary text-white rounded-2xl font-black uppercase italic tracking-widest shadow-xl">
-             Подтвердить список
-           </Button>
-        </div>
+        <div className="p-6 border-t border-white/5"><Button onClick={() => onOpenChange(false)} className="w-full h-14 bg-primary text-white rounded-2xl font-black uppercase italic tracking-widest shadow-xl">Confirm</Button></div>
       </DialogContent>
     </Dialog>
   );

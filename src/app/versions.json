@@ -1,13 +1,13 @@
 
 {
-  "latestVersion": "45.0.0",
-  "qesVersion": "45.0",
-  "build": "Signal-Status-Stable",
+  "latestVersion": "46.0.0",
+  "qesVersion": "46.0",
+  "build": "Absolute-Restore-Stable",
   "sizeMb": 128,
   "changelog": [
+    "Style: Восстановлен дизайн Elite-раздела и Админ-панели",
     "UI: Время и статус сообщения в одной строке (Telegram Style)",
-    "UI: Улучшена читаемость длинных сообщений",
-    "Sync: Исправлен рассинхрон версий патчей",
-    "Mentions: Оптимизирован поиск участников @all"
+    "Mentions: Оптимизирован поиск участников @all",
+    "Calls: Групповые вызовы и прямые ссылки"
   ]
 }
