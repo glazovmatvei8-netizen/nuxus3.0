@@ -1,13 +1,13 @@
 
 {
-  "latestVersion": "33.0.0",
-  "qesVersion": "33.0",
-  "build": "Neural-Pulse-Stability",
-  "sizeMb": 115,
+  "latestVersion": "37.3.0",
+  "qesVersion": "37.3",
+  "build": "Identity-Secure-Stability",
+  "sizeMb": 118,
   "changelog": [
-    "Audio: Исправлена ошибка дублирования и спама пустыми голосовыми сообщениями",
-    "UI: Кнопки настроек теперь зафиксированы (Fixed Footer) для iPhone",
-    "Fix: Устранена ошибка currentShapeObj при записи кружочков",
-    "Security: Добавлен мастер-ключ верификации для Администратора в начало списка"
+    "Fix: Устранена ошибка ReferenceError: Search в настройках",
+    "Security: Внедрена жесткая валидация английских юзернеймов",
+    "Identity: Обязательный символ @ для всех идентификаторов узлов",
+    "Privacy: Полный набор из 8 разделов защиты с поддержкой исключений"
   ]
 }

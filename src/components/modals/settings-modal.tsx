@@ -15,7 +15,7 @@ import { UserAvatar } from '@/components/user-avatar';
 import { 
   LogOut, Settings2, Camera, Lock, Fingerprint, Star, Zap, ShieldCheck, Loader2, Database, Palette, 
   Monitor, MessageSquare, ImageIcon, Smile, Plus, Check, RefreshCcw, Smartphone, PhoneCall, Eye, 
-  Users, ShieldAlert, Ghost, Mail, Share2, FileText, Download
+  Users, ShieldAlert, Ghost, Mail, Share2, FileText, Download, Search, MessageCircle
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { signOut } from 'firebase/auth';
@@ -25,10 +25,13 @@ import { useAppState } from '@/lib/store';
 import { cn, isUserPremium, formatDisplayName } from '@/lib/utils';
 import type { User, PrivacyOption } from '@/lib/types';
 import nuxusVersions from '@/app/versions.json';
+import { format } from 'date-fns';
+import { ru } from 'date-fns/locale';
 
 /**
- * SettingsModal V37.2.0
- * ФИКС: Исправлен ReferenceError useCollection, добавлена валидация English Only ников.
+ * SettingsModal V37.3.0
+ * ФИКС: Добавлен импорт Search, исправлена валидация English Only ников.
+ * ВНЕДРЕНО: Полный набор настроек конфиденциальности (8 разделов).
  */
 export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const auth = useAuth();
@@ -358,6 +361,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                   <PrivacySection icon={FileText} label="Био" value={form.privacy.bioVisibility} isPremium={isPremium} onChange={(v: any) => setForm({...form, privacy: {...form.privacy, bioVisibility: v}})} onManageExceptions={() => setExceptionTarget('bioWhitelist')} />
                   <PrivacySection icon={PhoneCall} label="Звонки" value={form.privacy.whoCanCallMe} isPremium={isPremium} onChange={(v: any) => setForm({...form, privacy: {...form.privacy, whoCanCallMe: v}})} onManageExceptions={() => setExceptionTarget('callWhitelist')} />
                   <PrivacySection icon={Users} label="Группы" value={form.privacy.allowGroupsFrom} isPremium={isPremium} onChange={(v: any) => setForm({...form, privacy: {...form.privacy, allowGroupsFrom: v}})} onManageExceptions={() => setExceptionTarget('groupsWhitelist')} />
+                  <PrivacySection icon={MessageCircle} label="Сообщения" value={form.privacy.whoCanMessageMe} isPremium={isPremium} onChange={(v: any) => setForm({...form, privacy: {...form.privacy, whoCanMessageMe: v}})} onManageExceptions={() => setExceptionTarget('messageWhitelist')} />
                 </div>
               </TabsContent>
 
@@ -434,6 +438,7 @@ function PrivacyExceptionModal({ open, onOpenChange, title, whitelist, onUpdate 
   const allUsersQuery = useMemoFirebase(() => (!db ? null : query(collection(db, 'users'), limit(100))), [db]);
   const { data: allUsers } = useCollection<User>(allUsersQuery);
 
+  // Фильтрация пользователей на верхнем уровне
   const filteredUsers = (allUsers || []).filter(u => {
     const searchVal = search.toLowerCase();
     return (u.name?.toLowerCase().includes(searchVal) || u.username?.toLowerCase().includes(searchVal)) && u.id !== user?.uid;
