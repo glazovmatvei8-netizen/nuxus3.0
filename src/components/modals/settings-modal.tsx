@@ -10,7 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useAuth, useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
+import { useAuth, useUser, useFirestore, useDoc, useMemoFirebase, useCollection } from '@/firebase';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
   LogOut, Settings2, Camera, Lock, Fingerprint, Star, Zap, ShieldCheck, Loader2, Database, Palette, 
@@ -28,9 +28,8 @@ import { format } from 'date-fns';
 import { ru } from 'date-fns/locale';
 
 /**
- * SETTINGS MODAL V35.4.1 «STABILITY FIXED»
- * Исправлено: Синтаксическая ошибка импорта nuxusVersions.
- * Сохранено: Все функции подтверждения, стиля, защиты и ядра.
+ * SETTINGS MODAL V35.5.0 «TRUST CIRCLE»
+ * ОБНОВЛЕНО: Список людей для исключений, восстановлены статусы и верификация.
  */
 export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const auth = useAuth();
@@ -172,7 +171,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
   return (
     <>
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md bg-[#0a0a0c]/98 backdrop-blur-[60px] border-white/10 p-0 overflow-hidden h-[90dvh] flex flex-col rounded-[3rem] shadow-2xl outline-none">
+      <DialogContent className="max-w-md bg-[#0a0a0c]/98 backdrop-blur-[50px] border-white/10 p-0 overflow-hidden h-[90dvh] flex flex-col rounded-[3rem] shadow-2xl outline-none">
         <DialogHeader className="p-8 border-b border-white/5 shrink-0 relative overflow-hidden">
           <div className="absolute inset-0 bg-gradient-to-r from-primary/10 to-transparent" />
           <DialogTitle className="flex items-center gap-3 text-2xl font-black italic uppercase text-white relative z-10">
@@ -475,70 +474,94 @@ function PrivacySection({ icon: Icon, label, value, whitelist, isPremium, onChan
   );
 }
 
+/**
+ * PRIVACY EXCEPTION MODAL V35.5.0
+ * Оптимизировано: Показывает список людей сразу, упрощено добавление.
+ */
 function PrivacyExceptionModal({ open, onOpenChange, title, whitelist, onUpdate }: any) {
   const db = useFirestore();
   const [search, setSearch] = useState('');
-  const [results, setResults] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleSearch = async (val: string) => {
-    setSearch(val);
-    if (val.length < 2 || !db) return;
-    setIsLoading(true);
-    try {
-      const q = query(collection(db, 'users'), limit(20));
-      const snap = await getDocs(q);
-      setResults(snap.docs.map(d => ({ id: d.id, ...d.data() } as User)).filter(u => 
-        u.name?.toLowerCase().includes(val.toLowerCase()) || 
-        u.username?.toLowerCase().includes(val.toLowerCase())
-      ));
-    } finally { setIsLoading(false); }
-  };
+  // Получаем список всех узлов для быстрого выбора
+  const allUsersQuery = useMemoFirebase(() => (!db ? null : query(collection(db, 'users'), limit(50))), [db]);
+  const { data: allUsers } = useCollection<User>(allUsersQuery);
+
+  const filteredUsers = (allUsers || []).filter(u => {
+    const searchVal = search.toLowerCase();
+    return (u.name?.toLowerCase().includes(searchVal) || u.username?.toLowerCase().includes(searchVal)) && u.id !== useUser().user?.uid;
+  });
 
   const toggleUser = (uid: string) => {
     const next = whitelist.includes(uid) ? whitelist.filter((id: string) => id !== uid) : [...whitelist, uid];
     onUpdate(next);
+    if (window.navigator && window.navigator.vibrate) window.navigator.vibrate(10);
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-sm bg-[#0a0a0c] border-white/10 rounded-[2.5rem] p-0 h-[70vh] flex flex-col outline-none shadow-2xl">
-        <DialogHeader className="p-6 border-b border-white/5">
-          <DialogTitle className="text-xl font-black uppercase italic text-white flex items-center gap-2">
-            <ShieldAlert className="w-5 h-5 text-primary" /> {title}
+      <DialogContent className="max-w-sm bg-[#0a0a0c]/98 backdrop-blur-[60px] border-white/10 rounded-[2.5rem] p-0 h-[75vh] flex flex-col outline-none shadow-[0_30px_100px_rgba(0,0,0,1)]">
+        <DialogHeader className="p-8 pb-4 shrink-0 border-b border-white/5">
+          <DialogTitle className="text-xl font-black uppercase italic text-white flex items-center gap-3">
+            <ShieldAlert className="w-6 h-6 text-primary" /> {title}
           </DialogTitle>
+          <DialogDescription className="text-[9px] font-bold uppercase tracking-widest text-primary/40 mt-1">Добавьте узлы в список доверия</DialogDescription>
         </DialogHeader>
-        <div className="px-6 py-4">
-          <Input placeholder="Поиск узлов..." value={search} onChange={e => handleSearch(e.target.value)} className="bg-white/5 border-white/10 h-11 rounded-xl" />
+        
+        <div className="px-6 py-4 shrink-0">
+          <div className="relative group">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/20 group-focus-within:text-primary transition-colors" />
+            <Input 
+              placeholder="Поиск по имени или нику..." 
+              value={search} 
+              onChange={e => setSearch(e.target.value)} 
+              className="bg-white/5 border-white/10 h-11 rounded-xl pl-9 text-xs focus:border-primary/40" 
+            />
+          </div>
         </div>
-        <ScrollArea className="flex-1">
-          <div className="p-6 pt-0 space-y-3">
-            {(search.length >= 2 ? results : []).map(u => (
-              <div key={u.id} onClick={() => toggleUser(u.id)} className="flex items-center justify-between p-3 bg-white/5 rounded-2xl hover:bg-primary/10 cursor-pointer border border-transparent hover:border-primary/20 transition-all">
-                <div className="flex items-center gap-3">
-                  <UserAvatar userId={u.id} className="h-10 w-10" />
-                  <div className="flex flex-col">
-                    <span className="font-bold text-sm text-white">{u.name}</span>
-                    <span className="text-[10px] text-muted-foreground uppercase">{u.username}</span>
+
+        <ScrollArea className="flex-1 px-4">
+          <div className="p-2 space-y-2 pb-10">
+            {filteredUsers.length > 0 ? filteredUsers.map(u => {
+              const isSelected = whitelist.includes(u.id);
+              return (
+                <div 
+                  key={u.id} 
+                  onClick={() => toggleUser(u.id)} 
+                  className={cn(
+                    "flex items-center justify-between p-3.5 rounded-2xl border transition-all cursor-pointer group",
+                    isSelected ? "bg-primary/10 border-primary/30" : "bg-white/[0.02] border-white/5 hover:bg-white/5"
+                  )}
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <UserAvatar userId={u.id} className="h-10 w-10 border border-white/10" manualAvatarUrl={u.avatarUrl} />
+                    <div className="flex flex-col text-left min-w-0">
+                      <span className={cn("font-black text-sm truncate uppercase italic tracking-tight", isSelected ? "text-primary" : "text-white")}>{formatDisplayName(u.name)}</span>
+                      <span className="text-[9px] text-muted-foreground uppercase font-black tracking-widest">{u.username}</span>
+                    </div>
+                  </div>
+                  <div className={cn(
+                    "w-8 h-8 rounded-xl flex items-center justify-center transition-all shadow-lg",
+                    isSelected ? "bg-primary text-white scale-110" : "bg-white/5 text-white/20 group-hover:text-white"
+                  )}>
+                    {isSelected ? <Check className="w-4 h-4 stroke-[3]" /> : <Plus className="w-4 h-4" />}
                   </div>
                 </div>
-                <div className={cn("w-6 h-6 rounded-lg flex items-center justify-center transition-all", whitelist.includes(u.id) ? "bg-primary text-white" : "bg-white/5")}>
-                  {whitelist.includes(u.id) ? <Check className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
-                </div>
+              );
+            }) : (
+              <div className="py-20 text-center opacity-20">
+                <Users className="w-12 h-12 mx-auto mb-4" />
+                <p className="text-[10px] font-black uppercase tracking-widest">Узлы не обнаружены</p>
               </div>
-            ))}
-            {whitelist.length > 0 && search.length < 2 && whitelist.map((uid: string) => (
-              <div key={uid} className="flex items-center justify-between p-3 bg-primary/5 rounded-2xl border border-primary/20">
-                 <div className="flex items-center gap-3">
-                   <UserAvatar userId={uid} className="h-10 w-10" />
-                   <span className="text-xs font-bold text-white uppercase italic">Активен</span>
-                 </div>
-                 <Button variant="ghost" size="icon" onClick={() => toggleUser(uid)} className="text-red-500"><X className="w-4 h-4" /></Button>
-              </div>
-            ))}
+            )}
           </div>
         </ScrollArea>
-        <div className="p-6 border-t border-white/5"><Button onClick={() => onOpenChange(false)} className="w-full h-12 bg-primary text-white rounded-xl font-black uppercase italic tracking-widest">Готово</Button></div>
+
+        <div className="p-6 border-t border-white/5 bg-white/[0.02]">
+           <Button onClick={() => onOpenChange(false)} className="w-full h-14 bg-primary text-white rounded-[1.4rem] font-black uppercase italic tracking-widest shadow-xl shadow-primary/20">
+             Подтвердить список
+           </Button>
+        </div>
       </DialogContent>
     </Dialog>
   );
