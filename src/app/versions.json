@@ -1,13 +1,13 @@
 
 {
-  "latestVersion": "46.0.0",
-  "qesVersion": "46.0",
-  "build": "Absolute-Restore-Stable",
+  "latestVersion": "47.0.0",
+  "qesVersion": "47.0",
+  "build": "Mention-Stability-Final",
   "sizeMb": 128,
   "changelog": [
-    "Style: Восстановлен дизайн Elite-раздела и Админ-панели",
-    "UI: Время и статус сообщения в одной строке (Telegram Style)",
-    "Mentions: Оптимизирован поиск участников @all",
-    "Calls: Групповые вызовы и прямые ссылки"
+    "Fix: Устранена ошибка useCollection в настройках защиты",
+    "Sync: Исправлен цикл обновлений (версия 47.0.0)",
+    "Style: Сохранен элитный дизайн Elite-узла и Админ-панели",
+    "UI: Улучшена работа галочек и времени в сообщениях"
   ]
 }
