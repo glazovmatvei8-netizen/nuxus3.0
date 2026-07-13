@@ -173,6 +173,10 @@ export interface UserPrivacy {
   messageWhitelist?: string[];
   whoCanCallMe: PrivacyOption;
   callWhitelist?: string[];
+  profilePhotoVisibility: PrivacyOption;
+  profilePhotoWhitelist?: string[];
+  forwardingVisibility: PrivacyOption;
+  forwardingWhitelist?: string[];
   isGhostMode?: boolean;
 }
 

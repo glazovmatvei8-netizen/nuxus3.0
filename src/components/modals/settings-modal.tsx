@@ -10,15 +10,15 @@ import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useAuth, useUser, useFirestore, useDoc, useMemoFirebase, useCollection } from '@/firebase';
+import { useAuth, useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
   LogOut, Settings2, Camera, Lock, Fingerprint, Star, Zap, ShieldCheck, Loader2, Database, Palette, 
-  Monitor, MessageSquare, ImageIcon, Info, Smile, Plus, Check, RefreshCcw, Smartphone, Laptop, PhoneCall, Eye, Users, ShieldAlert, Ghost, Mail, UserPlus, X, Search, CheckCircle2, Paintbrush, Download, Calendar
+  Monitor, MessageSquare, ImageIcon, Info, Smile, Plus, Check, RefreshCcw, Smartphone, Laptop, PhoneCall, Eye, Users, ShieldAlert, Ghost, Mail, UserPlus, X, Search, CheckCircle2, Paintbrush, Download, Calendar, Share2
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { signOut } from 'firebase/auth';
-import { doc, updateDoc, addDoc, collection, query, limit, getDocs, where } from 'firebase/firestore';
+import { doc, updateDoc, collection, query, limit, getDocs, where } from 'firebase/firestore';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAppState } from '@/lib/store';
 import { cn, isUserPremium, isGlobalAdmin, formatDisplayName } from '@/lib/utils';
@@ -28,8 +28,8 @@ import { format } from 'date-fns';
 import { ru } from 'date-fns/locale';
 
 /**
- * SETTINGS MODAL V35.5.0 «TRUST CIRCLE»
- * ОБНОВЛЕНО: Список людей для исключений, восстановлены статусы и верификация.
+ * SETTINGS MODAL V36.0.0 «DEEP SECURITY»
+ * ОБНОВЛЕНО: Полный набор Telegram-приватности, фикс сохранения исключений.
  */
 export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const auth = useAuth();
@@ -48,7 +48,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
   const [isVerifying, setIsVerifying] = useState<string | null>(null);
   const [isCheckingUpdates, setIsCheckingUpdates] = useState(false);
   const [isRequestingArchive, setIsRequestingArchive] = useState(false);
-  const [exceptionTarget, setExceptionTarget] = useState<keyof User['settings']['privacy'] | null>(null);
+  const [exceptionTarget, setExceptionTarget] = useState<string | null>(null);
   
   const isPremium = isUserPremium(profile);
 
@@ -60,16 +60,18 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
     twoFactorEnabled: false, twoFactorPin: '', biometricEnabled: false, 
     pwaNotificationsEnabled: false, isGhostMode: false,
     privacy: {
-      whoCanMessageMe: 'everybody' as PrivacyOption,
-      messageWhitelist: [] as string[],
-      allowGroupsFrom: 'everybody' as PrivacyOption,
-      groupsWhitelist: [] as string[],
       phoneVisibility: 'contacts' as PrivacyOption,
       phoneWhitelist: [] as string[],
       lastSeenVisibility: 'everybody' as PrivacyOption,
       lastSeenWhitelist: [] as string[],
+      profilePhotoVisibility: 'everybody' as PrivacyOption,
+      profilePhotoWhitelist: [] as string[],
+      forwardingVisibility: 'everybody' as PrivacyOption,
+      forwardingWhitelist: [] as string[],
       whoCanCallMe: 'everybody' as PrivacyOption,
-      callWhitelist: [] as string[]
+      callWhitelist: [] as string[],
+      allowGroupsFrom: 'everybody' as PrivacyOption,
+      groupsWhitelist: [] as string[]
     }
   });
 
@@ -97,16 +99,18 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         pwaNotificationsEnabled: !!profile.settings?.pwaNotificationsEnabled,
         isGhostMode: !!profile.settings?.privacy?.isGhostMode,
         privacy: {
-          whoCanMessageMe: profile.settings?.privacy?.whoCanMessageMe || 'everybody',
-          messageWhitelist: profile.settings?.privacy?.messageWhitelist || [],
-          allowGroupsFrom: profile.settings?.privacy?.allowGroupsFrom || 'everybody',
-          groupsWhitelist: profile.settings?.privacy?.groupsWhitelist || [],
           phoneVisibility: profile.settings?.privacy?.phoneVisibility || 'contacts',
           phoneWhitelist: profile.settings?.privacy?.phoneWhitelist || [],
           lastSeenVisibility: profile.settings?.privacy?.lastSeenVisibility || 'everybody',
           lastSeenWhitelist: profile.settings?.privacy?.lastSeenWhitelist || [],
+          profilePhotoVisibility: profile.settings?.privacy?.profilePhotoVisibility || 'everybody',
+          profilePhotoWhitelist: profile.settings?.privacy?.profilePhotoWhitelist || [],
+          forwardingVisibility: profile.settings?.privacy?.forwardingVisibility || 'everybody',
+          forwardingWhitelist: profile.settings?.privacy?.forwardingWhitelist || [],
           whoCanCallMe: profile.settings?.privacy?.whoCanCallMe || 'everybody',
-          callWhitelist: profile.settings?.privacy?.callWhitelist || []
+          callWhitelist: profile.settings?.privacy?.callWhitelist || [],
+          allowGroupsFrom: profile.settings?.privacy?.allowGroupsFrom || 'everybody',
+          groupsWhitelist: profile.settings?.privacy?.groupsWhitelist || []
         }
       });
     }
@@ -140,7 +144,10 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
       });
       onOpenChange(false);
       toast({ title: "Конфигурация обновлена" });
-    } catch (e: any) { toast({ title: "Ошибка", variant: "destructive" }); }
+    } catch (e: any) { 
+      console.error("Save error:", e);
+      toast({ title: "Ошибка", description: e.message, variant: "destructive" }); 
+    }
     finally { setIsSaving(false); }
   };
 
@@ -172,7 +179,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
     <>
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md bg-[#0a0a0c]/98 backdrop-blur-[50px] border-white/10 p-0 overflow-hidden h-[90dvh] flex flex-col rounded-[3rem] shadow-2xl outline-none">
-        <DialogHeader className="p-8 border-b border-white/5 shrink-0 relative overflow-hidden">
+        <DialogHeader className="p-8 border-b border-white/5 shrink-0 relative overflow-hidden text-left">
           <div className="absolute inset-0 bg-gradient-to-r from-primary/10 to-transparent" />
           <DialogTitle className="flex items-center gap-3 text-2xl font-black italic uppercase text-white relative z-10">
             <Settings2 className="w-7 h-7 text-primary" /> Параметры v{nuxusVersions.latestVersion}
@@ -197,11 +204,11 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                 <div className="flex flex-col items-center gap-8">
                   <div className="relative group">
                     <UserAvatar userId={user?.uid} manualAvatarUrl={form.avatarUrl} className="h-32 w-32 border-4 border-primary/20 shadow-2xl" fallbackName={form.name} />
-                    <button onClick={() => fileInputRef.current?.click()} className="absolute -bottom-2 -right-2 bg-primary p-2.5 rounded-2xl shadow-2xl hover:scale-110 transition-all"><Camera className="w-4 h-4 text-white" /></button>
+                    <button onClick={() => fileInputRef.current?.click()} className="absolute -bottom-2 -right-2 bg-primary p-2.5 rounded-2xl shadow-2xl hover:scale-110 transition-all z-20"><Camera className="w-4 h-4 text-white" /></button>
                     <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={(e) => { const f = e.target.files?.[0]; if(f) { const r = new FileReader(); r.onloadend = () => setForm({...form, avatarUrl: r.result as string}); r.readAsDataURL(f); } }} />
                   </div>
                   
-                  <div className="space-y-6 w-full">
+                  <div className="space-y-6 w-full text-left">
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-1.5">
                         <Label className="text-[10px] font-black uppercase text-primary/60 ml-2">Имя</Label>
@@ -251,7 +258,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                                    <Input value={form.phone} onChange={e => setForm({...form, phone: e.target.value})} className="bg-white/5 border-white/10 h-11 rounded-xl pl-10" placeholder="+7 (___) ___ __ __" />
                                 </div>
                                 {profile?.phoneVerified ? (
-                                   <div className="bg-green-500/10 text-green-500 h-11 px-4 flex items-center rounded-xl border border-green-500/20 shadow-lg"><Check className="w-5 h-5 stroke-[3]" /></div>
+                                   <div className="bg-green-500/10 text-green-500 h-11 px-4 flex items-center rounded-xl border border-green-500/20"><Check className="w-5 h-5 stroke-[3]" /></div>
                                 ) : (
                                    <Button 
                                      onClick={() => handleVerifyField('phone')}
@@ -271,7 +278,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                                    <Input value={form.email} onChange={e => setForm({...form, email: e.target.value})} className="bg-white/5 border-white/10 h-11 rounded-xl pl-10" placeholder="node@nuxus.chat" />
                                 </div>
                                 {profile?.emailVerified ? (
-                                   <div className="bg-green-500/10 text-green-500 h-11 px-4 flex items-center rounded-xl border border-green-500/20 shadow-lg"><Check className="w-5 h-5 stroke-[3]" /></div>
+                                   <div className="bg-green-500/10 text-green-500 h-11 px-4 flex items-center rounded-xl border border-green-500/20"><Check className="w-5 h-5 stroke-[3]" /></div>
                                 ) : (
                                    <Button 
                                      onClick={() => handleVerifyField('email')}
@@ -293,11 +300,11 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                 </div>
               </TabsContent>
 
-              <TabsContent value="style" className="p-8 pb-32 space-y-10">
+              <TabsContent value="style" className="p-8 pb-32 space-y-10 text-left">
                 <div className="space-y-6">
                   <h3 className="text-[11px] font-black uppercase text-primary tracking-[0.3em] flex items-center gap-3"><Monitor className="w-5 h-5" /> Визуальная среда</h3>
                   <div className="grid grid-cols-2 gap-3">
-                    <button onClick={() => setForm({...form, appearance: 'dark'})} className={cn("h-14 rounded-2xl border text-[11px] font-black uppercase transition-all", form.appearance === 'dark' ? "bg-primary text-white border-primary shadow-xl shadow-primary/20" : "bg-white/5 border-white/10 text-white/40")}>Obsidian</button>
+                    <button onClick={() => setForm({...form, appearance: 'dark'})} className={cn("h-14 rounded-2xl border text-[11px] font-black uppercase transition-all", form.appearance === 'dark' ? "bg-primary text-white border-primary shadow-xl" : "bg-white/5 border-white/10 text-white/40")}>Obsidian</button>
                     <button onClick={() => setForm({...form, appearance: 'light'})} className={cn("h-14 rounded-2xl border text-[11px] font-black uppercase transition-all", form.appearance === 'light' ? "bg-white text-black border-white shadow-xl" : "bg-white/5 border-white/10 text-white/40")}>Crystal</button>
                   </div>
                 </div>
@@ -327,8 +334,8 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                   <div className="space-y-6 bg-primary/5 p-6 rounded-[2.5rem] border border-primary/10">
                     <h3 className="text-[11px] font-black uppercase text-primary tracking-[0.3em] flex items-center gap-3"><Paintbrush className="w-5 h-5" /> HEX Резонанс</h3>
                     <div className="flex gap-3">
-                       <div className="h-14 w-14 rounded-2xl border border-white/10 shrink-0 shadow-inner" style={{ backgroundColor: form.customPrimaryColor || 'hsl(var(--primary))' }} />
-                       <Input placeholder="#A855F7" value={form.customPrimaryColor} onChange={e => setForm({...form, customPrimaryColor: e.target.value.toUpperCase()})} className="bg-black/40 border-white/10 h-14 rounded-2xl text-center font-mono text-lg tracking-widest" />
+                       <div className="h-14 w-14 rounded-2xl border border-white/10 shrink-0" style={{ backgroundColor: form.customPrimaryColor || 'hsl(var(--primary))' }} />
+                       <Input placeholder="#A855F7" value={form.customPrimaryColor} onChange={e => setForm({...form, customPrimaryColor: e.target.value.toUpperCase()})} className="bg-black/40 border-white/10 h-14 rounded-2xl text-center font-mono text-lg" />
                     </div>
                   </div>
                 )}
@@ -337,36 +344,13 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                   <h3 className="text-[11px] font-black uppercase text-primary tracking-[0.3em] flex items-center gap-3"><MessageSquare className="w-5 h-5" /> Контейнеры сигналов</h3>
                   <div className="grid grid-cols-2 gap-3">
                       {['default', 'neon', 'gold', 'ocean'].map(s => (
-                        <button key={s} onClick={() => setForm({...form, bubbleStyle: s})} className={cn("h-12 rounded-2xl border text-[10px] font-black uppercase tracking-widest transition-all", form.bubbleStyle === s ? "bg-white/10 text-white border-white/30 shadow-2xl" : "bg-white/5 border-white/10 text-white/40")}>{s}</button>
+                        <button key={s} onClick={() => setForm({...form, bubbleStyle: s})} className={cn("h-12 rounded-2xl border text-[10px] font-black uppercase tracking-widest transition-all", form.bubbleStyle === s ? "bg-white/10 text-white border-white/30" : "bg-white/5 border-white/10 text-white/40")}>{s}</button>
                       ))}
                   </div>
                 </div>
               </TabsContent>
 
-              <TabsContent value="premium" className="space-y-8 m-0 p-8 pb-24">
-                 {isPremium ? (
-                   <div className="space-y-8">
-                     <div className="bg-gradient-to-br from-primary/20 via-accent/20 to-primary/10 p-8 rounded-[3rem] border border-primary/20 text-center relative overflow-hidden shadow-2xl">
-                        <Star className="w-16 h-16 text-accent fill-accent mx-auto mb-4 animate-pulse shadow-accent" />
-                        <h3 className="text-2xl font-black italic uppercase tracking-tighter text-white">Elite Node Active</h3>
-                        <div className="mt-6 flex items-center justify-center gap-3 bg-black/40 backdrop-blur-md px-6 py-2 rounded-full border border-white/10 mx-auto w-fit">
-                          <Calendar className="w-4 h-4 text-primary" />
-                          <span className="text-[10px] font-black text-white uppercase tracking-widest">
-                            До: {profile?.premiumUntil ? format(new Date(profile.premiumUntil), 'dd.MM.yyyy', { locale: ru }) : 'Бессрочно'}
-                          </span>
-                        </div>
-                     </div>
-                   </div>
-                 ) : (
-                   <div className="bg-white/5 p-8 rounded-[3rem] border border-white/5 text-center space-y-6">
-                     <Star className="w-12 h-12 text-white/10 mx-auto" />
-                     <h3 className="text-xl font-black text-white uppercase italic">Nuxus Premium</h3>
-                     <Button className="w-full h-14 bg-white text-black rounded-2xl font-black uppercase italic tracking-widest">Подключить Elite</Button>
-                   </div>
-                 )}
-              </TabsContent>
-
-              <TabsContent value="privacy" className="space-y-8 m-0 p-8 pb-24">
+              <TabsContent value="privacy" className="space-y-8 m-0 p-8 pb-24 text-left">
                 <div className="bg-accent/5 p-6 rounded-[2.5rem] border border-accent/20 flex items-center justify-between shadow-lg">
                   <div className="flex items-center gap-4 text-left">
                     <div className="bg-accent/10 p-3 rounded-xl shadow-inner"><Ghost className="w-6 h-6 text-accent" /></div>
@@ -385,7 +369,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                     whitelist={form.privacy.phoneWhitelist}
                     isPremium={isPremium} 
                     onChange={(v: any) => setForm({...form, privacy: {...form.privacy, phoneVisibility: v}})}
-                    onManageExceptions={() => setExceptionTarget('phoneWhitelist' as any)}
+                    onManageExceptions={() => setExceptionTarget('phoneWhitelist')}
                   />
                   <PrivacySection 
                     icon={Eye} label="Последний вход" 
@@ -393,7 +377,23 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                     whitelist={form.privacy.lastSeenWhitelist}
                     isPremium={isPremium} 
                     onChange={(v: any) => setForm({...form, privacy: {...form.privacy, lastSeenVisibility: v}})}
-                    onManageExceptions={() => setExceptionTarget('lastSeenWhitelist' as any)}
+                    onManageExceptions={() => setExceptionTarget('lastSeenWhitelist')}
+                  />
+                  <PrivacySection 
+                    icon={Camera} label="Фотографии профиля" 
+                    value={form.privacy.profilePhotoVisibility} 
+                    whitelist={form.privacy.profilePhotoWhitelist}
+                    isPremium={isPremium} 
+                    onChange={(v: any) => setForm({...form, privacy: {...form.privacy, profilePhotoVisibility: v}})}
+                    onManageExceptions={() => setExceptionTarget('profilePhotoWhitelist')}
+                  />
+                  <PrivacySection 
+                    icon={Share2} label="Пересылка сообщений" 
+                    value={form.privacy.forwardingVisibility} 
+                    whitelist={form.privacy.forwardingWhitelist}
+                    isPremium={isPremium} 
+                    onChange={(v: any) => setForm({...form, privacy: {...form.privacy, forwardingVisibility: v}})}
+                    onManageExceptions={() => setExceptionTarget('forwardingWhitelist')}
                   />
                   <PrivacySection 
                     icon={PhoneCall} label="Входящие вызовы" 
@@ -401,12 +401,20 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                     whitelist={form.privacy.callWhitelist}
                     isPremium={isPremium} 
                     onChange={(v: any) => setForm({...form, privacy: {...form.privacy, whoCanCallMe: v}})}
-                    onManageExceptions={() => setExceptionTarget('callWhitelist' as any)}
+                    onManageExceptions={() => setExceptionTarget('callWhitelist')}
+                  />
+                  <PrivacySection 
+                    icon={Users} label="Группы и каналы" 
+                    value={form.privacy.allowGroupsFrom} 
+                    whitelist={form.privacy.groupsWhitelist}
+                    isPremium={isPremium} 
+                    onChange={(v: any) => setForm({...form, privacy: {...form.privacy, allowGroupsFrom: v}})}
+                    onManageExceptions={() => setExceptionTarget('groupsWhitelist')}
                   />
                 </div>
               </TabsContent>
 
-              <TabsContent value="data" className="space-y-8 m-0 p-8 pb-24">
+              <TabsContent value="data" className="space-y-8 m-0 p-8 pb-24 text-left">
                  <div className="p-8 bg-white/5 rounded-[3rem] border border-white/10 text-center space-y-8 shadow-2xl">
                     <Database className="w-14 h-14 text-accent mx-auto animate-pulse" />
                     <h3 className="text-xl font-black uppercase italic text-white tracking-tighter">Целостность данных</h3>
@@ -438,9 +446,22 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
     <PrivacyExceptionModal 
       open={!!exceptionTarget} 
       onOpenChange={() => setExceptionTarget(null)} 
-      title={exceptionTarget === 'phoneWhitelist' ? 'Видимость номера' : exceptionTarget === 'lastSeenWhitelist' ? 'Время захода' : 'Исключения'}
+      title={
+        exceptionTarget === 'phoneWhitelist' ? 'Видимость номера' : 
+        exceptionTarget === 'lastSeenWhitelist' ? 'Время захода' : 
+        exceptionTarget === 'profilePhotoWhitelist' ? 'Фото профиля' :
+        exceptionTarget === 'forwardingWhitelist' ? 'Пересылка' :
+        exceptionTarget === 'callWhitelist' ? 'Звонки' :
+        'Группы и каналы'
+      }
       whitelist={form.privacy[exceptionTarget as keyof typeof form.privacy] as string[] || []}
-      onUpdate={(newList: string[]) => setForm({ ...form, privacy: { ...form.privacy, [exceptionTarget!]: newList } })}
+      onUpdate={(newList: string[]) => setForm(prev => ({ 
+        ...prev, 
+        privacy: { 
+          ...prev.privacy, 
+          [exceptionTarget as string]: newList 
+        } 
+      }))}
     />
     </>
   );
@@ -474,16 +495,10 @@ function PrivacySection({ icon: Icon, label, value, whitelist, isPremium, onChan
   );
 }
 
-/**
- * PRIVACY EXCEPTION MODAL V35.5.0
- * Оптимизировано: Показывает список людей сразу, упрощено добавление.
- */
 function PrivacyExceptionModal({ open, onOpenChange, title, whitelist, onUpdate }: any) {
   const db = useFirestore();
   const [search, setSearch] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
 
-  // Получаем список всех узлов для быстрого выбора
   const allUsersQuery = useMemoFirebase(() => (!db ? null : query(collection(db, 'users'), limit(50))), [db]);
   const { data: allUsers } = useCollection<User>(allUsersQuery);
 
@@ -501,7 +516,7 @@ function PrivacyExceptionModal({ open, onOpenChange, title, whitelist, onUpdate 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-sm bg-[#0a0a0c]/98 backdrop-blur-[60px] border-white/10 rounded-[2.5rem] p-0 h-[75vh] flex flex-col outline-none shadow-[0_30px_100px_rgba(0,0,0,1)]">
-        <DialogHeader className="p-8 pb-4 shrink-0 border-b border-white/5">
+        <DialogHeader className="p-8 pb-4 shrink-0 border-b border-white/5 text-left">
           <DialogTitle className="text-xl font-black uppercase italic text-white flex items-center gap-3">
             <ShieldAlert className="w-6 h-6 text-primary" /> {title}
           </DialogTitle>
