@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useRef, useEffect } from 'react';
@@ -22,15 +21,15 @@ import { signOut } from 'firebase/auth';
 import { doc, updateDoc, collection, query, limit } from 'firebase/firestore';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAppState } from '@/lib/store';
-import { cn, isUserPremium, formatDisplayName } from '@/lib/utils';
+import { cn, isUserPremium, isGlobalAdmin, formatDisplayName } from '@/lib/utils';
 import type { User, PrivacyOption } from '@/lib/types';
 import nuxusVersions from '@/app/versions.json';
 import { format } from 'date-fns';
 import { ru } from 'date-fns/locale';
 
 /**
- * SettingsModal V37.3.0
- * ФИКС: Добавлен импорт Search, исправлена валидация English Only ников.
+ * SettingsModal V38.0.0
+ * ФИКС: Исправлены импорты cn, Search, isGlobalAdmin.
  * ВНЕДРЕНО: Полный набор настроек конфиденциальности (8 разделов).
  */
 export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
@@ -438,7 +437,6 @@ function PrivacyExceptionModal({ open, onOpenChange, title, whitelist, onUpdate 
   const allUsersQuery = useMemoFirebase(() => (!db ? null : query(collection(db, 'users'), limit(100))), [db]);
   const { data: allUsers } = useCollection<User>(allUsersQuery);
 
-  // Фильтрация пользователей на верхнем уровне
   const filteredUsers = (allUsers || []).filter(u => {
     const searchVal = search.toLowerCase();
     return (u.name?.toLowerCase().includes(searchVal) || u.username?.toLowerCase().includes(searchVal)) && u.id !== user?.uid;

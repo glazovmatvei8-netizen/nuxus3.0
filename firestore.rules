@@ -7,7 +7,6 @@ service cloud.firestore {
     }
 
     // Главный доступ для Администратора Ядра (UID владельца)
-    // Добавлена проверка по домену почты и конкретным UID
     function isPrimeAdmin() {
       return isSignedIn() && (
         request.auth.uid == 'GCvLucN8CjNcdaxPO2vmpZ84hNl1' ||
@@ -46,12 +45,16 @@ service cloud.firestore {
         allow read: if isSignedIn() && request.auth.uid == userId;
         allow create: if isSignedIn() && request.auth.uid == userId;
       }
+
+      match /sessions/{sessionId} {
+        allow read, write: if isSignedIn() && request.auth.uid == userId;
+      }
     }
 
-    // Заявки на пополнение
+    // Заявки на пополнение (Фикс прав Администратора)
     match /topUpRequests/{requestId} {
       allow create: if isSignedIn();
-      allow read: if isSignedIn() && (isPrimeAdmin() || resource.data.userId == request.auth.uid);
+      allow read, list: if isSignedIn() && (isPrimeAdmin() || resource.data.userId == request.auth.uid);
       allow update, delete: if isPrimeAdmin();
     }
 
@@ -77,17 +80,13 @@ service cloud.firestore {
       allow update, delete: if isSignedIn() && (isPrimeAdmin() || resource.data.userId == request.auth.uid);
     }
 
-    // Звонки (ФИКС: Разрешаем LIST для участников)
+    // Звонки
     match /calls/{callId} {
       allow create: if isSignedIn();
       allow read, list, update, delete: if isSignedIn() && (
         isPrimeAdmin() || 
         request.auth.uid in resource.data.participantIds
       );
-    }
-
-    match /{path=**}/messages/{messageId} {
-      allow read, list: if isSignedIn();
     }
   }
 }

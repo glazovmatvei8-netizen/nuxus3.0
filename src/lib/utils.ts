@@ -1,4 +1,3 @@
-
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
 import { formatDistanceToNow, parseISO, differenceInSeconds, isAfter } from 'date-fns';
@@ -10,12 +9,12 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 /**
- * ОКОНЧАТЕЛЬНЫЙ ФИКС ИМЕН V37.2
+ * ОКОНЧАТЕЛЬНЫЙ ФИКС ИМЕН V38.0
  * Максимально лоялен к именам пользователей. Приоритет: Имя -> Юзернейм -> Узел.
  */
 export function formatDisplayName(name: string | undefined | null, username?: string | null): string {
   const cleanName = name?.trim();
-  if (cleanName && cleanName !== '' && cleanName.toLowerCase() !== 'null' && cleanName !== 'User' && cleanName !== 'Nuxus Agent') {
+  if (cleanName && cleanName !== '' && cleanName.toLowerCase() !== 'null' && cleanName !== 'User') {
     return cleanName;
   }
   const cleanUsername = username?.trim();
