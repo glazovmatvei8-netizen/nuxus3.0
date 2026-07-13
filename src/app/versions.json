@@ -1,13 +1,14 @@
 
 {
-  "latestVersion": "37.3.0",
-  "qesVersion": "37.3",
-  "build": "Identity-Secure-Stability",
-  "sizeMb": 118,
+  "latestVersion": "42.0.0",
+  "qesVersion": "42.0",
+  "build": "Mention-Protocol-Stable",
+  "sizeMb": 122,
   "changelog": [
-    "Fix: Устранена ошибка ReferenceError: Search в настройках",
-    "Security: Внедрена жесткая валидация английских юзернеймов",
-    "Identity: Обязательный символ @ для всех идентификаторов узлов",
-    "Privacy: Полный набор из 8 разделов защиты с поддержкой исключений"
+    "Identity: Исправлено отображение имен в Избранном",
+    "Mentions: Активирован протокол @all (как в VK)",
+    "Mentions: Улучшен поиск участников по именам и ID",
+    "System: Исправлена ошибка синхронизации патчей",
+    "Security: Фикс прав доступа для Администратора"
   ]
 }

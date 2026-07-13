@@ -29,8 +29,8 @@ import { format } from 'date-fns';
 import { ru } from 'date-fns/locale';
 
 /**
- * SETTINGS MODAL V41.0.0
- * Окончательный фикс ReferenceError: cn.
+ * SETTINGS MODAL V42.0.0
+ * Окончательный фикс импортов и системы сохранения приватности.
  */
 export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const auth = useAuth();

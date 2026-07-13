@@ -38,7 +38,7 @@ function ParticipantItem({ userId, onClick }: { userId: string, onClick: () => v
              {userId === 'bot_nuxus_manager' ? 'Nuxus Manager 🛡️' : formatDisplayName(profile?.name, profile?.username)}
            </span>
            {profile?.username && (
-             <span className="text-[9px] text-primary/60 font-black uppercase tracking-widest">{profile.username}</span>
+             <span className="text-[9px] font-black text-primary/60 uppercase tracking-widest">{profile.username}</span>
            )}
          </div>
        </div>

@@ -22,6 +22,7 @@ import type { Message, User as UserType, Chat } from '@/lib/types';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { useToast } from '@/hooks/use-toast';
 import { suggestMessageDraft } from '@/ai/flows/ai-message-drafting-flow';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, isPremium, replyTo, onCancelReply, onOpenProRecorder, messages, participantIds, isGroup }: any) => {
   const { localDrafts, setLocalDrafts } = useAppState();
@@ -70,6 +71,7 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
         // Оптимизированный поиск по участникам
         for (let i = 0; i < limitSize; i++) {
            const uid = participantIds[i];
+           const uRef = doc(db, 'users', uid);
            const uSnap = await getDocs(query(collection(db, 'users'), where('id', '==', uid), limit(1)));
            if (!uSnap.empty) {
              const u = { id: uSnap.docs[0].id, ...uSnap.docs[0].data() } as UserType;

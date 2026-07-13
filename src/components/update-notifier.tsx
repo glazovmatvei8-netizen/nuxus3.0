@@ -9,9 +9,9 @@ import { Progress } from './ui/progress';
 import nuxusVersions from '@/app/versions.json';
 
 /**
- * КВАНТОВЫЙ ОБНОВЛЯТОР ЯДРА V26.5.1 (Live-Pulse)
+ * КВАНТОВЫЙ ОБНОВЛЯТОР ЯДРА V42.0.0 (Live-Pulse)
  */
-const CURRENT_VERSION = "26.5.1"; 
+const CURRENT_VERSION = "41.0.0"; // Специально ниже серверной, чтобы сработал апдейт
 
 export function UpdateNotifier() {
   const [isOpen, setIsOpen] = useState(false);
@@ -122,16 +122,16 @@ export function UpdateNotifier() {
           <DialogHeader className="space-y-2 text-left">
             <div className="flex items-center justify-between">
               <DialogTitle className="text-3xl font-black uppercase italic tracking-tighter text-white">Ядро {serverVersion}</DialogTitle>
-              <span className="text-[10px] font-black bg-white/5 border border-white/10 px-3 py-1 rounded-lg text-primary">140 MB</span>
+              <span className="text-[10px] font-black bg-white/5 border border-white/10 px-3 py-1 rounded-lg text-primary">142 MB</span>
             </div>
             <DialogDescription className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em] ml-1">
-              Оптимизация идентификации и фокуса
+              Mention Protocol & Identity Patch
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 bg-white/[0.03] p-6 rounded-[2.2rem] border border-white/5 shadow-inner">
             <div className="flex items-center gap-3 text-white/40 mb-2">
-              <ListChecks className="w-4 h-4 text-primary" />
+              <RefreshCw className="w-4 h-4 text-primary" />
               <span className="text-[10px] font-black uppercase tracking-widest">Список модификаций:</span>
             </div>
             <ul className="space-y-3">
@@ -150,7 +150,7 @@ export function UpdateNotifier() {
               className="h-16 bg-primary text-white rounded-[1.5rem] font-black uppercase italic tracking-widest shadow-2xl shadow-primary/30 group relative overflow-hidden active:scale-95 transition-all text-sm"
             >
               <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
-              <RefreshCw className="w-5 h-5 mr-3 group-hover:rotate-180 transition-transform duration-700" />
+              <Zap className="w-5 h-5 mr-3" />
               Активировать патч
             </Button>
             <Button variant="ghost" onClick={() => setIsOpen(false)} className="h-12 text-[9px] font-black uppercase tracking-[0.3em] text-muted-foreground/40 hover:text-white transition-all">
