@@ -14,22 +14,20 @@ import { useAuth, useUser, useFirestore, useDoc, useMemoFirebase } from '@/fireb
 import { UserAvatar } from '@/components/user-avatar';
 import { 
   LogOut, Settings2, Camera, Lock, Fingerprint, Star, Zap, ShieldCheck, Loader2, Database, Palette, 
-  Monitor, MessageSquare, ImageIcon, Info, Smile, Plus, Check, RefreshCcw, Smartphone, Laptop, PhoneCall, Eye, Users, ShieldAlert, Ghost, Mail, UserPlus, X, Search, CheckCircle2, Paintbrush, Download, Calendar, Share2
+  Monitor, MessageSquare, ImageIcon, Info, Smile, Plus, Check, RefreshCcw, Smartphone, Laptop, PhoneCall, Eye, Users, ShieldAlert, Ghost, Mail, UserPlus, X, Search, CheckCircle2, Paintbrush, Download, Calendar, Share2, FileText
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { signOut } from 'firebase/auth';
-import { doc, updateDoc, collection, query, limit, getDocs, where } from 'firebase/firestore';
+import { doc, updateDoc, collection, query, limit } from 'firebase/firestore';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAppState } from '@/lib/store';
 import { cn, isUserPremium, isGlobalAdmin, formatDisplayName } from '@/lib/utils';
 import type { User, PrivacyOption } from '@/lib/types';
 import nuxusVersions from '@/app/versions.json';
-import { format } from 'date-fns';
-import { ru } from 'date-fns/locale';
 
 /**
- * SETTINGS MODAL V36.0.0 «DEEP SECURITY»
- * ОБНОВЛЕНО: Полный набор Telegram-приватности, фикс сохранения исключений.
+ * SETTINGS MODAL V36.1.0 «DEEP SECURITY FIX»
+ * ИСПРАВЛЕНО: Ошибка сборки (Hook Violation), сохранение исключений и качество фонов.
  */
 export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const auth = useAuth();
@@ -47,7 +45,6 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
   const [isSaving, setIsSaving] = useState(false);
   const [isVerifying, setIsVerifying] = useState<string | null>(null);
   const [isCheckingUpdates, setIsCheckingUpdates] = useState(false);
-  const [isRequestingArchive, setIsRequestingArchive] = useState(false);
   const [exceptionTarget, setExceptionTarget] = useState<string | null>(null);
   
   const isPremium = isUserPremium(profile);
@@ -60,7 +57,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
     twoFactorEnabled: false, twoFactorPin: '', biometricEnabled: false, 
     pwaNotificationsEnabled: false, isGhostMode: false,
     privacy: {
-      phoneVisibility: 'contacts' as PrivacyOption,
+      phoneVisibility: 'everybody' as PrivacyOption,
       phoneWhitelist: [] as string[],
       lastSeenVisibility: 'everybody' as PrivacyOption,
       lastSeenWhitelist: [] as string[],
@@ -71,7 +68,9 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
       whoCanCallMe: 'everybody' as PrivacyOption,
       callWhitelist: [] as string[],
       allowGroupsFrom: 'everybody' as PrivacyOption,
-      groupsWhitelist: [] as string[]
+      groupsWhitelist: [] as string[],
+      bioVisibility: 'everybody' as PrivacyOption,
+      bioWhitelist: [] as string[]
     }
   });
 
@@ -99,7 +98,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         pwaNotificationsEnabled: !!profile.settings?.pwaNotificationsEnabled,
         isGhostMode: !!profile.settings?.privacy?.isGhostMode,
         privacy: {
-          phoneVisibility: profile.settings?.privacy?.phoneVisibility || 'contacts',
+          phoneVisibility: profile.settings?.privacy?.phoneVisibility || 'everybody',
           phoneWhitelist: profile.settings?.privacy?.phoneWhitelist || [],
           lastSeenVisibility: profile.settings?.privacy?.lastSeenVisibility || 'everybody',
           lastSeenWhitelist: profile.settings?.privacy?.lastSeenWhitelist || [],
@@ -110,7 +109,9 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
           whoCanCallMe: profile.settings?.privacy?.whoCanCallMe || 'everybody',
           callWhitelist: profile.settings?.privacy?.callWhitelist || [],
           allowGroupsFrom: profile.settings?.privacy?.allowGroupsFrom || 'everybody',
-          groupsWhitelist: profile.settings?.privacy?.groupsWhitelist || []
+          groupsWhitelist: profile.settings?.privacy?.groupsWhitelist || [],
+          bioVisibility: profile.settings?.privacy?.bioVisibility || 'everybody',
+          bioWhitelist: profile.settings?.privacy?.bioWhitelist || []
         }
       });
     }
@@ -159,7 +160,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
       await updateDoc(doc(db, 'users', user.uid), {
         [`${field}Verified`]: true
       });
-      toast({ title: "Верификация успешна", description: `Ваш ${field === 'email' ? 'email' : 'номер'} подтвержден в Ядре.` });
+      toast({ title: "Верификация успешна", description: `Ваш ${field === 'email' ? 'email' : 'номер'} подтвержден.` });
     } catch (e) {
       toast({ title: "Сбой связи", variant: "destructive" });
     } finally {
@@ -260,13 +261,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                                 {profile?.phoneVerified ? (
                                    <div className="bg-green-500/10 text-green-500 h-11 px-4 flex items-center rounded-xl border border-green-500/20"><Check className="w-5 h-5 stroke-[3]" /></div>
                                 ) : (
-                                   <Button 
-                                     onClick={() => handleVerifyField('phone')}
-                                     disabled={isVerifying === 'phone'}
-                                     variant="ghost" className="h-11 rounded-xl bg-primary/10 text-primary text-[10px] font-black uppercase tracking-widest px-4 border border-primary/20"
-                                   >
-                                     {isVerifying === 'phone' ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Подтвердить'}
-                                   </Button>
+                                   <Button onClick={() => handleVerifyField('phone')} disabled={isVerifying === 'phone'} variant="ghost" className="h-11 rounded-xl bg-primary/10 text-primary text-[10px] font-black uppercase tracking-widest px-4 border border-primary/20">{isVerifying === 'phone' ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Подтвердить'}</Button>
                                 )}
                              </div>
                           </div>
@@ -280,13 +275,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                                 {profile?.emailVerified ? (
                                    <div className="bg-green-500/10 text-green-500 h-11 px-4 flex items-center rounded-xl border border-green-500/20"><Check className="w-5 h-5 stroke-[3]" /></div>
                                 ) : (
-                                   <Button 
-                                     onClick={() => handleVerifyField('email')}
-                                     disabled={isVerifying === 'email'}
-                                     variant="ghost" className="h-11 rounded-xl bg-primary/10 text-primary text-[10px] font-black uppercase tracking-widest px-4 border border-primary/20"
-                                   >
-                                     {isVerifying === 'email' ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Подтвердить'}
-                                   </Button>
+                                   <Button onClick={() => handleVerifyField('email')} disabled={isVerifying === 'email'} variant="ghost" className="h-11 rounded-xl bg-primary/10 text-primary text-[10px] font-black uppercase tracking-widest px-4 border border-primary/20">{isVerifying === 'email' ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Подтвердить'}</Button>
                                 )}
                              </div>
                           </div>
@@ -396,6 +385,14 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                     onManageExceptions={() => setExceptionTarget('forwardingWhitelist')}
                   />
                   <PrivacySection 
+                    icon={FileText} label="Информация Био" 
+                    value={form.privacy.bioVisibility} 
+                    whitelist={form.privacy.bioWhitelist}
+                    isPremium={isPremium} 
+                    onChange={(v: any) => setForm({...form, privacy: {...form.privacy, bioVisibility: v}})}
+                    onManageExceptions={() => setExceptionTarget('bioWhitelist')}
+                  />
+                  <PrivacySection 
                     icon={PhoneCall} label="Входящие вызовы" 
                     value={form.privacy.whoCanCallMe} 
                     whitelist={form.privacy.callWhitelist}
@@ -452,6 +449,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         exceptionTarget === 'profilePhotoWhitelist' ? 'Фото профиля' :
         exceptionTarget === 'forwardingWhitelist' ? 'Пересылка' :
         exceptionTarget === 'callWhitelist' ? 'Звонки' :
+        exceptionTarget === 'bioWhitelist' ? 'Информация Био' :
         'Группы и каналы'
       }
       whitelist={form.privacy[exceptionTarget as keyof typeof form.privacy] as string[] || []}
@@ -486,7 +484,7 @@ function PrivacySection({ icon: Icon, label, value, whitelist, isPremium, onChan
         </SelectContent>
       </Select>
       <div className="flex items-center justify-between px-2">
-         <span className="text-[8px] font-black uppercase text-white/20">Доступно для: {whitelist.length}</span>
+         <span className="text-[8px] font-black uppercase text-white/20">Доступно для: {whitelist?.length || 0}</span>
          <button onClick={onManageExceptions} className="text-[8px] font-black uppercase text-primary hover:text-primary/60 transition-colors flex items-center gap-1.5">
            <UserPlus className="w-3 h-3" /> Настроить исключения
          </button>
@@ -497,6 +495,7 @@ function PrivacySection({ icon: Icon, label, value, whitelist, isPremium, onChan
 
 function PrivacyExceptionModal({ open, onOpenChange, title, whitelist, onUpdate }: any) {
   const db = useFirestore();
+  const { user } = useUser();
   const [search, setSearch] = useState('');
 
   const allUsersQuery = useMemoFirebase(() => (!db ? null : query(collection(db, 'users'), limit(50))), [db]);
@@ -504,13 +503,13 @@ function PrivacyExceptionModal({ open, onOpenChange, title, whitelist, onUpdate 
 
   const filteredUsers = (allUsers || []).filter(u => {
     const searchVal = search.toLowerCase();
-    return (u.name?.toLowerCase().includes(searchVal) || u.username?.toLowerCase().includes(searchVal)) && u.id !== useUser().user?.uid;
+    return (u.name?.toLowerCase().includes(searchVal) || u.username?.toLowerCase().includes(searchVal)) && u.id !== user?.uid;
   });
 
   const toggleUser = (uid: string) => {
     const next = whitelist.includes(uid) ? whitelist.filter((id: string) => id !== uid) : [...whitelist, uid];
     onUpdate(next);
-    if (window.navigator && window.navigator.vibrate) window.navigator.vibrate(10);
+    if (typeof window !== 'undefined' && window.navigator && window.navigator.vibrate) window.navigator.vibrate(10);
   };
 
   return (

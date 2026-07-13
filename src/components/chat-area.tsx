@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useRef, useEffect, useMemo, useCallback, memo } from 'react';
@@ -349,7 +350,6 @@ export default function ChatArea() {
     updateDoc(doc(db, 'chats', currentChatId), { lastMessageAt: new Date().toISOString() });
   }, [currentChatId, firebaseUser, db, userProfile, replyTo]);
 
-  // Pro Recorder Logic (REDACTED FOR BREVITY - remains same as previously stable version)
   const closeProRecorder = () => {
     setIsProRecorderOpen(false);
     setIsRecording(false);
@@ -368,8 +368,12 @@ export default function ChatArea() {
     <div className="flex-1 flex flex-col h-full bg-transparent relative overflow-hidden z-20 max-w-full">
       {userProfile?.settings?.chatBackground && (
         <div className="absolute inset-0 z-0 pointer-events-none">
-          <img src={userProfile.settings.chatBackground} className="w-full h-full object-cover" alt="BG" />
-          <div className="absolute inset-0 bg-black/20" />
+          <img 
+            src={userProfile.settings.chatBackground} 
+            className="w-full h-full object-cover" 
+            alt="BG" 
+          />
+          <div className="absolute inset-0 bg-black/40" />
         </div>
       )}
       
