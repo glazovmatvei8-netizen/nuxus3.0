@@ -9,7 +9,7 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 export function formatDisplayName(name: string | undefined | null): string {
-  if (!name) return 'User';
+  if (!name || name.trim() === '') return 'Nuxus Agent';
   const lower = name.toLowerCase();
   
   if (
@@ -22,11 +22,12 @@ export function formatDisplayName(name: string | undefined | null): string {
     return 'Null Node 🚫';
   }
 
-  if (lower === 'user' || lower === 'пользователь') {
-    return 'Nuxus Agent';
+  // Не заменяем, если имя похоже на имя, а не на системную заглушку
+  if (name.length > 2 && !['user', 'пользователь'].includes(lower)) {
+    return name;
   }
 
-  return name;
+  return 'Nuxus Agent';
 }
 
 /**
