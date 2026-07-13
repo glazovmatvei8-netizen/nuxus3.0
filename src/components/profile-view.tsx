@@ -3,12 +3,12 @@
 
 import React, { useState, useMemo } from 'react';
 import { useUser, useFirestore, useDoc, useMemoFirebase, useCollection } from '@/firebase';
-import { doc, query, collection, limit, writeBatch, increment, deleteDoc } from 'firebase/firestore';
+import { doc, query, collection, limit, writeBatch, increment } from 'firebase/firestore';
 import { UserAvatar } from '@/components/user-avatar';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { 
-  Pencil, Bookmark, ChevronRight, Star, Share2, Zap, HelpCircle, Globe, Server, QrCode, Fingerprint, Cpu, Shield, ShieldCheck, Palette, Sparkles, Gift, Trash2, Clock, Gem, ArrowRightLeft, Loader2
+  Pencil, Bookmark, ChevronRight, Star, Share2, Zap, HelpCircle, Globe, Server, QrCode, Fingerprint, Cpu, Shield, ShieldCheck, Palette, Sparkles, Gift, Trash2, Clock, Gem, ArrowRightLeft, Loader2, Download
 } from 'lucide-react';
 import { useAppState } from '@/lib/store';
 import { formatDisplayName, cn, isUserPremium } from '@/lib/utils';
@@ -20,6 +20,7 @@ import nuxusVersions from '@/app/versions.json';
 import { differenceInDays, parseISO, format } from 'date-fns';
 import { ru } from 'date-fns/locale';
 import { TradeModal } from './modals/trade-modal';
+import Link from 'next/link';
 
 export default function ProfileView() {
   const { user } = useUser();
@@ -189,7 +190,9 @@ export default function ProfileView() {
 
           <div className="grid grid-cols-2 gap-3">
             <ActionCard icon={QrCode} label="Signal QR" sub="ИДЕНТИФИКАЦИЯ" accent="text-accent" onClick={() => setIsQrOpen(true)} />
-            <ActionCard icon={ShieldCheck} label={`QES ${nuxusVersions.qesVersion}`} sub="ПРОВЕРИТЬ" accent="text-green-400" onClick={() => window.dispatchEvent(new CustomEvent('nuxus_check_updates'))} />
+            <Link href="/download" className="block w-full">
+              <ActionCard icon={Download} label="APK Client" sub="СКАЧАТЬ ЯДРО" accent="text-primary" />
+            </Link>
           </div>
 
           <div className="obsidian-glass rounded-[2rem] overflow-hidden divide-y divide-white/[0.03] border-white/5 shadow-xl">
@@ -301,7 +304,7 @@ export default function ProfileView() {
 
 function ActionCard({ icon: Icon, label, sub, accent, onClick }: any) {
   return (
-    <div onClick={onClick} className="obsidian-glass border-white/5 p-4 rounded-3xl flex flex-col items-center justify-center gap-1.5 cursor-pointer active:scale-95 transition-all shadow-lg hover:bg-white/5 group">
+    <div onClick={onClick} className="obsidian-glass border-white/5 p-4 rounded-3xl flex flex-col items-center justify-center gap-1.5 cursor-pointer active:scale-95 transition-all shadow-lg hover:bg-white/5 group h-full">
       <Icon className={cn("w-6 h-6 mb-0.5 transition-transform duration-500 group-hover:scale-110", accent)} />
       <span className="text-[14px] font-black text-white italic tracking-tighter uppercase">{label}</span>
       <span className="text-[7px] uppercase font-black text-white/20 tracking-widest">{sub}</span>
