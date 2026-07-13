@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useRef, useEffect, useMemo, useCallback, memo } from 'react';
@@ -16,7 +15,7 @@ import { ChatInfoModal } from './modals/chat-info-modal';
 import { CreatePollModal } from './modals/create-poll-modal';
 import { EmojiPicker } from './emoji-picker';
 import { useFirestore, useUser, useCollection, useDoc, useMemoFirebase } from '@/firebase';
-import { collection, query, orderBy, doc, addDoc, updateDoc, limit } from 'firebase/firestore';
+import { collection, query, orderBy, doc, addDoc, updateDoc, limit, getDocs } from 'firebase/firestore';
 import { formatDisplayName, cn, compressImage, encryptSignal, isGlobalAdmin, decryptSignal, formatLastSeen, isUserPremium } from '@/lib/utils';
 import type { Message, User as UserType, Chat } from '@/lib/types';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -31,12 +30,15 @@ const VIDEO_SHAPES = [
   { id: 'poop', icon: Ghost, label: 'Какашка', clip: 'polygon(50% 0%, 63% 13%, 53% 25%, 80% 38%, 85% 61%, 69% 68%, 94% 82%, 100% 100%, 0% 100%, 6% 82%, 31% 68%, 15% 61%, 20% 38%, 47% 25%, 37% 13%)' }
 ];
 
-const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, isPremium, replyTo, onCancelReply, onOpenProRecorder, messages }: any) => {
+const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, isPremium, replyTo, onCancelReply, onOpenProRecorder, messages, participantIds }: any) => {
   const { localDrafts, setLocalDrafts } = useAppState();
   const [messageInput, setMessageInput] = useState(localDrafts[currentChatId] || '');
   const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
   const [isDrafting, setIsDrafting] = useState(false);
+  const [mentionSearch, setMentionSearch] = useState<string | null>(null);
+  const [mentionList, setMentionList] = useState<UserType[]>([]);
   const { toast } = useToast();
+  const db = useFirestore();
   
   const [isRecording, setIsRecording] = useState(false);
   const [recorderMode, setRecorderMode] = useState<'audio' | 'video'>('audio');
@@ -53,6 +55,46 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
   useEffect(() => {
     setMessageInput(localDrafts[currentChatId] || '');
   }, [currentChatId, localDrafts]);
+
+  // Mention Detection Logic
+  useEffect(() => {
+    const lastWord = messageInput.split(/\s/).pop();
+    if (lastWord?.startsWith('@') && lastWord.length > 1) {
+      const search = lastWord.slice(1).toLowerCase();
+      setMentionSearch(search);
+    } else {
+      setMentionSearch(null);
+    }
+  }, [messageInput]);
+
+  useEffect(() => {
+    if (mentionSearch && db && participantIds) {
+      // Load participants for mentions
+      const fetchParticipants = async () => {
+        const results: UserType[] = [];
+        // Only load up to 10 for performance
+        for (const pid of participantIds.slice(0, 10)) {
+          const snap = await getDocs(query(collection(db, 'users'), limit(20)));
+          snap.docs.forEach(doc => {
+            const u = { id: doc.id, ...doc.data() } as UserType;
+            if (participantIds.includes(u.id) && (u.username.toLowerCase().includes(mentionSearch) || u.name.toLowerCase().includes(mentionSearch))) {
+               if(!results.find(r => r.id === u.id)) results.push(u);
+            }
+          });
+        }
+        setMentionList(results);
+      };
+      fetchParticipants();
+    }
+  }, [mentionSearch, db, participantIds]);
+
+  const handleSelectMention = (u: UserType) => {
+    const words = messageInput.split(/\s/);
+    words.pop();
+    const nextInput = words.join(' ') + (words.length > 0 ? ' ' : '') + u.username + ' ';
+    handleInputChange(nextInput);
+    setMentionSearch(null);
+  };
 
   const handleInputChange = (val: string) => {
     setMessageInput(val);
@@ -147,6 +189,30 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
 
   return (
     <footer className="p-3 pb-[calc(1rem+env(safe-area-inset-bottom))] obsidian-glass border-t border-white/5 shrink-0 z-40 relative flex flex-col gap-2">
+      {mentionSearch && mentionList.length > 0 && (
+        <div className="absolute bottom-full left-4 mb-2 w-64 obsidian-glass border border-white/10 rounded-2xl overflow-hidden z-[100] animate-in slide-in-from-bottom-2 duration-200">
+           <div className="p-2 border-b border-white/5 flex items-center gap-2">
+             <AtSign className="w-3 h-3 text-primary" />
+             <span className="text-[8px] font-black uppercase text-primary/60 tracking-widest">Упомянуть узел</span>
+           </div>
+           <div className="max-h-48 overflow-y-auto scrollbar-hide">
+              {mentionList.map(u => (
+                <button 
+                  key={u.id} 
+                  onClick={() => handleSelectMention(u)}
+                  className="w-full p-3 flex items-center gap-3 hover:bg-primary/10 transition-colors border-b border-white/5 last:border-0"
+                >
+                  <UserAvatar userId={u.id} className="h-8 w-8" manualAvatarUrl={u.avatarUrl} />
+                  <div className="flex flex-col text-left">
+                    <span className="text-xs font-bold text-white truncate">{formatDisplayName(u.name)}</span>
+                    <span className="text-[9px] text-primary/60 font-black uppercase">{u.username}</span>
+                  </div>
+                </button>
+              ))}
+           </div>
+        </div>
+      )}
+
       {replyTo && (
         <div className="bg-white/5 p-3 rounded-2xl flex items-center justify-between border border-white/5 animate-in slide-in-from-bottom-2 duration-300">
           <div className="flex items-center gap-3 min-w-0">
@@ -442,7 +508,7 @@ export default function ChatArea() {
       <ChatInputBar 
         onSendMessage={handleSendMessage} canPost={true} onPollOpen={() => setIsPollModalOpen(true)} 
         currentChatId={currentChatId} isPremium={isPremium} replyTo={replyTo} onCancelReply={() => setReplyTo(null)}
-        onOpenProRecorder={() => setIsProRecorderOpen(true)} messages={messages}
+        onOpenProRecorder={() => setIsProRecorderOpen(true)} messages={messages} participantIds={chat?.participantIds}
       />
 
       {chat && <ChatInfoModal open={isChatInfoOpen} onOpenChange={setIsChatInfoOpen} chat={chat as any} />}

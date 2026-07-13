@@ -10,11 +10,11 @@ export function cn(...inputs: ClassValue[]) {
 
 /**
  * АБСОЛЮТНЫЙ ИДЕНТИФИКАТОР V40.0
- * Берем имя напрямую из базы. Если его нет — берем никнейм.
+ * Приоритет: Реальное имя из базы -> Юзернейм -> Узел Сети.
  */
 export function formatDisplayName(name: string | undefined | null, username?: string | null): string {
   const cleanName = name?.trim();
-  if (cleanName && cleanName !== '' && cleanName.toLowerCase() !== 'null' && cleanName !== 'User') {
+  if (cleanName && cleanName !== '' && cleanName.toLowerCase() !== 'null' && cleanName !== 'user') {
     return cleanName;
   }
   const cleanUsername = username?.trim();

@@ -106,7 +106,7 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onForward, is
 
   const handleTranscribe = async () => {
     if (!isPremium) {
-      toast({ title: "Elite Only", description: "Расшифровка доступна только Premium-узлам.", variant: "destructive" });
+      toast({ title: "Elite Access Only", description: "Расшифровка доступна только Premium-узлам.", variant: "destructive" });
       return;
     }
     setIsTranscribing(true);
