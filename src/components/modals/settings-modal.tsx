@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useRef, useEffect } from 'react';
@@ -13,8 +12,8 @@ import { useAuth, useUser, useFirestore, useDoc, useMemoFirebase, useCollection 
 import { UserAvatar } from '@/components/user-avatar';
 import { 
   LogOut, Settings2, Camera, Lock, Fingerprint, Star, Zap, ShieldCheck, Loader2, Database, Download, Check, Palette, 
-  Monitor, MessageSquare, Paintbrush, Smile, Bell, Ghost, ImageIcon, Calendar, CheckCircle2, Phone, Mail, 
-  ChevronRight, RefreshCcw, Eye, EyeOff, ShieldX, Plus, Smartphone, Laptop, Info, ShieldAlert
+  Monitor, MessageSquare, ImageIcon, Calendar, CheckCircle2, Phone, Mail, 
+  ChevronRight, RefreshCcw, Ghost, Smartphone, Laptop, Info, ShieldAlert
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { 
@@ -24,7 +23,6 @@ import {
   ConfirmationResult
 } from 'firebase/auth';
 import { doc, updateDoc, collection, query, orderBy, limit, getDocs, where, addDoc } from 'firebase/firestore';
-import { deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAppState } from '@/lib/store';
 import { cn, isUserPremium, isGlobalAdmin } from '@/lib/utils';
@@ -34,8 +32,8 @@ import { format } from 'date-fns';
 import { ru } from 'date-fns/locale';
 
 /**
- * SETTINGS MODAL V33.2.1
- * ОБНОВЛЕНО: Фиксированный футер, исправлена прокрутка, возвращена кнопка обновлений.
+ * SETTINGS MODAL V33.2.2 «ABSOLUTE PRECISION»
+ * ОБНОВЛЕНО: Исправлено "двойное нажатие", возвращена кнопка обновлений, починена прокрутка.
  */
 export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const auth = useAuth();
@@ -55,9 +53,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
     if (!db || !user) return null;
     return query(collection(db, 'users', user.uid, 'sessions'), orderBy('lastActive', 'desc'));
   }, [db, user]);
-  const { data: sessions, isLoading: isSessionsLoading } = useCollection<Session>(sessionsQuery);
-
-  const currentSessionId = typeof window !== 'undefined' ? localStorage.getItem('nuxus_session_id') : null;
+  const { data: sessions } = useCollection<Session>(sessionsQuery);
 
   const [isSaving, setIsSaving] = useState(false);
   const [isLinkingBiometrics, setIsLinkingBiometrics] = useState(false);
@@ -116,10 +112,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
   };
 
   const handleLinkBiometrics = async () => {
-    if (typeof window === 'undefined' || !window.PublicKeyCredential || !user) {
-      toast({ title: "Hardware Error", description: "Биометрия недоступна", variant: "destructive" });
-      return;
-    }
+    if (typeof window === 'undefined' || !window.PublicKeyCredential || !user) return;
     setIsLinkingBiometrics(true);
     try {
       const challenge = crypto.getRandomValues(new Uint8Array(32));
@@ -142,7 +135,6 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
       }
     } catch (e: any) {
       setForm({ ...form, biometricEnabled: false });
-      toast({ title: "Сбой биометрии", variant: "destructive" });
     } finally { setIsLinkingBiometrics(false); }
   };
 
@@ -159,9 +151,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
 
   const handleCheckUpdates = () => {
     setIsCheckingUpdates(true);
-    // Диспатчим кастомное событие для UpdateNotifier
     window.dispatchEvent(new CustomEvent('nuxus_check_updates'));
-    
     setTimeout(() => {
       setIsCheckingUpdates(false);
       toast({ title: "Проверка завершена", description: "Ядро использует актуальные протоколы." });
@@ -232,8 +222,6 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         email: form.email.trim(),
         twoFactorEnabled: form.twoFactorEnabled,
         twoFactorPin: form.twoFactorPin,
-        cloudPasswordEnabled: form.cloudPasswordEnabled,
-        cloudPassword: form.cloudPassword,
         'settings.appearance': form.appearance,
         'settings.theme': form.theme,
         'settings.customPrimaryColor': form.customPrimaryColor,
@@ -255,7 +243,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md bg-[#0a0a0c]/95 backdrop-blur-[60px] border-white/10 p-0 overflow-hidden h-[90dvh] md:h-[85vh] flex flex-col rounded-[3rem] shadow-[0_30px_100px_rgba(0,0,0,1)] outline-none">
+      <DialogContent className="max-w-md bg-[#0a0a0c]/98 backdrop-blur-[60px] border-white/10 p-0 overflow-hidden h-[90dvh] flex flex-col rounded-[3rem] shadow-[0_30px_100px_rgba(0,0,0,1)] outline-none">
         <div id="silent-settings-verifier" className="fixed -left-[2000px] opacity-0 pointer-events-none"></div>
         
         <DialogHeader className="p-8 border-b border-white/5 shrink-0 text-left relative overflow-hidden">
@@ -276,8 +264,8 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
             </TabsList>
           </div>
 
-          <ScrollArea className="flex-1">
-            <div className="pb-32"> 
+          <ScrollArea className="flex-1 w-full h-full relative">
+            <div className="pb-40"> 
               <TabsContent value="profile" className="space-y-8 m-0 p-8">
                 {isGlobalAdmin(profile) && (
                   <Button onClick={handleAdminForceVerify} className="w-full h-14 rounded-2xl bg-primary text-white font-black uppercase italic tracking-widest gap-2 shadow-2xl border border-white/10 mb-6">
@@ -326,16 +314,14 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                              </div>
                            )}
                         </div>
-                      </div>
-
-                      <div className="space-y-1.5">
-                        <Label className="text-[10px] font-black uppercase text-primary/60 ml-2">Основная почта</Label>
-                        <div className="flex gap-2">
-                          <div className="relative flex-1">
-                             <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/20" />
-                             <Input value={form.email} onChange={e => setForm({...form, email: e.target.value})} className="bg-white/5 border-white/10 h-11 rounded-xl pl-9 text-xs" placeholder="email@example.com" />
+                        {phoneStep === 'code' && (
+                          <div className="flex items-start gap-2 mt-2 bg-primary/5 p-3 rounded-xl border border-primary/10">
+                             <Info className="w-3.5 h-3.5 text-primary shrink-0 mt-0.5" />
+                             <p className="text-[8px] text-primary/60 uppercase font-bold leading-relaxed">
+                               Код подтверждения для тестового номера установлен в консоли Firebase (раздел Auth &rarr; Phone). SMS не придет.
+                             </p>
                           </div>
-                        </div>
+                        )}
                       </div>
                     </div>
 
@@ -428,7 +414,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
             </div>
           </ScrollArea>
 
-          <div className="p-8 border-t border-white/5 bg-[#0a0a0c] shrink-0 flex gap-4 z-[100] pb-[calc(1.5rem+env(safe-area-inset-bottom))]">
+          <div className="p-8 border-t border-white/5 bg-[#0a0a0c] shrink-0 flex gap-4 z-[100] pb-[calc(1.5rem+env(safe-area-inset-bottom))] relative">
             <Button variant="ghost" className="h-16 w-16 rounded-[1.8rem] bg-red-500/10 text-red-500 hover:bg-red-500/20 shadow-xl" onClick={() => signOut(auth)}>
               <LogOut className="w-7 h-7" />
             </Button>
