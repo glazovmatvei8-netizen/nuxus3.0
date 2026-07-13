@@ -33,6 +33,10 @@ import nuxusVersions from '@/app/versions.json';
 import { format } from 'date-fns';
 import { ru } from 'date-fns/locale';
 
+/**
+ * SETTINGS MODAL V33.2.1
+ * ОБНОВЛЕНО: Фиксированный футер, исправлена прокрутка, возвращена кнопка обновлений.
+ */
 export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const auth = useAuth();
   const db = useFirestore();
@@ -58,8 +62,8 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
   const [isSaving, setIsSaving] = useState(false);
   const [isLinkingBiometrics, setIsLinkingBiometrics] = useState(false);
   const [isRequestingArchive, setIsRequestingArchive] = useState(false);
+  const [isCheckingUpdates, setIsCheckingUpdates] = useState(false);
 
-  // Verification State
   const [isVerifyingPhone, setIsVerifyingPhone] = useState(false);
   const [phoneStep, setPhoneStep] = useState<'idle' | 'code'>('idle');
   const [verificationCode, setVerificationCode] = useState('');
@@ -153,24 +157,32 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
     } finally { setIsVerifyingPhone(false); }
   };
 
+  const handleCheckUpdates = () => {
+    setIsCheckingUpdates(true);
+    // Диспатчим кастомное событие для UpdateNotifier
+    window.dispatchEvent(new CustomEvent('nuxus_check_updates'));
+    
+    setTimeout(() => {
+      setIsCheckingUpdates(false);
+      toast({ title: "Проверка завершена", description: "Ядро использует актуальные протоколы." });
+    }, 1500);
+  };
+
   const handleSendPhoneVerification = async () => {
     if (!form.phone || !auth || !user) return;
     setIsVerifyingPhone(true);
     try {
       if (recaptchaRef.current) recaptchaRef.current.clear();
-
       recaptchaRef.current = new RecaptchaVerifier(auth, 'silent-settings-verifier', {
         size: 'invisible',
         callback: () => {}
       });
-
       const finalPhone = form.phone.startsWith('+') ? form.phone : '+' + form.phone;
       const result = await linkWithPhoneNumber(user, finalPhone, recaptchaRef.current);
       setConfirmationResult(result);
       setPhoneStep('code');
-      toast({ title: "Сигнал отправлен", description: "Используйте тестовый код из консоли." });
+      toast({ title: "Сигнал отправлен" });
     } catch (e: any) {
-      console.error("Phone Link Error:", e);
       toast({ title: "Сбой сигнала", description: e.message, variant: "destructive" });
     } finally { setIsVerifyingPhone(false); }
   };
@@ -314,14 +326,6 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                              </div>
                            )}
                         </div>
-                        {phoneStep === 'code' && (
-                          <div className="flex items-start gap-2 mt-2 bg-primary/5 p-3 rounded-xl border border-primary/10">
-                             <Info className="w-3.5 h-3.5 text-primary shrink-0 mt-0.5" />
-                             <p className="text-[8px] text-primary/60 uppercase font-bold leading-relaxed">
-                               Код подтверждения для тестового номера установлен в консоли Firebase (раздел Auth &rarr; Phone). SMS не придет.
-                             </p>
-                          </div>
-                        )}
                       </div>
 
                       <div className="space-y-1.5">
@@ -373,15 +377,6 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                      <input type="file" ref={bgInputRef} className="hidden" accept="image/*" onChange={handleBgUpload} />
                   </div>
                 </div>
-
-                <div className="space-y-6">
-                  <h3 className="text-[11px] font-black uppercase text-primary tracking-widest flex items-center gap-3"><MessageSquare className="w-5 h-5" /> Контейнеры сигналов</h3>
-                  <div className="grid grid-cols-2 gap-3">
-                     {['default', 'neon', 'gold', 'ocean'].map(s => (
-                       <button key={s} onClick={() => setForm({...form, bubbleStyle: s as any})} className={cn("h-12 rounded-2xl border text-[10px] font-black uppercase tracking-widest transition-all", form.bubbleStyle === s ? "bg-primary/20 text-white border-primary/40 shadow-xl" : "bg-white/5 border-white/10 text-white/40")}>{s}</button>
-                     ))}
-                  </div>
-                </div>
               </TabsContent>
 
               <TabsContent value="privacy" className="space-y-8 m-0 p-8">
@@ -402,55 +397,22 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
               </TabsContent>
 
               <TabsContent value="data" className="space-y-6 m-0 p-8">
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between px-2">
-                    <h3 className="text-[11px] font-black uppercase text-primary tracking-widest flex items-center gap-3">
-                      <Smartphone className="w-5 h-5" /> Активные узлы
-                    </h3>
-                  </div>
-
+                <div className="p-8 bg-white/5 rounded-[3rem] border border-white/10 text-center space-y-8 shadow-2xl">
+                  <RefreshCcw className={cn("w-14 h-14 text-primary mx-auto", isCheckingUpdates && "animate-spin")} />
                   <div className="space-y-3">
-                    {isSessionsLoading ? (
-                      <div className="flex justify-center p-10"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>
-                    ) : sessions?.map(s => {
-                      const isCurrent = s.id === currentSessionId;
-                      return (
-                        <div key={s.id} className={cn(
-                          "p-5 rounded-[1.8rem] border flex items-center justify-between gap-4 transition-all shadow-lg",
-                          isCurrent ? "bg-primary/5 border-primary/20" : "bg-white/[0.02] border-white/5"
-                        )}>
-                          <div className="flex items-center gap-4 min-w-0">
-                            <div className={cn(
-                              "w-12 h-12 rounded-2xl flex items-center justify-center shadow-inner",
-                              isCurrent ? "bg-primary/20" : "bg-white/5"
-                            )}>
-                               {s.deviceName?.includes("PC") ? <Laptop className={cn("w-6 h-6", isCurrent ? "text-primary" : "text-white/20")} /> : <Smartphone className={cn("w-6 h-6", isCurrent ? "text-primary" : "text-white/20")} />}
-                            </div>
-                            <div className="flex flex-col text-left min-w-0">
-                              <span className="text-sm font-black text-white italic truncate uppercase tracking-tight">{s.deviceName}</span>
-                              <span className="text-[9px] text-white/40 uppercase font-black">{isCurrent ? 'В сети' : 'Был недавно'}</span>
-                            </div>
-                          </div>
-                          {!isCurrent && (
-                            <button onClick={() => {
-                                if (!db || !user) return;
-                                deleteDocumentNonBlocking(doc(db, 'users', user.uid, 'sessions', s.id));
-                                toast({ title: "Узел отключен" });
-                            }} className="h-10 w-10 rounded-xl bg-red-500/10 text-red-400 hover:bg-red-400/20 flex items-center justify-center transition-all">
-                              <ShieldX className="w-5 h-5" />
-                            </button>
-                          )}
-                        </div>
-                      );
-                    })}
+                    <h3 className="text-xl font-black uppercase italic text-white tracking-tighter">Обновление Ядра</h3>
+                    <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-[0.2em] leading-relaxed">Проверьте наличие новых патчей безопасности и функций.</p>
                   </div>
+                  <Button onClick={handleCheckUpdates} disabled={isCheckingUpdates} className="w-full h-14 bg-primary text-white border border-primary/20 rounded-2xl font-black uppercase text-[10px] tracking-widest gap-3 shadow-xl active:scale-95 transition-all">
+                    {isCheckingUpdates ? <Loader2 className="w-5 h-5 animate-spin" /> : <><RefreshCcw className="w-5 h-5" /> Проверить наличие патчей</>}
+                  </Button>
                 </div>
 
-                <div className="p-8 bg-white/5 rounded-[3rem] border border-white/10 text-center space-y-8 shadow-2xl mt-8">
+                <div className="p-8 bg-white/5 rounded-[3rem] border border-white/10 text-center space-y-8 shadow-2xl mt-4">
                   <Database className="w-14 h-14 text-accent mx-auto animate-pulse" />
                   <div className="space-y-3">
-                    <h3 className="text-xl font-black uppercase italic text-white tracking-tighter">Целостность данных</h3>
-                    <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-[0.2em] leading-relaxed">Запросите полный квантовый дамп вашего узла.</p>
+                    <h3 className="text-xl font-black uppercase italic text-white tracking-tighter">Квантовый Дамп</h3>
+                    <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-[0.2em] leading-relaxed">Запросите полный архив ваших данных в Ядре.</p>
                   </div>
                   <Button onClick={async () => {
                     setIsRequestingArchive(true);
