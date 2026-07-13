@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useRef, useEffect } from 'react';
@@ -13,7 +14,7 @@ import { UserAvatar } from '@/components/user-avatar';
 import { 
   LogOut, Settings2, Camera, Lock, Fingerprint, Star, Zap, ShieldCheck, Loader2, Database, Download, Check, Palette, 
   Monitor, MessageSquare, ImageIcon, Calendar, CheckCircle2, Phone, Mail, 
-  ChevronRight, RefreshCcw, Ghost, Smartphone, Laptop, Info, ShieldAlert
+  ChevronRight, RefreshCcw, Ghost, Smartphone, Laptop, Info, ShieldAlert, Smile, Plus
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { 
@@ -32,8 +33,8 @@ import { format } from 'date-fns';
 import { ru } from 'date-fns/locale';
 
 /**
- * SETTINGS MODAL V33.2.2 «ABSOLUTE PRECISION»
- * ОБНОВЛЕНО: Исправлено "двойное нажатие", возвращена кнопка обновлений, починена прокрутка.
+ * SETTINGS MODAL V33.2.3 «PRECISION PULSE»
+ * ИСПРАВЛЕНО: ReferenceError: Smile, стабилизированы клики и прокрутка.
  */
 export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const auth = useAuth();

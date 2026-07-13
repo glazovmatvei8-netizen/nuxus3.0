@@ -1,3 +1,4 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -55,29 +56,19 @@
   }
 }
 
-/* NUCLEAR RECAPTCHA BLOCK - Принудительно отключаем любые взаимодействия с капчей */
-.grecaptcha-badge { 
+/* NUCLEAR RECAPTCHA BLOCK - Полная деактивация любых слоев капчи */
+.grecaptcha-badge, 
+iframe[src*="recaptcha"],
+div[style*="z-index: 2000000000"],
+div[style*="z-index: 999999"],
+.recaptcha-wrapper { 
   visibility: hidden !important; 
   opacity: 0 !important; 
   pointer-events: none !important; 
   display: none !important;
-  z-index: -1000 !important;
-}
-
-div[style*="z-index: 2000000000"] {
-  display: none !important;
-  visibility: hidden !important;
-  opacity: 0 !important;
-  pointer-events: none !important;
-  z-index: -1000 !important;
-}
-
-iframe[src*="recaptcha"] {
-  display: none !important;
-  visibility: hidden !important;
-  opacity: 0 !important;
-  pointer-events: none !important;
-  z-index: -1000 !important;
+  z-index: -9999 !important;
+  position: absolute !important;
+  left: -9999px !important;
 }
 
 .obsidian-glass {
