@@ -8,10 +8,10 @@ import { RefreshCw, Zap, Download, ArrowUpCircle, Loader2 } from 'lucide-react';
 import nuxusVersions from '@/app/versions.json';
 
 /**
- * КВАНТОВЫЙ ОБНОВЛЯТОР ЯДРА V43.0.1 (Global Sync Fix)
+ * КВАНТОВЫЙ ОБНОВЛЯТОР ЯДРА V45.0.0 (Signal Status Update)
  * ИСПРАВЛЕНО: Синхронизация версий для устранения бесконечного цикла.
  */
-const CURRENT_VERSION = "43.0.1"; 
+const CURRENT_VERSION = "45.0.0"; 
 
 export function UpdateNotifier() {
   const [isOpen, setIsOpen] = useState(false);
@@ -123,10 +123,10 @@ export function UpdateNotifier() {
           <DialogHeader className="space-y-2 text-left">
             <div className="flex items-center justify-between">
               <DialogTitle className="text-3xl font-black uppercase italic tracking-tighter text-white">Ядро {serverVersion}</DialogTitle>
-              <span className="text-[10px] font-black bg-white/5 border border-white/10 px-3 py-1 rounded-lg text-primary">124 MB</span>
+              <span className="text-[10px] font-black bg-white/5 border border-white/10 px-3 py-1 rounded-lg text-primary">128 MB</span>
             </div>
             <DialogDescription className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em] ml-1">
-              Neural Mention Protocol & Sync Fix
+              Signal Status Protocol & UI Refresh
             </DialogDescription>
           </DialogHeader>
 

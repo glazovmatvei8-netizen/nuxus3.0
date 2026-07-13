@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, memo, useRef, useEffect, useMemo } from 'react';
@@ -183,15 +184,15 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onForward, is
     );
     
     return (
-      <div className="space-y-2">
+      <div className="flex flex-col gap-1 relative">
         {message.replyToId && (
-          <div className="bg-white/5 border-l-2 border-primary/50 p-2 rounded-lg mb-2 text-xs opacity-60">
+          <div className="bg-white/5 border-l-2 border-primary/50 p-2 rounded-lg mb-1 text-xs opacity-60">
             <span className="italic">{decryptSignal(message.replyToContent)}</span>
           </div>
         )}
-        <div className="whitespace-pre-wrap text-[16px] break-words max-w-[320px] font-semibold">{displayContent}</div>
+        <div className="whitespace-pre-wrap text-[16px] break-words max-w-[320px] font-semibold pr-16">{displayContent}</div>
         {translation && (
-          <div className="mt-2 pt-2 border-t border-white/10 italic text-[14px] text-primary/80">
+          <div className="mt-2 pt-2 border-t border-white/10 italic text-[14px] text-primary/80 pr-16">
             <div className="flex items-center gap-2 mb-1 text-[10px] font-black uppercase text-primary/40"><Languages className="w-3 h-3" /> Перевод</div>
             {translation}
           </div>
@@ -224,9 +225,24 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onForward, is
                 highlight && "ring-4 ring-primary scale-105"
               )}>
                 {renderContent()}
-                <div className="flex items-center justify-end gap-2 mt-2 opacity-40 px-1">
-                  <span className="text-[10px] font-black">{formattedTime}</span>
-                  {isMe && (message.isRead ? <CheckCheck className="w-4 h-4 text-accent" /> : <Check className="w-4 h-4" />)}
+                
+                {/* ИНТЕГРИРОВАННЫЙ СТАТУС-БАР (TIME + STATUS) */}
+                <div className={cn(
+                  "absolute bottom-2 right-4 flex items-center gap-1.5 px-1.5 py-0.5 rounded-full",
+                  message.contentType === 'text' ? "bg-black/10 backdrop-blur-sm" : "bg-black/40"
+                )}>
+                  <span className="text-[9px] font-black italic tabular-nums opacity-60">
+                    {formattedTime}
+                  </span>
+                  {isMe && (
+                    <div className="flex items-center opacity-60">
+                      {message.isRead ? (
+                        <CheckCheck className="w-3.5 h-3.5 text-accent" />
+                      ) : (
+                        <Check className="w-3.5 h-3.5" />
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
             </ContextMenuTrigger>
