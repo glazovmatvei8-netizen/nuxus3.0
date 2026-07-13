@@ -9,12 +9,12 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 /**
- * ОКОНЧАТЕЛЬНЫЙ ФИКС ИМЕН V38.0
- * Максимально лоялен к именам пользователей. Приоритет: Имя -> Юзернейм -> Узел.
+ * АБСОЛЮТНЫЙ ИДЕНТИФИКАТОР V39.0
+ * Никаких заглушек. Берем то, что есть в базе.
  */
 export function formatDisplayName(name: string | undefined | null, username?: string | null): string {
   const cleanName = name?.trim();
-  if (cleanName && cleanName !== '' && cleanName.toLowerCase() !== 'null' && cleanName !== 'User') {
+  if (cleanName && cleanName !== '' && cleanName.toLowerCase() !== 'null') {
     return cleanName;
   }
   const cleanUsername = username?.trim();

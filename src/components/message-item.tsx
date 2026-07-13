@@ -232,11 +232,15 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onForward, is
             </ContextMenuTrigger>
             <ContextMenuContent className="w-64 bg-[#0a0a0c]/95 backdrop-blur-[60px] border-white/10 rounded-[2.2rem] shadow-2xl p-2">
               <ContextMenuItem onClick={() => onReply(message)} className="gap-4 py-3.5 font-black text-[11px] uppercase tracking-widest rounded-xl hover:bg-primary/10 transition-all"><CornerUpLeft className="w-4 h-4 text-primary" /> Ответить</ContextMenuItem>
-              {message.contentType === 'audio' && isPremium && (
-                <ContextMenuItem onClick={handleTranscribe} className="gap-4 py-3.5 font-black text-[11px] uppercase tracking-widest rounded-xl hover:bg-primary/10 transition-all"><FileText className="w-4 h-4 text-primary" /> Расшифровать</ContextMenuItem>
+              {message.contentType === 'audio' && (
+                <ContextMenuItem onClick={handleTranscribe} className="gap-4 py-3.5 font-black text-[11px] uppercase tracking-widest rounded-xl hover:bg-primary/10 transition-all">
+                  <FileText className={cn("w-4 h-4", isPremium ? "text-primary" : "text-white/20")} /> Расшифровать { !isPremium && "★" }
+                </ContextMenuItem>
               )}
-              {message.contentType === 'text' && isPremium && (
-                <ContextMenuItem onClick={handleTranslate} className="gap-4 py-3.5 font-black text-[11px] uppercase tracking-widest rounded-xl hover:bg-primary/10 transition-all"><Languages className="w-4 h-4 text-primary" /> Перевести</ContextMenuItem>
+              {message.contentType === 'text' && (
+                <ContextMenuItem onClick={handleTranslate} className="gap-4 py-3.5 font-black text-[11px] uppercase tracking-widest rounded-xl hover:bg-primary/10 transition-all">
+                  <Languages className={cn("w-4 h-4", isPremium ? "text-primary" : "text-white/20")} /> Перевести { !isPremium && "★" }
+                </ContextMenuItem>
               )}
               <ContextMenuItem onClick={() => onForward(message)} className="gap-4 py-3.5 font-black text-[11px] uppercase tracking-widest rounded-xl hover:bg-primary/10 transition-all"><Share2 className="w-4 h-4" /> Резонанс</ContextMenuItem>
               <ContextMenuSeparator className="bg-white/5 mx-2 my-1" />

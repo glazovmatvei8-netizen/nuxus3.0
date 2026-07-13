@@ -27,11 +27,6 @@ import nuxusVersions from '@/app/versions.json';
 import { format } from 'date-fns';
 import { ru } from 'date-fns/locale';
 
-/**
- * SettingsModal V38.0.0
- * ФИКС: Исправлены импорты cn, Search, isGlobalAdmin.
- * ВНЕДРЕНО: Полный набор настроек конфиденциальности (8 разделов).
- */
 export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const auth = useAuth();
   const db = useFirestore();
@@ -127,8 +122,6 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
 
   const handleSave = async () => {
     if (!db || !user || !profile) return;
-
-    // Валидация ника: только английский
     const rawUsername = form.username.trim().replace('@', '');
     if (/[^a-zA-Z0-9_]/.test(rawUsername)) {
       toast({ title: "Ошибка ника", description: "Используйте только английские буквы и цифры.", variant: "destructive" });
@@ -138,7 +131,6 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
     setIsSaving(true);
     try {
       const usernameWithAt = '@' + rawUsername;
-      
       await updateDoc(doc(db, 'users', user.uid), {
         name: form.name.trim(),
         username: usernameWithAt,
@@ -173,15 +165,11 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
     setIsVerifying(field);
     try {
       await new Promise(resolve => setTimeout(resolve, 1500));
-      await updateDoc(doc(db, 'users', user.uid), {
-        [`${field}Verified`]: true
-      });
+      await updateDoc(doc(db, 'users', user.uid), { [`${field}Verified`]: true });
       toast({ title: "Верификация успешна" });
     } catch (e) {
       toast({ title: "Сбой", variant: "destructive" });
-    } finally {
-      setIsVerifying(null);
-    }
+    } finally { setIsVerifying(null); }
   };
 
   const handleBgUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -216,7 +204,6 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
 
           <ScrollArea className="flex-1 w-full h-full relative">
             <div className="pb-40"> 
-              
               <TabsContent value="profile" className="space-y-8 m-0 p-8">
                 <div className="flex flex-col items-center gap-8">
                   <div className="relative group">
@@ -247,20 +234,9 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                       </div>
                       <div className="flex gap-3">
                         <div className="w-14">
-                          <Input 
-                            placeholder="🏠" 
-                            maxLength={2} 
-                            value={form.statusEmoji} 
-                            onChange={e => setForm({...form, statusEmoji: e.target.value})} 
-                            className="bg-black/40 border-white/10 h-12 rounded-xl text-center text-xl" 
-                          />
+                          <Input placeholder="🏠" maxLength={2} value={form.statusEmoji} onChange={e => setForm({...form, statusEmoji: e.target.value})} className="bg-black/40 border-white/10 h-12 rounded-xl text-center text-xl" />
                         </div>
-                        <Input 
-                          placeholder="Чем занимаетесь?" 
-                          value={form.statusText} 
-                          onChange={e => setForm({...form, statusText: e.target.value})} 
-                          className="bg-black/40 border-white/10 h-12 rounded-xl text-xs font-bold" 
-                        />
+                        <Input placeholder="Чем занимаетесь?" value={form.statusText} onChange={e => setForm({...form, statusText: e.target.value})} className="bg-black/40 border-white/10 h-12 rounded-xl text-xs font-bold" />
                       </div>
                     </div>
 
