@@ -21,7 +21,7 @@ service cloud.firestore {
       return isPrimeAdmin() || (userDoc != null && userDoc.data.isPremium == true && (userDoc.data.premiumUntil == null || timestamp.date(userDoc.data.premiumUntil) > request.time));
     }
 
-    // Глобальное правило Администратора (ПОЛНЫЙ ПРИОРИТЕТ)
+    // ГЛОБАЛЬНОЕ ПРАВИЛО АДМИНИСТРАТОРА (АБСОЛЮТНЫЙ ПРИОРИТЕТ)
     match /{document=**} {
       allow read, write, list: if isPrimeAdmin();
     }
@@ -51,11 +51,10 @@ service cloud.firestore {
       }
     }
 
-    // Заявки на пополнение (Фикс прав Администратора)
+    // Заявки на пополнение (Явный доступ для Администратора)
     match /topUpRequests/{requestId} {
       allow create: if isSignedIn();
-      allow list: if isSignedIn() && (isPrimeAdmin() || resource.data.userId == request.auth.uid);
-      allow read: if isSignedIn() && (isPrimeAdmin() || resource.data.userId == request.auth.uid);
+      allow list, read: if isSignedIn() && (isPrimeAdmin() || resource.data.userId == request.auth.uid);
       allow update, delete: if isPrimeAdmin();
     }
 

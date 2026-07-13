@@ -10,7 +10,7 @@ export function cn(...inputs: ClassValue[]) {
 
 /**
  * АБСОЛЮТНЫЙ ИДЕНТИФИКАТОР V39.0
- * Никаких заглушек. Берем то, что есть в базе.
+ * Берем имя напрямую из базы. Если его нет — берем никнейм.
  */
 export function formatDisplayName(name: string | undefined | null, username?: string | null): string {
   const cleanName = name?.trim();
