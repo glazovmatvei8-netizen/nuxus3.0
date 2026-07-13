@@ -86,12 +86,15 @@ export function formatLastSeen(
   lastSeenIso: string | undefined | null, 
   visibility: PrivacyOption = 'everybody',
   isDeleted: boolean = false,
-  onlineString: string = 'в сети'
+  onlineString: string = 'в сети',
+  whitelist: string[] = [],
+  currentUserId?: string
 ): string {
   if (isDeleted || !lastSeenIso) return 'был(а) недавно';
   
-  // V35.0: Privacy-aware status
-  if (visibility === 'nobody') return 'был(а) недавно';
+  // V35.2: Privacy-aware status with exceptions
+  const isExempt = currentUserId && whitelist.includes(currentUserId);
+  if (!isExempt && visibility === 'nobody') return 'был(а) недавно';
   
   try {
     const lastSeen = parseISO(lastSeenIso);

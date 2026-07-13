@@ -13,7 +13,7 @@ import { useFirestore, useUser, useDoc, useMemoFirebase, useCollection } from '@
 import { doc, query, collection, limit, getDocs, addDoc, where, orderBy } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { useAppState } from '@/lib/store';
-import { formatDisplayName, isUserPremium, formatLastSeen, cn } from '@/lib/utils';
+import { formatDisplayName, isUserPremium, formatLastSeen, cn, isGlobalAdmin, decryptSignal } from '@/lib/utils';
 import type { User, ReceivedGift } from '@/lib/types';
 import { format } from 'date-fns';
 import { ru } from 'date-fns/locale';
@@ -25,7 +25,7 @@ const ORIGIN_DATE = '2024-01-01T00:00:00Z';
 
 /**
  * МОДАЛ ПРОФИЛЯ V25.3.1
- * ОБНОВЛЕНО: Статус и эмодзи теперь отображаются в центре внимания профиля.
+ * ОБНОВЛЕНО: Поддержка списков исключений в Last Seen.
  */
 export function UserProfileModal() {
   const db = useFirestore();
@@ -150,16 +150,14 @@ export function UserProfileModal() {
                 <h2 className="text-2xl font-black text-white italic tracking-tighter uppercase leading-tight">
                   {formatDisplayName(targetUser?.name)}
                 </h2>
-                {/* ЭМОДЗИ СТАТУСА (В ПРОФИЛЕ) */}
                 {(targetUser?.statusEmoji || (inspectedUserId === ADMIN_ID)) && (
-                   <span className="text-2xl drop-shadow-[0_0_10px_rgba(255,255,255,0.3)]">
+                   <span className="text-2xl drop-shadow-[0_0_100px_rgba(255,255,255,0.3)]">
                      {targetUser?.statusEmoji || '👑'}
                    </span>
                 )}
               </div>
               <p className="text-[11px] text-primary font-black uppercase tracking-[0.4em] mt-1 opacity-70 italic">{targetUser?.username}</p>
               
-              {/* ТЕКСТ СТАТУСА (В ПРОФИЛЕ) */}
               {targetUser?.statusText && (
                 <div className="mt-4 px-6 py-2.5 bg-primary/10 rounded-2xl border border-primary/20 inline-flex items-center gap-3 max-w-full shadow-lg animate-in fade-in slide-in-from-top-2">
                   <Sparkles className="w-4 h-4 text-accent shrink-0 animate-pulse" />
@@ -168,7 +166,14 @@ export function UserProfileModal() {
               )}
 
               <p className="text-[9px] text-muted-foreground uppercase font-black tracking-widest mt-4 opacity-40">
-                {formatLastSeen(targetUser?.lastSeen, targetUser?.settings?.privacy?.lastSeenVisibility)}
+                {formatLastSeen(
+                  targetUser?.lastSeen, 
+                  targetUser?.settings?.privacy?.lastSeenVisibility, 
+                  false, 
+                  'в сети', 
+                  targetUser?.settings?.privacy?.lastSeenWhitelist || [], 
+                  currentUser?.uid
+                )}
               </p>
             </div>
 

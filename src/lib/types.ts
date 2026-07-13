@@ -164,10 +164,15 @@ export type PrivacyOption = 'everybody' | 'contacts' | 'premium' | 'nobody';
 
 export interface UserPrivacy {
   phoneVisibility: PrivacyOption;
+  phoneWhitelist?: string[];
   lastSeenVisibility: PrivacyOption;
+  lastSeenWhitelist?: string[];
   allowGroupsFrom: PrivacyOption;
+  groupsWhitelist?: string[];
   whoCanMessageMe: PrivacyOption;
+  messageWhitelist?: string[];
   whoCanCallMe: PrivacyOption;
+  callWhitelist?: string[];
   isGhostMode?: boolean;
 }
 
