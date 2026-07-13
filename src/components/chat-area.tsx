@@ -16,7 +16,7 @@ import { ChatInfoModal } from './modals/chat-info-modal';
 import { CreatePollModal } from './modals/create-poll-modal';
 import { EmojiPicker } from './emoji-picker';
 import { useFirestore, useUser, useCollection, useDoc, useMemoFirebase } from '@/firebase';
-import { collection, query, orderBy, doc, addDoc, updateDoc, limit, getDocs, where } from 'firebase/firestore';
+import { collection, query, orderBy, doc, addDoc, updateDoc, limit, getDocs, where, getDoc } from 'firebase/firestore';
 import { formatDisplayName, cn, compressImage, encryptSignal, isGlobalAdmin, decryptSignal, formatLastSeen, isUserPremium } from '@/lib/utils';
 import type { Message, User as UserType, Chat } from '@/lib/types';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -31,6 +31,7 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
   const [isDrafting, setIsDrafting] = useState(false);
   const [mentionSearch, setMentionSearch] = useState<string | null>(null);
   const [mentionList, setMentionList] = useState<UserType[]>([]);
+  const [isFetchingMentions, setIsFetchingMentions] = useState(false);
   const { toast } = useToast();
   const db = useFirestore();
   
@@ -50,7 +51,7 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
     setMessageInput(localDrafts[currentChatId] || '');
   }, [currentChatId, localDrafts]);
 
-  // УЛУЧШЕННАЯ ЛОГИКА УПОМИНАНИЙ V43.0.0
+  // СИСТЕМА УПОМИНАНИЙ V43.0.1 - ОПТИМИЗИРОВАННЫЙ ПОИСК
   useEffect(() => {
     const lastWord = messageInput.split(/\s/).pop() || '';
     if (lastWord.startsWith('@')) {
@@ -63,39 +64,46 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
   }, [messageInput]);
 
   useEffect(() => {
-    if (mentionSearch !== null && db && participantIds) {
+    if (mentionSearch !== null && db && participantIds && isGroup) {
       const fetchParticipants = async () => {
+        setIsFetchingMentions(true);
         try {
           const results: UserType[] = [];
-          const limitSize = Math.min(participantIds.length, 50);
+          // Берем срез участников для оптимизации
+          const targetIds = participantIds.slice(0, 50);
           
-          for (let i = 0; i < limitSize; i++) {
-             const uid = participantIds[i];
-             const userSnap = await getDocs(query(collection(db, 'users'), where('id', '==', uid), limit(1)));
-             if (!userSnap.empty) {
-               const u = { id: userSnap.docs[0].id, ...userSnap.docs[0].data() } as UserType;
-               const matches = 
-                  u.username?.toLowerCase().includes(mentionSearch) || 
-                  u.name?.toLowerCase().includes(mentionSearch) || 
-                  mentionSearch === '' ||
-                  mentionSearch === 'all';
-               
-               if (matches) results.push(u);
-             }
-          }
-          setMentionList(results);
+          const promises = targetIds.map(async (uid: string) => {
+            const userSnap = await getDoc(doc(db, 'users', uid));
+            if (userSnap.exists()) {
+              const u = { id: userSnap.id, ...userSnap.data() } as UserType;
+              const matches = 
+                 u.username?.toLowerCase().includes(mentionSearch) || 
+                 u.name?.toLowerCase().includes(mentionSearch) || 
+                 mentionSearch === '' ||
+                 mentionSearch === 'all';
+              
+              if (matches) return u;
+            }
+            return null;
+          });
+
+          const fetched = await Promise.all(promises);
+          setMentionList(fetched.filter((u): u is UserType => u !== null));
         } catch (e) {
           console.warn("Mention fetch failed");
+        } finally {
+          setIsFetchingMentions(false);
         }
       };
       fetchParticipants();
     }
-  }, [mentionSearch, db, participantIds]);
+  }, [mentionSearch, db, participantIds, isGroup]);
 
   const handleSelectMention = (username: string) => {
     const words = messageInput.split(/\s/);
     words.pop();
-    const nextInput = words.join(' ') + (words.length > 0 ? ' ' : '') + (username.startsWith('@') ? username : '@' + username) + ' ';
+    const cleanNick = username.startsWith('@') ? username : '@' + username;
+    const nextInput = words.join(' ') + (words.length > 0 ? ' ' : '') + cleanNick + ' ';
     handleInputChange(nextInput);
     setMentionSearch(null);
     textareaRef.current?.focus();
@@ -186,15 +194,15 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
 
   return (
     <footer className="p-3 pb-[calc(1rem+env(safe-area-inset-bottom))] obsidian-glass border-t border-white/5 shrink-0 z-40 relative flex flex-col gap-2">
-      {/* МЕНЮ УПОМИНАНИЙ V43.0.0 */}
+      {/* МЕНЮ УПОМИНАНИЙ V43.0.1 - ПРОВЕРЕННАЯ СТАБИЛЬНОСТЬ */}
       {mentionSearch !== null && isGroup && (
-        <div className="absolute bottom-full left-4 mb-2 w-72 obsidian-glass border border-white/10 rounded-[2rem] overflow-hidden z-[100] animate-in slide-in-from-bottom-4 duration-500 shadow-2xl">
+        <div className="absolute bottom-full left-4 mb-2 w-72 obsidian-glass border border-white/10 rounded-[2.2rem] overflow-hidden z-[100] animate-in slide-in-from-bottom-4 duration-500 shadow-2xl">
            <div className="p-3 border-b border-white/5 flex items-center justify-between bg-primary/5">
              <div className="flex items-center gap-2">
                 <AtSign className="w-3.5 h-3.5 text-primary" />
                 <span className="text-[9px] font-black uppercase text-primary/80 tracking-widest">Упоминания</span>
              </div>
-             <span className="text-[8px] font-bold text-white/20 uppercase tracking-widest">v43.0.0</span>
+             {isFetchingMentions && <Loader2 className="w-3 h-3 text-primary animate-spin" />}
            </div>
            <ScrollArea className="max-h-64">
               <div className="flex flex-col">
@@ -227,7 +235,7 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
                   </button>
                 ))}
 
-                {mentionList.length === 0 && mentionSearch !== '' && mentionSearch !== 'all' && (
+                {mentionList.length === 0 && !isFetchingMentions && mentionSearch !== '' && mentionSearch !== 'all' && (
                   <div className="p-6 text-center opacity-20">
                      <p className="text-[10px] font-black uppercase tracking-widest">Нет совпадений</p>
                   </div>
@@ -257,7 +265,7 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
               <PopoverTrigger asChild>
                 <Button variant="ghost" size="icon" className="h-11 w-11 shrink-0 rounded-2xl bg-white/5 hover:bg-primary/10 mb-0.5"><Paperclip className="w-6 h-6" /></Button>
               </PopoverTrigger>
-              <PopoverContent side="top" align="start" className="w-64 obsidian-glass border-white/10 rounded-[2rem] p-2 mb-4">
+              <PopoverContent side="top" align="start" className="w-64 obsidian-glass border-white/10 rounded-[2.2rem] p-2 mb-4">
                 <AttachmentItem icon={ImageIcon} label="Медиа" color="text-primary" onClick={() => fileInputRef.current?.click()} />
                 <AttachmentItem icon={AtSign} label="Опрос" color="text-blue-400" onClick={onPollOpen} />
               </PopoverContent>

@@ -4,14 +4,14 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { RefreshCw, Zap, Download, ShieldCheck, ListChecks, ArrowUpCircle } from 'lucide-react';
-import { Progress } from './ui/progress';
+import { RefreshCw, Zap, Download, ArrowUpCircle, Loader2 } from 'lucide-react';
 import nuxusVersions from '@/app/versions.json';
 
 /**
- * КВАНТОВЫЙ ОБНОВЛЯТОР ЯДРА V43.0.0 (Global Sync)
+ * КВАНТОВЫЙ ОБНОВЛЯТОР ЯДРА V43.0.1 (Global Sync Fix)
+ * ИСПРАВЛЕНО: Синхронизация версий для устранения бесконечного цикла.
  */
-const CURRENT_VERSION = "42.0.1"; // Умышленно ниже серверной для активации триггера
+const CURRENT_VERSION = "43.0.1"; 
 
 export function UpdateNotifier() {
   const [isOpen, setIsOpen] = useState(false);
@@ -30,14 +30,14 @@ export function UpdateNotifier() {
         
         const lastInstalled = localStorage.getItem('nuxus_last_installed_version');
         
-        // Если версия в бандле совпадает с серверной и уже была установлена - закрываем
-        if (data.latestVersion === CURRENT_VERSION && lastInstalled === data.latestVersion) {
+        // Если версия в бандле совпадает с серверной - не показываем
+        if (data.latestVersion === CURRENT_VERSION) {
           setIsOpen(false);
           return;
         }
 
-        // Если серверная версия отличается от текущей в бандле - показываем окно
-        if (data.latestVersion !== CURRENT_VERSION) {
+        // Если серверная версия отличается от текущей - показываем окно
+        if (data.latestVersion !== CURRENT_VERSION && lastInstalled !== data.latestVersion) {
           setIsOpen(true);
         }
       }
@@ -49,8 +49,8 @@ export function UpdateNotifier() {
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
-    const timer = setTimeout(checkVersion, 2000);
-    const interval = setInterval(checkVersion, 60000);
+    const timer = setTimeout(checkVersion, 3000);
+    const interval = setInterval(checkVersion, 120000); // Раз в 2 минуты
 
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
@@ -73,7 +73,7 @@ export function UpdateNotifier() {
     setIsUpdating(true);
     let p = 0;
     const interval = setInterval(() => {
-      p += Math.random() * 25;
+      p += Math.random() * 20;
       if (p >= 100) {
         setUpdateProgress(100);
         clearInterval(interval);
@@ -126,7 +126,7 @@ export function UpdateNotifier() {
               <span className="text-[10px] font-black bg-white/5 border border-white/10 px-3 py-1 rounded-lg text-primary">124 MB</span>
             </div>
             <DialogDescription className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em] ml-1">
-              Neural Mention Protocol & Fixes
+              Neural Mention Protocol & Sync Fix
             </DialogDescription>
           </DialogHeader>
 
