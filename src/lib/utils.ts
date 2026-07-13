@@ -10,16 +10,17 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 /**
- * ОКОНЧАТЕЛЬНЫЙ ФИКС ИМЕН V35.0
+ * ОКОНЧАТЕЛЬНЫЙ ФИКС ИМЕН V36.0
+ * Максимально лоялен к именам пользователей.
  */
 export function formatDisplayName(name: string | undefined | null): string {
   if (!name) return 'Nuxus Agent';
   
   const trimmed = name.trim();
-  if (trimmed === '') return 'Nuxus Agent';
+  if (trimmed === '' || trimmed.toLowerCase() === 'null') return 'Nuxus Agent';
   
   const lower = trimmed.toLowerCase();
-  const blacklist = ['deleted user', 'null node', 'неизвестный', 'unknown'];
+  const blacklist = ['deleted user', 'null node'];
   if (blacklist.includes(lower) || lower.includes('🚫')) {
     return 'Null Node 🚫';
   }
