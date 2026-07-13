@@ -1,14 +1,13 @@
 
 {
-  "latestVersion": "42.0.0",
+  "latestVersion": "42.0.1",
   "qesVersion": "42.0",
-  "build": "Mention-Protocol-Stable",
+  "build": "Mention-Pulse-Stable",
   "sizeMb": 122,
   "changelog": [
-    "Identity: Исправлено отображение имен в Избранном",
-    "Mentions: Активирован протокол @all (как в VK)",
-    "Mentions: Улучшен поиск участников по именам и ID",
-    "System: Исправлена ошибка синхронизации патчей",
-    "Security: Фикс прав доступа для Администратора"
+    "Fix: Устранена ошибка ScrollArea в меню упоминаний",
+    "Mentions: Оптимизирован протокол @all и поиск участников",
+    "System: Синхронизация версий для Live-Update",
+    "Identity: Стабильное отображение имен в Избранном"
   ]
 }

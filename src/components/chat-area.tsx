@@ -50,7 +50,7 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
     setMessageInput(localDrafts[currentChatId] || '');
   }, [currentChatId, localDrafts]);
 
-  // УЛУЧШЕННАЯ ЛОГИКА УПОМИНАНИЙ V42.0
+  // УЛУЧШЕННАЯ ЛОГИКА УПОМИНАНИЙ V42.0.1
   useEffect(() => {
     const lastWord = messageInput.split(/\s/).pop() || '';
     if (lastWord.startsWith('@')) {
@@ -65,25 +65,30 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
   useEffect(() => {
     if (mentionSearch !== null && db && participantIds) {
       const fetchParticipants = async () => {
-        const results: UserType[] = [];
-        const limitSize = Math.min(participantIds.length, 50);
-        
-        // Оптимизированный поиск по участникам
-        for (let i = 0; i < limitSize; i++) {
-           const uid = participantIds[i];
-           const uRef = doc(db, 'users', uid);
-           const uSnap = await getDocs(query(collection(db, 'users'), where('id', '==', uid), limit(1)));
-           if (!uSnap.empty) {
-             const u = { id: uSnap.docs[0].id, ...uSnap.docs[0].data() } as UserType;
-             const matches = 
-                u.username?.toLowerCase().includes(mentionSearch) || 
-                u.name?.toLowerCase().includes(mentionSearch) || 
-                mentionSearch === '';
-             
-             if (matches) results.push(u);
-           }
+        try {
+          const results: UserType[] = [];
+          // Оптимизированный поиск: берем только участников текущего чата
+          // Для MVP используем лимит, чтобы не перегружать базу
+          const limitSize = Math.min(participantIds.length, 50);
+          
+          for (let i = 0; i < limitSize; i++) {
+             const uid = participantIds[i];
+             const userSnap = await getDocs(query(collection(db, 'users'), where('id', '==', uid), limit(1)));
+             if (!userSnap.empty) {
+               const u = { id: userSnap.docs[0].id, ...userSnap.docs[0].data() } as UserType;
+               const matches = 
+                  u.username?.toLowerCase().includes(mentionSearch) || 
+                  u.name?.toLowerCase().includes(mentionSearch) || 
+                  mentionSearch === '' ||
+                  mentionSearch === 'all';
+               
+               if (matches) results.push(u);
+             }
+          }
+          setMentionList(results);
+        } catch (e) {
+          console.warn("Mention fetch failed");
         }
-        setMentionList(results);
       };
       fetchParticipants();
     }
@@ -183,20 +188,20 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
 
   return (
     <footer className="p-3 pb-[calc(1rem+env(safe-area-inset-bottom))] obsidian-glass border-t border-white/5 shrink-0 z-40 relative flex flex-col gap-2">
-      {/* МЕНЮ УПОМИНАНИЙ V42.0 */}
-      {mentionSearch !== null && (mentionList.length > 0 || mentionSearch === '' || mentionSearch === 'all') && (
+      {/* МЕНЮ УПОМИНАНИЙ V42.0.1 */}
+      {mentionSearch !== null && isGroup && (
         <div className="absolute bottom-full left-4 mb-2 w-72 obsidian-glass border border-white/10 rounded-[2rem] overflow-hidden z-[100] animate-in slide-in-from-bottom-4 duration-500 shadow-2xl">
            <div className="p-3 border-b border-white/5 flex items-center justify-between bg-primary/5">
              <div className="flex items-center gap-2">
                 <AtSign className="w-3.5 h-3.5 text-primary" />
                 <span className="text-[9px] font-black uppercase text-primary/80 tracking-widest">Упоминания</span>
              </div>
-             <span className="text-[8px] font-bold text-white/20 uppercase tracking-widest">v42.0</span>
+             <span className="text-[8px] font-bold text-white/20 uppercase tracking-widest">v42.0.1</span>
            </div>
            <ScrollArea className="max-h-64">
               <div className="flex flex-col">
-                {/* SPECIAL: PING ALL (VK STYLE) */}
-                {(mentionSearch === '' || 'all'.includes(mentionSearch)) && isGroup && (
+                {/* SPECIAL: PING ALL (VK STYLE) - Всегда доступен при открытии меню в группах */}
+                {(mentionSearch === '' || 'all'.includes(mentionSearch)) && (
                   <button 
                     onClick={() => handleSelectMention('all')} 
                     className="w-full p-4 flex items-center gap-4 hover:bg-primary/10 transition-all border-b border-white/5 group"
@@ -224,6 +229,12 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
                     </div>
                   </button>
                 ))}
+
+                {mentionList.length === 0 && mentionSearch !== '' && mentionSearch !== 'all' && (
+                  <div className="p-6 text-center opacity-20">
+                     <p className="text-[10px] font-black uppercase tracking-widest">Нет совпадений</p>
+                  </div>
+                )}
               </div>
            </ScrollArea>
         </div>

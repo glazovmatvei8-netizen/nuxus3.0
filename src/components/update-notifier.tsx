@@ -9,9 +9,9 @@ import { Progress } from './ui/progress';
 import nuxusVersions from '@/app/versions.json';
 
 /**
- * КВАНТОВЫЙ ОБНОВЛЯТОР ЯДРА V42.0.0 (Live-Pulse)
+ * КВАНТОВЫЙ ОБНОВЛЯТОР ЯДРА V42.0.1 (Live-Pulse)
  */
-const CURRENT_VERSION = "41.0.0"; // Специально ниже серверной, чтобы сработал апдейт
+const CURRENT_VERSION = "42.0.0"; // На одну ниже серверной для триггера
 
 export function UpdateNotifier() {
   const [isOpen, setIsOpen] = useState(false);
@@ -125,7 +125,7 @@ export function UpdateNotifier() {
               <span className="text-[10px] font-black bg-white/5 border border-white/10 px-3 py-1 rounded-lg text-primary">142 MB</span>
             </div>
             <DialogDescription className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em] ml-1">
-              Mention Protocol & Identity Patch
+              Mention Protocol & Stability Patch
             </DialogDescription>
           </DialogHeader>
 
