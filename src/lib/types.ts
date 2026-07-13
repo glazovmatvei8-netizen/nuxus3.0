@@ -160,11 +160,14 @@ export interface Chat {
   }>;
 }
 
+export type PrivacyOption = 'everybody' | 'contacts' | 'premium' | 'nobody';
+
 export interface UserPrivacy {
-  phoneVisibility: 'everybody' | 'contacts' | 'nobody';
-  lastSeenVisibility: 'everybody' | 'nobody';
-  allowGroupsFrom: 'everybody' | 'contacts' | 'premium' | 'nobody';
-  whoCanMessageMe: 'everybody' | 'premium';
+  phoneVisibility: PrivacyOption;
+  lastSeenVisibility: PrivacyOption;
+  allowGroupsFrom: PrivacyOption;
+  whoCanMessageMe: PrivacyOption;
+  whoCanCallMe: PrivacyOption;
   isGhostMode?: boolean;
 }
 

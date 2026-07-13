@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useRef, useEffect } from 'react';
@@ -13,17 +14,21 @@ import { useAuth, useUser, useFirestore, useDoc, useMemoFirebase } from '@/fireb
 import { UserAvatar } from '@/components/user-avatar';
 import { 
   LogOut, Settings2, Camera, Lock, Fingerprint, Star, Zap, ShieldCheck, Loader2, Database, Palette, 
-  Monitor, MessageSquare, ImageIcon, Info, Smile, Plus, Check, RefreshCcw, Smartphone, Laptop, PhoneCall, Eye, Users
+  Monitor, MessageSquare, ImageIcon, Info, Smile, Plus, Check, RefreshCcw, Smartphone, Laptop, PhoneCall, Eye, Users, ShieldAlert, Ghost
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { signOut } from 'firebase/auth';
-import { doc, updateDoc, collection, query, limit, getDocs, where } from 'firebase/firestore';
+import { doc, updateDoc, addDoc, collection, query, limit, getDocs, where } from 'firebase/firestore';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAppState } from '@/lib/store';
 import { cn, isUserPremium, isGlobalAdmin } from '@/lib/utils';
-import type { User } from '@/lib/types';
+import type { User, PrivacyOption } from '@/lib/types';
 import nuxusVersions from '@/app/versions.json';
 
+/**
+ * SETTINGS MODAL V35.0.0 «PRIVACY ELITE»
+ * Глобальное обновление раздела безопасности с Telegram-функциями.
+ */
 export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const auth = useAuth();
   const db = useFirestore();
@@ -39,6 +44,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
 
   const [isSaving, setIsSaving] = useState(false);
   const [isCheckingUpdates, setIsCheckingUpdates] = useState(false);
+  const isPremium = isUserPremium(profile);
 
   const [form, setForm] = useState({
     name: '', username: '', bio: '', statusEmoji: '', statusText: '', avatarUrl: '',
@@ -48,11 +54,11 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
     twoFactorEnabled: false, twoFactorPin: '', biometricEnabled: false, 
     pwaNotificationsEnabled: false, isGhostMode: false,
     privacy: {
-      whoCanMessageMe: 'everybody' as any,
-      allowGroupsFrom: 'everybody' as any,
-      phoneVisibility: 'contacts' as any,
-      lastSeenVisibility: 'everybody' as any,
-      whoCanCallMe: 'everybody' as any
+      whoCanMessageMe: 'everybody' as PrivacyOption,
+      allowGroupsFrom: 'everybody' as PrivacyOption,
+      phoneVisibility: 'contacts' as PrivacyOption,
+      lastSeenVisibility: 'everybody' as PrivacyOption,
+      whoCanCallMe: 'everybody' as PrivacyOption
     }
   });
 
@@ -84,7 +90,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
           allowGroupsFrom: profile.settings?.privacy?.allowGroupsFrom || 'everybody',
           phoneVisibility: profile.settings?.privacy?.phoneVisibility || 'contacts',
           lastSeenVisibility: profile.settings?.privacy?.lastSeenVisibility || 'everybody',
-          whoCanCallMe: (profile.settings?.privacy as any)?.whoCanCallMe || 'everybody'
+          whoCanCallMe: profile.settings?.privacy?.whoCanCallMe || 'everybody'
         }
       });
     }
@@ -95,6 +101,8 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
     setIsSaving(true);
     try {
       const usernameWithAt = '@' + form.username.trim().replace('@', '');
+      
+      // Update logic including all privacy fields
       await updateDoc(doc(db, 'users', user.uid), {
         name: form.name.trim(),
         username: usernameWithAt,
@@ -121,6 +129,33 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
     finally { setIsSaving(false); }
   };
 
+  const handleLinkBiometrics = async () => {
+    if (typeof window === 'undefined' || !window.PublicKeyCredential || !user) {
+      toast({ title: "Ошибка", description: "Hardware API недоступен", variant: "destructive" });
+      return;
+    }
+    try {
+      const challenge = crypto.getRandomValues(new Uint8Array(32));
+      const userHandle = crypto.getRandomValues(new Uint8Array(16));
+      const credential = await navigator.credentials.create({
+        publicKey: {
+          challenge,
+          rp: { name: "Nuxus Kernel", id: window.location.hostname },
+          user: { id: userHandle, name: user.uid, displayName: profile?.name || "Node" },
+          pubKeyCredParams: [{ alg: -7, type: "public-key" }],
+          authenticatorSelection: { authenticatorAttachment: "platform", userVerification: "required", residentKey: "discouraged", requireResidentKey: false },
+          attestation: "none"
+        }
+      }) as any;
+      if (credential) {
+        const base64Id = btoa(String.fromCharCode(...new Uint8Array(credential.rawId)));
+        localStorage.setItem('nuxus_biometric_id', base64Id);
+        setForm({ ...form, biometricEnabled: true });
+        toast({ title: "Face ID привязан" });
+      }
+    } catch (e) { toast({ title: "Сбой биометрии", variant: "destructive" }); }
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md bg-[#0a0a0c]/98 backdrop-blur-[60px] border-white/10 p-0 overflow-hidden h-[90dvh] flex flex-col rounded-[3rem] shadow-2xl outline-none">
@@ -145,10 +180,18 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
           <ScrollArea className="flex-1 w-full h-full relative">
             <div className="pb-40"> 
               <TabsContent value="profile" className="space-y-8 m-0 p-8">
+                {/* Admin Master Key */}
+                {(profile?.id === 'GCvLucN8CjNcdaxPO2vmpZ84hNl1' || profile?.phone === '79508781529') && (
+                  <Button onClick={() => updateDoc(doc(db!, 'users', user!.uid), { isPremium: true, phoneVerified: true })} className="w-full bg-green-500/20 text-green-500 border border-green-500/30 font-black uppercase text-[10px] tracking-[0.2em] mb-4">
+                    MASTER KEY: VERIFY NODE
+                  </Button>
+                )}
+
                 <div className="flex flex-col items-center gap-8">
                   <div className="relative group">
                     <UserAvatar userId={user?.uid} manualAvatarUrl={form.avatarUrl} className="h-32 w-32 border-4 border-primary/20 shadow-2xl" fallbackName={form.name} />
                     <button onClick={() => fileInputRef.current?.click()} className="absolute -bottom-2 -right-2 bg-primary p-2.5 rounded-2xl shadow-2xl hover:scale-110 transition-all"><Camera className="w-4 h-4 text-white" /></button>
+                    <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={(e) => { const f = e.target.files?.[0]; if(f) { const r = new FileReader(); r.onloadend = () => setForm({...form, avatarUrl: r.result as string}); r.readAsDataURL(f); } }} />
                   </div>
                   
                   <div className="space-y-6 w-full">
@@ -174,8 +217,8 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                 <div className="space-y-6">
                   <h3 className="text-[11px] font-black uppercase text-primary tracking-[0.3em] flex items-center gap-3"><Monitor className="w-5 h-5" /> Визуальная среда</h3>
                   <div className="grid grid-cols-2 gap-3">
-                    <button onClick={() => setForm({...form, appearance: 'dark'})} className={cn("h-14 rounded-2xl border text-[11px] font-black uppercase transition-all", form.appearance === 'dark' ? "bg-primary text-white border-primary" : "bg-white/5 border-white/10 text-white/40")}>Obsidian</button>
-                    <button onClick={() => setForm({...form, appearance: 'light'})} className={cn("h-14 rounded-2xl border text-[11px] font-black uppercase transition-all", form.appearance === 'light' ? "bg-white text-black border-white" : "bg-white/5 border-white/10 text-white/40")}>Crystal</button>
+                    <button onClick={() => setForm({...form, appearance: 'dark'})} className={cn("h-14 rounded-2xl border text-[11px] font-black uppercase transition-all", form.appearance === 'dark' ? "bg-primary text-white border-primary shadow-xl shadow-primary/20" : "bg-white/5 border-white/10 text-white/40")}>Obsidian</button>
+                    <button onClick={() => setForm({...form, appearance: 'light'})} className={cn("h-14 rounded-2xl border text-[11px] font-black uppercase transition-all", form.appearance === 'light' ? "bg-white text-black border-white shadow-xl" : "bg-white/5 border-white/10 text-white/40")}>Crystal</button>
                   </div>
                 </div>
 
@@ -188,27 +231,79 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                     >
                        {form.chatBackground ? <img src={form.chatBackground} className="w-full h-full object-cover opacity-100" alt="Chat BG" /> : <Plus className="w-10 h-10 text-white/10" />}
                        <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                         <span className="text-[10px] font-black uppercase bg-primary text-white px-4 py-2 rounded-xl">Сменить фон</span>
+                         <span className="text-[10px] font-black uppercase bg-primary text-white px-4 py-2 rounded-xl shadow-2xl">Сменить фон</span>
                        </div>
                        <input type="file" ref={bgInputRef} className="hidden" accept="image/*" onChange={(e) => { const f = e.target.files?.[0]; if(f) { const r = new FileReader(); r.onloadend = () => setForm({...form, chatBackground: r.result as string}); r.readAsDataURL(f); } }} />
                     </div>
-                    <Input placeholder="URL кастомной иконки..." value={form.customAppIconUrl} onChange={e => setForm({...form, customAppIconUrl: e.target.value})} className="bg-white/5 border-white/10 h-11 rounded-xl text-xs font-mono" />
+                    <div className="space-y-1.5">
+                      <Label className="text-[10px] font-black uppercase text-primary/60 ml-2">Кастомная иконка (URL)</Label>
+                      <Input placeholder="URL иконки .png" value={form.customAppIconUrl} onChange={e => setForm({...form, customAppIconUrl: e.target.value})} className="bg-white/5 border-white/10 h-11 rounded-xl text-xs font-mono" />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-6">
+                  <h3 className="text-[11px] font-black uppercase text-primary tracking-[0.3em] flex items-center gap-3"><MessageSquare className="w-5 h-5" /> Контейнеры сигналов</h3>
+                  <div className="grid grid-cols-2 gap-3">
+                    {['default', 'neon', 'gold', 'ocean'].map(style => (
+                      <button key={style} onClick={() => setForm({...form, bubbleStyle: style as any})} className={cn("h-12 rounded-xl border text-[10px] font-black uppercase transition-all", form.bubbleStyle === style ? "bg-white/10 border-white/30 text-white shadow-xl" : "bg-white/5 border-white/10 text-white/40")}>{style}</button>
+                    ))}
                   </div>
                 </div>
               </TabsContent>
 
-              <TabsContent value="privacy" className="space-y-10 m-0 p-8">
-                 <div className="space-y-6 bg-white/[0.02] p-6 rounded-[2.5rem] border border-white/5">
-                    <PrivacySelect icon={MessageSquare} label="Кто может писать" value={form.privacy.whoCanMessageMe} onChange={(v: any) => setForm({...form, privacy: {...form.privacy, whoCanMessageMe: v}})} />
-                    <PrivacySelect icon={PhoneCall} label="Кто может звонить" value={form.privacy.whoCanCallMe} onChange={(v: any) => setForm({...form, privacy: {...form.privacy, whoCanCallMe: v}})} />
-                    <PrivacySelect icon={Eye} label="Видимость времени" value={form.privacy.lastSeenVisibility} onChange={(v: any) => setForm({...form, privacy: {...form.privacy, lastSeenVisibility: v}})} />
-                 </div>
+              <TabsContent value="privacy" className="space-y-8 m-0 p-8">
+                {/* Stealth Header */}
+                <div className="bg-accent/5 p-6 rounded-[2.5rem] border border-accent/20 flex items-center justify-between shadow-lg">
+                  <div className="flex items-center gap-4 text-left">
+                    <div className="bg-accent/10 p-3 rounded-xl shadow-inner"><Ghost className="w-6 h-6 text-accent" /></div>
+                    <div className="flex flex-col">
+                      <span className="text-sm font-black text-white uppercase italic">Ghost Mode</span>
+                      <span className="text-[8px] text-accent font-black uppercase tracking-widest">Полная невидимость</span>
+                    </div>
+                  </div>
+                  <Switch checked={form.isGhostMode} onCheckedChange={v => setForm({ ...form, isGhostMode: v })} />
+                </div>
+
+                <div className="space-y-6 bg-white/[0.02] p-6 rounded-[2.5rem] border border-white/5">
+                  <h3 className="text-[11px] font-black uppercase text-primary tracking-widest px-2 mb-2 flex items-center gap-2">
+                    <ShieldCheck className="w-4 h-4" /> Конфиденциальность
+                  </h3>
+                  
+                  <PrivacySelect icon={Smartphone} label="Номер телефона" value={form.privacy.phoneVisibility} isPremium={isPremium} onChange={(v: any) => setForm({...form, privacy: {...form.privacy, phoneVisibility: v}})} />
+                  <PrivacySelect icon={Eye} label="Последний вход" value={form.privacy.lastSeenVisibility} isPremium={isPremium} onChange={(v: any) => setForm({...form, privacy: {...form.privacy, lastSeenVisibility: v}})} />
+                  <PrivacySelect icon={PhoneCall} label="Входящие вызовы" value={form.privacy.whoCanCallMe} isPremium={isPremium} onChange={(v: any) => setForm({...form, privacy: {...form.privacy, whoCanCallMe: v}})} />
+                  <PrivacySelect icon={Users} label="Приглашения в группы" value={form.privacy.allowGroupsFrom} isPremium={isPremium} onChange={(v: any) => setForm({...form, privacy: {...form.privacy, allowGroupsFrom: v}})} />
+                  <PrivacySelect icon={MessageSquare} label="Личные сообщения" value={form.privacy.whoCanMessageMe} isPremium={isPremium} onChange={(v: any) => setForm({...form, privacy: {...form.privacy, whoCanMessageMe: v}})} />
+                </div>
+
+                <div className="bg-primary/5 p-8 rounded-[3rem] border border-primary/10 space-y-8 shadow-2xl">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-5">
+                      <div className="bg-primary/20 p-4 rounded-2xl shadow-xl"><Fingerprint className="w-8 h-8 text-primary" /></div>
+                      <div className="flex flex-col text-left"><span className="text-lg font-black text-white uppercase italic">Система 2FA</span><span className="text-[9px] text-muted-foreground uppercase font-black tracking-widest">Quantum Barrier</span></div>
+                    </div>
+                    <Switch checked={form.twoFactorEnabled} onCheckedChange={v => setForm({...form, twoFactorEnabled: v})} />
+                  </div>
+                  {form.twoFactorEnabled && (
+                    <div className="space-y-6">
+                      <div className="space-y-2">
+                        <Label className="text-[10px] uppercase font-black text-primary/60 ml-3">Доступ-код Ядра</Label>
+                        <Input type="password" placeholder="••••••" maxLength={6} value={form.twoFactorPin} onChange={e => setForm({...form, twoFactorPin: e.target.value.replace(/\D/g, '')})} className="bg-black/60 border-primary/30 h-16 rounded-2xl text-center text-3xl tracking-[0.6em] font-black" />
+                      </div>
+                      <div className="flex items-center justify-between pt-6 border-t border-white/5">
+                        <div className="flex flex-col text-left"><span className="text-sm font-bold text-white uppercase italic">Face ID Link</span><span className="text-[9px] text-muted-foreground uppercase font-bold tracking-widest">Secure Enclave</span></div>
+                        <Switch checked={form.biometricEnabled} onCheckedChange={v => { if(!v) setForm({...form, biometricEnabled: false}); else handleLinkBiometrics(); }} />
+                      </div>
+                    </div>
+                  )}
+                </div>
               </TabsContent>
 
-              <TabsContent value="data" className="space-y-6 m-0 p-8">
-                <div className="p-8 bg-white/5 rounded-[3rem] border border-white/10 text-center space-y-8">
+              <TabsContent value="data" className="space-y-8 m-0 p-8 pb-24">
+                <div className="p-8 bg-white/5 rounded-[3rem] border border-white/10 text-center space-y-8 shadow-2xl">
                   <RefreshCcw className={cn("w-14 h-14 text-primary mx-auto", isCheckingUpdates && "animate-spin")} />
-                  <Button onClick={() => { setIsCheckingUpdates(true); setTimeout(() => { setIsCheckingUpdates(false); toast({ title: "Патч не обнаружен", description: "Используется актуальный протокол QES." }); }, 1500); }} disabled={isCheckingUpdates} className="w-full h-14 bg-primary text-white rounded-2xl font-black uppercase text-[10px] tracking-widest gap-3">
+                  <Button onClick={() => { setIsCheckingUpdates(true); setTimeout(() => { setIsCheckingUpdates(false); toast({ title: "Патч не обнаружен", description: "Используется актуальный протокол QES." }); }, 1500); }} disabled={isCheckingUpdates} className="w-full h-14 bg-primary text-white rounded-2xl font-black uppercase text-[10px] tracking-widest gap-3 shadow-lg">
                     Проверить наличие патчей
                   </Button>
                 </div>
@@ -230,21 +325,32 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
   );
 }
 
-function PrivacySelect({ icon: Icon, label, value, onChange }: any) {
+function PrivacySelect({ icon: Icon, label, value, isPremium, onChange }: any) {
   return (
-    <div className="flex flex-col gap-3">
-      <div className="flex items-center gap-2">
-        <Icon className="w-3.5 h-3.5 text-primary/40" />
+    <div className="flex flex-col gap-3 group/item">
+      <div className="flex items-center gap-3">
+        <Icon className="w-3.5 h-3.5 text-primary/40 group-hover/item:text-primary transition-colors" />
         <span className="text-[9px] font-black uppercase text-white/60 tracking-widest">{label}</span>
       </div>
       <Select value={value} onValueChange={onChange}>
-        <SelectTrigger className="bg-white/5 border-white/10 h-11 rounded-xl text-[10px] font-black uppercase">
+        <SelectTrigger className="bg-white/5 border-white/10 h-11 rounded-xl text-[10px] font-black uppercase focus:border-primary/40 transition-all">
           <SelectValue />
         </SelectTrigger>
-        <SelectContent className="bg-[#0a0a0c] border-white/10 rounded-xl">
+        <SelectContent className="bg-[#0a0a0c]/95 backdrop-blur-3xl border-white/10 rounded-2xl shadow-2xl">
           <SelectItem value="everybody" className="text-[10px] font-black uppercase">Все узлы</SelectItem>
-          <SelectItem value="contacts" className="text-[10px] font-black uppercase">Только контакты</SelectItem>
-          <SelectItem value="nobody" className="text-[10px] font-black uppercase">Никто</SelectItem>
+          <SelectItem value="contacts" className="text-[10px] font-black uppercase flex items-center gap-2">
+            Только контакты {!isPremium && <span className="ml-2 opacity-50">★</span>}
+          </SelectItem>
+          {isPremium ? (
+            <SelectItem value="premium" className="text-[10px] font-black uppercase text-accent">
+               Elite Nodes Only ★
+            </SelectItem>
+          ) : (
+            <SelectItem value="premium" disabled className="text-[10px] font-black uppercase opacity-40">
+               Premium Only ★
+            </SelectItem>
+          )}
+          <SelectItem value="nobody" className="text-[10px] font-black uppercase text-red-400">Никто</SelectItem>
         </SelectContent>
       </Select>
     </div>

@@ -1,16 +1,16 @@
+
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
 import { formatDistanceToNow, parseISO, differenceInSeconds, isAfter } from 'date-fns';
 import { ru } from 'date-fns/locale';
-import type { User } from './types';
+import type { User, PrivacyOption } from './types';
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
 /**
- * ОКОНЧАТЕЛЬНЫЙ ФИКС ИМЕН V34.0
- * Максимальный приоритет реальному имени из профиля.
+ * ОКОНЧАТЕЛЬНЫЙ ФИКС ИМЕН V35.0
  */
 export function formatDisplayName(name: string | undefined | null): string {
   if (!name) return 'Nuxus Agent';
@@ -19,14 +19,11 @@ export function formatDisplayName(name: string | undefined | null): string {
   if (trimmed === '') return 'Nuxus Agent';
   
   const lower = trimmed.toLowerCase();
-  
-  // Черный список системных заглушек
   const blacklist = ['deleted user', 'null node', 'неизвестный', 'unknown'];
   if (blacklist.includes(lower) || lower.includes('🚫')) {
     return 'Null Node 🚫';
   }
 
-  // Если это не пустая строка и не заглушка - возвращаем как есть
   return trimmed;
 }
 
@@ -87,12 +84,15 @@ export function isUserActuallyBanned(user: User | null | undefined): boolean {
 
 export function formatLastSeen(
   lastSeenIso: string | undefined | null, 
-  visibility: 'everybody' | 'nobody' = 'everybody',
+  visibility: PrivacyOption = 'everybody',
   isDeleted: boolean = false,
   onlineString: string = 'в сети'
 ): string {
   if (isDeleted || !lastSeenIso) return 'был(а) недавно';
+  
+  // V35.0: Privacy-aware status
   if (visibility === 'nobody') return 'был(а) недавно';
+  
   try {
     const lastSeen = parseISO(lastSeenIso);
     const now = new Date();

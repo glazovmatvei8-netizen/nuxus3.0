@@ -50,7 +50,7 @@ export function AddMemberModal({ open, onOpenChange, chatId, currentParticipantI
   const handleAddUser = async (targetUser: User) => {
     if (!db || !chatId || !user) return;
     
-    // Проверка конфиденциальности
+    // Продвинутая проверка конфиденциальности V35.0
     const privacy = targetUser.settings?.privacy?.allowGroupsFrom || 'everybody';
     
     let canAdd = true;
@@ -58,24 +58,24 @@ export function AddMemberModal({ open, onOpenChange, chatId, currentParticipantI
 
     if (privacy === 'nobody') {
       canAdd = false;
-      errorMsg = "Пользователь запретил добавлять себя в группы.";
+      errorMsg = "Пользователь запретил приглашения в группы.";
     } else if (privacy === 'contacts') {
       const isContact = targetUser.contactIds?.includes(user.uid);
       if (!isContact) {
         canAdd = false;
-        errorMsg = "Пользователь разрешил добавлять себя только Контактам.";
+        errorMsg = "Вы не в списке контактов пользователя.";
       }
     } else if (privacy === 'premium') {
       if (!isUserPremium(currentUserProfile)) {
         canAdd = false;
-        errorMsg = "Пользователь разрешил инвайты только от Premium участников.";
+        errorMsg = "Требуется Premium статус для приглашения этого узла.";
       }
     }
 
     if (!canAdd) {
        toast({ 
-         title: "Ограничение", 
-         description: `${errorMsg} Отправьте ему ссылку на чат.`, 
+         title: "Сигнал заблокирован", 
+         description: errorMsg, 
          variant: "destructive" 
        });
        return;
@@ -87,7 +87,7 @@ export function AddMemberModal({ open, onOpenChange, chatId, currentParticipantI
       updateDocumentNonBlocking(chatRef, {
         participantIds: arrayUnion(targetUser.id)
       });
-      toast({ title: "Успех", description: `${formatDisplayName(targetUser.name)} добавлен в чат` });
+      toast({ title: "Узел добавлен", description: `${formatDisplayName(targetUser.name)} интегрирован в кластер.` });
       onOpenChange(false);
     } catch (error: any) {
       toast({ title: "Ошибка", description: error.message, variant: "destructive" });
@@ -98,38 +98,35 @@ export function AddMemberModal({ open, onOpenChange, chatId, currentParticipantI
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md p-0 overflow-hidden bg-card/95 backdrop-blur-xl border-border/40">
-        <DialogHeader className="p-6 pb-2">
-          <DialogTitle className="text-xl font-bold flex items-center gap-2">
-            <UserPlus className="w-5 h-5 text-primary" />
-            Добавить участников
+      <DialogContent className="max-w-md p-0 overflow-hidden bg-[#0a0a0c]/95 backdrop-blur-[60px] border-white/10 rounded-[2.5rem] shadow-2xl">
+        <DialogHeader className="p-8 pb-4">
+          <DialogTitle className="text-xl font-black uppercase italic text-white flex items-center gap-3">
+            <UserPlus className="w-6 h-6 text-primary" /> Интеграция узлов
           </DialogTitle>
-          <DialogDescription>
-            Найдите пользователей, чтобы добавить их в группу
+          <DialogDescription className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">
+            Сканируйте базу для добавления в кластер
           </DialogDescription>
         </DialogHeader>
 
-        <div className="px-6 py-4">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+        <div className="px-8 py-2">
+          <div className="relative group">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground/40 group-focus-within:text-primary transition-colors" />
             <Input 
-              placeholder="Имя, @ник или номер телефона..." 
-              className="pl-9 h-11 bg-muted/30 border-muted-foreground/10 rounded-xl"
+              placeholder="Имя, @ID или номер..." 
+              className="pl-11 h-12 bg-white/5 border-white/10 rounded-2xl font-bold focus:border-primary/40 transition-all"
               value={search}
               onChange={e => setSearch(e.target.value)}
             />
           </div>
         </div>
 
-        <ScrollArea className="h-[350px] border-t border-border/40">
-          <div className="p-2 space-y-1">
+        <ScrollArea className="h-[380px] mt-4 border-t border-white/5">
+          <div className="p-4 space-y-2">
             {search.length < 2 ? (
-              <div className="p-8 text-center space-y-3">
-                <div className="bg-muted/30 w-12 h-12 rounded-full flex items-center justify-center mx-auto">
-                  <Contact className="w-6 h-6 text-muted-foreground" />
-                </div>
-                <p className="text-xs text-muted-foreground italic">
-                  Введите данные для поиска участников
+              <div className="p-10 text-center space-y-4 opacity-20">
+                <Contact className="w-12 h-12 mx-auto" />
+                <p className="text-[10px] font-black uppercase tracking-widest italic">
+                  Введите данные для поиска
                 </p>
               </div>
             ) : filteredUsers.length > 0 ? (
@@ -137,33 +134,30 @@ export function AddMemberModal({ open, onOpenChange, chatId, currentParticipantI
                 <div
                   key={u.id}
                   onClick={() => handleAddUser(u)}
-                  className="flex items-center justify-between p-3 rounded-xl hover:bg-primary/10 cursor-pointer group transition-all"
+                  className="flex items-center justify-between p-4 bg-white/5 rounded-2xl hover:bg-primary/10 cursor-pointer group transition-all border border-transparent hover:border-primary/20 shadow-xl"
                 >
-                  <div className="flex items-center gap-3">
-                    <Avatar className="h-10 w-10 border-2 border-transparent group-hover:border-primary/20">
-                      <AvatarImage src={u.avatarUrl || ''} />
-                      <AvatarFallback className="bg-primary/20 text-primary font-bold uppercase">{u.name?.slice(0, 2)}</AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1 min-w-0 text-left">
-                      <div className="flex items-center gap-1">
-                        <span className="font-semibold text-sm group-hover:text-primary transition-colors block truncate">
+                  <div className="flex items-center gap-4">
+                    <UserAvatar userId={u.id} className="h-12 w-12 border border-white/5" manualAvatarUrl={u.avatarUrl} />
+                    <div className="flex flex-col text-left">
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-black text-sm text-white italic uppercase tracking-tight truncate max-w-[140px]">
                           {formatDisplayName(u.name)}
                         </span>
-                        {isUserPremium(u) && <Star className="w-3 h-3 text-accent fill-accent" />}
+                        {isUserPremium(u) && <Star className="w-3.5 h-3.5 text-accent fill-accent animate-pulse" />}
                       </div>
-                      <span className="text-[10px] text-muted-foreground block truncate">{u.username}</span>
+                      <span className="text-[10px] font-black text-primary/60 uppercase tracking-widest">{u.username}</span>
                     </div>
                   </div>
                   {u.settings?.privacy?.allowGroupsFrom !== 'everybody' && (
-                    <div className="flex items-center gap-1 text-[9px] text-muted-foreground/60 font-bold uppercase">
+                    <div className="flex items-center gap-1.5 text-[8px] font-black uppercase text-accent bg-accent/10 px-2 py-1 rounded-lg border border-accent/20">
                       <Lock className="w-3 h-3" /> {u.settings?.privacy?.allowGroupsFrom}
                     </div>
                   )}
                 </div>
               ))
             ) : (
-              <div className="p-8 text-center text-muted-foreground text-sm italic">
-                Пользователи не найдены
+              <div className="p-10 text-center opacity-40">
+                <p className="text-[10px] font-black uppercase italic tracking-widest">Узел не обнаружен</p>
               </div>
             )}
           </div>
