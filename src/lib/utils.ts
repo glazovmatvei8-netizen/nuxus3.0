@@ -8,9 +8,15 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
+/**
+ * Исправленная функция форматирования имени.
+ * Больше не переименовывает реальных пользователей в Nuxus Agent.
+ */
 export function formatDisplayName(name: string | undefined | null): string {
   if (!name || name.trim() === '') return 'Nuxus Agent';
+  
   const lower = name.toLowerCase();
+  const systemHolders = ['user', 'пользователь', 'node', 'unknown', 'неизвестный'];
   
   if (
     lower.includes('удаленный') || 
@@ -22,18 +28,14 @@ export function formatDisplayName(name: string | undefined | null): string {
     return 'Null Node 🚫';
   }
 
-  // Не заменяем, если имя похоже на имя, а не на системную заглушку
-  if (name.length > 2 && !['user', 'пользователь'].includes(lower)) {
+  // Если имя длиннее 2 символов и не является стандартной заглушкой - возвращаем как есть
+  if (name.length >= 2 && !systemHolders.includes(lower)) {
     return name;
   }
 
-  return 'Nuxus Agent';
+  return name || 'Nuxus Agent';
 }
 
-/**
- * Квантовое сквозное шифрование (E2EE)
- * Шифрует текст на стороне клиента.
- */
 export function encryptSignal(text: string): string {
   if (!text) return '';
   try {
@@ -44,54 +46,36 @@ export function encryptSignal(text: string): string {
   }
 }
 
-/**
- * Дешифровка сигнала
- */
 export function decryptSignal(content: string | undefined | null): string {
   if (!content || typeof content !== 'string') return content || '';
-  
   const prefix = content.startsWith('NX_SECURE_') ? 'NX_SECURE_' : content.startsWith('NX_') ? 'NX_' : null;
-  
   if (!prefix) return content;
-  
   try {
     const raw = content.replace(prefix, '');
     return decodeURIComponent(atob(raw));
   } catch (e) {
-    console.warn("Nuxus Signal: Decryption failed.");
     return content;
   }
 }
 
 export function isGlobalAdmin(user: User | null | undefined): boolean {
   if (!user) return false;
-  const PRIME_ADMINS = [
-    'vnctow46',
-    'GCvLucN8CjNcdaxPO2vmpZ84hNl1'
-  ];
+  const PRIME_ADMINS = ['vnctow46', 'GCvLucN8CjNcdaxPO2vmpZ84hNl1'];
   if (PRIME_ADMINS.includes(user.id)) return true;
   return !!user.isAdmin;
 }
 
-/**
- * СТРОГИЙ ПРЕМИУМ АУДИТ V6.5
- * Проверяет не только флаг, но и дату premiumUntil с учетом часовых поясов.
- */
 export function isUserPremium(user: User | null | undefined): boolean {
   if (!user) return false;
   if (isGlobalAdmin(user)) return true;
-  
   if (!user.isPremium) return false;
-  
   if (user.premiumUntil) {
     try {
-      const expiry = parseISO(user.premiumUntil);
-      return isAfter(expiry, new Date());
+      return isAfter(parseISO(user.premiumUntil), new Date());
     } catch (e) {
       return false;
     }
   }
-  
   return true;
 }
 
@@ -99,8 +83,7 @@ export function isUserActuallyBanned(user: User | null | undefined): boolean {
   if (!user || !user.isBanned) return false;
   if (user.bannedUntil) {
     try {
-      const expiry = parseISO(user.bannedUntil);
-      return isAfter(expiry, new Date());
+      return isAfter(parseISO(user.bannedUntil), new Date());
     } catch (e) {
       return true;
     }
@@ -112,18 +95,18 @@ export function formatLastSeen(
   lastSeenIso: string | undefined | null, 
   visibility: 'everybody' | 'nobody' = 'everybody',
   isDeleted: boolean = false,
-  onlineString: string = 'online'
+  onlineString: string = 'в сети'
 ): string {
-  if (isDeleted || !lastSeenIso) return 'Last seen long ago';
-  if (visibility === 'nobody') return 'seen recently';
+  if (isDeleted || !lastSeenIso) return 'был(а) недавно';
+  if (visibility === 'nobody') return 'был(а) недавно';
   try {
     const lastSeen = parseISO(lastSeenIso);
     const now = new Date();
     const diffSeconds = Math.max(0, differenceInSeconds(now, lastSeen));
     if (diffSeconds < 60) return onlineString;
-    return `seen ${formatDistanceToNow(lastSeen, { addSuffix: true, locale: ru })}`;
+    return `был(а) ${formatDistanceToNow(lastSeen, { addSuffix: true, locale: ru })}`;
   } catch (e) {
-    return 'Offline';
+    return 'оффлайн';
   }
 }
 
@@ -135,12 +118,10 @@ export async function compressImage(dataUrl: string, maxWidth = 1200, quality = 
       const canvas = document.createElement('canvas');
       let width = img.width;
       let height = img.height;
-
       if (width > maxWidth) {
         height = (maxWidth / width) * height;
         width = maxWidth;
       }
-
       canvas.width = width;
       canvas.height = height;
       const ctx = canvas.getContext('2d');

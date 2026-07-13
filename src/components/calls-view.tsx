@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { useAppState } from '@/lib/store';
 import { Button } from '@/components/ui/button';
 import { UserAvatar } from '@/components/user-avatar';
-import { Phone, Link as LinkIcon, Info, PhoneOff, Loader2, ArrowUpRight, ArrowDownLeft, ShieldCheck, Zap, Activity } from 'lucide-react';
+import { Phone, Link as LinkIcon, PhoneOff, Loader2, ArrowUpRight, ArrowDownLeft, ShieldCheck, Activity } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useFirestore, useUser, useCollection, useMemoFirebase, useDoc } from '@/firebase';
 import { collection, query, where, orderBy, limit, doc } from 'firebase/firestore';
@@ -13,10 +13,6 @@ import type { Call, User } from '@/lib/types';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 
-/**
- * CALL CENTER V29.0.0 «MISSION CONTROL»
- * ИСПРАВЛЕНО: Кнопки теперь функциональны. Добавлена генерация ссылок и поиск узлов.
- */
 export default function CallsView() {
   const { user } = useUser();
   const db = useFirestore();

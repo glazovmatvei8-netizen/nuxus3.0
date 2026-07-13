@@ -15,7 +15,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useAuth, useUser, useFirestore, useDoc, useMemoFirebase, useCollection } from '@/firebase';
+import { useAuth, useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
   LogOut, Settings2, Camera, Lock, Fingerprint, Star, Zap, ShieldCheck, Loader2, Database, Download, Check, Palette, 
@@ -23,25 +23,16 @@ import {
   RefreshCcw, Smartphone, Laptop, Info, Smile, Plus, User as UserIcon, Eye, UserX, Users, PhoneCall
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { 
-  signOut, 
-  RecaptchaVerifier, 
-  linkWithPhoneNumber,
-  ConfirmationResult
-} from 'firebase/auth';
-import { doc, updateDoc, collection, query, orderBy, limit, getDocs, where, addDoc } from 'firebase/firestore';
+import { signOut } from 'firebase/auth';
+import { doc, updateDoc, collection, query, limit, getDocs, where, addDoc } from 'firebase/firestore';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAppState } from '@/lib/store';
 import { cn, isUserPremium, isGlobalAdmin } from '@/lib/utils';
-import type { User, Session } from '@/lib/types';
+import type { User } from '@/lib/types';
 import nuxusVersions from '@/app/versions.json';
 import { format } from 'date-fns';
 import { ru } from 'date-fns/locale';
 
-/**
- * SETTINGS MODAL V33.2.4 «PRIVACY CORE»
- * ОБНОВЛЕНО: Детальная конфиденциальность и выбор стиля чатов.
- */
 export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const auth = useAuth();
   const db = useFirestore();
@@ -51,27 +42,19 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const bgInputRef = useRef<HTMLInputElement>(null);
-  const recaptchaRef = useRef<RecaptchaVerifier | null>(null);
 
-  const userRef = useMemoFirebase(() => (!db || !user) ? null : doc(db!, 'users', user.uid), [db, user]);
+  const userRef = useMemoFirebase(() => (!db || !user) ? null : doc(db, 'users', user.uid), [db, user]);
   const { data: profile } = useDoc<User>(userRef);
 
   const [isSaving, setIsSaving] = useState(false);
-  const [isLinkingBiometrics, setIsLinkingBiometrics] = useState(false);
-  const [isRequestingArchive, setIsRequestingArchive] = useState(false);
   const [isCheckingUpdates, setIsCheckingUpdates] = useState(false);
-
-  const [isVerifyingPhone, setIsVerifyingPhone] = useState(false);
-  const [phoneStep, setPhoneStep] = useState<'idle' | 'code'>('idle');
-  const [verificationCode, setVerificationCode] = useState('');
-  const [confirmationResult, setConfirmationResult] = useState<ConfirmationResult | null>(null);
 
   const [form, setForm] = useState({
     name: '', username: '', bio: '', statusEmoji: '', statusText: '', avatarUrl: '',
     phone: '', email: '',
     appearance: 'dark' as 'light' | 'dark', theme: 'default', customPrimaryColor: '',
     customAppIconUrl: '', bubbleStyle: 'default', chatBackground: '', messageSize: 'medium',
-    twoFactorEnabled: false, twoFactorPin: '' as any, biometricEnabled: false, 
+    twoFactorEnabled: false, twoFactorPin: '', biometricEnabled: false, 
     pwaNotificationsEnabled: false, isGhostMode: false,
     privacy: {
       whoCanMessageMe: 'everybody' as any,
@@ -92,16 +75,16 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         statusText: profile.statusText || '',
         avatarUrl: profile.avatarUrl || '',
         phone: profile.phone || '',
-        email: profile.email || user?.email || '',
+        email: profile.email || '',
         appearance: profile.settings?.appearance || 'dark',
         theme: profile.settings?.theme || 'default',
         customPrimaryColor: profile.settings?.customPrimaryColor || '',
-        customAppIconUrl: profile.settings?.customAppIconUrl || 'https://i.ibb.co/sd2MqGz2/Icon.png',
+        customAppIconUrl: profile.settings?.customAppIconUrl || '',
         bubbleStyle: profile.settings?.bubbleStyle || 'default',
         chatBackground: profile.settings?.chatBackground || '',
         messageSize: profile.settings?.messageSize || 'medium',
         twoFactorEnabled: !!profile.twoFactorEnabled,
-        twoFactorPin: profile.twoFactorPin as any || '',
+        twoFactorPin: profile.twoFactorPin || '',
         biometricEnabled: !!profile.settings?.biometricEnabled,
         pwaNotificationsEnabled: !!profile.settings?.pwaNotificationsEnabled,
         isGhostMode: !!profile.settings?.privacy?.isGhostMode,
@@ -114,7 +97,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         }
       });
     }
-  }, [profile, open, user?.email]);
+  }, [profile, open]);
 
   const handleBgUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -126,13 +109,12 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
 
   const handleAdminForceVerify = async () => {
     if (!db || !user) return;
-    setIsVerifyingPhone(true);
     try {
       await updateDoc(doc(db, 'users', user.uid), { phoneVerified: true });
-      toast({ title: "Узел верифицирован принудительно 🛡️" });
+      toast({ title: "Узел верифицирован 🛡️" });
     } catch (e) {
-      toast({ title: "Ошибка Админ-доступа", variant: "destructive" });
-    } finally { setIsVerifyingPhone(false); }
+      toast({ title: "Ошибка", variant: "destructive" });
+    }
   };
 
   const handleSave = async () => {
@@ -143,7 +125,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
       const targetLowercase = usernameWithAt.toLowerCase();
 
       if (targetLowercase !== profile.usernameLowercase) {
-        const q = query(collection(db!, 'users'), where('usernameLowercase', '==', targetLowercase), limit(1));
+        const q = query(collection(db, 'users'), where('usernameLowercase', '==', targetLowercase), limit(1));
         const checkSnap = await getDocs(q);
         if (!checkSnap.empty) {
           toast({ title: "ID занят", variant: "destructive" });
@@ -152,7 +134,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         }
       }
 
-      await updateDoc(doc(db!, 'users', user.uid), {
+      await updateDoc(doc(db, 'users', user.uid), {
         name: form.name.trim(),
         username: usernameWithAt,
         usernameLowercase: targetLowercase,
@@ -184,8 +166,6 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
     } finally { setIsSaving(false); }
   };
 
-  const isPremium = isUserPremium(profile);
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md bg-[#0a0a0c]/98 backdrop-blur-[60px] border-white/10 p-0 overflow-hidden h-[90dvh] flex flex-col rounded-[3rem] shadow-[0_30px_100px_rgba(0,0,0,1)] outline-none">
@@ -212,7 +192,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
               <TabsContent value="profile" className="space-y-8 m-0 p-8">
                 {isGlobalAdmin(profile) && (
                   <Button onClick={handleAdminForceVerify} className="w-full h-14 rounded-2xl bg-primary text-white font-black uppercase italic tracking-widest gap-2 shadow-2xl border border-white/10 mb-6">
-                    <ShieldCheck className="w-6 h-6" /> [ADMIN] MASTER NODE OK
+                    <ShieldCheck className="w-6 h-6" /> [ADMIN] FORCE VERIFY OK
                   </Button>
                 )}
 
@@ -264,7 +244,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                   <h3 className="text-[11px] font-black uppercase text-primary tracking-widest flex items-center gap-3"><MessageSquare className="w-5 h-5" /> Контейнеры сигналов</h3>
                   <div className="grid grid-cols-2 gap-3">
                       {['default', 'neon', 'gold', 'ocean'].map(s => (
-                        <button key={s} onClick={() => setForm({...form, bubbleStyle: s})} className={cn("h-12 rounded-2xl border text-[10px] font-black uppercase tracking-widest transition-all", form.bubbleStyle === s ? "bg-white/10 text-white border-white/30 shadow-2xl" : "bg-white/5 border-white/10 text-white/40")}>{s.toUpperCase()}</button>
+                        <button key={s} onClick={() => setForm({...form, bubbleStyle: s as any})} className={cn("h-12 rounded-2xl border text-[10px] font-black uppercase tracking-widest transition-all", form.bubbleStyle === s ? "bg-white/10 text-white border-white/30 shadow-2xl" : "bg-white/5 border-white/10 text-white/40")}>{s.toUpperCase()}</button>
                       ))}
                   </div>
                 </div>
@@ -293,25 +273,25 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                          icon={MessageSquare} 
                          label="Кто может писать мне" 
                          value={form.privacy.whoCanMessageMe} 
-                         onChange={(v) => setForm({...form, privacy: {...form.privacy, whoCanMessageMe: v}})}
+                         onChange={(v: any) => setForm({...form, privacy: {...form.privacy, whoCanMessageMe: v}})}
                        />
                        <PrivacySelect 
                          icon={Users} 
                          label="Добавление в группы" 
                          value={form.privacy.allowGroupsFrom} 
-                         onChange={(v) => setForm({...form, privacy: {...form.privacy, allowGroupsFrom: v}})}
+                         onChange={(v: any) => setForm({...form, privacy: {...form.privacy, allowGroupsFrom: v}})}
                        />
                        <PrivacySelect 
                          icon={PhoneCall} 
                          label="Кто может звонить" 
                          value={form.privacy.whoCanCallMe} 
-                         onChange={(v) => setForm({...form, privacy: {...form.privacy, whoCanCallMe: v}})}
+                         onChange={(v: any) => setForm({...form, privacy: {...form.privacy, whoCanCallMe: v}})}
                        />
                        <PrivacySelect 
                          icon={Eye} 
                          label="Видимость онлайна" 
                          value={form.privacy.lastSeenVisibility} 
-                         onChange={(v) => setForm({...form, privacy: {...form.privacy, lastSeenVisibility: v}})}
+                         onChange={(v: any) => setForm({...form, privacy: {...form.privacy, lastSeenVisibility: v}})}
                        />
                     </div>
                  </div>
