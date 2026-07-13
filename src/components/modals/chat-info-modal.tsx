@@ -21,7 +21,7 @@ import { GiftModal } from './gift-modal';
 import { chatConversationSummary } from '@/ai/flows/chat-conversation-summary-flow';
 
 /**
- * PARTICIPANT ITEM V2.0
+ * PARTICIPANT ITEM V43.0.0
  * Подтягивает реальные данные узла для списка участников.
  */
 function ParticipantItem({ userId, onClick }: { userId: string, onClick: () => void }) {

@@ -9,9 +9,9 @@ import { Progress } from './ui/progress';
 import nuxusVersions from '@/app/versions.json';
 
 /**
- * КВАНТОВЫЙ ОБНОВЛЯТОР ЯДРА V42.0.1 (Live-Pulse)
+ * КВАНТОВЫЙ ОБНОВЛЯТОР ЯДРА V43.0.0 (Global Sync)
  */
-const CURRENT_VERSION = "42.0.0"; // На одну ниже серверной для триггера
+const CURRENT_VERSION = "42.0.1"; // Умышленно ниже серверной для активации триггера
 
 export function UpdateNotifier() {
   const [isOpen, setIsOpen] = useState(false);
@@ -30,13 +30,14 @@ export function UpdateNotifier() {
         
         const lastInstalled = localStorage.getItem('nuxus_last_installed_version');
         
-        if (data.latestVersion === CURRENT_VERSION) {
-          localStorage.setItem('nuxus_last_installed_version', data.latestVersion);
+        // Если версия в бандле совпадает с серверной и уже была установлена - закрываем
+        if (data.latestVersion === CURRENT_VERSION && lastInstalled === data.latestVersion) {
           setIsOpen(false);
           return;
         }
 
-        if (data.latestVersion !== CURRENT_VERSION && lastInstalled !== data.latestVersion) {
+        // Если серверная версия отличается от текущей в бандле - показываем окно
+        if (data.latestVersion !== CURRENT_VERSION) {
           setIsOpen(true);
         }
       }
@@ -72,7 +73,7 @@ export function UpdateNotifier() {
     setIsUpdating(true);
     let p = 0;
     const interval = setInterval(() => {
-      p += Math.random() * 20;
+      p += Math.random() * 25;
       if (p >= 100) {
         setUpdateProgress(100);
         clearInterval(interval);
@@ -83,7 +84,7 @@ export function UpdateNotifier() {
       } else {
         setUpdateProgress(p);
       }
-    }, 100);
+    }, 150);
   };
 
   if (isUpdating) {
@@ -96,7 +97,7 @@ export function UpdateNotifier() {
           </div>
           <div className="space-y-3">
             <h2 className="text-3xl font-black uppercase italic tracking-tighter text-white">Синхронизация</h2>
-            <p className="text-[10px] font-black uppercase tracking-[0.5em] text-primary/60">Загрузка сегмента: {Math.round(updateProgress)}%</p>
+            <p className="text-[10px] font-black uppercase tracking-[0.5em] text-primary/60">Установка сегмента: {Math.round(updateProgress)}%</p>
           </div>
           <div className="relative h-2 w-full bg-white/5 rounded-full overflow-hidden border border-white/5">
              <div className="h-full bg-primary shadow-[0_0_20px_rgba(168,85,247,0.8)] transition-all duration-300" style={{ width: `${updateProgress}%` }} />
@@ -114,7 +115,7 @@ export function UpdateNotifier() {
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(168,85,247,0.2)_0%,transparent_70%)]" />
           <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-2 bg-black/40 px-4 py-1.5 rounded-full border border-white/10 backdrop-blur-md">
              <ArrowUpCircle className="w-3.5 h-3.5 text-primary" />
-             <span className="text-[9px] font-black text-white uppercase tracking-widest">Новый сигнал обнаружен</span>
+             <span className="text-[9px] font-black text-white uppercase tracking-widest">Обнаружена новая прошивка</span>
           </div>
         </div>
 
@@ -122,17 +123,17 @@ export function UpdateNotifier() {
           <DialogHeader className="space-y-2 text-left">
             <div className="flex items-center justify-between">
               <DialogTitle className="text-3xl font-black uppercase italic tracking-tighter text-white">Ядро {serverVersion}</DialogTitle>
-              <span className="text-[10px] font-black bg-white/5 border border-white/10 px-3 py-1 rounded-lg text-primary">142 MB</span>
+              <span className="text-[10px] font-black bg-white/5 border border-white/10 px-3 py-1 rounded-lg text-primary">124 MB</span>
             </div>
             <DialogDescription className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em] ml-1">
-              Mention Protocol & Stability Patch
+              Neural Mention Protocol & Fixes
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 bg-white/[0.03] p-6 rounded-[2.2rem] border border-white/5 shadow-inner">
             <div className="flex items-center gap-3 text-white/40 mb-2">
               <RefreshCw className="w-4 h-4 text-primary" />
-              <span className="text-[10px] font-black uppercase tracking-widest">Список модификаций:</span>
+              <span className="text-[10px] font-black uppercase tracking-widest">Журнал изменений:</span>
             </div>
             <ul className="space-y-3">
               {changelog.map((item, idx) => (
@@ -151,10 +152,10 @@ export function UpdateNotifier() {
             >
               <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
               <Zap className="w-5 h-5 mr-3" />
-              Активировать патч
+              Обновить систему
             </Button>
             <Button variant="ghost" onClick={() => setIsOpen(false)} className="h-12 text-[9px] font-black uppercase tracking-[0.3em] text-muted-foreground/40 hover:text-white transition-all">
-              Игнорировать
+              Позже
             </Button>
           </div>
         </div>

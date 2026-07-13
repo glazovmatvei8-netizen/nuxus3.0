@@ -1,13 +1,13 @@
 
 {
-  "latestVersion": "42.0.1",
-  "qesVersion": "42.0",
-  "build": "Mention-Pulse-Stable",
-  "sizeMb": 122,
+  "latestVersion": "43.0.0",
+  "qesVersion": "43.0",
+  "build": "Global-Sync-Stable",
+  "sizeMb": 124,
   "changelog": [
-    "Fix: Устранена ошибка ScrollArea в меню упоминаний",
-    "Mentions: Оптимизирован протокол @all и поиск участников",
-    "System: Синхронизация версий для Live-Update",
-    "Identity: Стабильное отображение имен в Избранном"
+    "Sync: Исправлен критический рассинхрон системы обновлений",
+    "Mentions: ScrollArea и cn импортированы корректно",
+    "Identity: Реальные имена в Избранном восстановлены",
+    "Admin: Абсолютный доступ к заявкам на пополнение"
   ]
 }

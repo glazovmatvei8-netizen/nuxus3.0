@@ -50,7 +50,7 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
     setMessageInput(localDrafts[currentChatId] || '');
   }, [currentChatId, localDrafts]);
 
-  // УЛУЧШЕННАЯ ЛОГИКА УПОМИНАНИЙ V42.0.1
+  // УЛУЧШЕННАЯ ЛОГИКА УПОМИНАНИЙ V43.0.0
   useEffect(() => {
     const lastWord = messageInput.split(/\s/).pop() || '';
     if (lastWord.startsWith('@')) {
@@ -67,8 +67,6 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
       const fetchParticipants = async () => {
         try {
           const results: UserType[] = [];
-          // Оптимизированный поиск: берем только участников текущего чата
-          // Для MVP используем лимит, чтобы не перегружать базу
           const limitSize = Math.min(participantIds.length, 50);
           
           for (let i = 0; i < limitSize; i++) {
@@ -188,7 +186,7 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
 
   return (
     <footer className="p-3 pb-[calc(1rem+env(safe-area-inset-bottom))] obsidian-glass border-t border-white/5 shrink-0 z-40 relative flex flex-col gap-2">
-      {/* МЕНЮ УПОМИНАНИЙ V42.0.1 */}
+      {/* МЕНЮ УПОМИНАНИЙ V43.0.0 */}
       {mentionSearch !== null && isGroup && (
         <div className="absolute bottom-full left-4 mb-2 w-72 obsidian-glass border border-white/10 rounded-[2rem] overflow-hidden z-[100] animate-in slide-in-from-bottom-4 duration-500 shadow-2xl">
            <div className="p-3 border-b border-white/5 flex items-center justify-between bg-primary/5">
@@ -196,11 +194,10 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
                 <AtSign className="w-3.5 h-3.5 text-primary" />
                 <span className="text-[9px] font-black uppercase text-primary/80 tracking-widest">Упоминания</span>
              </div>
-             <span className="text-[8px] font-bold text-white/20 uppercase tracking-widest">v42.0.1</span>
+             <span className="text-[8px] font-bold text-white/20 uppercase tracking-widest">v43.0.0</span>
            </div>
            <ScrollArea className="max-h-64">
               <div className="flex flex-col">
-                {/* SPECIAL: PING ALL (VK STYLE) - Всегда доступен при открытии меню в группах */}
                 {(mentionSearch === '' || 'all'.includes(mentionSearch)) && (
                   <button 
                     onClick={() => handleSelectMention('all')} 
