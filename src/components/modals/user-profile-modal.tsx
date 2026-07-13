@@ -7,10 +7,10 @@ import { Button } from '@/components/ui/button';
 import { UserAvatar } from '@/components/user-avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { 
-  MessageCircle, Star, Calendar, Phone, Video, Gift, Zap, Globe, ShieldCheck, Cpu, Sparkles
+  MessageCircle, Star, Calendar, Phone, Video, Gift, Zap, Globe, ShieldCheck, Cpu, Sparkles, UserCheck, UserPlus
 } from 'lucide-react';
 import { useFirestore, useUser, useDoc, useMemoFirebase, useCollection } from '@/firebase';
-import { doc, query, collection, limit, getDocs, addDoc, where, orderBy } from 'firebase/firestore';
+import { doc, query, collection, limit, getDocs, addDoc, where, orderBy, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { useAppState } from '@/lib/store';
 import { formatDisplayName, isUserPremium, formatLastSeen, cn, isGlobalAdmin, decryptSignal } from '@/lib/utils';
@@ -24,8 +24,8 @@ const ADMIN_ID = 'GCvLucN8CjNcdaxPO2vmpZ84hNl1';
 const ORIGIN_DATE = '2024-01-01T00:00:00Z'; 
 
 /**
- * МОДАЛ ПРОФИЛЯ V25.3.1
- * ОБНОВЛЕНО: Поддержка списков исключений в Last Seen.
+ * МОДАЛ ПРОФИЛЯ V37.2.0
+ * ОБНОВЛЕНО: Возвращена кнопка управления контактами, исправлена идентификация.
  */
 export function UserProfileModal() {
   const db = useFirestore();
@@ -35,6 +35,9 @@ export function UserProfileModal() {
 
   const [isGiftModalOpen, setIsGiftModalOpen] = useState(false);
 
+  const currentUserRef = useMemoFirebase(() => (!db || !currentUser) ? null : doc(db, 'users', currentUser.uid), [db, currentUser]);
+  const { data: currentUserProfile } = useDoc<User>(currentUserRef);
+
   const targetUserRef = useMemoFirebase(() => (!db || !inspectedUserId) ? null : doc(db, 'users', inspectedUserId), [db, inspectedUserId]);
   const { data: targetUser } = useDoc<User>(targetUserRef);
 
@@ -43,6 +46,22 @@ export function UserProfileModal() {
     return query(collection(db, 'users', inspectedUserId, 'receivedGifts'), limit(20));
   }, [db, inspectedUserId]);
   const { data: gifts } = useCollection<ReceivedGift>(giftsQuery);
+
+  const isContact = useMemo(() => {
+    return inspectedUserId && currentUserProfile?.contactIds?.includes(inspectedUserId);
+  }, [inspectedUserId, currentUserProfile?.contactIds]);
+
+  const handleToggleContact = async () => {
+    if (!db || !currentUser || !inspectedUserId) return;
+    try {
+      await updateDoc(doc(db, 'users', currentUser.uid), {
+        contactIds: isContact ? arrayRemove(inspectedUserId) : arrayUnion(inspectedUserId)
+      });
+      toast({ title: isContact ? "Узел удален из контактов" : "Узел добавлен в контакты" });
+    } catch (e) {
+      toast({ title: "Ошибка синхронизации", variant: "destructive" });
+    }
+  };
 
   const handleStartChat = async () => {
     if (!db || !currentUser || !targetUser) return;
@@ -128,7 +147,7 @@ export function UserProfileModal() {
     <Dialog open={!!inspectedUserId} onOpenChange={(o) => !o && setInspectedUserId(null)}>
       <DialogContent className="max-w-[420px] bg-[#030306]/95 backdrop-blur-[50px] border-white/10 p-0 overflow-hidden h-[90vh] flex flex-col rounded-[3rem] shadow-[0_0_100px_rgba(0,0,0,0.8)] outline-none">
         <DialogHeader className="sr-only">
-          <DialogTitle>{formatDisplayName(targetUser?.name)}</DialogTitle>
+          <DialogTitle>{formatDisplayName(targetUser?.name, targetUser?.username)}</DialogTitle>
           <DialogDescription>Профиль узла Ядра Nuxus</DialogDescription>
         </DialogHeader>
 
@@ -148,7 +167,7 @@ export function UserProfileModal() {
             <div className="mt-6 px-8 text-center">
               <div className="flex items-center justify-center gap-2">
                 <h2 className="text-2xl font-black text-white italic tracking-tighter uppercase leading-tight">
-                  {formatDisplayName(targetUser?.name)}
+                  {formatDisplayName(targetUser?.name, targetUser?.username)}
                 </h2>
                 {(targetUser?.statusEmoji || (inspectedUserId === ADMIN_ID)) && (
                    <span className="text-2xl drop-shadow-[0_0_100px_rgba(255,255,255,0.3)]">
@@ -177,10 +196,18 @@ export function UserProfileModal() {
               </p>
             </div>
 
-            <div className="px-6 mt-10 space-y-8">
+            <div className="px-6 mt-10 space-y-6">
+              <Button 
+                onClick={handleToggleContact}
+                variant={isContact ? "outline" : "default"}
+                className={cn("w-full h-14 rounded-2xl font-black uppercase italic tracking-widest gap-2 shadow-xl", isContact ? "border-white/10 bg-white/5" : "bg-primary text-white")}
+              >
+                {isContact ? <><UserCheck className="w-5 h-5 text-primary" /> В контактах</> : <><UserPlus className="w-5 h-5" /> Добавить в контакты</>}
+              </Button>
+
               <div className="flex gap-3">
-                <Button onClick={handleStartChat} className="flex-1 h-14 bg-primary text-white rounded-2xl font-black uppercase italic tracking-widest gap-2 shadow-xl border border-white/10">
-                  <MessageCircle className="w-5 h-5" /> Написать
+                <Button onClick={handleStartChat} className="flex-1 h-14 obsidian-glass border-white/5 text-white rounded-2xl font-black uppercase italic tracking-widest gap-2 shadow-xl hover:bg-primary/10 hover:border-primary/40 transition-all">
+                  <MessageCircle className="w-5 h-5 text-primary" /> Сообщение
                 </Button>
                 <Button onClick={() => setIsGiftModalOpen(true)} variant="outline" className="flex-1 h-14 border-white/10 bg-white/[0.03] text-white rounded-2xl font-black uppercase italic tracking-widest gap-2">
                   <Gift className="w-5 h-5 text-primary" /> Подарок

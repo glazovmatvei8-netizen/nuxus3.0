@@ -10,7 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useAuth, useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
+import { useAuth, useUser, useFirestore, useDoc, useMemoFirebase, useCollection } from '@/firebase';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
   LogOut, Settings2, Camera, Lock, Fingerprint, Star, Zap, ShieldCheck, Loader2, Database, Palette, 
@@ -26,6 +26,10 @@ import { cn, isUserPremium, formatDisplayName } from '@/lib/utils';
 import type { User, PrivacyOption } from '@/lib/types';
 import nuxusVersions from '@/app/versions.json';
 
+/**
+ * SettingsModal V37.2.0
+ * ФИКС: Исправлен ReferenceError useCollection, добавлена валидация English Only ников.
+ */
 export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const auth = useAuth();
   const db = useFirestore();
@@ -123,15 +127,15 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
     if (!db || !user || !profile) return;
 
     // Валидация ника: только английский
-    const cleanUsername = form.username.trim().replace('@', '');
-    if (/[^a-zA-Z0-9_]/.test(cleanUsername)) {
+    const rawUsername = form.username.trim().replace('@', '');
+    if (/[^a-zA-Z0-9_]/.test(rawUsername)) {
       toast({ title: "Ошибка ника", description: "Используйте только английские буквы и цифры.", variant: "destructive" });
       return;
     }
 
     setIsSaving(true);
     try {
-      const usernameWithAt = '@' + cleanUsername;
+      const usernameWithAt = '@' + rawUsername;
       
       await updateDoc(doc(db, 'users', user.uid), {
         name: form.name.trim(),

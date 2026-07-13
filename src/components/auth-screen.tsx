@@ -22,6 +22,10 @@ import { cn } from '@/lib/utils';
 
 type AuthMode = 'login' | 'register';
 
+/**
+ * AuthScreen V37.2.0
+ * ФИКС: Валидация английского ника и обязательный префикс @.
+ */
 export default function AuthScreen() {
   const auth = useAuth();
   const db = useFirestore();
@@ -80,14 +84,15 @@ export default function AuthScreen() {
         }
 
         // Валидация юзернейма: только английский
-        const cleanUsername = username.trim().replace('@', '');
-        if (/[^a-zA-Z0-9_]/.test(cleanUsername)) {
+        const rawNick = username.trim().replace('@', '');
+        if (/[^a-zA-Z0-9_]/.test(rawNick)) {
           toast({ title: "Ошибка ника", description: "Только английские буквы и цифры.", variant: "destructive" });
           setIsLoading(false);
           return;
         }
 
-        const targetSearch = ('@' + cleanUsername).toLowerCase();
+        const usernameWithAt = '@' + rawNick;
+        const targetSearch = usernameWithAt.toLowerCase();
         const q = query(collection(db, 'users'), where('usernameLowercase', '==', targetSearch), limit(1));
         const checkSnap = await getDocs(q);
         
@@ -103,7 +108,7 @@ export default function AuthScreen() {
           const profileData = {
             id: userCredential.user.uid,
             name: name.trim(),
-            username: '@' + cleanUsername,
+            username: usernameWithAt,
             usernameLowercase: targetSearch,
             phone: identifier.includes('@') ? '' : identifier.replace(/\D/g, ''),
             email: identifier.includes('@') ? identifier : null,
@@ -114,7 +119,7 @@ export default function AuthScreen() {
               theme: 'default', 
               appearance: 'dark',
               privacy: {
-                phoneVisibility: 'contacts',
+                phoneVisibility: 'everybody',
                 lastSeenVisibility: 'everybody',
                 allowGroupsFrom: 'everybody'
               }

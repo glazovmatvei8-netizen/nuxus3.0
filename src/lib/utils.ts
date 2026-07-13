@@ -10,15 +10,17 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 /**
- * ОКОНЧАТЕЛЬНЫЙ ФИКС ИМЕН V37.0
+ * ОКОНЧАТЕЛЬНЫЙ ФИКС ИМЕН V37.2
  * Максимально лоялен к именам пользователей. Приоритет: Имя -> Юзернейм -> Узел.
  */
 export function formatDisplayName(name: string | undefined | null, username?: string | null): string {
-  if (name && name.trim() !== '' && name.toLowerCase() !== 'null') {
-    return name.trim();
+  const cleanName = name?.trim();
+  if (cleanName && cleanName !== '' && cleanName.toLowerCase() !== 'null' && cleanName !== 'User' && cleanName !== 'Nuxus Agent') {
+    return cleanName;
   }
-  if (username && username.trim() !== '') {
-    return username.trim();
+  const cleanUsername = username?.trim();
+  if (cleanUsername && cleanUsername !== '' && cleanUsername !== '@' && cleanUsername !== 'null') {
+    return cleanUsername;
   }
   return 'Узел Сети';
 }
