@@ -9,29 +9,21 @@ import { UserAvatar } from '@/components/user-avatar';
 import { 
   Send, ChevronLeft, X, Paperclip, Mic, StopCircle, 
   Smile, ImageIcon, Trash2, AtSign, RefreshCcw, CornerUpLeft, Circle, Video as VideoIcon, Shield,
-  Heart, Square, Triangle, Ghost, Play, Search, Sparkles, Loader2
+  Heart, Square, Triangle, Ghost, Play, Search, Sparkles, Loader2, Users
 } from 'lucide-react';
 import { MessageItem } from './message-item';
 import { ChatInfoModal } from './modals/chat-info-modal';
 import { CreatePollModal } from './modals/create-poll-modal';
 import { EmojiPicker } from './emoji-picker';
 import { useFirestore, useUser, useCollection, useDoc, useMemoFirebase } from '@/firebase';
-import { collection, query, orderBy, doc, addDoc, updateDoc, limit, getDocs } from 'firebase/firestore';
+import { collection, query, orderBy, doc, addDoc, updateDoc, limit, getDocs, where } from 'firebase/firestore';
 import { formatDisplayName, cn, compressImage, encryptSignal, isGlobalAdmin, decryptSignal, formatLastSeen, isUserPremium } from '@/lib/utils';
 import type { Message, User as UserType, Chat } from '@/lib/types';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { useToast } from '@/hooks/use-toast';
 import { suggestMessageDraft } from '@/ai/flows/ai-message-drafting-flow';
 
-const VIDEO_SHAPES = [
-  { id: 'circle', icon: Circle, label: 'Круг', clip: 'circle(50% at 50% 50%)' },
-  { id: 'square', icon: Square, label: 'Квадрат', clip: 'inset(0% rounded 25%)' },
-  { id: 'heart', icon: Heart, label: 'Сердце', clip: 'polygon(50% 15%, 80% 0%, 100% 20%, 100% 50%, 50% 100%, 0% 50%, 0% 20%, 20% 0%)' },
-  { id: 'triangle', icon: Triangle, label: 'Треугольник', clip: 'polygon(50% 0%, 0% 100%, 100% 100%)' },
-  { id: 'poop', icon: Ghost, label: 'Какашка', clip: 'polygon(50% 0%, 63% 13%, 53% 25%, 80% 38%, 85% 61%, 69% 68%, 94% 82%, 100% 100%, 0% 100%, 6% 82%, 31% 68%, 15% 61%, 20% 38%, 47% 25%, 37% 13%)' }
-];
-
-const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, isPremium, replyTo, onCancelReply, onOpenProRecorder, messages, participantIds }: any) => {
+const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, isPremium, replyTo, onCancelReply, onOpenProRecorder, messages, participantIds, isGroup }: any) => {
   const { localDrafts, setLocalDrafts } = useAppState();
   const [messageInput, setMessageInput] = useState(localDrafts[currentChatId] || '');
   const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
@@ -57,27 +49,36 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
     setMessageInput(localDrafts[currentChatId] || '');
   }, [currentChatId, localDrafts]);
 
+  // УЛУЧШЕННАЯ ЛОГИКА УПОМИНАНИЙ V42.0
   useEffect(() => {
-    const lastWord = messageInput.split(/\s/).pop();
-    if (lastWord?.startsWith('@') && lastWord.length > 1) {
-      setMentionSearch(lastWord.slice(1).toLowerCase());
+    const lastWord = messageInput.split(/\s/).pop() || '';
+    if (lastWord.startsWith('@')) {
+      const query = lastWord.slice(1).toLowerCase();
+      setMentionSearch(query);
+      if (window.navigator && window.navigator.vibrate) window.navigator.vibrate(5);
     } else {
       setMentionSearch(null);
     }
   }, [messageInput]);
 
   useEffect(() => {
-    if (mentionSearch && db && participantIds) {
+    if (mentionSearch !== null && db && participantIds) {
       const fetchParticipants = async () => {
         const results: UserType[] = [];
-        const limitSize = Math.min(participantIds.length, 20);
+        const limitSize = Math.min(participantIds.length, 50);
+        
+        // Оптимизированный поиск по участникам
         for (let i = 0; i < limitSize; i++) {
-           const uSnap = await getDocs(query(collection(db, 'users'), where('id', '==', participantIds[i]), limit(1)));
+           const uid = participantIds[i];
+           const uSnap = await getDocs(query(collection(db, 'users'), where('id', '==', uid), limit(1)));
            if (!uSnap.empty) {
              const u = { id: uSnap.docs[0].id, ...uSnap.docs[0].data() } as UserType;
-             if (u.username.toLowerCase().includes(mentionSearch) || u.name.toLowerCase().includes(mentionSearch)) {
-               results.push(u);
-             }
+             const matches = 
+                u.username?.toLowerCase().includes(mentionSearch) || 
+                u.name?.toLowerCase().includes(mentionSearch) || 
+                mentionSearch === '';
+             
+             if (matches) results.push(u);
            }
         }
         setMentionList(results);
@@ -86,13 +87,14 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
     }
   }, [mentionSearch, db, participantIds]);
 
-  const handleSelectMention = (u: UserType) => {
+  const handleSelectMention = (username: string) => {
     const words = messageInput.split(/\s/);
     words.pop();
-    const nextInput = words.join(' ') + (words.length > 0 ? ' ' : '') + u.username + ' ';
+    const nextInput = words.join(' ') + (words.length > 0 ? ' ' : '') + (username.startsWith('@') ? username : '@' + username) + ' ';
     handleInputChange(nextInput);
     setMentionSearch(null);
     textareaRef.current?.focus();
+    if (window.navigator && window.navigator.vibrate) window.navigator.vibrate(10);
   };
 
   const handleInputChange = (val: string) => {
@@ -179,23 +181,49 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
 
   return (
     <footer className="p-3 pb-[calc(1rem+env(safe-area-inset-bottom))] obsidian-glass border-t border-white/5 shrink-0 z-40 relative flex flex-col gap-2">
-      {mentionSearch && mentionList.length > 0 && (
-        <div className="absolute bottom-full left-4 mb-2 w-64 obsidian-glass border border-white/10 rounded-2xl overflow-hidden z-[100] animate-in slide-in-from-bottom-2">
-           <div className="p-2 border-b border-white/5 flex items-center gap-2">
-             <AtSign className="w-3 h-3 text-primary" />
-             <span className="text-[8px] font-black uppercase text-primary/60 tracking-widest">Упомянуть</span>
+      {/* МЕНЮ УПОМИНАНИЙ V42.0 */}
+      {mentionSearch !== null && (mentionList.length > 0 || mentionSearch === '' || mentionSearch === 'all') && (
+        <div className="absolute bottom-full left-4 mb-2 w-72 obsidian-glass border border-white/10 rounded-[2rem] overflow-hidden z-[100] animate-in slide-in-from-bottom-4 duration-500 shadow-2xl">
+           <div className="p-3 border-b border-white/5 flex items-center justify-between bg-primary/5">
+             <div className="flex items-center gap-2">
+                <AtSign className="w-3.5 h-3.5 text-primary" />
+                <span className="text-[9px] font-black uppercase text-primary/80 tracking-widest">Упоминания</span>
+             </div>
+             <span className="text-[8px] font-bold text-white/20 uppercase tracking-widest">v42.0</span>
            </div>
-           <div className="max-h-48 overflow-y-auto scrollbar-hide">
-              {mentionList.map(u => (
-                <button key={u.id} onClick={() => handleSelectMention(u)} className="w-full p-3 flex items-center gap-3 hover:bg-primary/10 transition-colors border-b border-white/5 last:border-0">
-                  <UserAvatar userId={u.id} className="h-8 w-8" manualAvatarUrl={u.avatarUrl} />
-                  <div className="flex flex-col text-left">
-                    <span className="text-xs font-bold text-white truncate">{formatDisplayName(u.name)}</span>
-                    <span className="text-[9px] text-primary/60 font-black uppercase">{u.username}</span>
-                  </div>
-                </button>
-              ))}
-           </div>
+           <ScrollArea className="max-h-64">
+              <div className="flex flex-col">
+                {/* SPECIAL: PING ALL (VK STYLE) */}
+                {(mentionSearch === '' || 'all'.includes(mentionSearch)) && isGroup && (
+                  <button 
+                    onClick={() => handleSelectMention('all')} 
+                    className="w-full p-4 flex items-center gap-4 hover:bg-primary/10 transition-all border-b border-white/5 group"
+                  >
+                    <div className="h-10 w-10 rounded-2xl bg-primary/20 flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
+                      <Users className="w-5 h-5 fill-current" />
+                    </div>
+                    <div className="flex flex-col text-left">
+                      <span className="text-[13px] font-black text-white italic uppercase tracking-tight">Упомянуть всех</span>
+                      <span className="text-[9px] text-primary/60 font-black uppercase tracking-widest">@all</span>
+                    </div>
+                  </button>
+                )}
+
+                {mentionList.map(u => (
+                  <button 
+                    key={u.id} 
+                    onClick={() => handleSelectMention(u.username)} 
+                    className="w-full p-3.5 flex items-center gap-4 hover:bg-white/5 transition-all border-b border-white/5 last:border-0 group"
+                  >
+                    <UserAvatar userId={u.id} className="h-10 w-10 border border-white/10 group-hover:scale-105 transition-transform" manualAvatarUrl={u.avatarUrl} />
+                    <div className="flex flex-col text-left min-w-0 flex-1">
+                      <span className="text-[13px] font-black text-white truncate italic uppercase tracking-tight">{formatDisplayName(u.name)}</span>
+                      <span className="text-[9px] text-primary/40 font-black uppercase tracking-widest truncate">{u.username}</span>
+                    </div>
+                  </button>
+                ))}
+              </div>
+           </ScrollArea>
         </div>
       )}
 
@@ -411,7 +439,19 @@ export default function ChatArea() {
         </div>
       </div>
 
-      <ChatInputBar onSendMessage={handleSendMessage} canPost={true} onPollOpen={() => setIsPollModalOpen(true)} currentChatId={currentChatId} isPremium={isPremium} replyTo={replyTo} onCancelReply={() => setReplyTo(null)} onOpenProRecorder={() => setIsProRecorderOpen(true)} messages={messages} participantIds={chat?.participantIds} />
+      <ChatInputBar 
+        onSendMessage={handleSendMessage} 
+        canPost={true} 
+        onPollOpen={() => setIsPollModalOpen(true)} 
+        currentChatId={currentChatId} 
+        isPremium={isPremium} 
+        replyTo={replyTo} 
+        onCancelReply={() => setReplyTo(null)} 
+        onOpenProRecorder={() => setIsProRecorderOpen(true)} 
+        messages={messages} 
+        participantIds={chat?.participantIds} 
+        isGroup={chat?.type !== 'private'}
+      />
 
       {chat && <ChatInfoModal open={isChatInfoOpen} onOpenChange={setIsChatInfoOpen} chat={chat as any} />}
       {currentChatId && <CreatePollModal open={isPollModalOpen} onOpenChange={setIsPollModalOpen} chatId={currentChatId} />}
