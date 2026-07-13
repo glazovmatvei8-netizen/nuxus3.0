@@ -1,3 +1,4 @@
+
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
 import { formatDistanceToNow, parseISO, differenceInSeconds, isAfter } from 'date-fns';
@@ -9,12 +10,12 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 /**
- * АБСОЛЮТНЫЙ ИДЕНТИФИКАТОР V40.0
- * Приоритет: Реальное имя из базы -> Юзернейм -> Узел Сети.
+ * АБСОЛЮТНЫЙ ИДЕНТИФИКАТОР V40.1
+ * Приоритет: Реальное имя из базы -> Юзернейм. Без заглушек.
  */
 export function formatDisplayName(name: string | undefined | null, username?: string | null): string {
   const cleanName = name?.trim();
-  if (cleanName && cleanName !== '' && cleanName.toLowerCase() !== 'null' && cleanName !== 'user') {
+  if (cleanName && cleanName !== '' && cleanName.toLowerCase() !== 'null' && cleanName !== 'user' && cleanName !== '??') {
     return cleanName;
   }
   const cleanUsername = username?.trim();
@@ -29,9 +30,7 @@ export function encryptSignal(text: string): string {
   try {
     const encoded = btoa(encodeURIComponent(text.trim()));
     return `NX_${encoded}`;
-  } catch (e) {
-    return text;
-  }
+  } catch (e) { return text; }
 }
 
 export function decryptSignal(content: string | undefined | null): string {
@@ -41,9 +40,7 @@ export function decryptSignal(content: string | undefined | null): string {
   try {
     const raw = content.replace(prefix, '');
     return decodeURIComponent(atob(raw));
-  } catch (e) {
-    return content;
-  }
+  } catch (e) { return content; }
 }
 
 export function isGlobalAdmin(user: User | null | undefined): boolean {
@@ -58,11 +55,8 @@ export function isUserPremium(user: User | null | undefined): boolean {
   if (isGlobalAdmin(user)) return true;
   if (!user.isPremium) return false;
   if (user.premiumUntil) {
-    try {
-      return isAfter(parseISO(user.premiumUntil), new Date());
-    } catch (e) {
-      return false;
-    }
+    try { return isAfter(parseISO(user.premiumUntil), new Date()); } 
+    catch (e) { return false; }
   }
   return true;
 }
@@ -70,11 +64,8 @@ export function isUserPremium(user: User | null | undefined): boolean {
 export function isUserActuallyBanned(user: User | null | undefined): boolean {
   if (!user || !user.isBanned) return false;
   if (user.bannedUntil) {
-    try {
-      return isAfter(parseISO(user.bannedUntil), new Date());
-    } catch (e) {
-      return true;
-    }
+    try { return isAfter(parseISO(user.bannedUntil), new Date()); } 
+    catch (e) { return true; }
   }
   return true;
 }
@@ -88,19 +79,14 @@ export function formatLastSeen(
   currentUserId?: string
 ): string {
   if (isDeleted || !lastSeenIso) return 'был(а) недавно';
-  
   const isExempt = currentUserId && whitelist.includes(currentUserId);
   if (!isExempt && visibility === 'nobody') return 'был(а) недавно';
-  
   try {
     const lastSeen = parseISO(lastSeenIso);
-    const now = new Date();
-    const diffSeconds = Math.max(0, differenceInSeconds(now, lastSeen));
-    if (diffSeconds < 60) return onlineString;
+    const diffSeconds = Math.max(0, differenceInSeconds(new Date(), lastSeen));
+    if (diffSeconds < 120) return onlineString;
     return `был(а) ${formatDistanceToNow(lastSeen, { addSuffix: true, locale: ru })}`;
-  } catch (e) {
-    return 'был(а) недавно';
-  }
+  } catch (e) { return 'был(а) недавно'; }
 }
 
 export async function compressImage(dataUrl: string, maxWidth = 1200, quality = 0.6): Promise<string> {
@@ -109,20 +95,11 @@ export async function compressImage(dataUrl: string, maxWidth = 1200, quality = 
     img.src = dataUrl;
     img.onload = () => {
       const canvas = document.createElement('canvas');
-      let width = img.width;
-      let height = img.height;
-      if (width > maxWidth) {
-        height = (maxWidth / width) * height;
-        width = maxWidth;
-      }
-      canvas.width = width;
-      canvas.height = height;
+      let width = img.width, height = img.height;
+      if (width > maxWidth) { height = (maxWidth / width) * height; width = maxWidth; }
+      canvas.width = width; canvas.height = height;
       const ctx = canvas.getContext('2d');
-      if (ctx) {
-        ctx.imageSmoothingEnabled = true;
-        ctx.imageSmoothingQuality = 'high';
-        ctx.drawImage(img, 0, 0, width, height);
-      }
+      if (ctx) { ctx.imageSmoothingQuality = 'high'; ctx.drawImage(img, 0, 0, width, height); }
       resolve(canvas.toDataURL('image/jpeg', quality));
     };
     img.onerror = () => resolve(dataUrl);

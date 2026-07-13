@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useRef, useEffect, useMemo, useCallback, memo } from 'react';
@@ -8,7 +9,7 @@ import { UserAvatar } from '@/components/user-avatar';
 import { 
   Send, ChevronLeft, X, Paperclip, Mic, StopCircle, 
   Smile, ImageIcon, Trash2, AtSign, RefreshCcw, CornerUpLeft, Circle, Video as VideoIcon, Shield,
-  Heart, Square, Triangle, Ghost, Pause, Play, Search, Sparkles, Loader2
+  Heart, Square, Triangle, Ghost, Play, Search, Sparkles, Loader2
 } from 'lucide-react';
 import { MessageItem } from './message-item';
 import { ChatInfoModal } from './modals/chat-info-modal';
@@ -56,12 +57,10 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
     setMessageInput(localDrafts[currentChatId] || '');
   }, [currentChatId, localDrafts]);
 
-  // Mention Detection Logic
   useEffect(() => {
     const lastWord = messageInput.split(/\s/).pop();
     if (lastWord?.startsWith('@') && lastWord.length > 1) {
-      const search = lastWord.slice(1).toLowerCase();
-      setMentionSearch(search);
+      setMentionSearch(lastWord.slice(1).toLowerCase());
     } else {
       setMentionSearch(null);
     }
@@ -69,18 +68,17 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
 
   useEffect(() => {
     if (mentionSearch && db && participantIds) {
-      // Load participants for mentions
       const fetchParticipants = async () => {
         const results: UserType[] = [];
-        // Only load up to 10 for performance
-        for (const pid of participantIds.slice(0, 10)) {
-          const snap = await getDocs(query(collection(db, 'users'), limit(20)));
-          snap.docs.forEach(doc => {
-            const u = { id: doc.id, ...doc.data() } as UserType;
-            if (participantIds.includes(u.id) && (u.username.toLowerCase().includes(mentionSearch) || u.name.toLowerCase().includes(mentionSearch))) {
-               if(!results.find(r => r.id === u.id)) results.push(u);
-            }
-          });
+        const limitSize = Math.min(participantIds.length, 20);
+        for (let i = 0; i < limitSize; i++) {
+           const uSnap = await getDocs(query(collection(db, 'users'), where('id', '==', participantIds[i]), limit(1)));
+           if (!uSnap.empty) {
+             const u = { id: uSnap.docs[0].id, ...uSnap.docs[0].data() } as UserType;
+             if (u.username.toLowerCase().includes(mentionSearch) || u.name.toLowerCase().includes(mentionSearch)) {
+               results.push(u);
+             }
+           }
         }
         setMentionList(results);
       };
@@ -94,6 +92,7 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
     const nextInput = words.join(' ') + (words.length > 0 ? ' ' : '') + u.username + ' ';
     handleInputChange(nextInput);
     setMentionSearch(null);
+    textareaRef.current?.focus();
   };
 
   const handleInputChange = (val: string) => {
@@ -137,9 +136,7 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
       mediaRecorderRef.current = recorder;
       
       recorder.ondataavailable = (e) => { 
-        if (e.data && e.data.size > 0) {
-          chunksRef.current.push(e.data);
-        }
+        if (e.data && e.data.size > 0) chunksRef.current.push(e.data);
       };
 
       recorder.onstop = () => {
@@ -148,9 +145,7 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
           const blob = new Blob(capturedChunks, { type: 'audio/webm;codecs=opus' });
           const reader = new FileReader();
           reader.onloadend = () => {
-            if (reader.result) {
-              onSendMessage(reader.result as string, 'audio', null);
-            }
+            if (reader.result) onSendMessage(reader.result as string, 'audio', null);
           };
           reader.readAsDataURL(blob);
         }
@@ -165,20 +160,15 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
       timerIntervalRef.current = setInterval(() => setRecordingDuration(prev => prev + 1), 1000);
       isActuallyRecording.current = true;
     } catch (err) { 
-      console.error("Recording error:", err);
       isActuallyRecording.current = false;
     }
   };
 
   const stopAudioRecording = () => {
     if (mediaRecorderRef.current && isActuallyRecording.current) {
-      if (mediaRecorderRef.current.state !== 'inactive') {
-        mediaRecorderRef.current.stop();
-      }
+      if (mediaRecorderRef.current.state !== 'inactive') mediaRecorderRef.current.stop();
       if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
-      if (streamRef.current) {
-        streamRef.current.getTracks().forEach(t => t.stop());
-      }
+      if (streamRef.current) streamRef.current.getTracks().forEach(t => t.stop());
     } else {
       setIsRecording(false);
       isActuallyRecording.current = false;
@@ -190,18 +180,14 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
   return (
     <footer className="p-3 pb-[calc(1rem+env(safe-area-inset-bottom))] obsidian-glass border-t border-white/5 shrink-0 z-40 relative flex flex-col gap-2">
       {mentionSearch && mentionList.length > 0 && (
-        <div className="absolute bottom-full left-4 mb-2 w-64 obsidian-glass border border-white/10 rounded-2xl overflow-hidden z-[100] animate-in slide-in-from-bottom-2 duration-200">
+        <div className="absolute bottom-full left-4 mb-2 w-64 obsidian-glass border border-white/10 rounded-2xl overflow-hidden z-[100] animate-in slide-in-from-bottom-2">
            <div className="p-2 border-b border-white/5 flex items-center gap-2">
              <AtSign className="w-3 h-3 text-primary" />
-             <span className="text-[8px] font-black uppercase text-primary/60 tracking-widest">Упомянуть узел</span>
+             <span className="text-[8px] font-black uppercase text-primary/60 tracking-widest">Упомянуть</span>
            </div>
            <div className="max-h-48 overflow-y-auto scrollbar-hide">
               {mentionList.map(u => (
-                <button 
-                  key={u.id} 
-                  onClick={() => handleSelectMention(u)}
-                  className="w-full p-3 flex items-center gap-3 hover:bg-primary/10 transition-colors border-b border-white/5 last:border-0"
-                >
+                <button key={u.id} onClick={() => handleSelectMention(u)} className="w-full p-3 flex items-center gap-3 hover:bg-primary/10 transition-colors border-b border-white/5 last:border-0">
                   <UserAvatar userId={u.id} className="h-8 w-8" manualAvatarUrl={u.avatarUrl} />
                   <div className="flex flex-col text-left">
                     <span className="text-xs font-bold text-white truncate">{formatDisplayName(u.name)}</span>
@@ -214,7 +200,7 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
       )}
 
       {replyTo && (
-        <div className="bg-white/5 p-3 rounded-2xl flex items-center justify-between border border-white/5 animate-in slide-in-from-bottom-2 duration-300">
+        <div className="bg-white/5 p-3 rounded-2xl flex items-center justify-between border border-white/5 animate-in slide-in-from-bottom-2">
           <div className="flex items-center gap-3 min-w-0">
             <CornerUpLeft className="w-4 h-4 text-primary shrink-0" />
             <div className="flex flex-col min-w-0">
@@ -231,7 +217,7 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
           <>
             <Popover>
               <PopoverTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-11 w-11 shrink-0 rounded-2xl bg-white/5 hover:bg-primary/10 hover:text-primary mb-0.5"><Paperclip className="w-6 h-6" /></Button>
+                <Button variant="ghost" size="icon" className="h-11 w-11 shrink-0 rounded-2xl bg-white/5 hover:bg-primary/10 mb-0.5"><Paperclip className="w-6 h-6" /></Button>
               </PopoverTrigger>
               <PopoverContent side="top" align="start" className="w-64 obsidian-glass border-white/10 rounded-[2rem] p-2 mb-4">
                 <AttachmentItem icon={ImageIcon} label="Медиа" color="text-primary" onClick={() => fileInputRef.current?.click()} />
@@ -243,18 +229,12 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
               <Textarea 
                 ref={textareaRef}
                 placeholder="Сообщение..." 
-                className="bg-transparent border-none focus-visible:ring-0 text-white placeholder:text-white/20 font-medium min-h-[32px] max-h-[200px] overflow-y-auto scrollbar-hide py-1 text-base resize-none w-full" 
+                className="bg-transparent border-none focus-visible:ring-0 text-white font-medium min-h-[32px] max-h-[200px] py-1 text-base resize-none w-full scrollbar-hide" 
                 value={messageInput} 
                 onChange={e => handleInputChange(e.target.value)} 
               />
               <div className="flex items-center gap-1 mb-[-2px] shrink-0">
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
-                  className={cn("text-white/20 h-9 w-9", isDrafting ? "text-primary animate-pulse" : "hover:text-primary")}
-                  onClick={handleAiDraft}
-                  disabled={isDrafting}
-                >
+                <Button variant="ghost" size="icon" className={cn("text-white/20 h-9 w-9", isDrafting ? "text-primary animate-pulse" : "hover:text-primary")} onClick={handleAiDraft} disabled={isDrafting}>
                   {isDrafting ? <Loader2 className="w-5 h-5 animate-spin" /> : <Sparkles className="w-5 h-5" />}
                 </Button>
                 <Popover open={isEmojiPickerOpen} onOpenChange={setIsEmojiPickerOpen}>
@@ -269,18 +249,13 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
             </div>
 
             {messageInput.trim() ? (
-              <Button size="icon" className="h-11 w-11 rounded-2xl bg-primary text-white shadow-xl mb-0.5 shrink-0 active:scale-90 transition-all" onClick={handleSend}><Send className="w-5 h-5" /></Button>
+              <Button size="icon" className="h-11 w-11 rounded-2xl bg-primary text-white shadow-xl mb-0.5 shrink-0" onClick={handleSend}><Send className="w-5 h-5" /></Button>
             ) : (
               <div className="flex gap-1 mb-0.5 shrink-0">
-                <Button size="icon" variant="ghost" className="h-11 w-11 rounded-2xl bg-white/5 text-white/30" onClick={() => { setRecorderMode(recorderMode === 'audio' ? 'video' : 'audio'); }}>
+                <Button size="icon" variant="ghost" className="h-11 w-11 rounded-2xl bg-white/5 text-white/30" onClick={() => setRecorderMode(recorderMode === 'audio' ? 'video' : 'audio')}>
                   {recorderMode === 'audio' ? <VideoIcon className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
                 </Button>
-                <button 
-                  className="h-11 w-11 rounded-2xl flex items-center justify-center transition-all shadow-xl active:scale-90 bg-primary text-white"
-                  onPointerDown={() => recorderMode === 'audio' && startAudioRecording()}
-                  onPointerUp={() => recorderMode === 'audio' && stopAudioRecording()}
-                  onClick={() => recorderMode === 'video' && onOpenProRecorder()}
-                >
+                <button className="h-11 w-11 rounded-2xl flex items-center justify-center transition-all shadow-xl active:scale-90 bg-primary text-white" onPointerDown={() => recorderMode === 'audio' && startAudioRecording()} onPointerUp={() => recorderMode === 'audio' && stopAudioRecording()} onClick={() => recorderMode === 'video' && onOpenProRecorder()}>
                   {recorderMode === 'audio' ? <Mic className="w-5 h-5" /> : <Circle className="w-5 h-5 fill-current" />}
                 </button>
               </div>
@@ -292,7 +267,7 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
             <span className="text-lg font-black italic flex-1 tabular-nums text-white">
               {Math.floor(recordingDuration / 60).toString().padStart(2, '0')}:{(recordingDuration % 60).toString().padStart(2, '0')}
             </span>
-            <Button variant="ghost" size="icon" className="h-8 w-8 text-white/40" onClick={() => { if(mediaRecorderRef.current) mediaRecorderRef.current.onstop = null; stopAudioRecording(); setIsRecording(false); isActuallyRecording.current = false; }}><Trash2 className="w-4 h-4" /></Button>
+            <Button variant="ghost" size="icon" className="h-8 w-8 text-white/40" onClick={() => stopAudioRecording()}><Trash2 className="w-4 h-4" /></Button>
             <Button variant="ghost" size="icon" className="h-10 w-10 text-primary" onPointerDown={stopAudioRecording}><StopCircle className="w-7 h-7 fill-current" /></Button>
           </div>
         )}
@@ -349,31 +324,13 @@ export default function ChatArea() {
   const [replyTo, setReplyTo] = useState<Message | null>(null);
   const [isSearchMode, setIsSearchMode] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-
-  // Pro Recorder State
   const [isProRecorderOpen, setIsProRecorderOpen] = useState(false);
-  const [isRecording, setIsRecording] = useState(false);
-  const [isPaused, setIsPaused] = useState(false);
-  const [camMode, setCamMode] = useState<'user' | 'environment'>('user');
-  const [selectedShape, setSelectedShape] = useState('circle');
-  const [recordingDuration, setRecordingDuration] = useState(0);
-  
-  const videoPreviewRef = useRef<HTMLVideoElement | null>(null);
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const streamRef = useRef<MediaStream | null>(null);
-  const chunksRef = useRef<Blob[]>([]);
-  const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
-  
   const userProfileRef = useMemoFirebase(() => (!db || !firebaseUser) ? null : doc(db, 'users', firebaseUser.uid), [db, firebaseUser]);
   const { data: userProfile } = useDoc<UserType>(userProfileRef);
 
   const chatRef = useMemoFirebase(() => (!db || !currentChatId) ? null : doc(db, 'chats', currentChatId), [db, currentChatId]);
   const { data: chat } = useDoc<Chat>(chatRef);
-
-  const isSavedMessages = currentChatId?.startsWith('saved_');
 
   const otherId = useMemo(() => {
     if (!chat || chat.type !== 'private' || !firebaseUser) return null;
@@ -389,7 +346,8 @@ export default function ChatArea() {
   const isPremium = useMemo(() => isUserPremium(userProfile), [userProfile]);
 
   const scrollToBottom = useCallback((behavior: ScrollBehavior = 'smooth') => {
-    if (messagesEndRef.current) messagesEndRef.current.scrollIntoView({ behavior });
+    const end = document.getElementById('messages-end');
+    if (end) end.scrollIntoView({ behavior });
   }, []);
 
   useEffect(() => { scrollToBottom('auto'); }, [currentChatId, messages?.length, scrollToBottom]);
@@ -416,76 +374,24 @@ export default function ChatArea() {
     updateDoc(doc(db, 'chats', currentChatId), { lastMessageAt: new Date().toISOString() });
   }, [currentChatId, firebaseUser, db, userProfile, replyTo]);
 
-  const closeProRecorder = () => {
-    setIsProRecorderOpen(false);
-    setIsRecording(false);
-    setIsPaused(false);
-    setRecordingDuration(0);
-    if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach(t => t.stop());
-      streamRef.current = null;
-    }
-  };
-
-  const currentShapeObj = VIDEO_SHAPES.find(s => s.id === selectedShape) || VIDEO_SHAPES[0];
-
   return (
     <div className="flex-1 flex flex-col h-full bg-transparent relative overflow-hidden z-20 max-w-full">
       {userProfile?.settings?.chatBackground && (
         <div className="absolute inset-0 z-0 pointer-events-none">
-          <img 
-            src={userProfile.settings.chatBackground} 
-            className="w-full h-full object-cover" 
-            alt="BG" 
-          />
+          <img src={userProfile.settings.chatBackground} className="w-full h-full object-cover" alt="BG" />
           <div className="absolute inset-0 bg-black/40" />
         </div>
       )}
       
-      {isProRecorderOpen && (
-        <div className="fixed inset-0 z-[5000] bg-black/95 backdrop-blur-[60px] w-screen h-[100dvh] flex flex-col items-center justify-between animate-in fade-in duration-500 overflow-hidden">
-           <div className="w-full flex items-center justify-between px-6 pt-[calc(env(safe-area-inset-top,20px)+20px)] z-[5100]">
-              <div className="flex flex-col text-left">
-                 <span className="text-white font-black text-xl italic uppercase tracking-tighter block leading-none">NUXUS CIRCLE</span>
-                 <span className="text-[8px] text-primary font-black uppercase tracking-[0.4em] mt-2 block ml-1">PRO STUDIO V34.0</span>
-              </div>
-              <button onClick={closeProRecorder} className="w-12 h-12 rounded-full bg-white/10 flex items-center justify-center border border-white/10 shadow-2xl active:scale-90">
-                <X className="w-7 h-7 text-white" />
-              </button>
-           </div>
-
-           <div className="relative w-[320px] h-[320px] sm:w-[420px] sm:h-[420px] bg-black rounded-full overflow-hidden shadow-[0_0_120px_rgba(168,85,247,0.5)] border-4 border-white/10 flex items-center justify-center">
-              <video ref={videoPreviewRef} autoPlay muted playsInline className="w-full h-full object-cover" style={{ clipPath: currentShapeObj?.clip || 'circle(50% at 50% 50%)' }} />
-           </div>
-
-           <div className="w-full px-8 pb-[calc(4rem+env(safe-area-inset-bottom))] flex flex-col gap-8 z-[5100]">
-              <div className="flex gap-3 overflow-x-auto scrollbar-hide w-full justify-center py-4 bg-white/5 rounded-[3rem] border border-white/5 shadow-2xl backdrop-blur-md">
-                {VIDEO_SHAPES.map(shape => (
-                  <button key={shape.id} onClick={() => setSelectedShape(shape.id)} className={cn("flex flex-col items-center gap-2 p-3 rounded-2xl transition-all", selectedShape === shape.id ? "bg-primary text-white scale-110 shadow-xl" : "bg-transparent text-white/30")}>
-                    <shape.icon className="w-6 h-6" />
-                  </button>
-                ))}
-              </div>
-           </div>
-        </div>
-      )}
-
-      <header className="h-[calc(4rem+env(safe-area-inset-top))] pt-[env(safe-area-inset-top)] border-b border-white/5 obsidian-glass flex items-center justify-between px-5 shrink-0 z-30 shadow-xl">
+      <header className="h-[calc(4rem+env(safe-area-inset-top))] pt-[env(safe-area-inset-top)] border-b border-white/5 obsidian-glass flex items-center justify-between px-5 shrink-0 z-30">
         <div className="flex items-center gap-3 flex-1 min-w-0">
           <Button variant="ghost" size="icon" className="md:hidden obsidian-glass rounded-xl text-white/50 h-10 w-10 shrink-0" onClick={() => setCurrentChatId(null)}><ChevronLeft className="w-6 h-6" /></Button>
           {!isSearchMode ? (
             <div className="flex items-center gap-3 cursor-pointer min-w-0 flex-1 group" onClick={() => setIsChatInfoOpen(true)}>
-              {isSavedMessages ? (
-                <div className="h-10 w-10 rounded-xl bg-primary/20 border border-primary/30 flex items-center justify-center text-primary">
-                  <Shield className="w-5 h-5 fill-current" />
-                </div>
-              ) : (
-                <UserAvatar userId={chat?.type === 'private' ? otherId : null} manualAvatarUrl={chat?.type !== 'private' ? chat?.avatarUrl : otherUser?.avatarUrl} className="h-10 w-10 border border-white/10 shrink-0" fallbackName={formatDisplayName(chat?.name)} showOnlineStatus />
-              )}
+              <UserAvatar userId={chat?.type === 'private' ? otherId : null} manualAvatarUrl={chat?.type !== 'private' ? chat?.avatarUrl : otherUser?.avatarUrl} className="h-10 w-10 border border-white/10 shrink-0" fallbackName={formatDisplayName(chat?.name)} showOnlineStatus />
               <div className="flex flex-col min-w-0 text-left">
-                <span className="font-black text-[16px] truncate text-white italic tracking-tighter uppercase group-hover:text-primary transition-colors leading-tight">{isSavedMessages ? 'Архив Данных' : formatDisplayName(chat?.name)}</span>
-                <span className="text-[9px] font-black uppercase tracking-[0.1em] text-primary/40 leading-none truncate mt-0.5">{isSavedMessages ? 'Ваш терминал' : chat?.type === 'private' ? formatLastSeen(otherUser?.lastSeen) : 'Сигнал активен'}</span>
+                <span className="font-black text-[16px] truncate text-white italic tracking-tighter uppercase group-hover:text-primary transition-colors leading-tight">{formatDisplayName(chat?.name, chat?.username)}</span>
+                <span className="text-[9px] font-black uppercase tracking-[0.1em] text-primary/40 leading-none truncate mt-0.5">{chat?.type === 'private' ? formatLastSeen(otherUser?.lastSeen) : 'Сигнал активен'}</span>
               </div>
             </div>
           ) : (
@@ -499,17 +405,13 @@ export default function ChatArea() {
       </header>
 
       <div className="flex-1 relative overflow-hidden flex flex-col min-w-0 z-10 bg-transparent">
-        <div ref={scrollContainerRef} className="flex-1 w-full relative z-10 overflow-y-auto scrollbar-hide scroll-smooth">
+        <div className="flex-1 w-full relative z-10 overflow-y-auto scrollbar-hide scroll-smooth">
           <MessageList messages={messages} userId={firebaseUser?.uid} chatId={currentChatId} onReply={setReplyTo} onForward={setForwardingMessage} amIPremium={isPremium} isAdmin={isGlobalAdmin(userProfile)} isGroup={chat?.type !== 'private'} searchQuery={searchQuery} viewerProfile={userProfile} />
-          <div ref={messagesEndRef} className="h-4" />
+          <div id="messages-end" className="h-4" />
         </div>
       </div>
 
-      <ChatInputBar 
-        onSendMessage={handleSendMessage} canPost={true} onPollOpen={() => setIsPollModalOpen(true)} 
-        currentChatId={currentChatId} isPremium={isPremium} replyTo={replyTo} onCancelReply={() => setReplyTo(null)}
-        onOpenProRecorder={() => setIsProRecorderOpen(true)} messages={messages} participantIds={chat?.participantIds}
-      />
+      <ChatInputBar onSendMessage={handleSendMessage} canPost={true} onPollOpen={() => setIsPollModalOpen(true)} currentChatId={currentChatId} isPremium={isPremium} replyTo={replyTo} onCancelReply={() => setReplyTo(null)} onOpenProRecorder={() => setIsProRecorderOpen(true)} messages={messages} participantIds={chat?.participantIds} />
 
       {chat && <ChatInfoModal open={isChatInfoOpen} onOpenChange={setIsChatInfoOpen} chat={chat as any} />}
       {currentChatId && <CreatePollModal open={isPollModalOpen} onOpenChange={setIsPollModalOpen} chatId={currentChatId} />}

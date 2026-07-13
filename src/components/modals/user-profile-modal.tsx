@@ -13,7 +13,7 @@ import { useFirestore, useUser, useDoc, useMemoFirebase, useCollection } from '@
 import { doc, query, collection, limit, getDocs, addDoc, where, orderBy, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { useAppState } from '@/lib/store';
-import { formatDisplayName, isUserPremium, formatLastSeen, cn, isGlobalAdmin, decryptSignal } from '@/lib/utils';
+import { formatDisplayName, isUserPremium, formatLastSeen, cn, isGlobalAdmin } from '@/lib/utils';
 import type { User, ReceivedGift } from '@/lib/types';
 import { format } from 'date-fns';
 import { ru } from 'date-fns/locale';
@@ -23,10 +23,6 @@ import versions from '@/app/versions.json';
 const ADMIN_ID = 'GCvLucN8CjNcdaxPO2vmpZ84hNl1';
 const ORIGIN_DATE = '2024-01-01T00:00:00Z'; 
 
-/**
- * МОДАЛ ПРОФИЛЯ V37.2.0
- * ОБНОВЛЕНО: Возвращена кнопка управления контактами, исправлена идентификация.
- */
 export function UserProfileModal() {
   const db = useFirestore();
   const { user: currentUser } = useUser();
@@ -175,7 +171,7 @@ export function UserProfileModal() {
                    </span>
                 )}
               </div>
-              <p className="text-[11px] text-primary font-black uppercase tracking-[0.4em] mt-1 opacity-70 italic">{targetUser?.username}</p>
+              <p className="text-[11px] text-primary/60 font-black uppercase tracking-[0.4em] mt-1 opacity-70 italic">{targetUser?.username}</p>
               
               {targetUser?.statusText && (
                 <div className="mt-4 px-6 py-2.5 bg-primary/10 rounded-2xl border border-primary/20 inline-flex items-center gap-3 max-w-full shadow-lg animate-in fade-in slide-in-from-top-2">

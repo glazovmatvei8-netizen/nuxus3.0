@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useRef, useEffect } from 'react';
@@ -18,7 +19,7 @@ import {
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { signOut } from 'firebase/auth';
-import { doc, updateDoc, collection, query, limit } from 'firebase/firestore';
+import { doc, updateDoc, collection, query, limit, getDocs, where } from 'firebase/firestore';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAppState } from '@/lib/store';
 import { cn, isUserPremium, isGlobalAdmin, formatDisplayName } from '@/lib/utils';
@@ -131,10 +132,22 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
     setIsSaving(true);
     try {
       const usernameWithAt = '@' + rawUsername;
+      const targetLowercase = usernameWithAt.toLowerCase();
+
+      if (targetLowercase !== profile.usernameLowercase) {
+        const q = query(collection(db, 'users'), where('usernameLowercase', '==', targetLowercase), limit(1));
+        const snap = await getDocs(q);
+        if (!snap.empty) {
+          toast({ title: "ID занят", description: "Этот никнейм уже используется.", variant: "destructive" });
+          setIsSaving(false);
+          return;
+        }
+      }
+
       await updateDoc(doc(db, 'users', user.uid), {
         name: form.name.trim(),
         username: usernameWithAt,
-        usernameLowercase: usernameWithAt.toLowerCase(),
+        usernameLowercase: targetLowercase,
         bio: form.bio.trim(),
         statusEmoji: form.statusEmoji.trim(),
         statusText: form.statusText.trim(),
