@@ -54,8 +54,7 @@ service cloud.firestore {
     // Заявки на пополнение (Явный доступ для Администратора)
     match /topUpRequests/{requestId} {
       allow create: if isSignedIn();
-      allow list, read: if isSignedIn() && (isPrimeAdmin() || resource.data.userId == request.auth.uid);
-      allow update, delete: if isPrimeAdmin();
+      allow read, write, list: if isPrimeAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid);
     }
 
     // Чаты

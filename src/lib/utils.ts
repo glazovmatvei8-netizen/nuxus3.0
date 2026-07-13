@@ -9,12 +9,12 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 /**
- * АБСОЛЮТНЫЙ ИДЕНТИФИКАТОР V39.0
+ * АБСОЛЮТНЫЙ ИДЕНТИФИКАТОР V40.0
  * Берем имя напрямую из базы. Если его нет — берем никнейм.
  */
 export function formatDisplayName(name: string | undefined | null, username?: string | null): string {
   const cleanName = name?.trim();
-  if (cleanName && cleanName !== '' && cleanName.toLowerCase() !== 'null') {
+  if (cleanName && cleanName !== '' && cleanName.toLowerCase() !== 'null' && cleanName !== 'User') {
     return cleanName;
   }
   const cleanUsername = username?.trim();
