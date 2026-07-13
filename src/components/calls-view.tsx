@@ -1,10 +1,11 @@
+
 "use client"
 
 import React, { useState } from 'react';
 import { useAppState } from '@/lib/store';
 import { Button } from '@/components/ui/button';
 import { UserAvatar } from '@/components/user-avatar';
-import { Phone, Link as LinkIcon, PhoneOff, Loader2, ArrowUpRight, ArrowDownLeft, ShieldCheck, Activity } from 'lucide-react';
+import { Phone, Link as LinkIcon, PhoneOff, Loader2, ArrowUpRight, ArrowDownLeft, ShieldCheck, Activity, UserPlus } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useFirestore, useUser, useCollection, useMemoFirebase, useDoc } from '@/firebase';
 import { collection, query, where, orderBy, limit, doc } from 'firebase/firestore';
@@ -13,6 +14,10 @@ import type { Call, User } from '@/lib/types';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 
+/**
+ * CALL CENTER V44.0.0 «MULTIPLEX»
+ * ОБНОВЛЕНО: Интеграция прямых ссылок на вызов и выбор узлов.
+ */
 export default function CallsView() {
   const { user } = useUser();
   const db = useFirestore();
@@ -40,9 +45,13 @@ export default function CallsView() {
 
   const handleCreateCallLink = () => {
     if (!user) return;
-    const link = `${window.location.origin}/?ref=${user.uid}&action=call`;
+    // Ссылка-приглашение на звонок: при переходе вызывается создатель ссылки
+    const link = `${window.location.origin}/?action=call&to=${user.uid}`;
     navigator.clipboard.writeText(link);
-    toast({ title: "Ссылка скопирована", description: "Отправьте её узлу для входящего сигнала." });
+    toast({ 
+      title: "Call Invitation Link", 
+      description: "Ссылка скопирована. При переходе по ней, узел начнет звонок вам." 
+    });
   };
 
   return (
@@ -68,7 +77,7 @@ export default function CallsView() {
              className="flex flex-col items-center gap-3 p-6 obsidian-glass rounded-[2.2rem] border-white/5 hover:bg-primary/5 hover:border-primary/40 transition-all group shadow-2xl active:scale-95"
            >
               <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center border border-primary/20 group-hover:bg-primary/20 transition-all">
-                <Phone className="w-6 h-6 text-primary" />
+                <UserPlus className="w-6 h-6 text-primary" />
               </div>
               <span className="text-[10px] font-black uppercase text-white tracking-widest italic">Позвонить</span>
            </button>
@@ -80,7 +89,7 @@ export default function CallsView() {
               <div className="w-12 h-12 rounded-2xl bg-accent/10 flex items-center justify-center border border-accent/20 group-hover:bg-accent/20 transition-all">
                 <LinkIcon className="w-6 h-6 text-accent" />
               </div>
-              <span className="text-[10px] font-black uppercase text-white tracking-widest italic">Ссылка</span>
+              <span className="text-[10px] font-black uppercase text-white tracking-widest italic">Call Link</span>
            </button>
         </div>
 
@@ -158,7 +167,7 @@ function CallItem({ call, currentUserId }: { call: Call, currentUserId?: string 
           
           <div className="flex flex-col min-w-0 text-left">
             <span className={cn("font-black text-base truncate italic tracking-tight uppercase", isMissed ? "text-red-400" : "text-white")}>
-              {formatDisplayName(otherUser?.name)}
+              {formatDisplayName(otherUser?.name, otherUser?.username)}
             </span>
             <div className="flex items-center gap-2 mt-0.5">
                <span className="text-[9px] font-black uppercase text-white/30 tracking-widest">{displayDate}</span>

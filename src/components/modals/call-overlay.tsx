@@ -3,21 +3,23 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
-import { doc, onSnapshot } from 'firebase/firestore';
+import { doc, onSnapshot, arrayUnion } from 'firebase/firestore';
 import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { useAppState } from '@/lib/store';
 import { Button } from '@/components/ui/button';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
   PhoneOff, Mic, MicOff, Video, VideoOff, 
-  Phone, X, Loader2, ShieldCheck, Zap, Maximize2, Minimize2, RefreshCcw
+  Phone, X, Loader2, ShieldCheck, Zap, Maximize2, Minimize2, RefreshCcw, UserPlus
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import type { Call, User as UserType } from '@/lib/types';
+import { AddMemberModal } from './add-member-modal';
 
 /**
- * CALL OVERLAY V28.4.3: Hybrid Camera Switching (True Flip) & No Mirroring.
+ * CALL OVERLAY V44.0.0 «MULTIPLEX»
+ * ОБНОВЛЕНО: Поддержка групповых вызовов и добавления участников.
  */
 export function CallOverlay() {
   const { user } = useUser();
@@ -31,6 +33,7 @@ export function CallOverlay() {
   const [camMode, setCamMode] = useState<'user' | 'environment'>('user');
   const [callDuration, setCallDuration] = useState(0);
   const [localStream, setLocalStream] = useState<MediaStream | null>(null);
+  const [isAddMemberOpen, setIsAddMemberOpen] = useState(false);
   
   const localVideoRef = useRef<HTMLVideoElement | null>(null);
 
@@ -62,7 +65,6 @@ export function CallOverlay() {
 
   const initLocalMedia = async (withVideo: boolean, mode: 'user' | 'environment') => {
     try {
-      // Очищаем старый поток перед переключением
       if (localStream) {
         localStream.getTracks().forEach(t => t.stop());
       }
@@ -109,6 +111,7 @@ export function CallOverlay() {
   const isOutgoing = callData?.status === 'calling' && callData?.callerId === user?.uid;
   const isActive = callData?.status === 'active';
 
+  // В групповом вызове показываем первого другого участника или "Групповой вызов"
   const otherId = callData?.callerId === user?.uid ? callData?.receiverId : callData?.callerId;
   const otherUserRef = useMemoFirebase(() => (!db || !otherId) ? null : doc(db, 'users', otherId), [db, otherId]);
   const { data: otherUser } = useDoc<UserType>(otherUserRef);
@@ -178,8 +181,8 @@ export function CallOverlay() {
   if (!activeCallId || !callData) return null;
 
   return (
+    <>
     <div className="fixed inset-0 z-[5000] flex flex-col bg-[#020205] overflow-hidden animate-in fade-in duration-700">
-      {/* Background Video Layer */}
       <div className="absolute inset-0 z-0">
         {!isVideoOff && isActive && localStream ? (
            <video 
@@ -195,10 +198,8 @@ export function CallOverlay() {
         <div className="absolute inset-0 bg-black/60" />
       </div>
       
-      {/* Content Container */}
       <div className="relative z-10 flex-1 flex flex-col items-center justify-between py-20 px-8">
         
-        {/* Header Stats */}
         <div className="flex flex-col items-center gap-4 animate-in slide-in-from-top-4 duration-1000">
            <div className="bg-white/5 backdrop-blur-xl border border-white/10 px-6 py-2 rounded-full flex items-center gap-3 shadow-2xl">
              <div className={cn("w-1.5 h-1.5 rounded-full bg-primary", isActive && "animate-pulse")} />
@@ -209,7 +210,6 @@ export function CallOverlay() {
            <ShieldCheck className="w-4 h-4 text-primary/40" />
         </div>
 
-        {/* Main Identity */}
         <div className="flex flex-col items-center gap-12 w-full max-w-sm">
           <div className="relative">
             <div className="absolute -inset-16 bg-primary/20 blur-[100px] rounded-full animate-pulse" />
@@ -229,15 +229,14 @@ export function CallOverlay() {
 
           <div className="text-center space-y-2">
             <h2 className="text-4xl font-black text-white uppercase italic tracking-tighter drop-shadow-2xl">
-              {otherUser?.name || 'SYNC...'}
+              {callData.participantIds.length > 2 ? 'Групповой Сигнал' : (otherUser?.name || 'SYNC...')}
             </h2>
             <p className="text-[10px] font-black uppercase tracking-[0.5em] text-primary/60">
-              {otherUser?.username || '@node'}
+              {callData.participantIds.length} узлов в сети
             </p>
           </div>
         </div>
 
-        {/* Floating Local Mini-Video */}
         {isActive && !isVideoOff && (
           <div className="absolute right-6 top-32 w-28 h-48 rounded-2xl overflow-hidden border-2 border-white/20 shadow-2xl z-20 bg-black animate-in zoom-in duration-500">
              <video 
@@ -256,7 +255,6 @@ export function CallOverlay() {
           </div>
         )}
 
-        {/* Control Panel */}
         <div className="w-full max-w-md bg-white/[0.03] backdrop-blur-3xl border border-white/10 rounded-[3.5rem] p-6 shadow-[0_20px_60px_rgba(0,0,0,0.5)] flex items-center justify-between gap-4 animate-in slide-in-from-bottom-8 duration-700">
           {isIncoming ? (
             <div className="flex w-full gap-4">
@@ -276,29 +274,38 @@ export function CallOverlay() {
             </div>
           ) : (
             <>
-              <div className="flex gap-3">
+              <div className="flex gap-2">
                 <Button 
                   variant="ghost" 
                   size="icon" 
-                  className={cn("h-16 w-16 rounded-[2rem] obsidian-glass border border-white/5", isMuted && "bg-red-500/20 text-red-500 border-red-500/40")} 
+                  className={cn("h-14 w-14 rounded-[1.5rem] obsidian-glass border border-white/5", isMuted && "bg-red-500/20 text-red-500 border-red-500/40")} 
                   onClick={toggleMute}
                 >
-                  {isMuted ? <MicOff className="w-6 h-6" /> : <Mic className="w-6 h-6" />}
+                  {isMuted ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
                 </Button>
                 
                 <Button 
                   variant="ghost" 
                   size="icon" 
-                  className={cn("h-16 w-16 rounded-[2rem] obsidian-glass border border-white/5", isVideoOff && "bg-red-500/20 text-red-500 border-red-500/40")} 
+                  className={cn("h-14 w-14 rounded-[1.5rem] obsidian-glass border border-white/5", isVideoOff && "bg-red-500/20 text-red-500 border-red-500/40")} 
                   onClick={toggleVideo}
                 >
-                  {isVideoOff ? <VideoOff className="w-6 h-6" /> : <Video className="w-6 h-6" />}
+                  {isVideoOff ? <VideoOff className="w-5 h-5" /> : <Video className="w-5 h-5" />}
+                </Button>
+
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="h-14 w-14 rounded-[1.5rem] obsidian-glass border border-white/5 bg-primary/10 text-primary"
+                  onClick={() => setIsAddMemberOpen(true)}
+                >
+                  <UserPlus className="w-5 h-5" />
                 </Button>
               </div>
 
               <Button 
                 variant="destructive" 
-                className="h-16 w-32 rounded-[2.2rem] shadow-2xl shadow-red-500/20 hover:scale-105 active:scale-90 transition-all border border-white/10" 
+                className="h-16 w-20 rounded-[2rem] shadow-2xl shadow-red-500/20 hover:scale-105 active:scale-90 transition-all border border-white/10" 
                 onClick={handleEndCall}
               >
                 <PhoneOff className="w-7 h-7" />
@@ -309,10 +316,18 @@ export function CallOverlay() {
 
       </div>
 
-      {/* Footer Branding */}
       <div className="absolute bottom-10 left-0 right-0 flex justify-center opacity-10 pointer-events-none">
-        <span className="text-[8px] font-black uppercase tracking-[1em] text-white">Nuxus Kernel V28.4</span>
+        <span className="text-[8px] font-black uppercase tracking-[1em] text-white">Nuxus Kernel V44.0</span>
       </div>
     </div>
+
+    <AddMemberModal 
+      open={isAddMemberOpen} 
+      onOpenChange={setIsAddMemberOpen} 
+      chatId={callData.id} 
+      currentParticipantIds={callData.participantIds}
+      isCallContext={true}
+    />
+    </>
   );
 }

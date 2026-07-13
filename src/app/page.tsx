@@ -6,7 +6,7 @@ import { useAppState } from '@/lib/store';
 import AuthScreen from '@/components/auth-screen';
 import ChatMain from '@/components/chat-main';
 import { ShieldAlert, Fingerprint, ShieldCheck, Loader2 } from 'lucide-react';
-import { doc, collection, query, where, getDocs, limit } from 'firebase/firestore';
+import { doc, collection, query, where, getDocs, limit, addDoc } from 'firebase/firestore';
 import type { User as UserType } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -18,15 +18,14 @@ import { NuxusLogo } from '@/components/nuxus-logo';
 import { IosInstaller } from '@/components/ios-installer';
 
 /**
- * ГЛАВНЫЙ КОНТРОЛЛЕР ЯДРА V32.8.0 «STEEL CURTAIN»
- * ИСПРАВЛЕНО: Устранена уязвимость обхода 2FA при долгой загрузке.
- * ВНЕДРЕНО: Строгая проверка профиля перед допуском в систему.
+ * ГЛАВНЫЙ КОНТРОЛЛЕР ЯДРА V44.0.0 «MULTIPLEX»
+ * ВНЕДРЕНО: Обработка прямых ссылок на вызов (?action=call&to=UID).
  */
 export default function Home() {
   const { user, isUserLoading } = useUser();
   const db = useFirestore();
   const auth = useAuth();
-  const { is2FAVerified, setIs2FAVerified, setInspectedUserId } = useAppState();
+  const { is2FAVerified, setIs2FAVerified, setInspectedUserId, setActiveCallId } = useAppState();
   const { toast } = useToast();
   
   const [mounted, setMounted] = useState(false);
@@ -51,16 +50,38 @@ export default function Home() {
 
   const { data: profile, isLoading: isProfileLoading } = useDoc<UserType>(userProfileRef);
   
-  // Условие бана
   const isBanned = isUserActuallyBanned(profile);
 
   useEffect(() => {
-    if (!mounted || !db) return;
+    if (!mounted || !db || !user) return;
     const params = new URLSearchParams(window.location.search);
     const ref = params.get('ref');
     const usernameParam = params.get('u');
+    const action = params.get('action');
+    const targetId = params.get('to');
     
-    if (ref && ref !== user?.uid) {
+    if (action === 'call' && targetId && targetId !== user.uid) {
+      // Прямой вызов через ссылку
+      const startDirectCall = async () => {
+        try {
+          const callRef = await addDoc(collection(db, 'calls'), {
+            callerId: user.uid,
+            receiverId: targetId,
+            participantIds: [user.uid, targetId], 
+            chatId: 'direct_link',
+            type: 'audio',
+            status: 'calling',
+            createdAt: new Date().toISOString()
+          });
+          setActiveCallId(callRef.id);
+          toast({ title: "Signal Link Established", description: "Инициализация вызова через прямую ссылку." });
+        } catch (e) {
+          console.warn("Call link failed");
+        }
+      };
+      startDirectCall();
+      window.history.replaceState({}, document.title, "/");
+    } else if (ref && ref !== user?.uid) {
       setInspectedUserId(ref);
       window.history.replaceState({}, document.title, "/");
     } else if (usernameParam) {
@@ -72,7 +93,7 @@ export default function Home() {
       });
       window.history.replaceState({}, document.title, "/");
     }
-  }, [mounted, db, user?.uid, setInspectedUserId]);
+  }, [mounted, db, user, setInspectedUserId, setActiveCallId, toast]);
 
   const handleVerify2FA = () => {
     if (twoFactorInput === profile?.twoFactorPin) {
@@ -114,8 +135,6 @@ export default function Home() {
 
   if (!mounted) return null;
 
-  // СТРОГАЯ ЗАГРУЗКА: Пока мы не знаем всё о пользователе, мы не пускаем его дальше заставки.
-  // Это предотвращает "прыжок" в ChatMain до того, как сработает условие 2FA.
   if (isUserLoading || (user && isProfileLoading)) {
     return (
       <div className="h-[100dvh] w-full flex flex-col items-center justify-center bg-[#020203] text-white relative overflow-hidden">
@@ -134,10 +153,8 @@ export default function Home() {
 
   if (showIosInstaller) return <IosInstaller onDismiss={() => setShowIosInstaller(false)} />;
   
-  // Если не авторизован - экран входа
   if (!user) return <AuthScreen />;
 
-  // Если забанен - экран блокировки
   if (isBanned) {
     return (
       <div className="h-screen w-full flex flex-col items-center justify-center bg-[#050505] p-6 text-center">
@@ -148,8 +165,6 @@ export default function Home() {
     );
   }
 
-  // ОБЛАЧНЫЙ ПАРОЛЬ (2FA): Показываем, если включен и не пройден. 
-  // Теперь это условие гарантированно срабатывает, так как профиль уже загружен.
   if (profile?.twoFactorEnabled && !is2FAVerified) {
     return (
       <div className="h-screen w-full flex items-center justify-center bg-[#020203] relative px-6">
@@ -189,6 +204,5 @@ export default function Home() {
     );
   }
 
-  // Только если все проверки пройдены - пускаем в чаты
   return <ChatMain />;
 }
