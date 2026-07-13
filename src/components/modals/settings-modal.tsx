@@ -14,7 +14,7 @@ import { useAuth, useUser, useFirestore, useDoc, useMemoFirebase } from '@/fireb
 import { UserAvatar } from '@/components/user-avatar';
 import { 
   LogOut, Settings2, Camera, Lock, Fingerprint, Star, Zap, ShieldCheck, Loader2, Database, Palette, 
-  Monitor, MessageSquare, ImageIcon, Info, Smile, Plus, Check, RefreshCcw, Smartphone, Laptop, PhoneCall, Eye, Users, ShieldAlert, Ghost
+  Monitor, MessageSquare, ImageIcon, Info, Smile, Plus, Check, RefreshCcw, Smartphone, Laptop, PhoneCall, Eye, Users, ShieldAlert, Ghost, Mail
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { signOut } from 'firebase/auth';
@@ -26,8 +26,8 @@ import type { User, PrivacyOption } from '@/lib/types';
 import nuxusVersions from '@/app/versions.json';
 
 /**
- * SETTINGS MODAL V35.0.0 «PRIVACY ELITE»
- * Глобальное обновление раздела безопасности с Telegram-функциями.
+ * SETTINGS MODAL V35.1.0 «IDENTITY INTEGRITY»
+ * Глобальное обновление: Возвращены поля подтверждения телефона и почты.
  */
 export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const auth = useAuth();
@@ -102,7 +102,6 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
     try {
       const usernameWithAt = '@' + form.username.trim().replace('@', '');
       
-      // Update logic including all privacy fields
       await updateDoc(doc(db, 'users', user.uid), {
         name: form.name.trim(),
         username: usernameWithAt,
@@ -156,6 +155,20 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
     } catch (e) { toast({ title: "Сбой биометрии", variant: "destructive" }); }
   };
 
+  const handleMasterVerify = async () => {
+    if (!db || !user) return;
+    try {
+      await updateDoc(doc(db, 'users', user.uid), { 
+        isPremium: true, 
+        phoneVerified: true,
+        emailVerified: true 
+      });
+      toast({ title: "MASTER KEY ACTIVE", description: "Узел полностью верифицирован." });
+    } catch (e) {
+      toast({ title: "Signal Lost", variant: "destructive" });
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md bg-[#0a0a0c]/98 backdrop-blur-[60px] border-white/10 p-0 overflow-hidden h-[90dvh] flex flex-col rounded-[3rem] shadow-2xl outline-none">
@@ -181,9 +194,12 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
             <div className="pb-40"> 
               <TabsContent value="profile" className="space-y-8 m-0 p-8">
                 {/* Admin Master Key */}
-                {(profile?.id === 'GCvLucN8CjNcdaxPO2vmpZ84hNl1' || profile?.phone === '79508781529') && (
-                  <Button onClick={() => updateDoc(doc(db!, 'users', user!.uid), { isPremium: true, phoneVerified: true })} className="w-full bg-green-500/20 text-green-500 border border-green-500/30 font-black uppercase text-[10px] tracking-[0.2em] mb-4">
-                    MASTER KEY: VERIFY NODE
+                {(profile?.id === 'GCvLucN8CjNcdaxPO2vmpZ84hNl1' || profile?.phone === '79508781529' || isGlobalAdmin(profile)) && (
+                  <Button 
+                    onClick={handleMasterVerify} 
+                    className="w-full bg-green-500/20 text-green-500 border border-green-500/30 font-black uppercase text-[10px] tracking-[0.2em] mb-4 h-12 rounded-xl hover:bg-green-500/30"
+                  >
+                    MASTER KEY: VERIFY NODE ⚡
                   </Button>
                 )}
 
@@ -202,18 +218,72 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                       </div>
                       <div className="space-y-1.5">
                         <Label className="text-[10px] font-black uppercase text-primary/60 ml-2">ID</Label>
-                        <Input value={form.username} onChange={e => setForm({...form, username: e.target.value})} className="bg-white/5 border-white/10 h-11 rounded-xl" />
+                        <div className="relative">
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-primary font-black text-xs">@</span>
+                          <Input value={form.username} onChange={e => setForm({...form, username: e.target.value})} className="bg-white/5 border-white/10 h-11 rounded-xl pl-7" />
+                        </div>
                       </div>
                     </div>
-                    <div className="space-y-2">
+
+                    <div className="space-y-4 pt-4 border-t border-white/5">
+                       <h3 className="text-[9px] font-black uppercase tracking-[0.3em] text-primary/60 px-1">Данные связи</h3>
+                       
+                       <div className="space-y-4">
+                          <div className="space-y-2">
+                             <Label className="text-[10px] font-black uppercase text-primary/60 ml-2">Номер телефона</Label>
+                             <div className="flex gap-2">
+                                <div className="relative flex-1 group">
+                                   <Smartphone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/20 group-focus-within:text-primary transition-colors" />
+                                   <Input 
+                                      value={form.phone} 
+                                      onChange={e => setForm({...form, phone: e.target.value})} 
+                                      className="bg-white/5 border-white/10 h-11 rounded-xl pl-10" 
+                                      placeholder="+7 (___) ___ __ __"
+                                   />
+                                </div>
+                                {profile?.phoneVerified ? (
+                                   <div className="bg-green-500/10 text-green-500 h-11 px-4 flex items-center rounded-xl border border-green-500/20 shadow-lg">
+                                      <Check className="w-5 h-5 stroke-[3]" />
+                                   </div>
+                                ) : (
+                                   <Button variant="ghost" className="h-11 rounded-xl bg-primary/10 text-primary text-[10px] font-black uppercase tracking-widest px-4 border border-primary/20">Подтвердить</Button>
+                                )}
+                             </div>
+                          </div>
+
+                          <div className="space-y-2">
+                             <Label className="text-[10px] font-black uppercase text-primary/60 ml-2">Электронная почта</Label>
+                             <div className="flex gap-2">
+                                <div className="relative flex-1 group">
+                                   <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/20 group-focus-within:text-primary transition-colors" />
+                                   <Input 
+                                      value={form.email} 
+                                      onChange={e => setForm({...form, email: e.target.value})} 
+                                      className="bg-white/5 border-white/10 h-11 rounded-xl pl-10" 
+                                      placeholder="node@nuxus.chat"
+                                   />
+                                </div>
+                                {profile?.emailVerified ? (
+                                   <div className="bg-green-500/10 text-green-500 h-11 px-4 flex items-center rounded-xl border border-green-500/20 shadow-lg">
+                                      <Check className="w-5 h-5 stroke-[3]" />
+                                   </div>
+                                ) : (
+                                   <Button variant="ghost" className="h-11 rounded-xl bg-primary/10 text-primary text-[10px] font-black uppercase tracking-widest px-4 border border-primary/20">Подтвердить</Button>
+                                )}
+                             </div>
+                          </div>
+                       </div>
+                    </div>
+
+                    <div className="space-y-2 pt-4 border-t border-white/5">
                        <Label className="text-[10px] font-black uppercase text-primary/60 ml-2">Спецификация</Label>
-                       <Textarea value={form.bio} onChange={e => setForm({...form, bio: e.target.value})} className="bg-white/5 border-white/10 rounded-xl min-h-[80px]" />
+                       <Textarea value={form.bio} onChange={e => setForm({...form, bio: e.target.value})} className="bg-white/5 border-white/10 rounded-xl min-h-[80px] text-xs leading-relaxed" placeholder="Расскажите о себе..." />
                     </div>
                   </div>
                 </div>
               </TabsContent>
 
-              <TabsContent value="style" className="space-y-10 m-0 p-8">
+              <TabsContent value="style" className="space-y-10 m-0 p-8 pb-24">
                 <div className="space-y-6">
                   <h3 className="text-[11px] font-black uppercase text-primary tracking-[0.3em] flex items-center gap-3"><Monitor className="w-5 h-5" /> Визуальная среда</h3>
                   <div className="grid grid-cols-2 gap-3">
@@ -253,7 +323,6 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
               </TabsContent>
 
               <TabsContent value="privacy" className="space-y-8 m-0 p-8">
-                {/* Stealth Header */}
                 <div className="bg-accent/5 p-6 rounded-[2.5rem] border border-accent/20 flex items-center justify-between shadow-lg">
                   <div className="flex items-center gap-4 text-left">
                     <div className="bg-accent/10 p-3 rounded-xl shadow-inner"><Ghost className="w-6 h-6 text-accent" /></div>
@@ -290,10 +359,6 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                       <div className="space-y-2">
                         <Label className="text-[10px] uppercase font-black text-primary/60 ml-3">Доступ-код Ядра</Label>
                         <Input type="password" placeholder="••••••" maxLength={6} value={form.twoFactorPin} onChange={e => setForm({...form, twoFactorPin: e.target.value.replace(/\D/g, '')})} className="bg-black/60 border-primary/30 h-16 rounded-2xl text-center text-3xl tracking-[0.6em] font-black" />
-                      </div>
-                      <div className="flex items-center justify-between pt-6 border-t border-white/5">
-                        <div className="flex flex-col text-left"><span className="text-sm font-bold text-white uppercase italic">Face ID Link</span><span className="text-[9px] text-muted-foreground uppercase font-bold tracking-widest">Secure Enclave</span></div>
-                        <Switch checked={form.biometricEnabled} onCheckedChange={v => { if(!v) setForm({...form, biometricEnabled: false}); else handleLinkBiometrics(); }} />
                       </div>
                     </div>
                   )}
