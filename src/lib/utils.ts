@@ -9,31 +9,25 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 /**
- * Исправленная функция форматирования имени.
- * Больше не переименовывает реальных пользователей в Nuxus Agent.
+ * ОКОНЧАТЕЛЬНЫЙ ФИКС ИМЕН V34.0
+ * Максимальный приоритет реальному имени из профиля.
  */
 export function formatDisplayName(name: string | undefined | null): string {
-  if (!name || name.trim() === '') return 'Nuxus Agent';
+  if (!name) return 'Nuxus Agent';
   
-  const lower = name.toLowerCase();
-  const systemHolders = ['user', 'пользователь', 'node', 'unknown', 'неизвестный'];
+  const trimmed = name.trim();
+  if (trimmed === '') return 'Nuxus Agent';
   
-  if (
-    lower.includes('удаленный') || 
-    lower.includes('удалённый') || 
-    lower.includes('@deleted') || 
-    lower.includes('🚫') ||
-    lower === 'deleted user'
-  ) {
+  const lower = trimmed.toLowerCase();
+  
+  // Черный список системных заглушек
+  const blacklist = ['deleted user', 'null node', 'неизвестный', 'unknown'];
+  if (blacklist.includes(lower) || lower.includes('🚫')) {
     return 'Null Node 🚫';
   }
 
-  // Если имя длиннее 2 символов и не является стандартной заглушкой - возвращаем как есть
-  if (name.length >= 2 && !systemHolders.includes(lower)) {
-    return name;
-  }
-
-  return name || 'Nuxus Agent';
+  // Если это не пустая строка и не заглушка - возвращаем как есть
+  return trimmed;
 }
 
 export function encryptSignal(text: string): string {
