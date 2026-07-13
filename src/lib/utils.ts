@@ -10,22 +10,17 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 /**
- * ОКОНЧАТЕЛЬНЫЙ ФИКС ИМЕН V36.0
- * Максимально лоялен к именам пользователей.
+ * ОКОНЧАТЕЛЬНЫЙ ФИКС ИМЕН V37.0
+ * Максимально лоялен к именам пользователей. Приоритет: Имя -> Юзернейм -> Узел.
  */
-export function formatDisplayName(name: string | undefined | null): string {
-  if (!name) return 'Nuxus Agent';
-  
-  const trimmed = name.trim();
-  if (trimmed === '' || trimmed.toLowerCase() === 'null') return 'Nuxus Agent';
-  
-  const lower = trimmed.toLowerCase();
-  const blacklist = ['deleted user', 'null node'];
-  if (blacklist.includes(lower) || lower.includes('🚫')) {
-    return 'Null Node 🚫';
+export function formatDisplayName(name: string | undefined | null, username?: string | null): string {
+  if (name && name.trim() !== '' && name.toLowerCase() !== 'null') {
+    return name.trim();
   }
-
-  return trimmed;
+  if (username && username.trim() !== '') {
+    return username.trim();
+  }
+  return 'Узел Сети';
 }
 
 export function encryptSignal(text: string): string {
@@ -93,7 +88,6 @@ export function formatLastSeen(
 ): string {
   if (isDeleted || !lastSeenIso) return 'был(а) недавно';
   
-  // V35.2: Privacy-aware status with exceptions
   const isExempt = currentUserId && whitelist.includes(currentUserId);
   if (!isExempt && visibility === 'nobody') return 'был(а) недавно';
   
@@ -104,7 +98,7 @@ export function formatLastSeen(
     if (diffSeconds < 60) return onlineString;
     return `был(а) ${formatDistanceToNow(lastSeen, { addSuffix: true, locale: ru })}`;
   } catch (e) {
-    return 'оффлайн';
+    return 'был(а) недавно';
   }
 }
 

@@ -2,7 +2,7 @@
 "use client"
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -10,12 +10,12 @@ import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useAuth, useUser, useFirestore, useDoc, useMemoFirebase, useCollection } from '@/firebase';
+import { useAuth, useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
   LogOut, Settings2, Camera, Lock, Fingerprint, Star, Zap, ShieldCheck, Loader2, Database, Palette, 
   Monitor, MessageSquare, ImageIcon, Smile, Plus, Check, RefreshCcw, Smartphone, PhoneCall, Eye, 
-  Users, ShieldAlert, Ghost, Mail, X, Search, Paintbrush, Download, Share2, FileText, Mic
+  Users, ShieldAlert, Ghost, Mail, Share2, FileText, Download
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { signOut } from 'firebase/auth';
@@ -26,10 +26,6 @@ import { cn, isUserPremium, formatDisplayName } from '@/lib/utils';
 import type { User, PrivacyOption } from '@/lib/types';
 import nuxusVersions from '@/app/versions.json';
 
-/**
- * SETTINGS MODAL V36.2.0 «ABSOLUTE BUILD STABILITY»
- * ИСПРАВЛЕНО: Command "npm run build" больше не падает.
- */
 export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const auth = useAuth();
   const db = useFirestore();
@@ -72,7 +68,9 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
       allowGroupsFrom: 'everybody' as PrivacyOption,
       groupsWhitelist: [] as string[],
       bioVisibility: 'everybody' as PrivacyOption,
-      bioWhitelist: [] as string[]
+      bioWhitelist: [] as string[],
+      whoCanMessageMe: 'everybody' as PrivacyOption,
+      messageWhitelist: [] as string[]
     }
   });
 
@@ -113,7 +111,9 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
           allowGroupsFrom: profile.settings?.privacy?.allowGroupsFrom || 'everybody',
           groupsWhitelist: profile.settings?.privacy?.groupsWhitelist || [],
           bioVisibility: profile.settings?.privacy?.bioVisibility || 'everybody',
-          bioWhitelist: profile.settings?.privacy?.bioWhitelist || []
+          bioWhitelist: profile.settings?.privacy?.bioWhitelist || [],
+          whoCanMessageMe: profile.settings?.privacy?.whoCanMessageMe || 'everybody',
+          messageWhitelist: profile.settings?.privacy?.messageWhitelist || []
         }
       });
     }
@@ -121,13 +121,22 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
 
   const handleSave = async () => {
     if (!db || !user || !profile) return;
+
+    // Валидация ника: только английский
+    const cleanUsername = form.username.trim().replace('@', '');
+    if (/[^a-zA-Z0-9_]/.test(cleanUsername)) {
+      toast({ title: "Ошибка ника", description: "Используйте только английские буквы и цифры.", variant: "destructive" });
+      return;
+    }
+
     setIsSaving(true);
     try {
-      const usernameWithAt = '@' + form.username.trim().replace('@', '');
+      const usernameWithAt = '@' + cleanUsername;
       
       await updateDoc(doc(db, 'users', user.uid), {
         name: form.name.trim(),
         username: usernameWithAt,
+        usernameLowercase: usernameWithAt.toLowerCase(),
         bio: form.bio.trim(),
         statusEmoji: form.statusEmoji.trim(),
         statusText: form.statusText.trim(),
@@ -217,10 +226,10 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                         <Input value={form.name} onChange={e => setForm({...form, name: e.target.value})} className="bg-white/5 border-white/10 h-11 rounded-xl" />
                       </div>
                       <div className="space-y-1.5">
-                        <Label className="text-[10px] font-black uppercase text-primary/60 ml-2">ID</Label>
+                        <Label className="text-[10px] font-black uppercase text-primary/60 ml-2">ID (English Only)</Label>
                         <div className="relative">
                           <span className="absolute left-3 top-1/2 -translate-y-1/2 text-primary font-black text-xs">@</span>
-                          <Input value={form.username} onChange={e => setForm({...form, username: e.target.value})} className="bg-white/5 border-white/10 h-11 rounded-xl pl-7" />
+                          <Input value={form.username} onChange={e => setForm({...form, username: e.target.value.replace(/[^a-zA-Z0-9_@]/g, '')})} className="bg-white/5 border-white/10 h-11 rounded-xl pl-7" />
                         </div>
                       </div>
                     </div>
@@ -418,7 +427,7 @@ function PrivacyExceptionModal({ open, onOpenChange, title, whitelist, onUpdate 
   const { user } = useUser();
   const [search, setSearch] = useState('');
 
-  const allUsersQuery = useMemoFirebase(() => (!db ? null : query(collection(db, 'users'), limit(50))), [db]);
+  const allUsersQuery = useMemoFirebase(() => (!db ? null : query(collection(db, 'users'), limit(100))), [db]);
   const { data: allUsers } = useCollection<User>(allUsersQuery);
 
   const filteredUsers = (allUsers || []).filter(u => {
@@ -456,7 +465,7 @@ function PrivacyExceptionModal({ open, onOpenChange, title, whitelist, onUpdate 
                   <div className="flex items-center gap-3 min-w-0">
                     <UserAvatar userId={u.id} className="h-10 w-10" manualAvatarUrl={u.avatarUrl} />
                     <div className="flex flex-col text-left min-w-0">
-                      <span className={cn("font-black text-sm truncate uppercase", isSelected ? "text-primary" : "text-white")}>{formatDisplayName(u.name)}</span>
+                      <span className={cn("font-black text-sm truncate uppercase", isSelected ? "text-primary" : "text-white")}>{formatDisplayName(u.name, u.username)}</span>
                       <span className="text-[9px] text-muted-foreground uppercase font-black">{u.username}</span>
                     </div>
                   </div>

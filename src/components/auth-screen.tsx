@@ -1,13 +1,13 @@
 
 "use client"
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Phone, Lock, Eye, EyeOff, UserPlus, LogIn, AtSign, User, Mail } from 'lucide-react';
+import { Loader2, Lock, Eye, EyeOff, UserPlus, LogIn, AtSign, User, Mail, Phone } from 'lucide-react';
 import { useAuth, useFirestore } from '@/firebase';
 import { 
   signInWithEmailAndPassword,
@@ -22,11 +22,6 @@ import { cn } from '@/lib/utils';
 
 type AuthMode = 'login' | 'register';
 
-/**
- * AUTH SCREEN V32.9.0 «UNIVERSAL ACCESS»
- * ИСПРАВЛЕНО: Поддержка входа по Почте или Телефону для восстановления доступа.
- * ОСОБЕННОСТЬ: Если пользователь привязал почту и Identity изменился, он сможет войти.
- */
 export default function AuthScreen() {
   const auth = useAuth();
   const db = useFirestore();
@@ -37,17 +32,16 @@ export default function AuthScreen() {
   const [isLoading, setIsLoading] = useState(false);
   const [showPass, setShowPass] = useState(false);
 
-  // Form Fields
-  const [identifier, setIdentifier] = useState(''); // Может быть телефоном или почтой
+  const [identifier, setIdentifier] = useState(''); 
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
   const [username, setUsername] = useState('');
 
   const getFinalEmail = (input: string) => {
     const val = input.trim();
-    if (val.includes('@')) return val; // Если это уже почта
+    if (val.includes('@')) return val; 
     const cleanPhone = val.replace(/\D/g, '');
-    return `${cleanPhone}@nuxus.chat`; // Если это телефон
+    return `${cleanPhone}@nuxus.chat`; 
   };
 
   const handleAuth = async (e: React.FormEvent) => {
@@ -72,28 +66,28 @@ export default function AuthScreen() {
              setIs2FAVerified(true);
           }
         } catch (err: any) {
-          console.error("Auth Error:", err.code);
           if (err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential') {
-            toast({ 
-              title: "Доступ запрещен", 
-              description: "Неверные данные. Если вы привязали почту — попробуйте ввести её вместо номера.", 
-              variant: "destructive" 
-            });
+            toast({ title: "Доступ запрещен", description: "Неверные данные.", variant: "destructive" });
           } else {
             toast({ title: "Ошибка входа", description: err.message, variant: "destructive" });
           }
         }
       } else {
-        // РЕГИСТРАЦИЯ
         if (!name.trim() || !username.trim()) {
           toast({ title: "Заполните профиль", variant: "destructive" });
           setIsLoading(false);
           return;
         }
 
+        // Валидация юзернейма: только английский
         const cleanUsername = username.trim().replace('@', '');
+        if (/[^a-zA-Z0-9_]/.test(cleanUsername)) {
+          toast({ title: "Ошибка ника", description: "Только английские буквы и цифры.", variant: "destructive" });
+          setIsLoading(false);
+          return;
+        }
+
         const targetSearch = ('@' + cleanUsername).toLowerCase();
-        
         const q = query(collection(db, 'users'), where('usernameLowercase', '==', targetSearch), limit(1));
         const checkSnap = await getDocs(q);
         
@@ -129,13 +123,9 @@ export default function AuthScreen() {
 
           await setDoc(doc(db, 'users', userCredential.user.uid), profileData);
           setIs2FAVerified(true);
-          toast({ title: "Узел создан", description: "Добро пожаловать в Ядро." });
+          toast({ title: "Узел создан", description: "Добро пожаловать." });
         } catch (err: any) {
-          if (err.code === 'auth/email-already-in-use') {
-            toast({ title: "Узел уже существует", description: "Этот идентификатор занят. Переключитесь на Вход.", variant: "destructive" });
-          } else {
-            toast({ title: "Ошибка регистрации", description: err.message, variant: "destructive" });
-          }
+          toast({ title: "Ошибка регистрации", description: err.message, variant: "destructive" });
         }
       }
     } catch (e: any) {
@@ -150,7 +140,7 @@ export default function AuthScreen() {
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_-20%,rgba(168,85,247,0.15)_0%,transparent_50%)] pointer-events-none" />
       
       <div className="w-full max-w-[380px] relative z-10 flex flex-col items-center animate-in fade-in duration-1000">
-        <div className="mb-10 hover:scale-105 transition-transform duration-500">
+        <div className="mb-10">
           <NuxusLogo size={90} />
         </div>
 
@@ -180,7 +170,7 @@ export default function AuthScreen() {
               {mode === 'login' ? 'Вход в Ядро' : 'Новый Узел'}
             </CardTitle>
             <CardDescription className="text-primary/60 font-black tracking-[0.5em] uppercase text-[8px] mt-3">
-              Quantum Protocol v32.9
+              Quantum Protocol v37.0
             </CardDescription>
           </CardHeader>
 
@@ -191,9 +181,9 @@ export default function AuthScreen() {
                   <Label className="text-[8px] uppercase font-black text-primary/60 ml-4 tracking-[0.3em]">Телефон или Почта</Label>
                   <div className="relative group">
                      {identifier.includes('@') ? (
-                       <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-primary/40 group-focus-within:text-primary transition-colors" />
+                       <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-primary/40 group-focus-within:text-primary" />
                      ) : (
-                       <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-primary/40 group-focus-within:text-primary transition-colors" />
+                       <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-primary/40 group-focus-within:text-primary" />
                      )}
                      <Input 
                         placeholder={mode === 'login' ? "ID или @email" : "+7 (___) ___ __ __"} 
@@ -208,7 +198,7 @@ export default function AuthScreen() {
                 <div className="space-y-1.5 text-left">
                   <Label className="text-[8px] uppercase font-black text-primary/60 ml-4 tracking-widest">Пароль Сигнала</Label>
                   <div className="relative group">
-                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-primary/40 group-focus-within:text-primary transition-colors" />
+                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-primary/40 group-focus-within:text-primary" />
                     <Input 
                       type={showPass ? "text" : "password"} 
                       placeholder="••••••••" 
@@ -217,7 +207,7 @@ export default function AuthScreen() {
                       className="bg-white/5 border-white/10 h-14 rounded-2xl pl-12 font-bold focus:border-primary/40 transition-all" 
                       required 
                     />
-                    <button type="button" onClick={() => setShowPass(!showPass)} className="absolute right-4 top-1/2 -translate-y-1/2 text-white/20 hover:text-white transition-colors">
+                    <button type="button" onClick={() => setShowPass(!showPass)} className="absolute right-4 top-1/2 -translate-y-1/2 text-white/20">
                       {showPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
                   </div>
@@ -228,7 +218,7 @@ export default function AuthScreen() {
                     <div className="space-y-1.5 text-left">
                       <Label className="text-[8px] uppercase font-black text-primary/60 ml-4 tracking-widest">Имя Оператора</Label>
                       <div className="relative group">
-                        <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-primary/40 group-focus-within:text-primary transition-colors" />
+                        <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-primary/40 group-focus-within:text-primary" />
                         <Input 
                           placeholder="Ваше имя" 
                           value={name} 
@@ -239,13 +229,13 @@ export default function AuthScreen() {
                       </div>
                     </div>
                     <div className="space-y-1.5 text-left">
-                      <Label className="text-[8px] uppercase font-black text-primary/60 ml-4 tracking-widest">Цифровой ID (@никнейм)</Label>
+                      <Label className="text-[8px] uppercase font-black text-primary/60 ml-4 tracking-widest">Цифровой ID (только английский)</Label>
                       <div className="relative group">
-                        <AtSign className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-primary/40 group-focus-within:text-primary transition-colors" />
+                        <AtSign className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-primary/40 group-focus-within:text-primary" />
                         <Input 
                           placeholder="unique_id" 
                           value={username} 
-                          onChange={e => setUsername(e.target.value)} 
+                          onChange={e => setUsername(e.target.value.replace(/[^a-zA-Z0-9_@]/g, ''))} 
                           className="bg-white/5 border-white/10 h-14 rounded-2xl pl-12 font-bold focus:border-primary/40 transition-all" 
                           required 
                         />
@@ -262,15 +252,6 @@ export default function AuthScreen() {
             </form>
           </CardContent>
         </Card>
-
-        <div className="mt-8 text-center px-4">
-           <p className="text-[8px] text-white/30 uppercase font-bold tracking-widest leading-relaxed">
-             Входя на платформу, вы принимаете{' '}
-             <button type="button" onClick={() => setIsLegalOpen(true)} className="text-primary/60 hover:text-primary transition-colors underline decoration-primary/20 underline-offset-2">Цифровой регламент</button>
-             {' '}и{' '}
-             <button type="button" onClick={() => setIsLegalOpen(true)} className="text-primary/60 hover:text-primary transition-colors underline decoration-primary/20 underline-offset-2">Политику безопасности</button>.
-           </p>
-        </div>
       </div>
     </div>
   );

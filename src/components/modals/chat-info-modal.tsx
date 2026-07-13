@@ -1,30 +1,21 @@
+
 "use client"
 
-import React, { useState, useMemo, useRef, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { UserAvatar } from '@/components/user-avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { 
-  Star, Shield, UserCheck, UserPlus2, X, Bell, BellOff, Clock, Edit3, Camera, Save, UserPlus, Trash2, Gift, Sparkles, Wand2, Loader2
+  Star, Shield, UserPlus, X, Trash2, Wand2, Loader2, Sparkles, UserCheck, Gift
 } from 'lucide-react';
-import { 
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-  DropdownMenuSeparator
-} from "@/components/ui/dropdown-menu";
 import { useFirestore, useUser, useDoc, useMemoFirebase, useCollection } from '@/firebase';
-import { doc, updateDoc, arrayRemove, arrayUnion, query, collection, limit, orderBy, getDocs } from 'firebase/firestore';
+import { doc, updateDoc, arrayUnion, query, collection, limit, orderBy, getDocs, arrayRemove } from 'firebase/firestore';
 import { deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { useToast } from '@/hooks/use-toast';
 import { useAppState } from '@/lib/store';
-import { formatDisplayName, isUserPremium, formatLastSeen, cn, isGlobalAdmin, decryptSignal } from '@/lib/utils';
-import type { User, Chat, ReceivedGift, Message } from '@/lib/types';
-import { addHours, isAfter, parseISO } from 'date-fns';
+import { formatDisplayName, isUserPremium, formatLastSeen, decryptSignal } from '@/lib/utils';
+import type { User, Chat, ReceivedGift } from '@/lib/types';
 import { AddMemberModal } from './add-member-modal';
 import { GiftModal } from './gift-modal';
 import { chatConversationSummary } from '@/ai/flows/chat-conversation-summary-flow';
@@ -38,15 +29,10 @@ export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onO
   const isPrivate = chat.type === 'private';
   const otherId = isPrivate && user ? chat.participantIds?.find((id: string) => id !== user.uid) : null;
 
-  const [isEditing, setIsEditing] = useState(false);
   const [isAddMemberOpen, setIsAddMemberOpen] = useState(false);
   const [isGiftModalOpen, setIsGiftModalOpen] = useState(false);
   const [isSummarizing, setIsSummarizing] = useState(false);
   const [aiSummary, setAiSummary] = useState<string | null>(null);
-  
-  const [editForm, setEditForm] = useState({
-    name: '', username: chat.username || '', description: chat.description || '', avatarUrl: chat.avatarUrl || '', isPublic: !!chat.isPublic
-  });
 
   const userProfileRef = useMemoFirebase(() => (!db || !user) ? null : doc(db, 'users', user.uid), [db, user]);
   const { data: currentUserProfile } = useDoc<User>(userProfileRef);
@@ -61,6 +47,7 @@ export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onO
   const { data: gifts } = useCollection<ReceivedGift>(giftsQuery);
 
   const isPremium = useMemo(() => isUserPremium(currentUserProfile), [currentUserProfile]);
+  const isContact = useMemo(() => otherId && currentUserProfile?.contactIds?.includes(otherId), [otherId, currentUserProfile]);
 
   const handleAiSummary = async () => {
     if (!isPremium) {
@@ -78,42 +65,39 @@ export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onO
       const { summary } = await chatConversationSummary({ chatMessages: history });
       setAiSummary(summary);
     } catch (e) { toast({ title: "Сбой ИИ", variant: "destructive" }); }
-    finally { setIsSummarizing(true); }
+    finally { setIsSummarizing(false); }
   };
 
-  const handleSaveEdit = async () => {
-    if (!db || !chat.id || !user) return;
+  const toggleContact = async () => {
+    if (!db || !user || !otherId) return;
     try {
-      if (isPrivate) {
-        await updateDoc(doc(db, 'chats', chat.id), { [`metadata.${user.uid}.customName`]: editForm.name });
-      } else {
-        await updateDoc(doc(db, 'chats', chat.id), { ...editForm });
-      }
-      setIsEditing(false);
-      toast({ title: "Данные сохранены" });
-    } catch (e: any) { toast({ title: "Ошибка", variant: "destructive" }); }
+      await updateDoc(doc(db, 'users', user.uid), {
+        contactIds: isContact ? arrayRemove(otherId) : arrayUnion(otherId)
+      });
+      toast({ title: isContact ? "Удалено из контактов" : "Добавлено в контакты" });
+    } catch (e) { toast({ title: "Ошибка", variant: "destructive" }); }
   };
 
   const currentDisplayName = useMemo(() => {
     if (isPrivate) {
       const myMeta = chat.metadata?.[user?.uid || ''];
-      return myMeta?.customName || formatDisplayName(otherUserProfile?.name);
+      return myMeta?.customName || formatDisplayName(otherUserProfile?.name, otherUserProfile?.username);
     }
     return formatDisplayName(chat.name);
   }, [chat, user?.uid, otherUserProfile, isPrivate]);
 
   return (
     <>
-    <Dialog open={open} onOpenChange={(o) => { onOpenChange(o); if(!o) setIsEditing(false); }}>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md bg-card border-border p-0 overflow-hidden h-[85vh] flex flex-col rounded-[2.5rem] shadow-2xl">
         <DialogHeader className="p-6 text-center flex flex-col items-center shrink-0 space-y-0 relative border-b border-white/5">
           <div className="relative mb-4">
-             <UserAvatar userId={isPrivate ? otherId : null} manualAvatarUrl={isEditing && !isPrivate ? editForm.avatarUrl : (isPrivate ? otherUserProfile?.avatarUrl : chat.avatarUrl)} className="h-24 w-24 border-4 border-primary/20" fallbackName={currentDisplayName} showOnlineStatus={!isEditing} />
+             <UserAvatar userId={isPrivate ? otherId : null} manualAvatarUrl={isPrivate ? otherUserProfile?.avatarUrl : chat.avatarUrl} className="h-24 w-24 border-4 border-primary/20" fallbackName={currentDisplayName} showOnlineStatus />
           </div>
 
           <div className="space-y-1">
-             <DialogTitle className="text-xl font-black italic text-white flex items-center justify-center gap-2">
-               {currentDisplayName} {isUserPremium(otherUserProfile) && <Star className="w-4 h-4 text-accent fill-accent" />}
+             <DialogTitle className="text-xl font-black italic text-white flex items-center justify-center gap-2 uppercase tracking-tighter">
+               {currentDisplayName} {isUserPremium(otherUserProfile) && <Star className="w-4 h-4 text-accent fill-accent animate-pulse" />}
              </DialogTitle>
              <DialogDescription className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">
                 {isPrivate ? formatLastSeen(otherUserProfile?.lastSeen) : chat.username}
@@ -123,13 +107,23 @@ export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onO
 
         <ScrollArea className="flex-1">
           <div className="p-6 space-y-6">
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-3">
+               {isPrivate && (
+                 <Button 
+                   onClick={toggleContact}
+                   variant={isContact ? "outline" : "default"}
+                   className={cn("w-full h-12 rounded-xl font-black uppercase text-[10px] tracking-widest gap-2", isContact ? "border-white/10 bg-white/5" : "bg-primary")}
+                 >
+                   {isContact ? <><UserCheck className="w-4 h-4" /> В контактах</> : <><UserPlus className="w-4 h-4" /> Добавить в контакты</>}
+                 </Button>
+               )}
+               
                <Button 
                  onClick={handleAiSummary} 
                  disabled={isSummarizing}
                  className="w-full h-12 bg-primary/10 border border-primary/20 text-primary rounded-xl font-black uppercase italic tracking-widest gap-2 text-[10px]"
                >
-                 {isSummarizing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wand2 className="w-4 h-4" />} ПЕРЕСКАЗ ДИАЛОГА (AI)
+                 {isSummarizing ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Wand2 className="w-4 h-4" /> ПЕРЕСКАЗ ДИАЛОГА (AI)</>}
                </Button>
                {aiSummary && (
                  <div className="bg-primary/5 p-4 rounded-2xl border border-primary/10 animate-in fade-in zoom-in-95">
@@ -137,6 +131,14 @@ export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onO
                  </div>
                )}
             </div>
+
+            {isPrivate && (
+              <div className="flex gap-2">
+                 <Button onClick={() => setIsGiftModalOpen(true)} variant="outline" className="flex-1 h-12 rounded-xl border-white/10 bg-white/5 text-white font-black uppercase text-[10px] tracking-widest gap-2">
+                   <Gift className="w-4 h-4 text-primary" /> Подарок
+                 </Button>
+              </div>
+            )}
 
             {gifts && gifts.length > 0 && (
               <div className="space-y-3">
