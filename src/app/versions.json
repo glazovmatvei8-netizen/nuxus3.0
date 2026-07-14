@@ -1,13 +1,13 @@
 
 {
-  "latestVersion": "49.0.0",
-  "qesVersion": "49.0",
-  "build": "Shield-Absolute-Stable",
-  "sizeMb": 130,
+  "latestVersion": "50.0.0",
+  "qesVersion": "50.0",
+  "build": "Signal-Visibility-Sync",
+  "sizeMb": 135,
   "changelog": [
-    "Fix: Устранена ошибка Globe в настройках",
-    "Fix: Исправлен импорт Paintbrush для HEX-резонанса",
-    "Sync: Финальная синхронизация Live-Sync v49.0.0",
-    "Security: Все 8 разделов защиты активны"
+    "Sync: Исправлен статус прочтения (2 галочки)",
+    "UI: Добавлены разделители дат (сегодня/вчера)",
+    "Performance: Оптимизирована отрисовка длинных чатов",
+    "Stability: Финальная синхронизация Live-Sync V50"
   ]
 }

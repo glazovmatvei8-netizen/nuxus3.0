@@ -16,13 +16,15 @@ import { ChatInfoModal } from './modals/chat-info-modal';
 import { CreatePollModal } from './modals/create-poll-modal';
 import { EmojiPicker } from './emoji-picker';
 import { useFirestore, useUser, useCollection, useDoc, useMemoFirebase } from '@/firebase';
-import { collection, query, orderBy, doc, addDoc, updateDoc, limit, getDocs, where, getDoc } from 'firebase/firestore';
+import { collection, query, orderBy, doc, addDoc, updateDoc, limit, getDocs, where, getDoc, writeBatch } from 'firebase/firestore';
 import { formatDisplayName, cn, compressImage, encryptSignal, isGlobalAdmin, decryptSignal, formatLastSeen, isUserPremium } from '@/lib/utils';
 import type { Message, User as UserType, Chat } from '@/lib/types';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { useToast } from '@/hooks/use-toast';
 import { suggestMessageDraft } from '@/ai/flows/ai-message-drafting-flow';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { isToday, isYesterday, format } from 'date-fns';
+import { ru } from 'date-fns/locale';
 
 const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, isPremium, replyTo, onCancelReply, onOpenProRecorder, messages, participantIds, isGroup }: any) => {
   const { localDrafts, setLocalDrafts } = useAppState();
@@ -51,7 +53,6 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
     setMessageInput(localDrafts[currentChatId] || '');
   }, [currentChatId, localDrafts]);
 
-  // СИСТЕМА УПОМИНАНИЙ V43.0.1 - ОПТИМИЗИРОВАННЫЙ ПОИСК
   useEffect(() => {
     const lastWord = messageInput.split(/\s/).pop() || '';
     if (lastWord.startsWith('@')) {
@@ -69,7 +70,6 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
         setIsFetchingMentions(true);
         try {
           const results: UserType[] = [];
-          // Берем срез участников для оптимизации
           const targetIds = participantIds.slice(0, 50);
           
           const promises = targetIds.map(async (uid: string) => {
@@ -194,7 +194,6 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
 
   return (
     <footer className="p-3 pb-[calc(1rem+env(safe-area-inset-bottom))] obsidian-glass border-t border-white/5 shrink-0 z-40 relative flex flex-col gap-2">
-      {/* МЕНЮ УПОМИНАНИЙ V43.0.1 - ПРОВЕРЕННАЯ СТАБИЛЬНОСТЬ */}
       {mentionSearch !== null && isGroup && (
         <div className="absolute bottom-full left-4 mb-2 w-72 obsidian-glass border border-white/10 rounded-[2.2rem] overflow-hidden z-[100] animate-in slide-in-from-bottom-4 duration-500 shadow-2xl">
            <div className="p-3 border-b border-white/5 flex items-center justify-between bg-primary/5">
@@ -341,10 +340,34 @@ const MessageList = memo(({
     if (!messages) return [];
     return [...messages].sort((a, b) => new Date(a.sentAt).getTime() - new Date(b.sentAt).getTime());
   }, [messages]);
-  
-  return (
-    <div className="flex flex-col gap-2 max-w-5xl mx-auto px-4 md:px-10 py-8 min-h-full relative z-10 overflow-x-hidden">
-      {sortedMessages.map((msg: Message) => (
+
+  const renderMessagesWithDividers = () => {
+    if (!sortedMessages.length) return null;
+    
+    const elements: React.ReactNode[] = [];
+    let lastDateKey = '';
+
+    sortedMessages.forEach((msg: Message) => {
+      const dateObj = new Date(msg.sentAt);
+      const dateKey = format(dateObj, 'yyyy-MM-dd');
+
+      if (dateKey !== lastDateKey) {
+        let label = '';
+        if (isToday(dateObj)) label = 'сегодня';
+        else if (isYesterday(dateObj)) label = 'вчера';
+        else label = format(dateObj, 'd MMMM', { locale: ru });
+
+        elements.push(
+          <div key={`date-${dateKey}`} className="flex justify-center my-6 animate-in fade-in duration-700 select-none">
+            <div className="bg-white/[0.03] backdrop-blur-xl px-5 py-1.5 rounded-full border border-white/5 shadow-sm">
+              <span className="text-[10px] font-black uppercase text-white/30 tracking-[0.2em] italic">{label}</span>
+            </div>
+          </div>
+        );
+        lastDateKey = dateKey;
+      }
+
+      elements.push(
         <MessageItem 
           key={msg.id} message={msg} isMe={msg.senderId === userId} 
           chatId={chatId} onReply={onReply} 
@@ -353,7 +376,15 @@ const MessageList = memo(({
           highlight={searchQuery && msg.contentType === 'text' && decryptSignal(msg.content)?.toLowerCase().includes(searchQuery.toLowerCase())} 
           viewerProfile={viewerProfile} 
         />
-      ))}
+      );
+    });
+
+    return elements;
+  };
+  
+  return (
+    <div className="flex flex-col gap-2 max-w-5xl mx-auto px-4 md:px-10 py-8 min-h-full relative z-10 overflow-x-hidden">
+      {renderMessagesWithDividers()}
     </div>
   );
 });
@@ -390,6 +421,28 @@ export default function ChatArea() {
   const { data: messages } = useCollection<Message>(messagesQuery);
 
   const isPremium = useMemo(() => isUserPremium(userProfile), [userProfile]);
+
+  // СИНХРОНИЗАЦИЯ СТАТУСА ПРОЧТЕНИЯ (V50.0.0)
+  useEffect(() => {
+    if (!db || !currentChatId || !firebaseUser || !messages?.length) return;
+
+    const unreadFromOthers = messages.filter(m => !m.isRead && m.senderId !== firebaseUser.uid);
+    if (unreadFromOthers.length > 0) {
+      const markAsRead = async () => {
+        const batch = writeBatch(db);
+        unreadFromOthers.forEach(m => {
+          const mRef = doc(db, 'chats', currentChatId, 'messages', m.id);
+          batch.update(mRef, { isRead: true });
+        });
+        try {
+          await batch.commit();
+        } catch (e) {
+          console.warn("Nuxus Sync: Read status fail", e);
+        }
+      };
+      markAsRead();
+    }
+  }, [messages, currentChatId, firebaseUser, db]);
 
   const scrollToBottom = useCallback((behavior: ScrollBehavior = 'smooth') => {
     const end = document.getElementById('messages-end');

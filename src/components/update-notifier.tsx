@@ -8,9 +8,9 @@ import { RefreshCw, Zap, Download, ArrowUpCircle, Loader2 } from 'lucide-react';
 import nuxusVersions from '@/app/versions.json';
 
 /**
- * КВАНТОВЫЙ ОБНОВЛЯТОР ЯДРА V49.0.0 (Global Stability Sync)
+ * КВАНТОВЫЙ ОБНОВЛЯТОР ЯДРА V50.0.0 (Signal Visibility Sync)
  */
-const CURRENT_VERSION = "49.0.0"; 
+const CURRENT_VERSION = "50.0.0"; 
 
 export function UpdateNotifier() {
   const [isOpen, setIsOpen] = useState(false);
@@ -110,7 +110,7 @@ export function UpdateNotifier() {
               <span className="text-[10px] font-black bg-white/5 border border-white/10 px-3 py-1 rounded-lg text-primary">Stable</span>
             </div>
             <DialogDescription className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em]">
-              Shield Restoration & Identity Protocol
+              Signal Visibility & Time Travel Protocol
             </DialogDescription>
           </DialogHeader>
 
