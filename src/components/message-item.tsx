@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/dialog";
 import { format } from 'date-fns';
 import { 
-  CornerUpLeft, Trash2, Check, CheckCheck, Play, Pause, Volume2, Share2, FileText, Copy, Loader2, RefreshCcw, Languages, MoreHorizontal, Star, Edit, MousePointer2, Heart
+  CornerUpLeft, Trash2, Check, CheckCheck, Play, Pause, Share2, FileText, Copy, Loader2, Languages, MoreHorizontal, Star, Edit, MousePointer2
 } from 'lucide-react';
 import { cn, decryptSignal, isUserPremium, formatDisplayName } from '@/lib/utils';
 import { doc, updateDoc, deleteDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
@@ -36,7 +36,6 @@ const SHAPE_CLIPS: Record<string, string> = {
   square: 'inset(0% rounded 25%)',
   heart: 'polygon(50% 15%, 80% 0%, 100% 20%, 100% 50%, 50% 100%, 0% 50%, 0% 20%, 20% 0%)',
   triangle: 'polygon(50% 0%, 0% 100%, 100% 100%)',
-  poop: 'polygon(50% 0%, 63% 13%, 53% 25%, 80% 38%, 85% 61%, 69% 68%, 94% 82%, 100% 100%, 0% 100%, 6% 82%, 31% 68%, 15% 61%, 20% 38%, 47% 25%, 37% 13%)'
 };
 
 const QUICK_REACTIONS = ['❤️', '👀', '🤟', '🔥', '😭', '⚡', '👍', '❤️‍🔥'];
@@ -296,7 +295,6 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onForward, is
                     )}
                   </div>
 
-                  {/* Reactions Display (Telegram Style) */}
                   {message.reactions && Object.entries(message.reactions).some(([_, uids]) => (uids as string[]).length > 0) && (
                     <div className={cn(
                       "absolute -bottom-3 flex flex-wrap gap-1",
@@ -318,11 +316,11 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onForward, is
               </PopoverTrigger>
 
               <PopoverContent 
-                side={isMe ? "left" : "right"} 
-                align="start" 
-                className="w-72 bg-[#0a0a0c]/95 backdrop-blur-[60px] border-white/10 rounded-[2.2rem] shadow-2xl p-0 overflow-hidden outline-none animate-in zoom-in-95 duration-200"
+                side="top" 
+                align={isMe ? "end" : "start"} 
+                className="w-72 bg-[#0a0a0c]/95 backdrop-blur-[60px] border-white/10 rounded-[2.2rem] shadow-2xl p-0 overflow-hidden outline-none animate-in zoom-in-95 duration-200 z-[1000]"
+                collisionPadding={16}
               >
-                {/* Reactions Bar */}
                 <div className="flex justify-between items-center px-4 py-3 bg-white/5 border-b border-white/5">
                    {QUICK_REACTIONS.map(emoji => (
                      <button 
@@ -335,7 +333,6 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onForward, is
                    ))}
                 </div>
 
-                {/* Actions List */}
                 <div className="p-2 space-y-0.5">
                    <ActionMenuItem icon={CornerUpLeft} label="Ответить" onClick={() => { onReply(message); setIsMenuOpen(false); }} />
                    <ActionMenuItem icon={Share2} label="Переслать" onClick={() => { onForward(message); setIsMenuOpen(false); }} />
@@ -354,7 +351,6 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onForward, is
               </PopoverContent>
             </Popover>
 
-            {/* Three Dots Trigger Button */}
             <button 
               onClick={() => setIsMenuOpen(true)}
               className={cn(
@@ -368,7 +364,6 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onForward, is
         </div>
       </div>
 
-      {/* Delete Confirmation Modal (Telegram Style) */}
       <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
         <DialogContent className="max-w-xs bg-[#0a0a0c]/98 backdrop-blur-[50px] border-white/10 rounded-[2.5rem] p-8 text-center shadow-2xl outline-none">
           <DialogHeader>
@@ -381,7 +376,7 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onForward, is
           <div className="py-6 space-y-4">
              <div className="flex items-center justify-between bg-white/5 p-4 rounded-2xl border border-white/5">
                 <div className="flex flex-col text-left">
-                  <span className="text-xs font-bold text-white">Удалить для {isMe ? (isGroup ? 'всех' : (otherUser?.name || 'собеседника')) : 'меня'}</span>
+                  <span className="text-xs font-bold text-white">Удалить для всех</span>
                   <span className="text-[9px] text-primary/60 font-black uppercase tracking-widest">Квантовая зачистка</span>
                 </div>
                 <Checkbox 

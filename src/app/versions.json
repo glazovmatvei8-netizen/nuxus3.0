@@ -1,13 +1,13 @@
 
 {
-  "latestVersion": "51.0.0",
-  "qesVersion": "51.0",
-  "build": "Signal-Interlink-Reactions",
-  "sizeMb": 138,
+  "latestVersion": "51.1.0",
+  "qesVersion": "51.1",
+  "build": "Elite-Shield-Restore",
+  "sizeMb": 142,
   "changelog": [
-    "UI: Новое меню действий с тремя точками",
-    "Social: Добавлены реакции на сообщения (вкл. ❤️‍🔥)",
-    "Privacy: Удаление сообщений для обоих участников",
-    "Stability: Фикс системы Live-Sync V51"
+    "Fix: Позиционирование меню действий (больше не уходит за экран)",
+    "Security: Полное восстановление всех 8 разделов защиты",
+    "UI: Исправлен элитный стиль Premium-раздела",
+    "Core: Оптимизация наложения слоев в чате"
   ]
 }

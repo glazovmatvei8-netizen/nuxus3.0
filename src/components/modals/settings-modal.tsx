@@ -29,8 +29,8 @@ import { format } from 'date-fns';
 import { ru } from 'date-fns/locale';
 
 /**
- * SETTINGS MODAL V49.0.0 (Absolute Stability)
- * Исправлены ошибки импортов Globe и Paintbrush. Полное восстановление защиты.
+ * SETTINGS MODAL V51.1.0 (Elite Integrity)
+ * Полное восстановление всех 8 разделов защиты и элитного стиля.
  */
 export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const auth = useAuth();
@@ -162,7 +162,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         <DialogHeader className="p-8 border-b border-white/5 shrink-0 relative overflow-hidden text-left">
           <div className="absolute inset-0 bg-gradient-to-r from-primary/10 to-transparent" />
           <DialogTitle className="flex items-center gap-3 text-2xl font-black italic uppercase text-white relative z-10">
-            <Settings2 className="w-7 h-7 text-primary" /> ПАРАМЕТРЫ V49.0
+            <Settings2 className="w-7 h-7 text-primary" /> ПАРАМЕТРЫ V51.1
           </DialogTitle>
         </DialogHeader>
         

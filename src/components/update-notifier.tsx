@@ -8,9 +8,9 @@ import { RefreshCw, Zap, Download, ArrowUpCircle, Loader2 } from 'lucide-react';
 import nuxusVersions from '@/app/versions.json';
 
 /**
- * КВАНТОВЫЙ ОБНОВЛЯТОР ЯДРА V51.0.0 (Signal Interlink Sync)
+ * КВАНТОВЫЙ ОБНОВЛЯТОР ЯДРА V51.1.0 (Elite Integrity)
  */
-const CURRENT_VERSION = "51.0.0"; 
+const CURRENT_VERSION = "51.1.0"; 
 
 export function UpdateNotifier() {
   const [isOpen, setIsOpen] = useState(false);
