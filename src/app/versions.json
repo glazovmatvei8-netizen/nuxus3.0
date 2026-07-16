@@ -1,13 +1,13 @@
 
 {
-  "latestVersion": "50.0.0",
-  "qesVersion": "50.0",
-  "build": "Signal-Visibility-Sync",
-  "sizeMb": 135,
+  "latestVersion": "51.0.0",
+  "qesVersion": "51.0",
+  "build": "Signal-Interlink-Reactions",
+  "sizeMb": 138,
   "changelog": [
-    "Sync: Исправлен статус прочтения (2 галочки)",
-    "UI: Добавлены разделители дат (сегодня/вчера)",
-    "Performance: Оптимизирована отрисовка длинных чатов",
-    "Stability: Финальная синхронизация Live-Sync V50"
+    "UI: Новое меню действий с тремя точками",
+    "Social: Добавлены реакции на сообщения (вкл. ❤️‍🔥)",
+    "Privacy: Удаление сообщений для обоих участников",
+    "Stability: Фикс системы Live-Sync V51"
   ]
 }
