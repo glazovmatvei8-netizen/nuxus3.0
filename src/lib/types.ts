@@ -204,8 +204,9 @@ export interface User {
   id: string;
   phone: string;
   phoneVerified?: boolean;
-  email?: string;
+  email?: string | null;
   emailVerified?: boolean;
+  emailLastChangedAt?: string;
   name: string;
   username: string;
   usernameLowercase?: string;

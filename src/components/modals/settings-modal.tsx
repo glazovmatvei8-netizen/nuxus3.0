@@ -1,7 +1,7 @@
 
 "use client"
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,22 +15,23 @@ import { UserAvatar } from '@/components/user-avatar';
 import { 
   LogOut, Settings2, Camera, Lock, Fingerprint, Star, Zap, ShieldCheck, Loader2, Database, Palette, 
   Monitor, MessageSquare, ImageIcon, Smile, Plus, Check, RefreshCcw, Smartphone, PhoneCall, Eye, 
-  Users, ShieldAlert, Ghost, Mail, Share2, FileText, Download, Search, MessageCircle, CheckCircle2, Calendar, Shield, Info, Globe, Paintbrush
+  Users, ShieldAlert, Ghost, Mail, Share2, FileText, Download, Search, MessageCircle, CheckCircle2, Calendar, Shield, Info, Globe, Paintbrush, ArrowRight, ShieldQuestion
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { signOut } from 'firebase/auth';
-import { doc, updateDoc, collection, query, limit, getDocs, where } from 'firebase/firestore';
+import { doc, updateDoc, collection, query, limit, getDocs, where, addDoc } from 'firebase/firestore';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAppState } from '@/lib/store';
 import { cn, isUserPremium, isGlobalAdmin, formatDisplayName } from '@/lib/utils';
 import type { User, PrivacyOption } from '@/lib/types';
 import nuxusVersions from '@/app/versions.json';
-import { format } from 'date-fns';
+import { format, addHours, isAfter, parseISO, differenceInSeconds } from 'date-fns';
 import { ru } from 'date-fns/locale';
+import { sendVerificationCode } from '@/ai/flows/send-verification-email-flow';
 
 /**
- * SETTINGS MODAL V51.1.0 (Elite Integrity)
- * Полное восстановление всех 8 разделов защиты и элитного стиля.
+ * SETTINGS MODAL V52.0.0 (Verification Protocol)
+ * Fully working email verification with 6-digit codes and 24h lock.
  */
 export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const auth = useAuth();
@@ -48,6 +49,14 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
   const [isSaving, setIsSaving] = useState(false);
   const [exceptionTarget, setExceptionTarget] = useState<string | null>(null);
   
+  // Verification States
+  const [verifyStep, setVerifyStep] = useState<'idle' | 'verifying_old' | 'entering_new' | 'verifying_new'>('idle');
+  const [emailToVerify, setEmailToVerify] = useState('');
+  const [inputCode, setInputCode] = useState('');
+  const [activeCode, setActiveCode] = useState('');
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [timeRemaining, setTimeRemaining] = useState<number | null>(null);
+
   const isPremium = isUserPremium(profile);
 
   const [form, setForm] = useState({
@@ -119,8 +128,84 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
           messageWhitelist: profile.settings?.privacy?.messageWhitelist || []
         }
       });
+
+      // Check 24h lock
+      if (profile.emailLastChangedAt) {
+        const lockEnd = addHours(parseISO(profile.emailLastChangedAt), 24);
+        if (isAfter(lockEnd, new Date())) {
+          setTimeRemaining(differenceInSeconds(lockEnd, new Date()));
+        } else {
+          setTimeRemaining(null);
+        }
+      }
     }
   }, [profile, open]);
+
+  const handleSendEmailCode = async (targetEmail: string, step: typeof verifyStep) => {
+    if (!targetEmail.includes('@')) {
+      toast({ title: "Ошибка", description: "Некорректная почта.", variant: "destructive" });
+      return;
+    }
+    setIsVerifying(true);
+    try {
+      const { success, code } = await sendVerificationCode({ email: targetEmail, userName: form.name });
+      if (success) {
+        setActiveCode(code);
+        setVerifyStep(step);
+        toast({ title: "Код отправлен", description: "Проверьте входящие или папку Спам." });
+      }
+    } catch (e) {
+      toast({ title: "Сбой ИИ", variant: "destructive" });
+    } finally {
+      setIsVerifying(false);
+    }
+  };
+
+  const handleConfirmCode = async () => {
+    if (inputCode !== activeCode) {
+      toast({ title: "Неверный код", description: "Проверьте цифры и попробуйте снова.", variant: "destructive" });
+      return;
+    }
+
+    if (verifyStep === 'verifying_old') {
+      setVerifyStep('entering_new');
+      setInputCode('');
+      setActiveCode('');
+    } else if (verifyStep === 'verifying_new') {
+      if (!db || !user) return;
+      setIsVerifying(true);
+      try {
+        await updateDoc(doc(db, 'users', user.uid), {
+          email: emailToVerify,
+          emailVerified: true,
+          emailLastChangedAt: new Date().toISOString()
+        });
+        setVerifyStep('idle');
+        setForm({ ...form, email: emailToVerify });
+        toast({ title: "Почта подтверждена", description: "Ядро синхронизировано." });
+      } finally {
+        setIsVerifying(false);
+      }
+    }
+  };
+
+  const requestPhoneVerification = async () => {
+    if (!db || !user || !profile) return;
+    try {
+      await addDoc(collection(db, 'topUpRequests'), {
+        userId: user.uid,
+        userName: profile.name,
+        amount: 0,
+        type: 'phone_verification',
+        phone: form.phone,
+        status: 'pending',
+        createdAt: new Date().toISOString()
+      });
+      toast({ title: "Сигнал отправлен", description: "Администратор свяжется с вами для проверки номера." });
+    } catch (e) {
+      toast({ title: "Ошибка отправки" });
+    }
+  };
 
   const handleSave = async () => {
     if (!db || !user || !profile) return;
@@ -137,6 +222,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         statusEmoji: form.statusEmoji.trim(),
         statusText: form.statusText.trim(),
         avatarUrl: form.avatarUrl,
+        phone: form.phone.trim(),
         twoFactorEnabled: form.twoFactorEnabled,
         twoFactorPin: form.twoFactorPin,
         'settings.appearance': form.appearance,
@@ -155,6 +241,12 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
     finally { setIsSaving(false); }
   };
 
+  const formatLockTime = (seconds: number) => {
+    const hours = Math.floor(seconds / 3600);
+    const mins = Math.floor((seconds % 3600) / 60);
+    return `${hours}ч ${mins}м`;
+  };
+
   return (
     <>
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -162,7 +254,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         <DialogHeader className="p-8 border-b border-white/5 shrink-0 relative overflow-hidden text-left">
           <div className="absolute inset-0 bg-gradient-to-r from-primary/10 to-transparent" />
           <DialogTitle className="flex items-center gap-3 text-2xl font-black italic uppercase text-white relative z-10">
-            <Settings2 className="w-7 h-7 text-primary" /> ПАРАМЕТРЫ V51.1
+            <Settings2 className="w-7 h-7 text-primary" /> ПАРАМЕТРЫ V52.0
           </DialogTitle>
         </DialogHeader>
         
@@ -200,6 +292,124 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                         </div>
                       </div>
                     </div>
+
+                    {/* EMAIL VERIFICATION MODULE */}
+                    <div className="bg-white/5 p-5 rounded-[2rem] border border-white/5 space-y-4">
+                       <div className="flex items-center justify-between">
+                         <div className="flex items-center gap-2">
+                           <Mail className="w-4 h-4 text-primary" />
+                           <span className="text-[10px] font-black uppercase text-white tracking-widest">Электронная почта</span>
+                         </div>
+                         {profile?.emailVerified ? (
+                           <div className="flex items-center gap-1.5 bg-green-500/10 px-2 py-0.5 rounded-full border border-green-500/20">
+                             <CheckCircle2 className="w-3 h-3 text-green-500" />
+                             <span className="text-[8px] font-black uppercase text-green-500">Подтверждена</span>
+                           </div>
+                         ) : (
+                           <div className="flex items-center gap-1.5 bg-red-500/10 px-2 py-0.5 rounded-full border border-red-500/20">
+                             <ShieldAlert className="w-3 h-3 text-red-500" />
+                             <span className="text-[8px] font-black uppercase text-red-500">Не подтверждена</span>
+                           </div>
+                         )}
+                       </div>
+
+                       {verifyStep === 'idle' && (
+                         <div className="space-y-3">
+                           <Input 
+                             value={form.email || ''} 
+                             readOnly={profile?.emailVerified}
+                             disabled={!!timeRemaining}
+                             placeholder="Введите вашу почту..."
+                             className="bg-black/40 border-white/10 h-12 rounded-xl text-sm" 
+                           />
+                           {timeRemaining ? (
+                             <div className="p-3 bg-primary/5 border border-primary/20 rounded-xl flex items-center justify-center gap-3">
+                               <Clock className="w-4 h-4 text-primary animate-pulse" />
+                               <span className="text-[10px] font-black uppercase text-primary tracking-widest">Заблокировано на {formatLockTime(timeRemaining)}</span>
+                             </div>
+                           ) : profile?.emailVerified ? (
+                             <Button onClick={() => handleSendEmailCode(profile.email!, 'verifying_old')} className="w-full h-11 bg-white/5 border border-white/10 text-white rounded-xl font-black uppercase text-[10px] tracking-widest">
+                               Изменить почту
+                             </Button>
+                           ) : (
+                             <Button onClick={() => handleSendEmailCode(form.email, 'verifying_new')} disabled={isVerifying || !form.email} className="w-full h-12 bg-primary text-white rounded-xl font-black uppercase italic tracking-widest shadow-lg">
+                               {isVerifying ? <Loader2 className="w-5 h-5 animate-spin" /> : "Подтвердить почту"}
+                             </Button>
+                           )}
+                         </div>
+                       )}
+
+                       {/* Verification Code Input View */}
+                       {(verifyStep === 'verifying_old' || verifyStep === 'verifying_new') && (
+                         <div className="space-y-4 animate-in fade-in zoom-in-95">
+                           <div className="text-center space-y-1">
+                             <p className="text-[10px] font-bold text-white/40 uppercase">Введите 6-значный код</p>
+                             <p className="text-[11px] font-black text-primary uppercase italic truncate">{verifyStep === 'verifying_old' ? profile?.email : emailToVerify}</p>
+                           </div>
+                           <Input 
+                             value={inputCode} 
+                             onChange={e => setInputCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                             placeholder="000000"
+                             className="bg-black/60 border-primary/40 h-14 rounded-2xl text-center text-2xl tracking-[0.4em] font-black"
+                           />
+                           <div className="flex gap-2">
+                             <Button onClick={() => setVerifyStep('idle')} variant="ghost" className="flex-1 h-11 text-[9px] font-black uppercase">Отмена</Button>
+                             <Button onClick={handleConfirmCode} disabled={inputCode.length !== 6 || isVerifying} className="flex-2 h-11 bg-primary text-white rounded-xl font-black uppercase text-[10px] tracking-widest">
+                               {isVerifying ? <Loader2 className="w-4 h-4 animate-spin" /> : "Подтвердить"}
+                             </Button>
+                           </div>
+                         </div>
+                       )}
+
+                       {/* Entering New Email View */}
+                       {verifyStep === 'entering_new' && (
+                         <div className="space-y-4 animate-in slide-in-from-right-4">
+                           <p className="text-[10px] font-black uppercase text-primary text-center">Введите новую почту</p>
+                           <Input 
+                             value={emailToVerify}
+                             onChange={e => setEmailToVerify(e.target.value)}
+                             placeholder="new_email@example.com"
+                             className="bg-black/40 border-primary/20 h-12 rounded-xl text-center"
+                           />
+                           <Button onClick={() => handleSendEmailCode(emailToVerify, 'verifying_new')} disabled={!emailToVerify.includes('@') || isVerifying} className="w-full h-12 bg-primary text-white rounded-xl font-black uppercase italic tracking-widest">
+                             {isVerifying ? <Loader2 className="w-5 h-5 animate-spin" /> : "Получить код"}
+                           </Button>
+                         </div>
+                       )}
+                    </div>
+
+                    {/* PHONE VERIFICATION */}
+                    <div className="bg-white/5 p-5 rounded-[2rem] border border-white/5 space-y-4">
+                       <div className="flex items-center justify-between">
+                         <div className="flex items-center gap-2">
+                           <Smartphone className="w-4 h-4 text-primary" />
+                           <span className="text-[10px] font-black uppercase text-white tracking-widest">Номер телефона</span>
+                         </div>
+                         {profile?.phoneVerified ? (
+                           <div className="flex items-center gap-1.5 bg-green-500/10 px-2 py-0.5 rounded-full border border-green-500/20">
+                             <CheckCircle2 className="w-3 h-3 text-green-500" />
+                             <span className="text-[8px] font-black uppercase text-green-500">Проверен</span>
+                           </div>
+                         ) : (
+                           <div className="flex items-center gap-1.5 bg-accent/10 px-2 py-0.5 rounded-full border border-accent/20">
+                             <ShieldQuestion className="w-3 h-3 text-accent" />
+                             <span className="text-[8px] font-black uppercase text-accent">Ожидание</span>
+                           </div>
+                         )}
+                       </div>
+                       <div className="flex gap-2">
+                         <Input value={form.phone} onChange={e => setForm({...form, phone: e.target.value})} className="bg-black/40 border-white/10 h-12 rounded-xl text-sm" placeholder="+7 (___) ___ __ __" />
+                         {!profile?.phoneVerified && (
+                           <Button onClick={requestPhoneVerification} className="h-12 w-12 rounded-xl bg-primary shrink-0 shadow-lg">
+                             <ShieldCheck className="w-5 h-5 text-white" />
+                           </Button>
+                         )}
+                       </div>
+                       {!profile?.phoneVerified && (
+                         <p className="text-[8px] text-white/30 uppercase font-black tracking-widest px-2">Проверка номера выполняется вручную через администратора.</p>
+                       )}
+                    </div>
+
                     <div className="bg-primary/5 p-4 rounded-2xl border border-primary/10 space-y-4">
                       <div className="flex items-center gap-2 mb-1">
                         <Smile className="w-3.5 h-3.5 text-primary" />

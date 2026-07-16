@@ -11,6 +11,10 @@
         "name": { "type": "string" },
         "username": { "type": "string" },
         "phone": { "type": "string" },
+        "phoneVerified": { "type": "boolean" },
+        "email": { "type": "string", "format": "email" },
+        "emailVerified": { "type": "boolean" },
+        "emailLastChangedAt": { "type": "string", "format": "date-time" },
         "avatarUrl": { "type": "string", "format": "uri" },
         "lastSeen": { "type": "string", "format": "date-time" },
         "createdAt": { "type": "string", "format": "date-time" },
@@ -20,137 +24,9 @@
         "countryCode": { "type": "string", "description": "ISO 3166-1 alpha-2 country code." }
       },
       "required": ["id", "name", "username", "phone", "createdAt"]
-    },
-    "Session": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Session",
-      "type": "object",
-      "description": "Represents an active device session.",
-      "properties": {
-        "id": { "type": "string" },
-        "userId": { "type": "string" },
-        "deviceName": { "type": "string" },
-        "browser": { "type": "string" },
-        "ip": { "type": "string" },
-        "countryCode": { "type": "string" },
-        "lastActive": { "type": "string", "format": "date-time" },
-        "createdAt": { "type": "string", "format": "date-time" },
-        "userAgent": { "type": "string" }
-      },
-      "required": ["id", "userId", "deviceName", "lastActive", "createdAt"]
-    },
-    "ReceivedGift": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "ReceivedGift",
-      "type": "object",
-      "description": "A gift received by a user.",
-      "properties": {
-        "id": { "type": "string" },
-        "senderId": { "type": "string" },
-        "senderName": { "type": "string" },
-        "giftId": { "type": "string" },
-        "giftName": { "type": "string" },
-        "giftIcon": { "type": "string" },
-        "price": { "type": "number" },
-        "receivedAt": { "type": "string", "format": "date-time" }
-      },
-      "required": ["id", "senderId", "giftId", "receivedAt"]
-    },
-    "Transaction": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Transaction",
-      "type": "object",
-      "description": "Financial transaction record.",
-      "properties": {
-        "id": { "type": "string" },
-        "userId": { "type": "string" },
-        "amount": { "type": "number" },
-        "type": { "type": "string", "enum": ["deposit", "withdrawal", "transfer_in", "transfer_out", "gift_purchase"] },
-        "status": { "type": "string", "enum": ["completed", "pending", "failed"] },
-        "otherPartyId": { "type": "string" },
-        "otherPartyName": { "type": "string" },
-        "createdAt": { "type": "string", "format": "date-time" }
-      },
-      "required": ["id", "userId", "amount", "type", "status", "createdAt"]
-    },
-    "TopUpRequest": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "TopUpRequest",
-      "type": "object",
-      "description": "A manual request to top up balance.",
-      "properties": {
-        "id": { "type": "string" },
-        "userId": { "type": "string" },
-        "userName": { "type": "string" },
-        "amount": { "type": "number" },
-        "status": { "type": "string", "enum": ["pending", "approved", "rejected"] },
-        "createdAt": { "type": "string", "format": "date-time" }
-      },
-      "required": ["id", "userId", "amount", "status", "createdAt"]
-    },
-    "Chat": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Chat",
-      "type": "object",
-      "description": "Represents a conversation.",
-      "properties": {
-        "id": { "type": "string" },
-        "type": { "type": "string" },
-        "name": { "type": "string" },
-        "participantIds": { "type": "array", "items": { "type": "string" } },
-        "createdAt": { "type": "string", "format": "date-time" }
-      },
-      "required": ["id", "type", "name", "createdAt", "participantIds"]
-    },
-    "Message": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Message",
-      "type": "object",
-      "description": "Represents a single message, including polls.",
-      "properties": {
-        "id": { "type": "string" },
-        "chatId": { "type": "string" },
-        "senderId": { "type": "string" },
-        "content": { "type": "string" },
-        "contentType": { "type": "string" },
-        "sentAt": { "type": "string", "format": "date-time" }
-      },
-      "required": ["id", "chatId", "senderId", "content", "contentType", "sentAt"]
     }
   },
   "auth": {
-    "providers": ["phone"]
-  },
-  "firestore": {
-    "structure": [
-      {
-        "path": "/users/{userId}",
-        "definition": { "entityName": "UserProfile", "schema": { "$ref": "#/backend/entities/UserProfile" }, "description": "Stores user profiles." }
-      },
-      {
-        "path": "/users/{userId}/sessions/{sessionId}",
-        "definition": { "entityName": "Session", "schema": { "$ref": "#/backend/entities/Session" }, "description": "Stores active user sessions." }
-      },
-      {
-        "path": "/users/{userId}/receivedGifts/{giftId}",
-        "definition": { "entityName": "ReceivedGift", "schema": { "$ref": "#/backend/entities/ReceivedGift" }, "description": "Stores gifts received by user." }
-      },
-      {
-        "path": "/users/{userId}/transactions/{transactionId}",
-        "definition": { "entityName": "Transaction", "schema": { "$ref": "#/backend/entities/Transaction" }, "description": "Stores user transaction history." }
-      },
-      {
-        "path": "/topUpRequests/{requestId}",
-        "definition": { "entityName": "TopUpRequest", "schema": { "$ref": "#/backend/entities/TopUpRequest" }, "description": "Stores manual top-up requests." }
-      },
-      {
-        "path": "/chats/{chatId}",
-        "definition": { "entityName": "Chat", "schema": { "$ref": "#/backend/entities/Chat" }, "description": "Stores chat metadata." }
-      },
-      {
-        "path": "/chats/{chatId}/messages/{messageId}",
-        "definition": { "entityName": "Message", "schema": { "$ref": "#/backend/entities/Message" }, "description": "Stores chat messages." }
-      }
-    ]
+    "providers": ["phone", "email"]
   }
 }
