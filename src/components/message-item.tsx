@@ -284,16 +284,7 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onForward, is
           )}
           
           <div className="relative flex items-center gap-2">
-            {/* ТРИ ТОЧКИ ПЕРЕД СООБЩЕНИЕМ ДЛЯ МЕНЯ */}
-            {isMe && (
-              <button 
-                onClick={() => setIsMenuOpen(true)}
-                className="p-2 rounded-full bg-white/5 opacity-0 group-hover/msg:opacity-100 transition-all hover:bg-white/10 shrink-0 md:opacity-0 sm:opacity-100"
-              >
-                <MoreHorizontal className="w-5 h-5 text-white/40" />
-              </button>
-            )}
-
+            {/* ТРИ ТОЧКИ (MENU TRIGGER) */}
             <Popover open={isMenuOpen} onOpenChange={setIsMenuOpen}>
               <PopoverTrigger asChild>
                 <div className={cn(
@@ -376,15 +367,16 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onForward, is
               </PopoverContent>
             </Popover>
 
-            {/* ТРИ ТОЧКИ ПОСЛЕ СООБЩЕНИЯ ДЛЯ ДРУГИХ */}
-            {!isMe && (
-              <button 
-                onClick={() => setIsMenuOpen(true)}
-                className="p-2 rounded-full bg-white/5 opacity-0 group-hover/msg:opacity-100 transition-all hover:bg-white/10 shrink-0 md:opacity-0 sm:opacity-100"
-              >
-                <MoreHorizontal className="w-5 h-5 text-white/40" />
-              </button>
-            )}
+            {/* THREE DOTS BUTTON (EXTERNAL) */}
+            <button 
+              onClick={() => setIsMenuOpen(true)}
+              className={cn(
+                "p-2 rounded-full bg-white/5 transition-all hover:bg-white/10 shrink-0",
+                isMe ? "order-first opacity-100" : "order-last opacity-100"
+              )}
+            >
+              <MoreHorizontal className="w-5 h-5 text-white/40" />
+            </button>
           </div>
         </div>
       </div>

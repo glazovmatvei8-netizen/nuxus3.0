@@ -10,12 +10,12 @@ import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useAuth, useUser, useFirestore, useDoc, useMemoFirebase, useCollection } from '@/firebase';
+import { useAuth, useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
   LogOut, Settings2, Camera, Lock, Fingerprint, Star, Zap, ShieldCheck, Loader2, Database, Palette, 
   Monitor, MessageSquare, ImageIcon, Smile, Plus, Check, RefreshCcw, Smartphone, PhoneCall, Eye, 
-  Users, ShieldAlert, Ghost, Mail, Share2, FileText, Download, Search, MessageCircle, CheckCircle2, Calendar, Shield, Info, Globe, Paintbrush, ArrowRight, ShieldQuestion, Clock
+  Users, ShieldAlert, Ghost, Mail, Share2, FileText, Download, Search, MessageCircle, CheckCircle2, Calendar, Shield, Info, Globe, Paintbrush, ArrowRight, ShieldQuestion, Clock, Sparkles
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { signOut } from 'firebase/auth';
@@ -29,6 +29,10 @@ import { format, addHours, isAfter, parseISO, differenceInSeconds } from 'date-f
 import { ru } from 'date-fns/locale';
 import { sendVerificationCode } from '@/ai/flows/send-verification-email-flow';
 
+/**
+ * SETTINGS MODAL V56.4.1 «FULL RESTORATION»
+ * ВСЕ ФУНКЦИИ ОБЪЕДИНЕНЫ: ВЕРИФИКАЦИЯ + БИО + СТАТУС + ТЕЛЕФОН
+ */
 export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const auth = useAuth();
   const db = useFirestore();
@@ -43,7 +47,6 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
   const { data: profile } = useDoc<User>(userRef);
 
   const [isSaving, setIsSaving] = useState(false);
-  const [exceptionTarget, setExceptionTarget] = useState<string | null>(null);
   
   // VERIFICATION STATE
   const [verifyStep, setVerifyStep] = useState<'idle' | 'verifying_old' | 'entering_new' | 'verifying_new'>('idle');
@@ -246,13 +249,12 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
   };
 
   return (
-    <>
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md bg-[#0a0a0c]/98 backdrop-blur-[50px] border-white/10 p-0 overflow-hidden h-[90dvh] flex flex-col rounded-[3rem] shadow-2xl outline-none">
         <DialogHeader className="p-8 border-b border-white/5 shrink-0 relative overflow-hidden text-left">
           <div className="absolute inset-0 bg-gradient-to-r from-primary/10 to-transparent" />
           <DialogTitle className="flex items-center gap-3 text-2xl font-black italic uppercase text-white relative z-10">
-            <Settings2 className="w-7 h-7 text-primary" /> ПАРАМЕТРЫ V56.4
+            <Settings2 className="w-7 h-7 text-primary" /> ПАРАМЕТРЫ V56.4.1
           </DialogTitle>
         </DialogHeader>
         
@@ -291,7 +293,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                              <span className="text-[8px] font-black uppercase text-green-500">ОК</span>
                            </div>
                          ) : (
-                           <div className="flex items-center gap-1.5 bg-red-500/10 px-2 py-0.5 rounded-full border border-red-500/20">
+                           <div className="flex items-center gap-1.5 bg-red-500/10 px-2 py-0.5 rounded-full border border-green-500/20">
                              <ShieldAlert className="w-3 h-3 text-red-500" />
                              <span className="text-[8px] font-black uppercase text-red-500">НЕТ</span>
                            </div>
@@ -393,15 +395,54 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-1.5">
                         <Label className="text-[10px] font-black uppercase text-primary/60 ml-2">Имя Оператора</Label>
-                        <Input value={form.name} onChange={e => setForm({...form, name: e.target.value})} className="bg-white/5 border-white/10 h-11 rounded-xl" />
+                        <Input value={form.name} onChange={e => setForm({...form, name: e.target.value})} className="bg-white/5 border-white/10 h-11 rounded-xl font-bold" />
                       </div>
                       <div className="space-y-1.5">
                         <Label className="text-[10px] font-black uppercase text-primary/60 ml-2">Никнейм</Label>
                         <div className="relative">
                           <span className="absolute left-3 top-1/2 -translate-y-1/2 text-primary font-black text-xs">@</span>
-                          <Input value={form.username} onChange={e => setForm({...form, username: e.target.value.replace(/[^a-zA-Z0-9_@]/g, '')})} className="bg-white/5 border-white/10 h-11 rounded-xl pl-7" />
+                          <Input value={form.username} onChange={e => setForm({...form, username: e.target.value.replace(/[^a-zA-Z0-9_@]/g, '')})} className="bg-white/5 border-white/10 h-11 rounded-xl pl-7 font-bold" />
                         </div>
                       </div>
+                    </div>
+
+                    {/* STATUS BLOCK */}
+                    <div className="bg-primary/5 p-5 rounded-[2rem] border border-primary/10 space-y-4">
+                      <div className="flex items-center gap-2 mb-1">
+                        <Smile className="w-4 h-4 text-primary" />
+                        <span className="text-[10px] font-black uppercase text-primary tracking-widest">Текущий Статус</span>
+                      </div>
+                      <div className="flex gap-3">
+                        <div className="w-16">
+                          <Input 
+                            placeholder="🏠" 
+                            maxLength={2} 
+                            value={form.statusEmoji} 
+                            onChange={e => setForm({...form, statusEmoji: e.target.value})} 
+                            className="bg-black/40 border-white/10 h-14 rounded-2xl text-center text-xl shadow-inner" 
+                          />
+                        </div>
+                        <div className="flex-1 relative">
+                           <Input 
+                             placeholder="Чем занимаетесь?" 
+                             value={form.statusText} 
+                             onChange={e => setForm({...form, statusText: e.target.value})} 
+                             className="bg-black/40 border-white/10 h-14 rounded-2xl text-xs font-bold pl-4 pr-10" 
+                           />
+                           <Sparkles className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-primary/30" />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* BIO BLOCK */}
+                    <div className="space-y-2">
+                      <Label className="text-[10px] font-black uppercase text-primary/60 ml-2 tracking-widest">Спецификация (О себе)</Label>
+                      <Textarea 
+                        placeholder="Краткая информация о вашем узле..."
+                        value={form.bio} 
+                        onChange={e => setForm({...form, bio: e.target.value})} 
+                        className="bg-white/5 border-white/10 rounded-[1.5rem] min-h-[100px] font-medium text-xs leading-relaxed p-4 focus:border-primary/40 transition-all" 
+                      />
                     </div>
                   </div>
                 </div>
@@ -443,10 +484,23 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
 
                 <div className="space-y-8 bg-white/[0.02] p-6 rounded-[2.5rem] border border-white/5">
                    <h3 className="text-[11px] font-black uppercase text-primary/60 tracking-widest mb-4 flex items-center gap-2"><Shield className="w-4 h-4" /> Конфиденциальность</h3>
-                   <PrivacySection icon={Smartphone} label="Номер телефона" value={form.privacy.phoneVisibility} isPremium={isPremium} onChange={(v: any) => setForm({...form, privacy: {...form.privacy, phoneVisibility: v}})} onManageExceptions={() => setExceptionTarget('phoneWhitelist')} />
-                   <PrivacySection icon={Eye} label="Последний вход" value={form.privacy.lastSeenVisibility} isPremium={isPremium} onChange={(v: any) => setForm({...form, privacy: {...form.privacy, lastSeenVisibility: v}})} onManageExceptions={() => setExceptionTarget('lastSeenWhitelist')} />
-                   <PrivacySection icon={Camera} label="Фото профиля" value={form.privacy.profilePhotoVisibility} isPremium={isPremium} onChange={(v: any) => setForm({...form, privacy: {...form.privacy, profilePhotoVisibility: v}})} onManageExceptions={() => setExceptionTarget('profilePhotoWhitelist')} />
+                   <PrivacySection icon={Smartphone} label="Номер телефона" value={form.privacy.phoneVisibility} isPremium={isPremium} onChange={(v: any) => setForm({...form, privacy: {...form.privacy, phoneVisibility: v}})} />
+                   <PrivacySection icon={Eye} label="Последний вход" value={form.privacy.lastSeenVisibility} isPremium={isPremium} onChange={(v: any) => setForm({...form, privacy: {...form.privacy, lastSeenVisibility: v}})} />
+                   <PrivacySection icon={Camera} label="Фото профиля" value={form.privacy.profilePhotoVisibility} isPremium={isPremium} onChange={(v: any) => setForm({...form, privacy: {...form.privacy, profilePhotoVisibility: v}})} />
                 </div>
+              </TabsContent>
+
+              <TabsContent value="data" className="space-y-8 m-0 p-8 pb-24">
+                 <div className="p-8 bg-white/5 rounded-[3rem] border border-white/10 text-center space-y-8 shadow-2xl">
+                    <Database className="w-14 h-14 text-accent mx-auto animate-pulse" />
+                    <div className="space-y-3">
+                      <h3 className="text-xl font-black uppercase italic text-white tracking-tighter">Целостность данных</h3>
+                      <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-[0.2em] leading-relaxed">Запросите полный квантовый дамп вашего узла.</p>
+                    </div>
+                    <Button onClick={() => {}} className="w-full h-14 bg-white/5 border border-white/10 rounded-2xl font-black uppercase text-[10px] tracking-widest gap-3 hover:bg-white/10 transition-all">
+                      <Download className="w-5 h-5" /> Сформировать ZIP
+                    </Button>
+                 </div>
               </TabsContent>
             </div>
           </ScrollArea>
@@ -462,11 +516,10 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         </Tabs>
       </DialogContent>
     </Dialog>
-    </>
   );
 }
 
-function PrivacySection({ icon: Icon, label, value, isPremium, onChange, onManageExceptions }: any) {
+function PrivacySection({ icon: Icon, label, value, isPremium, onChange }: any) {
   return (
     <div className="flex flex-col gap-4 border-b border-white/[0.03] pb-6 last:border-0 last:pb-0">
       <div className="flex items-center gap-3">
