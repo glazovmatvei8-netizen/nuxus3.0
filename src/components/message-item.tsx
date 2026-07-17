@@ -77,7 +77,6 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onForward, is
   const otherUserRef = useMemoFirebase(() => (!db || !otherId) ? null : doc(db, 'users', otherId), [db, otherId]);
   const { data: otherUser } = useDoc<User>(otherUserRef);
 
-  // sender role title (Telegram Style)
   const senderTitle = message.metadata?.senderTitle || null;
 
   const handleTouchStart = (e: React.TouchEvent) => {
@@ -261,7 +260,7 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onForward, is
       onTouchEnd={handleTouchEnd}
       style={{ transform: `translateX(${swipeOffset}px)` }}
     >
-      <div className={cn("flex gap-3 max-w-[90%] items-end group", isMe ? "flex-row-reverse" : "flex-row")}>
+      <div className={cn("flex gap-3 max-w-[90%] items-end group/msg", isMe ? "flex-row-reverse" : "flex-row")}>
         {!isMe && (
           <div className="cursor-pointer active:scale-90 transition-transform mb-1" onClick={() => setInspectedUserId(message.senderId)}>
             <UserAvatar userId={message.senderId} className="h-10 w-10 shrink-0 border border-white/5" fallbackName={formatDisplayName(message.senderName)} />
@@ -284,7 +283,17 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onForward, is
             </div>
           )}
           
-          <div className="relative">
+          <div className="relative flex items-center gap-2">
+            {/* ТРИ ТОЧКИ ПЕРЕД СООБЩЕНИЕМ ДЛЯ МЕНЯ */}
+            {isMe && (
+              <button 
+                onClick={() => setIsMenuOpen(true)}
+                className="p-2 rounded-full bg-white/5 opacity-0 group-hover/msg:opacity-100 transition-all hover:bg-white/10 shrink-0 md:opacity-0 sm:opacity-100"
+              >
+                <MoreHorizontal className="w-5 h-5 text-white/40" />
+              </button>
+            )}
+
             <Popover open={isMenuOpen} onOpenChange={setIsMenuOpen}>
               <PopoverTrigger asChild>
                 <div className={cn(
@@ -321,7 +330,7 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onForward, is
                         <button 
                           key={emoji} 
                           onClick={(e) => { e.stopPropagation(); handleReaction(emoji); }}
-                          className="bg-white/10 backdrop-blur-xl border border-white/10 rounded-full px-2 py-0.5 flex items-center gap-1 hover:bg-white/20 transition-all shadow-lg scale-90"
+                          className="bg-[#1c1c1e] border border-white/10 rounded-full px-2 py-0.5 flex items-center gap-1 hover:bg-white/10 transition-all shadow-lg scale-90"
                         >
                           <span className="text-[12px]">{emoji}</span>
                           <span className="text-[9px] font-black text-white">{(uids as string[]).length}</span>
@@ -352,11 +361,10 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onForward, is
 
                 <div className="p-2 space-y-0.5">
                    <ActionMenuItem icon={CornerUpLeft} label="Ответить" onClick={() => { onReply(message); setIsMenuOpen(false); }} />
-                   <ActionMenuItem icon={Share2} label="Переслать" onClick={() => { onReply(message); setIsMenuOpen(false); }} />
-                   <ActionMenuItem icon={Star} label="Отметить как важное" onClick={() => setIsMenuOpen(false)} />
+                   <ActionMenuItem icon={Share2} label="Переслать" onClick={() => { onForward(message); setIsMenuOpen(false); }} />
+                   <ActionMenuItem icon={Star} label="В избранное" onClick={() => setIsMenuOpen(false)} />
                    {message.contentType === 'text' && <ActionMenuItem icon={Copy} label="Копировать текст" onClick={copyToClipboard} />}
                    {isMe && <ActionMenuItem icon={Edit} label="Редактировать" onClick={() => setIsMenuOpen(false)} />}
-                   <ActionMenuItem icon={MousePointer2} label="Выбрать" onClick={() => setIsMenuOpen(false)} />
                    <div className="h-px bg-white/5 mx-2 my-1" />
                    <ActionMenuItem 
                      icon={Trash2} 
@@ -368,21 +376,21 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onForward, is
               </PopoverContent>
             </Popover>
 
-            <button 
-              onClick={() => setIsMenuOpen(true)}
-              className={cn(
-                "absolute top-1/2 -translate-y-1/2 p-2 rounded-full bg-white/5 opacity-0 group-hover:opacity-100 transition-all hover:bg-white/10",
-                isMe ? "-left-10" : "-right-10"
-              )}
-            >
-              <MoreHorizontal className="w-5 h-5 text-white/40" />
-            </button>
+            {/* ТРИ ТОЧКИ ПОСЛЕ СООБЩЕНИЯ ДЛЯ ДРУГИХ */}
+            {!isMe && (
+              <button 
+                onClick={() => setIsMenuOpen(true)}
+                className="p-2 rounded-full bg-white/5 opacity-0 group-hover/msg:opacity-100 transition-all hover:bg-white/10 shrink-0 md:opacity-0 sm:opacity-100"
+              >
+                <MoreHorizontal className="w-5 h-5 text-white/40" />
+              </button>
+            )}
           </div>
         </div>
       </div>
 
       <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
-        <DialogContent className="max-w-xs bg-[#0a0a0c]/98 backdrop-blur-[50px] border-white/10 rounded-[2.5rem] p-8 text-center shadow-2xl outline-none">
+        <DialogContent className="max-w-xs bg-[#0a0a0c]/98 border-white/10 rounded-[2.5rem] p-8 text-center shadow-2xl outline-none">
           <DialogHeader>
             <DialogTitle className="text-xl font-black uppercase italic text-white text-center w-full">Удаление</DialogTitle>
             <DialogDescription className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mt-2 text-center w-full">
@@ -393,8 +401,8 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onForward, is
           <div className="py-6 space-y-4">
              <div className="flex items-center justify-between bg-white/5 p-4 rounded-2xl border border-white/5">
                 <div className="flex flex-col text-left">
-                  <span className="text-xs font-bold text-white">Удалить для всех</span>
-                  <span className="text-[9px] text-primary/60 font-black uppercase tracking-widest">Квантовая зачистка</span>
+                  <span className="text-xs font-bold text-white">Для всех</span>
+                  <span className="text-[9px] text-primary/60 font-black uppercase tracking-widest">Аннигиляция сигнала</span>
                 </div>
                 <Checkbox 
                   checked={deleteForEveryone} 
