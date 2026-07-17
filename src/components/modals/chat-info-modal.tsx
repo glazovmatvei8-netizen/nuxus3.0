@@ -7,41 +7,93 @@ import { Button } from '@/components/ui/button';
 import { UserAvatar } from '@/components/user-avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { 
-  Star, Shield, UserPlus, X, Trash2, Wand2, Loader2, Sparkles, UserCheck, Gift, Zap
+  Star, Shield, UserPlus, X, Trash2, Wand2, Loader2, Sparkles, UserCheck, Gift, Zap, ShieldCheck, MoreVertical, Ban, UserMinus
 } from 'lucide-react';
+import { 
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useFirestore, useUser, useDoc, useMemoFirebase, useCollection } from '@/firebase';
-import { doc, updateDoc, arrayUnion, query, collection, limit, orderBy, getDocs, arrayRemove } from 'firebase/firestore';
+import { doc, updateDoc, arrayUnion, query, collection, limit, orderBy, getDocs, arrayRemove, addDoc } from 'firebase/firestore';
 import { deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { useToast } from '@/hooks/use-toast';
 import { useAppState } from '@/lib/store';
-import { formatDisplayName, isUserPremium, formatLastSeen, decryptSignal, cn } from '@/lib/utils';
+import { formatDisplayName, isUserPremium, formatLastSeen, decryptSignal, cn, isGlobalAdmin } from '@/lib/utils';
 import type { User, Chat, ReceivedGift } from '@/lib/types';
 import { AddMemberModal } from './add-member-modal';
 import { GiftModal } from './gift-modal';
 import { chatConversationSummary } from '@/ai/flows/chat-conversation-summary-flow';
 
 /**
- * PARTICIPANT ITEM V43.0.0
- * Подтягивает реальные данные узла для списка участников.
+ * PARTICIPANT ITEM V55.0.0
+ * Теперь поддерживает управление правами (Админ/Кик)
  */
-function ParticipantItem({ userId, onClick }: { userId: string, onClick: () => void }) {
+function ParticipantItem({ 
+  userId, 
+  onClick, 
+  canManage, 
+  isAdmin, 
+  isOwner, 
+  onPromote, 
+  onDemote, 
+  onKick 
+}: { 
+  userId: string, 
+  onClick: () => void,
+  canManage: boolean,
+  isAdmin: boolean,
+  isOwner: boolean,
+  onPromote: (uid: string) => void,
+  onDemote: (uid: string) => void,
+  onKick: (uid: string) => void
+}) {
   const db = useFirestore();
   const userRef = useMemoFirebase(() => (!db ? null : doc(db, 'users', userId)), [db, userId]);
   const { data: profile } = useDoc<User>(userRef);
   
   return (
     <div className="flex items-center justify-between p-3.5 rounded-2xl hover:bg-white/5 transition-all group border border-transparent hover:border-white/5 shadow-lg">
-       <div className="flex items-center gap-4 cursor-pointer" onClick={onClick}>
+       <div className="flex items-center gap-4 cursor-pointer flex-1 min-w-0" onClick={onClick}>
          <UserAvatar userId={userId} className="h-11 w-11 border border-white/10" manualAvatarUrl={profile?.avatarUrl} fallbackName={profile?.name} showOnlineStatus />
-         <div className="flex flex-col text-left">
-           <span className="text-[14px] font-black text-white italic tracking-tight uppercase">
-             {userId === 'bot_nuxus_manager' ? 'Nuxus Manager 🛡️' : formatDisplayName(profile?.name, profile?.username)}
-           </span>
+         <div className="flex flex-col text-left min-w-0">
+           <div className="flex items-center gap-2">
+             <span className="text-[14px] font-black text-white italic tracking-tight uppercase truncate">
+               {userId === 'bot_nuxus_manager' ? 'Nuxus Manager 🛡️' : formatDisplayName(profile?.name, profile?.username)}
+             </span>
+             {isOwner && <ShieldCheck className="w-3.5 h-3.5 text-primary" />}
+             {isAdmin && !isOwner && <Shield className="w-3 h-3 text-accent" />}
+           </div>
            {profile?.username && (
-             <span className="text-[9px] font-black text-primary/60 uppercase tracking-widest">{profile.username}</span>
+             <span className="text-[9px] font-black text-primary/60 uppercase tracking-widest truncate">{profile.username}</span>
            )}
          </div>
        </div>
+
+       {canManage && userId !== 'bot_nuxus_manager' && !isOwner && (
+         <DropdownMenu>
+           <DropdownMenuTrigger asChild>
+             <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl text-white/20 hover:text-white group-hover:opacity-100 transition-opacity">
+               <MoreVertical className="w-4 h-4" />
+             </Button>
+           </DropdownMenuTrigger>
+           <DropdownMenuContent align="end" className="w-56 bg-[#0a0a0c]/95 backdrop-blur-xl border-white/10 rounded-2xl p-2 shadow-2xl">
+             {isAdmin ? (
+               <DropdownMenuItem onClick={() => onDemote(userId)} className="gap-3 py-3 rounded-xl font-bold text-[11px] uppercase tracking-widest text-orange-400">
+                 <Shield className="w-4 h-4" /> Снять админа
+               </DropdownMenuItem>
+             ) : (
+               <DropdownMenuItem onClick={() => onPromote(userId)} className="gap-3 py-3 rounded-xl font-bold text-[11px] uppercase tracking-widest text-primary">
+                 <ShieldCheck className="w-4 h-4" /> Дать админа
+               </DropdownMenuItem>
+             )}
+             <DropdownMenuItem onClick={() => onKick(userId)} className="gap-3 py-3 rounded-xl font-bold text-[11px] uppercase tracking-widest text-red-500">
+               <UserMinus className="w-4 h-4" /> Исключить
+             </DropdownMenuItem>
+           </DropdownMenuContent>
+         </DropdownMenu>
+       )}
     </div>
   );
 }
@@ -72,6 +124,11 @@ export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onO
   }, [db, otherId]);
   const { data: gifts } = useCollection<ReceivedGift>(giftsQuery);
 
+  const amIAdmin = useMemo(() => {
+    if (!user) return false;
+    return chat.ownerId === user.uid || chat.adminIds?.includes(user.uid) || isGlobalAdmin(currentUserProfile);
+  }, [chat, user, currentUserProfile]);
+
   const isPremium = useMemo(() => isUserPremium(currentUserProfile), [currentUserProfile]);
   const isContact = useMemo(() => otherId && currentUserProfile?.contactIds?.includes(otherId), [otherId, currentUserProfile]);
 
@@ -92,6 +149,27 @@ export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onO
       setAiSummary(summary);
     } catch (e) { toast({ title: "Сбой ИИ", variant: "destructive" }); }
     finally { setIsSummarizing(false); }
+  };
+
+  const handlePromote = async (uid: string) => {
+    if (!db) return;
+    await updateDoc(doc(db, 'chats', chat.id), { adminIds: arrayUnion(uid) });
+    toast({ title: "Узел назначен администратором" });
+  };
+
+  const handleDemote = async (uid: string) => {
+    if (!db) return;
+    await updateDoc(doc(db, 'chats', chat.id), { adminIds: arrayRemove(uid) });
+    toast({ title: "Права администратора отозваны" });
+  };
+
+  const handleKick = async (uid: string) => {
+    if (!db) return;
+    await updateDoc(doc(db, 'chats', chat.id), { 
+      participantIds: arrayRemove(uid),
+      adminIds: arrayRemove(uid)
+    });
+    toast({ title: "Узел исключен из кластера" });
   };
 
   const toggleContact = async () => {
@@ -190,7 +268,7 @@ export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onO
             <div className="space-y-4">
               <div className="flex items-center justify-between px-1">
                 <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-white/40 italic">Узлы: {chat.participantIds?.length}</h3>
-                {chat.type !== 'saved' && (
+                {(amIAdmin || chat.type === 'saved') && chat.type !== 'saved' && (
                   <Button variant="ghost" size="sm" className="h-8 text-[9px] uppercase font-black text-primary tracking-widest hover:bg-primary/10" onClick={() => setIsAddMemberOpen(true)}>
                     <Zap className="w-3 h-3 mr-2" /> Добавить
                   </Button>
@@ -201,7 +279,13 @@ export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onO
                   <ParticipantItem 
                     key={pid} 
                     userId={pid} 
-                    onClick={() => { onOpenChange(false); setInspectedUserId(pid); }} 
+                    onClick={() => { onOpenChange(false); setInspectedUserId(pid); }}
+                    canManage={amIAdmin && pid !== user?.uid}
+                    isAdmin={chat.adminIds?.includes(pid)}
+                    isOwner={chat.ownerId === pid}
+                    onPromote={handlePromote}
+                    onDemote={handleDemote}
+                    onKick={handleKick}
                   />
                 ))}
               </div>

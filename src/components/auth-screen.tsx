@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Lock, Eye, EyeOff, UserPlus, LogIn, AtSign, User, Mail, Phone } from 'lucide-react';
+import { Loader2, Lock, Eye, EyeOff, UserPlus, LogIn, AtSign, User, Mail, Phone, ShieldCheck } from 'lucide-react';
 import { useAuth, useFirestore } from '@/firebase';
 import { 
   signInWithEmailAndPassword,
@@ -23,8 +23,8 @@ import { cn } from '@/lib/utils';
 type AuthMode = 'login' | 'register';
 
 /**
- * AuthScreen V53.0.0 «IDENTITY INTEGRITY»
- * ФИКС: Тройная проверка уникальности (Ник + Почта + Телефон).
+ * AuthScreen V55.0.0 «CORE AUTHORITY»
+ * УСИЛЕНО: Прозрачная проверка телефона и почты при входе/регистрации.
  */
 export default function AuthScreen() {
   const auth = useAuth();
@@ -61,30 +61,34 @@ export default function AuthScreen() {
       
       if (mode === 'login') {
         try {
+          // ПРОВЕРКА ПРИ ВХОДЕ:
+          // Firebase Auth проверит email (или phone@nuxus.chat) и пароль.
           const userCredential = await signInWithEmailAndPassword(auth, finalEmail, password);
           const userSnap = await getDoc(doc(db, 'users', userCredential.user.uid));
           
           if (!userSnap.exists()) {
+             // Если Auth есть, а профиля нет (ошибка синхронизации)
              setMode('register');
-             toast({ title: "Профиль не найден", description: "Завершите регистрацию узла." });
+             toast({ title: "Узел не завершен", description: "Загрузите данные профиля." });
           } else {
              setIs2FAVerified(true);
+             toast({ title: "Сигнал принят", description: `Добро пожаловать, ${userSnap.data().name}` });
           }
         } catch (err: any) {
-          if (err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential') {
-            toast({ title: "Доступ запрещен", description: "Неверные данные.", variant: "destructive" });
+          if (err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential' || err.code === 'auth/wrong-password') {
+            toast({ title: "Доступ запрещен", description: "Неверный ID или пароль.", variant: "destructive" });
           } else {
             toast({ title: "Ошибка входа", description: err.message, variant: "destructive" });
           }
         }
       } else {
+        // РЕГИСТРАЦИЯ
         if (!name.trim() || !username.trim()) {
           toast({ title: "Заполните профиль", variant: "destructive" });
           setIsLoading(false);
           return;
         }
 
-        // 1. Проверка ника
         const rawNick = username.trim().replace('@', '');
         if (/[^a-zA-Z0-9_]/.test(rawNick)) {
           toast({ title: "Ошибка ника", description: "Только английские буквы и цифры.", variant: "destructive" });
@@ -95,10 +99,10 @@ export default function AuthScreen() {
         const usernameWithAt = '@' + rawNick;
         const targetSearch = usernameWithAt.toLowerCase();
 
-        // 2. Глобальное сканирование базы на дубликаты
+        // ГЛОБАЛЬНОЕ СКАНИРОВАНИЕ НА ДУБЛИКАТЫ (IDENTITY INTEGRITY)
         const usersCol = collection(db, 'users');
         
-        // Проверка ника
+        // 1. Проверка Ника
         const nickCheck = await getDocs(query(usersCol, where('usernameLowercase', '==', targetSearch), limit(1)));
         if (!nickCheck.empty) {
           toast({ title: "Никнейм занят", variant: "destructive" });
@@ -106,17 +110,17 @@ export default function AuthScreen() {
           return;
         }
 
-        // Проверка номера телефона (если указан)
+        // 2. Проверка Телефона (если ввели номер)
         if (cleanPhone) {
           const phoneCheck = await getDocs(query(usersCol, where('phone', '==', cleanPhone), limit(1)));
           if (!phoneCheck.empty) {
-            toast({ title: "Номер уже в сети", description: "На один номер можно создать только один узел.", variant: "destructive" });
+            toast({ title: "Номер уже в сети", description: "Этот телефон привязан к другому узлу.", variant: "destructive" });
             setIsLoading(false);
             return;
           }
         }
 
-        // Проверка почты (если указана)
+        // 3. Проверка Почты (если ввели email)
         if (identifier.includes('@')) {
           const emailCheck = await getDocs(query(usersCol, where('email', '==', identifier.trim()), limit(1)));
           if (!emailCheck.empty) {
@@ -152,13 +156,17 @@ export default function AuthScreen() {
 
           await setDoc(doc(db, 'users', userCredential.user.uid), profileData);
           setIs2FAVerified(true);
-          toast({ title: "Узел создан", description: "Добро пожаловать." });
+          toast({ title: "Узел создан", description: "Синхронизация завершена." });
         } catch (err: any) {
-          toast({ title: "Ошибка регистрации", description: err.message, variant: "destructive" });
+          if (err.code === 'auth/email-already-in-use') {
+             toast({ title: "Узел существует", description: "Этот идентификатор уже занят.", variant: "destructive" });
+          } else {
+             toast({ title: "Ошибка регистрации", description: err.message, variant: "destructive" });
+          }
         }
       }
     } catch (e: any) {
-      toast({ title: "Ошибка системы", variant: "destructive" });
+      toast({ title: "Критический сбой Ядра", variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
@@ -199,7 +207,7 @@ export default function AuthScreen() {
               {mode === 'login' ? 'Вход в Ядро' : 'Новый Узел'}
             </CardTitle>
             <CardDescription className="text-primary/60 font-black tracking-[0.5em] uppercase text-[8px] mt-3">
-              Identity Protocol v53.0
+              Verification Engine v55.0
             </CardDescription>
           </CardHeader>
 
@@ -215,7 +223,7 @@ export default function AuthScreen() {
                        <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-primary/40 group-focus-within:text-primary" />
                      )}
                      <Input 
-                        placeholder={mode === 'login' ? "ID или @email" : "+7 (___) ___ __ __"} 
+                        placeholder={mode === 'login' ? "+7... или @email" : "+7 (999) 000 00 00"} 
                         value={identifier} 
                         onChange={e => setIdentifier(e.target.value)} 
                         className="bg-white/5 border-white/10 h-14 rounded-2xl pl-12 text-lg font-bold tracking-tight border-2 focus:border-primary/40 transition-all" 
@@ -279,6 +287,11 @@ export default function AuthScreen() {
                 {isLoading ? <Loader2 className="animate-spin w-6 h-6" /> : (mode === 'login' ? "Авторизовать" : "Создать Узел")}
               </Button>
             </form>
+
+            <div className="mt-8 flex items-center justify-center gap-3 opacity-30">
+               <ShieldCheck className="w-4 h-4 text-primary" />
+               <span className="text-[7px] font-black uppercase tracking-[0.4em] text-white">Quantum Encryption Signal 25.4</span>
+            </div>
           </CardContent>
         </Card>
       </div>
