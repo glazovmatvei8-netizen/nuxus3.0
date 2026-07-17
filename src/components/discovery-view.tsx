@@ -7,7 +7,7 @@ import { collection, query, where, limit, orderBy } from 'firebase/firestore';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Search, Zap, Users, Radio, Star, Globe, Sparkles, Activity, Target, ShieldCheck, ArrowRight } from 'lucide-react';
+import { Search, Zap, Users, Radio, Star, Globe, Sparkles, Activity, Target, ShieldCheck, ArrowRight, CheckCircle2 } from 'lucide-react';
 import { UserAvatar } from '@/components/user-avatar';
 import { useAppState } from '@/lib/store';
 import { cn, formatDisplayName, isUserPremium } from '@/lib/utils';
@@ -17,7 +17,7 @@ const ADMIN_ID = 'GCvLucN8CjNcdaxPO2vmpZ84hNl1';
 
 /**
  * НАВИГАТОР V12.0 «Mission Control»
- * ОБНОВЛЕНО: Только активные Прайм-Узлы.
+ * ОБНОВЛЕНО: Релизный баннер nuxus.fun
  */
 export default function DiscoveryView() {
   const db = useFirestore();
@@ -80,6 +80,21 @@ export default function DiscoveryView() {
           <div className="obsidian-glass p-3 rounded-2xl border-white/5 shadow-xl">
             <Globe className="w-6 h-6 text-primary/60 animate-[spin_20s_linear_infinite]" />
           </div>
+        </div>
+
+        {/* Release Celebration Banner */}
+        <div className="bg-primary/10 border border-primary/20 p-4 rounded-[2rem] flex items-center justify-between shadow-2xl relative overflow-hidden group">
+           <div className="absolute inset-0 bg-gradient-to-r from-primary/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+           <div className="flex items-center gap-4 relative z-10">
+              <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center text-primary shadow-lg">
+                <CheckCircle2 className="w-6 h-6" />
+              </div>
+              <div className="flex flex-col text-left">
+                <span className="text-[10px] font-black text-white uppercase italic tracking-tighter">NODE VERIFIED</span>
+                <span className="text-[12px] font-black text-primary uppercase tracking-widest">nuxus.fun</span>
+              </div>
+           </div>
+           <Zap className="w-5 h-5 text-primary animate-pulse relative z-10" />
         </div>
 
         <div className="relative group">
