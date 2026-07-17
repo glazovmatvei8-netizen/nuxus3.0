@@ -30,8 +30,8 @@ import { ru } from 'date-fns/locale';
 import { sendVerificationCode } from '@/ai/flows/send-verification-email-flow';
 
 /**
- * SETTINGS MODAL V52.3.0 (Absolute Stability)
- * Исправлено: Добавлен импорт Clock, оптимизирована верификация.
+ * SETTINGS MODAL V54.0.1 (Build Stability Patch)
+ * Исправлены ошибки рендеринга при отсутствии данных профиля.
  */
 export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const auth = useAuth();
@@ -49,7 +49,6 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
   const [isSaving, setIsSaving] = useState(false);
   const [exceptionTarget, setExceptionTarget] = useState<string | null>(null);
   
-  // Verification States
   const [verifyStep, setVerifyStep] = useState<'idle' | 'verifying_old' | 'entering_new' | 'verifying_new'>('idle');
   const [emailToVerify, setEmailToVerify] = useState('');
   const [inputCode, setInputCode] = useState('');
@@ -57,7 +56,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
   const [isVerifying, setIsVerifying] = useState(false);
   const [timeRemaining, setTimeRemaining] = useState<number | null>(null);
 
-  const isPremium = isUserPremium(profile);
+  const isPremium = useMemo(() => isUserPremium(profile), [profile]);
 
   const [form, setForm] = useState({
     name: '', username: '', bio: '', statusEmoji: '', statusText: '', avatarUrl: '',
@@ -129,20 +128,21 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         }
       });
 
-      // Check 24h lock
       if (profile.emailLastChangedAt) {
-        const lockEnd = addHours(parseISO(profile.emailLastChangedAt), 24);
-        if (isAfter(lockEnd, new Date())) {
-          setTimeRemaining(differenceInSeconds(lockEnd, new Date()));
-        } else {
-          setTimeRemaining(null);
-        }
+        try {
+          const lockEnd = addHours(parseISO(profile.emailLastChangedAt), 24);
+          if (isAfter(lockEnd, new Date())) {
+            setTimeRemaining(differenceInSeconds(lockEnd, new Date()));
+          } else {
+            setTimeRemaining(null);
+          }
+        } catch(e) { setTimeRemaining(null); }
       }
     }
   }, [profile, open]);
 
   const handleSendEmailCode = async (targetEmail: string, step: typeof verifyStep) => {
-    if (!targetEmail.includes('@')) {
+    if (!targetEmail || !targetEmail.includes('@')) {
       toast({ title: "Ошибка", description: "Некорректная почта.", variant: "destructive" });
       return;
     }
@@ -254,7 +254,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         <DialogHeader className="p-8 border-b border-white/5 shrink-0 relative overflow-hidden text-left">
           <div className="absolute inset-0 bg-gradient-to-r from-primary/10 to-transparent" />
           <DialogTitle className="flex items-center gap-3 text-2xl font-black italic uppercase text-white relative z-10">
-            <Settings2 className="w-7 h-7 text-primary" /> ПАРАМЕТРЫ V52.3
+            <Settings2 className="w-7 h-7 text-primary" /> ПАРАМЕТРЫ V54.0.1
           </DialogTitle>
         </DialogHeader>
         
@@ -293,7 +293,6 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                       </div>
                     </div>
 
-                    {/* EMAIL VERIFICATION MODULE */}
                     <div className="bg-white/5 p-5 rounded-[2rem] border border-white/5 space-y-4">
                        <div className="flex items-center justify-between">
                          <div className="flex items-center gap-2">
@@ -317,7 +316,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                          <div className="space-y-3">
                            <Input 
                              value={form.email || ''} 
-                             readOnly={profile?.emailVerified}
+                             readOnly={!!profile?.emailVerified}
                              disabled={!!timeRemaining}
                              placeholder="Введите вашу почту..."
                              className="bg-black/40 border-white/10 h-12 rounded-xl text-sm" 
@@ -339,7 +338,6 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                          </div>
                        )}
 
-                       {/* Verification Code Input View */}
                        {(verifyStep === 'verifying_old' || verifyStep === 'verifying_new') && (
                          <div className="space-y-4 animate-in fade-in zoom-in-95">
                            <div className="text-center space-y-1">
@@ -361,7 +359,6 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                          </div>
                        )}
 
-                       {/* Entering New Email View */}
                        {verifyStep === 'entering_new' && (
                          <div className="space-y-4 animate-in slide-in-from-right-4">
                            <p className="text-[10px] font-black uppercase text-primary text-center">Введите новую почту</p>
@@ -378,7 +375,6 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                        )}
                     </div>
 
-                    {/* PHONE VERIFICATION */}
                     <div className="bg-white/5 p-5 rounded-[2rem] border border-white/5 space-y-4">
                        <div className="flex items-center justify-between">
                          <div className="flex items-center gap-2">
@@ -555,7 +551,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
       open={!!exceptionTarget} 
       onOpenChange={() => setExceptionTarget(null)} 
       title="Исключения"
-      whitelist={form.privacy[exceptionTarget as keyof typeof form.privacy] as string[] || []}
+      whitelist={exceptionTarget ? (form.privacy[exceptionTarget as keyof typeof form.privacy] as string[]) : []}
       onUpdate={(newList: string[]) => setForm(prev => ({ ...prev, privacy: { ...prev.privacy, [exceptionTarget as string]: newList } }))}
     />
     </>
@@ -607,10 +603,13 @@ function PrivacyExceptionModal({ open, onOpenChange, title, whitelist, onUpdate 
   const allUsersQuery = useMemoFirebase(() => (!db ? null : query(collection(db, 'users'), limit(100))), [db]);
   const { data: allUsers } = useCollection<User>(allUsersQuery);
 
-  const filteredUsers = (allUsers || []).filter(u => {
+  const filteredUsers = useMemo(() => {
+    if (!allUsers) return [];
     const searchVal = search.toLowerCase();
-    return (u.name?.toLowerCase().includes(searchVal) || u.username?.toLowerCase().includes(searchVal)) && u.id !== user?.uid;
-  });
+    return allUsers.filter(u => {
+      return (u.name?.toLowerCase().includes(searchVal) || u.username?.toLowerCase().includes(searchVal)) && u.id !== user?.uid;
+    });
+  }, [allUsers, search, user?.uid]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -629,9 +628,9 @@ function PrivacyExceptionModal({ open, onOpenChange, title, whitelist, onUpdate 
         <ScrollArea className="flex-1 px-4">
           <div className="p-2 space-y-2 pb-10">
             {filteredUsers.map(u => {
-              const isSelected = whitelist.includes(u.id);
+              const isSelected = whitelist && whitelist.includes(u.id);
               return (
-                <div key={u.id} onClick={() => onUpdate(isSelected ? whitelist.filter((id: string) => id !== u.id) : [...whitelist, u.id])} className={cn("flex items-center justify-between p-3.5 rounded-2xl border transition-all cursor-pointer", isSelected ? "bg-primary/10 border-primary/30" : "bg-white/[0.02] border-white/5")}>
+                <div key={u.id} onClick={() => onUpdate(isSelected ? whitelist.filter((id: string) => id !== u.id) : [...(whitelist || []), u.id])} className={cn("flex items-center justify-between p-3.5 rounded-2xl border transition-all cursor-pointer", isSelected ? "bg-primary/10 border-primary/30" : "bg-white/[0.02] border-white/5")}>
                   <div className="flex items-center gap-3 min-w-0">
                     <UserAvatar userId={u.id} className="h-10 w-10" manualAvatarUrl={u.avatarUrl} />
                     <div className="flex flex-col text-left min-w-0">

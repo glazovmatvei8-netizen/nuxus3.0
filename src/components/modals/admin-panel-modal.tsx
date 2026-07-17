@@ -31,7 +31,7 @@ import { addMonths, addYears } from 'date-fns';
 const ROOT_UID = 'GCvLucN8CjNcdaxPO2vmpZ84hNl1';
 
 /**
- * ADMIN PANEL MODAL V46.0.0 (Absolute Restore)
+ * ADMIN PANEL MODAL V54.0.1 (Build Stability Fix)
  */
 export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const db = useFirestore();
@@ -57,7 +57,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
   const stats = useMemo(() => {
     if (!users) return { total: 0, premium: 0, admins: 0, banned: 0 };
     return {
-      total: users.length,
+      total: users.length || 0,
       premium: users.filter(u => isUserPremium(u)).length,
       admins: users.filter(u => isGlobalAdmin(u)).length,
       banned: users.filter(u => u.isBanned).length
