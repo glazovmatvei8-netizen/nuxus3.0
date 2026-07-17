@@ -1,13 +1,13 @@
 
 {
-  "latestVersion": "56.1.0",
-  "qesVersion": "56.1",
-  "build": "Authority-Performance-Patch",
+  "latestVersion": "56.2.0",
+  "qesVersion": "56.2",
+  "build": "Badge-Relocation-Patch",
   "sizeMb": 152,
   "changelog": [
-    "Performance: Оптимизирован ввод кастомных должностей (Zero Lag)",
-    "Authority: Улучшена иерархия участников в списке",
-    "UI: Ускорена перерисовка профиля чата",
-    "Stability: Исправлены микро-задержки при смене ролей"
+    "UI: Бейджи должностей перенесены к никнейму отправителя (как в Telegram)",
+    "Clean: Очищена область времени в сообщениях",
+    "Authority: Улучшена читаемость ролей в групповых чатах",
+    "Stability: Исправлены микро-задержки в списках"
   ]
 }

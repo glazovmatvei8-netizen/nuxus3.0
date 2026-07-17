@@ -77,7 +77,7 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onForward, is
   const otherUserRef = useMemoFirebase(() => (!db || !otherId) ? null : doc(db, 'users', otherId), [db, otherId]);
   const { data: otherUser } = useDoc<User>(otherUserRef);
 
-  // NEW: Calculate sender role title (Telegram Style)
+  // sender role title (Telegram Style)
   const senderTitle = message.metadata?.senderTitle || null;
 
   const handleTouchStart = (e: React.TouchEvent) => {
@@ -298,10 +298,6 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onForward, is
                     "absolute bottom-2 right-4 flex items-center gap-1.5 px-1.5 py-0.5 rounded-full",
                     message.contentType === 'text' ? "bg-black/10 backdrop-blur-sm" : "bg-black/40"
                   )}>
-                    {/* NEW: Admin indicator next to time */}
-                    {isGroup && senderTitle && !isMe && (
-                       <span className="text-[7px] font-black uppercase text-white/40 tracking-widest mr-1 italic">{senderTitle}</span>
-                    )}
                     <span className="text-[9px] font-black italic tabular-nums opacity-60">
                       {formattedTime}
                     </span>
@@ -356,7 +352,7 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onForward, is
 
                 <div className="p-2 space-y-0.5">
                    <ActionMenuItem icon={CornerUpLeft} label="Ответить" onClick={() => { onReply(message); setIsMenuOpen(false); }} />
-                   <ActionMenuItem icon={Share2} label="Переслать" onClick={() => { onForward(message); setIsMenuOpen(false); }} />
+                   <ActionMenuItem icon={Share2} label="Переслать" onClick={() => { onReply(message); setIsMenuOpen(false); }} />
                    <ActionMenuItem icon={Star} label="Отметить как важное" onClick={() => setIsMenuOpen(false)} />
                    {message.contentType === 'text' && <ActionMenuItem icon={Copy} label="Копировать текст" onClick={copyToClipboard} />}
                    {isMe && <ActionMenuItem icon={Edit} label="Редактировать" onClick={() => setIsMenuOpen(false)} />}
