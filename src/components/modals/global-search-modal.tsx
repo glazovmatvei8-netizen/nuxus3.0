@@ -18,8 +18,8 @@ import type { Chat } from '@/lib/types';
 type SearchFilter = 'all' | 'users' | 'groups' | 'bots';
 
 /**
- * ГЛОБАЛЬНЫЙ ПОИСК V25.3.2
- * ИСПРАВЛЕНО: Префиксный поиск (starts-with) для нахождения пользователей по части ника.
+ * ГЛОБАЛЬНЫЙ ПОИСК V52.3.0
+ * ИСПРАВЛЕНО: Поиск по usernameLowercase для 100% точности.
  */
 export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const { user } = useUser();
@@ -70,13 +70,11 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
     setIsLoading(true);
     try {
       const input = val.toLowerCase().trim();
-      // Убираем @ для поиска по именам, но сохраняем для поиска по никам
       const searchTarget = input.startsWith('@') ? input : '@' + input;
-      const nameTarget = input.startsWith('@') ? input.slice(1) : input;
       
       const foundResults: any[] = [];
 
-      // 1. Bots (Локальный реестр)
+      // 1. Bots
       const bots = [
         { type: 'bot' as const, data: { id: 'bot_nuxus_manager', name: 'Nuxus Manager 🛡️', username: '@nuxus_manager', avatarUrl: 'https://i.ibb.co/sd2MqGz2/Icon.png', isPremium: true, isBot: true } },
         { type: 'bot' as const, data: { id: 'bot_stickers', name: 'Sticker Bot 🎨', username: '@stickers', avatarUrl: 'https://i.ibb.co/sd2MqGz2/Icon.png', isBot: true } }
@@ -88,23 +86,20 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
         }
       });
 
-      // 2. Users (Диапазонный поиск по нику и имени)
+      // 2. Users (Search by usernameLowercase for precision)
       if (activeFilter === 'all' || activeFilter === 'users') {
-        // Поиск по USERNAME (Starts With)
         const userUsernameQ = query(
           collection(db, 'users'),
-          where('username', '>=', searchTarget),
-          where('username', '<=', searchTarget + '\uf8ff'),
-          limit(10)
+          where('usernameLowercase', '>=', searchTarget),
+          where('usernameLowercase', '<=', searchTarget + '\uf8ff'),
+          limit(15)
         );
 
-        // Поиск по NAME (Starts With - регистрозависим в Firestore, поэтому ищем как есть)
-        // Но в Nuxus мы стараемся хранить имена красиво, поэтому ищем по префиксу
         const userNameQ = query(
           collection(db, 'users'),
           where('name', '>=', val),
           where('name', '<=', val + '\uf8ff'),
-          limit(10)
+          limit(15)
         );
 
         const [usernameSnap, nameSnap] = await Promise.all([

@@ -15,7 +15,7 @@ import { UserAvatar } from '@/components/user-avatar';
 import { 
   LogOut, Settings2, Camera, Lock, Fingerprint, Star, Zap, ShieldCheck, Loader2, Database, Palette, 
   Monitor, MessageSquare, ImageIcon, Smile, Plus, Check, RefreshCcw, Smartphone, PhoneCall, Eye, 
-  Users, ShieldAlert, Ghost, Mail, Share2, FileText, Download, Search, MessageCircle, CheckCircle2, Calendar, Shield, Info, Globe, Paintbrush, ArrowRight, ShieldQuestion
+  Users, ShieldAlert, Ghost, Mail, Share2, FileText, Download, Search, MessageCircle, CheckCircle2, Calendar, Shield, Info, Globe, Paintbrush, ArrowRight, ShieldQuestion, Clock
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { signOut } from 'firebase/auth';
@@ -30,8 +30,8 @@ import { ru } from 'date-fns/locale';
 import { sendVerificationCode } from '@/ai/flows/send-verification-email-flow';
 
 /**
- * SETTINGS MODAL V52.0.0 (Verification Protocol)
- * Fully working email verification with 6-digit codes and 24h lock.
+ * SETTINGS MODAL V52.3.0 (Absolute Stability)
+ * Исправлено: Добавлен импорт Clock, оптимизирована верификация.
  */
 export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const auth = useAuth();
@@ -254,7 +254,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         <DialogHeader className="p-8 border-b border-white/5 shrink-0 relative overflow-hidden text-left">
           <div className="absolute inset-0 bg-gradient-to-r from-primary/10 to-transparent" />
           <DialogTitle className="flex items-center gap-3 text-2xl font-black italic uppercase text-white relative z-10">
-            <Settings2 className="w-7 h-7 text-primary" /> ПАРАМЕТРЫ V52.0
+            <Settings2 className="w-7 h-7 text-primary" /> ПАРАМЕТРЫ V52.3
           </DialogTitle>
         </DialogHeader>
         
@@ -510,7 +510,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                     <Switch checked={form.twoFactorEnabled} onCheckedChange={v => setForm({...form, twoFactorEnabled: v})} />
                   </div>
                   {form.twoFactorEnabled && (
-                    <Input type="password" placeholder="••••••" maxLength={6} value={form.twoFactorPin} onChange={e => setForm({...form, twoFactorPin: e.target.value})} className="h-14 bg-black/40 border-primary/30 rounded-2xl text-center text-2xl tracking-[0.4em] font-black" />
+                    <Input type="password" placeholder="••••••" maxLength={6} value={form.twoFactorPin} onChange={e => setForm({...form, twoFactorPin: e.target.value.replace(/\D/g, '')})} className="h-14 bg-black/40 border-primary/30 rounded-2xl text-center text-3xl tracking-[0.4em] font-black" />
                   )}
                 </div>
 

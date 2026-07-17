@@ -1,13 +1,13 @@
 
 {
-  "latestVersion": "52.2.0",
-  "qesVersion": "52.1",
-  "build": "Cloudflare-Integration",
+  "latestVersion": "52.3.0",
+  "qesVersion": "52.3",
+  "build": "Cloudflare-Integration-Final",
   "sizeMb": 145,
   "changelog": [
-    "Domain: Интеграция Cloudflare для обхода блокировок в РФ",
-    "Security: Добавлен гайд по настройке глобального доступа",
-    "Security: Подтверждение почты через 6-значный код",
-    "Admin: Верификация телефона через оператора"
+    "Search: Исправлен поиск участников по никнейму (регистр)",
+    "Settings: Исправлен вылет раздела верификации (Clock fix)",
+    "Sync: Полная синхронизация версий для Live-Sync",
+    "Domain: Поддержка Cloudflare Proxy для nuxus.fun"
   ]
 }
