@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, memo, useMemo } from 'react';
@@ -20,8 +21,8 @@ interface UserAvatarProps {
 }
 
 /**
- * USER AVATAR V26.9.0
- * ОПТИМИЗИРОВАНО: Исправлен порядок наложения и LCP производительность.
+ * USER AVATAR V56.4.5 «ELITE SHINE»
+ * ИСПРАВЛЕНО: Премиальное сияние и порядок наложения слоев.
  */
 export const UserAvatar = memo(({ userId, className, fallbackName, fallbackClassName, manualAvatarUrl, showOnlineStatus = false }: UserAvatarProps) => {
   const db = useFirestore();
@@ -68,17 +69,17 @@ export const UserAvatar = memo(({ userId, className, fallbackName, fallbackClass
 
   return (
     <div className={cn("relative inline-flex items-center justify-center shrink-0 rounded-full", className)}>
-      {/* ПРЕМИАЛЬНАЯ АНИМИРОВАННАЯ ПОДЛОЖКА (Z-Index: 0) */}
+      {/* ПРЕМИАЛЬНАЯ АНИМИРОВАННАЯ ПОДЛОЖКА */}
       {premium && (
-        <div className="absolute inset-0 rounded-full p-[1px] overflow-hidden z-0">
-          <div className="absolute inset-[-100%] bg-gradient-to-tr from-primary via-accent to-primary animate-[spin_8s_linear_infinite] will-change-transform opacity-100" />
+        <div className="absolute inset-[-4px] rounded-full p-[2px] overflow-hidden z-0">
+          <div className="absolute inset-[-100%] bg-gradient-to-tr from-primary via-accent to-primary animate-[spin_8s_linear_infinite] opacity-100" />
         </div>
       )}
 
-      {/* ОСНОВНОЙ КОНТЕЙНЕР АВАТАРА (Z-Index: 10) */}
+      {/* ОСНОВНОЙ КОНТЕЙНЕР АВАТАРА */}
       <div className={cn(
-        "rounded-full p-[2px] w-full h-full flex items-center justify-center overflow-hidden transition-all duration-1000 relative z-10 bg-[#020205]",
-        !premium && "bg-white/10"
+        "rounded-full p-[2px] w-full h-full flex items-center justify-center overflow-hidden transition-all duration-1000 relative z-10",
+        premium ? "bg-[#020205]" : "bg-white/10"
       )}>
         <Avatar className="shrink-0 relative overflow-hidden bg-black w-full h-full rounded-full border-none flex items-center justify-center shadow-inner">
           {displayAvatar && !imgError && activeId === userId ? (

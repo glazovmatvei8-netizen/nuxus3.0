@@ -18,8 +18,8 @@ import { NuxusLogo } from '@/components/nuxus-logo';
 import { IosInstaller } from '@/components/ios-installer';
 
 /**
- * ГЛАВНЫЙ КОНТРОЛЛЕР ЯДРА V44.0.0 «MULTIPLEX»
- * ВНЕДРЕНО: Обработка прямых ссылок на вызов (?action=call&to=UID).
+ * ГЛАВНЫЙ КОНТРОЛЛЕР ЯДРА V56.4.5 «IRON SHIELD»
+ * ИСПРАВЛЕНО: PIN-код теперь запрашивается всегда при включенной 2FA.
  */
 export default function Home() {
   const { user, isUserLoading } = useUser();
@@ -53,7 +53,13 @@ export default function Home() {
   const isBanned = isUserActuallyBanned(profile);
 
   useEffect(() => {
-    if (!mounted || !db || !user) return;
+    if (!mounted || !db || !user || !profile) return;
+    
+    // PIN Check
+    if (profile.twoFactorEnabled && !is2FAVerified) {
+       return; // Wait for PIN
+    }
+
     const params = new URLSearchParams(window.location.search);
     const ref = params.get('ref');
     const usernameParam = params.get('u');
@@ -61,7 +67,6 @@ export default function Home() {
     const targetId = params.get('to');
     
     if (action === 'call' && targetId && targetId !== user.uid) {
-      // Прямой вызов через ссылку
       const startDirectCall = async () => {
         try {
           const callRef = await addDoc(collection(db, 'calls'), {
@@ -74,7 +79,7 @@ export default function Home() {
             createdAt: new Date().toISOString()
           });
           setActiveCallId(callRef.id);
-          toast({ title: "Signal Link Established", description: "Инициализация вызова через прямую ссылку." });
+          toast({ title: "Signal Link Established" });
         } catch (e) {
           console.warn("Call link failed");
         }
@@ -86,14 +91,14 @@ export default function Home() {
       window.history.replaceState({}, document.title, "/");
     } else if (usernameParam) {
       const cleanUsername = usernameParam.startsWith('@') ? usernameParam.toLowerCase() : '@' + usernameParam.toLowerCase();
-      getDocs(query(collection(db, 'users'), where('username', '==', cleanUsername), limit(1))).then(snap => {
+      getDocs(query(collection(db, 'users'), where('usernameLowercase', '==', cleanUsername), limit(1))).then(snap => {
         if (!snap.empty && snap.docs[0].id !== user?.uid) {
           setInspectedUserId(snap.docs[0].id);
         }
       });
       window.history.replaceState({}, document.title, "/");
     }
-  }, [mounted, db, user, setInspectedUserId, setActiveCallId, toast]);
+  }, [mounted, db, user, profile, is2FAVerified, setInspectedUserId, setActiveCallId, toast]);
 
   const handleVerify2FA = () => {
     if (twoFactorInput === profile?.twoFactorPin) {
@@ -144,7 +149,7 @@ export default function Home() {
             <div className="relative w-48 h-1 bg-white/5 rounded-full overflow-hidden">
               <div className="absolute inset-0 bg-gradient-to-r from-transparent via-primary to-transparent animate-[scanline_1.5s_linear_infinite]" />
             </div>
-            <p className="text-[9px] font-black uppercase tracking-[0.8em] text-primary/60 animate-pulse ml-[0.8em]">ЗАГРУЗКА ЯДРА</p>
+            <p className="text-[9px] font-black uppercase tracking-[0.8em] text-primary/60 animate-pulse ml-[0.8em]">СИНХРОНИЗАЦИЯ ЯДРА</p>
           </div>
         </div>
       </div>
@@ -165,12 +170,15 @@ export default function Home() {
     );
   }
 
+  // СТРОГАЯ ПРОВЕРКА 2FA
   if (profile?.twoFactorEnabled && !is2FAVerified) {
     return (
       <div className="h-screen w-full flex items-center justify-center bg-[#020203] relative px-6">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(168,85,247,0.1)_0%,transparent_70%)] pointer-events-none" />
         <div className="w-full max-w-[340px] space-y-12 text-center relative z-10">
-          <div className="bg-white/[0.03] border border-white/10 w-24 h-24 rounded-[2.5rem] flex items-center justify-center mx-auto shadow-2xl">
-            <Fingerprint className="w-10 h-10 text-primary animate-pulse" />
+          <div className="bg-white/[0.03] border border-white/10 w-24 h-24 rounded-[2.8rem] flex items-center justify-center mx-auto shadow-2xl relative overflow-hidden">
+            <div className="absolute inset-0 bg-primary/10 animate-pulse" />
+            <Fingerprint className="w-10 h-10 text-primary relative z-10" />
           </div>
           <div className="space-y-8">
             <div className="space-y-2">
@@ -182,17 +190,17 @@ export default function Home() {
               placeholder="••••••" 
               maxLength={6} 
               autoFocus
-              className="bg-white/[0.04] border-white/10 h-16 text-3xl tracking-[0.6em] text-center rounded-2xl font-black focus:border-primary/40 transition-all"
+              className="bg-white/[0.04] border-white/10 h-16 text-3xl tracking-[0.6em] text-center rounded-2xl font-black focus:border-primary/40 transition-all border-2"
               value={twoFactorInput}
               onChange={e => setTwoFactorInput(e.target.value.replace(/\D/g, ''))}
               onKeyDown={e => e.key === 'Enter' && handleVerify2FA()}
             />
             <div className="space-y-4">
-              <Button onClick={handleVerify2FA} className="w-full h-14 rounded-2xl bg-primary text-white font-black uppercase italic tracking-widest shadow-2xl shadow-primary/30">
+              <Button onClick={handleVerify2FA} className="w-full h-14 rounded-2xl bg-primary text-white font-black uppercase italic tracking-widest shadow-2xl shadow-primary/30 active:scale-95 transition-all">
                 Разблокировать
               </Button>
               {profile?.settings?.biometricEnabled && (
-                <Button variant="ghost" onClick={tryBiometricAuth} disabled={isVerifying} className="w-full h-12 rounded-xl text-primary font-black uppercase text-[10px] tracking-widest gap-2 bg-white/5">
+                <Button variant="ghost" onClick={tryBiometricAuth} disabled={isVerifying} className="w-full h-12 rounded-xl text-primary font-black uppercase text-[10px] tracking-widest gap-2 bg-white/5 border border-white/5">
                   {isVerifying ? <Loader2 className="w-4 h-4 animate-spin" /> : <ShieldCheck className="w-4 h-4" />} 
                   Face ID / Touch ID
                 </Button>
