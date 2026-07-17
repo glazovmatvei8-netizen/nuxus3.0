@@ -1,13 +1,13 @@
 
 {
-  "latestVersion": "52.1.0",
+  "latestVersion": "52.2.0",
   "qesVersion": "52.1",
-  "build": "Domain-Migration",
+  "build": "Cloudflare-Integration",
   "sizeMb": 145,
   "changelog": [
-    "Domain: Глобальный переход на nuxus.fun",
+    "Domain: Интеграция Cloudflare для обхода блокировок в РФ",
+    "Security: Добавлен гайд по настройке глобального доступа",
     "Security: Подтверждение почты через 6-значный код",
-    "Security: 24-часовая блокировка изменения почты",
     "Admin: Верификация телефона через оператора"
   ]
 }
