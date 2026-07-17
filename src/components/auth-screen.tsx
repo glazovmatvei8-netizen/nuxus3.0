@@ -19,12 +19,13 @@ import { doc, setDoc, getDoc, collection, query, where, getDocs, limit } from 'f
 import { useAppState } from '@/lib/store';
 import { NuxusLogo } from './nuxus-logo';
 import { cn } from '@/lib/utils';
+import { LegalModal } from './modals/legal-modal';
 
 type AuthMode = 'login' | 'register';
 
 /**
- * AuthScreen V55.0.0 «CORE AUTHORITY»
- * УСИЛЕНО: Прозрачная проверка телефона и почты при входе/регистрации.
+ * AuthScreen V56.3.0 «LEGAL SHIELD»
+ * ДОБАВЛЕНО: Рабочая Политика конфиденциальности и Условия использования.
  */
 export default function AuthScreen() {
   const auth = useAuth();
@@ -35,6 +36,7 @@ export default function AuthScreen() {
   const [mode, setMode] = useState<AuthMode>('login');
   const [isLoading, setIsLoading] = useState(false);
   const [showPass, setShowPass] = useState(false);
+  const [isLegalOpen, setIsLegalOpen] = useState(false);
 
   const [identifier, setIdentifier] = useState(''); 
   const [password, setPassword] = useState('');
@@ -61,13 +63,10 @@ export default function AuthScreen() {
       
       if (mode === 'login') {
         try {
-          // ПРОВЕРКА ПРИ ВХОДЕ:
-          // Firebase Auth проверит email (или phone@nuxus.chat) и пароль.
           const userCredential = await signInWithEmailAndPassword(auth, finalEmail, password);
           const userSnap = await getDoc(doc(db, 'users', userCredential.user.uid));
           
           if (!userSnap.exists()) {
-             // Если Auth есть, а профиля нет (ошибка синхронизации)
              setMode('register');
              toast({ title: "Узел не завершен", description: "Загрузите данные профиля." });
           } else {
@@ -82,7 +81,6 @@ export default function AuthScreen() {
           }
         }
       } else {
-        // РЕГИСТРАЦИЯ
         if (!name.trim() || !username.trim()) {
           toast({ title: "Заполните профиль", variant: "destructive" });
           setIsLoading(false);
@@ -99,10 +97,8 @@ export default function AuthScreen() {
         const usernameWithAt = '@' + rawNick;
         const targetSearch = usernameWithAt.toLowerCase();
 
-        // ГЛОБАЛЬНОЕ СКАНИРОВАНИЕ НА ДУБЛИКАТЫ (IDENTITY INTEGRITY)
         const usersCol = collection(db, 'users');
         
-        // 1. Проверка Ника
         const nickCheck = await getDocs(query(usersCol, where('usernameLowercase', '==', targetSearch), limit(1)));
         if (!nickCheck.empty) {
           toast({ title: "Никнейм занят", variant: "destructive" });
@@ -110,7 +106,6 @@ export default function AuthScreen() {
           return;
         }
 
-        // 2. Проверка Телефона (если ввели номер)
         if (cleanPhone) {
           const phoneCheck = await getDocs(query(usersCol, where('phone', '==', cleanPhone), limit(1)));
           if (!phoneCheck.empty) {
@@ -120,7 +115,6 @@ export default function AuthScreen() {
           }
         }
 
-        // 3. Проверка Почты (если ввели email)
         if (identifier.includes('@')) {
           const emailCheck = await getDocs(query(usersCol, where('email', '==', identifier.trim()), limit(1)));
           if (!emailCheck.empty) {
@@ -207,7 +201,7 @@ export default function AuthScreen() {
               {mode === 'login' ? 'Вход в Ядро' : 'Новый Узел'}
             </CardTitle>
             <CardDescription className="text-primary/60 font-black tracking-[0.5em] uppercase text-[8px] mt-3">
-              Verification Engine v55.0
+              Verification Engine v56.3
             </CardDescription>
           </CardHeader>
 
@@ -288,13 +282,23 @@ export default function AuthScreen() {
               </Button>
             </form>
 
-            <div className="mt-8 flex items-center justify-center gap-3 opacity-30">
-               <ShieldCheck className="w-4 h-4 text-primary" />
-               <span className="text-[7px] font-black uppercase tracking-[0.4em] text-white">Quantum Encryption Signal 25.4</span>
+            <div className="mt-8 flex flex-col items-center gap-3">
+               <button 
+                 onClick={() => setIsLegalOpen(true)}
+                 className="text-[9px] font-black uppercase tracking-widest text-white/20 hover:text-primary transition-colors py-1"
+               >
+                 Политика конфиденциальности
+               </button>
+               <div className="flex items-center gap-3 opacity-30">
+                  <ShieldCheck className="w-4 h-4 text-primary" />
+                  <span className="text-[7px] font-black uppercase tracking-[0.4em] text-white">Quantum Encryption Signal 25.4</span>
+               </div>
             </div>
           </CardContent>
         </Card>
       </div>
+
+      <LegalModal open={isLegalOpen} onOpenChange={setIsLegalOpen} />
     </div>
   );
 }

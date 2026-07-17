@@ -8,10 +8,10 @@ import { RefreshCw, Zap, Download, ArrowUpCircle, Loader2 } from 'lucide-react';
 import nuxusVersions from '@/app/versions.json';
 
 /**
- * КВАНТОВЫЙ ОБНОВЛЯТОР ЯДРА V56.2.0
- * РЕЛИЗ: Перенос бейджей должностей к никнеймам.
+ * КВАНТОВЫЙ ОБНОВЛЯТОР ЯДРА V56.3.0
+ * РЕЛИЗ: Добавление Legal-блока на экран входа.
  */
-const CURRENT_VERSION = "56.2.0"; 
+const CURRENT_VERSION = "56.3.0"; 
 
 export function UpdateNotifier() {
   const [isOpen, setIsOpen] = useState(false);
@@ -28,7 +28,6 @@ export function UpdateNotifier() {
         setServerVersion(data.latestVersion);
         setChangelog(data.changelog);
         
-        // Если версия совпадает с текущей — закрываем окно
         if (data.latestVersion === CURRENT_VERSION) {
           setIsOpen(false);
           return;
