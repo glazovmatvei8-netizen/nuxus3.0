@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/dialog";
 import { format } from 'date-fns';
 import { 
-  CornerUpLeft, Trash2, Check, CheckCheck, Play, Pause, Share2, FileText, Copy, Loader2, Languages, MoreHorizontal, Star, Edit, MousePointer2
+  CornerUpLeft, Trash2, Check, CheckCheck, Play, Pause, Share2, FileText, Copy, Loader2, Languages, MoreHorizontal, Star, Edit, MousePointer2, ShieldCheck
 } from 'lucide-react';
 import { cn, decryptSignal, isUserPremium, formatDisplayName } from '@/lib/utils';
 import { doc, updateDoc, deleteDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
@@ -76,6 +76,9 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onForward, is
   const otherId = !isMe ? message.senderId : null;
   const otherUserRef = useMemoFirebase(() => (!db || !otherId) ? null : doc(db, 'users', otherId), [db, otherId]);
   const { data: otherUser } = useDoc<User>(otherUserRef);
+
+  // NEW: Calculate sender role title (Telegram Style)
+  const senderTitle = message.metadata?.senderTitle || null;
 
   const handleTouchStart = (e: React.TouchEvent) => {
     touchStartX.current = e.touches[0].clientX;
@@ -265,7 +268,21 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onForward, is
           </div>
         )}
         <div className={cn("flex flex-col min-w-0 max-w-full", isMe ? "items-end" : "items-start")}>
-          {!isMe && isGroup && <span className="text-[11px] font-black text-primary uppercase tracking-[0.2em] mb-1.5 ml-2 opacity-60">{formatDisplayName(message.senderName)}</span>}
+          {!isMe && isGroup && (
+            <div className="flex items-center gap-2 mb-1.5 ml-2">
+              <span className="text-[11px] font-black text-primary uppercase tracking-[0.2em] opacity-80">{formatDisplayName(message.senderName)}</span>
+              {senderTitle && (
+                <div className="flex items-center gap-1 bg-primary/10 border border-primary/20 px-1.5 py-0.5 rounded-md">
+                   {senderTitle.toLowerCase().includes('владелец') || senderTitle.toLowerCase().includes('owner') ? (
+                     <Star className="w-2.5 h-2.5 text-accent fill-accent" />
+                   ) : (
+                     <ShieldCheck className="w-2.5 h-2.5 text-primary" />
+                   )}
+                   <span className="text-[8px] font-black text-white/60 uppercase tracking-widest">{senderTitle}</span>
+                </div>
+              )}
+            </div>
+          )}
           
           <div className="relative">
             <Popover open={isMenuOpen} onOpenChange={setIsMenuOpen}>
@@ -281,6 +298,10 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onForward, is
                     "absolute bottom-2 right-4 flex items-center gap-1.5 px-1.5 py-0.5 rounded-full",
                     message.contentType === 'text' ? "bg-black/10 backdrop-blur-sm" : "bg-black/40"
                   )}>
+                    {/* NEW: Admin indicator next to time */}
+                    {isGroup && senderTitle && !isMe && (
+                       <span className="text-[7px] font-black uppercase text-white/40 tracking-widest mr-1 italic">{senderTitle}</span>
+                    )}
                     <span className="text-[9px] font-black italic tabular-nums opacity-60">
                       {formattedTime}
                     </span>

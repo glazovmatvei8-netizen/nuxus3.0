@@ -1,13 +1,13 @@
 
 {
-  "latestVersion": "55.0.0",
-  "qesVersion": "55.0",
-  "build": "Core-Authority-Final",
-  "sizeMb": 146,
+  "latestVersion": "56.0.0",
+  "qesVersion": "56.0",
+  "build": "Authority-Customization-Final",
+  "sizeMb": 152,
   "changelog": [
-    "Authority: Графическое управление администраторами в чатах",
-    "Identity: Усиленная проверка телефона и почты при входе",
-    "Security: Протокол исключения участников из узлов связи",
-    "Build: Финализация Live-Sync и устранение циклов обновления"
+    "Authority: Система кастомных должностей для администраторов",
+    "Identity: Telegram-style бейджи и звезды в сообщениях",
+    "Sync: Глобальное обновление визуальной иерархии чатов",
+    "Security: Протокол защиты титулов владельца узла"
   ]
 }

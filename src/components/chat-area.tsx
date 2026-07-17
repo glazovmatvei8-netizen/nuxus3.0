@@ -334,7 +334,7 @@ function AttachmentItem({ icon: Icon, label, color, onClick }: any) {
 ChatInputBar.displayName = 'ChatInputBar';
 
 const MessageList = memo(({ 
-  messages, userId, chatId, onReply, onForward, amIPremium, isAdmin, isGroup, searchQuery, viewerProfile
+  messages, userId, chatId, onReply, onForward, amIPremium, isAdmin, isGroup, searchQuery, viewerProfile, chatData
 }: any) => {
   const sortedMessages = useMemo(() => {
     if (!messages) return [];
@@ -367,9 +367,28 @@ const MessageList = memo(({
         lastDateKey = dateKey;
       }
 
+      // Inject sender title from chat metadata
+      const senderMeta = chatData?.metadata?.[msg.senderId];
+      const isOwner = chatData?.ownerId === msg.senderId;
+      const isAdminInChat = chatData?.adminIds?.includes(msg.senderId);
+      
+      let finalTitle = senderMeta?.customTitle;
+      if (!finalTitle) {
+         if (isOwner) finalTitle = 'Владелец';
+         else if (isAdminInChat) finalTitle = 'Админ';
+      }
+
+      const enhancedMsg = {
+        ...msg,
+        metadata: {
+          ...msg.metadata,
+          senderTitle: finalTitle
+        }
+      };
+
       elements.push(
         <MessageItem 
-          key={msg.id} message={msg} isMe={msg.senderId === userId} 
+          key={msg.id} message={enhancedMsg} isMe={msg.senderId === userId} 
           chatId={chatId} onReply={onReply} 
           amIPremium={amIPremium} isAdmin={isAdmin} isGroup={isGroup} 
           onForward={onForward} 
@@ -422,7 +441,6 @@ export default function ChatArea() {
 
   const isPremium = useMemo(() => isUserPremium(userProfile), [userProfile]);
 
-  // СИНХРОНИЗАЦИЯ СТАТУСА ПРОЧТЕНИЯ (V50.0.0)
   useEffect(() => {
     if (!db || !currentChatId || !firebaseUser || !messages?.length) return;
 
@@ -505,7 +523,7 @@ export default function ChatArea() {
 
       <div className="flex-1 relative overflow-hidden flex flex-col min-w-0 z-10 bg-transparent">
         <div className="flex-1 w-full relative z-10 overflow-y-auto scrollbar-hide scroll-smooth">
-          <MessageList messages={messages} userId={firebaseUser?.uid} chatId={currentChatId} onReply={setReplyTo} onForward={setForwardingMessage} amIPremium={isPremium} isAdmin={isGlobalAdmin(userProfile)} isGroup={chat?.type !== 'private'} searchQuery={searchQuery} viewerProfile={userProfile} />
+          <MessageList messages={messages} userId={firebaseUser?.uid} chatId={currentChatId} onReply={setReplyTo} onForward={setForwardingMessage} amIPremium={isPremium} isAdmin={isGlobalAdmin(userProfile)} isGroup={chat?.type !== 'private'} searchQuery={searchQuery} viewerProfile={userProfile} chatData={chat} />
           <div id="messages-end" className="h-4" />
         </div>
       </div>

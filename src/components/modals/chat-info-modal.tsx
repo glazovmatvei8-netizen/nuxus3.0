@@ -2,12 +2,13 @@
 "use client"
 
 import React, { useState, useMemo } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { UserAvatar } from '@/components/user-avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Input } from '@/components/ui/input';
 import { 
-  Star, Shield, UserPlus, X, Trash2, Wand2, Loader2, Sparkles, UserCheck, Gift, Zap, ShieldCheck, MoreVertical, Ban, UserMinus
+  Star, Shield, UserPlus, X, Trash2, Wand2, Loader2, Sparkles, UserCheck, Gift, Zap, ShieldCheck, MoreVertical, Ban, UserMinus, Edit2
 } from 'lucide-react';
 import { 
   DropdownMenu,
@@ -27,8 +28,8 @@ import { GiftModal } from './gift-modal';
 import { chatConversationSummary } from '@/ai/flows/chat-conversation-summary-flow';
 
 /**
- * PARTICIPANT ITEM V55.0.0
- * Теперь поддерживает управление правами (Админ/Кик)
+ * PARTICIPANT ITEM V56.0.0
+ * Теперь поддерживает управление правами (Админ/Кик) и должностями.
  */
 function ParticipantItem({ 
   userId, 
@@ -36,18 +37,22 @@ function ParticipantItem({
   canManage, 
   isAdmin, 
   isOwner, 
+  customTitle,
   onPromote, 
   onDemote, 
-  onKick 
+  onKick,
+  onSetTitle
 }: { 
   userId: string, 
   onClick: () => void,
   canManage: boolean,
   isAdmin: boolean,
   isOwner: boolean,
+  customTitle?: string,
   onPromote: (uid: string) => void,
   onDemote: (uid: string) => void,
-  onKick: (uid: string) => void
+  onKick: (uid: string) => void,
+  onSetTitle: (uid: string) => void
 }) {
   const db = useFirestore();
   const userRef = useMemoFirebase(() => (!db ? null : doc(db, 'users', userId)), [db, userId]);
@@ -62,12 +67,19 @@ function ParticipantItem({
              <span className="text-[14px] font-black text-white italic tracking-tight uppercase truncate">
                {userId === 'bot_nuxus_manager' ? 'Nuxus Manager 🛡️' : formatDisplayName(profile?.name, profile?.username)}
              </span>
-             {isOwner && <ShieldCheck className="w-3.5 h-3.5 text-primary" />}
-             {isAdmin && !isOwner && <Shield className="w-3 h-3 text-accent" />}
+             {isOwner && <Star className="w-3.5 h-3.5 text-accent fill-accent animate-pulse" />}
+             {isAdmin && !isOwner && <Shield className="w-3 h-3 text-primary" />}
            </div>
-           {profile?.username && (
-             <span className="text-[9px] font-black text-primary/60 uppercase tracking-widest truncate">{profile.username}</span>
-           )}
+           <div className="flex flex-col">
+              {customTitle ? (
+                <span className="text-[9px] font-black text-primary uppercase tracking-widest truncate italic">{customTitle}</span>
+              ) : (
+                isAdmin && <span className="text-[9px] font-black text-white/30 uppercase tracking-widest truncate">{isOwner ? 'Владелец' : 'Администратор'}</span>
+              )}
+              {profile?.username && (
+                <span className="text-[8px] font-bold text-white/10 uppercase tracking-widest truncate">{profile.username}</span>
+              )}
+           </div>
          </div>
        </div>
 
@@ -80,9 +92,14 @@ function ParticipantItem({
            </DropdownMenuTrigger>
            <DropdownMenuContent align="end" className="w-56 bg-[#0a0a0c]/95 backdrop-blur-xl border-white/10 rounded-2xl p-2 shadow-2xl">
              {isAdmin ? (
-               <DropdownMenuItem onClick={() => onDemote(userId)} className="gap-3 py-3 rounded-xl font-bold text-[11px] uppercase tracking-widest text-orange-400">
-                 <Shield className="w-4 h-4" /> Снять админа
-               </DropdownMenuItem>
+               <>
+                 <DropdownMenuItem onClick={() => onSetTitle(userId)} className="gap-3 py-3 rounded-xl font-bold text-[11px] uppercase tracking-widest text-white">
+                   <Edit2 className="w-4 h-4 text-primary" /> Изменить должность
+                 </DropdownMenuItem>
+                 <DropdownMenuItem onClick={() => onDemote(userId)} className="gap-3 py-3 rounded-xl font-bold text-[11px] uppercase tracking-widest text-orange-400">
+                   <Shield className="w-4 h-4" /> Снять админа
+                 </DropdownMenuItem>
+               </>
              ) : (
                <DropdownMenuItem onClick={() => onPromote(userId)} className="gap-3 py-3 rounded-xl font-bold text-[11px] uppercase tracking-widest text-primary">
                  <ShieldCheck className="w-4 h-4" /> Дать админа
@@ -111,6 +128,9 @@ export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onO
   const [isGiftModalOpen, setIsGiftModalOpen] = useState(false);
   const [isSummarizing, setIsSummarizing] = useState(false);
   const [aiSummary, setAiSummary] = useState<string | null>(null);
+  
+  const [titleModalUser, setTitleModalUser] = useState<string | null>(null);
+  const [newTitle, setNewTitle] = useState('');
 
   const userProfileRef = useMemoFirebase(() => (!db || !user) ? null : doc(db, 'users', user.uid), [db, user]);
   const { data: currentUserProfile } = useDoc<User>(userProfileRef);
@@ -159,7 +179,10 @@ export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onO
 
   const handleDemote = async (uid: string) => {
     if (!db) return;
-    await updateDoc(doc(db, 'chats', chat.id), { adminIds: arrayRemove(uid) });
+    await updateDoc(doc(db, 'chats', chat.id), { 
+      adminIds: arrayRemove(uid),
+      [`metadata.${uid}.customTitle`]: null
+    });
     toast({ title: "Права администратора отозваны" });
   };
 
@@ -170,6 +193,19 @@ export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onO
       adminIds: arrayRemove(uid)
     });
     toast({ title: "Узел исключен из кластера" });
+  };
+
+  const handleSaveTitle = async () => {
+    if (!db || !titleModalUser) return;
+    try {
+      await updateDoc(doc(db, 'chats', chat.id), {
+        [`metadata.${titleModalUser}.customTitle`]: newTitle.trim() || null
+      });
+      toast({ title: "Должность обновлена" });
+      setTitleModalUser(null);
+    } catch (e) {
+      toast({ title: "Сбой синхронизации" });
+    }
   };
 
   const toggleContact = async () => {
@@ -283,9 +319,11 @@ export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onO
                     canManage={amIAdmin && pid !== user?.uid}
                     isAdmin={chat.adminIds?.includes(pid)}
                     isOwner={chat.ownerId === pid}
+                    customTitle={chat.metadata?.[pid]?.customTitle}
                     onPromote={handlePromote}
                     onDemote={handleDemote}
                     onKick={handleKick}
+                    onSetTitle={(uid) => { setTitleModalUser(uid); setNewTitle(chat.metadata?.[uid]?.customTitle || ''); }}
                   />
                 ))}
               </div>
@@ -301,6 +339,29 @@ export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onO
           </div>
         </ScrollArea>
       </DialogContent>
+    </Dialog>
+
+    {/* Custom Title Modal */}
+    <Dialog open={!!titleModalUser} onOpenChange={(o) => !o && setTitleModalUser(null)}>
+       <DialogContent className="max-w-xs bg-[#0a0a0c]/98 border-white/10 rounded-[2.5rem] p-8 text-center shadow-2xl outline-none">
+          <DialogHeader>
+             <DialogTitle className="text-xl font-black uppercase italic text-white text-center w-full">Должность</DialogTitle>
+             <DialogDescription className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest mt-2 text-center w-full">Введите название для администратора</DialogDescription>
+          </DialogHeader>
+          <div className="py-6">
+             <Input 
+               placeholder="например: Модератор" 
+               value={newTitle} 
+               onChange={e => setNewTitle(e.target.value)} 
+               maxLength={20}
+               className="bg-white/5 border-white/10 h-12 rounded-xl text-center text-sm font-black uppercase tracking-widest italic" 
+             />
+          </div>
+          <DialogFooter className="flex flex-col gap-2">
+             <Button onClick={handleSaveTitle} className="w-full h-14 rounded-2xl bg-primary text-white font-black uppercase italic tracking-widest">Сохранить</Button>
+             <Button variant="ghost" onClick={() => setTitleModalUser(null)} className="w-full h-12 text-white/20 font-black uppercase text-[10px] tracking-widest">Отмена</Button>
+          </DialogFooter>
+       </DialogContent>
     </Dialog>
 
     <AddMemberModal open={isAddMemberOpen} onOpenChange={setIsAddMemberOpen} chatId={chat.id} currentParticipantIds={chat.participantIds} />
