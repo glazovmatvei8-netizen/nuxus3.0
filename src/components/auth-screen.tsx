@@ -23,14 +23,14 @@ import { cn } from '@/lib/utils';
 type AuthMode = 'login' | 'register';
 
 /**
- * AuthScreen V37.2.0
- * ФИКС: Валидация английского ника и обязательный префикс @.
+ * AuthScreen V53.0.0 «IDENTITY INTEGRITY»
+ * ФИКС: Тройная проверка уникальности (Ник + Почта + Телефон).
  */
 export default function AuthScreen() {
   const auth = useAuth();
   const db = useFirestore();
   const { toast } = useToast();
-  const { setIs2FAVerified, setIsLegalOpen } = useAppState();
+  const { setIs2FAVerified } = useAppState();
   
   const [mode, setMode] = useState<AuthMode>('login');
   const [isLoading, setIsLoading] = useState(false);
@@ -54,6 +54,7 @@ export default function AuthScreen() {
 
     setIsLoading(true);
     const finalEmail = getFinalEmail(identifier);
+    const cleanPhone = identifier.includes('@') ? '' : identifier.replace(/\D/g, '');
 
     try {
       await setPersistence(auth, browserLocalPersistence);
@@ -83,7 +84,7 @@ export default function AuthScreen() {
           return;
         }
 
-        // Валидация юзернейма: только английский
+        // 1. Проверка ника
         const rawNick = username.trim().replace('@', '');
         if (/[^a-zA-Z0-9_]/.test(rawNick)) {
           toast({ title: "Ошибка ника", description: "Только английские буквы и цифры.", variant: "destructive" });
@@ -93,13 +94,36 @@ export default function AuthScreen() {
 
         const usernameWithAt = '@' + rawNick;
         const targetSearch = usernameWithAt.toLowerCase();
-        const q = query(collection(db, 'users'), where('usernameLowercase', '==', targetSearch), limit(1));
-        const checkSnap = await getDocs(q);
+
+        // 2. Глобальное сканирование базы на дубликаты
+        const usersCol = collection(db, 'users');
         
-        if (!checkSnap.empty) {
+        // Проверка ника
+        const nickCheck = await getDocs(query(usersCol, where('usernameLowercase', '==', targetSearch), limit(1)));
+        if (!nickCheck.empty) {
           toast({ title: "Никнейм занят", variant: "destructive" });
           setIsLoading(false);
           return;
+        }
+
+        // Проверка номера телефона (если указан)
+        if (cleanPhone) {
+          const phoneCheck = await getDocs(query(usersCol, where('phone', '==', cleanPhone), limit(1)));
+          if (!phoneCheck.empty) {
+            toast({ title: "Номер уже в сети", description: "На один номер можно создать только один узел.", variant: "destructive" });
+            setIsLoading(false);
+            return;
+          }
+        }
+
+        // Проверка почты (если указана)
+        if (identifier.includes('@')) {
+          const emailCheck = await getDocs(query(usersCol, where('email', '==', identifier.trim()), limit(1)));
+          if (!emailCheck.empty) {
+            toast({ title: "Почта занята", variant: "destructive" });
+            setIsLoading(false);
+            return;
+          }
         }
 
         try {
@@ -110,8 +134,8 @@ export default function AuthScreen() {
             name: name.trim(),
             username: usernameWithAt,
             usernameLowercase: targetSearch,
-            phone: identifier.includes('@') ? '' : identifier.replace(/\D/g, ''),
-            email: identifier.includes('@') ? identifier : null,
+            phone: cleanPhone,
+            email: identifier.includes('@') ? identifier.trim() : null,
             createdAt: new Date().toISOString(),
             isPremium: false,
             balance: 0,
@@ -175,7 +199,7 @@ export default function AuthScreen() {
               {mode === 'login' ? 'Вход в Ядро' : 'Новый Узел'}
             </CardTitle>
             <CardDescription className="text-primary/60 font-black tracking-[0.5em] uppercase text-[8px] mt-3">
-              Quantum Protocol v37.0
+              Identity Protocol v53.0
             </CardDescription>
           </CardHeader>
 
