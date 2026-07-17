@@ -154,7 +154,8 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onForward, is
     finally { setIsTranslating(false); }
   };
 
-  const handleAudioToggle = () => {
+  const handleAudioToggle = (e: React.MouseEvent) => {
+    e.stopPropagation(); // ВАЖНО: Останавливаем открытие меню
     if (!audioInstance.current) {
       audioInstance.current = new Audio(message.content);
       audioInstance.current.onplay = () => setIsPlaying(true);
@@ -284,52 +285,62 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onForward, is
           )}
           
           <div className="relative flex items-center gap-2">
-            {/* ТРИ ТОЧКИ (MENU TRIGGER) */}
-            <Popover open={isMenuOpen} onOpenChange={setIsMenuOpen}>
-              <PopoverTrigger asChild>
-                <div className={cn(
-                  "p-4 rounded-[1.8rem] transition-all relative shadow-2xl cursor-pointer hover:brightness-110",
-                  isMe ? "bg-primary text-white rounded-br-none" : "bg-white/[0.08] backdrop-blur-md border border-white/5 rounded-bl-none text-white",
-                  highlight && "ring-4 ring-primary scale-105"
-                )}>
-                  {renderContent()}
-                  
-                  <div className={cn(
-                    "absolute bottom-2 right-4 flex items-center gap-1.5 px-1.5 py-0.5 rounded-full",
-                    message.contentType === 'text' ? "bg-black/10 backdrop-blur-sm" : "bg-black/40"
-                  )}>
-                    <span className="text-[9px] font-black italic tabular-nums opacity-60">
-                      {formattedTime}
-                    </span>
-                    {isMe && (
-                      <div className="flex items-center opacity-60">
-                        {message.isRead ? (
-                          <CheckCheck className="w-3.5 h-3.5 text-accent" />
-                        ) : (
-                          <Check className="w-3.5 h-3.5" />
-                        )}
-                      </div>
+            {/* ТЕЛО СООБЩЕНИЯ (ТЕПЕРЬ НЕ ТРИГГЕР МЕНЮ) */}
+            <div className={cn(
+              "p-4 rounded-[1.8rem] transition-all relative shadow-2xl",
+              isMe ? "bg-primary text-white rounded-br-none" : "bg-white/[0.08] backdrop-blur-md border border-white/5 rounded-bl-none text-white",
+              highlight && "ring-4 ring-primary scale-105"
+            )}>
+              {renderContent()}
+              
+              <div className={cn(
+                "absolute bottom-2 right-4 flex items-center gap-1.5 px-1.5 py-0.5 rounded-full",
+                message.contentType === 'text' ? "bg-black/10 backdrop-blur-sm" : "bg-black/40"
+              )}>
+                <span className="text-[9px] font-black italic tabular-nums opacity-60">
+                  {formattedTime}
+                </span>
+                {isMe && (
+                  <div className="flex items-center opacity-60">
+                    {message.isRead ? (
+                      <CheckCheck className="w-3.5 h-3.5 text-accent" />
+                    ) : (
+                      <Check className="w-3.5 h-3.5" />
                     )}
                   </div>
+                )}
+              </div>
 
-                  {message.reactions && Object.entries(message.reactions).some(([_, uids]) => (uids as string[]).length > 0) && (
-                    <div className={cn(
-                      "absolute -bottom-3 flex flex-wrap gap-1",
-                      isMe ? "right-0" : "left-0"
-                    )}>
-                      {Object.entries(message.reactions).map(([emoji, uids]) => (uids as string[]).length > 0 && (
-                        <button 
-                          key={emoji} 
-                          onClick={(e) => { e.stopPropagation(); handleReaction(emoji); }}
-                          className="bg-[#1c1c1e] border border-white/10 rounded-full px-2 py-0.5 flex items-center gap-1 hover:bg-white/10 transition-all shadow-lg scale-90"
-                        >
-                          <span className="text-[12px]">{emoji}</span>
-                          <span className="text-[9px] font-black text-white">{(uids as string[]).length}</span>
-                        </button>
-                      ))}
-                    </div>
-                  )}
+              {message.reactions && Object.entries(message.reactions).some(([_, uids]) => (uids as string[]).length > 0) && (
+                <div className={cn(
+                  "absolute -bottom-3 flex flex-wrap gap-1",
+                  isMe ? "right-0" : "left-0"
+                )}>
+                  {Object.entries(message.reactions).map(([emoji, uids]) => (uids as string[]).length > 0 && (
+                    <button 
+                      key={emoji} 
+                      onClick={(e) => { e.stopPropagation(); handleReaction(emoji); }}
+                      className="bg-[#1c1c1e] border border-white/10 rounded-full px-2 py-0.5 flex items-center gap-1 hover:bg-white/10 transition-all shadow-lg scale-90"
+                    >
+                      <span className="text-[12px]">{emoji}</span>
+                      <span className="text-[9px] font-black text-white">{(uids as string[]).length}</span>
+                    </button>
+                  ))}
                 </div>
+              )}
+            </div>
+
+            {/* ТРИ ТОЧКИ (ЕДИНСТВЕННЫЙ ТРИГГЕР МЕНЮ) */}
+            <Popover open={isMenuOpen} onOpenChange={setIsMenuOpen}>
+              <PopoverTrigger asChild>
+                <button 
+                  className={cn(
+                    "p-2 rounded-full bg-white/5 transition-all hover:bg-white/10 shrink-0",
+                    isMe ? "order-first opacity-100" : "order-last opacity-100"
+                  )}
+                >
+                  <MoreHorizontal className="w-5 h-5 text-white/40" />
+                </button>
               </PopoverTrigger>
 
               <PopoverContent 
@@ -366,17 +377,6 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onForward, is
                 </div>
               </PopoverContent>
             </Popover>
-
-            {/* THREE DOTS BUTTON (EXTERNAL) */}
-            <button 
-              onClick={() => setIsMenuOpen(true)}
-              className={cn(
-                "p-2 rounded-full bg-white/5 transition-all hover:bg-white/10 shrink-0",
-                isMe ? "order-first opacity-100" : "order-last opacity-100"
-              )}
-            >
-              <MoreHorizontal className="w-5 h-5 text-white/40" />
-            </button>
           </div>
         </div>
       </div>

@@ -8,10 +8,10 @@ import { RefreshCw, Zap, Download, ArrowUpCircle, Loader2 } from 'lucide-react';
 import nuxusVersions from '@/app/versions.json';
 
 /**
- * КВАНТОВЫЙ ОБНОВЛЯТОР ЯДРА V56.3.0
- * РЕЛИЗ: Добавление Legal-блока на экран входа.
+ * КВАНТОВЫЙ ОБНОВЛЯТОР ЯДРА V56.4.3
+ * РЕЛИЗ: Исправление конфликта медиа-кликов.
  */
-const CURRENT_VERSION = "56.3.0"; 
+const CURRENT_VERSION = "56.4.3"; 
 
 export function UpdateNotifier() {
   const [isOpen, setIsOpen] = useState(false);
@@ -111,7 +111,7 @@ export function UpdateNotifier() {
               <span className="text-[10px] font-black bg-white/5 border border-white/10 px-3 py-1 rounded-lg text-primary">Stable</span>
             </div>
             <DialogDescription className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em]">
-              Authority & Identity Final Patch
+              Media Interaction & Stability Fix
             </DialogDescription>
           </DialogHeader>
 
