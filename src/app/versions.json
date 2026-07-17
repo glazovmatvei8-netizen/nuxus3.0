@@ -1,13 +1,13 @@
 
 {
-  "latestVersion": "56.0.0",
-  "qesVersion": "56.0",
-  "build": "Authority-Customization-Final",
+  "latestVersion": "56.1.0",
+  "qesVersion": "56.1",
+  "build": "Authority-Performance-Patch",
   "sizeMb": 152,
   "changelog": [
-    "Authority: Система кастомных должностей для администраторов",
-    "Identity: Telegram-style бейджи и звезды в сообщениях",
-    "Sync: Глобальное обновление визуальной иерархии чатов",
-    "Security: Протокол защиты титулов владельца узла"
+    "Performance: Оптимизирован ввод кастомных должностей (Zero Lag)",
+    "Authority: Улучшена иерархия участников в списке",
+    "UI: Ускорена перерисовка профиля чата",
+    "Stability: Исправлены микро-задержки при смене ролей"
   ]
 }

@@ -1,7 +1,7 @@
 
 "use client"
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, memo } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { UserAvatar } from '@/components/user-avatar';
@@ -16,7 +16,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useFirestore, useUser, useDoc, useMemoFirebase, useCollection } from '@/firebase';
+import { useUser, useFirestore, useDoc, useMemoFirebase, useCollection } from '@/firebase';
 import { doc, updateDoc, arrayUnion, query, collection, limit, orderBy, getDocs, arrayRemove, addDoc } from 'firebase/firestore';
 import { deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { useToast } from '@/hooks/use-toast';
@@ -28,10 +28,57 @@ import { GiftModal } from './gift-modal';
 import { chatConversationSummary } from '@/ai/flows/chat-conversation-summary-flow';
 
 /**
- * PARTICIPANT ITEM V56.0.0
- * Теперь поддерживает управление правами (Админ/Кик) и должностями.
+ * ИЗОЛИРОВАННЫЙ ДИАЛОГ ВВОДА (Устранение лагов)
  */
-function ParticipantItem({ 
+const CustomTitleDialog = memo(({ 
+  isOpen, 
+  onClose, 
+  onSave, 
+  initialTitle 
+}: { 
+  isOpen: boolean, 
+  onClose: () => void, 
+  onSave: (title: string) => void, 
+  initialTitle: string 
+}) => {
+  const [value, setValue] = useState(initialTitle);
+
+  // Сбрасываем значение при открытии для другого пользователя
+  React.useEffect(() => {
+    if (isOpen) setValue(initialTitle);
+  }, [isOpen, initialTitle]);
+
+  return (
+    <Dialog open={isOpen} onOpenChange={(o) => !o && onClose()}>
+       <DialogContent className="max-w-xs bg-[#0a0a0c]/98 border-white/10 rounded-[2.5rem] p-8 text-center shadow-2xl outline-none z-[1100]">
+          <DialogHeader>
+             <DialogTitle className="text-xl font-black uppercase italic text-white text-center w-full">Должность</DialogTitle>
+             <DialogDescription className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest mt-2 text-center w-full">Введите название для администратора</DialogDescription>
+          </DialogHeader>
+          <div className="py-6">
+             <Input 
+               placeholder="например: Модератор" 
+               value={value} 
+               onChange={e => setValue(e.target.value)} 
+               maxLength={20}
+               className="bg-white/5 border-white/10 h-12 rounded-xl text-center text-sm font-black uppercase tracking-widest italic focus:border-primary/50 transition-all" 
+               autoFocus
+             />
+          </div>
+          <DialogFooter className="flex flex-col gap-2">
+             <Button onClick={() => onSave(value)} className="w-full h-14 rounded-2xl bg-primary text-white font-black uppercase italic tracking-widest shadow-xl">Сохранить</Button>
+             <Button variant="ghost" onClick={onClose} className="w-full h-12 text-white/20 font-black uppercase text-[10px] tracking-widest">Отмена</Button>
+          </DialogFooter>
+       </DialogContent>
+    </Dialog>
+  );
+});
+CustomTitleDialog.displayName = 'CustomTitleDialog';
+
+/**
+ * PARTICIPANT ITEM V56.1.0
+ */
+const ParticipantItem = memo(({ 
   userId, 
   onClick, 
   canManage, 
@@ -53,7 +100,7 @@ function ParticipantItem({
   onDemote: (uid: string) => void,
   onKick: (uid: string) => void,
   onSetTitle: (uid: string) => void
-}) {
+}) => {
   const db = useFirestore();
   const userRef = useMemoFirebase(() => (!db ? null : doc(db, 'users', userId)), [db, userId]);
   const { data: profile } = useDoc<User>(userRef);
@@ -75,9 +122,6 @@ function ParticipantItem({
                 <span className="text-[9px] font-black text-primary uppercase tracking-widest truncate italic">{customTitle}</span>
               ) : (
                 isAdmin && <span className="text-[9px] font-black text-white/30 uppercase tracking-widest truncate">{isOwner ? 'Владелец' : 'Администратор'}</span>
-              )}
-              {profile?.username && (
-                <span className="text-[8px] font-bold text-white/10 uppercase tracking-widest truncate">{profile.username}</span>
               )}
            </div>
          </div>
@@ -113,7 +157,8 @@ function ParticipantItem({
        )}
     </div>
   );
-}
+});
+ParticipantItem.displayName = 'ParticipantItem';
 
 export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onOpenChange: (o: boolean) => void, chat: Chat }) {
   const db = useFirestore();
@@ -130,7 +175,6 @@ export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onO
   const [aiSummary, setAiSummary] = useState<string | null>(null);
   
   const [titleModalUser, setTitleModalUser] = useState<string | null>(null);
-  const [newTitle, setNewTitle] = useState('');
 
   const userProfileRef = useMemoFirebase(() => (!db || !user) ? null : doc(db, 'users', user.uid), [db, user]);
   const { data: currentUserProfile } = useDoc<User>(userProfileRef);
@@ -195,11 +239,11 @@ export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onO
     toast({ title: "Узел исключен из кластера" });
   };
 
-  const handleSaveTitle = async () => {
+  const handleSaveTitle = async (title: string) => {
     if (!db || !titleModalUser) return;
     try {
       await updateDoc(doc(db, 'chats', chat.id), {
-        [`metadata.${titleModalUser}.customTitle`]: newTitle.trim() || null
+        [`metadata.${titleModalUser}.customTitle`]: title.trim() || null
       });
       toast({ title: "Должность обновлена" });
       setTitleModalUser(null);
@@ -288,19 +332,6 @@ export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onO
               </div>
             )}
 
-            {gifts && gifts.length > 0 && (
-              <div className="space-y-4">
-                <h3 className="text-[9px] font-black uppercase tracking-[0.4em] text-primary/60 flex items-center gap-2 px-1"><Sparkles className="w-3.5 h-3.5" /> Артефакты Ядра</h3>
-                <div className="grid grid-cols-4 gap-3">
-                  {gifts.map(gift => (
-                    <div key={gift.id} className="aspect-square bg-white/[0.03] rounded-2xl border border-white/5 flex items-center justify-center p-3 shadow-inner hover:bg-white/10 transition-all">
-                      <div className="text-3xl drop-shadow-2xl">{gift.giftIcon}</div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
             <div className="space-y-4">
               <div className="flex items-center justify-between px-1">
                 <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-white/40 italic">Узлы: {chat.participantIds?.length}</h3>
@@ -323,7 +354,7 @@ export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onO
                     onPromote={handlePromote}
                     onDemote={handleDemote}
                     onKick={handleKick}
-                    onSetTitle={(uid) => { setTitleModalUser(uid); setNewTitle(chat.metadata?.[uid]?.customTitle || ''); }}
+                    onSetTitle={(uid) => setTitleModalUser(uid)}
                   />
                 ))}
               </div>
@@ -341,28 +372,12 @@ export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onO
       </DialogContent>
     </Dialog>
 
-    {/* Custom Title Modal */}
-    <Dialog open={!!titleModalUser} onOpenChange={(o) => !o && setTitleModalUser(null)}>
-       <DialogContent className="max-w-xs bg-[#0a0a0c]/98 border-white/10 rounded-[2.5rem] p-8 text-center shadow-2xl outline-none">
-          <DialogHeader>
-             <DialogTitle className="text-xl font-black uppercase italic text-white text-center w-full">Должность</DialogTitle>
-             <DialogDescription className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest mt-2 text-center w-full">Введите название для администратора</DialogDescription>
-          </DialogHeader>
-          <div className="py-6">
-             <Input 
-               placeholder="например: Модератор" 
-               value={newTitle} 
-               onChange={e => setNewTitle(e.target.value)} 
-               maxLength={20}
-               className="bg-white/5 border-white/10 h-12 rounded-xl text-center text-sm font-black uppercase tracking-widest italic" 
-             />
-          </div>
-          <DialogFooter className="flex flex-col gap-2">
-             <Button onClick={handleSaveTitle} className="w-full h-14 rounded-2xl bg-primary text-white font-black uppercase italic tracking-widest">Сохранить</Button>
-             <Button variant="ghost" onClick={() => setTitleModalUser(null)} className="w-full h-12 text-white/20 font-black uppercase text-[10px] tracking-widest">Отмена</Button>
-          </DialogFooter>
-       </DialogContent>
-    </Dialog>
+    <CustomTitleDialog 
+      isOpen={!!titleModalUser} 
+      onClose={() => setTitleModalUser(null)} 
+      onSave={handleSaveTitle} 
+      initialTitle={titleModalUser ? (chat.metadata?.[titleModalUser]?.customTitle || '') : ''} 
+    />
 
     <AddMemberModal open={isAddMemberOpen} onOpenChange={setIsAddMemberOpen} chatId={chat.id} currentParticipantIds={chat.participantIds} />
     <GiftModal open={isGiftModalOpen} onOpenChange={setIsGiftModalOpen} targetUser={otherUserProfile || null} chatId={chat.id} />
