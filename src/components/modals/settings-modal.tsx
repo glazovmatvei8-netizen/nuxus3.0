@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useRef, useEffect, useMemo } from 'react';
@@ -15,7 +14,7 @@ import { UserAvatar } from '@/components/user-avatar';
 import { 
   LogOut, Settings2, Camera, Lock, Fingerprint, Star, Zap, ShieldCheck, Loader2, Database, Palette, 
   Monitor, MessageSquare, ImageIcon, Smile, Plus, Check, RefreshCcw, Smartphone, PhoneCall, Eye, 
-  Users, ShieldAlert, Ghost, Mail, Share2, FileText, Download, Search, MessageCircle, CheckCircle2, Calendar, Shield, Info, Globe, Paintbrush, ArrowRight, ShieldQuestion, Clock, Sparkles
+  Users, ShieldAlert, Ghost, Mail, Share2, FileText, Download, Search, MessageCircle, CheckCircle2, Calendar, Shield, Info, Globe, Paintbrush, ArrowRight, ShieldQuestion, Clock, Sparkles, Wand2
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { signOut } from 'firebase/auth';
@@ -30,8 +29,8 @@ import { ru } from 'date-fns/locale';
 import { sendVerificationCode } from '@/ai/flows/send-verification-email-flow';
 
 /**
- * SETTINGS MODAL V56.4.1 «FULL RESTORATION»
- * ВСЕ ФУНКЦИИ ОБЪЕДИНЕНЫ: ВЕРИФИКАЦИЯ + БИО + СТАТУС + ТЕЛЕФОН
+ * SETTINGS MODAL V56.4.4 «ELITE RESTORATION»
+ * ИСПРАВЛЕНО: Смена аватара, полная инфа о премиуме, объединенные поля.
  */
 export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const auth = useAuth();
@@ -242,19 +241,13 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
     finally { setIsSaving(false); }
   };
 
-  const formatLockTime = (seconds: number) => {
-    const hours = Math.floor(seconds / 3600);
-    const mins = Math.floor((seconds % 3600) / 60);
-    return `${hours}ч ${mins}м`;
-  };
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md bg-[#0a0a0c]/98 backdrop-blur-[50px] border-white/10 p-0 overflow-hidden h-[90dvh] flex flex-col rounded-[3rem] shadow-2xl outline-none">
         <DialogHeader className="p-8 border-b border-white/5 shrink-0 relative overflow-hidden text-left">
           <div className="absolute inset-0 bg-gradient-to-r from-primary/10 to-transparent" />
           <DialogTitle className="flex items-center gap-3 text-2xl font-black italic uppercase text-white relative z-10">
-            <Settings2 className="w-7 h-7 text-primary" /> ПАРАМЕТРЫ V56.4.1
+            <Settings2 className="w-7 h-7 text-primary" /> ПАРАМЕТРЫ V56.4.4
           </DialogTitle>
         </DialogHeader>
         
@@ -273,14 +266,16 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
             <div className="pb-40"> 
               <TabsContent value="profile" className="space-y-8 m-0 p-8">
                 <div className="flex flex-col items-center gap-8">
-                  <div className="relative group">
-                    <UserAvatar userId={user?.uid} manualAvatarUrl={form.avatarUrl} className="h-32 w-32 border-4 border-primary/20 shadow-2xl" fallbackName={form.name} />
-                    <button onClick={() => fileInputRef.current?.click()} className="absolute -bottom-2 -right-2 bg-primary p-2.5 rounded-2xl shadow-2xl hover:scale-110 transition-all z-20"><Camera className="w-4 h-4 text-white" /></button>
+                  <div className="relative group cursor-pointer" onClick={() => fileInputRef.current?.click()}>
+                    <div className="absolute -inset-4 bg-primary/20 blur-3xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity" />
+                    <UserAvatar userId={user?.uid} manualAvatarUrl={form.avatarUrl} className="h-32 w-32 border-4 border-primary/20 shadow-2xl relative z-10" fallbackName={form.name} />
+                    <div className="absolute -bottom-2 -right-2 bg-primary p-2.5 rounded-2xl shadow-2xl hover:scale-110 transition-all z-20 border-2 border-[#0a0a0c]">
+                      <Camera className="w-4 h-4 text-white" />
+                    </div>
                     <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={(e) => { const f = e.target.files?.[0]; if(f) { const r = new FileReader(); r.onloadend = () => setForm({...form, avatarUrl: r.result as string}); r.readAsDataURL(f); } }} />
                   </div>
 
                   <div className="space-y-6 w-full text-left">
-                    {/* EMAIL VERIFICATION BLOCK */}
                     <div className="bg-white/5 p-5 rounded-[2rem] border border-white/5 space-y-4">
                        <div className="flex items-center justify-between">
                          <div className="flex items-center gap-2">
@@ -312,7 +307,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                            {timeRemaining ? (
                              <div className="p-3 bg-primary/5 border border-primary/20 rounded-xl flex items-center justify-center gap-3">
                                <Clock className="w-4 h-4 text-primary animate-pulse" />
-                               <span className="text-[10px] font-black uppercase text-primary tracking-widest">Замок: {formatLockTime(timeRemaining)}</span>
+                               <span className="text-[10px] font-black uppercase text-primary tracking-widest">Замок: {Math.floor(timeRemaining / 3600)}ч {Math.floor((timeRemaining % 3600) / 60)}м</span>
                              </div>
                            ) : profile?.emailVerified ? (
                              <Button onClick={() => handleSendEmailCode(profile.email!, 'verifying_old')} className="w-full h-11 bg-white/5 border border-white/10 text-white rounded-xl font-black uppercase text-[9px] tracking-widest">
@@ -363,7 +358,6 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                        )}
                     </div>
 
-                    {/* PHONE VERIFICATION BLOCK */}
                     <div className="bg-white/5 p-5 rounded-[2rem] border border-white/5 space-y-4">
                        <div className="flex items-center justify-between">
                          <div className="flex items-center gap-2">
@@ -406,7 +400,6 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                       </div>
                     </div>
 
-                    {/* STATUS BLOCK */}
                     <div className="bg-primary/5 p-5 rounded-[2rem] border border-primary/10 space-y-4">
                       <div className="flex items-center gap-2 mb-1">
                         <Smile className="w-4 h-4 text-primary" />
@@ -434,7 +427,6 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                       </div>
                     </div>
 
-                    {/* BIO BLOCK */}
                     <div className="space-y-2">
                       <Label className="text-[10px] font-black uppercase text-primary/60 ml-2 tracking-widest">Спецификация (О себе)</Label>
                       <Textarea 
@@ -465,6 +457,53 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                     </div>
                     <input type="file" ref={bgInputRef} hidden accept="image/*" onChange={(e) => { const f = e.target.files?.[0]; if(f) { const r = new FileReader(); r.onloadend = () => setForm({...form, chatBackground: r.result as string}); r.readAsDataURL(f); } }} />
                  </div>
+              </TabsContent>
+
+              <TabsContent value="premium" className="space-y-8 m-0 p-8 pb-24">
+                {isPremium ? (
+                  <div className="space-y-8">
+                    <div className="bg-gradient-to-br from-primary/20 via-accent/20 to-primary/10 p-8 rounded-[3rem] border border-primary/20 text-center relative overflow-hidden shadow-2xl">
+                       <Star className="w-16 h-16 text-accent fill-accent mx-auto mb-4 animate-pulse shadow-accent" />
+                       <h3 className="text-2xl font-black italic uppercase tracking-tighter text-white">Elite Node Active</h3>
+                       <div className="mt-6 flex items-center justify-center gap-3 bg-black/40 backdrop-blur-md px-6 py-2 rounded-full border border-white/10 mx-auto w-fit">
+                         <Calendar className="w-4 h-4 text-primary" />
+                         <span className="text-[10px] font-black text-white uppercase tracking-widest">
+                           {profile?.premiumUntil ? `До: ${format(new Date(profile.premiumUntil), 'dd.MM.yyyy', { locale: ru })}` : 'Бессрочный доступ'}
+                         </span>
+                       </div>
+                    </div>
+
+                    <div className="space-y-4">
+                       <h4 className="text-[10px] font-black uppercase tracking-[0.4em] text-primary/60 ml-2">Разблокированные модули:</h4>
+                       <div className="grid grid-cols-1 gap-2">
+                         <PremiumFeature label="Ghost Mode (Инкогнито)" desc="Скрывает ваш онлайн статус от всех узлов." icon={Ghost} active />
+                         <PremiumFeature label="AI Cinema Studio" desc="Генерация видео и артов через Veo 2.0." icon={Wand2} active />
+                         <PremiumFeature label="Voice Transcription" desc="Мгновенный перевод ГС в текст через AI." icon={MessageCircle} active />
+                         <PremiumFeature label="Custom Style & HEX" desc="Любые HEX цвета интерфейса и фоны." icon={Paintbrush} active />
+                         <PremiumFeature label="Exclusive 3D Stickers" desc="Доступ ко всем коллекционным пакам." icon={Zap} active />
+                       </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-8">
+                    <div className="bg-white/5 p-8 rounded-[3rem] border border-white/5 text-center space-y-6">
+                      <Star className="w-12 h-12 text-white/10 mx-auto" />
+                      <div className="space-y-2">
+                         <h3 className="text-xl font-black text-white uppercase italic">Nuxus Premium</h3>
+                         <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest leading-relaxed">Разблокируйте полный потенциал Ядра</p>
+                      </div>
+                      <Button className="w-full h-14 bg-white text-black rounded-2xl font-black uppercase italic tracking-widest shadow-xl">Подключить Elite</Button>
+                    </div>
+                    <div className="space-y-4 opacity-50">
+                      <h4 className="text-[10px] font-black uppercase tracking-[0.4em] text-white/30 ml-2">Что дает статус:</h4>
+                      <div className="grid grid-cols-1 gap-2">
+                         <PremiumFeature label="Ghost Mode" desc="Полная невидимость в сети." icon={Ghost} />
+                         <PremiumFeature label="AI Cinema Studio" desc="Генерация видео по тексту." icon={Wand2} />
+                         <PremiumFeature label="High Fidelity Audio" desc="Транскрипция ГС без лимитов." icon={MessageCircle} />
+                      </div>
+                    </div>
+                  </div>
+                )}
               </TabsContent>
 
               <TabsContent value="privacy" className="space-y-8 m-0 p-8 text-left">
@@ -537,6 +576,21 @@ function PrivacySection({ icon: Icon, label, value, isPremium, onChange }: any) 
           <SelectItem value="nobody" className="text-[10px] font-black uppercase text-red-400">Никто</SelectItem>
         </SelectContent>
       </Select>
+    </div>
+  );
+}
+
+function PremiumFeature({ label, desc, icon: Icon, active }: any) {
+  return (
+    <div className={cn("flex items-start gap-4 p-4 rounded-2xl border transition-all", active ? "bg-primary/10 border-primary/20" : "bg-white/5 border-white/5 opacity-50")}>
+       <div className={cn("bg-white/5 p-2 rounded-xl shrink-0", active && "bg-primary/20")}>
+         <Icon className={cn("w-5 h-5", active ? "text-primary" : "text-white/20")} />
+       </div>
+       <div className="flex flex-col text-left">
+          <span className={cn("text-[11px] font-black uppercase italic leading-none", active ? "text-white" : "text-white/40")}>{label}</span>
+          <p className="text-[9px] text-muted-foreground uppercase font-bold mt-1.5 leading-tight">{desc}</p>
+       </div>
+       {active && <CheckCircle2 className="w-4 h-4 text-green-500 ml-auto shrink-0" />}
     </div>
   );
 }
