@@ -4,7 +4,7 @@
   "appName": "Nuxus",
   "webDir": "out",
   "server": {
-    "url": "https://nuxusmobile.vercel.app",
+    "url": "https://nuxus.fun",
     "allowNavigation": ["*"]
   }
 }
