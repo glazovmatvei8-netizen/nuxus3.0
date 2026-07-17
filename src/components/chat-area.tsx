@@ -26,8 +26,14 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { isToday, isYesterday, format } from 'date-fns';
 import { ru } from 'date-fns/locale';
 
+/**
+ * ОПТИМИЗИРОВАННАЯ ПАНЕЛЬ ВВОДА V56.4.2
+ * ИСПРАВЛЕНО: Устранены лаги за счет дебаунса сохранения черновиков.
+ */
 const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, isPremium, replyTo, onCancelReply, onOpenProRecorder, messages, participantIds, isGroup }: any) => {
   const { localDrafts, setLocalDrafts } = useAppState();
+  
+  // Локальное состояние для мгновенного отклика
   const [messageInput, setMessageInput] = useState(localDrafts[currentChatId] || '');
   const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
   const [isDrafting, setIsDrafting] = useState(false);
@@ -49,16 +55,26 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
   const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
+  // Синхронизация при смене чата
   useEffect(() => {
     setMessageInput(localDrafts[currentChatId] || '');
-  }, [currentChatId, localDrafts]);
+  }, [currentChatId]);
+
+  // ДЕБАУНС: Сохраняем черновик в глобальный стор только через 1с после остановки печати
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (messageInput !== localDrafts[currentChatId]) {
+        setLocalDrafts(prev => ({ ...prev, [currentChatId]: messageInput }));
+      }
+    }, 1000);
+    return () => clearTimeout(timer);
+  }, [messageInput, currentChatId, setLocalDrafts, localDrafts]);
 
   useEffect(() => {
     const lastWord = messageInput.split(/\s/).pop() || '';
     if (lastWord.startsWith('@')) {
       const query = lastWord.slice(1).toLowerCase();
       setMentionSearch(query);
-      if (window.navigator && window.navigator.vibrate) window.navigator.vibrate(5);
     } else {
       setMentionSearch(null);
     }
@@ -104,15 +120,10 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
     words.pop();
     const cleanNick = username.startsWith('@') ? username : '@' + username;
     const nextInput = words.join(' ') + (words.length > 0 ? ' ' : '') + cleanNick + ' ';
-    handleInputChange(nextInput);
+    setMessageInput(nextInput);
     setMentionSearch(null);
     textareaRef.current?.focus();
     if (window.navigator && window.navigator.vibrate) window.navigator.vibrate(10);
-  };
-
-  const handleInputChange = (val: string) => {
-    setMessageInput(val);
-    setLocalDrafts(prev => ({ ...prev, [currentChatId]: val }));
   };
 
   const handleSend = () => {
@@ -134,7 +145,7 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
         message: decryptSignal(m.content)
       }));
       const { draftMessage } = await suggestMessageDraft({ conversationHistory: history, currentUserInput: messageInput });
-      handleInputChange(draftMessage);
+      setMessageInput(draftMessage);
     } catch (e) {
       toast({ title: "Сбой ИИ", variant: "destructive" });
     } finally {
@@ -276,7 +287,7 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
                 placeholder="Сообщение..." 
                 className="bg-transparent border-none focus-visible:ring-0 text-white font-medium min-h-[32px] max-h-[200px] py-1 text-base resize-none w-full scrollbar-hide" 
                 value={messageInput} 
-                onChange={e => handleInputChange(e.target.value)} 
+                onChange={e => setMessageInput(e.target.value)} 
               />
               <div className="flex items-center gap-1 mb-[-2px] shrink-0">
                 <Button variant="ghost" size="icon" className={cn("text-white/20 h-9 w-9", isDrafting ? "text-primary animate-pulse" : "hover:text-primary")} onClick={handleAiDraft} disabled={isDrafting}>
@@ -287,7 +298,7 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
                      <Button variant="ghost" size="icon" className="text-white/20 hover:text-primary h-9 w-9"><Smile className="w-6 h-6" /></Button>
                    </PopoverTrigger>
                    <PopoverContent side="top" className="p-0 border-none bg-transparent w-[320px] mb-4">
-                     <EmojiPicker onEmojiSelect={(e) => handleInputChange(messageInput + e)} onStickerSelect={(url) => { onSendMessage(url, 'sticker', null); setIsEmojiPickerOpen(false); }} />
+                     <EmojiPicker onEmojiSelect={(e) => setMessageInput(messageInput + e)} onStickerSelect={(url) => { onSendMessage(url, 'sticker', null); setIsEmojiPickerOpen(false); }} />
                    </PopoverContent>
                 </Popover>
               </div>
