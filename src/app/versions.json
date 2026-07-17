@@ -1,13 +1,13 @@
 
 {
-  "latestVersion": "56.2.0",
+  "latestVersion": "56.2.1",
   "qesVersion": "56.2",
-  "build": "Badge-Relocation-Patch",
+  "build": "Build-Recovery-Patch",
   "sizeMb": 152,
   "changelog": [
-    "UI: Бейджи должностей перенесены к никнейму отправителя (как в Telegram)",
-    "Clean: Очищена область времени в сообщениях",
-    "Authority: Улучшена читаемость ролей в групповых чатах",
-    "Stability: Исправлены микро-задержки в списках"
+    "Fix: Устранена критическая ошибка сборки npm run build",
+    "Security: Оптимизированы Server Actions для работы в облаке Vercel",
+    "UI: Бейджи должностей теперь стабильно отображаются у ника",
+    "Cleanup: Удалены конфликтные файлы конфигурации"
   ]
 }

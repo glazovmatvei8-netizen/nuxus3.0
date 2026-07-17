@@ -2,7 +2,7 @@
 import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
-  output: 'export', // ОБЯЗАТЕЛЬНО для Capacitor
+  // output: 'export', // Раскомментировать только для локальной сборки IPA/APK
   typescript: {
     ignoreBuildErrors: true,
   },
@@ -10,7 +10,7 @@ const nextConfig: NextConfig = {
     ignoreDuringBuilds: true,
   },
   images: {
-    unoptimized: true, // Требуется для статического экспорта
+    unoptimized: true,
     remotePatterns: [
       {
         protocol: 'https',

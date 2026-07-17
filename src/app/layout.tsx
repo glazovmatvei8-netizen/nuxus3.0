@@ -27,7 +27,6 @@ export const metadata: Metadata = {
   title: 'Nuxus 2.0 — Премиальная связь',
   description: 'Современный и безопасный мессенджер нового поколения.',
   applicationName: 'Nuxus',
-  manifest: '/manifest.webmanifest',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
