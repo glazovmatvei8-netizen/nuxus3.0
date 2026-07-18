@@ -25,8 +25,9 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 type AuthMode = 'login' | 'register';
 
 /**
- * AuthScreen V56.8.2 «ABSOLUTE IDENTITY LINK»
- * ИСПРАВЛЕНО: Кнопки входа/регистрации не накладываются. Виджет VK ID гарантированно виден и кликабелен.
+ * AuthScreen V56.8.3 «ULTIMATE IDENTITY SYNC»
+ * ИСПРАВЛЕНО: Кнопки выбора режима не накладываются (Grid Fix).
+ * ИНТЕГРИРОВАНО: Официальный код VK ID OneTap (385px, 50 radius).
  */
 export default function AuthScreen() {
   const auth = useAuth();
@@ -56,6 +57,7 @@ export default function AuthScreen() {
       if (!VKID || !vkidContainerRef.current || isVkRendered.current) return;
 
       try {
+        // ПРЯМАЯ ИНЪЕКЦИЯ ВАШЕГО КОДА
         VKID.Config.init({
           app: 54684553,
           redirectUrl: 'https://nuxus.fun',
@@ -75,7 +77,7 @@ export default function AuthScreen() {
           }
         })
         .on(VKID.WidgetEvents.ERROR, (error: any) => {
-          console.error("VK ID Error:", error);
+          console.error("VK ID Widget Error:", error);
         })
         .on(VKID.OneTapInternalEvents.LOGIN_SUCCESS, function (payload: any) {
           const code = payload.code;
@@ -118,7 +120,7 @@ export default function AuthScreen() {
       const vkEmail = `vk_${vId}@nuxus.chat`;
       const vkPass = `vk_quantum_${vId}_secure_signal_v3`;
 
-      // 1. ПРИОРИТЕТ: Поиск по VK ID (Прямая связка)
+      // 1. ПРИОРИТЕТ: Прямой поиск по VK ID
       const vkQuery = query(collection(db, 'users'), where('vkId', '==', vId), limit(1));
       const vkSnap = await getDocs(vkQuery);
 
@@ -126,19 +128,19 @@ export default function AuthScreen() {
         await setPersistence(auth, browserLocalPersistence);
         await signInWithEmailAndPassword(auth, vkEmail, vkPass);
         setIs2FAVerified(true);
-        toast({ title: "VK Сигнал Принят", description: `С возвращением!` });
+        toast({ title: "Вход выполнен через VK" });
         setIsLoading(false);
         return;
       }
 
-      // 2. ВТОРИЧНО: Поиск по номеру телефона для предложения связки
+      // 2. ВТОРИЧНО: Предложение связки, если номер совпадает
       if (phoneNumber) {
         const cleanPhone = phoneNumber.replace(/\D/g, '');
         const phoneQuery = query(collection(db, 'users'), where('phone', '==', cleanPhone), limit(1));
         const phoneSnap = await getDocs(phoneQuery);
         
         if (!phoneSnap.empty) {
-          toast({ title: "Узел Обнаружен", description: "Введите пароль для объединения с вашим VK." });
+          toast({ title: "Узел Обнаружен", description: "Введите пароль для привязки вашего VK." });
           setIdentifier(phoneNumber);
           setMode('login');
           setVkId(vId); 
@@ -147,12 +149,12 @@ export default function AuthScreen() {
         }
       }
 
-      // 3. ТРЕТИЧНО: Новый узел или ручная привязка
+      // 3. ТРЕТИЧНО: Новый узел
       setMode('register');
       setName(vName);
       setIdentifier(phoneNumber || '');
       setVkId(vId);
-      toast({ title: "Сигнал получен", description: "Данные подтянуты. Выберите никнейм или привяжите к старому узлу." });
+      toast({ title: "Сигнал получен", description: "Выберите никнейм для завершения." });
       
     } catch (error: any) {
       toast({ title: "Ошибка VK ID", description: error.message, variant: "destructive" });
@@ -165,7 +167,7 @@ export default function AuthScreen() {
     const val = input.trim();
     if (val.includes('@')) return val; 
     const cleanPhone = val.replace(/\D/g, '');
-    return `${cleanPhone}@nuxus.chat`; 
+    return cleanPhone ? `${cleanPhone}@nuxus.chat` : val; 
   };
 
   const handleAuth = async (e: React.FormEvent) => {
@@ -183,21 +185,16 @@ export default function AuthScreen() {
         try {
           const userCredential = await signInWithEmailAndPassword(auth, finalEmail, password);
           const userRef = doc(db, 'users', userCredential.user.uid);
-          const userSnap = await getDoc(userRef);
           
-          if (!userSnap.exists()) {
-             setMode('register');
-             toast({ title: "Профиль не завершен" });
-          } else {
-             if (vkId) {
-               await updateDoc(userRef, { vkId });
-               toast({ title: "VK ID Привязан", description: "Теперь вы можете заходить через VK." });
-             }
-             setIs2FAVerified(true);
-             toast({ title: "Сигнал принят", description: `Добро пожаловать, ${userSnap.data().name}` });
+          if (vkId) {
+            await updateDoc(userRef, { vkId });
+            toast({ title: "VK ID успешно привязан" });
           }
+          
+          setIs2FAVerified(true);
+          toast({ title: "Доступ разрешен" });
         } catch (err: any) {
-          toast({ title: "Доступ запрещен", description: "Неверный идентификатор или пароль.", variant: "destructive" });
+          toast({ title: "Ошибка входа", description: "Проверьте данные.", variant: "destructive" });
         }
       } else {
         if (!name.trim() || !username.trim()) {
@@ -206,8 +203,7 @@ export default function AuthScreen() {
           return;
         }
 
-        const rawNick = username.trim().replace('@', '');
-        const usernameWithAt = '@' + rawNick;
+        const usernameWithAt = '@' + username.trim().replace('@', '');
         const targetSearch = usernameWithAt.toLowerCase();
 
         const nickCheck = await getDocs(query(collection(db, 'users'), where('usernameLowercase', '==', targetSearch), limit(1)));
@@ -252,19 +248,20 @@ export default function AuthScreen() {
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_-20%,rgba(168,85,247,0.15)_0%,transparent_50%)] pointer-events-none" />
       
       <ScrollArea className="w-full h-full">
-        <div className="min-h-full w-full flex flex-col items-center justify-center p-4 py-12 relative z-10 animate-in fade-in duration-1000">
+        <div className="min-h-full w-full flex flex-col items-center justify-center p-4 py-12 relative z-10">
           <div className="mb-10">
             <NuxusLogo size={90} />
           </div>
 
           <Card className="w-full max-w-[420px] border-white/[0.08] bg-white/[0.02] backdrop-blur-[40px] shadow-2xl rounded-[3rem] overflow-hidden relative border-2 z-20">
             <CardHeader className="text-center pb-2 pt-10 px-8">
-              <div className="grid grid-cols-2 bg-white/5 p-1 rounded-2xl mb-6 border border-white/5 w-full">
+              {/* FIXED GRID FOR TABS */}
+              <div className="grid grid-cols-2 bg-white/5 p-1 rounded-2xl mb-8 border border-white/5 w-full relative">
                 <button 
                   type="button" 
                   onClick={() => setMode('login')} 
                   className={cn(
-                    "h-10 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all", 
+                    "h-11 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all z-10", 
                     mode === 'login' ? "bg-primary text-white shadow-lg" : "text-white/30 hover:bg-white/5"
                   )}
                 >
@@ -274,7 +271,7 @@ export default function AuthScreen() {
                   type="button" 
                   onClick={() => setMode('register')} 
                   className={cn(
-                    "h-10 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all", 
+                    "h-11 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all z-10", 
                     mode === 'register' ? "bg-primary text-white shadow-lg" : "text-white/30 hover:bg-white/5"
                   )}
                 >
@@ -282,7 +279,7 @@ export default function AuthScreen() {
                 </button>
               </div>
               <CardTitle className="text-3xl font-black tracking-tighter uppercase italic text-white leading-none">
-                {mode === 'login' ? (vkId ? 'Связка узла' : 'Вход в Ядро') : 'Новый Узел'}
+                {mode === 'login' ? 'Вход в Ядро' : 'Новый Узел'}
               </CardTitle>
             </CardHeader>
 
@@ -324,7 +321,7 @@ export default function AuthScreen() {
 
                 <div className="space-y-6">
                   <Button type="submit" disabled={isLoading} className="w-full h-16 bg-primary text-white rounded-2xl font-black uppercase italic tracking-widest shadow-2xl active:scale-95 transition-all">
-                    {isLoading ? <Loader2 className="animate-spin w-6 h-6" /> : (vkId && mode === 'login' ? "Привязать и войти" : mode === 'login' ? "Авторизовать" : "Создать Узел")}
+                    {isLoading ? <Loader2 className="animate-spin w-6 h-6" /> : (mode === 'login' ? "Авторизовать" : "Создать Узел")}
                   </Button>
                   
                   {mode === 'register' && vkId && (
@@ -344,7 +341,7 @@ export default function AuthScreen() {
                         <div className="h-px flex-1 bg-white/5" />
                      </div>
                      
-                     {/* VK ID CONTAINER - GUARANTEED VISIBILITY */}
+                     {/* VK ID CONTAINER - GUARANTEED VISIBILITY & INTERACTION */}
                      <div className="relative w-full min-h-[52px] z-[100] flex justify-center items-center overflow-visible">
                         <div 
                           ref={vkidContainerRef} 
@@ -360,7 +357,7 @@ export default function AuthScreen() {
                  <button type="button" onClick={() => setIsLegalOpen(true)} className="text-[9px] font-black uppercase tracking-widest text-white/20 hover:text-primary transition-colors py-1">Политика конфиденциальности</button>
                  <div className="flex items-center gap-3 opacity-30">
                     <ShieldCheck className="w-4 h-4 text-primary" />
-                    <span className="text-[7px] font-black uppercase tracking-[0.4em] text-white">Quantum Link 56.8.2</span>
+                    <span className="text-[7px] font-black uppercase tracking-[0.4em] text-white">Quantum Link 56.8.3</span>
                  </div>
               </div>
             </CardContent>
@@ -372,3 +369,4 @@ export default function AuthScreen() {
     </div>
   );
 }
+
