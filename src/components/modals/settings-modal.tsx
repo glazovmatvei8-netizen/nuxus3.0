@@ -30,8 +30,8 @@ import { ru } from 'date-fns/locale';
 import { sendVerificationCode } from '@/ai/flows/send-verification-email-flow';
 
 /**
- * SETTINGS MODAL V56.8.3 «ABSOLUTE IDENTITY LINK»
- * ИСПРАВЛЕНО: Интеграция официального кода VK ID OneTap для связки аккаунтов.
+ * SETTINGS MODAL V56.9.0 «POPUP IDENTITY LINK»
+ * ИСПРАВЛЕНО: Интеграция кастомной кнопки VK ID для быстрой связки через Popup.
  */
 export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const auth = useAuth();
@@ -42,14 +42,11 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const bgInputRef = useRef<HTMLInputElement>(null);
-  const vkidSettingsRef = useRef<HTMLDivElement>(null);
 
   const userRef = useMemoFirebase(() => (!db || !user) ? null : doc(db, 'users', user.uid), [db, user]);
   const { data: profile } = useDoc<User>(userRef);
 
   const [isSaving, setIsSaving] = useState(false);
-  const [isVkModalOpen, setIsVkModalOpen] = useState(false);
-  const isVkRendered = useRef(false);
   
   // VERIFICATION STATE
   const [verifyStep, setVerifyStep] = useState<'idle' | 'verifying_old' | 'entering_new' | 'verifying_new'>('idle');
@@ -57,7 +54,6 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
   const [inputCode, setInputCode] = useState('');
   const [activeCode, setActiveCode] = useState('');
   const [isVerifying, setIsVerifying] = useState(false);
-  const [timeRemaining, setTimeRemaining] = useState<number | null>(null);
 
   const isPremium = useMemo(() => isUserPremium(profile), [profile]);
 
@@ -133,43 +129,25 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
     }
   }, [profile, open]);
 
-  // VK ID Linking (Official Injection)
-  useEffect(() => {
-    if (isVkModalOpen && vkidSettingsRef.current && (window as any).VKIDSDK && !isVkRendered.current) {
-      const VKID = (window as any).VKIDSDK;
-      
-      VKID.Config.init({
-        app: 54684553,
-        redirectUrl: 'https://nuxus.fun',
-        responseMode: VKID.ConfigResponseMode.Callback,
-        source: VKID.ConfigSource.LOWCODE,
-        scope: '', 
-      });
-
-      const oneTap = new VKID.OneTap();
-
-      oneTap.render({
-        container: vkidSettingsRef.current,
-        showAlternativeLogin: true,
-        styles: {
-          borderRadius: 50,
-          width: 320 // В модалке чуть меньше
-        }
-      })
-      .on(VKID.OneTapInternalEvents.LOGIN_SUCCESS, function (payload: any) {
-        VKID.Auth.exchangeCode(payload.code, payload.device_id).then(async (data: any) => {
-          if (!db || !user) return;
-          const vId = data.user_id || data.id;
-          await updateDoc(doc(db, 'users', user.uid), { vkId: vId });
-          toast({ title: "VK ID Привязан" });
-          setIsVkModalOpen(false);
-          isVkRendered.current = false;
-        });
-      });
-      
-      isVkRendered.current = true;
+  const handleVkLink = () => {
+    const VKID = (window as any).VKIDSDK;
+    if (!VKID) {
+      toast({ title: "VK SDK не готов", variant: "destructive" });
+      return;
     }
-  }, [isVkModalOpen, db, user, toast]);
+
+    VKID.Auth.login()
+      .then(async (data: any) => {
+        if (!db || !user) return;
+        const vId = data.user_id || data.id;
+        await updateDoc(doc(db, 'users', user.uid), { vkId: vId });
+        toast({ title: "VK ID Привязан", description: "Теперь вы можете входить через этот аккаунт." });
+      })
+      .catch((err: any) => {
+        console.error("VK Link Error:", err);
+        toast({ title: "Сбой привязки VK", variant: "destructive" });
+      });
+  };
 
   const handleSendEmailCode = async (targetEmail: string, step: typeof verifyStep) => {
     if (!targetEmail || !targetEmail.includes('@')) {
@@ -218,22 +196,6 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
     }
   };
 
-  const requestPhoneVerification = async () => {
-    if (!db || !user || !profile) return;
-    try {
-      await addDoc(collection(db, 'topUpRequests'), {
-        userId: user.uid,
-        userName: profile.name,
-        amount: 0,
-        type: 'phone_verification',
-        phone: form.phone,
-        status: 'pending',
-        createdAt: new Date().toISOString()
-      });
-      toast({ title: "Запрос отправлен" });
-    } catch (e) { toast({ title: "Ошибка" }); }
-  };
-
   const handleSave = async () => {
     if (!db || !user || !profile) return;
     setIsSaving(true);
@@ -269,7 +231,6 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
   };
 
   return (
-    <>
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md bg-[#0a0a0c]/98 backdrop-blur-[50px] border-white/10 p-0 overflow-hidden h-[90dvh] flex flex-col rounded-[3rem] shadow-2xl outline-none">
         <DialogHeader className="p-8 border-b border-white/5 shrink-0 relative overflow-hidden text-left">
@@ -306,14 +267,17 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                   <div className="space-y-6 w-full text-left">
                     <div className="bg-white/5 p-5 rounded-[2rem] border border-white/5 space-y-4">
                        <div className="flex items-center gap-2"><LinkIcon className="w-4 h-4 text-primary" /><span className="text-[10px] font-black uppercase text-white tracking-widest">Связанные аккаунты</span></div>
-                       <div className="flex items-center justify-between p-3 bg-black/40 rounded-xl border border-white/5">
-                          <div className="flex items-center gap-3">
-                             <div className="w-8 h-8 rounded-lg bg-blue-500/20 flex items-center justify-center text-blue-500 font-black">VK</div>
-                             <span className="text-xs font-bold text-white/80">{profile?.vkId ? 'Связано' : 'Не связано'}</span>
-                          </div>
-                          <Button onClick={() => { isVkRendered.current = false; setIsVkModalOpen(true); }} className="h-8 px-4 rounded-lg bg-blue-500 text-white font-black uppercase text-[8px] tracking-widest">
-                            {profile?.vkId ? 'Обновить' : 'Привязать'}
-                          </Button>
+                       <div className="flex flex-col gap-3">
+                          <button 
+                            type="button"
+                            onClick={handleVkLink}
+                            className="flex items-center justify-center gap-3 bg-[#0077ff] hover:bg-[#0066dd] text-white rounded-xl px-6 py-3 font-bold transition-all shadow-lg active:scale-95"
+                          >
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                              <path d="M12.785 16.241s.288-.032.436-.194c.136-.148.132-.427.132-.427s-.02-1.304.587-1.496c.598-.19 1.365 1.26 2.18 1.817.615.422 1.083.33 1.083.33l2.177-.03s1.14-.071.6-.972c-.044-.073-.314-.66-1.617-1.866-1.364-1.26-1.183-1.055.462-3.23.998-1.332 1.397-2.144 1.272-2.493-.12-.333-.862-.244-.862-.244l-2.45.015s-.182-.025-.316.056c-.132.08-.217.267-.217.267s-.39 1.037-.91 1.92c-1.094 1.84-1.532 1.937-1.713 1.82-.42-.27-.315-1.087-.315-1.666 0-1.812.275-2.568-.536-2.764-.27-.065-.467-.108-1.155-.115-.882-.01-1.63.003-2.054.21-.282.14-.498.45-.366.468.164.023.535.1.732.365.254.34.245 1.103.245 1.103s.146 2.13-.34 2.395c-.334.183-.792-.19-1.775-1.896-.504-.87-.886-1.83-.886-1.83s-.074-.18-.206-.276c-.16-.12-.384-.157-.384-.157l-2.33.015s-.35.01-.478.162c-.115.137-.008.42-.008.42s1.834 4.286 3.91 6.45c1.903 1.984 4.067 1.85 4.067 1.85h.98z"/>
+                            </svg>
+                            <span className="uppercase text-[9px] tracking-widest font-black">{profile?.vkId ? 'Обновить VK Link' : 'Привязать VK ID'}</span>
+                          </button>
                        </div>
                     </div>
 
@@ -341,7 +305,6 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                   </div>
                 </div>
               </TabsContent>
-              {/* Остальные вкладки пропущены для краткости */}
             </div>
           </ScrollArea>
 
@@ -352,19 +315,5 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         </Tabs>
       </DialogContent>
     </Dialog>
-
-    <Dialog open={isVkModalOpen} onOpenChange={(o) => { setIsVkModalOpen(o); if(!o) isVkRendered.current = false; }}>
-       <DialogContent className="max-w-xs bg-[#0a0a0c] border-white/10 rounded-[2.5rem] p-8 text-center shadow-2xl outline-none z-[2000]">
-          <DialogHeader>
-             <DialogTitle className="text-xl font-black uppercase italic text-white">Связка с VK</DialogTitle>
-             <DialogDescription className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest mt-1">Привяжите VK ID к этому узлу Nuxus.</DialogDescription>
-          </DialogHeader>
-          <div className="py-6 flex justify-center overflow-visible">
-             <div ref={vkidSettingsRef} className="w-full flex justify-center" />
-          </div>
-          <Button variant="ghost" onClick={() => setIsVkModalOpen(false)} className="w-full h-12 text-[10px] font-black uppercase tracking-widest text-white/20">Отмена</Button>
-       </DialogContent>
-    </Dialog>
-    </>
   );
 }
