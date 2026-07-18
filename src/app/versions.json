@@ -1,12 +1,13 @@
+
 {
-  "latestVersion": "56.5.0",
+  "latestVersion": "56.5.1",
   "qesVersion": "56.5",
   "build": "Quantum-Link-Release",
   "sizeMb": 156,
   "changelog": [
+    "Added: Инструкции по получению SHA-1 для VK ID",
     "Added: Полная интеграция VK ID (вход и регистрация)",
     "Fixed: Автоматическая проверка номера телефона через VK",
-    "Restored: Предзаполнение имени и телефона при новом узле",
     "Security: Гибридная авторизация (VK + Phone + Email)"
   ]
 }
