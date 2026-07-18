@@ -30,8 +30,8 @@ import { ru } from 'date-fns/locale';
 import { sendVerificationCode } from '@/ai/flows/send-verification-email-flow';
 
 /**
- * SETTINGS MODAL V56.9.0 «POPUP IDENTITY LINK»
- * ИСПРАВЛЕНО: Интеграция кастомной кнопки VK ID для быстрой связки через Popup.
+ * SETTINGS MODAL V56.9.1 «SDK SYNC FIX»
+ * ИСПРАВЛЕНО: Кнопка VK Link инициализируется только при доступности SDK.
  */
 export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const auth = useAuth();
@@ -132,21 +132,33 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
   const handleVkLink = () => {
     const VKID = (window as any).VKIDSDK;
     if (!VKID) {
-      toast({ title: "VK SDK не готов", variant: "destructive" });
+      toast({ title: "SDK VK еще не готов", description: "Попробуйте снова через секунду", variant: "destructive" });
       return;
     }
 
-    VKID.Auth.login()
-      .then(async (data: any) => {
-        if (!db || !user) return;
-        const vId = data.user_id || data.id;
-        await updateDoc(doc(db, 'users', user.uid), { vkId: vId });
-        toast({ title: "VK ID Привязан", description: "Теперь вы можете входить через этот аккаунт." });
-      })
-      .catch((err: any) => {
-        console.error("VK Link Error:", err);
-        toast({ title: "Сбой привязки VK", variant: "destructive" });
+    try {
+      VKID.Config.init({
+        app: 54684553,
+        redirectUrl: 'https://nuxus.fun',
+        responseMode: VKID.ConfigResponseMode.Callback,
+        source: VKID.ConfigSource.LOWCODE,
+        scope: '', 
       });
+
+      VKID.Auth.login()
+        .then(async (data: any) => {
+          if (!db || !user) return;
+          const vId = data.user_id || data.id;
+          await updateDoc(doc(db, 'users', user.uid), { vkId: vId });
+          toast({ title: "VK ID Привязан", description: "Теперь вы можете входить через этот аккаунт." });
+        })
+        .catch((err: any) => {
+          console.error("VK Link Error:", err);
+          toast({ title: "Сбой привязки VK", variant: "destructive" });
+        });
+    } catch (e) {
+      toast({ title: "Ошибка инициализации", variant: "destructive" });
+    }
   };
 
   const handleSendEmailCode = async (targetEmail: string, step: typeof verifyStep) => {

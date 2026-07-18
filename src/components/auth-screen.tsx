@@ -1,7 +1,7 @@
 
 "use client"
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -25,9 +25,8 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 type AuthMode = 'login' | 'register';
 
 /**
- * AuthScreen V56.9.0 «POPUP IDENTITY LINK»
- * ИСПРАВЛЕНО: Виджет OneTap заменен на кастомную кнопку с вызовом Popup.
- * ИСПРАВЛЕНО: Сетка вкладок Вход/Регистрация теперь стабильна.
+ * AuthScreen V56.9.1 «SDK SYNC FIX»
+ * ИСПРАВЛЕНО: Ошибка "VK SDK не готов" устранена за счет инициализации при клике.
  */
 export default function AuthScreen() {
   const auth = useAuth();
@@ -46,53 +45,38 @@ export default function AuthScreen() {
   const [username, setUsername] = useState('');
   const [vkId, setVkId] = useState<number | null>(null);
 
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-
-    const initVKID = () => {
-      const VKID = (window as any).VKIDSDK;
-      if (!VKID) return;
-
-      try {
-        VKID.Config.init({
-          app: 54684553,
-          redirectUrl: 'https://nuxus.fun',
-          responseMode: VKID.ConfigResponseMode.Callback,
-          source: VKID.ConfigSource.LOWCODE,
-          scope: '', 
-        });
-      } catch (e) {
-        console.warn("VK ID Init Fail:", e);
-      }
-    };
-
-    const checkInterval = setInterval(() => {
-      if ((window as any).VKIDSDK) {
-        initVKID();
-        clearInterval(checkInterval);
-      }
-    }, 300);
-
-    return () => clearInterval(checkInterval);
-  }, []);
-
   const handleVkLogin = () => {
     const VKID = (window as any).VKIDSDK;
     if (!VKID) {
-      toast({ title: "VK SDK не загружен", variant: "destructive" });
+      toast({ title: "SDK VK еще загружается", description: "Подождите пару секунд...", variant: "destructive" });
       return;
     }
 
     setIsLoading(true);
-    VKID.Auth.login()
-      .then((data: any) => {
-        handleVkSuccess(data);
-      })
-      .catch((err: any) => {
-        console.error("VK Login Error:", err);
-        setIsLoading(false);
-        toast({ title: "Сбой входа VK", variant: "destructive" });
+
+    try {
+      // Инициализируем конфиг ПРЯМО ПЕРЕД входом
+      VKID.Config.init({
+        app: 54684553,
+        redirectUrl: 'https://nuxus.fun',
+        responseMode: VKID.ConfigResponseMode.Callback,
+        source: VKID.ConfigSource.LOWCODE,
+        scope: '', 
       });
+
+      VKID.Auth.login()
+        .then((data: any) => {
+          handleVkSuccess(data);
+        })
+        .catch((err: any) => {
+          console.error("VK Login Error:", err);
+          setIsLoading(false);
+          toast({ title: "Сбой входа VK", variant: "destructive" });
+        });
+    } catch (e) {
+      setIsLoading(false);
+      toast({ title: "Ошибка инициализации SDK", variant: "destructive" });
+    }
   };
 
   const handleVkSuccess = async (data: any) => {
@@ -326,7 +310,6 @@ export default function AuthScreen() {
                         <div className="h-px flex-1 bg-white/5" />
                      </div>
                      
-                     {/* CUSTOM VK LOGIN BUTTON (POPUP MODE) */}
                      <div className="flex justify-center w-full">
                         <button 
                           type="button"
@@ -334,10 +317,14 @@ export default function AuthScreen() {
                           disabled={isLoading}
                           className="flex items-center justify-center gap-3 bg-[#0077ff] hover:bg-[#0066dd] text-white rounded-[1.2rem] px-8 py-3.5 font-bold transition-all shadow-xl active:scale-95 disabled:opacity-50 min-w-[280px]"
                         >
-                          <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M12.785 16.241s.288-.032.436-.194c.136-.148.132-.427.132-.427s-.02-1.304.587-1.496c.598-.19 1.365 1.26 2.18 1.817.615.422 1.083.33 1.083.33l2.177-.03s1.14-.071.6-.972c-.044-.073-.314-.66-1.617-1.866-1.364-1.26-1.183-1.055.462-3.23.998-1.332 1.397-2.144 1.272-2.493-.12-.333-.862-.244-.862-.244l-2.45.015s-.182-.025-.316.056c-.132.08-.217.267-.217.267s-.39 1.037-.91 1.92c-1.094 1.84-1.532 1.937-1.713 1.82-.42-.27-.315-1.087-.315-1.666 0-1.812.275-2.568-.536-2.764-.27-.065-.467-.108-1.155-.115-.882-.01-1.63.003-2.054.21-.282.14-.498.45-.366.468.164.023.535.1.732.365.254.34.245 1.103.245 1.103s.146 2.13-.34 2.395c-.334.183-.792-.19-1.775-1.896-.504-.87-.886-1.83-.886-1.83s-.074-.18-.206-.276c-.16-.12-.384-.157-.384-.157l-2.33.015s-.35.01-.478.162c-.115.137-.008.42-.008.42s1.834 4.286 3.91 6.45c1.903 1.984 4.067 1.85 4.067 1.85h.98z"/>
-                          </svg>
-                          <span className="uppercase text-[11px] tracking-widest font-black">Войти через VK</span>
+                          {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : (
+                            <>
+                              <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M12.785 16.241s.288-.032.436-.194c.136-.148.132-.427.132-.427s-.02-1.304.587-1.496c.598-.19 1.365 1.26 2.18 1.817.615.422 1.083.33 1.083.33l2.177-.03s1.14-.071.6-.972c-.044-.073-.314-.66-1.617-1.866-1.364-1.26-1.183-1.055.462-3.23.998-1.332 1.397-2.144 1.272-2.493-.12-.333-.862-.244-.862-.244l-2.45.015s-.182-.025-.316.056c-.132.08-.217.267-.217.267s-.39 1.037-.91 1.92c-1.094 1.84-1.532 1.937-1.713 1.82-.42-.27-.315-1.087-.315-1.666 0-1.812.275-2.568-.536-2.764-.27-.065-.467-.108-1.155-.115-.882-.01-1.63.003-2.054.21-.282.14-.498.45-.366.468.164.023.535.1.732.365.254.34.245 1.103.245 1.103s.146 2.13-.34 2.395c-.334.183-.792-.19-1.775-1.896-.504-.87-.886-1.83-.886-1.83s-.074-.18-.206-.276c-.16-.12-.384-.157-.384-.157l-2.33.015s-.35.01-.478.162c-.115.137-.008.42-.008.42s1.834 4.286 3.91 6.45c1.903 1.984 4.067 1.85 4.067 1.85h.98z"/>
+                              </svg>
+                              <span className="uppercase text-[11px] tracking-widest font-black">Войти через VK</span>
+                            </>
+                          )}
                         </button>
                      </div>
                   </div>
@@ -348,7 +335,7 @@ export default function AuthScreen() {
                  <button type="button" onClick={() => setIsLegalOpen(true)} className="text-[9px] font-black uppercase tracking-widest text-white/20 hover:text-primary transition-colors py-1">Политика конфиденциальности</button>
                  <div className="flex items-center gap-3 opacity-30">
                     <ShieldCheck className="w-4 h-4 text-primary" />
-                    <span className="text-[7px] font-black uppercase tracking-[0.4em] text-white">Quantum Link 56.9.0</span>
+                    <span className="text-[7px] font-black uppercase tracking-[0.4em] text-white">Quantum Link 56.9.1</span>
                  </div>
               </div>
             </CardContent>
