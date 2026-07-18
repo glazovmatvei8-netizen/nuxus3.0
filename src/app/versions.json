@@ -1,13 +1,14 @@
 
 {
-  "latestVersion": "56.8.1",
-  "qesVersion": "56.8",
-  "build": "Absolute-Identity-Link",
+  "latestVersion": "57.1.0",
+  "qesVersion": "57.1",
+  "build": "Absolute-Sync-Recovery",
   "sizeMb": 160,
   "changelog": [
-    "Added: Принудительная привязка VK ID к любому аккаунту (игнорируя номер телефона)",
-    "Fixed: Логика входа приоритезирует прямую связь по vkId",
-    "Improved: Интерфейс связки аккаунтов в настройках и при входе",
-    "Updated: Защита от создания дубликатов при авторизации через VK"
+    "Fixed: Runtime ReferenceError (cn) in settings",
+    "Restored: All profile fields (Bio, Status, Phone)",
+    "Added: VK FloatingOneTap (Шторка) for instant mobile entry",
+    "Improved: VK OneTap inline button with style sync (385px, 50 radius)",
+    "Fixed: Login/Register tab grid layout overlaps"
   ]
 }

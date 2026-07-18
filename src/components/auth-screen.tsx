@@ -1,13 +1,13 @@
 
 "use client"
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Lock, Eye, EyeOff, User as UserIcon, Link as LinkIcon } from 'lucide-react';
+import { Loader2, Lock, Eye, EyeOff, User as UserIcon, Link as LinkIcon, Sparkles } from 'lucide-react';
 import { useAuth, useFirestore } from '@/firebase';
 import { 
   signInWithEmailAndPassword,
@@ -32,74 +32,84 @@ export default function AuthScreen() {
   const [mode, setMode] = useState<AuthMode>('login');
   const [isLoading, setIsLoading] = useState(false);
   const [showPass, setShowPass] = useState(false);
+  const [vkIdToLink, setVkIdToLink] = useState<number | null>(null);
 
   const [identifier, setIdentifier] = useState(''); 
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
   const [username, setUsername] = useState('');
-  const [vkId, setVkId] = useState<number | null>(null);
 
-  const handleVkLogin = async () => {
-    let VKID = (window as any).VKIDSDK;
-    
-    // Если SDK еще нет, пробуем подождать 1.5 секунды
-    if (!VKID) {
-      setIsLoading(true);
-      let attempts = 0;
-      const interval = setInterval(async () => {
-        attempts++;
-        VKID = (window as any).VKIDSDK;
-        if (VKID || attempts > 8) {
-          clearInterval(interval);
-          if (VKID) {
-            initiateVkAuth(VKID);
-          } else {
-            setIsLoading(false);
-            toast({ title: "VK SDK не отвечает", description: "Проверьте соединение или обновите страницу.", variant: "destructive" });
-          }
-        }
-      }, 200);
-      return;
-    }
+  const vkidContainerRef = useRef<HTMLDivElement>(null);
+  const sdkInited = useRef(false);
 
-    initiateVkAuth(VKID);
-  };
+  // ГЛОБАЛЬНАЯ ИНИЦИАЛИЗАЦИЯ VK SDK
+  useEffect(() => {
+    const initVK = async () => {
+      const VKID = (window as any).VKIDSDK;
+      if (!VKID || sdkInited.current) return;
 
-  const initiateVkAuth = async (VKID: any) => {
-    setIsLoading(true);
-    try {
       VKID.Config.init({
         app: 54684553,
         redirectUrl: 'https://nuxus.fun',
         responseMode: VKID.ConfigResponseMode.Callback,
         source: VKID.ConfigSource.LOWCODE,
-        scope: '', 
+        scope: '',
       });
 
-      const data = await VKID.Auth.login();
-      await handleVkSuccess(data);
-    } catch (e: any) {
-      console.error("VK Auth Error:", e);
-      toast({ title: "Сбой VK ID", description: "Окно было закрыто или произошла ошибка.", variant: "destructive" });
-    } finally {
-      setIsLoading(false);
-    }
-  };
+      // 1. Интеграция Шторки (FloatingOneTap)
+      const floatingOneTap = new VKID.FloatingOneTap();
+      floatingOneTap.render({
+        appName: 'Nuxus 2.0',
+        showAlternativeLogin: true
+      })
+      .on(VKID.FloatingOneTapInternalEvents.LOGIN_SUCCESS, (payload: any) => {
+        VKID.Auth.exchangeCode(payload.code, payload.device_id)
+          .then((data: any) => {
+            floatingOneTap.close();
+            handleVkSuccess(data);
+          });
+      });
+
+      // 2. Интеграция Кнопки (OneTap) в форму
+      if (vkidContainerRef.current) {
+        const oneTap = new VKID.OneTap();
+        oneTap.render({
+          container: vkidContainerRef.current,
+          showAlternativeLogin: true,
+          styles: { borderRadius: 50, width: 385 }
+        })
+        .on(VKID.OneTapInternalEvents.LOGIN_SUCCESS, (payload: any) => {
+          VKID.Auth.exchangeCode(payload.code, payload.device_id)
+            .then(handleVkSuccess);
+        });
+      }
+
+      sdkInited.current = true;
+    };
+
+    const interval = setInterval(() => {
+      if ((window as any).VKIDSDK) {
+        initVK();
+        clearInterval(interval);
+      }
+    }, 500);
+
+    return () => clearInterval(interval);
+  }, []);
 
   const handleVkSuccess = async (data: any) => {
     if (!db || !auth) return;
-
+    setIsLoading(true);
     try {
       const vId = data.user_id || data.id;
       const vName = data.user?.first_name ? `${data.user.first_name} ${data.user.last_name || ''}` : "VK User";
-      const phoneNumber = data.user?.phone || "";
+      const phoneNumber = (data.user?.phone || "").replace(/\D/g, '');
       
       const vkEmail = `vk_${vId}@nuxus.chat`;
-      const vkPass = `vk_quantum_${vId}_secure_signal_v3`;
+      const vkPass = `vk_quantum_${vId}_secure_v57`;
 
-      // 1. Ищем прямо по vkId
-      const vkQuery = query(collection(db, 'users'), where('vkId', '==', vId), limit(1));
-      const vkSnap = await getDocs(vkQuery);
+      // Поиск по vkId
+      const vkSnap = await getDocs(query(collection(db, 'users'), where('vkId', '==', vId), limit(1)));
 
       if (!vkSnap.empty) {
         await setPersistence(auth, browserLocalPersistence);
@@ -109,101 +119,67 @@ export default function AuthScreen() {
         return;
       }
 
-      // 2. Ищем по телефону (если есть в ответе VK)
+      // Поиск по номеру телефона
       if (phoneNumber) {
-        const cleanPhone = phoneNumber.replace(/\D/g, '');
-        const phoneQuery = query(collection(db, 'users'), where('phone', '==', cleanPhone), limit(1));
-        const phoneSnap = await getDocs(phoneQuery);
-        
+        const phoneSnap = await getDocs(query(collection(db, 'users'), where('phone', '==', phoneNumber), limit(1)));
         if (!phoneSnap.empty) {
           toast({ title: "Узел Обнаружен", description: "Введите пароль для привязки VK к вашему узлу." });
           setIdentifier(phoneNumber);
           setMode('login');
-          setVkId(vId); 
+          setVkIdToLink(vId);
           return;
         }
       }
 
-      // 3. Если ничего не нашли — на регистрацию
+      // Если новый пользователь
       setMode('register');
       setName(vName);
       setIdentifier(phoneNumber || '');
-      setVkId(vId);
-      toast({ title: "Данные получены", description: "Завершите регистрацию нового узла." });
-      
-    } catch (error: any) {
-      toast({ title: "Ошибка данных", description: error.message, variant: "destructive" });
+      setVkIdToLink(vId);
+      toast({ title: "Данные получены", description: "Завершите регистрацию." });
+    } catch (e: any) {
+      toast({ title: "Сбой VK", description: e.message, variant: "destructive" });
+    } finally {
+      setIsLoading(false);
     }
-  };
-
-  const getFinalEmail = (input: string) => {
-    const val = input.trim();
-    if (val.includes('@')) return val; 
-    const cleanPhone = val.replace(/\D/g, '');
-    return cleanPhone ? `${cleanPhone}@nuxus.chat` : val; 
   };
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!identifier.trim() || (!password && !vkId) || !auth || !db) return;
+    if (!identifier.trim() || !db || !auth) return;
 
     setIsLoading(true);
-    const finalEmail = getFinalEmail(identifier);
-    const cleanPhone = identifier.includes('@') ? '' : identifier.replace(/\D/g, '');
+    const finalEmail = identifier.includes('@') ? identifier.trim() : `${identifier.replace(/\D/g, '')}@nuxus.chat`;
 
     try {
       await setPersistence(auth, browserLocalPersistence);
       
       if (mode === 'login') {
-        try {
-          const userCredential = await signInWithEmailAndPassword(auth, finalEmail, password);
-          if (vkId) {
-            await updateDoc(doc(db, 'users', userCredential.user.uid), { vkId });
-            toast({ title: "VK ID Привязан" });
-          }
-          setIs2FAVerified(true);
-        } catch (err: any) {
-          toast({ title: "Ошибка", description: "Неверный пароль или идентификатор.", variant: "destructive" });
+        const userCred = await signInWithEmailAndPassword(auth, finalEmail, password);
+        if (vkIdToLink) {
+          await updateDoc(doc(db, 'users', userCred.user.uid), { vkId: vkIdToLink });
+          toast({ title: "VK ID Привязан" });
         }
+        setIs2FAVerified(true);
       } else {
-        if (!name.trim() || !username.trim()) {
-          toast({ title: "Заполните все поля", variant: "destructive" });
-          setIsLoading(false);
-          return;
-        }
-
         const usernameWithAt = '@' + username.trim().replace('@', '');
-        const targetSearch = usernameWithAt.toLowerCase();
-
-        const nickCheck = await getDocs(query(collection(db, 'users'), where('usernameLowercase', '==', targetSearch), limit(1)));
-        if (!nickCheck.empty) {
-          toast({ title: "Никнейм занят", variant: "destructive" });
-          setIsLoading(false);
-          return;
-        }
-
-        const regEmail = vkId ? `vk_${vkId}@nuxus.chat` : finalEmail;
-        const regPass = vkId ? `vk_quantum_${vkId}_secure_signal_v3` : password;
+        const userCred = await createUserWithEmailAndPassword(auth, finalEmail, vkIdToLink ? `vk_quantum_${vkIdToLink}_secure_v57` : password);
         
-        const userCredential = await createUserWithEmailAndPassword(auth, regEmail, regPass);
-        
-        await setDoc(doc(db, 'users', userCredential.user.uid), {
-          id: userCredential.user.uid,
+        await setDoc(doc(db, 'users', userCred.user.uid), {
+          id: userCred.user.uid,
           name: name.trim(),
           username: usernameWithAt,
-          usernameLowercase: targetSearch,
-          phone: cleanPhone,
-          email: identifier.includes('@') ? identifier.trim() : (vkId ? null : finalEmail),
-          vkId: vkId,
+          usernameLowercase: usernameWithAt.toLowerCase(),
+          phone: identifier.replace(/\D/g, ''),
+          vkId: vkIdToLink,
           createdAt: new Date().toISOString(),
-          isPremium: false,
           balance: 0,
           settings: { theme: 'default', appearance: 'dark' }
         });
         setIs2FAVerified(true);
       }
     } catch (e: any) {
-      toast({ title: "Сбой", description: e.message, variant: "destructive" });
+      toast({ title: "Ошибка", description: "Проверьте данные.", variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
@@ -211,17 +187,17 @@ export default function AuthScreen() {
 
   return (
     <div className="h-[100dvh] w-full flex flex-col bg-[#020203] relative overflow-hidden">
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_-20%,rgba(168,85,247,0.15)_0%,transparent_50%)] pointer-events-none" />
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_-20%,rgba(168,85,247,0.15)_0%,transparent_50%)]" />
       
       <ScrollArea className="w-full h-full">
         <div className="min-h-full w-full flex flex-col items-center justify-center p-4 py-12 relative z-10">
           <div className="mb-10"><NuxusLogo size={90} /></div>
 
-          <Card className="w-full max-w-[420px] border-white/[0.08] bg-white/[0.02] backdrop-blur-[40px] shadow-2xl rounded-[3rem] overflow-hidden relative border-2 z-20">
+          <Card className="w-full max-w-[420px] border-white/[0.08] bg-white/[0.02] backdrop-blur-[40px] shadow-2xl rounded-[3rem] overflow-hidden relative border-2">
             <CardHeader className="text-center pb-2 pt-10 px-8">
               <div className="grid grid-cols-2 bg-white/5 p-1 rounded-2xl mb-8 border border-white/5">
-                <button type="button" onClick={() => setMode('login')} className={cn("h-11 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all", mode === 'login' ? "bg-primary text-white shadow-lg" : "text-white/30 hover:bg-white/5")}>Вход</button>
-                <button type="button" onClick={() => setMode('register')} className={cn("h-11 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all", mode === 'register' ? "bg-primary text-white shadow-lg" : "text-white/30 hover:bg-white/5")}>Регистрация</button>
+                <button onClick={() => setMode('login')} className={cn("h-11 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all", mode === 'login' ? "bg-primary text-white shadow-lg" : "text-white/30")}>Вход</button>
+                <button onClick={() => setMode('register')} className={cn("h-11 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all", mode === 'register' ? "bg-primary text-white shadow-lg" : "text-white/30")}>Регистрация</button>
               </div>
               <CardTitle className="text-3xl font-black tracking-tighter uppercase italic text-white leading-none">
                 {mode === 'login' ? 'Вход в Ядро' : 'Новый Узел'}
@@ -243,7 +219,7 @@ export default function AuthScreen() {
                     <Label className="text-[8px] uppercase font-black text-primary/60 ml-4 tracking-widest">Пароль</Label>
                     <div className="relative">
                       <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-primary/40" />
-                      <Input type={showPass ? "text" : "password"} placeholder="••••••••" value={password} onChange={e => setPassword(e.target.value)} className="bg-white/5 border-white/10 h-14 rounded-2xl pl-12 font-bold" required={!vkId || mode === 'login'} />
+                      <Input type={showPass ? "text" : "password"} placeholder="••••••••" value={password} onChange={e => setPassword(e.target.value)} className="bg-white/5 border-white/10 h-14 rounded-2xl pl-12 font-bold" required={!vkIdToLink} />
                       <button type="button" onClick={() => setShowPass(!showPass)} className="absolute right-4 top-1/2 -translate-y-1/2 text-white/20">
                         {showPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                       </button>
@@ -269,8 +245,8 @@ export default function AuthScreen() {
                     {isLoading ? <Loader2 className="animate-spin w-6 h-6" /> : (mode === 'login' ? "Авторизовать" : "Создать Узел")}
                   </Button>
                   
-                  {mode === 'register' && vkId && (
-                    <button type="button" onClick={() => setMode('login')} className="w-full flex items-center justify-center gap-2 text-[9px] font-black uppercase tracking-widest text-primary/60 hover:text-primary transition-colors py-2">
+                  {vkIdToLink && mode === 'register' && (
+                    <button type="button" onClick={() => setMode('login')} className="w-full flex items-center justify-center gap-2 text-[9px] font-black uppercase tracking-widest text-primary/60 hover:text-primary py-2">
                       <LinkIcon className="w-3 h-3" /> Привязать к существующему узлу
                     </button>
                   )}
@@ -280,21 +256,8 @@ export default function AuthScreen() {
                         <div className="h-px flex-1 bg-white/5" /><span className="text-[8px] font-black text-white/20 uppercase tracking-[0.3em]">или</span><div className="h-px flex-1 bg-white/5" />
                      </div>
                      
-                     <div className="flex justify-center w-full">
-                        <button 
-                          type="button"
-                          onClick={handleVkLogin}
-                          disabled={isLoading}
-                          className="flex items-center justify-center gap-3 bg-[#0077ff] hover:bg-[#0066dd] text-white rounded-[1.2rem] px-8 py-3.5 font-bold transition-all shadow-xl active:scale-95 disabled:opacity-50 min-w-[280px]"
-                        >
-                          {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : (
-                            <>
-                              <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M12.785 16.241s.288-.032.436-.194c.136-.148.132-.427.132-.427s-.02-1.304.587-1.496c.598-.19 1.365 1.26 2.18 1.817.615.422 1.083.33 1.083.33l2.177-.03s1.14-.071.6-.972c-.044-.073-.314-.66-1.617-1.866-1.364-1.26-1.183-1.055.462-3.23.998-1.332 1.397-2.144 1.272-2.493-.12-.333-.862-.244-.862-.244l-2.45.015s-.182-.025-.316.056c-.132.08-.217.267-.217.267s-.39 1.037-.91 1.92c-1.094 1.84-1.532 1.937-1.713 1.82-.42-.27-.315-1.087-.315-1.666 0-1.812.275-2.568-.536-2.764-.27-.065-.467-.108-1.155-.115-.882-.01-1.63.003-2.054.21-.282.14-.498.45-.366.468.164.023.535.1.732.365.254.34.245 1.103.245 1.103s.146 2.13-.34 2.395c-.334.183-.792-.19-1.775-1.896-.504-.87-.886-1.83-.886-1.83s-.074-.18-.206-.276c-.16-.12-.384-.157-.384-.157l-2.33.015s-.35.01-.478.162c-.115.137-.008.42-.008.42s1.834 4.286 3.91 6.45c1.903 1.984 4.067 1.85 4.067 1.85h.98z"/></svg>
-                              <span className="uppercase text-[11px] tracking-widest font-black">Войти через VK</span>
-                            </>
-                          )}
-                        </button>
-                     </div>
+                     {/* VK ID OneTap Container */}
+                     <div ref={vkidContainerRef} className="w-full flex justify-center min-h-[52px] overflow-visible" />
                   </div>
                 </div>
               </form>

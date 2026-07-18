@@ -19,10 +19,14 @@ import { signOut } from 'firebase/auth';
 import { doc, updateDoc, collection, query, limit, getDocs, where } from 'firebase/firestore';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAppState } from '@/lib/store';
-import { isUserPremium, isGlobalAdmin } from '@/lib/utils';
+import { isUserPremium, isGlobalAdmin, cn } from '@/lib/utils';
 import type { User } from '@/lib/types';
 import { sendVerificationCode } from '@/ai/flows/send-verification-email-flow';
 
+/**
+ * SETTINGS MODAL V57.1.0 «RECOVERY SHIELD»
+ * ИСПРАВЛЕНО: Добавлен импорт cn, восстановлены все поля профиля.
+ */
 export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const auth = useAuth();
   const db = useFirestore();
@@ -31,6 +35,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
   const { settingsTab, setSettingsTab } = useAppState();
   
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const vkidContainerRef = useRef<HTMLDivElement>(null);
 
   const userRef = useMemoFirebase(() => (!db || !user) ? null : doc(db, 'users', user.uid), [db, user]);
   const { data: profile } = useDoc<User>(userRef);
@@ -77,29 +82,40 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
     }
   }, [profile, open]);
 
-  const handleVkLink = async () => {
-    let VKID = (window as any).VKIDSDK;
-    if (!VKID) {
-      toast({ title: "VK SDK еще грузится", variant: "destructive" });
-      return;
+  // Интеграция VK OneTap для настроек
+  useEffect(() => {
+    if (open && settingsTab === 'profile' && vkidContainerRef.current) {
+      const renderVK = () => {
+        const VKID = (window as any).VKIDSDK;
+        if (!VKID || !vkidContainerRef.current) return;
+
+        VKID.Config.init({
+          app: 54684553,
+          redirectUrl: 'https://nuxus.fun',
+          responseMode: VKID.ConfigResponseMode.Callback,
+          source: VKID.ConfigSource.LOWCODE,
+          scope: '',
+        });
+
+        const oneTap = new VKID.OneTap();
+        oneTap.render({
+          container: vkidContainerRef.current,
+          showAlternativeLogin: true,
+          styles: { borderRadius: 50, width: 320 }
+        })
+        .on(VKID.OneTapInternalEvents.LOGIN_SUCCESS, async (payload: any) => {
+          const data = await VKID.Auth.exchangeCode(payload.code, payload.device_id);
+          if (data && user) {
+            await updateDoc(doc(db!, 'users', user.uid), { vkId: data.user_id || data.id });
+            toast({ title: "VK ID Привязан" });
+          }
+        });
+      };
+      
+      const timer = setTimeout(renderVK, 500);
+      return () => clearTimeout(timer);
     }
-    try {
-      VKID.Config.init({
-        app: 54684553,
-        redirectUrl: 'https://nuxus.fun',
-        responseMode: VKID.ConfigResponseMode.Callback,
-        source: VKID.ConfigSource.LOWCODE,
-        scope: '', 
-      });
-      const data = await VKID.Auth.login();
-      if (!db || !user) return;
-      const vId = data.user_id || data.id;
-      await updateDoc(doc(db, 'users', user.uid), { vkId: vId });
-      toast({ title: "VK ID Привязан" });
-    } catch (e) {
-      toast({ title: "Сбой привязки VK", variant: "destructive" });
-    }
-  };
+  }, [open, settingsTab, user, db, toast]);
 
   const handleSendEmailCode = async () => {
     if (!emailToVerify || !emailToVerify.includes('@')) {
@@ -121,12 +137,10 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
   const handleSendPhoneCode = async () => {
     if (!phoneToVerify) return;
     setIsVerifying(true);
-    // Для прототипа используем ту же логику кода
     const code = Math.floor(100000 + Math.random() * 900000).toString();
-    console.log("[NUXUS KERNEL] Phone verification code:", code);
     setActiveCode(code);
     setVerifyStep('verifying_phone');
-    toast({ title: "Код отправлен в SMS", description: "Имитация: код выведен в консоль" });
+    toast({ title: "Код SMS", description: `Имитация: ${code}` });
     setIsVerifying(false);
   };
 
@@ -175,7 +189,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         'settings.privacy.lastSeenVisibility': form.privacy.lastSeenVisibility
       });
       onOpenChange(false);
-      toast({ title: "Конфигурация узла сохранена" });
+      toast({ title: "Конфигурация сохранена" });
     } catch (e: any) { toast({ title: "Ошибка", description: e.message, variant: "destructive" }); }
     finally { setIsSaving(false); }
   };
@@ -195,7 +209,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
               <TabsTrigger value="profile" className="text-[9px] font-black uppercase tracking-widest">Узел</TabsTrigger>
               <TabsTrigger value="privacy" className="text-[9px] font-black uppercase tracking-widest">Защита</TabsTrigger>
               <TabsTrigger value="style" className="text-[9px] font-black uppercase tracking-widest">Стиль</TabsTrigger>
-              <TabsTrigger value="data" className="text-[9px] font-black uppercase tracking-widest">Данные</TabsTrigger>
+              <TabsTrigger value="data" className="text-[9px] font-black uppercase tracking-widest">Инфо</TabsTrigger>
             </TabsList>
           </div>
 
@@ -228,41 +242,34 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                            {profile?.phoneVerified ? <CheckCircle2 className="w-3 h-3 text-green-500" /> : <ShieldAlert className="w-3 h-3 text-red-500" />}
                          </div>
                          <div className="flex gap-2">
-                            <div className="relative flex-1">
-                               <PhoneCall className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-primary/40" />
-                               <Input value={phoneToVerify} onChange={e => setPhoneToVerify(e.target.value)} className="bg-black/40 border-white/10 h-12 rounded-xl pl-11 font-bold" />
-                            </div>
-                            {!profile?.phoneVerified && (
-                               <Button onClick={handleSendPhoneCode} className="h-12 w-12 rounded-xl bg-primary shrink-0"><Check className="w-5 h-5" /></Button>
-                            )}
+                            <Input value={phoneToVerify} onChange={e => setPhoneToVerify(e.target.value)} className="bg-black/40 border-white/10 h-12 rounded-xl font-bold" />
+                            {!profile?.phoneVerified && <Button onClick={handleSendPhoneCode} className="h-12 w-12 rounded-xl bg-primary shrink-0"><Check className="w-5 h-5" /></Button>}
                          </div>
                        </div>
 
                        <div className="space-y-1.5">
-                         <Label className="text-[9px] font-black uppercase text-primary/60 ml-2">О себе (Био)</Label>
-                         <Textarea value={form.bio} onChange={e => setForm({...form, bio: e.target.value})} className="bg-black/40 border-white/10 rounded-2xl h-24 resize-none" placeholder="Спецификация вашего узла..." />
+                         <Label className="text-[9px] font-black uppercase text-primary/60 ml-2">Био (О себе)</Label>
+                         <Textarea value={form.bio} onChange={e => setForm({...form, bio: e.target.value})} className="bg-black/40 border-white/10 rounded-2xl h-24 resize-none" placeholder="Спецификация..." />
                        </div>
-                    </div>
 
-                    <div className="bg-white/5 p-6 rounded-[2rem] border border-white/5 space-y-4">
-                       <div className="flex items-center gap-2 mb-2"><Sparkles className="w-4 h-4 text-accent" /><span className="text-[10px] font-black uppercase text-white tracking-widest">Цифровой Статус</span></div>
-                       <div className="flex gap-3">
-                          <Input value={form.statusEmoji} onChange={e => setForm({...form, statusEmoji: e.target.value})} className="w-16 h-12 bg-black/40 border-white/10 rounded-xl text-center text-xl" placeholder="🔥" />
-                          <Input value={form.statusText} onChange={e => setForm({...form, statusText: e.target.value})} className="flex-1 h-12 bg-black/40 border-white/10 rounded-xl text-xs font-bold" placeholder="Текст статуса..." />
+                       <div className="space-y-4">
+                          <Label className="text-[9px] font-black uppercase text-primary/60 ml-2">Цифровой Статус</Label>
+                          <div className="flex gap-3">
+                             <Input value={form.statusEmoji} onChange={e => setForm({...form, statusEmoji: e.target.value})} className="w-16 h-12 bg-black/40 border-white/10 rounded-xl text-center text-xl" placeholder="🔥" />
+                             <Input value={form.statusText} onChange={e => setForm({...form, statusText: e.target.value})} className="flex-1 h-12 bg-black/40 border-white/10 rounded-xl text-xs font-bold" placeholder="Текст статуса..." />
+                          </div>
                        </div>
                     </div>
 
                     <div className="bg-white/5 p-6 rounded-[2rem] border border-white/5 space-y-6">
                        <div className="space-y-4">
-                          <div className="flex items-center gap-2"><LinkIcon className="w-4 h-4 text-primary" /><span className="text-[10px] font-black uppercase text-white tracking-widest">Связанные аккаунты</span></div>
-                          <button type="button" onClick={handleVkLink} className="w-full flex items-center justify-center gap-3 bg-[#0077ff] hover:bg-[#0066dd] text-white rounded-xl py-3 font-bold transition-all shadow-lg active:scale-95">
-                            <span className="uppercase text-[9px] tracking-widest font-black">{profile?.vkId ? 'Обновить VK Link' : 'Привязать VK ID'}</span>
-                          </button>
+                          <Label className="text-[10px] font-black uppercase text-white tracking-widest ml-1">Связанные аккаунты</Label>
+                          <div ref={vkidContainerRef} className="w-full flex justify-center min-h-[48px]" />
                        </div>
                        <div className="space-y-4">
                           <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2"><Mail className="w-4 h-4 text-primary" /><span className="text-[10px] font-black uppercase text-white tracking-widest">Электронная почта</span></div>
-                            {profile?.emailVerified ? <CheckCircle2 className="w-4 h-4 text-green-500" /> : <ShieldAlert className="w-4 h-4 text-red-500" />}
+                            <Label className="text-[10px] font-black uppercase text-white tracking-widest ml-1">Электронная почта</Label>
+                            {profile?.emailVerified && <CheckCircle2 className="w-4 h-4 text-green-500" />}
                           </div>
                           <div className="flex gap-2">
                             <Input value={emailToVerify} onChange={e => setEmailToVerify(e.target.value)} className="bg-black/40 border-white/10 h-12 rounded-xl text-sm" placeholder="Email..." />
@@ -305,7 +312,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                          <Input type="password" value={form.twoFactorPin} onChange={e => setForm({...form, twoFactorPin: e.target.value.replace(/\D/g, '')})} placeholder="6-значный PIN" maxLength={6} className="bg-black/40 border-white/10 h-12 rounded-xl text-center tracking-[0.4em]" />
                        )}
                        <div className="flex items-center justify-between">
-                          <span className="text-xs font-bold text-white">Face ID / Touch ID</span>
+                          <span className="text-xs font-bold text-white">Биометрия (Hardware)</span>
                           <Switch checked={form.biometricEnabled} onCheckedChange={v => setForm({...form, biometricEnabled: v})} />
                        </div>
                     </div>
