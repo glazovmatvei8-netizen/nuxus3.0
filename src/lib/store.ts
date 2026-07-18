@@ -1,6 +1,6 @@
 
 /**
- * DEPRECATED: Duplicate of store.tsx.
- * Please use @/lib/store (which points to store.tsx) instead.
+ * REMOVED: Redundant duplicate file. 
+ * Please use src/lib/store.tsx instead.
  */
 export {};

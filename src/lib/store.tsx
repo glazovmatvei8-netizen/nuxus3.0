@@ -74,7 +74,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   // Persistent active account index
   const [activeAccountIndex, setActiveAccountIndex] = useState(() => {
     if (typeof window !== 'undefined') {
-      return parseInt(localStorage.getItem('nuxus_active_index') || '0');
+      const saved = localStorage.getItem('nuxus_active_index');
+      return saved ? parseInt(saved) : 0;
     }
     return 0;
   });
@@ -92,42 +93,24 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <AppContext.Provider value={{
-      currentChatId,
-      setCurrentChatId,
-      activeView,
-      setActiveView,
-      forwardingMessage,
-      setForwardingMessage,
-      activeCallId,
-      setActiveCallId,
-      localDrafts,
-      setLocalDrafts,
-      is2FAVerified,
-      setIs2FAVerified,
-      isSettingsOpen,
-      setIsSettingsOpen,
-      isSearchOpen,
-      setIsSearchOpen,
-      settingsTab,
-      setSettingsTab,
-      activeAccountIndex,
-      setActiveAccountIndex,
-      isLegalOpen,
-      setIsLegalOpen,
-      inspectedUserId,
-      setInspectedUserId,
-      isInterceptionRequested,
-      setIsInterceptionRequested,
-      currentTrack,
-      setCurrentTrack,
-      isPlayingMusic,
-      setIsPlayingMusic,
-      activeStoryId,
-      setActiveStoryId,
-      isCreateStoryOpen,
-      setIsCreateStoryOpen,
-      storiesToView,
-      setStoriesToView
+      currentChatId, setCurrentChatId,
+      activeView, setActiveView,
+      forwardingMessage, setForwardingMessage,
+      activeCallId, setActiveCallId,
+      localDrafts, setLocalDrafts,
+      is2FAVerified, setIs2FAVerified,
+      isSettingsOpen, setIsSettingsOpen,
+      isSearchOpen, setIsSearchOpen,
+      settingsTab, setSettingsTab,
+      activeAccountIndex, setActiveAccountIndex,
+      isLegalOpen, setIsLegalOpen,
+      inspectedUserId, setInspectedUserId,
+      isInterceptionRequested, setIsInterceptionRequested,
+      currentTrack, setCurrentTrack,
+      isPlayingMusic, setIsPlayingMusic,
+      activeStoryId, setActiveStoryId,
+      isCreateStoryOpen, setIsCreateStoryOpen,
+      storiesToView, setStoriesToView
     }}>
       {children}
     </AppContext.Provider>

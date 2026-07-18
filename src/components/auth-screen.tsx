@@ -21,103 +21,50 @@ import { NuxusLogo } from './nuxus-logo';
 import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
-type AuthMode = 'login' | 'register';
-
 export default function AuthScreen() {
   const auth = useAuth();
   const db = useFirestore();
   const { toast } = useToast();
   const { setIs2FAVerified } = useAppState();
   
-  const [mode, setMode] = useState<AuthMode>('login');
+  const [mode, setMode] = useState<'login' | 'register'>('login');
   const [isLoading, setIsLoading] = useState(false);
   const [isVkLoading, setIsVkLoading] = useState(false);
   const [showPass, setShowPass] = useState(false);
-  const [vkIdToLink, setVkIdToLink] = useState<number | null>(null);
 
   const [identifier, setIdentifier] = useState(''); 
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
   const [username, setUsername] = useState('');
+  const [vkIdToLink, setVkIdToLink] = useState<number | null>(null);
 
-  const floatingOneTapRef = useRef<any>(null);
-
-  // AUTO-DETECTION of pending switch
+  // Обработка данных из VkProvider (шторки)
   useEffect(() => {
-    const target = sessionStorage.getItem('nuxus_pending_target');
-    if (target) {
-      setIdentifier(target);
-      setMode('login');
-      toast({ title: `Переключение на ${target}`, description: "Введите пароль для активации узла." });
-      // Keep it once
-      sessionStorage.removeItem('nuxus_pending_target');
+    const pending = sessionStorage.getItem('nuxus_vk_pending');
+    if (pending) {
+      const data = JSON.parse(pending);
+      setMode('register');
+      setName(data.name);
+      setIdentifier(data.phone);
+      setVkIdToLink(data.vkId);
+      sessionStorage.removeItem('nuxus_vk_pending');
     }
-  }, [toast]);
-
-  const getVkAppId = useCallback(() => {
-    const isNative = typeof window !== 'undefined' && (!!(window as any).Capacitor || !!(window as any).webkit);
-    return isNative ? 54684554 : 54684553;
   }, []);
-
-  const ensureSDK = useCallback((): Promise<any> => {
-    return new Promise((resolve) => {
-      if ((window as any).VKIDSDK) return resolve((window as any).VKIDSDK);
-      const script = document.createElement('script');
-      script.src = "https://unpkg.com/@vkid/sdk@2.1.0/dist-sdk/umd/index.js";
-      script.async = true;
-      script.onload = () => resolve((window as any).VKIDSDK);
-      document.head.appendChild(script);
-      setTimeout(() => resolve((window as any).VKIDSDK), 4000);
-    });
-  }, []);
-
-  useEffect(() => {
-    let active = true;
-    const initFloating = async () => {
-      const VKID = await ensureSDK();
-      if (!VKID || !active) return;
-
-      VKID.Config.init({
-        app: getVkAppId(),
-        redirectUrl: 'https://nuxus.fun',
-        responseMode: VKID.ConfigResponseMode.Callback,
-        source: VKID.ConfigSource.LOWCODE,
-      });
-
-      const floatingOneTap = new VKID.FloatingOneTap();
-      floatingOneTapRef.current = floatingOneTap;
-
-      floatingOneTap.render({
-        appName: 'Nuxus',
-        showAlternativeLogin: true
-      })
-      .on(VKID.WidgetEvents.ERROR, (e: any) => console.warn("VK Floating Error", e))
-      .on(VKID.FloatingOneTapInternalEvents.LOGIN_SUCCESS, (payload: any) => {
-        VKID.Auth.exchangeCode(payload.code, payload.device_id)
-          .then(handleVkSuccess)
-          .catch((e: any) => toast({ title: "Сбой обмена", description: e.message, variant: "destructive" }));
-      });
-    };
-
-    initFloating();
-    return () => { 
-      active = false; 
-      if (floatingOneTapRef.current) floatingOneTapRef.current.close(); 
-    };
-  }, [ensureSDK, getVkAppId]);
 
   const handleVkLogin = async () => {
     setIsVkLoading(true);
-    const VKID = await ensureSDK();
+    const VKID = (window as any).VKIDSDK;
 
     if (!VKID) {
-      toast({ title: "SDK НЕ ОТВЕЧАЕТ", description: "Проверьте соединение с узлами VK.", variant: "destructive" });
+      toast({ title: "SDK НЕ ГОТОВ", description: "Подождите секунду, Ядро прогревается...", variant: "destructive" });
       setIsVkLoading(false);
       return;
     }
 
     try {
-      const APP_ID = getVkAppId();
+      const isNative = !!(window as any).Capacitor || !!(window as any).webkit;
+      const APP_ID = isNative ? 54684554 : 54684553;
+
       VKID.Config.init({
         app: APP_ID,
         redirectUrl: 'https://nuxus.fun',
@@ -131,8 +78,7 @@ export default function AuthScreen() {
         handleVkSuccess(data);
       }
     } catch (e: any) {
-      console.warn("VK Auth Error:", e);
-      toast({ title: "Сбой VK", description: "Окно входа было закрыто или сигнал прерван.", variant: "destructive" });
+      toast({ title: "Сбой VK", description: "Сигнал прерван.", variant: "destructive" });
     } finally {
       setIsVkLoading(false);
     }
@@ -143,8 +89,6 @@ export default function AuthScreen() {
     setIsLoading(true);
     try {
       const vId = data.user_id || data.id;
-      const vName = data.user?.first_name ? `${data.user.first_name} ${data.user.last_name || ''}` : "VK User";
-      const phoneNumber = (data.user?.phone || "").replace(/\D/g, '');
       const vkEmail = `vk_${vId}@nuxus.chat`;
       const vkPass = `vk_quantum_${vId}_secure_v57`;
 
@@ -157,10 +101,10 @@ export default function AuthScreen() {
       }
 
       setMode('register');
-      setName(vName);
-      setIdentifier(phoneNumber || '');
+      setName(data.user?.first_name ? `${data.user.first_name} ${data.user.last_name || ''}` : "VK User");
+      setIdentifier((data.user?.phone || "").replace(/\D/g, ''));
       setVkIdToLink(vId);
-      toast({ title: "Данные получены", description: "Завершите регистрацию или привяжите существующий узел." });
+      toast({ title: "VK ID Распознан", description: "Завершите регистрацию узла." });
     } catch (e: any) {
       toast({ title: "Сбой синхронизации", description: e.message, variant: "destructive" });
     } finally {
@@ -181,7 +125,6 @@ export default function AuthScreen() {
         const userCred = await signInWithEmailAndPassword(auth, finalEmail, password);
         if (vkIdToLink) {
           await updateDoc(doc(db, 'users', userCred.user.uid), { vkId: vkIdToLink });
-          toast({ title: "VK ID Привязан к узлу" });
         }
         setIs2FAVerified(true);
       } else {
@@ -201,7 +144,7 @@ export default function AuthScreen() {
         setIs2FAVerified(true);
       }
     } catch (e: any) {
-      toast({ title: "Ошибка", description: "Проверьте идентификатор или пароль.", variant: "destructive" });
+      toast({ title: "Ошибка", description: "Проверьте данные или пароль.", variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
