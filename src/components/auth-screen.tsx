@@ -23,10 +23,6 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 
 type AuthMode = 'login' | 'register';
 
-/**
- * AuthScreen V56.9.3 «POLLING RESILIENCE»
- * ИСПРАВЛЕНО: Агрессивный поиск VKIDSDK + Popup логика.
- */
 export default function AuthScreen() {
   const auth = useAuth();
   const db = useFirestore();
@@ -101,6 +97,7 @@ export default function AuthScreen() {
       const vkEmail = `vk_${vId}@nuxus.chat`;
       const vkPass = `vk_quantum_${vId}_secure_signal_v3`;
 
+      // 1. Ищем прямо по vkId
       const vkQuery = query(collection(db, 'users'), where('vkId', '==', vId), limit(1));
       const vkSnap = await getDocs(vkQuery);
 
@@ -112,13 +109,14 @@ export default function AuthScreen() {
         return;
       }
 
+      // 2. Ищем по телефону (если есть в ответе VK)
       if (phoneNumber) {
         const cleanPhone = phoneNumber.replace(/\D/g, '');
         const phoneQuery = query(collection(db, 'users'), where('phone', '==', cleanPhone), limit(1));
         const phoneSnap = await getDocs(phoneQuery);
         
         if (!phoneSnap.empty) {
-          toast({ title: "Узел Обнаружен", description: "Введите пароль для привязки VK." });
+          toast({ title: "Узел Обнаружен", description: "Введите пароль для привязки VK к вашему узлу." });
           setIdentifier(phoneNumber);
           setMode('login');
           setVkId(vId); 
@@ -126,11 +124,12 @@ export default function AuthScreen() {
         }
       }
 
+      // 3. Если ничего не нашли — на регистрацию
       setMode('register');
       setName(vName);
       setIdentifier(phoneNumber || '');
       setVkId(vId);
-      toast({ title: "Данные получены", description: "Завершите регистрацию." });
+      toast({ title: "Данные получены", description: "Завершите регистрацию нового узла." });
       
     } catch (error: any) {
       toast({ title: "Ошибка данных", description: error.message, variant: "destructive" });
@@ -164,7 +163,7 @@ export default function AuthScreen() {
           }
           setIs2FAVerified(true);
         } catch (err: any) {
-          toast({ title: "Ошибка", description: "Неверный пароль или ID.", variant: "destructive" });
+          toast({ title: "Ошибка", description: "Неверный пароль или идентификатор.", variant: "destructive" });
         }
       } else {
         if (!name.trim() || !username.trim()) {

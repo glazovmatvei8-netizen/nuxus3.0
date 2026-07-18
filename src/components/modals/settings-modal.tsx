@@ -12,21 +12,17 @@ import { Switch } from '@/components/ui/switch';
 import { useAuth, useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
-  LogOut, Settings2, Camera, Star, ShieldCheck, Loader2, Link as LinkIcon, Mail, PhoneCall, Sparkles, Check, CheckCircle2, ShieldAlert
+  LogOut, Settings2, Camera, Star, ShieldCheck, Loader2, Link as LinkIcon, Mail, PhoneCall, Sparkles, Check, CheckCircle2, ShieldAlert, Fingerprint, Palette, Archive, History, Globe, Zap
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { signOut } from 'firebase/auth';
 import { doc, updateDoc, collection, query, limit, getDocs, where } from 'firebase/firestore';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAppState } from '@/lib/store';
-import { isUserPremium } from '@/lib/utils';
-import type { User, PrivacyOption } from '@/lib/types';
+import { isUserPremium, isGlobalAdmin } from '@/lib/utils';
+import type { User } from '@/lib/types';
 import { sendVerificationCode } from '@/ai/flows/send-verification-email-flow';
 
-/**
- * SETTINGS MODAL V56.9.3 «FULL RESTORATION»
- * ВОССТАНОВЛЕНО: Био, Статус, Телефон.
- */
 export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const auth = useAuth();
   const db = useFirestore();
@@ -40,8 +36,9 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
   const { data: profile } = useDoc<User>(userRef);
 
   const [isSaving, setIsSaving] = useState(false);
-  const [verifyStep, setVerifyStep] = useState<'idle' | 'verifying_new'>('idle');
+  const [verifyStep, setVerifyStep] = useState<'idle' | 'verifying_email' | 'verifying_phone'>('idle');
   const [emailToVerify, setEmailToVerify] = useState('');
+  const [phoneToVerify, setPhoneToVerify] = useState('');
   const [inputCode, setInputCode] = useState('');
   const [activeCode, setActiveCode] = useState('');
   const [isVerifying, setIsVerifying] = useState(false);
@@ -51,7 +48,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
     phone: '', email: '',
     appearance: 'dark' as 'light' | 'dark', theme: 'default',
     twoFactorEnabled: false, twoFactorPin: '', biometricEnabled: false,
-    privacy: { isGhostMode: false }
+    privacy: { isGhostMode: false, lastSeenVisibility: 'everybody' as any }
   });
 
   useEffect(() => {
@@ -70,13 +67,18 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         twoFactorEnabled: !!profile.twoFactorEnabled,
         twoFactorPin: profile.twoFactorPin || '',
         biometricEnabled: !!profile.settings?.biometricEnabled,
-        privacy: { isGhostMode: !!profile.settings?.privacy?.isGhostMode }
+        privacy: { 
+          isGhostMode: !!profile.settings?.privacy?.isGhostMode,
+          lastSeenVisibility: profile.settings?.privacy?.lastSeenVisibility || 'everybody'
+        }
       });
+      setEmailToVerify(profile.email || '');
+      setPhoneToVerify(profile.phone || '');
     }
   }, [profile, open]);
 
   const handleVkLink = async () => {
-    const VKID = (window as any).VKIDSDK;
+    let VKID = (window as any).VKIDSDK;
     if (!VKID) {
       toast({ title: "VK SDK еще грузится", variant: "destructive" });
       return;
@@ -99,21 +101,33 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
     }
   };
 
-  const handleSendEmailCode = async (targetEmail: string, step: typeof verifyStep) => {
-    if (!targetEmail || !targetEmail.includes('@')) {
+  const handleSendEmailCode = async () => {
+    if (!emailToVerify || !emailToVerify.includes('@')) {
       toast({ title: "Ошибка", description: "Некорректная почта.", variant: "destructive" });
       return;
     }
     setIsVerifying(true);
     try {
-      const { success, code } = await sendVerificationCode({ email: targetEmail, userName: form.name });
+      const { success, code } = await sendVerificationCode({ email: emailToVerify, userName: form.name });
       if (success) {
         setActiveCode(code);
-        setVerifyStep(step);
-        toast({ title: "Код отправлен" });
+        setVerifyStep('verifying_email');
+        toast({ title: "Код отправлен на почту" });
       }
     } catch (e) { toast({ title: "Сбой ИИ", variant: "destructive" }); }
     finally { setIsVerifying(false); }
+  };
+
+  const handleSendPhoneCode = async () => {
+    if (!phoneToVerify) return;
+    setIsVerifying(true);
+    // Для прототипа используем ту же логику кода
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    console.log("[NUXUS KERNEL] Phone verification code:", code);
+    setActiveCode(code);
+    setVerifyStep('verifying_phone');
+    toast({ title: "Код отправлен в SMS", description: "Имитация: код выведен в консоль" });
+    setIsVerifying(false);
   };
 
   const handleConfirmCode = async () => {
@@ -124,10 +138,17 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
     if (!db || !user) return;
     setIsVerifying(true);
     try {
-      await updateDoc(doc(db, 'users', user.uid), { email: emailToVerify, emailVerified: true });
+      if (verifyStep === 'verifying_email') {
+        await updateDoc(doc(db, 'users', user.uid), { email: emailToVerify, emailVerified: true });
+        setForm({ ...form, email: emailToVerify });
+        toast({ title: "Почта подтверждена" });
+      } else {
+        await updateDoc(doc(db, 'users', user.uid), { phone: phoneToVerify, phoneVerified: true });
+        setForm({ ...form, phone: phoneToVerify });
+        toast({ title: "Телефон подтвержден" });
+      }
       setVerifyStep('idle');
-      setForm({ ...form, email: emailToVerify });
-      toast({ title: "Почта обновлена" });
+      setInputCode('');
     } finally { setIsVerifying(false); }
   };
 
@@ -148,11 +169,13 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         twoFactorEnabled: form.twoFactorEnabled,
         twoFactorPin: form.twoFactorPin,
         'settings.appearance': form.appearance,
+        'settings.theme': form.theme,
         'settings.biometricEnabled': form.biometricEnabled,
-        'settings.privacy.isGhostMode': form.privacy.isGhostMode
+        'settings.privacy.isGhostMode': form.privacy.isGhostMode,
+        'settings.privacy.lastSeenVisibility': form.privacy.lastSeenVisibility
       });
       onOpenChange(false);
-      toast({ title: "Узел синхронизирован" });
+      toast({ title: "Конфигурация узла сохранена" });
     } catch (e: any) { toast({ title: "Ошибка", description: e.message, variant: "destructive" }); }
     finally { setIsSaving(false); }
   };
@@ -172,7 +195,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
               <TabsTrigger value="profile" className="text-[9px] font-black uppercase tracking-widest">Узел</TabsTrigger>
               <TabsTrigger value="privacy" className="text-[9px] font-black uppercase tracking-widest">Защита</TabsTrigger>
               <TabsTrigger value="style" className="text-[9px] font-black uppercase tracking-widest">Стиль</TabsTrigger>
-              <TabsTrigger value="data" className="text-[9px] font-black uppercase tracking-widest">Инфо</TabsTrigger>
+              <TabsTrigger value="data" className="text-[9px] font-black uppercase tracking-widest">Данные</TabsTrigger>
             </TabsList>
           </div>
 
@@ -198,16 +221,26 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                            <Input value={form.username} onChange={e => setForm({...form, username: e.target.value})} className="bg-black/40 border-white/10 h-12 rounded-xl font-bold" />
                          </div>
                        </div>
+                       
                        <div className="space-y-1.5">
-                         <Label className="text-[9px] font-black uppercase text-primary/60 ml-2">Телефон</Label>
-                         <div className="relative">
-                           <PhoneCall className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-primary/40" />
-                           <Input value={form.phone} onChange={e => setForm({...form, phone: e.target.value})} className="bg-black/40 border-white/10 h-12 rounded-xl pl-11 font-bold" />
+                         <div className="flex items-center justify-between px-2">
+                           <Label className="text-[9px] font-black uppercase text-primary/60">Номер телефона</Label>
+                           {profile?.phoneVerified ? <CheckCircle2 className="w-3 h-3 text-green-500" /> : <ShieldAlert className="w-3 h-3 text-red-500" />}
+                         </div>
+                         <div className="flex gap-2">
+                            <div className="relative flex-1">
+                               <PhoneCall className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-primary/40" />
+                               <Input value={phoneToVerify} onChange={e => setPhoneToVerify(e.target.value)} className="bg-black/40 border-white/10 h-12 rounded-xl pl-11 font-bold" />
+                            </div>
+                            {!profile?.phoneVerified && (
+                               <Button onClick={handleSendPhoneCode} className="h-12 w-12 rounded-xl bg-primary shrink-0"><Check className="w-5 h-5" /></Button>
+                            )}
                          </div>
                        </div>
+
                        <div className="space-y-1.5">
                          <Label className="text-[9px] font-black uppercase text-primary/60 ml-2">О себе (Био)</Label>
-                         <Textarea value={form.bio} onChange={e => setForm({...form, bio: e.target.value})} className="bg-black/40 border-white/10 rounded-2xl h-24 resize-none" placeholder="Расскажите о себе..." />
+                         <Textarea value={form.bio} onChange={e => setForm({...form, bio: e.target.value})} className="bg-black/40 border-white/10 rounded-2xl h-24 resize-none" placeholder="Спецификация вашего узла..." />
                        </div>
                     </div>
 
@@ -232,16 +265,71 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                             {profile?.emailVerified ? <CheckCircle2 className="w-4 h-4 text-green-500" /> : <ShieldAlert className="w-4 h-4 text-red-500" />}
                           </div>
                           <div className="flex gap-2">
-                            <Input value={form.email} onChange={e => setEmailToVerify(e.target.value)} className="bg-black/40 border-white/10 h-12 rounded-xl text-sm" placeholder="Email..." />
-                            {!profile?.emailVerified && <Button onClick={() => handleSendEmailCode(emailToVerify, 'verifying_new')} className="h-12 w-12 rounded-xl bg-primary shrink-0"><Check className="w-5 h-5 text-white" /></Button>}
+                            <Input value={emailToVerify} onChange={e => setEmailToVerify(e.target.value)} className="bg-black/40 border-white/10 h-12 rounded-xl text-sm" placeholder="Email..." />
+                            {!profile?.emailVerified && <Button onClick={handleSendEmailCode} className="h-12 w-12 rounded-xl bg-primary shrink-0"><Check className="w-5 h-5" /></Button>}
                           </div>
-                          {verifyStep === 'verifying_new' && (
-                            <div className="space-y-4"><Input value={inputCode} onChange={e => setInputCode(e.target.value)} placeholder="000000" className="bg-black/60 border-primary/40 h-14 rounded-2xl text-center text-2xl tracking-[0.4em] font-black" /><Button onClick={handleConfirmCode} className="w-full h-11 bg-primary rounded-xl font-black uppercase text-[10px]">Подтвердить</Button></div>
+                          {(verifyStep === 'verifying_email' || verifyStep === 'verifying_phone') && (
+                            <div className="space-y-4 animate-in slide-in-from-top-4">
+                              <Input value={inputCode} onChange={e => setInputCode(e.target.value)} placeholder="000000" className="bg-black/60 border-primary/40 h-14 rounded-2xl text-center text-2xl tracking-[0.4em] font-black" />
+                              <Button onClick={handleConfirmCode} className="w-full h-11 bg-primary rounded-xl font-black uppercase text-[10px]">Подтвердить</Button>
+                            </div>
                           )}
                        </div>
                     </div>
                   </div>
                 </div>
+              </TabsContent>
+
+              <TabsContent value="privacy" className="space-y-6 m-0 p-8">
+                 <div className="bg-white/5 p-6 rounded-[2rem] border border-white/5 space-y-6">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="bg-primary/10 p-2 rounded-xl"><Fingerprint className="w-5 h-5 text-primary" /></div>
+                        <div className="flex flex-col">
+                           <span className="text-sm font-bold text-white uppercase italic">Режим призрака</span>
+                           <span className="text-[9px] text-primary/40 font-black uppercase tracking-widest">Скрыть онлайн-статус</span>
+                        </div>
+                      </div>
+                      <Switch checked={form.privacy.isGhostMode} onCheckedChange={v => setForm({...form, privacy: { ...form.privacy, isGhostMode: v }})} />
+                    </div>
+                 </div>
+
+                 <div className="bg-white/5 p-6 rounded-[2rem] border border-white/5 space-y-6">
+                    <div className="space-y-4">
+                       <div className="flex items-center gap-2"><ShieldCheck className="w-4 h-4 text-primary" /><span className="text-[10px] font-black uppercase text-white tracking-widest">Безопасность</span></div>
+                       <div className="flex items-center justify-between">
+                          <span className="text-xs font-bold text-white">Облачный пароль (2FA)</span>
+                          <Switch checked={form.twoFactorEnabled} onCheckedChange={v => setForm({...form, twoFactorEnabled: v})} />
+                       </div>
+                       {form.twoFactorEnabled && (
+                         <Input type="password" value={form.twoFactorPin} onChange={e => setForm({...form, twoFactorPin: e.target.value.replace(/\D/g, '')})} placeholder="6-значный PIN" maxLength={6} className="bg-black/40 border-white/10 h-12 rounded-xl text-center tracking-[0.4em]" />
+                       )}
+                       <div className="flex items-center justify-between">
+                          <span className="text-xs font-bold text-white">Face ID / Touch ID</span>
+                          <Switch checked={form.biometricEnabled} onCheckedChange={v => setForm({...form, biometricEnabled: v})} />
+                       </div>
+                    </div>
+                 </div>
+              </TabsContent>
+
+              <TabsContent value="style" className="space-y-6 m-0 p-8">
+                 <div className="bg-white/5 p-6 rounded-[2rem] border border-white/5 space-y-6 text-left">
+                    <div className="flex items-center gap-2"><Palette className="w-4 h-4 text-primary" /><span className="text-[10px] font-black uppercase text-white tracking-widest">Оформление</span></div>
+                    <div className="grid grid-cols-2 gap-3">
+                       <button onClick={() => setForm({...form, appearance: 'dark'})} className={cn("p-4 rounded-2xl border transition-all text-center", form.appearance === 'dark' ? "bg-primary/20 border-primary text-primary" : "bg-black/40 border-white/10 text-white/40")}>Темная</button>
+                       <button onClick={() => setForm({...form, appearance: 'light'})} className={cn("p-4 rounded-2xl border transition-all text-center", form.appearance === 'light' ? "bg-primary/20 border-primary text-primary" : "bg-black/40 border-white/10 text-white/40")}>Светлая</button>
+                    </div>
+                 </div>
+              </TabsContent>
+
+              <TabsContent value="data" className="space-y-6 m-0 p-8">
+                 <div className="bg-white/5 p-6 rounded-[2rem] border border-white/5 space-y-6 text-left">
+                    <div className="flex items-center gap-2"><Archive className="w-4 h-4 text-primary" /><span className="text-[10px] font-black uppercase text-white tracking-widest">Хранилище</span></div>
+                    <div className="space-y-3">
+                       <Button variant="ghost" className="w-full justify-between h-12 bg-white/5 rounded-xl text-[10px] font-black uppercase">Очистить кэш <ChevronRight className="w-3 h-3" /></Button>
+                       <Button variant="ghost" className="w-full justify-between h-12 bg-white/5 rounded-xl text-[10px] font-black uppercase">Активные сессии <History className="w-3 h-3" /></Button>
+                    </div>
+                 </div>
               </TabsContent>
             </div>
           </ScrollArea>
@@ -254,4 +342,8 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
       </DialogContent>
     </Dialog>
   );
+}
+
+function ChevronRight({ className }: { className?: string }) {
+  return <svg className={className} width="15" height="15" viewBox="0 0 15 15" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M6.1584 3.13597C5.96314 3.33123 5.96314 3.64781 6.1584 3.84307L9.81533 7.5L6.1584 11.1569C5.96314 11.3522 5.96314 11.6688 6.1584 11.864C6.35366 12.0593 6.67024 12.0593 6.8655 11.864L10.876 7.85355C11.0712 7.65829 11.0712 7.34171 10.876 7.14645L6.8655 3.13597C6.67024 2.94071 6.35366 2.94071 6.1584 3.13597Z" fill="currentColor" fillRule="evenodd" clipRule="evenodd"></path></svg>;
 }
