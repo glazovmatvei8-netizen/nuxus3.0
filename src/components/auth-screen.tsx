@@ -25,9 +25,8 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 type AuthMode = 'login' | 'register';
 
 /**
- * AuthScreen V56.6.3 «EXACT VK INTEGRATION»
- * ИСПРАВЛЕНО: Интегрирован код виджета, присланный пользователем.
- * Реализована логика: Проверка по номеру -> Вход или Регистрация с предзаполнением.
+ * AuthScreen V56.6.4 «VISIBILITY & INTERACTION»
+ * ИСПРАВЛЕНО: Кнопка VK ID теперь видна, имеет фиксированную высоту и доступна для клика.
  */
 export default function AuthScreen() {
   const auth = useAuth();
@@ -49,7 +48,6 @@ export default function AuthScreen() {
   const vkidContainerRef = useRef<HTMLDivElement>(null);
   const isVkRendered = useRef(false);
 
-  // ПРЯМАЯ ИНТЕГРАЦИЯ ТВОЕГО КОДА
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
@@ -57,7 +55,7 @@ export default function AuthScreen() {
       const VKID = (window as any).VKIDSDK;
       if (!VKID || !vkidContainerRef.current || isVkRendered.current) return;
 
-      // Конфигурация из твоего кода
+      // Точная конфигурация по твоему коду
       VKID.Config.init({
         app: 54684553,
         redirectUrl: 'https://nuxus.fun',
@@ -71,9 +69,10 @@ export default function AuthScreen() {
       oneTap.render({
         container: vkidContainerRef.current,
         showAlternativeLogin: true,
-        scheme: 'dark',
+        scheme: 'light', // Светлая схема, чтобы кнопку было видно на черном фоне
         styles: {
-          borderRadius: 16
+          borderRadius: 12,
+          height: 48
         }
       })
       .on(VKID.WidgetEvents.ERROR, (error: any) => {
@@ -110,7 +109,6 @@ export default function AuthScreen() {
     if (!db || !auth) return;
 
     try {
-      // Извлекаем данные профиля VK
       const vId = data.user_id || data.id;
       const vName = data.user?.first_name ? `${data.user.first_name} ${data.user.last_name || ''}` : "VK User";
       const phoneNumber = data.user?.phone || "";
@@ -118,17 +116,14 @@ export default function AuthScreen() {
       const vkEmail = `vk_${vId}@nuxus.chat`;
       const vkPass = `vk_quantum_${vId}_secure_signal_v3`;
 
-      // 1. Проверяем по номеру телефона (самый надежный способ связки)
       if (phoneNumber) {
         const cleanPhone = phoneNumber.replace(/\D/g, '');
         const phoneQuery = query(collection(db, 'users'), where('phone', '==', cleanPhone), limit(1));
         const phoneSnap = await getDocs(phoneQuery);
         
         if (!phoneSnap.empty) {
-          // Узел существует -> ВХОД
           const existingUser = phoneSnap.docs[0].data();
           await setPersistence(auth, browserLocalPersistence);
-          // Если пароль в базе не совпадает с дефолтным VK, просим войти через пароль один раз
           try {
             await signInWithEmailAndPassword(auth, existingUser.email || `${cleanPhone}@nuxus.chat`, vkPass);
           } catch (e) {
@@ -146,7 +141,6 @@ export default function AuthScreen() {
         }
       }
 
-      // 2. Если по номеру не нашли, проверяем по VK ID
       const vkQuery = query(collection(db, 'users'), where('vkId', '==', vId), limit(1));
       const vkSnap = await getDocs(vkQuery);
 
@@ -159,7 +153,6 @@ export default function AuthScreen() {
         return;
       }
 
-      // 3. НОВЫЙ ПОЛЬЗОВАТЕЛЬ -> РЕГИСТРАЦИЯ (ПРЕДЗАПОЛНЕНИЕ)
       setMode('register');
       setName(vName);
       setIdentifier(phoneNumber || '');
@@ -329,11 +322,12 @@ export default function AuthScreen() {
                         <div className="h-px flex-1 bg-white/5" />
                      </div>
                      
-                     {/* КОНТЕЙНЕР ДЛЯ ТВОЕГО КОДА ВИДЖЕТА */}
-                     <div className="relative w-full min-h-[52px] z-50">
+                     {/* ИСПРАВЛЕННЫЙ КОНТЕЙНЕР ДЛЯ ВИДЖЕТА VK */}
+                     <div className="relative w-full min-h-[52px] z-[100] flex justify-center">
                         <div 
                           ref={vkidContainerRef} 
-                          className="w-full flex justify-center items-center cursor-pointer" 
+                          className="w-full max-w-[280px] min-h-[48px] rounded-xl overflow-hidden bg-white/5 border border-white/10 shadow-lg cursor-pointer" 
+                          style={{ pointerEvents: 'auto' }}
                         />
                      </div>
                   </div>
@@ -344,7 +338,7 @@ export default function AuthScreen() {
                  <button type="button" onClick={() => setIsLegalOpen(true)} className="text-[9px] font-black uppercase tracking-widest text-white/20 hover:text-primary transition-colors py-1">Политика конфиденциальности</button>
                  <div className="flex items-center gap-3 opacity-30">
                     <ShieldCheck className="w-4 h-4 text-primary" />
-                    <span className="text-[7px] font-black uppercase tracking-[0.4em] text-white">Quantum Link 56.6.3</span>
+                    <span className="text-[7px] font-black uppercase tracking-[0.4em] text-white">Quantum Link 56.6.4</span>
                  </div>
               </div>
             </CardContent>
