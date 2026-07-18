@@ -78,40 +78,6 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
     }
   }, [profile, open]);
 
-  const getVkAppId = () => {
-    const isNative = typeof window !== 'undefined' && (!!(window as any).Capacitor || !!(window as any).webkit);
-    return isNative ? 54684554 : 54684553;
-  };
-
-  const handleVkLink = async () => {
-    const VKID = (window as any).VKIDSDK;
-    if (!VKID) {
-      toast({ title: "SDK НЕ ГОТОВ", description: "Подождите секунду...", variant: "destructive" });
-      return;
-    }
-    setIsVkLinking(true);
-    try {
-      const APP_ID = getVkAppId();
-      VKID.Config.init({
-        app: APP_ID,
-        redirectUrl: 'https://nuxus.fun',
-        responseMode: VKID.ConfigResponseMode.Callback,
-        source: VKID.ConfigSource.LOWCODE,
-      });
-
-      const result = await VKID.Auth.login();
-      if (result && user && db) {
-        const data = await VKID.Auth.exchangeCode(result.code, result.device_id);
-        await updateDoc(doc(db, 'users', user.uid), { vkId: data.user_id || data.id });
-        toast({ title: "VK ID Привязан" });
-      }
-    } catch (e: any) {
-      toast({ title: "Сбой привязки", variant: "destructive" });
-    } finally {
-      setIsVkLinking(false);
-    }
-  };
-
   const handleSendEmailCode = async () => {
     if (!emailToVerify || !emailToVerify.includes('@')) return;
     setIsVerifying(true);
@@ -120,7 +86,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
       if (success) {
         setActiveCode(code);
         setVerifyStep('verifying_email');
-        toast({ title: "Код отправлен на почту" });
+        toast({ title: "Код отправлен" });
       }
     } catch (e) { toast({ title: "Сбой ИИ", variant: "destructive" }); }
     finally { setIsVerifying(false); }
@@ -137,7 +103,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
       if (verifyStep === 'verifying_email') {
         await updateDoc(doc(db, 'users', user.uid), { email: emailToVerify, emailVerified: true });
         setForm({ ...form, email: emailToVerify });
-        toast({ title: "Почта подтверждена" });
+        toast({ title: "Email подтвержден" });
       }
       setVerifyStep('idle');
       setInputCode('');
@@ -166,7 +132,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         'settings.privacy.isGhostMode': form.privacy.isGhostMode
       });
       onOpenChange(false);
-      toast({ title: "Конфигурация сохранена" });
+      toast({ title: "Настройки сохранены" });
     } catch (e: any) { toast({ title: "Ошибка", description: e.message, variant: "destructive" }); }
     finally { setIsSaving(false); }
   };
@@ -176,7 +142,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
       <DialogContent className="max-w-md bg-[#0a0a0c]/98 backdrop-blur-[50px] border-white/10 p-0 overflow-hidden h-[90dvh] flex flex-col rounded-[3rem] shadow-2xl outline-none">
         <DialogHeader className="p-8 border-b border-white/5 shrink-0 relative overflow-hidden text-left">
           <DialogTitle className="flex items-center gap-3 text-2xl font-black italic uppercase text-white relative z-10">
-            <Settings2 className="w-7 h-7 text-primary" /> ПАРАМЕТРЫ ЯДРА
+            <Settings2 className="w-7 h-7 text-primary" /> КОНФИГУРАЦИЯ
           </DialogTitle>
         </DialogHeader>
         
@@ -212,52 +178,25 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                          </div>
                        </div>
                        <div className="space-y-1.5">
-                         <Label className="text-[9px] font-black uppercase text-primary/60 ml-2">Номер телефона</Label>
-                         <Input value={form.phone} onChange={e => setForm({...form, phone: e.target.value})} className="bg-black/40 border-white/10 h-12 rounded-xl font-bold" />
+                         <div className="flex items-center justify-between px-1">
+                            <Label className="text-[9px] font-black uppercase text-primary/60 ml-1">Телефон</Label>
+                            {profile?.phoneVerified && <CheckCircle2 className="w-3 h-3 text-green-500" />}
+                         </div>
+                         <div className="flex gap-2">
+                            <Input value={form.phone} onChange={e => setForm({...form, phone: e.target.value})} className="bg-black/40 border-white/10 h-12 rounded-xl font-bold flex-1" />
+                            {!profile?.phoneVerified && <Button className="h-12 px-4 rounded-xl bg-primary text-[9px] font-black uppercase">Verify</Button>}
+                         </div>
                        </div>
                        <div className="space-y-1.5">
-                         <Label className="text-[9px] font-black uppercase text-primary/60 ml-2">Био (О себе)</Label>
-                         <Textarea value={form.bio} onChange={e => setForm({...form, bio: e.target.value})} className="bg-black/40 border-white/10 rounded-2xl h-24 resize-none" placeholder="Спецификация..." />
+                         <Label className="text-[9px] font-black uppercase text-primary/60 ml-2">Био</Label>
+                         <Textarea value={form.bio} onChange={e => setForm({...form, bio: e.target.value})} className="bg-black/40 border-white/10 rounded-2xl h-24 resize-none" placeholder="Информация об узле..." />
                        </div>
                        <div className="space-y-4">
-                          <Label className="text-[9px] font-black uppercase text-primary/60 ml-2">Цифровой Статус</Label>
+                          <Label className="text-[9px] font-black uppercase text-primary/60 ml-2">Статус</Label>
                           <div className="flex gap-3">
                              <Input value={form.statusEmoji} onChange={e => setForm({...form, statusEmoji: e.target.value})} className="w-16 h-12 bg-black/40 border-white/10 rounded-xl text-center text-xl" placeholder="🔥" />
-                             <Input value={form.statusText} onChange={e => setForm({...form, statusText: e.target.value})} className="flex-1 h-12 bg-black/40 border-white/10 rounded-xl text-xs font-bold" placeholder="Текст статуса..." />
+                             <Input value={form.statusText} onChange={e => setForm({...form, statusText: e.target.value})} className="flex-1 h-12 bg-black/40 border-white/10 rounded-xl text-xs font-bold" placeholder="Текст..." />
                           </div>
-                       </div>
-                    </div>
-                    <div className="bg-white/5 p-6 rounded-[2rem] border border-white/5 space-y-6">
-                       <div className="space-y-4">
-                          <Label className="text-[10px] font-black uppercase text-white tracking-widest ml-1">Связанные аккаунты</Label>
-                          <Button 
-                            onClick={handleVkLink} 
-                            disabled={isVkLinking}
-                            className="w-full h-12 bg-[#0077ff] rounded-xl flex items-center justify-center gap-2 hover:bg-[#0066dd] transition-all"
-                          >
-                             {isVkLinking ? <Loader2 className="w-4 h-4 animate-spin" /> : (
-                               <>
-                                 <Zap className="w-4 h-4 fill-current" />
-                                 <span className="text-[10px] font-black uppercase">Связать с VK ID</span>
-                               </>
-                             )}
-                          </Button>
-                       </div>
-                       <div className="space-y-4">
-                          <div className="flex items-center justify-between px-1">
-                            <Label className="text-[10px] font-black uppercase text-white tracking-widest">Email</Label>
-                            {profile?.emailVerified && <CheckCircle2 className="w-4 h-4 text-green-500" />}
-                          </div>
-                          <div className="flex gap-2">
-                            <Input value={emailToVerify} onChange={e => setEmailToVerify(e.target.value)} className="bg-black/40 border-white/10 h-12 rounded-xl text-sm" placeholder="Email..." />
-                            {!profile?.emailVerified && <Button onClick={handleSendEmailCode} disabled={isVerifying} className="h-12 w-12 rounded-xl bg-primary shrink-0"><Check className="w-5 h-5" /></Button>}
-                          </div>
-                          {verifyStep === 'verifying_email' && (
-                            <div className="space-y-4 animate-in slide-in-from-top-4">
-                              <Input value={inputCode} onChange={e => setInputCode(e.target.value)} placeholder="000000" className="bg-black/60 border-primary/40 h-14 rounded-2xl text-center text-2xl tracking-[0.4em] font-black" />
-                              <Button onClick={handleConfirmCode} className="w-full h-11 bg-primary rounded-xl font-black uppercase text-[10px]">Подтвердить</Button>
-                            </div>
-                          )}
                        </div>
                     </div>
                   </div>
@@ -269,36 +208,30 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                       <div className="flex items-center gap-3">
                         <div className="bg-primary/10 p-2 rounded-xl"><Fingerprint className="w-5 h-5 text-primary" /></div>
                         <div className="flex flex-col">
-                           <span className="text-sm font-bold text-white uppercase italic">Режим призрака</span>
-                           <span className="text-[9px] text-primary/40 font-black uppercase tracking-widest">Скрыть онлайн-статус</span>
+                           <span className="text-sm font-bold text-white uppercase italic">Ghost Mode</span>
+                           <span className="text-[9px] text-primary/40 font-black uppercase tracking-widest">Невидимка</span>
                         </div>
                       </div>
                       <Switch checked={form.privacy.isGhostMode} onCheckedChange={v => setForm({...form, privacy: { ...form.privacy, isGhostMode: v }})} />
                     </div>
-                 </div>
-                 <div className="bg-white/5 p-6 rounded-[2rem] border border-white/5 space-y-6">
-                    <div className="space-y-4">
+                    <div className="space-y-4 pt-4 border-t border-white/5">
                        <div className="flex items-center gap-2"><ShieldCheck className="w-4 h-4 text-primary" /><span className="text-[10px] font-black uppercase text-white tracking-widest">Безопасность</span></div>
                        <div className="flex items-center justify-between">
-                          <span className="text-xs font-bold text-white">Облачный пароль (2FA)</span>
+                          <span className="text-xs font-bold text-white">Облачный пароль</span>
                           <Switch checked={form.twoFactorEnabled} onCheckedChange={v => setForm({...form, twoFactorEnabled: v})} />
                        </div>
                        {form.twoFactorEnabled && (
                          <Input type="password" value={form.twoFactorPin} onChange={e => setForm({...form, twoFactorPin: e.target.value.replace(/\D/g, '')})} placeholder="6-значный PIN" maxLength={6} className="bg-black/40 border-white/10 h-12 rounded-xl text-center tracking-[0.4em]" />
                        )}
-                       <div className="flex items-center justify-between">
-                          <span className="text-xs font-bold text-white">Биометрия (Hardware)</span>
-                          <Switch checked={form.biometricEnabled} onCheckedChange={v => setForm({...form, biometricEnabled: v})} />
-                       </div>
                     </div>
                  </div>
               </TabsContent>
               <TabsContent value="style" className="space-y-6 m-0 p-8">
                  <div className="bg-white/5 p-6 rounded-[2rem] border border-white/5 space-y-6 text-left">
-                    <div className="flex items-center gap-2"><Palette className="w-4 h-4 text-primary" /><span className="text-[10px] font-black uppercase text-white tracking-widest">Оформление</span></div>
+                    <div className="flex items-center gap-2"><Palette className="w-4 h-4 text-primary" /><span className="text-[10px] font-black uppercase text-white tracking-widest">Тема</span></div>
                     <div className="grid grid-cols-2 gap-3">
-                       <button onClick={() => setForm({...form, appearance: 'dark'})} className={cn("p-4 rounded-2xl border transition-all text-center", form.appearance === 'dark' ? "bg-primary/20 border-primary text-primary" : "bg-black/40 border-white/10 text-white/40")}>Темная</button>
-                       <button onClick={() => setForm({...form, appearance: 'light'})} className={cn("p-4 rounded-2xl border transition-all text-center", form.appearance === 'light' ? "bg-primary/20 border-primary text-primary" : "bg-black/40 border-white/10 text-white/40")}>Светлая</button>
+                       <button onClick={() => setForm({...form, appearance: 'dark'})} className={cn("p-4 rounded-2xl border transition-all text-center", form.appearance === 'dark' ? "bg-primary/20 border-primary text-primary" : "bg-black/40 border-white/10 text-white/40")}>Dark</button>
+                       <button onClick={() => setForm({...form, appearance: 'light'})} className={cn("p-4 rounded-2xl border transition-all text-center", form.appearance === 'light' ? "bg-primary/20 border-primary text-primary" : "bg-black/40 border-white/10 text-white/40")}>Light</button>
                     </div>
                  </div>
               </TabsContent>
@@ -307,7 +240,6 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                     <div className="flex items-center gap-2"><Archive className="w-4 h-4 text-primary" /><span className="text-[10px] font-black uppercase text-white tracking-widest">Хранилище</span></div>
                     <div className="space-y-3">
                        <Button variant="ghost" className="w-full justify-between h-12 bg-white/5 rounded-xl text-[10px] font-black uppercase">Очистить кэш <ChevronRight className="w-3 h-3" /></Button>
-                       <Button variant="ghost" className="w-full justify-between h-12 bg-white/5 rounded-xl text-[10px] font-black uppercase">Активные сессии <History className="w-3 h-3" /></Button>
                     </div>
                  </div>
               </TabsContent>

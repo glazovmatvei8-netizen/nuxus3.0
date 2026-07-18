@@ -55,7 +55,7 @@ interface AppState {
   setStoriesToView: (stories: Story[] | null) => void;
 }
 
-const AppContext = createContext<AppState | undefined>(undefined);
+export const AppContext = createContext<AppState | undefined>(undefined);
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const [currentChatId, setCurrentChatId] = useState<string | null>(null);
@@ -71,14 +71,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [inspectedUserId, setInspectedUserId] = useState<string | null>(null);
   const [isInterceptionRequested, setIsInterceptionRequested] = useState(false);
   
-  // Persistent active account index
-  const [activeAccountIndex, setActiveAccountIndex] = useState(() => {
+  const [activeAccountIndex, setActiveAccountIndex] = useState(0);
+
+  useEffect(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('nuxus_active_index');
-      return saved ? parseInt(saved) : 0;
+      if (saved) setActiveAccountIndex(parseInt(saved));
     }
-    return 0;
-  });
+  }, []);
 
   useEffect(() => {
     localStorage.setItem('nuxus_active_index', activeAccountIndex.toString());
