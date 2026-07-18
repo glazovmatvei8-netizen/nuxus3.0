@@ -1,7 +1,7 @@
 
 "use client"
 
-import React, { useState, useRef, useEffect, useMemo } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -24,8 +24,8 @@ import type { User } from '@/lib/types';
 import { sendVerificationCode } from '@/ai/flows/send-verification-email-flow';
 
 /**
- * SETTINGS MODAL V57.1.0 «RECOVERY SHIELD»
- * ИСПРАВЛЕНО: Добавлен импорт cn, восстановлены все поля профиля.
+ * SETTINGS MODAL V57.2.0 «RECOVERY SHIELD»
+ * ИСПРАВЛЕНО: Исправлен импорт cn, восстановлены все поля профиля.
  */
 export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const auth = useAuth();
@@ -35,12 +35,12 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
   const { settingsTab, setSettingsTab } = useAppState();
   
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const vkidContainerRef = useRef<HTMLDivElement>(null);
 
   const userRef = useMemoFirebase(() => (!db || !user) ? null : doc(db, 'users', user.uid), [db, user]);
   const { data: profile } = useDoc<User>(userRef);
 
   const [isSaving, setIsSaving] = useState(false);
+  const [isVkLinking, setIsVkLinking] = useState(false);
   const [verifyStep, setVerifyStep] = useState<'idle' | 'verifying_email' | 'verifying_phone'>('idle');
   const [emailToVerify, setEmailToVerify] = useState('');
   const [phoneToVerify, setPhoneToVerify] = useState('');
@@ -82,46 +82,36 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
     }
   }, [profile, open]);
 
-  // Интеграция VK OneTap для настроек
-  useEffect(() => {
-    if (open && settingsTab === 'profile' && vkidContainerRef.current) {
-      const renderVK = () => {
-        const VKID = (window as any).VKIDSDK;
-        if (!VKID || !vkidContainerRef.current) return;
-
-        VKID.Config.init({
-          app: 54684553,
-          redirectUrl: 'https://nuxus.fun',
-          responseMode: VKID.ConfigResponseMode.Callback,
-          source: VKID.ConfigSource.LOWCODE,
-          scope: '',
-        });
-
-        const oneTap = new VKID.OneTap();
-        oneTap.render({
-          container: vkidContainerRef.current,
-          showAlternativeLogin: true,
-          styles: { borderRadius: 50, width: 320 }
-        })
-        .on(VKID.OneTapInternalEvents.LOGIN_SUCCESS, async (payload: any) => {
-          const data = await VKID.Auth.exchangeCode(payload.code, payload.device_id);
-          if (data && user) {
-            await updateDoc(doc(db!, 'users', user.uid), { vkId: data.user_id || data.id });
-            toast({ title: "VK ID Привязан" });
-          }
-        });
-      };
-      
-      const timer = setTimeout(renderVK, 500);
-      return () => clearTimeout(timer);
-    }
-  }, [open, settingsTab, user, db, toast]);
-
-  const handleSendEmailCode = async () => {
-    if (!emailToVerify || !emailToVerify.includes('@')) {
-      toast({ title: "Ошибка", description: "Некорректная почта.", variant: "destructive" });
+  const handleVkLink = async () => {
+    const VKID = (window as any).VKIDSDK;
+    if (!VKID) {
+      toast({ title: "SDK НЕ ГОТОВ", description: "Подождите секунду и попробуйте снова.", variant: "destructive" });
       return;
     }
+    setIsVkLinking(true);
+    try {
+      VKID.Config.init({
+        app: 54684553,
+        redirectUrl: 'https://nuxus.fun',
+        responseMode: VKID.ConfigResponseMode.Callback,
+        source: VKID.ConfigSource.LOWCODE,
+      });
+
+      const result = await VKID.Auth.login();
+      if (result && user && db) {
+        const data = await VKID.Auth.exchangeCode(result.code, result.device_id);
+        await updateDoc(doc(db, 'users', user.uid), { vkId: data.user_id || data.id });
+        toast({ title: "VK ID Привязан" });
+      }
+    } catch (e: any) {
+      toast({ title: "Сбой привязки", description: e.message, variant: "destructive" });
+    } finally {
+      setIsVkLinking(false);
+    }
+  };
+
+  const handleSendEmailCode = async () => {
+    if (!emailToVerify || !emailToVerify.includes('@')) return;
     setIsVerifying(true);
     try {
       const { success, code } = await sendVerificationCode({ email: emailToVerify, userName: form.name });
@@ -132,16 +122,6 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
       }
     } catch (e) { toast({ title: "Сбой ИИ", variant: "destructive" }); }
     finally { setIsVerifying(false); }
-  };
-
-  const handleSendPhoneCode = async () => {
-    if (!phoneToVerify) return;
-    setIsVerifying(true);
-    const code = Math.floor(100000 + Math.random() * 900000).toString();
-    setActiveCode(code);
-    setVerifyStep('verifying_phone');
-    toast({ title: "Код SMS", description: `Имитация: ${code}` });
-    setIsVerifying(false);
   };
 
   const handleConfirmCode = async () => {
@@ -156,10 +136,6 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         await updateDoc(doc(db, 'users', user.uid), { email: emailToVerify, emailVerified: true });
         setForm({ ...form, email: emailToVerify });
         toast({ title: "Почта подтверждена" });
-      } else {
-        await updateDoc(doc(db, 'users', user.uid), { phone: phoneToVerify, phoneVerified: true });
-        setForm({ ...form, phone: phoneToVerify });
-        toast({ title: "Телефон подтвержден" });
       }
       setVerifyStep('idle');
       setInputCode('');
@@ -185,8 +161,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         'settings.appearance': form.appearance,
         'settings.theme': form.theme,
         'settings.biometricEnabled': form.biometricEnabled,
-        'settings.privacy.isGhostMode': form.privacy.isGhostMode,
-        'settings.privacy.lastSeenVisibility': form.privacy.lastSeenVisibility
+        'settings.privacy.isGhostMode': form.privacy.isGhostMode
       });
       onOpenChange(false);
       toast({ title: "Конфигурация сохранена" });
@@ -237,14 +212,8 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                        </div>
                        
                        <div className="space-y-1.5">
-                         <div className="flex items-center justify-between px-2">
-                           <Label className="text-[9px] font-black uppercase text-primary/60">Номер телефона</Label>
-                           {profile?.phoneVerified ? <CheckCircle2 className="w-3 h-3 text-green-500" /> : <ShieldAlert className="w-3 h-3 text-red-500" />}
-                         </div>
-                         <div className="flex gap-2">
-                            <Input value={phoneToVerify} onChange={e => setPhoneToVerify(e.target.value)} className="bg-black/40 border-white/10 h-12 rounded-xl font-bold" />
-                            {!profile?.phoneVerified && <Button onClick={handleSendPhoneCode} className="h-12 w-12 rounded-xl bg-primary shrink-0"><Check className="w-5 h-5" /></Button>}
-                         </div>
+                         <Label className="text-[9px] font-black uppercase text-primary/60 ml-2">Номер телефона</Label>
+                         <Input value={form.phone} onChange={e => setForm({...form, phone: e.target.value})} className="bg-black/40 border-white/10 h-12 rounded-xl font-bold" />
                        </div>
 
                        <div className="space-y-1.5">
@@ -264,18 +233,29 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                     <div className="bg-white/5 p-6 rounded-[2rem] border border-white/5 space-y-6">
                        <div className="space-y-4">
                           <Label className="text-[10px] font-black uppercase text-white tracking-widest ml-1">Связанные аккаунты</Label>
-                          <div ref={vkidContainerRef} className="w-full flex justify-center min-h-[48px]" />
+                          <Button 
+                            onClick={handleVkLink} 
+                            disabled={isVkLinking}
+                            className="w-full h-12 bg-[#0077ff] rounded-xl flex items-center justify-center gap-2 hover:bg-[#0066dd] transition-all"
+                          >
+                             {isVkLinking ? <Loader2 className="w-4 h-4 animate-spin" /> : (
+                               <>
+                                 <Zap className="w-4 h-4 fill-current" />
+                                 <span className="text-[10px] font-black uppercase">Связать с VK ID</span>
+                               </>
+                             )}
+                          </Button>
                        </div>
                        <div className="space-y-4">
-                          <div className="flex items-center justify-between">
-                            <Label className="text-[10px] font-black uppercase text-white tracking-widest ml-1">Электронная почта</Label>
+                          <div className="flex items-center justify-between px-1">
+                            <Label className="text-[10px] font-black uppercase text-white tracking-widest">Email</Label>
                             {profile?.emailVerified && <CheckCircle2 className="w-4 h-4 text-green-500" />}
                           </div>
                           <div className="flex gap-2">
                             <Input value={emailToVerify} onChange={e => setEmailToVerify(e.target.value)} className="bg-black/40 border-white/10 h-12 rounded-xl text-sm" placeholder="Email..." />
-                            {!profile?.emailVerified && <Button onClick={handleSendEmailCode} className="h-12 w-12 rounded-xl bg-primary shrink-0"><Check className="w-5 h-5" /></Button>}
+                            {!profile?.emailVerified && <Button onClick={handleSendEmailCode} disabled={isVerifying} className="h-12 w-12 rounded-xl bg-primary shrink-0"><Check className="w-5 h-5" /></Button>}
                           </div>
-                          {(verifyStep === 'verifying_email' || verifyStep === 'verifying_phone') && (
+                          {verifyStep === 'verifying_email' && (
                             <div className="space-y-4 animate-in slide-in-from-top-4">
                               <Input value={inputCode} onChange={e => setInputCode(e.target.value)} placeholder="000000" className="bg-black/60 border-primary/40 h-14 rounded-2xl text-center text-2xl tracking-[0.4em] font-black" />
                               <Button onClick={handleConfirmCode} className="w-full h-11 bg-primary rounded-xl font-black uppercase text-[10px]">Подтвердить</Button>

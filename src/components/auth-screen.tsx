@@ -23,6 +23,10 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 
 type AuthMode = 'login' | 'register';
 
+/**
+ * AUTH SCREEN V57.2.0 «HYBRID RECOVERY»
+ * ИСПРАВЛЕНО: Кастомная кнопка VK с принудительной синхронизацией SDK.
+ */
 export default function AuthScreen() {
   const auth = useAuth();
   const db = useFirestore();
@@ -31,6 +35,7 @@ export default function AuthScreen() {
   
   const [mode, setMode] = useState<AuthMode>('login');
   const [isLoading, setIsLoading] = useState(false);
+  const [isVkLoading, setIsVkLoading] = useState(false);
   const [showPass, setShowPass] = useState(false);
   const [vkIdToLink, setVkIdToLink] = useState<number | null>(null);
 
@@ -39,15 +44,16 @@ export default function AuthScreen() {
   const [name, setName] = useState('');
   const [username, setUsername] = useState('');
 
-  const vkidContainerRef = useRef<HTMLDivElement>(null);
-  const sdkInited = useRef(false);
+  // Логика VK ID Popup
+  const handleVkLogin = async () => {
+    const VKID = (window as any).VKIDSDK;
+    if (!VKID) {
+      toast({ title: "SDK НЕ ГОТОВ", description: "Проверьте соединение. Попробуйте еще раз через секунду.", variant: "destructive" });
+      return;
+    }
 
-  // ГЛОБАЛЬНАЯ ИНИЦИАЛИЗАЦИЯ VK SDK
-  useEffect(() => {
-    const initVK = async () => {
-      const VKID = (window as any).VKIDSDK;
-      if (!VKID || sdkInited.current) return;
-
+    setIsVkLoading(true);
+    try {
       VKID.Config.init({
         app: 54684553,
         redirectUrl: 'https://nuxus.fun',
@@ -56,46 +62,17 @@ export default function AuthScreen() {
         scope: '',
       });
 
-      // 1. Интеграция Шторки (FloatingOneTap)
-      const floatingOneTap = new VKID.FloatingOneTap();
-      floatingOneTap.render({
-        appName: 'Nuxus 2.0',
-        showAlternativeLogin: true
-      })
-      .on(VKID.FloatingOneTapInternalEvents.LOGIN_SUCCESS, (payload: any) => {
-        VKID.Auth.exchangeCode(payload.code, payload.device_id)
-          .then((data: any) => {
-            floatingOneTap.close();
-            handleVkSuccess(data);
-          });
-      });
-
-      // 2. Интеграция Кнопки (OneTap) в форму
-      if (vkidContainerRef.current) {
-        const oneTap = new VKID.OneTap();
-        oneTap.render({
-          container: vkidContainerRef.current,
-          showAlternativeLogin: true,
-          styles: { borderRadius: 50, width: 385 }
-        })
-        .on(VKID.OneTapInternalEvents.LOGIN_SUCCESS, (payload: any) => {
-          VKID.Auth.exchangeCode(payload.code, payload.device_id)
-            .then(handleVkSuccess);
-        });
+      const result = await VKID.Auth.login();
+      if (result) {
+        const data = await VKID.Auth.exchangeCode(result.code, result.device_id);
+        handleVkSuccess(data);
       }
-
-      sdkInited.current = true;
-    };
-
-    const interval = setInterval(() => {
-      if ((window as any).VKIDSDK) {
-        initVK();
-        clearInterval(interval);
-      }
-    }, 500);
-
-    return () => clearInterval(interval);
-  }, []);
+    } catch (e: any) {
+      toast({ title: "Сбой VK", description: e.message || "Окно входа было закрыто.", variant: "destructive" });
+    } finally {
+      setIsVkLoading(false);
+    }
+  };
 
   const handleVkSuccess = async (data: any) => {
     if (!db || !auth) return;
@@ -108,9 +85,8 @@ export default function AuthScreen() {
       const vkEmail = `vk_${vId}@nuxus.chat`;
       const vkPass = `vk_quantum_${vId}_secure_v57`;
 
-      // Поиск по vkId
+      // 1. Поиск по vkId (Прямая связка)
       const vkSnap = await getDocs(query(collection(db, 'users'), where('vkId', '==', vId), limit(1)));
-
       if (!vkSnap.empty) {
         await setPersistence(auth, browserLocalPersistence);
         await signInWithEmailAndPassword(auth, vkEmail, vkPass);
@@ -119,11 +95,11 @@ export default function AuthScreen() {
         return;
       }
 
-      // Поиск по номеру телефона
+      // 2. Поиск по номеру телефона (Умная связка)
       if (phoneNumber) {
         const phoneSnap = await getDocs(query(collection(db, 'users'), where('phone', '==', phoneNumber), limit(1)));
         if (!phoneSnap.empty) {
-          toast({ title: "Узел Обнаружен", description: "Введите пароль для привязки VK к вашему узлу." });
+          toast({ title: "Узел Обнаружен", description: "Введите пароль вашего аккаунта Nuxus для привязки VK." });
           setIdentifier(phoneNumber);
           setMode('login');
           setVkIdToLink(vId);
@@ -131,14 +107,14 @@ export default function AuthScreen() {
         }
       }
 
-      // Если новый пользователь
+      // 3. Новый пользователь
       setMode('register');
       setName(vName);
       setIdentifier(phoneNumber || '');
       setVkIdToLink(vId);
-      toast({ title: "Данные получены", description: "Завершите регистрацию." });
+      toast({ title: "Данные получены", description: "Завершите регистрацию вашего узла." });
     } catch (e: any) {
-      toast({ title: "Сбой VK", description: e.message, variant: "destructive" });
+      toast({ title: "Сбой синхронизации", description: e.message, variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
@@ -158,7 +134,7 @@ export default function AuthScreen() {
         const userCred = await signInWithEmailAndPassword(auth, finalEmail, password);
         if (vkIdToLink) {
           await updateDoc(doc(db, 'users', userCred.user.uid), { vkId: vkIdToLink });
-          toast({ title: "VK ID Привязан" });
+          toast({ title: "VK ID Привязан к узлу" });
         }
         setIs2FAVerified(true);
       } else {
@@ -179,7 +155,7 @@ export default function AuthScreen() {
         setIs2FAVerified(true);
       }
     } catch (e: any) {
-      toast({ title: "Ошибка", description: "Проверьте данные.", variant: "destructive" });
+      toast({ title: "Ошибка", description: "Проверьте идентификатор или пароль.", variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
@@ -256,8 +232,23 @@ export default function AuthScreen() {
                         <div className="h-px flex-1 bg-white/5" /><span className="text-[8px] font-black text-white/20 uppercase tracking-[0.3em]">или</span><div className="h-px flex-1 bg-white/5" />
                      </div>
                      
-                     {/* VK ID OneTap Container */}
-                     <div ref={vkidContainerRef} className="w-full flex justify-center min-h-[52px] overflow-visible" />
+                     <button 
+                       type="button"
+                       onClick={handleVkLogin}
+                       disabled={isVkLoading}
+                       className="w-full h-14 bg-[#0077ff] hover:bg-[#0066dd] text-white rounded-[1.2rem] flex items-center justify-center gap-3 transition-all active:scale-95 shadow-xl font-bold"
+                     >
+                       {isVkLoading ? (
+                         <Loader2 className="w-5 h-5 animate-spin" />
+                       ) : (
+                         <>
+                           <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                             <path d="M12.785 16.241s.288-.032.436-.194c.136-.148.132-.427.132-.427s-.02-1.304.587-1.496c.598-.19 1.365 1.26 2.18 1.817.615.422 1.083.33 1.083.33l2.177-.03s1.14-.071.6-.972c-.044-.073-.314-.66-1.617-1.866-1.364-1.26-1.183-1.055.462-3.23.998-1.332 1.397-2.144 1.272-2.493-.12-.333-.862-.244-.862-.244l-2.45.015s-.182-.025-.316.056c-.132.08-.217.267-.217.267s-.39 1.037-.91 1.92c-1.094 1.84-1.532 1.937-1.713 1.82-.42-.27-.315-1.087-.315-1.666 0-1.812.275-2.568-.536-2.764-.27-.065-.467-.108-1.155-.115-.882-.01-1.63.003-2.054.21-.282.14-.498.45-.366.468.164.023.535.1.732.365.254.34.245 1.103.245 1.103s.146 2.13-.34 2.395c-.334.183-.792-.19-1.775-1.896-.504-.87-.886-1.83-.886-1.83s-.074-.18-.206-.276c-.16-.12-.384-.157-.384-.157l-2.33.015s-.35.01-.478.162c-.115.137-.008.42-.008.42s1.834 4.286 3.91 6.45c1.903 1.984 4.067 1.85 4.067 1.85h.98z"/>
+                           </svg>
+                           <span className="uppercase text-[11px] tracking-widest font-black">Войти через VK</span>
+                         </>
+                       )}
+                     </button>
                   </div>
                 </div>
               </form>
