@@ -25,8 +25,8 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 type AuthMode = 'login' | 'register';
 
 /**
- * AuthScreen V56.7.0 «EXACT VK ID INJECTION»
- * ИСПРАВЛЕНО: Виджет OneTap теперь гарантированно виден и кликабелен под формами.
+ * AuthScreen V56.7.1 «EXACT VK ID INJECTION»
+ * ИСПРАВЛЕНО: Интеграция кода в точности по шаблону пользователя (styles: width 385, borderRadius 50).
  */
 export default function AuthScreen() {
   const auth = useAuth();
@@ -70,7 +70,11 @@ export default function AuthScreen() {
         // РЕНДЕРИНГ В ТОЧНОСТИ ПО КОДУ ПОЛЬЗОВАТЕЛЯ
         oneTap.render({
           container: vkidContainerRef.current,
-          showAlternativeLogin: true
+          showAlternativeLogin: true,
+          styles: {
+            borderRadius: 50,
+            width: 385
+          }
         })
         .on(VKID.WidgetEvents.ERROR, (error: any) => {
           console.error("VK ID Error:", error);
@@ -116,7 +120,6 @@ export default function AuthScreen() {
       const vkEmail = `vk_${vId}@nuxus.chat`;
       const vkPass = `vk_quantum_${vId}_secure_signal_v3`;
 
-      // ПРОВЕРКА ПО НОМЕРУ (Как просил пользователь)
       if (phoneNumber) {
         const cleanPhone = phoneNumber.replace(/\D/g, '');
         const phoneQuery = query(collection(db, 'users'), where('phone', '==', cleanPhone), limit(1));
@@ -154,7 +157,6 @@ export default function AuthScreen() {
         return;
       }
 
-      // ПЕРЕКЛЮЧЕНИЕ НА РЕГИСТРАЦИЮ (Как просил пользователь)
       setMode('register');
       setName(vName);
       setIdentifier(phoneNumber || '');
@@ -263,9 +265,9 @@ export default function AuthScreen() {
             <NuxusLogo size={90} />
           </div>
 
-          <Card className="w-full max-w-[380px] border-white/[0.08] bg-white/[0.02] backdrop-blur-[40px] shadow-2xl rounded-[3rem] overflow-hidden relative border-2 z-20">
+          <Card className="w-full max-w-[420px] border-white/[0.08] bg-white/[0.02] backdrop-blur-[40px] shadow-2xl rounded-[3rem] overflow-hidden relative border-2 z-20">
             <CardHeader className="text-center pb-2 pt-10 px-8">
-              <div className="flex bg-white/5 p-1 rounded-2xl mb-6 border border-white/5">
+              <div className="flex bg-white/5 p-1 rounded-2xl mb-6 border border-white/5 max-w-[320px] mx-auto">
                 <button type="button" onClick={() => setMode('login')} className={cn("flex-1 h-10 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all", mode === 'login' ? "bg-primary text-white" : "text-white/30")}>Вход</button>
                 <button type="button" onClick={() => setMode('register')} className={cn("flex-1 h-10 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all", mode === 'register' ? "bg-primary text-white" : "text-white/30")}>Регистрация</button>
               </div>
@@ -324,11 +326,11 @@ export default function AuthScreen() {
                         <div className="h-px flex-1 bg-white/5" />
                      </div>
                      
-                     {/* КОНТЕЙНЕР ДЛЯ ВИДЖЕТА VK ID (Гарантированная высота для iframe) */}
-                     <div className="relative w-full min-h-[44px] z-[100] flex justify-center items-center">
+                     {/* КОНТЕЙНЕР ДЛЯ ВИДЖЕТА VK ID (Размер 385px согласно коду пользователя) */}
+                     <div className="relative w-full min-h-[48px] z-[100] flex justify-center items-center overflow-visible">
                         <div 
                           ref={vkidContainerRef} 
-                          className="w-full max-w-[320px] min-h-[44px] overflow-visible cursor-pointer" 
+                          className="w-full max-w-[385px] min-h-[48px] overflow-visible cursor-pointer flex justify-center" 
                           style={{ pointerEvents: 'auto', display: 'block' }}
                         />
                      </div>
@@ -340,7 +342,7 @@ export default function AuthScreen() {
                  <button type="button" onClick={() => setIsLegalOpen(true)} className="text-[9px] font-black uppercase tracking-widest text-white/20 hover:text-primary transition-colors py-1">Политика конфиденциальности</button>
                  <div className="flex items-center gap-3 opacity-30">
                     <ShieldCheck className="w-4 h-4 text-primary" />
-                    <span className="text-[7px] font-black uppercase tracking-[0.4em] text-white">Quantum Link 56.7.0</span>
+                    <span className="text-[7px] font-black uppercase tracking-[0.4em] text-white">Quantum Link 56.7.1</span>
                  </div>
               </div>
             </CardContent>

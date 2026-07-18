@@ -1,13 +1,13 @@
 
 {
-  "latestVersion": "56.6.7",
-  "qesVersion": "56.6",
-  "build": "VK-Injection-Final",
+  "latestVersion": "56.7.1",
+  "qesVersion": "56.7",
+  "build": "VK-Final-Style-Injection",
   "sizeMb": 158,
   "changelog": [
-    "Integrated: Официальный код VK ID OneTap SDK (Low Code)",
-    "Fixed: Виджет теперь виден под кнопками входа и регистрации",
-    "Improved: Автоматическая проверка номера телефона при входе через VK",
-    "Improved: Авто-заполнение профиля при первой регистрации через VK"
+    "Integrated: Официальный стиль виджета VK ID (385px, 50px radius)",
+    "Improved: Виджет OneTap теперь виден под формами Входа и Регистрации",
+    "Improved: Повышена устойчивость инициализации SDK в React-среде",
+    "Fixed: Устранены ограничения контейнера, мешавшие отображению кнопки"
   ]
 }
