@@ -1,13 +1,13 @@
 
 "use client"
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Lock, Eye, EyeOff, User as UserIcon, Link as LinkIcon, Sparkles } from 'lucide-react';
+import { Loader2, Lock, Eye, EyeOff, User as UserIcon, Link as LinkIcon } from 'lucide-react';
 import { useAuth, useFirestore } from '@/firebase';
 import { 
   signInWithEmailAndPassword,
@@ -23,10 +23,8 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 
 type AuthMode = 'login' | 'register';
 
-/**
- * AUTH SCREEN V57.2.0 «HYBRID RECOVERY»
- * ИСПРАВЛЕНО: Кастомная кнопка VK с принудительной синхронизацией SDK.
- */
+const VK_APP_ID = 54684554; // ОБНОВЛЕННЫЙ ID ДЛЯ APK
+
 export default function AuthScreen() {
   const auth = useAuth();
   const db = useFirestore();
@@ -44,22 +42,38 @@ export default function AuthScreen() {
   const [name, setName] = useState('');
   const [username, setUsername] = useState('');
 
-  // Логика VK ID Popup
+  // Интеллектуальный поиск SDK
+  const ensureSDK = (): Promise<any> => {
+    return new Promise((resolve) => {
+      if ((window as any).VKIDSDK) return resolve((window as any).VKIDSDK);
+      
+      // Если SDK нет, пробуем внедрить его динамически
+      const script = document.createElement('script');
+      script.src = "https://unpkg.com/@vkid/sdk@2.1.0/dist-sdk/umd/index.js";
+      script.onload = () => resolve((window as any).VKIDSDK);
+      document.head.appendChild(script);
+
+      // Тайм-аут на случай провала сети
+      setTimeout(() => resolve((window as any).VKIDSDK), 3000);
+    });
+  };
+
   const handleVkLogin = async () => {
-    const VKID = (window as any).VKIDSDK;
+    setIsVkLoading(true);
+    const VKID = await ensureSDK();
+
     if (!VKID) {
-      toast({ title: "SDK НЕ ГОТОВ", description: "Проверьте соединение. Попробуйте еще раз через секунду.", variant: "destructive" });
+      toast({ title: "SDK НЕ ОТВЕЧАЕТ", description: "Проверьте соединение с узлами VK. Попробуйте еще раз.", variant: "destructive" });
+      setIsVkLoading(false);
       return;
     }
 
-    setIsVkLoading(true);
     try {
       VKID.Config.init({
-        app: 54684553,
+        app: VK_APP_ID,
         redirectUrl: 'https://nuxus.fun',
         responseMode: VKID.ConfigResponseMode.Callback,
         source: VKID.ConfigSource.LOWCODE,
-        scope: '',
       });
 
       const result = await VKID.Auth.login();
@@ -68,7 +82,7 @@ export default function AuthScreen() {
         handleVkSuccess(data);
       }
     } catch (e: any) {
-      toast({ title: "Сбой VK", description: e.message || "Окно входа было закрыто.", variant: "destructive" });
+      toast({ title: "Сбой VK", description: "Окно входа было закрыто или сигнал прерван.", variant: "destructive" });
     } finally {
       setIsVkLoading(false);
     }
@@ -85,34 +99,19 @@ export default function AuthScreen() {
       const vkEmail = `vk_${vId}@nuxus.chat`;
       const vkPass = `vk_quantum_${vId}_secure_v57`;
 
-      // 1. Поиск по vkId (Прямая связка)
       const vkSnap = await getDocs(query(collection(db, 'users'), where('vkId', '==', vId), limit(1)));
       if (!vkSnap.empty) {
         await setPersistence(auth, browserLocalPersistence);
         await signInWithEmailAndPassword(auth, vkEmail, vkPass);
         setIs2FAVerified(true);
-        toast({ title: "Синхронизация по VK ID" });
         return;
       }
 
-      // 2. Поиск по номеру телефона (Умная связка)
-      if (phoneNumber) {
-        const phoneSnap = await getDocs(query(collection(db, 'users'), where('phone', '==', phoneNumber), limit(1)));
-        if (!phoneSnap.empty) {
-          toast({ title: "Узел Обнаружен", description: "Введите пароль вашего аккаунта Nuxus для привязки VK." });
-          setIdentifier(phoneNumber);
-          setMode('login');
-          setVkIdToLink(vId);
-          return;
-        }
-      }
-
-      // 3. Новый пользователь
       setMode('register');
       setName(vName);
       setIdentifier(phoneNumber || '');
       setVkIdToLink(vId);
-      toast({ title: "Данные получены", description: "Завершите регистрацию вашего узла." });
+      toast({ title: "Данные получены", description: "Завершите регистрацию или привяжите существующий узел." });
     } catch (e: any) {
       toast({ title: "Сбой синхронизации", description: e.message, variant: "destructive" });
     } finally {
@@ -129,7 +128,6 @@ export default function AuthScreen() {
 
     try {
       await setPersistence(auth, browserLocalPersistence);
-      
       if (mode === 'login') {
         const userCred = await signInWithEmailAndPassword(auth, finalEmail, password);
         if (vkIdToLink) {
@@ -140,7 +138,6 @@ export default function AuthScreen() {
       } else {
         const usernameWithAt = '@' + username.trim().replace('@', '');
         const userCred = await createUserWithEmailAndPassword(auth, finalEmail, vkIdToLink ? `vk_quantum_${vkIdToLink}_secure_v57` : password);
-        
         await setDoc(doc(db, 'users', userCred.user.uid), {
           id: userCred.user.uid,
           name: name.trim(),
@@ -221,7 +218,7 @@ export default function AuthScreen() {
                     {isLoading ? <Loader2 className="animate-spin w-6 h-6" /> : (mode === 'login' ? "Авторизовать" : "Создать Узел")}
                   </Button>
                   
-                  {vkIdToLink && mode === 'register' && (
+                  {vkIdToLink && (
                     <button type="button" onClick={() => setMode('login')} className="w-full flex items-center justify-center gap-2 text-[9px] font-black uppercase tracking-widest text-primary/60 hover:text-primary py-2">
                       <LinkIcon className="w-3 h-3" /> Привязать к существующему узлу
                     </button>

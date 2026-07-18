@@ -12,7 +12,7 @@ import { Switch } from '@/components/ui/switch';
 import { useAuth, useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
-  LogOut, Settings2, Camera, Star, ShieldCheck, Loader2, Link as LinkIcon, Mail, PhoneCall, Sparkles, Check, CheckCircle2, ShieldAlert, Fingerprint, Palette, Archive, History, Globe, Zap
+  LogOut, Settings2, Camera, Star, ShieldCheck, Loader2, Link as LinkIcon, Mail, PhoneCall, Sparkles, Check, CheckCircle2, ShieldAlert, Fingerprint, Palette, Archive, History, Globe, Zap, ChevronRight
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { signOut } from 'firebase/auth';
@@ -23,10 +23,8 @@ import { isUserPremium, isGlobalAdmin, cn } from '@/lib/utils';
 import type { User } from '@/lib/types';
 import { sendVerificationCode } from '@/ai/flows/send-verification-email-flow';
 
-/**
- * SETTINGS MODAL V57.2.0 «RECOVERY SHIELD»
- * ИСПРАВЛЕНО: Исправлен импорт cn, восстановлены все поля профиля.
- */
+const VK_APP_ID = 54684554; // ОБНОВЛЕННЫЙ ID ДЛЯ APK
+
 export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const auth = useAuth();
   const db = useFirestore();
@@ -85,13 +83,13 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
   const handleVkLink = async () => {
     const VKID = (window as any).VKIDSDK;
     if (!VKID) {
-      toast({ title: "SDK НЕ ГОТОВ", description: "Подождите секунду и попробуйте снова.", variant: "destructive" });
+      toast({ title: "SDK НЕ ГОТОВ", description: "Подождите секунду. Ядро активирует мост VK.", variant: "destructive" });
       return;
     }
     setIsVkLinking(true);
     try {
       VKID.Config.init({
-        app: 54684553,
+        app: VK_APP_ID,
         redirectUrl: 'https://nuxus.fun',
         responseMode: VKID.ConfigResponseMode.Callback,
         source: VKID.ConfigSource.LOWCODE,
@@ -104,7 +102,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         toast({ title: "VK ID Привязан" });
       }
     } catch (e: any) {
-      toast({ title: "Сбой привязки", description: e.message, variant: "destructive" });
+      toast({ title: "Сбой привязки", description: "Окно было закрыто.", variant: "destructive" });
     } finally {
       setIsVkLinking(false);
     }
@@ -329,8 +327,4 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
       </DialogContent>
     </Dialog>
   );
-}
-
-function ChevronRight({ className }: { className?: string }) {
-  return <svg className={className} width="15" height="15" viewBox="0 0 15 15" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M6.1584 3.13597C5.96314 3.33123 5.96314 3.64781 6.1584 3.84307L9.81533 7.5L6.1584 11.1569C5.96314 11.3522 5.96314 11.6688 6.1584 11.864C6.35366 12.0593 6.67024 12.0593 6.8655 11.864L10.876 7.85355C11.0712 7.65829 11.0712 7.34171 10.876 7.14645L6.8655 3.13597C6.67024 2.94071 6.35366 2.94071 6.1584 3.13597Z" fill="currentColor" fillRule="evenodd" clipRule="evenodd"></path></svg>;
 }
