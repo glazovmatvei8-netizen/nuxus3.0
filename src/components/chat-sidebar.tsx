@@ -6,7 +6,7 @@ import { useAppState } from '@/lib/store';
 import { Button } from '@/components/ui/button';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
-  Plus, Ghost, Search, Star, Pin, PinOff, Archive, Lock, Trash2, MessageCircle, Activity, LayoutGrid, Users, User, ChevronRight, Zap, Bookmark, Shield, ChevronDown, UserPlus, LogOut, Check
+  Plus, Ghost, Search, Star, Pin, PinOff, Archive, Lock, Trash2, MessageCircle, Activity, LayoutGrid, Users, User, ChevronRight, Zap, Bookmark, Shield, ChevronDown, UserPlus, LogOut, Check, X
 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { CreateChatModal } from './modals/create-chat-modal';
@@ -29,7 +29,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { signOut } from 'firebase/auth';
 
 /**
- * MULTI-ACCOUNT ITEM V57.5.0
+ * MULTI-ACCOUNT ITEM V57.6.1
  */
 const AccountItem = memo(({ account, isActive, onSwitch, onRemove }: any) => (
   <div className={cn(
@@ -43,13 +43,12 @@ const AccountItem = memo(({ account, isActive, onSwitch, onRemove }: any) => (
         <span className="text-[9px] font-black text-primary/60 uppercase tracking-widest">{account.username}</span>
       </div>
     </div>
-    {isActive ? (
-      <Check className="w-4 h-4 text-primary shrink-0" />
-    ) : (
+    {!isActive && (
       <button onClick={() => onRemove(account.id)} className="opacity-0 group-hover:opacity-100 p-2 text-white/20 hover:text-red-500 transition-all">
         <X className="w-4 h-4" />
       </button>
     )}
+    {isActive && <Check className="w-4 h-4 text-primary shrink-0" />}
   </div>
 ));
 AccountItem.displayName = 'AccountItem';
@@ -157,7 +156,6 @@ const ChatListItem = memo(({
 
   return (
     <div className="relative overflow-hidden touch-pan-y select-none px-4 py-1.5 max-w-full virtual-list-item">
-      {/* Buttons Behind (Improved z-index and opacity) */}
       <div className={cn("absolute inset-y-1.5 left-4 flex h-[calc(100%-12px)] z-0 transition-opacity duration-300 rounded-[2.2rem] overflow-hidden", offsetX > 20 ? "opacity-100" : "opacity-0 pointer-events-none")}>
         <button onClick={(e) => { e.stopPropagation(); onMarkUnread(chat.id); resetSwipe(); }} className="w-[70px] bg-blue-600 flex flex-col items-center justify-center text-white gap-1.5 active:brightness-125 transition-all">
           <MessageCircle className="w-5 h-5" />
@@ -180,7 +178,6 @@ const ChatListItem = memo(({
         </button>
       </div>
 
-      {/* Main Container (Increased Opacity to prevent see-through) */}
       <div 
         className={cn(
           "relative z-10 obsidian-glass will-change-transform w-full select-none rounded-[2.2rem] transition-all bg-[#0a0a0c] border border-white/5", 
@@ -225,9 +222,7 @@ const ChatListItem = memo(({
                   </p>
                 </div>
               </div>
-              
               <div className="absolute right-0 top-1/2 -translate-y-1/2 h-12 w-1.5 bg-primary/10 rounded-l-full group-hover:bg-primary/30 transition-all" />
-              
               {isActive && (
                 <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1.5 h-12 bg-primary rounded-r-full shadow-[0_0_20px_rgba(168,85,247,1)]" />
               )}
@@ -280,7 +275,7 @@ export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?:
     const updateLatency = async () => {
       const start = Date.now();
       try {
-        await fetch('/manifest.webmanifest', { method: 'HEAD', cache: 'no-store' });
+        await fetch('/manifest.json', { method: 'HEAD', cache: 'no-store' });
         const realLat = Date.now() - start;
         setLatency(prev => prev === 0 ? realLat : Math.round(prev * 0.7 + realLat * 0.3));
       } catch (e) {
@@ -321,8 +316,6 @@ export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?:
 
   const handleSwitchAccount = (acc: any) => {
     if (acc.id === user?.uid) return;
-    // В прототипе без кастомных токенов переключение требует повторного входа
-    // Но мы можем запомнить "целевой" аккаунт для автозаполнения
     localStorage.setItem('nuxus_target_account', acc.username);
     signOut(auth).then(() => window.location.reload());
   };
@@ -368,18 +361,10 @@ export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?:
     const savedId = `saved_${user.uid}`;
     const savedRef = doc(db, 'chats', savedId);
     const snap = await getDoc(savedRef);
-    
     if (!snap.exists()) {
       await setDoc(savedRef, {
-        id: savedId,
-        type: 'saved',
-        name: 'Архив Данных',
-        username: '@saved',
-        ownerId: user.uid,
-        participantIds: [user.uid],
-        adminIds: [user.uid],
-        createdAt: new Date().toISOString(),
-        isPublic: false
+        id: savedId, type: 'saved', name: 'Архив Данных', username: '@saved', ownerId: user.uid,
+        participantIds: [user.uid], adminIds: [user.uid], createdAt: new Date().toISOString(), isPublic: false
       });
     }
     setCurrentChatId(savedId);
@@ -392,16 +377,13 @@ export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?:
       const bTime = b.lastMessageAt ? new Date(b.lastMessageAt).getTime() : new Date(b.createdAt).getTime();
       return bTime - aTime;
     });
-
     let saved = result.find(c => c.type === 'saved');
     let others = result.filter(c => c.type !== 'saved');
-
     others.sort((a, b) => {
       const aPinned = currentUserProfile?.pinnedChatIds?.includes(a.id) ? 1 : 0;
       const bPinned = currentUserProfile?.pinnedChatIds?.includes(b.id) ? 1 : 0;
       return bPinned - aPinned;
     });
-
     if (saved && !isArchiveView) others = [saved, ...others];
     if (isArchiveView) return others.filter(c => c.isArchived);
     if (activeTab === 'private') return others.filter(c => c.type === 'private' && !c.isArchived);
@@ -419,7 +401,6 @@ export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?:
              <Activity className={cn("w-5 h-5", latency > 200 ? "text-red-500" : "text-green-500")} />
              <span className="text-[8px] font-black uppercase tabular-nums">{latency} MS</span>
           </div>
-          
           <div className="absolute left-1/2 -translate-x-1/2">
             <Popover>
               <PopoverTrigger asChild>
@@ -437,11 +418,8 @@ export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?:
                        <div className="space-y-1">
                           {savedAccounts.map(acc => (
                             <AccountItem 
-                              key={acc.id} 
-                              account={acc} 
-                              isActive={acc.id === user?.uid} 
-                              onSwitch={handleSwitchAccount} 
-                              onRemove={handleRemoveAccount} 
+                              key={acc.id} account={acc} isActive={acc.id === user?.uid} 
+                              onSwitch={handleSwitchAccount} onRemove={handleRemoveAccount} 
                             />
                           ))}
                        </div>
@@ -468,12 +446,10 @@ export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?:
               </PopoverContent>
             </Popover>
           </div>
-
           <Button variant="ghost" size="icon" className="h-12 w-12 rounded-2xl obsidian-glass border-white/5 hover:border-primary/40 transition-all group shadow-xl" onClick={() => setIsCreateModalOpen(true)}>
             <Plus className="w-6 h-6 group-hover:rotate-90 transition-transform duration-700" />
           </Button>
         </div>
-
         <div className="relative group px-1">
           <div className="absolute -inset-1 bg-gradient-to-r from-primary/20 to-accent/20 rounded-2xl blur-lg opacity-0 group-focus-within:opacity-100 transition-opacity" />
           <div className="relative flex items-center">
@@ -487,13 +463,11 @@ export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?:
           </div>
         </div>
       </div>
-
       <ScrollArea className="flex-1 px-1">
         <div className="flex flex-col max-w-full overflow-x-hidden">
           {!isArchiveView && (
             <div className="animate-in fade-in slide-in-from-top-4 duration-700 px-1">
               <StoriesBar />
-              
               <div className="px-5 pt-6">
                 <button 
                   onClick={handleOpenSaved}
@@ -512,7 +486,6 @@ export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?:
                   <ChevronRight className="w-4 h-4 ml-auto text-primary/20" />
                 </button>
               </div>
-
               <div className="px-5 py-6">
                 <div className="flex items-center gap-3 overflow-x-auto scrollbar-hide py-1">
                   {[
@@ -521,22 +494,19 @@ export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?:
                     { id: 'groups', label: 'ГРУППЫ', icon: Users }
                   ].map((tab) => (
                     <button 
-                      key={tab.id} 
-                      onClick={() => setActiveTab(tab.id)} 
+                      key={tab.id} onClick={() => setActiveTab(tab.id)} 
                       className={cn(
                         "px-6 py-3 rounded-2xl text-[9px] font-black uppercase tracking-widest transition-all whitespace-nowrap border italic flex items-center gap-2.5", 
                         activeTab === tab.id ? "bg-primary text-white border-primary shadow-[0_10px_30px_rgba(168,85,247,0.3)] scale-105" : "text-muted-foreground/40 border-white/[0.05] hover:text-white hover:bg-white/10"
                       )}
                     >
-                      <tab.icon className="w-3.5 h-3.5" />
-                      {tab.label}
+                      <tab.icon className="w-3.5 h-3.5" /> {tab.label}
                     </button>
                   ))}
                 </div>
               </div>
             </div>
           )}
-
           <div className="pb-40 space-y-2 overflow-x-hidden px-1">
             {filteredChats.length > 0 ? (
               filteredChats.map(chat => (
@@ -557,7 +527,6 @@ export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?:
           </div>
         </div>
       </ScrollArea>
-
       <CreateChatModal open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen} />
       <AdminPanelModal open={isAdminPanelOpen} onOpenChange={setIsAdminPanelOpen} />
     </div>

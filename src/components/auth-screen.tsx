@@ -1,7 +1,7 @@
 
 "use client"
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -40,25 +40,61 @@ export default function AuthScreen() {
   const [name, setName] = useState('');
   const [username, setUsername] = useState('');
 
+  const floatingOneTapRef = useRef<any>(null);
+
   // ДИНАМИЧЕСКИЙ ID (APK 54684554 / WEB 54684553)
-  const getVkAppId = () => {
+  const getVkAppId = useCallback(() => {
     const isNative = typeof window !== 'undefined' && (!!(window as any).Capacitor || !!(window as any).webkit);
     return isNative ? 54684554 : 54684553;
-  };
+  }, []);
 
   const ensureSDK = useCallback((): Promise<any> => {
     return new Promise((resolve) => {
       if ((window as any).VKIDSDK) return resolve((window as any).VKIDSDK);
-      
       const script = document.createElement('script');
       script.src = "https://unpkg.com/@vkid/sdk@2.1.0/dist-sdk/umd/index.js";
       script.async = true;
       script.onload = () => resolve((window as any).VKIDSDK);
       document.head.appendChild(script);
-
-      setTimeout(() => resolve((window as any).VKIDSDK), 3500);
+      setTimeout(() => resolve((window as any).VKIDSDK), 4000);
     });
   }, []);
+
+  // АКТИВАЦИЯ ШТОРКИ (FloatingOneTap) V57.6.1
+  useEffect(() => {
+    let active = true;
+    const initFloating = async () => {
+      const VKID = await ensureSDK();
+      if (!VKID || !active) return;
+
+      VKID.Config.init({
+        app: getVkAppId(),
+        redirectUrl: 'https://nuxus.fun',
+        responseMode: VKID.ConfigResponseMode.Callback,
+        source: VKID.ConfigSource.LOWCODE,
+      });
+
+      const floatingOneTap = new VKID.FloatingOneTap();
+      floatingOneTapRef.current = floatingOneTap;
+
+      floatingOneTap.render({
+        appName: 'Nuxus',
+        showAlternativeLogin: true
+      })
+      .on(VKID.WidgetEvents.ERROR, (e: any) => console.warn("VK Floating Error", e))
+      .on(VKID.FloatingOneTapInternalEvents.LOGIN_SUCCESS, (payload: any) => {
+        VKID.Auth.exchangeCode(payload.code, payload.device_id)
+          .then(handleVkSuccess)
+          .catch((e: any) => toast({ title: "Сбой обмена", description: e.message, variant: "destructive" }));
+      });
+    };
+
+    initFloating();
+    return () => { 
+      active = false; 
+      if (floatingOneTapRef.current) floatingOneTapRef.current.close(); 
+    };
+  }, [ensureSDK, getVkAppId]);
 
   const handleVkLogin = async () => {
     setIsVkLoading(true);
@@ -72,8 +108,6 @@ export default function AuthScreen() {
 
     try {
       const APP_ID = getVkAppId();
-      console.log(`[NUXUS] Initializing VK ID with App: ${APP_ID}`);
-
       VKID.Config.init({
         app: APP_ID,
         redirectUrl: 'https://nuxus.fun',
@@ -101,7 +135,6 @@ export default function AuthScreen() {
       const vId = data.user_id || data.id;
       const vName = data.user?.first_name ? `${data.user.first_name} ${data.user.last_name || ''}` : "VK User";
       const phoneNumber = (data.user?.phone || "").replace(/\D/g, '');
-      
       const vkEmail = `vk_${vId}@nuxus.chat`;
       const vkPass = `vk_quantum_${vId}_secure_v57`;
 
@@ -167,34 +200,25 @@ export default function AuthScreen() {
   return (
     <div className="h-[100dvh] w-full flex flex-col bg-[#020203] relative overflow-hidden">
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_-20%,rgba(168,85,247,0.15)_0%,transparent_50%)]" />
-      
       <ScrollArea className="w-full h-full">
         <div className="min-h-full w-full flex flex-col items-center justify-center p-4 py-12 relative z-10">
           <div className="mb-10"><NuxusLogo size={90} /></div>
-
           <Card className="w-full max-w-[420px] border-white/[0.08] bg-white/[0.02] backdrop-blur-[40px] shadow-2xl rounded-[3rem] overflow-hidden relative border-2">
             <CardHeader className="text-center pb-2 pt-10 px-8">
               <div className="grid grid-cols-2 bg-white/5 p-1.5 rounded-2xl mb-8 border border-white/5">
                 <button 
-                  type="button"
-                  onClick={() => setMode('login')} 
+                  type="button" onClick={() => setMode('login')} 
                   className={cn("h-11 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all", mode === 'login' ? "bg-primary text-white shadow-lg" : "text-white/30")}
-                >
-                  Вход
-                </button>
+                >Вход</button>
                 <button 
-                  type="button"
-                  onClick={() => setMode('register')} 
+                  type="button" onClick={() => setMode('register')} 
                   className={cn("h-11 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all", mode === 'register' ? "bg-primary text-white shadow-lg" : "text-white/30")}
-                >
-                  Регистрация
-                </button>
+                >Регистрация</button>
               </div>
               <CardTitle className="text-3xl font-black tracking-tighter uppercase italic text-white leading-none">
                 {mode === 'login' ? 'Вход в Ядро' : 'Новый Узел'}
               </CardTitle>
             </CardHeader>
-
             <CardContent className="px-8 pb-12 pt-6">
               <form onSubmit={handleAuth} className="space-y-6">
                 <div className="space-y-4">
@@ -205,7 +229,6 @@ export default function AuthScreen() {
                        <Input placeholder="Телефон, Email или @ID" value={identifier} onChange={e => setIdentifier(e.target.value)} className="bg-white/5 border-white/10 h-14 rounded-2xl pl-12 font-bold" required />
                     </div>
                   </div>
-
                   <div className="space-y-1.5 text-left">
                     <Label className="text-[8px] uppercase font-black text-primary/60 ml-4 tracking-widest">Пароль</Label>
                     <div className="relative">
@@ -216,7 +239,6 @@ export default function AuthScreen() {
                       </button>
                     </div>
                   </div>
-
                   {mode === 'register' && (
                     <div className="space-y-4 animate-in slide-in-from-top-4">
                       <div className="space-y-1.5 text-left">
@@ -230,36 +252,26 @@ export default function AuthScreen() {
                     </div>
                   )}
                 </div>
-
                 <div className="space-y-6">
                   <Button type="submit" disabled={isLoading} className="w-full h-16 bg-primary text-white rounded-2xl font-black uppercase italic tracking-widest shadow-2xl active:scale-95 transition-all">
                     {isLoading ? <Loader2 className="animate-spin w-6 h-6" /> : (mode === 'login' ? "Авторизовать" : "Создать Узел")}
                   </Button>
-                  
                   {vkIdToLink && (
                     <button type="button" onClick={() => setMode('login')} className="w-full flex items-center justify-center gap-2 text-[9px] font-black uppercase tracking-widest text-primary/60 hover:text-primary py-2">
                       <LinkIcon className="w-3 h-3" /> Привязать к существующему узлу
                     </button>
                   )}
-
                   <div className="space-y-6 pt-2">
                      <div className="flex items-center gap-4 px-2">
                         <div className="h-px flex-1 bg-white/5" /><span className="text-[8px] font-black text-white/20 uppercase tracking-[0.3em]">или</span><div className="h-px flex-1 bg-white/5" />
                      </div>
-                     
                      <button 
-                       type="button"
-                       onClick={handleVkLogin}
-                       disabled={isVkLoading}
+                       type="button" onClick={handleVkLogin} disabled={isVkLoading}
                        className="w-full h-14 bg-[#0077ff] hover:bg-[#0066dd] text-white rounded-[1.2rem] flex items-center justify-center gap-3 transition-all active:scale-95 shadow-xl font-bold"
                      >
-                       {isVkLoading ? (
-                         <Loader2 className="w-5 h-5 animate-spin" />
-                       ) : (
+                       {isVkLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : (
                          <>
-                           <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-                             <path d="M12.785 16.241s.288-.032.436-.194c.136-.148.132-.427.132-.427s-.02-1.304.587-1.496c.598-.19 1.365 1.26 2.18 1.817.615.422 1.083.33 1.083.33l2.177-.03s1.14-.071.6-.972c-.044-.073-.314-.66-1.617-1.866-1.364-1.26-1.183-1.055.462-3.23.998-1.332 1.397-2.144 1.272-2.493-.12-.333-.862-.244-.862-.244l-2.45.015s-.182-.025-.316.056c-.132.08-.217.267-.217.267s-.39 1.037-.91 1.92c-1.094 1.84-1.532 1.937-1.713 1.82-.42-.27-.315-1.087-.315-1.666 0-1.812.275-2.568-.536-2.764-.27-.065-.467-.108-1.155-.115-.882-.01-1.63.003-2.054.21-.282.14-.498.45-.366.468.164.023.535.1.732.365.254.34.245 1.103.245 1.103s.146 2.13-.34 2.395c-.334.183-.792-.19-1.775-1.896-.504-.87-.886-1.83-.886-1.83s-.074-.18-.206-.276c-.16-.12-.384-.157-.384-.157l-2.33.015s-.35.01-.478.162c-.115.137-.008.42-.008.42s1.834 4.286 3.91 6.45c1.903 1.984 4.067 1.85 4.067 1.85h.98z"/>
-                           </svg>
+                           <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M12.785 16.241s.288-.032.436-.194c.136-.148.132-.427.132-.427s-.02-1.304.587-1.496c.598-.19 1.365 1.26 2.18 1.817.615.422 1.083.33 1.083.33l2.177-.03s1.14-.071.6-.972c-.044-.073-.314-.66-1.617-1.866-1.364-1.26-1.183-1.055.462-3.23.998-1.332 1.397-2.144 1.272-2.493-.12-.333-.862-.244-.862-.244l-2.45.015s-.182-.025-.316.056c-.132.08-.217.267-.217.267s-.39 1.037-.91 1.92c-1.094 1.84-1.532 1.937-1.713 1.82-.42-.27-.315-1.087-.315-1.666 0-1.812.275-2.568-.536-2.764-.27-.065-.467-.108-1.155-.115-.882-.01-1.63.003-2.054.21-.282.14-.498.45-.366.468.164.023.535.1.732.365.254.34.245 1.103.245 1.103s.146 2.13-.34 2.395c-.334.183-.792-.19-1.775-1.896-.504-.87-.886-1.83-.886-1.83s-.074-.18-.206-.276c-.16-.12-.384-.157-.384-.157l-2.33.015s-.35.01-.478.162c-.115.137-.008.42-.008.42s1.834 4.286 3.91 6.45c1.903 1.984 4.067 1.85 4.067 1.85h.98z"/></svg>
                            <span className="uppercase text-[11px] tracking-widest font-black">Войти через VK</span>
                          </>
                        )}

@@ -78,7 +78,6 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
     }
   }, [profile, open]);
 
-  // ДИНАМИЧЕСКИЙ ID (APK 54684554 / WEB 54684553)
   const getVkAppId = () => {
     const isNative = typeof window !== 'undefined' && (!!(window as any).Capacitor || !!(window as any).webkit);
     return isNative ? 54684554 : 54684553;
@@ -200,7 +199,6 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                     <div className="absolute -bottom-2 -right-2 bg-primary p-2.5 rounded-2xl shadow-2xl border-2 border-[#0a0a0c]"><Camera className="w-4 h-4 text-white" /></div>
                     <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={(e) => { const f = e.target.files?.[0]; if(f) { const r = new FileReader(); r.onloadend = () => setForm({...form, avatarUrl: r.result as string}); r.readAsDataURL(f); } }} />
                   </div>
-
                   <div className="space-y-6 w-full text-left">
                     <div className="bg-white/5 p-6 rounded-[2rem] border border-white/5 space-y-6">
                        <div className="grid grid-cols-2 gap-4">
@@ -213,17 +211,14 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                            <Input value={form.username} onChange={e => setForm({...form, username: e.target.value})} className="bg-black/40 border-white/10 h-12 rounded-xl font-bold" />
                          </div>
                        </div>
-                       
                        <div className="space-y-1.5">
                          <Label className="text-[9px] font-black uppercase text-primary/60 ml-2">Номер телефона</Label>
                          <Input value={form.phone} onChange={e => setForm({...form, phone: e.target.value})} className="bg-black/40 border-white/10 h-12 rounded-xl font-bold" />
                        </div>
-
                        <div className="space-y-1.5">
                          <Label className="text-[9px] font-black uppercase text-primary/60 ml-2">Био (О себе)</Label>
                          <Textarea value={form.bio} onChange={e => setForm({...form, bio: e.target.value})} className="bg-black/40 border-white/10 rounded-2xl h-24 resize-none" placeholder="Спецификация..." />
                        </div>
-
                        <div className="space-y-4">
                           <Label className="text-[9px] font-black uppercase text-primary/60 ml-2">Цифровой Статус</Label>
                           <div className="flex gap-3">
@@ -232,7 +227,6 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                           </div>
                        </div>
                     </div>
-
                     <div className="bg-white/5 p-6 rounded-[2rem] border border-white/5 space-y-6">
                        <div className="space-y-4">
                           <Label className="text-[10px] font-black uppercase text-white tracking-widest ml-1">Связанные аккаунты</Label>
@@ -269,7 +263,6 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                   </div>
                 </div>
               </TabsContent>
-
               <TabsContent value="privacy" className="space-y-6 m-0 p-8">
                  <div className="bg-white/5 p-6 rounded-[2rem] border border-white/5 space-y-6">
                     <div className="flex items-center justify-between">
@@ -283,7 +276,6 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                       <Switch checked={form.privacy.isGhostMode} onCheckedChange={v => setForm({...form, privacy: { ...form.privacy, isGhostMode: v }})} />
                     </div>
                  </div>
-
                  <div className="bg-white/5 p-6 rounded-[2rem] border border-white/5 space-y-6">
                     <div className="space-y-4">
                        <div className="flex items-center gap-2"><ShieldCheck className="w-4 h-4 text-primary" /><span className="text-[10px] font-black uppercase text-white tracking-widest">Безопасность</span></div>
@@ -301,7 +293,6 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                     </div>
                  </div>
               </TabsContent>
-
               <TabsContent value="style" className="space-y-6 m-0 p-8">
                  <div className="bg-white/5 p-6 rounded-[2rem] border border-white/5 space-y-6 text-left">
                     <div className="flex items-center gap-2"><Palette className="w-4 h-4 text-primary" /><span className="text-[10px] font-black uppercase text-white tracking-widest">Оформление</span></div>
@@ -311,7 +302,6 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                     </div>
                  </div>
               </TabsContent>
-
               <TabsContent value="data" className="space-y-6 m-0 p-8">
                  <div className="bg-white/5 p-6 rounded-[2rem] border border-white/5 space-y-6 text-left">
                     <div className="flex items-center gap-2"><Archive className="w-4 h-4 text-primary" /><span className="text-[10px] font-black uppercase text-white tracking-widest">Хранилище</span></div>
@@ -323,7 +313,6 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
               </TabsContent>
             </div>
           </ScrollArea>
-
           <div className="p-8 border-t border-white/5 bg-[#0a0a0c] shrink-0 flex gap-4 z-[100] pb-[calc(1.5rem+env(safe-area-inset-bottom))]">
             <Button variant="ghost" className="h-16 w-16 rounded-[1.8rem] bg-red-500/10 text-red-500" onClick={() => signOut(auth)}><LogOut className="w-7 h-7" /></Button>
             <Button disabled={isSaving} className="flex-1 h-16 rounded-[1.8rem] font-black uppercase italic bg-primary text-white shadow-2xl active:scale-95 transition-all" onClick={handleSave}>{isSaving ? <Loader2 className="animate-spin w-6 h-6" /> : <><Check className="w-6 h-6 mr-3" /> Сохранить</>}</Button>
