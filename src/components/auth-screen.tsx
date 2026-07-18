@@ -25,8 +25,8 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 type AuthMode = 'login' | 'register';
 
 /**
- * AuthScreen V56.6.5 «ULTIMATE VK ID FIX»
- * ИСПРАВЛЕНО: Кнопка VK ID теперь имеет принудительные размеры, текст и светлую схему.
+ * AuthScreen V56.6.6 «ULTIMATE VK ID LIGHT FIX»
+ * ИСПРАВЛЕНО: Принудительная белая схема для кнопки VK ID, исключающая "черный экран".
  */
 export default function AuthScreen() {
   const auth = useAuth();
@@ -66,16 +66,16 @@ export default function AuthScreen() {
 
         const oneTap = new VKID.OneTap();
 
+        // ФОРСИРОВАННАЯ СВЕТЛАЯ СХЕМА ДЛЯ ВИДИМОСТИ
         oneTap.render({
           container: vkidContainerRef.current,
           showAlternativeLogin: true,
-          scheme: 'light', // Гарантирует белый фон кнопки и синий логотип
+          scheme: 'light', 
           lang: 'ru',
           styles: {
             borderRadius: 12,
             height: 48,
-            width: '100%', // Принудительно на всю ширину
-            maxWidth: 320
+            width: 320 // Фиксированная ширина для стабильности iframe
           }
         })
         .on(VKID.WidgetEvents.ERROR, (error: any) => {
@@ -328,12 +328,17 @@ export default function AuthScreen() {
                         <div className="h-px flex-1 bg-white/5" />
                      </div>
                      
-                     {/* ИСПРАВЛЕННЫЙ КОНТЕЙНЕР: Фиксированные размеры и высокая видимость */}
+                     {/* КРИТИЧЕСКИЙ ФИКС: Белая подложка для видимости на темном фоне */}
                      <div className="relative w-full min-h-[52px] z-[100] flex justify-center items-center">
                         <div 
                           ref={vkidContainerRef} 
                           className="w-full max-w-[320px] min-h-[48px] rounded-xl overflow-visible shadow-xl cursor-pointer" 
-                          style={{ pointerEvents: 'auto', display: 'block' }}
+                          style={{ 
+                            pointerEvents: 'auto', 
+                            display: 'block',
+                            backgroundColor: '#FFFFFF', // Гарантирует видимость кнопки
+                            borderRadius: '12px'
+                          }}
                         />
                      </div>
                   </div>
@@ -344,7 +349,7 @@ export default function AuthScreen() {
                  <button type="button" onClick={() => setIsLegalOpen(true)} className="text-[9px] font-black uppercase tracking-widest text-white/20 hover:text-primary transition-colors py-1">Политика конфиденциальности</button>
                  <div className="flex items-center gap-3 opacity-30">
                     <ShieldCheck className="w-4 h-4 text-primary" />
-                    <span className="text-[7px] font-black uppercase tracking-[0.4em] text-white">Quantum Link 56.6.5</span>
+                    <span className="text-[7px] font-black uppercase tracking-[0.4em] text-white">Quantum Link 56.6.6</span>
                  </div>
               </div>
             </CardContent>
