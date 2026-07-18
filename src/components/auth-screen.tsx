@@ -4,10 +4,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Lock, Eye, EyeOff, UserPlus, LogIn, AtSign, User as UserIcon, Mail, Phone, ShieldCheck } from 'lucide-react';
+import { Loader2, Lock, Eye, EyeOff, Phone, ShieldCheck } from 'lucide-react';
 import { useAuth, useFirestore } from '@/firebase';
 import { 
   signInWithEmailAndPassword,
@@ -25,8 +25,8 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 type AuthMode = 'login' | 'register';
 
 /**
- * AuthScreen V56.6.0 «OFFICIAL VK ID SDK»
- * Интегрирован виджет OneTap для бесшовного входа.
+ * AuthScreen V56.6.1 «OFFICIAL VK ID OneTap»
+ * Исправлено: Виджет OneTap теперь отображается под кнопками и корректно инициализируется.
  */
 export default function AuthScreen() {
   const auth = useAuth();
@@ -46,14 +46,15 @@ export default function AuthScreen() {
   const [vkId, setVkId] = useState<number | null>(null);
 
   const vkidContainerRef = useRef<HTMLDivElement>(null);
+  const isVkRendered = useRef(false);
 
-  // INITIALIZE VK ID SDK
+  // INITIALIZE VK ID SDK (Official OneTap)
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
     const initVKID = () => {
       const VKID = (window as any).VKIDSDK;
-      if (!VKID || !vkidContainerRef.current) return;
+      if (!VKID || !vkidContainerRef.current || isVkRendered.current) return;
 
       VKID.Config.init({
         app: 54684553,
@@ -84,9 +85,11 @@ export default function AuthScreen() {
              toast({ title: "Сбой обмена кодом", variant: "destructive" });
           });
       });
+
+      isVkRendered.current = true;
     };
 
-    // Ожидаем загрузку скрипта
+    // Ожидаем загрузку скрипта из layout.tsx
     const timer = setInterval(() => {
       if ((window as any).VKIDSDK) {
         initVKID();
@@ -95,16 +98,15 @@ export default function AuthScreen() {
     }, 500);
 
     return () => clearInterval(timer);
-  }, [vkidContainerRef.current]);
+  }, []);
 
   const handleVkSuccess = async (data: any) => {
     if (!db || !auth) return;
     setIsLoading(true);
 
     try {
-      // В данных обмена обычно приходит токен и краткая инфа
-      // Для прототипа используем доступный user_id
-      const vId = data.user_id || data.id || Math.floor(Math.random() * 1000000);
+      // Данные профиля из VK ID
+      const vId = data.user_id || data.id;
       const vName = data.user?.first_name ? `${data.user.first_name} ${data.user.last_name || ''}` : "VK User";
       const phoneNumber = data.user?.phone || "";
       
@@ -124,20 +126,22 @@ export default function AuthScreen() {
         return;
       }
 
-      // 2. Проверяем по номеру (если есть)
+      // 2. Проверяем по номеру (если есть) для связки
       if (phoneNumber) {
-        const phoneQuery = query(collection(db, 'users'), where('phone', '==', phoneNumber.replace(/\D/g, '')), limit(1));
+        const cleanPhone = phoneNumber.replace(/\D/g, '');
+        const phoneQuery = query(collection(db, 'users'), where('phone', '==', cleanPhone), limit(1));
         const phoneSnap = await getDocs(phoneQuery);
         if (!phoneSnap.empty) {
           toast({ title: "Узел Обнаружен", description: "Войдите через пароль для связки с VK." });
           setIdentifier(phoneNumber);
           setMode('login');
+          setVkId(vId); // Запоминаем для связки при успешном входе по паролю
           setIsLoading(false);
           return;
         }
       }
 
-      // 3. Предзаполнение регистрации
+      // 3. Предзаполнение регистрации для нового узла
       setMode('register');
       setName(vName);
       setIdentifier(phoneNumber || '');
@@ -178,6 +182,7 @@ export default function AuthScreen() {
              setMode('register');
              toast({ title: "Профиль не завершен" });
           } else {
+             // Если входили через пароль, но есть VK ID — связываем
              if (vkId) {
                await updateDoc(doc(db, 'users', userCredential.user.uid), { vkId });
                toast({ title: "VK Привязан" });
@@ -213,6 +218,7 @@ export default function AuthScreen() {
           return;
         }
 
+        // Если регистрация через VK, создаем аккаунт с авто-паролем
         const regEmail = vkId ? `vk_${vkId}@nuxus.chat` : finalEmail;
         const regPass = vkId ? `vk_quantum_${vkId}_secure_signal_v3` : password;
         
@@ -224,7 +230,7 @@ export default function AuthScreen() {
           username: usernameWithAt,
           usernameLowercase: targetSearch,
           phone: cleanPhone,
-          email: identifier.includes('@') ? identifier.trim() : (vkId ? null : null),
+          email: identifier.includes('@') ? identifier.trim() : null,
           vkId: vkId,
           createdAt: new Date().toISOString(),
           isPremium: false,
@@ -302,21 +308,28 @@ export default function AuthScreen() {
                   )}
                 </div>
 
-                <div className="space-y-3">
+                <div className="space-y-6">
                   <Button type="submit" disabled={isLoading} className="w-full h-16 bg-primary text-white rounded-2xl font-black uppercase italic tracking-widest shadow-2xl active:scale-95 transition-all">
                     {isLoading ? <Loader2 className="animate-spin w-6 h-6" /> : (mode === 'login' ? "Авторизовать" : "Создать Узел")}
                   </Button>
                   
-                  {/* VK ID WIDGET CONTAINER */}
-                  <div ref={vkidContainerRef} className="w-full min-h-[56px] flex justify-center items-center rounded-2xl overflow-hidden shadow-xl" />
+                  {/* ГЛОБАЛЬНЫЙ ВИДЖЕТ VK ID (ПОД КНОПКОЙ) */}
+                  <div className="space-y-3">
+                     <div className="flex items-center gap-4 px-2">
+                        <div className="h-px flex-1 bg-white/5" />
+                        <span className="text-[8px] font-black text-white/20 uppercase tracking-[0.3em]">или войти через</span>
+                        <div className="h-px flex-1 bg-white/5" />
+                     </div>
+                     <div ref={vkidContainerRef} className="w-full min-h-[52px] flex justify-center items-center rounded-2xl overflow-hidden shadow-xl bg-white/5 border border-white/5" />
+                  </div>
                 </div>
               </form>
 
-              <div className="mt-8 flex flex-col items-center gap-3">
+              <div className="mt-10 flex flex-col items-center gap-3">
                  <button type="button" onClick={() => setIsLegalOpen(true)} className="text-[9px] font-black uppercase tracking-widest text-white/20 hover:text-primary transition-colors py-1">Политика конфиденциальности</button>
                  <div className="flex items-center gap-3 opacity-30">
                     <ShieldCheck className="w-4 h-4 text-primary" />
-                    <span className="text-[7px] font-black uppercase tracking-[0.4em] text-white">Quantum Link 56.6.0</span>
+                    <span className="text-[7px] font-black uppercase tracking-[0.4em] text-white">Quantum Link 56.6.1</span>
                  </div>
               </div>
             </CardContent>

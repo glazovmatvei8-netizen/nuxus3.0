@@ -1,14 +1,13 @@
 
 {
-  "latestVersion": "56.6.0",
+  "latestVersion": "56.6.1",
   "qesVersion": "56.5",
-  "build": "Quantum-VK-Link",
+  "build": "Quantum-VK-Widget",
   "sizeMb": 158,
   "changelog": [
-    "Added: Официальный VK ID SDK (OneTap виджет)",
-    "Added: Автоматическое предзаполнение данных при регистрации через VK",
-    "Improved: Гибридная система входа (VK + Phone + Email)",
-    "Fixed: Ошибки обмена кодами авторизации в SDK",
-    "Security: Сгенерированные пароли для связанных узлов"
+    "Fixed: Позиционирование виджета VK ID OneTap под кнопками",
+    "Improved: Стабильность инициализации SDK VK ID",
+    "Improved: Автозаполнение полей регистрации из профиля VK",
+    "Visual: Улучшенная интеграция виджета в тёмную тему"
   ]
 }
