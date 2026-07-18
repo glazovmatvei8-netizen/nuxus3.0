@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Lock, Eye, EyeOff, Phone, ShieldCheck, User as UserIcon } from 'lucide-react';
+import { Loader2, Lock, Eye, EyeOff, Phone, ShieldCheck, User as UserIcon, Link as LinkIcon, ArrowRight } from 'lucide-react';
 import { useAuth, useFirestore } from '@/firebase';
 import { 
   signInWithEmailAndPassword,
@@ -25,9 +25,8 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 type AuthMode = 'login' | 'register';
 
 /**
- * AuthScreen V56.8.0 «HYBRID SYNC»
- * ИСПРАВЛЕНО: Кнопки выбора режима больше не накладываются.
- * ИСПРАВЛЕНО: Виджет VK ID интегрирован в точности по коду пользователя.
+ * AuthScreen V56.8.1 «ABSOLUTE IDENTITY LINK»
+ * ИСПРАВЛЕНО: Теперь можно привязать любой VK ID к любому аккаунту даже при несовпадении номеров.
  */
 export default function AuthScreen() {
   const auth = useAuth();
@@ -119,7 +118,7 @@ export default function AuthScreen() {
       const vkEmail = `vk_${vId}@nuxus.chat`;
       const vkPass = `vk_quantum_${vId}_secure_signal_v3`;
 
-      // Поиск существующего VK-аккаунта
+      // 1. ПРИОРИТЕТ: Поиск по VK ID (Прямая связка)
       const vkQuery = query(collection(db, 'users'), where('vkId', '==', vId), limit(1));
       const vkSnap = await getDocs(vkQuery);
 
@@ -132,7 +131,7 @@ export default function AuthScreen() {
         return;
       }
 
-      // Поиск по номеру телефона для связки
+      // 2. ВТОРИЧНО: Поиск по номеру телефона для предложения связки
       if (phoneNumber) {
         const cleanPhone = phoneNumber.replace(/\D/g, '');
         const phoneQuery = query(collection(db, 'users'), where('phone', '==', cleanPhone), limit(1));
@@ -142,18 +141,18 @@ export default function AuthScreen() {
           toast({ title: "Узел Обнаружен", description: "Введите пароль для объединения с вашим VK." });
           setIdentifier(phoneNumber);
           setMode('login');
-          setVkId(vId); // Запоминаем для апдейта после входа
+          setVkId(vId); 
           setIsLoading(false);
           return;
         }
       }
 
-      // Если ничего не нашли - регистрация
+      // 3. ТРЕТИЧНО: Новый узел или ручная привязка
       setMode('register');
       setName(vName);
       setIdentifier(phoneNumber || '');
       setVkId(vId);
-      toast({ title: "Новый Узел", description: "Данные VK подтянуты. Выберите никнейм." });
+      toast({ title: "Сигнал получен", description: "Данные подтянуты. Выберите никнейм или привяжите к старому узлу." });
       
     } catch (error: any) {
       toast({ title: "Ошибка VK ID", description: error.message, variant: "destructive" });
@@ -191,9 +190,9 @@ export default function AuthScreen() {
              toast({ title: "Профиль не завершен" });
           } else {
              if (vkId) {
-               // Привязываем VK ID если зашли по паролю после клика на VK
+               // ПРИНУДИТЕЛЬНАЯ ПРИВЯЗКА VK ID после успешного входа
                await updateDoc(userRef, { vkId });
-               toast({ title: "VK Успешно Привязан" });
+               toast({ title: "VK ID Привязан", description: "Теперь вы можете заходить через VK." });
              }
              setIs2FAVerified(true);
              toast({ title: "Сигнал принят", description: `Добро пожаловать, ${userSnap.data().name}` });
@@ -284,7 +283,7 @@ export default function AuthScreen() {
                 </button>
               </div>
               <CardTitle className="text-3xl font-black tracking-tighter uppercase italic text-white leading-none">
-                {mode === 'login' ? 'Вход в Ядро' : 'Новый Узел'}
+                {mode === 'login' ? (vkId ? 'Связка узла' : 'Вход в Ядро') : 'Новый Узел'}
               </CardTitle>
             </CardHeader>
 
@@ -295,7 +294,7 @@ export default function AuthScreen() {
                     <Label className="text-[8px] uppercase font-black text-primary/60 ml-4 tracking-widest">Идентификатор</Label>
                     <div className="relative">
                        <UserIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-primary/40" />
-                       <Input placeholder="Телефон или Email" value={identifier} onChange={e => setIdentifier(e.target.value)} className="bg-white/5 border-white/10 h-14 rounded-2xl pl-12 font-bold" required />
+                       <Input placeholder="Телефон, Email или @ID" value={identifier} onChange={e => setIdentifier(e.target.value)} className="bg-white/5 border-white/10 h-14 rounded-2xl pl-12 font-bold" required />
                     </div>
                   </div>
 
@@ -303,7 +302,7 @@ export default function AuthScreen() {
                     <Label className="text-[8px] uppercase font-black text-primary/60 ml-4 tracking-widest">Пароль</Label>
                     <div className="relative">
                       <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-primary/40" />
-                      <Input type={showPass ? "text" : "password"} placeholder="••••••••" value={password} onChange={e => setPassword(e.target.value)} className="bg-white/5 border-white/10 h-14 rounded-2xl pl-12 font-bold" required={!vkId} />
+                      <Input type={showPass ? "text" : "password"} placeholder="••••••••" value={password} onChange={e => setPassword(e.target.value)} className="bg-white/5 border-white/10 h-14 rounded-2xl pl-12 font-bold" required={!vkId || mode === 'login'} />
                       <button type="button" onClick={() => setShowPass(!showPass)} className="absolute right-4 top-1/2 -translate-y-1/2 text-white/20">
                         {showPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                       </button>
@@ -326,24 +325,36 @@ export default function AuthScreen() {
 
                 <div className="space-y-6">
                   <Button type="submit" disabled={isLoading} className="w-full h-16 bg-primary text-white rounded-2xl font-black uppercase italic tracking-widest shadow-2xl active:scale-95 transition-all">
-                    {isLoading ? <Loader2 className="animate-spin w-6 h-6" /> : (mode === 'login' ? "Авторизовать" : "Создать Узел")}
+                    {isLoading ? <Loader2 className="animate-spin w-6 h-6" /> : (vkId && mode === 'login' ? "Привязать и войти" : mode === 'login' ? "Авторизовать" : "Создать Узел")}
                   </Button>
                   
-                  <div className="space-y-6 pt-2">
-                     <div className="flex items-center gap-4 px-2">
-                        <div className="h-px flex-1 bg-white/5" />
-                        <span className="text-[8px] font-black text-white/20 uppercase tracking-[0.3em]">или войти через</span>
-                        <div className="h-px flex-1 bg-white/5" />
-                     </div>
-                     
-                     <div className="relative w-full min-h-[48px] z-[100] flex justify-center items-center overflow-visible">
-                        <div 
-                          ref={vkidContainerRef} 
-                          className="w-full max-w-[385px] min-h-[48px] overflow-visible cursor-pointer flex justify-center" 
-                          style={{ pointerEvents: 'auto', display: 'block' }}
-                        />
-                     </div>
-                  </div>
+                  {mode === 'register' && vkId && (
+                    <button 
+                      type="button" 
+                      onClick={() => setMode('login')}
+                      className="w-full flex items-center justify-center gap-2 text-[9px] font-black uppercase tracking-widest text-primary/60 hover:text-primary transition-colors py-2"
+                    >
+                      <LinkIcon className="w-3 h-3" /> Привязать к существующему узлу
+                    </button>
+                  )}
+
+                  {!vkId && (
+                    <div className="space-y-6 pt-2">
+                       <div className="flex items-center gap-4 px-2">
+                          <div className="h-px flex-1 bg-white/5" />
+                          <span className="text-[8px] font-black text-white/20 uppercase tracking-[0.3em]">или войти через</span>
+                          <div className="h-px flex-1 bg-white/5" />
+                       </div>
+                       
+                       <div className="relative w-full min-h-[48px] z-[100] flex justify-center items-center overflow-visible">
+                          <div 
+                            ref={vkidContainerRef} 
+                            className="w-full max-w-[385px] min-h-[48px] overflow-visible cursor-pointer flex justify-center" 
+                            style={{ pointerEvents: 'auto', display: 'block' }}
+                          />
+                       </div>
+                    </div>
+                  )}
                 </div>
               </form>
 
@@ -351,7 +362,7 @@ export default function AuthScreen() {
                  <button type="button" onClick={() => setIsLegalOpen(true)} className="text-[9px] font-black uppercase tracking-widest text-white/20 hover:text-primary transition-colors py-1">Политика конфиденциальности</button>
                  <div className="flex items-center gap-3 opacity-30">
                     <ShieldCheck className="w-4 h-4 text-primary" />
-                    <span className="text-[7px] font-black uppercase tracking-[0.4em] text-white">Quantum Link 56.8.0</span>
+                    <span className="text-[7px] font-black uppercase tracking-[0.4em] text-white">Quantum Link 56.8.1</span>
                  </div>
               </div>
             </CardContent>

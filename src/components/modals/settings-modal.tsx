@@ -30,7 +30,8 @@ import { ru } from 'date-fns/locale';
 import { sendVerificationCode } from '@/ai/flows/send-verification-email-flow';
 
 /**
- * SETTINGS MODAL V56.8.0 «HYBRID SYNC»
+ * SETTINGS MODAL V56.8.1 «ABSOLUTE IDENTITY LINK»
+ * ИСПРАВЛЕНО: Принудительная привязка VK ID без проверок на номер телефона.
  */
 export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const auth = useAuth();
@@ -47,7 +48,6 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
   const { data: profile } = useDoc<User>(userRef);
 
   const [isSaving, setIsSaving] = useState(false);
-  const [isLinkingVK, setIsLinkingVK] = useState(false);
   const [isVkModalOpen, setIsVkModalOpen] = useState(false);
   
   // VERIFICATION STATE
@@ -144,7 +144,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
     }
   }, [profile, open]);
 
-  // VK ID Linking Logic
+  // VK ID Linking Logic (Direct overwrite)
   useEffect(() => {
     if (isVkModalOpen && vkidSettingsRef.current && (window as any).VKIDSDK) {
       const VKID = (window as any).VKIDSDK;
@@ -162,8 +162,12 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         VKID.Auth.exchangeCode(payload.code, payload.device_id).then(async (data: any) => {
           if (!db || !user) return;
           const vId = data.user_id || data.id;
+          // Прямая перезапись VK ID в профиле текущего пользователя
           await updateDoc(doc(db, 'users', user.uid), { vkId: vId });
-          toast({ title: "VK ID Привязан" });
+          toast({ title: "VK ID Успешно Привязан", description: "Теперь вы можете входить через этот профиль VK." });
+          setIsVkModalOpen(false);
+        }).catch(() => {
+          toast({ title: "Сбой связки", variant: "destructive" });
           setIsVkModalOpen(false);
         });
       });
@@ -303,19 +307,17 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                   </div>
 
                   <div className="space-y-6 w-full text-left">
-                    {/* SOCIALS BLOCK */}
+                    {/* SOCIALS BLOCK - ABSOLUTE LINK */}
                     <div className="bg-white/5 p-5 rounded-[2rem] border border-white/5 space-y-4">
                        <div className="flex items-center gap-2"><LinkIcon className="w-4 h-4 text-primary" /><span className="text-[10px] font-black uppercase text-white tracking-widest">Связанные аккаунты</span></div>
                        <div className="flex items-center justify-between p-3 bg-black/40 rounded-xl border border-white/5">
                           <div className="flex items-center gap-3">
                              <div className="w-8 h-8 rounded-lg bg-blue-500/20 flex items-center justify-center text-blue-500 font-black">VK</div>
-                             <span className="text-xs font-bold text-white/80">{profile?.vkId ? 'Привязано' : 'Не привязано'}</span>
+                             <span className="text-xs font-bold text-white/80">{profile?.vkId ? 'Связано' : 'Не связано'}</span>
                           </div>
-                          {!profile?.vkId ? (
-                            <Button onClick={() => setIsVkModalOpen(true)} className="h-8 px-4 rounded-lg bg-blue-500 text-white font-black uppercase text-[8px] tracking-widest">Привязать</Button>
-                          ) : (
-                            <CheckCircle2 className="w-4 h-4 text-green-500" />
-                          )}
+                          <Button onClick={() => setIsVkModalOpen(true)} className="h-8 px-4 rounded-lg bg-blue-500 text-white font-black uppercase text-[8px] tracking-widest">
+                            {profile?.vkId ? 'Перепривязать' : 'Привязать'}
+                          </Button>
                        </div>
                     </div>
 
@@ -451,7 +453,9 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
        <DialogContent className="max-w-xs bg-[#0a0a0c] border-white/10 rounded-[2.5rem] p-8 text-center shadow-2xl outline-none z-[2000]">
           <DialogHeader>
              <DialogTitle className="text-xl font-black uppercase italic text-white">Связка с VK</DialogTitle>
-             <DialogDescription className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest mt-1">Используйте OneTap для привязки</DialogDescription>
+             <DialogDescription className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest mt-1">
+               Привяжите любой профиль VK ID для быстрого входа в этот узел Nuxus.
+             </DialogDescription>
           </DialogHeader>
           <div className="py-6 flex justify-center overflow-visible">
              <div ref={vkidSettingsRef} className="w-full flex justify-center" />
