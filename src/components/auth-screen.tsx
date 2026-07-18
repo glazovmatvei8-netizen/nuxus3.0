@@ -1,13 +1,13 @@
 
 "use client"
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Lock, Eye, EyeOff, ShieldCheck, User as UserIcon, Link as LinkIcon } from 'lucide-react';
+import { Loader2, Lock, Eye, EyeOff, User as UserIcon, Link as LinkIcon } from 'lucide-react';
 import { useAuth, useFirestore } from '@/firebase';
 import { 
   signInWithEmailAndPassword,
@@ -15,18 +15,17 @@ import {
   browserLocalPersistence,
   setPersistence
 } from 'firebase/auth';
-import { doc, setDoc, getDoc, collection, query, where, getDocs, limit, updateDoc } from 'firebase/firestore';
+import { doc, setDoc, collection, query, where, getDocs, limit, updateDoc } from 'firebase/firestore';
 import { useAppState } from '@/lib/store';
 import { NuxusLogo } from './nuxus-logo';
 import { cn } from '@/lib/utils';
-import { LegalModal } from './modals/legal-modal';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
 type AuthMode = 'login' | 'register';
 
 /**
- * AuthScreen V56.9.2 «SDK RESILIENCE»
- * ИСПРАВЛЕНО: Агрессивное ожидание SDK + восстановление popup-логики.
+ * AuthScreen V56.9.3 «POLLING RESILIENCE»
+ * ИСПРАВЛЕНО: Агрессивный поиск VKIDSDK + Popup логика.
  */
 export default function AuthScreen() {
   const auth = useAuth();
@@ -36,9 +35,7 @@ export default function AuthScreen() {
   
   const [mode, setMode] = useState<AuthMode>('login');
   const [isLoading, setIsLoading] = useState(false);
-  const [isSdkReady, setIsSdkReady] = useState(false);
   const [showPass, setShowPass] = useState(false);
-  const [isLegalOpen, setIsLegalOpen] = useState(false);
 
   const [identifier, setIdentifier] = useState(''); 
   const [password, setPassword] = useState('');
@@ -46,29 +43,35 @@ export default function AuthScreen() {
   const [username, setUsername] = useState('');
   const [vkId, setVkId] = useState<number | null>(null);
 
-  // Периодическая проверка готовности SDK
-  useEffect(() => {
-    const checkInterval = setInterval(() => {
-      if ((window as any).VKIDSDK) {
-        setIsSdkReady(true);
-        clearInterval(checkInterval);
-      }
-    }, 500);
-    return () => clearInterval(checkInterval);
-  }, []);
-
   const handleVkLogin = async () => {
-    const VKID = (window as any).VKIDSDK;
+    let VKID = (window as any).VKIDSDK;
     
+    // Если SDK еще нет, пробуем подождать 1.5 секунды
     if (!VKID) {
-      toast({ title: "VK SDK еще не готов", description: "Подождите несколько секунд...", variant: "destructive" });
+      setIsLoading(true);
+      let attempts = 0;
+      const interval = setInterval(async () => {
+        attempts++;
+        VKID = (window as any).VKIDSDK;
+        if (VKID || attempts > 8) {
+          clearInterval(interval);
+          if (VKID) {
+            initiateVkAuth(VKID);
+          } else {
+            setIsLoading(false);
+            toast({ title: "VK SDK не отвечает", description: "Проверьте соединение или обновите страницу.", variant: "destructive" });
+          }
+        }
+      }, 200);
       return;
     }
 
-    setIsLoading(true);
+    initiateVkAuth(VKID);
+  };
 
+  const initiateVkAuth = async (VKID: any) => {
+    setIsLoading(true);
     try {
-      // Принудительная инициализация конфига
       VKID.Config.init({
         app: 54684553,
         redirectUrl: 'https://nuxus.fun',
@@ -98,7 +101,6 @@ export default function AuthScreen() {
       const vkEmail = `vk_${vId}@nuxus.chat`;
       const vkPass = `vk_quantum_${vId}_secure_signal_v3`;
 
-      // 1. ПРИОРИТЕТ: Прямой поиск по VK ID
       const vkQuery = query(collection(db, 'users'), where('vkId', '==', vId), limit(1));
       const vkSnap = await getDocs(vkQuery);
 
@@ -110,7 +112,6 @@ export default function AuthScreen() {
         return;
       }
 
-      // 2. ВТОРИЧНО: Совпадение по номеру
       if (phoneNumber) {
         const cleanPhone = phoneNumber.replace(/\D/g, '');
         const phoneQuery = query(collection(db, 'users'), where('phone', '==', cleanPhone), limit(1));
@@ -125,7 +126,6 @@ export default function AuthScreen() {
         }
       }
 
-      // 3. ТРЕТИЧНО: Новый узел
       setMode('register');
       setName(vName);
       setIdentifier(phoneNumber || '');
@@ -303,7 +303,6 @@ export default function AuthScreen() {
           </Card>
         </div>
       </ScrollArea>
-      <LegalModal open={isLegalOpen} onOpenChange={setIsLegalOpen} />
     </div>
   );
 }
