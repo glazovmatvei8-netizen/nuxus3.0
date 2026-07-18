@@ -1,7 +1,7 @@
 
 "use client"
 
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 import type { Message, Story, Track } from './types';
 
 export type MainView = 'chats' | 'contacts' | 'calls' | 'profile' | 'archive' | 'music' | 'wallet' | 'discovery' | 'games';
@@ -26,13 +26,13 @@ interface AppState {
   settingsTab: string;
   setSettingsTab: (tab: string) => void;
   
+  // Multi-Account Core
+  activeAccountIndex: number;
+  setActiveAccountIndex: (index: number) => void;
+  
   // Legal State
   isLegalOpen: boolean;
   setIsLegalOpen: (v: boolean) => void;
-  
-  // Update State
-  isUpdateDeferred: boolean;
-  setIsUpdateDeferred: (v: boolean) => void;
   
   // User Inspection State
   inspectedUserId: string | null;
@@ -68,9 +68,20 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [settingsTab, setSettingsTab] = useState('profile');
   const [isLegalOpen, setIsLegalOpen] = useState(false);
-  const [isUpdateDeferred, setIsUpdateDeferred] = useState(false);
   const [inspectedUserId, setInspectedUserId] = useState<string | null>(null);
   const [isInterceptionRequested, setIsInterceptionRequested] = useState(false);
+  
+  // Persistent active account index
+  const [activeAccountIndex, setActiveAccountIndex] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return parseInt(localStorage.getItem('nuxus_active_index') || '0');
+    }
+    return 0;
+  });
+
+  useEffect(() => {
+    localStorage.setItem('nuxus_active_index', activeAccountIndex.toString());
+  }, [activeAccountIndex]);
   
   const [currentTrack, setCurrentTrack] = useState<Track | null>(null);
   const [isPlayingMusic, setIsPlayingMusic] = useState(false);
@@ -99,10 +110,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setIsSearchOpen,
       settingsTab,
       setSettingsTab,
+      activeAccountIndex,
+      setActiveAccountIndex,
       isLegalOpen,
       setIsLegalOpen,
-      isUpdateDeferred,
-      setIsUpdateDeferred,
       inspectedUserId,
       setInspectedUserId,
       isInterceptionRequested,

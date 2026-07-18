@@ -7,22 +7,22 @@ import { getAuth, Auth } from 'firebase/auth';
 import { getFirestore, initializeFirestore, persistentLocalCache, persistentMultipleTabManager, Firestore } from 'firebase/firestore';
 
 /**
- * Безопасная инициализация Firebase с поддержкой оффлайн-режима.
- * V25.2.0: Оптимизировано для iOS PWA и автономного чтения.
+ * Безопасная инициализация Firebase с поддержкой нескольких инстансов (Multi-Account).
+ * instanceName позволяет создавать изолированные сессии в одном браузере.
  */
-export function initializeFirebase() {
-  const app: FirebaseApp = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
+export function initializeFirebase(instanceName?: string) {
+  const name = instanceName || '[DEFAULT]';
+  const existingApp = getApps().find(a => a.name === name);
+  const app: FirebaseApp = existingApp || initializeApp(firebaseConfig, name);
   
   let db: Firestore;
   try {
-    // Пытаемся инициализировать Firestore с расширенными настройками кэширования для PWA
     db = initializeFirestore(app, {
       localCache: persistentLocalCache({
         tabManager: persistentMultipleTabManager()
       })
     });
   } catch (e: any) {
-    // Если Firestore уже инициализирован (например, при HMR), получаем текущий экземпляр
     db = getFirestore(app);
   }
 

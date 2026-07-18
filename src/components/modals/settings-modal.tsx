@@ -86,7 +86,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
   const handleVkLink = async () => {
     const VKID = (window as any).VKIDSDK;
     if (!VKID) {
-      toast({ title: "SDK НЕ ГОТОВ", description: "Подождите секунду. Ядро активирует мост VK.", variant: "destructive" });
+      toast({ title: "SDK НЕ ГОТОВ", description: "Подождите секунду...", variant: "destructive" });
       return;
     }
     setIsVkLinking(true);
@@ -106,7 +106,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         toast({ title: "VK ID Привязан" });
       }
     } catch (e: any) {
-      toast({ title: "Сбой привязки", description: "Окно было закрыто.", variant: "destructive" });
+      toast({ title: "Сбой привязки", variant: "destructive" });
     } finally {
       setIsVkLinking(false);
     }

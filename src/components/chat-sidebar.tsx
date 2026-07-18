@@ -29,14 +29,14 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { signOut } from 'firebase/auth';
 
 /**
- * MULTI-ACCOUNT ITEM V57.6.5
+ * MULTI-ACCOUNT ITEM V57.7.0 «INSTANT SWITCH»
  */
-const AccountItem = memo(({ account, isActive, onSwitch, onRemove }: any) => (
+const AccountItem = memo(({ account, isActive, index, onSwitch, onRemove }: any) => (
   <div className={cn(
     "flex items-center justify-between p-3 rounded-2xl transition-all group",
     isActive ? "bg-primary/10 border border-primary/20" : "hover:bg-white/5"
   )}>
-    <div className="flex items-center gap-3 cursor-pointer flex-1 min-w-0" onClick={() => onSwitch(account)}>
+    <div className="flex items-center gap-3 cursor-pointer flex-1 min-w-0" onClick={() => onSwitch(index)}>
       <UserAvatar userId={account.id} manualAvatarUrl={account.avatarUrl} className="h-10 w-10 border border-white/10" />
       <div className="flex flex-col text-left min-w-0">
         <span className="text-sm font-black text-white truncate">{account.name}</span>
@@ -44,7 +44,7 @@ const AccountItem = memo(({ account, isActive, onSwitch, onRemove }: any) => (
       </div>
     </div>
     {!isActive && (
-      <button onClick={(e) => { e.stopPropagation(); onRemove(account.id); }} className="opacity-0 group-hover:opacity-100 p-2 text-white/20 hover:text-red-500 transition-all">
+      <button onClick={(e) => { e.stopPropagation(); onRemove(index); }} className="opacity-0 group-hover:opacity-100 p-2 text-white/20 hover:text-red-500 transition-all">
         <X className="w-4 h-4" />
       </button>
     )}
@@ -258,16 +258,16 @@ export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?:
   const { user } = useUser();
   const db = useFirestore();
   const auth = useAuth();
-  const { currentChatId, setCurrentChatId, setIsSearchOpen, setIsInterceptionRequested } = useAppState();
+  const { currentChatId, setCurrentChatId, setIsSearchOpen, activeAccountIndex, setActiveAccountIndex } = useAppState();
   
   const [activeTab, setActiveTab] = useState('all');
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isAdminPanelOpen, setIsAdminPanelOpen] = useState(false);
   const [latency, setLatency] = useState<number>(0);
-  const [savedAccounts, setSavedAccounts] = useState<any[]>([]);
+  const [savedAccounts, setSavedAccounts] = useState<Record<number, any>>({});
 
   useEffect(() => {
-    const saved = localStorage.getItem('nuxus_saved_accounts');
+    const saved = localStorage.getItem('nuxus_multi_accounts');
     if (saved) setSavedAccounts(JSON.parse(saved));
   }, []);
 
@@ -290,43 +290,43 @@ export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?:
   const userProfileRef = useMemoFirebase(() => (!db || !user) ? null : doc(db, 'users', user.uid), [db, user]);
   const { data: currentUserProfile } = useDoc<UserType>(userProfileRef);
 
+  // Sync current account data to storage
   useEffect(() => {
     if (user && currentUserProfile) {
-      const accounts = JSON.parse(localStorage.getItem('nuxus_saved_accounts') || '[]');
-      const index = accounts.findIndex((a: any) => a.id === user.uid);
-      const accData = {
+      const accounts = JSON.parse(localStorage.getItem('nuxus_multi_accounts') || '{}');
+      accounts[activeAccountIndex] = {
         id: user.uid,
         name: currentUserProfile.name,
         username: currentUserProfile.username,
         avatarUrl: currentUserProfile.avatarUrl,
         isPremium: !!isUserPremium(currentUserProfile)
       };
-      if (index > -1) accounts[index] = accData;
-      else accounts.push(accData);
-      localStorage.setItem('nuxus_saved_accounts', JSON.stringify(accounts));
+      localStorage.setItem('nuxus_multi_accounts', JSON.stringify(accounts));
       setSavedAccounts(accounts);
     }
-  }, [user, currentUserProfile]);
+  }, [user, currentUserProfile, activeAccountIndex]);
+
+  const handleSwitchAccount = (index: number) => {
+    if (index === activeAccountIndex) return;
+    setActiveAccountIndex(index);
+    setCurrentChatId(null); // Reset chat view for new account
+  };
 
   const handleAddAccount = () => {
-    // Clear pending target to ensure full login screen
-    sessionStorage.removeItem('nuxus_pending_target');
-    signOut(auth).then(() => {
-      window.location.reload();
-    });
+    // Find next empty slot
+    const slots = [0, 1, 2, 3, 4];
+    const nextSlot = slots.find(s => !savedAccounts[s]);
+    if (nextSlot !== undefined) {
+      setActiveAccountIndex(nextSlot);
+      setCurrentChatId(null);
+    }
   };
 
-  const handleSwitchAccount = (acc: any) => {
-    if (acc.id === user?.uid) return;
-    // Store target username to pre-fill on login screen
-    sessionStorage.setItem('nuxus_pending_target', acc.username);
-    signOut(auth).then(() => window.location.reload());
-  };
-
-  const handleRemoveAccount = (id: string) => {
-    const next = savedAccounts.filter(a => a.id !== id);
+  const handleRemoveAccount = (index: number) => {
+    const next = { ...savedAccounts };
+    delete next[index];
     setSavedAccounts(next);
-    localStorage.setItem('nuxus_saved_accounts', JSON.stringify(next));
+    localStorage.setItem('nuxus_multi_accounts', JSON.stringify(next));
   };
 
   const chatsQuery = useMemoFirebase(() => {
@@ -394,8 +394,9 @@ export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?:
     return others.filter(c => !c.isArchived);
   }, [chats, activeTab, isArchiveView, currentUserProfile?.pinnedChatIds]);
 
-  // CRITICAL: Global Limit check - if ANY saved account is premium, allow 5
-  const accLimit = (isUserPremium(currentUserProfile) || savedAccounts.some(a => a.isPremium)) ? 5 : 3;
+  const accsList = Object.entries(savedAccounts).map(([idx, data]) => ({ index: parseInt(idx), ...data }));
+  const hasPremiumAnywhere = accsList.some(a => a.isPremium);
+  const accLimit = hasPremiumAnywhere ? 5 : 3;
 
   return (
     <div className="flex flex-col h-full bg-transparent overflow-hidden relative max-w-full">
@@ -417,12 +418,12 @@ export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?:
               </PopoverTrigger>
               <PopoverContent align="center" className="w-72 bg-[#0a0a0c]/95 backdrop-blur-3xl border-white/10 rounded-[2.2rem] p-3 shadow-2xl z-[1000] outline-none">
                  <div className="space-y-1.5 mb-4">
-                    <span className="text-[9px] font-black uppercase tracking-[0.3em] text-white/20 px-2">Узлы в сети ({savedAccounts.length}/{accLimit})</span>
+                    <span className="text-[9px] font-black uppercase tracking-[0.3em] text-white/20 px-2">Узлы в сети ({accsList.length}/{accLimit})</span>
                     <ScrollArea className="max-h-64">
                        <div className="space-y-1">
-                          {savedAccounts.map(acc => (
+                          {accsList.map(acc => (
                             <AccountItem 
-                              key={acc.id} account={acc} isActive={acc.id === user?.uid} 
+                              key={acc.index} account={acc} index={acc.index} isActive={acc.index === activeAccountIndex} 
                               onSwitch={handleSwitchAccount} onRemove={handleRemoveAccount} 
                             />
                           ))}
@@ -430,7 +431,7 @@ export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?:
                     </ScrollArea>
                  </div>
                  <div className="pt-2 border-t border-white/5 space-y-1">
-                    {savedAccounts.length < accLimit && (
+                    {accsList.length < accLimit && (
                       <button onClick={handleAddAccount} className="w-full flex items-center gap-3 p-3.5 rounded-xl hover:bg-primary/10 transition-all group text-left">
                         <div className="h-9 w-9 rounded-xl bg-primary/20 flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
                           <UserPlus className="w-5 h-5" />
@@ -518,7 +519,7 @@ export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?:
                   key={chat.id} chat={chat} isActive={currentChatId === chat.id} 
                   isPinned={currentUserProfile?.pinnedChatIds?.includes(chat.id)}
                   onPinToggle={handlePinToggle} onMarkUnread={handleMarkUnread} onArchive={handleArchive}
-                  onDelete={handleDelete} onClick={() => { setIsInterceptionRequested(false); setCurrentChatId(chat.id); }}
+                  onDelete={handleDelete} onClick={() => { setCurrentChatId(chat.id); }}
                   currentUserId={user?.uid} otherId={chat.type === 'private' && user ? chat.participantIds?.find((id: string) => id !== user.uid) : null} 
                 />
               ))
@@ -536,4 +537,3 @@ export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?:
     </div>
   );
 }
-

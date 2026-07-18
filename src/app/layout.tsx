@@ -73,8 +73,8 @@ export default function RootLayout({
         style={{ fontFamily: 'var(--font-jakarta), ui-sans-serif, system-ui, -apple-system, sans-serif' }}
         suppressHydrationWarning
       >
-        <FirebaseClientProvider>
-          <AppProvider>
+        <AppProvider>
+          <FirebaseClientProvider>
             <VkProvider />
             <ThemeApplier />
             <AppIconApplier />
@@ -85,8 +85,8 @@ export default function RootLayout({
             <Analytics />
             <SpeedInsights />
             <Toaster />
-          </AppProvider>
-        </FirebaseClientProvider>
+          </FirebaseClientProvider>
+        </AppProvider>
 
         <Script id="register-sw" strategy="afterInteractive">
           {`
