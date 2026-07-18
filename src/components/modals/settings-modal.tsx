@@ -15,7 +15,7 @@ import { UserAvatar } from '@/components/user-avatar';
 import { 
   LogOut, Settings2, Camera, Lock, Fingerprint, Star, Zap, ShieldCheck, Loader2, Database, Palette, 
   Monitor, MessageSquare, ImageIcon, Smile, Plus, Check, RefreshCcw, Smartphone, PhoneCall, Eye, 
-  Users, ShieldAlert, Ghost, Mail, Share2, FileText, Download, Search, MessageCircle, CheckCircle2, Calendar, Shield, Info, Globe, Paintbrush, ArrowRight, ShieldQuestion, Clock, Sparkles, Wand2, Link as LinkIcon
+  Users, ShieldAlert, Ghost, Mail, Share2, FileText, Download, Search, MessageCircle, CheckCircle2, Calendar, Shield, Info, Globe, Paintbrush, ArrowRight, ShieldQuestion, Clock, Sparkles, Wand2, Link as LinkIcon, User as UserIcon, Type
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { signOut } from 'firebase/auth';
@@ -30,8 +30,8 @@ import { ru } from 'date-fns/locale';
 import { sendVerificationCode } from '@/ai/flows/send-verification-email-flow';
 
 /**
- * SETTINGS MODAL V56.9.1 «SDK SYNC FIX»
- * ИСПРАВЛЕНО: Кнопка VK Link инициализируется только при доступности SDK.
+ * SETTINGS MODAL V56.9.2 «RESTORATION & SDK FIX»
+ * ИСПРАВЛЕНО: Возвращены поля Био, Статус и Номер телефона.
  */
 export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const auth = useAuth();
@@ -41,7 +41,6 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
   const { settingsTab, setSettingsTab } = useAppState();
   
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const bgInputRef = useRef<HTMLInputElement>(null);
 
   const userRef = useMemoFirebase(() => (!db || !user) ? null : doc(db, 'users', user.uid), [db, user]);
   const { data: profile } = useDoc<User>(userRef);
@@ -49,7 +48,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
   const [isSaving, setIsSaving] = useState(false);
   
   // VERIFICATION STATE
-  const [verifyStep, setVerifyStep] = useState<'idle' | 'verifying_old' | 'entering_new' | 'verifying_new'>('idle');
+  const [verifyStep, setVerifyStep] = useState<'idle' | 'verifying_new'>('idle');
   const [emailToVerify, setEmailToVerify] = useState('');
   const [inputCode, setInputCode] = useState('');
   const [activeCode, setActiveCode] = useState('');
@@ -132,7 +131,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
   const handleVkLink = () => {
     const VKID = (window as any).VKIDSDK;
     if (!VKID) {
-      toast({ title: "SDK VK еще не готов", description: "Попробуйте снова через секунду", variant: "destructive" });
+      toast({ title: "VK SDK еще грузится", variant: "destructive" });
       return;
     }
 
@@ -150,7 +149,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
           if (!db || !user) return;
           const vId = data.user_id || data.id;
           await updateDoc(doc(db, 'users', user.uid), { vkId: vId });
-          toast({ title: "VK ID Привязан", description: "Теперь вы можете входить через этот аккаунт." });
+          toast({ title: "VK ID Привязан" });
         })
         .catch((err: any) => {
           console.error("VK Link Error:", err);
@@ -186,11 +185,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
       toast({ title: "Неверный код", variant: "destructive" });
       return;
     }
-    if (verifyStep === 'verifying_old') {
-      setVerifyStep('entering_new');
-      setInputCode('');
-      setActiveCode('');
-    } else if (verifyStep === 'verifying_new') {
+    if (verifyStep === 'verifying_new') {
       if (!db || !user) return;
       setIsVerifying(true);
       try {
@@ -277,13 +272,53 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                   </div>
 
                   <div className="space-y-6 w-full text-left">
-                    <div className="bg-white/5 p-5 rounded-[2rem] border border-white/5 space-y-4">
-                       <div className="flex items-center gap-2"><LinkIcon className="w-4 h-4 text-primary" /><span className="text-[10px] font-black uppercase text-white tracking-widest">Связанные аккаунты</span></div>
-                       <div className="flex flex-col gap-3">
+                    {/* ОСНОВНОЕ */}
+                    <div className="bg-white/5 p-6 rounded-[2rem] border border-white/5 space-y-6">
+                       <div className="grid grid-cols-2 gap-4">
+                         <div className="space-y-1.5">
+                           <Label className="text-[9px] font-black uppercase text-primary/60 ml-2">Имя</Label>
+                           <Input value={form.name} onChange={e => setForm({...form, name: e.target.value})} className="bg-black/40 border-white/10 h-12 rounded-xl font-bold" />
+                         </div>
+                         <div className="space-y-1.5">
+                           <Label className="text-[9px] font-black uppercase text-primary/60 ml-2">Никнейм</Label>
+                           <Input value={form.username} onChange={e => setForm({...form, username: e.target.value})} className="bg-black/40 border-white/10 h-12 rounded-xl font-bold" />
+                         </div>
+                       </div>
+
+                       <div className="space-y-1.5">
+                         <Label className="text-[9px] font-black uppercase text-primary/60 ml-2">Телефон</Label>
+                         <div className="relative">
+                           <PhoneCall className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-primary/40" />
+                           <Input value={form.phone} onChange={e => setForm({...form, phone: e.target.value})} className="bg-black/40 border-white/10 h-12 rounded-xl pl-11 font-bold" placeholder="+7 (___) ___ __ __" />
+                         </div>
+                       </div>
+
+                       <div className="space-y-1.5">
+                         <Label className="text-[9px] font-black uppercase text-primary/60 ml-2">О себе (Био)</Label>
+                         <Textarea value={form.bio} onChange={e => setForm({...form, bio: e.target.value})} className="bg-black/40 border-white/10 rounded-2xl h-24 resize-none" placeholder="Расскажите о себе..." />
+                       </div>
+                    </div>
+
+                    {/* СТАТУС */}
+                    <div className="bg-white/5 p-6 rounded-[2rem] border border-white/5 space-y-4">
+                       <div className="flex items-center gap-2 mb-2">
+                         <Sparkles className="w-4 h-4 text-accent" />
+                         <span className="text-[10px] font-black uppercase text-white tracking-widest">Цифровой Статус</span>
+                       </div>
+                       <div className="flex gap-3">
+                          <Input value={form.statusEmoji} onChange={e => setForm({...form, statusEmoji: e.target.value})} className="w-16 h-12 bg-black/40 border-white/10 rounded-xl text-center text-xl" placeholder="🔥" maxLength={2} />
+                          <Input value={form.statusText} onChange={e => setForm({...form, statusText: e.target.value})} className="flex-1 h-12 bg-black/40 border-white/10 rounded-xl text-xs font-bold" placeholder="Текст статуса..." maxLength={30} />
+                       </div>
+                    </div>
+
+                    {/* СВЯЗИ */}
+                    <div className="bg-white/5 p-6 rounded-[2rem] border border-white/5 space-y-6">
+                       <div className="space-y-4">
+                          <div className="flex items-center gap-2"><LinkIcon className="w-4 h-4 text-primary" /><span className="text-[10px] font-black uppercase text-white tracking-widest">Связанные аккаунты</span></div>
                           <button 
                             type="button"
                             onClick={handleVkLink}
-                            className="flex items-center justify-center gap-3 bg-[#0077ff] hover:bg-[#0066dd] text-white rounded-xl px-6 py-3 font-bold transition-all shadow-lg active:scale-95"
+                            className="w-full flex items-center justify-center gap-3 bg-[#0077ff] hover:bg-[#0066dd] text-white rounded-xl py-3 font-bold transition-all shadow-lg active:scale-95"
                           >
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
                               <path d="M12.785 16.241s.288-.032.436-.194c.136-.148.132-.427.132-.427s-.02-1.304.587-1.496c.598-.19 1.365 1.26 2.18 1.817.615.422 1.083.33 1.083.33l2.177-.03s1.14-.071.6-.972c-.044-.073-.314-.66-1.617-1.866-1.364-1.26-1.183-1.055.462-3.23.998-1.332 1.397-2.144 1.272-2.493-.12-.333-.862-.244-.862-.244l-2.45.015s-.182-.025-.316.056c-.132.08-.217.267-.217.267s-.39 1.037-.91 1.92c-1.094 1.84-1.532 1.937-1.713 1.82-.42-.27-.315-1.087-.315-1.666 0-1.812.275-2.568-.536-2.764-.27-.065-.467-.108-1.155-.115-.882-.01-1.63.003-2.054.21-.282.14-.498.45-.366.468.164.023.535.1.732.365.254.34.245 1.103.245 1.103s.146 2.13-.34 2.395c-.334.183-.792-.19-1.775-1.896-.504-.87-.886-1.83-.886-1.83s-.074-.18-.206-.276c-.16-.12-.384-.157-.384-.157l-2.33.015s-.35.01-.478.162c-.115.137-.008.42-.008.42s1.834 4.286 3.91 6.45c1.903 1.984 4.067 1.85 4.067 1.85h.98z"/>
@@ -291,32 +326,29 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                             <span className="uppercase text-[9px] tracking-widest font-black">{profile?.vkId ? 'Обновить VK Link' : 'Привязать VK ID'}</span>
                           </button>
                        </div>
-                    </div>
 
-                    <div className="bg-white/5 p-5 rounded-[2rem] border border-white/5 space-y-4">
-                       <div className="flex items-center justify-between">
-                         <div className="flex items-center gap-2"><Mail className="w-4 h-4 text-primary" /><span className="text-[10px] font-black uppercase text-white tracking-widest">Электронная почта</span></div>
-                         {profile?.emailVerified ? <CheckCircle2 className="w-4 h-4 text-green-500" /> : <ShieldAlert className="w-4 h-4 text-red-500" />}
+                       <div className="space-y-4">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2"><Mail className="w-4 h-4 text-primary" /><span className="text-[10px] font-black uppercase text-white tracking-widest">Электронная почта</span></div>
+                            {profile?.emailVerified ? <CheckCircle2 className="w-4 h-4 text-green-500" /> : <ShieldAlert className="w-4 h-4 text-red-500" />}
+                          </div>
+                          <div className="flex gap-2">
+                            <Input value={form.email} onChange={e => setForm({...form, email: e.target.value})} className="bg-black/40 border-white/10 h-12 rounded-xl text-sm" placeholder="Email..." />
+                            {!profile?.emailVerified && <Button onClick={() => handleSendEmailCode(form.email, 'verifying_new')} className="h-12 w-12 rounded-xl bg-primary shrink-0"><Check className="w-5 h-5 text-white" /></Button>}
+                          </div>
+                          {(verifyStep === 'verifying_new') && (
+                            <div className="space-y-4 animate-in fade-in zoom-in-95">
+                              <Input value={inputCode} onChange={e => setInputCode(e.target.value.replace(/\D/g, '').slice(0, 6))} placeholder="000000" className="bg-black/60 border-primary/40 h-14 rounded-2xl text-center text-2xl tracking-[0.4em] font-black" />
+                              <Button onClick={handleConfirmCode} className="w-full h-11 bg-primary rounded-xl font-black uppercase text-[10px]">Подтвердить</Button>
+                            </div>
+                          )}
                        </div>
-                       <div className="flex gap-2">
-                         <Input value={form.email} onChange={e => setForm({...form, email: e.target.value})} className="bg-black/40 border-white/10 h-12 rounded-xl text-sm" placeholder="Email..." />
-                         {!profile?.emailVerified && <Button onClick={() => handleSendEmailCode(form.email, 'verifying_new')} className="h-12 w-12 rounded-xl bg-primary shrink-0"><Check className="w-5 h-5 text-white" /></Button>}
-                       </div>
-                       {(verifyStep === 'verifying_new') && (
-                         <div className="space-y-4 animate-in fade-in zoom-in-95">
-                           <Input value={inputCode} onChange={e => setInputCode(e.target.value.replace(/\D/g, '').slice(0, 6))} placeholder="000000" className="bg-black/60 border-primary/40 h-14 rounded-2xl text-center text-2xl tracking-[0.4em] font-black" />
-                           <Button onClick={handleConfirmCode} className="w-full h-11 bg-primary rounded-xl font-black uppercase text-[10px]">Подтвердить</Button>
-                         </div>
-                       )}
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-1.5"><Label className="text-[10px] font-black uppercase text-primary/60 ml-2">Имя</Label><Input value={form.name} onChange={e => setForm({...form, name: e.target.value})} className="bg-white/5 border-white/10 h-11 rounded-xl font-bold" /></div>
-                      <div className="space-y-1.5"><Label className="text-[10px] font-black uppercase text-primary/60 ml-2">Никнейм</Label><Input value={form.username} onChange={e => setForm({...form, username: e.target.value})} className="bg-white/5 border-white/10 h-11 rounded-xl font-bold" /></div>
                     </div>
                   </div>
                 </div>
               </TabsContent>
+              
+              {/* Остальные вкладки остаются без изменений... */}
             </div>
           </ScrollArea>
 

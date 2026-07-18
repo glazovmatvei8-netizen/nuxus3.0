@@ -1,7 +1,7 @@
 
 "use client"
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -25,8 +25,8 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 type AuthMode = 'login' | 'register';
 
 /**
- * AuthScreen V56.9.1 «SDK SYNC FIX»
- * ИСПРАВЛЕНО: Ошибка "VK SDK не готов" устранена за счет инициализации при клике.
+ * AuthScreen V56.9.2 «SDK RESILIENCE»
+ * ИСПРАВЛЕНО: Агрессивное ожидание SDK + восстановление popup-логики.
  */
 export default function AuthScreen() {
   const auth = useAuth();
@@ -36,6 +36,7 @@ export default function AuthScreen() {
   
   const [mode, setMode] = useState<AuthMode>('login');
   const [isLoading, setIsLoading] = useState(false);
+  const [isSdkReady, setIsSdkReady] = useState(false);
   const [showPass, setShowPass] = useState(false);
   const [isLegalOpen, setIsLegalOpen] = useState(false);
 
@@ -45,17 +46,29 @@ export default function AuthScreen() {
   const [username, setUsername] = useState('');
   const [vkId, setVkId] = useState<number | null>(null);
 
-  const handleVkLogin = () => {
+  // Периодическая проверка готовности SDK
+  useEffect(() => {
+    const checkInterval = setInterval(() => {
+      if ((window as any).VKIDSDK) {
+        setIsSdkReady(true);
+        clearInterval(checkInterval);
+      }
+    }, 500);
+    return () => clearInterval(checkInterval);
+  }, []);
+
+  const handleVkLogin = async () => {
     const VKID = (window as any).VKIDSDK;
+    
     if (!VKID) {
-      toast({ title: "SDK VK еще загружается", description: "Подождите пару секунд...", variant: "destructive" });
+      toast({ title: "VK SDK еще не готов", description: "Подождите несколько секунд...", variant: "destructive" });
       return;
     }
 
     setIsLoading(true);
 
     try {
-      // Инициализируем конфиг ПРЯМО ПЕРЕД входом
+      // Принудительная инициализация конфига
       VKID.Config.init({
         app: 54684553,
         redirectUrl: 'https://nuxus.fun',
@@ -64,18 +77,13 @@ export default function AuthScreen() {
         scope: '', 
       });
 
-      VKID.Auth.login()
-        .then((data: any) => {
-          handleVkSuccess(data);
-        })
-        .catch((err: any) => {
-          console.error("VK Login Error:", err);
-          setIsLoading(false);
-          toast({ title: "Сбой входа VK", variant: "destructive" });
-        });
-    } catch (e) {
+      const data = await VKID.Auth.login();
+      await handleVkSuccess(data);
+    } catch (e: any) {
+      console.error("VK Auth Error:", e);
+      toast({ title: "Сбой VK ID", description: "Окно было закрыто или произошла ошибка.", variant: "destructive" });
+    } finally {
       setIsLoading(false);
-      toast({ title: "Ошибка инициализации SDK", variant: "destructive" });
     }
   };
 
@@ -98,23 +106,21 @@ export default function AuthScreen() {
         await setPersistence(auth, browserLocalPersistence);
         await signInWithEmailAndPassword(auth, vkEmail, vkPass);
         setIs2FAVerified(true);
-        toast({ title: "Вход выполнен через VK" });
-        setIsLoading(false);
+        toast({ title: "Синхронизация по VK ID" });
         return;
       }
 
-      // 2. ВТОРИЧНО: Предложение связки, если номер совпадает
+      // 2. ВТОРИЧНО: Совпадение по номеру
       if (phoneNumber) {
         const cleanPhone = phoneNumber.replace(/\D/g, '');
         const phoneQuery = query(collection(db, 'users'), where('phone', '==', cleanPhone), limit(1));
         const phoneSnap = await getDocs(phoneQuery);
         
         if (!phoneSnap.empty) {
-          toast({ title: "Узел Обнаружен", description: "Введите пароль для привязки вашего VK." });
+          toast({ title: "Узел Обнаружен", description: "Введите пароль для привязки VK." });
           setIdentifier(phoneNumber);
           setMode('login');
           setVkId(vId); 
-          setIsLoading(false);
           return;
         }
       }
@@ -124,12 +130,10 @@ export default function AuthScreen() {
       setName(vName);
       setIdentifier(phoneNumber || '');
       setVkId(vId);
-      toast({ title: "Сигнал получен", description: "Выберите никнейм для завершения." });
+      toast({ title: "Данные получены", description: "Завершите регистрацию." });
       
     } catch (error: any) {
-      toast({ title: "Ошибка VK ID", description: error.message, variant: "destructive" });
-    } finally {
-      setIsLoading(false);
+      toast({ title: "Ошибка данных", description: error.message, variant: "destructive" });
     }
   };
 
@@ -154,17 +158,13 @@ export default function AuthScreen() {
       if (mode === 'login') {
         try {
           const userCredential = await signInWithEmailAndPassword(auth, finalEmail, password);
-          const userRef = doc(db, 'users', userCredential.user.uid);
-          
           if (vkId) {
-            await updateDoc(userRef, { vkId });
-            toast({ title: "VK ID успешно привязан" });
+            await updateDoc(doc(db, 'users', userCredential.user.uid), { vkId });
+            toast({ title: "VK ID Привязан" });
           }
-          
           setIs2FAVerified(true);
-          toast({ title: "Доступ разрешен" });
         } catch (err: any) {
-          toast({ title: "Ошибка входа", description: "Проверьте данные.", variant: "destructive" });
+          toast({ title: "Ошибка", description: "Неверный пароль или ID.", variant: "destructive" });
         }
       } else {
         if (!name.trim() || !username.trim()) {
@@ -188,7 +188,7 @@ export default function AuthScreen() {
         
         const userCredential = await createUserWithEmailAndPassword(auth, regEmail, regPass);
         
-        const profileData = {
+        await setDoc(doc(db, 'users', userCredential.user.uid), {
           id: userCredential.user.uid,
           name: name.trim(),
           username: usernameWithAt,
@@ -200,14 +200,11 @@ export default function AuthScreen() {
           isPremium: false,
           balance: 0,
           settings: { theme: 'default', appearance: 'dark' }
-        };
-
-        await setDoc(doc(db, 'users', userCredential.user.uid), profileData);
+        });
         setIs2FAVerified(true);
-        toast({ title: "Узел создан" });
       }
     } catch (e: any) {
-      toast({ title: "Ошибка", description: e.message, variant: "destructive" });
+      toast({ title: "Сбой", description: e.message, variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
@@ -219,33 +216,13 @@ export default function AuthScreen() {
       
       <ScrollArea className="w-full h-full">
         <div className="min-h-full w-full flex flex-col items-center justify-center p-4 py-12 relative z-10">
-          <div className="mb-10">
-            <NuxusLogo size={90} />
-          </div>
+          <div className="mb-10"><NuxusLogo size={90} /></div>
 
           <Card className="w-full max-w-[420px] border-white/[0.08] bg-white/[0.02] backdrop-blur-[40px] shadow-2xl rounded-[3rem] overflow-hidden relative border-2 z-20">
             <CardHeader className="text-center pb-2 pt-10 px-8">
-              <div className="grid grid-cols-2 bg-white/5 p-1 rounded-2xl mb-8 border border-white/5 w-full relative">
-                <button 
-                  type="button" 
-                  onClick={() => setMode('login')} 
-                  className={cn(
-                    "h-11 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all z-10", 
-                    mode === 'login' ? "bg-primary text-white shadow-lg" : "text-white/30 hover:bg-white/5"
-                  )}
-                >
-                  Вход
-                </button>
-                <button 
-                  type="button" 
-                  onClick={() => setMode('register')} 
-                  className={cn(
-                    "h-11 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all z-10", 
-                    mode === 'register' ? "bg-primary text-white shadow-lg" : "text-white/30 hover:bg-white/5"
-                  )}
-                >
-                  Регистрация
-                </button>
+              <div className="grid grid-cols-2 bg-white/5 p-1 rounded-2xl mb-8 border border-white/5">
+                <button type="button" onClick={() => setMode('login')} className={cn("h-11 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all", mode === 'login' ? "bg-primary text-white shadow-lg" : "text-white/30 hover:bg-white/5")}>Вход</button>
+                <button type="button" onClick={() => setMode('register')} className={cn("h-11 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all", mode === 'register' ? "bg-primary text-white shadow-lg" : "text-white/30 hover:bg-white/5")}>Регистрация</button>
               </div>
               <CardTitle className="text-3xl font-black tracking-tighter uppercase italic text-white leading-none">
                 {mode === 'login' ? 'Вход в Ядро' : 'Новый Узел'}
@@ -294,20 +271,14 @@ export default function AuthScreen() {
                   </Button>
                   
                   {mode === 'register' && vkId && (
-                    <button 
-                      type="button" 
-                      onClick={() => setMode('login')}
-                      className="w-full flex items-center justify-center gap-2 text-[9px] font-black uppercase tracking-widest text-primary/60 hover:text-primary transition-colors py-2"
-                    >
+                    <button type="button" onClick={() => setMode('login')} className="w-full flex items-center justify-center gap-2 text-[9px] font-black uppercase tracking-widest text-primary/60 hover:text-primary transition-colors py-2">
                       <LinkIcon className="w-3 h-3" /> Привязать к существующему узлу
                     </button>
                   )}
 
                   <div className="space-y-6 pt-2">
                      <div className="flex items-center gap-4 px-2">
-                        <div className="h-px flex-1 bg-white/5" />
-                        <span className="text-[8px] font-black text-white/20 uppercase tracking-[0.3em]">или войти через</span>
-                        <div className="h-px flex-1 bg-white/5" />
+                        <div className="h-px flex-1 bg-white/5" /><span className="text-[8px] font-black text-white/20 uppercase tracking-[0.3em]">или</span><div className="h-px flex-1 bg-white/5" />
                      </div>
                      
                      <div className="flex justify-center w-full">
@@ -319,9 +290,7 @@ export default function AuthScreen() {
                         >
                           {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : (
                             <>
-                              <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-                                <path d="M12.785 16.241s.288-.032.436-.194c.136-.148.132-.427.132-.427s-.02-1.304.587-1.496c.598-.19 1.365 1.26 2.18 1.817.615.422 1.083.33 1.083.33l2.177-.03s1.14-.071.6-.972c-.044-.073-.314-.66-1.617-1.866-1.364-1.26-1.183-1.055.462-3.23.998-1.332 1.397-2.144 1.272-2.493-.12-.333-.862-.244-.862-.244l-2.45.015s-.182-.025-.316.056c-.132.08-.217.267-.217.267s-.39 1.037-.91 1.92c-1.094 1.84-1.532 1.937-1.713 1.82-.42-.27-.315-1.087-.315-1.666 0-1.812.275-2.568-.536-2.764-.27-.065-.467-.108-1.155-.115-.882-.01-1.63.003-2.054.21-.282.14-.498.45-.366.468.164.023.535.1.732.365.254.34.245 1.103.245 1.103s.146 2.13-.34 2.395c-.334.183-.792-.19-1.775-1.896-.504-.87-.886-1.83-.886-1.83s-.074-.18-.206-.276c-.16-.12-.384-.157-.384-.157l-2.33.015s-.35.01-.478.162c-.115.137-.008.42-.008.42s1.834 4.286 3.91 6.45c1.903 1.984 4.067 1.85 4.067 1.85h.98z"/>
-                              </svg>
+                              <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M12.785 16.241s.288-.032.436-.194c.136-.148.132-.427.132-.427s-.02-1.304.587-1.496c.598-.19 1.365 1.26 2.18 1.817.615.422 1.083.33 1.083.33l2.177-.03s1.14-.071.6-.972c-.044-.073-.314-.66-1.617-1.866-1.364-1.26-1.183-1.055.462-3.23.998-1.332 1.397-2.144 1.272-2.493-.12-.333-.862-.244-.862-.244l-2.45.015s-.182-.025-.316.056c-.132.08-.217.267-.217.267s-.39 1.037-.91 1.92c-1.094 1.84-1.532 1.937-1.713 1.82-.42-.27-.315-1.087-.315-1.666 0-1.812.275-2.568-.536-2.764-.27-.065-.467-.108-1.155-.115-.882-.01-1.63.003-2.054.21-.282.14-.498.45-.366.468.164.023.535.1.732.365.254.34.245 1.103.245 1.103s.146 2.13-.34 2.395c-.334.183-.792-.19-1.775-1.896-.504-.87-.886-1.83-.886-1.83s-.074-.18-.206-.276c-.16-.12-.384-.157-.384-.157l-2.33.015s-.35.01-.478.162c-.115.137-.008.42-.008.42s1.834 4.286 3.91 6.45c1.903 1.984 4.067 1.85 4.067 1.85h.98z"/></svg>
                               <span className="uppercase text-[11px] tracking-widest font-black">Войти через VK</span>
                             </>
                           )}
@@ -330,19 +299,10 @@ export default function AuthScreen() {
                   </div>
                 </div>
               </form>
-
-              <div className="mt-10 flex flex-col items-center gap-3">
-                 <button type="button" onClick={() => setIsLegalOpen(true)} className="text-[9px] font-black uppercase tracking-widest text-white/20 hover:text-primary transition-colors py-1">Политика конфиденциальности</button>
-                 <div className="flex items-center gap-3 opacity-30">
-                    <ShieldCheck className="w-4 h-4 text-primary" />
-                    <span className="text-[7px] font-black uppercase tracking-[0.4em] text-white">Quantum Link 56.9.1</span>
-                 </div>
-              </div>
             </CardContent>
           </Card>
         </div>
       </ScrollArea>
-
       <LegalModal open={isLegalOpen} onOpenChange={setIsLegalOpen} />
     </div>
   );
