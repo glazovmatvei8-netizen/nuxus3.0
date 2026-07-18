@@ -29,7 +29,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { signOut } from 'firebase/auth';
 
 /**
- * MULTI-ACCOUNT ITEM V57.6.1
+ * MULTI-ACCOUNT ITEM V57.6.5
  */
 const AccountItem = memo(({ account, isActive, onSwitch, onRemove }: any) => (
   <div className={cn(
@@ -44,7 +44,7 @@ const AccountItem = memo(({ account, isActive, onSwitch, onRemove }: any) => (
       </div>
     </div>
     {!isActive && (
-      <button onClick={() => onRemove(account.id)} className="opacity-0 group-hover:opacity-100 p-2 text-white/20 hover:text-red-500 transition-all">
+      <button onClick={(e) => { e.stopPropagation(); onRemove(account.id); }} className="opacity-0 group-hover:opacity-100 p-2 text-white/20 hover:text-red-500 transition-all">
         <X className="w-4 h-4" />
       </button>
     )}
@@ -299,7 +299,7 @@ export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?:
         name: currentUserProfile.name,
         username: currentUserProfile.username,
         avatarUrl: currentUserProfile.avatarUrl,
-        isPremium: !!currentUserProfile.isPremium
+        isPremium: !!isUserPremium(currentUserProfile)
       };
       if (index > -1) accounts[index] = accData;
       else accounts.push(accData);
@@ -309,6 +309,8 @@ export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?:
   }, [user, currentUserProfile]);
 
   const handleAddAccount = () => {
+    // Clear pending target to ensure full login screen
+    sessionStorage.removeItem('nuxus_pending_target');
     signOut(auth).then(() => {
       window.location.reload();
     });
@@ -316,7 +318,8 @@ export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?:
 
   const handleSwitchAccount = (acc: any) => {
     if (acc.id === user?.uid) return;
-    localStorage.setItem('nuxus_target_account', acc.username);
+    // Store target username to pre-fill on login screen
+    sessionStorage.setItem('nuxus_pending_target', acc.username);
     signOut(auth).then(() => window.location.reload());
   };
 
@@ -391,7 +394,8 @@ export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?:
     return others.filter(c => !c.isArchived);
   }, [chats, activeTab, isArchiveView, currentUserProfile?.pinnedChatIds]);
 
-  const accLimit = isUserPremium(currentUserProfile) ? 5 : 3;
+  // CRITICAL: Global Limit check - if ANY saved account is premium, allow 5
+  const accLimit = (isUserPremium(currentUserProfile) || savedAccounts.some(a => a.isPremium)) ? 5 : 3;
 
   return (
     <div className="flex flex-col h-full bg-transparent overflow-hidden relative max-w-full">
@@ -532,3 +536,4 @@ export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?:
     </div>
   );
 }
+

@@ -42,7 +42,18 @@ export default function AuthScreen() {
 
   const floatingOneTapRef = useRef<any>(null);
 
-  // ДИНАМИЧЕСКИЙ ID (APK 54684554 / WEB 54684553)
+  // AUTO-DETECTION of pending switch
+  useEffect(() => {
+    const target = sessionStorage.getItem('nuxus_pending_target');
+    if (target) {
+      setIdentifier(target);
+      setMode('login');
+      toast({ title: `Переключение на ${target}`, description: "Введите пароль для активации узла." });
+      // Keep it once
+      sessionStorage.removeItem('nuxus_pending_target');
+    }
+  }, [toast]);
+
   const getVkAppId = useCallback(() => {
     const isNative = typeof window !== 'undefined' && (!!(window as any).Capacitor || !!(window as any).webkit);
     return isNative ? 54684554 : 54684553;
@@ -60,7 +71,6 @@ export default function AuthScreen() {
     });
   }, []);
 
-  // АКТИВАЦИЯ ШТОРКИ (FloatingOneTap) V57.6.1
   useEffect(() => {
     let active = true;
     const initFloating = async () => {
