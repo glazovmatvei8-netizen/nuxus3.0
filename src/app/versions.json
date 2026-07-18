@@ -1,10 +1,11 @@
 
 {
-  "latestVersion": "56.5.1",
+  "latestVersion": "56.5.2",
   "qesVersion": "56.5",
   "build": "Quantum-Link-Release",
   "sizeMb": 156,
   "changelog": [
+    "Added: Скрипты автоматического извлечения SHA-1 (get-sha1)",
     "Added: Инструкции по получению SHA-1 для VK ID",
     "Added: Полная интеграция VK ID (вход и регистрация)",
     "Fixed: Автоматическая проверка номера телефона через VK",
