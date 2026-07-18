@@ -25,8 +25,8 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 type AuthMode = 'login' | 'register';
 
 /**
- * AuthScreen V56.6.6 «ULTIMATE VK ID LIGHT FIX»
- * ИСПРАВЛЕНО: Принудительная белая схема для кнопки VK ID, исключающая "черный экран".
+ * AuthScreen V56.6.7 «EXACT VK ID INJECTION»
+ * ИСПРАВЛЕНО: Интеграция кода виджета OneTap в точности по шаблону пользователя.
  */
 export default function AuthScreen() {
   const auth = useAuth();
@@ -56,6 +56,7 @@ export default function AuthScreen() {
       if (!VKID || !vkidContainerRef.current || isVkRendered.current) return;
 
       try {
+        // ИНИЦИАЛИЗАЦИЯ ПО КОДУ ПОЛЬЗОВАТЕЛЯ
         VKID.Config.init({
           app: 54684553,
           redirectUrl: 'https://nuxus.fun',
@@ -66,17 +67,10 @@ export default function AuthScreen() {
 
         const oneTap = new VKID.OneTap();
 
-        // ФОРСИРОВАННАЯ СВЕТЛАЯ СХЕМА ДЛЯ ВИДИМОСТИ
+        // РЕНДЕРИНГ ПО КОДУ ПОЛЬЗОВАТЕЛЯ
         oneTap.render({
           container: vkidContainerRef.current,
-          showAlternativeLogin: true,
-          scheme: 'light', 
-          lang: 'ru',
-          styles: {
-            borderRadius: 12,
-            height: 48,
-            width: 320 // Фиксированная ширина для стабильности iframe
-          }
+          showAlternativeLogin: true
         })
         .on(VKID.WidgetEvents.ERROR, (error: any) => {
           console.error("VK ID Error:", error);
@@ -122,6 +116,7 @@ export default function AuthScreen() {
       const vkEmail = `vk_${vId}@nuxus.chat`;
       const vkPass = `vk_quantum_${vId}_secure_signal_v3`;
 
+      // ПРОВЕРКА ПО НОМЕРУ (Как просил пользователь)
       if (phoneNumber) {
         const cleanPhone = phoneNumber.replace(/\D/g, '');
         const phoneQuery = query(collection(db, 'users'), where('phone', '==', cleanPhone), limit(1));
@@ -159,6 +154,7 @@ export default function AuthScreen() {
         return;
       }
 
+      // ПЕРЕКЛЮЧЕНИЕ НА РЕГИСТРАЦИЮ (Как просил пользователь)
       setMode('register');
       setName(vName);
       setIdentifier(phoneNumber || '');
@@ -321,24 +317,19 @@ export default function AuthScreen() {
                     {isLoading ? <Loader2 className="animate-spin w-6 h-6" /> : (mode === 'login' ? "Авторизовать" : "Создать Узел")}
                   </Button>
                   
-                  <div className="space-y-4">
+                  <div className="space-y-6 pt-2">
                      <div className="flex items-center gap-4 px-2">
                         <div className="h-px flex-1 bg-white/5" />
                         <span className="text-[8px] font-black text-white/20 uppercase tracking-[0.3em]">или войти через</span>
                         <div className="h-px flex-1 bg-white/5" />
                      </div>
                      
-                     {/* КРИТИЧЕСКИЙ ФИКС: Белая подложка для видимости на темном фоне */}
-                     <div className="relative w-full min-h-[52px] z-[100] flex justify-center items-center">
+                     {/* КОНТЕЙНЕР ДЛЯ ВИДЖЕТА VK ID (Универсальное расположение) */}
+                     <div className="relative w-full min-h-[48px] z-[100] flex justify-center items-center">
                         <div 
                           ref={vkidContainerRef} 
-                          className="w-full max-w-[320px] min-h-[48px] rounded-xl overflow-visible shadow-xl cursor-pointer" 
-                          style={{ 
-                            pointerEvents: 'auto', 
-                            display: 'block',
-                            backgroundColor: '#FFFFFF', // Гарантирует видимость кнопки
-                            borderRadius: '12px'
-                          }}
+                          className="w-full max-w-[320px] min-h-[48px] overflow-visible cursor-pointer" 
+                          style={{ pointerEvents: 'auto', display: 'block' }}
                         />
                      </div>
                   </div>
@@ -349,7 +340,7 @@ export default function AuthScreen() {
                  <button type="button" onClick={() => setIsLegalOpen(true)} className="text-[9px] font-black uppercase tracking-widest text-white/20 hover:text-primary transition-colors py-1">Политика конфиденциальности</button>
                  <div className="flex items-center gap-3 opacity-30">
                     <ShieldCheck className="w-4 h-4 text-primary" />
-                    <span className="text-[7px] font-black uppercase tracking-[0.4em] text-white">Quantum Link 56.6.6</span>
+                    <span className="text-[7px] font-black uppercase tracking-[0.4em] text-white">Quantum Link 56.6.7</span>
                  </div>
               </div>
             </CardContent>

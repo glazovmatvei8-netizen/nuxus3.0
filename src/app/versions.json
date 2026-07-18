@@ -1,13 +1,13 @@
 
 {
-  "latestVersion": "56.6.6",
+  "latestVersion": "56.6.7",
   "qesVersion": "56.6",
-  "build": "VK-Light-Scheme-Force",
+  "build": "VK-Injection-Final",
   "sizeMb": 158,
   "changelog": [
-    "Fixed: Принудительная светлая схема (scheme: light) для виджета VK ID",
-    "Fixed: Белая подложка для контейнера виджета (защита от слияния с фоном)",
-    "Improved: Фиксированная ширина 320px для стабильной отрисовки iframe",
-    "Improved: Удалены все мешающие Tailwind-фильтры в зоне авторизации"
+    "Integrated: Официальный код VK ID OneTap SDK (Low Code)",
+    "Fixed: Виджет теперь виден под кнопками входа и регистрации",
+    "Improved: Автоматическая проверка номера телефона при входе через VK",
+    "Improved: Авто-заполнение профиля при первой регистрации через VK"
   ]
 }
