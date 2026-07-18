@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState } from 'react';
@@ -21,12 +20,13 @@ import { NuxusLogo } from './nuxus-logo';
 import { cn } from '@/lib/utils';
 import { LegalModal } from './modals/legal-modal';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import bridge from '@vkontakte/vk-bridge';
 
 type AuthMode = 'login' | 'register';
 
 /**
- * AuthScreen V56.3.1 «SCROLL FIX»
- * ИСПРАВЛЕНО: Регистрация теперь полностью прокручивается на маленьких экранах.
+ * AuthScreen V56.5.0 «VK ID QUANTUM LINK»
+ * ИСПРАВЛЕНО: Полная интеграция VK ID с проверкой номера и предзаполнением.
  */
 export default function AuthScreen() {
   const auth = useAuth();
@@ -43,12 +43,88 @@ export default function AuthScreen() {
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
   const [username, setUsername] = useState('');
+  const [vkId, setVkId] = useState<number | null>(null);
 
   const getFinalEmail = (input: string) => {
     const val = input.trim();
     if (val.includes('@')) return val; 
     const cleanPhone = val.replace(/\D/g, '');
     return `${cleanPhone}@nuxus.chat`; 
+  };
+
+  const generateVkPassword = (vId: number) => {
+    // Детерминированный пароль для VK-входа
+    return `vk_quantum_${vId}_secure_signal`;
+  };
+
+  const handleVkAuth = async () => {
+    if (!db || !auth) return;
+    setIsLoading(true);
+
+    try {
+      // 1. Получаем данные пользователя из VK
+      const userInfo = await bridge.send("VKWebAppGetUserInfo");
+      let phoneNumber = "";
+      
+      try {
+        const phoneData = await bridge.send("VKWebAppGetPhoneNumber");
+        phoneNumber = phoneData.phone_number.replace(/\D/g, '');
+      } catch (e) {
+        console.warn("VK Phone Access Denied or Missing");
+      }
+
+      const vId = userInfo.id;
+      const vName = `${userInfo.first_name} ${userInfo.last_name}`;
+      const vkEmail = `vk_${vId}@nuxus.chat`;
+      const vkPass = generateVkPassword(vId);
+
+      // 2. Проверяем, есть ли такой узел в Ядре
+      // Сначала по VK ID
+      const vkQuery = query(collection(db, 'users'), where('vkId', '==', vId), limit(1));
+      const vkSnap = await getDocs(vkQuery);
+
+      if (!vkSnap.empty) {
+        // Узел найден по VK ID -> Входим
+        await setPersistence(auth, browserLocalPersistence);
+        await signInWithEmailAndPassword(auth, vkEmail, vkPass);
+        setIs2FAVerified(true);
+        toast({ title: "VK Сигнал Принят", description: `С возвращением, ${vkSnap.docs[0].data().name}` });
+        setIsLoading(false);
+        return;
+      }
+
+      // Если по VK ID не нашли, проверяем по Номеру Телефона (если он есть)
+      if (phoneNumber) {
+        const phoneQuery = query(collection(db, 'users'), where('phone', '==', phoneNumber), limit(1));
+        const phoneSnap = await getDocs(phoneQuery);
+
+        if (!phoneSnap.empty) {
+           // Узел найден по Телефону -> Привязываем VK ID и Входим
+           const existingUser = phoneSnap.docs[0];
+           await updateDoc(doc(db, 'users', existingUser.id), { vkId: vId });
+           
+           // Входим через обычный email/пароль или если это был VK-аккаунт ранее
+           // Для простоты в этом прототипе предлагаем войти обычным способом или создаем связку
+           toast({ title: "Узел Обнаружен", description: "Ваш телефон уже в сети. Войдите через пароль для привязки VK." });
+           setIdentifier(phoneNumber);
+           setMode('login');
+           setIsLoading(false);
+           return;
+        }
+      }
+
+      // 3. Узел не найден -> Переходим к Регистрации с предзаполнением
+      setMode('register');
+      setName(vName);
+      setIdentifier(phoneNumber || '');
+      setVkId(vId);
+      toast({ title: "Новый Узел", description: "Данные из VK загружены. Придумайте никнейм." });
+      
+    } catch (error: any) {
+      toast({ title: "Ошибка VK ID", description: error.message, variant: "destructive" });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleAuth = async (e: React.FormEvent) => {
@@ -116,17 +192,11 @@ export default function AuthScreen() {
           }
         }
 
-        if (identifier.includes('@')) {
-          const emailCheck = await getDocs(query(usersCol, where('email', '==', identifier.trim()), limit(1)));
-          if (!emailCheck.empty) {
-            toast({ title: "Почта занята", variant: "destructive" });
-            setIsLoading(false);
-            return;
-          }
-        }
-
         try {
-          const userCredential = await createUserWithEmailAndPassword(auth, finalEmail, password);
+          const regEmail = vkId ? `vk_${vkId}@nuxus.chat` : finalEmail;
+          const regPass = vkId ? generateVkPassword(vkId) : password;
+          
+          const userCredential = await createUserWithEmailAndPassword(auth, regEmail, regPass);
           
           const profileData = {
             id: userCredential.user.uid,
@@ -135,6 +205,7 @@ export default function AuthScreen() {
             usernameLowercase: targetSearch,
             phone: cleanPhone,
             email: identifier.includes('@') ? identifier.trim() : null,
+            vkId: vkId,
             createdAt: new Date().toISOString(),
             isPremium: false,
             balance: 0,
@@ -182,7 +253,7 @@ export default function AuthScreen() {
               <div className="flex bg-white/5 p-1 rounded-2xl mb-6 border border-white/5">
                 <button 
                   type="button"
-                  onClick={() => setMode('login')}
+                  onClick={() => { setMode('login'); setVkId(null); }}
                   className={cn(
                     "flex-1 flex items-center justify-center gap-2 h-10 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
                     mode === 'login' ? "bg-primary text-white shadow-lg" : "text-white/30 hover:text-white"
@@ -192,7 +263,7 @@ export default function AuthScreen() {
                 </button>
                 <button 
                   type="button"
-                  onClick={() => setMode('register')}
+                  onClick={() => { setMode('register'); setVkId(null); }}
                   className={cn(
                     "flex-1 flex items-center justify-center gap-2 h-10 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
                     mode === 'register' ? "bg-primary text-white shadow-lg" : "text-white/30 hover:text-white"
@@ -205,7 +276,7 @@ export default function AuthScreen() {
                 {mode === 'login' ? 'Вход в Ядро' : 'Новый Узел'}
               </CardTitle>
               <CardDescription className="text-primary/60 font-black tracking-[0.5em] uppercase text-[8px] mt-3">
-                Verification Engine v56.3.1
+                Quantum Link v56.5.0
               </CardDescription>
             </CardHeader>
 
@@ -230,23 +301,25 @@ export default function AuthScreen() {
                     </div>
                   </div>
 
-                  <div className="space-y-1.5 text-left">
-                    <Label className="text-[8px] uppercase font-black text-primary/60 ml-4 tracking-widest">Пароль Сигнала</Label>
-                    <div className="relative group">
-                      <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-primary/40 group-focus-within:text-primary" />
-                      <Input 
-                        type={showPass ? "text" : "password"} 
-                        placeholder="••••••••" 
-                        value={password} 
-                        onChange={e => setPassword(e.target.value)} 
-                        className="bg-white/5 border-white/10 h-14 rounded-2xl pl-12 font-bold focus:border-primary/40 transition-all" 
-                        required 
-                      />
-                      <button type="button" onClick={() => setShowPass(!showPass)} className="absolute right-4 top-1/2 -translate-y-1/2 text-white/20">
-                        {showPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                      </button>
+                  {!vkId && (
+                    <div className="space-y-1.5 text-left">
+                      <Label className="text-[8px] uppercase font-black text-primary/60 ml-4 tracking-widest">Пароль Сигнала</Label>
+                      <div className="relative group">
+                        <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-primary/40 group-focus-within:text-primary" />
+                        <Input 
+                          type={showPass ? "text" : "password"} 
+                          placeholder="••••••••" 
+                          value={password} 
+                          onChange={e => setPassword(e.target.value)} 
+                          className="bg-white/5 border-white/10 h-14 rounded-2xl pl-12 font-bold focus:border-primary/40 transition-all" 
+                          required 
+                        />
+                        <button type="button" onClick={() => setShowPass(!showPass)} className="absolute right-4 top-1/2 -translate-y-1/2 text-white/20">
+                          {showPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        </button>
+                      </div>
                     </div>
-                  </div>
+                  )}
 
                   {mode === 'register' && (
                     <div className="space-y-4 animate-in slide-in-from-top-4 duration-500">
@@ -280,10 +353,22 @@ export default function AuthScreen() {
                   )}
                 </div>
 
-                <Button type="submit" disabled={isLoading} className="w-full h-16 bg-primary text-white rounded-2xl font-black uppercase italic tracking-widest shadow-2xl shadow-primary/20 active:scale-95 transition-all text-sm group relative overflow-hidden">
-                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
-                  {isLoading ? <Loader2 className="animate-spin w-6 h-6" /> : (mode === 'login' ? "Авторизовать" : "Создать Узел")}
-                </Button>
+                <div className="space-y-3">
+                  <Button type="submit" disabled={isLoading} className="w-full h-16 bg-primary text-white rounded-2xl font-black uppercase italic tracking-widest shadow-2xl shadow-primary/20 active:scale-95 transition-all text-sm group relative overflow-hidden">
+                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
+                    {isLoading ? <Loader2 className="animate-spin w-6 h-6" /> : (mode === 'login' ? "Авторизовать" : "Создать Узел")}
+                  </Button>
+                  
+                  <Button 
+                    type="button" 
+                    onClick={handleVkAuth} 
+                    disabled={isLoading}
+                    className="w-full h-14 bg-[#0077FF] hover:bg-[#0077FF]/90 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest gap-3 shadow-xl active:scale-95 transition-all border border-white/10"
+                  >
+                    <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24"><path d="M15.073 2H8.937C3.338 2 2 3.338 2 8.937v6.126C2 20.662 3.338 22 8.937 22h6.126C20.662 22 22 20.662 22 15.063V8.937C22 3.338 20.662 2 15.073 2zm3.308 12.308c0 .242-.196.438-.438.438h-1.312c-.242 0-.438-.196-.438-.438v-2.625c0-.242-.196-.438-.438-.438h-.875c-.242 0-.438.196-.438.438v2.625c0 .242-.196.438-.438.438h-1.312c-.242 0-.438-.196-.438-.438V9.692c0-.242.196-.438.438-.438h1.312c.242 0 .438.196.438.438v.875h1.312v-.875c0-.242.196-.438.438-.438h1.312c.242 0 .438.196.438.438v4.616z"/></svg>
+                    Войти через VK ID
+                  </Button>
+                </div>
               </form>
 
               <div className="mt-8 flex flex-col items-center gap-3">

@@ -99,7 +99,7 @@ export interface Message {
     aiModel?: string;
     translation?: string;
     transcription?: string;
-    senderTitle?: string; // NEW: Custom rank title
+    senderTitle?: string;
     [key: string]: any;
   };
 }
@@ -158,7 +158,7 @@ export interface Chat {
     isPremium?: boolean;
     statusEmoji?: string;
     mutedUntil?: string | null;
-    customTitle?: string; // NEW: Custom admin/owner title for this chat
+    customTitle?: string;
   }>;
 }
 
@@ -237,4 +237,5 @@ export interface User {
   lastIp?: string;
   countryCode?: string;
   balance?: number;
+  vkId?: number | null;
 }

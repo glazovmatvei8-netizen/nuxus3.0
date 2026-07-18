@@ -1,12 +1,12 @@
 {
-  "latestVersion": "56.4.4",
-  "qesVersion": "56.4",
-  "build": "Elite-Restoration-Patch",
-  "sizeMb": 154,
+  "latestVersion": "56.5.0",
+  "qesVersion": "56.5",
+  "build": "Quantum-Link-Release",
+  "sizeMb": 156,
   "changelog": [
-    "Fixed: Смена аватара теперь работает корректно",
-    "Restored: Полная информация о Premium во вкладке со звездочкой",
-    "Merged: Био, Статусы и Верификация объединены в одном интерфейсе",
-    "Optimized: Удалены конфликтующие файлы настроек"
+    "Added: Полная интеграция VK ID (вход и регистрация)",
+    "Fixed: Автоматическая проверка номера телефона через VK",
+    "Restored: Предзаполнение имени и телефона при новом узле",
+    "Security: Гибридная авторизация (VK + Phone + Email)"
   ]
 }
