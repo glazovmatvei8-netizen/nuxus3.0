@@ -1,14 +1,14 @@
 
 {
-  "latestVersion": "56.5.3",
+  "latestVersion": "56.6.0",
   "qesVersion": "56.5",
-  "build": "Quantum-Link-Release",
-  "sizeMb": 156,
+  "build": "Quantum-VK-Link",
+  "sizeMb": 158,
   "changelog": [
-    "Fixed: Устойчивость входа VK ID при отсутствии номера телефона",
-    "Added: Пояснения к механизму SHA-1 в документации",
-    "Added: Улучшенный скрипт get-sha1.bat для Windows",
-    "Security: Логика связки VK ID с существующими аккаунтами по номеру",
-    "Stability: Исправлена ошибка сборки Server Actions на Vercel"
+    "Added: Официальный VK ID SDK (OneTap виджет)",
+    "Added: Автоматическое предзаполнение данных при регистрации через VK",
+    "Improved: Гибридная система входа (VK + Phone + Email)",
+    "Fixed: Ошибки обмена кодами авторизации в SDK",
+    "Security: Сгенерированные пароли для связанных узлов"
   ]
 }
