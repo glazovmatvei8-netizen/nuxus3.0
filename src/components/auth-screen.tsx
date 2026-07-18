@@ -1,7 +1,7 @@
 
 "use client"
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -46,7 +46,7 @@ export default function AuthScreen() {
     return isNative ? 54684554 : 54684553;
   };
 
-  const ensureSDK = (): Promise<any> => {
+  const ensureSDK = useCallback((): Promise<any> => {
     return new Promise((resolve) => {
       if ((window as any).VKIDSDK) return resolve((window as any).VKIDSDK);
       
@@ -58,7 +58,7 @@ export default function AuthScreen() {
 
       setTimeout(() => resolve((window as any).VKIDSDK), 3500);
     });
-  };
+  }, []);
 
   const handleVkLogin = async () => {
     setIsVkLoading(true);

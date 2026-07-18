@@ -6,14 +6,14 @@ import { useAppState } from '@/lib/store';
 import { Button } from '@/components/ui/button';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
-  Plus, Ghost, Search, Star, Pin, PinOff, Archive, Lock, Trash2, MessageCircle, Activity, LayoutGrid, Users, User, ChevronRight, Zap, Bookmark, Shield
+  Plus, Ghost, Search, Star, Pin, PinOff, Archive, Lock, Trash2, MessageCircle, Activity, LayoutGrid, Users, User, ChevronRight, Zap, Bookmark, Shield, ChevronDown, UserPlus, LogOut, Check
 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { CreateChatModal } from './modals/create-chat-modal';
 import { AdminPanelModal } from './modals/admin-panel-modal';
 import { StoriesBar } from './stories-bar';
 import type { User as UserType, Message, Chat } from '@/lib/types';
-import { useFirestore, useUser, useCollection, useDoc, useMemoFirebase } from '@/firebase';
+import { useFirestore, useUser, useCollection, useMemoFirebase, useDoc, useAuth } from '@/firebase';
 import { collection, query, where, doc, limit, orderBy, updateDoc, arrayUnion, arrayRemove, deleteDoc, setDoc, getDoc } from 'firebase/firestore';
 import { formatDisplayName, cn, isGlobalAdmin, decryptSignal, isUserPremium } from '@/lib/utils';
 import { format } from 'date-fns';
@@ -25,6 +25,34 @@ import {
   ContextMenuTrigger,
   ContextMenuSeparator,
 } from "@/components/ui/context-menu";
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { signOut } from 'firebase/auth';
+
+/**
+ * MULTI-ACCOUNT ITEM V57.5.0
+ */
+const AccountItem = memo(({ account, isActive, onSwitch, onRemove }: any) => (
+  <div className={cn(
+    "flex items-center justify-between p-3 rounded-2xl transition-all group",
+    isActive ? "bg-primary/10 border border-primary/20" : "hover:bg-white/5"
+  )}>
+    <div className="flex items-center gap-3 cursor-pointer flex-1 min-w-0" onClick={() => onSwitch(account)}>
+      <UserAvatar userId={account.id} manualAvatarUrl={account.avatarUrl} className="h-10 w-10 border border-white/10" />
+      <div className="flex flex-col text-left min-w-0">
+        <span className="text-sm font-black text-white truncate">{account.name}</span>
+        <span className="text-[9px] font-black text-primary/60 uppercase tracking-widest">{account.username}</span>
+      </div>
+    </div>
+    {isActive ? (
+      <Check className="w-4 h-4 text-primary shrink-0" />
+    ) : (
+      <button onClick={() => onRemove(account.id)} className="opacity-0 group-hover:opacity-100 p-2 text-white/20 hover:text-red-500 transition-all">
+        <X className="w-4 h-4" />
+      </button>
+    )}
+  </div>
+));
+AccountItem.displayName = 'AccountItem';
 
 const ChatListItem = memo(({ 
   chat, isActive, otherId, isPinned, onPinToggle, onClick, onMarkUnread, onDelete, onArchive, currentUserId
@@ -234,12 +262,19 @@ ChatListItem.displayName = 'ChatListItem';
 export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?: boolean }) {
   const { user } = useUser();
   const db = useFirestore();
+  const auth = useAuth();
   const { currentChatId, setCurrentChatId, setIsSearchOpen, setIsInterceptionRequested } = useAppState();
   
   const [activeTab, setActiveTab] = useState('all');
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isAdminPanelOpen, setIsAdminPanelOpen] = useState(false);
   const [latency, setLatency] = useState<number>(0);
+  const [savedAccounts, setSavedAccounts] = useState<any[]>([]);
+
+  useEffect(() => {
+    const saved = localStorage.getItem('nuxus_saved_accounts');
+    if (saved) setSavedAccounts(JSON.parse(saved));
+  }, []);
 
   useEffect(() => {
     const updateLatency = async () => {
@@ -259,6 +294,44 @@ export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?:
 
   const userProfileRef = useMemoFirebase(() => (!db || !user) ? null : doc(db, 'users', user.uid), [db, user]);
   const { data: currentUserProfile } = useDoc<UserType>(userProfileRef);
+
+  useEffect(() => {
+    if (user && currentUserProfile) {
+      const accounts = JSON.parse(localStorage.getItem('nuxus_saved_accounts') || '[]');
+      const index = accounts.findIndex((a: any) => a.id === user.uid);
+      const accData = {
+        id: user.uid,
+        name: currentUserProfile.name,
+        username: currentUserProfile.username,
+        avatarUrl: currentUserProfile.avatarUrl,
+        isPremium: !!currentUserProfile.isPremium
+      };
+      if (index > -1) accounts[index] = accData;
+      else accounts.push(accData);
+      localStorage.setItem('nuxus_saved_accounts', JSON.stringify(accounts));
+      setSavedAccounts(accounts);
+    }
+  }, [user, currentUserProfile]);
+
+  const handleAddAccount = () => {
+    signOut(auth).then(() => {
+      window.location.reload();
+    });
+  };
+
+  const handleSwitchAccount = (acc: any) => {
+    if (acc.id === user?.uid) return;
+    // В прототипе без кастомных токенов переключение требует повторного входа
+    // Но мы можем запомнить "целевой" аккаунт для автозаполнения
+    localStorage.setItem('nuxus_target_account', acc.username);
+    signOut(auth).then(() => window.location.reload());
+  };
+
+  const handleRemoveAccount = (id: string) => {
+    const next = savedAccounts.filter(a => a.id !== id);
+    setSavedAccounts(next);
+    localStorage.setItem('nuxus_saved_accounts', JSON.stringify(next));
+  };
 
   const chatsQuery = useMemoFirebase(() => {
     if (!db || !user) return null;
@@ -336,6 +409,8 @@ export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?:
     return others.filter(c => !c.isArchived);
   }, [chats, activeTab, isArchiveView, currentUserProfile?.pinnedChatIds]);
 
+  const accLimit = isUserPremium(currentUserProfile) ? 5 : 3;
+
   return (
     <div className="flex flex-col h-full bg-transparent overflow-hidden relative max-w-full">
       <div className="px-6 pt-12 pb-6 shrink-0 bg-transparent z-20 space-y-8">
@@ -346,15 +421,52 @@ export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?:
           </div>
           
           <div className="absolute left-1/2 -translate-x-1/2">
-            <h1 
-              onClick={() => isGlobalAdmin(currentUserProfile) && setIsAdminPanelOpen(true)} 
-              className={cn(
-                "text-3xl font-black italic tracking-tighter text-white transition-all uppercase flex items-center gap-3", 
-                isGlobalAdmin(currentUserProfile) ? "cursor-pointer hover:text-primary active:scale-95" : "cursor-default"
-              )}
-            >
-              {isArchiveView ? 'Архив' : 'Сигналы'}
-            </h1>
+            <Popover>
+              <PopoverTrigger asChild>
+                <div className="flex items-center gap-2 cursor-pointer group active:scale-95 transition-all">
+                   <h1 className="text-3xl font-black italic tracking-tighter text-white uppercase group-hover:text-primary transition-colors">
+                     {isArchiveView ? 'Архив' : 'Сигналы'}
+                   </h1>
+                   <ChevronDown className="w-5 h-5 text-white/20 group-hover:text-primary transition-all" />
+                </div>
+              </PopoverTrigger>
+              <PopoverContent align="center" className="w-72 bg-[#0a0a0c]/95 backdrop-blur-3xl border-white/10 rounded-[2.2rem] p-3 shadow-2xl z-[1000] outline-none">
+                 <div className="space-y-1.5 mb-4">
+                    <span className="text-[9px] font-black uppercase tracking-[0.3em] text-white/20 px-2">Узлы в сети ({savedAccounts.length}/{accLimit})</span>
+                    <ScrollArea className="max-h-64">
+                       <div className="space-y-1">
+                          {savedAccounts.map(acc => (
+                            <AccountItem 
+                              key={acc.id} 
+                              account={acc} 
+                              isActive={acc.id === user?.uid} 
+                              onSwitch={handleSwitchAccount} 
+                              onRemove={handleRemoveAccount} 
+                            />
+                          ))}
+                       </div>
+                    </ScrollArea>
+                 </div>
+                 <div className="pt-2 border-t border-white/5 space-y-1">
+                    {savedAccounts.length < accLimit && (
+                      <button onClick={handleAddAccount} className="w-full flex items-center gap-3 p-3.5 rounded-xl hover:bg-primary/10 transition-all group text-left">
+                        <div className="h-9 w-9 rounded-xl bg-primary/20 flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
+                          <UserPlus className="w-5 h-5" />
+                        </div>
+                        <span className="text-[11px] font-black uppercase text-white tracking-widest">Добавить узел</span>
+                      </button>
+                    )}
+                    {isGlobalAdmin(currentUserProfile) && (
+                      <button onClick={() => setIsAdminPanelOpen(true)} className="w-full flex items-center gap-3 p-3.5 rounded-xl hover:bg-primary/10 transition-all group text-left">
+                        <div className="h-9 w-9 rounded-xl bg-primary/20 flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
+                          <Shield className="w-5 h-5" />
+                        </div>
+                        <span className="text-[11px] font-black uppercase text-white tracking-widest">Админ-панель</span>
+                      </button>
+                    )}
+                 </div>
+              </PopoverContent>
+            </Popover>
           </div>
 
           <Button variant="ghost" size="icon" className="h-12 w-12 rounded-2xl obsidian-glass border-white/5 hover:border-primary/40 transition-all group shadow-xl" onClick={() => setIsCreateModalOpen(true)}>

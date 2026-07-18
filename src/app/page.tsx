@@ -5,7 +5,7 @@ import { useUser, useFirestore, useDoc, useMemoFirebase, useAuth } from '@/fireb
 import { useAppState } from '@/lib/store';
 import AuthScreen from '@/components/auth-screen';
 import ChatMain from '@/components/chat-main';
-import { ShieldAlert, Fingerprint, ShieldCheck, Loader2 } from 'lucide-react';
+import { ShieldAlert, Fingerprint, ShieldCheck, Loader2, LogOut } from 'lucide-react';
 import { doc, collection, query, where, getDocs, limit, addDoc } from 'firebase/firestore';
 import type { User as UserType } from '@/lib/types';
 import { Button } from '@/components/ui/button';
@@ -18,8 +18,8 @@ import { NuxusLogo } from '@/components/nuxus-logo';
 import { IosInstaller } from '@/components/ios-installer';
 
 /**
- * ГЛАВНЫЙ КОНТРОЛЛЕР ЯДРА V56.4.5 «IRON SHIELD»
- * ИСПРАВЛЕНО: PIN-код теперь запрашивается всегда при включенной 2FA.
+ * ГЛАВНЫЙ КОНТРОЛЛЕР ЯДРА V57.5.0 «MULTI-ACCOUNT & GATE»
+ * ИСПРАВЛЕНО: Добавлена кнопка выхода на экране 2FA.
  */
 export default function Home() {
   const { user, isUserLoading } = useUser();
@@ -108,6 +108,14 @@ export default function Home() {
       toast({ title: "Ключ не принят", variant: "destructive" });
       setTwoFactorInput('');
     }
+  };
+
+  const handleSignOutFrom2FA = () => {
+    signOut(auth).then(() => {
+      setIs2FAVerified(false);
+      setTwoFactorInput('');
+      toast({ title: "Сессия завершена" });
+    });
   };
 
   const tryBiometricAuth = () => {
@@ -199,12 +207,17 @@ export default function Home() {
               <Button onClick={handleVerify2FA} className="w-full h-14 rounded-2xl bg-primary text-white font-black uppercase italic tracking-widest shadow-2xl shadow-primary/30 active:scale-95 transition-all">
                 Разблокировать
               </Button>
-              {profile?.settings?.biometricEnabled && (
-                <Button variant="ghost" onClick={tryBiometricAuth} disabled={isVerifying} className="w-full h-12 rounded-xl text-primary font-black uppercase text-[10px] tracking-widest gap-2 bg-white/5 border border-white/5">
-                  {isVerifying ? <Loader2 className="w-4 h-4 animate-spin" /> : <ShieldCheck className="w-4 h-4" />} 
-                  Face ID / Touch ID
-                </Button>
-              )}
+              <div className="grid grid-cols-1 gap-3">
+                 {profile?.settings?.biometricEnabled && (
+                   <Button variant="ghost" onClick={tryBiometricAuth} disabled={isVerifying} className="w-full h-12 rounded-xl text-primary font-black uppercase text-[10px] tracking-widest gap-2 bg-white/5 border border-white/5">
+                     {isVerifying ? <Loader2 className="w-4 h-4 animate-spin" /> : <ShieldCheck className="w-4 h-4" />} 
+                     Face ID / Touch ID
+                   </Button>
+                 )}
+                 <Button variant="ghost" onClick={handleSignOutFrom2FA} className="w-full h-12 rounded-xl text-red-500/60 hover:text-red-500 font-black uppercase text-[10px] tracking-widest gap-2 bg-white/5 border border-white/5">
+                    <LogOut className="w-4 h-4" /> Выйти из аккаунта
+                 </Button>
+              </div>
             </div>
           </div>
         </div>
