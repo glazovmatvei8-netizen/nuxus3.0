@@ -2,7 +2,7 @@
 "use client"
 
 import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -15,7 +15,7 @@ import { UserAvatar } from '@/components/user-avatar';
 import { 
   LogOut, Settings2, Camera, Lock, Fingerprint, Star, Zap, ShieldCheck, Loader2, Database, Palette, 
   Monitor, MessageSquare, ImageIcon, Smile, Plus, Check, RefreshCcw, Smartphone, PhoneCall, Eye, 
-  Users, ShieldAlert, Ghost, Mail, Share2, FileText, Download, Search, MessageCircle, CheckCircle2, Calendar, Shield, Info, Globe, Paintbrush, ArrowRight, ShieldQuestion, Clock, Sparkles, Wand2
+  Users, ShieldAlert, Ghost, Mail, Share2, FileText, Download, Search, MessageCircle, CheckCircle2, Calendar, Shield, Info, Globe, Paintbrush, ArrowRight, ShieldQuestion, Clock, Sparkles, Wand2, Link as LinkIcon
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { signOut } from 'firebase/auth';
@@ -30,8 +30,7 @@ import { ru } from 'date-fns/locale';
 import { sendVerificationCode } from '@/ai/flows/send-verification-email-flow';
 
 /**
- * SETTINGS MODAL V56.4.5 «PROTECTION MAX»
- * ИСПРАВЛЕНО: Аватара, Elite вкладка, и все 8 уровней защиты.
+ * SETTINGS MODAL V56.8.0 «HYBRID SYNC»
  */
 export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const auth = useAuth();
@@ -42,11 +41,14 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const bgInputRef = useRef<HTMLInputElement>(null);
+  const vkidSettingsRef = useRef<HTMLDivElement>(null);
 
   const userRef = useMemoFirebase(() => (!db || !user) ? null : doc(db, 'users', user.uid), [db, user]);
   const { data: profile } = useDoc<User>(userRef);
 
   const [isSaving, setIsSaving] = useState(false);
+  const [isLinkingVK, setIsLinkingVK] = useState(false);
+  const [isVkModalOpen, setIsVkModalOpen] = useState(false);
   
   // VERIFICATION STATE
   const [verifyStep, setVerifyStep] = useState<'idle' | 'verifying_old' | 'entering_new' | 'verifying_new'>('idle');
@@ -141,6 +143,32 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
       }
     }
   }, [profile, open]);
+
+  // VK ID Linking Logic
+  useEffect(() => {
+    if (isVkModalOpen && vkidSettingsRef.current && (window as any).VKIDSDK) {
+      const VKID = (window as any).VKIDSDK;
+      VKID.Config.init({
+        app: 54684553,
+        redirectUrl: 'https://nuxus.fun',
+        responseMode: VKID.ConfigResponseMode.Callback,
+        source: VKID.ConfigSource.LOWCODE,
+      });
+      const oneTap = new VKID.OneTap();
+      oneTap.render({
+        container: vkidSettingsRef.current,
+        styles: { borderRadius: 50, width: 320 }
+      }).on(VKID.OneTapInternalEvents.LOGIN_SUCCESS, (payload: any) => {
+        VKID.Auth.exchangeCode(payload.code, payload.device_id).then(async (data: any) => {
+          if (!db || !user) return;
+          const vId = data.user_id || data.id;
+          await updateDoc(doc(db, 'users', user.uid), { vkId: vId });
+          toast({ title: "VK ID Привязан" });
+          setIsVkModalOpen(false);
+        });
+      });
+    }
+  }, [isVkModalOpen, db, user, toast]);
 
   const handleSendEmailCode = async (targetEmail: string, step: typeof verifyStep) => {
     if (!targetEmail || !targetEmail.includes('@')) {
@@ -240,6 +268,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
   };
 
   return (
+    <>
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md bg-[#0a0a0c]/98 backdrop-blur-[50px] border-white/10 p-0 overflow-hidden h-[90dvh] flex flex-col rounded-[3rem] shadow-2xl outline-none">
         <DialogHeader className="p-8 border-b border-white/5 shrink-0 relative overflow-hidden text-left">
@@ -274,6 +303,22 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                   </div>
 
                   <div className="space-y-6 w-full text-left">
+                    {/* SOCIALS BLOCK */}
+                    <div className="bg-white/5 p-5 rounded-[2rem] border border-white/5 space-y-4">
+                       <div className="flex items-center gap-2"><LinkIcon className="w-4 h-4 text-primary" /><span className="text-[10px] font-black uppercase text-white tracking-widest">Связанные аккаунты</span></div>
+                       <div className="flex items-center justify-between p-3 bg-black/40 rounded-xl border border-white/5">
+                          <div className="flex items-center gap-3">
+                             <div className="w-8 h-8 rounded-lg bg-blue-500/20 flex items-center justify-center text-blue-500 font-black">VK</div>
+                             <span className="text-xs font-bold text-white/80">{profile?.vkId ? 'Привязано' : 'Не привязано'}</span>
+                          </div>
+                          {!profile?.vkId ? (
+                            <Button onClick={() => setIsVkModalOpen(true)} className="h-8 px-4 rounded-lg bg-blue-500 text-white font-black uppercase text-[8px] tracking-widest">Привязать</Button>
+                          ) : (
+                            <CheckCircle2 className="w-4 h-4 text-green-500" />
+                          )}
+                       </div>
+                    </div>
+
                     {/* EMAIL BLOCK */}
                     <div className="bg-white/5 p-5 rounded-[2rem] border border-white/5 space-y-4">
                        <div className="flex items-center justify-between">
@@ -400,6 +445,21 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         </Tabs>
       </DialogContent>
     </Dialog>
+
+    {/* LINK VK MODAL */}
+    <Dialog open={isVkModalOpen} onOpenChange={setIsVkModalOpen}>
+       <DialogContent className="max-w-xs bg-[#0a0a0c] border-white/10 rounded-[2.5rem] p-8 text-center shadow-2xl outline-none z-[2000]">
+          <DialogHeader>
+             <DialogTitle className="text-xl font-black uppercase italic text-white">Связка с VK</DialogTitle>
+             <DialogDescription className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest mt-1">Используйте OneTap для привязки</DialogDescription>
+          </DialogHeader>
+          <div className="py-6 flex justify-center overflow-visible">
+             <div ref={vkidSettingsRef} className="w-full flex justify-center" />
+          </div>
+          <Button variant="ghost" onClick={() => setIsVkModalOpen(false)} className="w-full h-12 text-[10px] font-black uppercase tracking-widest text-white/20">Отмена</Button>
+       </DialogContent>
+    </Dialog>
+    </>
   );
 }
 

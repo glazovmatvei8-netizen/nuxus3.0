@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Lock, Eye, EyeOff, Phone, ShieldCheck } from 'lucide-react';
+import { Loader2, Lock, Eye, EyeOff, Phone, ShieldCheck, User as UserIcon } from 'lucide-react';
 import { useAuth, useFirestore } from '@/firebase';
 import { 
   signInWithEmailAndPassword,
@@ -25,7 +25,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 type AuthMode = 'login' | 'register';
 
 /**
- * AuthScreen V56.7.2 «EXACT VK ID INJECTION & LAYOUT FIX»
+ * AuthScreen V56.8.0 «HYBRID SYNC»
  * ИСПРАВЛЕНО: Кнопки выбора режима больше не накладываются.
  * ИСПРАВЛЕНО: Виджет VK ID интегрирован в точности по коду пользователя.
  */
@@ -57,7 +57,6 @@ export default function AuthScreen() {
       if (!VKID || !vkidContainerRef.current || isVkRendered.current) return;
 
       try {
-        // ИНИЦИАЛИЗАЦИЯ В ТОЧНОСТИ ПО КОДУ ПОЛЬЗОВАТЕЛЯ
         VKID.Config.init({
           app: 54684553,
           redirectUrl: 'https://nuxus.fun',
@@ -68,7 +67,6 @@ export default function AuthScreen() {
 
         const oneTap = new VKID.OneTap();
 
-        // РЕНДЕРИНГ В ТОЧНОСТИ ПО КОДУ ПОЛЬЗОВАТЕЛЯ
         oneTap.render({
           container: vkidContainerRef.current,
           showAlternativeLogin: true,
@@ -121,31 +119,7 @@ export default function AuthScreen() {
       const vkEmail = `vk_${vId}@nuxus.chat`;
       const vkPass = `vk_quantum_${vId}_secure_signal_v3`;
 
-      if (phoneNumber) {
-        const cleanPhone = phoneNumber.replace(/\D/g, '');
-        const phoneQuery = query(collection(db, 'users'), where('phone', '==', cleanPhone), limit(1));
-        const phoneSnap = await getDocs(phoneQuery);
-        
-        if (!phoneSnap.empty) {
-          const existingUser = phoneSnap.docs[0].data();
-          await setPersistence(auth, browserLocalPersistence);
-          try {
-            await signInWithEmailAndPassword(auth, existingUser.email || `${cleanPhone}@nuxus.chat`, vkPass);
-          } catch (e) {
-            toast({ title: "Узел Обнаружен", description: "Введите пароль для объединения с VK." });
-            setIdentifier(phoneNumber);
-            setMode('login');
-            setVkId(vId);
-            setIsLoading(false);
-            return;
-          }
-          setIs2FAVerified(true);
-          toast({ title: "Вход по VK", description: `С возвращением, ${existingUser.name}` });
-          setIsLoading(false);
-          return;
-        }
-      }
-
+      // Поиск существующего VK-аккаунта
       const vkQuery = query(collection(db, 'users'), where('vkId', '==', vId), limit(1));
       const vkSnap = await getDocs(vkQuery);
 
@@ -158,6 +132,23 @@ export default function AuthScreen() {
         return;
       }
 
+      // Поиск по номеру телефона для связки
+      if (phoneNumber) {
+        const cleanPhone = phoneNumber.replace(/\D/g, '');
+        const phoneQuery = query(collection(db, 'users'), where('phone', '==', cleanPhone), limit(1));
+        const phoneSnap = await getDocs(phoneQuery);
+        
+        if (!phoneSnap.empty) {
+          toast({ title: "Узел Обнаружен", description: "Введите пароль для объединения с вашим VK." });
+          setIdentifier(phoneNumber);
+          setMode('login');
+          setVkId(vId); // Запоминаем для апдейта после входа
+          setIsLoading(false);
+          return;
+        }
+      }
+
+      // Если ничего не нашли - регистрация
       setMode('register');
       setName(vName);
       setIdentifier(phoneNumber || '');
@@ -192,15 +183,17 @@ export default function AuthScreen() {
       if (mode === 'login') {
         try {
           const userCredential = await signInWithEmailAndPassword(auth, finalEmail, password);
-          const userSnap = await getDoc(doc(db, 'users', userCredential.user.uid));
+          const userRef = doc(db, 'users', userCredential.user.uid);
+          const userSnap = await getDoc(userRef);
           
           if (!userSnap.exists()) {
              setMode('register');
              toast({ title: "Профиль не завершен" });
           } else {
              if (vkId) {
-               await updateDoc(doc(db, 'users', userCredential.user.uid), { vkId });
-               toast({ title: "VK Привязан" });
+               // Привязываем VK ID если зашли по паролю после клика на VK
+               await updateDoc(userRef, { vkId });
+               toast({ title: "VK Успешно Привязан" });
              }
              setIs2FAVerified(true);
              toast({ title: "Сигнал принят", description: `Добро пожаловать, ${userSnap.data().name}` });
@@ -237,7 +230,7 @@ export default function AuthScreen() {
           username: usernameWithAt,
           usernameLowercase: targetSearch,
           phone: cleanPhone,
-          email: identifier.includes('@') ? identifier.trim() : null,
+          email: identifier.includes('@') ? identifier.trim() : (vkId ? null : finalEmail),
           vkId: vkId,
           createdAt: new Date().toISOString(),
           isPremium: false,
@@ -268,7 +261,6 @@ export default function AuthScreen() {
 
           <Card className="w-full max-w-[420px] border-white/[0.08] bg-white/[0.02] backdrop-blur-[40px] shadow-2xl rounded-[3rem] overflow-hidden relative border-2 z-20">
             <CardHeader className="text-center pb-2 pt-10 px-8">
-              {/* ИСПРАВЛЕННЫЙ ТАБ-КОНТРОЛЛЕР */}
               <div className="flex bg-white/5 p-1 rounded-2xl mb-6 border border-white/5 w-full">
                 <button 
                   type="button" 
@@ -302,23 +294,21 @@ export default function AuthScreen() {
                   <div className="space-y-1.5 text-left">
                     <Label className="text-[8px] uppercase font-black text-primary/60 ml-4 tracking-widest">Идентификатор</Label>
                     <div className="relative">
-                       <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-primary/40" />
-                       <Input placeholder="+7..." value={identifier} onChange={e => setIdentifier(e.target.value)} className="bg-white/5 border-white/10 h-14 rounded-2xl pl-12 font-bold" required />
+                       <UserIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-primary/40" />
+                       <Input placeholder="Телефон или Email" value={identifier} onChange={e => setIdentifier(e.target.value)} className="bg-white/5 border-white/10 h-14 rounded-2xl pl-12 font-bold" required />
                     </div>
                   </div>
 
-                  {!vkId && (
-                    <div className="space-y-1.5 text-left">
-                      <Label className="text-[8px] uppercase font-black text-primary/60 ml-4 tracking-widest">Пароль</Label>
-                      <div className="relative">
-                        <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-primary/40" />
-                        <Input type={showPass ? "text" : "password"} placeholder="••••••••" value={password} onChange={e => setPassword(e.target.value)} className="bg-white/5 border-white/10 h-14 rounded-2xl pl-12 font-bold" required={!vkId} />
-                        <button type="button" onClick={() => setShowPass(!showPass)} className="absolute right-4 top-1/2 -translate-y-1/2 text-white/20">
-                          {showPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                        </button>
-                      </div>
+                  <div className="space-y-1.5 text-left">
+                    <Label className="text-[8px] uppercase font-black text-primary/60 ml-4 tracking-widest">Пароль</Label>
+                    <div className="relative">
+                      <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-primary/40" />
+                      <Input type={showPass ? "text" : "password"} placeholder="••••••••" value={password} onChange={e => setPassword(e.target.value)} className="bg-white/5 border-white/10 h-14 rounded-2xl pl-12 font-bold" required={!vkId} />
+                      <button type="button" onClick={() => setShowPass(!showPass)} className="absolute right-4 top-1/2 -translate-y-1/2 text-white/20">
+                        {showPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
                     </div>
-                  )}
+                  </div>
 
                   {mode === 'register' && (
                     <div className="space-y-4 animate-in slide-in-from-top-4">
@@ -346,7 +336,6 @@ export default function AuthScreen() {
                         <div className="h-px flex-1 bg-white/5" />
                      </div>
                      
-                     {/* КОНТЕЙНЕР ДЛЯ ВИДЖЕТА VK ID (Размер 385px согласно коду пользователя) */}
                      <div className="relative w-full min-h-[48px] z-[100] flex justify-center items-center overflow-visible">
                         <div 
                           ref={vkidContainerRef} 
@@ -362,7 +351,7 @@ export default function AuthScreen() {
                  <button type="button" onClick={() => setIsLegalOpen(true)} className="text-[9px] font-black uppercase tracking-widest text-white/20 hover:text-primary transition-colors py-1">Политика конфиденциальности</button>
                  <div className="flex items-center gap-3 opacity-30">
                     <ShieldCheck className="w-4 h-4 text-primary" />
-                    <span className="text-[7px] font-black uppercase tracking-[0.4em] text-white">Quantum Link 56.7.2</span>
+                    <span className="text-[7px] font-black uppercase tracking-[0.4em] text-white">Quantum Link 56.8.0</span>
                  </div>
               </div>
             </CardContent>

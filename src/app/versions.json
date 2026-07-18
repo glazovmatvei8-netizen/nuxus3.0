@@ -1,13 +1,13 @@
 
 {
-  "latestVersion": "56.7.1",
-  "qesVersion": "56.7",
-  "build": "VK-Final-Style-Injection",
-  "sizeMb": 158,
+  "latestVersion": "56.8.0",
+  "qesVersion": "56.8",
+  "build": "Hybrid-Identity-Sync",
+  "sizeMb": 160,
   "changelog": [
-    "Integrated: Официальный стиль виджета VK ID (385px, 50px radius)",
-    "Improved: Виджет OneTap теперь виден под формами Входа и Регистрации",
-    "Improved: Повышена устойчивость инициализации SDK в React-среде",
-    "Fixed: Устранены ограничения контейнера, мешавшие отображению кнопки"
+    "Integrated: Гибридная авторизация (Телефон + Почта + VK ID)",
+    "Added: Возможность привязать VK ID в настройках профиля",
+    "Improved: Умная склейка аккаунтов при обнаружении совпадения номера",
+    "Fixed: Оптимизировано позиционирование виджета OneTap"
   ]
 }
