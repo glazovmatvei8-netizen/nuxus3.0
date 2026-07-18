@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Lock, Eye, EyeOff, Phone, ShieldCheck, User as UserIcon, Link as LinkIcon, ArrowRight } from 'lucide-react';
+import { Loader2, Lock, Eye, EyeOff, ShieldCheck, User as UserIcon, Link as LinkIcon } from 'lucide-react';
 import { useAuth, useFirestore } from '@/firebase';
 import { 
   signInWithEmailAndPassword,
@@ -25,8 +25,8 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 type AuthMode = 'login' | 'register';
 
 /**
- * AuthScreen V56.8.1 «ABSOLUTE IDENTITY LINK»
- * ИСПРАВЛЕНО: Теперь можно привязать любой VK ID к любому аккаунту даже при несовпадении номеров.
+ * AuthScreen V56.8.2 «ABSOLUTE IDENTITY LINK»
+ * ИСПРАВЛЕНО: Кнопки входа/регистрации не накладываются. Виджет VK ID гарантированно виден и кликабелен.
  */
 export default function AuthScreen() {
   const auth = useAuth();
@@ -102,7 +102,7 @@ export default function AuthScreen() {
         initVKIDWidget();
         clearInterval(checkInterval);
       }
-    }, 500);
+    }, 300);
 
     return () => clearInterval(checkInterval);
   }, []);
@@ -190,7 +190,6 @@ export default function AuthScreen() {
              toast({ title: "Профиль не завершен" });
           } else {
              if (vkId) {
-               // ПРИНУДИТЕЛЬНАЯ ПРИВЯЗКА VK ID после успешного входа
                await updateDoc(userRef, { vkId });
                toast({ title: "VK ID Привязан", description: "Теперь вы можете заходить через VK." });
              }
@@ -260,12 +259,12 @@ export default function AuthScreen() {
 
           <Card className="w-full max-w-[420px] border-white/[0.08] bg-white/[0.02] backdrop-blur-[40px] shadow-2xl rounded-[3rem] overflow-hidden relative border-2 z-20">
             <CardHeader className="text-center pb-2 pt-10 px-8">
-              <div className="flex bg-white/5 p-1 rounded-2xl mb-6 border border-white/5 w-full">
+              <div className="grid grid-cols-2 bg-white/5 p-1 rounded-2xl mb-6 border border-white/5 w-full">
                 <button 
                   type="button" 
                   onClick={() => setMode('login')} 
                   className={cn(
-                    "flex-1 h-10 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all", 
+                    "h-10 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all", 
                     mode === 'login' ? "bg-primary text-white shadow-lg" : "text-white/30 hover:bg-white/5"
                   )}
                 >
@@ -275,7 +274,7 @@ export default function AuthScreen() {
                   type="button" 
                   onClick={() => setMode('register')} 
                   className={cn(
-                    "flex-1 h-10 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all", 
+                    "h-10 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all", 
                     mode === 'register' ? "bg-primary text-white shadow-lg" : "text-white/30 hover:bg-white/5"
                   )}
                 >
@@ -338,23 +337,22 @@ export default function AuthScreen() {
                     </button>
                   )}
 
-                  {!vkId && (
-                    <div className="space-y-6 pt-2">
-                       <div className="flex items-center gap-4 px-2">
-                          <div className="h-px flex-1 bg-white/5" />
-                          <span className="text-[8px] font-black text-white/20 uppercase tracking-[0.3em]">или войти через</span>
-                          <div className="h-px flex-1 bg-white/5" />
-                       </div>
-                       
-                       <div className="relative w-full min-h-[48px] z-[100] flex justify-center items-center overflow-visible">
-                          <div 
-                            ref={vkidContainerRef} 
-                            className="w-full max-w-[385px] min-h-[48px] overflow-visible cursor-pointer flex justify-center" 
-                            style={{ pointerEvents: 'auto', display: 'block' }}
-                          />
-                       </div>
-                    </div>
-                  )}
+                  <div className="space-y-6 pt-2">
+                     <div className="flex items-center gap-4 px-2">
+                        <div className="h-px flex-1 bg-white/5" />
+                        <span className="text-[8px] font-black text-white/20 uppercase tracking-[0.3em]">или войти через</span>
+                        <div className="h-px flex-1 bg-white/5" />
+                     </div>
+                     
+                     {/* VK ID CONTAINER - GUARANTEED VISIBILITY */}
+                     <div className="relative w-full min-h-[52px] z-[100] flex justify-center items-center overflow-visible">
+                        <div 
+                          ref={vkidContainerRef} 
+                          className="w-full max-w-[385px] min-h-[48px] overflow-visible cursor-pointer" 
+                          style={{ pointerEvents: 'auto', display: 'block' }}
+                        />
+                     </div>
+                  </div>
                 </div>
               </form>
 
@@ -362,7 +360,7 @@ export default function AuthScreen() {
                  <button type="button" onClick={() => setIsLegalOpen(true)} className="text-[9px] font-black uppercase tracking-widest text-white/20 hover:text-primary transition-colors py-1">Политика конфиденциальности</button>
                  <div className="flex items-center gap-3 opacity-30">
                     <ShieldCheck className="w-4 h-4 text-primary" />
-                    <span className="text-[7px] font-black uppercase tracking-[0.4em] text-white">Quantum Link 56.8.1</span>
+                    <span className="text-[7px] font-black uppercase tracking-[0.4em] text-white">Quantum Link 56.8.2</span>
                  </div>
               </div>
             </CardContent>
