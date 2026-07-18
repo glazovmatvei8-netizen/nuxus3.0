@@ -66,7 +66,7 @@ export default function RootLayout({
         <link rel="icon" href={FINAL_ICON_URL} sizes="any" />
         <link rel="apple-touch-icon" href={FINAL_ICON_URL} />
         <meta name="mobile-web-app-capable" content="yes" />
-        {/* VK ID SDK */}
+        {/* VK ID SDK - EXACT VERSION FROM USER */}
         <script src="https://unpkg.com/@vkid/sdk@<3.0.0/dist-sdk/umd/index.js" defer></script>
       </head>
       <body 

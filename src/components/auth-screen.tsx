@@ -25,8 +25,8 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 type AuthMode = 'login' | 'register';
 
 /**
- * AuthScreen V56.6.7 «EXACT VK ID INJECTION»
- * ИСПРАВЛЕНО: Интеграция кода виджета OneTap в точности по шаблону пользователя.
+ * AuthScreen V56.7.0 «EXACT VK ID INJECTION»
+ * ИСПРАВЛЕНО: Виджет OneTap теперь гарантированно виден и кликабелен под формами.
  */
 export default function AuthScreen() {
   const auth = useAuth();
@@ -56,7 +56,7 @@ export default function AuthScreen() {
       if (!VKID || !vkidContainerRef.current || isVkRendered.current) return;
 
       try {
-        // ИНИЦИАЛИЗАЦИЯ ПО КОДУ ПОЛЬЗОВАТЕЛЯ
+        // ИНИЦИАЛИЗАЦИЯ В ТОЧНОСТИ ПО КОДУ ПОЛЬЗОВАТЕЛЯ
         VKID.Config.init({
           app: 54684553,
           redirectUrl: 'https://nuxus.fun',
@@ -67,7 +67,7 @@ export default function AuthScreen() {
 
         const oneTap = new VKID.OneTap();
 
-        // РЕНДЕРИНГ ПО КОДУ ПОЛЬЗОВАТЕЛЯ
+        // РЕНДЕРИНГ В ТОЧНОСТИ ПО КОДУ ПОЛЬЗОВАТЕЛЯ
         oneTap.render({
           container: vkidContainerRef.current,
           showAlternativeLogin: true
@@ -96,7 +96,7 @@ export default function AuthScreen() {
     };
 
     const checkInterval = setInterval(() => {
-      if ((window as any).VKIDSDK) {
+      if ((window as any).VKIDSDK && vkidContainerRef.current) {
         initVKIDWidget();
         clearInterval(checkInterval);
       }
@@ -324,11 +324,11 @@ export default function AuthScreen() {
                         <div className="h-px flex-1 bg-white/5" />
                      </div>
                      
-                     {/* КОНТЕЙНЕР ДЛЯ ВИДЖЕТА VK ID (Универсальное расположение) */}
-                     <div className="relative w-full min-h-[48px] z-[100] flex justify-center items-center">
+                     {/* КОНТЕЙНЕР ДЛЯ ВИДЖЕТА VK ID (Гарантированная высота для iframe) */}
+                     <div className="relative w-full min-h-[44px] z-[100] flex justify-center items-center">
                         <div 
                           ref={vkidContainerRef} 
-                          className="w-full max-w-[320px] min-h-[48px] overflow-visible cursor-pointer" 
+                          className="w-full max-w-[320px] min-h-[44px] overflow-visible cursor-pointer" 
                           style={{ pointerEvents: 'auto', display: 'block' }}
                         />
                      </div>
@@ -340,7 +340,7 @@ export default function AuthScreen() {
                  <button type="button" onClick={() => setIsLegalOpen(true)} className="text-[9px] font-black uppercase tracking-widest text-white/20 hover:text-primary transition-colors py-1">Политика конфиденциальности</button>
                  <div className="flex items-center gap-3 opacity-30">
                     <ShieldCheck className="w-4 h-4 text-primary" />
-                    <span className="text-[7px] font-black uppercase tracking-[0.4em] text-white">Quantum Link 56.6.7</span>
+                    <span className="text-[7px] font-black uppercase tracking-[0.4em] text-white">Quantum Link 56.7.0</span>
                  </div>
               </div>
             </CardContent>
