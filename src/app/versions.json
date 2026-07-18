@@ -1,14 +1,14 @@
 
 {
-  "latestVersion": "56.5.2",
+  "latestVersion": "56.5.3",
   "qesVersion": "56.5",
   "build": "Quantum-Link-Release",
   "sizeMb": 156,
   "changelog": [
-    "Added: Скрипты автоматического извлечения SHA-1 (get-sha1)",
-    "Added: Инструкции по получению SHA-1 для VK ID",
-    "Added: Полная интеграция VK ID (вход и регистрация)",
-    "Fixed: Автоматическая проверка номера телефона через VK",
-    "Security: Гибридная авторизация (VK + Phone + Email)"
+    "Fixed: Устойчивость входа VK ID при отсутствии номера телефона",
+    "Added: Пояснения к механизму SHA-1 в документации",
+    "Added: Улучшенный скрипт get-sha1.bat для Windows",
+    "Security: Логика связки VK ID с существующими аккаунтами по номеру",
+    "Stability: Исправлена ошибка сборки Server Actions на Vercel"
   ]
 }

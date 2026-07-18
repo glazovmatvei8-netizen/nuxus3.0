@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState } from 'react';
@@ -14,7 +15,7 @@ import {
   browserLocalPersistence,
   setPersistence
 } from 'firebase/auth';
-import { doc, setDoc, getDoc, collection, query, where, getDocs, limit } from 'firebase/firestore';
+import { doc, setDoc, getDoc, collection, query, where, getDocs, limit, updateDoc } from 'firebase/firestore';
 import { useAppState } from '@/lib/store';
 import { NuxusLogo } from './nuxus-logo';
 import { cn } from '@/lib/utils';
@@ -25,8 +26,8 @@ import bridge from '@vkontakte/vk-bridge';
 type AuthMode = 'login' | 'register';
 
 /**
- * AuthScreen V56.5.0 «VK ID QUANTUM LINK»
- * ИСПРАВЛЕНО: Полная интеграция VK ID с проверкой номера и предзаполнением.
+ * AuthScreen V56.5.3 «VK ID STABILITY»
+ * ИСПРАВЛЕНО: Резистентность к ошибкам VK Bridge и логика связки аккаунтов.
  */
 export default function AuthScreen() {
   const auth = useAuth();
@@ -53,8 +54,8 @@ export default function AuthScreen() {
   };
 
   const generateVkPassword = (vId: number) => {
-    // Детерминированный пароль для VK-входа
-    return `vk_quantum_${vId}_secure_signal`;
+    // Детерминированный пароль для VK-входа (скрыт от пользователя)
+    return `vk_quantum_${vId}_secure_signal_v2`;
   };
 
   const handleVkAuth = async () => {
@@ -70,7 +71,7 @@ export default function AuthScreen() {
         const phoneData = await bridge.send("VKWebAppGetPhoneNumber");
         phoneNumber = phoneData.phone_number.replace(/\D/g, '');
       } catch (e) {
-        console.warn("VK Phone Access Denied or Missing");
+        console.warn("Nuxus VK: Phone access restricted by user or environment.");
       }
 
       const vId = userInfo.id;
@@ -78,13 +79,12 @@ export default function AuthScreen() {
       const vkEmail = `vk_${vId}@nuxus.chat`;
       const vkPass = generateVkPassword(vId);
 
-      // 2. Проверяем, есть ли такой узел в Ядре
-      // Сначала по VK ID
+      // 2. Проверяем наличие VK ID в базе
       const vkQuery = query(collection(db, 'users'), where('vkId', '==', vId), limit(1));
       const vkSnap = await getDocs(vkQuery);
 
       if (!vkSnap.empty) {
-        // Узел найден по VK ID -> Входим
+        // Узел найден -> Входим
         await setPersistence(auth, browserLocalPersistence);
         await signInWithEmailAndPassword(auth, vkEmail, vkPass);
         setIs2FAVerified(true);
@@ -93,19 +93,16 @@ export default function AuthScreen() {
         return;
       }
 
-      // Если по VK ID не нашли, проверяем по Номеру Телефона (если он есть)
+      // 3. Проверяем по Номеру Телефона (если получили из VK)
       if (phoneNumber) {
         const phoneQuery = query(collection(db, 'users'), where('phone', '==', phoneNumber), limit(1));
         const phoneSnap = await getDocs(phoneQuery);
 
         if (!phoneSnap.empty) {
-           // Узел найден по Телефону -> Привязываем VK ID и Входим
-           const existingUser = phoneSnap.docs[0];
-           await updateDoc(doc(db, 'users', existingUser.id), { vkId: vId });
-           
-           // Входим через обычный email/пароль или если это был VK-аккаунт ранее
-           // Для простоты в этом прототипе предлагаем войти обычным способом или создаем связку
-           toast({ title: "Узел Обнаружен", description: "Ваш телефон уже в сети. Войдите через пароль для привязки VK." });
+           toast({ 
+             title: "Узел Обнаружен", 
+             description: "Этот телефон уже в сети. Войдите через пароль для связки с VK." 
+           });
            setIdentifier(phoneNumber);
            setMode('login');
            setIsLoading(false);
@@ -113,15 +110,15 @@ export default function AuthScreen() {
         }
       }
 
-      // 3. Узел не найден -> Переходим к Регистрации с предзаполнением
+      // 4. Новый Узел -> Предзаполнение регистрации
       setMode('register');
       setName(vName);
       setIdentifier(phoneNumber || '');
       setVkId(vId);
-      toast({ title: "Новый Узел", description: "Данные из VK загружены. Придумайте никнейм." });
+      toast({ title: "Новый Узел", description: "Данные VK подгружены. Выберите никнейм." });
       
     } catch (error: any) {
-      toast({ title: "Ошибка VK ID", description: error.message, variant: "destructive" });
+      toast({ title: "Ошибка VK ID", description: "Убедитесь, что приложение запущено в среде VK или корректно настроен SHA-1.", variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
@@ -129,7 +126,7 @@ export default function AuthScreen() {
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!identifier.trim() || !password || !auth || !db) return;
+    if (!identifier.trim() || (!password && !vkId) || !auth || !db) return;
 
     setIsLoading(true);
     const finalEmail = getFinalEmail(identifier);
@@ -145,28 +142,30 @@ export default function AuthScreen() {
           
           if (!userSnap.exists()) {
              setMode('register');
-             toast({ title: "Узел не завершен", description: "Загрузите данные профиля." });
+             toast({ title: "Профиль не завершен", description: "Заполните данные для создания узла." });
           } else {
+             // Если мы вошли обычным способом, но у нас есть ожидающий vkId, привязываем его
+             if (vkId) {
+               await updateDoc(doc(db, 'users', userCredential.user.uid), { vkId });
+               toast({ title: "VK Привязан", description: "Теперь вы можете входить через VK ID." });
+             }
              setIs2FAVerified(true);
              toast({ title: "Сигнал принят", description: `Добро пожаловать, ${userSnap.data().name}` });
           }
         } catch (err: any) {
-          if (err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential' || err.code === 'auth/wrong-password') {
-            toast({ title: "Доступ запрещен", description: "Неверный ID или пароль.", variant: "destructive" });
-          } else {
-            toast({ title: "Ошибка входа", description: err.message, variant: "destructive" });
-          }
+          toast({ title: "Доступ запрещен", description: "Неверный идентификатор или пароль.", variant: "destructive" });
         }
       } else {
+        // РЕГИСТРАЦИЯ
         if (!name.trim() || !username.trim()) {
-          toast({ title: "Заполните профиль", variant: "destructive" });
+          toast({ title: "Заполните все поля", variant: "destructive" });
           setIsLoading(false);
           return;
         }
 
         const rawNick = username.trim().replace('@', '');
         if (/[^a-zA-Z0-9_]/.test(rawNick)) {
-          toast({ title: "Ошибка ника", description: "Только английские буквы и цифры.", variant: "destructive" });
+          toast({ title: "Ошибка ника", description: "Используйте только английские буквы и цифры.", variant: "destructive" });
           setIsLoading(false);
           return;
         }
@@ -174,9 +173,8 @@ export default function AuthScreen() {
         const usernameWithAt = '@' + rawNick;
         const targetSearch = usernameWithAt.toLowerCase();
 
-        const usersCol = collection(db, 'users');
-        
-        const nickCheck = await getDocs(query(usersCol, where('usernameLowercase', '==', targetSearch), limit(1)));
+        // Проверки уникальности
+        const nickCheck = await getDocs(query(collection(db, 'users'), where('usernameLowercase', '==', targetSearch), limit(1)));
         if (!nickCheck.empty) {
           toast({ title: "Никнейм занят", variant: "destructive" });
           setIsLoading(false);
@@ -184,55 +182,47 @@ export default function AuthScreen() {
         }
 
         if (cleanPhone) {
-          const phoneCheck = await getDocs(query(usersCol, where('phone', '==', cleanPhone), limit(1)));
+          const phoneCheck = await getDocs(query(collection(db, 'users'), where('phone', '==', cleanPhone), limit(1)));
           if (!phoneCheck.empty) {
-            toast({ title: "Номер уже в сети", description: "Этот телефон привязан к другому узлу.", variant: "destructive" });
+            toast({ title: "Номер в сети", description: "Этот телефон уже привязан к другому узлу.", variant: "destructive" });
             setIsLoading(false);
             return;
           }
         }
 
-        try {
-          const regEmail = vkId ? `vk_${vkId}@nuxus.chat` : finalEmail;
-          const regPass = vkId ? generateVkPassword(vkId) : password;
-          
-          const userCredential = await createUserWithEmailAndPassword(auth, regEmail, regPass);
-          
-          const profileData = {
-            id: userCredential.user.uid,
-            name: name.trim(),
-            username: usernameWithAt,
-            usernameLowercase: targetSearch,
-            phone: cleanPhone,
-            email: identifier.includes('@') ? identifier.trim() : null,
-            vkId: vkId,
-            createdAt: new Date().toISOString(),
-            isPremium: false,
-            balance: 0,
-            settings: { 
-              theme: 'default', 
-              appearance: 'dark',
-              privacy: {
-                phoneVisibility: 'everybody',
-                lastSeenVisibility: 'everybody',
-                allowGroupsFrom: 'everybody'
-              }
+        const regEmail = vkId ? `vk_${vkId}@nuxus.chat` : finalEmail;
+        const regPass = vkId ? generateVkPassword(vkId) : password;
+        
+        const userCredential = await createUserWithEmailAndPassword(auth, regEmail, regPass);
+        
+        const profileData = {
+          id: userCredential.user.uid,
+          name: name.trim(),
+          username: usernameWithAt,
+          usernameLowercase: targetSearch,
+          phone: cleanPhone,
+          email: identifier.includes('@') ? identifier.trim() : (vkId ? null : null),
+          vkId: vkId,
+          createdAt: new Date().toISOString(),
+          isPremium: false,
+          balance: 0,
+          settings: { 
+            theme: 'default', 
+            appearance: 'dark',
+            privacy: {
+              phoneVisibility: 'everybody',
+              lastSeenVisibility: 'everybody',
+              allowGroupsFrom: 'everybody'
             }
-          };
-
-          await setDoc(doc(db, 'users', userCredential.user.uid), profileData);
-          setIs2FAVerified(true);
-          toast({ title: "Узел создан", description: "Синхронизация завершена." });
-        } catch (err: any) {
-          if (err.code === 'auth/email-already-in-use') {
-             toast({ title: "Узел существует", description: "Этот идентификатор уже занят.", variant: "destructive" });
-          } else {
-             toast({ title: "Ошибка регистрации", description: err.message, variant: "destructive" });
           }
-        }
+        };
+
+        await setDoc(doc(db, 'users', userCredential.user.uid), profileData);
+        setIs2FAVerified(true);
+        toast({ title: "Узел создан", description: "Синхронизация с Ядром завершена." });
       }
     } catch (e: any) {
-      toast({ title: "Критический сбой Ядра", variant: "destructive" });
+      toast({ title: "Ошибка авторизации", description: e.message, variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
@@ -276,7 +266,7 @@ export default function AuthScreen() {
                 {mode === 'login' ? 'Вход в Ядро' : 'Новый Узел'}
               </CardTitle>
               <CardDescription className="text-primary/60 font-black tracking-[0.5em] uppercase text-[8px] mt-3">
-                Quantum Link v56.5.0
+                Quantum Link v56.5.3
               </CardDescription>
             </CardHeader>
 
@@ -312,7 +302,7 @@ export default function AuthScreen() {
                           value={password} 
                           onChange={e => setPassword(e.target.value)} 
                           className="bg-white/5 border-white/10 h-14 rounded-2xl pl-12 font-bold focus:border-primary/40 transition-all" 
-                          required 
+                          required={!vkId}
                         />
                         <button type="button" onClick={() => setShowPass(!showPass)} className="absolute right-4 top-1/2 -translate-y-1/2 text-white/20">
                           {showPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
