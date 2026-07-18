@@ -25,8 +25,8 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 type AuthMode = 'login' | 'register';
 
 /**
- * AuthScreen V56.6.4 «VISIBILITY & INTERACTION»
- * ИСПРАВЛЕНО: Кнопка VK ID теперь видна, имеет фиксированную высоту и доступна для клика.
+ * AuthScreen V56.6.5 «ULTIMATE VK ID FIX»
+ * ИСПРАВЛЕНО: Кнопка VK ID теперь имеет принудительные размеры, текст и светлую схему.
  */
 export default function AuthScreen() {
   const auth = useAuth();
@@ -55,44 +55,50 @@ export default function AuthScreen() {
       const VKID = (window as any).VKIDSDK;
       if (!VKID || !vkidContainerRef.current || isVkRendered.current) return;
 
-      // Точная конфигурация по твоему коду
-      VKID.Config.init({
-        app: 54684553,
-        redirectUrl: 'https://nuxus.fun',
-        responseMode: VKID.ConfigResponseMode.Callback,
-        source: VKID.ConfigSource.LOWCODE,
-        scope: '', 
-      });
+      try {
+        VKID.Config.init({
+          app: 54684553,
+          redirectUrl: 'https://nuxus.fun',
+          responseMode: VKID.ConfigResponseMode.Callback,
+          source: VKID.ConfigSource.LOWCODE,
+          scope: '', 
+        });
 
-      const oneTap = new VKID.OneTap();
+        const oneTap = new VKID.OneTap();
 
-      oneTap.render({
-        container: vkidContainerRef.current,
-        showAlternativeLogin: true,
-        scheme: 'light', // Светлая схема, чтобы кнопку было видно на черном фоне
-        styles: {
-          borderRadius: 12,
-          height: 48
-        }
-      })
-      .on(VKID.WidgetEvents.ERROR, (error: any) => {
-        console.error("VK ID Error:", error);
-      })
-      .on(VKID.OneTapInternalEvents.LOGIN_SUCCESS, function (payload: any) {
-        const code = payload.code;
-        const deviceId = payload.device_id;
+        oneTap.render({
+          container: vkidContainerRef.current,
+          showAlternativeLogin: true,
+          scheme: 'light', // Гарантирует белый фон кнопки и синий логотип
+          lang: 'ru',
+          styles: {
+            borderRadius: 12,
+            height: 48,
+            width: '100%', // Принудительно на всю ширину
+            maxWidth: 320
+          }
+        })
+        .on(VKID.WidgetEvents.ERROR, (error: any) => {
+          console.error("VK ID Error:", error);
+        })
+        .on(VKID.OneTapInternalEvents.LOGIN_SUCCESS, function (payload: any) {
+          const code = payload.code;
+          const deviceId = payload.device_id;
 
-        setIsLoading(true);
-        VKID.Auth.exchangeCode(code, deviceId)
-          .then(handleVkSuccess)
-          .catch((err: any) => {
-            console.error("VK Exchange Error:", err);
-            setIsLoading(false);
-            toast({ title: "Сбой синхронизации VK", variant: "destructive" });
-          });
-      });
+          setIsLoading(true);
+          VKID.Auth.exchangeCode(code, deviceId)
+            .then(handleVkSuccess)
+            .catch((err: any) => {
+              console.error("VK Exchange Error:", err);
+              setIsLoading(false);
+              toast({ title: "Сбой синхронизации VK", variant: "destructive" });
+            });
+        });
 
-      isVkRendered.current = true;
+        isVkRendered.current = true;
+      } catch (e) {
+        console.warn("VK ID Init Fail:", e);
+      }
     };
 
     const checkInterval = setInterval(() => {
@@ -322,12 +328,12 @@ export default function AuthScreen() {
                         <div className="h-px flex-1 bg-white/5" />
                      </div>
                      
-                     {/* ИСПРАВЛЕННЫЙ КОНТЕЙНЕР ДЛЯ ВИДЖЕТА VK */}
-                     <div className="relative w-full min-h-[52px] z-[100] flex justify-center">
+                     {/* ИСПРАВЛЕННЫЙ КОНТЕЙНЕР: Фиксированные размеры и высокая видимость */}
+                     <div className="relative w-full min-h-[52px] z-[100] flex justify-center items-center">
                         <div 
                           ref={vkidContainerRef} 
-                          className="w-full max-w-[280px] min-h-[48px] rounded-xl overflow-hidden bg-white/5 border border-white/10 shadow-lg cursor-pointer" 
-                          style={{ pointerEvents: 'auto' }}
+                          className="w-full max-w-[320px] min-h-[48px] rounded-xl overflow-visible shadow-xl cursor-pointer" 
+                          style={{ pointerEvents: 'auto', display: 'block' }}
                         />
                      </div>
                   </div>
@@ -338,7 +344,7 @@ export default function AuthScreen() {
                  <button type="button" onClick={() => setIsLegalOpen(true)} className="text-[9px] font-black uppercase tracking-widest text-white/20 hover:text-primary transition-colors py-1">Политика конфиденциальности</button>
                  <div className="flex items-center gap-3 opacity-30">
                     <ShieldCheck className="w-4 h-4 text-primary" />
-                    <span className="text-[7px] font-black uppercase tracking-[0.4em] text-white">Quantum Link 56.6.4</span>
+                    <span className="text-[7px] font-black uppercase tracking-[0.4em] text-white">Quantum Link 56.6.5</span>
                  </div>
               </div>
             </CardContent>
