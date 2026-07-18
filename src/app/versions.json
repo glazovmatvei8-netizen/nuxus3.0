@@ -1,14 +1,13 @@
 
 {
-  "latestVersion": "57.1.0",
-  "qesVersion": "57.1",
-  "build": "Absolute-Sync-Recovery",
+  "latestVersion": "57.4.0",
+  "qesVersion": "57.4",
+  "build": "Dual-Identity-Signal",
   "sizeMb": 160,
   "changelog": [
-    "Fixed: Runtime ReferenceError (cn) in settings",
-    "Restored: All profile fields (Bio, Status, Phone)",
-    "Added: VK FloatingOneTap (Шторка) for instant mobile entry",
-    "Improved: VK OneTap inline button with style sync (385px, 50 radius)",
-    "Fixed: Login/Register tab grid layout overlaps"
+    "Fixed: VK SDK App ID auto-detection (Web 54684553 / APK 54684554)",
+    "Fixed: Login interruption error in WebView (LOWCODE bridge)",
+    "Restored: Full Settings profile (Bio, Status, Phone verification)",
+    "Improved: Grid-based tabs for Login/Register"
   ]
 }

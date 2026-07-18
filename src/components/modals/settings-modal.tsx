@@ -23,8 +23,6 @@ import { isUserPremium, isGlobalAdmin, cn } from '@/lib/utils';
 import type { User } from '@/lib/types';
 import { sendVerificationCode } from '@/ai/flows/send-verification-email-flow';
 
-const VK_APP_ID = 54684554; // ОБНОВЛЕННЫЙ ID ДЛЯ APK
-
 export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const auth = useAuth();
   const db = useFirestore();
@@ -80,6 +78,12 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
     }
   }, [profile, open]);
 
+  // ДИНАМИЧЕСКИЙ ID (APK 54684554 / WEB 54684553)
+  const getVkAppId = () => {
+    const isNative = typeof window !== 'undefined' && (!!(window as any).Capacitor || !!(window as any).webkit);
+    return isNative ? 54684554 : 54684553;
+  };
+
   const handleVkLink = async () => {
     const VKID = (window as any).VKIDSDK;
     if (!VKID) {
@@ -88,8 +92,9 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
     }
     setIsVkLinking(true);
     try {
+      const APP_ID = getVkAppId();
       VKID.Config.init({
-        app: VK_APP_ID,
+        app: APP_ID,
         redirectUrl: 'https://nuxus.fun',
         responseMode: VKID.ConfigResponseMode.Callback,
         source: VKID.ConfigSource.LOWCODE,

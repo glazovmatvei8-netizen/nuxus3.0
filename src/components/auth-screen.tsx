@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Lock, Eye, EyeOff, User as UserIcon, Link as LinkIcon } from 'lucide-react';
+import { Loader2, Lock, Eye, EyeOff, User as UserIcon, Link as LinkIcon, Zap } from 'lucide-react';
 import { useAuth, useFirestore } from '@/firebase';
 import { 
   signInWithEmailAndPassword,
@@ -22,8 +22,6 @@ import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
 type AuthMode = 'login' | 'register';
-
-const VK_APP_ID = 54684554; // ОБНОВЛЕННЫЙ ID ДЛЯ APK
 
 export default function AuthScreen() {
   const auth = useAuth();
@@ -42,19 +40,23 @@ export default function AuthScreen() {
   const [name, setName] = useState('');
   const [username, setUsername] = useState('');
 
-  // Интеллектуальный поиск SDK
+  // ДИНАМИЧЕСКИЙ ID (APK 54684554 / WEB 54684553)
+  const getVkAppId = () => {
+    const isNative = typeof window !== 'undefined' && (!!(window as any).Capacitor || !!(window as any).webkit);
+    return isNative ? 54684554 : 54684553;
+  };
+
   const ensureSDK = (): Promise<any> => {
     return new Promise((resolve) => {
       if ((window as any).VKIDSDK) return resolve((window as any).VKIDSDK);
       
-      // Если SDK нет, пробуем внедрить его динамически
       const script = document.createElement('script');
       script.src = "https://unpkg.com/@vkid/sdk@2.1.0/dist-sdk/umd/index.js";
+      script.async = true;
       script.onload = () => resolve((window as any).VKIDSDK);
       document.head.appendChild(script);
 
-      // Тайм-аут на случай провала сети
-      setTimeout(() => resolve((window as any).VKIDSDK), 3000);
+      setTimeout(() => resolve((window as any).VKIDSDK), 3500);
     });
   };
 
@@ -63,14 +65,17 @@ export default function AuthScreen() {
     const VKID = await ensureSDK();
 
     if (!VKID) {
-      toast({ title: "SDK НЕ ОТВЕЧАЕТ", description: "Проверьте соединение с узлами VK. Попробуйте еще раз.", variant: "destructive" });
+      toast({ title: "SDK НЕ ОТВЕЧАЕТ", description: "Проверьте соединение с узлами VK.", variant: "destructive" });
       setIsVkLoading(false);
       return;
     }
 
     try {
+      const APP_ID = getVkAppId();
+      console.log(`[NUXUS] Initializing VK ID with App: ${APP_ID}`);
+
       VKID.Config.init({
-        app: VK_APP_ID,
+        app: APP_ID,
         redirectUrl: 'https://nuxus.fun',
         responseMode: VKID.ConfigResponseMode.Callback,
         source: VKID.ConfigSource.LOWCODE,
@@ -82,6 +87,7 @@ export default function AuthScreen() {
         handleVkSuccess(data);
       }
     } catch (e: any) {
+      console.warn("VK Auth Error:", e);
       toast({ title: "Сбой VK", description: "Окно входа было закрыто или сигнал прерван.", variant: "destructive" });
     } finally {
       setIsVkLoading(false);
@@ -168,9 +174,21 @@ export default function AuthScreen() {
 
           <Card className="w-full max-w-[420px] border-white/[0.08] bg-white/[0.02] backdrop-blur-[40px] shadow-2xl rounded-[3rem] overflow-hidden relative border-2">
             <CardHeader className="text-center pb-2 pt-10 px-8">
-              <div className="grid grid-cols-2 bg-white/5 p-1 rounded-2xl mb-8 border border-white/5">
-                <button onClick={() => setMode('login')} className={cn("h-11 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all", mode === 'login' ? "bg-primary text-white shadow-lg" : "text-white/30")}>Вход</button>
-                <button onClick={() => setMode('register')} className={cn("h-11 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all", mode === 'register' ? "bg-primary text-white shadow-lg" : "text-white/30")}>Регистрация</button>
+              <div className="grid grid-cols-2 bg-white/5 p-1.5 rounded-2xl mb-8 border border-white/5">
+                <button 
+                  type="button"
+                  onClick={() => setMode('login')} 
+                  className={cn("h-11 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all", mode === 'login' ? "bg-primary text-white shadow-lg" : "text-white/30")}
+                >
+                  Вход
+                </button>
+                <button 
+                  type="button"
+                  onClick={() => setMode('register')} 
+                  className={cn("h-11 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all", mode === 'register' ? "bg-primary text-white shadow-lg" : "text-white/30")}
+                >
+                  Регистрация
+                </button>
               </div>
               <CardTitle className="text-3xl font-black tracking-tighter uppercase italic text-white leading-none">
                 {mode === 'login' ? 'Вход в Ядро' : 'Новый Узел'}
