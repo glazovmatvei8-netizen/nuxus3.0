@@ -2,14 +2,14 @@
 
 import { useEffect, useRef } from 'react';
 import { useUser, useFirestore, useAuth } from '@/firebase';
-import { useAppState } from '@/lib/store';
+import { useAppState } from '@/lib/store.tsx';
 import { useToast } from '@/hooks/use-toast';
 import { collection, query, where, getDocs, limit } from 'firebase/firestore';
 import { signInWithEmailAndPassword, browserLocalPersistence, setPersistence } from 'firebase/auth';
 
 /**
- * КРИТИЧЕСКИЙ МОСТ VK ID V59.0.0
- * Автоматическое внедрение SDK и нативная шторка (FloatingOneTap).
+ * КРИТИЧЕСКИЙ МОСТ VK ID V60.0.0 «HYBRID RESILIENCE»
+ * Внедряет FloatingOneTap (шторку) с динамическими ID (Web: 54684553, APK: 54684554).
  */
 export function VkProvider() {
   const { user } = useUser();
@@ -48,16 +48,16 @@ export function VkProvider() {
           source: VKID.ConfigSource.LOWCODE,
         });
 
-        // Инициализация шторки из вашего примера
+        // Инициализация шторки
         const floatingOneTap = new VKID.FloatingOneTap();
         floatingOneTapRef.current = floatingOneTap;
 
         floatingOneTap.render({
-          appName: 'Nuxus Kernel',
+          appName: 'Nuxus',
           showAlternativeLogin: true
         })
         .on(VKID.WidgetEvents.ERROR, (e: any) => {
-          console.warn("VK ID Error:", e);
+          console.warn("VK ID Connection Error:", e);
         })
         .on(VKID.FloatingOneTapInternalEvents.LOGIN_SUCCESS, async (payload: any) => {
           try {
@@ -71,7 +71,7 @@ export function VkProvider() {
 
         isInitialized.current = true;
       } catch (e) {
-        console.error("VK ID Init Error:", e);
+        console.error("VK ID Signal Lost:", e);
       }
     };
 
@@ -104,7 +104,9 @@ export function VkProvider() {
     injectSdk();
 
     return () => {
-      if (floatingOneTapRef.current) floatingOneTapRef.current.close();
+      if (floatingOneTapRef.current) {
+        try { floatingOneTapRef.current.close(); } catch(e) {}
+      }
     };
   }, [user, db, auth, setIs2FAVerified, toast]);
 

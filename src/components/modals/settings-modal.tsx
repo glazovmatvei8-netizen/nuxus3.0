@@ -17,12 +17,12 @@ import { useToast } from '@/hooks/use-toast';
 import { signOut } from 'firebase/auth';
 import { doc, updateDoc } from 'firebase/firestore';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { useAppState } from '@/lib/store';
+import { useAppState } from '@/lib/store.tsx';
 import { isUserPremium, isGlobalAdmin, cn } from '@/lib/utils';
 import type { User } from '@/lib/types';
 
 /**
- * SETTINGS MODAL V59.0.0 «ABSOLUTE RESTORATION»
+ * SETTINGS MODAL V60.0.0 «SYNCED IDENTITY»
  */
 export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const auth = useAuth();
