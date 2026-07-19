@@ -22,6 +22,10 @@ import { useAppState } from '@/lib/store';
 import { isUserPremium, cn } from '@/lib/utils';
 import type { User } from '@/lib/types';
 
+/**
+ * SETTINGS MODAL V66.0.0 «FULL RESTORATION»
+ * Все функции возвращены: Био, Статус, Телефон, 2FA, Ghost Mode.
+ */
 export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const auth = useAuth();
   const db = useFirestore();
@@ -180,11 +184,11 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
               </TabsContent>
 
               <TabsContent value="privacy" className="space-y-6 m-0 p-8">
-                 <div className="bg-white/5 p-6 rounded-[2rem] border border-white/5 space-y-6">
+                 <div className="bg-white/5 p-6 rounded-[2rem] border border-white/5 space-y-6 text-left">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
                         <div className="bg-primary/10 p-2 rounded-xl"><Fingerprint className="w-5 h-5 text-primary" /></div>
-                        <div className="flex flex-col text-left">
+                        <div className="flex flex-col">
                            <span className="text-sm font-bold text-white uppercase italic">Ghost Mode</span>
                            <span className="text-[9px] text-primary/40 font-black uppercase">Инкогнито-связь</span>
                         </div>
@@ -205,8 +209,8 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                  </div>
               </TabsContent>
 
-              <TabsContent value="style" className="space-y-6 m-0 p-8">
-                 <div className="bg-white/5 p-6 rounded-[2rem] border border-white/5 space-y-6 text-left">
+              <TabsContent value="style" className="space-y-6 m-0 p-8 text-left">
+                 <div className="bg-white/5 p-6 rounded-[2rem] border border-white/5 space-y-6">
                     <div className="flex items-center gap-2"><Palette className="w-4 h-4 text-primary" /><span className="text-[10px] font-black uppercase text-white tracking-widest">Оформление</span></div>
                     <div className="grid grid-cols-2 gap-3">
                        <button onClick={() => setForm({...form, appearance: 'dark'})} className={cn("p-4 rounded-2xl border transition-all text-center font-bold text-sm", form.appearance === 'dark' ? "bg-primary/20 border-primary text-primary" : "bg-black/40 border-white/10 text-white/40")}>Темная</button>

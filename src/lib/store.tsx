@@ -110,7 +110,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 export const useAppState = (): AppState => {
   const context = useContext(AppContext);
   if (context === undefined) {
-    // Return a dummy state for SSR to prevent crash
+    // Return a proxy/dummy state for SSR to prevent crash
     return {
       activeAccountIndex: 0,
       setActiveAccountIndex: () => {},

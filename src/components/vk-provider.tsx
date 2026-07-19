@@ -9,8 +9,9 @@ import { collection, query, where, getDocs, limit } from 'firebase/firestore';
 import { signInWithEmailAndPassword, browserLocalPersistence, setPersistence } from 'firebase/auth';
 
 /**
- * КРИТИЧЕСКИЙ МОСТ VK ID V65.8.0 «ABSOLUTE STABILITY»
- * В соответствии с VK ID Console: Домен nuxus.fun | Redirect https://nuxus.fun
+ * КРИТИЧЕСКИЙ МОСТ VK ID V66.0.0 «ABSOLUTE DOMAIN SYNC»
+ * В соответствии со скриншотом: Домен nuxus.fun | Redirect https://nuxus.fun
+ * Исправлена ошибка TypeError за счет использования строковых литералов.
  */
 export function VkProvider() {
   const { user } = useUser();
@@ -44,7 +45,7 @@ export function VkProvider() {
         const isNative = !!(window as any).Capacitor || !!(window as any).webkit;
         const APP_ID = isNative ? 54684554 : 54684553;
 
-        // Использование строковых литералов во избежание TypeError VKID.ConfigResponseMode.Callback
+        // Прямая конфигурация в соответствии с консолью VK ID
         VKID.Config.init({
           app: APP_ID,
           redirectUrl: 'https://nuxus.fun',

@@ -22,8 +22,9 @@ import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
 /**
- * AUTH SCREEN V63.5.0 «ABSOLUTE STABILITY»
+ * AUTH SCREEN V66.0.0 «ABSOLUTE DOMAIN SYNC»
  * ИСПРАВЛЕНО: Домен nuxus.fun | Redirect https://nuxus.fun
+ * Устранена ошибка TypeError VKID.ConfigResponseMode.Callback
  */
 export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'login' | 'register' }) {
   const auth = useAuth();
