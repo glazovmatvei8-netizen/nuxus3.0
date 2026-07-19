@@ -1,13 +1,13 @@
 
 "use client"
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Lock, Eye, EyeOff, User as UserIcon, Link as LinkIcon, Zap } from 'lucide-react';
+import { Loader2, Lock, Eye, EyeOff, User as UserIcon, Link as LinkIcon } from 'lucide-react';
 import { useAuth, useFirestore } from '@/firebase';
 import { 
   signInWithEmailAndPassword,
@@ -21,13 +21,17 @@ import { NuxusLogo } from './nuxus-logo';
 import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
-export default function AuthScreen() {
+/**
+ * AUTH SCREEN V63.5.0 «ABSOLUTE STABILITY»
+ * ИСПРАВЛЕНО: Домен nuxus.fun | Redirect https://nuxus.fun
+ */
+export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'login' | 'register' }) {
   const auth = useAuth();
   const db = useFirestore();
   const { toast } = useToast();
   const { setIs2FAVerified } = useAppState();
   
-  const [mode, setMode] = useState<'login' | 'register'>('login');
+  const [mode, setMode] = useState<'login' | 'register'>(initialMode);
   const [isLoading, setIsLoading] = useState(false);
   const [isVkLoading, setIsVkLoading] = useState(false);
   const [showPass, setShowPass] = useState(false);
@@ -38,7 +42,6 @@ export default function AuthScreen() {
   const [username, setUsername] = useState('');
   const [vkIdToLink, setVkIdToLink] = useState<number | null>(null);
 
-  // Обработка данных из VkProvider (шторки)
   useEffect(() => {
     const pending = sessionStorage.getItem('nuxus_vk_pending');
     if (pending) {
@@ -65,11 +68,12 @@ export default function AuthScreen() {
       const isNative = !!(window as any).Capacitor || !!(window as any).webkit;
       const APP_ID = isNative ? 54684554 : 54684553;
 
+      // Используем строковые литералы для исключения TypeError
       VKID.Config.init({
         app: APP_ID,
         redirectUrl: 'https://nuxus.fun',
-        responseMode: VKID.ConfigResponseMode.Callback,
-        source: VKID.ConfigSource.LOWCODE,
+        responseMode: 'callback',
+        source: 'lowcode',
       });
 
       const result = await VKID.Auth.login();

@@ -9,8 +9,8 @@ import { collection, query, where, getDocs, limit } from 'firebase/firestore';
 import { signInWithEmailAndPassword, browserLocalPersistence, setPersistence } from 'firebase/auth';
 
 /**
- * КРИТИЧЕСКИЙ МОСТ VK ID V63.0 «ABSOLUTE STABILITY»
- * Исправлена ошибка 'undefined is not an object' через строковые литералы.
+ * КРИТИЧЕСКИЙ МОСТ VK ID V63.5.0 «ABSOLUTE STABILITY»
+ * Исправлено: домен nuxus.fun, redirect https://nuxus.fun
  */
 export function VkProvider() {
   const { user } = useUser();
@@ -44,7 +44,7 @@ export function VkProvider() {
         const isNative = !!(window as any).Capacitor || !!(window as any).webkit;
         const APP_ID = isNative ? 54684554 : 54684553;
 
-        // Безопасная инициализация с использованием строковых литералов
+        // Использование строковых литералов для исключения TypeError
         VKID.Config.init({
           app: APP_ID,
           redirectUrl: 'https://nuxus.fun',

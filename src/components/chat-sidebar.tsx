@@ -27,7 +27,7 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 
 /**
- * MULTI-ACCOUNT ITEM V63.0
+ * MULTI-ACCOUNT ITEM V63.5.0
  */
 const AccountItem = memo(({ account, isActive, index, onSwitch, onRemove }: any) => (
   <div className={cn(
