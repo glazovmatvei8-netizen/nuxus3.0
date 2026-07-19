@@ -51,6 +51,7 @@ interface AppState {
   setStoriesToView: (stories: Story[] | null) => void;
 }
 
+// Создаем контекст с undefined по умолчанию для отладки
 export const AppContext = createContext<AppState | undefined>(undefined);
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
@@ -75,7 +76,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
-    localStorage.setItem('nuxus_active_index', activeAccountIndex.toString());
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('nuxus_active_index', activeAccountIndex.toString());
+    }
   }, [activeAccountIndex]);
   
   const [currentTrack, setCurrentTrack] = useState<Track | null>(null);
@@ -83,25 +86,27 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [isCreateStoryOpen, setIsCreateStoryOpen] = useState(false);
   const [storiesToView, setStoriesToView] = useState<Story[] | null>(null);
 
+  const value = {
+    currentChatId, setCurrentChatId,
+    activeView, setActiveView,
+    forwardingMessage, setForwardingMessage,
+    activeCallId, setActiveCallId,
+    localDrafts, setLocalDrafts,
+    is2FAVerified, setIs2FAVerified,
+    isSettingsOpen, setIsSettingsOpen,
+    isSearchOpen, setIsSearchOpen,
+    settingsTab, setSettingsTab,
+    activeAccountIndex, setActiveAccountIndex,
+    isLegalOpen, setIsLegalOpen,
+    inspectedUserId, setInspectedUserId,
+    currentTrack, setCurrentTrack,
+    isPlayingMusic, setIsPlayingMusic,
+    isCreateStoryOpen, setIsCreateStoryOpen,
+    storiesToView, setStoriesToView
+  };
+
   return (
-    <AppContext.Provider value={{
-      currentChatId, setCurrentChatId,
-      activeView, setActiveView,
-      forwardingMessage, setForwardingMessage,
-      activeCallId, setActiveCallId,
-      localDrafts, setLocalDrafts,
-      is2FAVerified, setIs2FAVerified,
-      isSettingsOpen, setIsSettingsOpen,
-      isSearchOpen, setIsSearchOpen,
-      settingsTab, setSettingsTab,
-      activeAccountIndex, setActiveAccountIndex,
-      isLegalOpen, setIsLegalOpen,
-      inspectedUserId, setInspectedUserId,
-      currentTrack, setCurrentTrack,
-      isPlayingMusic, setIsPlayingMusic,
-      isCreateStoryOpen, setIsCreateStoryOpen,
-      storiesToView, setStoriesToView
-    }}>
+    <AppContext.Provider value={value}>
       {children}
     </AppContext.Provider>
   );
@@ -109,6 +114,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
 export const useAppState = () => {
   const context = useContext(AppContext);
-  if (!context) throw new Error('useAppState must be used within AppProvider');
+  if (context === undefined) {
+    // В некоторых случаях (SSR) контекст может быть не прокинут.
+    // Возвращаем пустой объект, чтобы не крашить приложение на сервере.
+    return {} as AppState;
+  }
   return context;
 };

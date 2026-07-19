@@ -21,8 +21,8 @@ interface UserAvatarProps {
 }
 
 /**
- * USER AVATAR V56.4.5 «ELITE SHINE»
- * ИСПРАВЛЕНО: Премиальное сияние и порядок наложения слоев.
+ * USER AVATAR V62.0.0 «THERMAL OPTIMIZED»
+ * ИСПРАВЛЕНО: Анимация замедлена для снижения нагрева.
  */
 export const UserAvatar = memo(({ userId, className, fallbackName, fallbackClassName, manualAvatarUrl, showOnlineStatus = false }: UserAvatarProps) => {
   const db = useFirestore();
@@ -69,34 +69,32 @@ export const UserAvatar = memo(({ userId, className, fallbackName, fallbackClass
 
   return (
     <div className={cn("relative inline-flex items-center justify-center shrink-0 rounded-full", className)}>
-      {/* ПРЕМИАЛЬНАЯ АНИМИРОВАННАЯ ПОДЛОЖКА */}
+      {/* ОПТИМИЗИРОВАННАЯ АНИМАЦИЯ (8s -> 15s для разгрузки CPU) */}
       {premium && (
-        <div className="absolute inset-[-4px] rounded-full p-[2px] overflow-hidden z-0">
-          <div className="absolute inset-[-100%] bg-gradient-to-tr from-primary via-accent to-primary animate-[spin_8s_linear_infinite] opacity-100" />
+        <div className="absolute inset-[-3px] rounded-full p-[1.5px] overflow-hidden z-0">
+          <div className="absolute inset-[-100%] bg-gradient-to-tr from-primary via-accent to-primary animate-[spin_15s_linear_infinite] opacity-60" />
         </div>
       )}
 
-      {/* ОСНОВНОЙ КОНТЕЙНЕР АВАТАРА */}
       <div className={cn(
-        "rounded-full p-[2px] w-full h-full flex items-center justify-center overflow-hidden transition-all duration-1000 relative z-10",
+        "rounded-full p-[1.5px] w-full h-full flex items-center justify-center overflow-hidden relative z-10",
         premium ? "bg-[#020205]" : "bg-white/10"
       )}>
-        <Avatar className="shrink-0 relative overflow-hidden bg-black w-full h-full rounded-full border-none flex items-center justify-center shadow-inner">
+        <Avatar className="shrink-0 relative overflow-hidden bg-black w-full h-full rounded-full border-none flex items-center justify-center">
           {displayAvatar && !imgError && activeId === userId ? (
             <div className="relative w-full h-full rounded-full overflow-hidden">
               <Image 
                 src={displayAvatar} 
                 alt={initialsSource} 
                 fill
-                sizes="(max-width: 768px) 64px, 128px"
+                sizes="128px"
                 className="object-cover rounded-full"
                 onError={() => setImgError(true)}
                 unoptimized={displayAvatar.startsWith('data:')}
-                priority={userId === 'bot_nuxus_manager' || premium}
               />
             </div>
           ) : (
-            <AvatarFallback className={cn("bg-[#050505] text-primary font-black uppercase h-full w-full flex items-center justify-center rounded-full select-none italic tracking-tighter text-[40%]", fallbackClassName)}>
+            <AvatarFallback className={cn("bg-[#050505] text-primary font-black uppercase h-full w-full flex items-center justify-center rounded-full select-none italic text-[40%]", fallbackClassName)}>
               {initialsSource.slice(0, 2)}
             </AvatarFallback>
           )}
@@ -105,14 +103,14 @@ export const UserAvatar = memo(({ userId, className, fallbackName, fallbackClass
 
       {showOnlineStatus && isOnline && !isGhost && (
         <div className="absolute top-[8%] right-[8%] z-20">
-          <div className="h-3 w-3 bg-green-500 rounded-full border-[2px] border-[#0a0a0c] shadow-[0_0_10px_rgba(34,197,94,1)] animate-pulse" />
+          <div className="h-3 w-3 bg-green-500 rounded-full border-[2px] border-[#0a0a0c] shadow-[0_0_8px_rgba(34,197,94,1)]" />
         </div>
       )}
 
       {premium && (
-        <div className="absolute -bottom-[5%] -right-[5%] z-30 transform hover:scale-110 transition-transform w-[35%] h-[35%] max-w-[32px] max-h-[32px]">
-          <div className="bg-[#020205] rounded-full p-[1px] shadow-lg border border-white/20 w-full h-full">
-            <div className="bg-gradient-to-tr from-yellow-300 to-orange-500 p-[15%] rounded-full shadow-inner flex items-center justify-center w-full h-full">
+        <div className="absolute -bottom-[5%] -right-[5%] z-30 w-[35%] h-[35%] max-w-[32px]">
+          <div className="bg-[#020205] rounded-full p-[1px] shadow-lg border border-white/10 w-full h-full">
+            <div className="bg-gradient-to-tr from-yellow-300 to-orange-500 p-[15%] rounded-full flex items-center justify-center w-full h-full">
                <Star className="w-[85%] h-[85%] text-black fill-current" />
             </div>
           </div>
