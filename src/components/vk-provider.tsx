@@ -9,8 +9,8 @@ import { collection, query, where, getDocs, limit } from 'firebase/firestore';
 import { signInWithEmailAndPassword, browserLocalPersistence, setPersistence } from 'firebase/auth';
 
 /**
- * ГЛОБАЛЬНЫЙ МОСТ VK ID V57.9.0
- * Обеспечивает автоматическую шторку (FloatingOneTap) и отказоустойчивый SDK.
+ * КРИТИЧЕСКИЙ МОСТ VK ID V58.0.0
+ * Автоматическое внедрение SDK, выбор ID (Web/APK) и нативная шторка.
  */
 export function VkProvider() {
   const { user } = useUser();
@@ -19,31 +19,24 @@ export function VkProvider() {
   const { setIs2FAVerified } = useAppState();
   const { toast } = useToast();
   const floatingOneTapRef = useRef<any>(null);
-  const loadAttempts = useRef(0);
+  const isInitialized = useRef(false);
 
   useEffect(() => {
-    if (user || typeof window === 'undefined') return;
+    if (user || typeof window === 'undefined' || isInitialized.current) return;
 
-    let active = true;
+    const injectSdk = () => {
+      if (document.getElementById('vk-id-sdk-loader')) return;
+      const script = document.createElement('script');
+      script.id = 'vk-id-sdk-loader';
+      script.src = "https://unpkg.com/@vkid/sdk@2.1.0/dist-sdk/umd/index.js";
+      script.async = true;
+      script.onload = () => initVk();
+      document.head.appendChild(script);
+    };
 
     const initVk = async () => {
       const VKID = (window as any).VKIDSDK;
-      
-      if (!VKID) {
-        if (loadAttempts.current < 10 && active) {
-          loadAttempts.current++;
-          // Если SDK не найден, пробуем догрузить его принудительно
-          if (!document.getElementById('vk-sdk-manual')) {
-             const script = document.createElement('script');
-             script.id = 'vk-sdk-manual';
-             script.src = "https://unpkg.com/@vkid/sdk@2.1.0/dist-sdk/umd/index.js";
-             script.async = true;
-             document.head.appendChild(script);
-          }
-          setTimeout(initVk, 500);
-        }
-        return;
-      }
+      if (!VKID) return;
 
       try {
         const isNative = !!(window as any).Capacitor || !!(window as any).webkit;
@@ -60,11 +53,11 @@ export function VkProvider() {
         floatingOneTapRef.current = floatingOneTap;
 
         floatingOneTap.render({
-          appName: 'Nuxus',
+          appName: 'Nuxus Kernel',
           showAlternativeLogin: true
         })
         .on(VKID.WidgetEvents.ERROR, (e: any) => {
-          console.warn("VK ID Widget Error:", e);
+          console.warn("VK ID Error:", e);
         })
         .on(VKID.FloatingOneTapInternalEvents.LOGIN_SUCCESS, async (payload: any) => {
           try {
@@ -72,46 +65,45 @@ export function VkProvider() {
             await handleVkSuccess(data);
             floatingOneTap.close();
           } catch (e: any) {
-            toast({ title: "Сбой сигнала", description: e.message, variant: "destructive" });
+            toast({ title: "Сбой синхронизации", variant: "destructive" });
           }
         });
+
+        isInitialized.current = true;
       } catch (e) {
-        console.error("VK Init Error:", e);
+        console.error("VK ID Init Error:", e);
       }
     };
 
     const handleVkSuccess = async (data: any) => {
       if (!db || !auth) return;
-      
       const vId = data.user_id || data.id;
       const vkEmail = `vk_${vId}@nuxus.chat`;
       const vkPass = `vk_quantum_${vId}_secure_v57`;
 
       try {
         const vkSnap = await getDocs(query(collection(db, 'users'), where('vkId', '==', vId), limit(1)));
-        
         if (!vkSnap.empty) {
           await setPersistence(auth, browserLocalPersistence);
           await signInWithEmailAndPassword(auth, vkEmail, vkPass);
           setIs2FAVerified(true);
-          toast({ title: "Узел авторизован", description: "Добро пожаловать." });
+          toast({ title: "Узел синхронизирован", description: "Личность подтверждена через VK ID." });
         } else {
           sessionStorage.setItem('nuxus_vk_pending', JSON.stringify({
             vkId: vId,
             name: data.user?.first_name ? `${data.user.first_name} ${data.user.last_name || ''}` : "VK User",
             phone: (data.user?.phone || "").replace(/\D/g, '')
           }));
-          toast({ title: "VK ID Распознан", description: "Завершите регистрацию." });
+          toast({ title: "VK ID Распознан", description: "Завершите регистрацию узла." });
         }
       } catch (e: any) {
-        console.error("VK Sync Error:", e);
+        toast({ title: "Сбой сигнала", description: e.message, variant: "destructive" });
       }
     };
 
-    initVk();
+    injectSdk();
 
     return () => {
-      active = false;
       if (floatingOneTapRef.current) floatingOneTapRef.current.close();
     };
   }, [user, db, auth, setIs2FAVerified, toast]);

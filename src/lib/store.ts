@@ -1,6 +1,5 @@
 
 /**
- * Nuxus Context Proxy v57.9.0
- * Redirects all imports to the .tsx version to prevent duplicate Context instances.
+ * REMOVED: Redundant file causing Context mismatch.
+ * All logic moved to src/lib/store.tsx to ensure a single Context instance.
  */
-export * from './store.tsx';

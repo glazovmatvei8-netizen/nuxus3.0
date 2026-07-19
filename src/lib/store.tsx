@@ -37,8 +37,6 @@ interface AppState {
   // User Inspection State
   inspectedUserId: string | null;
   setInspectedUserId: (id: string | null) => void;
-  isInterceptionRequested: boolean;
-  setIsInterceptionRequested: (v: boolean) => void;
   
   // Music State
   currentTrack: Track | null;
@@ -47,8 +45,6 @@ interface AppState {
   setIsPlayingMusic: (v: boolean) => void;
   
   // Story State
-  activeStoryId: string | null;
-  setActiveStoryId: (id: string | null) => void;
   isCreateStoryOpen: boolean;
   setIsCreateStoryOpen: (v: boolean) => void;
   storiesToView: Story[] | null;
@@ -69,8 +65,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [settingsTab, setSettingsTab] = useState('profile');
   const [isLegalOpen, setIsLegalOpen] = useState(false);
   const [inspectedUserId, setInspectedUserId] = useState<string | null>(null);
-  const [isInterceptionRequested, setIsInterceptionRequested] = useState(false);
-  
   const [activeAccountIndex, setActiveAccountIndex] = useState(0);
 
   useEffect(() => {
@@ -86,8 +80,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   
   const [currentTrack, setCurrentTrack] = useState<Track | null>(null);
   const [isPlayingMusic, setIsPlayingMusic] = useState(false);
-  
-  const [activeStoryId, setActiveStoryId] = useState<string | null>(null);
   const [isCreateStoryOpen, setIsCreateStoryOpen] = useState(false);
   const [storiesToView, setStoriesToView] = useState<Story[] | null>(null);
 
@@ -105,10 +97,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       activeAccountIndex, setActiveAccountIndex,
       isLegalOpen, setIsLegalOpen,
       inspectedUserId, setInspectedUserId,
-      isInterceptionRequested, setIsInterceptionRequested,
       currentTrack, setCurrentTrack,
       isPlayingMusic, setIsPlayingMusic,
-      activeStoryId, setActiveStoryId,
       isCreateStoryOpen, setIsCreateStoryOpen,
       storiesToView, setStoriesToView
     }}>
