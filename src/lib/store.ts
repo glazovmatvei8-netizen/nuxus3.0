@@ -1,5 +1,6 @@
 
 /**
- * REMOVED: Redundant file causing Context mismatch.
- * All logic moved to src/lib/store.tsx to ensure a single Context instance.
+ * Nuxus Store Proxy v58.1
+ * Этот файл перенаправляет все запросы к store.tsx для предотвращения дублирования контекста.
  */
+export * from './store.tsx';

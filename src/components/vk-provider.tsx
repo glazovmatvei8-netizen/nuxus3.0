@@ -9,8 +9,8 @@ import { collection, query, where, getDocs, limit } from 'firebase/firestore';
 import { signInWithEmailAndPassword, browserLocalPersistence, setPersistence } from 'firebase/auth';
 
 /**
- * КРИТИЧЕСКИЙ МОСТ VK ID V58.0.0
- * Автоматическое внедрение SDK, выбор ID (Web/APK) и нативная шторка.
+ * КРИТИЧЕСКИЙ МОСТ VK ID V58.1.0
+ * Автоматическое внедрение SDK, выбор ID (Web 54684553 / APK 54684554) и нативная шторка.
  */
 export function VkProvider() {
   const { user } = useUser();

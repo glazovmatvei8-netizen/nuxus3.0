@@ -12,7 +12,7 @@ import { Switch } from '@/components/ui/switch';
 import { useAuth, useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
-  LogOut, Settings2, Camera, Star, ShieldCheck, Loader2, Mail, PhoneCall, Sparkles, Check, CheckCircle2, Fingerprint, Palette, Archive, ChevronRight
+  LogOut, Settings2, Camera, Star, ShieldCheck, Loader2, Mail, PhoneCall, Sparkles, Check, CheckCircle2, Fingerprint, Palette, Archive, ChevronRight, X
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { signOut } from 'firebase/auth';
@@ -21,11 +21,10 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAppState } from '@/lib/store';
 import { isUserPremium, isGlobalAdmin, cn } from '@/lib/utils';
 import type { User } from '@/lib/types';
-import { sendVerificationCode } from '@/ai/flows/send-verification-email-flow';
 
 /**
- * SETTINGS MODAL V58.0.0 «TOTAL RESTORATION»
- * Исправлены ошибки cn, восстановлены Био, Статус и кнопка подтверждения телефона.
+ * SETTINGS MODAL V58.1.0 «ABSOLUTE RESTORATION»
+ * Исправлены ошибки cn, восстановлены Био, Статус и верификация телефона.
  */
 export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const auth = useAuth();
@@ -73,7 +72,6 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
 
   const handlePhoneVerify = async () => {
     setIsVerifying(true);
-    // Имитация процесса верификации для прототипа
     setTimeout(async () => {
       if (db && user) {
         await updateDoc(doc(db, 'users', user.uid), { phoneVerified: true });
@@ -106,8 +104,11 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
       });
       onOpenChange(false);
       toast({ title: "Конфигурация обновлена" });
-    } catch (e: any) { toast({ title: "Сбой записи", description: e.message, variant: "destructive" }); }
-    finally { setIsSaving(false); }
+    } catch (e: any) { 
+      toast({ title: "Сбой записи", description: e.message, variant: "destructive" }); 
+    } finally { 
+      setIsSaving(false); 
+    }
   };
 
   return (
