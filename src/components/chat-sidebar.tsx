@@ -26,7 +26,6 @@ import {
   ContextMenuSeparator,
 } from "@/components/ui/context-menu";
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { signOut } from 'firebase/auth';
 
 /**
  * MULTI-ACCOUNT ITEM V57.7.0 «INSTANT SWITCH»
@@ -257,13 +256,11 @@ ChatListItem.displayName = 'ChatListItem';
 export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?: boolean }) {
   const { user } = useUser();
   const db = useFirestore();
-  const auth = useAuth();
   const { currentChatId, setCurrentChatId, setIsSearchOpen, activeAccountIndex, setActiveAccountIndex } = useAppState();
   
   const [activeTab, setActiveTab] = useState('all');
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isAdminPanelOpen, setIsAdminPanelOpen] = useState(false);
-  const [latency, setLatency] = useState<number>(0);
   const [savedAccounts, setSavedAccounts] = useState<Record<number, any>>({});
 
   useEffect(() => {
@@ -271,26 +268,9 @@ export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?:
     if (saved) setSavedAccounts(JSON.parse(saved));
   }, []);
 
-  useEffect(() => {
-    const updateLatency = async () => {
-      const start = Date.now();
-      try {
-        await fetch('/manifest.json', { method: 'HEAD', cache: 'no-store' });
-        const realLat = Date.now() - start;
-        setLatency(prev => prev === 0 ? realLat : Math.round(prev * 0.7 + realLat * 0.3));
-      } catch (e) {
-        setLatency(Math.floor(Math.random() * 30) + 15);
-      }
-    };
-    const interval = setInterval(updateLatency, 15000);
-    updateLatency();
-    return () => clearInterval(interval);
-  }, []);
-
   const userProfileRef = useMemoFirebase(() => (!db || !user) ? null : doc(db, 'users', user.uid), [db, user]);
   const { data: currentUserProfile } = useDoc<UserType>(userProfileRef);
 
-  // Sync current account data to storage
   useEffect(() => {
     if (user && currentUserProfile) {
       const accounts = JSON.parse(localStorage.getItem('nuxus_multi_accounts') || '{}');
@@ -309,11 +289,10 @@ export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?:
   const handleSwitchAccount = (index: number) => {
     if (index === activeAccountIndex) return;
     setActiveAccountIndex(index);
-    setCurrentChatId(null); // Reset chat view for new account
+    setCurrentChatId(null);
   };
 
   const handleAddAccount = () => {
-    // Find next empty slot
     const slots = [0, 1, 2, 3, 4];
     const nextSlot = slots.find(s => !savedAccounts[s]);
     if (nextSlot !== undefined) {
@@ -402,9 +381,9 @@ export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?:
     <div className="flex flex-col h-full bg-transparent overflow-hidden relative max-w-full">
       <div className="px-6 pt-12 pb-6 shrink-0 bg-transparent z-20 space-y-8">
         <div className="flex items-center justify-between w-full relative">
-          <div className="flex flex-col items-center gap-1.5 cursor-help opacity-40 hover:opacity-100 transition-opacity">
-             <Activity className={cn("w-5 h-5", latency > 200 ? "text-red-500" : "text-green-500")} />
-             <span className="text-[8px] font-black uppercase tabular-nums">{latency} MS</span>
+          <div className="flex flex-col items-center gap-1.5 opacity-40">
+             <Activity className="w-5 h-5 text-green-500" />
+             <span className="text-[8px] font-black uppercase tabular-nums">SYNCED</span>
           </div>
           <div className="absolute left-1/2 -translate-x-1/2">
             <Popover>
@@ -525,7 +504,7 @@ export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?:
               ))
             ) : (
               <div className="flex flex-col items-center justify-center p-24 opacity-10 space-y-6">
-                 <Zap className="w-20 h-20 animate-pulse text-primary" />
+                 <Zap className="w-20 h-20 text-primary" />
                  <p className="text-[11px] font-black uppercase tracking-[0.4em] text-center">Сигналы не обнаружены</p>
               </div>
             )}

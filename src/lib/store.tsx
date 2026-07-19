@@ -51,7 +51,6 @@ interface AppState {
   setStoriesToView: (stories: Story[] | null) => void;
 }
 
-// СОЗДАНИЕ ЕДИНОГО КОНТЕКСТА
 export const AppContext = createContext<AppState | undefined>(undefined);
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
