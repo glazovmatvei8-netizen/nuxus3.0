@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
@@ -30,7 +29,7 @@ interface AppState {
   activeAccountIndex: number;
   setActiveAccountIndex: (index: number) => void;
   
-  // User Inspection State
+  // User Inspection
   inspectedUserId: string | null;
   setInspectedUserId: (id: string | null) => void;
   
@@ -107,14 +106,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   );
 }
 
-/**
- * БЕЗОПАСНЫЙ ХУК V63.5.0 (SSR PROTECTION)
- * Возвращает пустой объект вместо ошибки, если контекст еще не инициализирован.
- */
 export const useAppState = () => {
   const context = useContext(AppContext);
   if (!context) {
-    // Безопасный возврат для SSR/Loading фазы
     return {
       activeAccountIndex: 0,
       setActiveAccountIndex: () => {},

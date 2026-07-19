@@ -11,19 +11,16 @@ import { Switch } from '@/components/ui/switch';
 import { useAuth, useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
-  LogOut, Settings2, Camera, Star, ShieldCheck, Loader2, Mail, PhoneCall, Sparkles, Check, CheckCircle2, Fingerprint, Palette, Archive, ChevronRight, X
+  LogOut, Settings2, Camera, Star, ShieldCheck, Loader2, CheckCircle2, Fingerprint, Palette, Archive, ChevronRight
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { signOut } from 'firebase/auth';
 import { doc, updateDoc } from 'firebase/firestore';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { useAppState } from '@/lib/store.tsx';
-import { isUserPremium, isGlobalAdmin, cn } from '@/lib/utils';
+import { useAppState } from '@/lib/store';
+import { isUserPremium, cn } from '@/lib/utils';
 import type { User } from '@/lib/types';
 
-/**
- * SETTINGS MODAL V60.0.0 «SYNCED IDENTITY»
- */
 export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const auth = useAuth();
   const db = useFirestore();
@@ -41,10 +38,9 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
 
   const [form, setForm] = useState({
     name: '', username: '', bio: '', statusEmoji: '', statusText: '', avatarUrl: '',
-    phone: '', email: '',
+    phone: '', twoFactorEnabled: false, twoFactorPin: '', biometricEnabled: false,
     appearance: 'dark' as 'light' | 'dark', theme: 'default',
-    twoFactorEnabled: false, twoFactorPin: '', biometricEnabled: false,
-    privacy: { isGhostMode: false }
+    isGhostMode: false
   });
 
   useEffect(() => {
@@ -57,27 +53,15 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         statusText: profile.statusText || '',
         avatarUrl: profile.avatarUrl || '',
         phone: profile.phone || '',
-        email: profile.email || '',
-        appearance: profile.settings?.appearance || 'dark',
-        theme: profile.settings?.theme || 'default',
         twoFactorEnabled: !!profile.twoFactorEnabled,
         twoFactorPin: profile.twoFactorPin || '',
         biometricEnabled: !!profile.settings?.biometricEnabled,
-        privacy: { isGhostMode: !!profile.settings?.privacy?.isGhostMode }
+        appearance: profile.settings?.appearance || 'dark',
+        theme: profile.settings?.theme || 'default',
+        isGhostMode: !!profile.settings?.privacy?.isGhostMode
       });
     }
   }, [profile, open]);
-
-  const handlePhoneVerify = async () => {
-    setIsVerifying(true);
-    setTimeout(async () => {
-      if (db && user) {
-        await updateDoc(doc(db, 'users', user.uid), { phoneVerified: true });
-        toast({ title: "Узел верифицирован", description: "Номер телефона подтвержден в Ядре." });
-      }
-      setIsVerifying(false);
-    }, 1500);
-  };
 
   const handleSave = async () => {
     if (!db || !user) return;
@@ -98,15 +82,26 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         'settings.appearance': form.appearance,
         'settings.theme': form.theme,
         'settings.biometricEnabled': form.biometricEnabled,
-        'settings.privacy.isGhostMode': form.privacy.isGhostMode
+        'settings.privacy.isGhostMode': form.isGhostMode
       });
       onOpenChange(false);
       toast({ title: "Конфигурация обновлена" });
     } catch (e: any) { 
-      toast({ title: "Сбой записи", description: e.message, variant: "destructive" }); 
+      toast({ title: "Сбой записи", variant: "destructive" }); 
     } finally { 
       setIsSaving(false); 
     }
+  };
+
+  const handlePhoneVerify = () => {
+    setIsVerifying(true);
+    setTimeout(async () => {
+      if (db && user) {
+        await updateDoc(doc(db, 'users', user.uid), { phoneVerified: true });
+        toast({ title: "Узел верифицирован" });
+      }
+      setIsVerifying(false);
+    }, 1500);
   };
 
   return (
@@ -159,7 +154,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                          <div className="flex gap-2">
                             <Input value={form.phone} onChange={e => setForm({...form, phone: e.target.value})} className="bg-black/40 border-white/10 h-12 rounded-xl font-bold flex-1" />
                             {!profile?.phoneVerified && (
-                              <Button onClick={handlePhoneVerify} disabled={isVerifying} className="h-12 px-4 rounded-xl bg-primary text-[9px] font-black uppercase shadow-lg shadow-primary/20">
+                              <Button onClick={handlePhoneVerify} disabled={isVerifying} className="h-12 px-4 rounded-xl bg-primary text-[9px] font-black uppercase">
                                 {isVerifying ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Confirm'}
                               </Button>
                             )}
@@ -168,14 +163,14 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
 
                        <div className="space-y-1.5">
                          <Label className="text-[9px] font-black uppercase text-primary/60 ml-2">О себе (Био)</Label>
-                         <Textarea value={form.bio} onChange={e => setForm({...form, bio: e.target.value})} className="bg-black/40 border-white/10 rounded-2xl h-24 resize-none" placeholder="Спецификация вашего узла..." />
+                         <Textarea value={form.bio} onChange={e => setForm({...form, bio: e.target.value})} className="bg-black/40 border-white/10 rounded-2xl h-24 resize-none" placeholder="Спецификация..." />
                        </div>
 
                        <div className="space-y-4">
                           <Label className="text-[9px] font-black uppercase text-primary/60 ml-2">Статус в сети</Label>
                           <div className="flex gap-3">
-                             <Input value={form.statusEmoji} onChange={e => setForm({...form, statusEmoji: e.target.value})} className="w-16 h-12 bg-black/40 border-white/10 rounded-xl text-center text-xl" placeholder="🔥" />
-                             <Input value={form.statusText} onChange={e => setForm({...form, statusText: e.target.value})} className="flex-1 h-12 bg-black/40 border-white/10 rounded-xl text-xs font-bold" placeholder="Текст статуса..." />
+                             <Input value={form.statusEmoji} onChange={e => setForm({...form, statusEmoji: e.target.value})} className="w-16 h-12 bg-black/40 border-white/10 rounded-xl text-center text-xl" />
+                             <Input value={form.statusText} onChange={e => setForm({...form, statusText: e.target.value})} className="flex-1 h-12 bg-black/40 border-white/10 rounded-xl text-xs font-bold" />
                           </div>
                        </div>
                     </div>
@@ -190,10 +185,10 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                         <div className="bg-primary/10 p-2 rounded-xl"><Fingerprint className="w-5 h-5 text-primary" /></div>
                         <div className="flex flex-col text-left">
                            <span className="text-sm font-bold text-white uppercase italic">Ghost Mode</span>
-                           <span className="text-[9px] text-primary/40 font-black uppercase tracking-widest">Полная инкогнито-связь</span>
+                           <span className="text-[9px] text-primary/40 font-black uppercase">Инкогнито-связь</span>
                         </div>
                       </div>
-                      <Switch checked={form.privacy.isGhostMode} onCheckedChange={v => setForm({...form, privacy: { ...form.privacy, isGhostMode: v }})} />
+                      <Switch checked={form.isGhostMode} onCheckedChange={v => setForm({...form, isGhostMode: v})} />
                     </div>
 
                     <div className="space-y-4 pt-4 border-t border-white/5">
@@ -219,9 +214,9 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                  </div>
               </TabsContent>
 
-              <TabsContent value="data" className="space-y-6 m-0 p-8">
-                 <div className="bg-white/5 p-6 rounded-[2rem] border border-white/5 space-y-6 text-left">
-                    <div className="flex items-center gap-2"><Archive className="w-4 h-4 text-primary" /><span className="text-[10px] font-black uppercase text-white tracking-widest">Данные и Кеш</span></div>
+              <TabsContent value="data" className="space-y-6 m-0 p-8 text-left">
+                 <div className="bg-white/5 p-6 rounded-[2rem] border border-white/5 space-y-6">
+                    <div className="flex items-center gap-2"><Archive className="w-4 h-4 text-primary" /><span className="text-[10px] font-black uppercase text-white tracking-widest">Данные</span></div>
                     <Button variant="ghost" className="w-full justify-between h-12 bg-white/5 rounded-xl text-[10px] font-black uppercase px-4">Очистить историю сессий <ChevronRight className="w-3 h-3" /></Button>
                  </div>
               </TabsContent>
@@ -231,7 +226,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
           <div className="p-8 border-t border-white/5 bg-[#0a0a0c] shrink-0 flex gap-4 z-[100] pb-[calc(1.5rem+env(safe-area-inset-bottom))]">
             <Button variant="ghost" className="h-16 w-16 rounded-[1.8rem] bg-red-500/10 text-red-500" onClick={() => signOut(auth)}><LogOut className="w-7 h-7" /></Button>
             <Button disabled={isSaving} className="flex-1 h-16 rounded-[1.8rem] font-black uppercase italic bg-primary text-white shadow-2xl active:scale-95 transition-all" onClick={handleSave}>
-              {isSaving ? <Loader2 className="animate-spin w-6 h-6" /> : <><Check className="w-6 h-6 mr-3" /> Сохранить Сигнал</>}
+              {isSaving ? <Loader2 className="animate-spin w-6 h-6" /> : 'Сохранить Сигнал'}
             </Button>
           </div>
         </Tabs>

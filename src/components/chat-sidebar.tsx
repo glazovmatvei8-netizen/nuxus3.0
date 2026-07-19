@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useMemo, memo, useRef, useEffect } from 'react';
@@ -26,9 +25,6 @@ import {
 } from "@/components/ui/context-menu";
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 
-/**
- * MULTI-ACCOUNT ITEM V63.5.0
- */
 const AccountItem = memo(({ account, isActive, index, onSwitch, onRemove }: any) => (
   <div className={cn(
     "flex items-center justify-between p-3 rounded-2xl transition-all group",
