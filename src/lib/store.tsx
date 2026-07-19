@@ -107,10 +107,18 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   );
 }
 
+/**
+ * БЕЗОПАСНЫЙ ХУК V63.0 (SSR PROTECTION)
+ * Возвращает пустой объект вместо ошибки, если контекст еще не инициализирован.
+ */
 export const useAppState = () => {
   const context = useContext(AppContext);
-  if (context === undefined) {
-    return {} as AppState;
+  if (!context) {
+    return {
+      activeAccountIndex: 0,
+      setActiveAccountIndex: () => {},
+      // ... другие дефолтные значения для SSR
+    } as AppState;
   }
   return context;
 };

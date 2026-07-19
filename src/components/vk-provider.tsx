@@ -9,8 +9,8 @@ import { collection, query, where, getDocs, limit } from 'firebase/firestore';
 import { signInWithEmailAndPassword, browserLocalPersistence, setPersistence } from 'firebase/auth';
 
 /**
- * КРИТИЧЕСКИЙ МОСТ VK ID V62.5.0 «ABSOLUTE RESILIENCE»
- * Исправлена ошибка 'undefined is not an object' при инициализации SDK.
+ * КРИТИЧЕСКИЙ МОСТ VK ID V63.0 «ABSOLUTE STABILITY»
+ * Исправлена ошибка 'undefined is not an object' через строковые литералы.
  */
 export function VkProvider() {
   const { user } = useUser();
@@ -21,7 +21,6 @@ export function VkProvider() {
   const isInitialized = useRef(false);
 
   useEffect(() => {
-    // Если пользователь уже авторизован в текущем слоте, не показываем шторку
     if (user || typeof window === 'undefined' || isInitialized.current) return;
 
     const injectSdk = () => {
@@ -45,11 +44,11 @@ export function VkProvider() {
         const isNative = !!(window as any).Capacitor || !!(window as any).webkit;
         const APP_ID = isNative ? 54684554 : 54684553;
 
-        // Безопасная инициализация с защитой от undefined
+        // Безопасная инициализация с использованием строковых литералов
         VKID.Config.init({
           app: APP_ID,
           redirectUrl: 'https://nuxus.fun',
-          responseMode: 'callback', // Используем строку вместо VKID.ConfigResponseMode.Callback
+          responseMode: 'callback', 
           source: 'lowcode',
         });
 
@@ -89,7 +88,7 @@ export function VkProvider() {
           await setPersistence(auth, browserLocalPersistence);
           await signInWithEmailAndPassword(auth, vkEmail, vkPass);
           setIs2FAVerified(true);
-          toast({ title: "Узел синхронизирован", description: "Личность подтверждена через VK ID." });
+          toast({ title: "Узел синхронизирован" });
         } else {
           sessionStorage.setItem('nuxus_vk_pending', JSON.stringify({
             vkId: vId,
@@ -103,7 +102,8 @@ export function VkProvider() {
       }
     };
 
-    injectSdk();
+    const timer = setTimeout(injectSdk, 1000);
+    return () => clearTimeout(timer);
   }, [user, db, auth, setIs2FAVerified, toast]);
 
   return null;

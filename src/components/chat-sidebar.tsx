@@ -27,7 +27,7 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 
 /**
- * MULTI-ACCOUNT ITEM V62.5.0
+ * MULTI-ACCOUNT ITEM V63.0
  */
 const AccountItem = memo(({ account, isActive, index, onSwitch, onRemove }: any) => (
   <div className={cn(
@@ -270,7 +270,6 @@ export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?:
   const userProfileRef = useMemoFirebase(() => (!db || !user) ? null : doc(db, 'users', user.uid), [db, user]);
   const { data: currentUserProfile } = useDoc<UserType>(userProfileRef);
 
-  // Сохраняем данные аккаунта в список только если пользователь реально авторизован
   useEffect(() => {
     if (user && currentUserProfile) {
       const accounts = JSON.parse(localStorage.getItem('nuxus_multi_accounts') || '{}');
@@ -296,7 +295,6 @@ export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?:
     const slots = [0, 1, 2, 3, 4];
     const nextSlot = slots.find(s => !savedAccounts[s]);
     if (nextSlot !== undefined) {
-      // Сначала переключаем индекс, FirebaseClientProvider сам переключит Auth контекст
       setActiveAccountIndex(nextSlot);
       setCurrentChatId(null);
       if (window.navigator && window.navigator.vibrate) window.navigator.vibrate(20);
