@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
@@ -24,13 +25,10 @@ interface AppState {
   setIsSearchOpen: (v: boolean) => void;
   settingsTab: string;
   setSettingsTab: (tab: string) => void;
-  
   activeAccountIndex: number;
   setActiveAccountIndex: (index: number) => void;
-  
   inspectedUserId: string | null;
   setInspectedUserId: (id: string | null) => void;
-  
   isLegalOpen: boolean;
   setIsLegalOpen: (v: boolean) => void;
   currentTrack: Track | null;
@@ -43,7 +41,7 @@ interface AppState {
   setStoriesToView: (stories: Story[] | null) => void;
 }
 
-export const AppContext = createContext<AppState | undefined>(undefined);
+const AppContext = createContext<AppState | undefined>(undefined);
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const [currentChatId, setCurrentChatId] = useState<string | null>(null);
@@ -106,26 +104,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 export const useAppState = (): AppState => {
   const context = useContext(AppContext);
   if (context === undefined) {
-    return {
-      activeAccountIndex: 0,
-      setActiveAccountIndex: () => {},
-      localDrafts: {},
-      setLocalDrafts: () => {},
-      setIs2FAVerified: () => {},
-      setIsSettingsOpen: () => {},
-      setIsSearchOpen: () => {},
-      setSettingsTab: () => {},
-      setCurrentChatId: () => {},
-      setActiveView: () => {},
-      setForwardingMessage: () => {},
-      setActiveCallId: () => {},
-      setInspectedUserId: () => {},
-      setIsLegalOpen: () => {},
-      setCurrentTrack: () => {},
-      setIsPlayingMusic: () => {},
-      setIsCreateStoryOpen: () => {},
-      setStoriesToView: () => {},
-    } as any;
+    throw new Error('useAppState must be used within AppProvider');
   }
   return context;
 };

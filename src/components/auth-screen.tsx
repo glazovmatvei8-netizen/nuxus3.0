@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useEffect } from 'react';
@@ -6,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Lock, Eye, EyeOff, User as UserIcon, Link as LinkIcon } from 'lucide-react';
+import { Loader2, Lock, Eye, EyeOff, User as UserIcon } from 'lucide-react';
 import { useAuth, useFirestore } from '@/firebase';
 import { 
   signInWithEmailAndPassword,
@@ -21,9 +22,8 @@ import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
 /**
- * AUTH SCREEN V67.0.0 «ABSOLUTE DOMAIN SYNC»
- * ИСПРАВЛЕНО: Домен nuxus.fun | Redirect https://nuxus.fun
- * Соответствует скриншоту консоли VK ID.
+ * AUTH SCREEN V68.0.0 «ABSOLUTE DOMAIN SYNC»
+ * Исправлено: Домен nuxus.fun | Redirect https://nuxus.fun
  */
 export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'login' | 'register' }) {
   const auth = useAuth();
@@ -47,7 +47,7 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
     const VKID = (window as any).VKIDSDK;
 
     if (!VKID) {
-      toast({ title: "SDK НЕ ГОТОВ", description: "Подождите секунду, Ядро прогревается...", variant: "destructive" });
+      toast({ title: "SDK НЕ ГОТОВ", description: "Инициализация моста...", variant: "destructive" });
       setIsVkLoading(false);
       return;
     }
