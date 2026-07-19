@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
@@ -41,7 +40,7 @@ interface AppState {
   setStoriesToView: (stories: Story[] | null) => void;
 }
 
-const AppContext = createContext<AppState | undefined>(undefined);
+export const AppContext = createContext<AppState | undefined>(undefined);
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const [currentChatId, setCurrentChatId] = useState<string | null>(null);
@@ -104,7 +103,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 export const useAppState = (): AppState => {
   const context = useContext(AppContext);
   if (context === undefined) {
-    throw new Error('useAppState must be used within AppProvider');
+    // Fallback for SSR or during hydration
+    return {} as AppState;
   }
   return context;
 };

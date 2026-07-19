@@ -23,7 +23,7 @@ import type { User } from '@/lib/types';
 
 /**
  * SETTINGS MODAL V68.0.0 «FULL RESTORATION»
- * Все функции возвращены: Био, Статус, Телефон, 2FA, Ghost Mode.
+ * Everything is back: Bio, Status, Phone, 2FA, Ghost Mode.
  */
 export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const auth = useAuth();

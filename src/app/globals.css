@@ -1,4 +1,3 @@
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -49,9 +48,9 @@
   }
 }
 
-/* ТЕПЛОВАЯ ОПТИМИЗАЦИЯ: СНИЖЕН BLUR ДЛЯ РАЗГРУЗКИ GPU */
+/* THERMAL OPTIMIZATION: Reduced blur from 8px to 4px to offload GPU */
 .obsidian-glass {
-  @apply bg-white/[0.03] backdrop-blur-[8px] border border-white/[0.05] shadow-[0_10px_40px_rgba(0,0,0,0.5)];
+  @apply bg-white/[0.03] backdrop-blur-[4px] border border-white/[0.05] shadow-[0_10px_40px_rgba(0,0,0,0.5)];
 }
 
 .floating-nav {

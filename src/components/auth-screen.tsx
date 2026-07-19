@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useEffect } from 'react';
@@ -23,7 +22,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 
 /**
  * AUTH SCREEN V68.0.0 «ABSOLUTE DOMAIN SYNC»
- * Исправлено: Домен nuxus.fun | Redirect https://nuxus.fun
+ * Fixed: Direct Domain nuxus.fun | Trusted URL https://nuxus.fun
  */
 export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'login' | 'register' }) {
   const auth = useAuth();
@@ -56,6 +55,7 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
       const isNative = !!(window as any).Capacitor || !!(window as any).webkit;
       const APP_ID = isNative ? 54684554 : 54684553;
 
+      // STRICT DOMAIN SYNC
       VKID.Config.init({
         app: APP_ID,
         redirectUrl: 'https://nuxus.fun',
@@ -69,7 +69,7 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
         handleVkSuccess(data);
       }
     } catch (e: any) {
-      toast({ title: "Сбой VK", description: "Сигнал прерван.", variant: "destructive" });
+      toast({ title: "Сбой VK", description: "Ограничение доступа или сбой сети.", variant: "destructive" });
     } finally {
       setIsVkLoading(false);
     }

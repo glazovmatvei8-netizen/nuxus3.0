@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, memo, useMemo } from 'react';
@@ -21,8 +20,8 @@ interface UserAvatarProps {
 }
 
 /**
- * USER AVATAR V62.0.0 «THERMAL OPTIMIZED»
- * ИСПРАВЛЕНО: Анимация замедлена для снижения нагрева.
+ * USER AVATAR V68.0.0 «THERMAL RESTORATION»
+ * Fixed: Animation slowed down significantly to reduce phone heat.
  */
 export const UserAvatar = memo(({ userId, className, fallbackName, fallbackClassName, manualAvatarUrl, showOnlineStatus = false }: UserAvatarProps) => {
   const db = useFirestore();
@@ -69,10 +68,10 @@ export const UserAvatar = memo(({ userId, className, fallbackName, fallbackClass
 
   return (
     <div className={cn("relative inline-flex items-center justify-center shrink-0 rounded-full", className)}>
-      {/* ОПТИМИЗИРОВАННАЯ АНИМАЦИЯ (8s -> 15s для разгрузки CPU) */}
+      {/* THERMAL FIX: Animation slowed from 15s to 25s */}
       {premium && (
         <div className="absolute inset-[-3px] rounded-full p-[1.5px] overflow-hidden z-0">
-          <div className="absolute inset-[-100%] bg-gradient-to-tr from-primary via-accent to-primary animate-[spin_15s_linear_infinite] opacity-60" />
+          <div className="absolute inset-[-100%] bg-gradient-to-tr from-primary via-accent to-primary animate-[spin_25s_linear_infinite] opacity-40" />
         </div>
       )}
 

@@ -1,8 +1,6 @@
-
 'use client';
 /**
- * Nuxus State Proxy v67.0.0
- * CRITICAL: Synchronized to prevent duplicate context instances.
+ * NUXUS CORE STORE PROXY V68.0.0
+ * CRITICAL: This file now strictly re-exports from store.tsx to prevent dual-context errors.
  */
-export { AppProvider, useAppState, AppContext } from './store.tsx';
-export type { MainView } from './store.tsx';
+export * from './store.tsx';
