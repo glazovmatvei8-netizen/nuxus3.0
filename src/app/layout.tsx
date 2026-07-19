@@ -1,7 +1,6 @@
-
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
-import { AppProvider } from '@/lib/store.tsx';
+import { AppProvider } from '@/lib/store';
 import { Toaster } from '@/components/ui/toaster';
 import { FirebaseClientProvider } from '@/firebase/client-provider';
 import { ThemeApplier } from '@/components/theme-applier';
@@ -13,6 +12,7 @@ import { SpeedInsights } from "@vercel/speed-insights/next";
 import Script from 'next/script';
 import { OfflinePlaceholder } from '@/components/offline-placeholder';
 import { BiometricGate } from '@/components/biometric-gate';
+import { BrandStatusBadge } from '@/components/brand-status-badge';
 
 const font = Plus_Jakarta_Sans({
   subsets: ['latin'],
@@ -78,6 +78,7 @@ export default function RootLayout({
             <ThemeApplier />
             <AppIconApplier />
             <OfflinePlaceholder />
+            <BrandStatusBadge />
             <BiometricGate>
               {children}
             </BiometricGate>

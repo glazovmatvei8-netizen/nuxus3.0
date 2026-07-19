@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useEffect, useRef } from 'react';
@@ -9,8 +8,8 @@ import { collection, query, where, getDocs, limit } from 'firebase/firestore';
 import { signInWithEmailAndPassword, browserLocalPersistence, setPersistence } from 'firebase/auth';
 
 /**
- * КРИТИЧЕСКИЙ МОСТ VK ID V58.1.0
- * Автоматическое внедрение SDK, выбор ID (Web 54684553 / APK 54684554) и нативная шторка.
+ * КРИТИЧЕСКИЙ МОСТ VK ID V59.0.0
+ * Автоматическое внедрение SDK и нативная шторка (FloatingOneTap).
  */
 export function VkProvider() {
   const { user } = useUser();
@@ -49,6 +48,7 @@ export function VkProvider() {
           source: VKID.ConfigSource.LOWCODE,
         });
 
+        // Инициализация шторки из вашего примера
         const floatingOneTap = new VKID.FloatingOneTap();
         floatingOneTapRef.current = floatingOneTap;
 

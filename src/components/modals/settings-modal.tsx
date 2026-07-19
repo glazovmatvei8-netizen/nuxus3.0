@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useRef, useEffect } from 'react';
@@ -23,8 +22,7 @@ import { isUserPremium, isGlobalAdmin, cn } from '@/lib/utils';
 import type { User } from '@/lib/types';
 
 /**
- * SETTINGS MODAL V58.1.0 «ABSOLUTE RESTORATION»
- * Исправлены ошибки cn, восстановлены Био, Статус и верификация телефона.
+ * SETTINGS MODAL V59.0.0 «ABSOLUTE RESTORATION»
  */
 export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const auth = useAuth();
