@@ -302,6 +302,7 @@ export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?:
     delete next[index];
     setSavedAccounts(next);
     localStorage.setItem('nuxus_multi_accounts', JSON.stringify(next));
+    if (index === activeAccountIndex) setActiveAccountIndex(0);
   };
 
   const chatsQuery = useMemoFirebase(() => {

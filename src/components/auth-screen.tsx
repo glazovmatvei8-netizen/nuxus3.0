@@ -21,8 +21,9 @@ import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
 /**
- * AUTH SCREEN V68.0.0 «ABSOLUTE DOMAIN SYNC»
- * Fixed: Direct Domain nuxus.fun | Trusted URL https://nuxus.fun
+ * AUTH SCREEN V69.0.0 «ABSOLUTE DOMAIN SYNC»
+ * Fixed: Configuration parameters aligned with VK Console Screenshot.
+ * Domain: nuxus.fun | Redirect: https://nuxus.fun
  */
 export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'login' | 'register' }) {
   const auth = useAuth();
@@ -55,7 +56,7 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
       const isNative = !!(window as any).Capacitor || !!(window as any).webkit;
       const APP_ID = isNative ? 54684554 : 54684553;
 
-      // STRICT DOMAIN SYNC
+      // ABSOLUTE DOMAIN SYNC
       VKID.Config.init({
         app: APP_ID,
         redirectUrl: 'https://nuxus.fun',
@@ -69,7 +70,7 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
         handleVkSuccess(data);
       }
     } catch (e: any) {
-      toast({ title: "Сбой VK", description: "Ограничение доступа или сбой сети.", variant: "destructive" });
+      toast({ title: "Сбой VK", description: "Ошибка доступа или домена.", variant: "destructive" });
     } finally {
       setIsVkLoading(false);
     }

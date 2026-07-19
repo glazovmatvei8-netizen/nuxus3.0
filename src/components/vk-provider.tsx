@@ -2,20 +2,18 @@
 
 import { useEffect, useRef } from 'react';
 import { useUser, useFirestore, useAuth } from '@/firebase';
-import { useAppState } from '@/lib/store';
-import { useToast } from '@/hooks/use-toast';
 
 /**
- * КРИТИЧЕСКИЙ МОСТ VK ID V68.0.0 «ABSOLUTE DOMAIN SYNC»
- * Синхронизировано: nuxus.fun | Redirect https://nuxus.fun
+ * КРИТИЧЕСКИЙ МОСТ VK ID V69.0.0 «ABSOLUTE DOMAIN SYNC»
+ * Синхронизировано в соответствии со скриншотом настроек VK ID.
+ * Базовый домен: nuxus.fun | Redirect: https://nuxus.fun
  */
 export function VkProvider() {
   const { user } = useUser();
-  const db = useFirestore();
-  const auth = useAuth();
   const isInitialized = useRef(false);
 
   useEffect(() => {
+    // Инициализируем только если пользователь не вошел в текущем слоте
     if (user || typeof window === 'undefined' || isInitialized.current) return;
 
     const injectSdk = () => {
@@ -39,7 +37,7 @@ export function VkProvider() {
         const isNative = !!(window as any).Capacitor || !!(window as any).webkit;
         const APP_ID = isNative ? 54684554 : 54684553;
 
-        // Прямая конфигурация для nuxus.fun (строго по скриншоту)
+        // Прямая конфигурация для nuxus.fun (согласно настройкам ресурса)
         VKID.Config.init({
           app: APP_ID,
           redirectUrl: 'https://nuxus.fun',
@@ -53,9 +51,9 @@ export function VkProvider() {
       }
     };
 
-    const timer = setTimeout(injectSdk, 1000);
+    const timer = setTimeout(injectSdk, 500);
     return () => clearTimeout(timer);
-  }, [user, db, auth]);
+  }, [user]);
 
   return null;
 }

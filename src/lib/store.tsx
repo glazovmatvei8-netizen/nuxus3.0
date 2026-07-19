@@ -103,8 +103,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 export const useAppState = (): AppState => {
   const context = useContext(AppContext);
   if (context === undefined) {
-    // Fallback for SSR or during hydration
-    return {} as AppState;
+    // Return a safe object during SSR or if used outside Provider
+    return {
+      activeAccountIndex: 0,
+      localDrafts: {},
+      is2FAVerified: false,
+      isSettingsOpen: false,
+      activeView: 'chats',
+      settingsTab: 'profile'
+    } as AppState;
   }
   return context;
 };

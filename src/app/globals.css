@@ -48,7 +48,7 @@
   }
 }
 
-/* THERMAL OPTIMIZATION: Reduced blur from 8px to 4px to offload GPU */
+/* THERMAL OPTIMIZATION: Reduced blur from 8px to 4px to offload GPU and reduce phone heating */
 .obsidian-glass {
   @apply bg-white/[0.03] backdrop-blur-[4px] border border-white/[0.05] shadow-[0_10px_40px_rgba(0,0,0,0.5)];
 }
