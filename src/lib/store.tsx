@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
@@ -26,15 +25,12 @@ interface AppState {
   settingsTab: string;
   setSettingsTab: (tab: string) => void;
   
-  // Multi-Account Core
   activeAccountIndex: number;
   setActiveAccountIndex: (index: number) => void;
   
-  // User Inspection
   inspectedUserId: string | null;
   setInspectedUserId: (id: string | null) => void;
   
-  // UI States
   isLegalOpen: boolean;
   setIsLegalOpen: (v: boolean) => void;
   currentTrack: Track | null;
@@ -110,7 +106,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 export const useAppState = (): AppState => {
   const context = useContext(AppContext);
   if (context === undefined) {
-    // Return a proxy/dummy state for SSR to prevent crash
     return {
       activeAccountIndex: 0,
       setActiveAccountIndex: () => {},

@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useEffect } from 'react';
@@ -22,9 +21,9 @@ import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
 /**
- * AUTH SCREEN V66.0.0 «ABSOLUTE DOMAIN SYNC»
+ * AUTH SCREEN V67.0.0 «ABSOLUTE DOMAIN SYNC»
  * ИСПРАВЛЕНО: Домен nuxus.fun | Redirect https://nuxus.fun
- * Устранена ошибка TypeError VKID.ConfigResponseMode.Callback
+ * Соответствует скриншоту консоли VK ID.
  */
 export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'login' | 'register' }) {
   const auth = useAuth();
@@ -43,18 +42,6 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
   const [username, setUsername] = useState('');
   const [vkIdToLink, setVkIdToLink] = useState<number | null>(null);
 
-  useEffect(() => {
-    const pending = sessionStorage.getItem('nuxus_vk_pending');
-    if (pending) {
-      const data = JSON.parse(pending);
-      setMode('register');
-      setName(data.name);
-      setIdentifier(data.phone);
-      setVkIdToLink(data.vkId);
-      sessionStorage.removeItem('nuxus_vk_pending');
-    }
-  }, []);
-
   const handleVkLogin = async () => {
     setIsVkLoading(true);
     const VKID = (window as any).VKIDSDK;
@@ -69,7 +56,6 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
       const isNative = !!(window as any).Capacitor || !!(window as any).webkit;
       const APP_ID = isNative ? 54684554 : 54684553;
 
-      // Используем строковые литералы для исключения TypeError
       VKID.Config.init({
         app: APP_ID,
         redirectUrl: 'https://nuxus.fun',
@@ -214,11 +200,6 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
                   <Button type="submit" disabled={isLoading} className="w-full h-16 bg-primary text-white rounded-2xl font-black uppercase italic tracking-widest shadow-2xl active:scale-95 transition-all">
                     {isLoading ? <Loader2 className="animate-spin w-6 h-6" /> : (mode === 'login' ? "Авторизовать" : "Создать Узел")}
                   </Button>
-                  {vkIdToLink && (
-                    <button type="button" onClick={() => setMode('login')} className="w-full flex items-center justify-center gap-2 text-[9px] font-black uppercase tracking-widest text-primary/60 hover:text-primary py-2">
-                      <LinkIcon className="w-3 h-3" /> Привязать к существующему узлу
-                    </button>
-                  )}
                   <div className="space-y-6 pt-2">
                      <div className="flex items-center gap-4 px-2">
                         <div className="h-px flex-1 bg-white/5" /><span className="text-[8px] font-black text-white/20 uppercase tracking-[0.3em]">или</span><div className="h-px flex-1 bg-white/5" />

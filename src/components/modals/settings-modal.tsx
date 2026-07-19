@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useRef, useEffect } from 'react';
@@ -12,7 +11,7 @@ import { Switch } from '@/components/ui/switch';
 import { useAuth, useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
-  LogOut, Settings2, Camera, Star, ShieldCheck, Loader2, CheckCircle2, Fingerprint, Palette, Archive, ChevronRight
+  LogOut, Settings2, Camera, Star, ShieldCheck, Loader2, CheckCircle2, Fingerprint, Palette, Archive, ChevronRight, X
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { signOut } from 'firebase/auth';
@@ -23,7 +22,7 @@ import { isUserPremium, cn } from '@/lib/utils';
 import type { User } from '@/lib/types';
 
 /**
- * SETTINGS MODAL V66.0.0 «FULL RESTORATION»
+ * SETTINGS MODAL V68.0.0 «FULL RESTORATION»
  * Все функции возвращены: Био, Статус, Телефон, 2FA, Ghost Mode.
  */
 export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
