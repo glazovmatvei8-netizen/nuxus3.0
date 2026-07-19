@@ -1,15 +1,16 @@
+
 'use client';
 
 import { useEffect, useRef } from 'react';
 import { useUser, useFirestore, useAuth } from '@/firebase';
-import { useAppState } from '@/lib/store.tsx';
+import { useAppState } from '@/lib/store';
 import { useToast } from '@/hooks/use-toast';
 import { collection, query, where, getDocs, limit } from 'firebase/firestore';
 import { signInWithEmailAndPassword, browserLocalPersistence, setPersistence } from 'firebase/auth';
 
 /**
- * КРИТИЧЕСКИЙ МОСТ VK ID V60.0.0 «HYBRID RESILIENCE»
- * Внедряет FloatingOneTap (шторку) с динамическими ID (Web: 54684553, APK: 54684554).
+ * КРИТИЧЕСКИЙ МОСТ VK ID V62.5.0 «ABSOLUTE RESILIENCE»
+ * Исправлена ошибка 'undefined is not an object' при инициализации SDK.
  */
 export function VkProvider() {
   const { user } = useUser();
@@ -17,14 +18,17 @@ export function VkProvider() {
   const auth = useAuth();
   const { setIs2FAVerified } = useAppState();
   const { toast } = useToast();
-  const floatingOneTapRef = useRef<any>(null);
   const isInitialized = useRef(false);
 
   useEffect(() => {
+    // Если пользователь уже авторизован в текущем слоте, не показываем шторку
     if (user || typeof window === 'undefined' || isInitialized.current) return;
 
     const injectSdk = () => {
-      if (document.getElementById('vk-id-sdk-loader')) return;
+      if (document.getElementById('vk-id-sdk-loader')) {
+        initVk();
+        return;
+      }
       const script = document.createElement('script');
       script.id = 'vk-id-sdk-loader';
       script.src = "https://unpkg.com/@vkid/sdk@2.1.0/dist-sdk/umd/index.js";
@@ -35,31 +39,29 @@ export function VkProvider() {
 
     const initVk = async () => {
       const VKID = (window as any).VKIDSDK;
-      if (!VKID) return;
+      if (!VKID || isInitialized.current) return;
 
       try {
         const isNative = !!(window as any).Capacitor || !!(window as any).webkit;
         const APP_ID = isNative ? 54684554 : 54684553;
 
+        // Безопасная инициализация с защитой от undefined
         VKID.Config.init({
           app: APP_ID,
           redirectUrl: 'https://nuxus.fun',
-          responseMode: VKID.ConfigResponseMode.Callback,
-          source: VKID.ConfigSource.LOWCODE,
+          responseMode: 'callback', // Используем строку вместо VKID.ConfigResponseMode.Callback
+          source: 'lowcode',
         });
 
-        // Инициализация шторки
         const floatingOneTap = new VKID.FloatingOneTap();
-        floatingOneTapRef.current = floatingOneTap;
-
         floatingOneTap.render({
           appName: 'Nuxus',
           showAlternativeLogin: true
         })
-        .on(VKID.WidgetEvents.ERROR, (e: any) => {
-          console.warn("VK ID Connection Error:", e);
+        .on('error', (e: any) => {
+          console.warn("Nuxus VK Signal Error:", e);
         })
-        .on(VKID.FloatingOneTapInternalEvents.LOGIN_SUCCESS, async (payload: any) => {
+        .on('login_success', async (payload: any) => {
           try {
             const data = await VKID.Auth.exchangeCode(payload.code, payload.device_id);
             await handleVkSuccess(data);
@@ -71,7 +73,7 @@ export function VkProvider() {
 
         isInitialized.current = true;
       } catch (e) {
-        console.error("VK ID Signal Lost:", e);
+        console.error("Nuxus VK Bridge Fail:", e);
       }
     };
 
@@ -102,12 +104,6 @@ export function VkProvider() {
     };
 
     injectSdk();
-
-    return () => {
-      if (floatingOneTapRef.current) {
-        try { floatingOneTapRef.current.close(); } catch(e) {}
-      }
-    };
   }, [user, db, auth, setIs2FAVerified, toast]);
 
   return null;

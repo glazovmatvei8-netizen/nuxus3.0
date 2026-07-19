@@ -67,7 +67,6 @@ export default function RootLayout({
         <link rel="icon" href={FINAL_ICON_URL} sizes="any" />
         <link rel="apple-touch-icon" href={FINAL_ICON_URL} />
         <meta name="mobile-web-app-capable" content="yes" />
-        <script src="https://unpkg.com/@vkid/sdk@2.1.0/dist-sdk/umd/index.js" async></script>
       </head>
       <body 
         className="font-sans antialiased bg-background text-foreground overflow-hidden h-[100dvh] selection:bg-primary/30" 

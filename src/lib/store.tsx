@@ -30,28 +30,23 @@ interface AppState {
   activeAccountIndex: number;
   setActiveAccountIndex: (index: number) => void;
   
-  // Legal State
-  isLegalOpen: boolean;
-  setIsLegalOpen: (v: boolean) => void;
-  
   // User Inspection State
   inspectedUserId: string | null;
   setInspectedUserId: (id: string | null) => void;
   
-  // Music State
+  // UI States
+  isLegalOpen: boolean;
+  setIsLegalOpen: (v: boolean) => void;
   currentTrack: Track | null;
   setCurrentTrack: (track: Track | null) => void;
   isPlayingMusic: boolean;
   setIsPlayingMusic: (v: boolean) => void;
-  
-  // Story State
   isCreateStoryOpen: boolean;
   setIsCreateStoryOpen: (v: boolean) => void;
   storiesToView: Story[] | null;
   setStoriesToView: (stories: Story[] | null) => void;
 }
 
-// Создаем контекст с undefined по умолчанию для отладки
 export const AppContext = createContext<AppState | undefined>(undefined);
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
@@ -115,8 +110,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 export const useAppState = () => {
   const context = useContext(AppContext);
   if (context === undefined) {
-    // В некоторых случаях (SSR) контекст может быть не прокинут.
-    // Возвращаем пустой объект, чтобы не крашить приложение на сервере.
     return {} as AppState;
   }
   return context;

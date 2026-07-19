@@ -6,18 +6,17 @@ import { useAppState } from '@/lib/store';
 import { Button } from '@/components/ui/button';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
-  Plus, Ghost, Search, Star, Pin, PinOff, Archive, Lock, Trash2, MessageCircle, Activity, LayoutGrid, Users, User, ChevronRight, Zap, Bookmark, Shield, ChevronDown, UserPlus, LogOut, Check, X
+  Plus, Search, Star, Pin, PinOff, Archive, Lock, Trash2, MessageCircle, Activity, LayoutGrid, Users, User, ChevronRight, Zap, Shield, ChevronDown, UserPlus, LogOut, Check, X
 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { CreateChatModal } from './modals/create-chat-modal';
 import { AdminPanelModal } from './modals/admin-panel-modal';
 import { StoriesBar } from './stories-bar';
 import type { User as UserType, Message, Chat } from '@/lib/types';
-import { useFirestore, useUser, useCollection, useMemoFirebase, useDoc, useAuth } from '@/firebase';
+import { useFirestore, useUser, useCollection, useMemoFirebase, useDoc } from '@/firebase';
 import { collection, query, where, doc, limit, orderBy, updateDoc, arrayUnion, arrayRemove, deleteDoc, setDoc, getDoc } from 'firebase/firestore';
 import { formatDisplayName, cn, isGlobalAdmin, decryptSignal, isUserPremium } from '@/lib/utils';
 import { format } from 'date-fns';
-import { useTranslations } from '@/hooks/use-translations';
 import { 
   ContextMenu,
   ContextMenuContent,
@@ -28,7 +27,7 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 
 /**
- * MULTI-ACCOUNT ITEM V57.7.0 «INSTANT SWITCH»
+ * MULTI-ACCOUNT ITEM V62.5.0
  */
 const AccountItem = memo(({ account, isActive, index, onSwitch, onRemove }: any) => (
   <div className={cn(
@@ -209,7 +208,7 @@ const ChatListItem = memo(({
                     <span className="font-black text-[16px] truncate tracking-tight italic text-white leading-none">
                       {finalDisplayName}
                     </span>
-                    {isPremium && !isSavedMessages && <Star className="w-3.5 h-3.5 text-accent fill-accent shrink-0 animate-pulse" />}
+                    {isPremium && !isSavedMessages && <Star className="w-3.5 h-3.5 text-accent fill-accent shrink-0" />}
                     {isPinned && <Pin className="w-3.5 h-3.5 text-primary rotate-45 shrink-0" />}
                   </div>
                   <span className="text-[10px] text-white/30 font-black tabular-nums tracking-widest">{displayTime}</span>
@@ -271,6 +270,7 @@ export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?:
   const userProfileRef = useMemoFirebase(() => (!db || !user) ? null : doc(db, 'users', user.uid), [db, user]);
   const { data: currentUserProfile } = useDoc<UserType>(userProfileRef);
 
+  // Сохраняем данные аккаунта в список только если пользователь реально авторизован
   useEffect(() => {
     if (user && currentUserProfile) {
       const accounts = JSON.parse(localStorage.getItem('nuxus_multi_accounts') || '{}');
@@ -296,8 +296,10 @@ export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?:
     const slots = [0, 1, 2, 3, 4];
     const nextSlot = slots.find(s => !savedAccounts[s]);
     if (nextSlot !== undefined) {
+      // Сначала переключаем индекс, FirebaseClientProvider сам переключит Auth контекст
       setActiveAccountIndex(nextSlot);
       setCurrentChatId(null);
+      if (window.navigator && window.navigator.vibrate) window.navigator.vibrate(20);
     }
   };
 
