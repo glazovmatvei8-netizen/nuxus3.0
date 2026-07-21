@@ -8,23 +8,19 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Switch } from '@/components/ui/switch';
-import { useAuth, useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
+import { useAuth, useUser, useFirestore, useDoc, useMemoFirebase, useCollection } from '@/firebase';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
-  LogOut, Settings2, Camera, Star, ShieldCheck, Loader2, CheckCircle2, Fingerprint, Palette, Archive, ChevronRight, X
+  LogOut, Settings2, Camera, Star, ShieldCheck, Loader2, CheckCircle2, Fingerprint, Palette, Archive, ChevronRight, X, Globe, Smartphone, Monitor, Trash2
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { signOut } from 'firebase/auth';
-import { doc, updateDoc } from 'firebase/firestore';
+import { doc, updateDoc, collection, query, orderBy, deleteDoc } from 'firebase/firestore';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAppState } from '@/lib/store';
 import { isUserPremium, cn } from '@/lib/utils';
-import type { User } from '@/lib/types';
+import type { User, Session } from '@/lib/types';
 
-/**
- * SETTINGS MODAL V68.0.0 «FULL RESTORATION»
- * Everything is back: Bio, Status, Phone, 2FA, Ghost Mode.
- */
 export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const auth = useAuth();
   const db = useFirestore();
@@ -37,6 +33,12 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
   const userRef = useMemoFirebase(() => (!db || !user) ? null : doc(db, 'users', user.uid), [db, user]);
   const { data: profile } = useDoc<User>(userRef);
 
+  const sessionsQuery = useMemoFirebase(() => {
+    if (!db || !user) return null;
+    return query(collection(db, 'users', user.uid, 'sessions'), orderBy('lastActive', 'desc'));
+  }, [db, user]);
+  const { data: sessions } = useCollection<Session>(sessionsQuery);
+
   const [isSaving, setIsSaving] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
 
@@ -44,7 +46,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
     name: '', username: '', bio: '', statusEmoji: '', statusText: '', avatarUrl: '',
     phone: '', twoFactorEnabled: false, twoFactorPin: '', biometricEnabled: false,
     appearance: 'dark' as 'light' | 'dark', theme: 'default',
-    isGhostMode: false
+    isGhostMode: false, bubbleStyle: 'default'
   });
 
   useEffect(() => {
@@ -62,7 +64,8 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         biometricEnabled: !!profile.settings?.biometricEnabled,
         appearance: profile.settings?.appearance || 'dark',
         theme: profile.settings?.theme || 'default',
-        isGhostMode: !!profile.settings?.privacy?.isGhostMode
+        isGhostMode: !!profile.settings?.privacy?.isGhostMode,
+        bubbleStyle: profile.settings?.bubbleStyle || 'default'
       });
     }
   }, [profile, open]);
@@ -86,7 +89,8 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         'settings.appearance': form.appearance,
         'settings.theme': form.theme,
         'settings.biometricEnabled': form.biometricEnabled,
-        'settings.privacy.isGhostMode': form.isGhostMode
+        'settings.privacy.isGhostMode': form.isGhostMode,
+        'settings.bubbleStyle': form.bubbleStyle
       });
       onOpenChange(false);
       toast({ title: "Конфигурация обновлена" });
@@ -97,15 +101,12 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
     }
   };
 
-  const handlePhoneVerify = () => {
-    setIsVerifying(true);
-    setTimeout(async () => {
-      if (db && user) {
-        await updateDoc(doc(db, 'users', user.uid), { phoneVerified: true });
-        toast({ title: "Узел верифицирован" });
-      }
-      setIsVerifying(false);
-    }, 1500);
+  const terminateSession = async (sessionId: string) => {
+    if (!db || !user) return;
+    try {
+      await deleteDoc(doc(db, 'users', user.uid, 'sessions', sessionId));
+      toast({ title: "Сеанс завершен" });
+    } catch (e) { toast({ title: "Ошибка", variant: "destructive" }); }
   };
 
   return (
@@ -149,54 +150,25 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                            <Input value={form.username} onChange={e => setForm({...form, username: e.target.value})} className="bg-black/40 border-white/10 h-12 rounded-xl font-bold" />
                          </div>
                        </div>
-
-                       <div className="space-y-1.5">
-                         <div className="flex items-center justify-between px-1">
-                            <Label className="text-[9px] font-black uppercase text-primary/60 ml-1">Телефон</Label>
-                            {profile?.phoneVerified && <CheckCircle2 className="w-4 h-4 text-green-500" />}
-                         </div>
-                         <div className="flex gap-2">
-                            <Input value={form.phone} onChange={e => setForm({...form, phone: e.target.value})} className="bg-black/40 border-white/10 h-12 rounded-xl font-bold flex-1" />
-                            {!profile?.phoneVerified && (
-                              <Button onClick={handlePhoneVerify} disabled={isVerifying} className="h-12 px-4 rounded-xl bg-primary text-[9px] font-black uppercase">
-                                {isVerifying ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Confirm'}
-                              </Button>
-                            )}
-                         </div>
-                       </div>
-
                        <div className="space-y-1.5">
                          <Label className="text-[9px] font-black uppercase text-primary/60 ml-2">О себе (Био)</Label>
                          <Textarea value={form.bio} onChange={e => setForm({...form, bio: e.target.value})} className="bg-black/40 border-white/10 rounded-2xl h-24 resize-none" placeholder="Спецификация..." />
-                       </div>
-
-                       <div className="space-y-4">
-                          <Label className="text-[9px] font-black uppercase text-primary/60 ml-2">Статус в сети</Label>
-                          <div className="flex gap-3">
-                             <Input value={form.statusEmoji} onChange={e => setForm({...form, statusEmoji: e.target.value})} className="w-16 h-12 bg-black/40 border-white/10 rounded-xl text-center text-xl" />
-                             <Input value={form.statusText} onChange={e => setForm({...form, statusText: e.target.value})} className="flex-1 h-12 bg-black/40 border-white/10 rounded-xl text-xs font-bold" />
-                          </div>
                        </div>
                     </div>
                   </div>
                 </div>
               </TabsContent>
 
-              <TabsContent value="privacy" className="space-y-6 m-0 p-8">
-                 <div className="bg-white/5 p-6 rounded-[2rem] border border-white/5 space-y-6 text-left">
+              <TabsContent value="privacy" className="space-y-6 m-0 p-8 text-left">
+                 <div className="bg-white/5 p-6 rounded-[2rem] border border-white/5 space-y-6">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
                         <div className="bg-primary/10 p-2 rounded-xl"><Fingerprint className="w-5 h-5 text-primary" /></div>
-                        <div className="flex flex-col">
-                           <span className="text-sm font-bold text-white uppercase italic">Ghost Mode</span>
-                           <span className="text-[9px] text-primary/40 font-black uppercase">Инкогнито-связь</span>
-                        </div>
+                        <div className="flex flex-col"><span className="text-sm font-bold text-white uppercase italic">Ghost Mode</span></div>
                       </div>
                       <Switch checked={form.isGhostMode} onCheckedChange={v => setForm({...form, isGhostMode: v})} />
                     </div>
-
                     <div className="space-y-4 pt-4 border-t border-white/5">
-                       <div className="flex items-center gap-2"><ShieldCheck className="w-4 h-4 text-primary" /><span className="text-[10px] font-black uppercase text-white tracking-widest">Безопасность</span></div>
                        <div className="flex items-center justify-between">
                           <span className="text-xs font-bold text-white">Облачный пароль (2FA)</span>
                           <Switch checked={form.twoFactorEnabled} onCheckedChange={v => setForm({...form, twoFactorEnabled: v})} />
@@ -210,18 +182,38 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
 
               <TabsContent value="style" className="space-y-6 m-0 p-8 text-left">
                  <div className="bg-white/5 p-6 rounded-[2rem] border border-white/5 space-y-6">
-                    <div className="flex items-center gap-2"><Palette className="w-4 h-4 text-primary" /><span className="text-[10px] font-black uppercase text-white tracking-widest">Оформление</span></div>
-                    <div className="grid grid-cols-2 gap-3">
-                       <button onClick={() => setForm({...form, appearance: 'dark'})} className={cn("p-4 rounded-2xl border transition-all text-center font-bold text-sm", form.appearance === 'dark' ? "bg-primary/20 border-primary text-primary" : "bg-black/40 border-white/10 text-white/40")}>Темная</button>
-                       <button onClick={() => setForm({...form, appearance: 'light'})} className={cn("p-4 rounded-2xl border transition-all text-center font-bold text-sm", form.appearance === 'light' ? "bg-primary/20 border-primary text-primary" : "bg-black/40 border-white/10 text-white/40")}>Светлая</button>
+                    <div className="space-y-4">
+                       <Label className="text-[9px] font-black uppercase text-primary/60 ml-2">Стиль пузырей</Label>
+                       <div className="grid grid-cols-2 gap-3">
+                          {['default', 'neon', 'gold', 'ocean'].map(s => (
+                            <button key={s} onClick={() => setForm({...form, bubbleStyle: s})} className={cn("p-3 rounded-xl border text-[10px] font-black uppercase transition-all", form.bubbleStyle === s ? "border-primary bg-primary/10 text-primary" : "border-white/5 bg-black/20 text-white/40")}>{s}</button>
+                          ))}
+                       </div>
                     </div>
                  </div>
               </TabsContent>
 
               <TabsContent value="data" className="space-y-6 m-0 p-8 text-left">
-                 <div className="bg-white/5 p-6 rounded-[2rem] border border-white/5 space-y-6">
-                    <div className="flex items-center gap-2"><Archive className="w-4 h-4 text-primary" /><span className="text-[10px] font-black uppercase text-white tracking-widest">Данные</span></div>
-                    <Button variant="ghost" className="w-full justify-between h-12 bg-white/5 rounded-xl text-[10px] font-black uppercase px-4">Очистить историю сессий <ChevronRight className="w-3 h-3" /></Button>
+                 <div className="space-y-4">
+                    <h3 className="text-[10px] font-black uppercase tracking-widest text-primary/60 px-1">Активные сеансы</h3>
+                    <div className="space-y-2">
+                       {sessions?.map(s => (
+                         <div key={s.id} className="bg-white/5 p-4 rounded-2xl border border-white/5 flex items-center justify-between group">
+                            <div className="flex items-center gap-3">
+                               <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
+                                  {s.deviceName.includes('PC') ? <Monitor className="w-5 h-5" /> : <Smartphone className="w-5 h-5" />}
+                               </div>
+                               <div className="flex flex-col">
+                                  <span className="text-xs font-bold text-white uppercase">{s.deviceName}</span>
+                                  <span className="text-[8px] text-muted-foreground font-black uppercase">{s.ip} • {s.browser}</span>
+                               </div>
+                            </div>
+                            {s.id !== localStorage.getItem('nuxus_session_id') && (
+                              <button onClick={() => terminateSession(s.id)} className="p-2 text-red-500/40 hover:text-red-500 transition-all opacity-0 group-hover:opacity-100"><Trash2 className="w-4 h-4" /></button>
+                            )}
+                         </div>
+                       ))}
+                    </div>
                  </div>
               </TabsContent>
             </div>
@@ -229,7 +221,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
 
           <div className="p-8 border-t border-white/5 bg-[#0a0a0c] shrink-0 flex gap-4 z-[100] pb-[calc(1.5rem+env(safe-area-inset-bottom))]">
             <Button variant="ghost" className="h-16 w-16 rounded-[1.8rem] bg-red-500/10 text-red-500" onClick={() => signOut(auth)}><LogOut className="w-7 h-7" /></Button>
-            <Button disabled={isSaving} className="flex-1 h-16 rounded-[1.8rem] font-black uppercase italic bg-primary text-white shadow-2xl active:scale-95 transition-all" onClick={handleSave}>
+            <Button disabled={isSaving} className="flex-1 h-16 rounded-[1.8rem] font-black uppercase italic bg-primary text-white shadow-2xl" onClick={handleSave}>
               {isSaving ? <Loader2 className="animate-spin w-6 h-6" /> : 'Сохранить Сигнал'}
             </Button>
           </div>

@@ -10,22 +10,22 @@ interface FirebaseClientProviderProps {
 }
 
 /**
- * Глобальный менеджер инстансов Nuxus V71.0.0
- * Использует именованные инстансы для ПОЛНОЙ изоляции Auth-сессий.
+ * Глобальный менеджер инстансов Nuxus V72.0.0
+ * Использует СТРОГО именованные инстансы для ПОЛНОЙ изоляции Auth-сессий.
  */
 export function FirebaseClientProvider({ children }: FirebaseClientProviderProps) {
   const { activeAccountIndex } = useAppState();
 
-  // Инициализируем 5 СТРОГО изолированных приложений
+  // Инициализируем 5 СТРОГО изолированных приложений с уникальными именами
   const instances = useMemo(() => {
     return [0, 1, 2, 3, 4].map(i => {
-      // Каждый слот имеет свое уникальное имя инстанса Firebase
-      const instanceName = `nuxus_node_v71_${i}`;
+      // Имя инстанса привязано к индексу слота
+      const instanceName = `nuxus_node_instance_${i}`;
       return initializeFirebase(instanceName);
     });
   }, []);
 
-  // Выбираем активный инстанс на основе индекса
+  // Выбираем активный инстанс на основе индекса из глобального стора
   const activeInstance = instances[activeAccountIndex] || instances[0];
 
   return (

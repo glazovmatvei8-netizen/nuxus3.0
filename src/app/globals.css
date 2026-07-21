@@ -18,8 +18,6 @@
     --muted-foreground: 240 5% 60%;
     --accent: 180 100% 50%;
     --accent-foreground: 240 10% 4%;
-    --destructive: 0 84% 60%;
-    --destructive-foreground: 0 0% 98%;
     --border: 240 10% 12%;
     --input: 240 10% 12%;
     --ring: 270 95% 65%;
@@ -48,19 +46,13 @@
   }
 }
 
-/* THERMAL OPTIMIZATION: Reduced blur from 8px to 4px to offload GPU and reduce phone heating */
+/* ОПТИМИЗАЦИЯ: Минимальный блюр для охлаждения */
 .obsidian-glass {
-  @apply bg-white/[0.03] backdrop-blur-[4px] border border-white/[0.05] shadow-[0_10px_40px_rgba(0,0,0,0.5)];
+  @apply bg-white/[0.03] backdrop-blur-[6px] border border-white/[0.05] shadow-2xl;
 }
 
 .floating-nav {
   @apply fixed bottom-6 left-1/2 -translate-x-1/2 obsidian-glass rounded-[2.5rem] h-[72px] flex items-center justify-between px-6 z-[100] w-[92%] max-w-[420px];
-  animation: slide-up-float 0.8s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-@keyframes slide-up-float {
-  from { transform: translate(-50%, 100px); opacity: 0; }
-  to { transform: translate(-50%, 0); opacity: 1; }
 }
 
 .scrollbar-hide::-webkit-scrollbar { display: none; }
@@ -69,9 +61,4 @@
 .premium-glow {
   box-shadow: 0 0 20px hsl(var(--primary) / 0.15);
   border-color: hsl(var(--primary) / 0.3) !important;
-}
-
-.virtual-list-item {
-  content-visibility: auto;
-  contain-intrinsic-size: 1px 96px;
 }

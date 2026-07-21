@@ -4,8 +4,8 @@ import { useEffect, useRef } from 'react';
 import { useUser } from '@/firebase';
 
 /**
- * КРИТИЧЕСКИЙ МОСТ VK ID V71.0.0 «ABSOLUTE DOMAIN SYNC»
- * Синхронизировано для nuxus.fun (Web 54684553 / APK 54684554)
+ * КРИТИЧЕСКИЙ МОСТ VK ID V72.0.0 «DOMAIN FORCE»
+ * Исправлено: Параметры синхронизированы с nuxus.fun
  */
 export function VkProvider() {
   const { user } = useUser();
@@ -15,10 +15,6 @@ export function VkProvider() {
     if (user || typeof window === 'undefined' || isInitialized.current) return;
 
     const injectSdk = () => {
-      if (document.getElementById('vk-id-sdk-loader')) {
-        initVk();
-        return;
-      }
       const script = document.createElement('script');
       script.id = 'vk-id-sdk-loader';
       script.src = "https://unpkg.com/@vkid/sdk@2.1.0/dist-sdk/umd/index.js";
@@ -30,27 +26,21 @@ export function VkProvider() {
     const initVk = async () => {
       const VKID = (window as any).VKIDSDK;
       if (!VKID) return;
-
       try {
         const isNative = !!(window as any).Capacitor || !!(window as any).webkit;
         const APP_ID = isNative ? 54684554 : 54684553;
 
-        // Прямая конфигурация для nuxus.fun
         VKID.Config.init({
           app: APP_ID,
           redirectUrl: 'https://nuxus.fun',
           responseMode: 'callback', 
           source: 'lowcode',
         });
-
         isInitialized.current = true;
-      } catch (e) {
-        console.error("Nuxus VK Bridge Fail:", e);
-      }
+      } catch (e) { console.error("VK Error:", e); }
     };
 
-    const timer = setTimeout(injectSdk, 500);
-    return () => clearTimeout(timer);
+    injectSdk();
   }, [user]);
 
   return null;
