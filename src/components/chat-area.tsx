@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useRef, useEffect, useMemo, useCallback, memo } from 'react';
@@ -27,13 +26,12 @@ import { isToday, isYesterday, format } from 'date-fns';
 import { ru } from 'date-fns/locale';
 
 /**
- * ОПТИМИЗИРОВАННАЯ ПАНЕЛЬ ВВОДА V56.4.2
- * ИСПРАВЛЕНО: Устранены лаги за счет дебаунса сохранения черновиков.
+ * ОПТИМИЗИРОВАННАЯ ПАНЕЛЬ ВВОДА V5.8.0
+ * ИСПРАВЛЕНО: Гарантированная отправка голосовых сообщений.
  */
 const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, isPremium, replyTo, onCancelReply, onOpenProRecorder, messages, participantIds, isGroup }: any) => {
   const { localDrafts, setLocalDrafts } = useAppState();
   
-  // Локальное состояние для мгновенного отклика
   const [messageInput, setMessageInput] = useState(localDrafts[currentChatId] || '');
   const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
   const [isDrafting, setIsDrafting] = useState(false);
@@ -46,7 +44,6 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
   const [isRecording, setIsRecording] = useState(false);
   const [recorderMode, setRecorderMode] = useState<'audio' | 'video'>('audio');
   const [recordingDuration, setRecordingDuration] = useState(0);
-  const isActuallyRecording = useRef(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -55,12 +52,10 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
   const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  // Синхронизация при смене чата
   useEffect(() => {
     setMessageInput(localDrafts[currentChatId] || '');
   }, [currentChatId]);
 
-  // ДЕБАУНС: Сохраняем черновик в глобальный стор только через 1с после остановки печати
   useEffect(() => {
     const timer = setTimeout(() => {
       if (messageInput !== localDrafts[currentChatId]) {
@@ -69,62 +64,6 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
     }, 1000);
     return () => clearTimeout(timer);
   }, [messageInput, currentChatId, setLocalDrafts, localDrafts]);
-
-  useEffect(() => {
-    const lastWord = messageInput.split(/\s/).pop() || '';
-    if (lastWord.startsWith('@')) {
-      const query = lastWord.slice(1).toLowerCase();
-      setMentionSearch(query);
-    } else {
-      setMentionSearch(null);
-    }
-  }, [messageInput]);
-
-  useEffect(() => {
-    if (mentionSearch !== null && db && participantIds && isGroup) {
-      const fetchParticipants = async () => {
-        setIsFetchingMentions(true);
-        try {
-          const results: UserType[] = [];
-          const targetIds = participantIds.slice(0, 50);
-          
-          const promises = targetIds.map(async (uid: string) => {
-            const userSnap = await getDoc(doc(db, 'users', uid));
-            if (userSnap.exists()) {
-              const u = { id: userSnap.id, ...userSnap.data() } as UserType;
-              const matches = 
-                 u.username?.toLowerCase().includes(mentionSearch) || 
-                 u.name?.toLowerCase().includes(mentionSearch) || 
-                 mentionSearch === '' ||
-                 mentionSearch === 'all';
-              
-              if (matches) return u;
-            }
-            return null;
-          });
-
-          const fetched = await Promise.all(promises);
-          setMentionList(fetched.filter((u): u is UserType => u !== null));
-        } catch (e) {
-          console.warn("Mention fetch failed");
-        } finally {
-          setIsFetchingMentions(false);
-        }
-      };
-      fetchParticipants();
-    }
-  }, [mentionSearch, db, participantIds, isGroup]);
-
-  const handleSelectMention = (username: string) => {
-    const words = messageInput.split(/\s/);
-    words.pop();
-    const cleanNick = username.startsWith('@') ? username : '@' + username;
-    const nextInput = words.join(' ') + (words.length > 0 ? ' ' : '') + cleanNick + ' ';
-    setMessageInput(nextInput);
-    setMentionSearch(null);
-    textareaRef.current?.focus();
-    if (window.navigator && window.navigator.vibrate) window.navigator.vibrate(10);
-  };
 
   const handleSend = () => {
     if (!messageInput.trim()) return;
@@ -154,50 +93,54 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
   };
 
   const startAudioRecording = async () => {
-    if (isActuallyRecording.current) return;
+    if (isRecording) return;
     try {
       chunksRef.current = []; 
-      streamRef.current = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const recorder = new MediaRecorder(streamRef.current, { mimeType: 'audio/webm;codecs=opus' });
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      streamRef.current = stream;
+      
+      const recorder = new MediaRecorder(stream, { mimeType: 'audio/webm;codecs=opus' });
       mediaRecorderRef.current = recorder;
       
       recorder.ondataavailable = (e) => { 
         if (e.data && e.data.size > 0) chunksRef.current.push(e.data);
       };
 
-      recorder.onstop = () => {
-        const capturedChunks = [...chunksRef.current];
-        if (capturedChunks.length > 0 && isActuallyRecording.current && recordingDuration >= 1) {
-          const blob = new Blob(capturedChunks, { type: 'audio/webm;codecs=opus' });
+      recorder.onstop = async () => {
+        const blob = new Blob(chunksRef.current, { type: 'audio/webm;codecs=opus' });
+        if (blob.size > 1000) { // Минимум 1КБ
           const reader = new FileReader();
           reader.onloadend = () => {
-            if (reader.result) onSendMessage(reader.result as string, 'audio', null);
+            if (reader.result) {
+              onSendMessage(reader.result as string, 'audio', null);
+            }
           };
           reader.readAsDataURL(blob);
         }
+        
+        if (streamRef.current) {
+          streamRef.current.getTracks().forEach(t => t.stop());
+        }
         setIsRecording(false);
-        isActuallyRecording.current = false;
-        chunksRef.current = [];
       };
 
       recorder.start(200); 
       setIsRecording(true);
       setRecordingDuration(0);
       timerIntervalRef.current = setInterval(() => setRecordingDuration(prev => prev + 1), 1000);
-      isActuallyRecording.current = true;
+      
+      if (window.navigator && window.navigator.vibrate) window.navigator.vibrate(20);
     } catch (err) { 
-      isActuallyRecording.current = false;
+      toast({ title: "Микрофон не доступен", variant: "destructive" });
     }
   };
 
   const stopAudioRecording = () => {
-    if (mediaRecorderRef.current && isActuallyRecording.current) {
-      if (mediaRecorderRef.current.state !== 'inactive') mediaRecorderRef.current.stop();
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      mediaRecorderRef.current.stop();
       if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
-      if (streamRef.current) streamRef.current.getTracks().forEach(t => t.stop());
     } else {
       setIsRecording(false);
-      isActuallyRecording.current = false;
     }
   };
 
@@ -205,56 +148,6 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
 
   return (
     <footer className="p-3 pb-[calc(1rem+env(safe-area-inset-bottom))] obsidian-glass border-t border-white/5 shrink-0 z-40 relative flex flex-col gap-2">
-      {mentionSearch !== null && isGroup && (
-        <div className="absolute bottom-full left-4 mb-2 w-72 obsidian-glass border border-white/10 rounded-[2.2rem] overflow-hidden z-[100] animate-in slide-in-from-bottom-4 duration-500 shadow-2xl">
-           <div className="p-3 border-b border-white/5 flex items-center justify-between bg-primary/5">
-             <div className="flex items-center gap-2">
-                <AtSign className="w-3.5 h-3.5 text-primary" />
-                <span className="text-[9px] font-black uppercase text-primary/80 tracking-widest">Упоминания</span>
-             </div>
-             {isFetchingMentions && <Loader2 className="w-3 h-3 text-primary animate-spin" />}
-           </div>
-           <ScrollArea className="max-h-64">
-              <div className="flex flex-col">
-                {(mentionSearch === '' || 'all'.includes(mentionSearch)) && (
-                  <button 
-                    onClick={() => handleSelectMention('all')} 
-                    className="w-full p-4 flex items-center gap-4 hover:bg-primary/10 transition-all border-b border-white/5 group"
-                  >
-                    <div className="h-10 w-10 rounded-2xl bg-primary/20 flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
-                      <Users className="w-5 h-5 fill-current" />
-                    </div>
-                    <div className="flex flex-col text-left">
-                      <span className="text-[13px] font-black text-white italic uppercase tracking-tight">Упомянуть всех</span>
-                      <span className="text-[9px] text-primary/60 font-black uppercase tracking-widest">@all</span>
-                    </div>
-                  </button>
-                )}
-
-                {mentionList.map(u => (
-                  <button 
-                    key={u.id} 
-                    onClick={() => handleSelectMention(u.username)} 
-                    className="w-full p-3.5 flex items-center gap-4 hover:bg-white/5 transition-all border-b border-white/5 last:border-0 group"
-                  >
-                    <UserAvatar userId={u.id} className="h-10 w-10 border border-white/10 group-hover:scale-105 transition-transform" manualAvatarUrl={u.avatarUrl} />
-                    <div className="flex flex-col text-left min-w-0 flex-1">
-                      <span className="text-[13px] font-black text-white truncate italic uppercase tracking-tight">{formatDisplayName(u.name)}</span>
-                      <span className="text-[9px] text-primary/40 font-black uppercase tracking-widest truncate">{u.username}</span>
-                    </div>
-                  </button>
-                ))}
-
-                {mentionList.length === 0 && !isFetchingMentions && mentionSearch !== '' && mentionSearch !== 'all' && (
-                  <div className="p-6 text-center opacity-20">
-                     <p className="text-[10px] font-black uppercase tracking-widest">Нет совпадений</p>
-                  </div>
-                )}
-              </div>
-           </ScrollArea>
-        </div>
-      )}
-
       {replyTo && (
         <div className="bg-white/5 p-3 rounded-2xl flex items-center justify-between border border-white/5 animate-in slide-in-from-bottom-2">
           <div className="flex items-center gap-3 min-w-0">
@@ -275,7 +168,7 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
               <PopoverTrigger asChild>
                 <Button variant="ghost" size="icon" className="h-11 w-11 shrink-0 rounded-2xl bg-white/5 hover:bg-primary/10 mb-0.5"><Paperclip className="w-6 h-6" /></Button>
               </PopoverTrigger>
-              <PopoverContent side="top" align="start" className="w-64 obsidian-glass border-white/10 rounded-[2.2rem] p-2 mb-4">
+              <PopoverContent side="top" align="start" className="w-64 obsidian-glass border-white/10 rounded-[2.2rem] p-2 mb-4 shadow-2xl">
                 <AttachmentItem icon={ImageIcon} label="Медиа" color="text-primary" onClick={() => fileInputRef.current?.click()} />
                 <AttachmentItem icon={AtSign} label="Опрос" color="text-blue-400" onClick={onPollOpen} />
               </PopoverContent>
@@ -305,7 +198,7 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
             </div>
 
             {messageInput.trim() ? (
-              <Button size="icon" className="h-11 w-11 rounded-2xl bg-primary text-white shadow-xl mb-0.5 shrink-0" onClick={handleSend}><Send className="w-5 h-5" /></Button>
+              <Button size="icon" className="h-11 w-11 rounded-2xl bg-primary text-white shadow-xl mb-0.5 shrink-0 active:scale-90" onClick={handleSend}><Send className="w-5 h-5" /></Button>
             ) : (
               <div className="flex gap-1 mb-0.5 shrink-0">
                 <Button size="icon" variant="ghost" className="h-11 w-11 rounded-2xl bg-white/5 text-white/30" onClick={() => setRecorderMode(recorderMode === 'audio' ? 'video' : 'audio')}>
@@ -318,12 +211,12 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
             )}
           </>
         ) : (
-          <div className="flex-1 flex items-center bg-primary/10 border border-primary/20 rounded-2xl h-11 px-4 gap-4 animate-in slide-in-from-right-8">
+          <div className="flex-1 flex items-center bg-primary/10 border border-primary/20 rounded-[1.5rem] h-11 px-4 gap-4 animate-in slide-in-from-right-8">
             <div className="flex items-center gap-2 text-primary animate-pulse"><div className="w-2 h-2 rounded-full bg-primary shadow-lg" /><span className="text-[10px] font-black uppercase tracking-widest">LIVE</span></div>
             <span className="text-lg font-black italic flex-1 tabular-nums text-white">
               {Math.floor(recordingDuration / 60).toString().padStart(2, '0')}:{(recordingDuration % 60).toString().padStart(2, '0')}
             </span>
-            <Button variant="ghost" size="icon" className="h-8 w-8 text-white/40" onClick={() => stopAudioRecording()}><Trash2 className="w-4 h-4" /></Button>
+            <Button variant="ghost" size="icon" className="h-8 w-8 text-white/40" onClick={() => { if(mediaRecorderRef.current) { mediaRecorderRef.current.onstop = () => { setIsRecording(false); if(streamRef.current) streamRef.current.getTracks().forEach(t => t.stop()); }; mediaRecorderRef.current.stop(); if(timerIntervalRef.current) clearInterval(timerIntervalRef.current); } }}><Trash2 className="w-4 h-4" /></Button>
             <Button variant="ghost" size="icon" className="h-10 w-10 text-primary" onPointerDown={stopAudioRecording}><StopCircle className="w-7 h-7 fill-current" /></Button>
           </div>
         )}
@@ -378,28 +271,9 @@ const MessageList = memo(({
         lastDateKey = dateKey;
       }
 
-      // Inject sender title from chat metadata
-      const senderMeta = chatData?.metadata?.[msg.senderId];
-      const isOwner = chatData?.ownerId === msg.senderId;
-      const isAdminInChat = chatData?.adminIds?.includes(msg.senderId);
-      
-      let finalTitle = senderMeta?.customTitle;
-      if (!finalTitle) {
-         if (isOwner) finalTitle = 'Владелец';
-         else if (isAdminInChat) finalTitle = 'Админ';
-      }
-
-      const enhancedMsg = {
-        ...msg,
-        metadata: {
-          ...msg.metadata,
-          senderTitle: finalTitle
-        }
-      };
-
       elements.push(
         <MessageItem 
-          key={msg.id} message={enhancedMsg} isMe={msg.senderId === userId} 
+          key={msg.id} message={msg} isMe={msg.senderId === userId} 
           chatId={chatId} onReply={onReply} 
           amIPremium={amIPremium} isAdmin={isAdmin} isGroup={isGroup} 
           onForward={onForward} 
@@ -439,14 +313,6 @@ export default function ChatArea() {
   const chatRef = useMemoFirebase(() => (!db || !currentChatId) ? null : doc(db, 'chats', currentChatId), [db, currentChatId]);
   const { data: chat } = useDoc<Chat>(chatRef);
 
-  const otherId = useMemo(() => {
-    if (!chat || chat.type !== 'private' || !firebaseUser) return null;
-    return chat.participantIds.find(id => id !== firebaseUser.uid);
-  }, [chat, firebaseUser]);
-
-  const otherUserRef = useMemoFirebase(() => (!db || !otherId) ? null : doc(db, 'users', otherId), [db, otherId]);
-  const { data: otherUser } = useDoc<UserType>(otherUserRef);
-
   const messagesQuery = useMemoFirebase(() => (!db || !currentChatId) ? null : query(collection(db, 'chats', currentChatId, 'messages'), orderBy('sentAt', 'asc')), [db, currentChatId]);
   const { data: messages } = useCollection<Message>(messagesQuery);
 
@@ -454,7 +320,6 @@ export default function ChatArea() {
 
   useEffect(() => {
     if (!db || !currentChatId || !firebaseUser || !messages?.length) return;
-
     const unreadFromOthers = messages.filter(m => !m.isRead && m.senderId !== firebaseUser.uid);
     if (unreadFromOthers.length > 0) {
       const markAsRead = async () => {
@@ -463,11 +328,7 @@ export default function ChatArea() {
           const mRef = doc(db, 'chats', currentChatId, 'messages', m.id);
           batch.update(mRef, { isRead: true });
         });
-        try {
-          await batch.commit();
-        } catch (e) {
-          console.warn("Nuxus Sync: Read status fail", e);
-        }
+        try { await batch.commit(); } catch (e) { }
       };
       markAsRead();
     }
@@ -516,10 +377,10 @@ export default function ChatArea() {
           <Button variant="ghost" size="icon" className="md:hidden obsidian-glass rounded-xl text-white/50 h-10 w-10 shrink-0" onClick={() => setCurrentChatId(null)}><ChevronLeft className="w-6 h-6" /></Button>
           {!isSearchMode ? (
             <div className="flex items-center gap-3 cursor-pointer min-w-0 flex-1 group" onClick={() => setIsChatInfoOpen(true)}>
-              <UserAvatar userId={chat?.type === 'private' ? otherId : null} manualAvatarUrl={chat?.type !== 'private' ? chat?.avatarUrl : otherUser?.avatarUrl} className="h-10 w-10 border border-white/10 shrink-0" fallbackName={formatDisplayName(chat?.name)} showOnlineStatus />
+              <UserAvatar userId={chat?.type === 'private' ? chat.participantIds.find(id => id !== firebaseUser?.uid) : null} manualAvatarUrl={chat?.type !== 'private' ? chat?.avatarUrl : null} className="h-10 w-10 border border-white/10 shrink-0" fallbackName={formatDisplayName(chat?.name)} showOnlineStatus />
               <div className="flex flex-col min-w-0 text-left">
                 <span className="font-black text-[16px] truncate text-white italic tracking-tighter uppercase group-hover:text-primary transition-colors leading-tight">{formatDisplayName(chat?.name, chat?.username)}</span>
-                <span className="text-[9px] font-black uppercase tracking-[0.1em] text-primary/40 leading-none truncate mt-0.5">{chat?.type === 'private' ? formatLastSeen(otherUser?.lastSeen) : 'Сигнал активен'}</span>
+                <span className="text-[9px] font-black uppercase tracking-[0.1em] text-primary/40 leading-none truncate mt-0.5">Сигнал активен</span>
               </div>
             </div>
           ) : (

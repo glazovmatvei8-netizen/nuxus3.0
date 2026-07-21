@@ -1,13 +1,13 @@
-
 {
-  "latestVersion": "57.4.0",
-  "qesVersion": "57.4",
-  "build": "Dual-Identity-Signal",
-  "sizeMb": 160,
+  "latestVersion": "5.8.0",
+  "qesVersion": "24.1",
+  "build": "Signal-Stability-Force",
+  "sizeMb": 105,
   "changelog": [
-    "Fixed: VK SDK App ID auto-detection (Web 54684553 / APK 54684554)",
-    "Fixed: Login interruption error in WebView (LOWCODE bridge)",
-    "Restored: Full Settings profile (Bio, Status, Phone verification)",
-    "Improved: Grid-based tabs for Login/Register"
+    "Fixed: Voice message transmission fail",
+    "Improved: AI Transcription sensitivity (Retry/Hide added)",
+    "New: Advanced Admin Mission Control GUI",
+    "Added: Reject button for top-up requests",
+    "Fixed: Random session logouts in multi-account mode"
   ]
 }

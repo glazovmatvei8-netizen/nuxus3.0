@@ -1,9 +1,7 @@
-
-'use server';
+"use server"
 /**
  * @fileOverview A Genkit flow for transcribing voice messages to text.
- * Optimized for high-fidelity transcription with retry resilience.
- * V33.1.2: Increased sensitivity for short phrases and noise tolerance.
+ * V5.8.0: Increased sensitivity and noise cancellation logic.
  */
 
 import { ai } from '@/ai/genkit';
@@ -36,14 +34,14 @@ const voiceToTextPrompt = ai.definePrompt({
   input: { schema: VoiceToTextInputSchema },
   output: { schema: VoiceToTextOutputSchema },
   prompt: `You are the advanced neural transcription engine of Nuxus Kernel. 
-Task: Convert the provided audio signal into text with maximum sensitivity.
+Task: Convert the provided audio signal into text with MAXIMUM SENSITIVITY.
 
 Guidelines:
 1. Return ONLY the spoken words.
-2. Be extremely sensitive to short phrases (e.g., "Привет", "Да", "Нет", "Ок"). Do NOT treat them as noise.
-3. Only return "[Звук не распознан]" if there is absolutely no human speech or the audio is complete silence.
-4. Maintain original punctuation and emotional context.
-5. Transcribe in the language detected in the audio.
+2. Even if the recording is short (1-2 seconds) or quiet, attempt to recognize words like "Привет", "Да", "Нет", "Слушаю".
+3. Filter background white noise and static.
+4. Only return "[Звук не распознан]" if there is absolutely no human speech signal.
+5. Do NOT add notes like "I can hear..." or "The user said...". Just the text.
 
 Audio Signal: {{media url=audioDataUri}}`,
 });
@@ -59,7 +57,7 @@ const voiceToTextFlow = ai.defineFlow(
       const { output } = await voiceToTextPrompt(input);
       
       if (!output || !output.text.trim() || output.text === 'null') {
-        throw new Error('Empty or invalid signal output');
+        throw new Error('Empty signal');
       }
 
       return output;
