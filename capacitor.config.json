@@ -1,10 +1,14 @@
-
 {
   "appId": "com.username.nuxus.fun",
   "appName": "Nuxus",
   "webDir": "out",
+  "bundledWebRuntime": false,
   "server": {
     "url": "https://nuxus.fun",
-    "allowNavigation": ["*"]
+    "allowNavigation": ["*"],
+    "cleartext": true
+  },
+  "android": {
+    "allowMixedContent": true
   }
 }

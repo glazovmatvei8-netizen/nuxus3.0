@@ -56,6 +56,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [inspectedUserId, setInspectedUserId] = useState<string | null>(null);
   const [activeAccountIndex, setActiveAccountIndex] = useState(0);
 
+  // Hydration safety: ensure client-side values match server-side defaults during first render
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('nuxus_active_index');
@@ -103,15 +104,23 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 export const useAppState = (): AppState => {
   const context = useContext(AppContext);
   if (context === undefined) {
-    // Return a safe object during SSR or if used outside Provider
+    // Return a safe dummy object for SSR to prevent "Context must be used within Provider" crashes
     return {
       activeAccountIndex: 0,
       localDrafts: {},
       is2FAVerified: false,
       isSettingsOpen: false,
       activeView: 'chats',
-      settingsTab: 'profile'
-    } as AppState;
+      settingsTab: 'profile',
+      currentChatId: null,
+      setCurrentChatId: () => {},
+      setActiveView: () => {},
+      setLocalDrafts: () => {},
+      setIs2FAVerified: () => {},
+      setIsSettingsOpen: () => {},
+      setSettingsTab: () => {},
+      setActiveAccountIndex: () => {},
+    } as unknown as AppState;
   }
   return context;
 };
