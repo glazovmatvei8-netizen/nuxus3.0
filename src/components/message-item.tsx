@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, memo, useRef, useMemo } from 'react';
@@ -10,7 +11,7 @@ import {
 } from "@/components/ui/popover";
 import { format } from 'date-fns';
 import { 
-  CornerUpLeft, Trash2, Check, CheckCheck, Play, Share2, Copy, Edit2, MoreHorizontal, ShieldCheck, Star, Wand2, Loader2, Music, RotateCcw, EyeOff
+  CornerUpLeft, Trash2, Check, CheckCheck, Play, Share2, Copy, Edit2, MoreHorizontal, ShieldCheck, Star, Wand2, Loader2, Music, RotateCcw, EyeOff, Eye
 } from 'lucide-react';
 import { cn, decryptSignal, isUserPremium, formatDisplayName } from '@/lib/utils';
 import { doc, updateDoc, deleteDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
@@ -39,10 +40,10 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onForward, is
 
   const handleTranscribe = async (e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
-    if (message.contentType !== 'audio' || isTranscribing) return;
+    if (message.contentType !== 'audio' && message.contentType !== 'video_note' && message.contentType !== 'video') return;
+    if (isTranscribing) return;
     
     setIsTranscribing(true);
-    setTranscription(null);
     setIsTranscriptionVisible(true);
     
     try {
@@ -58,6 +59,11 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onForward, is
     } finally {
       setIsTranscribing(false);
     }
+  };
+
+  const toggleTranscription = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setIsTranscriptionVisible(!isTranscriptionVisible);
   };
 
   const copyToClipboard = () => {
@@ -105,25 +111,33 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onForward, is
                       <div className="flex-1 h-1 bg-white/10 rounded-full overflow-hidden">
                         <div className="h-full bg-white/40 w-1/4" />
                       </div>
-                      <span className="text-[10px] font-bold tabular-nums opacity-60">0:04</span>
+                      <span className="text-[10px] font-bold tabular-nums opacity-60">
+                        {message.metadata?.duration ? `${Math.floor(message.metadata.duration / 60)}:${(message.metadata.duration % 60).toString().padStart(2, '0')}` : '0:00'}
+                      </span>
                    </div>
                    
-                   {transcription && isTranscriptionVisible ? (
-                     <div className="bg-black/10 p-3 rounded-2xl border border-white/5 relative group/t">
-                        <p className="text-[12px] italic text-white/80 leading-relaxed pr-8">{transcription}</p>
-                        <div className="absolute top-2 right-2 flex flex-col gap-1 opacity-0 group-hover/t:opacity-100 transition-opacity">
-                           <button onClick={(e) => { e.stopPropagation(); handleTranscribe(); }} className="p-1 hover:text-primary transition-colors"><RotateCcw className="w-3 h-3" /></button>
-                           <button onClick={(e) => { e.stopPropagation(); setIsTranscriptionVisible(false); }} className="p-1 hover:text-white transition-colors"><EyeOff className="w-3 h-3" /></button>
-                        </div>
+                   {transcription && (
+                     <div className={cn("bg-black/10 p-3 rounded-2xl border border-white/5 relative group/t overflow-hidden transition-all", !isTranscriptionVisible && "h-0 p-0 border-none")}>
+                        {isTranscriptionVisible && (
+                          <>
+                            <p className="text-[12px] italic text-white/80 leading-relaxed pr-8">{transcription}</p>
+                            <div className="absolute top-2 right-2 flex flex-col gap-1 opacity-0 group-hover/t:opacity-100 transition-opacity">
+                               <button onClick={(e) => { e.stopPropagation(); handleTranscribe(); }} className="p-1 hover:text-primary transition-colors"><RotateCcw className="w-3 h-3" /></button>
+                               <button onClick={toggleTranscription} className="p-1 hover:text-white transition-colors"><EyeOff className="w-3 h-3" /></button>
+                            </div>
+                          </>
+                        )}
                      </div>
-                   ) : (
+                   )}
+
+                   {(!transcription || !isTranscriptionVisible) && (
                      <Button 
-                       onClick={handleTranscribe} 
+                       onClick={!transcription ? handleTranscribe : toggleTranscription} 
                        disabled={isTranscribing}
                        variant="ghost" 
                        className="w-full h-9 rounded-xl bg-white/5 hover:bg-white/10 text-[9px] font-black uppercase tracking-widest gap-2"
                      >
-                       {isTranscribing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <><Wand2 className="w-3.5 h-3.5 text-primary" /> {transcription ? 'Показать текст' : 'Расшифровать'}</>}
+                       {isTranscribing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : transcription ? <><Eye className="w-3.5 h-3.5" /> Показать текст</> : <><Wand2 className="w-3.5 h-3.5 text-primary" /> Расшифровать</>}
                      </Button>
                    )}
                 </div>

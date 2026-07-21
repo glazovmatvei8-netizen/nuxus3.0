@@ -1,7 +1,8 @@
+
 "use server"
 /**
  * @fileOverview A Genkit flow for transcribing voice messages to text.
- * V5.8.0: Increased sensitivity and noise cancellation logic.
+ * V5.9.0: Ultra-sensitive mode for short and quiet signals.
  */
 
 import { ai } from '@/ai/genkit';
@@ -23,7 +24,7 @@ export type VoiceToTextOutput = z.infer<typeof VoiceToTextOutputSchema>;
 
 /**
  * Transcribes voice messages precisely using AI.
- * Returns "[Звук не распознан]" on clear silence or processing failure.
+ * Updated V5.9.0: Enhanced for 1-2 second clips.
  */
 export async function transcribeVoice(input: VoiceToTextInput): Promise<VoiceToTextOutput> {
   return voiceToTextFlow(input);
@@ -33,15 +34,15 @@ const voiceToTextPrompt = ai.definePrompt({
   name: 'voiceToTextPrompt',
   input: { schema: VoiceToTextInputSchema },
   output: { schema: VoiceToTextOutputSchema },
-  prompt: `You are the advanced neural transcription engine of Nuxus Kernel. 
-Task: Convert the provided audio signal into text with MAXIMUM SENSITIVITY.
+  prompt: `You are the neural heart of Nuxus Kernel. 
+Task: Convert audio to text with ABSOLUTE SENSITIVITY.
 
-Guidelines:
-1. Return ONLY the spoken words.
-2. Even if the recording is short (1-2 seconds) or quiet, attempt to recognize words like "Привет", "Да", "Нет", "Слушаю".
-3. Filter background white noise and static.
-4. Only return "[Звук не распознан]" if there is absolutely no human speech signal.
-5. Do NOT add notes like "I can hear..." or "The user said...". Just the text.
+STRICT RULES:
+1. Even if the clip is 1 second, try to hear: "Да", "Нет", "Ок", "Чё".
+2. If there is even a faint whisper, transcribe it.
+3. Ignore static noise but DON'T ignore quiet human speech.
+4. If you hear absolutely nothing human, return "[Сигнал не распознан]".
+5. Only return the text, no explanations.
 
 Audio Signal: {{media url=audioDataUri}}`,
 });
@@ -56,14 +57,14 @@ const voiceToTextFlow = ai.defineFlow(
     try {
       const { output } = await voiceToTextPrompt(input);
       
-      if (!output || !output.text.trim() || output.text === 'null') {
-        throw new Error('Empty signal');
+      if (!output || !output.text.trim() || output.text === 'null' || output.text.includes('null')) {
+        throw new Error('Neural gap');
       }
 
       return output;
     } catch (e: any) {
-      console.error("Nuxus Neural Transcription Failure:", e.message || e);
-      return { text: "[Звук не распознан]" };
+      console.error("Nuxus V5.9 Transcription Failure:", e.message || e);
+      return { text: "[Сигнал не распознан]" };
     }
   }
 );

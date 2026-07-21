@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useRef, useEffect, useMemo, useCallback, memo } from 'react';
@@ -25,21 +26,13 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { isToday, isYesterday, format } from 'date-fns';
 import { ru } from 'date-fns/locale';
 
-/**
- * ОПТИМИЗИРОВАННАЯ ПАНЕЛЬ ВВОДА V5.8.0
- * ИСПРАВЛЕНО: Гарантированная отправка голосовых сообщений.
- */
 const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, isPremium, replyTo, onCancelReply, onOpenProRecorder, messages, participantIds, isGroup }: any) => {
   const { localDrafts, setLocalDrafts } = useAppState();
   
   const [messageInput, setMessageInput] = useState(localDrafts[currentChatId] || '');
   const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
   const [isDrafting, setIsDrafting] = useState(false);
-  const [mentionSearch, setMentionSearch] = useState<string | null>(null);
-  const [mentionList, setMentionList] = useState<UserType[]>([]);
-  const [isFetchingMentions, setIsFetchingMentions] = useState(false);
   const { toast } = useToast();
-  const db = useFirestore();
   
   const [isRecording, setIsRecording] = useState(false);
   const [recorderMode, setRecorderMode] = useState<'audio' | 'video'>('audio');
@@ -72,26 +65,6 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
     setLocalDrafts(prev => ({ ...prev, [currentChatId]: '' }));
   };
 
-  const handleAiDraft = async () => {
-    if (!isPremium) {
-      toast({ title: "Elite Only", description: "ИИ-черновики доступны только Premium узлам.", variant: "destructive" });
-      return;
-    }
-    setIsDrafting(true);
-    try {
-      const history = (messages || []).slice(-10).map((m: any) => ({
-        sender: m.senderName,
-        message: decryptSignal(m.content)
-      }));
-      const { draftMessage } = await suggestMessageDraft({ conversationHistory: history, currentUserInput: messageInput });
-      setMessageInput(draftMessage);
-    } catch (e) {
-      toast({ title: "Сбой ИИ", variant: "destructive" });
-    } finally {
-      setIsDrafting(false);
-    }
-  };
-
   const startAudioRecording = async () => {
     if (isRecording) return;
     try {
@@ -108,11 +81,13 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
 
       recorder.onstop = async () => {
         const blob = new Blob(chunksRef.current, { type: 'audio/webm;codecs=opus' });
-        if (blob.size > 1000) { // Минимум 1КБ
+        const dur = recordingDuration; // Capture final duration before reset
+        
+        if (blob.size > 1000) {
           const reader = new FileReader();
           reader.onloadend = () => {
             if (reader.result) {
-              onSendMessage(reader.result as string, 'audio', null);
+              onSendMessage(reader.result as string, 'audio', { duration: dur });
             }
           };
           reader.readAsDataURL(blob);
@@ -122,12 +97,18 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
           streamRef.current.getTracks().forEach(t => t.stop());
         }
         setIsRecording(false);
+        setRecordingDuration(0);
+        if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
       };
 
-      recorder.start(200); 
+      recorder.start(100); 
       setIsRecording(true);
       setRecordingDuration(0);
-      timerIntervalRef.current = setInterval(() => setRecordingDuration(prev => prev + 1), 1000);
+      
+      // V5.9.0 Fix: Proper 1-second interval for duration
+      timerIntervalRef.current = setInterval(() => {
+        setRecordingDuration(prev => prev + 1);
+      }, 1000);
       
       if (window.navigator && window.navigator.vibrate) window.navigator.vibrate(20);
     } catch (err) { 
@@ -138,9 +119,10 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
   const stopAudioRecording = () => {
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
       mediaRecorderRef.current.stop();
-      if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
     } else {
       setIsRecording(false);
+      setRecordingDuration(0);
+      if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
     }
   };
 
@@ -183,9 +165,6 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
                 onChange={e => setMessageInput(e.target.value)} 
               />
               <div className="flex items-center gap-1 mb-[-2px] shrink-0">
-                <Button variant="ghost" size="icon" className={cn("text-white/20 h-9 w-9", isDrafting ? "text-primary animate-pulse" : "hover:text-primary")} onClick={handleAiDraft} disabled={isDrafting}>
-                  {isDrafting ? <Loader2 className="w-5 h-5 animate-spin" /> : <Sparkles className="w-5 h-5" />}
-                </Button>
                 <Popover open={isEmojiPickerOpen} onOpenChange={setIsEmojiPickerOpen}>
                    <PopoverTrigger asChild>
                      <Button variant="ghost" size="icon" className="text-white/20 hover:text-primary h-9 w-9"><Smile className="w-6 h-6" /></Button>
@@ -216,7 +195,7 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
             <span className="text-lg font-black italic flex-1 tabular-nums text-white">
               {Math.floor(recordingDuration / 60).toString().padStart(2, '0')}:{(recordingDuration % 60).toString().padStart(2, '0')}
             </span>
-            <Button variant="ghost" size="icon" className="h-8 w-8 text-white/40" onClick={() => { if(mediaRecorderRef.current) { mediaRecorderRef.current.onstop = () => { setIsRecording(false); if(streamRef.current) streamRef.current.getTracks().forEach(t => t.stop()); }; mediaRecorderRef.current.stop(); if(timerIntervalRef.current) clearInterval(timerIntervalRef.current); } }}><Trash2 className="w-4 h-4" /></Button>
+            <Button variant="ghost" size="icon" className="h-8 w-8 text-white/40" onClick={() => { if(mediaRecorderRef.current) { mediaRecorderRef.current.onstop = () => { setIsRecording(false); setRecordingDuration(0); if(streamRef.current) streamRef.current.getTracks().forEach(t => t.stop()); }; mediaRecorderRef.current.stop(); if(timerIntervalRef.current) clearInterval(timerIntervalRef.current); } }}><Trash2 className="w-4 h-4" /></Button>
             <Button variant="ghost" size="icon" className="h-10 w-10 text-primary" onPointerDown={stopAudioRecording}><StopCircle className="w-7 h-7 fill-current" /></Button>
           </div>
         )}
@@ -236,63 +215,6 @@ function AttachmentItem({ icon: Icon, label, color, onClick }: any) {
 }
 
 ChatInputBar.displayName = 'ChatInputBar';
-
-const MessageList = memo(({ 
-  messages, userId, chatId, onReply, onForward, amIPremium, isAdmin, isGroup, searchQuery, viewerProfile, chatData
-}: any) => {
-  const sortedMessages = useMemo(() => {
-    if (!messages) return [];
-    return [...messages].sort((a, b) => new Date(a.sentAt).getTime() - new Date(b.sentAt).getTime());
-  }, [messages]);
-
-  const renderMessagesWithDividers = () => {
-    if (!sortedMessages.length) return null;
-    
-    const elements: React.ReactNode[] = [];
-    let lastDateKey = '';
-
-    sortedMessages.forEach((msg: Message) => {
-      const dateObj = new Date(msg.sentAt);
-      const dateKey = format(dateObj, 'yyyy-MM-dd');
-
-      if (dateKey !== lastDateKey) {
-        let label = '';
-        if (isToday(dateObj)) label = 'сегодня';
-        else if (isYesterday(dateObj)) label = 'вчера';
-        else label = format(dateObj, 'd MMMM', { locale: ru });
-
-        elements.push(
-          <div key={`date-${dateKey}`} className="flex justify-center my-6 animate-in fade-in duration-700 select-none">
-            <div className="bg-white/[0.03] backdrop-blur-xl px-5 py-1.5 rounded-full border border-white/5 shadow-sm">
-              <span className="text-[10px] font-black uppercase text-white/30 tracking-[0.2em] italic">{label}</span>
-            </div>
-          </div>
-        );
-        lastDateKey = dateKey;
-      }
-
-      elements.push(
-        <MessageItem 
-          key={msg.id} message={msg} isMe={msg.senderId === userId} 
-          chatId={chatId} onReply={onReply} 
-          amIPremium={amIPremium} isAdmin={isAdmin} isGroup={isGroup} 
-          onForward={onForward} 
-          highlight={searchQuery && msg.contentType === 'text' && decryptSignal(msg.content)?.toLowerCase().includes(searchQuery.toLowerCase())} 
-          viewerProfile={viewerProfile} 
-        />
-      );
-    });
-
-    return elements;
-  };
-  
-  return (
-    <div className="flex flex-col gap-2 max-w-5xl mx-auto px-4 md:px-10 py-8 min-h-full relative z-10 overflow-x-hidden">
-      {renderMessagesWithDividers()}
-    </div>
-  );
-});
-MessageList.displayName = 'MessageList';
 
 export default function ChatArea() {
   const { user: firebaseUser } = useUser();
@@ -394,10 +316,20 @@ export default function ChatArea() {
       </header>
 
       <div className="flex-1 relative overflow-hidden flex flex-col min-w-0 z-10 bg-transparent">
-        <div className="flex-1 w-full relative z-10 overflow-y-auto scrollbar-hide scroll-smooth">
-          <MessageList messages={messages} userId={firebaseUser?.uid} chatId={currentChatId} onReply={setReplyTo} onForward={setForwardingMessage} amIPremium={isPremium} isAdmin={isGlobalAdmin(userProfile)} isGroup={chat?.type !== 'private'} searchQuery={searchQuery} viewerProfile={userProfile} chatData={chat} />
-          <div id="messages-end" className="h-4" />
-        </div>
+        <ScrollArea className="flex-1 w-full relative z-10">
+          <div className="flex flex-col gap-2 max-w-5xl mx-auto px-4 md:px-10 py-8 min-h-full">
+            {messages?.map(msg => (
+               <MessageItem 
+                 key={msg.id} message={msg} isMe={msg.senderId === firebaseUser?.uid} 
+                 chatId={currentChatId} onReply={setReplyTo} 
+                 amIPremium={isPremium} isAdmin={isGlobalAdmin(userProfile)} isGroup={chat?.type !== 'private'} 
+                 onForward={setForwardingMessage} 
+                 viewerProfile={userProfile} 
+               />
+            ))}
+            <div id="messages-end" className="h-4" />
+          </div>
+        </ScrollArea>
       </div>
 
       <ChatInputBar 

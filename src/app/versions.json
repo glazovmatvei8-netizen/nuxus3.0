@@ -1,13 +1,14 @@
+
 {
-  "latestVersion": "5.8.0",
+  "latestVersion": "5.9.0",
   "qesVersion": "24.1",
-  "build": "Signal-Stability-Force",
+  "build": "Neural-Precision-Core",
   "sizeMb": 105,
   "changelog": [
-    "Fixed: Voice message transmission fail",
-    "Improved: AI Transcription sensitivity (Retry/Hide added)",
-    "New: Advanced Admin Mission Control GUI",
-    "Added: Reject button for top-up requests",
-    "Fixed: Random session logouts in multi-account mode"
+    "Improved: Neural transcription sensitivity for short signals",
+    "Fixed: Voice recording duration mismatch (2s->4s fix)",
+    "Fixed: Hide/Retry logic in message transcription UI",
+    "Cleaned: Phantom users (no-name nodes) hidden from Admin list",
+    "New: Integrated Kernel Terminal commands (status, nodes, clear)"
   ]
 }
