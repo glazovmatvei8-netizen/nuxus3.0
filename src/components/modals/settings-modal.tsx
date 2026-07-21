@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useRef, useEffect } from 'react';
@@ -11,7 +12,7 @@ import { Switch } from '@/components/ui/switch';
 import { useAuth, useUser, useFirestore, useDoc, useMemoFirebase, useCollection } from '@/firebase';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
-  LogOut, Settings2, Camera, Star, ShieldCheck, Loader2, CheckCircle2, Fingerprint, Palette, Archive, ChevronRight, X, Globe, Smartphone, Monitor, Trash2, MapPin, Activity, Zap
+  LogOut, Settings2, Camera, Star, ShieldCheck, Loader2, CheckCircle2, Fingerprint, Palette, Archive, ChevronRight, X, Globe, Smartphone, Monitor, Trash2, MapPin, Activity, Zap, Mail, Phone, Lock
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { signOut } from 'firebase/auth';
@@ -22,8 +23,7 @@ import { isUserPremium, cn } from '@/lib/utils';
 import type { User, Session } from '@/lib/types';
 
 /**
- * SETTINGS CORE V74.0.0 «TOTAL RECOVERY»
- * Восстановлены сессии с IP, стили пузырей и подтверждение Premium.
+ * SETTINGS CORE V5.8.0 «ELITE RESTORATION»
  */
 export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const auth = useAuth();
@@ -45,10 +45,11 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
 
   const [isSaving, setIsSaving] = useState(false);
   const [form, setForm] = useState({
-    name: '', username: '', bio: '', statusEmoji: '', statusText: '', avatarUrl: '',
-    phone: '', twoFactorEnabled: false, twoFactorPin: '', biometricEnabled: false,
+    name: '', username: '', bio: '', avatarUrl: '', phone: '', email: '',
+    twoFactorEnabled: false, twoFactorPin: '', biometricEnabled: false,
     appearance: 'dark' as 'light' | 'dark', theme: 'default',
-    isGhostMode: false, bubbleStyle: 'default'
+    bubbleStyle: 'default', chatBackground: '', customPrimaryColor: '', customAppIconUrl: '',
+    isGhostMode: false
   });
 
   useEffect(() => {
@@ -57,17 +58,19 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         name: profile.name || '',
         username: (profile.username || '').replace('@', ''),
         bio: profile.bio || '',
-        statusEmoji: profile.statusEmoji || '',
-        statusText: profile.statusText || '',
         avatarUrl: profile.avatarUrl || '',
         phone: profile.phone || '',
+        email: profile.email || '',
         twoFactorEnabled: !!profile.twoFactorEnabled,
         twoFactorPin: profile.twoFactorPin || '',
         biometricEnabled: !!profile.settings?.biometricEnabled,
         appearance: profile.settings?.appearance || 'dark',
         theme: profile.settings?.theme || 'default',
-        isGhostMode: !!profile.settings?.privacy?.isGhostMode,
-        bubbleStyle: profile.settings?.bubbleStyle || 'default'
+        bubbleStyle: profile.settings?.bubbleStyle || 'default',
+        chatBackground: profile.settings?.chatBackground || '',
+        customPrimaryColor: profile.settings?.customPrimaryColor || '',
+        customAppIconUrl: profile.settings?.customAppIconUrl || '',
+        isGhostMode: !!profile.settings?.privacy?.isGhostMode
       });
     }
   }, [profile, open]);
@@ -82,19 +85,21 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         username: usernameWithAt,
         usernameLowercase: usernameWithAt.toLowerCase(),
         bio: form.bio.trim(),
-        statusEmoji: form.statusEmoji.trim(),
-        statusText: form.statusText.trim(),
         avatarUrl: form.avatarUrl,
         phone: form.phone.trim(),
+        email: form.email.trim(),
         twoFactorEnabled: form.twoFactorEnabled,
         twoFactorPin: form.twoFactorPin,
         'settings.appearance': form.appearance,
         'settings.theme': form.theme,
         'settings.biometricEnabled': form.biometricEnabled,
-        'settings.privacy.isGhostMode': form.isGhostMode,
-        'settings.bubbleStyle': form.bubbleStyle
+        'settings.bubbleStyle': form.bubbleStyle,
+        'settings.chatBackground': form.chatBackground,
+        'settings.customPrimaryColor': form.customPrimaryColor,
+        'settings.customAppIconUrl': form.customAppIconUrl,
+        'settings.privacy.isGhostMode': form.isGhostMode
       });
-      toast({ title: "Узел синхронизирован" });
+      toast({ title: "Узел синхронизирован V5.8.0" });
       onOpenChange(false);
     } catch (e: any) { 
       toast({ title: "Сбой записи", variant: "destructive" }); 
@@ -132,29 +137,41 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
 
           <ScrollArea className="flex-1">
             <div className="pb-40"> 
-              <TabsContent value="profile" className="space-y-8 m-0 p-8">
-                <div className="flex flex-col items-center gap-8">
+              <TabsContent value="profile" className="space-y-6 m-0 p-8">
+                <div className="flex flex-col items-center gap-6">
                   <div className="relative group cursor-pointer" onClick={() => fileInputRef.current?.click()}>
                     <UserAvatar userId={user?.uid} manualAvatarUrl={form.avatarUrl} className="h-32 w-32 border-4 border-primary/20 shadow-2xl" fallbackName={form.name} />
                     <div className="absolute -bottom-2 -right-2 bg-primary p-2.5 rounded-2xl shadow-2xl border-2 border-[#0a0a0c]"><Camera className="w-4 h-4 text-white" /></div>
                     <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={(e) => { const f = e.target.files?.[0]; if(f) { const r = new FileReader(); r.onloadend = () => setForm({...form, avatarUrl: r.result as string}); r.readAsDataURL(f); } }} />
                   </div>
 
-                  <div className="space-y-6 w-full text-left">
-                    <div className="bg-white/5 p-6 rounded-[2rem] border border-white/5 space-y-6">
+                  <div className="space-y-4 w-full text-left">
+                    <div className="bg-white/5 p-5 rounded-[2rem] border border-white/5 space-y-4">
                        <div className="grid grid-cols-2 gap-4">
                          <div className="space-y-1.5">
                            <Label className="text-[9px] font-black uppercase text-primary/60 ml-2">Имя</Label>
-                           <Input value={form.name} onChange={e => setForm({...form, name: e.target.value})} className="bg-black/40 border-white/10 h-12 rounded-xl font-bold" />
+                           <Input value={form.name} onChange={e => setForm({...form, name: e.target.value})} className="bg-black/40 border-white/10 h-11 rounded-xl font-bold" />
                          </div>
                          <div className="space-y-1.5">
                            <Label className="text-[9px] font-black uppercase text-primary/60 ml-2">ID Узла</Label>
-                           <Input value={form.username} onChange={e => setForm({...form, username: e.target.value})} className="bg-black/40 border-white/10 h-12 rounded-xl font-bold" />
+                           <Input value={form.username} onChange={e => setForm({...form, username: e.target.value})} className="bg-black/40 border-white/10 h-11 rounded-xl font-bold" />
                          </div>
                        </div>
+                       
+                       <div className="space-y-3 pt-2 border-t border-white/5">
+                          <div className="flex items-center gap-3">
+                             <Mail className="w-4 h-4 text-primary/40" />
+                             <Input placeholder="Email" value={form.email} onChange={e => setForm({...form, email: e.target.value})} className="bg-black/20 border-white/5 h-10 rounded-xl text-xs" />
+                          </div>
+                          <div className="flex items-center gap-3">
+                             <Phone className="w-4 h-4 text-primary/40" />
+                             <Input placeholder="Телефон" value={form.phone} onChange={e => setForm({...form, phone: e.target.value})} className="bg-black/20 border-white/5 h-10 rounded-xl text-xs" />
+                          </div>
+                       </div>
+
                        <div className="space-y-1.5">
-                         <Label className="text-[9px] font-black uppercase text-primary/60 ml-2">О себе (Био)</Label>
-                         <Textarea value={form.bio} onChange={e => setForm({...form, bio: e.target.value})} className="bg-black/40 border-white/10 rounded-2xl h-24 resize-none p-4" placeholder="Спецификация узла..." />
+                         <Label className="text-[9px] font-black uppercase text-primary/60 ml-2">О себе</Label>
+                         <Textarea value={form.bio} onChange={e => setForm({...form, bio: e.target.value})} className="bg-black/40 border-white/10 rounded-2xl h-20 resize-none p-4 text-sm" placeholder="Спецификация узла..." />
                        </div>
                     </div>
                   </div>
@@ -187,32 +204,40 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                     <div className="space-y-4">
                        <Label className="text-[10px] font-black uppercase text-primary/60 ml-2 tracking-widest">Визуальный пакет пузырей</Label>
                        <div className="grid grid-cols-2 gap-3">
-                          {[
-                            { id: 'default', label: 'Classic' },
-                            { id: 'neon', label: 'Neon Glow' },
-                            { id: 'gold', label: 'Elite Gold' },
-                            { id: 'ocean', label: 'Ocean Depth' }
-                          ].map(s => (
+                          {['default', 'neon', 'gold', 'ocean'].map(s => (
                             <button 
-                              key={s.id} 
-                              onClick={() => setForm({...form, bubbleStyle: s.id as any})} 
+                              key={s} 
+                              onClick={() => setForm({...form, bubbleStyle: s as any})} 
                               className={cn(
-                                "h-14 rounded-2xl border text-[10px] font-black uppercase tracking-widest transition-all relative overflow-hidden",
-                                form.bubbleStyle === s.id ? "border-primary bg-primary/10 text-primary shadow-lg" : "border-white/5 bg-black/40 text-white/30"
+                                "h-12 rounded-xl border text-[9px] font-black uppercase tracking-widest transition-all",
+                                form.bubbleStyle === s ? "border-primary bg-primary/10 text-primary" : "border-white/5 bg-black/40 text-white/30"
                               )}
                             >
-                              {s.label}
-                              {form.bubbleStyle === s.id && <div className="absolute top-1 right-2 w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />}
+                              {s}
                             </button>
                           ))}
                        </div>
                     </div>
 
-                    <div className="space-y-4 pt-6 border-t border-white/5">
+                    <div className="space-y-4 pt-4 border-t border-white/5">
+                       <Label className="text-[10px] font-black uppercase text-primary/60 ml-2 tracking-widest">Кастомизация Ядра</Label>
+                       <div className="space-y-3">
+                          <div className="space-y-1.5">
+                            <span className="text-[8px] font-bold text-white/20 uppercase ml-2">Цвет HEX</span>
+                            <Input placeholder="#A855F7" value={form.customPrimaryColor} onChange={e => setForm({...form, customPrimaryColor: e.target.value})} className="bg-black/40 border-white/5 h-10 rounded-xl" />
+                          </div>
+                          <div className="space-y-1.5">
+                            <span className="text-[8px] font-bold text-white/20 uppercase ml-2">URL Фона чатов</span>
+                            <Input placeholder="https://..." value={form.chatBackground} onChange={e => setForm({...form, chatBackground: e.target.value})} className="bg-black/40 border-white/5 h-10 rounded-xl" />
+                          </div>
+                       </div>
+                    </div>
+
+                    <div className="space-y-4 pt-4 border-t border-white/5">
                        <Label className="text-[10px] font-black uppercase text-primary/60 ml-2 tracking-widest">Тема интерфейса</Label>
                        <div className="flex gap-2 p-1 bg-black/40 rounded-2xl border border-white/5">
-                          <button onClick={() => setForm({...form, appearance: 'dark'})} className={cn("flex-1 h-10 rounded-xl text-[9px] font-black uppercase transition-all", form.appearance === 'dark' ? "bg-white/10 text-white" : "text-white/20")}>Dark</button>
-                          <button onClick={() => setForm({...form, appearance: 'light'})} className={cn("flex-1 h-10 rounded-xl text-[9px] font-black uppercase transition-all", form.appearance === 'light' ? "bg-white/10 text-white" : "text-white/20")}>Light</button>
+                          <button onClick={() => setForm({...form, appearance: 'dark'})} className={cn("flex-1 h-9 rounded-xl text-[9px] font-black uppercase transition-all", form.appearance === 'dark' ? "bg-white/10 text-white" : "text-white/20")}>Dark</button>
+                          <button onClick={() => setForm({...form, appearance: 'light'})} className={cn("flex-1 h-9 rounded-xl text-[9px] font-black uppercase transition-all", form.appearance === 'light' ? "bg-white/10 text-white" : "text-white/20")}>Light</button>
                        </div>
                     </div>
                  </div>
@@ -221,37 +246,31 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
               <TabsContent value="data" className="space-y-8 m-0 p-8 text-left">
                  <div className="space-y-6">
                     <div className="flex items-center justify-between px-1">
-                       <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-primary/60">Активные узлы входа</h3>
+                       <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-primary/60">Активные сеансы</h3>
                        <Activity className="w-3 h-3 text-primary animate-pulse" />
                     </div>
                     <div className="space-y-3">
                        {sessions?.map(s => (
-                         <div key={s.id} className="bg-white/5 p-5 rounded-[1.8rem] border border-white/5 flex items-center justify-between group transition-all hover:bg-white/[0.08] shadow-lg">
+                         <div key={s.id} className="bg-white/5 p-4 rounded-[1.5rem] border border-white/5 flex items-center justify-between group transition-all hover:bg-white/[0.08]">
                             <div className="flex items-center gap-4">
-                               <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary shadow-inner">
-                                  {s.deviceName.includes('PC') || s.deviceName.includes('Mac') || s.deviceName.includes('Windows') ? <Monitor className="w-6 h-6" /> : <Smartphone className="w-6 h-6" />}
+                               <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
+                                  {s.deviceName.includes('PC') || s.deviceName.includes('Mac') || s.deviceName.includes('Windows') ? <Monitor className="w-5 h-5" /> : <Smartphone className="w-5 h-5" />}
                                </div>
                                <div className="flex flex-col">
                                   <div className="flex items-center gap-2">
-                                     <span className="text-[13px] font-black text-white uppercase italic">{s.deviceName}</span>
-                                     {s.id === localStorage.getItem('nuxus_session_id') && <span className="bg-green-500/20 text-green-500 text-[7px] px-2 py-0.5 rounded-full font-black uppercase">Current</span>}
+                                     <span className="text-[12px] font-black text-white uppercase italic">{s.deviceName}</span>
+                                     {s.id === localStorage.getItem('nuxus_session_id') && <span className="bg-green-500/20 text-green-500 text-[6px] px-2 py-0.5 rounded-full font-black uppercase">Текущий</span>}
                                   </div>
-                                  <div className="flex items-center gap-2 mt-0.5">
-                                     <MapPin className="w-2.5 h-2.5 text-primary/40" />
-                                     <span className="text-[9px] text-muted-foreground font-black uppercase tracking-tighter">{s.ip} • {s.countryCode}</span>
-                                  </div>
+                                  <span className="text-[8px] text-muted-foreground font-black uppercase tracking-tighter">{s.ip} • {s.countryCode}</span>
                                </div>
                             </div>
                             {s.id !== localStorage.getItem('nuxus_session_id') && (
-                              <button onClick={() => terminateSession(s.id)} className="h-10 w-10 flex items-center justify-center text-red-500/40 hover:text-red-500 hover:bg-red-500/10 rounded-xl transition-all">
-                                <Trash2 className="w-5 h-5" />
+                              <button onClick={() => terminateSession(s.id)} className="h-8 w-8 flex items-center justify-center text-red-500/40 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-all">
+                                <Trash2 className="w-4 h-4" />
                               </button>
                             )}
                          </div>
                        ))}
-                       {(!sessions || sessions.length === 0) && (
-                         <div className="py-10 text-center opacity-20"><Zap className="w-8 h-8 mx-auto mb-2" /><p className="text-[9px] uppercase font-black">Синхронизация сессий...</p></div>
-                       )}
                     </div>
                  </div>
               </TabsContent>
@@ -259,12 +278,12 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
           </ScrollArea>
 
           <div className="p-8 border-t border-white/5 bg-[#0a0a0c] shrink-0 flex gap-4 z-[100] pb-[calc(1.5rem+env(safe-area-inset-bottom))]">
-            <Button variant="ghost" className="h-16 w-16 rounded-[1.8rem] bg-red-500/10 text-red-500 border border-red-500/20 active:scale-90 transition-all" onClick={() => signOut(auth)}>
-               <LogOut className="w-7 h-7" />
+            <Button variant="ghost" className="h-14 w-14 rounded-2xl bg-red-500/10 text-red-500 border border-red-500/20 active:scale-90 transition-all" onClick={() => signOut(auth)}>
+               <LogOut className="w-6 h-6" />
             </Button>
-            <Button disabled={isSaving} className="flex-1 h-16 rounded-[1.8rem] font-black uppercase italic bg-primary text-white shadow-2xl active:scale-95 transition-all group relative overflow-hidden" onClick={handleSave}>
+            <Button disabled={isSaving} className="flex-1 h-14 rounded-2xl font-black uppercase italic bg-primary text-white shadow-2xl active:scale-95 transition-all group relative overflow-hidden" onClick={handleSave}>
               <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
-              {isSaving ? <Loader2 className="animate-spin w-6 h-6" /> : 'Записать в Ядро'}
+              {isSaving ? <Loader2 className="animate-spin w-5 h-5" /> : 'Записать в Ядро'}
             </Button>
           </div>
         </Tabs>

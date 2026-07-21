@@ -8,10 +8,9 @@ import { RefreshCw, Zap, Download, ArrowUpCircle, Loader2 } from 'lucide-react';
 import nuxusVersions from '@/app/versions.json';
 
 /**
- * КВАНТОВЫЙ ОБНОВЛЯТОР ЯДРА V56.4.3
- * РЕЛИЗ: Исправление конфликта медиа-кликов.
+ * КВАНТОВЫЙ ОБНОВЛЯТОР ЯДРА V5.8.0
  */
-const CURRENT_VERSION = "56.4.3"; 
+const CURRENT_VERSION = "5.8.0"; 
 
 export function UpdateNotifier() {
   const [isOpen, setIsOpen] = useState(false);
@@ -46,7 +45,7 @@ export function UpdateNotifier() {
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const timer = setTimeout(checkVersion, 3000);
-    const interval = setInterval(checkVersion, 120000);
+    const interval = setInterval(checkVersion, 300000); // 5 mins check
     
     window.addEventListener('visibilitychange', () => document.visibilityState === 'visible' && checkVersion());
     
@@ -100,21 +99,10 @@ export function UpdateNotifier() {
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(168,85,247,0.2)_0%,transparent_70%)]" />
           <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-2 bg-black/40 px-4 py-1.5 rounded-full border border-white/10 backdrop-blur-md">
              <ArrowUpCircle className="w-3.5 h-3.5 text-primary" />
-             <span className="text-[9px] font-black text-white uppercase tracking-widest">Доступна новая прошивка Ядра</span>
+             <span className="text-[9px] font-black text-white uppercase tracking-widest">Прошивка Ядра V{serverVersion}</span>
           </div>
         </div>
-
         <div className="p-8 space-y-8">
-          <DialogHeader className="text-left">
-            <div className="flex items-center justify-between">
-              <DialogTitle className="text-3xl font-black uppercase italic tracking-tighter text-white">V{serverVersion}</DialogTitle>
-              <span className="text-[10px] font-black bg-white/5 border border-white/10 px-3 py-1 rounded-lg text-primary">Stable</span>
-            </div>
-            <DialogDescription className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em]">
-              Media Interaction & Stability Fix
-            </DialogDescription>
-          </DialogHeader>
-
           <div className="space-y-4 bg-white/[0.03] p-6 rounded-[2.2rem] border border-white/5">
             <span className="text-[10px] font-black uppercase tracking-widest text-white/40">Изменения:</span>
             <ul className="space-y-3">
@@ -126,19 +114,9 @@ export function UpdateNotifier() {
               ))}
             </ul>
           </div>
-
-          <div className="flex flex-col gap-3">
-            <Button 
-              onClick={handleUpdateAction}
-              className="h-16 bg-primary text-white rounded-[1.5rem] font-black uppercase italic tracking-widest shadow-2xl shadow-primary/30 group relative overflow-hidden active:scale-95 transition-all"
-            >
-              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
-              Принять патч
-            </Button>
-            <Button variant="ghost" onClick={() => setIsOpen(false)} className="h-12 text-[9px] font-black uppercase tracking-[0.3em] text-muted-foreground/40 hover:text-white transition-all">
-              Пропустить
-            </Button>
-          </div>
+          <Button onClick={handleUpdateAction} className="w-full h-16 bg-primary text-white rounded-[1.5rem] font-black uppercase italic tracking-widest shadow-2xl active:scale-95 transition-all">
+            Принять патч
+          </Button>
         </div>
       </DialogContent>
     </Dialog>

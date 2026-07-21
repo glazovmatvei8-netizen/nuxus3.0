@@ -1,14 +1,14 @@
 
 {
-  "latestVersion": "5.9.0",
+  "latestVersion": "5.8.0",
   "qesVersion": "24.1",
   "build": "Neural-Precision-Core",
   "sizeMb": 105,
   "changelog": [
-    "Improved: Neural transcription sensitivity for short signals",
-    "Fixed: Voice recording duration mismatch (2s->4s fix)",
-    "Fixed: Hide/Retry logic in message transcription UI",
-    "Cleaned: Phantom users (no-name nodes) hidden from Admin list",
-    "New: Integrated Kernel Terminal commands (status, nodes, clear)"
+    "Fixed: Version frozen at 5.8.0",
+    "Restored: Phone, Email and VK verification badges",
+    "Restored: Custom primary color and chat background settings",
+    "Fixed: User count discrepancy in Admin Panel",
+    "Improved: Session management and IP tracking"
   ]
 }

@@ -12,7 +12,7 @@ import { collection, query, doc, limit, updateDoc, writeBatch, where, orderBy, i
 import { UserAvatar } from '@/components/user-avatar';
 import { 
   ShieldAlert, Users, Star, Ban, Check, Activity, Wallet, Clock, 
-  Terminal as TerminalIcon, X, Zap, ShieldCheck, Search, Trash2, Crown, Globe
+  Terminal as TerminalIcon, X, Zap, ShieldCheck, Search, Trash2, Crown, Globe, AlertCircle
 } from 'lucide-react';
 import type { User, TopUpRequest } from '@/lib/types';
 import { formatDisplayName, cn } from '@/lib/utils';
@@ -25,7 +25,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState('requests');
   const [userSearch, setUserSearch] = useState('');
-  const [terminalLines, setTerminalLines] = useState<string[]>(["Nuxus Kernel Console v5.9.0", "Type 'help' for available commands."]);
+  const [terminalLines, setTerminalLines] = useState<string[]>(["Nuxus Kernel Console v5.8.0", "Type 'help' for available commands."]);
   const [terminalInput, setTerminalInput] = useState('');
   const terminalScrollRef = useRef<HTMLDivElement>(null);
 
@@ -41,10 +41,12 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
   }, [db]);
   const { data: allUsers } = useCollection<User>(usersQuery);
 
+  const totalRawCount = allUsers?.length || 0;
+
   const filteredUsers = useMemo(() => {
     if (!allUsers) return [];
-    // V5.9.0 Cleanup: Filter out phantoms (no name and no username)
-    let list = allUsers.filter(u => (u.name && u.name !== 'User') || u.username);
+    // V5.8.0 Sync: Distinguish between valid and ghost nodes
+    let list = allUsers.filter(u => (u.name && u.name !== 'User' && u.name !== '??') || u.username);
     if (userSearch.trim()) {
       const s = userSearch.toLowerCase();
       list = list.filter(u => u.name?.toLowerCase().includes(s) || u.username?.toLowerCase().includes(s));
@@ -58,10 +60,10 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
     if (!cmd) return;
 
     let response = "";
-    if (cmd === 'help') response = "Available: status, nodes --count, clear, version, help";
+    if (cmd === 'help') response = "Available: status, nodes, clear, version, help";
     else if (cmd === 'status') response = "System: STABLE. Nodes: SYNCHRONIZED.";
-    else if (cmd === 'nodes --count') response = `Active network nodes: ${filteredUsers.length}`;
-    else if (cmd === 'version') response = "Nuxus OS: V5.9.0 Pulse";
+    else if (cmd === 'nodes') response = `Network Stats: ${filteredUsers.length} Valid / ${totalRawCount} Total`;
+    else if (cmd === 'version') response = "Nuxus OS: V5.8.0 Pulse";
     else if (cmd === 'clear') { setTerminalLines([]); setTerminalInput(''); return; }
     else response = `Command not found: ${cmd}`;
 
@@ -112,13 +114,16 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
               </div>
               <div className="flex flex-col text-left">
                 <DialogTitle className="text-3xl font-black uppercase italic text-white tracking-tighter leading-none">MISSION CONTROL</DialogTitle>
-                <DialogDescription className="text-[10px] font-black uppercase tracking-[0.5em] text-primary/60 mt-2">Nuxus Kernel Management v5.9.0</DialogDescription>
+                <DialogDescription className="text-[10px] font-black uppercase tracking-[0.5em] text-primary/60 mt-2">Nuxus Kernel Management v5.8.0</DialogDescription>
               </div>
             </div>
             <div className="hidden md:flex gap-4">
                <div className="bg-black/40 border border-white/5 px-5 py-2.5 rounded-2xl shadow-xl flex items-center gap-3">
                   <Users className="w-4 h-4 text-white" />
-                  <div className="flex flex-col"><span className="text-xs font-black text-white">{filteredUsers.length}</span><span className="text-[7px] font-black text-white/20 uppercase">NODES</span></div>
+                  <div className="flex flex-col">
+                    <span className="text-xs font-black text-white">{filteredUsers.length} / {totalRawCount}</span>
+                    <span className="text-[7px] font-black text-white/20 uppercase">VALID / TOTAL</span>
+                  </div>
                </div>
             </div>
           </div>
@@ -191,9 +196,9 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
 
               <TabsContent value="stats" className="m-0 space-y-6">
                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-                    <StatsCard icon={Globe} title="Network Nodes" value={filteredUsers.length} sub="Filtered valid nodes" />
-                    <StatsCard icon={Zap} title="Kernel Pulse" value="1.0ms" sub="Excellent" />
-                    <StatsCard icon={ShieldCheck} title="Protocol" value="V5.9.0" sub="Latest Stable" />
+                    <StatsCard icon={Globe} title="Valid Nodes" value={filteredUsers.length} sub={`of ${totalRawCount} total docs`} />
+                    <StatsCard icon={Zap} title="Kernel Pulse" value="1.2ms" sub="Optimal" />
+                    <StatsCard icon={ShieldCheck} title="Protocol" value="V5.8.0" sub="Frozen Stable" />
                  </div>
               </TabsContent>
 
