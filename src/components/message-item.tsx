@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/popover";
 import { format } from 'date-fns';
 import { 
-  CornerUpLeft, Trash2, Check, CheckCheck, Play, Share2, Copy, Edit2, MoreHorizontal, ShieldCheck, Star
+  CornerUpLeft, Trash2, Check, CheckCheck, Play, Share2, Copy, Edit2, MoreHorizontal, ShieldCheck, Star, Wand2, Loader2, Music
 } from 'lucide-react';
 import { cn, decryptSignal, isUserPremium, formatDisplayName } from '@/lib/utils';
 import { doc, updateDoc, deleteDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
@@ -18,6 +18,7 @@ import type { Message, User } from '@/lib/types';
 import { Button } from './ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { useAppState } from '@/lib/store';
+import { transcribeVoice } from '@/ai/flows/voice-to-text-flow';
 
 export const MessageItem = memo(({ message, isMe, chatId, onReply, onForward, isAdmin = false, isGroup = false, highlight = false, viewerProfile }: any) => {
   const { user } = useUser();
@@ -26,6 +27,8 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onForward, is
   const { toast } = useToast();
   
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isTranscribing, setIsTranscribing] = useState(false);
+  const [transcription, setTranscription] = useState<string | null>(message.metadata?.transcription || null);
 
   const displayContent = useMemo(() => {
     return message.contentType === 'text' ? decryptSignal(message.content) : message.content;
@@ -33,17 +36,22 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onForward, is
 
   const formattedTime = message.sentAt ? format(new Date(message.sentAt), 'HH:mm') : '';
 
-  const handleReaction = async (emoji: string) => {
-    if (!db || !chatId || !user) return;
-    const msgRef = doc(db, 'chats', chatId, 'messages', message.id);
-    const existing = message.reactions?.[emoji] || [];
-    const hasReacted = existing.includes(user.uid);
-    if (hasReacted) {
-      await updateDoc(msgRef, { [`reactions.${emoji}`]: arrayRemove(user.uid) });
-    } else {
-      await updateDoc(msgRef, { [`reactions.${emoji}`]: arrayUnion(user.uid) });
+  const handleTranscribe = async () => {
+    if (message.contentType !== 'audio' || isTranscribing) return;
+    setIsTranscribing(true);
+    try {
+      const { text } = await transcribeVoice({ audioDataUri: message.content });
+      setTranscription(text);
+      if (db && chatId) {
+        await updateDoc(doc(db, 'chats', chatId, 'messages', message.id), {
+          'metadata.transcription': text
+        });
+      }
+    } catch (e) {
+      toast({ title: "Сбой расшифровки", variant: "destructive" });
+    } finally {
+      setIsTranscribing(false);
     }
-    setIsMenuOpen(false);
   };
 
   const copyToClipboard = () => {
@@ -63,11 +71,60 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onForward, is
         <div className={cn("flex flex-col", isMe ? "items-end" : "items-start")}>
           <div className="relative flex items-center gap-2">
             <div className={cn(
-              "p-4 rounded-[1.8rem] transition-all relative shadow-xl",
-              isMe ? "bg-primary text-white rounded-br-none" : "bg-white/[0.08] backdrop-blur-md border border-white/5 rounded-bl-none text-white"
+              "p-4 rounded-[1.8rem] transition-all relative shadow-xl min-w-[80px]",
+              isMe ? "bg-primary text-white rounded-br-none" : "bg-white/[0.08] backdrop-blur-md border border-white/5 rounded-bl-none text-white",
+              message.metadata?.bubbleStyle === 'neon' && "shadow-[0_0_20px_rgba(168,85,247,0.3)] border-primary/30",
+              message.metadata?.bubbleStyle === 'gold' && "bg-gradient-to-br from-yellow-600/20 to-orange-600/20 border-yellow-500/30"
             )}>
-              {message.replyToId && <div className="bg-black/10 p-2 rounded-lg mb-1 text-[10px] opacity-60 italic">{decryptSignal(message.replyToContent)}</div>}
-              <div className="whitespace-pre-wrap text-[15px] font-medium break-words max-w-[280px]">{displayContent}</div>
+              {isGroup && !isMe && (
+                <span className="text-[10px] font-black text-primary/60 uppercase tracking-widest mb-1 block">
+                  {message.metadata?.senderTitle || message.senderName}
+                </span>
+              )}
+              
+              {message.replyToId && (
+                <div className="bg-black/20 p-2 rounded-xl mb-2 text-[10px] opacity-60 italic border-l-2 border-primary/40 truncate max-w-[200px]">
+                  {decryptSignal(message.replyToContent)}
+                </div>
+              )}
+
+              {message.contentType === 'audio' ? (
+                <div className="space-y-3 min-w-[200px]">
+                   <div className="flex items-center gap-3">
+                      <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full bg-white/10 shrink-0">
+                        <Play className="w-5 h-5 fill-current" />
+                      </Button>
+                      <div className="flex-1 h-1 bg-white/10 rounded-full overflow-hidden">
+                        <div className="h-full bg-white/40 w-1/3" />
+                      </div>
+                      <span className="text-[10px] font-bold tabular-nums opacity-60">0:04</span>
+                   </div>
+                   
+                   {transcription ? (
+                     <div className="bg-black/10 p-3 rounded-2xl border border-white/5">
+                        <p className="text-[12px] italic text-white/80 leading-relaxed">{transcription}</p>
+                     </div>
+                   ) : (
+                     <Button 
+                       onClick={handleTranscribe} 
+                       disabled={isTranscribing}
+                       variant="ghost" 
+                       className="w-full h-8 rounded-xl bg-white/5 hover:bg-white/10 text-[9px] font-black uppercase tracking-widest gap-2"
+                     >
+                       {isTranscribing ? <Loader2 className="w-3.3 animate-spin" /> : <><Wand2 className="w-3 h-3 text-primary" /> Расшифровать в текст</>}
+                     </Button>
+                   )}
+                </div>
+              ) : message.contentType === 'image' ? (
+                <div className="relative rounded-2xl overflow-hidden border border-white/10 bg-black/20">
+                   <img src={message.content} className="max-w-[280px] h-auto object-cover" alt="Signal" />
+                </div>
+              ) : (
+                <div className="whitespace-pre-wrap text-[15px] font-medium break-words max-w-[280px] leading-snug">
+                  {displayContent}
+                </div>
+              )}
+
               <div className="mt-1 flex items-center justify-end gap-1.5 opacity-60">
                  <span className="text-[9px] font-black tabular-nums">{formattedTime}</span>
                  {isMe && (message.isRead ? <CheckCheck className="w-3 h-3 text-accent" /> : <Check className="w-3 h-3" />)}
@@ -76,9 +133,9 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onForward, is
 
             <Popover open={isMenuOpen} onOpenChange={setIsMenuOpen}>
               <PopoverTrigger asChild>
-                <button className="p-2 rounded-full hover:bg-white/5 text-white/20 transition-all"><MoreHorizontal className="w-5 h-5" /></button>
+                <button className="p-2 rounded-full hover:bg-white/5 text-white/20 transition-all opacity-0 group-hover:opacity-100"><MoreHorizontal className="w-5 h-5" /></button>
               </PopoverTrigger>
-              <PopoverContent side="top" align={isMe ? "end" : "start"} className="w-56 bg-[#0a0a0c] border-white/10 rounded-2xl p-2 shadow-2xl z-[1000]">
+              <PopoverContent side="top" align={isMe ? "end" : "start"} className="w-56 bg-[#0a0a0c]/95 backdrop-blur-xl border-white/10 rounded-[1.8rem] p-2 shadow-2xl z-[1000] outline-none">
                  <ActionMenuItem icon={CornerUpLeft} label="Ответить" onClick={() => { onReply(message); setIsMenuOpen(false); }} />
                  <ActionMenuItem icon={Share2} label="Переслать" onClick={() => { onForward(message); setIsMenuOpen(false); }} />
                  <ActionMenuItem icon={Copy} label="Копировать" onClick={copyToClipboard} />
@@ -94,8 +151,8 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onForward, is
 
 function ActionMenuItem({ icon: Icon, label, onClick, variant = 'default' }: any) {
   return (
-    <button onClick={onClick} className={cn("w-full flex items-center justify-between p-3 rounded-xl hover:bg-white/5 transition-all", variant === 'destructive' ? "text-red-500" : "text-white")}>
-      <span className="text-[12px] font-black uppercase tracking-widest">{label}</span>
+    <button onClick={onClick} className={cn("w-full flex items-center justify-between p-3.5 rounded-xl hover:bg-white/5 transition-all", variant === 'destructive' ? "text-red-500" : "text-white")}>
+      <span className="text-[11px] font-black uppercase tracking-widest">{label}</span>
       <Icon className="w-4 h-4 opacity-40" />
     </button>
   );

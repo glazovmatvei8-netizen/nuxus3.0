@@ -5,53 +5,56 @@ import { useUser, useFirestore } from '@/firebase';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { useAppState } from '@/lib/store';
 import { useToast } from '@/hooks/use-toast';
-import type { Chat, Call } from '@/lib/types';
+import type { Call } from '@/lib/types';
 
 /**
- * NUXUS NOTIFICATION CORE V72.0.0
- * Добавлена поддержка звонков и системных звуков.
+ * NUXUS NOTIFICATION CORE V74.0.0
+ * ОБНОВЛЕНО: Повышена чувствительность перехвата входящих сигналов.
  */
 export function NotificationListener() {
   const { user } = useUser();
   const db = useFirestore();
-  const { currentChatId, setActiveCallId, activeCallId } = useAppState();
+  const { activeCallId, setActiveCallId } = useAppState();
   const { toast } = useToast();
   
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-
   useEffect(() => {
     if (!db || !user) return;
 
-    // 1. Поиск входящих звонков
+    // 1. Поиск входящих звонков (Режим реального времени)
     const callsQuery = query(
       collection(db, 'calls'),
-      where('participantIds', 'array-contains', user.uid),
+      where('receiverId', '==', user.uid),
       where('status', '==', 'calling')
     );
 
     const unsubscribeCalls = onSnapshot(callsQuery, (snap) => {
       snap.docChanges().forEach(change => {
-        if (change.type === 'added') {
+        if (change.type === 'added' || (change.type === 'modified' && change.doc.data().status === 'calling')) {
           const call = { id: change.doc.id, ...change.doc.data() } as Call;
-          if (call.receiverId === user.uid && !activeCallId) {
+          
+          // Если мы еще не в звонке и звонок направлен нам
+          if (!activeCallId && call.id !== activeCallId) {
             setActiveCallId(call.id);
-            toast({ title: "Входящий вызов", description: "Узел запрашивает соединение..." });
+            
+            // Вибрация (если поддерживается)
+            if (window.navigator && window.navigator.vibrate) {
+              window.navigator.vibrate([500, 200, 500, 200, 500]);
+            }
+
+            toast({ 
+              title: "Входящий вызов", 
+              description: "Узел запрашивает соединение по защищенной линии.",
+              duration: 10000 
+            });
           }
         }
       });
     });
 
-    // 2. Уведомления о сообщениях (упрощено для стабильности)
-    const chatsQuery = query(collection(db, 'chats'), where('participantIds', 'array-contains', user.uid));
-    const unsubscribeMessages = onSnapshot(chatsQuery, (snap) => {
-      // Здесь можно добавить Toast для новых сообщений в закрытых чатах
-    });
-
     return () => {
       unsubscribeCalls();
-      unsubscribeMessages();
     };
-  }, [db, user, activeCallId]);
+  }, [db, user, activeCallId, setActiveCallId, toast]);
 
   return null;
 }

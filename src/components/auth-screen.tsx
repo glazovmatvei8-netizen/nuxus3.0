@@ -21,9 +21,8 @@ import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
 /**
- * AUTH SCREEN V69.0.0 «ABSOLUTE DOMAIN SYNC»
- * Fixed: Configuration parameters aligned with VK Console Screenshot.
- * Domain: nuxus.fun | Redirect: https://nuxus.fun
+ * AUTH SCREEN V74.0.0 «DOMAIN ABSOLUTE FORCE»
+ * Синхронизировано: nuxus.fun | Redirect: https://nuxus.fun
  */
 export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'login' | 'register' }) {
   const auth = useAuth();
@@ -47,16 +46,15 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
     const VKID = (window as any).VKIDSDK;
 
     if (!VKID) {
-      toast({ title: "SDK НЕ ГОТОВ", description: "Инициализация моста...", variant: "destructive" });
+      toast({ title: "SDK НЕ ГОТОВ", description: "Инициализация...", variant: "destructive" });
       setIsVkLoading(false);
       return;
     }
 
     try {
-      const isNative = !!(window as any).Capacitor || !!(window as any).webkit;
+      const isNative = typeof window !== 'undefined' && (!!(window as any).Capacitor || !!(window as any).webkit);
       const APP_ID = isNative ? 54684554 : 54684553;
 
-      // ABSOLUTE DOMAIN SYNC
       VKID.Config.init({
         app: APP_ID,
         redirectUrl: 'https://nuxus.fun',
@@ -70,7 +68,7 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
         handleVkSuccess(data);
       }
     } catch (e: any) {
-      toast({ title: "Сбой VK", description: "Ошибка доступа или домена.", variant: "destructive" });
+      toast({ title: "Сбой VK", description: "Ошибка домена или доступа.", variant: "destructive" });
     } finally {
       setIsVkLoading(false);
     }
@@ -82,7 +80,7 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
     try {
       const vId = data.user_id || data.id;
       const vkEmail = `vk_${vId}@nuxus.chat`;
-      const vkPass = `vk_quantum_${vId}_secure_v57`;
+      const vkPass = `vk_quantum_${vId}_secure_v74`;
 
       const vkSnap = await getDocs(query(collection(db, 'users'), where('vkId', '==', vId), limit(1)));
       if (!vkSnap.empty) {
@@ -109,7 +107,8 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
     if (!identifier.trim() || !db || !auth) return;
 
     setIsLoading(true);
-    const finalEmail = identifier.includes('@') ? identifier.trim() : `${identifier.replace(/\D/g, '')}@nuxus.chat`;
+    const idClean = identifier.trim();
+    const finalEmail = idClean.includes('@') ? idClean : `${idClean.replace(/\D/g, '')}@nuxus.chat`;
 
     try {
       await setPersistence(auth, browserLocalPersistence);
@@ -121,7 +120,7 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
         setIs2FAVerified(true);
       } else {
         const usernameWithAt = '@' + username.trim().replace('@', '');
-        const userCred = await createUserWithEmailAndPassword(auth, finalEmail, vkIdToLink ? `vk_quantum_${vkIdToLink}_secure_v57` : password);
+        const userCred = await createUserWithEmailAndPassword(auth, finalEmail, vkIdToLink ? `vk_quantum_${vkIdToLink}_secure_v74` : password);
         await setDoc(doc(db, 'users', userCred.user.uid), {
           id: userCred.user.uid,
           name: name.trim(),
@@ -131,12 +130,17 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
           vkId: vkIdToLink,
           createdAt: new Date().toISOString(),
           balance: 0,
-          settings: { theme: 'default', appearance: 'dark' }
+          settings: { 
+            theme: 'default', 
+            appearance: 'dark', 
+            bubbleStyle: 'default',
+            privacy: { lastSeenVisibility: 'everybody' } 
+          }
         });
         setIs2FAVerified(true);
       }
     } catch (e: any) {
-      toast({ title: "Ошибка", description: "Проверьте данные или пароль.", variant: "destructive" });
+      toast({ title: "Ошибка", description: "Проверьте идентификатор или пароль.", variant: "destructive" });
     } finally {
       setIsLoading(false);
     }

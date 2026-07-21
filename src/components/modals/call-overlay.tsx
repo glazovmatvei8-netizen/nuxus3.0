@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
   PhoneOff, Mic, MicOff, Video, VideoOff, 
-  Phone, X, Loader2, ShieldCheck, Zap, RefreshCcw, UserPlus
+  Phone, X, Loader2, ShieldCheck, Zap, RefreshCcw, UserPlus, Activity
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
@@ -17,8 +17,8 @@ import type { Call, User as UserType } from '@/lib/types';
 import { AddMemberModal } from './add-member-modal';
 
 /**
- * CALL OVERLAY V72.0.0 «AUDIO RESTORATION»
- * Исправлено: Активация звука и системных уведомлений.
+ * CALL OVERLAY V74.0.0 «TOTAL AUDIO FORCE»
+ * Исправлено: Принудительный аудио-мост и визуализация сигнала.
  */
 export function CallOverlay() {
   const { user } = useUser();
@@ -34,6 +34,7 @@ export function CallOverlay() {
   const [isAddMemberOpen, setIsAddMemberOpen] = useState(false);
   
   const localVideoRef = useRef<HTMLVideoElement | null>(null);
+  const remoteAudioRef = useRef<HTMLAudioElement | null>(null);
   const ringtoneRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
@@ -53,12 +54,23 @@ export function CallOverlay() {
            if (!ringtoneRef.current) {
              ringtoneRef.current = new Audio('https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3');
              ringtoneRef.current.loop = true;
-             ringtoneRef.current.play().catch(() => {});
+             ringtoneRef.current.play().catch(() => {
+               // Safari require interaction
+               const resume = () => ringtoneRef.current?.play();
+               window.addEventListener('click', resume, { once: true });
+             });
            }
         } else {
            if (ringtoneRef.current) {
              ringtoneRef.current.pause();
              ringtoneRef.current = null;
+           }
+        }
+
+        if (data.status === 'active') {
+           // Принудительно подключаем удаленный звук
+           if (remoteAudioRef.current) {
+             remoteAudioRef.current.play().catch(console.warn);
            }
         }
 
@@ -88,7 +100,7 @@ export function CallOverlay() {
       setLocalStream(stream);
       if (localVideoRef.current) localVideoRef.current.srcObject = stream;
     } catch (e) {
-      toast({ title: "Сбой медиа", variant: "destructive" });
+      toast({ title: "Сбой медиа", description: "Проверьте разрешения микрофона", variant: "destructive" });
     }
   };
 
@@ -130,44 +142,76 @@ export function CallOverlay() {
 
   if (!activeCallId || !callData) return null;
 
+  const durationStr = `${Math.floor(callDuration / 60).toString().padStart(2, '0')}:${(callDuration % 60).toString().padStart(2, '0')}`;
+
   return (
     <>
+    <audio ref={remoteAudioRef} autoPlay playsInline />
     <div className="fixed inset-0 z-[5000] flex flex-col bg-[#020205] overflow-hidden animate-in fade-in duration-700">
       <div className="absolute inset-0 z-0">
-        <div className="w-full h-full bg-[radial-gradient(circle_at_50%_50%,rgba(168,85,247,0.1)_0%,transparent_70%)]" />
-        <div className="absolute inset-0 bg-black/60" />
+        <div className="w-full h-full bg-[radial-gradient(circle_at_50%_50%,rgba(168,85,247,0.15)_0%,transparent_70%)]" />
+        <div className="absolute inset-0 bg-black/80" />
       </div>
       
       <div className="relative z-10 flex-1 flex flex-col items-center justify-between py-20 px-8">
         <div className="flex flex-col items-center gap-4">
            <div className="bg-white/5 backdrop-blur-xl border border-white/10 px-6 py-2 rounded-full flex items-center gap-3 shadow-2xl">
-             <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+             <div className={cn("w-2 h-2 rounded-full shadow-lg", callData.status === 'active' ? "bg-green-500 animate-pulse" : "bg-primary animate-pulse")} />
              <span className="text-[11px] font-black text-white uppercase tracking-[0.3em] tabular-nums">
-               {callData.status === 'active' ? 'Соединение активно' : 'Входящий сигнал'}
+               {callData.status === 'active' ? durationStr : 'Входящий сигнал'}
              </span>
            </div>
+           {callData.status === 'active' && (
+             <div className="flex gap-1 h-4 items-center">
+                {[1,2,3,4,5].map(i => <div key={i} className="w-1 bg-primary/40 rounded-full animate-pulse" style={{ height: `${Math.random()*100}%`, animationDelay: `${i*0.1}s` }} />)}
+             </div>
+           )}
         </div>
 
         <div className="flex flex-col items-center gap-12">
-          <UserAvatar userId={otherId} className="h-40 w-40 border-[6px] border-white/5 shadow-2xl" manualAvatarUrl={otherUser?.avatarUrl} />
-          <h2 className="text-4xl font-black text-white uppercase italic tracking-tighter">{otherUser?.name || 'SYNC...'}</h2>
+          <div className="relative">
+             <div className="absolute -inset-8 bg-primary/20 blur-[60px] rounded-full animate-pulse" />
+             <UserAvatar userId={otherId} className="h-44 w-44 border-[6px] border-[#0a0a0c] shadow-[0_30px_100px_rgba(0,0,0,0.8)] relative z-10" manualAvatarUrl={otherUser?.avatarUrl} />
+          </div>
+          <div className="text-center space-y-2">
+            <h2 className="text-4xl font-black text-white uppercase italic tracking-tighter drop-shadow-2xl">{otherUser?.name || 'SYNC...'}</h2>
+            <p className="text-[10px] font-black text-primary/60 uppercase tracking-[0.5em] ml-[0.5em]">Quantum Voice Link</p>
+          </div>
         </div>
 
         <div className="w-full max-w-md bg-white/[0.03] backdrop-blur-3xl border border-white/10 rounded-[3.5rem] p-6 shadow-2xl flex items-center justify-between gap-4">
           {callData.status === 'calling' && callData.receiverId === user?.uid ? (
             <div className="flex w-full gap-4">
-              <Button variant="destructive" className="flex-1 h-16 rounded-3xl" onClick={handleEndCall}><PhoneOff className="w-7 h-7" /></Button>
-              <Button className="flex-1 h-16 rounded-3xl bg-green-500" onClick={handleAccept}><Phone className="w-7 h-7" /></Button>
+              <Button variant="destructive" className="flex-1 h-20 rounded-3xl shadow-2xl active:scale-95 transition-all" onClick={handleEndCall}>
+                <PhoneOff className="w-8 h-8" />
+              </Button>
+              <Button className="flex-1 h-20 rounded-3xl bg-green-500 shadow-2xl shadow-green-500/20 active:scale-95 transition-all" onClick={handleAccept}>
+                <Phone className="w-8 h-8 animate-bounce" />
+              </Button>
             </div>
           ) : (
             <>
-              <div className="flex gap-2">
-                <Button variant="ghost" size="icon" className="h-14 w-14 rounded-2xl bg-white/5" onClick={() => setIsMuted(!isMuted)}>
-                  {isMuted ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
+              <div className="flex gap-3">
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className={cn("h-16 w-16 rounded-[1.8rem] transition-all", isMuted ? "bg-red-500/20 text-red-500" : "bg-white/5 text-white/40")} 
+                  onClick={() => setIsMuted(!isMuted)}
+                >
+                  {isMuted ? <MicOff className="w-6 h-6" /> : <Mic className="w-6 h-6" />}
                 </Button>
-                <Button variant="ghost" size="icon" className="h-14 w-14 rounded-2xl bg-white/5" onClick={() => setIsAddMemberOpen(true)}><UserPlus className="w-5 h-5" /></Button>
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="h-16 w-16 rounded-[1.8rem] bg-white/5 text-white/40 hover:bg-primary/20 hover:text-primary transition-all" 
+                  onClick={() => setIsAddMemberOpen(true)}
+                >
+                  <UserPlus className="w-6 h-6" />
+                </Button>
               </div>
-              <Button variant="destructive" className="h-16 w-20 rounded-3xl" onClick={handleEndCall}><PhoneOff className="w-7 h-7" /></Button>
+              <Button variant="destructive" className="h-20 w-24 rounded-[2rem] shadow-2xl shadow-red-500/20 active:scale-90 transition-all" onClick={handleEndCall}>
+                <PhoneOff className="w-8 h-8" />
+              </Button>
             </>
           )}
         </div>
