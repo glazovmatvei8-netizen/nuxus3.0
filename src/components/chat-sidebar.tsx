@@ -288,9 +288,11 @@ export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?:
   };
 
   const handleAddAccount = () => {
+    // Находим первый пустой слот (от 0 до 4)
     const slots = [0, 1, 2, 3, 4];
     const nextSlot = slots.find(s => !savedAccounts[s]);
     if (nextSlot !== undefined) {
+      // ПЕРЕКЛЮЧАЕМ ИНДЕКС: Firebase Client Provider подставит новый изолированный инстанс
       setActiveAccountIndex(nextSlot);
       setCurrentChatId(null);
       if (window.navigator && window.navigator.vibrate) window.navigator.vibrate(20);
@@ -371,6 +373,7 @@ export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?:
   }, [chats, activeTab, isArchiveView, currentUserProfile?.pinnedChatIds]);
 
   const accsList = Object.entries(savedAccounts).map(([idx, data]) => ({ index: parseInt(idx), ...data }));
+  // ПРОВЕРКА ЛИМИТОВ: 5 если есть хоть один Premium, иначе 3
   const hasPremiumAnywhere = accsList.some(a => a.isPremium);
   const accLimit = hasPremiumAnywhere ? 5 : 3;
 

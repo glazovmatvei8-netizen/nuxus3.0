@@ -1,19 +1,17 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
-import { useUser, useFirestore, useAuth } from '@/firebase';
+import { useUser } from '@/firebase';
 
 /**
- * КРИТИЧЕСКИЙ МОСТ VK ID V69.0.0 «ABSOLUTE DOMAIN SYNC»
- * Синхронизировано в соответствии со скриншотом настроек VK ID.
- * Базовый домен: nuxus.fun | Redirect: https://nuxus.fun
+ * КРИТИЧЕСКИЙ МОСТ VK ID V71.0.0 «ABSOLUTE DOMAIN SYNC»
+ * Синхронизировано для nuxus.fun (Web 54684553 / APK 54684554)
  */
 export function VkProvider() {
   const { user } = useUser();
   const isInitialized = useRef(false);
 
   useEffect(() => {
-    // Инициализируем только если пользователь не вошел в текущем слоте
     if (user || typeof window === 'undefined' || isInitialized.current) return;
 
     const injectSdk = () => {
@@ -31,13 +29,13 @@ export function VkProvider() {
 
     const initVk = async () => {
       const VKID = (window as any).VKIDSDK;
-      if (!VKID || isInitialized.current) return;
+      if (!VKID) return;
 
       try {
         const isNative = !!(window as any).Capacitor || !!(window as any).webkit;
         const APP_ID = isNative ? 54684554 : 54684553;
 
-        // Прямая конфигурация для nuxus.fun (согласно настройкам ресурса)
+        // Прямая конфигурация для nuxus.fun
         VKID.Config.init({
           app: APP_ID,
           redirectUrl: 'https://nuxus.fun',

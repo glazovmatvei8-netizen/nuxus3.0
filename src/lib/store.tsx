@@ -56,17 +56,17 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [inspectedUserId, setInspectedUserId] = useState<string | null>(null);
   const [activeAccountIndex, setActiveAccountIndex] = useState(0);
 
-  // Hydration safety: ensure client-side values match server-side defaults during first render
+  // ГАРАНТИЯ ОДНОГО КОНТЕКСТА: Загрузка из localStorage только на клиенте
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('nuxus_active_index');
+      const saved = localStorage.getItem('nuxus_active_index_v71');
       if (saved) setActiveAccountIndex(parseInt(saved));
     }
   }, []);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      localStorage.setItem('nuxus_active_index', activeAccountIndex.toString());
+      localStorage.setItem('nuxus_active_index_v71', activeAccountIndex.toString());
     }
   }, [activeAccountIndex]);
   
@@ -104,7 +104,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 export const useAppState = (): AppState => {
   const context = useContext(AppContext);
   if (context === undefined) {
-    // Return a safe dummy object for SSR to prevent "Context must be used within Provider" crashes
+    // Безопасный возврат для SSR
     return {
       activeAccountIndex: 0,
       localDrafts: {},

@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useMemo, type ReactNode } from 'react';
@@ -11,22 +10,22 @@ interface FirebaseClientProviderProps {
 }
 
 /**
- * Глобальный менеджер инстансов Nuxus V57.7.0
- * Поддерживает до 5 параллельных сессий для мгновенного переключения.
+ * Глобальный менеджер инстансов Nuxus V71.0.0
+ * Использует именованные инстансы для ПОЛНОЙ изоляции Auth-сессий.
  */
 export function FirebaseClientProvider({ children }: FirebaseClientProviderProps) {
   const { activeAccountIndex } = useAppState();
 
-  // Инициализируем 5 слотов для аккаунтов
+  // Инициализируем 5 СТРОГО изолированных приложений
   const instances = useMemo(() => {
     return [0, 1, 2, 3, 4].map(i => {
-      // Slot 0 uses default app, others use named apps
-      const name = i === 0 ? undefined : `nuxus_account_${i}`;
-      return initializeFirebase(name);
+      // Каждый слот имеет свое уникальное имя инстанса Firebase
+      const instanceName = `nuxus_node_v71_${i}`;
+      return initializeFirebase(instanceName);
     });
   }, []);
 
-  // Выбираем активный инстанс на основе индекса из стора
+  // Выбираем активный инстанс на основе индекса
   const activeInstance = instances[activeAccountIndex] || instances[0];
 
   return (
