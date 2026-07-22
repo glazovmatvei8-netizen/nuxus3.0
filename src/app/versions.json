@@ -9,6 +9,7 @@
     "Restored: Phone, Email and VK verification badges",
     "Restored: Custom primary color and chat background settings",
     "Fixed: User count discrepancy in Admin Panel",
-    "Improved: Session management and IP tracking"
+    "Improved: Session management and IP tracking",
+    "Added: Markdown Negotiation for Agents"
   ]
 }

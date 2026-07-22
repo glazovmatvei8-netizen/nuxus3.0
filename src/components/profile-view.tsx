@@ -22,6 +22,10 @@ import { ru } from 'date-fns/locale';
 import { TradeModal } from './modals/trade-modal';
 import Link from 'next/link';
 
+/**
+ * PROFILE VIEW V5.8.0 «ELITE RESTORATION»
+ * Восстановлены подтверждения телефона, почты и VK.
+ */
 export default function ProfileView() {
   const { user } = useUser();
   const db = useFirestore();
@@ -84,7 +88,7 @@ export default function ProfileView() {
           <Share2 className="w-5 h-5" />
         </Button>
         <div className="flex flex-col items-center">
-           <span className="text-[8px] font-black uppercase text-primary/40 tracking-[0.5em] ml-[0.5em]">V5.8.0 ALPHA</span>
+           <span className="text-[8px] font-black uppercase text-primary/40 tracking-[0.5em] ml-[0.5em]">V{nuxusVersions.latestVersion} KERNEL</span>
         </div>
         <Button variant="ghost" size="icon" className="obsidian-glass h-10 w-10 rounded-xl text-white/60 hover:text-primary transition-all" onClick={() => { setSettingsTab('profile'); setIsSettingsOpen(true); }}>
           <Pencil className="w-5 h-5" />
@@ -105,12 +109,12 @@ export default function ProfileView() {
                      {profile?.name ? formatDisplayName(profile.name) : 'СИНХРОНИЗАЦИЯ...'}
                    </h2>
                    {isPremium && <Star className="w-5 h-5 text-accent fill-accent animate-pulse" />}
-                   {profile?.vkId && <div className="bg-blue-500 rounded-full p-1"><CheckCircle2 className="w-3 h-3 text-white" /></div>}
+                   {profile?.vkId && <div className="bg-blue-500 rounded-full p-1 shadow-[0_0_10px_rgba(59,130,246,0.5)]"><CheckCircle2 className="w-3 h-3 text-white" /></div>}
                 </div>
                 <div className="flex items-center justify-center gap-3">
                    <span className="text-[11px] text-primary/60 font-black uppercase tracking-[0.4em] italic ml-[0.4em]">{profile?.username}</span>
-                   {profile?.phone && <Phone className="w-3 h-3 text-green-500" />}
-                   {profile?.email && <Mail className="w-3 h-3 text-blue-400" />}
+                   {profile?.phone && <div className="flex items-center gap-1 bg-green-500/10 px-2 py-0.5 rounded-full border border-green-500/20"><Phone className="w-2.5 h-2.5 text-green-500" /><span className="text-[7px] text-green-500 font-black uppercase">Verified</span></div>}
+                   {profile?.email && <div className="flex items-center gap-1 bg-blue-400/10 px-2 py-0.5 rounded-full border border-blue-400/20"><Mail className="w-2.5 h-2.5 text-blue-400" /><span className="text-[7px] text-blue-400 font-black uppercase">Email</span></div>}
                 </div>
              </div>
 
@@ -154,7 +158,7 @@ export default function ProfileView() {
                   </div>
                   <div className="flex flex-col">
                     <span className="text-[8px] font-black uppercase text-primary/50 tracking-widest leading-none">Протокол Ядра</span>
-                    <span className="text-xl font-black text-white italic mt-1 tracking-tighter uppercase">Узел V5.8.0</span>
+                    <span className="text-xl font-black text-white italic mt-1 tracking-tighter uppercase">Узел V{nuxusVersions.latestVersion}</span>
                   </div>
                 </div>
                 <div className="text-right">
@@ -187,7 +191,6 @@ export default function ProfileView() {
         </div>
       </ScrollArea>
 
-      {/* GIFT MODAL */}
       <Dialog open={!!selectedGift} onOpenChange={(o) => !o && setSelectedGift(null)}>
         <DialogContent className="max-w-xs bg-card border-white/10 rounded-[2.5rem] p-8 text-center shadow-2xl outline-none">
           {selectedGift && (

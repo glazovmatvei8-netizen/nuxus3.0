@@ -21,6 +21,10 @@ import { useToast } from '@/hooks/use-toast';
 import { useAppState } from '@/lib/store';
 import { transcribeVoice } from '@/ai/flows/voice-to-text-flow';
 
+/**
+ * MESSAGE ITEM V5.8.0 «ELITE RESTORATION»
+ * Восстановлены действия: Ответить, Переслать, Копировать, Удалить.
+ */
 export const MessageItem = memo(({ message, isMe, chatId, onReply, onForward, isAdmin = false, isGroup = false, highlight = false, viewerProfile }: any) => {
   const { user } = useUser();
   const db = useFirestore();
@@ -72,6 +76,16 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onForward, is
     navigator.clipboard.writeText(textToCopy);
     toast({ title: "Скопировано в буфер" });
     setIsMenuOpen(false);
+  };
+
+  const handleDeleteMessage = async () => {
+    if (!db || !chatId) return;
+    try {
+      await deleteDoc(doc(db, 'chats', chatId, 'messages', message.id));
+      setIsMenuOpen(false);
+    } catch (e) {
+      toast({ title: "Ошибка удаления", variant: "destructive" });
+    }
   };
 
   return (
@@ -165,7 +179,7 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onForward, is
                  <ActionMenuItem icon={CornerUpLeft} label="Ответить" onClick={() => { onReply(message); setIsMenuOpen(false); }} />
                  <ActionMenuItem icon={Share2} label="Переслать" onClick={() => { onForward(message); setIsMenuOpen(false); }} />
                  <ActionMenuItem icon={Copy} label="Копировать" onClick={copyToClipboard} />
-                 {isMe && <ActionMenuItem icon={Trash2} label="Удалить" variant="destructive" onClick={async () => { await deleteDoc(doc(db!, 'chats', chatId, 'messages', message.id)); setIsMenuOpen(false); }} />}
+                 {isMe && <ActionMenuItem icon={Trash2} label="Удалить" variant="destructive" onClick={handleDeleteMessage} />}
               </PopoverContent>
             </Popover>
           </div>

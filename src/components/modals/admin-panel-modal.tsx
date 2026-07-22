@@ -12,7 +12,7 @@ import { collection, query, doc, limit, updateDoc, writeBatch, where, orderBy, i
 import { UserAvatar } from '@/components/user-avatar';
 import { 
   ShieldAlert, Users, Star, Ban, Check, Activity, Wallet, Clock, 
-  Terminal as TerminalIcon, X, Zap, ShieldCheck, Search, Trash2, Crown, Globe, AlertCircle
+  Terminal as TerminalIcon, X, Zap, ShieldCheck, Search, Trash2, Crown, Globe, AlertCircle, XCircle
 } from 'lucide-react';
 import type { User, TopUpRequest } from '@/lib/types';
 import { formatDisplayName, cn } from '@/lib/utils';
@@ -20,6 +20,10 @@ import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { ru } from 'date-fns/locale';
 
+/**
+ * АДМИН-ПАНЕЛЬ V5.8.0 «ELITE CONTROL»
+ * Полностью новый интерфейс и восстановленный функционал.
+ */
 export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const db = useFirestore();
   const { toast } = useToast();
@@ -45,8 +49,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
 
   const filteredUsers = useMemo(() => {
     if (!allUsers) return [];
-    // V5.8.0 Sync: Distinguish between valid and ghost nodes
-    let list = allUsers.filter(u => (u.name && u.name !== 'User' && u.name !== '??') || u.username);
+    let list = allUsers.filter(u => (u.name && u.name !== 'User') || u.username);
     if (userSearch.trim()) {
       const s = userSearch.toLowerCase();
       list = list.filter(u => u.name?.toLowerCase().includes(s) || u.username?.toLowerCase().includes(s));
@@ -70,12 +73,6 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
     setTerminalLines(prev => [...prev, `$ ${terminalInput}`, response]);
     setTerminalInput('');
   };
-
-  useEffect(() => {
-    if (terminalScrollRef.current) {
-      terminalScrollRef.current.scrollTop = terminalScrollRef.current.scrollHeight;
-    }
-  }, [terminalLines]);
 
   const handleApprove = async (req: TopUpRequest) => {
     if (!db) return;
@@ -155,12 +152,18 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
                       </div>
                     </div>
                     <div className="flex items-center gap-3">
-                      <Button onClick={() => handleReject(req.id)} variant="ghost" className="h-11 px-6 rounded-xl border border-red-500/20 text-red-500 hover:bg-red-500/10 font-black uppercase text-[10px] tracking-widest">Отказ</Button>
-                      <Button onClick={() => handleApprove(req)} className="h-11 px-6 rounded-xl bg-green-500 text-white shadow-lg font-black uppercase text-[10px] tracking-widest">Принять</Button>
+                      <Button onClick={() => handleReject(req.id)} variant="ghost" className="h-11 px-6 rounded-xl border border-red-500/20 text-red-500 hover:bg-red-500/10 font-black uppercase text-[10px] tracking-widest gap-2">
+                        <XCircle className="w-4 h-4" /> Отклонить
+                      </Button>
+                      <Button onClick={() => handleApprove(req)} className="h-11 px-6 rounded-xl bg-green-500 text-white shadow-lg font-black uppercase text-[10px] tracking-widest gap-2">
+                        <Check className="w-4 h-4" /> Одобрить
+                      </Button>
                     </div>
                   </div>
                 ))}
-                {requests?.filter(r => r.status === 'pending').length === 0 && <div className="py-20 text-center opacity-20"><Wallet className="w-12 h-12 mx-auto mb-4" /><p className="text-[10px] font-black uppercase">Очередь пуста</p></div>}
+                {requests?.filter(r => r.status === 'pending').length === 0 && (
+                  <div className="py-20 text-center opacity-20"><Wallet className="w-12 h-12 mx-auto mb-4" /><p className="text-[10px] font-black uppercase">Очередь пуста</p></div>
+                )}
               </TabsContent>
 
               <TabsContent value="users" className="m-0 space-y-6">

@@ -12,7 +12,7 @@ import { Switch } from '@/components/ui/switch';
 import { useAuth, useUser, useFirestore, useDoc, useMemoFirebase, useCollection } from '@/firebase';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
-  LogOut, Settings2, Camera, Star, ShieldCheck, Loader2, CheckCircle2, Fingerprint, Palette, Archive, ChevronRight, X, Globe, Smartphone, Monitor, Trash2, MapPin, Activity, Zap, Mail, Phone, Lock
+  LogOut, Settings2, Camera, Star, ShieldCheck, Loader2, CheckCircle2, Fingerprint, Palette, Archive, ChevronRight, X, Globe, Smartphone, Monitor, Trash2, MapPin, Activity, Zap, Mail, Phone, Lock, Eye, EyeOff
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { signOut } from 'firebase/auth';
@@ -24,6 +24,7 @@ import type { User, Session } from '@/lib/types';
 
 /**
  * SETTINGS CORE V5.8.0 «ELITE RESTORATION»
+ * Восстановлены сессии с IP, кастомные стили и верификации.
  */
 export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const auth = useAuth();
@@ -99,7 +100,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         'settings.customAppIconUrl': form.customAppIconUrl,
         'settings.privacy.isGhostMode': form.isGhostMode
       });
-      toast({ title: "Узел синхронизирован V5.8.0" });
+      toast({ title: "Узел синхронизирован" });
       onOpenChange(false);
     } catch (e: any) { 
       toast({ title: "Сбой записи", variant: "destructive" }); 
@@ -229,6 +230,10 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                           <div className="space-y-1.5">
                             <span className="text-[8px] font-bold text-white/20 uppercase ml-2">URL Фона чатов</span>
                             <Input placeholder="https://..." value={form.chatBackground} onChange={e => setForm({...form, chatBackground: e.target.value})} className="bg-black/40 border-white/5 h-10 rounded-xl" />
+                          </div>
+                          <div className="space-y-1.5">
+                            <span className="text-[8px] font-bold text-white/20 uppercase ml-2">URL Иконки приложения</span>
+                            <Input placeholder="https://..." value={form.customAppIconUrl} onChange={e => setForm({...form, customAppIconUrl: e.target.value})} className="bg-black/40 border-white/5 h-10 rounded-xl" />
                           </div>
                        </div>
                     </div>
