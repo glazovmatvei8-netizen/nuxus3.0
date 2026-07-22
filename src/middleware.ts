@@ -3,8 +3,8 @@ import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
 /**
- * NUXUS KERNEL AGENT HANDLER
- * Возвращает Markdown версию страницы при запросе от AI-агентов.
+ * NUXUS KERNEL AGENT HANDLER v1.1
+ * Обеспечивает Markdown Negotiation и поддержку метаданных для агентов.
  */
 export function middleware(request: NextRequest) {
   const acceptHeader = request.headers.get('accept')
@@ -12,30 +12,28 @@ export function middleware(request: NextRequest) {
   if (acceptHeader && acceptHeader.includes('text/markdown')) {
     const markdown = `
 # Nuxus 2.0 — Premium Communication Kernel
+Version: 5.8.0 | Protocol: QES 24.1
 
-Nuxus is a quantum-secure messaging environment designed for safe and high-fidelity communication.
+Nuxus is a quantum-secure messaging environment designed for safe communication.
 
 ## Node Features
-- **Quantum Encryption (QES 24.1)**: All text signals are encrypted locally on your node.
-- **Multi-Node Support**: Up to 5 isolated accounts on a single kernel instance.
-- **AI Intelligence**: Integrated Gemini 1.5 Flash for voice transcription and chat summaries.
-- **Nuxus Wallet**: Internal NX-token system for gifts and node upgrades.
-- **Global Discovery**: Public clusters and verified nodes navigation.
+- **Quantum Encryption (QES 24.1)**: Local node-to-node signal encryption.
+- **Multi-Node Isolation**: Up to 5 autonomous instances per kernel.
+- **AI Core**: Gemini 1.5 Flash powered voice-to-text transcription.
+- **API Discovery**: RFC 9727 compliant api-catalog enabled.
 
-## Technical Stack
-- Engine: Next.js 15 (Pulse)
-- Logic: Firebase Cloud Backend
-- AI Core: Genkit / Gemini 1.5 Flash
-- Protocol: QES v24.1
+## Endpoints
+- **Health**: /api/health
+- **Catalog**: /.well-known/api-catalog
 
-Official Node Access: [https://nuxus.fun](https://nuxus.fun)
+Official Node: [https://nuxus.fun](https://nuxus.fun)
     `.trim()
 
     return new NextResponse(markdown, {
       status: 200,
       headers: {
         'Content-Type': 'text/markdown; charset=utf-8',
-        'X-Markdown-Tokens': '150',
+        'X-Markdown-Tokens': '200',
       },
     })
   }
@@ -44,5 +42,5 @@ Official Node Access: [https://nuxus.fun](https://nuxus.fun)
 }
 
 export const config = {
-  matcher: ['/', '/login', '/register'],
+  matcher: ['/', '/login', '/register', '/.well-known/api-catalog'],
 }
