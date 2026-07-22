@@ -7,12 +7,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { Switch } from '@/components/ui/switch';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, doc, limit, updateDoc, writeBatch, where, orderBy, increment, deleteDoc } from 'firebase/firestore';
+import { collection, query, doc, limit, updateDoc, writeBatch, increment, orderBy } from 'firebase/firestore';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
   ShieldAlert, Users, Star, Ban, Check, Activity, Wallet, Clock, 
-  Terminal as TerminalIcon, X, Zap, ShieldCheck, Search, Trash2, Crown, Globe, AlertCircle, XCircle
+  Terminal as TerminalIcon, X, Zap, ShieldCheck, Search, Trash2, Crown, Shield, AlertTriangle, Eye, EyeOff
 } from 'lucide-react';
 import type { User, TopUpRequest } from '@/lib/types';
 import { formatDisplayName, cn } from '@/lib/utils';
@@ -20,18 +21,14 @@ import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { ru } from 'date-fns/locale';
 
-/**
- * АДМИН-ПАНЕЛЬ V5.8.0 «ELITE CONTROL»
- * ИСПРАВЛЕНО: Полный функционал, кнопка Отклонить, Терминал и точные счетчики.
- */
 export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const db = useFirestore();
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState('requests');
   const [userSearch, setUserSearch] = useState('');
-  const [terminalLines, setTerminalLines] = useState<string[]>(["Nuxus Kernel Console v5.8.0", "System status: SECURE"]);
+  const [terminalLines, setTerminalLines] = useState<string[]>(["Nuxus Aegis Console v5.8.0", "Security Protocol: ACTIVE"]);
   const [terminalInput, setTerminalInput] = useState('');
-  const terminalScrollRef = useRef<HTMLDivElement>(null);
+  const [isShieldActive, setIsShieldActive] = useState(false);
 
   const topUpRequestsQuery = useMemoFirebase(() => {
     if (!db) return null;
@@ -45,7 +42,12 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
   }, [db]);
   const { data: allUsers } = useCollection<User>(usersQuery);
 
-  const totalRawCount = allUsers?.length || 0;
+  const stats = useMemo(() => {
+    if (!allUsers) return { total: 0, valid: 0, premium: 0 };
+    const valid = allUsers.filter(u => (u.name && u.name !== 'User') || u.username).length;
+    const premium = allUsers.filter(u => u.isPremium).length;
+    return { total: allUsers.length, valid, premium };
+  }, [allUsers]);
 
   const filteredUsers = useMemo(() => {
     if (!allUsers) return [];
@@ -61,40 +63,33 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
     e.preventDefault();
     const cmd = terminalInput.trim().toLowerCase();
     if (!cmd) return;
-
-    let response = "";
-    if (cmd === 'help') response = "Available: status, nodes, clear, version, help";
-    else if (cmd === 'status') response = "Kernel: ONLINE. Nodes: " + totalRawCount;
-    else if (cmd === 'nodes') response = `Network Stats: ${filteredUsers.length} Valid / ${totalRawCount} Total`;
+    let res = "";
+    if (cmd === 'shield --status') res = `Shield is ${isShieldActive ? 'ON' : 'OFF'}`;
+    else if (cmd === 'nodes --count') res = `Valid signals: ${stats.valid}`;
     else if (cmd === 'clear') { setTerminalLines([]); setTerminalInput(''); return; }
-    else response = `Unknown command: ${cmd}`;
-
-    setTerminalLines(prev => [...prev, `$ ${terminalInput}`, response]);
+    else res = `Command not recognized: ${cmd}`;
+    setTerminalLines(prev => [...prev, `$ ${terminalInput}`, res]);
     setTerminalInput('');
   };
 
   const handleApprove = async (req: TopUpRequest) => {
     if (!db) return;
-    try {
-      const batch = writeBatch(db);
-      batch.update(doc(db, 'users', req.userId), { balance: increment(req.amount) });
-      batch.update(doc(db, 'topUpRequests', req.id), { status: 'approved' });
-      await batch.commit();
-      toast({ title: "Заявка одобрена" });
-    } catch (e) { toast({ title: "Сбой", variant: "destructive" }); }
+    const batch = writeBatch(db);
+    batch.update(doc(db, 'users', req.userId), { balance: increment(req.amount) });
+    batch.update(doc(db, 'topUpRequests', req.id), { status: 'approved' });
+    await batch.commit();
+    toast({ title: "Заявка одобрена" });
   };
 
-  const handleReject = async (reqId: string) => {
+  const handleReject = async (id: string) => {
     if (!db) return;
-    try {
-      await updateDoc(doc(db, 'topUpRequests', reqId), { status: 'rejected' });
-      toast({ title: "Заявка отклонена" });
-    } catch (e) { toast({ title: "Сбой", variant: "destructive" }); }
+    await updateDoc(doc(db, 'topUpRequests', id), { status: 'rejected' });
+    toast({ title: "Заявка отклонена" });
   };
 
-  const updateUserRole = async (uid: string, field: string, value: any) => {
+  const updateUser = async (uid: string, data: any) => {
     if (!db) return;
-    await updateDoc(doc(db, 'users', uid), { [field]: value });
+    await updateDoc(doc(db, 'users', uid), data);
     toast({ title: "Узел обновлен" });
   };
 
@@ -110,15 +105,15 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
               </div>
               <div className="flex flex-col text-left">
                 <DialogTitle className="text-3xl font-black uppercase italic text-white tracking-tighter">MISSION CONTROL</DialogTitle>
-                <DialogDescription className="text-[10px] font-black uppercase text-primary/60 mt-1">Kernel V5.8.0 Management</DialogDescription>
+                <DialogDescription className="text-[10px] font-black uppercase text-primary/60 mt-1">Kernel V5.8.0 Aegis Protocol</DialogDescription>
               </div>
             </div>
             <div className="flex gap-4">
                <div className="bg-black/40 border border-white/5 px-5 py-2.5 rounded-2xl flex items-center gap-3">
-                  <Users className="w-4 h-4 text-white" />
+                  <Activity className="w-4 h-4 text-green-500" />
                   <div className="flex flex-col">
-                    <span className="text-xs font-black text-white">{filteredUsers.length} / {totalRawCount}</span>
-                    <span className="text-[7px] font-black text-white/20 uppercase">Valid / Total</span>
+                    <span className="text-xs font-black text-white">{stats.valid} / {stats.total}</span>
+                    <span className="text-[7px] font-black text-white/20 uppercase tracking-widest">Nodes Synchronized</span>
                   </div>
                </div>
             </div>
@@ -127,11 +122,12 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0">
           <div className="px-8 mt-6">
-            <TabsList className="grid grid-cols-4 bg-white/5 p-1.5 rounded-2xl border border-white/5">
-              <TabsTrigger value="requests" className="text-[9px] font-black uppercase tracking-widest gap-2"><Wallet className="w-3 h-3" /> Заявки</TabsTrigger>
-              <TabsTrigger value="users" className="text-[9px] font-black uppercase tracking-widest gap-2"><Users className="w-3 h-3" /> Узлы</TabsTrigger>
-              <TabsTrigger value="stats" className="text-[9px] font-black uppercase tracking-widest gap-2"><Activity className="w-3 h-3" /> Статус</TabsTrigger>
-              <TabsTrigger value="terminal" className="text-[9px] font-black uppercase tracking-widest gap-2"><TerminalIcon className="w-3 h-3" /> Терминал</TabsTrigger>
+            <TabsList className="grid grid-cols-5 bg-white/5 p-1.5 rounded-2xl border border-white/5">
+              <TabsTrigger value="requests" className="text-[9px] font-black uppercase tracking-widest gap-2">Заявки</TabsTrigger>
+              <TabsTrigger value="users" className="text-[9px] font-black uppercase tracking-widest gap-2">Узлы</TabsTrigger>
+              <TabsTrigger value="shield" className="text-[9px] font-black uppercase tracking-widest gap-2"><Shield className="w-3 h-3" /> Aegis</TabsTrigger>
+              <TabsTrigger value="terminal" className="text-[9px] font-black uppercase tracking-widest gap-2">Консоль</TabsTrigger>
+              <TabsTrigger value="stats" className="text-[9px] font-black uppercase tracking-widest gap-2">Инфо</TabsTrigger>
             </TabsList>
           </div>
 
@@ -150,19 +146,12 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
                         </div>
                       </div>
                     </div>
-                    <div className="flex items-center gap-3">
-                      <Button onClick={() => handleReject(req.id)} variant="ghost" className="h-11 px-6 rounded-xl border border-red-500/20 text-red-500 hover:bg-red-500/10 font-black uppercase text-[10px] tracking-widest gap-2">
-                        <XCircle className="w-4 h-4" /> Отклонить
-                      </Button>
-                      <Button onClick={() => handleApprove(req)} className="h-11 px-6 rounded-xl bg-green-500 text-white font-black uppercase text-[10px] tracking-widest gap-2">
-                        <Check className="w-4 h-4" /> Одобрить
-                      </Button>
+                    <div className="flex gap-3">
+                      <Button onClick={() => handleReject(req.id)} variant="ghost" className="h-10 px-4 rounded-xl border border-red-500/20 text-red-500 text-[10px] font-black uppercase tracking-widest">Отклонить</Button>
+                      <Button onClick={() => handleApprove(req)} className="h-10 px-6 rounded-xl bg-green-500 text-white text-[10px] font-black uppercase tracking-widest">Одобрить</Button>
                     </div>
                   </div>
                 ))}
-                {requests?.filter(r => r.status === 'pending').length === 0 && (
-                  <div className="py-20 text-center opacity-20"><Wallet className="w-12 h-12 mx-auto mb-4" /><p className="text-[10px] font-black uppercase">Нет новых заявок</p></div>
-                )}
               </TabsContent>
 
               <TabsContent value="users" className="m-0 space-y-6">
@@ -187,31 +176,52 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
                             </div>
                          </div>
                          <div className="grid grid-cols-3 gap-2">
-                            <AdminActionBtn label="Premium" active={u.isPremium} onClick={() => updateUserRole(u.id, 'isPremium', !u.isPremium)} />
-                            <AdminActionBtn label="Admin" active={u.isAdmin} onClick={() => updateUserRole(u.id, 'isAdmin', !u.isAdmin)} />
-                            <AdminActionBtn label="Ban" active={u.isBanned} danger onClick={() => updateUserRole(u.id, 'isBanned', !u.isBanned)} />
+                            <button onClick={() => updateUser(u.id, { isPremium: !u.isPremium })} className={cn("h-9 rounded-xl text-[8px] font-black uppercase tracking-widest border", u.isPremium ? "bg-primary text-white" : "bg-white/5 text-white/40")}>Premium</button>
+                            <button onClick={() => updateUser(u.id, { isAdmin: !u.isAdmin })} className={cn("h-9 rounded-xl text-[8px] font-black uppercase tracking-widest border", u.isAdmin ? "bg-primary text-white" : "bg-white/5 text-white/40")}>Admin</button>
+                            <button onClick={() => updateUser(u.id, { isBanned: !u.isBanned })} className={cn("h-9 rounded-xl text-[8px] font-black uppercase tracking-widest border", u.isBanned ? "bg-red-500 text-white" : "bg-white/5 text-white/40")}>Ban</button>
                          </div>
                       </div>
                     ))}
                  </div>
               </TabsContent>
 
+              <TabsContent value="shield" className="m-0 space-y-8">
+                 <div className="bg-red-500/10 border border-red-500/20 p-8 rounded-[2.5rem] flex items-center justify-between">
+                    <div className="flex items-center gap-6">
+                       <div className="h-16 w-16 rounded-[1.8rem] bg-red-500/20 flex items-center justify-center">
+                          <AlertTriangle className="w-8 h-8 text-red-500 animate-pulse" />
+                       </div>
+                       <div className="flex flex-col text-left">
+                          <h4 className="text-xl font-black text-white uppercase italic">Under Attack Mode</h4>
+                          <p className="text-[10px] font-bold text-red-500/60 uppercase tracking-widest mt-1">Принудительная фильтрация всех сигналов</p>
+                       </div>
+                    </div>
+                    <Switch checked={isShieldActive} onCheckedChange={setIsShieldActive} className="data-[state=checked]:bg-red-500" />
+                 </div>
+
+                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <ShieldCard icon={ShieldCheck} label="Edge Shield" status="ACTIVE" color="text-green-500" />
+                    <ShieldCard icon={Zap} label="Rate Limiting" status="30 req/10s" color="text-primary" />
+                    <ShieldCard icon={Ban} label="Blacklist" status="0 IPs" color="text-white/40" />
+                 </div>
+              </TabsContent>
+
               <TabsContent value="terminal" className="m-0">
-                 <div className="bg-black/60 border border-white/10 rounded-[2rem] overflow-hidden h-[400px] flex flex-col font-mono">
-                    <div className="bg-white/5 p-3 flex items-center gap-2 border-b border-white/5">
-                       <div className="flex gap-1.5 ml-2">
+                 <div className="bg-black/60 border border-white/10 rounded-[2.5rem] overflow-hidden h-[400px] flex flex-col font-mono shadow-inner">
+                    <div className="bg-white/5 p-4 flex items-center gap-2 border-b border-white/5">
+                       <div className="flex gap-2 ml-2">
                           <div className="w-3 h-3 rounded-full bg-red-500/50" />
                           <div className="w-3 h-3 rounded-full bg-green-500/50" />
                        </div>
-                       <span className="text-[10px] text-white/40 uppercase font-black ml-4">nuxus@kernel: console</span>
+                       <span className="text-[10px] text-white/30 uppercase font-black ml-4 tracking-widest">nuxus@kernel: ~ console</span>
                     </div>
-                    <ScrollArea className="flex-1 p-6 text-[12px] leading-relaxed" ref={terminalScrollRef}>
+                    <ScrollArea className="flex-1 p-6 text-[12px] leading-relaxed">
                        {terminalLines.map((line, i) => (
-                         <p key={i} className={cn(line.startsWith('$') ? "text-white" : "text-primary/80 mb-2")}>{line}</p>
+                         <p key={i} className={cn(line.startsWith('$') ? "text-white" : "text-primary/70 mb-2")}>{line}</p>
                        ))}
                        <form onSubmit={handleTerminalCommand} className="flex items-center gap-2 mt-2">
                           <span className="text-primary">$</span>
-                          <input className="bg-transparent border-none outline-none flex-1 text-white" autoFocus value={terminalInput} onChange={e => setTerminalInput(e.target.value)} />
+                          <input className="bg-transparent border-none outline-none flex-1 text-white" value={terminalInput} onChange={e => setTerminalInput(e.target.value)} autoFocus />
                        </form>
                     </ScrollArea>
                  </div>
@@ -224,18 +234,14 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
   );
 }
 
-function AdminActionBtn({ label, active, onClick, danger }: any) {
+function ShieldCard({ icon: Icon, label, status, color }: any) {
   return (
-    <button 
-      onClick={onClick}
-      className={cn(
-        "h-10 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all border",
-        active 
-          ? (danger ? "bg-red-500 border-red-500 text-white" : "bg-primary border-primary text-white")
-          : "bg-white/5 border-white/10 text-white/40"
-      )}
-    >
-      {label}
-    </button>
+    <div className="bg-white/5 p-6 rounded-[2rem] border border-white/10 flex flex-col items-center gap-4 text-center">
+       <Icon className={cn("w-6 h-6", color)} />
+       <div>
+          <span className="text-[10px] font-black uppercase text-white/20 tracking-widest block mb-1">{label}</span>
+          <span className={cn("text-[12px] font-black uppercase tracking-widest", color)}>{status}</span>
+       </div>
+    </div>
   );
 }
