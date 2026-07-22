@@ -11,19 +11,21 @@ import {
 } from "@/components/ui/popover";
 import { format } from 'date-fns';
 import { 
-  CornerUpLeft, Trash2, Check, CheckCheck, Play, Share2, Copy, Edit2, MoreHorizontal, ShieldCheck, Star, Wand2, Loader2, RotateCcw, EyeOff, Eye
+  CornerUpLeft, Trash2, Check, CheckCheck, Play, Share2, Copy, Edit2, MoreHorizontal, ShieldCheck, Star, Wand2, Loader2, RotateCcw, EyeOff, Eye, Heart, Smile
 } from 'lucide-react';
 import { cn, decryptSignal, isUserPremium, formatDisplayName } from '@/lib/utils';
-import { doc, updateDoc, deleteDoc } from 'firebase/firestore';
+import { doc, updateDoc, deleteDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
 import type { Message, User } from '@/lib/types';
 import { Button } from './ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { useAppState } from '@/lib/store';
 import { transcribeVoice } from '@/ai/flows/voice-to-text-flow';
 
+const COMMON_REACTIONS = ['❤️', '🔥', '👍', '😂', '😮', '😢', '💯'];
+
 /**
- * MESSAGE ITEM V5.8.0 «ELITE RESTORATION»
- * Исправлено: Нейронная расшифровка (Hide/Retry), полное меню действий.
+ * MESSAGE ITEM V76.0.0 «AEGIS REACTIONS»
+ * Восстановлены реакции в меню и нативная поддержка мульти-реакций.
  */
 export const MessageItem = memo(({ message, isMe, chatId, onReply, onForward, isAdmin = false, isGroup = false, highlight = false, viewerProfile }: any) => {
   const { user } = useUser();
@@ -60,6 +62,23 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onForward, is
     }
   };
 
+  const handleReaction = async (emoji: string) => {
+    if (!db || !chatId || !user) return;
+    const msgRef = doc(db, 'chats', chatId, 'messages', message.id);
+    const hasReacted = message.reactions?.[emoji]?.includes(user.uid);
+    
+    if (window.navigator && window.navigator.vibrate) window.navigator.vibrate(20);
+    
+    try {
+      if (hasReacted) {
+        await updateDoc(msgRef, { [`reactions.${emoji}`]: arrayRemove(user.uid) });
+      } else {
+        await updateDoc(msgRef, { [`reactions.${emoji}`]: arrayUnion(user.uid) });
+      }
+    } catch (e) {}
+    setIsMenuOpen(false);
+  };
+
   const copyToClipboard = () => {
     const text = message.contentType === 'text' ? displayContent : transcription || '';
     if (!text) return;
@@ -75,6 +94,11 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onForward, is
       setIsMenuOpen(false);
     } catch (e) { }
   };
+
+  const reactionsCount = useMemo(() => {
+    if (!message.reactions) return 0;
+    return Object.values(message.reactions).reduce((acc: number, uids: any) => acc + (uids?.length || 0), 0);
+  }, [message.reactions]);
 
   return (
     <div className={cn("w-full flex mb-2", isMe ? "justify-end" : "justify-start")}>
@@ -128,13 +152,41 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onForward, is
                  <span className="text-[9px] font-black tabular-nums">{formattedTime}</span>
                  {isMe && (message.isRead ? <CheckCheck className="w-3 h-3 text-accent" /> : <Check className="w-3 h-3" />)}
               </div>
+
+              {/* REACTIONS DISPLAY */}
+              {reactionsCount > 0 && (
+                <div className={cn(
+                  "absolute -bottom-2 flex gap-1 bg-[#1c1c1e] p-1 rounded-full border border-white/10 shadow-lg z-20",
+                  isMe ? "right-2" : "left-2"
+                )}>
+                  {Object.entries(message.reactions || {}).map(([emoji, uids]: any) => uids.length > 0 && (
+                    <div key={emoji} className="flex items-center gap-1 px-1.5 py-0.5 rounded-full hover:bg-white/5 transition-colors cursor-default">
+                      <span className="text-xs">{emoji}</span>
+                      <span className="text-[9px] font-black text-white/60">{uids.length}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             <Popover open={isMenuOpen} onOpenChange={setIsMenuOpen}>
               <PopoverTrigger asChild>
                 <button className="p-2 rounded-full hover:bg-white/5 text-white/20 opacity-0 group-hover:opacity-100 transition-all"><MoreHorizontal className="w-5 h-5" /></button>
               </PopoverTrigger>
-              <PopoverContent side="top" align={isMe ? "end" : "start"} className="w-56 bg-[#0a0a0c]/95 backdrop-blur-xl border-white/10 rounded-[1.8rem] p-2 shadow-2xl z-[1000] outline-none">
+              <PopoverContent side="top" align={isMe ? "end" : "start"} className="w-64 bg-[#0a0a0c]/95 backdrop-blur-xl border-white/10 rounded-[2rem] p-2 shadow-2xl z-[1000] outline-none">
+                 {/* QUICK REACTIONS BLOCK */}
+                 <div className="flex justify-around p-2 mb-2 bg-white/5 rounded-2xl border border-white/5">
+                    {COMMON_REACTIONS.map(emoji => (
+                      <button 
+                        key={emoji} 
+                        onClick={() => handleReaction(emoji)}
+                        className="text-xl hover:scale-150 active:scale-90 transition-transform p-1.5"
+                      >
+                        {emoji}
+                      </button>
+                    ))}
+                 </div>
+                 
                  <ActionMenuItem icon={CornerUpLeft} label="Ответить" onClick={() => { onReply(message); setIsMenuOpen(false); }} />
                  <ActionMenuItem icon={Share2} label="Переслать" onClick={() => { onForward(message); setIsMenuOpen(false); }} />
                  <ActionMenuItem icon={Copy} label="Копировать" onClick={copyToClipboard} />

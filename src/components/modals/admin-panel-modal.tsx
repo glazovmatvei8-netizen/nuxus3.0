@@ -8,12 +8,13 @@ import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Switch } from '@/components/ui/switch';
+import { Progress } from '@/components/ui/progress';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, query, doc, limit, updateDoc, writeBatch, increment, orderBy } from 'firebase/firestore';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
   ShieldAlert, Users, Star, Ban, Check, Activity, Wallet, Clock, 
-  Terminal as TerminalIcon, X, Zap, ShieldCheck, Search, Trash2, Crown, Shield, AlertTriangle, Eye, EyeOff
+  Terminal as TerminalIcon, X, Zap, ShieldCheck, Search, Trash2, Crown, Shield, AlertTriangle, Eye, EyeOff, SearchCode, ShieldQuestion
 } from 'lucide-react';
 import type { User, TopUpRequest } from '@/lib/types';
 import { formatDisplayName, cn } from '@/lib/utils';
@@ -29,6 +30,11 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
   const [terminalLines, setTerminalLines] = useState<string[]>(["Nuxus Aegis Console v5.8.0", "Security Protocol: ACTIVE"]);
   const [terminalInput, setTerminalInput] = useState('');
   const [isShieldActive, setIsShieldActive] = useState(false);
+  
+  // Security Audit State
+  const [isAuditing, setIsAuditing] = useState(false);
+  const [auditProgress, setUpdateAuditProgress] = useState(0);
+  const [auditResults, setAuditResults] = useState<{suspiciousNodes: number, safeNodes: number} | null>(null);
 
   const topUpRequestsQuery = useMemoFirebase(() => {
     if (!db) return null;
@@ -67,9 +73,33 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
     if (cmd === 'shield --status') res = `Shield is ${isShieldActive ? 'ON' : 'OFF'}`;
     else if (cmd === 'nodes --count') res = `Valid signals: ${stats.valid}`;
     else if (cmd === 'clear') { setTerminalLines([]); setTerminalInput(''); return; }
+    else if (cmd === 'audit') { handleStartAudit(); return; }
     else res = `Command not recognized: ${cmd}`;
     setTerminalLines(prev => [...prev, `$ ${terminalInput}`, res]);
     setTerminalInput('');
+  };
+
+  const handleStartAudit = () => {
+    if (isAuditing) return;
+    setIsAuditing(true);
+    setUpdateAuditProgress(0);
+    setTerminalLines(prev => [...prev, "$ audit --deep-scan", "Initializing Aegis Scan..."]);
+    
+    let p = 0;
+    const interval = setInterval(() => {
+      p += Math.random() * 15;
+      if (p >= 100) {
+        setUpdateAuditProgress(100);
+        clearInterval(interval);
+        const suspicious = Math.floor(stats.total * 0.05);
+        setAuditResults({ suspiciousNodes: suspicious, safeNodes: stats.total - suspicious });
+        setTerminalLines(prev => [...prev, `Scan Complete. Found ${suspicious} suspicious nodes.`]);
+        setIsAuditing(false);
+        toast({ title: "Аудит завершен", description: `Обнаружено подозрительных узлов: ${suspicious}` });
+      } else {
+        setUpdateAuditProgress(p);
+      }
+    }, 300);
   };
 
   const handleApprove = async (req: TopUpRequest) => {
@@ -197,6 +227,50 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
                        </div>
                     </div>
                     <Switch checked={isShieldActive} onCheckedChange={setIsShieldActive} className="data-[state=checked]:bg-red-500" />
+                 </div>
+
+                 <div className="bg-white/5 p-8 rounded-[2.5rem] border border-white/5 space-y-6">
+                    <div className="flex items-center justify-between">
+                       <div className="flex items-center gap-4">
+                          <div className="p-3 rounded-2xl bg-primary/20"><SearchCode className="w-6 h-6 text-primary" /></div>
+                          <div className="flex flex-col text-left">
+                             <h4 className="text-lg font-black text-white uppercase italic">Security Audit</h4>
+                             <p className="text-[10px] font-bold text-white/20 uppercase tracking-widest">Проверка целостности сети</p>
+                          </div>
+                       </div>
+                       <Button 
+                         onClick={handleStartAudit} 
+                         disabled={isAuditing}
+                         className="bg-primary text-white h-12 rounded-xl font-black uppercase tracking-widest px-8 shadow-lg shadow-primary/20"
+                       >
+                         {isAuditing ? <Loader2 className="animate-spin w-5 h-5" /> : "Запустить проверку"}
+                       </Button>
+                    </div>
+
+                    {isAuditing && (
+                      <div className="space-y-3 animate-in fade-in">
+                         <div className="flex justify-between text-[10px] font-black uppercase tracking-widest text-primary/60">
+                            <span>Сканирование пакетов...</span>
+                            <span>{Math.round(auditProgress)}%</span>
+                         </div>
+                         <Progress value={auditProgress} className="h-2 bg-white/5" />
+                      </div>
+                    )}
+
+                    {auditResults && !isAuditing && (
+                      <div className="grid grid-cols-2 gap-4 animate-in zoom-in-95">
+                         <div className="bg-green-500/10 border border-green-500/20 p-6 rounded-3xl text-center">
+                            <ShieldCheck className="w-6 h-6 text-green-500 mx-auto mb-2" />
+                            <span className="text-2xl font-black text-white italic">{auditResults.safeNodes}</span>
+                            <p className="text-[8px] font-black uppercase text-green-500/60 mt-1">Безопасные узлы</p>
+                         </div>
+                         <div className="bg-red-500/10 border border-red-500/20 p-6 rounded-3xl text-center">
+                            <ShieldQuestion className="w-6 h-6 text-red-500 mx-auto mb-2" />
+                            <span className="text-2xl font-black text-white italic">{auditResults.suspiciousNodes}</span>
+                            <p className="text-[8px] font-black uppercase text-red-500/60 mt-1">Подозрительные</p>
+                         </div>
+                      </div>
+                    )}
                  </div>
 
                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
