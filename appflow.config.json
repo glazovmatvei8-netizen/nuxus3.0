@@ -2,7 +2,7 @@
 {
   "apps": [
     {
-      "id": "nuxus-kernel-v78",
+      "appId": "nuxus-kernel-v78",
       "root": ".",
       "dependencyInstallCommand": "npm install",
       "buildCommand": "npm run build",

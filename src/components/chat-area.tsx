@@ -65,11 +65,10 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
       };
 
       recorder.onstop = async () => {
-        const blob = new Blob(chunksRef.current, { type: 'audio/webm;codecs=opus' });
-        // ТОЧНЫЙ ТАЙМЕР V78.0
         const finalDur = Math.floor((Date.now() - startTimeRef.current) / 1000);
+        const blob = new Blob(chunksRef.current, { type: 'audio/webm;codecs=opus' });
         
-        if (blob.size > 500) { // Снижен порог для коротких сообщений
+        if (blob.size > 100) { 
           const reader = new FileReader();
           reader.onloadend = () => {
             if (reader.result) {
@@ -90,11 +89,13 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
       setIsRecording(true);
       setRecordingDuration(0);
       
-      // ИСПРАВЛЕННЫЙ ТАЙМЕР
       timerIntervalRef.current = setInterval(() => {
-        setRecordingDuration(Math.floor((Date.now() - startTimeRef.current) / 1000));
-      }, 500); // Чаще обновление для плавности, но floor берет целые
-    } catch (err) { }
+        const elapsed = Math.floor((Date.now() - startTimeRef.current) / 1000);
+        setRecordingDuration(elapsed);
+      }, 500);
+    } catch (err) { 
+      console.error("Recording error:", err);
+    }
   };
 
   const stopAudioRecording = () => {

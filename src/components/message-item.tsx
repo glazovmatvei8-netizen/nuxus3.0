@@ -120,7 +120,7 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onForward, is
                      <div className="bg-black/10 p-3 rounded-2xl border border-white/5 relative group/t">
                         <p className="text-[12px] italic text-white/80 leading-relaxed pr-8">{transcription}</p>
                         <div className="absolute top-2 right-2 flex flex-col gap-1 opacity-0 group-hover/t:opacity-100 transition-opacity">
-                           <button onClick={() => handleTranscribe()} title="Повторить" className="p-1 hover:text-primary"><RotateCcw className="w-3 h-3" /></button>
+                           <button onClick={(e) => { e.stopPropagation(); handleTranscribe(); }} title="Повторить" className="p-1 hover:text-primary"><RotateCcw className="w-3 h-3" /></button>
                            <button onClick={(e) => { e.stopPropagation(); setIsTranscriptionVisible(false); }} title="Скрыть" className="p-1 hover:text-white"><EyeOff className="w-3 h-3" /></button>
                         </div>
                      </div>

@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useMemo, type ReactNode } from 'react';
@@ -11,8 +12,8 @@ interface FirebaseClientProviderProps {
 }
 
 /**
- * Глобальный менеджер изолированных узлов Nuxus V77.0.0
- * Использует СТРОГО изолированные именованные инстансы для предотвращения дублирования аккаунтов.
+ * Глобальный менеджер изолированных узлов Nuxus V78.0.0
+ * Использует СТРОГО изолированные именованные инстансы и принудительную персистентность.
  */
 export function FirebaseClientProvider({ children }: FirebaseClientProviderProps) {
   const { activeAccountIndex } = useAppState();
@@ -21,10 +22,10 @@ export function FirebaseClientProvider({ children }: FirebaseClientProviderProps
   const instances = useMemo(() => {
     if (typeof window === 'undefined') return [];
     return [0, 1, 2, 3, 4].map(i => {
-      const instanceName = `nuxus_node_v77_${i}`;
+      const instanceName = `nuxus_node_v78_${i}`;
       const instance = initializeFirebase(instanceName);
       
-      // Фиксация сессии для каждого узла отдельно
+      // КРИТИЧЕСКИ: Фиксация сессии для каждого узла отдельно
       setPersistence(instance.auth, browserLocalPersistence).catch(e => 
         console.warn(`Node ${i} persistence fail:`, e)
       );
@@ -35,7 +36,6 @@ export function FirebaseClientProvider({ children }: FirebaseClientProviderProps
 
   const activeInstance = useMemo(() => {
     if (instances.length === 0) return initializeFirebase('nuxus_ssr_temp');
-    // Гарантируем возврат инстанса по активному индексу
     return instances[activeAccountIndex] || instances[0];
   }, [instances, activeAccountIndex]);
 

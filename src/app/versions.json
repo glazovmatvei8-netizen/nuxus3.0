@@ -5,11 +5,11 @@
   "build": "Neural-Precision-Core",
   "sizeMb": 105,
   "changelog": [
-    "Fixed: Version frozen at 5.8.0",
-    "Restored: Phone, Email and VK verification badges",
-    "Restored: Custom primary color and chat background settings",
-    "Fixed: User count discrepancy in Admin Panel",
-    "Improved: Session management and IP tracking",
-    "Added: Markdown Negotiation for Agents"
+    "Fixed: Appflow build missing AppId element",
+    "Improved: Voice message timer precision 1:1",
+    "Added: Retry/Hide controls for AI transcription",
+    "Enhanced: Session persistence to prevent random logout",
+    "Cleaned: Ghost nodes filtered from Admin Panel",
+    "Sync: RFC 9727 API Catalog for Agents"
   ]
 }
