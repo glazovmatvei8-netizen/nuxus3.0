@@ -65,11 +65,11 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
       };
 
       recorder.onstop = async () => {
-        // КРИТИЧЕСКИЙ ФИКС: Используем разницу во времени для 100% точности
+        if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
         const finalDur = Math.floor((Date.now() - startTimeRef.current) / 1000);
         const blob = new Blob(chunksRef.current, { type: 'audio/webm;codecs=opus' });
         
-        if (blob.size > 50) { // Снизили порог для коротких ответов
+        if (blob.size > 50) { 
           const reader = new FileReader();
           reader.onloadend = () => {
             if (reader.result) {
@@ -82,11 +82,10 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
         if (streamRef.current) streamRef.current.getTracks().forEach(t => t.stop());
         setIsRecording(false);
         setRecordingDuration(0);
-        if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
       };
 
       startTimeRef.current = Date.now();
-      recorder.start(200); // Частые дампы для надежности
+      recorder.start(100); 
       setIsRecording(true);
       setRecordingDuration(0);
       

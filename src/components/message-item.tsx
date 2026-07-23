@@ -23,8 +23,8 @@ import { transcribeVoice } from '@/ai/flows/voice-to-text-flow';
 const COMMON_REACTIONS = ['❤️', '🔥', '👍', '😂', '😮', '😢', '💯'];
 
 /**
- * MESSAGE ITEM V78.0.0 «NEURAL PRECISION»
- * Исправлены кнопки управления ИИ-расшифровкой.
+ * MESSAGE ITEM V78.2.0 «NEURAL PRECISION»
+ * Фикс кнопок: Скрыть/Показать больше не вызывают повторный сигнал.
  */
 export const MessageItem = memo(({ message, isMe, chatId, onReply, onForward, isAdmin = false, isGroup = false, highlight = false, viewerProfile }: any) => {
   const { user } = useUser();
@@ -117,7 +117,7 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onForward, is
                    </div>
                    
                    {transcription && isTranscriptionVisible && (
-                     <div className="bg-black/10 p-3 rounded-2xl border border-white/5 relative group/t">
+                     <div className="bg-black/10 p-3 rounded-2xl border border-white/5 relative group/t animate-in fade-in zoom-in-95">
                         <p className="text-[12px] italic text-white/80 leading-relaxed pr-8">{transcription}</p>
                         <div className="absolute top-2 right-2 flex flex-col gap-1 opacity-0 group-hover/t:opacity-100 transition-opacity">
                            <button onClick={(e) => { e.stopPropagation(); handleTranscribe(); }} title="Повторить" className="p-1 hover:text-primary"><RotateCcw className="w-3 h-3" /></button>
@@ -131,7 +131,7 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onForward, is
                        onClick={() => !transcription ? handleTranscribe() : setIsTranscriptionVisible(true)} 
                        disabled={isTranscribing}
                        variant="ghost" 
-                       className="w-full h-9 rounded-xl bg-white/5 text-[9px] font-black uppercase tracking-widest gap-2"
+                       className="w-full h-9 rounded-xl bg-white/5 text-[9px] font-black uppercase tracking-widest gap-2 transition-all hover:bg-white/10"
                      >
                        {isTranscribing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : transcription ? <><Eye className="w-3.5 h-3.5" /> Показать текст</> : <><Wand2 className="w-3.5 h-3.5 text-primary" /> Расшифровать</>}
                      </Button>
