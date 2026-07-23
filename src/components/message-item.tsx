@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, memo, useMemo } from 'react';
@@ -22,7 +23,8 @@ import { transcribeVoice } from '@/ai/flows/voice-to-text-flow';
 const COMMON_REACTIONS = ['❤️', '🔥', '👍', '😂', '😮', '😢', '💯'];
 
 /**
- * MESSAGE ITEM V77.0.0 «REACTIONS RESTORED»
+ * MESSAGE ITEM V78.0.0 «NEURAL PRECISION»
+ * Исправлены кнопки управления ИИ-расшифровкой.
  */
 export const MessageItem = memo(({ message, isMe, chatId, onReply, onForward, isAdmin = false, isGroup = false, highlight = false, viewerProfile }: any) => {
   const { user } = useUser();
@@ -110,7 +112,7 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onForward, is
                       <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full bg-white/10 shrink-0"><Play className="w-5 h-5 fill-current" /></Button>
                       <div className="flex-1 h-1 bg-white/10 rounded-full overflow-hidden"><div className="h-full bg-white/40 w-1/4" /></div>
                       <span className="text-[10px] font-bold opacity-60">
-                        {message.metadata?.duration ? `${Math.floor(message.metadata.duration / 60)}:${(message.metadata.duration % 60).toString().padStart(2, '0')}` : '0:00'}
+                        {message.metadata?.duration ? `${Math.floor(message.metadata.duration / 60)}:${(message.metadata.duration % 60).toString().padStart(2, '0')}` : '0:01'}
                       </span>
                    </div>
                    
@@ -118,8 +120,8 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onForward, is
                      <div className="bg-black/10 p-3 rounded-2xl border border-white/5 relative group/t">
                         <p className="text-[12px] italic text-white/80 leading-relaxed pr-8">{transcription}</p>
                         <div className="absolute top-2 right-2 flex flex-col gap-1 opacity-0 group-hover/t:opacity-100 transition-opacity">
-                           <button onClick={() => handleTranscribe()} className="p-1 hover:text-primary"><RotateCcw className="w-3 h-3" /></button>
-                           <button onClick={() => setIsTranscriptionVisible(false)} className="p-1 hover:text-white"><EyeOff className="w-3 h-3" /></button>
+                           <button onClick={() => handleTranscribe()} title="Повторить" className="p-1 hover:text-primary"><RotateCcw className="w-3 h-3" /></button>
+                           <button onClick={(e) => { e.stopPropagation(); setIsTranscriptionVisible(false); }} title="Скрыть" className="p-1 hover:text-white"><EyeOff className="w-3 h-3" /></button>
                         </div>
                      </div>
                    )}

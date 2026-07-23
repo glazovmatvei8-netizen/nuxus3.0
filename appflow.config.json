@@ -1,0 +1,12 @@
+
+{
+  "apps": [
+    {
+      "id": "nuxus-kernel-v78",
+      "root": ".",
+      "dependencyInstallCommand": "npm install",
+      "buildCommand": "npm run build",
+      "webDir": "out"
+    }
+  ]
+}

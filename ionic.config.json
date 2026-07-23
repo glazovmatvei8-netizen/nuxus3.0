@@ -1,0 +1,8 @@
+
+{
+  "name": "Nuxus",
+  "integrations": {
+    "capacitor": {}
+  },
+  "type": "custom"
+}

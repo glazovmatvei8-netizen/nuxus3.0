@@ -2,7 +2,7 @@
 "use server"
 /**
  * @fileOverview A Genkit flow for transcribing voice messages to text.
- * V5.9.0: Ultra-sensitive mode for short and quiet signals.
+ * V78.0.0: Ultra-sensitive mode for short and quiet signals.
  */
 
 import { ai } from '@/ai/genkit';
@@ -24,7 +24,7 @@ export type VoiceToTextOutput = z.infer<typeof VoiceToTextOutputSchema>;
 
 /**
  * Transcribes voice messages precisely using AI.
- * Updated V5.9.0: Enhanced for 1-2 second clips.
+ * Updated V78.0.0: Extreme sensitivity for 1-second signals.
  */
 export async function transcribeVoice(input: VoiceToTextInput): Promise<VoiceToTextOutput> {
   return voiceToTextFlow(input);
@@ -35,14 +35,14 @@ const voiceToTextPrompt = ai.definePrompt({
   input: { schema: VoiceToTextInputSchema },
   output: { schema: VoiceToTextOutputSchema },
   prompt: `You are the neural heart of Nuxus Kernel. 
-Task: Convert audio to text with ABSOLUTE SENSITIVITY.
+Task: Convert audio to text with MAXIMUM SENSITIVITY.
 
 STRICT RULES:
-1. Even if the clip is 1 second, try to hear: "Да", "Нет", "Ок", "Чё".
-2. If there is even a faint whisper, transcribe it.
-3. Ignore static noise but DON'T ignore quiet human speech.
-4. If you hear absolutely nothing human, return "[Сигнал не распознан]".
-5. Only return the text, no explanations.
+1. Even if the clip is only 0.5 - 1 second, extract the meaning (e.g., "Да", "Нет", "Привет", "Ок").
+2. Listen through the silence and static noise. 
+3. If human speech is present, return ONLY the text.
+4. If there is absolutely zero human speech, return "[Сигнал не распознан]".
+5. Don't add your own comments. Just transcription.
 
 Audio Signal: {{media url=audioDataUri}}`,
 });
@@ -57,13 +57,13 @@ const voiceToTextFlow = ai.defineFlow(
     try {
       const { output } = await voiceToTextPrompt(input);
       
-      if (!output || !output.text.trim() || output.text === 'null' || output.text.includes('null')) {
+      if (!output || !output.text.trim() || output.text.toLowerCase().includes('null')) {
         throw new Error('Neural gap');
       }
 
       return output;
     } catch (e: any) {
-      console.error("Nuxus V5.9 Transcription Failure:", e.message || e);
+      console.error("Nuxus V78.0 Transcription Failure:", e.message || e);
       return { text: "[Сигнал не распознан]" };
     }
   }

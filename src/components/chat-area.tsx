@@ -21,12 +21,9 @@ import { formatDisplayName, cn, compressImage, encryptSignal, isGlobalAdmin, dec
 import type { Message, User as UserType, Chat } from '@/lib/types';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { useToast } from '@/hooks/use-toast';
-import { suggestMessageDraft } from '@/ai/flows/ai-message-drafting-flow';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { isToday, isYesterday, format } from 'date-fns';
-import { ru } from 'date-fns/locale';
 
-const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, isPremium, replyTo, onCancelReply, onOpenProRecorder, messages, participantIds, isGroup }: any) => {
+const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, isPremium, replyTo, onCancelReply, messages, participantIds, isGroup }: any) => {
   const { localDrafts, setLocalDrafts } = useAppState();
   
   const [messageInput, setMessageInput] = useState(localDrafts[currentChatId] || '');
@@ -69,14 +66,14 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
 
       recorder.onstop = async () => {
         const blob = new Blob(chunksRef.current, { type: 'audio/webm;codecs=opus' });
-        // Рассчитываем точную длительность
-        const finalDur = Math.round((Date.now() - startTimeRef.current) / 1000);
+        // ТОЧНЫЙ ТАЙМЕР V78.0
+        const finalDur = Math.floor((Date.now() - startTimeRef.current) / 1000);
         
-        if (blob.size > 1000) {
+        if (blob.size > 500) { // Снижен порог для коротких сообщений
           const reader = new FileReader();
           reader.onloadend = () => {
             if (reader.result) {
-              onSendMessage(reader.result as string, 'audio', { duration: finalDur });
+              onSendMessage(reader.result as string, 'audio', { duration: Math.max(1, finalDur) });
             }
           };
           reader.readAsDataURL(blob);
@@ -93,9 +90,10 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
       setIsRecording(true);
       setRecordingDuration(0);
       
+      // ИСПРАВЛЕННЫЙ ТАЙМЕР
       timerIntervalRef.current = setInterval(() => {
-        setRecordingDuration(Math.round((Date.now() - startTimeRef.current) / 1000));
-      }, 1000);
+        setRecordingDuration(Math.floor((Date.now() - startTimeRef.current) / 1000));
+      }, 500); // Чаще обновление для плавности, но floor берет целые
     } catch (err) { }
   };
 
@@ -165,7 +163,7 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
                 <Button size="icon" variant="ghost" className="h-11 w-11 rounded-2xl bg-white/5 text-white/30" onClick={() => setRecorderMode(recorderMode === 'audio' ? 'video' : 'audio')}>
                   {recorderMode === 'audio' ? <VideoIcon className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
                 </Button>
-                <button className="h-11 w-11 rounded-2xl flex items-center justify-center transition-all bg-primary text-white active:scale-90" onPointerDown={() => recorderMode === 'audio' && startAudioRecording()} onPointerUp={() => recorderMode === 'audio' && stopAudioRecording()} onClick={() => recorderMode === 'video' && onOpenProRecorder()}>
+                <button className="h-11 w-11 rounded-2xl flex items-center justify-center transition-all bg-primary text-white active:scale-90" onPointerDown={() => recorderMode === 'audio' && startAudioRecording()} onPointerUp={() => recorderMode === 'audio' && stopAudioRecording()}>
                   {recorderMode === 'audio' ? <Mic className="w-5 h-5" /> : <Circle className="w-5 h-5 fill-current" />}
                 </button>
               </div>

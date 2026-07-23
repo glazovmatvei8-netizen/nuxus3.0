@@ -2,7 +2,7 @@
 import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
-  // output: 'export', // Раскомментировать только для локальной сборки IPA/APK
+  output: 'export', // АКТИВИРОВАНО ДЛЯ СБОРКИ APK/IPA
   typescript: {
     ignoreBuildErrors: true,
   },

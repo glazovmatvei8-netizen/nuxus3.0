@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useMemo, useEffect } from 'react';
@@ -22,15 +23,15 @@ import { format } from 'date-fns';
 import { ru } from 'date-fns/locale';
 
 /**
- * MISSION CONTROL V77.0.0
- * Полный функционал: Одобрение/Отказ заявок, Список узлов, Shield Audit и Терминал.
+ * MISSION CONTROL V78.0.0 «CLEAN NODES»
+ * Очистка списка от фантомов и улучшенный терминал.
  */
 export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const db = useFirestore();
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState('requests');
   const [userSearch, setUserSearch] = useState('');
-  const [terminalLines, setTerminalLines] = useState<string[]>(["Nuxus Aegis Console v77.0.0", "Security Protocol: ACTIVE"]);
+  const [terminalLines, setTerminalLines] = useState<string[]>(["Nuxus Aegis Console v78.0.0", "Security Protocol: ACTIVE"]);
   const [terminalInput, setTerminalInput] = useState('');
   const [isShieldActive, setIsShieldActive] = useState(false);
   
@@ -52,14 +53,16 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
 
   const stats = useMemo(() => {
     if (!allUsers) return { total: 0, valid: 0, premium: 0 };
-    const valid = allUsers.filter(u => u.name && u.name !== 'User').length;
+    // ФИЛЬТР ФАНТОМОВ: Имя должно существовать и не быть дефолтным
+    const valid = allUsers.filter(u => u.name && u.name !== 'User' && u.username).length;
     const premium = allUsers.filter(u => u.isPremium).length;
     return { total: allUsers.length, valid, premium };
   }, [allUsers]);
 
   const filteredUsers = useMemo(() => {
     if (!allUsers) return [];
-    let list = allUsers.filter(u => u.name && u.name !== 'User');
+    // СТРОГИЙ СПИСОК РЕАЛЬНЫХ УЗЛОВ
+    let list = allUsers.filter(u => u.name && u.name !== 'User' && u.username);
     if (userSearch.trim()) {
       const s = userSearch.toLowerCase();
       list = list.filter(u => u.name?.toLowerCase().includes(s) || u.username?.toLowerCase().includes(s));
@@ -72,8 +75,10 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
     const cmd = terminalInput.trim().toLowerCase();
     if (!cmd) return;
     let res = "";
-    if (cmd === 'status') res = "Kernel: STABLE | Aegis: ACTIVE | Nodes: 43/47";
+    if (cmd === 'status') res = "Kernel: STABLE | Aegis: ACTIVE | Nodes: " + stats.valid + "/" + stats.total;
     else if (cmd === 'audit') { handleStartAudit(); return; }
+    else if (cmd === 'nodes') res = `Valid: ${stats.valid}, Premium: ${stats.premium}, Ghost: ${stats.total - stats.valid}`;
+    else if (cmd === 'version') res = "Nuxus Kernel v78.0.0 (Neural Pulse)";
     else if (cmd === 'clear') { setTerminalLines([]); setTerminalInput(''); return; }
     else res = `Signal not recognized: ${cmd}`;
     setTerminalLines(prev => [...prev, `$ ${terminalInput}`, res]);
@@ -126,14 +131,14 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
               </div>
               <div className="flex flex-col text-left">
                 <DialogTitle className="text-3xl font-black uppercase italic text-white tracking-tighter">MISSION CONTROL</DialogTitle>
-                <DialogDescription className="text-[10px] font-black uppercase text-primary/60 mt-1">Kernel V77.0.0 Aegis Active</DialogDescription>
+                <DialogDescription className="text-[10px] font-black uppercase text-primary/60 mt-1">Kernel V78.0.0 Aegis Active</DialogDescription>
               </div>
             </div>
             <div className="bg-black/40 border border-white/5 px-6 py-3 rounded-2xl flex items-center gap-4">
                <Activity className="w-4 h-4 text-green-500" />
                <div className="flex flex-col">
                  <span className="text-xs font-black text-white">{stats.valid} / {stats.total}</span>
-                 <span className="text-[7px] font-black text-white/20 uppercase tracking-widest">Active Signals</span>
+                 <span className="text-[7px] font-black text-white/20 uppercase tracking-widest">Valid Nodes</span>
                </div>
             </div>
           </div>
@@ -175,7 +180,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
               <TabsContent value="users" className="m-0 space-y-6">
                  <div className="relative">
                     <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/20" />
-                    <Input placeholder="Поиск активного узла..." value={userSearch} onChange={e => setUserSearch(e.target.value)} className="h-14 bg-white/5 border-white/10 rounded-2xl pl-12 font-bold" />
+                    <Input placeholder="Поиск реального узла..." value={userSearch} onChange={e => setUserSearch(e.target.value)} className="h-14 bg-white/5 border-white/10 rounded-2xl pl-12 font-bold" />
                  </div>
                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {filteredUsers.map(u => (
