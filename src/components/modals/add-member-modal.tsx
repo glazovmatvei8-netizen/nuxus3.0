@@ -1,11 +1,10 @@
-
 "use client"
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { useFirestore, useCollection, useMemoFirebase, useUser, useDoc } from '@/firebase';
+import { useFirestore, useCollection, useUser, useDoc } from '@/firebase';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Search, UserPlus, Loader2, Contact, ShieldAlert, Lock, Star, Phone } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -14,13 +13,14 @@ import { collection, query, doc, arrayUnion, limit } from 'firebase/firestore';
 import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import type { User } from '@/lib/types';
 import { formatDisplayName, isUserPremium } from '@/lib/utils';
+import { UserAvatar } from '../user-avatar';
 
 interface AddMemberModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   chatId: string;
   currentParticipantIds: string[];
-  isCallContext?: boolean; // Новый флаг для контекста звонка
+  isCallContext?: boolean; 
 }
 
 export function AddMemberModal({ open, onOpenChange, chatId, currentParticipantIds, isCallContext }: AddMemberModalProps) {
@@ -30,10 +30,10 @@ export function AddMemberModal({ open, onOpenChange, chatId, currentParticipantI
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
-  const currentUserRef = useMemoFirebase(() => (!db || !user) ? null : doc(db, 'users', user.uid), [db, user]);
+  const currentUserRef = useMemo(() => (!db || !user) ? null : doc(db, 'users', user.uid), [db, user?.uid]);
   const { data: currentUserProfile } = useDoc<User>(currentUserRef);
 
-  const usersQuery = useMemoFirebase(() => {
+  const usersQuery = useMemo(() => {
     if (!db || search.length < 2) return null;
     return query(collection(db, 'users'), limit(50));
   }, [db, search]);
@@ -75,7 +75,6 @@ export function AddMemberModal({ open, onOpenChange, chatId, currentParticipantI
 
     setIsLoading(true);
     try {
-      // Если это контекст звонка, обновляем коллекцию calls
       const collectionName = isCallContext ? 'calls' : 'chats';
       const ref = doc(db, collectionName, chatId);
       

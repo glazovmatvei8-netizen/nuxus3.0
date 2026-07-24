@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useEffect, useMemo } from 'react';
@@ -13,7 +12,7 @@ import GamesView from './games-view';
 import DiscoveryView from './discovery-view';
 import { useAppState } from '@/lib/store';
 import { cn, isUserPremium } from '@/lib/utils';
-import { useFirestore, useUser, useCollection, useMemoFirebase, useDoc } from '@/firebase';
+import { useFirestore, useUser, useCollection, useDoc } from '@/firebase';
 import { collection, query, where, limit, doc } from 'firebase/firestore';
 import { CallOverlay } from './modals/call-overlay';
 import { NotificationListener } from './notification-listener';
@@ -41,11 +40,11 @@ export default function ChatMain() {
   const db = useFirestore();
   const { t } = useTranslations();
 
-  const userRef = useMemoFirebase(() => (!db || !user) ? null : doc(db, 'users', user.uid), [db, user]);
+  const userRef = useMemo(() => (!db || !user) ? null : doc(db, 'users', user.uid), [db, user?.uid]);
   const { data: profile } = useDoc<UserType>(userRef);
   const isPremium = useMemo(() => isUserPremium(profile), [profile]);
 
-  const incomingCallsQuery = useMemoFirebase(() => {
+  const incomingCallsQuery = useMemo(() => {
     if (!db || !user) return null;
     return query(
       collection(db, 'calls'),
@@ -53,7 +52,7 @@ export default function ChatMain() {
       where('status', '==', 'calling'),
       limit(1)
     );
-  }, [db, user]);
+  }, [db, user?.uid]);
 
   const { data: incomingCalls } = useCollection<Call>(incomingCallsQuery);
 

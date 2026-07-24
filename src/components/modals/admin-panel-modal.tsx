@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useMemo, useEffect } from 'react';
@@ -9,7 +8,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Switch } from '@/components/ui/switch';
 import { Progress } from '@/components/ui/progress';
-import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
+import { useFirestore, useCollection } from '@/firebase';
 import { collection, query, doc, limit, updateDoc, writeBatch, increment, orderBy } from 'firebase/firestore';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
@@ -39,13 +38,13 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
   const [auditProgress, setUpdateAuditProgress] = useState(0);
   const [auditResults, setAuditResults] = useState<{suspiciousNodes: number, safeNodes: number} | null>(null);
 
-  const topUpRequestsQuery = useMemoFirebase(() => {
+  const topUpRequestsQuery = useMemo(() => {
     if (!db) return null;
     return query(collection(db, 'topUpRequests'), orderBy('createdAt', 'desc'), limit(50));
   }, [db]);
   const { data: requests } = useCollection<TopUpRequest>(topUpRequestsQuery);
 
-  const usersQuery = useMemoFirebase(() => {
+  const usersQuery = useMemo(() => {
     if (!db) return null;
     return query(collection(db, 'users'), limit(500));
   }, [db]);

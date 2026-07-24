@@ -32,22 +32,17 @@ export interface InternalQuery extends Query<DocumentData> {
 
 /**
  * React hook to subscribe to a Firestore collection or query in real-time.
- * V5.8.0: Removed property check to prevent mobile crashes.
  */
 export function useCollection<T = any>(
     memoizedTargetRefOrQuery: (CollectionReference<DocumentData> | Query<DocumentData>) | null | undefined,
 ): UseCollectionResult<T> {
-  type ResultItemType = WithId<T>;
-  type StateDataType = ResultItemType[] | null;
-
-  const [data, setData] = useState<StateDataType>(null);
+  const [data, setData] = useState<WithId<T>[] | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<FirestoreError | Error | null>(null);
 
   useEffect(() => {
-    setData(null);
-
     if (!memoizedTargetRefOrQuery) {
+      setData(null);
       setIsLoading(false);
       setError(null);
       return;
@@ -60,32 +55,19 @@ export function useCollection<T = any>(
       memoizedTargetRefOrQuery,
       { includeMetadataChanges: true },
       (snapshot: QuerySnapshot<DocumentData>) => {
-        const results: ResultItemType[] = [];
-        for (const doc of snapshot.docs) {
-          results.push({ 
-            ...(doc.data() as T), 
-            id: doc.id,
-            isPending: doc.metadata.hasPendingWrites
-          });
-        }
+        const results: WithId<T>[] = snapshot.docs.map(doc => ({ 
+          ...(doc.data() as T), 
+          id: doc.id,
+          isPending: doc.metadata.hasPendingWrites
+        }));
         setData(results);
         setError(null);
         setIsLoading(false);
       },
       (error: FirestoreError) => {
-        const path: string =
-          memoizedTargetRefOrQuery.type === 'collection'
-            ? (memoizedTargetRefOrQuery as CollectionReference).path
-            : (memoizedTargetRefOrQuery as unknown as InternalQuery)._query.path.canonicalString()
-
-        const contextualError = new FirestorePermissionError({
-          operation: 'list',
-          path,
-        })
-
-        setError(contextualError)
-        setIsLoading(false)
-        errorEmitter.emit('permission-error', contextualError);
+        console.error("Firestore UseCollection Error:", error);
+        setError(error);
+        setIsLoading(false);
       }
     );
 

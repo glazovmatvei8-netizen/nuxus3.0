@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useMemo } from 'react';
@@ -9,11 +8,11 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { 
   MessageCircle, Star, Calendar, Phone, Video, Gift, Zap, Globe, ShieldCheck, Cpu, Sparkles, UserCheck, UserPlus
 } from 'lucide-react';
-import { useFirestore, useUser, useDoc, useMemoFirebase, useCollection } from '@/firebase';
+import { useFirestore, useUser, useDoc, useCollection } from '@/firebase';
 import { doc, query, collection, limit, getDocs, addDoc, where, orderBy, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { useAppState } from '@/lib/store';
-import { formatDisplayName, isUserPremium, formatLastSeen, cn, isGlobalAdmin } from '@/lib/utils';
+import { formatDisplayName, isUserPremium, formatLastSeen, decryptSignal, cn, isGlobalAdmin } from '@/lib/utils';
 import type { User, ReceivedGift } from '@/lib/types';
 import { format } from 'date-fns';
 import { ru } from 'date-fns/locale';
@@ -31,13 +30,13 @@ export function UserProfileModal() {
 
   const [isGiftModalOpen, setIsGiftModalOpen] = useState(false);
 
-  const currentUserRef = useMemoFirebase(() => (!db || !currentUser) ? null : doc(db, 'users', currentUser.uid), [db, currentUser]);
+  const currentUserRef = useMemo(() => (!db || !currentUser) ? null : doc(db, 'users', currentUser.uid), [db, currentUser?.uid]);
   const { data: currentUserProfile } = useDoc<User>(currentUserRef);
 
-  const targetUserRef = useMemoFirebase(() => (!db || !inspectedUserId) ? null : doc(db, 'users', inspectedUserId), [db, inspectedUserId]);
+  const targetUserRef = useMemo(() => (!db || !inspectedUserId) ? null : doc(db, 'users', inspectedUserId), [db, inspectedUserId]);
   const { data: targetUser } = useDoc<User>(targetUserRef);
 
-  const giftsQuery = useMemoFirebase(() => {
+  const giftsQuery = useMemo(() => {
     if (!db || !inspectedUserId) return null;
     return query(collection(db, 'users', inspectedUserId, 'receivedGifts'), limit(20));
   }, [db, inspectedUserId]);

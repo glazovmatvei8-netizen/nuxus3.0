@@ -1,7 +1,8 @@
 
 "use client"
 
-import { useUser, useFirestore, useDoc, useMemoFirebase, useAuth } from '@/firebase';
+import React, { useEffect, useState, useMemo } from 'react';
+import { useUser, useFirestore, useDoc, useAuth } from '@/firebase';
 import { useAppState } from '@/lib/store';
 import AuthScreen from '@/components/auth-screen';
 import ChatMain from '@/components/chat-main';
@@ -11,7 +12,6 @@ import type { User as UserType } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { signOut } from 'firebase/auth';
-import { useEffect, useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { isUserActuallyBanned } from '@/lib/utils';
 import { NuxusLogo } from '@/components/nuxus-logo';
@@ -39,7 +39,7 @@ export default function Home() {
     }
   }, []);
 
-  const userProfileRef = useMemoFirebase(() => {
+  const userProfileRef = useMemo(() => {
     if (!db || !user) return null;
     return doc(db, 'users', user.uid);
   }, [db, user]);
@@ -113,34 +113,6 @@ export default function Home() {
     });
   };
 
-  const tryBiometricAuth = () => {
-    const storedIdBase64 = localStorage.getItem('nuxus_biometric_id');
-    if (!storedIdBase64 || !navigator.credentials) return;
-
-    setIsVerifying(true);
-    try {
-      const challenge = crypto.getRandomValues(new Uint8Array(32));
-      const id = Uint8Array.from(atob(storedIdBase64), c => c.charCodeAt(0));
-
-      navigator.credentials.get({
-        publicKey: {
-          challenge,
-          allowCredentials: [{ id, type: 'public-key', transports: ['internal'] }],
-          userVerification: "required"
-        }
-      }).then((assertion) => {
-        if (assertion) {
-          setIs2FAVerified(true);
-          toast({ title: "Личность подтверждена" });
-        }
-      }).catch((e) => {
-        console.warn("Nuxus Auth Reject:", e);
-      }).finally(() => setIsVerifying(false));
-    } catch (e) {
-      setIsVerifying(false);
-    }
-  };
-
   if (!mounted) return null;
 
   if (isUserLoading || (user && isProfileLoading)) {
@@ -205,20 +177,8 @@ export default function Home() {
               onKeyDown={e => e.key === 'Enter' && handleVerify2FA()}
             />
             <div className="space-y-4">
-              <Button onClick={handleVerify2FA} className="w-full h-14 rounded-2xl bg-primary text-white font-black uppercase italic tracking-widest shadow-2xl shadow-primary/30 active:scale-95 transition-all">
-                Разблокировать
-              </Button>
-              <div className="grid grid-cols-1 gap-3">
-                 {profile?.settings?.biometricEnabled && (
-                   <Button variant="ghost" onClick={tryBiometricAuth} disabled={isVerifying} className="w-full h-12 rounded-xl text-primary font-black uppercase text-[10px] tracking-widest gap-2 bg-white/5 border border-white/5">
-                     {isVerifying ? <Loader2 className="w-4 h-4 animate-spin" /> : <ShieldCheck className="w-4 h-4" />} 
-                     Face ID / Touch ID
-                   </Button>
-                 )}
-                 <Button variant="ghost" onClick={handleSignOutFrom2FA} className="w-full h-12 rounded-xl text-red-500/60 hover:text-red-500 font-black uppercase text-[10px] tracking-widest gap-2 bg-white/5 border border-white/5">
-                    <LogOut className="w-4 h-4" /> Выйти из аккаунта
-                 </Button>
-              </div>
+              <Button onClick={handleVerify2FA} className="w-full h-14 rounded-2xl bg-primary text-white font-black uppercase italic tracking-widest shadow-2xl shadow-primary/30 active:scale-95 transition-all">Разблокировать</Button>
+              <Button variant="ghost" onClick={handleSignOutFrom2FA} className="w-full h-12 rounded-xl text-red-500/60 hover:text-red-500 font-black uppercase text-[10px] tracking-widest gap-2 bg-white/5 border border-white/5"><LogOut className="w-4 h-4" /> Выйти из аккаунта</Button>
             </div>
           </div>
         </div>

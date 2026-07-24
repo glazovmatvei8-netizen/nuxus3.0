@@ -1,7 +1,7 @@
 
 "use client"
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
 import type { Message, Story, Track } from './types';
 
 export type MainView = 'chats' | 'contacts' | 'calls' | 'profile' | 'archive' | 'music' | 'wallet' | 'games' | 'discovery';
@@ -43,6 +43,41 @@ interface AppState {
 
 export const AppContext = createContext<AppState | undefined>(undefined);
 
+const SAFE_FALLBACK: AppState = {
+  activeAccountIndex: 0,
+  localDrafts: {},
+  is2FAVerified: false,
+  isSettingsOpen: false,
+  activeView: 'chats',
+  settingsTab: 'profile',
+  currentChatId: null,
+  setCurrentChatId: () => {},
+  setActiveView: () => {},
+  setLocalDrafts: () => {},
+  setIs2FAVerified: () => {},
+  setIsSettingsOpen: () => {},
+  setSettingsTab: () => {},
+  setActiveAccountIndex: () => {},
+  forwardingMessage: null,
+  setForwardingMessage: () => {},
+  activeCallId: null,
+  setActiveCallId: () => {},
+  isSearchOpen: false,
+  setIsSearchOpen: () => {},
+  inspectedUserId: null,
+  setInspectedUserId: () => {},
+  isLegalOpen: false,
+  setIsLegalOpen: () => {},
+  currentTrack: null,
+  setCurrentTrack: () => {},
+  isPlayingMusic: false,
+  setIsPlayingMusic: () => {},
+  isCreateStoryOpen: false,
+  setIsCreateStoryOpen: () => {},
+  storiesToView: null,
+  setStoriesToView: () => {}
+};
+
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const [currentChatId, setCurrentChatId] = useState<string | null>(null);
   const [activeView, setActiveView] = useState<MainView>('chats');
@@ -75,7 +110,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [isCreateStoryOpen, setIsCreateStoryOpen] = useState(false);
   const [storiesToView, setStoriesToView] = useState<Story[] | null>(null);
 
-  const value = {
+  const value = useMemo(() => ({
     currentChatId, setCurrentChatId,
     activeView, setActiveView,
     forwardingMessage, setForwardingMessage,
@@ -92,7 +127,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     isPlayingMusic, setIsPlayingMusic,
     isCreateStoryOpen, setIsCreateStoryOpen,
     storiesToView, setStoriesToView
-  };
+  }), [
+    currentChatId, activeView, forwardingMessage, activeCallId, localDrafts,
+    is2FAVerified, isSettingsOpen, isSearchOpen, settingsTab,
+    activeAccountIndex, isLegalOpen, inspectedUserId, currentTrack,
+    isPlayingMusic, isCreateStoryOpen, storiesToView
+  ]);
 
   return (
     <AppContext.Provider value={value}>
@@ -103,42 +143,5 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
 export const useAppState = (): AppState => {
   const context = useContext(AppContext);
-  if (context === undefined) {
-    // Fallback safe functions to avoid "undefined is not a function"
-    return {
-      activeAccountIndex: 0,
-      localDrafts: {},
-      is2FAVerified: false,
-      isSettingsOpen: false,
-      activeView: 'chats',
-      settingsTab: 'profile',
-      currentChatId: null,
-      setCurrentChatId: () => {},
-      setActiveView: () => {},
-      setLocalDrafts: () => {},
-      setIs2FAVerified: () => {},
-      setIsSettingsOpen: () => {},
-      setSettingsTab: () => {},
-      setActiveAccountIndex: () => {},
-      forwardingMessage: null,
-      setForwardingMessage: () => {},
-      activeCallId: null,
-      setActiveCallId: () => {},
-      isSearchOpen: false,
-      setIsSearchOpen: () => {},
-      inspectedUserId: null,
-      setInspectedUserId: () => {},
-      isLegalOpen: false,
-      setIsLegalOpen: () => {},
-      currentTrack: null,
-      setCurrentTrack: () => {},
-      isPlayingMusic: false,
-      setIsPlayingMusic: () => {},
-      isCreateStoryOpen: false,
-      setIsCreateStoryOpen: () => {},
-      storiesToView: null,
-      setStoriesToView: () => {}
-    } as AppState;
-  }
-  return context;
+  return context || SAFE_FALLBACK;
 };

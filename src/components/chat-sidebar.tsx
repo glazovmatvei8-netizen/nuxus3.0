@@ -12,7 +12,7 @@ import { CreateChatModal } from './modals/create-chat-modal';
 import { AdminPanelModal } from './modals/admin-panel-modal';
 import { StoriesBar } from './stories-bar';
 import type { User as UserType, Message, Chat } from '@/lib/types';
-import { useFirestore, useUser, useCollection, useMemoFirebase, useDoc } from '@/firebase';
+import { useFirestore, useUser, useCollection, useDoc } from '@/firebase';
 import { collection, query, where, doc, limit, orderBy, updateDoc, arrayUnion, arrayRemove, deleteDoc, setDoc, getDoc } from 'firebase/firestore';
 import { formatDisplayName, cn, isGlobalAdmin, decryptSignal, isUserPremium } from '@/lib/utils';
 import { format } from 'date-fns';
@@ -59,10 +59,10 @@ const ChatListItem = memo(({
   const isVerticalScroll = useRef(false);
   const directionDecided = useRef(false);
 
-  const userProfileRef = useMemoFirebase(() => (!db || !otherId) ? null : doc(db, 'users', otherId), [db, otherId]);
+  const userProfileRef = useMemo(() => (!db || !otherId) ? null : doc(db, 'users', otherId), [db, otherId]);
   const { data: otherProfile } = useDoc<UserType>(userProfileRef);
 
-  const lastMessageQuery = useMemoFirebase(() => {
+  const lastMessageQuery = useMemo(() => {
     if (!db || !chat.id) return null;
     return query(collection(db, 'chats', chat.id, 'messages'), orderBy('sentAt', 'desc'), limit(1));
   }, [db, chat.id]);
@@ -263,7 +263,7 @@ export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?:
     if (saved) setSavedAccounts(JSON.parse(saved));
   }, []);
 
-  const userProfileRef = useMemoFirebase(() => (!db || !user) ? null : doc(db, 'users', user.uid), [db, user]);
+  const userProfileRef = useMemo(() => (!db || !user) ? null : doc(db, 'users', user.uid), [db, user?.uid]);
   const { data: currentUserProfile } = useDoc<UserType>(userProfileRef);
 
   useEffect(() => {
@@ -279,7 +279,7 @@ export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?:
       localStorage.setItem('nuxus_multi_accounts', JSON.stringify(accounts));
       setSavedAccounts(accounts);
     }
-  }, [user, currentUserProfile, activeAccountIndex]);
+  }, [user?.uid, currentUserProfile, activeAccountIndex]);
 
   const handleSwitchAccount = (index: number) => {
     if (index === activeAccountIndex) return;
@@ -288,11 +288,9 @@ export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?:
   };
 
   const handleAddAccount = () => {
-    // Находим первый пустой слот (от 0 до 4)
     const slots = [0, 1, 2, 3, 4];
     const nextSlot = slots.find(s => !savedAccounts[s]);
     if (nextSlot !== undefined) {
-      // ПЕРЕКЛЮЧАЕМ ИНДЕКС: Firebase Client Provider подставит новый изолированный инстанс
       setActiveAccountIndex(nextSlot);
       setCurrentChatId(null);
       if (window.navigator && window.navigator.vibrate) window.navigator.vibrate(20);
@@ -307,10 +305,10 @@ export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?:
     if (index === activeAccountIndex) setActiveAccountIndex(0);
   };
 
-  const chatsQuery = useMemoFirebase(() => {
+  const chatsQuery = useMemo(() => {
     if (!db || !user) return null;
     return query(collection(db, 'chats'), where('participantIds', 'array-contains', user.uid));
-  }, [db, user]);
+  }, [db, user?.uid]);
   const { data: chats } = useCollection<Chat>(chatsQuery);
 
   const handlePinToggle = async (chatId: string) => {
@@ -373,7 +371,6 @@ export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?:
   }, [chats, activeTab, isArchiveView, currentUserProfile?.pinnedChatIds]);
 
   const accsList = Object.entries(savedAccounts).map(([idx, data]) => ({ index: parseInt(idx), ...data }));
-  // ПРОВЕРКА ЛИМИТОВ: 5 если есть хоть один Premium, иначе 3
   const hasPremiumAnywhere = accsList.some(a => a.isPremium);
   const accLimit = hasPremiumAnywhere ? 5 : 3;
 

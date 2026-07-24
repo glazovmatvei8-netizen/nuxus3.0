@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState, useMemo } from 'react';
-import { useUser, useFirestore, useDoc, useMemoFirebase, useCollection } from '@/firebase';
+import { useUser, useFirestore, useDoc, useCollection } from '@/firebase';
 import { doc, query, collection, limit, writeBatch, increment } from 'firebase/firestore';
 import { UserAvatar } from '@/components/user-avatar';
 import { Button } from '@/components/ui/button';
@@ -23,7 +23,7 @@ import Link from 'next/link';
 
 /**
  * PROFILE VIEW V5.8.0 «GLOBAL SOVEREIGNTY»
- * ИСПРАВЛЕНО: Исправлен синтаксис импорта nuxusVersions.
+ * ИСПРАВЛЕНО: Удален useMemoFirebase, заменен на useMemo.
  */
 export default function ProfileView() {
   const { user } = useUser();
@@ -36,19 +36,19 @@ export default function ProfileView() {
   const [isSelling, setIsSelling] = useState(false);
   const [isTradeOpen, setIsTradeOpen] = useState(false);
   
-  const userProfileRef = useMemoFirebase(() => (!db || !user) ? null : doc(db!, 'users', user.uid), [db, user]);
+  const userProfileRef = useMemo(() => (!db || !user) ? null : doc(db, 'users', user.uid), [db, user?.uid]);
   const { data: profile } = useDoc<User>(userProfileRef);
 
-  const giftsQuery = useMemoFirebase(() => {
+  const giftsQuery = useMemo(() => {
     if (!db || !user) return null;
     return query(collection(db, 'users', user.uid, 'receivedGifts'), limit(24));
-  }, [db, user]);
+  }, [db, user?.uid]);
   const { data: gifts } = useCollection<ReceivedGift>(giftsQuery);
 
   const inviteLink = useMemo(() => {
     if (typeof window === 'undefined' || !user) return '';
     return `${window.location.origin}/?ref=${user.uid}`;
-  }, [user]);
+  }, [user?.uid]);
 
   const copyRefLink = () => {
     if (!inviteLink) return;

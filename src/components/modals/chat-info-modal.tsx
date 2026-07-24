@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useMemo, memo } from 'react';
@@ -16,7 +15,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useUser, useFirestore, useDoc, useMemoFirebase, useCollection } from '@/firebase';
+import { useUser, useFirestore, useDoc, useCollection } from '@/firebase';
 import { doc, updateDoc, arrayUnion, query, collection, limit, orderBy, getDocs, arrayRemove, addDoc } from 'firebase/firestore';
 import { deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { useToast } from '@/hooks/use-toast';
@@ -74,7 +73,7 @@ const ParticipantItem = memo(({
   onSetTitle
 }: any) => {
   const db = useFirestore();
-  const userRef = useMemoFirebase(() => (!db ? null : doc(db, 'users', userId)), [db, userId]);
+  const userRef = useMemo(() => (!db ? null : doc(db, 'users', userId)), [db, userId]);
   const { data: profile } = useDoc<User>(userRef);
   
   return (
@@ -141,13 +140,13 @@ export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onO
   const [aiSummary, setAiSummary] = useState<string | null>(null);
   const [titleModalUser, setTitleModalUser] = useState<string | null>(null);
 
-  const userProfileRef = useMemoFirebase(() => (!db || !user) ? null : doc(db, 'users', user.uid), [db, user]);
+  const userProfileRef = useMemo(() => (!db || !user) ? null : doc(db, 'users', user.uid), [db, user?.uid]);
   const { data: currentUserProfile } = useDoc<User>(userProfileRef);
   
-  const otherUserProfileRef = useMemoFirebase(() => (!db || !otherId) ? null : doc(db, 'users', otherId), [db, otherId]);
+  const otherUserProfileRef = useMemo(() => (!db || !otherId) ? null : doc(db, 'users', otherId), [db, otherId]);
   const { data: otherUserProfile } = useDoc<User>(otherUserProfileRef);
 
-  const giftsQuery = useMemoFirebase(() => {
+  const giftsQuery = useMemo(() => {
     if (!db || !otherId) return null;
     return query(collection(db, 'users', otherId, 'receivedGifts'), limit(20));
   }, [db, otherId]);
@@ -156,10 +155,10 @@ export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onO
   const amIAdmin = useMemo(() => {
     if (!user || !chat) return false;
     return chat.ownerId === user.uid || chat.adminIds?.includes(user.uid) || isGlobalAdmin(currentUserProfile);
-  }, [chat, user, currentUserProfile]);
+  }, [chat, user?.uid, currentUserProfile]);
 
   const isPremium = useMemo(() => isUserPremium(currentUserProfile), [currentUserProfile]);
-  const isContact = useMemo(() => otherId && currentUserProfile?.contactIds?.includes(otherId), [otherId, currentUserProfile]);
+  const isContact = useMemo(() => otherId && currentUserProfile?.contactIds?.includes(otherId), [otherId, currentUserProfile?.contactIds]);
 
   const handleAiSummary = async () => {
     if (!isPremium) { toast({ title: "Elite Only", variant: "destructive" }); return; }

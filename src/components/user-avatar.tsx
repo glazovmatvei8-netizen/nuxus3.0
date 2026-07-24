@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState, memo, useMemo } from 'react';
-import { useDoc, useMemoFirebase, useFirestore } from '@/firebase';
+import { useDoc, useFirestore } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { cn, formatDisplayName, isUserPremium } from '@/lib/utils';
@@ -17,13 +17,14 @@ interface UserAvatarProps {
   fallbackClassName?: string;
   manualAvatarUrl?: string | null;
   showOnlineStatus?: boolean;
+  onClick?: () => void;
 }
 
 /**
  * USER AVATAR V71.0.0 «THERMAL BALANCE»
  * Оптимизированные анимации для предотвращения нагрева.
  */
-export const UserAvatar = memo(({ userId, className, fallbackName, fallbackClassName, manualAvatarUrl, showOnlineStatus = false }: UserAvatarProps) => {
+export const UserAvatar = memo(({ userId, className, fallbackName, fallbackClassName, manualAvatarUrl, showOnlineStatus = false, onClick }: UserAvatarProps) => {
   const db = useFirestore();
   const [imgError, setImgError] = useState(false);
   
@@ -33,7 +34,7 @@ export const UserAvatar = memo(({ userId, className, fallbackName, fallbackClass
     setImgError(false);
   }
 
-  const userRef = useMemoFirebase(() => {
+  const userRef = useMemo(() => {
     if (!db || !userId) return null;
     return doc(db, 'users', userId);
   }, [db, userId]);
@@ -67,7 +68,7 @@ export const UserAvatar = memo(({ userId, className, fallbackName, fallbackClass
   }, [profile?.lastSeen, isGhost]);
 
   return (
-    <div className={cn("relative inline-flex items-center justify-center shrink-0 rounded-full", className)}>
+    <div onClick={onClick} className={cn("relative inline-flex items-center justify-center shrink-0 rounded-full", className)}>
       {/* ОПТИМИЗАЦИЯ: Анимация замедлена до 30 секунд для охлаждения GPU */}
       {premium && (
         <div className="absolute inset-[-3px] rounded-full p-[1.5px] overflow-hidden z-0">

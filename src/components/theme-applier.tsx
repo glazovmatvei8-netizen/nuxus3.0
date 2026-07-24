@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect } from 'react';
-import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
+import { useEffect, useMemo } from 'react';
+import { useUser, useFirestore, useDoc } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import type { User } from '@/lib/types';
 import { isUserPremium } from '@/lib/utils';
@@ -14,7 +14,7 @@ export function ThemeApplier() {
   const { user } = useUser();
   const db = useFirestore();
 
-  const userRef = useMemoFirebase(() => (!db || !user) ? null : doc(db, 'users', user.uid), [db, user]);
+  const userRef = useMemo(() => (!db || !user) ? null : doc(db, 'users', user.uid), [db, user?.uid]);
   const { data: profile } = useDoc<User>(userRef);
 
   useEffect(() => {
