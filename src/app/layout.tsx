@@ -12,7 +12,6 @@ import { SpeedInsights } from "@vercel/speed-insights/next";
 import Script from 'next/script';
 import { OfflinePlaceholder } from '@/components/offline-placeholder';
 import { BiometricGate } from '@/components/biometric-gate';
-import { BrandStatusBadge } from '@/components/brand-status-badge';
 
 const font = Plus_Jakarta_Sans({
   subsets: ['latin'],
@@ -77,7 +76,6 @@ export default function RootLayout({
             <ThemeApplier />
             <AppIconApplier />
             <OfflinePlaceholder />
-            <BrandStatusBadge />
             <BiometricGate>
               {children}
             </BiometricGate>

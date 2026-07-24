@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Lock, Eye, EyeOff, User as UserIcon, ShieldCheck, Scale, Globe } from 'lucide-react';
+import { Loader2, Lock, Eye, EyeOff, User as UserIcon, ShieldCheck, Scale, Globe, Languages } from 'lucide-react';
 import { useAuth, useFirestore } from '@/firebase';
 import { 
   signInWithEmailAndPassword,
@@ -56,6 +56,7 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
   const { toast } = useToast();
   const { setIs2FAVerified, setIsLegalOpen } = useAppState();
   
+  const [langSelected, setLangSelected] = useState<string | null>(null);
   const [mode, setMode] = useState<'login' | 'register'>(initialMode);
   const [isLoading, setIsLoading] = useState(false);
   const [showPass, setShowPass] = useState(false);
@@ -75,7 +76,7 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
     if (!identifier.trim() || !db || !auth) return;
 
     if (mode === 'register' && !acceptedPolicy) {
-      toast({ title: "Ошибка", description: "Вы должны согласиться с Политикой конфиденциальности.", variant: "destructive" });
+      toast({ title: langSelected === 'ru' ? "Ошибка" : "Error", description: langSelected === 'ru' ? "Вы должны согласиться с Политикой конфиденциальности." : "You must agree to the Privacy Policy.", variant: "destructive" });
       return;
     }
 
@@ -84,8 +85,6 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
     setIsLoading(true);
     const idClean = identifier.trim().replace(/\D/g, '');
     
-    // Формируем финальный email/идентификатор
-    // Для регистрации всегда используем выбранный код страны
     const finalPhone = mode === 'register' ? `${countryCode.replace('+', '')}${idClean}` : idClean;
     const finalEmail = identifier.includes('@') ? identifier.trim() : `${finalPhone}@nuxus.chat`;
 
@@ -109,6 +108,7 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
           createdAt: new Date().toISOString(),
           balance: 0,
           settings: { 
+            language: langSelected || 'ru',
             theme: 'default', 
             appearance: 'dark', 
             bubbleStyle: 'default',
@@ -123,32 +123,76 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
       }
     } catch (e: any) {
       console.error(e);
-      toast({ title: "Ошибка", description: "Проверьте данные или соединение. Регистрация из РФ запрещена.", variant: "destructive" });
+      toast({ title: langSelected === 'ru' ? "Ошибка" : "Error", description: langSelected === 'ru' ? "Проверьте данные или соединение. Регистрация из РФ запрещена." : "Check your details or connection. Registration from RF is prohibited.", variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
   };
+
+  // 1. ШАГ ВЫБОРА ЯЗЫКА (STYLE TELEGRAM)
+  if (!langSelected) {
+    return (
+      <div className="h-[100dvh] w-full flex flex-col items-center justify-center bg-[#020203] relative overflow-hidden px-6">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(168,85,247,0.1)_0%,transparent_70%)]" />
+        
+        <div className="relative z-10 flex flex-col items-center gap-12 w-full max-w-sm text-center">
+           <div className="animate-in fade-in zoom-in-95 duration-1000">
+              <NuxusLogo size={140} />
+           </div>
+           
+           <div className="space-y-4 w-full">
+              <div className="flex items-center justify-center gap-3 mb-6">
+                 <Languages className="w-5 h-5 text-primary" />
+                 <h2 className="text-xl font-black uppercase italic tracking-widest text-white">Choose Language</h2>
+              </div>
+              
+              <Button 
+                onClick={() => setLangSelected('ru')}
+                className="w-full h-16 bg-primary text-white rounded-2xl font-black uppercase italic tracking-widest shadow-2xl active:scale-95 transition-all text-sm"
+              >
+                Продолжить на русском
+              </Button>
+              
+              <Button 
+                onClick={() => setLangSelected('en')}
+                variant="ghost"
+                className="w-full h-14 bg-white/5 text-white/60 hover:text-white rounded-2xl font-black uppercase tracking-widest transition-all text-[11px]"
+              >
+                Continue in English
+              </Button>
+           </div>
+           
+           <div className="opacity-20 flex flex-col items-center gap-2">
+              <ShieldCheck className="w-5 h-5 text-primary" />
+              <span className="text-[7px] font-black uppercase tracking-[0.6em]">Nuxus Kernel V5.8.0</span>
+           </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="h-[100dvh] w-full flex flex-col bg-[#020203] relative overflow-hidden">
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_-20%,rgba(168,85,247,0.15)_0%,transparent_50%)]" />
       <ScrollArea className="w-full h-full">
         <div className="min-h-full w-full flex flex-col items-center justify-center p-4 py-12 relative z-10">
-          <div className="mb-10"><NuxusLogo size={90} /></div>
+          <div className="mb-10 cursor-pointer" onClick={() => setLangSelected(null)}><NuxusLogo size={90} /></div>
           <Card className="w-full max-w-[420px] border-white/[0.08] bg-white/[0.02] backdrop-blur-[40px] shadow-2xl rounded-[3rem] overflow-hidden relative border-2">
             <CardHeader className="text-center pb-2 pt-10 px-8">
               <div className="grid grid-cols-2 bg-white/5 p-1.5 rounded-2xl mb-8 border border-white/5">
                 <button 
                   type="button" onClick={() => setMode('login')} 
                   className={cn("h-11 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all", mode === 'login' ? "bg-primary text-white shadow-lg" : "text-white/30")}
-                >Вход</button>
+                >{langSelected === 'ru' ? 'Вход' : 'Login'}</button>
                 <button 
                   type="button" onClick={() => setMode('register')} 
                   className={cn("h-11 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all", mode === 'register' ? "bg-primary text-white shadow-lg" : "text-white/30")}
-                >Регистрация</button>
+                >{langSelected === 'ru' ? 'Регистрация' : 'Register'}</button>
               </div>
               <CardTitle className="text-3xl font-black tracking-tighter uppercase italic text-white leading-none">
-                {mode === 'login' ? 'Вход в Ядро' : 'Новый Узел'}
+                {mode === 'login' 
+                  ? (langSelected === 'ru' ? 'Вход в Ядро' : 'Core Entry') 
+                  : (langSelected === 'ru' ? 'Новый Узел' : 'New Node')}
               </CardTitle>
             </CardHeader>
             <CardContent className="px-8 pb-10 pt-6">
@@ -158,19 +202,19 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
                 <div className="space-y-4">
                   {mode === 'register' && (
                     <div className="space-y-1.5 text-left animate-in fade-in slide-in-from-top-2">
-                      <Label className="text-[8px] uppercase font-black text-primary/60 ml-4 tracking-widest">Публичное имя</Label>
-                      <Input placeholder="Ваше имя" value={name} onChange={e => setName(e.target.value)} className="bg-white/5 border-white/10 h-14 rounded-2xl font-bold" required />
+                      <Label className="text-[8px] uppercase font-black text-primary/60 ml-4 tracking-widest">{langSelected === 'ru' ? 'Публичное имя' : 'Public Name'}</Label>
+                      <Input placeholder={langSelected === 'ru' ? 'Ваше имя' : 'Your name'} value={name} onChange={e => setName(e.target.value)} className="bg-white/5 border-white/10 h-14 rounded-2xl font-bold" required />
                     </div>
                   )}
                   {mode === 'register' && (
                     <div className="space-y-1.5 text-left animate-in fade-in slide-in-from-top-2">
-                      <Label className="text-[8px] uppercase font-black text-primary/60 ml-4 tracking-widest">ID Узла (@ник)</Label>
+                      <Label className="text-[8px] uppercase font-black text-primary/60 ml-4 tracking-widest">{langSelected === 'ru' ? 'ID Узла (@ник)' : 'Node ID (@nick)'}</Label>
                       <Input placeholder="unique_id" value={username} onChange={e => setUsername(e.target.value)} className="bg-white/5 border-white/10 h-14 rounded-2xl font-bold" required />
                     </div>
                   )}
                   
                   <div className="space-y-1.5 text-left">
-                    <Label className="text-[8px] uppercase font-black text-primary/60 ml-4 tracking-widest">Телефон или Почта</Label>
+                    <Label className="text-[8px] uppercase font-black text-primary/60 ml-4 tracking-widest">{langSelected === 'ru' ? 'Телефон или Почта' : 'Phone or Email'}</Label>
                     <div className="flex gap-2">
                       {mode === 'register' && !identifier.includes('@') && (
                         <div className="w-[110px] shrink-0">
@@ -191,7 +235,7 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
                       <div className="relative flex-1">
                         <UserIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-primary/40" />
                         <Input 
-                          placeholder={mode === 'register' ? "Номер без кода" : "7999..."} 
+                          placeholder={mode === 'register' ? (langSelected === 'ru' ? "Номер без кода" : "Number without code") : "7999..."} 
                           value={identifier} 
                           onChange={e => setIdentifier(e.target.value)} 
                           className="bg-white/5 border-white/10 h-14 rounded-2xl pl-12 font-bold" 
@@ -202,7 +246,7 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
                   </div>
 
                   <div className="space-y-1.5 text-left">
-                    <Label className="text-[8px] uppercase font-black text-primary/60 ml-4 tracking-widest">Пароль</Label>
+                    <Label className="text-[8px] uppercase font-black text-primary/60 ml-4 tracking-widest">{langSelected === 'ru' ? 'Пароль' : 'Password'}</Label>
                     <div className="relative">
                       <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-primary/40" />
                       <Input type={showPass ? "text" : "password"} placeholder="••••••••" value={password} onChange={e => setPassword(e.target.value)} className="bg-white/5 border-white/10 h-14 rounded-2xl pl-12 font-bold" required />
@@ -217,7 +261,7 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
                   <div className="flex items-start space-x-3 p-4 bg-white/5 rounded-2xl border border-white/5">
                     <Checkbox id="policy" checked={acceptedPolicy} onCheckedChange={(v) => setAcceptedPolicy(!!v)} className="mt-0.5 border-primary/40 data-[state=checked]:bg-primary" />
                     <label htmlFor="policy" className="text-[10px] font-bold text-white/60 leading-tight cursor-pointer uppercase tracking-tight">
-                      Я ознакомлен и согласен с <button type="button" onClick={() => setIsLegalOpen(true)} className="text-primary hover:underline font-black">Политикой конфиденциальности</button>
+                      {langSelected === 'ru' ? 'Я ознакомлен и согласен с' : 'I have read and agree to the'} <button type="button" onClick={() => setIsLegalOpen(true)} className="text-primary hover:underline font-black">{langSelected === 'ru' ? 'Политикой конфиденциальности' : 'Privacy Policy'}</button>
                     </label>
                   </div>
                 )}
@@ -225,12 +269,12 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
                 <div className="space-y-4">
                   <Button type="submit" disabled={isLoading} className="w-full h-16 bg-primary text-white rounded-2xl font-black uppercase italic tracking-widest shadow-2xl active:scale-95 transition-all group relative overflow-hidden">
                     <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity" />
-                    {isLoading ? <Loader2 className="animate-spin w-6 h-6" /> : (mode === 'login' ? "Авторизовать" : "Создать Узел")}
+                    {isLoading ? <Loader2 className="animate-spin w-6 h-6" /> : (mode === 'login' ? (langSelected === 'ru' ? "Авторизовать" : "Authorize") : (langSelected === 'ru' ? "Создать Узел" : "Create Node"))}
                   </Button>
                   
                   <div className="flex justify-center">
                     <button type="button" onClick={() => setIsLegalOpen(true)} className="flex items-center gap-2 text-[8px] font-black uppercase tracking-[0.2em] text-white/30 hover:text-white/60 transition-colors py-2">
-                       <Scale className="w-3 h-3" /> Правовая информация
+                       <Scale className="w-3 h-3" /> {langSelected === 'ru' ? 'Правовая информация' : 'Legal Information'}
                     </button>
                   </div>
                 </div>
