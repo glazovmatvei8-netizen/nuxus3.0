@@ -1,3 +1,4 @@
+
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import { AppProvider } from '@/lib/store'; 
@@ -5,7 +6,6 @@ import { Toaster } from '@/components/ui/toaster';
 import { FirebaseClientProvider } from '@/firebase/client-provider';
 import { ThemeApplier } from '@/components/theme-applier';
 import { AppIconApplier } from '@/components/app-icon-applier';
-import { VkProvider } from '@/components/vk-provider';
 import { Plus_Jakarta_Sans } from 'next/font/google';
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/next";
@@ -74,7 +74,6 @@ export default function RootLayout({
       >
         <AppProvider>
           <FirebaseClientProvider>
-            <VkProvider />
             <ThemeApplier />
             <AppIconApplier />
             <OfflinePlaceholder />

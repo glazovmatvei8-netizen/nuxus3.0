@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Lock, Eye, EyeOff, User as UserIcon, ShieldCheck, Scale, ExternalLink } from 'lucide-react';
+import { Loader2, Lock, Eye, EyeOff, User as UserIcon, ShieldCheck, Scale, Globe } from 'lucide-react';
 import { useAuth, useFirestore } from '@/firebase';
 import { 
   signInWithEmailAndPassword,
@@ -16,16 +16,40 @@ import {
   browserLocalPersistence,
   setPersistence
 } from 'firebase/auth';
-import { doc, setDoc, collection, query, where, getDocs, limit, updateDoc } from 'firebase/firestore';
+import { doc, setDoc } from 'firebase/firestore';
 import { useAppState } from '@/lib/store';
 import { NuxusLogo } from './nuxus-logo';
 import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
-/**
- * AUTH SCREEN V78.0.0 «PRIVACY FORCE»
- * Добавлен Checkbox согласия с политикой и ссылки на Legal Core.
- */
+// Список стран (БЕЗ РФ)
+const COUNTRY_CODES = [
+  { code: '+380', name: 'Украина', flag: '🇺🇦' },
+  { code: '+1', name: 'USA/Canada', flag: '🇺🇸' },
+  { code: '+44', name: 'UK', flag: '🇬🇧' },
+  { code: '+49', name: 'Germany', flag: '🇩🇪' },
+  { code: '+33', name: 'France', flag: '🇫🇷' },
+  { code: '+48', name: 'Poland', flag: '🇵🇱' },
+  { code: '+375', name: 'Belarus', flag: '🇧🇾' },
+  { code: '+77', name: 'Kazakhstan', flag: '🇰🇿' },
+  { code: '+995', name: 'Georgia', flag: '🇬🇪' },
+  { code: '+370', name: 'Lithuania', flag: '🇱🇹' },
+  { code: '+371', name: 'Latvia', flag: '🇱🇻' },
+  { code: '+372', name: 'Estonia', flag: '🇪🇪' },
+  { code: '+358', name: 'Finland', flag: '🇫🇮' },
+  { code: '+46', name: 'Sweden', flag: '🇸🇪' },
+  { code: '+90', name: 'Turkey', flag: '🇹🇷' },
+  { code: '+972', name: 'Israel', flag: '🇮🇱' },
+  { code: '+81', name: 'Japan', flag: '🇯🇵' },
+];
+
 export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'login' | 'register' }) {
   const auth = useAuth();
   const db = useFirestore();
@@ -37,6 +61,7 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
   const [showPass, setShowPass] = useState(false);
   const [acceptedPolicy, setAcceptedPolicy] = useState(false);
 
+  const [countryCode, setCountryCode] = useState('+380');
   const [identifier, setIdentifier] = useState(''); 
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
@@ -57,8 +82,12 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
     if (hpValue !== '') return; 
 
     setIsLoading(true);
-    const idClean = identifier.trim();
-    const finalEmail = idClean.includes('@') ? idClean : `${idClean.replace(/\D/g, '')}@nuxus.chat`;
+    const idClean = identifier.trim().replace(/\D/g, '');
+    
+    // Формируем финальный email/идентификатор
+    // Для регистрации всегда используем выбранный код страны
+    const finalPhone = mode === 'register' ? `${countryCode.replace('+', '')}${idClean}` : idClean;
+    const finalEmail = identifier.includes('@') ? identifier.trim() : `${finalPhone}@nuxus.chat`;
 
     try {
       await setPersistence(auth, browserLocalPersistence);
@@ -73,7 +102,7 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
           name: name.trim(),
           username: usernameWithAt,
           usernameLowercase: usernameWithAt.toLowerCase(),
-          phone: identifier.replace(/\D/g, ''),
+          phone: finalPhone,
           email: finalEmail,
           emailVerified: false,
           phoneVerified: false,
@@ -93,7 +122,8 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
         setIs2FAVerified(true);
       }
     } catch (e: any) {
-      toast({ title: "Ошибка", description: "Проверьте данные или соединение.", variant: "destructive" });
+      console.error(e);
+      toast({ title: "Ошибка", description: "Проверьте данные или соединение. Регистрация из РФ запрещена.", variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
@@ -138,13 +168,39 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
                       <Input placeholder="unique_id" value={username} onChange={e => setUsername(e.target.value)} className="bg-white/5 border-white/10 h-14 rounded-2xl font-bold" required />
                     </div>
                   )}
+                  
                   <div className="space-y-1.5 text-left">
                     <Label className="text-[8px] uppercase font-black text-primary/60 ml-4 tracking-widest">Телефон или Почта</Label>
-                    <div className="relative">
-                       <UserIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-primary/40" />
-                       <Input placeholder="7999..." value={identifier} onChange={e => setIdentifier(e.target.value)} className="bg-white/5 border-white/10 h-14 rounded-2xl pl-12 font-bold" required />
+                    <div className="flex gap-2">
+                      {mode === 'register' && !identifier.includes('@') && (
+                        <div className="w-[110px] shrink-0">
+                          <Select value={countryCode} onValueChange={setCountryCode}>
+                            <SelectTrigger className="h-14 bg-white/5 border-white/10 rounded-2xl font-bold px-3">
+                              <SelectValue placeholder="🌍" />
+                            </SelectTrigger>
+                            <SelectContent className="bg-[#0a0a0c] border-white/10 rounded-2xl">
+                              {COUNTRY_CODES.map((c) => (
+                                <SelectItem key={c.code} value={c.code} className="text-[11px] font-black uppercase">
+                                  {c.flag} {c.code}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      )}
+                      <div className="relative flex-1">
+                        <UserIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-primary/40" />
+                        <Input 
+                          placeholder={mode === 'register' ? "Номер без кода" : "7999..."} 
+                          value={identifier} 
+                          onChange={e => setIdentifier(e.target.value)} 
+                          className="bg-white/5 border-white/10 h-14 rounded-2xl pl-12 font-bold" 
+                          required 
+                        />
+                      </div>
                     </div>
                   </div>
+
                   <div className="space-y-1.5 text-left">
                     <Label className="text-[8px] uppercase font-black text-primary/60 ml-4 tracking-widest">Пароль</Label>
                     <div className="relative">

@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useMemo } from 'react';
@@ -23,8 +22,8 @@ import { TradeModal } from './modals/trade-modal';
 import Link from 'next/link';
 
 /**
- * PROFILE VIEW V5.8.0 «ELITE RESTORATION»
- * Исправлено: Возвращены подтверждения почты, телефона и VK.
+ * PROFILE VIEW V5.8.0 «GLOBAL SOVEREIGNTY»
+ * ИСПРАВЛЕНО: Исправлен синтаксис импорта nuxusVersions.
  */
 export default function ProfileView() {
   const { user } = useUser();
@@ -109,7 +108,6 @@ export default function ProfileView() {
                      {profile?.name ? formatDisplayName(profile.name) : 'СИНХРОНИЗАЦИЯ...'}
                    </h2>
                    {isPremium && <Star className="w-5 h-5 text-accent fill-accent animate-pulse" />}
-                   {profile?.vkId && <div className="bg-blue-500 rounded-full p-1 shadow-[0_0_10px_rgba(59,130,246,0.5)]"><CheckCircle2 className="w-3 h-3 text-white" /></div>}
                 </div>
                 <div className="flex items-center justify-center gap-3">
                    <span className="text-[11px] text-primary/60 font-black uppercase tracking-[0.4em] italic ml-[0.4em]">{profile?.username}</span>

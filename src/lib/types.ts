@@ -237,5 +237,4 @@ export interface User {
   lastIp?: string;
   countryCode?: string;
   balance?: number;
-  vkId?: number | null;
 }

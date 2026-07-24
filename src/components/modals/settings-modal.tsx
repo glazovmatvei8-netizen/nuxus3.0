@@ -23,7 +23,7 @@ import { isUserPremium, cn } from '@/lib/utils';
 import type { User, Session, PrivacyOption } from '@/lib/types';
 
 /**
- * SETTINGS CORE V5.8.0 «PRIVACY & VERIFICATION»
+ * SETTINGS CORE V5.8.0 «GLOBAL SOVEREIGNTY»
  */
 export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const auth = useAuth();
