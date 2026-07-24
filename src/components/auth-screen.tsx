@@ -209,7 +209,7 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
                             <SelectTrigger className="h-14 bg-white/5 border-white/10 rounded-2xl font-bold px-3">
                               <SelectValue placeholder="🌍" />
                             </SelectTrigger>
-                            <SelectContent className="bg-[#0a0a0c] border-white/10 rounded-2xl max-h-[300px] overflow-y-auto">
+                            <SelectContent position="popper" className="bg-[#0a0a0c] border-white/10 rounded-2xl max-h-[300px] overflow-y-auto">
                               {COUNTRY_CODES.map((c) => (
                                 <SelectItem key={c.code} value={c.code} className="text-[11px] font-black uppercase py-3 cursor-pointer">
                                   {c.flag} {c.code}

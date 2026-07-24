@@ -1,12 +1,19 @@
-
 'use client';
 
-import React, { createContext, useContext, ReactNode, useMemo, useState, useEffect } from 'react';
+import React, { createContext, useContext, ReactNode, useMemo, useState, useEffect, DependencyList } from 'react';
 import { FirebaseApp } from 'firebase/app';
 import { Firestore, doc, setDoc, collection, onSnapshot } from 'firebase/firestore';
 import { Auth, User, onAuthStateChanged, signOut } from 'firebase/auth';
 import { FirebaseErrorListener } from '@/components/FirebaseErrorListener'
 import { updateDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+
+/**
+ * Стабилизатор ссылок Firebase V1.0.
+ * Необходим для предотвращения бесконечных циклов в useCollection/useDoc.
+ */
+export function useMemoFirebase<T>(factory: () => T, deps: DependencyList): T {
+  return useMemo(factory, deps);
+}
 
 interface FirebaseProviderProps {
   children: ReactNode;

@@ -1,16 +1,18 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useContext } from 'react';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
-import { useUser } from '@/firebase';
+import { FirebaseContext } from '@/firebase/provider';
 
 /**
  * An invisible component that listens for globally emitted 'permission-error' events.
  * Updated V33.2.2: Even more silent to prevent UX disruptions.
+ * FIX: Using direct context import to avoid circular dependency loop.
  */
 export function FirebaseErrorListener() {
-  const { user } = useUser();
+  const context = useContext(FirebaseContext);
+  const user = context?.user;
 
   useEffect(() => {
     const handleError = (error: FirestorePermissionError) => {
