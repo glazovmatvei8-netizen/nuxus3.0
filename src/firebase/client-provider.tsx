@@ -1,9 +1,8 @@
-
 'use client';
 
 import React, { useMemo, type ReactNode } from 'react';
 import { FirebaseProvider } from '@/firebase/provider';
-import { initializeFirebase } from '@/firebase';
+import { initializeFirebase } from '@/firebase/app';
 import { useAppState } from '@/lib/store';
 import { setPersistence, browserLocalPersistence } from 'firebase/auth';
 
@@ -13,23 +12,15 @@ interface FirebaseClientProviderProps {
 
 /**
  * Глобальный менеджер изолированных узлов Nuxus V78.0.0
- * Использует СТРОГО изолированные именованные инстансы и принудительную персистентность.
  */
 export function FirebaseClientProvider({ children }: FirebaseClientProviderProps) {
   const { activeAccountIndex } = useAppState();
 
-  // Инициализируем 5 СТРОГО изолированных приложений (Nodes)
   const instances = useMemo(() => {
     if (typeof window === 'undefined') return [];
     return [0, 1, 2, 3, 4].map(i => {
-      const instanceName = `nuxus_node_v78_${i}`;
-      const instance = initializeFirebase(instanceName);
-      
-      // КРИТИЧЕСКИ: Фиксация сессии для каждого узла отдельно
-      setPersistence(instance.auth, browserLocalPersistence).catch(e => 
-        console.warn(`Node ${i} persistence fail:`, e)
-      );
-      
+      const instance = initializeFirebase(`nuxus_node_v78_${i}`);
+      setPersistence(instance.auth, browserLocalPersistence).catch(() => {});
       return instance;
     });
   }, []);

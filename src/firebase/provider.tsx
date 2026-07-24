@@ -2,14 +2,13 @@
 
 import React, { createContext, useContext, ReactNode, useMemo, useState, useEffect, DependencyList } from 'react';
 import { FirebaseApp } from 'firebase/app';
-import { Firestore, doc, setDoc, collection, onSnapshot } from 'firebase/firestore';
+import { Firestore, doc, onSnapshot } from 'firebase/firestore';
 import { Auth, User, onAuthStateChanged, signOut } from 'firebase/auth';
-import { FirebaseErrorListener } from '@/components/FirebaseErrorListener'
+import { FirebaseErrorListener } from '@/components/FirebaseErrorListener';
 import { updateDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 /**
- * Стабилизатор ссылок Firebase V1.0.
- * Необходим для предотвращения бесконечных циклов в useCollection/useDoc.
+ * Стабилизатор ссылок Firebase.
  */
 export function useMemoFirebase<T>(factory: () => T, deps: DependencyList): T {
   return useMemo(factory, deps);
@@ -33,21 +32,6 @@ export interface FirebaseContextState {
   firebaseApp: FirebaseApp | null;
   firestore: Firestore | null;
   auth: Auth | null;
-  user: User | null;
-  isUserLoading: boolean;
-  userError: Error | null;
-}
-
-export interface FirebaseServicesAndUser {
-  firebaseApp: FirebaseApp;
-  firestore: Firestore;
-  auth: Auth;
-  user: User | null;
-  isUserLoading: boolean;
-  userError: Error | null;
-}
-
-export interface UserHookResult {
   user: User | null;
   isUserLoading: boolean;
   userError: Error | null;
@@ -99,24 +83,7 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
 
     const sessionRef = doc(firestore, 'users', uid, 'sessions', sessionId);
 
-    const getDeviceName = () => {
-      const ua = navigator.userAgent;
-      if (/android/i.test(ua)) return "Android Device";
-      if (/iPad|iPhone|iPod/.test(ua)) return "iOS Device";
-      if (/Windows/i.test(ua)) return "Windows PC";
-      if (/Mac/i.test(ua)) return "macOS Node";
-      return "Quantum Node";
-    };
-
-    const getBrowserName = () => {
-      const ua = navigator.userAgent;
-      if (ua.includes("Firefox")) return "Firefox";
-      if (ua.includes("Chrome")) return "Chrome";
-      if (ua.includes("Safari")) return "Safari";
-      return "Nuxus Kernel";
-    };
-
-    const updateStatus = async () => {
+    const updateStatus = () => {
       if (document.hidden) return;
       const now = new Date().toISOString();
       updateDocumentNonBlocking(userRef, { lastSeen: now });
@@ -134,29 +101,17 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
         const sessionData = {
           id: sessionId,
           userId: uid,
-          deviceName: getDeviceName(),
-          browser: getBrowserName(),
+          deviceName: "Nuxus Node",
           ip: geo.ip || '?.?.?.?',
           countryCode: geo.country_code || '??',
           lastActive: new Date().toISOString(),
-          createdAt: new Date().toISOString(),
-          userAgent: navigator.userAgent
+          createdAt: new Date().toISOString()
         };
 
         setDocumentNonBlocking(sessionRef, sessionData, { merge: true });
-        updateDocumentNonBlocking(userRef, { 
-          lastIp: geo.ip,
-          countryCode: geo.country_code || '??'
-        });
+        updateDocumentNonBlocking(userRef, { countryCode: geo.country_code || '??' });
       } catch (e) {
-        setDocumentNonBlocking(sessionRef, {
-          id: sessionId,
-          userId: uid,
-          deviceName: getDeviceName(),
-          browser: getBrowserName(),
-          lastActive: new Date().toISOString(),
-          createdAt: new Date().toISOString()
-        }, { merge: true });
+        setDocumentNonBlocking(sessionRef, { id: sessionId, userId: uid, lastActive: new Date().toISOString() }, { merge: true });
       }
     };
 
@@ -173,12 +128,8 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
     updateStatus();
     const interval = setInterval(updateStatus, 60000); 
 
-    const handleVisibility = () => { if (!document.hidden) updateStatus(); };
-    document.addEventListener('visibilitychange', handleVisibility);
-
     return () => {
       clearInterval(interval);
-      document.removeEventListener('visibilitychange', handleVisibility);
       unsubscribeSession();
     };
   }, [userAuthState.user?.uid, firestore, auth]);
@@ -204,29 +155,25 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
   );
 };
 
-export const useFirebase = (): FirebaseServicesAndUser => {
+export const useFirebase = () => {
   const context = useContext(FirebaseContext);
-  if (context === undefined) {
-    throw new Error('useFirebase must be used within a FirebaseProvider.');
-  }
-  if (!context.areServicesAvailable || !context.firebaseApp || !context.firestore || !context.auth) {
-    throw new Error('Firebase core services not available. Check FirebaseProvider props.');
-  }
-  return {
-    firebaseApp: context.firebaseApp,
-    firestore: context.firestore,
-    auth: context.auth,
-    user: context.user,
-    isUserLoading: context.isUserLoading,
-    userError: context.userError,
-  };
+  if (context === undefined) throw new Error('useFirebase must be used within a FirebaseProvider.');
+  return context;
 };
 
-export const useAuth = (): Auth => useFirebase().auth;
-export const useFirestore = (): Firestore => useFirebase().firestore;
-export const useFirebaseApp = (): FirebaseApp => useFirebase().firebaseApp;
+export const useAuth = () => {
+  const { auth } = useFirebase();
+  if (!auth) throw new Error('Auth not available');
+  return auth;
+};
 
-export const useUser = (): UserHookResult => {
+export const useFirestore = () => {
+  const { firestore } = useFirebase();
+  if (!firestore) throw new Error('Firestore not available');
+  return firestore;
+};
+
+export const useUser = () => {
   const { user, isUserLoading, userError } = useFirebase();
   return { user, isUserLoading, userError };
 };
