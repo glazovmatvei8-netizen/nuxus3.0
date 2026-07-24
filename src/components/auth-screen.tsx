@@ -135,7 +135,7 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
     return (
       <div className="h-[100dvh] w-full flex flex-col items-center justify-center bg-[#020203] px-6">
         <NuxusLogo size={140} />
-        <div className="space-y-4 w-full max-sm mt-12">
+        <div className="space-y-4 w-full max-w-sm mt-12">
           <Button onClick={() => setLangSelected('ru')} className="w-full h-16 bg-primary font-black uppercase italic tracking-widest rounded-2xl">Продолжить на русском</Button>
           <Button onClick={() => setLangSelected('en')} variant="ghost" className="w-full h-14 bg-white/5 text-white/60 rounded-2xl">Continue in English</Button>
         </div>

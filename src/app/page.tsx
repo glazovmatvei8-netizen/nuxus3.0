@@ -1,8 +1,8 @@
-
 "use client"
 
 import React, { useEffect, useState, useMemo } from 'react';
-import { useUser, useFirestore, useDoc, useAuth } from '@/firebase';
+import { useUser, useFirestore, useAuth } from '@/firebase/provider';
+import { useDoc } from '@/firebase/firestore/use-doc';
 import { useAppState } from '@/lib/store';
 import AuthScreen from '@/components/auth-screen';
 import ChatMain from '@/components/chat-main';
@@ -28,7 +28,6 @@ export default function Home() {
   const [mounted, setMounted] = useState(false);
   const [twoFactorInput, setTwoFactorInput] = useState('');
   const [showIosInstaller, setShowIosInstaller] = useState(false);
-  const [isVerifying, setIsVerifying] = useState(false);
   
   useEffect(() => {
     setMounted(true);
