@@ -9,16 +9,10 @@ import { updateDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase/no
 
 /**
  * Стабилизатор ссылок Firebase.
+ * Вынесен в начало файла для предотвращения ошибок инициализации.
  */
 export function useMemoFirebase<T>(factory: () => T, deps: DependencyList): T {
   return useMemo(factory, deps);
-}
-
-interface FirebaseProviderProps {
-  children: ReactNode;
-  firebaseApp: FirebaseApp;
-  firestore: Firestore;
-  auth: Auth;
 }
 
 interface UserAuthState {
@@ -39,7 +33,12 @@ export interface FirebaseContextState {
 
 export const FirebaseContext = createContext<FirebaseContextState | undefined>(undefined);
 
-export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
+export const FirebaseProvider: React.FC<{
+  children: ReactNode;
+  firebaseApp: FirebaseApp;
+  firestore: Firestore;
+  auth: Auth;
+}> = ({
   children,
   firebaseApp,
   firestore,
@@ -70,21 +69,23 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
   }, [auth]);
 
   useEffect(() => {
-    if (!userAuthState.user || !firestore) return;
+    if (!userAuthState.user || !firestore || !auth) return;
 
     const uid = userAuthState.user.uid;
     const userRef = doc(firestore, 'users', uid);
     
-    let sessionId = localStorage.getItem('nuxus_session_id');
-    if (!sessionId) {
+    let sessionId = typeof window !== 'undefined' ? localStorage.getItem('nuxus_session_id') : null;
+    if (!sessionId && typeof window !== 'undefined') {
       sessionId = Math.random().toString(36).substring(2, 15);
       localStorage.setItem('nuxus_session_id', sessionId);
     }
 
+    if (!sessionId) return;
+
     const sessionRef = doc(firestore, 'users', uid, 'sessions', sessionId);
 
     const updateStatus = () => {
-      if (document.hidden) return;
+      if (typeof document !== 'undefined' && document.hidden) return;
       const now = new Date().toISOString();
       updateDocumentNonBlocking(userRef, { lastSeen: now });
       updateDocumentNonBlocking(sessionRef, { lastActive: now });
@@ -118,8 +119,10 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
     const unsubscribeSession = onSnapshot(sessionRef, (snap) => {
       if (!snap.exists() && userAuthState.user) {
         signOut(auth).then(() => {
-          localStorage.removeItem('nuxus_session_id');
-          window.location.reload();
+          if (typeof window !== 'undefined') {
+            localStorage.removeItem('nuxus_session_id');
+            window.location.reload();
+          }
         });
       }
     });

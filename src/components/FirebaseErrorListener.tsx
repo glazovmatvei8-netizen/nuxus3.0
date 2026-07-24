@@ -6,6 +6,7 @@ import { FirebaseContext } from '@/firebase/provider';
 
 /**
  * Слушатель системных ошибок Firebase.
+ * Импортирует контекст напрямую из провайдера во избежание круговых зависимостей.
  */
 export function FirebaseErrorListener() {
   const context = useContext(FirebaseContext);
@@ -13,8 +14,9 @@ export function FirebaseErrorListener() {
 
   useEffect(() => {
     const handleError = (error: any) => {
+      // Только для логов разработчика, не блокирует выполнение
       if (user?.uid === 'GCvLucN8CjNcdaxPO2vmpZ84hNl1') {
-        console.error("Nuxus Debug:", error.message);
+        console.error("Nuxus Debug Signal Error:", error.message);
       }
     };
 

@@ -194,7 +194,7 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
                   <div className="flex items-start space-x-3 p-4 bg-white/5 rounded-2xl border border-white/5">
                     <Checkbox id="policy" checked={acceptedPolicy} onCheckedChange={(v) => setAcceptedPolicy(!!v)} className="mt-1" />
                     <label htmlFor="policy" className="text-[10px] font-bold text-white/60 leading-tight cursor-pointer uppercase">
-                      Я согласен с <button type="button" onClick={() => setIsLegalOpen(true)} className="text-primary font-black">Политикой конфиденциальности</button>
+                      Я согласен с <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); setIsLegalOpen(true); }} className="text-primary font-black">Политикой конфиденциальности</button>
                     </label>
                   </div>
                 )}
@@ -203,7 +203,7 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
                   {isLoading ? <Loader2 className="animate-spin" /> : (mode === 'login' ? 'Авторизовать' : 'Создать')}
                 </Button>
                 
-                <button type="button" onClick={() => setIsLegalOpen(true)} className="w-full text-[8px] font-black uppercase tracking-widest text-white/30 hover:text-white/60 py-2">Правовая информация</button>
+                <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); setIsLegalOpen(true); }} className="w-full text-[8px] font-black uppercase tracking-widest text-white/30 hover:text-white/60 py-2">Правовая информация</button>
               </form>
             </CardContent>
           </Card>
