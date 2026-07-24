@@ -1,11 +1,9 @@
 'use client';
 
 import { useEffect, useMemo } from 'react';
-import { useUser, useFirestore } from '@/firebase/provider';
-import { useDoc } from '@/firebase/firestore/use-doc';
+import { useUser, useFirestore, useDoc } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import type { User } from '@/lib/types';
-import { isUserPremium } from '@/lib/utils';
 
 export function ThemeApplier() {
   const { user } = useUser();
