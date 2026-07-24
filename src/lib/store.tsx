@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
@@ -56,7 +57,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [inspectedUserId, setInspectedUserId] = useState<string | null>(null);
   const [activeAccountIndex, setActiveAccountIndex] = useState(0);
 
-  // ГАРАНТИЯ ОДНОГО КОНТЕКСТА: Загрузка из localStorage только на клиенте
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('nuxus_active_index_v71');
@@ -104,7 +104,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 export const useAppState = (): AppState => {
   const context = useContext(AppContext);
   if (context === undefined) {
-    // Безопасный возврат для SSR
     return {
       activeAccountIndex: 0,
       localDrafts: {},
@@ -120,7 +119,25 @@ export const useAppState = (): AppState => {
       setIsSettingsOpen: () => {},
       setSettingsTab: () => {},
       setActiveAccountIndex: () => {},
-    } as unknown as AppState;
+      forwardingMessage: null,
+      setForwardingMessage: () => {},
+      activeCallId: null,
+      setActiveCallId: () => {},
+      isSearchOpen: false,
+      setIsSearchOpen: () => {},
+      inspectedUserId: null,
+      setInspectedUserId: () => {},
+      isLegalOpen: false,
+      setIsLegalOpen: () => {},
+      currentTrack: null,
+      setCurrentTrack: () => {},
+      isPlayingMusic: false,
+      setIsPlayingMusic: () => {},
+      isCreateStoryOpen: false,
+      setIsCreateStoryOpen: () => {},
+      storiesToView: null,
+      setStoriesToView: () => {}
+    } as AppState;
   }
   return context;
 };

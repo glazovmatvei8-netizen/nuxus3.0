@@ -17,10 +17,6 @@ import { isUserActuallyBanned } from '@/lib/utils';
 import { NuxusLogo } from '@/components/nuxus-logo';
 import { IosInstaller } from '@/components/ios-installer';
 
-/**
- * ГЛАВНЫЙ КОНТРОЛЛЕР ЯДРА V57.5.0 «MULTI-ACCOUNT & GATE»
- * ИСПРАВЛЕНО: Добавлена кнопка выхода на экране 2FA.
- */
 export default function Home() {
   const { user, isUserLoading } = useUser();
   const db = useFirestore();
@@ -35,7 +31,6 @@ export default function Home() {
   
   useEffect(() => {
     setMounted(true);
-    
     const isIos = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
     const isStandalone = (window.navigator as any).standalone || window.matchMedia('(display-mode: standalone)').matches;
     if (isIos && !isStandalone && !localStorage.getItem('ios_installer_dismissed')) {
@@ -55,9 +50,8 @@ export default function Home() {
   useEffect(() => {
     if (!mounted || !db || !user || !profile) return;
     
-    // PIN Check
     if (profile.twoFactorEnabled && !is2FAVerified) {
-       return; // Wait for PIN
+       return;
     }
 
     const params = new URLSearchParams(window.location.search);
@@ -165,9 +159,7 @@ export default function Home() {
   }
 
   if (showIosInstaller) return <IosInstaller onDismiss={() => setShowIosInstaller(false)} />;
-  
   if (!user) return <AuthScreen />;
-
   if (isBanned) {
     return (
       <div className="h-screen w-full flex flex-col items-center justify-center bg-[#050505] p-6 text-center">
@@ -178,7 +170,6 @@ export default function Home() {
     );
   }
 
-  // СТРОГАЯ ПРОВЕРКА 2FA
   if (profile?.twoFactorEnabled && !is2FAVerified) {
     return (
       <div className="h-screen w-full flex items-center justify-center bg-[#020203] relative px-6">

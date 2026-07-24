@@ -2,7 +2,7 @@
 "use client"
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -15,16 +15,13 @@ import {
   LogOut, Settings2, Camera, Star, ShieldCheck, Loader2, CheckCircle2, Fingerprint, Palette, Archive, ChevronRight, X, Globe, Smartphone, Monitor, Trash2, MapPin, Activity, Zap, Mail, Phone, Lock, Eye, EyeOff, AlertTriangle, UserCheck, ShieldAlert, FileText
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { signOut, deleteUser } from 'firebase/auth';
+import { signOut, deleteUser, EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
 import { doc, updateDoc, collection, query, orderBy, deleteDoc } from 'firebase/firestore';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAppState } from '@/lib/store';
 import { isUserPremium, cn } from '@/lib/utils';
 import type { User, Session, PrivacyOption } from '@/lib/types';
 
-/**
- * SETTINGS CORE V5.8.0 «GLOBAL SOVEREIGNTY»
- */
 export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const auth = useAuth();
   const db = useFirestore();
@@ -44,6 +41,9 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
   const { data: sessions } = useCollection<Session>(sessionsQuery);
 
   const [isSaving, setIsSaving] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [confirmValue, setConfirmValue] = useState('');
+  
   const [form, setForm] = useState({
     name: '', username: '', bio: '', avatarUrl: '', phone: '', email: '',
     twoFactorEnabled: false, twoFactorPin: '', biometricEnabled: false,
@@ -114,6 +114,20 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
       toast({ title: "Сбой записи", variant: "destructive" }); 
     } finally { 
       setIsSaving(false); 
+    }
+  };
+
+  const handleAnnihilate = async () => {
+    if (confirmValue !== 'УНИЧТОЖИТЬ' || !user || !db) return;
+    setIsDeleting(true);
+    try {
+      await deleteDoc(doc(db, 'users', user.uid));
+      await deleteUser(user);
+      window.location.reload();
+    } catch (e: any) {
+      toast({ title: "Критический сбой", description: "Требуется свежая авторизация для этого действия.", variant: "destructive" });
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -233,11 +247,25 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                        {sessions?.map(s => (
                          <div key={s.id} className="bg-white/5 p-4 rounded-[1.5rem] border border-white/5 flex items-center justify-between">
                             <div className="flex items-center gap-4">
-                               <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">{s.deviceName.includes('PC') ? <Monitor className="w-5 h-5" /> : <Smartphone className="w-5 h-5" />}</div>
+                               <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">{s.deviceName?.includes('PC') ? <Monitor className="w-5 h-5" /> : <Smartphone className="w-5 h-5" />}</div>
                                <div className="flex flex-col"><span className="text-[12px] font-black text-white uppercase">{s.deviceName}</span><span className="text-[8px] text-muted-foreground font-black uppercase">{s.ip} • {s.countryCode}</span></div>
                             </div>
                          </div>
                        ))}
+                    </div>
+                 </div>
+
+                 <div className="pt-10 border-t border-white/10 space-y-6">
+                    <div className="flex items-center gap-3 text-red-500"><AlertTriangle className="w-6 h-6" /><h3 className="text-xl font-black uppercase italic tracking-tighter">Опасная зона</h3></div>
+                    <div className="bg-red-500/5 p-6 rounded-[2rem] border border-red-500/20 space-y-6">
+                       <p className="text-[10px] font-bold text-red-500/60 uppercase leading-relaxed">Аннигиляция узла удалит все ваши сообщения, профиль и доступ навсегда. Это действие необратимо.</p>
+                       <div className="space-y-3">
+                          <Label className="text-[9px] font-black uppercase text-red-500 ml-1">Введите "УНИЧТОЖИТЬ" для подтверждения</Label>
+                          <Input value={confirmValue} onChange={e => setConfirmValue(e.target.value)} className="bg-black/60 border-red-500/30 h-12 rounded-xl text-center font-black text-red-500" placeholder="УНИЧТОЖИТЬ" />
+                       </div>
+                       <Button onClick={handleAnnihilate} disabled={confirmValue !== 'УНИЧТОЖИТЬ' || isDeleting} className="w-full h-14 bg-red-600 text-white rounded-2xl font-black uppercase italic tracking-widest shadow-xl active:scale-95 transition-all">
+                          {isDeleting ? <Loader2 className="animate-spin w-5 h-5" /> : 'Аннигилировать Узел'}
+                       </Button>
                     </div>
                  </div>
               </TabsContent>
