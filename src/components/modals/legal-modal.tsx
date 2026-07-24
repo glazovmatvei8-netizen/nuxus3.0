@@ -5,7 +5,7 @@ import React from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { ShieldCheck, Scale, Lock, Database, HelpCircle, MessageCircle, Zap, ShieldAlert, FileText } from 'lucide-react';
+import { ShieldCheck, Scale, Lock, Database, HelpCircle, MessageCircle, Zap, ShieldAlert, FileText, Globe } from 'lucide-react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Button } from '@/components/ui/button';
 import { useAppState } from '@/lib/store';
@@ -60,28 +60,28 @@ export function LegalModal({ open, onOpenChange }: { open: boolean, onOpenChange
                     <ul className="list-disc pl-5 space-y-1 text-white/60">
                        <li>Номер телефона (используется как уникальный логин для входа).</li>
                        <li>Пароль в зашифрованном виде (для защиты вашего аккаунта).</li>
-                       <li>Текстовые сообщения, медиафайлы и реакции в чатах (исключительно для того, чтобы доставлять их вашим собеседникам).</li>
+                       <li>Текстовые сообщения, медиафайлы и реакции в чатах.</li>
                     </ul>
                   </section>
 
                   <section className="space-y-2">
-                    <p className="text-primary/60 font-black">3. ЦЕЛИ ОБРАБОТКИ ДАННЫХ</p>
-                    <p>Данные собираются только для создания аккаунта, авторизации в приложении и обеспечения работы чатов, личных сообщений и групп.</p>
+                    <p className="text-primary/60 font-black">3. РЕГИОНАЛЬНЫЕ ОГРАНИЧЕНИЯ</p>
+                    <p className="text-red-500">Приложение Nuxus.fun не оказывает услуги и не позволяет регистрировать новые узлы с территории Российской Федерации (РФ) для обеспечения безопасности данных основной сети.</p>
                   </section>
 
                   <section className="space-y-2">
                     <p className="text-primary/60 font-black">4. БЕЗОПАСНОСТЬ И ПЕРЕДАЧА</p>
-                    <p>Мы не продаем, не передаем и не раскрываем ваши данные третьим лицам. Все переписки и номера телефонов хранятся на защищенных серверах и используются только внутри мессенджера Nuxus.fun.</p>
+                    <p>Мы не продаем и не передаем ваши данные третьим лицам. Все переписки хранятся на защищенных узлах.</p>
                   </section>
 
                   <section className="space-y-2">
                     <p className="text-primary/60 font-black">5. УДАЛЕНИЕ ДАННЫХ</p>
-                    <p>Каждый пользователь имеет право запросить удаление своего аккаунта и всех связанных с ним данных через настройки профиля (Аннигиляция Узла) или написав в поддержку.</p>
+                    <p>Каждый пользователь имеет право на полное удаление своего аккаунта (Аннигиляция Узла) через настройки приложения.</p>
                   </section>
                 </div>
 
                 <div className="pt-8 border-t border-white/5 opacity-40">
-                   <p className="text-[9px] font-black text-center">ПОСЛЕДНЕЕ ОБНОВЛЕНИЕ: 23 ИЮЛЯ 2026</p>
+                   <p className="text-[9px] font-black text-center uppercase tracking-widest">Последнее обновление: Июль 2026</p>
                 </div>
               </div>
             </ScrollArea>
@@ -91,21 +91,21 @@ export function LegalModal({ open, onOpenChange }: { open: boolean, onOpenChange
             <ScrollArea className="flex-1 p-8">
               <div className="space-y-6">
                 <h3 className="text-white font-black uppercase tracking-[0.2em] flex items-center gap-3 text-sm">
-                  <HelpCircle className="w-5 h-5 text-primary" /> Часто задаваемые вопросы
+                  <HelpCircle className="w-5 h-5 text-primary" /> База знаний
                 </h3>
                 
                 <Accordion type="single" collapsible className="space-y-2">
                   <AccordionItem value="item-1" className="border-white/5 px-4 rounded-2xl bg-white/[0.02]">
                     <AccordionTrigger className="text-[11px] font-bold uppercase text-white/80 hover:no-underline">Как работает шифрование QES?</AccordionTrigger>
                     <AccordionContent className="text-[10px] text-muted-foreground leading-relaxed">
-                      Все ваши текстовые сообщения шифруются актуальным протоколом QES v{versions.qesVersion} на вашем устройстве. Только получатель имеет ключ для дешифровки. Ядро видит только зашифрованный шум.
+                      Все ваши текстовые сообщения шифруются актуальным протоколом QES v{versions.qesVersion} на вашем устройстве. Только получатель имеет ключ для дешифровки.
                     </AccordionContent>
                   </AccordionItem>
 
                   <AccordionItem value="item-2" className="border-white/5 px-4 rounded-2xl bg-white/[0.02]">
-                    <AccordionTrigger className="text-[11px] font-bold uppercase text-white/80 hover:no-underline">Как получить статус Premium?</AccordionTrigger>
+                    <AccordionTrigger className="text-[11px] font-bold uppercase text-white/80 hover:no-underline">Почему мой номер (+7) недоступен?</AccordionTrigger>
                     <AccordionContent className="text-[10px] text-muted-foreground leading-relaxed">
-                      Статус Premium открывает доступ к ИИ-видео, кастомным цветам и расшифровке голоса. Для активации обратитесь к Оператору Ядра.
+                      Ядро Nuxus временно ограничило регистрацию новых узлов из РФ для соблюдения международных протоколов безопасности данных.
                     </AccordionContent>
                   </AccordionItem>
                 </Accordion>

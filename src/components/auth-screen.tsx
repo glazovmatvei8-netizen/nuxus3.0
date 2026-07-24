@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Lock, Eye, EyeOff, User as UserIcon, ShieldCheck, Scale, Globe, Languages } from 'lucide-react';
+import { Loader2, Lock, Eye, EyeOff, User as UserIcon, ShieldCheck, Scale, Globe, Languages, AlertCircle } from 'lucide-react';
 import { useAuth, useFirestore } from '@/firebase';
 import { 
   signInWithEmailAndPassword,
@@ -68,7 +68,6 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
   const [name, setName] = useState('');
   const [username, setUsername] = useState('');
   
-  // HONEYPOT
   const [hpValue, setHpValue] = useState('');
 
   const handleAuth = async (e: React.FormEvent) => {
@@ -81,6 +80,16 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
     }
 
     if (hpValue !== '') return; 
+
+    // БЛОКИРОВКА РФ ПРИ РУЧНОМ ВВОДЕ
+    if (identifier.startsWith('+7') || identifier.startsWith('7') || identifier.startsWith('89')) {
+       toast({ 
+         title: langSelected === 'ru' ? "Региональное ограничение" : "Regional Restriction", 
+         description: langSelected === 'ru' ? "Регистрация из РФ временно недоступна для обеспечения безопасности Ядра." : "Registration from RF is temporarily unavailable due to security protocols.", 
+         variant: "destructive" 
+       });
+       return;
+    }
 
     setIsLoading(true);
     const idClean = identifier.trim().replace(/\D/g, '');
@@ -123,13 +132,12 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
       }
     } catch (e: any) {
       console.error(e);
-      toast({ title: langSelected === 'ru' ? "Ошибка" : "Error", description: langSelected === 'ru' ? "Проверьте данные или соединение. Регистрация из РФ запрещена." : "Check your details or connection. Registration from RF is prohibited.", variant: "destructive" });
+      toast({ title: langSelected === 'ru' ? "Сбой доступа" : "Access Fail", description: langSelected === 'ru' ? "Проверьте данные или соединение. Регистрация из РФ ограничена." : "Check details or connection. RF registration restricted.", variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
   };
 
-  // 1. ШАГ ВЫБОРА ЯЗЫКА (STYLE TELEGRAM)
   if (!langSelected) {
     return (
       <div className="h-[100dvh] w-full flex flex-col items-center justify-center bg-[#020203] relative overflow-hidden px-6">
@@ -285,6 +293,11 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
                <span className="text-[7px] font-black uppercase tracking-[0.4em] text-white">Aegis Protection Active</span>
             </div>
           </Card>
+          
+          <div className="mt-8 flex items-center gap-2 bg-red-500/10 px-4 py-2 rounded-xl border border-red-500/20">
+             <AlertCircle className="w-3.5 h-3.5 text-red-500" />
+             <span className="text-[9px] font-black text-red-500 uppercase tracking-widest">{langSelected === 'ru' ? 'РФ: Регистрация ограничена' : 'RF: Registration Restricted'}</span>
+          </div>
         </div>
       </ScrollArea>
     </div>
