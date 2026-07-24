@@ -1,20 +1,20 @@
-
 'use client';
 
-import { useEffect } from 'react';
-import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
+import { useEffect, useMemo } from 'react';
+import { useUser, useFirestore } from '@/firebase/provider';
+import { useDoc } from '@/firebase/firestore/use-doc';
 import { doc } from 'firebase/firestore';
 import type { User } from '@/lib/types';
 
 /**
- * ОПТИМИЗИРОВАННЫЙ ОБНОВЛЯТОР ИКОНОК.
- * Выполняется только при загрузке или изменении настроек профиля.
+ * ОБНОВЛЯТОР ИКОНОК V5.8.0
+ * ОПТИМИЗИРОВАНО: Прямые импорты для предотвращения originalFactory.call.
  */
 export function AppIconApplier() {
   const { user } = useUser();
   const db = useFirestore();
 
-  const userRef = useMemoFirebase(() => (!db || !user) ? null : doc(db, 'users', user.uid), [db, user]);
+  const userRef = useMemo(() => (!db || !user) ? null : doc(db, 'users', user.uid), [db, user?.uid]);
   const { data: profile } = useDoc<User>(userRef);
 
   const TARGET_ICON = 'https://i.ibb.co/sd2MqGz2/Icon.png?v=45';
@@ -45,7 +45,6 @@ export function AppIconApplier() {
     };
 
     updateIcons();
-    // Интервал удален для снижения нагрузки на CPU
   }, [profile?.settings?.customAppIconUrl]);
 
   return null;

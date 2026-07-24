@@ -1,29 +1,29 @@
 "use client"
 
 import React, { useState, useMemo } from 'react';
-import { useUser, useFirestore, useDoc, useCollection } from '@/firebase';
+import { useUser, useFirestore } from '@/firebase/provider';
+import { useDoc } from '@/firebase/firestore/use-doc';
+import { useCollection } from '@/firebase/firestore/use-collection';
 import { doc, query, collection, limit, writeBatch, increment } from 'firebase/firestore';
 import { UserAvatar } from '@/components/user-avatar';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { 
-  Pencil, Bookmark, ChevronRight, Star, Share2, Zap, HelpCircle, Globe, Server, QrCode, Fingerprint, Cpu, Shield, ShieldCheck, Palette, Sparkles, Gift, Trash2, Clock, Gem, ArrowRightLeft, Loader2, Download, CheckCircle2, Phone, Mail
+  Pencil, Bookmark, ChevronRight, Star, Share2, Zap, QrCode, Fingerprint, Cpu, ShieldAlert, Palette, Sparkles, Phone, Mail
 } from 'lucide-react';
 import { useAppState } from '@/lib/store';
 import { formatDisplayName, cn, isUserPremium } from '@/lib/utils';
 import type { User, ReceivedGift } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { QRCodeSVG } from 'qrcode.react';
 import nuxusVersions from '@/app/versions.json';
-import { differenceInDays, parseISO, format } from 'date-fns';
+import { format } from 'date-fns';
 import { ru } from 'date-fns/locale';
-import { TradeModal } from './modals/trade-modal';
-import Link from 'next/link';
 
 /**
  * PROFILE VIEW V5.8.0 «GLOBAL SOVEREIGNTY»
- * ИСПРАВЛЕНО: Удален useMemoFirebase, заменен на useMemo.
+ * ИСПРАВЛЕНО: Прямые импорты хуков для устранения конфликтов Next.js 15.
  */
 export default function ProfileView() {
   const { user } = useUser();
@@ -32,9 +32,6 @@ export default function ProfileView() {
   const { setIsSettingsOpen, setSettingsTab, setIsLegalOpen } = useAppState();
   
   const [isQrOpen, setIsQrOpen] = useState(false);
-  const [selectedGift, setSelectedGift] = useState<ReceivedGift | null>(null);
-  const [isSelling, setIsSelling] = useState(false);
-  const [isTradeOpen, setIsTradeOpen] = useState(false);
   
   const userProfileRef = useMemo(() => (!db || !user) ? null : doc(db, 'users', user.uid), [db, user?.uid]);
   const { data: profile } = useDoc<User>(userProfileRef);
@@ -54,28 +51,6 @@ export default function ProfileView() {
     if (!inviteLink) return;
     navigator.clipboard.writeText(inviteLink);
     toast({ title: "Ссылка скопирована", description: "Идентификатор узла готов к передаче." });
-  };
-
-  const handleSellGift = async () => {
-    if (!db || !user || !selectedGift || !profile) return;
-    setIsSelling(true);
-    try {
-      const batch = writeBatch(db);
-      const refundRate = 0.65;
-      const refundAmount = Math.floor(selectedGift.price * refundRate);
-      const userRef = doc(db, 'users', user.uid);
-      const giftRef = doc(db, 'users', user.uid, 'receivedGifts', selectedGift.id);
-      const txRef = doc(collection(db, 'users', user.uid, 'transactions'));
-      batch.update(userRef, { balance: increment(refundAmount) });
-      batch.delete(giftRef);
-      batch.set(txRef, {
-        id: txRef.id, userId: user.uid, amount: refundAmount, type: 'transfer_in', status: 'completed', otherPartyName: `Buyback: ${selectedGift.giftName}`, createdAt: new Date().toISOString()
-      });
-      await batch.commit();
-      toast({ title: "Артефакт продан", description: `Начислено ${refundAmount} NX` });
-      setSelectedGift(null);
-    } catch (e) { toast({ title: "Ошибка", variant: "destructive" }); }
-    finally { setIsSelling(false); }
   };
 
   const isPremium = isUserPremium(profile);
@@ -157,7 +132,6 @@ export default function ProfileView() {
 
       <Dialog open={isQrOpen} onOpenChange={setIsQrOpen}>
         <DialogContent className="max-w-xs obsidian-glass border-white/10 rounded-[2.5rem] p-8 text-center shadow-2xl outline-none">
-          <DialogHeader><DialogTitle className="text-xl font-black uppercase italic text-white text-center w-full">Signal Hash</DialogTitle></DialogHeader>
           <div className="py-4 flex justify-center">
             <div className="bg-white p-5 rounded-[2rem] shadow-xl relative">
               <QRCodeSVG value={inviteLink} size={140} imageSettings={{ src: "https://i.ibb.co/sd2MqGz2/Icon.png", height: 32, width: 32, excavate: true }} />
