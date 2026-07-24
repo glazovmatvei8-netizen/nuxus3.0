@@ -15,7 +15,7 @@ import { MessageItem } from './message-item';
 import { ChatInfoModal } from './modals/chat-info-modal';
 import { CreatePollModal } from './modals/create-poll-modal';
 import { EmojiPicker } from './emoji-picker';
-import { useFirestore, useUser, useCollection, useDoc, useMemoFirebase } from '@/firebase';
+import { useUser, useFirestore, useCollection, useDoc, useMemoFirebase } from '@/firebase';
 import { collection, query, orderBy, doc, addDoc, updateDoc, limit, getDocs, where, getDoc, writeBatch } from 'firebase/firestore';
 import { formatDisplayName, cn, compressImage, encryptSignal, isGlobalAdmin, decryptSignal, formatLastSeen, isUserPremium } from '@/lib/utils';
 import type { Message, User as UserType, Chat } from '@/lib/types';
@@ -23,7 +23,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { useToast } from '@/hooks/use-toast';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
-const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, isPremium, replyTo, onCancelReply, messages, participantIds, isGroup }: any) => {
+const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, isPremium, replyTo, onCancelReply }: any) => {
   const { localDrafts, setLocalDrafts } = useAppState();
   
   const [messageInput, setMessageInput] = useState(localDrafts[currentChatId] || '');
@@ -66,14 +66,14 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
 
       recorder.onstop = async () => {
         if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
-        const finalDur = Math.floor((Date.now() - startTimeRef.current) / 1000);
+        const finalDur = Math.max(1, Math.floor((Date.now() - startTimeRef.current) / 1000));
         const blob = new Blob(chunksRef.current, { type: 'audio/webm;codecs=opus' });
         
         if (blob.size > 50) { 
           const reader = new FileReader();
           reader.onloadend = () => {
             if (reader.result) {
-              onSendMessage(reader.result as string, 'audio', { duration: Math.max(1, finalDur) });
+              onSendMessage(reader.result as string, 'audio', { duration: finalDur });
             }
           };
           reader.readAsDataURL(blob);
@@ -89,6 +89,7 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
       setIsRecording(true);
       setRecordingDuration(0);
       
+      // PRECISION TIMER 1:1
       timerIntervalRef.current = setInterval(() => {
         const elapsed = Math.floor((Date.now() - startTimeRef.current) / 1000);
         setRecordingDuration(elapsed);
@@ -276,7 +277,7 @@ export default function ChatArea() {
         </ScrollArea>
       </div>
 
-      <ChatInputBar onSendMessage={handleSendMessage} canPost={true} onPollOpen={() => setIsPollModalOpen(true)} currentChatId={currentChatId} isPremium={isPremium} replyTo={replyTo} onCancelReply={() => setReplyTo(null)} messages={messages} participantIds={chat?.participantIds} isGroup={chat?.type !== 'private'} />
+      <ChatInputBar onSendMessage={handleSendMessage} canPost={true} onPollOpen={() => setIsPollModalOpen(true)} currentChatId={currentChatId} isPremium={isPremium} replyTo={replyTo} onCancelReply={() => setReplyTo(null)} />
 
       {chat && <ChatInfoModal open={isChatInfoOpen} onOpenChange={setIsChatInfoOpen} chat={chat as any} />}
       {currentChatId && <CreatePollModal open={isPollModalOpen} onOpenChange={setIsPollModalOpen} chatId={currentChatId} />}
