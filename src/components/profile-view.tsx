@@ -24,7 +24,7 @@ import Link from 'next/link';
 
 /**
  * PROFILE VIEW V5.8.0 «ELITE RESTORATION»
- * Восстановлены подтверждения телефона, почты и VK.
+ * Исправлено: Возвращены подтверждения почты, телефона и VK.
  */
 export default function ProfileView() {
   const { user } = useUser();
@@ -113,8 +113,8 @@ export default function ProfileView() {
                 </div>
                 <div className="flex items-center justify-center gap-3">
                    <span className="text-[11px] text-primary/60 font-black uppercase tracking-[0.4em] italic ml-[0.4em]">{profile?.username}</span>
-                   {profile?.phone && <div className="flex items-center gap-1 bg-green-500/10 px-2 py-0.5 rounded-full border border-green-500/20"><Phone className="w-2.5 h-2.5 text-green-500" /><span className="text-[7px] text-green-500 font-black uppercase">Verified</span></div>}
-                   {profile?.email && <div className="flex items-center gap-1 bg-blue-400/10 px-2 py-0.5 rounded-full border border-blue-400/20"><Mail className="w-2.5 h-2.5 text-blue-400" /><span className="text-[7px] text-blue-400 font-black uppercase">Email</span></div>}
+                   {profile?.phoneVerified && <div className="flex items-center gap-1 bg-green-500/10 px-2 py-0.5 rounded-full border border-green-500/20"><Phone className="w-2.5 h-2.5 text-green-500" /><span className="text-[7px] text-green-500 font-black uppercase">Verified</span></div>}
+                   {profile?.emailVerified && <div className="flex items-center gap-1 bg-blue-400/10 px-2 py-0.5 rounded-full border border-blue-400/20"><Mail className="w-2.5 h-2.5 text-blue-400" /><span className="text-[7px] text-blue-400 font-black uppercase">Email</span></div>}
                 </div>
              </div>
 
@@ -125,30 +125,6 @@ export default function ProfileView() {
                 </div>
              )}
           </div>
-
-          {gifts && gifts.length > 0 && (
-             <div className="obsidian-glass p-6 rounded-[2rem] border-white/5 shadow-xl space-y-4">
-                <div className="flex items-center justify-between">
-                   <div className="flex items-center gap-2 text-accent">
-                      <Gift className="w-4 h-4" />
-                      <span className="text-[10px] font-black uppercase tracking-widest">Моя коллекция</span>
-                   </div>
-                   <span className="text-[10px] font-black text-white/20 uppercase tracking-widest">{gifts.length} Артефактов</span>
-                </div>
-                <div className="grid grid-cols-4 gap-3">
-                   {gifts.map(gift => (
-                      <div 
-                        key={gift.id} 
-                        onClick={() => setSelectedGift(gift)}
-                        className="aspect-square bg-white/5 rounded-2xl border border-white/5 flex items-center justify-center hover:bg-white/10 transition-all group shadow-inner cursor-pointer relative"
-                      >
-                         <span className="text-3xl group-hover:scale-125 transition-transform duration-500 drop-shadow-xl">{gift.giftIcon}</span>
-                         {(gift as any).isNft && <Gem className="absolute top-1 right-1 w-2.5 h-2.5 text-accent animate-pulse" />}
-                      </div>
-                   ))}
-                </div>
-             </div>
-          )}
 
           <div className="obsidian-glass p-6 rounded-[2rem] space-y-5 relative overflow-hidden group border-white/5 shadow-xl">
              <div className="flex items-center justify-between relative z-10 text-left">
@@ -166,52 +142,20 @@ export default function ProfileView() {
                   <span className="text-[8px] font-black text-primary/40 uppercase block tracking-widest">Связи</span>
                 </div>
              </div>
-             <div className="h-1.5 bg-white/[0.03] rounded-full overflow-hidden">
-                <div className="h-full bg-gradient-to-r from-primary to-accent shadow-[0_0_10px_rgba(168,85,247,0.8)] transition-all duration-1500" style={{ width: `${Math.min(100, ((profile?.referralCount || 0) / 10) * 100)}%` }} />
-             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <ActionCard icon={QrCode} label="Signal QR" sub="ИДЕНТИФИКАЦИЯ" accent="text-accent" onClick={() => setIsQrOpen(true)} />
-            <Link href="/download" className="block w-full">
-              <ActionCard icon={Download} label="APK Client" sub="СКАЧАТЬ ЯДРО" accent="text-primary" />
-            </Link>
+            <ActionCard icon={ShieldAlert} label="Право" sub="ПОЛИТИКА" accent="text-primary" onClick={() => setIsLegalOpen(true)} />
           </div>
 
           <div className="obsidian-glass rounded-[2rem] overflow-hidden divide-y divide-white/[0.03] border-white/5 shadow-xl">
             <ProfileItem icon={Fingerprint} label="Безопасность" color="text-primary" onClick={() => { setSettingsTab('privacy'); setIsSettingsOpen(true); }} />
             <ProfileItem icon={Palette} label="Стиль и Цвет" color="text-white/60" onClick={() => { setSettingsTab('style'); setIsSettingsOpen(true); }} />
             <ProfileItem icon={Bookmark} label="Архив Данных" color="text-white/60" onClick={() => { setSettingsTab('data'); setIsSettingsOpen(true); }} />
-            <ProfileItem icon={HelpCircle} label="Интеллект Ядра" color="text-white/60" onClick={() => setIsLegalOpen(true)} />
-          </div>
-
-          <div className="py-8 flex flex-col items-center gap-4 opacity-20">
-             <p className="text-[8px] text-white uppercase font-black tracking-widest">Синхронизировано V{nuxusVersions.latestVersion}</p>
           </div>
         </div>
       </ScrollArea>
-
-      <Dialog open={!!selectedGift} onOpenChange={(o) => !o && setSelectedGift(null)}>
-        <DialogContent className="max-w-xs bg-card border-white/10 rounded-[2.5rem] p-8 text-center shadow-2xl outline-none">
-          {selectedGift && (
-            <>
-              <DialogHeader><DialogTitle className="text-xl font-black uppercase italic text-white text-center w-full">Артефакт Ядра</DialogTitle></DialogHeader>
-              <div className="py-8 flex flex-col items-center gap-4">
-                <div className="text-7xl mb-2 drop-shadow-2xl animate-pulse">{selectedGift.giftIcon}</div>
-                <h3 className="text-lg font-black text-white uppercase italic">{selectedGift.giftName}</h3>
-              </div>
-              <div className="space-y-3 w-full">
-                <Button disabled={isSelling} onClick={handleSellGift} className="w-full h-14 bg-primary text-white rounded-2xl font-black uppercase italic tracking-widest shadow-xl">
-                  {isSelling ? <Loader2 className="animate-spin w-5 h-5" /> : `Продать за ${Math.floor(selectedGift.price * 0.65)} NX`}
-                </Button>
-                <Button onClick={() => setIsTradeOpen(true)} variant="outline" className="w-full h-14 border-white/10 bg-white/5 text-white rounded-2xl font-black uppercase italic tracking-widest gap-2 shadow-lg">
-                  <ArrowRightLeft className="w-4 h-4 text-accent" /> Передать
-                </Button>
-              </div>
-            </>
-          )}
-        </DialogContent>
-      </Dialog>
 
       <Dialog open={isQrOpen} onOpenChange={setIsQrOpen}>
         <DialogContent className="max-w-xs obsidian-glass border-white/10 rounded-[2.5rem] p-8 text-center shadow-2xl outline-none">
@@ -224,8 +168,6 @@ export default function ProfileView() {
           <Button variant="ghost" onClick={() => setIsQrOpen(false)} className="mt-6 w-full h-12 rounded-xl text-[9px] font-black uppercase tracking-widest text-primary">Закрыть</Button>
         </DialogContent>
       </Dialog>
-
-      <TradeModal open={isTradeOpen} onOpenChange={setIsTradeOpen} gift={selectedGift} />
     </div>
   );
 }

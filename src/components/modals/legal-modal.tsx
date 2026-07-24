@@ -5,17 +5,16 @@ import React from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { ShieldCheck, Scale, Lock, Database, HelpCircle, MessageCircle, Zap, ShieldAlert } from 'lucide-react';
+import { ShieldCheck, Scale, Lock, Database, HelpCircle, MessageCircle, Zap, ShieldAlert, FileText } from 'lucide-react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Button } from '@/components/ui/button';
 import { useAppState } from '@/lib/store';
 import versions from '@/app/versions.json';
 
-export function LegalModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void, type?: 'privacy' | 'terms' }) {
+export function LegalModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const { setInspectedUserId } = useAppState();
 
   const handleContactSupport = () => {
-    // Открываем профиль главного администратора
     setInspectedUserId('GCvLucN8CjNcdaxPO2vmpZ84hNl1');
     onOpenChange(false);
   };
@@ -23,22 +22,70 @@ export function LegalModal({ open, onOpenChange }: { open: boolean, onOpenChange
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl bg-[#0a0a0c] border-white/10 rounded-[2.5rem] p-0 overflow-hidden shadow-2xl flex flex-col h-[85vh] outline-none">
-        <DialogHeader className="p-6 border-b border-white/5 shrink-0">
+        <DialogHeader className="p-8 border-b border-white/5 shrink-0 bg-gradient-to-r from-primary/10 to-transparent">
           <DialogTitle className="text-xl font-black uppercase italic text-white flex items-center gap-3">
-            <ShieldCheck className="w-6 h-6 text-primary" /> База Знаний Ядра
+            <ShieldCheck className="w-6 h-6 text-primary" /> Правовой Департамент
           </DialogTitle>
-          <DialogDescription className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">
-            Nuxus Kernel v{versions.latestVersion} — Technical Support
+          <DialogDescription className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60 mt-1">
+            Nuxus Kernel v{versions.latestVersion} — Legal & Compliance
           </DialogDescription>
         </DialogHeader>
 
-        <Tabs defaultValue="faq" className="flex-1 flex flex-col min-h-0">
+        <Tabs defaultValue="privacy" className="flex-1 flex flex-col min-h-0">
           <div className="px-6 pt-2 shrink-0">
-            <TabsList className="grid grid-cols-2 bg-white/5 p-1 rounded-2xl">
-              <TabsTrigger value="faq" className="rounded-xl text-[10px] font-black uppercase tracking-widest">База знаний</TabsTrigger>
-              <TabsTrigger value="legal" className="rounded-xl text-[10px] font-black uppercase tracking-widest">Юридическая инфо</TabsTrigger>
+            <TabsList className="grid grid-cols-3 bg-white/5 p-1 rounded-2xl border border-white/5">
+              <TabsTrigger value="privacy" className="rounded-xl text-[9px] font-black uppercase tracking-widest">Конфиденциальность</TabsTrigger>
+              <TabsTrigger value="faq" className="rounded-xl text-[9px] font-black uppercase tracking-widest">База знаний</TabsTrigger>
+              <TabsTrigger value="legal" className="rounded-xl text-[9px] font-black uppercase tracking-widest">Условия</TabsTrigger>
             </TabsList>
           </div>
+
+          <TabsContent value="privacy" className="flex-1 m-0 overflow-hidden data-[state=active]:flex flex-col">
+            <ScrollArea className="flex-1 p-8">
+              <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2">
+                <div className="flex items-center gap-4 text-primary">
+                   <Lock className="w-6 h-6" />
+                   <h3 className="text-lg font-black uppercase italic tracking-tight">Политика Nuxus.fun</h3>
+                </div>
+                
+                <div className="space-y-6 text-[12px] leading-relaxed text-white/80 uppercase font-bold tracking-tight">
+                  <section className="space-y-2">
+                    <p className="text-primary/60 font-black">1. ОБЩИЕ ПОЛОЖЕНИЯ</p>
+                    <p>Настоящая Политика определяет порядок обработки персональных данных пользователей мобильного приложения Nuxus.fun. Цель политики — обеспечение защиты прав и свобод человека при обработке его данных.</p>
+                  </section>
+
+                  <section className="space-y-2">
+                    <p className="text-primary/60 font-black">2. КАКИЕ ДАННЫЕ МЫ СОБИРАЕМ</p>
+                    <p>Для работы мессенджера мы собираем только самые необходимые данные, которые вы вводите сами:</p>
+                    <ul className="list-disc pl-5 space-y-1 text-white/60">
+                       <li>Номер телефона (используется как уникальный логин для входа).</li>
+                       <li>Пароль в зашифрованном виде (для защиты вашего аккаунта).</li>
+                       <li>Текстовые сообщения, медиафайлы и реакции в чатах (исключительно для того, чтобы доставлять их вашим собеседникам).</li>
+                    </ul>
+                  </section>
+
+                  <section className="space-y-2">
+                    <p className="text-primary/60 font-black">3. ЦЕЛИ ОБРАБОТКИ ДАННЫХ</p>
+                    <p>Данные собираются только для создания аккаунта, авторизации в приложении и обеспечения работы чатов, личных сообщений и групп.</p>
+                  </section>
+
+                  <section className="space-y-2">
+                    <p className="text-primary/60 font-black">4. БЕЗОПАСНОСТЬ И ПЕРЕДАЧА</p>
+                    <p>Мы не продаем, не передаем и не раскрываем ваши данные третьим лицам. Все переписки и номера телефонов хранятся на защищенных серверах и используются только внутри мессенджера Nuxus.fun.</p>
+                  </section>
+
+                  <section className="space-y-2">
+                    <p className="text-primary/60 font-black">5. УДАЛЕНИЕ ДАННЫХ</p>
+                    <p>Каждый пользователь имеет право запросить удаление своего аккаунта и всех связанных с ним данных через настройки профиля (Аннигиляция Узла) или написав в поддержку.</p>
+                  </section>
+                </div>
+
+                <div className="pt-8 border-t border-white/5 opacity-40">
+                   <p className="text-[9px] font-black text-center">ПОСЛЕДНЕЕ ОБНОВЛЕНИЕ: 23 ИЮЛЯ 2026</p>
+                </div>
+              </div>
+            </ScrollArea>
+          </TabsContent>
 
           <TabsContent value="faq" className="flex-1 m-0 overflow-hidden data-[state=active]:flex flex-col">
             <ScrollArea className="flex-1 p-8">
@@ -59,13 +106,6 @@ export function LegalModal({ open, onOpenChange }: { open: boolean, onOpenChange
                     <AccordionTrigger className="text-[11px] font-bold uppercase text-white/80 hover:no-underline">Как получить статус Premium?</AccordionTrigger>
                     <AccordionContent className="text-[10px] text-muted-foreground leading-relaxed">
                       Статус Premium открывает доступ к ИИ-видео, кастомным цветам и расшифровке голоса. Для активации обратитесь к Оператору Ядра.
-                    </AccordionContent>
-                  </AccordionItem>
-
-                  <AccordionItem value="item-3" className="border-white/5 px-4 rounded-2xl bg-white/[0.02]">
-                    <AccordionTrigger className="text-[11px] font-bold uppercase text-white/80 hover:no-underline">Что такое Signal QR?</AccordionTrigger>
-                    <AccordionContent className="text-[10px] text-muted-foreground leading-relaxed">
-                      Это ваш персональный идентификатор. При сканировании другим пользователем, он мгновенно попадает в ваш профиль для начала защищенного чата.
                     </AccordionContent>
                   </AccordionItem>
                 </Accordion>
@@ -96,18 +136,6 @@ export function LegalModal({ open, onOpenChange }: { open: boolean, onOpenChange
                     <p>2. КОНТЕНТ: ВЫ НЕСЕТЕ ПОЛНУЮ ОТВЕТСТВЕННОСТЬ ЗА ЛЮБОЙ ПЕРЕДАВАЕМЫЙ СИГНАЛ.</p>
                     <p>3. БЕЗОПАСНОСТЬ: ЗАПРЕЩЕНЫ ЛЮБЫЕ ПОПЫТКИ ВЗЛОМА ИЛИ ДЕСТАБИЛИЗАЦИИ ЯДРА.</p>
                   </div>
-                </section>
-
-                <section className="space-y-4">
-                  <h3 className="text-white font-black uppercase tracking-wider flex items-center gap-2"><Lock className="w-4 h-4 text-primary" /> КОНФИДЕНЦИАЛЬНОСТЬ</h3>
-                  <div className="text-[11px] leading-relaxed space-y-2 uppercase font-bold">
-                    <p>МЫ НЕ СОБИРАЕМ ВАШИ ДАННЫЕ ДЛЯ РЕКЛАМЫ. ВСЯ ИНФОРМАЦИЯ ШИФРУЕТСЯ И ПРИНАДЛЕЖИТ ТОЛЬКО ВАМ.</p>
-                  </div>
-                </section>
-
-                <section className="space-y-4">
-                  <h3 className="text-white font-black uppercase tracking-wider flex items-center gap-2"><Database className="w-4 h-4 text-primary" /> ДАННЫЕ</h3>
-                  <p className="text-[10px] uppercase font-bold">Логи IP-адресов удаляются автоматически после завершения каждой сессии.</p>
                 </section>
               </div>
             </ScrollArea>

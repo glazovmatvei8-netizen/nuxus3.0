@@ -6,8 +6,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Lock, Eye, EyeOff, User as UserIcon, ShieldCheck } from 'lucide-react';
+import { Loader2, Lock, Eye, EyeOff, User as UserIcon, ShieldCheck, Scale, ExternalLink } from 'lucide-react';
 import { useAuth, useFirestore } from '@/firebase';
 import { 
   signInWithEmailAndPassword,
@@ -22,38 +23,38 @@ import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
 /**
- * AUTH SCREEN V75.0.0 «AEGIS SHIELD»
- * Добавлен Honeypot для защиты от ботов.
+ * AUTH SCREEN V78.0.0 «PRIVACY FORCE»
+ * Добавлен Checkbox согласия с политикой и ссылки на Legal Core.
  */
 export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'login' | 'register' }) {
   const auth = useAuth();
   const db = useFirestore();
   const { toast } = useToast();
-  const { setIs2FAVerified } = useAppState();
+  const { setIs2FAVerified, setIsLegalOpen } = useAppState();
   
   const [mode, setMode] = useState<'login' | 'register'>(initialMode);
   const [isLoading, setIsLoading] = useState(false);
-  const [isVkLoading, setIsVkLoading] = useState(false);
   const [showPass, setShowPass] = useState(false);
+  const [acceptedPolicy, setAcceptedPolicy] = useState(false);
 
   const [identifier, setIdentifier] = useState(''); 
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
   const [username, setUsername] = useState('');
-  const [vkIdToLink, setVkIdToLink] = useState<number | null>(null);
   
-  // HONEYPOT (Анти-бот ловушка)
+  // HONEYPOT
   const [hpValue, setHpValue] = useState('');
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!identifier.trim() || !db || !auth) return;
 
-    // ЕСЛИ HONEYPOT ЗАПОЛНЕН - ЭТО БОТ
-    if (hpValue !== '') {
-      console.warn("Nuxus Shield: Bot attempt neutralized.");
-      return; 
+    if (mode === 'register' && !acceptedPolicy) {
+      toast({ title: "Ошибка", description: "Вы должны согласиться с Политикой конфиденциальности.", variant: "destructive" });
+      return;
     }
+
+    if (hpValue !== '') return; 
 
     setIsLoading(true);
     const idClean = identifier.trim();
@@ -62,34 +63,37 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
     try {
       await setPersistence(auth, browserLocalPersistence);
       if (mode === 'login') {
-        const userCred = await signInWithEmailAndPassword(auth, finalEmail, password);
-        if (vkIdToLink) {
-          await updateDoc(doc(db, 'users', userCred.user.uid), { vkId: vkIdToLink });
-        }
+        await signInWithEmailAndPassword(auth, finalEmail, password);
         setIs2FAVerified(true);
       } else {
         const usernameWithAt = '@' + username.trim().replace('@', '');
-        const userCred = await createUserWithEmailAndPassword(auth, finalEmail, vkIdToLink ? `vk_quantum_${vkIdToLink}_secure_v74` : password);
+        const userCred = await createUserWithEmailAndPassword(auth, finalEmail, password);
         await setDoc(doc(db, 'users', userCred.user.uid), {
           id: userCred.user.uid,
           name: name.trim(),
           username: usernameWithAt,
           usernameLowercase: usernameWithAt.toLowerCase(),
           phone: identifier.replace(/\D/g, ''),
-          vkId: vkIdToLink,
+          email: finalEmail,
+          emailVerified: false,
+          phoneVerified: false,
           createdAt: new Date().toISOString(),
           balance: 0,
           settings: { 
             theme: 'default', 
             appearance: 'dark', 
             bubbleStyle: 'default',
-            privacy: { lastSeenVisibility: 'everybody' } 
+            privacy: { 
+              lastSeenVisibility: 'everybody',
+              phoneVisibility: 'contacts',
+              allowGroupsFrom: 'everybody'
+            } 
           }
         });
         setIs2FAVerified(true);
       }
     } catch (e: any) {
-      toast({ title: "Ошибка", description: "Проверьте идентификатор или пароль.", variant: "destructive" });
+      toast({ title: "Ошибка", description: "Проверьте данные или соединение.", variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
@@ -117,38 +121,62 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
                 {mode === 'login' ? 'Вход в Ядро' : 'Новый Узел'}
               </CardTitle>
             </CardHeader>
-            <CardContent className="px-8 pb-12 pt-6">
+            <CardContent className="px-8 pb-10 pt-6">
               <form onSubmit={handleAuth} className="space-y-6">
-                
-                {/* HONEYPOT FIELD (Hidden for humans) */}
-                <div style={{ display: 'none' }}>
-                  <input type="text" value={hpValue} onChange={e => setHpValue(e.target.value)} tabIndex={-1} autoComplete="off" />
-                </div>
+                <div style={{ display: 'none' }}><input type="text" value={hpValue} onChange={e => setHpValue(e.target.value)} tabIndex={-1} /></div>
 
                 <div className="space-y-4">
+                  {mode === 'register' && (
+                    <div className="space-y-1.5 text-left animate-in fade-in slide-in-from-top-2">
+                      <Label className="text-[8px] uppercase font-black text-primary/60 ml-4 tracking-widest">Публичное имя</Label>
+                      <Input placeholder="Ваше имя" value={name} onChange={e => setName(e.target.value)} className="bg-white/5 border-white/10 h-14 rounded-2xl font-bold" required />
+                    </div>
+                  )}
+                  {mode === 'register' && (
+                    <div className="space-y-1.5 text-left animate-in fade-in slide-in-from-top-2">
+                      <Label className="text-[8px] uppercase font-black text-primary/60 ml-4 tracking-widest">ID Узла (@ник)</Label>
+                      <Input placeholder="unique_id" value={username} onChange={e => setUsername(e.target.value)} className="bg-white/5 border-white/10 h-14 rounded-2xl font-bold" required />
+                    </div>
+                  )}
                   <div className="space-y-1.5 text-left">
-                    <Label className="text-[8px] uppercase font-black text-primary/60 ml-4 tracking-widest">Идентификатор</Label>
+                    <Label className="text-[8px] uppercase font-black text-primary/60 ml-4 tracking-widest">Телефон или Почта</Label>
                     <div className="relative">
                        <UserIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-primary/40" />
-                       <Input placeholder="Телефон, Email или @ID" value={identifier} onChange={e => setIdentifier(e.target.value)} className="bg-white/5 border-white/10 h-14 rounded-2xl pl-12 font-bold" required />
+                       <Input placeholder="7999..." value={identifier} onChange={e => setIdentifier(e.target.value)} className="bg-white/5 border-white/10 h-14 rounded-2xl pl-12 font-bold" required />
                     </div>
                   </div>
                   <div className="space-y-1.5 text-left">
                     <Label className="text-[8px] uppercase font-black text-primary/60 ml-4 tracking-widest">Пароль</Label>
                     <div className="relative">
                       <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-primary/40" />
-                      <Input type={showPass ? "text" : "password"} placeholder="••••••••" value={password} onChange={e => setPassword(e.target.value)} className="bg-white/5 border-white/10 h-14 rounded-2xl pl-12 font-bold" required={!vkIdToLink} />
+                      <Input type={showPass ? "text" : "password"} placeholder="••••••••" value={password} onChange={e => setPassword(e.target.value)} className="bg-white/5 border-white/10 h-14 rounded-2xl pl-12 font-bold" required />
                       <button type="button" onClick={() => setShowPass(!showPass)} className="absolute right-4 top-1/2 -translate-y-1/2 text-white/20">
                         {showPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                       </button>
                     </div>
                   </div>
                 </div>
-                <div className="space-y-6">
+
+                {mode === 'register' && (
+                  <div className="flex items-start space-x-3 p-4 bg-white/5 rounded-2xl border border-white/5">
+                    <Checkbox id="policy" checked={acceptedPolicy} onCheckedChange={(v) => setAcceptedPolicy(!!v)} className="mt-0.5 border-primary/40 data-[state=checked]:bg-primary" />
+                    <label htmlFor="policy" className="text-[10px] font-bold text-white/60 leading-tight cursor-pointer uppercase tracking-tight">
+                      Я ознакомлен и согласен с <button type="button" onClick={() => setIsLegalOpen(true)} className="text-primary hover:underline font-black">Политикой конфиденциальности</button>
+                    </label>
+                  </div>
+                )}
+
+                <div className="space-y-4">
                   <Button type="submit" disabled={isLoading} className="w-full h-16 bg-primary text-white rounded-2xl font-black uppercase italic tracking-widest shadow-2xl active:scale-95 transition-all group relative overflow-hidden">
                     <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity" />
                     {isLoading ? <Loader2 className="animate-spin w-6 h-6" /> : (mode === 'login' ? "Авторизовать" : "Создать Узел")}
                   </Button>
+                  
+                  <div className="flex justify-center">
+                    <button type="button" onClick={() => setIsLegalOpen(true)} className="flex items-center gap-2 text-[8px] font-black uppercase tracking-[0.2em] text-white/30 hover:text-white/60 transition-colors py-2">
+                       <Scale className="w-3 h-3" /> Правовая информация
+                    </button>
+                  </div>
                 </div>
               </form>
             </CardContent>
