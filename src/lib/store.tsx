@@ -104,6 +104,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 export const useAppState = (): AppState => {
   const context = useContext(AppContext);
   if (context === undefined) {
+    // Fallback safe functions to avoid "undefined is not a function"
     return {
       activeAccountIndex: 0,
       localDrafts: {},

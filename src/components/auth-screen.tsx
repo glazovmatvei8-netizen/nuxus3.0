@@ -143,7 +143,7 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
       <div className="h-[100dvh] w-full flex flex-col items-center justify-center bg-[#020203] relative overflow-hidden px-6">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(168,85,247,0.1)_0%,transparent_70%)]" />
         
-        <div className="relative z-10 flex flex-col items-center gap-12 w-full max-w-sm text-center">
+        <div className="relative z-10 flex flex-col items-center gap-12 w-full max-sm text-center">
            <div className="animate-in fade-in zoom-in-95 duration-1000">
               <NuxusLogo size={140} />
            </div>

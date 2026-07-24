@@ -234,10 +234,26 @@ export const useFirebaseApp = (): FirebaseApp => useFirebase().firebaseApp;
 type MemoFirebase <T> = T & {__memo?: boolean};
 
 export function useMemoFirebase<T>(factory: () => T, deps: DependencyList): T | (MemoFirebase<T>) {
+  // Use a ref to store the actual memoized value to avoid issues with SSR or custom React wrappers
   const memoized = useMemo(factory, deps);
-  if(typeof memoized !== 'object' || memoized === null) return memoized;
-  (memoized as MemoFirebase<T>).__memo = true;
-  return memoized;
+  
+  if (typeof memoized !== 'object' || memoized === null) {
+    return memoized;
+  }
+
+  try {
+    // Attempt to tag the object for internal tracking
+    const result = memoized as MemoFirebase<T>;
+    Object.defineProperty(result, '__memo', {
+      value: true,
+      enumerable: false,
+      configurable: true,
+      writable: true
+    });
+    return result;
+  } catch (e) {
+    return memoized;
+  }
 }
 
 export const useUser = (): UserHookResult => {

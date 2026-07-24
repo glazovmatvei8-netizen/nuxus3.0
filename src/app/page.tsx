@@ -16,12 +16,13 @@ import { useToast } from '@/hooks/use-toast';
 import { isUserActuallyBanned } from '@/lib/utils';
 import { NuxusLogo } from '@/components/nuxus-logo';
 import { IosInstaller } from '@/components/ios-installer';
+import { LegalModal } from '@/components/modals/legal-modal';
 
 export default function Home() {
   const { user, isUserLoading } = useUser();
   const db = useFirestore();
   const auth = useAuth();
-  const { is2FAVerified, setIs2FAVerified, setInspectedUserId, setActiveCallId } = useAppState();
+  const { is2FAVerified, setIs2FAVerified, setInspectedUserId, setActiveCallId, isLegalOpen, setIsLegalOpen } = useAppState();
   const { toast } = useToast();
   
   const [mounted, setMounted] = useState(false);
@@ -159,7 +160,16 @@ export default function Home() {
   }
 
   if (showIosInstaller) return <IosInstaller onDismiss={() => setShowIosInstaller(false)} />;
-  if (!user) return <AuthScreen />;
+  
+  if (!user) {
+    return (
+      <>
+        <AuthScreen />
+        <LegalModal open={isLegalOpen} onOpenChange={setIsLegalOpen} />
+      </>
+    );
+  }
+
   if (isBanned) {
     return (
       <div className="h-screen w-full flex flex-col items-center justify-center bg-[#050505] p-6 text-center">
