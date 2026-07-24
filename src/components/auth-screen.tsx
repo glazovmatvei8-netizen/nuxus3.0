@@ -29,13 +29,15 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-// Список стран (БЕЗ РФ)
+// Список стран (БЕЗ РФ, с прокруткой)
 const COUNTRY_CODES = [
   { code: '+380', name: 'Украина', flag: '🇺🇦' },
   { code: '+1', name: 'USA/Canada', flag: '🇺🇸' },
   { code: '+44', name: 'UK', flag: '🇬🇧' },
   { code: '+49', name: 'Germany', flag: '🇩🇪' },
   { code: '+33', name: 'France', flag: '🇫🇷' },
+  { code: '+34', name: 'Spain', flag: '🇪🇸' },
+  { code: '+39', name: 'Italy', flag: '🇮🇹' },
   { code: '+48', name: 'Poland', flag: '🇵🇱' },
   { code: '+375', name: 'Belarus', flag: '🇧🇾' },
   { code: '+77', name: 'Kazakhstan', flag: '🇰🇿' },
@@ -45,9 +47,13 @@ const COUNTRY_CODES = [
   { code: '+372', name: 'Estonia', flag: '🇪🇪' },
   { code: '+358', name: 'Finland', flag: '🇫🇮' },
   { code: '+46', name: 'Sweden', flag: '🇸🇪' },
+  { code: '+47', name: 'Norway', flag: '🇳🇴' },
+  { code: '+41', name: 'Switzerland', flag: '🇨🇭' },
   { code: '+90', name: 'Turkey', flag: '🇹🇷' },
   { code: '+972', name: 'Israel', flag: '🇮🇱' },
   { code: '+81', name: 'Japan', flag: '🇯🇵' },
+  { code: '+82', name: 'S.Korea', flag: '🇰🇷' },
+  { code: '+971', name: 'UAE', flag: '🇦🇪' },
 ];
 
 export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'login' | 'register' }) {
@@ -94,7 +100,8 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
     setIsLoading(true);
     const idClean = identifier.trim().replace(/\D/g, '');
     
-    const finalPhone = mode === 'register' ? `${countryCode.replace('+', '')}${idClean}` : idClean;
+    // Всегда используем код страны, если ввод не похож на почту
+    const finalPhone = identifier.includes('@') ? idClean : `${countryCode.replace('+', '')}${idClean}`;
     const finalEmail = identifier.includes('@') ? identifier.trim() : `${finalPhone}@nuxus.chat`;
 
     try {
@@ -224,15 +231,15 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
                   <div className="space-y-1.5 text-left">
                     <Label className="text-[8px] uppercase font-black text-primary/60 ml-4 tracking-widest">{langSelected === 'ru' ? 'Телефон или Почта' : 'Phone or Email'}</Label>
                     <div className="flex gap-2">
-                      {mode === 'register' && !identifier.includes('@') && (
+                      {!identifier.includes('@') && (
                         <div className="w-[110px] shrink-0">
                           <Select value={countryCode} onValueChange={setCountryCode}>
                             <SelectTrigger className="h-14 bg-white/5 border-white/10 rounded-2xl font-bold px-3">
                               <SelectValue placeholder="🌍" />
                             </SelectTrigger>
-                            <SelectContent className="bg-[#0a0a0c] border-white/10 rounded-2xl">
+                            <SelectContent className="bg-[#0a0a0c] border-white/10 rounded-2xl max-h-[250px] overflow-y-auto">
                               {COUNTRY_CODES.map((c) => (
-                                <SelectItem key={c.code} value={c.code} className="text-[11px] font-black uppercase">
+                                <SelectItem key={c.code} value={c.code} className="text-[11px] font-black uppercase py-3">
                                   {c.flag} {c.code}
                                 </SelectItem>
                               ))}
@@ -243,7 +250,7 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
                       <div className="relative flex-1">
                         <UserIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-primary/40" />
                         <Input 
-                          placeholder={mode === 'register' ? (langSelected === 'ru' ? "Номер без кода" : "Number without code") : "7999..."} 
+                          placeholder={mode === 'register' ? (langSelected === 'ru' ? "Номер без кода" : "Number without code") : "999..."} 
                           value={identifier} 
                           onChange={e => setIdentifier(e.target.value)} 
                           className="bg-white/5 border-white/10 h-14 rounded-2xl pl-12 font-bold" 
@@ -269,7 +276,7 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
                   <div className="flex items-start space-x-3 p-4 bg-white/5 rounded-2xl border border-white/5">
                     <Checkbox id="policy" checked={acceptedPolicy} onCheckedChange={(v) => setAcceptedPolicy(!!v)} className="mt-0.5 border-primary/40 data-[state=checked]:bg-primary" />
                     <label htmlFor="policy" className="text-[10px] font-bold text-white/60 leading-tight cursor-pointer uppercase tracking-tight">
-                      {langSelected === 'ru' ? 'Я ознакомлен и согласен с' : 'I have read and agree to the'} <button type="button" onClick={() => setIsLegalOpen(true)} className="text-primary hover:underline font-black">{langSelected === 'ru' ? 'Политикой конфиденциальности' : 'Privacy Policy'}</button>
+                      {langSelected === 'ru' ? 'Я ознакомлен и согласен с' : 'I have read and agree to the'} <button type="button" onClick={(e) => { e.preventDefault(); setIsLegalOpen(true); }} className="text-primary hover:underline font-black">{langSelected === 'ru' ? 'Политикой конфиденциальности' : 'Privacy Policy'}</button>
                     </label>
                   </div>
                 )}

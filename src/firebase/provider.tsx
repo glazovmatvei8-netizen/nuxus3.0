@@ -78,14 +78,12 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
     return () => unsubscribe();
   }, [auth]);
 
-  // Session & Heartbeat Core v32.0
   useEffect(() => {
     if (!userAuthState.user || !firestore) return;
 
     const uid = userAuthState.user.uid;
     const userRef = doc(firestore, 'users', uid);
     
-    // Generate or retrieve persistent Session ID for this browser/device
     let sessionId = localStorage.getItem('nuxus_session_id');
     if (!sessionId) {
       sessionId = Math.random().toString(36).substring(2, 15);
@@ -94,7 +92,6 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
 
     const sessionRef = doc(firestore, 'users', uid, 'sessions', sessionId);
 
-    // Get basic device info
     const getDeviceName = () => {
       const ua = navigator.userAgent;
       if (/android/i.test(ua)) return "Android Device";
@@ -115,11 +112,7 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
     const updateStatus = async () => {
       if (document.hidden) return;
       const now = new Date().toISOString();
-      
-      // Update global user status
       updateDocumentNonBlocking(userRef, { lastSeen: now });
-      
-      // Update specific session heartbeat
       updateDocumentNonBlocking(sessionRef, { lastActive: now });
     };
 
@@ -144,14 +137,11 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
         };
 
         setDocumentNonBlocking(sessionRef, sessionData, { merge: true });
-        
-        // Also update user profile IP
         updateDocumentNonBlocking(userRef, { 
           lastIp: geo.ip,
           countryCode: geo.country_code || '??'
         });
       } catch (e) {
-        // Fallback session without geo
         setDocumentNonBlocking(sessionRef, {
           id: sessionId,
           userId: uid,
@@ -163,10 +153,8 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
       }
     };
 
-    // Monitor this session existence (remote termination)
     const unsubscribeSession = onSnapshot(sessionRef, (snap) => {
       if (!snap.exists() && userAuthState.user) {
-        // Session was terminated remotely
         signOut(auth).then(() => {
           localStorage.removeItem('nuxus_session_id');
           window.location.reload();
@@ -231,29 +219,12 @@ export const useAuth = (): Auth => useFirebase().auth;
 export const useFirestore = (): Firestore => useFirebase().firestore;
 export const useFirebaseApp = (): FirebaseApp => useFirebase().firebaseApp;
 
-type MemoFirebase <T> = T & {__memo?: boolean};
-
-export function useMemoFirebase<T>(factory: () => T, deps: DependencyList): T | (MemoFirebase<T>) {
-  // Use a ref to store the actual memoized value to avoid issues with SSR or custom React wrappers
-  const memoized = useMemo(factory, deps);
-  
-  if (typeof memoized !== 'object' || memoized === null) {
-    return memoized;
-  }
-
-  try {
-    // Attempt to tag the object for internal tracking
-    const result = memoized as MemoFirebase<T>;
-    Object.defineProperty(result, '__memo', {
-      value: true,
-      enumerable: false,
-      configurable: true,
-      writable: true
-    });
-    return result;
-  } catch (e) {
-    return memoized;
-  }
+/**
+ * STABLE useMemoFirebase V5.8.0
+ * Fixed "originalFactory.cal" error on mobile by using standard useMemo.
+ */
+export function useMemoFirebase<T>(factory: () => T, deps: DependencyList): T {
+  return useMemo(factory, deps);
 }
 
 export const useUser = (): UserHookResult => {
