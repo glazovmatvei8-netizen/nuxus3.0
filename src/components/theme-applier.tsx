@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo } from 'react';
-import { useUser, useFirestore, useDoc } from '@/firebase';
+import { useUser, useFirestore, useDoc } from '@/firebase/provider';
 import { doc } from 'firebase/firestore';
 import type { User } from '@/lib/types';
 

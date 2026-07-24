@@ -8,9 +8,10 @@ import { updateDocumentNonBlocking, setDocumentNonBlocking } from './non-blockin
 
 /**
  * Стабилизатор ссылок Firebase.
- * Помогает избежать бесконечных циклов в useCollection/useDoc.
+ * Использует стандартный useMemo для обеспечения стабильности ссылок в useCollection/useDoc.
  */
 export function useMemoFirebase<T>(factory: () => T, deps: DependencyList): T {
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   return useMemo(factory, deps);
 }
 
