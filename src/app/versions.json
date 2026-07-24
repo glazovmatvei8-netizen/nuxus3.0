@@ -5,11 +5,10 @@
   "build": "Neural-Precision-Core",
   "sizeMb": 105,
   "changelog": [
-    "Fixed: Appflow build missing AppId element",
+    "Added: Permanent account annihilation feature",
     "Improved: Voice message timer precision 1:1",
-    "Added: Retry/Hide controls for AI transcription",
-    "Enhanced: Session persistence to prevent random logout",
-    "Cleaned: Ghost nodes filtered from Admin Panel",
+    "Enhanced: Session persistence & Anti-Logout",
+    "Security: Aegis Shield & AI Security Audit",
     "Sync: RFC 9727 API Catalog for Agents"
   ]
 }

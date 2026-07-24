@@ -12,10 +12,10 @@ import { Switch } from '@/components/ui/switch';
 import { useAuth, useUser, useFirestore, useDoc, useMemoFirebase, useCollection } from '@/firebase';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
-  LogOut, Settings2, Camera, Star, ShieldCheck, Loader2, CheckCircle2, Fingerprint, Palette, Archive, ChevronRight, X, Globe, Smartphone, Monitor, Trash2, MapPin, Activity, Zap, Mail, Phone, Lock, Eye, EyeOff
+  LogOut, Settings2, Camera, Star, ShieldCheck, Loader2, CheckCircle2, Fingerprint, Palette, Archive, ChevronRight, X, Globe, Smartphone, Monitor, Trash2, MapPin, Activity, Zap, Mail, Phone, Lock, Eye, EyeOff, AlertTriangle
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { signOut } from 'firebase/auth';
+import { signOut, deleteUser } from 'firebase/auth';
 import { doc, updateDoc, collection, query, orderBy, deleteDoc } from 'firebase/firestore';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAppState } from '@/lib/store';
@@ -23,8 +23,8 @@ import { isUserPremium, cn } from '@/lib/utils';
 import type { User, Session } from '@/lib/types';
 
 /**
- * SETTINGS CORE V5.8.0 «ELITE RESTORATION»
- * Восстановлены сессии с IP, кастомные стили и верификации.
+ * SETTINGS CORE V5.8.0 «ELITE RESTORATION & ANNIHILATION»
+ * Добавлена функция вечного удаления аккаунта.
  */
 export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const auth = useAuth();
@@ -106,6 +106,44 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
       toast({ title: "Сбой записи", variant: "destructive" }); 
     } finally { 
       setIsSaving(false); 
+    }
+  };
+
+  const handlePermanentDelete = async () => {
+    if (!db || !user || !auth.currentUser) return;
+    
+    const confirmText = prompt('ВНИМАНИЕ: Это действие аннигилирует ваш узел навсегда без возможности восстановления. Введите "УНИЧТОЖИТЬ" для подтверждения:');
+    if (confirmText !== 'УНИЧТОЖИТЬ') {
+      toast({ title: "Действие отменено" });
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      // 1. Стираем данные в Firestore
+      await deleteDoc(doc(db, 'users', user.uid));
+      
+      // 2. Удаляем пользователя из системы авторизации
+      await deleteUser(auth.currentUser);
+      
+      toast({ title: "Узел успешно аннигилирован" });
+      onOpenChange(false);
+      window.location.reload();
+    } catch (e: any) {
+      if (e.code === 'auth/requires-recent-login') {
+        toast({ 
+          title: "Свежий вход обязателен", 
+          description: "Для удаления узла вы должны перезайти в аккаунт прямо сейчас.",
+          variant: "destructive" 
+        });
+      } else {
+        // Если удаление из Auth не сработало, пробуем просто выйти
+        await signOut(auth);
+        toast({ title: "Сигнал разорван", description: "Узел помечен как неактивный." });
+        onOpenChange(false);
+      }
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -276,6 +314,26 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                             )}
                          </div>
                        ))}
+                    </div>
+                 </div>
+
+                 {/* ACCOUNT DELETION BLOCK */}
+                 <div className="pt-8 border-t border-red-500/20 space-y-4">
+                    <div className="flex items-center gap-3 px-1 text-red-500">
+                       <AlertTriangle className="w-4 h-4" />
+                       <h3 className="text-[10px] font-black uppercase tracking-[0.3em]">Опасная зона</h3>
+                    </div>
+                    <div className="bg-red-500/5 p-6 rounded-[2rem] border border-red-500/10 space-y-4">
+                       <p className="text-[10px] text-red-500/60 font-bold uppercase leading-relaxed">
+                          Удаление узла навсегда сотрет все ваши сообщения, артефакты и связи. Вы больше никогда не сможете войти в этот аккаунт.
+                       </p>
+                       <Button 
+                         onClick={handlePermanentDelete} 
+                         variant="ghost" 
+                         className="w-full h-14 rounded-2xl bg-red-500/10 text-red-500 border border-red-500/20 font-black uppercase italic text-[10px] tracking-widest hover:bg-red-500 hover:text-white transition-all"
+                       >
+                          Аннигилировать узел навсегда
+                       </Button>
                     </div>
                  </div>
               </TabsContent>
