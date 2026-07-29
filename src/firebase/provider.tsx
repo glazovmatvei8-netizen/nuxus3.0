@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { createContext, useContext, ReactNode, useMemo, useState, useEffect, DependencyList } from 'react';
@@ -20,7 +19,6 @@ import { updateDocumentNonBlocking, setDocumentNonBlocking } from './non-blockin
 
 /**
  * СТАБИЛИЗАТОР ХУКОВ V6.0.2 «ULTIMATE»
- * Полное устранение циклической зависимости originalFactory.call.
  */
 
 export function useMemoFirebase<T>(factory: () => T, deps: DependencyList): T {
@@ -192,9 +190,9 @@ export const useUser = () => {
 
 export type WithId<T> = T & { id: string, isPending?: boolean };
 
-export const useCollection = <T = any>(
+export function useCollection<T = any>(
     memoizedTargetRefOrQuery: (CollectionReference<DocumentData> | Query<DocumentData>) | null | undefined,
-) => {
+) {
   const [data, setData] = useState<WithId<T>[] | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<FirestoreError | Error | null>(null);
@@ -235,9 +233,9 @@ export const useCollection = <T = any>(
   return { data, isLoading, error };
 }
 
-export const useDoc = <T = any>(
+export function useDoc<T = any>(
   memoizedDocRef: any
-) => {
+) {
   const [data, setData] = useState<WithId<T> | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<FirestoreError | Error | null>(null);
