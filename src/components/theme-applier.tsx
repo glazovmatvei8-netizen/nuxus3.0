@@ -6,15 +6,19 @@ import { doc } from 'firebase/firestore';
 import type { User } from '@/lib/types';
 
 /**
- * ПРИМЕНИТЕЛЬ ТЕМЫ V6.0.2 «ULTIMATE»
+ * ПРИМЕНИТЕЛЬ ТЕМЫ V6.1.0 «ULTIMATE»
  * Безопасная обработка SSR и состояния инициализации.
- * Исправлена ошибка Firestore not available.
+ * Исправлена ошибка Firestore not available через проверку firestore.
  */
 export function ThemeApplier() {
   const { user } = useUser();
-  const db = useFirestore();
+  const firestore = useFirestore();
 
-  const userRef = useMemo(() => (!db || !user) ? null : doc(db, 'users', user.uid), [db, user?.uid]);
+  const userRef = useMemo(() => {
+    if (!firestore || !user) return null;
+    return doc(firestore, 'users', user.uid);
+  }, [firestore, user?.uid]);
+
   const { data: profile } = useDoc<User>(userRef);
 
   useEffect(() => {

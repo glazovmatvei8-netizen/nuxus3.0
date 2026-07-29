@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useRef, useEffect } from 'react';
@@ -7,29 +6,28 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { 
   Sparkles, Zap, Globe, ShieldCheck, Loader2, Send, 
-  Cpu, Activity, Terminal, Wand2, Mic, Ghost
+  Cpu, Activity, Terminal, Wand2, Mic, Ghost, Search, ArrowUpRight, BrainCircuit
 } from 'lucide-react';
 import { useUser, useFirestore } from '@/firebase/provider';
-import { doc } from 'firebase/firestore';
-import { useDoc } from '@/firebase/firestore/use-doc';
 import { askNexusAI } from '@/ai/flows/nuxus-intelligence-flow';
 import { cn, formatDisplayName } from '@/lib/utils';
 import type { User } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
+import { NuxusLogo } from './nuxus-logo';
 
 /**
- * NEXUS AI TERMINAL V1.0
- * Прямой доступ к суверенному интеллекту Ядра.
+ * NEXUS AI TERMINAL V2.0 «GEMINI EDITION»
+ * Ультра-современный интерфейс в стиле Gemini.
  */
 export default function NuxusAiView() {
   const { user } = useUser();
-  const db = useFirestore();
   const { toast } = useToast();
   
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState<{role: 'user' | 'model', content: string}[]>([]);
   const [isThinking, setIsThinking] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -57,110 +55,125 @@ export default function NuxusAiView() {
 
   return (
     <div className="flex flex-col h-full bg-[#020205] overflow-hidden relative">
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(168,85,247,0.1)_0%,transparent_50%)] pointer-events-none" />
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(168,85,247,0.08)_0%,transparent_50%)] pointer-events-none" />
       
-      <header className="px-6 pt-12 pb-6 shrink-0 border-b border-white/5 bg-black/20 backdrop-blur-xl z-20">
-        <div className="flex items-center justify-between">
-          <div className="flex flex-col text-left">
-            <h1 className="text-3xl font-black text-white italic tracking-tighter uppercase flex items-center gap-3">
-              NX-AI <span className="text-[8px] bg-primary/20 text-primary px-2 py-0.5 rounded-full border border-primary/20 tracking-[0.3em] font-black">SOVEREIGN</span>
-            </h1>
-            <p className="text-[8px] font-black text-white/20 uppercase tracking-[0.4em] ml-1 mt-1 flex items-center gap-2">
-              <Activity className="w-2 h-2 text-green-500" /> Neural Link Active
-            </p>
-          </div>
-          <div className="h-12 w-12 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center shadow-xl">
-             <Cpu className="w-6 h-6 text-primary animate-pulse" />
-          </div>
-        </div>
+      {/* Header */}
+      <header className="px-6 pt-12 pb-6 shrink-0 z-20 flex items-center justify-between">
+         <div className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-xl bg-white/[0.03] border border-white/10 flex items-center justify-center shadow-xl">
+               <BrainCircuit className="w-5 h-5 text-primary animate-pulse" />
+            </div>
+            <div className="flex flex-col">
+               <h1 className="text-xl font-black text-white italic tracking-tighter uppercase">Nexus AI</h1>
+               <span className="text-[7px] font-black text-primary/40 uppercase tracking-[0.4em]">Sovereign Mind v2.0</span>
+            </div>
+         </div>
+         <div className="flex items-center gap-2 opacity-40">
+            <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+            <span className="text-[8px] font-black text-white uppercase tracking-widest">Neural Link Active</span>
+         </div>
       </header>
 
-      <ScrollArea className="flex-1 px-4">
-        <div className="p-4 space-y-6 pb-32">
+      <ScrollArea className="flex-1 px-4 md:px-20 lg:px-40">
+        <div className="max-w-4xl mx-auto py-10 space-y-10">
           {messages.length === 0 && (
-            <div className="flex flex-col items-center justify-center py-20 text-center space-y-8 animate-in fade-in zoom-in-95 duration-1000">
+            <div className="flex flex-col items-center justify-center min-h-[50vh] text-center space-y-12 animate-in fade-in zoom-in-95 duration-1000">
                <div className="relative">
-                  <div className="absolute -inset-10 bg-primary/20 blur-[80px] rounded-full animate-pulse" />
-                  <Terminal className="w-20 h-20 text-primary/40 relative z-10" />
+                  <div className="absolute -inset-16 bg-primary/20 blur-[100px] rounded-full animate-pulse" />
+                  <NuxusLogo size={180} />
                </div>
-               <div className="space-y-3">
-                  <h3 className="text-xl font-black text-white uppercase italic tracking-widest">Инициализация Разума</h3>
-                  <p className="text-[10px] text-white/40 font-bold uppercase tracking-[0.2em] max-w-[240px] leading-relaxed">
-                    Я — суверенный интеллект Ядра. Спрашивайте о чем угодно, я найду ответ в сети.
+               <div className="space-y-4 max-w-lg">
+                  <h3 className="text-4xl font-black text-white uppercase italic tracking-tighter leading-none">Чем я могу помочь?</h3>
+                  <p className="text-sm text-white/40 font-bold uppercase tracking-widest leading-relaxed">
+                    Я — суверенный разум Ядра Nuxus. <br/> Могу анализировать данные, искать в сети и писать код.
                   </p>
                </div>
-               <div className="grid grid-cols-1 gap-3 w-full max-w-xs">
-                  <QuickCommand text="Найди последние новости технологий" onClick={setInput} />
-                  <QuickCommand text="Как работает шифрование QES?" onClick={setInput} />
-                  <QuickCommand text="Напиши код на Python для анализа данных" onClick={setInput} />
+               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 w-full">
+                  <QuickCommand icon={Globe} text="Мировые новости" onClick={setInput} />
+                  <QuickCommand icon={Cpu} text="Помощь с кодом" onClick={setInput} />
+                  <QuickCommand icon={Sparkles} text="Идеи для фото" onClick={setInput} />
                </div>
             </div>
           )}
 
           {messages.map((msg, i) => (
-            <div key={i} className={cn("flex w-full", msg.role === 'user' ? "justify-end" : "justify-start")}>
+            <div key={i} className={cn("flex w-full flex-col gap-3 animate-in slide-in-from-bottom-4 duration-500", msg.role === 'user' ? "items-end" : "items-start")}>
                <div className={cn(
-                 "max-w-[85%] p-5 rounded-[2rem] shadow-2xl relative border animate-in slide-in-from-bottom-2 duration-500",
+                 "p-6 rounded-[2.5rem] shadow-2xl relative border-2 max-w-[85%]",
                  msg.role === 'user' 
-                  ? "bg-primary text-white border-primary/20 rounded-br-none" 
-                  : "bg-white/5 backdrop-blur-xl border-white/10 text-white rounded-bl-none"
+                  ? "bg-primary/10 border-primary/20 text-white rounded-br-none" 
+                  : "bg-white/[0.03] border-white/5 text-white/90 rounded-bl-none"
                )}>
-                  <p className="text-sm font-medium leading-relaxed">{msg.content}</p>
-                  <div className="mt-2 flex items-center gap-2 opacity-30">
-                     <span className="text-[8px] font-black uppercase tracking-widest">{msg.role === 'user' ? 'Узел' : 'NX-AI'}</span>
-                  </div>
+                  <p className="text-[15px] font-medium leading-relaxed whitespace-pre-wrap">{msg.content}</p>
                </div>
+               <span className="text-[8px] font-black uppercase text-white/20 tracking-widest px-4">
+                 {msg.role === 'user' ? 'Узел' : 'Nexus AI'}
+               </span>
             </div>
           ))}
 
           {isThinking && (
-            <div className="flex justify-start animate-in fade-in duration-300">
-               <div className="bg-white/5 border border-white/10 p-5 rounded-[2rem] rounded-bl-none flex items-center gap-4">
-                  <div className="flex gap-1">
-                     <div className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce [animation-delay:-0.3s]" />
-                     <div className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce [animation-delay:-0.15s]" />
-                     <div className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce" />
+            <div className="flex flex-col gap-3 items-start animate-in fade-in duration-300">
+               <div className="bg-white/[0.02] border border-white/5 p-6 rounded-[2.5rem] rounded-bl-none flex items-center gap-6 shadow-2xl">
+                  <div className="flex gap-2">
+                     <div className="w-2 h-2 bg-primary rounded-full animate-bounce [animation-delay:-0.3s]" />
+                     <div className="w-2 h-2 bg-primary rounded-full animate-bounce [animation-delay:-0.15s]" />
+                     <div className="w-2 h-2 bg-primary rounded-full animate-bounce" />
                   </div>
-                  <span className="text-[9px] font-black uppercase tracking-widest text-primary/60">Анализ сигналов...</span>
+                  <span className="text-[10px] font-black uppercase tracking-[0.3em] text-primary/60">Синхронизация нейронов...</span>
                </div>
             </div>
           )}
-          <div ref={scrollRef} />
+          <div ref={scrollRef} className="h-10" />
         </div>
       </ScrollArea>
 
-      <div className="p-4 bg-transparent shrink-0 z-30 pb-[calc(1.5rem+env(safe-area-inset-bottom))]">
-        <div className="max-w-3xl mx-auto relative">
-          <div className="absolute -inset-2 bg-primary/10 blur-xl opacity-50 rounded-[2.5rem]" />
-          <div className="relative bg-white/5 border border-white/10 rounded-[2.2rem] p-2 flex items-end gap-2 shadow-2xl backdrop-blur-3xl">
+      {/* Gemini-Style Input Area */}
+      <div className="shrink-0 z-30 pb-[calc(2rem+env(safe-area-inset-bottom))] px-6">
+        <div className="max-w-4xl mx-auto relative group">
+          <div className="absolute -inset-1 bg-gradient-to-r from-primary/30 to-accent/30 blur-2xl opacity-0 group-focus-within:opacity-100 transition-all duration-700" />
+          <div className="relative bg-white/[0.03] backdrop-blur-3xl border-2 border-white/10 rounded-[3rem] p-3 flex items-end gap-3 shadow-[0_30px_100px_rgba(0,0,0,0.8)] focus-within:border-primary/40 transition-all duration-500">
+             <Button variant="ghost" size="icon" className="h-12 w-12 rounded-full text-white/20 hover:text-white shrink-0">
+                <Mic className="w-6 h-6" />
+             </Button>
              <Textarea 
-               placeholder="Запрос к Интеллекту..." 
+               ref={textareaRef}
+               placeholder="Спросите Nexus AI..." 
                value={input}
                onChange={e => setInput(e.target.value)}
                onKeyDown={e => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), handleSend())}
-               className="bg-transparent border-none focus-visible:ring-0 text-white min-h-[56px] max-h-40 py-4 px-4 resize-none text-sm font-bold tracking-tight scrollbar-hide"
+               className="bg-transparent border-none focus-visible:ring-0 text-white min-h-[48px] max-h-40 py-3.5 px-2 resize-none text-[16px] font-medium tracking-tight scrollbar-hide flex-1"
              />
              <Button 
                onClick={handleSend}
                disabled={!input.trim() || isThinking}
-               className="h-12 w-12 rounded-2xl bg-primary text-white shrink-0 shadow-lg active:scale-90 transition-all"
+               className={cn(
+                 "h-12 w-12 rounded-full shrink-0 shadow-2xl active:scale-90 transition-all duration-500",
+                 input.trim() ? "bg-primary text-white scale-110" : "bg-white/5 text-white/20"
+               )}
              >
                {isThinking ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
              </Button>
           </div>
+          <p className="mt-4 text-center text-[8px] font-black uppercase text-white/10 tracking-[0.4em]">
+            Nexus AI может ошибаться. Проверяйте важные сигналы.
+          </p>
         </div>
       </div>
     </div>
   );
 }
 
-function QuickCommand({ text, onClick }: { text: string, onClick: (t: string) => void }) {
+function QuickCommand({ icon: Icon, text, onClick }: { icon: any, text: string, onClick: (t: string) => void }) {
   return (
     <button 
       onClick={() => onClick(text)}
-      className="p-3.5 bg-white/5 border border-white/10 rounded-xl text-[10px] font-black uppercase tracking-widest text-white/60 hover:bg-primary/10 hover:text-primary transition-all text-left flex items-center gap-3"
+      className="p-5 bg-white/[0.02] border border-white/10 rounded-3xl text-[10px] font-black uppercase tracking-widest text-white/40 hover:bg-primary/10 hover:text-primary hover:border-primary/20 transition-all text-left flex flex-col gap-4 group"
     >
-      <Zap className="w-3.5 h-3.5" /> {text}
+      <div className="h-10 w-10 rounded-xl bg-white/5 flex items-center justify-center group-hover:scale-110 transition-transform">
+         <Icon className="w-5 h-5" />
+      </div>
+      <span>{text}</span>
     </button>
   );
 }

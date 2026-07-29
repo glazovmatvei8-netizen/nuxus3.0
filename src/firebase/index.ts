@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * NUXUS FIREBASE CORE BARREL V6.0.2
+ * NUXUS FIREBASE CORE BARREL V6.1.0
  * Централизованный экспорт для устранения циклической зависимости "originalFactory.call".
  */
 

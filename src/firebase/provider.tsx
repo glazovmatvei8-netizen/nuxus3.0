@@ -18,7 +18,8 @@ import { Auth, User, onAuthStateChanged, signOut } from 'firebase/auth';
 import { updateDocumentNonBlocking, setDocumentNonBlocking } from './non-blocking-updates';
 
 /**
- * СТАБИЛИЗАТОР ХУКОВ V6.0.2 «ULTIMATE»
+ * СТАБИЛИЗАТОР ХУКОВ V6.1.0 «ULTIMATE»
+ * Все хуки консолидированы здесь для предотвращения циклической зависимости.
  */
 
 export function useMemoFirebase<T>(factory: () => T, deps: DependencyList): T {

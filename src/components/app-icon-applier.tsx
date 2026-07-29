@@ -6,14 +6,18 @@ import { doc } from 'firebase/firestore';
 import type { User } from '@/lib/types';
 
 /**
- * ОБНОВЛЯТОР ИКОНОК V6.0.2
+ * ОБНОВЛЯТОР ИКОНОК V6.1.0
  * ОПТИМИЗИРОВАНО: Прямые импорты из провайдера.
  */
 export function AppIconApplier() {
   const { user } = useUser();
-  const db = useFirestore();
+  const firestore = useFirestore();
 
-  const userRef = useMemo(() => (!db || !user) ? null : doc(db, 'users', user.uid), [db, user?.uid]);
+  const userRef = useMemo(() => {
+    if (!firestore || !user) return null;
+    return doc(firestore, 'users', user.uid);
+  }, [firestore, user?.uid]);
+
   const { data: profile } = useDoc<User>(userRef);
 
   const TARGET_ICON = 'https://i.ibb.co/sd2MqGz2/Icon.png?v=45';

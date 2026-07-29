@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Lock, Eye, EyeOff, ShieldCheck, AlertCircle } from 'lucide-react';
+import { Loader2, Lock, Eye, EyeOff, ShieldCheck, AlertCircle, Globe } from 'lucide-react';
 import { useAuth, useFirestore } from '@/firebase/provider';
 import { 
   signInWithEmailAndPassword,
@@ -149,8 +149,8 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
       <div className="h-[100dvh] w-full flex flex-col items-center justify-center bg-[#020203] px-6">
         <NuxusLogo size={140} />
         <div className="space-y-4 w-full max-sm mt-12">
-          <Button onClick={() => setLangSelected('ru')} className="w-full h-16 bg-primary font-black uppercase italic tracking-widest rounded-2xl">Продолжить на русском</Button>
-          <Button onClick={() => setLangSelected('en')} variant="ghost" className="w-full h-14 bg-white/5 text-white/60 rounded-2xl">Continue in English</Button>
+          <button onClick={() => setLangSelected('ru')} className="w-full h-16 bg-primary text-white font-black uppercase italic tracking-widest rounded-2xl shadow-2xl active:scale-95 transition-all">Продолжить на русском</button>
+          <button onClick={() => setLangSelected('en')} className="w-full h-14 bg-white/5 text-white/60 font-black uppercase italic tracking-widest rounded-2xl active:scale-95 transition-all">Continue in English</button>
         </div>
       </div>
     );
@@ -164,17 +164,17 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
           <Card className="w-full max-w-[420px] bg-white/[0.02] border-white/10 rounded-[3rem] shadow-2xl overflow-hidden">
             <CardHeader className="text-center pt-10 px-8">
               <div className="grid grid-cols-2 bg-white/5 p-1 rounded-2xl mb-8">
-                <button type="button" onClick={() => setMode('login')} className={cn("h-11 rounded-xl text-[10px] font-black uppercase transition-all", mode === 'login' ? "bg-primary text-white" : "text-white/30")}>{langSelected === 'ru' ? 'Вход' : 'Login'}</button>
-                <button type="button" onClick={() => setMode('register')} className={cn("h-11 rounded-xl text-[10px] font-black uppercase transition-all", mode === 'register' ? "bg-primary text-white" : "text-white/30")}>{langSelected === 'ru' ? 'Регистрация' : 'Register'}</button>
+                <button type="button" onClick={() => setMode('login')} className={cn("h-11 rounded-xl text-[10px] font-black uppercase transition-all", mode === 'login' ? "bg-primary text-white shadow-lg" : "text-white/30")}>{langSelected === 'ru' ? 'Вход' : 'Login'}</button>
+                <button type="button" onClick={() => setMode('register')} className={cn("h-11 rounded-xl text-[10px] font-black uppercase transition-all", mode === 'register' ? "bg-primary text-white shadow-lg" : "text-white/30")}>{langSelected === 'ru' ? 'Регистрация' : 'Register'}</button>
               </div>
-              <CardTitle className="text-3xl font-black italic text-white uppercase">{mode === 'login' ? (langSelected === 'ru' ? 'Вход' : 'Entry') : (langSelected === 'ru' ? 'Новый Узел' : 'New Node')}</CardTitle>
+              <CardTitle className="text-3xl font-black italic text-white uppercase tracking-tighter">{mode === 'login' ? (langSelected === 'ru' ? 'Вход в Ядро' : 'Entry') : (langSelected === 'ru' ? 'Новый Узел' : 'New Node')}</CardTitle>
             </CardHeader>
             <CardContent className="px-8 pb-10">
               <form onSubmit={handleAuth} className="space-y-6">
                 {mode === 'register' && (
                   <>
-                    <Input placeholder={langSelected === 'ru' ? 'Имя' : 'Name'} value={name} onChange={e => setName(e.target.value)} className="h-14 rounded-2xl bg-white/5 font-bold" required />
-                    <Input placeholder="ID (@nick)" value={username} onChange={e => setUsername(e.target.value)} className="h-14 rounded-2xl bg-white/5 font-bold" required />
+                    <Input placeholder={langSelected === 'ru' ? 'Имя' : 'Name'} value={name} onChange={e => setName(e.target.value)} className="h-14 rounded-2xl bg-white/5 border-white/10 font-bold focus:border-primary/40 transition-all" required />
+                    <Input placeholder="ID (@nick)" value={username} onChange={e => setUsername(e.target.value)} className="h-14 rounded-2xl bg-white/5 border-white/10 font-bold focus:border-primary/40 transition-all" required />
                   </>
                 )}
                 
@@ -182,12 +182,12 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
                   {!identifier.includes('@') && (
                     <div className="w-[110px] shrink-0">
                       <Select value={countryCode} onValueChange={setCountryCode}>
-                        <SelectTrigger className="h-14 bg-white/5 border-white/10 rounded-2xl font-bold">
+                        <SelectTrigger className="h-14 bg-white/5 border-white/10 rounded-2xl font-bold focus:ring-0 focus:border-primary/40 transition-all">
                           <SelectValue placeholder="🌍" />
                         </SelectTrigger>
                         <SelectContent position="popper" className="bg-[#0a0a0c] border-white/10 rounded-2xl max-h-[300px] overflow-y-auto z-[2000] scrollbar-hide shadow-2xl">
                           {COUNTRY_CODES.map((c) => (
-                            <SelectItem key={c.code} value={c.code} className="py-3 cursor-pointer">
+                            <SelectItem key={c.code} value={c.code} className="py-3 cursor-pointer hover:bg-primary/10 transition-colors">
                               {c.flag} {c.code}
                             </SelectItem>
                           ))}
@@ -195,32 +195,35 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
                       </Select>
                     </div>
                   )}
-                  <Input placeholder={langSelected === 'ru' ? 'Телефон или Почта' : 'Phone or Email'} value={identifier} onChange={e => setIdentifier(e.target.value)} className="h-14 rounded-2xl bg-white/5 flex-1 font-bold" required />
+                  <Input placeholder={langSelected === 'ru' ? 'Телефон или Почта' : 'Phone or Email'} value={identifier} onChange={e => setIdentifier(e.target.value)} className="h-14 rounded-2xl bg-white/5 border-white/10 flex-1 font-bold focus:border-primary/40 transition-all" required />
                 </div>
 
                 <div className="relative">
-                  <Input type={showPass ? "text" : "password"} placeholder={langSelected === 'ru' ? 'Пароль' : 'Password'} value={password} onChange={e => setPassword(e.target.value)} className="h-14 rounded-2xl bg-white/5 font-bold" required />
-                  <button type="button" onClick={() => setShowPass(!showPass)} className="absolute right-4 top-1/2 -translate-y-1/2 text-white/20">{showPass ? <EyeOff size={18} /> : <Eye size={18} />}</button>
+                  <Input type={showPass ? "text" : "password"} placeholder={langSelected === 'ru' ? 'Пароль' : 'Password'} value={password} onChange={e => setPassword(e.target.value)} className="h-14 rounded-2xl bg-white/5 border-white/10 font-bold focus:border-primary/40 transition-all" required />
+                  <button type="button" onClick={() => setShowPass(!showPass)} className="absolute right-4 top-1/2 -translate-y-1/2 text-white/20 hover:text-white transition-colors">{showPass ? <EyeOff size={18} /> : <Eye size={18} />}</button>
                 </div>
 
                 {mode === 'register' && (
-                  <div className="flex items-start space-x-3 p-4 bg-white/5 rounded-2xl border border-white/5">
+                  <div className="flex items-start space-x-3 p-5 bg-white/5 rounded-2xl border border-white/10">
                     <Checkbox id="policy" checked={acceptedPolicy} onCheckedChange={(v) => setAcceptedPolicy(!!v)} className="mt-1" />
-                    <label htmlFor="policy" className="text-[10px] font-bold text-white/60 leading-tight cursor-pointer uppercase">
-                      Я согласен с <button type="button" onClick={openLegal} className="text-primary font-black underline">Политикой конфиденциальности</button>
+                    <label htmlFor="policy" className="text-[10px] font-bold text-white/60 leading-tight cursor-pointer uppercase tracking-tight">
+                      Я согласен с <button type="button" onClick={openLegal} className="text-primary font-black underline hover:text-white transition-colors">Политикой конфиденциальности</button>
                     </label>
                   </div>
                 )}
 
-                <Button type="submit" disabled={isLoading} className="w-full h-16 bg-primary font-black uppercase italic rounded-2xl shadow-2xl">
-                  {isLoading ? <Loader2 className="animate-spin" /> : (mode === 'login' ? 'Авторизовать' : 'Создать')}
+                <Button type="submit" disabled={isLoading} className="w-full h-16 bg-primary text-white font-black uppercase italic tracking-widest rounded-2xl shadow-2xl shadow-primary/20 active:scale-95 transition-all">
+                  {isLoading ? <Loader2 className="animate-spin" /> : (mode === 'login' ? 'Авторизовать' : 'Инициализировать')}
                 </Button>
                 
-                <button type="button" onClick={openLegal} className="w-full text-[8px] font-black uppercase tracking-widest text-white/30 hover:text-white/60 py-2">Правовая информация</button>
+                <button type="button" onClick={openLegal} className="w-full text-[9px] font-black uppercase tracking-[0.2em] text-white/20 hover:text-white transition-all py-2">Правовая информация</button>
               </form>
             </CardContent>
           </Card>
-          <div className="mt-8 flex items-center gap-2 bg-red-500/10 px-4 py-2 rounded-xl border border-red-500/20"><AlertCircle size={14} className="text-red-500" /><span className="text-[9px] font-black text-red-500 uppercase">РФ: Регистрация ограничена</span></div>
+          <div className="mt-8 flex items-center gap-3 bg-red-500/10 px-6 py-3 rounded-2xl border border-red-500/20 shadow-xl animate-pulse">
+            <AlertCircle size={16} className="text-red-500" />
+            <span className="text-[10px] font-black text-red-500 uppercase tracking-widest">РФ: Регистрация ограничена</span>
+          </div>
         </div>
       </ScrollArea>
     </div>
