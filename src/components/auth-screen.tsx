@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Lock, Eye, EyeOff, User as UserIcon, ShieldCheck, Scale, Globe, Languages, AlertCircle } from 'lucide-react';
+import { Loader2, Lock, Eye, EyeOff, ShieldCheck, AlertCircle } from 'lucide-react';
 import { useAuth, useFirestore } from '@/firebase/provider';
 import { 
   signInWithEmailAndPassword,
@@ -59,6 +59,10 @@ const COUNTRY_CODES = [
   { code: '+43', name: 'Austria', flag: '🇦🇹' },
   { code: '+351', name: 'Portugal', flag: '🇵🇹' },
   { code: '+30', name: 'Greece', flag: '🇬🇷' },
+  { code: '+65', name: 'Singapore', flag: '🇸🇬' },
+  { code: '+852', name: 'Hong Kong', flag: '🇭🇰' },
+  { code: '+66', name: 'Thailand', flag: '🇹🇭' },
+  { code: '+91', name: 'India', flag: '🇮🇳' },
 ];
 
 export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'login' | 'register' }) {
@@ -131,6 +135,12 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
     }
   };
 
+  const openLegal = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsLegalOpen(true);
+  };
+
   if (!langSelected) {
     return (
       <div className="h-[100dvh] w-full flex flex-col items-center justify-center bg-[#020203] px-6">
@@ -148,8 +158,8 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
       <ScrollArea className="w-full h-full">
         <div className="min-h-full w-full flex flex-col items-center justify-center p-4 py-12">
           <div className="mb-10 cursor-pointer" onClick={() => setLangSelected(null)}><NuxusLogo size={90} /></div>
-          <Card className="w-full max-w-[420px] bg-white/[0.02] border-white/10 rounded-[3rem] shadow-2xl">
-            <CardHeader className="text-center pt-10">
+          <Card className="w-full max-w-[420px] bg-white/[0.02] border-white/10 rounded-[3rem] shadow-2xl overflow-hidden">
+            <CardHeader className="text-center pt-10 px-8">
               <div className="grid grid-cols-2 bg-white/5 p-1 rounded-2xl mb-8">
                 <button type="button" onClick={() => setMode('login')} className={cn("h-11 rounded-xl text-[10px] font-black uppercase transition-all", mode === 'login' ? "bg-primary text-white" : "text-white/30")}>{langSelected === 'ru' ? 'Вход' : 'Login'}</button>
                 <button type="button" onClick={() => setMode('register')} className={cn("h-11 rounded-xl text-[10px] font-black uppercase transition-all", mode === 'register' ? "bg-primary text-white" : "text-white/30")}>{langSelected === 'ru' ? 'Регистрация' : 'Register'}</button>
@@ -172,7 +182,7 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
                         <SelectTrigger className="h-14 bg-white/5 border-white/10 rounded-2xl font-bold">
                           <SelectValue placeholder="🌍" />
                         </SelectTrigger>
-                        <SelectContent position="popper" className="bg-[#0a0a0c] border-white/10 rounded-2xl max-h-[300px] overflow-y-auto z-[2000]">
+                        <SelectContent position="popper" className="bg-[#0a0a0c] border-white/10 rounded-2xl max-h-[300px] overflow-y-auto z-[2000] scrollbar-hide shadow-2xl">
                           {COUNTRY_CODES.map((c) => (
                             <SelectItem key={c.code} value={c.code} className="py-3 cursor-pointer">
                               {c.flag} {c.code}
@@ -194,7 +204,7 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
                   <div className="flex items-start space-x-3 p-4 bg-white/5 rounded-2xl border border-white/5">
                     <Checkbox id="policy" checked={acceptedPolicy} onCheckedChange={(v) => setAcceptedPolicy(!!v)} className="mt-1" />
                     <label htmlFor="policy" className="text-[10px] font-bold text-white/60 leading-tight cursor-pointer uppercase">
-                      Я согласен с <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); setIsLegalOpen(true); }} className="text-primary font-black">Политикой конфиденциальности</button>
+                      Я согласен с <button type="button" onClick={openLegal} className="text-primary font-black underline">Политикой конфиденциальности</button>
                     </label>
                   </div>
                 )}
@@ -203,7 +213,7 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
                   {isLoading ? <Loader2 className="animate-spin" /> : (mode === 'login' ? 'Авторизовать' : 'Создать')}
                 </Button>
                 
-                <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); setIsLegalOpen(true); }} className="w-full text-[8px] font-black uppercase tracking-widest text-white/30 hover:text-white/60 py-2">Правовая информация</button>
+                <button type="button" onClick={openLegal} className="w-full text-[8px] font-black uppercase tracking-widest text-white/30 hover:text-white/60 py-2">Правовая информация</button>
               </form>
             </CardContent>
           </Card>

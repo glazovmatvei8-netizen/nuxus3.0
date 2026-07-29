@@ -7,8 +7,13 @@ import { getFirestore, initializeFirestore, persistentLocalCache, persistentMult
 
 /**
  * Изолированная инициализация инстансов Firebase (Nodes).
+ * Добавлена проверка на window для SSR стабильности.
  */
 export function initializeFirebase(instanceName?: string) {
+  if (typeof window === 'undefined') {
+    return { firebaseApp: null as any, auth: null as any, firestore: null as any };
+  }
+
   const name = instanceName || '[DEFAULT]';
   const existingApp = getApps().find(a => a.name === name);
   const app: FirebaseApp = existingApp || initializeApp(firebaseConfig, name);

@@ -1,8 +1,7 @@
 "use client"
 
 import React, { useEffect, useState, useMemo } from 'react';
-import { useUser, useFirestore, useAuth } from '@/firebase/provider';
-import { useDoc } from '@/firebase/firestore/use-doc';
+import { useUser, useFirestore, useAuth, useDoc } from '@/firebase/provider';
 import { useAppState } from '@/lib/store';
 import AuthScreen from '@/components/auth-screen';
 import ChatMain from '@/components/chat-main';
@@ -16,13 +15,12 @@ import { useToast } from '@/hooks/use-toast';
 import { isUserActuallyBanned } from '@/lib/utils';
 import { NuxusLogo } from '@/components/nuxus-logo';
 import { IosInstaller } from '@/components/ios-installer';
-import { LegalModal } from '@/components/modals/legal-modal';
 
 export default function Home() {
   const { user, isUserLoading } = useUser();
   const db = useFirestore();
   const auth = useAuth();
-  const { is2FAVerified, setIs2FAVerified, setInspectedUserId, setActiveCallId, isLegalOpen, setIsLegalOpen } = useAppState();
+  const { is2FAVerified, setIs2FAVerified, setInspectedUserId, setActiveCallId } = useAppState();
   const { toast } = useToast();
   
   const [mounted, setMounted] = useState(false);
@@ -133,12 +131,7 @@ export default function Home() {
   if (showIosInstaller) return <IosInstaller onDismiss={() => setShowIosInstaller(false)} />;
   
   if (!user) {
-    return (
-      <>
-        <AuthScreen />
-        <LegalModal open={isLegalOpen} onOpenChange={setIsLegalOpen} />
-      </>
-    );
+    return <AuthScreen />;
   }
 
   if (isBanned) {

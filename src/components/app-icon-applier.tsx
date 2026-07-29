@@ -1,14 +1,13 @@
 'use client';
 
 import { useEffect, useMemo } from 'react';
-import { useUser, useFirestore } from '@/firebase/provider';
-import { useDoc } from '@/firebase/firestore/use-doc';
+import { useUser, useFirestore, useDoc } from '@/firebase/provider';
 import { doc } from 'firebase/firestore';
 import type { User } from '@/lib/types';
 
 /**
- * ОБНОВЛЯТОР ИКОНОК V5.8.0
- * ОПТИМИЗИРОВАНО: Прямые импорты для предотвращения originalFactory.call.
+ * ОБНОВЛЯТОР ИКОНОК V6.0.2
+ * ОПТИМИЗИРОВАНО: Прямые импорты из провайдера.
  */
 export function AppIconApplier() {
   const { user } = useUser();

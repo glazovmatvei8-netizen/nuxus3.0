@@ -1,14 +1,13 @@
 'use client';
 
 import { useEffect, useMemo } from 'react';
-import { useUser, useFirestore } from '@/firebase/provider';
-import { useDoc } from '@/firebase/firestore/use-doc';
+import { useUser, useFirestore, useDoc } from '@/firebase/provider';
 import { doc } from 'firebase/firestore';
 import type { User } from '@/lib/types';
 
 /**
- * ПРИМЕНИТЕЛЬ ТЕМЫ V5.8.0
- * ОПТИМИЗИРОВАНО: Прямые импорты хуков для устранения циклической зависимости.
+ * ПРИМЕНИТЕЛЬ ТЕМЫ V6.0.2 «ULTIMATE»
+ * Безопасная обработка SSR и состояния инициализации.
  */
 export function ThemeApplier() {
   const { user } = useUser();

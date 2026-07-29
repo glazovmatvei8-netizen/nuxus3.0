@@ -2,14 +2,26 @@
 
 import React, { createContext, useContext, ReactNode, useMemo, useState, useEffect, DependencyList } from 'react';
 import { FirebaseApp } from 'firebase/app';
-import { Firestore, doc, onSnapshot } from 'firebase/firestore';
+import { 
+  Firestore, 
+  doc, 
+  onSnapshot, 
+  collection, 
+  Query, 
+  DocumentData, 
+  QuerySnapshot, 
+  DocumentSnapshot,
+  FirestoreError,
+  CollectionReference
+} from 'firebase/firestore';
 import { Auth, User, onAuthStateChanged, signOut } from 'firebase/auth';
 import { updateDocumentNonBlocking, setDocumentNonBlocking } from './non-blocking-updates';
 
 /**
- * Стабилизатор ссылок Firebase.
- * Использует стандартный useMemo для обеспечения стабильности ссылок в useCollection/useDoc.
+ * СТАБИЛИЗАТОР ХУКОВ V6.0.2 «ULTIMATE»
+ * Консолидация и защита от SSR сбоев.
  */
+
 export function useMemoFirebase<T>(factory: () => T, deps: DependencyList): T {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   return useMemo(factory, deps);
@@ -51,10 +63,7 @@ export const FirebaseProvider: React.FC<{
   });
 
   useEffect(() => {
-    if (!auth) {
-      setUserAuthState({ user: null, isUserLoading: false, userError: new Error("Auth service not provided.") });
-      return;
-    }
+    if (!auth) return;
 
     const unsubscribe = onAuthStateChanged(
       auth,
@@ -159,23 +168,115 @@ export const FirebaseProvider: React.FC<{
 
 export const useFirebase = () => {
   const context = useContext(FirebaseContext);
-  if (context === undefined) throw new Error('useFirebase must be used within a FirebaseProvider.');
+  if (context === undefined) {
+    // В режиме SSR контекст может быть не определен, возвращаем пустой объект вместо ошибки
+    return { firestore: null, auth: null, user: null, isUserLoading: true } as any;
+  }
   return context;
 };
 
 export const useAuth = () => {
   const { auth } = useFirebase();
-  if (!auth) throw new Error('Auth not available');
-  return auth;
+  return auth; // Возвращаем null если нет, вместо Error
 };
 
 export const useFirestore = () => {
   const { firestore } = useFirebase();
-  if (!firestore) throw new Error('Firestore not available');
-  return firestore;
+  return firestore; // Возвращаем null если нет, вместо Error
 };
 
 export const useUser = () => {
   const { user, isUserLoading, userError } = useFirebase();
   return { user, isUserLoading, userError };
 };
+
+// Консолидация хуков данных
+export type WithId<T> = T & { id: string, isPending?: boolean };
+
+export const useCollection = <T = any>(
+    memoizedTargetRefOrQuery: (CollectionReference<DocumentData> | Query<DocumentData>) | null | undefined,
+) => {
+  const [data, setData] = useState<WithId<T>[] | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [error, setError] = useState<FirestoreError | Error | null>(null);
+
+  useEffect(() => {
+    if (!memoizedTargetRefOrQuery) {
+      setData(null);
+      setIsLoading(false);
+      setError(null);
+      return;
+    }
+
+    setIsLoading(true);
+    setError(null);
+
+    const unsubscribe = onSnapshot(
+      memoizedTargetRefOrQuery,
+      { includeMetadataChanges: true },
+      (snapshot: QuerySnapshot<DocumentData>) => {
+        const results: WithId<T>[] = snapshot.docs.map(doc => ({ 
+          ...(doc.data() as T), 
+          id: doc.id,
+          isPending: doc.metadata.hasPendingWrites
+        }));
+        setData(results);
+        setError(null);
+        setIsLoading(false);
+      },
+      (error: FirestoreError) => {
+        setError(error);
+        setIsLoading(false);
+      }
+    );
+
+    return () => unsubscribe();
+  }, [memoizedTargetRefOrQuery]);
+
+  return { data, isLoading, error };
+}
+
+export const useDoc = <T = any>(
+  memoizedDocRef: any
+) => {
+  const [data, setData] = useState<WithId<T> | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [error, setError] = useState<FirestoreError | Error | null>(null);
+
+  useEffect(() => {
+    if (!memoizedDocRef) {
+      setData(null);
+      setIsLoading(false);
+      setError(null);
+      return;
+    }
+
+    setIsLoading(true);
+
+    const unsubscribe = onSnapshot(
+      memoizedDocRef,
+      { includeMetadataChanges: true },
+      (snapshot: DocumentSnapshot<DocumentData>) => {
+        if (snapshot.exists()) {
+          setData({ 
+            ...(snapshot.data() as T), 
+            id: snapshot.id,
+            isPending: snapshot.metadata.hasPendingWrites
+          });
+        } else {
+          setData(null);
+        }
+        setError(null);
+        setIsLoading(false);
+      },
+      (error: FirestoreError) => {
+        setError(error);
+        setIsLoading(false);
+      }
+    );
+
+    return () => unsubscribe();
+  }, [memoizedDocRef]);
+
+  return { data, isLoading, error };
+}
