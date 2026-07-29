@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Lock, Eye, EyeOff, ShieldCheck, AlertCircle, Globe } from 'lucide-react';
-import { useAuth, useFirestore } from '@/firebase/provider';
+import { useAuth, useFirestore } from '@/firebase/provider'; // Прямой импорт
 import { 
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
@@ -16,7 +16,7 @@ import {
   setPersistence
 } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
-import { useAppState } from '@/lib/store.tsx';
+import { useAppState } from '@/lib/store.tsx'; // Прямой импорт
 import { NuxusLogo } from './nuxus-logo';
 import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -104,8 +104,9 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
 
     setIsLoading(true);
     const idClean = identifier.replace(/\D/g, '');
-    const finalPhone = identifier.includes('@') ? identifier.trim() : `${countryCode.replace('+', '')}${idClean}`;
-    const finalEmail = identifier.includes('@') ? identifier.trim() : `${finalPhone}@nuxus.chat`;
+    const isEmail = identifier.includes('@');
+    const finalPhone = isEmail ? identifier.trim() : `${countryCode.replace('+', '')}${idClean}`;
+    const finalEmail = isEmail ? identifier.trim() : `${finalPhone}@nuxus.chat`;
 
     try {
       await setPersistence(auth, browserLocalPersistence);
@@ -148,7 +149,7 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
     return (
       <div className="h-[100dvh] w-full flex flex-col items-center justify-center bg-[#020203] px-6">
         <NuxusLogo size={140} />
-        <div className="space-y-4 w-full max-sm mt-12">
+        <div className="space-y-4 w-full max-w-sm mt-12">
           <button onClick={() => setLangSelected('ru')} className="w-full h-16 bg-primary text-white font-black uppercase italic tracking-widest rounded-2xl shadow-2xl active:scale-95 transition-all">Продолжить на русском</button>
           <button onClick={() => setLangSelected('en')} className="w-full h-14 bg-white/5 text-white/60 font-black uppercase italic tracking-widest rounded-2xl active:scale-95 transition-all">Continue in English</button>
         </div>
@@ -161,7 +162,7 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
       <ScrollArea className="w-full h-full">
         <div className="min-h-full w-full flex flex-col items-center justify-center p-4 py-12">
           <div className="mb-10 cursor-pointer" onClick={() => setLangSelected(null)}><NuxusLogo size={90} /></div>
-          <Card className="w-full max-w-[420px] bg-white/[0.02] border-white/10 rounded-[3rem] shadow-[0_30px_60px_rgba(0,0,0,0.5)] overflow-hidden">
+          <Card className="w-full max-w-[420px] bg-white/[0.02] border-white/10 rounded-[3rem] shadow-[0_30px_100px_rgba(0,0,0,0.8)] overflow-hidden">
             <CardHeader className="text-center pt-10 px-8">
               <div className="grid grid-cols-2 bg-white/5 p-1 rounded-2xl mb-8 border border-white/5">
                 <button type="button" onClick={() => setMode('login')} className={cn("h-11 rounded-xl text-[10px] font-black uppercase transition-all", mode === 'login' ? "bg-primary text-white shadow-lg" : "text-white/30")}>{langSelected === 'ru' ? 'Вход' : 'Login'}</button>

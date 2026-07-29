@@ -1,14 +1,13 @@
 'use client';
 
 import { useEffect, useMemo } from 'react';
-import { useUser, useFirestore, useDoc } from '@/firebase/provider';
+import { useUser, useFirestore, useDoc } from '@/firebase/provider'; // Прямой импорт
 import { doc } from 'firebase/firestore';
 import type { User } from '@/lib/types';
 
 /**
- * ПРИМЕНИТЕЛЬ ТЕМЫ V6.1.0 «ULTIMATE»
- * Безопасная обработка SSR и состояния инициализации.
- * Исправлена ошибка Firestore not available через проверку firestore.
+ * ПРИМЕНИТЕЛЬ ТЕМЫ V6.1.1 «ULTIMATE STABILITY»
+ * Безопасная обработка SSR и устранение ошибок undefined 'call'
  */
 export function ThemeApplier() {
   const { user } = useUser();
