@@ -6,9 +6,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { useFirestore, useUser, useCollection, useMemoFirebase } from '@/firebase';
+import { useFirestore, useUser, useCollection, useMemoFirebase } from '@/firebase/provider';
 import { collection, query, where, getDocs, limit, doc, updateDoc, arrayUnion, addDoc, orderBy } from 'firebase/firestore';
-import { useAppState } from '@/lib/store';
+import { useAppState } from '@/lib/store.tsx';
 import { useToast } from '@/hooks/use-toast';
 import { Search, Loader2, ArrowRight, Zap, Globe, Star, Users, User, Bot, ShieldCheck, Plus, Check } from 'lucide-react';
 import { UserAvatar } from '@/components/user-avatar';

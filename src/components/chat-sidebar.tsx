@@ -1,7 +1,8 @@
+
 "use client"
 
 import React, { useState, useMemo, memo, useRef, useEffect } from 'react';
-import { useAppState } from '@/lib/store';
+import { useAppState } from '@/lib/store.tsx';
 import { Button } from '@/components/ui/button';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
@@ -12,7 +13,7 @@ import { CreateChatModal } from './modals/create-chat-modal';
 import { AdminPanelModal } from './modals/admin-panel-modal';
 import { StoriesBar } from './stories-bar';
 import type { User as UserType, Message, Chat } from '@/lib/types';
-import { useFirestore, useUser, useCollection, useDoc } from '@/firebase';
+import { useFirestore, useUser, useCollection, useDoc } from '@/firebase/provider';
 import { collection, query, where, doc, limit, orderBy, updateDoc, arrayUnion, arrayRemove, deleteDoc, setDoc, getDoc } from 'firebase/firestore';
 import { formatDisplayName, cn, isGlobalAdmin, decryptSignal, isUserPremium } from '@/lib/utils';
 import { format } from 'date-fns';

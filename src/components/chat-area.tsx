@@ -1,7 +1,8 @@
+
 "use client"
 
 import React, { useState, useRef, useEffect, useMemo, useCallback, memo } from 'react';
-import { useAppState } from '@/lib/store';
+import { useAppState } from '@/lib/store.tsx';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { UserAvatar } from '@/components/user-avatar';
@@ -14,7 +15,7 @@ import { MessageItem } from './message-item';
 import { ChatInfoModal } from './modals/chat-info-modal';
 import { CreatePollModal } from './modals/create-poll-modal';
 import { EmojiPicker } from './emoji-picker';
-import { useUser, useFirestore, useCollection, useDoc } from '@/firebase';
+import { useUser, useFirestore, useCollection, useDoc } from '@/firebase/provider';
 import { collection, query, orderBy, doc, addDoc, updateDoc, limit, getDocs, where, getDoc, writeBatch } from 'firebase/firestore';
 import { formatDisplayName, cn, compressImage, encryptSignal, isGlobalAdmin, decryptSignal, formatLastSeen, isUserPremium } from '@/lib/utils';
 import type { Message, User as UserType, Chat } from '@/lib/types';
@@ -40,7 +41,7 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
 
   useEffect(() => {
     setMessageInput(localDrafts[currentChatId] || '');
-  }, [currentChatId]);
+  }, [currentChatId, localDrafts]);
 
   const handleSend = () => {
     if (!messageInput.trim()) return;

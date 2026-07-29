@@ -1,14 +1,14 @@
 
 {
-  "latestVersion": "6.0.0",
+  "latestVersion": "6.0.2",
   "qesVersion": "25.2",
-  "build": "Neural-Nexus-Sovereign",
+  "build": "Neural-Nexus-Absolute",
   "sizeMb": 112,
   "changelog": [
-    "Added: NX-AI Autonomous Intelligence Node",
-    "Feature: Real-time Web Search Integration",
-    "Improved: Neural Voice Signal Processing",
-    "Security: Sovereign Encryption for AI Signals",
-    "UI: Dedicated Nexus AI Terminal"
+    "Fixed: originalFactory.call circular dependency error",
+    "Improved: Country selector now active on Login tab",
+    "Fixed: Country list scrolling on mobile devices",
+    "Fixed: Privacy policy links functionality",
+    "Improved: NX-AI Internet search precision"
   ]
 }

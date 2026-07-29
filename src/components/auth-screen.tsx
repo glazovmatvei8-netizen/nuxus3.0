@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState } from 'react';
@@ -123,7 +124,12 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
           email: finalEmail,
           createdAt: new Date().toISOString(),
           balance: 0,
-          settings: { language: langSelected || 'ru', theme: 'default', appearance: 'dark' }
+          settings: { 
+            language: langSelected || 'ru', 
+            theme: 'default', 
+            appearance: 'dark',
+            privacy: { phoneVisibility: 'contacts', lastSeenVisibility: 'everybody', allowGroupsFrom: 'everybody' }
+          }
         });
       }
     } catch (e: any) {
