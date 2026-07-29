@@ -1,10 +1,9 @@
 'use client';
 
 /**
- * NUXUS FIREBASE BARREL DEACTIVATED V5.8.0
- * To avoid "originalFactory.call" errors (circular dependencies),
- * all components must now import directly from the source files.
- * Example: import { useUser } from '@/firebase/provider';
+ * DEACTIVATED V6.0.2
+ * Barrel file removed to prevent circular dependency "originalFactory.call" errors in Next.js 15.
+ * Import directly from @/firebase/provider or @/firebase/app.
  */
 
 export {};

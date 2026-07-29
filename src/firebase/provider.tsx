@@ -19,7 +19,7 @@ import { updateDocumentNonBlocking, setDocumentNonBlocking } from './non-blockin
 
 /**
  * СТАБИЛИЗАТОР ХУКОВ V6.0.2 «ULTIMATE»
- * Консолидация и защита от SSR сбоев.
+ * Полное устранение циклической зависимости originalFactory.call.
  */
 
 export function useMemoFirebase<T>(factory: () => T, deps: DependencyList): T {
@@ -169,7 +169,6 @@ export const FirebaseProvider: React.FC<{
 export const useFirebase = () => {
   const context = useContext(FirebaseContext);
   if (context === undefined) {
-    // В режиме SSR контекст может быть не определен, возвращаем пустой объект вместо ошибки
     return { firestore: null, auth: null, user: null, isUserLoading: true } as any;
   }
   return context;
@@ -177,12 +176,12 @@ export const useFirebase = () => {
 
 export const useAuth = () => {
   const { auth } = useFirebase();
-  return auth; // Возвращаем null если нет, вместо Error
+  return auth;
 };
 
 export const useFirestore = () => {
   const { firestore } = useFirebase();
-  return firestore; // Возвращаем null если нет, вместо Error
+  return firestore;
 };
 
 export const useUser = () => {
@@ -190,7 +189,6 @@ export const useUser = () => {
   return { user, isUserLoading, userError };
 };
 
-// Консолидация хуков данных
 export type WithId<T> = T & { id: string, isPending?: boolean };
 
 export const useCollection = <T = any>(

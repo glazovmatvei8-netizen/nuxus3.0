@@ -8,6 +8,7 @@ import type { User } from '@/lib/types';
 /**
  * ПРИМЕНИТЕЛЬ ТЕМЫ V6.0.2 «ULTIMATE»
  * Безопасная обработка SSR и состояния инициализации.
+ * Исправлена ошибка Firestore not available.
  */
 export function ThemeApplier() {
   const { user } = useUser();

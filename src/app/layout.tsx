@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
-import { AppProvider, useAppState } from '@/lib/store'; 
+import { AppProvider } from '@/lib/store.tsx'; 
 import { Toaster } from '@/components/ui/toaster';
 import { FirebaseClientProvider } from '@/firebase/client-provider';
 import { ThemeApplier } from '@/components/theme-applier';
@@ -11,7 +11,6 @@ import { SpeedInsights } from "@vercel/speed-insights/next";
 import Script from 'next/script';
 import { OfflinePlaceholder } from '@/components/offline-placeholder';
 import { BiometricGate } from '@/components/biometric-gate';
-import { LegalModal } from '@/components/modals/legal-modal';
 import { GlobalModalsWrapper } from '@/components/global-modals-wrapper';
 
 const font = Plus_Jakarta_Sans({

@@ -16,7 +16,7 @@ import {
   setPersistence
 } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
-import { useAppState } from '@/lib/store';
+import { useAppState } from '@/lib/store.tsx';
 import { NuxusLogo } from './nuxus-logo';
 import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -69,7 +69,7 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
   const auth = useAuth();
   const db = useFirestore();
   const { toast } = useToast();
-  const { setIs2FAVerified, setIsLegalOpen } = useAppState();
+  const { setIsLegalOpen } = useAppState();
   
   const [langSelected, setLangSelected] = useState<string | null>(null);
   const [mode, setMode] = useState<'login' | 'register'>(initialMode);
@@ -111,7 +111,6 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
       await setPersistence(auth, browserLocalPersistence);
       if (mode === 'login') {
         await signInWithEmailAndPassword(auth, finalEmail, password);
-        setIs2FAVerified(true);
       } else {
         const usernameWithAt = '@' + username.trim().replace('@', '');
         const userCred = await createUserWithEmailAndPassword(auth, finalEmail, password);
@@ -126,7 +125,6 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
           balance: 0,
           settings: { language: langSelected || 'ru', theme: 'default', appearance: 'dark' }
         });
-        setIs2FAVerified(true);
       }
     } catch (e: any) {
       toast({ title: langSelected === 'ru' ? "Сбой" : "Fail", description: "Проверьте данные. Регистрация из РФ ограничена.", variant: "destructive" });
@@ -170,8 +168,8 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
               <form onSubmit={handleAuth} className="space-y-6">
                 {mode === 'register' && (
                   <>
-                    <Input placeholder={langSelected === 'ru' ? 'Имя' : 'Name'} value={name} onChange={e => setName(e.target.value)} className="h-14 rounded-2xl bg-white/5" required />
-                    <Input placeholder="ID (@nick)" value={username} onChange={e => setUsername(e.target.value)} className="h-14 rounded-2xl bg-white/5" required />
+                    <Input placeholder={langSelected === 'ru' ? 'Имя' : 'Name'} value={name} onChange={e => setName(e.target.value)} className="h-14 rounded-2xl bg-white/5 font-bold" required />
+                    <Input placeholder="ID (@nick)" value={username} onChange={e => setUsername(e.target.value)} className="h-14 rounded-2xl bg-white/5 font-bold" required />
                   </>
                 )}
                 
@@ -192,11 +190,11 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
                       </Select>
                     </div>
                   )}
-                  <Input placeholder={langSelected === 'ru' ? 'Телефон или Почта' : 'Phone or Email'} value={identifier} onChange={e => setIdentifier(e.target.value)} className="h-14 rounded-2xl bg-white/5 flex-1" required />
+                  <Input placeholder={langSelected === 'ru' ? 'Телефон или Почта' : 'Phone or Email'} value={identifier} onChange={e => setIdentifier(e.target.value)} className="h-14 rounded-2xl bg-white/5 flex-1 font-bold" required />
                 </div>
 
                 <div className="relative">
-                  <Input type={showPass ? "text" : "password"} placeholder={langSelected === 'ru' ? 'Пароль' : 'Password'} value={password} onChange={e => setPassword(e.target.value)} className="h-14 rounded-2xl bg-white/5" required />
+                  <Input type={showPass ? "text" : "password"} placeholder={langSelected === 'ru' ? 'Пароль' : 'Password'} value={password} onChange={e => setPassword(e.target.value)} className="h-14 rounded-2xl bg-white/5 font-bold" required />
                   <button type="button" onClick={() => setShowPass(!showPass)} className="absolute right-4 top-1/2 -translate-y-1/2 text-white/20">{showPass ? <EyeOff size={18} /> : <Eye size={18} />}</button>
                 </div>
 

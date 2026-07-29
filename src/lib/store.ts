@@ -1,6 +1,9 @@
 'use client';
+
 /**
- * NUXUS CORE STORE PROXY V70.0.0
- * CRITICAL: Strictly re-exporting to eliminate "useAppState must be used within AppProvider" errors.
+ * DEACTIVATED V6.0.2
+ * Barrel file removed to prevent circular dependency errors.
+ * Import directly from @/lib/store.tsx.
  */
-export * from './store.tsx';
+
+export {};
