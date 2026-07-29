@@ -2,9 +2,8 @@
 
 /**
  * NUXUS FIREBASE CORE BARREL V6.1.0
- * Централизованный экспорт для устранения циклической зависимости "originalFactory.call".
+ * Циклическая зависимость "originalFactory.call" устранена.
+ * Теперь это только точка входа для инициализации.
  */
 
-export * from './provider';
-export * from './app';
-export * from './client-provider';
+export { initializeFirebase } from './app';

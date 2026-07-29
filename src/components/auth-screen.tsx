@@ -161,9 +161,9 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
       <ScrollArea className="w-full h-full">
         <div className="min-h-full w-full flex flex-col items-center justify-center p-4 py-12">
           <div className="mb-10 cursor-pointer" onClick={() => setLangSelected(null)}><NuxusLogo size={90} /></div>
-          <Card className="w-full max-w-[420px] bg-white/[0.02] border-white/10 rounded-[3rem] shadow-2xl overflow-hidden">
+          <Card className="w-full max-w-[420px] bg-white/[0.02] border-white/10 rounded-[3rem] shadow-[0_30px_60px_rgba(0,0,0,0.5)] overflow-hidden">
             <CardHeader className="text-center pt-10 px-8">
-              <div className="grid grid-cols-2 bg-white/5 p-1 rounded-2xl mb-8">
+              <div className="grid grid-cols-2 bg-white/5 p-1 rounded-2xl mb-8 border border-white/5">
                 <button type="button" onClick={() => setMode('login')} className={cn("h-11 rounded-xl text-[10px] font-black uppercase transition-all", mode === 'login' ? "bg-primary text-white shadow-lg" : "text-white/30")}>{langSelected === 'ru' ? 'Вход' : 'Login'}</button>
                 <button type="button" onClick={() => setMode('register')} className={cn("h-11 rounded-xl text-[10px] font-black uppercase transition-all", mode === 'register' ? "bg-primary text-white shadow-lg" : "text-white/30")}>{langSelected === 'ru' ? 'Регистрация' : 'Register'}</button>
               </div>
@@ -173,8 +173,8 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
               <form onSubmit={handleAuth} className="space-y-6">
                 {mode === 'register' && (
                   <>
-                    <Input placeholder={langSelected === 'ru' ? 'Имя' : 'Name'} value={name} onChange={e => setName(e.target.value)} className="h-14 rounded-2xl bg-white/5 border-white/10 font-bold focus:border-primary/40 transition-all" required />
-                    <Input placeholder="ID (@nick)" value={username} onChange={e => setUsername(e.target.value)} className="h-14 rounded-2xl bg-white/5 border-white/10 font-bold focus:border-primary/40 transition-all" required />
+                    <Input placeholder={langSelected === 'ru' ? 'Имя' : 'Name'} value={name} onChange={e => setName(e.target.value)} className="h-14 rounded-2xl bg-white/5 border-white/10 font-bold focus:border-primary/40 transition-all shadow-inner" required />
+                    <Input placeholder="ID (@nick)" value={username} onChange={e => setUsername(e.target.value)} className="h-14 rounded-2xl bg-white/5 border-white/10 font-bold focus:border-primary/40 transition-all shadow-inner" required />
                   </>
                 )}
                 
@@ -182,7 +182,7 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
                   {!identifier.includes('@') && (
                     <div className="w-[110px] shrink-0">
                       <Select value={countryCode} onValueChange={setCountryCode}>
-                        <SelectTrigger className="h-14 bg-white/5 border-white/10 rounded-2xl font-bold focus:ring-0 focus:border-primary/40 transition-all">
+                        <SelectTrigger className="h-14 bg-white/5 border-white/10 rounded-2xl font-bold focus:ring-0 focus:border-primary/40 transition-all shadow-inner">
                           <SelectValue placeholder="🌍" />
                         </SelectTrigger>
                         <SelectContent position="popper" className="bg-[#0a0a0c] border-white/10 rounded-2xl max-h-[300px] overflow-y-auto z-[2000] scrollbar-hide shadow-2xl">
@@ -195,16 +195,16 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
                       </Select>
                     </div>
                   )}
-                  <Input placeholder={langSelected === 'ru' ? 'Телефон или Почта' : 'Phone or Email'} value={identifier} onChange={e => setIdentifier(e.target.value)} className="h-14 rounded-2xl bg-white/5 border-white/10 flex-1 font-bold focus:border-primary/40 transition-all" required />
+                  <Input placeholder={langSelected === 'ru' ? 'Телефон или Почта' : 'Phone or Email'} value={identifier} onChange={e => setIdentifier(e.target.value)} className="h-14 rounded-2xl bg-white/5 border-white/10 flex-1 font-bold focus:border-primary/40 transition-all shadow-inner" required />
                 </div>
 
                 <div className="relative">
-                  <Input type={showPass ? "text" : "password"} placeholder={langSelected === 'ru' ? 'Пароль' : 'Password'} value={password} onChange={e => setPassword(e.target.value)} className="h-14 rounded-2xl bg-white/5 border-white/10 font-bold focus:border-primary/40 transition-all" required />
+                  <Input type={showPass ? "text" : "password"} placeholder={langSelected === 'ru' ? 'Пароль' : 'Password'} value={password} onChange={e => setPassword(e.target.value)} className="h-14 rounded-2xl bg-white/5 border-white/10 font-bold focus:border-primary/40 transition-all shadow-inner" required />
                   <button type="button" onClick={() => setShowPass(!showPass)} className="absolute right-4 top-1/2 -translate-y-1/2 text-white/20 hover:text-white transition-colors">{showPass ? <EyeOff size={18} /> : <Eye size={18} />}</button>
                 </div>
 
                 {mode === 'register' && (
-                  <div className="flex items-start space-x-3 p-5 bg-white/5 rounded-2xl border border-white/10">
+                  <div className="flex items-start space-x-3 p-5 bg-white/5 rounded-2xl border border-white/10 shadow-inner">
                     <Checkbox id="policy" checked={acceptedPolicy} onCheckedChange={(v) => setAcceptedPolicy(!!v)} className="mt-1" />
                     <label htmlFor="policy" className="text-[10px] font-bold text-white/60 leading-tight cursor-pointer uppercase tracking-tight">
                       Я согласен с <button type="button" onClick={openLegal} className="text-primary font-black underline hover:text-white transition-colors">Политикой конфиденциальности</button>
@@ -212,7 +212,8 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
                   </div>
                 )}
 
-                <Button type="submit" disabled={isLoading} className="w-full h-16 bg-primary text-white font-black uppercase italic tracking-widest rounded-2xl shadow-2xl shadow-primary/20 active:scale-95 transition-all">
+                <Button type="submit" disabled={isLoading} className="w-full h-16 bg-primary text-white font-black uppercase italic tracking-widest rounded-2xl shadow-2xl shadow-primary/20 active:scale-95 transition-all group overflow-hidden">
+                  <div className="absolute inset-0 bg-white/20 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
                   {isLoading ? <Loader2 className="animate-spin" /> : (mode === 'login' ? 'Авторизовать' : 'Инициализировать')}
                 </Button>
                 

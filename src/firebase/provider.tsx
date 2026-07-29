@@ -169,7 +169,7 @@ export const FirebaseProvider: React.FC<{
 export const useFirebase = () => {
   const context = useContext(FirebaseContext);
   if (context === undefined) {
-    return { firestore: null, auth: null, user: null, isUserLoading: true } as any;
+    return { firestore: null, auth: null, user: null, isUserLoading: true };
   }
   return context;
 };

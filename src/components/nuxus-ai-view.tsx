@@ -18,6 +18,7 @@ import { NuxusLogo } from './nuxus-logo';
 /**
  * NEXUS AI TERMINAL V2.0 «GEMINI EDITION»
  * Ультра-современный интерфейс в стиле Gemini.
+ * Исправлены ошибки SSR и стабильности.
  */
 export default function NuxusAiView() {
   const { user } = useUser();
@@ -74,8 +75,8 @@ export default function NuxusAiView() {
          </div>
       </header>
 
-      <ScrollArea className="flex-1 px-4 md:px-20 lg:px-40">
-        <div className="max-w-4xl mx-auto py-10 space-y-10">
+      <ScrollArea className="flex-1">
+        <div className="max-w-4xl mx-auto py-10 px-4 md:px-8 space-y-10">
           {messages.length === 0 && (
             <div className="flex flex-col items-center justify-center min-h-[50vh] text-center space-y-12 animate-in fade-in zoom-in-95 duration-1000">
                <div className="relative">
@@ -99,7 +100,7 @@ export default function NuxusAiView() {
           {messages.map((msg, i) => (
             <div key={i} className={cn("flex w-full flex-col gap-3 animate-in slide-in-from-bottom-4 duration-500", msg.role === 'user' ? "items-end" : "items-start")}>
                <div className={cn(
-                 "p-6 rounded-[2.5rem] shadow-2xl relative border-2 max-w-[85%]",
+                 "p-6 rounded-[2.5rem] shadow-2xl relative border-2 max-w-[90%] md:max-w-[80%]",
                  msg.role === 'user' 
                   ? "bg-primary/10 border-primary/20 text-white rounded-br-none" 
                   : "bg-white/[0.03] border-white/5 text-white/90 rounded-bl-none"
@@ -124,20 +125,19 @@ export default function NuxusAiView() {
                </div>
             </div>
           )}
-          <div ref={scrollRef} className="h-10" />
+          <div ref={scrollRef} className="h-20" />
         </div>
       </ScrollArea>
 
       {/* Gemini-Style Input Area */}
       <div className="shrink-0 z-30 pb-[calc(2rem+env(safe-area-inset-bottom))] px-6">
-        <div className="max-w-4xl mx-auto relative group">
+        <div className="max-w-3xl mx-auto relative group">
           <div className="absolute -inset-1 bg-gradient-to-r from-primary/30 to-accent/30 blur-2xl opacity-0 group-focus-within:opacity-100 transition-all duration-700" />
           <div className="relative bg-white/[0.03] backdrop-blur-3xl border-2 border-white/10 rounded-[3rem] p-3 flex items-end gap-3 shadow-[0_30px_100px_rgba(0,0,0,0.8)] focus-within:border-primary/40 transition-all duration-500">
              <Button variant="ghost" size="icon" className="h-12 w-12 rounded-full text-white/20 hover:text-white shrink-0">
                 <Mic className="w-6 h-6" />
              </Button>
              <Textarea 
-               ref={textareaRef}
                placeholder="Спросите Nexus AI..." 
                value={input}
                onChange={e => setInput(e.target.value)}
