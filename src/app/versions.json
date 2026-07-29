@@ -1,14 +1,14 @@
 
 {
-  "latestVersion": "5.8.0",
-  "qesVersion": "24.1",
-  "build": "Neural-Precision-Core",
-  "sizeMb": 105,
+  "latestVersion": "6.0.0",
+  "qesVersion": "25.2",
+  "build": "Neural-Nexus-Sovereign",
+  "sizeMb": 112,
   "changelog": [
-    "Added: Permanent account annihilation feature",
-    "Improved: Voice message timer precision 1:1",
-    "Enhanced: Session persistence & Anti-Logout",
-    "Security: Aegis Shield & AI Security Audit",
-    "Sync: RFC 9727 API Catalog for Agents"
+    "Added: NX-AI Autonomous Intelligence Node",
+    "Feature: Real-time Web Search Integration",
+    "Improved: Neural Voice Signal Processing",
+    "Security: Sovereign Encryption for AI Signals",
+    "UI: Dedicated Nexus AI Terminal"
   ]
 }
