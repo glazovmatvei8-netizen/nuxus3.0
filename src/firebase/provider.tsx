@@ -18,8 +18,8 @@ import { Auth, User, onAuthStateChanged, signOut } from 'firebase/auth';
 import { updateDocumentNonBlocking, setDocumentNonBlocking } from './non-blocking-updates';
 
 /**
- * СТАБИЛИЗАТОР ХУКОВ V6.1.0 «ULTIMATE»
- * Все хуки консолидированы здесь для предотвращения циклической зависимости.
+ * NUXUS FIREBASE PROVIDER V6.1.0 (ULTIMATE STABILITY)
+ * Содержит всю логику хуков для предотвращения циклической зависимости.
  */
 
 export function useMemoFirebase<T>(factory: () => T, deps: DependencyList): T {
@@ -168,10 +168,7 @@ export const FirebaseProvider: React.FC<{
 
 export const useFirebase = () => {
   const context = useContext(FirebaseContext);
-  if (context === undefined) {
-    return { firestore: null, auth: null, user: null, isUserLoading: true };
-  }
-  return context;
+  return context || { firestore: null, auth: null, user: null, isUserLoading: true };
 };
 
 export const useAuth = () => {

@@ -4,11 +4,10 @@ import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Lock, Eye, EyeOff, ShieldCheck, AlertCircle, Globe } from 'lucide-react';
-import { useAuth, useFirestore } from '@/firebase/provider'; // Прямой импорт
+import { Loader2, Eye, EyeOff, AlertCircle } from 'lucide-react';
+import { useAuth, useFirestore } from '@/firebase/provider'; 
 import { 
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
@@ -16,7 +15,7 @@ import {
   setPersistence
 } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
-import { useAppState } from '@/lib/store.tsx'; // Прямой импорт
+import { useAppState } from '@/lib/store.tsx'; 
 import { NuxusLogo } from './nuxus-logo';
 import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
