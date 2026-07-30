@@ -2,7 +2,7 @@
 
 /**
  * NUXUS FIREBASE CORE BARREL V6.1.0
- * Циклическая зависимость "originalFactory.call" устранена.
+ * Циклические зависимости устранены через прямые импорты из provider.tsx.
  */
 
 export { initializeFirebase } from './app';

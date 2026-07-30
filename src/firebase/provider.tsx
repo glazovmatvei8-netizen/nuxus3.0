@@ -19,7 +19,7 @@ import { updateDocumentNonBlocking, setDocumentNonBlocking } from './non-blockin
 
 /**
  * NUXUS FIREBASE PROVIDER V6.1.0 (ULTIMATE STABILITY)
- * Содержит всю логику хуков для предотвращения циклической зависимости.
+ * Консолидированная логика хуков для предотвращения циклических зависимостей.
  */
 
 export function useMemoFirebase<T>(factory: () => T, deps: DependencyList): T {
