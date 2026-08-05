@@ -2,7 +2,8 @@
 
 /**
  * NUXUS FIREBASE CORE BARREL V6.1.0
- * Циклические зависимости устранены через прямые импорты из provider.tsx.
+ * Barrel-файл очищен для предотвращения циклических зависимостей.
+ * Все импорты теперь должны идти напрямую из provider.tsx.
  */
 
 export { initializeFirebase } from './app';
