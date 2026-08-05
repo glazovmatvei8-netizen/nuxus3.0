@@ -16,10 +16,12 @@ import {
 } from 'firebase/firestore';
 import { Auth, User, onAuthStateChanged, signOut } from 'firebase/auth';
 import { updateDocumentNonBlocking, setDocumentNonBlocking } from './non-blocking-updates';
+import { errorEmitter } from './error-emitter';
 
 /**
  * NUXUS FIREBASE PROVIDER V6.1.0 (ULTIMATE STABILITY)
  * Консолидированная логика хуков для предотвращения циклических зависимостей.
+ * Логика FirebaseErrorListener интегрирована напрямую.
  */
 
 export function useMemoFirebase<T>(factory: () => T, deps: DependencyList): T {
@@ -62,9 +64,9 @@ export const FirebaseProvider: React.FC<{
     userError: null,
   });
 
+  // Auth State Listener
   useEffect(() => {
     if (!auth) return;
-
     const unsubscribe = onAuthStateChanged(
       auth,
       (firebaseUser) => {
@@ -77,6 +79,20 @@ export const FirebaseProvider: React.FC<{
     return () => unsubscribe();
   }, [auth]);
 
+  // Firebase Error Listener (Integrated to avoid circular deps)
+  useEffect(() => {
+    const handleError = (error: any) => {
+      // Только для логов разработчика, не блокирует выполнение
+      if (userAuthState.user?.uid === 'GCvLucN8CjNcdaxPO2vmpZ84hNl1') {
+        console.error("Nuxus Debug Signal Error:", error.message);
+      }
+    };
+
+    errorEmitter.on('permission-error', handleError);
+    return () => errorEmitter.off('permission-error', handleError);
+  }, [userAuthState.user]);
+
+  // Session & Online Status Logic
   useEffect(() => {
     if (!userAuthState.user || !firestore || !auth) return;
 

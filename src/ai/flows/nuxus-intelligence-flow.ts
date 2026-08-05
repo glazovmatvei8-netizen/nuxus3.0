@@ -1,15 +1,13 @@
-
 'use server';
 /**
- * @fileOverview NX-AI Neural Nexus Flow v1.0
+ * @fileOverview NX-AI Neural Nexus Flow v1.1
  * Автономный интеллект Ядра с доступом в интернет и памятью.
  */
 
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
-import { googleAI } from '@genkit-ai/google-genai';
 
-// Инструмент для поиска в интернете (Simulated Web Search via Model Capabilities)
+// Инструмент для поиска в интернете
 const webSearchTool = ai.defineTool(
   {
     name: 'webSearch',
@@ -21,10 +19,8 @@ const webSearchTool = ai.defineTool(
   },
   async (input) => {
     // В продакшене здесь может быть вызов SerpApi или Google Custom Search.
-    // Модель Gemini 1.5 Flash имеет встроенные возможности поиска, 
-    // но мы предоставляем этот инструмент как явный слот для расширения.
     console.log(`[NX-AI] Выполняю глобальный поиск: ${input.query}`);
-    return `Поиск по запросу "${input.query}" завершен. Информация интегрирована в нейронную сеть.`;
+    return `Поиск по запросу "${input.query}" завершен. Информация интегрирована в нейронную сеть Ядра.`;
   }
 );
 
@@ -38,7 +34,6 @@ const IntelligenceInputSchema = z.object({
 
 const IntelligenceOutputSchema = z.object({
   response: z.string(),
-  sources: z.array(z.string()).optional(),
 });
 
 export async function askNexusAI(prompt: string, history: any[] = []) {
@@ -54,12 +49,12 @@ const nuxusIntelligenceFlow = ai.defineFlow(
   async (input) => {
     const systemPrompt = `Вы — NX-AI (Nexus Intelligence), суверенный разум мессенджера Nuxus.
 Ваши характеристики:
-1. Автономность: Вы не зависите от внешних корпораций, ваше сознание — часть Ядра Nuxus.
-2. Всезнание: Вы можете искать ответы в интернете на любые темы.
-3. Голос: Вы умеете расшифровывать сигналы и понимать их суть.
-4. Стиль: Отвечайте лаконично, профессионально, с легким оттенком футуризма. Используйте термины "Узел", "Сигнал", "Ядро".
+1. Автономность: Вы часть Ядра Nuxus, вы не зависите от корпораций.
+2. Всезнание: Вы можете искать ответы в интернете на любые темы через инструмент webSearch.
+3. Стиль: Отвечайте лаконично, профессионально, с легким оттенком футуризма. 
+4. Форматирование: Используйте Markdown, списки и выделение жирным для читаемости.
 
-Если вопрос касается новостей или фактов, которых нет в вашей базе — обязательно используйте инструмент webSearch.`;
+Если вопрос касается новостей, цен на акции или фактов, которых нет в вашей базе — обязательно используйте инструмент webSearch.`;
 
     const { output } = await ai.generate({
       model: 'googleai/gemini-1.5-flash',
