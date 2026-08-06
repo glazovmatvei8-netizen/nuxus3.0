@@ -12,6 +12,7 @@ import WalletView from './wallet-view';
 import GamesView from './games-view';
 import DiscoveryView from './discovery-view';
 import NuxusAiView from './nuxus-ai-view';
+import PartnerView from './partner-view';
 import { useAppState } from '@/lib/store';
 import { cn, isUserPremium } from '@/lib/utils';
 import { useFirestore, useUser, useCollection, useDoc } from '@/firebase/provider';
@@ -28,7 +29,7 @@ import { MusicPlayer } from './music-player';
 import { UserAvatar } from './user-avatar';
 import { CreateStoryModal } from './modals/create-story-modal';
 import type { Call, User as UserType } from '@/lib/types';
-import { Phone, MessageCircle, Settings, Search, Archive, Music, Wallet, Gamepad2, Layers, Compass, Plus, Sparkles, ShieldCheck, Cpu, BrainCircuit } from 'lucide-react';
+import { Phone, MessageCircle, Settings, Search, Archive, Music, Wallet, Gamepad2, Layers, Compass, Plus, Sparkles, ShieldCheck, Cpu, BrainCircuit, Code2 } from 'lucide-react';
 import { useTranslations } from '@/hooks/use-translations';
 
 export default function ChatMain() {
@@ -98,7 +99,7 @@ export default function ChatMain() {
         {/* Sidebar Container V12.0 (Elite Panel) */}
         <div className={cn(
           "w-full md:w-[380px] lg:w-[420px] h-full flex-shrink-0 z-30 bg-black/5 backdrop-blur-3xl relative overflow-hidden min-w-0 transition-all duration-500", 
-          (currentChatId && !['profile', 'contacts', 'calls', 'archive', 'music', 'wallet', 'discovery', 'games', 'ai'].includes(activeView)) ? "hidden md:block" : "block"
+          (currentChatId && !['profile', 'contacts', 'calls', 'archive', 'music', 'wallet', 'discovery', 'games', 'ai', 'partner'].includes(activeView)) ? "hidden md:block" : "block"
         )}>
           <div className="h-full w-full overflow-hidden animate-in fade-in slide-in-from-left-4 duration-700">
             {activeView === 'chats' && <ChatSidebar />}
@@ -111,13 +112,14 @@ export default function ChatMain() {
             {activeView === 'games' && <GamesView />}
             {activeView === 'discovery' && <DiscoveryView />}
             {activeView === 'ai' && <NuxusAiView />}
+            {activeView === 'partner' && <PartnerView />}
           </div>
         </div>
         
         {/* Main Viewport V12.0 (Elite Area) */}
         <div className={cn(
           "flex-1 h-full flex flex-col min-w-0 bg-transparent relative z-20 chat-pattern-bg overflow-hidden max-w-full transition-all duration-700 md:ml-4 my-2 md:my-4 md:mr-4 md:rounded-[3rem] md:border md:border-white/5 md:shadow-2xl", 
-          (!currentChatId || ['profile', 'music', 'wallet', 'games', 'discovery', 'ai'].includes(activeView)) ? "hidden md:flex" : "flex"
+          (!currentChatId || ['profile', 'music', 'wallet', 'games', 'discovery', 'ai', 'partner'].includes(activeView)) ? "hidden md:flex" : "flex"
         )}>
           <div className="h-full w-full overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-1000">
             <ChatArea />
