@@ -6,13 +6,17 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Camera, Send, X, Loader2, Zap, FileUp, ShieldAlert } from 'lucide-react';
-import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
+import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase/provider';
 import { collection, addDoc, doc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { compressImage, isUserPremium } from '@/lib/utils';
 import { addHours } from 'date-fns';
 import type { User } from '@/lib/types';
 
+/**
+ * CREATE STORY MODAL V5.2.0
+ * FIXED: Direct imports from provider.
+ */
 export function CreateStoryModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const { user } = useUser();
   const db = useFirestore();

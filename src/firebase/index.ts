@@ -1,19 +1,9 @@
 'use client';
 
 /**
- * NUXUS FIREBASE CORE BARREL V6.5.0
- * ОПТИМИЗИРОВАНО: Прямые реэкспорты из provider.tsx для предотвращения циклов.
+ * DEACTIVATED V6.5.2
+ * Barrel file removed to prevent 'originalFactory.call' circular dependency errors in Next.js 15.
+ * Import directly from @/firebase/provider or @/firebase/app instead.
  */
 
-export { initializeFirebase } from './app';
-export { 
-  FirebaseProvider, 
-  useFirebase, 
-  useAuth, 
-  useFirestore, 
-  useUser,
-  useMemoFirebase,
-  useCollection,
-  useDoc
-} from './provider';
-export { FirebaseClientProvider } from './client-provider';
+export {};

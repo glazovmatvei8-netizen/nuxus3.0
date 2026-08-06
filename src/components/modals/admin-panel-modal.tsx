@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useMemo, useEffect } from 'react';
@@ -8,7 +9,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Switch } from '@/components/ui/switch';
 import { Progress } from '@/components/ui/progress';
-import { useFirestore, useCollection } from '@/firebase';
+import { useFirestore, useCollection } from '@/firebase/provider';
 import { collection, query, doc, limit, updateDoc, writeBatch, increment, orderBy } from 'firebase/firestore';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
@@ -23,7 +24,7 @@ import { ru } from 'date-fns/locale';
 
 /**
  * MISSION CONTROL V5.8.0 «CLEAN NODES»
- * Очистка списка от фантомов и улучшенный терминал.
+ * FIXED: Direct imports from provider.
  */
 export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const db = useFirestore();
@@ -230,7 +231,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
                              <span className="text-2xl font-black text-white italic">{auditResults.safeNodes}</span>
                              <p className="text-[8px] font-black uppercase text-green-500/60 mt-1">Безопасные узлы</p>
                           </div>
-                          <div className="bg-red-500/10 p-5 rounded-3xl border border-red-500/20 text-center">
+                          <div className="bg-red-500/10 p-5 rounded-3xl border border-green-500/20 text-center">
                              <ShieldQuestion className="w-6 h-6 text-red-500 mx-auto mb-2" />
                              <span className="text-2xl font-black text-white italic">{auditResults.suspiciousNodes}</span>
                              <p className="text-[8px] font-black uppercase text-red-500/60 mt-1">Подозрительные</p>

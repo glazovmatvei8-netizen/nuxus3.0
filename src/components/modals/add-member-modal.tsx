@@ -1,10 +1,11 @@
+
 "use client"
 
 import React, { useState, useMemo } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { useFirestore, useCollection, useUser, useDoc } from '@/firebase';
+import { useFirestore, useCollection, useUser, useDoc } from '@/firebase/provider';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Search, UserPlus, Loader2, Contact, ShieldAlert, Lock, Star, Phone } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -23,6 +24,10 @@ interface AddMemberModalProps {
   isCallContext?: boolean; 
 }
 
+/**
+ * ADD MEMBER MODAL V5.2.0
+ * FIXED: Direct imports from provider.
+ */
 export function AddMemberModal({ open, onOpenChange, chatId, currentParticipantIds, isCallContext }: AddMemberModalProps) {
   const db = useFirestore();
   const { user } = useUser();

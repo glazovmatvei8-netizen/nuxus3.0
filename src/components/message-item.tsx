@@ -2,7 +2,7 @@
 "use client"
 
 import React, { useState, memo, useMemo } from 'react';
-import { useFirestore, useUser } from '@/firebase';
+import { useFirestore, useUser } from '@/firebase/provider';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
   Popover,
@@ -27,7 +27,7 @@ const COMMON_REACTIONS = ['❤️', '🔥', '👍', '😂', '😮', '😢', '�
 
 /**
  * MESSAGE ITEM V79.0.0 «REACTION PULSE»
- * ДОБАВЛЕНО: Расширенные анимированные реакции.
+ * FIXED: Direct imports from provider.
  */
 export const MessageItem = memo(({ message, isMe, chatId, onReply, onForward, isAdmin = false, isGroup = false, highlight = false, viewerProfile }: any) => {
   const { user } = useUser();

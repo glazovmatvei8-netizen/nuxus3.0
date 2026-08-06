@@ -1,7 +1,8 @@
+
 "use client"
 
 import React, { useState, useEffect, useRef } from 'react';
-import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
+import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase/provider';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { useAppState } from '@/lib/store';
@@ -18,7 +19,7 @@ import { AddMemberModal } from './add-member-modal';
 
 /**
  * CALL OVERLAY V74.0.0 «TOTAL AUDIO FORCE»
- * Исправлено: Принудительный аудио-мост и визуализация сигнала.
+ * FIXED: Direct imports from provider.
  */
 export function CallOverlay() {
   const { user } = useUser();

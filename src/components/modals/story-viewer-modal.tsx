@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { UserAvatar } from '@/components/user-avatar';
 import { X, Eye, Heart, Smile, Loader2, Share2, Send } from 'lucide-react';
 import { useAppState } from '@/lib/store';
-import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
+import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase/provider';
 import { doc, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
 import type { Story, User } from '@/lib/types';
 import { cn, formatDisplayName } from '@/lib/utils';
@@ -18,6 +18,10 @@ import { useToast } from '@/hooks/use-toast';
 
 const STORY_REACTIONS = ['❤️', '🔥', '😂', '😮', '😢', '💯', '👏'];
 
+/**
+ * STORY VIEWER MODAL V5.2.0
+ * FIXED: Direct imports from provider.
+ */
 export function StoryViewerModal() {
   const { user } = useUser();
   const db = useFirestore();

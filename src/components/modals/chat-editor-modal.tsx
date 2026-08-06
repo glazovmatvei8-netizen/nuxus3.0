@@ -5,7 +5,7 @@ import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { useFirestore, useUser, useCollection, useMemoFirebase } from '@/firebase';
+import { useFirestore, useUser, useCollection, useMemoFirebase } from '@/firebase/provider';
 import { collection, query, where, doc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { UserAvatar } from '@/components/user-avatar';
 import { Archive, Trash2, Ghost, ShieldAlert } from 'lucide-react';
@@ -13,6 +13,10 @@ import { formatDisplayName, cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import type { Chat } from '@/lib/types';
 
+/**
+ * CHAT EDITOR MODAL V5.2.0
+ * FIXED: Direct imports from provider.
+ */
 export function ChatEditorModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const { user } = useUser();
   const db = useFirestore();

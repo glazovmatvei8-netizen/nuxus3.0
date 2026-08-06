@@ -24,8 +24,8 @@ import { ru } from 'date-fns/locale';
 const MAX_TOP_UP_AMOUNT = 500000;
 
 /**
- * WALLET VIEW V6.5.1 «STABLE FLOW»
- * ФИКС: Устранение ошибок рендеринга и улучшенная прокрутка.
+ * WALLET VIEW V6.5.2 «ABSOLUTE STABILITY»
+ * FIXED: Rendering errors and improved scroll behavior.
  */
 export default function WalletView() {
   const { user } = useUser();
@@ -87,7 +87,7 @@ export default function WalletView() {
     try {
       await addDoc(collection(db, 'topUpRequests'), {
         userId: user.uid,
-        userName: profile.name,
+        userName: profile.name || 'User',
         amount: amount,
         status: 'pending',
         createdAt: new Date().toISOString()
@@ -145,6 +145,8 @@ export default function WalletView() {
     finally { setIsProcessing(false); }
   };
 
+  const currentBalance = profile?.balance ?? 0;
+
   return (
     <div className="flex flex-col h-full bg-[#0a0a0c] overflow-hidden relative">
       <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 blur-[120px] pointer-events-none -z-10" />
@@ -164,7 +166,7 @@ export default function WalletView() {
               <p className="text-[10px] font-black uppercase tracking-[0.4em] text-primary/60 mb-2">Node Balance</p>
               <div className="flex items-baseline gap-2">
                 <span className="text-5xl font-black text-white italic tracking-tighter tabular-nums">
-                  {profile?.balance !== undefined ? profile.balance.toFixed(2) : '0.00'}
+                  {currentBalance.toFixed(2)}
                 </span>
                 <span className="text-xl font-bold text-primary italic">NX</span>
               </div>
@@ -250,7 +252,7 @@ export default function WalletView() {
             ) : (
               <div className="space-y-6 animate-in zoom-in-95">
                 <div className="flex items-center gap-4 bg-white/5 p-4 rounded-3xl border border-accent/20 relative">
-                  <div className="w-12 h-12 rounded-2xl bg-accent/10 flex items-center justify-center border border-accent/30 text-accent font-black">{foundUser.name[0]}</div>
+                  <div className="w-12 h-12 rounded-2xl bg-accent/10 flex items-center justify-center border border-accent/30 text-accent font-black">{foundUser.name ? foundUser.name[0] : 'U'}</div>
                   <div className="flex flex-col text-left">
                     <span className="font-bold text-white uppercase italic">{foundUser.name}</span>
                     <span className="text-[10px] text-accent uppercase font-black">{foundUser.username}</span>

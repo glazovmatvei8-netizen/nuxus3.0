@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useMemo } from 'react';
@@ -8,7 +9,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { 
   MessageCircle, Star, Calendar, Phone, Video, Gift, Zap, Globe, ShieldCheck, Cpu, Sparkles, UserCheck, UserPlus
 } from 'lucide-react';
-import { useFirestore, useUser, useDoc, useCollection } from '@/firebase';
+import { useFirestore, useUser, useDoc, useCollection } from '@/firebase/provider';
 import { doc, query, collection, limit, getDocs, addDoc, where, orderBy, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { useAppState } from '@/lib/store';
@@ -22,6 +23,10 @@ import versions from '@/app/versions.json';
 const ADMIN_ID = 'GCvLucN8CjNcdaxPO2vmpZ84hNl1';
 const ORIGIN_DATE = '2024-01-01T00:00:00Z'; 
 
+/**
+ * USER PROFILE MODAL V5.3.0
+ * FIXED: Direct imports from provider.
+ */
 export function UserProfileModal() {
   const db = useFirestore();
   const { user: currentUser } = useUser();

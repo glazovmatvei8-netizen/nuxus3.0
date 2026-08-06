@@ -1,13 +1,14 @@
+
 'use client';
 
 import { useEffect, useMemo } from 'react';
-import { useUser, useFirestore, useDoc } from '@/firebase'; 
+import { useUser, useFirestore, useDoc } from '@/firebase/provider'; 
 import { doc } from 'firebase/firestore';
 import type { User } from '@/lib/types';
 
 /**
- * ПРИМЕНИТЕЛЬ ТЕМЫ V6.1.4 «ULTIMATE COLOR SYNERGY»
- * ИСПРАВЛЕНО: Теперь HEX-цвет корректно конвертируется в HSL компоненты для Tailwind.
+ * ПРИМЕНИТЕЛЬ ТЕМЫ V6.5.4 «ULTIMATE COLOR SYNERGY»
+ * ИСПРАВЛЕНО: Принудительный прямой импорт хуков для устранения ошибки 'is not a function'.
  */
 export function ThemeApplier() {
   const { user } = useUser();
@@ -42,14 +43,13 @@ export function ThemeApplier() {
 
     // 3. Обработка кастомного цвета (HEX to HSL Components)
     const applyColor = (hex: string) => {
-      // Если это уже формат "270 95% 65%", применяем как есть
+      if (!hex) return;
       if (hex.includes(' ')) {
         document.documentElement.style.setProperty('--primary', hex);
         document.documentElement.style.setProperty('--ring', hex);
         return;
       }
 
-      // Если это HEX (#ffffff), конвертируем
       const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
       if (result) {
         let r = parseInt(result[1], 16) / 255;

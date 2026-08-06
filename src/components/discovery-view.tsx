@@ -1,7 +1,8 @@
+
 "use client"
 
 import React, { useState, useMemo } from 'react';
-import { useFirestore, useUser, useCollection } from '@/firebase';
+import { useFirestore, useUser, useCollection } from '@/firebase/provider';
 import { collection, query, where, limit, orderBy } from 'firebase/firestore';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Input } from '@/components/ui/input';
@@ -16,7 +17,7 @@ const ADMIN_ID = 'GCvLucN8CjNcdaxPO2vmpZ84hNl1';
 
 /**
  * НАВИГАТОР V12.0 «Mission Control»
- * ОБНОВЛЕНО: Релизный баннер nuxus.fun
+ * FIXED: Direct imports from provider.
  */
 export default function DiscoveryView() {
   const db = useFirestore();

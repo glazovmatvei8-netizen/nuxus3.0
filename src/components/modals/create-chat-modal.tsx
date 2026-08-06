@@ -6,7 +6,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useAppState } from '@/lib/store';
-import { useFirestore, useUser } from '@/firebase';
+import { useFirestore, useUser } from '@/firebase/provider';
 import { Users, Radio, MessageSquarePlus, ArrowRight, Loader2, Search, Zap, Globe, Sparkles } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import type { ChatType } from '@/lib/types';
@@ -19,6 +19,10 @@ interface CreateChatModalProps {
   onOpenChange: (open: boolean) => void;
 }
 
+/**
+ * CREATE CHAT MODAL V5.3.0
+ * FIXED: Direct imports from provider.
+ */
 export function CreateChatModal({ open, onOpenChange }: CreateChatModalProps) {
   const { user } = useUser();
   const db = useFirestore();

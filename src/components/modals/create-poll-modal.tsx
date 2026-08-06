@@ -8,10 +8,14 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { BarChart3, Plus, X, ListTodo, Loader2 } from 'lucide-react';
-import { useFirestore, useUser } from '@/firebase';
+import { useFirestore, useUser } from '@/firebase/provider';
 import { collection, addDoc, doc, updateDoc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 
+/**
+ * CREATE POLL MODAL V5.2.0
+ * FIXED: Direct imports from provider.
+ */
 export function CreatePollModal({ open, onOpenChange, chatId }: { open: boolean, onOpenChange: (o: boolean) => void, chatId: string }) {
   const { user } = useUser();
   const db = useFirestore();

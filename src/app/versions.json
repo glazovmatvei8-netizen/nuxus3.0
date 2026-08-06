@@ -1,13 +1,13 @@
+
 {
-  "latestVersion": "6.5.1",
+  "latestVersion": "6.5.4",
   "qesVersion": "25.2",
-  "build": "Neural-Unrestricted-Custom",
+  "build": "Neural-Absolute-Decoupled-Stable",
   "sizeMb": 114,
   "changelog": [
-    "Fixed: Wallet scroll issues and data rendering stability",
-    "Improved: NX-AI removed safety filters for unrestricted content",
-    "Restored: Full elite settings for Style and Security tabs",
-    "Added: Multi-category safety bypass for Sovereign Mind",
-    "Fixed: iOS PWA originalFactory.call final stabilization"
+    "Fixed: Critical 'useUser is not a function' error resolved via full decoupling",
+    "Improved: NX-AI unrestricted mode with forced safety bypass",
+    "Stable: All components migrated to direct provider imports",
+    "Optimized: iOS PWA initialization stability"
   ]
 }

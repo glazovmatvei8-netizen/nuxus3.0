@@ -2,13 +2,13 @@
 "use client"
 
 import AuthScreen from '@/components/auth-screen';
-import { useUser } from '@/firebase';
+import { useUser } from '@/firebase/provider';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 
 /**
  * Прямой маршрут для входа в Ядро.
- * Исправлено: гарантированный экспорт для Next.js App Router.
+ * FIXED: Direct import from provider.
  */
 export default function LoginPage() {
   const { user, isUserLoading } = useUser();

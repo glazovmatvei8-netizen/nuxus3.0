@@ -1,7 +1,8 @@
+
 "use client"
 
 import React, { useState, memo, useMemo } from 'react';
-import { useFirestore, useDoc } from '@/firebase';
+import { useFirestore, useDoc } from '@/firebase/provider';
 import { doc } from 'firebase/firestore';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { cn, formatDisplayName, isUserPremium } from '@/lib/utils';
@@ -10,8 +11,8 @@ import { differenceInMinutes, parseISO } from 'date-fns';
 import Image from 'next/image';
 
 /**
- * USER AVATAR V6.1.3 «STABLE FRAME»
- * ИСПРАВЛЕНО: Безопасное получение данных профиля.
+ * USER AVATAR V6.5.4 «STABLE FRAME»
+ * ИСПРАВЛЕНО: Перевод на прямой импорт хуков для устранения ошибки 'is not a function'.
  */
 export const UserAvatar = memo(({ userId, className, fallbackName, manualAvatarUrl, showOnlineStatus = false, onClick }: any) => {
   const db = useFirestore();

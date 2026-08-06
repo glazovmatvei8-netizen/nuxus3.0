@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useRef, useMemo } from 'react';
@@ -9,7 +10,7 @@ import {
   Sparkles, Video as MovieIcon, Image as ImageIcon, Wand2, 
   Loader2, Download, Zap, ShieldCheck, Play, Plus, X, Star, FileUp
 } from 'lucide-react';
-import { useUser, useFirestore, useDoc } from '@/firebase';
+import { useUser, useFirestore, useDoc } from '@/firebase/provider';
 import { doc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { cn, isUserPremium } from '@/lib/utils';
@@ -19,7 +20,7 @@ import { generateAiImage } from '@/ai/flows/generate-ai-image-flow';
 
 /**
  * NUXUS AI CINEMA STUDIO V1.1 (Optimized Quotas)
- * Позволяет генерировать видео через Veo 2.0 и изображения через Imagen 3 Fast.
+ * FIXED: Direct imports from provider.
  */
 export default function AiStudioView() {
   const { user } = useUser();

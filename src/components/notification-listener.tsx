@@ -1,7 +1,8 @@
+
 "use client"
 
 import { useEffect, useRef } from 'react';
-import { useUser, useFirestore } from '@/firebase';
+import { useUser, useFirestore } from '@/firebase/provider';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { useAppState } from '@/lib/store';
 import { useToast } from '@/hooks/use-toast';
@@ -9,7 +10,7 @@ import type { Call } from '@/lib/types';
 
 /**
  * NUXUS NOTIFICATION CORE V74.0.0
- * ОБНОВЛЕНО: Повышена чувствительность перехвата входящих сигналов.
+ * FIXED: Direct imports from provider.
  */
 export function NotificationListener() {
   const { user } = useUser();

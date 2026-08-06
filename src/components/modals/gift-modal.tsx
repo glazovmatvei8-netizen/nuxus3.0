@@ -4,7 +4,7 @@
 import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
+import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase/provider';
 import { doc, collection, writeBatch, increment, addDoc } from 'firebase/firestore';
 import { Gift, Sparkles, Loader2, Wallet, Zap, ChevronRight, Gem } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
@@ -31,6 +31,10 @@ const PREDEFINED_GIFTS = [
   { id: 'nft_singularity', name: 'Omega Singularity', price: 950000, icon: '🌑', isNft: true },
 ];
 
+/**
+ * GIFT MODAL V5.2.0
+ * FIXED: Direct imports from provider.
+ */
 export function GiftModal({ open, onOpenChange, targetUser, chatId }: { open: boolean, onOpenChange: (o: boolean) => void, targetUser: User | null, chatId?: string | null }) {
   const { user } = useUser();
   const db = useFirestore();

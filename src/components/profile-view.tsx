@@ -1,7 +1,8 @@
+
 "use client"
 
 import React, { useState, useMemo } from 'react';
-import { useUser, useFirestore, useDoc, useCollection } from '@/firebase';
+import { useUser, useFirestore, useDoc, useCollection } from '@/firebase/provider';
 import { doc, query, collection, limit } from 'firebase/firestore';
 import { UserAvatar } from '@/components/user-avatar';
 import { Button } from '@/components/ui/button';
@@ -20,7 +21,7 @@ import { ru } from 'date-fns/locale';
 
 /**
  * PROFILE VIEW V6.1.3 «STABLE SYNERGY»
- * ИСПРАВЛЕНО: Прямые импорты из @/firebase для предотвращения деструктуризации null.
+ * FIXED: Direct imports from provider.
  */
 export default function ProfileView() {
   const { user } = useUser();

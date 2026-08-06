@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useMemo, memo } from 'react';
@@ -15,7 +16,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useUser, useFirestore, useDoc, useCollection } from '@/firebase';
+import { useUser, useFirestore, useDoc, useCollection } from '@/firebase/provider';
 import { doc, updateDoc, arrayUnion, query, collection, limit, orderBy, getDocs, arrayRemove, addDoc } from 'firebase/firestore';
 import { deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { useToast } from '@/hooks/use-toast';
@@ -123,6 +124,10 @@ const ParticipantItem = memo(({
 });
 ParticipantItem.displayName = 'ParticipantItem';
 
+/**
+ * CHAT INFO MODAL V5.3.0
+ * FIXED: Direct imports from provider.
+ */
 export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onOpenChange: (o: boolean) => void, chat: Chat }) {
   const db = useFirestore();
   const { user } = useUser();

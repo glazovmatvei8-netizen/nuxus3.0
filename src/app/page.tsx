@@ -18,8 +18,8 @@ import { IosInstaller } from '@/components/ios-installer';
 import { authenticator } from 'otplib';
 
 /**
- * HOME GATE V6.5.0
- * ИСПРАВЛЕНО: Прямые импорты из провайдера для устранения ошибки 'call'.
+ * HOME GATE V6.5.2
+ * FIXED: Direct imports from provider to eliminate 'call' error.
  */
 export default function Home() {
   const { user, isUserLoading } = useUser();
@@ -56,13 +56,12 @@ export default function Home() {
     if (isProtected && !is2FAVerified) return;
 
     const params = new URLSearchParams(window.location.search);
-    if (params.get('action') === 'call') { /* ...existing call logic... */ }
+    if (params.get('action') === 'call') { /* logic */ }
   }, [mounted, db, user, profile, is2FAVerified]);
 
   const handleVerify2FA = () => {
     if (!profile) return;
     
-    // TOTP Check
     if (profile.totpEnabled && profile.totpSecret) {
        if (authenticator.check(twoFactorInput, profile.totpSecret)) {
           setIs2FAVerified(true);
@@ -71,7 +70,6 @@ export default function Home() {
        }
     }
 
-    // Classic PIN Check (Fallback)
     if (profile.twoFactorEnabled && twoFactorInput === profile.twoFactorPin) {
       setIs2FAVerified(true);
       toast({ title: "Доступ разрешен" });

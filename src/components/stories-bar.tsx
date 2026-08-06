@@ -3,7 +3,7 @@
 
 import React, { useMemo, useState } from 'react';
 import { useAppState } from '@/lib/store';
-import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase';
+import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase/provider';
 import { collection, query, where, doc } from 'firebase/firestore';
 import { UserAvatar } from './user-avatar';
 import { Plus, Loader2, Archive } from 'lucide-react';
@@ -15,7 +15,7 @@ import { useToast } from '@/hooks/use-toast';
 
 /**
  * NUXUS MOMENTS BAR V6.4.0
- * ДОБАВЛЕНО: Доступ к архиву историй.
+ * FIXED: Direct imports from provider.
  */
 export function StoriesBar() {
   const { user } = useUser();

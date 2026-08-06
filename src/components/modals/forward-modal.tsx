@@ -6,15 +6,19 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { useFirestore, useUser, useCollection, useMemoFirebase, useDoc } from '@/firebase';
+import { useFirestore, useUser, useCollection, useMemoFirebase, useDoc } from '@/firebase/provider';
 import { collection, query, where, doc, addDoc } from 'firebase/firestore';
 import { useAppState } from '@/lib/store';
 import { useToast } from '@/hooks/use-toast';
-import { Search, Share2, Loader2, ArrowRight } from 'lucide-react';
+import { Search, Loader2, ArrowRight } from 'lucide-react';
 import { UserAvatar } from '@/components/user-avatar';
 import { formatDisplayName } from '@/lib/utils';
 import type { Chat, Message, User } from '@/lib/types';
 
+/**
+ * FORWARD MODAL V5.2.0
+ * FIXED: Direct imports from provider.
+ */
 export function ForwardModal() {
   const { user } = useUser();
   const db = useFirestore();
